@@ -20,9 +20,9 @@ def cfg():
     try:
         config = load_config()
     except ConfigError as exc:
-        pytest.skip("no usable dataset config: {}".format(exc))
+        pytest.skip(f"no usable dataset config: {exc}")
     if not config.meta_csv.is_file():
-        pytest.skip("dataset not present at {}".format(config.zenodo_root))
+        pytest.skip(f"dataset not present at {config.zenodo_root}")
     return config
 
 

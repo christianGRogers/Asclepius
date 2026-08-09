@@ -34,7 +34,6 @@ from typing import Optional
 
 import numpy as np
 import torch
-
 from nnunetv2.training.nnUNetTrainer.nnUNetTrainer import nnUNetTrainer
 
 # Absolute import: nnU-Net imports this file as a top-level module.
@@ -82,7 +81,9 @@ class nnUNetTrainer_segtrain(nnUNetTrainer):
         configuration: str,
         fold: int,
         dataset_json: dict,
-        device: torch.device = torch.device("cuda"),
+        # Mirrors nnUNetTrainer's own signature exactly; nnU-Net constructs
+        # trainers positionally, so this must not drift from the base class.
+        device: torch.device = torch.device("cuda"),  # noqa: B008
     ):
         super().__init__(plans, configuration, fold, dataset_json, device)
 
@@ -216,6 +217,7 @@ class nnUNetTrainer_segtrain_5epochs(nnUNetTrainer_segtrain):
     the event stream, the preview daemon and the Slicer monitor in a few minutes.
     """
 
-    def __init__(self, plans, configuration, fold, dataset_json, device=torch.device("cuda")):
+    def __init__(self, plans, configuration, fold, dataset_json,
+                 device=torch.device("cuda")):  # noqa: B008
         super().__init__(plans, configuration, fold, dataset_json, device)
         self.num_epochs = int(os.environ.get("SEGTRAIN_EPOCHS", "5"))

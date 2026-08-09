@@ -21,8 +21,9 @@ from __future__ import annotations
 import json
 import os
 import time
+from collections.abc import Iterator
 from pathlib import Path
-from typing import Any, Iterator, Optional
+from typing import Any, Optional
 
 EVENTS_FILENAME = "events.jsonl"
 PREVIEWS_DIRNAME = "previews"
@@ -131,7 +132,7 @@ class EventWriter:
         except Exception:
             pass
 
-    def __enter__(self) -> "EventWriter":
+    def __enter__(self) -> EventWriter:
         return self
 
     def __exit__(self, *exc: Any) -> None:
@@ -202,7 +203,7 @@ class EventReader:
         # look dead. Seeking to our offset and reading costs nothing when there
         # is nothing new, and always sees the true contents.
         try:
-            with open(self.path, "r", encoding="utf-8", errors="replace") as fh:
+            with open(self.path, encoding="utf-8", errors="replace") as fh:
                 fh.seek(0, 2)
                 end = fh.tell()
                 if end < self._offset:
@@ -263,7 +264,7 @@ class RunState:
         self.messages: list[dict] = []
         self.last_event_time: Optional[float] = None
 
-    def update(self, events: list[dict]) -> "RunState":
+    def update(self, events: list[dict]) -> RunState:
         for e in events:
             kind = e.get("event")
             self.last_event_time = e.get("t", self.last_event_time)

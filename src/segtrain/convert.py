@@ -27,16 +27,17 @@ from __future__ import annotations
 import json
 import os
 import shutil
+from collections.abc import Iterable, Sequence
 from concurrent.futures import ProcessPoolExecutor, as_completed
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Iterable, Optional, Sequence
+from typing import Optional
 
 import nibabel as nib
 import numpy as np
 
 from .config import Config, TaskConfig
-from .splits import CaseMeta, SPLIT_TEST
+from .splits import SPLIT_TEST, CaseMeta
 
 # Geometry agreement is checked as a physical displacement, not as an element-wise
 # tolerance on the affine. Obliquely-acquired volumes in this dataset carry

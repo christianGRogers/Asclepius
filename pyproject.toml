@@ -56,7 +56,21 @@ markers = [
 
 [tool.ruff]
 line-length = 100
+# Slicer 5.8 bundles Python 3.9, and the monitor module runs inside it.
 target-version = "py39"
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B"]
+ignore = [
+    # `Optional[X]` is explicit and reads fine; rewriting to `X | None` across
+    # the codebase would be churn for no benefit.
+    "UP045",
+]
+
+[tool.ruff.lint.per-file-ignores]
+# The Slicer module is loaded by Slicer's own importer, not as part of the
+# segtrain package. It has no `from __future__ import annotations`, and its
+# imports genuinely cannot all sit at the top: `src/` must be put on sys.path
+# before `segtrain.events` can be imported at all.
+"slicer/**" = ["E402", "I001", "UP031", "UP032"]
+"tests/**" = ["UP031"]

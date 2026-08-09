@@ -35,7 +35,7 @@ def main():
             failures.append(name)
 
     print("Slicer self-test for SegmentatorTrainMonitor")
-    print("  module dir: {}".format(MODULE_DIR))
+    print(f"  module dir: {MODULE_DIR}")
 
     if MODULE_DIR not in sys.path:
         sys.path.insert(0, MODULE_DIR)
@@ -74,7 +74,7 @@ def main():
         check("connects to run directory", logic.connect(run_dir), logic.lastError or "")
         state = logic.state
         check("parsed epoch events", len(state.epochs) > 0,
-              "{} epochs".format(len(state.epochs)))
+              f"{len(state.epochs)} epochs")
         check("run metadata present", bool(state.meta.get("class_names")),
               "{} class names".format(len(state.meta.get("class_names") or [])))
         check("summary renders", bool(logic.summary()), logic.summary())
@@ -84,12 +84,12 @@ def main():
         if logic._tableNode:
             rows = logic._tableNode.GetTable().GetNumberOfRows()
             check("plot table has a row per epoch", rows == len(state.epochs),
-                  "{} rows".format(rows))
+                  f"{rows} rows")
         check("chart has three series", len(logic._seriesNodes) == 3)
 
         scores = logic.latestClassScores()
         check("per-class scores available", len(scores) > 0,
-              "{} structures".format(len(scores)))
+              f"{len(scores)} structures")
         check("scores sorted weakest first",
               all(scores[i][1] <= scores[i + 1][1] for i in range(len(scores) - 1)))
 
@@ -100,7 +100,7 @@ def main():
             if ok and logic._segmentationNode:
                 seg = logic._segmentationNode.GetSegmentation()
                 n = seg.GetNumberOfSegments()
-                check("segments imported", n > 0, "{} segments".format(n))
+                check("segments imported", n > 0, f"{n} segments")
                 names = [seg.GetNthSegment(i).GetName() for i in range(min(n, 400))]
                 known = set(state.meta.get("class_names") or [])
                 named = [x for x in names if x in known]

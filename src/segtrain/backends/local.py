@@ -7,8 +7,9 @@ import os
 import signal
 import subprocess
 import sys
+from collections.abc import Sequence
 from pathlib import Path
-from typing import Optional, Sequence
+from typing import Optional
 
 from .base import Backend, BackendError, Job
 

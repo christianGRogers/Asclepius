@@ -17,8 +17,9 @@ dataset's framing rather than the model.
 
 from __future__ import annotations
 
+from collections.abc import Iterable, Sequence
 from dataclasses import dataclass
-from typing import Iterable, Optional, Sequence
+from typing import Optional
 
 import numpy as np
 from scipy import ndimage

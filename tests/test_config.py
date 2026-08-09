@@ -33,9 +33,9 @@ def test_groups_partition_all117_exactly():
     seen = set()
     for group in GROUPS:
         members = set(load_label_set(group).labels)
-        assert not (seen & members), "structures in two groups: {}".format(seen & members)
+        assert not (seen & members), f"structures in two groups: {seen & members}"
         seen |= members
-    assert seen == everything, "not partitioned: {}".format(seen ^ everything)
+    assert seen == everything, f"not partitioned: {seen ^ everything}"
 
 
 @pytest.mark.parametrize("group", GROUPS + ["all117"])

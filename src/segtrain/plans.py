@@ -23,8 +23,7 @@ from pathlib import Path
 from typing import Optional
 
 from .config import Config, TaskConfig
-from .splits import build_splits, read_meta, select, validate_splits, write_splits_final
-from .splits import SPLIT_TEST
+from .splits import SPLIT_TEST, build_splits, read_meta, select, validate_splits, write_splits_final
 
 
 def configure_nnunet_env(cfg: Config) -> None:

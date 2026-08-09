@@ -216,7 +216,9 @@ def load_label_set(name: str, labels_dir: Optional[Path] = None) -> LabelSet:
     path = (labels_dir or LABELS_DIR) / f"{name}.yaml"
     if not path.is_file():
         available = sorted(p.stem for p in (labels_dir or LABELS_DIR).glob("*.yaml"))
-        raise ConfigError(f"unknown label set {name!r}; available: {', '.join(available) or 'none'}")
+        raise ConfigError(
+            f"unknown label set {name!r}; available: {', '.join(available) or 'none'}"
+        )
 
     data = _read_yaml(path)
     labels = data.get("labels")

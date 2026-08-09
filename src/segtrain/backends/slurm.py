@@ -16,8 +16,9 @@ import re
 import shlex
 import shutil
 import subprocess
+from collections.abc import Sequence
 from pathlib import Path
-from typing import Optional, Sequence
+from typing import Optional
 
 from .base import Backend, BackendError, Job
 

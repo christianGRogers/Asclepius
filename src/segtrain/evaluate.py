@@ -13,8 +13,9 @@ from a handful of catastrophic cases.
 from __future__ import annotations
 
 import csv
+from collections.abc import Sequence
 from pathlib import Path
-from typing import Optional, Sequence
+from typing import Optional
 
 import nibabel as nib
 import numpy as np

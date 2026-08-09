@@ -78,13 +78,19 @@ class RemoteRunSource(RunSource):
 
     kind = "ssh"
 
-    def __init__(self, host, remote_dir, cache_dir=None, ssh_options=None):
+    def __init__(self, host, remote_dir, cache_dir=None, ssh_options=None,
+                 identity_file=None):
         RunSource.__init__(self, "{}:{}".format(host, remote_dir))
         self.host = host
         self.remote_dir = remote_dir.rstrip("/")
         self.cache_dir = cache_dir or tempfile.mkdtemp(prefix="segtrain-monitor-")
-        self.ssh_options = list(ssh_options or ["-o", "BatchMode=yes",
-                                                "-o", "ConnectTimeout=10"])
+        self.identity_file = identity_file
+        options = list(ssh_options or ["-o", "BatchMode=yes", "-o", "ConnectTimeout=10"])
+        if identity_file:
+            # IdentitiesOnly stops ssh offering every agent key first and hitting
+            # the server's MaxAuthTries before it reaches this one.
+            options += ["-i", str(identity_file), "-o", "IdentitiesOnly=yes"]
+        self.ssh_options = options
         self.last_error = None
 
     def _scp(self, remote_rel, local_path):
@@ -149,7 +155,7 @@ class RemoteRunSource(RunSource):
         return True
 
 
-def make_source(location, cache_dir=None):
+def make_source(location, cache_dir=None, identity_file=None):
     """Build the right source for a location string.
 
     ``user@host:/path/to/run`` is remote; anything else is a local path. The
@@ -159,5 +165,6 @@ def make_source(location, cache_dir=None):
     text = str(location).strip()
     if "@" in text and ":" in text.split("@", 1)[1]:
         host, remote_dir = text.split(":", 1)
-        return RemoteRunSource(host, remote_dir, cache_dir=cache_dir)
+        return RemoteRunSource(host, remote_dir, cache_dir=cache_dir,
+                               identity_file=identity_file)
     return LocalRunSource(text)

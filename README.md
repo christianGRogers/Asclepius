@@ -96,13 +96,83 @@ segtrain train --task 701 --backend slurm
 
 ---
 
+## Running on a rented GPU
+
+The whole point of the event-stream design: training runs on the instance, you
+watch from your laptop. Nothing but OpenSSH is needed locally.
+
+Configure once in `configs/dataset.local.yaml`:
+
+```yaml
+remote:
+  host: ubuntu@203.0.113.10      # changes every time the instance restarts
+  identity_file: C:/Users/you/.ssh/lambda.pem
+  root: /home/ubuntu/segtrain
+```
+
+Then:
+
+```bash
+segtrain remote check                    # key, connection, GPU, disk, install
+segtrain remote setup                    # ships the pipeline, installs deps
+segtrain convert --task 701              # locally: 117 masks -> 1 multilabel
+segtrain remote push  --task 701         # uploads ~21 GB, resumable
+segtrain remote train --task 701         # plan + preprocess + train, detached
+segtrain remote status --task 701 --watch
+segtrain remote pull  --task 701 --checkpoints
+```
+
+**Fix the key first.** On Windows a downloaded `.pem` inherits ACLs granting
+SYSTEM and Administrators access, and OpenSSH refuses it with *UNPROTECTED
+PRIVATE KEY FILE*. `segtrain remote check` detects this and
+`--fix-key` repairs it (`icacls /inheritance:r /grant:r`).
+
+Three things the transfer does deliberately:
+
+- **Converts locally.** The 117 binary masks are 9.1 GB and merge to ~0.7 GB.
+  Uploading converted datasets rather than the Zenodo tree saves that transfer
+  *and* moves the CPU work off a machine billed by the GPU-hour.
+- **Uploads images once.** All six tasks share byte-identical `imagesTr`. Images
+  go to a shared pool and are hardlinked into each task, so six tasks cost
+  ~21 GB plus ~0.7 GB each, not six full copies.
+- **Streams with `tar`, not `scp`.** A dataset is ~2500 files; `scp` pays a round
+  trip per file. Transfers resume by diffing a remote listing, so a dropped
+  connection costs only the current 200-file batch.
+
+`remote train` runs planning, preprocessing and training inside `nohup setsid`,
+so closing your laptop cannot kill an hour of preprocessing.
+
+### Instance sizing
+
+nnU-Net's default plan targets **8 GB**, so every current rental option has more
+VRAM than this workload can use. The real constraint is **vCPU count** —
+3d_fullres is dataloader-bound on fast GPUs, and augmentation is CPU work. A
+26-vCPU H100 will idle waiting on its own dataloader. `remote check` warns below
+12 vCPUs.
+
+Rough Stage 1 cost on Lambda (1000 epochs, estimates ±30%):
+
+| GPU | $/hr | vCPUs | est. hours | est. total |
+|---|---|---|---|---|
+| GH200 | 2.29 | 64 | ~16 | **~$37** |
+| Quadro RTX 6000 | 0.69 | 14 | ~90 | ~$62 |
+| A100 SXM | 1.99 | 30 | ~36 | ~$72 |
+| H100 SXM | 4.29 | 26 | ~24 | ~$103 |
+
+GH200's 96 GB and 64 vCPUs also let you train ~4 of the Stage 2 group models
+concurrently, which is what takes Stage 2 from ~$400 to ~$140. Its Grace CPU is
+ARM, so expect more dependency friction than x86.
+
 ## Watching it train in Slicer
 
 1. Slicer → **Edit → Application Settings → Modules**, drag
    `slicer/SegmentatorTrainMonitor` into **Additional module paths**, restart.
 2. Open **Segmentation → Segmentator Train Monitor**.
-3. Point it at a run directory — a local path, or `user@gpu-box:/data/runs/...`
-   (uses your system `ssh`/`scp`, honouring `~/.ssh/config`).
+3. Point it at a run directory — a local path, or
+   `ubuntu@203.0.113.10:/home/ubuntu/segtrain/runs/Dataset701_Total3mm__fold0`,
+   and set **SSH key** to your `.pem` for a rented instance.
+
+`segtrain remote train` prints the exact `host:path` to paste.
 
 You get loss and pseudo-Dice curves, a per-structure Dice table sorted weakest
 first, and the live model's segmentation of a **held-out** case loaded over the

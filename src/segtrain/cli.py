@@ -20,6 +20,7 @@ import argparse
 import os
 import shutil
 import sys
+import time
 from pathlib import Path
 from typing import Optional
 
@@ -330,6 +331,274 @@ def cmd_status(args) -> int:
     return 0
 
 
+# ------------------------------------------------------------------------- remote
+
+
+def _remote(args):
+    """Build a Remote from config plus any CLI overrides."""
+    from .remote import Remote
+
+    cfg, task = _load(args)
+    rc = cfg.remote
+    if getattr(args, "host", None):
+        rc.host = args.host
+    if getattr(args, "identity", None):
+        rc.identity_file = str(args.identity)
+    return cfg, task, Remote(rc)
+
+
+def cmd_remote_check(args) -> int:
+    from .remote import (
+        Remote,
+        check_identity_permissions,
+        fix_identity_permissions,
+        render_check_report,
+    )
+
+    cfg, _ = _load(args)
+    rc = cfg.remote
+    if args.host:
+        rc.host = args.host
+    if args.identity:
+        rc.identity_file = str(args.identity)
+
+    # Key permissions are checkable without a host, and are the single most
+    # common reason a first connection fails on Windows.
+    if args.fix_key:
+        if not rc.identity_file:
+            print("no identity file configured", file=sys.stderr)
+            return 2
+        ok, message = fix_identity_permissions(rc.identity_file)
+        print(("fixed: " if ok else "failed: ") + message)
+        if not ok:
+            return 1
+
+    if not rc.configured:
+        print("no remote host configured; checking the key only\n")
+        return 0 if render_check_report([check_identity_permissions(rc.identity_file)]) else 1
+
+    print(f"checking {rc.host} ...\n")
+    return 0 if render_check_report(Remote(rc).check()) else 1
+
+
+def cmd_remote_setup(args) -> int:
+    from .remote import render_setup_script
+
+    cfg, _, remote = _remote(args)
+    rc = cfg.remote
+
+    print(f"provisioning {rc.host}:{rc.root} ...")
+    remote.mkdir(rc.root, rc.data_root, rc.runs_root)
+
+    # Ship the pipeline itself. It is small, and sending the working tree avoids
+    # requiring the repo to be pushed to a git host the instance can reach.
+    from .remote import TransferPlan
+
+    repo_root = Path(__file__).resolve().parents[2]
+    wanted = []
+    for pattern in ("src/**/*.py", "configs/**/*.yaml", "scripts/*.py",
+                    "pyproject.toml", "README.md"):
+        wanted.extend(p for p in repo_root.glob(pattern) if p.is_file())
+
+    plan = TransferPlan(files=wanted, total_bytes=sum(p.stat().st_size for p in wanted))
+    print(f"  sending pipeline: {plan.describe()}")
+    remote.send(repo_root, rc.repo, plan)
+
+    print("  installing (this pulls nnU-Net; torch comes from the image) ...")
+    result = remote.run(render_setup_script(rc), timeout=1800)
+    print(result.stdout.strip() or result.stderr.strip()[:1000])
+    if result.returncode != 0:
+        return 1
+    print("\nsetup complete. Next: segtrain remote push --task 701")
+    return 0
+
+
+def cmd_remote_push(args) -> int:
+    from .remote import link_shared_images, task_remote_dirs
+
+    cfg, task, remote = _remote(args)
+    rc = cfg.remote
+    raw = task.raw_dir(cfg)
+    if not raw.is_dir():
+        print(f"nothing to push: {raw} does not exist. Run `segtrain convert` first.",
+              file=sys.stderr)
+        return 1
+
+    dirs = task_remote_dirs(rc, task)
+    shared = dirs["shared_images"]
+
+    def _progress(done, total, sent, total_bytes):
+        pct = 100.0 * sent / total_bytes if total_bytes else 100.0
+        sys.stderr.write(f"\r  {done}/{total} files  {sent / 2**30:.2f}/"
+                         f"{total_bytes / 2**30:.2f} GB  ({pct:.0f}%)")
+        if done >= total:
+            sys.stderr.write("\n")
+        sys.stderr.flush()
+
+    # Images go to a shared pool so every task reuses one upload.
+    for split in ("imagesTr", "imagesTs"):
+        local = raw / split
+        if not local.is_dir():
+            continue
+        target = f"{shared}/{split}"
+        print(f"images -> {target}")
+        plan = remote.plan_transfer(local, target)
+        print(f"  {plan.describe()}")
+        if plan.files and not args.dry_run:
+            remote.send(local, target, plan, progress=_progress)
+
+    for split in ("labelsTr", "labelsTs"):
+        local = raw / split
+        if not local.is_dir():
+            continue
+        target = f"{dirs['base']}/{split}"
+        print(f"labels -> {target}")
+        plan = remote.plan_transfer(local, target)
+        print(f"  {plan.describe()}")
+        if plan.files and not args.dry_run:
+            remote.send(local, target, plan, progress=_progress)
+
+    meta = raw / "dataset.json"
+    if meta.is_file() and not args.dry_run:
+        from .remote import TransferPlan
+
+        remote.send(raw, dirs["base"],
+                    TransferPlan(files=[meta], total_bytes=meta.stat().st_size))
+
+    if args.dry_run:
+        print("\n[dry-run] nothing sent")
+        return 0
+
+    print(link_shared_images(remote, rc, task))
+    print(f"\npushed {task.nnunet_name}. Next: segtrain remote train --task {task.dataset_id}")
+    return 0
+
+
+def cmd_remote_train(args) -> int:
+    """Plan, preprocess and launch training on the instance, then follow it."""
+    from .remote import remote_env_exports
+
+    cfg, task, remote = _remote(args)
+    rc = cfg.remote
+    py = f"{rc.venv}/bin/segtrain"
+    env = remote_env_exports(rc)
+    overrides = (f"--zenodo-root {rc.data_root} --nnunet-raw {rc.nnunet_raw} "
+                 f"--nnunet-preprocessed {rc.nnunet_preprocessed} "
+                 f"--nnunet-results {rc.nnunet_results} --runs-root {rc.runs_root}")
+
+    steps = []
+    if not args.skip_prepare:
+        # Planning needs meta.csv for splits; on the instance we use cv5 because
+        # the Zenodo tree (and its meta.csv) is not uploaded -- only the
+        # converted dataset is.
+        steps.append(f"{py} plan --task {task.dataset_id} {overrides} --scheme cv5")
+        steps.append(f"{py} preprocess --task {task.dataset_id} {overrides}")
+
+    train = (f"{py} train --task {task.dataset_id} --fold {args.fold} {overrides} "
+             f"--device cuda --backend local")
+    if args.epochs:
+        train += f" --epochs {args.epochs}"
+    steps.append(train)
+
+    script = f"cd {rc.repo}; {env} " + " && ".join(steps)
+    print(f"remote: {rc.host}")
+    for s in steps:
+        print(f"  {s}")
+    if args.dry_run:
+        print("\n[dry-run] not launching")
+        return 0
+
+    # Preprocessing can take an hour; run it inside a detached shell so a
+    # dropped laptop connection cannot kill it.
+    log = f"{rc.runs_root}/{task.nnunet_name}__fold{args.fold}.setup.log"
+    remote.mkdir(rc.runs_root)
+    launched = remote.run(
+        f"mkdir -p {rc.runs_root} && nohup setsid bash -lc {shlex_quote(script)} "
+        f">> {log} 2>&1 & echo $!",
+        timeout=120,
+    )
+    if launched.returncode != 0:
+        print(launched.stderr.strip(), file=sys.stderr)
+        return 1
+    print(f"\nlaunched (pid {launched.stdout.strip()}), log: {log}")
+    print(f"follow with: segtrain remote status --task {task.dataset_id}")
+    print("or point the Slicer monitor at: "
+          f"{rc.host}:{rc.runs_root}/{task.nnunet_name}__fold{args.fold}")
+    return 0
+
+
+def cmd_remote_status(args) -> int:
+    """Mirror the remote run directory locally, then summarise it."""
+    from .events import read_run
+
+    cfg, task, remote = _remote(args)
+    rc = cfg.remote
+    run_name = f"{task.nnunet_name}__fold{args.fold}"
+    remote_dir = f"{rc.runs_root}/{run_name}"
+    local_dir = cfg.runs_root / run_name
+
+    while True:
+        ok = remote.fetch(f"{remote_dir}/events.jsonl", local_dir / "events.jsonl")
+        if not ok:
+            print(f"no events yet at {remote_dir}", file=sys.stderr)
+            if not args.watch:
+                return 1
+        else:
+            state = read_run(local_dir)
+            total, current = state.total_epochs, state.current_epoch
+            eta = state.eta_seconds()
+            _, dice = state.mean_pseudo_dice()
+            line = (f"{run_name}  epoch {current}"
+                    + (f"/{total}" if total else "")
+                    + (f"  pseudo Dice {dice[-1]:.4f}" if dice else "")
+                    + (f"  eta {eta / 3600:.1f} h" if eta else "")
+                    + f"  [{state.status or 'waiting'}]")
+            if args.watch:
+                sys.stdout.write("\r" + line.ljust(100))
+                sys.stdout.flush()
+            else:
+                print(line)
+                return 0
+            if state.finished:
+                print()
+                return 0
+        time.sleep(args.interval)
+
+
+def cmd_remote_pull(args) -> int:
+    """Bring results back: checkpoints, run directory, evaluation CSVs."""
+    cfg, task, remote = _remote(args)
+    rc = cfg.remote
+    run_name = f"{task.nnunet_name}__fold{args.fold}"
+
+    run_dir = cfg.runs_root / run_name
+    print(f"run directory -> {run_dir}")
+    remote.fetch_dir(f"{rc.runs_root}/{run_name}", run_dir,
+                     # Test predictions are large and regenerable; the metrics
+                     # CSVs that summarise them are not.
+                     exclude=("./test_predictions",))
+
+    if args.checkpoints:
+        model = (f"{rc.nnunet_results}/{task.nnunet_name}/"
+                 f"{task.trainer}__{task.plans_name}__{task.configuration}")
+        dest = task.results_dir(cfg) / f"{task.trainer}__{task.plans_name}__{task.configuration}"
+        print(f"checkpoints   -> {dest}")
+        for name in ("dataset.json", "plans.json"):
+            remote.fetch(f"{model}/{name}", dest / name)
+        for name in ("checkpoint_best.pth", "checkpoint_final.pth"):
+            print(f"  {name} (~400 MB) ...")
+            remote.fetch(f"{model}/fold_{args.fold}/{name}",
+                         dest / f"fold_{args.fold}" / name)
+    print("\ndone")
+    return 0
+
+
+def shlex_quote(text: str) -> str:
+    import shlex
+
+    return shlex.quote(text)
+
+
 # ----------------------------------------------------------------------- evaluate
 
 
@@ -465,6 +734,48 @@ def build_parser() -> argparse.ArgumentParser:
     s.add_argument("--run-dir", help="read this directory instead of the configured one")
     s.add_argument("--worst", type=int, default=0, help="list the N weakest structures")
     s.set_defaults(func=cmd_status)
+
+    # -- remote: the rented GPU workflow
+    remote_opt = argparse.ArgumentParser(add_help=False)
+    remote_opt.add_argument("--host", help="user@ip of the training instance")
+    remote_opt.add_argument("--identity", type=Path, help="path to the SSH private key")
+
+    rem = sub.add_parser("remote", help="drive a rented GPU instance")
+    remsub = rem.add_subparsers(dest="remote_command", required=True)
+
+    s = remsub.add_parser("check", parents=[common, remote_opt],
+                          help="verify key, connection, GPU, disk and install")
+    s.add_argument("--fix-key", action="store_true",
+                   help="restrict the private key's permissions so OpenSSH accepts it")
+    s.set_defaults(func=cmd_remote_check)
+
+    s = remsub.add_parser("setup", parents=[common, remote_opt],
+                          help="install the pipeline on the instance")
+    s.set_defaults(func=cmd_remote_setup)
+
+    s = remsub.add_parser("push", parents=[common, task_opt, remote_opt],
+                          help="upload a converted dataset (images shared across tasks)")
+    s.add_argument("--dry-run", action="store_true")
+    s.set_defaults(func=cmd_remote_push)
+
+    s = remsub.add_parser("train", parents=[common, task_opt, fold_opt, remote_opt],
+                          help="plan, preprocess and train on the instance")
+    s.add_argument("--epochs", type=int)
+    s.add_argument("--skip-prepare", action="store_true",
+                   help="dataset is already planned and preprocessed remotely")
+    s.add_argument("--dry-run", action="store_true")
+    s.set_defaults(func=cmd_remote_train)
+
+    s = remsub.add_parser("status", parents=[common, task_opt, fold_opt, remote_opt],
+                          help="summarise the remote run (--watch to follow)")
+    s.add_argument("--watch", action="store_true")
+    s.add_argument("--interval", type=float, default=30.0)
+    s.set_defaults(func=cmd_remote_status)
+
+    s = remsub.add_parser("pull", parents=[common, task_opt, fold_opt, remote_opt],
+                          help="bring the run directory and checkpoints back")
+    s.add_argument("--checkpoints", action="store_true", help="also fetch .pth files")
+    s.set_defaults(func=cmd_remote_pull)
 
     s = sub.add_parser("evaluate", parents=[common, task_opt, fold_opt],
                        help="score the held-out test set with Dice and NSD")

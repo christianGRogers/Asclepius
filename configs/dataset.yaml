@@ -54,6 +54,19 @@ reader_writer: NibabelIOWithReorient
 #                 arbitrary. Provided only for comparison.
 overlap_policy: smaller_wins
 
+# The rented GPU instance. Only `host` and `identity_file` normally change.
+remote:
+  # Lambda assigns a new address every time an instance starts, so expect to
+  # update this each session. Override per-command with --host.
+  host: ""                       # e.g. ubuntu@203.0.113.10
+  identity_file: ""              # e.g. C:/Users/you/.ssh/lambda.pem
+  root: /home/ubuntu/segtrain    # everything the pipeline creates lives here
+  python: python3
+  # Created with --system-site-packages so the image's preinstalled CUDA torch
+  # (already matched to the driver) is reused rather than re-downloaded.
+  venv: /home/ubuntu/segtrain/.venv
+  ssh_options: []
+
 preview:
   # Cases the preview daemon runs the live checkpoint on. These are real members
   # of the official `val` split in meta.csv -- never training cases, or the

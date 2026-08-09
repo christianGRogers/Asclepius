@@ -20,7 +20,6 @@ sys.path.insert(0, os.path.join(REPO, "src"))
 sys.path.insert(0, os.path.join(REPO, "slicer", "SegmentatorTrainMonitor"))
 
 import slicer  # noqa: E402
-
 from segtrain.config import load_config, load_task  # noqa: E402
 
 
@@ -74,18 +73,18 @@ def main():
         ct = raw / "imagesTs" / (case + "_0000.nii.gz")
         gt = raw / "labelsTs" / (case + ".nii.gz")
     if not ct.is_file():
-        print("no converted case {} under {}".format(case, raw))
+        print(f"no converted case {case} under {raw}")
         slicer.util.exit(1)
 
-    print("CT:           {}".format(ct))
+    print(f"CT:           {ct}")
     volume = slicer.util.loadVolume(str(ct))
 
     if gt.is_file():
-        print("ground truth: {}".format(gt))
+        print(f"ground truth: {gt}")
         _load_segmentation(str(gt), names, "GroundTruth", 0.6)
 
     if pred and os.path.isfile(pred):
-        print("prediction:   {}".format(pred))
+        print(f"prediction:   {pred}")
         _load_segmentation(pred, names, "Prediction", 0.6)
 
     slicer.util.setSliceViewerLayers(background=volume, fit=True)
@@ -103,7 +102,7 @@ def main():
         slicer.util.saveScreenshot = getattr(slicer.util, "saveScreenshot", None)
         image = slicer.util.mainWindow().grab()
         image.save(shot)
-        print("screenshot:   {}".format(shot))
+        print(f"screenshot:   {shot}")
         slicer.util.exit(0)
 
     print("\nLoaded. Ground truth and prediction are separate segmentation nodes -- "

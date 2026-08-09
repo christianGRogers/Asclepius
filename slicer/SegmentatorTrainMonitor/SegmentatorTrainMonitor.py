@@ -91,9 +91,9 @@ class SegmentatorTrainMonitorLogic(ScriptedLoadableModuleLogic):
 
     # -- connection ---------------------------------------------------------
 
-    def connect(self, location):
+    def connect(self, location, identity_file=None):
         """Point at a run directory. Returns True if its event stream is readable."""
-        self.source = make_source(location)
+        self.source = make_source(location, identity_file=identity_file)
         self.state = RunState()
         self.reader = None
         self.lastError = None
@@ -409,6 +409,21 @@ class SegmentatorTrainMonitorWidget(ScriptedLoadableModuleWidget):
         row.addWidget(browse)
         connLayout.addRow("Run directory:", row)
 
+        # Only needed for a remote run whose key is not already in the agent or
+        # at a default ~/.ssh path -- which is the normal case for a rented
+        # instance, where the provider hands you a one-off .pem.
+        self.keyEdit = qt.QLineEdit()
+        self.keyEdit.setPlaceholderText(r"C:\Users\you\.ssh\lambda.pem   (remote runs only)")
+        self.keyEdit.setToolTip(
+            "SSH private key for the training instance. Leave empty for local runs "
+            "or when your key is already loaded in the agent.")
+        keyBrowse = qt.QPushButton("Browse...")
+        keyBrowse.clicked.connect(self.onBrowseKey)
+        keyRow = qt.QHBoxLayout()
+        keyRow.addWidget(self.keyEdit)
+        keyRow.addWidget(keyBrowse)
+        connLayout.addRow("SSH key:", keyRow)
+
         self.connectButton = qt.QPushButton("Connect")
         self.connectButton.clicked.connect(self.onConnect)
         connLayout.addRow(self.connectButton)
@@ -495,11 +510,17 @@ class SegmentatorTrainMonitorWidget(ScriptedLoadableModuleWidget):
         if path:
             self.runDirEdit.text = path
 
+    def onBrowseKey(self):
+        path = qt.QFileDialog.getOpenFileName(None, "Select an SSH private key")
+        if path:
+            self.keyEdit.text = path
+
     def onConnect(self):
         location = self.runDirEdit.text.strip()
         if not location:
             return
-        if self.logic.connect(location):
+        key = self.keyEdit.text.strip() or None
+        if self.logic.connect(location, identity_file=key):
             self.statusLabel.text = "connected"
             self.timer.start(self.pollSpin.value * 1000)
             self.refreshUi()

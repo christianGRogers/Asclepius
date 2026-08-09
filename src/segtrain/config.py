@@ -66,6 +66,65 @@ class PreviewConfig:
 
 
 @dataclass
+class RemoteConfig:
+    """The rented GPU instance: how to reach it and where things live on it."""
+
+    host: str = ""
+    identity_file: Optional[str] = None
+    root: str = "/home/ubuntu/segtrain"
+    python: str = "python3"
+    # Lambda images ship a conda env with torch already matched to the driver;
+    # creating a fresh venv would mean re-downloading a CUDA torch build on the
+    # clock. `--system-site-packages` keeps that and layers our deps on top.
+    venv: str = "/home/ubuntu/segtrain/.venv"
+    ssh_options: list[str] = field(default_factory=list)
+
+    @property
+    def configured(self) -> bool:
+        return bool(self.host)
+
+    @property
+    def data_root(self) -> str:
+        return f"{self.root}/data"
+
+    @property
+    def nnunet_raw(self) -> str:
+        return f"{self.data_root}/nnUNet_raw"
+
+    @property
+    def nnunet_preprocessed(self) -> str:
+        return f"{self.data_root}/nnUNet_preprocessed"
+
+    @property
+    def nnunet_results(self) -> str:
+        return f"{self.data_root}/nnUNet_results"
+
+    @property
+    def runs_root(self) -> str:
+        return f"{self.root}/runs"
+
+    @property
+    def repo(self) -> str:
+        return f"{self.root}/segmentator-train"
+
+    def ssh_args(self) -> list[str]:
+        """Base ssh/scp arguments: identity, batch mode, keepalives.
+
+        ServerAliveInterval matters here -- a training run is monitored for days
+        over a home connection, and without keepalives an idle control channel
+        gets dropped by NAT long before anything interesting happens.
+        """
+        args = ["-o", "BatchMode=yes", "-o", "ServerAliveInterval=30",
+                "-o", "ServerAliveCountMax=6"]
+        if self.identity_file:
+            # IdentitiesOnly stops ssh offering every key in the agent first and
+            # tripping the server's MaxAuthTries before reaching this one.
+            args += ["-i", str(self.identity_file), "-o", "IdentitiesOnly=yes"]
+        args += list(self.ssh_options)
+        return args
+
+
+@dataclass
 class Config:
     """Resolved paths and settings for one invocation."""
 
@@ -79,6 +138,7 @@ class Config:
     overlap_policy: str = "smaller_wins"
     reader_writer: str = "NibabelIOWithReorient"
     preview: PreviewConfig = field(default_factory=PreviewConfig)
+    remote: RemoteConfig = field(default_factory=RemoteConfig)
 
     @property
     def meta_csv(self) -> Path:
@@ -153,6 +213,18 @@ def load_config(
         skip_if_busy=bool(preview_raw.get("skip_if_busy", True)),
     )
 
+    remote_raw = base.get("remote") or {}
+    remote = RemoteConfig(
+        host=str(remote_raw.get("host") or ""),
+        identity_file=(str(remote_raw["identity_file"])
+                       if remote_raw.get("identity_file") else None),
+        root=str(remote_raw.get("root") or "/home/ubuntu/segtrain"),
+        python=str(remote_raw.get("python") or "python3"),
+        venv=str(remote_raw.get("venv")
+                 or f"{remote_raw.get('root') or '/home/ubuntu/segtrain'}/.venv"),
+        ssh_options=list(remote_raw.get("ssh_options") or []),
+    )
+
     required = ["zenodo_root", "nnunet_raw", "nnunet_preprocessed", "nnunet_results", "runs_root"]
     missing = [k for k in required if not base.get(k)]
     if missing:
@@ -169,6 +241,7 @@ def load_config(
         overlap_policy=str(base.get("overlap_policy", "smaller_wins")),
         reader_writer=str(base.get("reader_writer", "NibabelIOWithReorient")),
         preview=preview,
+        remote=remote,
     )
     cfg.validate()
     return cfg

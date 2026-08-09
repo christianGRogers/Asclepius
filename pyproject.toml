@@ -1,0 +1,62 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "segtrain"
+version = "0.1.0"
+description = "Training pipeline for whole-body CT anatomical segmentation (nnU-Net v2), with live monitoring from 3D Slicer"
+readme = "README.md"
+requires-python = ">=3.9"
+license = { text = "MIT" }
+authors = [{ name = "Christian Rogers" }]
+keywords = ["segmentation", "nnunet", "ct", "totalsegmentator", "3d-slicer"]
+
+# Deliberately light. `segtrain convert/splits/evaluate` and the Slicer monitor
+# run on these alone -- no torch, no nnU-Net. That is what lets the data prep and
+# the monitor UI run on a laptop with no GPU. Training pulls in `[train]`.
+dependencies = [
+    "numpy>=1.21",
+    "nibabel>=4.0",
+    "PyYAML>=6.0",
+    "scipy>=1.7",
+]
+
+[project.optional-dependencies]
+# Installed on the training machine only. torch is intentionally unpinned here:
+# pick the build that matches the box's CUDA version, then install this extra.
+train = [
+    "nnunetv2>=2.5,<3",
+    "SimpleITK>=2.2",
+]
+dev = [
+    "pytest>=7",
+    "pytest-cov",
+    "ruff>=0.4",
+]
+
+[project.scripts]
+segtrain = "segtrain.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/chrisrogers/segmentator-train"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+segtrain = ["py.typed"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = [
+    "needs_data: requires the TotalSegmentator dataset on disk",
+    "slow: takes more than a few seconds",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py39"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]

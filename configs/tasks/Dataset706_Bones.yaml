@@ -1,0 +1,23 @@
+# Stage 2 group: ribs and remaining bones (38 classes).
+#
+# Largest group and the most demanding: 24 individually-numbered ribs plus
+# costal cartilages, sternum, clavicles, scapulae, humeri, femora, hips, sacrum
+# and skull. Like the vertebrae, rib errors are usually miscounting rather than
+# bad boundaries, and ribs 11-12 are the usual offenders because they are short,
+# float free, and are often clipped by the field of view.
+#
+# Ribs are thin relative to a 1.5 mm voxel, so Dice is a harsh metric for them;
+# read NSD alongside it before concluding the model is failing.
+
+dataset_id: 706
+dataset_name: Bones
+label_set: bones
+
+spacing: [1.5, 1.5, 1.5]
+
+configuration: 3d_fullres
+trainer: nnUNetTrainer_segtrain
+plans_name: segtrainPlans_15mm
+
+epochs: 1000
+folds: [0]

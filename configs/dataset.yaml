@@ -1,0 +1,70 @@
+# Tracked template. Copy to configs/dataset.local.yaml (gitignored) and edit
+# paths for your machine; segtrain prefers the .local.yaml when it exists.
+#
+# Every path here can also be overridden by an environment variable or a CLI
+# flag, so the same repo drives a laptop, a rented GPU box, and a cluster
+# without any file edits. Precedence: CLI flag > env var > .local.yaml > this.
+
+# Root of the TotalSegmentator Zenodo dataset, read in place. Contains sXXXX/
+# subdirectories and meta.csv. Never written to.
+zenodo_root: /data/Totalsegmentator_dataset_v201
+
+# nnU-Net's three roots. These are the ones that get large -- see README for
+# sizing. Put them on the training machine's fastest large disk.
+nnunet_raw: /data/nnUNet_raw                   # env: nnUNet_raw
+nnunet_preprocessed: /data/nnUNet_preprocessed # env: nnUNet_preprocessed
+nnunet_results: /data/nnUNet_results           # env: nnUNet_results
+
+# Where run directories live (events.jsonl, previews/, logs). Small. This is the
+# directory the Slicer monitor connects to.
+runs_root: /data/runs
+
+# How to materialise images into nnUNet_raw/imagesTr:
+#   hardlink - 0 extra bytes, requires same filesystem as zenodo_root (default)
+#   symlink  - 0 extra bytes, works across filesystems, needs privilege on Windows
+#   copy     - always works, costs a full duplicate of the images (~21 GB)
+link_mode: hardlink
+
+# Number of worker processes for the mask-merging conversion. Conversion is
+# I/O-bound on decompressing 117 small masks per case, so oversubscribing cores
+# helps. 0 means "os.cpu_count()".
+convert_workers: 0
+
+# Which nnU-Net image reader to record in dataset.json. Do not change this
+# without reading the note in convert.py.
+#
+# nnU-Net's default is SimpleITK, and ITK rejects NIfTI files whose direction
+# cosines are not orthonormal to its tolerance. 136 of the 1228 volumes in this
+# dataset (11.1%) are obliquely acquired and, stored as float32, fall outside it.
+# With the default reader those cases fail to preprocess and 11% of the training
+# data disappears -- quietly, and unevenly across study types. nibabel reads all
+# 1228, and WithReorient also normalises orientation before training and restores
+# it when writing predictions.
+reader_writer: NibabelIOWithReorient
+
+# How to resolve a voxel claimed by two structures when merging the 117 binary
+# masks. The source masks genuinely overlap at anatomical interfaces -- colon
+# against small bowel, heart against inferior vena cava, L5 against sacrum --
+# because each structure was segmented independently. It is roughly 0.02% of
+# voxels, but a multilabel volume needs one owner per voxel.
+#
+#   smaller_wins  contested voxels go to the smaller structure in that case, so
+#                 thin structures are not eroded by bulky neighbours (default)
+#   label_order   higher label index wins; alphabetical, so anatomically
+#                 arbitrary. Provided only for comparison.
+overlap_policy: smaller_wins
+
+preview:
+  # Cases the preview daemon runs the live checkpoint on. These are real members
+  # of the official `val` split in meta.csv -- never training cases, or the
+  # previews would flatter the model. Chosen to span coverage: one near
+  # whole-body, one torso, one small/fast case that gives a quick first signal.
+  #   s0123  ct neck-thorax-abdomen-pelvis  (exercises the most classes)
+  #   s0650  ct thorax-abdomen-pelvis
+  #   s0000  ct pelvis                      (small, cheap preview)
+  cases: [s0123, s0650, s0000]
+  # Run a preview at most this often, in epochs. Inference on a whole volume
+  # costs real GPU time, so keep this well above 1.
+  every_n_epochs: 25
+  # Skip a preview if the previous one has not finished. Training always wins.
+  skip_if_busy: true

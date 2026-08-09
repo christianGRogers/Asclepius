@@ -1,0 +1,19 @@
+# Stage 2 group: heart and great vessels (18 classes).
+#
+# Most contrast-dependent group in the set. The dataset's study types include
+# both plain and angiographic acquisitions ("ct angiography ..."), and vessel
+# boundaries are only crisp in the latter. Expect a wider Dice spread here than
+# in any other group, driven by contrast phase rather than by model capacity.
+
+dataset_id: 704
+dataset_name: Cardiac
+label_set: cardiac
+
+spacing: [1.5, 1.5, 1.5]
+
+configuration: 3d_fullres
+trainer: nnUNetTrainer_segtrain
+plans_name: segtrainPlans_15mm
+
+epochs: 1000
+folds: [0]

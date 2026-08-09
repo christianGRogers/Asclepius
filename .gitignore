@@ -1,0 +1,37 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+.venv/
+venv/
+.pytest_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Never commit data or model weights. The nnU-Net roots and run directories can
+# reach hundreds of GB; see README for where they belong.
+nnUNet_raw/
+nnUNet_preprocessed/
+nnUNet_results/
+runs/
+*.nii
+*.nii.gz
+*.npz
+*.npy
+*.b2nd
+*.pth
+*.pkl
+
+# Local machine-specific config (paths, hosts). configs/dataset.yaml is the
+# tracked template; dataset.local.yaml is yours and is ignored.
+configs/dataset.local.yaml
+configs/*.local.yaml
+
+# Editors / OS
+.vscode/
+.idea/
+Thumbs.db
+.DS_Store

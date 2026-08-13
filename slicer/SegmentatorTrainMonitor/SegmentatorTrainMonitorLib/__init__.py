@@ -1,3 +1,15 @@
-from .RunSource import LocalRunSource, RemoteRunSource, RunSource, make_source
+from .RunSource import (
+    LocalRunSource,
+    ModalRunSource,
+    RunSource,
+    find_modal_cli,
+    make_source,
+)
 
-__all__ = ["RunSource", "LocalRunSource", "RemoteRunSource", "make_source"]
+__all__ = [
+    "RunSource",
+    "LocalRunSource",
+    "ModalRunSource",
+    "make_source",
+    "find_modal_cli",
+]

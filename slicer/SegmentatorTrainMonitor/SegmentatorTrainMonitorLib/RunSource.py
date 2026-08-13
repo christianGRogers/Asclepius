@@ -1,14 +1,14 @@
-"""Reading a run directory that may be local or on the training machine.
+"""Reading a run directory that may be local or on a Modal volume.
 
 The monitor needs exactly two things from a run: the event stream, and the
 occasional small preview file. Both are plain files, so a remote run is just a
-local run with a copy step in front -- which is why this abstraction is small
-and why nothing above it knows where training actually happened.
+local run with a copy step in front -- which is why this abstraction is small and
+why nothing above it knows where training actually happened.
 
-Remote access shells out to the OpenSSH client that ships with Windows 10+,
-macOS and Linux. A Python SSH library would have to be pip-installed into
-Slicer's bundled interpreter and would still not understand the user's
-``~/.ssh/config``, jump hosts or agent.
+Modal runs are reached by shelling out to the ``modal`` CLI rather than importing
+its SDK. The SDK would have to be pip-installed into Slicer's bundled Python,
+which this module deliberately avoids; the CLI already holds the user's
+authentication token and lives in the project venv.
 
 Stdlib only: this runs inside Slicer's Python 3.9.
 """
@@ -26,6 +26,7 @@ if os.name == "nt":
     _NO_WINDOW = getattr(subprocess, "CREATE_NO_WINDOW", 0)
 
 EVENTS_FILENAME = "events.jsonl"
+MODAL_SCHEME = "modal://"
 
 
 class RunSource:
@@ -67,62 +68,60 @@ class LocalRunSource(RunSource):
         return os.path.isdir(self.location)
 
 
-class RemoteRunSource(RunSource):
-    """A run directory on another machine, reached over SSH.
+class ModalRunSource(RunSource):
+    """A run directory on a Modal volume, read through the ``modal`` CLI.
 
-    Files are copied into a local cache directory. Preview segmentations are
-    cached by name and never re-fetched, since a given epoch's preview never
-    changes; events.jsonl is re-fetched every poll because it is the thing that
-    grows.
+    Files are cached locally. Preview segmentations are cached by name and never
+    re-fetched, since a given epoch's preview never changes; events.jsonl is
+    re-fetched every poll because it is the thing that grows.
     """
 
-    kind = "ssh"
+    kind = "modal"
 
-    def __init__(self, host, remote_dir, cache_dir=None, ssh_options=None,
-                 identity_file=None):
-        RunSource.__init__(self, "{}:{}".format(host, remote_dir))
-        self.host = host
-        self.remote_dir = remote_dir.rstrip("/")
-        self.cache_dir = cache_dir or tempfile.mkdtemp(prefix="segtrain-monitor-")
-        self.identity_file = identity_file
-        options = list(ssh_options or ["-o", "BatchMode=yes", "-o", "ConnectTimeout=10"])
-        if identity_file:
-            # IdentitiesOnly stops ssh offering every agent key first and hitting
-            # the server's MaxAuthTries before it reaches this one.
-            options += ["-i", str(identity_file), "-o", "IdentitiesOnly=yes"]
-        self.ssh_options = options
+    def __init__(self, volume, run_path, cache_dir=None, modal_cli=None):
+        RunSource.__init__(self, "{}{}/{}".format(MODAL_SCHEME, volume,
+                                                  run_path.lstrip("/")))
+        self.volume = volume
+        self.run_path = run_path.strip("/")
+        self.cache_dir = cache_dir or tempfile.mkdtemp(prefix="segtrain-modal-")
+        self.modal_cli = modal_cli or find_modal_cli()
         self.last_error = None
 
-    def _scp(self, remote_rel, local_path):
-        if shutil.which("scp") is None:
-            self.last_error = "no 'scp' on PATH"
+    def _get(self, remote_rel, local_path):
+        if not self.modal_cli:
+            self.last_error = (
+                "the modal CLI was not found. Install it in the project venv "
+                "(pip install modal) or set the CLI path in the module panel."
+            )
             return False
+
         local_dir = os.path.dirname(local_path)
         if local_dir and not os.path.isdir(local_dir):
             os.makedirs(local_dir)
-        remote = "{}:{}/{}".format(self.host, self.remote_dir, remote_rel)
+        remote = "{}/{}".format(self.run_path, remote_rel.lstrip("/"))
         try:
             result = subprocess.run(
-                ["scp", "-q"] + self.ssh_options + [remote, local_path],
+                [self.modal_cli, "volume", "get", "--force",
+                 self.volume, remote, local_path],
                 capture_output=True,
                 text=True,
-                timeout=120,
+                timeout=300,
                 creationflags=_NO_WINDOW,
             )
         except (OSError, subprocess.SubprocessError) as exc:
             self.last_error = str(exc)
             return False
         if result.returncode != 0:
-            self.last_error = (result.stderr or "").strip() or "scp failed"
+            self.last_error = (result.stderr or result.stdout or "").strip()[:300]
             return False
         self.last_error = None
-        return True
+        return os.path.isfile(local_path)
 
     def events_path(self):
         local = os.path.join(self.cache_dir, EVENTS_FILENAME)
-        if self._scp(EVENTS_FILENAME, local):
+        if self._get(EVENTS_FILENAME, local):
             return local
-        # Fall back to the last successful copy so a dropped connection shows
+        # Fall back to the last successful copy so a transient CLI failure shows
         # stale data rather than an empty, alarming-looking UI.
         return local if os.path.isfile(local) else None
 
@@ -130,41 +129,52 @@ class RemoteRunSource(RunSource):
         local = os.path.join(self.cache_dir, relative_path.replace("/", os.sep))
         if os.path.isfile(local):
             return local
-        return local if self._scp(relative_path, local) else None
+        return local if self._get(relative_path, local) else None
 
     def available(self):
-        if shutil.which("ssh") is None:
-            self.last_error = "no 'ssh' on PATH"
+        if not self.modal_cli:
+            self.last_error = "modal CLI not found"
             return False
-        try:
-            result = subprocess.run(
-                ["ssh"] + self.ssh_options + [self.host,
-                                              "test -d {}".format(self.remote_dir)],
-                capture_output=True,
-                text=True,
-                timeout=20,
-                creationflags=_NO_WINDOW,
-            )
-        except (OSError, subprocess.SubprocessError) as exc:
-            self.last_error = str(exc)
-            return False
-        if result.returncode != 0:
-            self.last_error = (result.stderr or "").strip() or "run directory not found"
-            return False
-        self.last_error = None
-        return True
+        return self.events_path() is not None
 
 
-def make_source(location, cache_dir=None, identity_file=None):
+def find_modal_cli():
+    """Locate the modal CLI.
+
+    Slicer's Python does not have the SDK, and Slicer's PATH is not the shell's,
+    so PATH alone is unreliable. Check the project venv next to this module
+    first, then fall back to PATH.
+    """
+    here = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    repo = os.path.dirname(os.path.dirname(here))
+    candidates = [
+        os.path.join(repo, ".venv", "Scripts", "modal.exe"),
+        os.path.join(repo, ".venv", "bin", "modal"),
+    ]
+    for candidate in candidates:
+        if os.path.isfile(candidate):
+            return candidate
+    return shutil.which("modal")
+
+
+def parse_modal_location(location):
+    """``modal://volume/path/to/run`` -> ``(volume, path)``."""
+    body = str(location)[len(MODAL_SCHEME):].strip("/")
+    if "/" not in body:
+        return body, ""
+    volume, path = body.split("/", 1)
+    return volume, path
+
+
+def make_source(location, cache_dir=None, modal_cli=None):
     """Build the right source for a location string.
 
-    ``user@host:/path/to/run`` is remote; anything else is a local path. The
-    check is deliberately narrow so Windows drive letters (``C:\\runs``) are not
-    mistaken for a host:path pair.
+    ``modal://volume/path`` is a Modal volume; anything else is a local path.
+    Windows drive letters (``C:\\runs``) are never mistaken for a scheme because
+    the check is an explicit prefix match.
     """
     text = str(location).strip()
-    if "@" in text and ":" in text.split("@", 1)[1]:
-        host, remote_dir = text.split(":", 1)
-        return RemoteRunSource(host, remote_dir, cache_dir=cache_dir,
-                               identity_file=identity_file)
+    if text.lower().startswith(MODAL_SCHEME):
+        volume, path = parse_modal_location(text)
+        return ModalRunSource(volume, path, cache_dir=cache_dir, modal_cli=modal_cli)
     return LocalRunSource(text)

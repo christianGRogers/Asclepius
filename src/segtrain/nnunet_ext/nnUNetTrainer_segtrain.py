@@ -23,6 +23,14 @@ with a fixed signature we cannot extend:
     Override iterations per epoch (nnU-Net default 250). Only for smoke tests --
     lowering it changes the effective schedule, since nnU-Net's polynomial LR
     decay is defined over epochs, not steps.
+``SEGTRAIN_MAX_SECONDS``
+    Wall-clock budget for this process. Once exceeded, save a checkpoint and stop
+    cleanly at the next epoch boundary. This is what lets a 36-hour run survive
+    Modal's 24-hour function ceiling: the driver relaunches with ``--c`` and
+    training continues from the checkpoint instead of restarting.
+``SEGTRAIN_SAVE_EVERY``
+    Epochs between periodic checkpoints (nnU-Net default 50). Lower it so an
+    *unclean* kill -- preemption, OOM -- costs minutes rather than hours.
 ``SEGTRAIN_TASK``
     Task name, recorded in the run_start event for display.
 """
@@ -30,6 +38,7 @@ with a fixed signature we cannot extend:
 from __future__ import annotations
 
 import os
+import time
 from typing import Optional
 
 import numpy as np
@@ -105,9 +114,27 @@ class nnUNetTrainer_segtrain(nnUNetTrainer):
             except ValueError:
                 pass
 
+        save_every = os.environ.get("SEGTRAIN_SAVE_EVERY")
+        if save_every:
+            try:
+                self.save_every = max(1, int(save_every))
+            except ValueError:
+                pass
+
         self._events: Optional[EventWriter] = None
         self._run_dir = os.environ.get("SEGTRAIN_RUN_DIR") or self.output_folder
         self._task_name = os.environ.get("SEGTRAIN_TASK", "")
+
+        # Wall-clock budget. Measured from process start, not from epoch 0, so a
+        # resumed run gets its own full budget.
+        self._deadline: Optional[float] = None
+        budget = os.environ.get("SEGTRAIN_MAX_SECONDS")
+        if budget:
+            try:
+                self._deadline = time.time() + float(budget)
+            except ValueError:
+                pass
+        self._paused = False
 
     @property
     def _is_main(self) -> bool:
@@ -208,6 +235,94 @@ class nnUNetTrainer_segtrain(nnUNetTrainer):
         finally:
             w.close()
             self._events = None
+
+    # -- pausing ------------------------------------------------------------
+
+    def _out_of_time(self) -> bool:
+        return self._deadline is not None and time.time() >= self._deadline
+
+    def run_training(self) -> None:
+        """nnU-Net's training loop, with a clean stop at a wall-clock deadline.
+
+        Overridden rather than hooked because neither hook can express this.
+        ``run_training`` builds its epoch range once with
+        ``range(self.current_epoch, self.num_epochs)``, so lowering ``num_epochs``
+        from ``on_epoch_end`` does nothing -- the loop keeps going.
+
+        The bigger reason is what ``on_train_end`` does: it writes
+        ``checkpoint_final.pth`` and then **deletes ``checkpoint_latest.pth``**.
+        That is correct at the end of training and catastrophic at a pause -- the
+        next chunk would find no checkpoint to resume from and restart at epoch 0,
+        silently. So a paused run must exit *without* ``on_train_end``, leaving
+        ``checkpoint_latest.pth`` in place for ``--c`` to pick up.
+        """
+        self.on_train_start()
+
+        for _epoch in range(self.current_epoch, self.num_epochs):
+            self.on_epoch_start()
+
+            self.on_train_epoch_start()
+            train_outputs = []
+            for _ in range(self.num_iterations_per_epoch):
+                train_outputs.append(self.train_step(next(self.dataloader_train)))
+            self.on_train_epoch_end(train_outputs)
+
+            with torch.no_grad():
+                self.on_validation_epoch_start()
+                val_outputs = []
+                for _ in range(self.num_val_iterations_per_epoch):
+                    val_outputs.append(self.validation_step(next(self.dataloader_val)))
+                self.on_validation_epoch_end(val_outputs)
+
+            self.on_epoch_end()
+
+            if self._out_of_time():
+                self._pause()
+                return
+
+        self.on_train_end()
+
+    def _pause(self) -> None:
+        """Checkpoint and stop, leaving the run resumable."""
+        self._paused = True
+        remaining = int(self.num_epochs) - int(self.current_epoch)
+        self.print_to_log_file(
+            f"[segtrain] wall-clock budget reached at epoch {self.current_epoch}; "
+            f"checkpointing and pausing with {remaining} epoch(s) left"
+        )
+
+        latest = os.path.join(self.output_folder, "checkpoint_latest.pth")
+        try:
+            self.save_checkpoint(latest)
+        except Exception as exc:
+            self.print_to_log_file(f"[segtrain] failed to save pause checkpoint: {exc}")
+
+        w = self._writer()
+        if w is not None:
+            try:
+                # Distinct from "completed" so the driver knows to relaunch rather
+                # than move on, and so the monitor does not show a finished run.
+                w.run_end(status="paused", epochs_completed=int(self.current_epoch),
+                          epochs_remaining=remaining, checkpoint=latest)
+            finally:
+                w.close()
+                self._events = None
+
+        self._shutdown_dataloaders()
+
+    def _shutdown_dataloaders(self) -> None:
+        """Stop augmentation worker processes so the container can exit.
+
+        nnU-Net does this inside on_train_end, which a pause deliberately skips.
+        Without it the background workers keep the process alive.
+        """
+        for loader in (self.dataloader_train, self.dataloader_val):
+            finish = getattr(loader, "_finish", None)
+            if callable(finish):
+                try:
+                    finish()
+                except Exception:
+                    pass
 
 
 class nnUNetTrainer_segtrain_5epochs(nnUNetTrainer_segtrain):

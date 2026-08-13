@@ -66,62 +66,50 @@ class PreviewConfig:
 
 
 @dataclass
-class RemoteConfig:
-    """The rented GPU instance: how to reach it and where things live on it."""
+class ModalConfig:
+    """Where training runs on Modal, and where things live inside the container.
 
-    host: str = ""
-    identity_file: Optional[str] = None
-    root: str = "/home/ubuntu/segtrain"
-    python: str = "python3"
-    # Lambda images ship a conda env with torch already matched to the driver;
-    # creating a fresh venv would mean re-downloading a CUDA torch build on the
-    # clock. `--system-site-packages` keeps that and layers our deps on top.
-    venv: str = "/home/ubuntu/segtrain/.venv"
-    ssh_options: list[str] = field(default_factory=list)
+    The volume is mounted at ``mount`` in every function, so the container's
+    nnU-Net roots are just paths under it. That keeps the Modal side using the
+    same ``segtrain`` commands as a local run -- only the roots differ.
+    """
+
+    volume: str = "segtrain-data"
+    app: str = "segtrain"
+    mount: str = "/data"
+    gpu: str = "A100-40GB"
+    cpu: float = 24.0
+    memory_mb: int = 65536
+    # Modal caps a function at 24 h. Stop the trainer with margin so it saves a
+    # checkpoint and exits cleanly instead of being killed mid-epoch.
+    train_timeout_s: int = 23 * 3600
+    max_train_seconds: int = 22 * 3600
+    # nnU-Net checkpoints every 50 epochs by default; at ~2 min/epoch an unclean
+    # kill would cost ~100 minutes. 25 halves that for a negligible I/O cost.
+    save_every: int = 25
 
     @property
-    def configured(self) -> bool:
-        return bool(self.host)
-
-    @property
-    def data_root(self) -> str:
-        return f"{self.root}/data"
+    def shared_images(self) -> str:
+        return f"{self.mount}/shared_images"
 
     @property
     def nnunet_raw(self) -> str:
-        return f"{self.data_root}/nnUNet_raw"
+        return f"{self.mount}/nnUNet_raw"
 
     @property
     def nnunet_preprocessed(self) -> str:
-        return f"{self.data_root}/nnUNet_preprocessed"
+        return f"{self.mount}/nnUNet_preprocessed"
 
     @property
     def nnunet_results(self) -> str:
-        return f"{self.data_root}/nnUNet_results"
+        return f"{self.mount}/nnUNet_results"
 
     @property
     def runs_root(self) -> str:
-        return f"{self.root}/runs"
+        return f"{self.mount}/runs"
 
-    @property
-    def repo(self) -> str:
-        return f"{self.root}/segmentator-train"
-
-    def ssh_args(self) -> list[str]:
-        """Base ssh/scp arguments: identity, batch mode, keepalives.
-
-        ServerAliveInterval matters here -- a training run is monitored for days
-        over a home connection, and without keepalives an idle control channel
-        gets dropped by NAT long before anything interesting happens.
-        """
-        args = ["-o", "BatchMode=yes", "-o", "ServerAliveInterval=30",
-                "-o", "ServerAliveCountMax=6"]
-        if self.identity_file:
-            # IdentitiesOnly stops ssh offering every key in the agent first and
-            # tripping the server's MaxAuthTries before reaching this one.
-            args += ["-i", str(self.identity_file), "-o", "IdentitiesOnly=yes"]
-        args += list(self.ssh_options)
-        return args
+    def run_dir(self, task_name: str, fold: int) -> str:
+        return f"{self.runs_root}/{task_name}__fold{fold}"
 
 
 @dataclass
@@ -138,7 +126,7 @@ class Config:
     overlap_policy: str = "smaller_wins"
     reader_writer: str = "NibabelIOWithReorient"
     preview: PreviewConfig = field(default_factory=PreviewConfig)
-    remote: RemoteConfig = field(default_factory=RemoteConfig)
+    modal: ModalConfig = field(default_factory=ModalConfig)
 
     @property
     def meta_csv(self) -> Path:
@@ -213,16 +201,17 @@ def load_config(
         skip_if_busy=bool(preview_raw.get("skip_if_busy", True)),
     )
 
-    remote_raw = base.get("remote") or {}
-    remote = RemoteConfig(
-        host=str(remote_raw.get("host") or ""),
-        identity_file=(str(remote_raw["identity_file"])
-                       if remote_raw.get("identity_file") else None),
-        root=str(remote_raw.get("root") or "/home/ubuntu/segtrain"),
-        python=str(remote_raw.get("python") or "python3"),
-        venv=str(remote_raw.get("venv")
-                 or f"{remote_raw.get('root') or '/home/ubuntu/segtrain'}/.venv"),
-        ssh_options=list(remote_raw.get("ssh_options") or []),
+    modal_raw = base.get("modal") or {}
+    modal_cfg = ModalConfig(
+        volume=str(modal_raw.get("volume") or "segtrain-data"),
+        app=str(modal_raw.get("app") or "segtrain"),
+        mount=str(modal_raw.get("mount") or "/data"),
+        gpu=str(modal_raw.get("gpu") or "A100-40GB"),
+        cpu=float(modal_raw.get("cpu", 24.0)),
+        memory_mb=int(modal_raw.get("memory_mb", 65536)),
+        train_timeout_s=int(modal_raw.get("train_timeout_s", 23 * 3600)),
+        max_train_seconds=int(modal_raw.get("max_train_seconds", 22 * 3600)),
+        save_every=int(modal_raw.get("save_every", 25)),
     )
 
     required = ["zenodo_root", "nnunet_raw", "nnunet_preprocessed", "nnunet_results", "runs_root"]
@@ -241,7 +230,7 @@ def load_config(
         overlap_policy=str(base.get("overlap_policy", "smaller_wins")),
         reader_writer=str(base.get("reader_writer", "NibabelIOWithReorient")),
         preview=preview,
-        remote=remote,
+        modal=modal_cfg,
     )
     cfg.validate()
     return cfg

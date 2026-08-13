@@ -49,7 +49,7 @@ except ImportError as exc:  # pragma: no cover - surfaced in the UI instead
     RunState = None
     _IMPORT_ERROR = str(exc)
 
-from SegmentatorTrainMonitorLib import make_source
+from SegmentatorTrainMonitorLib import find_modal_cli, make_source
 
 DEFAULT_POLL_SECONDS = 10
 
@@ -91,9 +91,9 @@ class SegmentatorTrainMonitorLogic(ScriptedLoadableModuleLogic):
 
     # -- connection ---------------------------------------------------------
 
-    def connect(self, location, identity_file=None):
+    def connect(self, location, modal_cli=None):
         """Point at a run directory. Returns True if its event stream is readable."""
-        self.source = make_source(location, identity_file=identity_file)
+        self.source = make_source(location, modal_cli=modal_cli)
         self.state = RunState()
         self.reader = None
         self.lastError = None
@@ -409,20 +409,22 @@ class SegmentatorTrainMonitorWidget(ScriptedLoadableModuleWidget):
         row.addWidget(browse)
         connLayout.addRow("Run directory:", row)
 
-        # Only needed for a remote run whose key is not already in the agent or
-        # at a default ~/.ssh path -- which is the normal case for a rented
-        # instance, where the provider hands you a one-off .pem.
-        self.keyEdit = qt.QLineEdit()
-        self.keyEdit.setPlaceholderText(r"C:\Users\you\.ssh\lambda.pem   (remote runs only)")
-        self.keyEdit.setToolTip(
-            "SSH private key for the training instance. Leave empty for local runs "
-            "or when your key is already loaded in the agent.")
-        keyBrowse = qt.QPushButton("Browse...")
-        keyBrowse.clicked.connect(self.onBrowseKey)
-        keyRow = qt.QHBoxLayout()
-        keyRow.addWidget(self.keyEdit)
-        keyRow.addWidget(keyBrowse)
-        connLayout.addRow("SSH key:", keyRow)
+        # Slicer's PATH is not the shell's, so the CLI is auto-detected in the
+        # project venv first. This field is only for overriding that.
+        self.modalCliEdit = qt.QLineEdit()
+        detected = find_modal_cli()
+        if detected:
+            self.modalCliEdit.text = detected
+        self.modalCliEdit.setPlaceholderText("auto-detected   (modal:// runs only)")
+        self.modalCliEdit.setToolTip(
+            "Path to the modal CLI, used to read runs from a Modal volume. "
+            "Ignored for local run directories.")
+        cliBrowse = qt.QPushButton("Browse...")
+        cliBrowse.clicked.connect(self.onBrowseModalCli)
+        cliRow = qt.QHBoxLayout()
+        cliRow.addWidget(self.modalCliEdit)
+        cliRow.addWidget(cliBrowse)
+        connLayout.addRow("modal CLI:", cliRow)
 
         self.connectButton = qt.QPushButton("Connect")
         self.connectButton.clicked.connect(self.onConnect)
@@ -510,17 +512,17 @@ class SegmentatorTrainMonitorWidget(ScriptedLoadableModuleWidget):
         if path:
             self.runDirEdit.text = path
 
-    def onBrowseKey(self):
-        path = qt.QFileDialog.getOpenFileName(None, "Select an SSH private key")
+    def onBrowseModalCli(self):
+        path = qt.QFileDialog.getOpenFileName(None, "Select the modal CLI")
         if path:
-            self.keyEdit.text = path
+            self.modalCliEdit.text = path
 
     def onConnect(self):
         location = self.runDirEdit.text.strip()
         if not location:
             return
-        key = self.keyEdit.text.strip() or None
-        if self.logic.connect(location, identity_file=key):
+        cli = self.modalCliEdit.text.strip() or None
+        if self.logic.connect(location, modal_cli=cli):
             self.statusLabel.text = "connected"
             self.timer.start(self.pollSpin.value * 1000)
             self.refreshUi()

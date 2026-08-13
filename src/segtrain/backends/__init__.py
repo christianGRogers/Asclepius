@@ -1,38 +1,27 @@
-"""Where a training run executes: this machine, a remote box, or a cluster queue.
+"""Where a training run executes.
 
-All three backends launch the *same* command and produce the *same*
-``events.jsonl`` in a run directory. Nothing downstream -- not the preview
-daemon, not the Slicer monitor -- knows or cares which was used. That is what
-lets the pipeline be developed on a laptop and run on rented hardware without a
-second code path.
+Only local execution lives here. Training on Modal is not a backend: Modal
+functions are launched through its SDK rather than by running a command
+somewhere, so that path lives in ``segtrain.modal_app``. What the two share is
+the output contract -- both produce the same ``events.jsonl`` in a run directory,
+so the preview daemon and the Slicer monitor neither know nor care which ran.
+
+Inside a Modal container, training is a *local* run; the Modal function calls
+straight through to this backend.
 """
 
 from __future__ import annotations
 
-from typing import Optional
-
 from .base import Backend, BackendError, Job
 from .local import LocalBackend
-from .slurm import SlurmBackend
-from .ssh import SshBackend
 
-__all__ = [
-    "Backend",
-    "BackendError",
-    "Job",
-    "LocalBackend",
-    "SshBackend",
-    "SlurmBackend",
-    "get_backend",
-]
+__all__ = ["Backend", "BackendError", "Job", "LocalBackend", "get_backend"]
 
 
-def get_backend(name: str, **kwargs) -> Backend:
-    backends = {"local": LocalBackend, "ssh": SshBackend, "slurm": SlurmBackend}
-    if name not in backends:
-        raise BackendError(f"unknown backend {name!r}; expected one of {sorted(backends)}")
-    return backends[name](**kwargs)
-
-
-def default_backend(remote: Optional[str] = None) -> Backend:
-    return SshBackend(remote) if remote else LocalBackend()
+def get_backend(name: str = "local", **kwargs) -> Backend:
+    if name != "local":
+        raise BackendError(
+            f"unknown backend {name!r}; only 'local' is supported. "
+            "For GPU training use `segtrain modal train`."
+        )
+    return LocalBackend(**kwargs)

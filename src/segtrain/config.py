@@ -66,50 +66,122 @@ class PreviewConfig:
 
 
 @dataclass
-class ModalConfig:
-    """Where training runs on Modal, and where things live inside the container.
+class SciNetConfig:
+    """How a run is submitted to SLURM on a SciNet cluster.
 
-    The volume is mounted at ``mount`` in every function, so the container's
-    nnU-Net roots are just paths under it. That keeps the Modal side using the
-    same ``segtrain`` commands as a local run -- only the roots differ.
+    Everything a job script needs, and nothing about *where* data lives -- the
+    nnU-Net roots are ordinary ``Config`` paths, because on a cluster they are
+    ordinary paths on a shared filesystem. That is the substantive difference
+    from a serverless backend: there is no volume to mount and no container
+    boundary, so the same ``segtrain`` commands run on the login node and on the
+    compute node against the same paths.
+
+    ``account`` is the only field with no sensible default. SLURM on the Alliance
+    clusters rejects a job with no ``--account`` when the user belongs to more
+    than one allocation, which every user with a RAC does.
     """
 
-    volume: str = "segtrain-data"
-    app: str = "segtrain"
-    mount: str = "/data"
-    gpu: str = "A100-40GB"
-    cpu: float = 24.0
-    memory_mb: int = 65536
-    # Modal caps a function at 24 h. Stop the trainer with margin so it saves a
-    # checkpoint and exits cleanly instead of being killed mid-epoch.
-    train_timeout_s: int = 23 * 3600
-    max_train_seconds: int = 22 * 3600
+    cluster: str = "trillium"
+    account: str = ""
+    # Both default to empty, and on Trillium they must stay that way: "Do not
+    # specify this partition explicitly; you must allow the scheduler to select
+    # the appropriate partition for your job."
+    gpu_partition: str = ""
+    cpu_partition: str = ""
+
+    # -- the GPU training job
+    nodes: int = 1
+    # Trillium schedules whole GPUs: 1 (a quarter node, 24 cores, ~188 GiB) or a
+    # multiple of 4. 2 and 3 are rejected, and MIG is unavailable. nnU-Net's
+    # default plan targets 8 GB of VRAM, so one 80 GB H100 is already far more
+    # than this workload can use -- asking for four would idle three of them.
+    gpus_per_node: int = 1
+    # 0 means "do not emit --cpus-per-task". None of the Trillium GPU examples
+    # request cores, because the cores come with the GPU; the job reads
+    # $SLURM_CPUS_ON_NODE instead of asserting a number.
+    cpus_per_task: int = 0
+    # Ignored on Trillium -- "Memory requests are ignored... Do not use --mem".
+    # Kept for other clusters.
+    mem: str = ""
+    # The cap is 24 h. Ten minutes under it leaves room for the job to be placed
+    # and to shut down without SLURM's own kill landing first.
+    walltime: str = "23:50:00"
+    # Subtracted from walltime to get the trainer's budget. Must cover module
+    # load, venv, staging, nnU-Net's unpacking, one final epoch (the deadline is
+    # only tested at epoch boundaries) and a ~400 MB checkpoint write.
+    pause_margin_seconds: int = 30 * 60
     # nnU-Net checkpoints every 50 epochs by default; at ~2 min/epoch an unclean
-    # kill would cost ~100 minutes. 25 halves that for a negligible I/O cost.
+    # kill -- preemption, node failure -- would cost ~100 minutes. 25 halves that
+    # for negligible I/O.
     save_every: int = 25
+    # How the chain is built. "array" is one `sbatch --array=1-N%1`; "dependency"
+    # is N jobs each waiting on the last. Both are submitted from a login node,
+    # because Trillium forbids a job from submitting anything. See segtrain.slurm.
+    chain_mode: str = "array"
+    # How many walltime blocks the chain may use. Also the ceiling: a run that
+    # never reports completion stops here rather than queueing forever. Trillium
+    # allows 500 submitted jobs, so this is our limit, not the scheduler's.
+    chain_max: int = 3
+    # nnU-Net sizes its augmentation pool from the machine's core count unless
+    # told otherwise, which on a shared node oversubscribes the allocation 4x.
+    # 0 means "read $SLURM_CPUS_ON_NODE at run time", which is what you want.
+    dataloader_workers: int = 0
+    # Copy the preprocessed task into $SLURM_TMPDIR and train from there.
+    # Off by default, and read segtrain.slurm before turning it on: Trillium
+    # nodes have no local disk, so $SLURM_TMPDIR is a RAM disk that spends the
+    # job's own memory. Reasonable for Stage 1 at 3 mm (~10 GB of ~188 GiB);
+    # not for the 1.5 mm groups (~75 GB, roughly doubled by unpacking).
+    stage_to_tmpdir: bool = False
 
-    @property
-    def shared_images(self) -> str:
-        return f"{self.mount}/shared_images"
+    # -- the CPU-only plan/preprocess job
+    prepare_walltime: str = "12:00:00"
+    prepare_cpus: int = 0
 
-    @property
-    def nnunet_raw(self) -> str:
-        return f"{self.mount}/nnUNet_raw"
+    # -- environment
+    # Loaded by every job. Keep cuda out of this list: Trillium's CPU nodes have
+    # no cuda module, and the prepare job would fail at `module load`.
+    modules: list[str] = field(default_factory=list)
+    # Loaded by GPU jobs only, on top of `modules`.
+    gpu_modules: list[str] = field(default_factory=list)
+    # Trillium-specific: build this in $HOME, which compute nodes can read.
+    # $SCRATCH "may get partially deleted", and $SLURM_TMPDIR is RAM.
+    venv: str = ""
+    setup_commands: list[str] = field(default_factory=list)
+    sbatch_extra: list[str] = field(default_factory=list)
 
-    @property
-    def nnunet_preprocessed(self) -> str:
-        return f"{self.mount}/nnUNet_preprocessed"
+    mail_user: str = ""
+    mail_type: str = "FAIL,TIME_LIMIT"
 
-    @property
-    def nnunet_results(self) -> str:
-        return f"{self.mount}/nnUNet_results"
+    # Only used to print a paste-ready address for the Slicer monitor.
+    login_host: str = ""
 
-    @property
-    def runs_root(self) -> str:
-        return f"{self.mount}/runs"
+    def validate(self) -> None:
+        from .slurm import CHAIN_MODES
 
-    def run_dir(self, task_name: str, fold: int) -> str:
-        return f"{self.runs_root}/{task_name}__fold{fold}"
+        if self.chain_mode not in CHAIN_MODES:
+            raise ConfigError(
+                f"scinet.chain_mode must be one of {CHAIN_MODES}, "
+                f"got {self.chain_mode!r}"
+            )
+        if self.chain_max < 1:
+            raise ConfigError(f"scinet.chain_max must be at least 1, got {self.chain_max}")
+        # Trillium rejects 2 or 3 GPUs outright, and the error comes back from
+        # sbatch as a generic configuration message that takes a while to place.
+        if self.cluster == "trillium" and self.gpus_per_node not in (1, 4, 8, 12, 16):
+            raise ConfigError(
+                f"scinet.gpus_per_node={self.gpus_per_node} is invalid on Trillium: "
+                "GPUs are scheduled whole, so ask for 1 (a quarter node) or a "
+                "multiple of 4. 2 and 3 are rejected."
+            )
+
+    def budget_seconds(self) -> int:
+        from .slurm import train_budget_seconds
+
+        return train_budget_seconds(self)
+
+    def run_address(self, run_dir: str) -> str:
+        """``user@host:/path`` for the Slicer monitor, or the bare path."""
+        return f"{self.login_host}:{run_dir}" if self.login_host else str(run_dir)
 
 
 @dataclass
@@ -126,7 +198,7 @@ class Config:
     overlap_policy: str = "smaller_wins"
     reader_writer: str = "NibabelIOWithReorient"
     preview: PreviewConfig = field(default_factory=PreviewConfig)
-    modal: ModalConfig = field(default_factory=ModalConfig)
+    scinet: SciNetConfig = field(default_factory=SciNetConfig)
 
     @property
     def meta_csv(self) -> Path:
@@ -160,6 +232,7 @@ class Config:
                 f"overlap_policy must be one of {VALID_OVERLAP_POLICIES}, "
                 f"got {self.overlap_policy!r}"
             )
+        self.scinet.validate()
         if require_data:
             if not self.zenodo_root.is_dir():
                 raise ConfigError(f"zenodo_root does not exist: {self.zenodo_root}")
@@ -201,17 +274,42 @@ def load_config(
         skip_if_busy=bool(preview_raw.get("skip_if_busy", True)),
     )
 
-    modal_raw = base.get("modal") or {}
-    modal_cfg = ModalConfig(
-        volume=str(modal_raw.get("volume") or "segtrain-data"),
-        app=str(modal_raw.get("app") or "segtrain"),
-        mount=str(modal_raw.get("mount") or "/data"),
-        gpu=str(modal_raw.get("gpu") or "A100-40GB"),
-        cpu=float(modal_raw.get("cpu", 24.0)),
-        memory_mb=int(modal_raw.get("memory_mb", 65536)),
-        train_timeout_s=int(modal_raw.get("train_timeout_s", 23 * 3600)),
-        max_train_seconds=int(modal_raw.get("max_train_seconds", 22 * 3600)),
-        save_every=int(modal_raw.get("save_every", 25)),
+    scinet_raw = base.get("scinet") or {}
+    defaults = SciNetConfig()
+    scinet_cfg = SciNetConfig(
+        cluster=str(scinet_raw.get("cluster") or defaults.cluster),
+        # SLURM_ACCOUNT is the variable sbatch itself reads, so honouring it here
+        # means `export SLURM_ACCOUNT=...` in a login profile is enough and the
+        # account never has to be written into a config file at all.
+        account=str(scinet_raw.get("account")
+                    or os.environ.get("SLURM_ACCOUNT", "")),
+        gpu_partition=str(scinet_raw.get("gpu_partition") or ""),
+        cpu_partition=str(scinet_raw.get("cpu_partition") or ""),
+        nodes=int(scinet_raw.get("nodes", defaults.nodes)),
+        gpus_per_node=int(scinet_raw.get("gpus_per_node", defaults.gpus_per_node)),
+        cpus_per_task=int(scinet_raw.get("cpus_per_task", defaults.cpus_per_task)),
+        mem=str(scinet_raw.get("mem") or ""),
+        walltime=str(scinet_raw.get("walltime") or defaults.walltime),
+        pause_margin_seconds=int(scinet_raw.get("pause_margin_seconds",
+                                               defaults.pause_margin_seconds)),
+        save_every=int(scinet_raw.get("save_every", defaults.save_every)),
+        chain_mode=str(scinet_raw.get("chain_mode") or defaults.chain_mode),
+        chain_max=int(scinet_raw.get("chain_max", defaults.chain_max)),
+        dataloader_workers=int(scinet_raw.get("dataloader_workers",
+                                              defaults.dataloader_workers)),
+        stage_to_tmpdir=bool(scinet_raw.get("stage_to_tmpdir",
+                                            defaults.stage_to_tmpdir)),
+        prepare_walltime=str(scinet_raw.get("prepare_walltime")
+                             or defaults.prepare_walltime),
+        prepare_cpus=int(scinet_raw.get("prepare_cpus", defaults.prepare_cpus)),
+        modules=[str(m) for m in (scinet_raw.get("modules") or [])],
+        gpu_modules=[str(m) for m in (scinet_raw.get("gpu_modules") or [])],
+        venv=str(scinet_raw.get("venv") or ""),
+        setup_commands=[str(c) for c in (scinet_raw.get("setup_commands") or [])],
+        sbatch_extra=[str(c) for c in (scinet_raw.get("sbatch_extra") or [])],
+        mail_user=str(scinet_raw.get("mail_user") or ""),
+        mail_type=str(scinet_raw.get("mail_type") or defaults.mail_type),
+        login_host=str(scinet_raw.get("login_host") or ""),
     )
 
     required = ["zenodo_root", "nnunet_raw", "nnunet_preprocessed", "nnunet_results", "runs_root"]
@@ -230,7 +328,7 @@ def load_config(
         overlap_policy=str(base.get("overlap_policy", "smaller_wins")),
         reader_writer=str(base.get("reader_writer", "NibabelIOWithReorient")),
         preview=preview,
-        modal=modal_cfg,
+        scinet=scinet_cfg,
     )
     cfg.validate()
     return cfg

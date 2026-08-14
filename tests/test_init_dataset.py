@@ -11,6 +11,7 @@ installed.
 """
 
 import importlib.util
+import sys
 import zipfile
 from pathlib import Path
 
@@ -23,6 +24,9 @@ def _load_script():
     spec = importlib.util.spec_from_file_location(
         "init_dataset", REPO / "scripts" / "init_dataset.py")
     module = importlib.util.module_from_spec(spec)
+    # Registered before exec: @dataclass resolves annotations through
+    # sys.modules[cls.__module__], which is None for an unregistered module.
+    sys.modules[spec.name] = module
     spec.loader.exec_module(module)
     return module
 
@@ -202,6 +206,155 @@ def test_human_readable_sizes(value, expected):
 ])
 def test_duration_formatting(value, expected):
     assert init_dataset.duration(value) == expected
+
+
+# -- IDC catalogue and queries -----------------------------------------------
+
+
+def test_catalogue_entries_are_internally_consistent():
+    for ds in init_dataset.IDC_CATALOGUE:
+        assert ds.truth in ("expert", "model", "mixed"), ds.id
+        assert ds.label_modality in ("SEG", "RTSTRUCT"), ds.id
+        # Exactly one selection mechanism: a collection holds its own CT, an
+        # analysis result only references CT held elsewhere.
+        assert bool(ds.collection) != bool(ds.analysis_result), ds.id
+        assert ds.cases > 0, ds.id
+        assert ds.labels, ds.id
+
+
+def test_catalogue_ids_are_unique():
+    ids = [d.id for d in init_dataset.IDC_CATALOGUE]
+    assert len(ids) == len(set(ids))
+    assert set(ids) == set(init_dataset.IDC_BY_ID)
+
+
+def test_expert_group_excludes_model_output_and_noncommercial():
+    expert = init_dataset.idc_group("expert")
+    assert expert, "the expert group should not be empty"
+    assert all(d.truth == "expert" for d in expert)
+    # nsclc_radiomics is CC BY-NC: a model trained on it inherits the restriction.
+    assert all("NC" not in d.license for d in expert)
+    assert "nsclc_radiomics" not in {d.id for d in expert}
+    assert "totalsegmentator_ct_segmentations" not in {d.id for d in expert}
+
+
+def test_all_group_includes_everything():
+    assert len(init_dataset.idc_group("all")) == len(init_dataset.IDC_CATALOGUE)
+
+
+def test_idc_group_rejects_an_unknown_name():
+    with pytest.raises(KeyError):
+        init_dataset.idc_group("no_such_dataset")
+
+
+def test_selection_sql_for_a_collection_asks_for_images_and_labels():
+    ds = init_dataset.IDC_BY_ID["lctsc"]
+    sql = init_dataset.idc_selection_sql(ds)
+    assert "collection_id = 'lctsc'" in sql
+    assert "Modality IN ('CT', 'RTSTRUCT')" in sql
+    assert "LIMIT" not in sql
+
+    limited = init_dataset.idc_selection_sql(ds, limit_cases=5)
+    assert "LIMIT 5" in limited
+
+
+def test_selection_sql_for_an_analysis_result_joins_back_to_source_ct():
+    ds = init_dataset.IDC_BY_ID["totalsegmentator_ct_segmentations"]
+    sql = init_dataset.idc_selection_sql(ds)
+    # The derived collection holds no CT of its own; it has to be reached
+    # through seg_index.segmented_SeriesInstanceUID.
+    assert "analysis_result_id = 'totalsegmentator_ct_segmentations'" in sql
+    assert "seg_index" in sql
+    assert "segmented_SeriesInstanceUID" in sql
+    assert "UNION ALL" in sql
+
+
+# -- S3 listing --------------------------------------------------------------
+
+
+LISTING = """<?xml version="1.0" encoding="UTF-8"?>
+<ListBucketResult xmlns="http://s3.amazonaws.com/doc/2006-03-01/">
+  <Name>idc-open-data</Name>
+  <IsTruncated>{truncated}</IsTruncated>
+  <NextContinuationToken>{token}</NextContinuationToken>
+  <Contents><Key>uuid/a.dcm</Key><Size>1024</Size></Contents>
+  <Contents><Key>uuid/b.dcm</Key><Size>2048</Size></Contents>
+  <Contents><Key>uuid/</Key><Size>0</Size></Contents>
+</ListBucketResult>"""
+
+
+def test_parse_s3_listing_returns_objects_and_no_token_when_complete():
+    objects, token = init_dataset.parse_s3_listing(
+        LISTING.format(truncated="false", token=""))
+    assert objects == [("uuid/a.dcm", 1024), ("uuid/b.dcm", 2048)]
+    assert token == ""
+
+
+def test_parse_s3_listing_ignores_directory_placeholders():
+    objects, _ = init_dataset.parse_s3_listing(
+        LISTING.format(truncated="false", token=""))
+    assert all(not key.endswith("/") for key, _ in objects)
+
+
+def test_parse_s3_listing_returns_the_continuation_token_when_truncated():
+    _, token = init_dataset.parse_s3_listing(
+        LISTING.format(truncated="true", token="abc/123+="))
+    assert token == "abc/123+="
+
+
+def test_parse_s3_listing_drops_a_stale_token_when_not_truncated():
+    # S3 can echo a token on the final page; following it would loop forever.
+    _, token = init_dataset.parse_s3_listing(
+        LISTING.format(truncated="false", token="abc123"))
+    assert token == ""
+
+
+# -- object fetching ---------------------------------------------------------
+
+
+def test_fetch_object_skips_a_file_already_at_the_right_size(tmp_path):
+    target = tmp_path / "a.dcm"
+    target.write_bytes(b"x" * 10)
+    size, fetched = init_dataset._fetch_object("key", target, 10)
+    assert (size, fetched) == (10, False)
+
+
+@pytest.mark.needs_network
+def test_catalogue_matches_the_live_idc_index():
+    """The catalogue's numbers are claims about IDC. Check them against IDC.
+
+    IDC ships a new version a few times a year and collections grow, so this
+    guards against the catalogue quietly going stale -- not against small drift.
+    """
+    collections = {d.collection: d for d in init_dataset.IDC_CATALOGUE if d.collection}
+    quoted = ", ".join(f"'{c}'" for c in collections)
+    try:
+        rows = init_dataset.idc_sql(
+            f"SELECT collection_id, Modality, COUNT(DISTINCT PatientID) pts, "
+            f"string_agg(DISTINCT license_short_name, '|') lic FROM index "
+            f"WHERE collection_id IN ({quoted}) GROUP BY 1, 2",
+            timeout=120)
+    except Exception as exc:  # network, DNS, API change
+        pytest.skip(f"IDC API unreachable: {exc}")
+
+    labels, images = {}, {}
+    for row in rows:
+        ds = collections[row["collection_id"]]
+        if row["Modality"] == ds.label_modality:
+            labels[ds.id] = (row["pts"], row["lic"])
+        elif row["Modality"] == "CT":
+            images[ds.id] = row["lic"]
+
+    assert set(labels) == {d.id for d in collections.values()}, "a collection disappeared"
+    for ds_id, (patients, label_license) in labels.items():
+        ds = init_dataset.IDC_BY_ID[ds_id]
+        assert abs(patients - ds.cases) <= max(5, ds.cases * 0.1), (
+            f"{ds_id}: catalogue says {ds.cases} cases, IDC says {patients}")
+        assert ds.license in images[ds_id], (
+            f"{ds_id}: catalogue says images are {ds.license}, IDC says {images[ds_id]}")
+        assert (ds.label_license or ds.license) in label_license, (
+            f"{ds_id}: catalogue says labels are {ds.label_license or ds.license}, "
+            f"IDC says {label_license}")
 
 
 def test_published_archive_constants_are_intact():

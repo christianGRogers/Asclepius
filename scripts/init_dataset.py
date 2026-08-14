@@ -28,20 +28,43 @@ container whose image does not necessarily have the package installed.
 
 With no `--dest` it reads `zenodo_root` from the pipeline config, so on a
 configured machine `python scripts/init_dataset.py` is the whole command.
+
+It also fetches labelled CT from the NCI Imaging Data Commons:
+
+    python scripts/init_dataset.py --list-idc          # what is there
+    python scripts/init_dataset.py --idc expert        # every human-drawn set
+    python scripts/init_dataset.py --idc pediatric_ct_seg --limit-cases 25
+
+Be clear about what that second source is. IDC's largest CT segmentation
+holding by far is TotalSegmentator's *own output* over 26k NLST chest scans:
+126k series, ~22 TB, and pseudo-labels. Training on it distils the model this
+pipeline is reproducing rather than improving on it. The human-drawn sets are
+two orders of magnitude smaller and worth far more per case -- `pediatric_ct_seg`
+in particular covers a population the TotalSegmentator training set does not.
+
+And IDC ships DICOM. The pipeline reads NIfTI plus one mask per structure, so
+what comes down still needs converting and its structure names mapping onto the
+117. That converter does not exist in this repo yet; `--idc` gets you the data
+and the provenance, not a drop-in dataset.
 """
 
 from __future__ import annotations
 
 import argparse
+import concurrent.futures
 import hashlib
+import json
 import re
 import shutil
 import sys
 import time
+import xml.etree.ElementTree as ET
 import zipfile
+from dataclasses import dataclass
 from http.client import HTTPException
 from pathlib import Path
 from urllib.error import HTTPError, URLError
+from urllib.parse import quote
 from urllib.request import Request, urlopen
 
 REPO = Path(__file__).resolve().parents[1]
@@ -377,6 +400,488 @@ def extract(zip_path: Path, dest: Path) -> int:
     return written
 
 
+# -- NCI Imaging Data Commons ------------------------------------------------
+#
+# IDC (imaging.datacommons.cancer.gov) publishes public cancer imaging with its
+# metadata queryable as SQL over a REST endpoint, and its pixel data in
+# anonymously readable S3/GCS buckets. Both are reachable with urllib, so this
+# stays dependency-free: no idc-index, no boto3, no credentials.
+#
+# What IDC adds to a TotalSegmentator-style model is *not* more of the same.
+# Read the `truth` field on each entry below before training on any of it:
+#
+#   expert -- humans drew these. Real ground truth, small, and worth the most
+#             per case. `pediatric_ct_seg` is the standout: paediatric anatomy
+#             is exactly what the adult-heavy TotalSegmentator dataset lacks.
+#   model  -- a model drew these. `totalsegmentator_ct_segmentations` is
+#             TotalSegmentator's own output over 26k NLST chest CTs. Training on
+#             it distils the model this pipeline is trying to reproduce; it
+#             cannot exceed it. Useful for pretraining or semi-supervised work,
+#             misleading as "labelled data".
+#   mixed  -- model output with a fraction human-reviewed.
+
+IDC_API = "https://api.imaging.datacommons.cancer.gov/v3/sql"
+IDC_BUCKET_URL = "https://idc-open-data.s3.amazonaws.com"
+IDC_PAGE = 5000
+IDC_VERSION_URL = "https://api.imaging.datacommons.cancer.gov/v3/version"
+
+
+@dataclass(frozen=True)
+class IDCDataset:
+    """One downloadable slice of IDC, with what it actually contains."""
+
+    id: str
+    labels: str
+    truth: str  # expert | model | mixed
+    cases: int
+    ct_gb: float
+    label_gb: float
+    license: str
+    label_modality: str  # SEG or RTSTRUCT
+    collection: str = ""
+    analysis_result: str = ""
+    note: str = ""
+    # IDC attaches licences to series, not collections, so images and labels can
+    # differ -- pancreas_ct's CT is CC BY 3.0 while its segmentations are 4.0.
+    # Empty means "same as the images".
+    label_license: str = ""
+
+    @property
+    def total_gb(self) -> float:
+        return self.ct_gb + self.label_gb
+
+    @property
+    def licenses(self) -> str:
+        if self.label_license and self.label_license != self.license:
+            return f"{self.license} + {self.label_license}"
+        return self.license
+
+    @property
+    def commercial_ok(self) -> bool:
+        """Using the data means honouring both licences, so both must allow it."""
+        return "NC" not in self.license and "NC" not in (self.label_license or "")
+
+
+# Counts, sizes and licences below were read from the IDC index (v24) rather than
+# from documentation, and are checked by tests against the live API when it is
+# reachable. Sizes are the DICOM on the wire.
+IDC_CATALOGUE = (
+    IDCDataset(
+        id="pediatric_ct_seg",
+        labels=("29 organs incl. liver, spleen, kidneys, pancreas, duodenum, adrenals, "
+                "gallbladder, stomach, bowel, lungs, heart, oesophagus, bladder, femoral heads"),
+        truth="expert",
+        cases=359,
+        ct_gb=56.6,
+        label_gb=7.5,
+        license="CC BY 4.0",
+        label_modality="RTSTRUCT",
+        collection="pediatric_ct_seg",
+        note="Paediatric CT. The single most valuable entry here: a population the "
+             "TotalSegmentator training set barely covers, contoured by humans.",
+    ),
+    IDCDataset(
+        id="mediastinal_lymph_node_seg",
+        labels="mediastinal lymph nodes",
+        truth="expert",
+        cases=513,
+        ct_gb=34.1,
+        label_gb=0.3,
+        license="CC BY 4.0",
+        label_modality="SEG",
+        collection="mediastinal_lymph_node_seg",
+        note="Not one of the 117 classes -- useful only if you extend the label set.",
+    ),
+    IDCDataset(
+        id="c4kc_kits",
+        labels="kidney and kidney tumour",
+        truth="expert",
+        cases=210,
+        ct_gb=36.8,
+        label_gb=3.0,
+        license="CC BY 3.0",
+        label_modality="SEG",
+        collection="c4kc_kits",
+        note="KiTS19. Contrast-enhanced abdominal CT; kidney labels include tumour, "
+             "which the TotalSegmentator kidney class does not.",
+    ),
+    IDCDataset(
+        id="prostate_anatomical_edge_cases",
+        labels="prostate, bladder, rectum, left and right femoral head",
+        truth="expert",
+        cases=131,
+        ct_gb=16.6,
+        label_gb=0.1,
+        license="CC BY 4.0",
+        label_modality="RTSTRUCT",
+        collection="prostate_anatomical_edge_cases",
+        note="Chosen for anatomy that is hard to contour -- exactly the cases a model "
+             "trained on routine scans gets wrong.",
+    ),
+    IDCDataset(
+        id="pancreas_ct",
+        labels="pancreas",
+        truth="expert",
+        cases=80,
+        ct_gb=9.7,
+        label_gb=0.2,
+        license="CC BY 3.0",
+        label_modality="SEG",
+        collection="pancreas_ct",
+        note="The NIH Clinical Center pancreas set. Small, and the reference standard "
+             "for a structure models routinely do badly on.",
+        label_license="CC BY 4.0",
+    ),
+    IDCDataset(
+        id="lctsc",
+        labels="oesophagus, heart, left lung, right lung, spinal cord",
+        truth="expert",
+        cases=60,
+        ct_gb=4.9,
+        label_gb=0.1,
+        license="CC BY 3.0",
+        label_modality="RTSTRUCT",
+        collection="lctsc",
+        note="Lung CT Segmentation Challenge -- radiotherapy organs at risk, so the "
+             "contours are clinical-grade.",
+    ),
+    IDCDataset(
+        id="spine_mets_ct_seg",
+        labels="vertebrae and spinal metastases",
+        truth="expert",
+        cases=55,
+        ct_gb=18.3,
+        label_gb=1.6,
+        license="CC BY 4.0",
+        label_modality="SEG",
+        collection="spine_mets_ct_seg",
+        note="Diseased vertebrae. Vertebra labelling degrades on pathological spines.",
+    ),
+    IDCDataset(
+        id="adrenal_acc_ki67_seg",
+        labels="adrenal gland (adrenocortical carcinoma)",
+        truth="expert",
+        cases=53,
+        ct_gb=9.4,
+        label_gb=0.3,
+        license="CC BY 4.0",
+        label_modality="SEG",
+        collection="adrenal_acc_ki67_seg",
+    ),
+    IDCDataset(
+        id="nsclc_radiomics",
+        labels="left lung, right lung, oesophagus, heart, spinal cord, GTV",
+        truth="expert",
+        cases=422,
+        ct_gb=26.3,
+        label_gb=0.6,
+        license="CC BY-NC 3.0",
+        label_modality="RTSTRUCT",
+        collection="nsclc_radiomics",
+        note="NON-COMMERCIAL licence. A model trained on it inherits that restriction, "
+             "so it is excluded unless you pass --allow-noncommercial.",
+    ),
+    IDCDataset(
+        id="totalsegmentator_ct_segmentations",
+        labels="~77 structures per series, TotalSegmentator's own label vocabulary",
+        truth="model",
+        cases=26194,
+        ct_gb=8666.8,
+        label_gb=13854.6,
+        license="CC BY 4.0",
+        label_modality="SEG",
+        analysis_result="totalsegmentator_ct_segmentations",
+        note="126,051 series over 26,194 NLST patients -- ~22 TB whole, so use "
+             "--limit-cases. Low-dose non-contrast CHEST screening CT only: no "
+             "abdominal or pelvic coverage, and the labels are model output.",
+    ),
+    IDCDataset(
+        id="bamf_aimi_annotations",
+        labels="kidney, liver, lung, prostate, breast and associated tumours",
+        truth="mixed",
+        cases=4226,
+        ct_gb=0.0,
+        label_gb=0.0,
+        license="CC BY 4.0",
+        label_modality="SEG",
+        analysis_result="bamf_aimi_annotations",
+        note="nnU-Net output with ~10% reviewed and corrected by a radiologist. Spans "
+             "22 collections and several modalities; sizes vary with what you select.",
+    ),
+)
+
+IDC_BY_ID = {d.id: d for d in IDC_CATALOGUE}
+
+
+def idc_sql(sql: str, timeout: int = 300) -> list[dict]:
+    """Run one SQL query against the IDC REST API."""
+    body = json.dumps({"sql": sql}).encode()
+    req = Request(IDC_API, data=body,
+                  headers={"Content-Type": "application/json", "User-Agent": USER_AGENT})
+    with urlopen(req, timeout=timeout) as resp:
+        payload = json.loads(resp.read().decode())
+    if "rows" not in payload:
+        raise RuntimeError(f"unexpected IDC response: {str(payload)[:300]}")
+    return payload["rows"]
+
+
+def idc_query_all(base_sql: str) -> list[dict]:
+    """Page through a query. The API caps a single response at 5000 rows."""
+    rows: list[dict] = []
+    while True:
+        page = idc_sql(f"SELECT * FROM ({base_sql}) ORDER BY patient, modality, uuid "
+                       f"LIMIT {IDC_PAGE} OFFSET {len(rows)}")
+        rows.extend(page)
+        if len(page) < IDC_PAGE:
+            return rows
+
+
+def idc_selection_sql(ds: IDCDataset, limit_cases: int = 0) -> str:
+    """SQL selecting every series to download for `ds`, images and labels.
+
+    Two shapes, because IDC models the two differently: a *collection* is an
+    original submission and holds its own CT, while an *analysis result* is
+    derived and only references CT that lives elsewhere.
+    """
+    if ds.collection:
+        cases = ""
+        if limit_cases:
+            cases = (f" AND PatientID IN (SELECT PatientID FROM index "
+                     f"WHERE collection_id = '{ds.collection}' "
+                     f"AND Modality = '{ds.label_modality}' "
+                     f"GROUP BY 1 ORDER BY 1 LIMIT {limit_cases})")
+        return (f"SELECT crdc_series_uuid AS uuid, Modality AS modality, "
+                f"PatientID AS patient, series_size_MB AS mb FROM index "
+                f"WHERE collection_id = '{ds.collection}' "
+                f"AND Modality IN ('CT', '{ds.label_modality}'){cases}")
+
+    cases = ""
+    if limit_cases:
+        cases = (f" AND PatientID IN (SELECT PatientID FROM index "
+                 f"WHERE analysis_result_id = '{ds.analysis_result}' "
+                 f"AND Modality = '{ds.label_modality}' "
+                 f"GROUP BY 1 ORDER BY 1 LIMIT {limit_cases})")
+    return (
+        f"WITH labels AS (SELECT SeriesInstanceUID, crdc_series_uuid, PatientID, "
+        f"series_size_MB FROM index WHERE analysis_result_id = '{ds.analysis_result}' "
+        f"AND Modality = '{ds.label_modality}'{cases}) "
+        f"SELECT crdc_series_uuid AS uuid, '{ds.label_modality}' AS modality, "
+        f"PatientID AS patient, series_size_MB AS mb FROM labels "
+        f"UNION ALL "
+        f"SELECT src.crdc_series_uuid, 'CT', src.PatientID, src.series_size_MB "
+        f"FROM seg_index s JOIN labels ON labels.SeriesInstanceUID = s.SeriesInstanceUID "
+        f"JOIN index src ON src.SeriesInstanceUID = s.segmented_SeriesInstanceUID"
+    )
+
+
+S3_NS = "{http://s3.amazonaws.com/doc/2006-03-01/}"
+
+
+def parse_s3_listing(xml_text: str) -> tuple[list[tuple[str, int]], str]:
+    """(key, size) pairs and the continuation token from an S3 ListObjectsV2 body."""
+    root = ET.fromstring(xml_text)
+    objects = []
+    for contents in root.findall(f"{S3_NS}Contents"):
+        key = contents.findtext(f"{S3_NS}Key") or ""
+        size = int(contents.findtext(f"{S3_NS}Size") or 0)
+        if key and not key.endswith("/"):
+            objects.append((key, size))
+    truncated = (root.findtext(f"{S3_NS}IsTruncated") or "false").lower() == "true"
+    token = root.findtext(f"{S3_NS}NextContinuationToken") or ""
+    return objects, (token if truncated else "")
+
+
+def idc_series_objects(series_uuid: str) -> list[tuple[str, int]]:
+    """Every object making up one DICOM series. Anonymous; the bucket is public."""
+    objects: list[tuple[str, int]] = []
+    token = ""
+    while True:
+        url = (f"{IDC_BUCKET_URL}/?list-type=2&prefix={quote(series_uuid)}/"
+               + (f"&continuation-token={quote(token, safe='')}" if token else ""))
+        req = Request(url, headers={"User-Agent": USER_AGENT})
+        with urlopen(req, timeout=120) as resp:
+            page, token = parse_s3_listing(resp.read().decode())
+        objects.extend(page)
+        if not token:
+            return objects
+
+
+def _fetch_object(key: str, target: Path, size: int,
+                  retries: int = 3) -> tuple[int, bool]:
+    """Download one object unless it is already there at the right size.
+
+    Returns (bytes, whether it was actually fetched) so a resumed run still
+    reports progress across files it skipped.
+    """
+    if target.exists() and target.stat().st_size == size:
+        return size, False
+    target.parent.mkdir(parents=True, exist_ok=True)
+    tmp = target.with_name(target.name + ".part")
+    for attempt in range(retries + 1):
+        try:
+            req = Request(f"{IDC_BUCKET_URL}/{quote(key)}",
+                          headers={"User-Agent": USER_AGENT})
+            with urlopen(req, timeout=300) as resp, open(tmp, "wb") as fh:
+                shutil.copyfileobj(resp, fh, 2**20)
+            tmp.replace(target)
+            return size, True
+        except (URLError, OSError, HTTPException):
+            if attempt == retries:
+                raise
+            time.sleep(2 ** attempt)
+    return size, True
+
+
+def idc_download(ds: IDCDataset, root: Path, limit_cases: int = 0,
+                 workers: int = 8, dry_run: bool = False) -> int:
+    """Fetch one catalogue entry into `root/<id>/<patient>/<modality>/<series>/`.
+
+    Laid out by patient so an image series and the labels drawn on it sit
+    together -- IDC's own file names are opaque UUIDs, and the association is the
+    only thing that makes the download usable later.
+    """
+    print(f"\n=== {ds.id} ===")
+    print(f"  labels   {ds.labels}")
+    print(f"  truth    {ds.truth}")
+    print(f"  licence  {ds.licenses}")
+    if ds.note:
+        print(f"  note     {ds.note}")
+
+    print("  querying the IDC index ...", flush=True)
+    rows = idc_query_all(idc_selection_sql(ds, limit_cases))
+    if not rows:
+        print("  nothing matched -- has the collection been renamed?", file=sys.stderr)
+        return 0
+
+    patients = {r["patient"] for r in rows}
+    approx = sum(float(r["mb"] or 0) for r in rows) / 1024
+    n_lab = sum(1 for r in rows if r["modality"] != "CT")
+    print(f"  {len(rows)} series ({len(rows) - n_lab} CT, {n_lab} {ds.label_modality}) "
+          f"over {len(patients)} patients, about {approx:.1f} GB")
+
+    dest = root / ds.id
+    if dry_run:
+        print(f"  [dry-run] would download into {dest}")
+        return 0
+
+    dest.mkdir(parents=True, exist_ok=True)
+    (dest / "ATTRIBUTION.txt").write_text(
+        f"{ds.id}\nSource: NCI Imaging Data Commons (https://imaging.datacommons.cancer.gov/)\n"
+        f"Licence: {ds.license}\nLabels: {ds.labels}\nProvenance: {ds.truth}\n"
+        f"Retrieved: {time.strftime('%Y-%m-%d')}\n\n"
+        "IDC requires attribution. Cite the collection's own DOI as well as IDC.\n",
+        encoding="utf-8")
+    with open(dest / "series.tsv", "w", encoding="utf-8") as fh:
+        fh.write("patient\tmodality\tseries_uuid\n")
+        for r in sorted(rows, key=lambda r: (r["patient"], r["modality"])):
+            fh.write(f"{r['patient']}\t{r['modality']}\t{r['uuid']}\n")
+
+    # Listing is one request per series and downloads are many small files, so
+    # both are threaded. The bottleneck is round trips, not bandwidth.
+    print("  listing objects ...", flush=True)
+    jobs: list[tuple[str, Path, int]] = []
+    with concurrent.futures.ThreadPoolExecutor(max_workers=workers) as pool:
+        listings = pool.map(idc_series_objects, [r["uuid"] for r in rows])
+        for row, objects in zip(rows, listings):
+            series_dir = dest / str(row["patient"]) / str(row["modality"]) / str(row["uuid"])
+            for key, size in objects:
+                jobs.append((key, series_dir / key.rsplit("/", 1)[-1], size))
+
+    total = sum(size for _, _, size in jobs)
+    print(f"  {len(jobs)} files, {human(total)}")
+    progress = Progress(total, "idc")
+    fetched = 0
+    with concurrent.futures.ThreadPoolExecutor(max_workers=workers) as pool:
+        futures = [pool.submit(_fetch_object, key, target, size)
+                   for key, target, size in jobs]
+        for future in concurrent.futures.as_completed(futures):
+            size, was_fetched = future.result()
+            progress.advance(size)
+            fetched += int(was_fetched)
+    progress.close()
+    skipped = len(jobs) - fetched
+    print(f"  {fetched} file(s) downloaded"
+          + (f", {skipped} already present" if skipped else ""))
+    print(f"  -> {dest}")
+    return fetched
+
+
+def print_idc_catalogue() -> None:
+    print("Labelled CT available from the NCI Imaging Data Commons (IDC v24).\n")
+    print(f"{'id':<34} {'truth':<7} {'cases':>6} {'GB':>8}  licence")
+    print("-" * 78)
+    for ds in IDC_CATALOGUE:
+        size = f"{ds.total_gb:.1f}" if ds.total_gb else "varies"
+        print(f"{ds.id:<34} {ds.truth:<7} {ds.cases:>6} {size:>8}  {ds.licenses}")
+    print("\nGroups: 'expert' (human-drawn, commercial-safe), 'all'.")
+    print("\nDetail:")
+    for ds in IDC_CATALOGUE:
+        print(f"\n  {ds.id}")
+        print(f"    labels: {ds.labels}")
+        if ds.note:
+            print(f"    note:   {ds.note}")
+    print("\nEverything here is DICOM. See the notes in this script's docstring for "
+          "what still has to happen before it is training data.")
+
+
+def idc_group(name: str) -> list[IDCDataset]:
+    if name == "expert":
+        return [d for d in IDC_CATALOGUE if d.truth == "expert" and d.commercial_ok]
+    if name == "all":
+        return list(IDC_CATALOGUE)
+    if name in IDC_BY_ID:
+        return [IDC_BY_ID[name]]
+    raise KeyError(name)
+
+
+def run_idc(args) -> int:
+    root = (args.idc_dest or Path("idc")).expanduser()
+
+    selected: list[IDCDataset] = []
+    for name in args.idc:
+        try:
+            for ds in idc_group(name):
+                if ds not in selected:
+                    selected.append(ds)
+        except KeyError:
+            print(f"error: unknown IDC dataset {name!r}. --list-idc shows the options.",
+                  file=sys.stderr)
+            return 2
+
+    blocked = [d for d in selected if not d.commercial_ok and not args.allow_noncommercial]
+    for ds in blocked:
+        print(f"skipping {ds.id}: {ds.licenses} forbids commercial use, and a model "
+              f"trained on it inherits that. --allow-noncommercial to include it.")
+    selected = [d for d in selected if d not in blocked]
+    if not selected:
+        print("nothing selected")
+        return 1
+
+    try:
+        with urlopen(Request(IDC_VERSION_URL, headers={"User-Agent": USER_AGENT}),
+                     timeout=60) as resp:
+            version = json.loads(resp.read().decode()).get("idc_version", "?")
+        print(f"IDC data version {version}")
+    except Exception as exc:
+        print(f"warning: could not reach the IDC API ({exc})", file=sys.stderr)
+        return 1
+
+    planned = sum(d.total_gb for d in selected)
+    print(f"selected {len(selected)} dataset(s), roughly {planned:.0f} GB before limits")
+
+    for ds in selected:
+        idc_download(ds, root, limit_cases=args.limit_cases,
+                     workers=args.workers, dry_run=args.dry_run)
+
+    if not args.dry_run:
+        print(f"\nDICOM is in {root}. It is not yet training data: the pipeline reads "
+              "NIfTI\nimages with one mask per structure, so these series still need "
+              "converting\n(DICOM -> NIfTI, SEG/RTSTRUCT -> per-structure masks) and "
+              "their structure names\nmapped onto the 117. No converter ships with this "
+              "repo yet.")
+    return 0
+
+
 # -- main --------------------------------------------------------------------
 
 
@@ -401,9 +906,36 @@ def main() -> int:
                     help="re-download and re-extract even if the dataset looks complete")
     ap.add_argument("--no-space-check", action="store_true",
                     help="proceed even if the filesystem looks too small")
+
+    idc = ap.add_argument_group(
+        "NCI Imaging Data Commons",
+        "Additional labelled CT, on top of the TotalSegmentator dataset.")
+    idc.add_argument("--list-idc", action="store_true",
+                     help="show what labelled CT is available from IDC and exit")
+    idc.add_argument("--idc", nargs="+", metavar="ID",
+                     help="fetch these IDC datasets ('expert' for all human-drawn ones)")
+    idc.add_argument("--idc-dest", type=Path,
+                     help="where IDC data goes (default: <dest>/../idc)")
+    idc.add_argument("--limit-cases", type=int, default=0,
+                     help="download only the first N patients of each dataset")
+    idc.add_argument("--workers", type=int, default=8,
+                     help="parallel downloads (default 8)")
+    idc.add_argument("--allow-noncommercial", action="store_true",
+                     help="include CC BY-NC datasets; the trained weights inherit that")
+    idc.add_argument("--dry-run", action="store_true",
+                     help="report what would be fetched from IDC, download nothing")
     args = ap.parse_args()
 
     dest: Path | None = args.dest or default_dest()
+
+    if args.list_idc:
+        print_idc_catalogue()
+        return 0
+    if args.idc:
+        if args.idc_dest is None:
+            args.idc_dest = (dest.parent / "idc") if dest else Path("idc")
+        return run_idc(args)
+
     if dest is None:
         print("error: no --dest given and zenodo_root could not be read from the config.\n"
               "       Pass --dest /path/to/Totalsegmentator_dataset_v201", file=sys.stderr)

@@ -51,6 +51,7 @@ segtrain = ["py.typed"]
 testpaths = ["tests"]
 markers = [
     "needs_data: requires the TotalSegmentator dataset on disk",
+    "needs_network: queries a public API; skips when it is unreachable",
     "slow: takes more than a few seconds",
 ]
 

@@ -103,6 +103,56 @@ that dies at 19 GB resumes instead of starting over. This replaces
 `segtrain modal upload`, which is now only worth using when the dataset is
 already converted on this machine.
 
+### More labelled CT, from the NCI Imaging Data Commons
+
+[IDC](https://imaging.datacommons.cancer.gov/) publishes public cancer imaging
+with a SQL-queryable index and anonymously readable buckets. The same script
+fetches from it — no `idc-index`, no credentials, still stdlib only:
+
+```bash
+python scripts/init_dataset.py --list-idc                    # what is there
+python scripts/init_dataset.py --idc expert                  # every human-drawn set
+python scripts/init_dataset.py --idc pediatric_ct_seg --limit-cases 25
+```
+
+| | labels | provenance | cases | size |
+|---|---|---|---|---|
+| `pediatric_ct_seg` | 29 organs | expert | 359 | 64 GB |
+| `nsclc_radiomics` | lungs, oesophagus, heart, cord | expert | 422 | 27 GB (**CC BY-NC**) |
+| `mediastinal_lymph_node_seg` | lymph nodes | expert | 513 | 34 GB |
+| `c4kc_kits` | kidney + tumour | expert | 210 | 40 GB |
+| `prostate_anatomical_edge_cases` | prostate, bladder, rectum, femoral heads | expert | 131 | 17 GB |
+| `pancreas_ct` | pancreas | expert | 80 | 10 GB |
+| `lctsc` | oesophagus, heart, lungs, cord | expert | 60 | 5 GB |
+| `spine_mets_ct_seg` | vertebrae + metastases | expert | 55 | 20 GB |
+| `adrenal_acc_ki67_seg` | adrenal gland | expert | 53 | 10 GB |
+| `totalsegmentator_ct_segmentations` | ~77 structures, this label set | **model** | 26,194 | 22 TB |
+| `bamf_aimi_annotations` | organs + tumours | mixed | 4,226 | varies |
+
+Three things decide whether any of this is worth pulling.
+
+**Most of it by volume is not ground truth.** `totalsegmentator_ct_segmentations`
+is 126,051 series — TotalSegmentator's *own output* over NLST. Training on it
+distils the model this pipeline reproduces; it cannot beat it. It is also chest
+screening CT only, so it carries no abdominal or pelvic anatomy. Useful for
+pretraining or semi-supervised work, and it is the reason `--limit-cases` exists.
+
+**The expert sets are small and complementary.** `pediatric_ct_seg` is the one
+worth the trouble: 359 paediatric CTs with 29 human-contoured organs, covering a
+population the TotalSegmentator training set barely has. The rest add pathology —
+diseased vertebrae, kidneys with tumour, hard-to-contour pelvic anatomy.
+
+**Licences differ per series, and weights inherit them.** `nsclc_radiomics` is
+CC BY-NC and is skipped unless you pass `--allow-noncommercial`; `pancreas_ct`
+has CC BY 3.0 images with CC BY 4.0 labels. Each download writes an
+`ATTRIBUTION.txt` beside the data.
+
+IDC ships DICOM, and this pipeline reads NIfTI plus one mask per structure. So
+`--idc` gets you the data, its layout by patient, and its provenance — **not a
+drop-in dataset.** Converting DICOM to NIfTI, turning SEG/RTSTRUCT into
+per-structure masks, and mapping names like `Deep muscle of back` or
+`Femoral Head Rig` onto the 117 is still to be written.
+
 ---
 
 ## Running a stage

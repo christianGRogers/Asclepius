@@ -345,6 +345,40 @@ def _modal_bits():
     return modal_app
 
 
+def cmd_modal_fetch(args) -> int:
+    """Pull the dataset from Zenodo onto the Volume, then convert it there.
+
+    The other way to populate the volume is `segtrain modal upload`, which sends
+    a locally converted dataset. Prefer this one unless the data is already
+    converted on this machine: Zenodo to Modal is a datacenter-speed transfer,
+    and it does not spend a day of your upstream bandwidth.
+    """
+    import modal
+
+    modal_app = _modal_bits()
+    cfg, task = _load(args)
+    mc = cfg.modal
+
+    print(f"volume   {mc.volume}")
+    print(f"task     {task.nnunet_name}")
+    print("source   zenodo.org/records/10047292 -- TotalSegmentator v2.0.1, ~22 GB")
+    print("  runs on a CPU-only container; nothing is uploaded from here")
+    if not args.no_convert:
+        print("  and converts on arrival, so `modal upload` is not needed")
+    print()
+
+    with modal.enable_output(), modal_app.app.run():
+        result = modal_app.fetch.remote(
+            task=str(task.dataset_id),
+            convert=not args.no_convert,
+            keep_raw=not args.prune_raw,
+            keep_zip=args.keep_zip,
+        )
+    print(result)
+    print(f"next: segtrain modal prepare --task {task.dataset_id}")
+    return 0
+
+
 def cmd_modal_upload(args) -> int:
     """Send a converted dataset to the Volume.
 
@@ -740,8 +774,18 @@ def build_parser() -> argparse.ArgumentParser:
     s.set_defaults(func=cmd_status)
 
     # -- modal: the GPU workflow
-    mod = sub.add_parser("modal", help="run on Modal (upload, prepare, train, monitor)")
+    mod = sub.add_parser("modal", help="run on Modal (fetch, prepare, train, monitor)")
     modsub = mod.add_subparsers(dest="modal_command", required=True)
+
+    s = modsub.add_parser("fetch", parents=[common, task_opt],
+                          help="download the dataset from Zenodo onto the volume and convert it")
+    s.add_argument("--no-convert", action="store_true",
+                   help="download and extract only; run `convert` separately")
+    s.add_argument("--keep-zip", action="store_true",
+                   help="keep the 22 GB archive on the volume after extracting")
+    s.add_argument("--prune-raw", action="store_true",
+                   help="delete the Zenodo tree after converting; the other five tasks need it")
+    s.set_defaults(func=cmd_modal_fetch)
 
     s = modsub.add_parser("upload", parents=[common, task_opt],
                           help="send a converted dataset to the Modal volume")

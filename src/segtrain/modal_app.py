@@ -29,6 +29,7 @@ Run through ``segtrain modal ...``, or directly::
 from __future__ import annotations
 
 import os
+import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -38,6 +39,10 @@ import modal
 APP_NAME = "segtrain"
 VOLUME_NAME = "segtrain-data"
 MOUNT = "/data"
+
+# Where `fetch` puts the Zenodo tree. Named after the archive so a human poking
+# at the volume with `segtrain modal inspect` sees what it is.
+DATASET = f"{MOUNT}/Totalsegmentator_dataset_v201"
 
 # Repo root: src/segtrain/modal_app.py -> repo/
 REPO = Path(__file__).resolve().parents[2]
@@ -69,6 +74,7 @@ image = (
     # does not trigger an image rebuild. Worth a lot while iterating.
     .add_local_dir(REPO / "src", "/root/src")
     .add_local_dir(REPO / "configs", "/root/configs")
+    .add_local_dir(REPO / "scripts", "/root/scripts")
 )
 
 CONTAINER_ENV = {
@@ -96,7 +102,7 @@ def _segtrain(*args: str, env: dict | None = None) -> int:
 def _roots() -> list[str]:
     """CLI overrides pointing every root into the mounted Volume."""
     return [
-        "--zenodo-root", MOUNT,
+        "--zenodo-root", DATASET,
         "--nnunet-raw", f"{MOUNT}/nnUNet_raw",
         "--nnunet-preprocessed", f"{MOUNT}/nnUNet_preprocessed",
         "--nnunet-results", f"{MOUNT}/nnUNet_results",
@@ -127,6 +133,56 @@ def _has_checkpoint(task: str, fold: int) -> bool:
 @app.function(
     image=image,
     volumes={MOUNT: volume},
+    cpu=8.0,
+    memory=MEMORY_MB,
+    # Zenodo -> Modal is minutes, not the hours it takes from a laptop. Unpacking
+    # 145k small files onto the Volume is the slow half, hence the wide timeout.
+    timeout=12 * HOURS,
+)
+def fetch(task: str = "701", convert: bool = True,
+          keep_raw: bool = True, keep_zip: bool = False) -> str:
+    """Download the dataset from Zenodo straight onto the Volume, then convert.
+
+    This is the alternative to ``segtrain modal upload``, and on any connection
+    slower than a datacenter's it is the better one: the 21 GB never touches your
+    laptop. Conversion runs here too -- the argument for converting locally was
+    that a rented GPU box bills by the hour whether or not the GPU is busy, and
+    that does not apply to a CPU-only serverless function.
+
+    The archive is downloaded *to the Volume* rather than to container-local
+    disk, so a container that dies at 19 GB resumes instead of starting over.
+    """
+    args = ["--dest", DATASET, "--zip", f"{MOUNT}/Totalsegmentator_dataset_v201.zip"]
+    if keep_zip:
+        args.append("--keep-zip")
+
+    cmd = [sys.executable, "/root/scripts/init_dataset.py", *args]
+    print("+ " + " ".join(cmd), flush=True)
+    code = subprocess.run(cmd, env={**os.environ, **CONTAINER_ENV}).returncode
+    volume.commit()
+    if code != 0:
+        raise RuntimeError(f"dataset download failed with exit code {code}")
+
+    if convert:
+        code = _segtrain("convert", "--task", task, *_roots())
+        volume.commit()
+        if code != 0:
+            raise RuntimeError(f"`segtrain convert` failed with exit code {code}")
+
+    # Kept by default: every task converts from this tree, so the five Stage 2
+    # datasets would each have to re-download it. Drop it only once all six
+    # conversions are done and you want the ~30 GB back.
+    if not keep_raw:
+        shutil.rmtree(DATASET, ignore_errors=True)
+        volume.commit()
+        print(f"removed {DATASET}", flush=True)
+
+    return f"fetched dataset; {'converted ' + task if convert else 'not converted'}"
+
+
+@app.function(
+    image=image,
+    volumes={MOUNT: volume},
     # No GPU on purpose. Fingerprinting, planning and preprocessing are CPU and
     # disk bound; attaching a GPU here would burn ~$2/hour to leave it idle.
     cpu=CPU,
@@ -135,12 +191,15 @@ def _has_checkpoint(task: str, fold: int) -> bool:
 )
 def prepare(task: str = "701", scheme: str = "official") -> str:
     """Link images into the task, then plan and preprocess."""
+    # sys.path first: CONTAINER_ENV's PYTHONPATH reaches subprocesses, not this
+    # process, so segtrain is not importable until /root/src is on the path.
+    sys.path.insert(0, "/root/src")
+
     from segtrain.config import load_config, load_task
     from segtrain.convert import link_or_copy
 
-    sys.path.insert(0, "/root/src")
     cfg = load_config(Path("/root/configs/dataset.yaml"), {
-        "zenodo_root": MOUNT,
+        "zenodo_root": DATASET,
         "nnunet_raw": f"{MOUNT}/nnUNet_raw",
         "nnunet_preprocessed": f"{MOUNT}/nnUNet_preprocessed",
         "nnunet_results": f"{MOUNT}/nnUNet_results",
@@ -307,7 +366,9 @@ def inspect(path: str = "") -> str:
 @app.local_entrypoint()
 def main(task: str = "701", fold: int = 0, action: str = "prepare"):
     """Entry point for `modal run src/segtrain/modal_app.py`."""
-    if action == "prepare":
+    if action == "fetch":
+        print(fetch.remote(task=task))
+    elif action == "prepare":
         print(prepare.remote(task=task))
     elif action == "train":
         print(train.remote(task=task, fold=fold))

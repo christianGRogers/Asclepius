@@ -74,6 +74,37 @@ cluster with no edits to tracked files.
 
 ---
 
+## Getting the data
+
+The dataset is [Zenodo record 10047292](https://zenodo.org/records/10047292) —
+one 22 GB archive that expands to ~30 GB of subject directories.
+
+```bash
+python scripts/init_dataset.py                       # uses zenodo_root from the config
+python scripts/init_dataset.py --dest /data/Totalsegmentator_dataset_v201
+```
+
+It downloads, checks the published MD5, extracts, verifies the result is 1228
+subjects with 117 masks each, and deletes the archive (`--keep-zip` to keep it).
+Both the download and the extraction resume, and a dataset root that already
+looks complete is left alone — so it is safe to run from a provisioning script,
+or to run again after an interrupted transfer. Stdlib only, so it works before
+`pip install -e .`.
+
+On Modal, fetch straight onto the volume instead — Zenodo to Modal is a
+datacenter-speed transfer, so the 21 GB never crosses your own connection:
+
+```bash
+segtrain modal fetch --task 701      # download + extract + convert, CPU-only container
+```
+
+The archive lands on the volume rather than container-local disk, so a container
+that dies at 19 GB resumes instead of starting over. This replaces
+`segtrain modal upload`, which is now only worth using when the dataset is
+already converted on this machine.
+
+---
+
 ## Running a stage
 
 ```bash

@@ -49,7 +49,7 @@ except ImportError as exc:  # pragma: no cover - surfaced in the UI instead
     RunState = None
     _IMPORT_ERROR = str(exc)
 
-from SegmentatorTrainMonitorLib import find_modal_cli, make_source
+from SegmentatorTrainMonitorLib import make_source
 
 DEFAULT_POLL_SECONDS = 10
 
@@ -91,9 +91,9 @@ class SegmentatorTrainMonitorLogic(ScriptedLoadableModuleLogic):
 
     # -- connection ---------------------------------------------------------
 
-    def connect(self, location, modal_cli=None):
+    def connect(self, location, identity_file=None):
         """Point at a run directory. Returns True if its event stream is readable."""
-        self.source = make_source(location, modal_cli=modal_cli)
+        self.source = make_source(location, identity_file=identity_file)
         self.state = RunState()
         self.reader = None
         self.lastError = None
@@ -398,10 +398,11 @@ class SegmentatorTrainMonitorWidget(ScriptedLoadableModuleWidget):
 
         self.runDirEdit = qt.QLineEdit()
         self.runDirEdit.setPlaceholderText(
-            r"C:\segtrain\runs\Dataset701_Total3mm__fold0   or   user@gpu-box:/data/runs/...")
+            r"C:\segtrain\runs\Dataset701_Total3mm__fold0"
+            "   or   you@trillium.scinet.utoronto.ca:/scratch/.../runs/...")
         self.runDirEdit.setToolTip(
-            "A local path, a mounted share, or user@host:/path for a run on the "
-            "training machine (uses your system ssh/scp, honouring ~/.ssh/config).")
+            "A local path, a mounted share, or user@host:/path for a run on a "
+            "cluster (uses your system ssh/scp, honouring ~/.ssh/config).")
         browse = qt.QPushButton("Browse...")
         browse.clicked.connect(self.onBrowse)
         row = qt.QHBoxLayout()
@@ -409,22 +410,21 @@ class SegmentatorTrainMonitorWidget(ScriptedLoadableModuleWidget):
         row.addWidget(browse)
         connLayout.addRow("Run directory:", row)
 
-        # Slicer's PATH is not the shell's, so the CLI is auto-detected in the
-        # project venv first. This field is only for overriding that.
-        self.modalCliEdit = qt.QLineEdit()
-        detected = find_modal_cli()
-        if detected:
-            self.modalCliEdit.text = detected
-        self.modalCliEdit.setPlaceholderText("auto-detected   (modal:// runs only)")
-        self.modalCliEdit.setToolTip(
-            "Path to the modal CLI, used to read runs from a Modal volume. "
-            "Ignored for local run directories.")
-        cliBrowse = qt.QPushButton("Browse...")
-        cliBrowse.clicked.connect(self.onBrowseModalCli)
-        cliRow = qt.QHBoxLayout()
-        cliRow.addWidget(self.modalCliEdit)
-        cliRow.addWidget(cliBrowse)
-        connLayout.addRow("modal CLI:", cliRow)
+        # Optional: leave empty when ~/.ssh/config already names the key for the
+        # host, which is the better setup anyway because it also lets you enable
+        # ControlMaster and stop paying a handshake per poll.
+        self.identityEdit = qt.QLineEdit()
+        self.identityEdit.setPlaceholderText(
+            "optional   (from ~/.ssh/config if blank; remote runs only)")
+        self.identityEdit.setToolTip(
+            "Private key for the remote host, passed to ssh as -i. Ignored for "
+            "local run directories.")
+        keyBrowse = qt.QPushButton("Browse...")
+        keyBrowse.clicked.connect(self.onBrowseIdentityFile)
+        keyRow = qt.QHBoxLayout()
+        keyRow.addWidget(self.identityEdit)
+        keyRow.addWidget(keyBrowse)
+        connLayout.addRow("SSH key:", keyRow)
 
         self.connectButton = qt.QPushButton("Connect")
         self.connectButton.clicked.connect(self.onConnect)
@@ -512,17 +512,17 @@ class SegmentatorTrainMonitorWidget(ScriptedLoadableModuleWidget):
         if path:
             self.runDirEdit.text = path
 
-    def onBrowseModalCli(self):
-        path = qt.QFileDialog.getOpenFileName(None, "Select the modal CLI")
+    def onBrowseIdentityFile(self):
+        path = qt.QFileDialog.getOpenFileName(None, "Select an SSH private key")
         if path:
-            self.modalCliEdit.text = path
+            self.identityEdit.text = path
 
     def onConnect(self):
         location = self.runDirEdit.text.strip()
         if not location:
             return
-        cli = self.modalCliEdit.text.strip() or None
-        if self.logic.connect(location, modal_cli=cli):
+        key = self.identityEdit.text.strip() or None
+        if self.logic.connect(location, identity_file=key):
             self.statusLabel.text = "connected"
             self.timer.start(self.pollSpin.value * 1000)
             self.refreshUi()

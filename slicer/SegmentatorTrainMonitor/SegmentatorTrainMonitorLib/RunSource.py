@@ -1,14 +1,20 @@
-"""Reading a run directory that may be local or on a Modal volume.
+"""Reading a run directory that may be local or on a cluster login node.
 
 The monitor needs exactly two things from a run: the event stream, and the
 occasional small preview file. Both are plain files, so a remote run is just a
 local run with a copy step in front -- which is why this abstraction is small and
 why nothing above it knows where training actually happened.
 
-Modal runs are reached by shelling out to the ``modal`` CLI rather than importing
-its SDK. The SDK would have to be pip-installed into Slicer's bundled Python,
-which this module deliberately avoids; the CLI already holds the user's
-authentication token and lives in the project venv.
+Cluster runs are reached with the system ``ssh``/``scp`` rather than a Python SSH
+library, because nothing may be pip-installed into Slicer's bundled Python. That
+also means ``~/.ssh/config`` applies, so a host alias with ``ControlMaster``
+configured costs one TCP handshake for the whole session instead of one per poll
+-- worth setting up, since SciNet's login nodes are several hundred milliseconds
+away and the monitor polls every ten seconds.
+
+A run on SciNet lives on ``$SCRATCH``, which the login nodes share with the
+compute nodes, so the monitor reads the live file while the job writes it. There
+is no staging step and nothing to synchronise.
 
 Stdlib only: this runs inside Slicer's Python 3.9.
 """
@@ -16,7 +22,7 @@ Stdlib only: this runs inside Slicer's Python 3.9.
 from __future__ import annotations
 
 import os
-import shutil
+import re
 import subprocess
 import tempfile
 
@@ -26,7 +32,11 @@ if os.name == "nt":
     _NO_WINDOW = getattr(subprocess, "CREATE_NO_WINDOW", 0)
 
 EVENTS_FILENAME = "events.jsonl"
-MODAL_SCHEME = "modal://"
+
+# user@host:/path, or host:/path. Anchored on a colon followed by a slash so a
+# Windows drive letter (C:\runs, and even C:/runs) can never match: a drive
+# letter is one character, and this needs at least two before the colon.
+_SSH_LOCATION = re.compile(r"^(?P<host>[^:/\\]{2,}):(?P<path>/.*)$")
 
 
 class RunSource:
@@ -68,113 +78,138 @@ class LocalRunSource(RunSource):
         return os.path.isdir(self.location)
 
 
-class ModalRunSource(RunSource):
-    """A run directory on a Modal volume, read through the ``modal`` CLI.
+class SshRunSource(RunSource):
+    """A run directory on another machine, read with ``ssh`` and ``scp``.
 
     Files are cached locally. Preview segmentations are cached by name and never
     re-fetched, since a given epoch's preview never changes; events.jsonl is
     re-fetched every poll because it is the thing that grows.
+
+    events.jsonl is pulled with ``ssh cat`` rather than ``scp`` because it is
+    append-only and small: a single stream avoids scp's second round trip, and
+    the file is complete-as-of-read by construction. A truncated final line --
+    the job appending while we read -- is the reader's problem to tolerate, and
+    ``segtrain.events`` already skips unparseable lines for exactly this reason.
     """
 
-    kind = "modal"
+    kind = "ssh"
 
-    def __init__(self, volume, run_path, cache_dir=None, modal_cli=None):
-        RunSource.__init__(self, "{}{}/{}".format(MODAL_SCHEME, volume,
-                                                  run_path.lstrip("/")))
-        self.volume = volume
-        self.run_path = run_path.strip("/")
-        self.cache_dir = cache_dir or tempfile.mkdtemp(prefix="segtrain-modal-")
-        self.modal_cli = modal_cli or find_modal_cli()
+    def __init__(self, host, run_path, cache_dir=None, identity_file=None,
+                 ssh_options=None):
+        RunSource.__init__(self, "{}:{}".format(host, run_path))
+        self.host = host
+        self.run_path = run_path.rstrip("/")
+        self.cache_dir = cache_dir or tempfile.mkdtemp(prefix="segtrain-ssh-")
+        self.identity_file = identity_file or None
+        self.ssh_options = list(ssh_options or [])
         self.last_error = None
 
-    def _get(self, remote_rel, local_path):
-        if not self.modal_cli:
-            self.last_error = (
-                "the modal CLI was not found. Install it in the project venv "
-                "(pip install modal) or set the CLI path in the module panel."
-            )
-            return False
+    def _base_options(self):
+        # BatchMode: never sit at a password prompt with no terminal to type
+        # into -- a missing key must fail fast and visibly in the panel instead
+        # of hanging the UI thread until the timeout.
+        options = ["-o", "BatchMode=yes", "-o", "ConnectTimeout=15"]
+        if self.identity_file:
+            options += ["-i", self.identity_file]
+        return options + self.ssh_options
 
-        local_dir = os.path.dirname(local_path)
-        if local_dir and not os.path.isdir(local_dir):
-            os.makedirs(local_dir)
-        remote = "{}/{}".format(self.run_path, remote_rel.lstrip("/"))
+    def _run(self, argv, timeout, stdout_path=None):
+        handle = None
         try:
+            if stdout_path is not None:
+                handle = open(stdout_path, "wb")
             result = subprocess.run(
-                [self.modal_cli, "volume", "get", "--force",
-                 self.volume, remote, local_path],
-                capture_output=True,
-                text=True,
-                timeout=300,
+                argv,
+                stdout=handle if handle is not None else subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                timeout=timeout,
                 creationflags=_NO_WINDOW,
             )
         except (OSError, subprocess.SubprocessError) as exc:
             self.last_error = str(exc)
-            return False
+            return None
+        finally:
+            if handle is not None:
+                handle.close()
+
         if result.returncode != 0:
-            self.last_error = (result.stderr or result.stdout or "").strip()[:300]
-            return False
+            detail = (result.stderr or b"").decode("utf-8", "replace").strip()
+            self.last_error = detail[:300] or "exit code {}".format(result.returncode)
+            return None
         self.last_error = None
-        return os.path.isfile(local_path)
+        return result
+
+    def _remote(self, relative_path):
+        return "{}/{}".format(self.run_path, relative_path.lstrip("/"))
 
     def events_path(self):
         local = os.path.join(self.cache_dir, EVENTS_FILENAME)
-        if self._get(EVENTS_FILENAME, local):
-            return local
-        # Fall back to the last successful copy so a transient CLI failure shows
-        # stale data rather than an empty, alarming-looking UI.
+        argv = ["ssh"] + self._base_options() + [
+            self.host, "cat -- {}".format(_quote(self._remote(EVENTS_FILENAME)))]
+        # Write to a temporary and move into place: a failed or partial transfer
+        # must not destroy the previous good copy, which is what the UI falls
+        # back to.
+        staging = local + ".part"
+        if self._run(argv, timeout=120, stdout_path=staging) is not None:
+            try:
+                os.replace(staging, local)
+            except OSError as exc:
+                self.last_error = str(exc)
+        elif os.path.isfile(staging):
+            os.remove(staging)
+
+        # Fall back to the last successful copy so a transient network failure
+        # shows stale data rather than an empty, alarming-looking UI.
         return local if os.path.isfile(local) else None
 
     def fetch(self, relative_path):
         local = os.path.join(self.cache_dir, relative_path.replace("/", os.sep))
         if os.path.isfile(local):
             return local
-        return local if self._get(relative_path, local) else None
+        local_dir = os.path.dirname(local)
+        if local_dir and not os.path.isdir(local_dir):
+            os.makedirs(local_dir)
+
+        remote = "{}:{}".format(self.host, self._remote(relative_path))
+        argv = ["scp"] + self._base_options() + ["-p", remote, local]
+        # Previews are whole NIfTI volumes over a WAN link; a few MB at a few
+        # MB/s wants a much wider window than the event stream.
+        if self._run(argv, timeout=600) is None:
+            return None
+        return local if os.path.isfile(local) else None
 
     def available(self):
-        if not self.modal_cli:
-            self.last_error = "modal CLI not found"
-            return False
         return self.events_path() is not None
 
 
-def find_modal_cli():
-    """Locate the modal CLI.
+def _quote(path):
+    """Single-quote a path for the remote shell.
 
-    Slicer's Python does not have the SDK, and Slicer's PATH is not the shell's,
-    so PATH alone is unreliable. Check the project venv next to this module
-    first, then fall back to PATH.
+    ssh concatenates its command arguments and hands the result to the login
+    shell, so quoting is ours to do. Run directories are named after nnU-Net
+    datasets and contain no quotes, but a path with a space would otherwise
+    silently read the wrong file.
     """
-    here = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    repo = os.path.dirname(os.path.dirname(here))
-    candidates = [
-        os.path.join(repo, ".venv", "Scripts", "modal.exe"),
-        os.path.join(repo, ".venv", "bin", "modal"),
-    ]
-    for candidate in candidates:
-        if os.path.isfile(candidate):
-            return candidate
-    return shutil.which("modal")
+    return "'" + str(path).replace("'", "'\\''") + "'"
 
 
-def parse_modal_location(location):
-    """``modal://volume/path/to/run`` -> ``(volume, path)``."""
-    body = str(location)[len(MODAL_SCHEME):].strip("/")
-    if "/" not in body:
-        return body, ""
-    volume, path = body.split("/", 1)
-    return volume, path
+def parse_ssh_location(location):
+    """``user@host:/path/to/run`` -> ``(host, path)``, or None if not remote."""
+    match = _SSH_LOCATION.match(str(location).strip())
+    if not match:
+        return None
+    return match.group("host"), match.group("path")
 
 
-def make_source(location, cache_dir=None, modal_cli=None):
+def make_source(location, cache_dir=None, identity_file=None, ssh_options=None):
     """Build the right source for a location string.
 
-    ``modal://volume/path`` is a Modal volume; anything else is a local path.
-    Windows drive letters (``C:\\runs``) are never mistaken for a scheme because
-    the check is an explicit prefix match.
+    ``user@host:/path`` is read over SSH; anything else is a local path.
     """
     text = str(location).strip()
-    if text.lower().startswith(MODAL_SCHEME):
-        volume, path = parse_modal_location(text)
-        return ModalRunSource(volume, path, cache_dir=cache_dir, modal_cli=modal_cli)
+    remote = parse_ssh_location(text)
+    if remote:
+        host, path = remote
+        return SshRunSource(host, path, cache_dir=cache_dir,
+                            identity_file=identity_file, ssh_options=ssh_options)
     return LocalRunSource(text)

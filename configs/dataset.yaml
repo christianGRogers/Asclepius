@@ -19,6 +19,19 @@ nnunet_results: /data/nnUNet_results           # env: nnUNet_results
 # directory the Slicer monitor connects to.
 runs_root: /data/runs
 
+# On Trillium every one of the five paths above must be under $SCRATCH. $HOME and
+# $PROJECT are mounted READ-ONLY on compute nodes, so a job whose results_root is
+# in either dies on its first write -- after its queue wait. So:
+#
+#   zenodo_root:         /scratch/g/group/you/Totalsegmentator_dataset_v201
+#   nnunet_raw:          /scratch/g/group/you/nnUNet_raw
+#   nnunet_preprocessed: /scratch/g/group/you/nnUNet_preprocessed
+#   nnunet_results:      /scratch/g/group/you/nnUNet_results
+#   runs_root:           /scratch/g/group/you/runs
+#
+# The venv is the exception and belongs in $HOME -- see the scinet: block below.
+# `segtrain scinet check` flags any of these that sit on a read-only filesystem.
+
 # How to materialise images into nnUNet_raw/imagesTr:
 #   hardlink - 0 extra bytes, requires same filesystem as zenodo_root (default)
 #   symlink  - 0 extra bytes, works across filesystems, needs privilege on Windows
@@ -54,18 +67,101 @@ reader_writer: NibabelIOWithReorient
 #                 arbitrary. Provided only for comparison.
 overlap_policy: smaller_wins
 
-# The rented GPU instance. Only `host` and `identity_file` normally change.
-remote:
-  # Lambda assigns a new address every time an instance starts, so expect to
-  # update this each session. Override per-command with --host.
-  host: ""                       # e.g. ubuntu@203.0.113.10
-  identity_file: ""              # e.g. C:/Users/you/.ssh/lambda.pem
-  root: /home/ubuntu/segtrain    # everything the pipeline creates lives here
-  python: python3
-  # Created with --system-site-packages so the image's preinstalled CUDA torch
-  # (already matched to the driver) is reused rather than re-downloaded.
-  venv: /home/ubuntu/segtrain/.venv
-  ssh_options: []
+# Running on a SciNet cluster via SLURM. Defaults target Trillium's GPU
+# subcluster (4x H100-80GB per node, x86_64, 24 h walltime cap).
+#
+# On the cluster, copy this file and set `account` and `venv`; everything else
+# has a working default. `segtrain scinet check` verifies the result before you
+# spend a queue wait finding out.
+scinet:
+  cluster: trillium
+
+  # The only field with no default. SLURM rejects a job with no --account once
+  # you belong to more than one allocation. `sshare -U` lists yours; RAC names
+  # start with rrg-/rpp-, the default allocation with def-. Also read from
+  # $SLURM_ACCOUNT, so it need not be written here at all.
+  account: ""
+
+  # Leave both empty on Trillium. Its docs are explicit: "Do not specify this
+  # partition explicitly; you must allow the scheduler to select the appropriate
+  # partition for your job."
+  gpu_partition: ""
+  cpu_partition: ""
+
+  nodes: 1
+  # Trillium schedules whole GPUs. 1 gets you a quarter node -- 1 H100, 24 of the
+  # 96 cores, ~188 GiB. 2 and 3 are rejected; above 1 you must ask in multiples
+  # of 4. nnU-Net's default plan targets 8 GB of VRAM, so one 80 GB H100 is
+  # already more than this workload can use.
+  gpus_per_node: 1
+  # 0 = do not emit --cpus-per-task. The cores come with the GPU, and the job
+  # reads $SLURM_CPUS_ON_NODE rather than asserting a number the scheduler may
+  # ignore.
+  cpus_per_task: 0
+  # Ignored on Trillium ("Memory requests are ignored... Do not use --mem").
+  mem: ""
+
+  # The cap is 24 h. Ten minutes under leaves room to be placed and to shut down
+  # before SLURM's own kill.
+  walltime: "23:50:00"
+  # Subtracted from walltime to get the trainer's wall-clock budget, after which
+  # it checkpoints and stops at the next epoch boundary. Must cover module load,
+  # the venv, nnU-Net unpacking, one whole epoch, and a ~400 MB checkpoint write.
+  pause_margin_seconds: 1800
+
+  # How the run crosses the 24 h cap. Both submit the whole chain from the login
+  # node, because Trillium forbids a job from submitting anything.
+  #   array       one `sbatch --array=1-N%1`; N blocks, one at a time (default)
+  #   dependency  N separate jobs, each --dependency=afterany on the last.
+  #               Use this if job arrays turn out to be restricted.
+  chain_mode: array
+  # Blocks in the chain, and the hard ceiling on resubmission. 3 x 23:50 is
+  # ~71 h, comfortably more than Stage 1 needs on an H100.
+  chain_max: 3
+
+  # nnU-Net checkpoints every 50 epochs by default. Lower means an *unclean* kill
+  # -- preemption, node failure, OOM -- costs less. A clean pause is unaffected.
+  save_every: 25
+  # 0 = read $SLURM_CPUS_ON_NODE at run time. Set a number only to throttle.
+  dataloader_workers: 0
+
+  # Copy preprocessed data into $SLURM_TMPDIR and train from there.
+  #
+  # Off by default, and think before enabling: Trillium nodes have NO local disk,
+  # so $SLURM_TMPDIR is a RAM disk and its contents come out of the job's own
+  # memory (~188 GiB for a 1-GPU job). Fine for Stage 1 at 3 mm (~10 GB); not for
+  # the 1.5 mm groups (~75 GB, roughly doubled by nnU-Net's .npz -> .npy step).
+  # Less necessary here than the usual HPC advice implies -- Trillium's storage
+  # is all-NVMe rather than Lustre. The job script re-checks the fit and skips
+  # staging rather than being OOM-killed.
+  stage_to_tmpdir: false
+
+  # The CPU-only convert/plan/preprocess job. The CPU subcluster is 1224 nodes
+  # against the GPU subcluster's 63, so this usually starts much sooner.
+  prepare_walltime: "12:00:00"
+  prepare_cpus: 0
+
+  # Loaded by every job. Keep cuda OUT of this list -- Trillium's CPU nodes have
+  # no cuda module and the prepare job would fail at `module load`.
+  modules: [StdEnv/2023, python/3.11.5]
+  # Loaded by GPU jobs only, on top of `modules`.
+  gpu_modules: [cuda/12.6]
+
+  # Build this on a login node with `segtrain scinet setup`, and keep it in
+  # $HOME: compute nodes can read $HOME, $SCRATCH "may get partially deleted",
+  # and $SLURM_TMPDIR is RAM.
+  venv: ""                        # e.g. /home/g/group/you/segtrain-env
+  # Extra shell lines after the venv is active, before the pipeline runs.
+  setup_commands: []
+  # Raw #SBATCH lines appended verbatim, for anything not modelled above.
+  sbatch_extra: []                # e.g. ["#SBATCH --export=NONE"]
+
+  mail_user: ""
+  mail_type: "FAIL,TIME_LIMIT"
+
+  # Only used to print a paste-ready address for the Slicer monitor, and by
+  # `segtrain scinet pull`.
+  login_host: ""                  # e.g. you@trillium.alliancecan.ca
 
 preview:
   # Cases the preview daemon runs the live checkpoint on. These are real members

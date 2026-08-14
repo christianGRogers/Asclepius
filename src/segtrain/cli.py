@@ -9,18 +9,29 @@ A normal Stage 1 run, start to finish::
     segtrain preview    --task 701 --fold 0 --watch   # second terminal
     segtrain evaluate   --task 701
 
+The same run on a SciNet cluster, from a login node::
+
+    segtrain scinet check                              # config, paths, quotas
+    segtrain scinet fetch   --task 701                 # login node: no compute-node internet
+    segtrain scinet prepare --task 701 --convert       # CPU job
+    segtrain scinet submit  --task 701 --fold 0        # chained GPU job
+    segtrain scinet status  --task 701 --fold 0 --watch
+
 Heavy imports (torch, nnU-Net) happen inside the subcommands that need them, so
 ``convert``, ``splits``, ``status`` and ``evaluate --score-only`` all run on a
-machine with neither installed.
+machine with neither installed -- including a login node, where importing torch
+to print a help message would be antisocial.
 """
 
 from __future__ import annotations
 
 import argparse
 import os
+import shlex
 import shutil
 import sys
 import time
+from dataclasses import replace
 from pathlib import Path
 from typing import Optional
 
@@ -78,7 +89,8 @@ def cmd_info(args) -> int:
                 p = torch.cuda.get_device_properties(i)
                 print(f"  cuda:{i}  {p.name}  {p.total_memory / 2**30:.1f} GiB")
         else:
-            print("  no CUDA device -- training here is not viable; use `segtrain modal train`")
+            print("  no CUDA device -- training here is not viable; "
+                  "use `segtrain scinet submit`")
     except ImportError:
         print("  torch not installed (fine for convert/splits/status)")
 
@@ -243,7 +255,13 @@ def cmd_train(args) -> int:
 
         return subprocess.run(cmd, env=env).returncode
 
-    backend = get_backend(args.backend)
+    if args.backend == "slurm":
+        backend = get_backend("slurm", scinet=cfg.scinet)
+        print("\nnote: this submits a single job of "
+              f"{cfg.scinet.walltime}. A 1000-epoch run does not fit in one; use "
+              "`segtrain scinet submit` for the chained version.")
+    else:
+        backend = get_backend(args.backend)
 
     job = backend.submit(cmd, str(run_dir), env=env, cwd=str(Path.cwd()))
     print(f"\nlaunched: {job.describe()}")
@@ -285,6 +303,15 @@ def cmd_status(args) -> int:
 
     cfg, task = _load(args)
     run_dir = Path(args.run_dir) if args.run_dir else task.run_dir(cfg, args.fold)
+
+    if getattr(args, "is_complete", False):
+        # Silent and exit-code only: this is a shell predicate, not a report.
+        # A missing run directory is "not complete", not an error, because the
+        # first block of a chain asks before anything has been written.
+        if not run_dir.is_dir():
+            return 1
+        return 0 if read_run(run_dir).status == "completed" else 1
+
     if not run_dir.is_dir():
         print(f"no run directory at {run_dir}", file=sys.stderr)
         return 1
@@ -328,311 +355,536 @@ def cmd_status(args) -> int:
     return 0
 
 
-# -------------------------------------------------------------------------- modal
+# ------------------------------------------------------------------------- scinet
 
 
-def _modal_bits():
-    """Import the Modal app lazily -- `modal` is not needed for local work."""
-    try:
-        import modal  # noqa: F401
-    except ImportError as exc:
-        raise RuntimeError(
-            "the modal SDK is not installed. `pip install modal`, then "
-            "`modal setup` to authenticate."
-        ) from exc
-    from . import modal_app
+def _scinet_bits(cfg: Config):
+    """Validate the cluster config, and fail with something actionable.
 
-    return modal_app
-
-
-def cmd_modal_fetch(args) -> int:
-    """Pull the dataset from Zenodo onto the Volume, then convert it there.
-
-    The other way to populate the volume is `segtrain modal upload`, which sends
-    a locally converted dataset. Prefer this one unless the data is already
-    converted on this machine: Zenodo to Modal is a datacenter-speed transfer,
-    and it does not spend a day of your upstream bandwidth.
+    Called before anything is rendered or submitted. Every one of these is a
+    mistake that otherwise surfaces as an sbatch rejection or -- much worse -- a
+    job that starts, runs for a minute and dies, which on a busy cluster costs a
+    queue wait to discover.
     """
-    import modal
+    from .slurm import SlurmError, train_budget_seconds
 
-    modal_app = _modal_bits()
-    cfg, task = _load(args)
-    mc = cfg.modal
-
-    print(f"volume   {mc.volume}")
-    print(f"task     {task.nnunet_name}")
-    print("source   zenodo.org/records/10047292 -- TotalSegmentator v2.0.1, ~22 GB")
-    print("  runs on a CPU-only container; nothing is uploaded from here")
-    if not args.no_convert:
-        print("  and converts on arrival, so `modal upload` is not needed")
-    print()
-
-    with modal.enable_output(), modal_app.app.run():
-        result = modal_app.fetch.remote(
-            task=str(task.dataset_id),
-            convert=not args.no_convert,
-            keep_raw=not args.prune_raw,
-            keep_zip=args.keep_zip,
+    sc = cfg.scinet
+    problems = []
+    if not sc.account:
+        problems.append(
+            "no allocation account. Set scinet.account in configs/dataset.local.yaml, "
+            "or export SLURM_ACCOUNT. `sshare -U` lists the accounts you can charge."
         )
-    print(result)
-    print(f"next: segtrain modal prepare --task {task.dataset_id}")
+    if not sc.modules and not sc.venv:
+        problems.append(
+            "neither scinet.modules nor scinet.venv is set, so the job would run "
+            "against the compute node's bare system Python and fail on `import torch`."
+        )
+    try:
+        train_budget_seconds(sc)
+    except SlurmError as exc:
+        problems.append(str(exc))
+
+    if problems:
+        raise ConfigError("cluster configuration is incomplete:\n  - "
+                          + "\n  - ".join(problems))
+    return sc
+
+
+def cmd_scinet_check(args) -> int:
+    """Pre-flight the cluster setup without submitting anything.
+
+    Worth running once per session: every check here corresponds to a failure
+    that would otherwise be found by a job dying after its queue wait.
+    """
+    import subprocess
+
+    from .slurm import parse_walltime, queued_jobs
+
+    cfg, _ = _load(args)
+    sc = cfg.scinet
+    ok = True
+
+    def report(label: str, good: bool, detail: str = "") -> None:
+        nonlocal ok
+        ok = ok and good
+        print(f"  [{'ok' if good else '!!'}] {label:<28} {detail}")
+
+    print(f"cluster  {sc.cluster}")
+    print("\nscheduler:")
+    have_sbatch = shutil.which("sbatch") is not None
+    report("sbatch on PATH", have_sbatch,
+           "" if have_sbatch else "not a cluster login node -- submit from one")
+    report("account", bool(sc.account), sc.account or "unset (see `sshare -U`)")
+
+    if have_sbatch:
+        jobs = queued_jobs()
+        print(f"  [--] {'segtrain jobs queued':<28} {len(jobs)}")
+        for job in jobs:
+            print(f"         {job['job_id']}  {job['name']:<22} {job['state']:<10} "
+                  f"{job['reason']}")
+
+    print("\nbudget:")
+    total = parse_walltime(sc.walltime)
+    budget = sc.budget_seconds()
+    report("walltime", True, f"{sc.walltime}  ({total / 3600:.1f} h)")
+    report("trainer budget", budget > 0,
+           f"{budget}s ({budget / 3600:.1f} h), margin {sc.pause_margin_seconds}s")
+    report("chain", sc.chain_max >= 1,
+           f"{sc.chain_mode}, {sc.chain_max} block(s) = up to "
+           f"{sc.chain_max * total / 3600:.0f} h total")
+    # 24 h is the hard cap on both Trillium subclusters; sbatch rejects anything
+    # longer outright rather than trimming it.
+    if sc.cluster == "trillium" and total > 24 * 3600:
+        report("walltime <= 24 h", False,
+               f"{sc.walltime} exceeds Trillium's 24 h limit; sbatch will refuse it")
+
+    print("\nenvironment:")
+    report("modules", bool(sc.modules), " ".join(sc.modules) or "none set")
+    print(f"  [--] {'gpu modules (extra)':<28} {' '.join(sc.gpu_modules) or 'none'}")
+    venv_ok = bool(sc.venv) and Path(sc.venv, "bin", "activate").is_file()
+    report("venv", venv_ok, sc.venv or "none set")
+    if sc.venv and not venv_ok:
+        print(f"         no bin/activate under {sc.venv} -- run `segtrain scinet setup`")
+    # Trillium's guidance is explicit and the failure is silent-looking: a venv
+    # on $SCRATCH "may get partially deleted", which surfaces weeks later as an
+    # ImportError in block 7 of a chain.
+    scratch = os.environ.get("SCRATCH")
+    if sc.venv and scratch and str(sc.venv).startswith(scratch):
+        report("venv location", False,
+               "on $SCRATCH, which may be partially deleted -- put it in $HOME")
+
+    print("\npaths:")
+    home = os.environ.get("HOME", "")
+    project = os.environ.get("PROJECT", "")
+    for key in ("zenodo_root", "nnunet_raw", "nnunet_preprocessed", "nnunet_results",
+                "runs_root"):
+        value = Path(getattr(cfg, key))
+        exists = value.is_dir()
+        # A missing root is only a problem if its *parent* is not writable: the
+        # pipeline creates these itself.
+        parent_ok = exists or (value.parent.is_dir() and os.access(value.parent, os.W_OK))
+        note = "" if exists else "   (will be created)"
+
+        # The one that actually bites on Trillium. $HOME and $PROJECT are mounted
+        # read-only on compute nodes, so a job writing there dies on its first
+        # output -- after its queue wait, and for a reason the traceback does not
+        # make obvious.
+        readonly = None
+        if key != "zenodo_root":
+            if home and str(value).startswith(home) and not (
+                    project and str(value).startswith(project)):
+                readonly = "$HOME"
+            elif project and str(value).startswith(project):
+                readonly = "$PROJECT"
+        if readonly and sc.cluster == "trillium":
+            report(key, False,
+                   f"{value}   under {readonly}, which is READ-ONLY on compute "
+                   "nodes -- move it to $SCRATCH")
+        else:
+            report(key, parent_ok, str(value) + note)
+
+    print("\nfilesystem:")
+    if shutil.which("diskusage_report"):
+        out = subprocess.run(["diskusage_report"], capture_output=True, text=True,
+                             timeout=120)
+        for line in (out.stdout or "").splitlines():
+            print("  " + line)
+        print("  $SCRATCH allows 25 TB / 10M files, so this dataset's ~145,000 files")
+        print("  are a non-issue; space is the thing to watch.")
+    else:
+        print("  diskusage_report not found; check your quota by hand")
+
+    print("\ngpu:" if have_sbatch else "\ngpu (this node):")
+    try:
+        import torch
+
+        if torch.cuda.is_available():
+            for i in range(torch.cuda.device_count()):
+                p = torch.cuda.get_device_properties(i)
+                print(f"  cuda:{i}  {p.name}  {p.total_memory / 2**30:.1f} GiB")
+        else:
+            print("  no CUDA device here, which is normal on a login node -- "
+                  "the job script asks for one")
+    except ImportError:
+        print("  torch not importable here; fine on a login node if the venv is "
+              "activated only inside the job")
+
+    print("\n" + ("ready to submit" if ok else "fix the '!!' lines above first"))
+    return 0 if ok else 1
+
+
+def cmd_scinet_setup(args) -> int:
+    """Print the commands that build the venv on a login node.
+
+    Printed rather than executed. Building it needs the right module stack loaded
+    in the *calling* shell, and a Python subprocess cannot change its parent's
+    environment -- so a script that ran these itself would either work by luck or
+    build a venv against the wrong interpreter. Handing over an exact block to
+    paste is both honest and easier to debug.
+    """
+    cfg, _ = _load(args)
+    sc = cfg.scinet
+    venv = sc.venv or "$SCRATCH/segtrain/.venv"
+    repo = Path(__file__).resolve().parents[2]
+
+    modules = list(sc.modules) + list(sc.gpu_modules)
+
+    print("# Run these once, on the GPU login node (trillium-gpu.alliancecan.ca).")
+    print("# Compute nodes have no outbound internet, so every download happens here.")
+    print("#")
+    print("# The venv goes in $HOME, not $SCRATCH: compute nodes can read $HOME,")
+    print("# $SCRATCH 'may get partially deleted', and $SLURM_TMPDIR is a RAM disk.")
+    print()
+    if modules:
+        print("module purge")
+        print(f"module load {' '.join(modules)}\n")
+    print(f"virtualenv --no-download {venv}" if not args.venv_module
+          else f"python -m venv {venv}")
+    print(f"source {venv}/bin/activate")
+    print("pip install --no-index --upgrade pip")
+    print()
+    print("# --no-index installs from the Alliance wheelhouse rather than PyPI.")
+    print("# Those wheels are built against this cluster's CUDA, drivers and CPU;")
+    print("# PyPI's torch bundles its own CUDA and is the usual cause of a job")
+    print("# that imports fine and then cannot see the GPU. H100s need torch>=2.5.1.")
+    print("pip install --no-index torch nnunetv2 SimpleITK nibabel")
+    print()
+    print("# The pipeline itself, without letting pip re-resolve the above.")
+    print(f"pip install --no-deps -e {shlex.quote(str(repo))}")
+    print()
+    print("# Then check it:")
+    print("python -c 'import torch, nnunetv2; print(torch.__version__, "
+          "torch.version.cuda)'")
+    print("segtrain scinet check")
+    print()
+    print("# Note: `avail_wheels torch nnunetv2` shows what the wheelhouse has.")
+    print("# Stay on Python 3.11/3.12 -- there is no SimpleITK wheel for 3.13+.")
     return 0
 
 
-def cmd_modal_upload(args) -> int:
-    """Send a converted dataset to the Volume.
+def cmd_scinet_fetch(args) -> int:
+    """Download the dataset onto the cluster from a login node.
 
-    Images go to a single shared pool: all six tasks use byte-identical
-    `imagesTr`, so uploading them once and materialising per task on the
-    container keeps 21 GB from becoming 126 GB. Uploading runs laptop -> volume
-    with no container attached, so unlike a rented instance the transfer time
-    itself is free.
+    Deliberately not a job: compute nodes have no outbound internet, so a
+    download submitted to the queue would wait for hours and then fail at the
+    first HTTP request.
     """
-    import modal
+    import subprocess
 
     cfg, task = _load(args)
-    mc = cfg.modal
-    raw = task.raw_dir(cfg)
-    if not raw.is_dir():
-        print(f"nothing to upload: {raw} does not exist. Run `segtrain convert` first.",
-              file=sys.stderr)
+    dest = Path(args.dest) if args.dest else cfg.zenodo_root
+    script = Path(__file__).resolve().parents[2] / "scripts" / "init_dataset.py"
+
+    print(f"dest     {dest}")
+    print("source   zenodo.org/records/10047292 -- TotalSegmentator v2.0.1, ~22 GB")
+    print("          expands to ~30 GB and about 145,000 files.")
+    print()
+    print("Two things to check before this runs:")
+    print("  * that this is a login or datamover node (tri-dm1.scinet.utoronto.ca).")
+    print("    Compute nodes have no outbound internet and cannot reach Zenodo,")
+    print("    so this can never be a batch job.")
+    print("  * that `dest` is under $SCRATCH. $HOME and $PROJECT are read-only")
+    print("    from compute nodes, so a dataset in either is unusable by a job.")
+    print()
+    print("Space, not inodes, is the constraint here: $SCRATCH allows 25 TB and")
+    print("10M files, so 145,000 is not a problem. The download resumes, so an")
+    print("interrupted transfer costs only the remainder.")
+    print()
+    if args.dry_run:
+        print("[dry-run] not downloading")
+        return 0
+
+    cmd = [sys.executable, str(script), "--dest", str(dest)]
+    if args.keep_zip:
+        cmd.append("--keep-zip")
+    print("+ " + " ".join(cmd))
+    code = subprocess.run(cmd).returncode
+    if code != 0:
+        return code
+
+    print()
+    print("Once every task is converted the Zenodo tree is no longer needed --")
+    print(f"~30 GB and ~145,000 files back:  rm -rf {dest}")
+    print(f"next: segtrain scinet prepare --task {task.dataset_id} --convert")
+    return 0
+
+
+def cmd_scinet_prepare(args) -> int:
+    """Submit the CPU-only convert / plan / preprocess job."""
+    from .slurm import SlurmError, parse_walltime, render_prepare_script, submit, write_script
+
+    cfg, task = _load(args)
+    sc = _scinet_bits(cfg)
+
+    log_dir = cfg.runs_root / f"{task.nnunet_name}__prepare"
+    log_dir.mkdir(parents=True, exist_ok=True)
+    script_path = log_dir / "prepare.sh"
+    text = render_prepare_script(cfg, task, scheme=args.scheme,
+                                 convert=args.convert, workers=args.workers)
+    write_script(script_path, text)
+
+    print(f"task     {task.nnunet_name}")
+    print(f"steps    {'convert, ' if args.convert else ''}plan, preprocess")
+    print(f"queue    {sc.cpu_partition or '(site default)'}  "
+          f"{sc.prepare_cpus or sc.cpus_per_task} cpus  {sc.prepare_walltime}")
+    print(f"script   {script_path}")
+    print("  no GPU is requested: this is CPU and I/O work, and the CPU queue is")
+    print("  both cheaper against the allocation and usually far shorter.")
+    print()
+    if args.dry_run:
+        print(text)
+        return 0
+
+    try:
+        job_id = submit(script_path)
+    except SlurmError as exc:
+        print(f"error: {exc}", file=sys.stderr)
         return 1
 
-    volume = modal.Volume.from_name(mc.volume, create_if_missing=True)
-
-    groups = []
-    for split in ("imagesTr", "imagesTs"):
-        if (raw / split).is_dir():
-            groups.append((raw / split, f"/shared_images/{split}"))
-    for split in ("labelsTr", "labelsTs"):
-        if (raw / split).is_dir():
-            groups.append((raw / split, f"/nnUNet_raw/{task.nnunet_name}/{split}"))
-
-    existing = _volume_listing(volume)
-    total_files = total_bytes = 0
-    todo = []
-    for local_dir, remote_dir in groups:
-        for path in sorted(local_dir.glob("*.nii.gz")):
-            remote = f"{remote_dir}/{path.name}"
-            size = path.stat().st_size
-            if existing.get(remote.lstrip("/")) == size:
-                continue
-            todo.append((path, remote))
-            total_files += 1
-            total_bytes += size
-
-    meta = raw / "dataset.json"
-    if meta.is_file():
-        todo.append((meta, f"/nnUNet_raw/{task.nnunet_name}/dataset.json"))
-
-    print(f"volume   {mc.volume}")
-    print(f"task     {task.nnunet_name}")
-    print(f"to send  {total_files} file(s), {total_bytes / 2**30:.2f} GB"
-          + (f"  ({len(existing)} already on the volume)" if existing else ""))
-    if args.dry_run:
-        print("\n[dry-run] nothing sent")
-        return 0
-    if not todo:
-        print("nothing to do")
-        return 0
-
-    # batch_upload opens one session for the whole set, which matters for
-    # thousands of small label files.
-    with volume.batch_upload(force=True) as batch:
-        for path, remote in todo:
-            batch.put_file(str(path), remote)
-    print("upload complete")
-    print(f"next: segtrain modal prepare --task {task.dataset_id}")
+    print(f"submitted job {job_id}")
+    print(f"logs     {log_dir}/slurm-{job_id}.out")
+    print(f"next     segtrain scinet submit --task {task.dataset_id} "
+          f"  (after this finishes; ~{parse_walltime(sc.prepare_walltime) // 3600} h cap)")
     return 0
 
 
-def _volume_listing(volume, prefix: str = "/") -> dict:
-    """{path: size} for everything currently on the volume.
+def cmd_scinet_submit(args) -> int:
+    """Submit the whole training chain.
 
-    Used to make uploads resumable. Returns empty on any error -- a fresh volume
-    raises rather than returning nothing, and re-uploading is merely wasteful,
-    not wrong.
+    One command covers the whole run: each block trains to its wall-clock budget,
+    checkpoints, and the next resumes from that checkpoint. The chain is created
+    here, on the login node, because Trillium forbids a job from submitting
+    anything -- see ``segtrain.slurm``.
     """
-    listing: dict[str, int] = {}
+    from .slurm import SlurmError, parse_walltime, render_train_script, submit_chain, write_script
 
-    def walk(path: str, depth: int = 0) -> None:
-        if depth > 6:
-            return
-        try:
-            entries = list(volume.listdir(path))
-        except Exception:
-            return
-        for entry in entries:
-            name = getattr(entry, "path", None) or getattr(entry, "name", "")
-            if not name:
-                continue
-            entry_type = str(getattr(entry, "type", ""))
-            size = getattr(entry, "size", None)
-            if "DIRECTORY" in entry_type.upper():
-                walk(name, depth + 1)
-            elif size is not None:
-                listing[str(name).lstrip("/")] = int(size)
-
-    walk(prefix)
-    return listing
-
-
-def cmd_modal_prepare(args) -> int:
-    import modal
-
-    modal_app = _modal_bits()
     cfg, task = _load(args)
-    print(f"planning and preprocessing {task.nnunet_name} on Modal (CPU only) ...")
-    print("  no GPU is attached for this step -- it is pure CPU work")
-    with modal.enable_output(), modal_app.app.run():
-        result = modal_app.prepare.remote(task=str(task.dataset_id), scheme=args.scheme)
-    print(result)
-    print(f"next: segtrain modal train --task {task.dataset_id}")
-    return 0
+    sc = _scinet_bits(cfg)
 
+    overrides = {}
+    if args.chain_max:
+        overrides["chain_max"] = args.chain_max
+    if args.chain_mode:
+        overrides["chain_mode"] = args.chain_mode
+    if overrides:
+        sc = replace(sc, **overrides)
+        sc.validate()
+        cfg = replace(cfg, scinet=sc)
 
-def cmd_modal_train(args) -> int:
-    """Train on Modal, relaunching across the 24-hour function ceiling.
+    run_dir = task.run_dir(cfg, args.fold)
+    run_dir.mkdir(parents=True, exist_ok=True)
+    script_path = run_dir / "job.sh"
 
-    Each call runs until its wall-clock budget, checkpoints, and returns
-    status='paused'. The loop then relaunches, and the container resumes with
-    nnU-Net's --c. A run that reaches its final epoch returns 'completed' and the
-    loop stops.
-    """
-    import modal
+    text = render_train_script(cfg, task, args.fold, epochs=args.epochs,
+                               iterations=args.iterations,
+                               preview=not args.no_preview)
+    write_script(script_path, text)
 
-    modal_app = _modal_bits()
-    cfg, task = _load(args)
-    mc = cfg.modal
-    gpu = args.gpu or mc.gpu
-    max_seconds = args.max_seconds or mc.max_train_seconds
+    block = parse_walltime(sc.walltime)
+    budget = sc.budget_seconds()
+    epochs = args.epochs or task.epochs
+    total_hours = sc.chain_max * block / 3600
 
     print(f"task     {task.nnunet_name} fold {args.fold}")
-    print(f"gpu      {gpu}   cpu {mc.cpu}   ram {mc.memory_mb // 1024} GiB")
-    print(f"budget   {max_seconds}s per chunk, up to {args.max_chunks} chunk(s)")
-    print(f"monitor  modal://{mc.volume}/runs/{task.nnunet_name}__fold{args.fold}")
+    print(f"queue    {sc.gpu_partition or '(scheduler chooses -- correct on Trillium)'}"
+          f"  {sc.gpus_per_node} gpu  {sc.walltime}")
+    print(f"budget   {budget / 3600:.1f} h of training per block, "
+          f"{sc.pause_margin_seconds / 60:.0f} min margin")
+    print(f"chain    {sc.chain_mode}, up to {sc.chain_max} block(s) = "
+          f"{total_hours:.0f} h of GPU time")
+    print(f"epochs   {epochs}")
+    print(f"script   {script_path}")
+    if sc.stage_to_tmpdir:
+        print("staging  preprocessed data into $SLURM_TMPDIR -- which is a RAM disk "
+              "on Trillium,")
+        print("         and so spends job memory. The script re-checks that it fits.")
+
+    # A 1000-epoch 3d_fullres run is ~24-40 GPU-hours, so a chain that cannot
+    # reach the end will stop short and look, from the event stream, exactly like
+    # a run still in progress. Say so now rather than in two days.
+    if total_hours < 40 and epochs >= 1000:
+        print()
+        print(f"note: {sc.chain_max} x {sc.walltime} is {total_hours:.0f} h, which "
+              f"may not finish {epochs} epochs.")
+        print("      Raise scinet.chain_max (or --chain-max). Re-running this "
+              "command later also resumes,")
+        print("      so stopping short costs a queue wait rather than the run.")
     print()
 
-    # The GPU is baked into the function decorator at import time, so an override
-    # has to be in the environment before modal_app is imported. _modal_bits()
-    # has already imported it, so warn rather than silently ignoring the flag.
-    if args.gpu and args.gpu != modal_app.GPU:
-        print(f"note: set SEGTRAIN_MODAL_GPU={args.gpu} before running to change the GPU; "
-              f"this run uses {modal_app.GPU}", file=sys.stderr)
+    if args.dry_run:
+        print(text)
+        return 0
 
-    with modal.enable_output(), modal_app.app.run():
-        for chunk in range(1, args.max_chunks + 1):
-            print(f"--- chunk {chunk}/{args.max_chunks} ---")
-            result = modal_app.train.remote(
-                task=str(task.dataset_id),
-                fold=args.fold,
-                epochs=args.epochs,
-                iterations=args.iterations,
-                max_seconds=max_seconds,
-                save_every=mc.save_every,
-            )
-            status = (result or {}).get("status")
-            epoch = (result or {}).get("epoch")
-            total = (result or {}).get("total_epochs")
-            print(f"    status={status} epoch={epoch}/{total}")
-            if (result or {}).get("finished"):
-                print("\ntraining complete")
-                return 0
-            if status != "paused":
-                print(f"\nstopped with status {status!r}; not relaunching",
-                      file=sys.stderr)
-                return 1
-    print(f"\nhit the {args.max_chunks}-chunk limit without finishing; "
-          f"re-run to continue (it resumes from the checkpoint)")
-    return 1
+    try:
+        job_ids = submit_chain(sc, script_path)
+    except SlurmError as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 1
+
+    if sc.chain_mode == "array":
+        print(f"submitted array job {job_ids[0]}  "
+              f"({sc.chain_max} block(s), one at a time)")
+        print(f"logs     {run_dir}/slurm-{job_ids[0]}_1.out ...")
+    else:
+        print(f"submitted {len(job_ids)} chained job(s): {', '.join(job_ids)}")
+        print(f"logs     {run_dir}/slurm-<jobid>.out")
+    print(f"watch    segtrain scinet status --task {task.dataset_id} "
+          f"--fold {args.fold} --watch")
+    print(f"stop     segtrain scinet cancel --task {task.dataset_id} "
+          f"--fold {args.fold}")
+    print(f"slicer   {sc.run_address(str(run_dir))}")
+    return 0
 
 
-def cmd_modal_status(args) -> int:
+def cmd_scinet_status(args) -> int:
+    """Training progress from the event stream, plus what SLURM thinks.
+
+    Both halves are needed and neither is sufficient. The event stream is silent
+    while a job sits in the queue, and SLURM says RUNNING for a job whose trainer
+    crashed twenty minutes ago.
+    """
     from .events import read_run
+    from .slurm import queued_jobs
 
     cfg, task = _load(args)
-    mc = cfg.modal
-    run_name = f"{task.nnunet_name}__fold{args.fold}"
-    local_dir = cfg.runs_root / run_name
-    local_dir.mkdir(parents=True, exist_ok=True)
+    run_dir = Path(args.run_dir) if args.run_dir else task.run_dir(cfg, args.fold)
+    run_name = run_dir.name
+
+    def queue_line() -> str:
+        jobs = [j for j in queued_jobs()
+                if j["name"] == f"segtrain-{task.dataset_id}-f{args.fold}"]
+        if not jobs:
+            return "no job queued or running"
+        return "  ".join(
+            f"{j['job_id']} {j['state']}"
+            + (f" ({j['reason']})" if j["state"].upper() == "PENDING" else "")
+            + (f" {j['left']} left" if j["state"].upper() == "RUNNING" else "")
+            for j in jobs
+        )
 
     while True:
-        ok = _modal_volume_get(mc.volume, f"runs/{run_name}/events.jsonl",
-                               local_dir / "events.jsonl")
-        if not ok:
-            print(f"no events yet for {run_name}", file=sys.stderr)
-            if not args.watch:
-                return 1
+        events = run_dir / "events.jsonl"
+        if not events.is_file():
+            line = f"{run_name}: no events yet  |  {queue_line()}"
         else:
-            state = read_run(local_dir)
+            state = read_run(run_dir)
             _, dice = state.mean_pseudo_dice()
             eta = state.eta_seconds()
             line = (f"{run_name}  epoch {state.current_epoch}"
                     + (f"/{state.total_epochs}" if state.total_epochs else "")
                     + (f"  pseudo Dice {dice[-1]:.4f}" if dice else "")
                     + (f"  eta {eta / 3600:.1f} h" if eta else "")
-                    + f"  [{state.status or 'waiting'}]")
-            if not args.watch:
-                print(line)
-                return 0
-            sys.stdout.write("\r" + line.ljust(110))
-            sys.stdout.flush()
-            if state.status == "completed":
-                print()
-                return 0
+                    + f"  [{state.status or 'waiting'}]  |  {queue_line()}")
+
+        if not args.watch:
+            print(line)
+            if not events.is_file():
+                return 1
+            return 0
+
+        sys.stdout.write("\r" + line.ljust(140))
+        sys.stdout.flush()
+        if events.is_file() and read_run(run_dir).status == "completed":
+            print()
+            return 0
         time.sleep(args.interval)
 
 
-def _modal_volume_get(volume: str, remote: str, local: Path) -> bool:
-    """Pull one file off the volume with the modal CLI."""
-    import subprocess
+def cmd_scinet_queue(args) -> int:
+    from .slurm import queued_jobs
 
-    exe = shutil.which("modal")
-    if not exe:
-        print("the modal CLI is not on PATH; `pip install modal`", file=sys.stderr)
-        return False
-    local = Path(local)
-    local.parent.mkdir(parents=True, exist_ok=True)
-    result = subprocess.run(
-        [exe, "volume", "get", "--force", volume, remote, str(local)],
-        capture_output=True, text=True, timeout=600,
-    )
-    return result.returncode == 0 and local.is_file()
+    jobs = queued_jobs("" if args.all else "segtrain")
+    if not jobs:
+        print("nothing queued")
+        return 0
+    print(f"{'job':<12} {'name':<26} {'state':<10} {'elapsed':>9} {'left':>9}  reason")
+    for job in jobs:
+        print(f"{job['job_id']:<12} {job['name']:<26} {job['state']:<10} "
+              f"{job['elapsed']:>9} {job['left']:>9}  {job['reason']}")
+    return 0
 
 
-def cmd_modal_pull(args) -> int:
+def cmd_scinet_cancel(args) -> int:
+    """Cancel the running block and the queued successor.
+
+    Order matters, and getting it wrong is a trap: the successor depends on this
+    job with ``afterany``, so cancelling the running job *first* satisfies that
+    dependency and SLURM promptly starts the block you were trying to stop.
+    """
+    from .slurm import cancel, queued_jobs
+
+    cfg, task = _load(args)
+    run_dir = task.run_dir(cfg, args.fold)
+    name = f"segtrain-{task.dataset_id}-f{args.fold}"
+
+    jobs = [j for j in queued_jobs() if j["name"] == name]
+    if not jobs:
+        print(f"no queued or running job named {name}")
+        return 0
+
+    # Pending (the successors) before running (the current block).
+    jobs.sort(key=lambda j: 0 if j["state"].upper() == "PENDING" else 1)
+    for job in jobs:
+        good = cancel(job["job_id"])
+        print(f"{'cancelled' if good else 'FAILED to cancel'} "
+              f"{job['job_id']} ({job['state']})")
+
+    (run_dir / "chain_next.jobid").unlink(missing_ok=True)
+    print("\ncheckpoint_latest.pth is untouched, so `segtrain scinet submit` "
+          "resumes where this left off.")
+    return 0
+
+
+def cmd_scinet_pull(args) -> int:
+    """Copy a run directory, and optionally its checkpoints, to this machine.
+
+    For working offline or archiving a finished run. To *watch* a run, point the
+    Slicer monitor straight at ``user@host:/path`` instead -- it reads the live
+    file on the shared filesystem and needs no copy at all.
+    """
     import subprocess
 
     cfg, task = _load(args)
-    mc = cfg.modal
-    run_name = f"{task.nnunet_name}__fold{args.fold}"
-    exe = shutil.which("modal")
-    if not exe:
-        print("the modal CLI is not on PATH; `pip install modal`", file=sys.stderr)
-        return 1
+    sc = cfg.scinet
+    host = args.host or sc.login_host
+    if not host:
+        print("no login host: pass --host user@trillium.scinet.utoronto.ca or set "
+              "scinet.login_host", file=sys.stderr)
+        return 2
 
-    run_dir = cfg.runs_root / run_name
-    run_dir.mkdir(parents=True, exist_ok=True)
-    print(f"run directory -> {run_dir}")
-    subprocess.run([exe, "volume", "get", "--force", mc.volume,
-                    f"runs/{run_name}", str(run_dir.parent)], timeout=3600)
+    remote_runs = args.remote_runs_root or str(cfg.runs_root)
+    run_name = f"{task.nnunet_name}__fold{args.fold}"
+    dest = Path(args.dest or cfg.runs_root)
+    dest.mkdir(parents=True, exist_ok=True)
+
+    base = ["-o", "BatchMode=yes"]
+    if args.identity_file:
+        base += ["-i", args.identity_file]
+
+    print(f"run directory -> {dest / run_name}")
+    # Exclude checkpoints from the default sweep: the run directory is a few MB
+    # of events and previews, and pulling ~1 GB of .pth every time would make the
+    # common case unusable over a home connection.
+    cmd = ["scp", *base, "-r", f"{host}:{remote_runs}/{run_name}", str(dest)]
+    print("+ " + " ".join(cmd))
+    if subprocess.run(cmd).returncode != 0:
+        return 1
 
     if args.checkpoints:
         model = f"{task.trainer}__{task.plans_name}__{task.configuration}"
-        dest = task.results_dir(cfg) / model / f"fold_{args.fold}"
-        dest.mkdir(parents=True, exist_ok=True)
-        print(f"checkpoints   -> {dest}")
+        remote_results = args.remote_results_root or str(cfg.nnunet_results)
+        local = task.results_dir(cfg) / model / f"fold_{args.fold}"
+        local.mkdir(parents=True, exist_ok=True)
+        print(f"checkpoints   -> {local}")
         for name in ("checkpoint_best.pth", "checkpoint_final.pth"):
+            remote = f"{host}:{remote_results}/{task.nnunet_name}/{model}/fold_{args.fold}/{name}"
             print(f"  {name} (~400 MB) ...")
-            _modal_volume_get(
-                mc.volume,
-                f"nnUNet_results/{task.nnunet_name}/{model}/fold_{args.fold}/{name}",
-                dest / name,
-            )
+            subprocess.run(["scp", *base, remote, str(local / name)])
         for name in ("dataset.json", "plans.json"):
-            _modal_volume_get(mc.volume,
-                              f"nnUNet_results/{task.nnunet_name}/{model}/{name}",
-                              dest.parent / name)
+            remote = f"{host}:{remote_results}/{task.nnunet_name}/{model}/{name}"
+            subprocess.run(["scp", *base, remote, str(local.parent / name)])
+
     print("\ndone")
     return 0
 
@@ -741,8 +993,9 @@ def build_parser() -> argparse.ArgumentParser:
 
     s = sub.add_parser("train", parents=[common, task_opt, fold_opt], help="launch training")
     s.add_argument("--device", default="cuda", choices=("cuda", "cpu", "mps"))
-    s.add_argument("--backend", default="local", choices=("local",),
-                   help="local only; for GPU training use `segtrain modal train`")
+    s.add_argument("--backend", default="local", choices=("local", "slurm"),
+                   help="'slurm' submits one job, one walltime block; for a "
+                        "multi-day run use `segtrain scinet submit`")
     s.add_argument("--trainer", help="override the task's trainer class")
     s.add_argument("--epochs", type=int, help="override epoch count (smoke tests)")
     s.add_argument("--iterations", type=int,
@@ -771,53 +1024,86 @@ def build_parser() -> argparse.ArgumentParser:
                        help="summarise a run from its event stream")
     s.add_argument("--run-dir", help="read this directory instead of the configured one")
     s.add_argument("--worst", type=int, default=0, help="list the N weakest structures")
+    # Used by the SLURM job script to decide whether to cancel its own queued
+    # successor: the trainer exits 0 for both "paused at the wall" and "finished",
+    # so only the event stream can tell them apart.
+    s.add_argument("--is-complete", action="store_true",
+                   help="print nothing; exit 0 only if the run finished all its epochs")
     s.set_defaults(func=cmd_status)
 
-    # -- modal: the GPU workflow
-    mod = sub.add_parser("modal", help="run on Modal (fetch, prepare, train, monitor)")
-    modsub = mod.add_subparsers(dest="modal_command", required=True)
+    # -- scinet: the SLURM/GPU workflow
+    sci = sub.add_parser(
+        "scinet",
+        help="run on a SciNet cluster via SLURM (check, setup, fetch, prepare, submit)")
+    scisub = sci.add_subparsers(dest="scinet_command", required=True)
 
-    s = modsub.add_parser("fetch", parents=[common, task_opt],
-                          help="download the dataset from Zenodo onto the volume and convert it")
-    s.add_argument("--no-convert", action="store_true",
-                   help="download and extract only; run `convert` separately")
+    s = scisub.add_parser("check", parents=[common],
+                          help="pre-flight the cluster config, paths and quotas")
+    s.set_defaults(func=cmd_scinet_check)
+
+    s = scisub.add_parser("setup", parents=[common],
+                          help="print the login-node commands that build the venv")
+    s.add_argument("--venv-module", action="store_true",
+                   help="use `python -m venv` instead of the Alliance `virtualenv "
+                        "--no-download` wrapper")
+    s.set_defaults(func=cmd_scinet_setup)
+
+    s = scisub.add_parser("fetch", parents=[common, task_opt],
+                          help="download the dataset here, on a login node")
+    s.add_argument("--dest", help="override zenodo_root for this download")
     s.add_argument("--keep-zip", action="store_true",
-                   help="keep the 22 GB archive on the volume after extracting")
-    s.add_argument("--prune-raw", action="store_true",
-                   help="delete the Zenodo tree after converting; the other five tasks need it")
-    s.set_defaults(func=cmd_modal_fetch)
-
-    s = modsub.add_parser("upload", parents=[common, task_opt],
-                          help="send a converted dataset to the Modal volume")
+                   help="keep the 22 GB archive after extracting")
     s.add_argument("--dry-run", action="store_true")
-    s.set_defaults(func=cmd_modal_upload)
+    s.set_defaults(func=cmd_scinet_fetch)
 
-    s = modsub.add_parser("prepare", parents=[common, task_opt],
-                          help="plan and preprocess on a CPU-only function (no GPU billed)")
+    s = scisub.add_parser("prepare", parents=[common, task_opt],
+                          help="submit the CPU-only convert/plan/preprocess job")
     s.add_argument("--scheme", choices=("official", "cv5"), default="official")
-    s.set_defaults(func=cmd_modal_prepare)
+    s.add_argument("--convert", action="store_true",
+                   help="also run `convert` in the job, before planning")
+    s.add_argument("--workers", type=int, help="preprocessing worker processes")
+    s.add_argument("--dry-run", action="store_true", help="print the script, submit nothing")
+    s.set_defaults(func=cmd_scinet_prepare)
 
-    s = modsub.add_parser("train", parents=[common, task_opt, fold_opt],
-                          help="train on Modal, resuming across the 24 h function limit")
+    s = scisub.add_parser("submit", parents=[common, task_opt, fold_opt],
+                          help="submit the training job chain (crosses the 24 h cap)")
     s.add_argument("--epochs", type=int)
     s.add_argument("--iterations", type=int, help="iterations per epoch (smoke tests)")
-    s.add_argument("--gpu", help="override the configured GPU, e.g. T4 for a cheap test")
-    s.add_argument("--max-chunks", type=int, default=10,
-                   help="safety stop on the resume loop")
-    s.add_argument("--max-seconds", type=int,
-                   help="wall-clock budget per chunk; small values exercise resume")
-    s.set_defaults(func=cmd_modal_train)
+    s.add_argument("--chain-max", type=int,
+                   help="override scinet.chain_max: how many walltime blocks")
+    s.add_argument("--chain-mode", choices=("array", "dependency"),
+                   help="one --array=1-N%%1 job (default) or N --dependency jobs")
+    s.add_argument("--no-preview", action="store_true",
+                   help="do not run the preview daemon alongside training")
+    s.add_argument("--dry-run", action="store_true", help="print the script, submit nothing")
+    s.set_defaults(func=cmd_scinet_submit)
 
-    s = modsub.add_parser("status", parents=[common, task_opt, fold_opt],
-                          help="summarise the Modal run (--watch to follow)")
+    s = scisub.add_parser("status", parents=[common, task_opt, fold_opt],
+                          help="training progress plus the SLURM queue state")
+    s.add_argument("--run-dir", help="read this directory instead of the configured one")
     s.add_argument("--watch", action="store_true")
     s.add_argument("--interval", type=float, default=30.0)
-    s.set_defaults(func=cmd_modal_status)
+    s.set_defaults(func=cmd_scinet_status)
 
-    s = modsub.add_parser("pull", parents=[common, task_opt, fold_opt],
-                          help="bring the run directory and checkpoints back")
+    s = scisub.add_parser("queue", parents=[common],
+                          help="list your queued and running jobs")
+    s.add_argument("--all", action="store_true", help="not just segtrain jobs")
+    s.set_defaults(func=cmd_scinet_queue)
+
+    s = scisub.add_parser("cancel", parents=[common, task_opt, fold_opt],
+                          help="cancel the running block and its queued successor")
+    s.set_defaults(func=cmd_scinet_cancel)
+
+    s = scisub.add_parser("pull", parents=[common, task_opt, fold_opt],
+                          help="copy a run directory here over scp")
+    s.add_argument("--host", help="user@login-node; defaults to scinet.login_host")
+    s.add_argument("--identity-file", help="SSH private key")
+    s.add_argument("--dest", help="where to put the run directory locally")
+    s.add_argument("--remote-runs-root", help="runs_root on the cluster, if it differs")
+    s.add_argument("--remote-results-root",
+                   help="nnUNet_results on the cluster, if it differs")
     s.add_argument("--checkpoints", action="store_true", help="also fetch .pth files")
-    s.set_defaults(func=cmd_modal_pull)
+    s.set_defaults(func=cmd_scinet_pull)
 
     s = sub.add_parser("evaluate", parents=[common, task_opt, fold_opt],
                        help="score the held-out test set with Dice and NSD")

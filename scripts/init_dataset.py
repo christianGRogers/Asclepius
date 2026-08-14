@@ -114,7 +114,7 @@ def duration(seconds: float) -> str:
 class Progress:
     """Byte progress that behaves in a terminal and in a log file.
 
-    Modal, nohup and CI capture stdout to a file, where a carriage-returning
+    SLURM, nohup and CI capture stdout to a file, where a carriage-returning
     progress bar becomes tens of thousands of useless lines. When stdout is not
     a tty this prints one line every `log_every` seconds instead.
     """

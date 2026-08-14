@@ -26,8 +26,8 @@ with a fixed signature we cannot extend:
 ``SEGTRAIN_MAX_SECONDS``
     Wall-clock budget for this process. Once exceeded, save a checkpoint and stop
     cleanly at the next epoch boundary. This is what lets a 36-hour run survive
-    Modal's 24-hour function ceiling: the driver relaunches with ``--c`` and
-    training continues from the checkpoint instead of restarting.
+    a cluster's 24-hour walltime cap: the next block in the chain relaunches with
+    ``--c`` and training continues from the checkpoint instead of restarting.
 ``SEGTRAIN_SAVE_EVERY``
     Epochs between periodic checkpoints (nnU-Net default 50). Lower it so an
     *unclean* kill -- preemption, OOM -- costs minutes rather than hours.

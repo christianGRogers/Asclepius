@@ -13,6 +13,10 @@ TotalSegmentator v2.0.1 dataset.
 The pipeline is the deliverable, not just the weights. It lives in its own repo,
 separate from the inference extension that will eventually ship the model.
 
+Training runs on [SciNet](https://www.scinet.utoronto.ca/)'s Trillium
+supercomputer — see [Running on SciNet](#running-on-scinet) and
+[Acknowledging SciNet](#acknowledging-scinet).
+
 ---
 
 ## What it does
@@ -69,8 +73,12 @@ and will collide with older host packages compiled against numpy 1.x.
 
 Copy `configs/dataset.yaml` to `configs/dataset.local.yaml` and set the paths.
 Precedence is CLI flag → environment (`nnUNet_raw` etc.) → `.local.yaml` →
-tracked template, so the same checkout drives a laptop, a rented box and a
-cluster with no edits to tracked files.
+tracked template, so the same checkout drives a laptop and a cluster with no
+edits to tracked files.
+
+On SciNet, install into the venv described under [Running on
+SciNet](#running-on-scinet) rather than with the `[train]` extra: torch and
+nnU-Net both come from the Alliance wheelhouse there, not PyPI.
 
 ---
 
@@ -91,17 +99,19 @@ looks complete is left alone — so it is safe to run from a provisioning script
 or to run again after an interrupted transfer. Stdlib only, so it works before
 `pip install -e .`.
 
-On Modal, fetch straight onto the volume instead — Zenodo to Modal is a
-datacenter-speed transfer, so the 21 GB never crosses your own connection:
+On SciNet, download it **on a login or datamover node** — compute nodes have no
+outbound internet, so a download submitted to the queue waits for hours and then
+fails at the first HTTP request:
 
 ```bash
-segtrain modal fetch --task 701      # download + extract + convert, CPU-only container
+segtrain scinet fetch --task 701     # runs here, not in a job
 ```
 
-The archive lands on the volume rather than container-local disk, so a container
-that dies at 19 GB resumes instead of starting over. This replaces
-`segtrain modal upload`, which is now only worth using when the dataset is
-already converted on this machine.
+Put it under `$SCRATCH`. `$HOME` and `$PROJECT` are mounted read-only on
+Trillium's compute nodes, so a dataset in either is unreadable-for-writing by the
+job that needs it. The ~145,000 files are not a quota problem there — `$SCRATCH`
+allows 25 TB and 10M files — but they are worth deleting once every task has been
+converted, since nothing downstream reads the Zenodo tree again.
 
 ### More labelled CT, from the NCI Imaging Data Commons
 
@@ -168,81 +178,130 @@ segtrain status     --task 701 --fold 0 --worst 10
 segtrain evaluate   --task 701                     # held-out test set, Dice + NSD
 ```
 
-Remote and cluster runs are the same commands:
-
-```bash
-segtrain train --task 701 --backend ssh --host me@gpu-box
-segtrain train --task 701 --backend slurm
-```
-
 ---
 
-## Running on a rented GPU
+## Running on SciNet
 
-The whole point of the event-stream design: training runs on the instance, you
-watch from your laptop. Nothing but OpenSSH is needed locally.
+<img src="docs/scinet-logo.png" alt="SciNet" width="260">
 
-Configure once in `configs/dataset.local.yaml`:
+Training runs on Trillium's GPU subcluster; you watch from your laptop. That is
+what the event-stream design is for — nothing but OpenSSH is needed locally, and
+the monitor reads the same `events.jsonl` the job is writing.
 
-```yaml
-remote:
-  host: ubuntu@203.0.113.10      # changes every time the instance restarts
-  identity_file: C:/Users/you/.ssh/lambda.pem
-  root: /home/ubuntu/segtrain
-```
+**Trillium GPU**, as of this writing: 63 nodes, each 4 × NVIDIA H100 SXM 80 GB,
+96 AMD EPYC cores, 768 GB RAM. Scheduling is by whole GPU — one GPU brings a
+quarter node with it (24 cores, ~188 GiB). Walltime is capped at **24 hours**.
 
-Then:
+### Setting up, once
 
 ```bash
-segtrain remote check                    # key, connection, GPU, disk, install
-segtrain remote setup                    # ships the pipeline, installs deps
-segtrain convert --task 701              # locally: 117 masks -> 1 multilabel
-segtrain remote push  --task 701         # uploads ~21 GB, resumable
-segtrain remote train --task 701         # plan + preprocess + train, detached
-segtrain remote status --task 701 --watch
-segtrain remote pull  --task 701 --checkpoints
+ssh you@trillium-gpu.alliancecan.ca      # GPU jobs submit from the GPU login node
+segtrain scinet setup                    # prints the exact commands; paste them
 ```
 
-**Fix the key first.** On Windows a downloaded `.pem` inherits ACLs granting
-SYSTEM and Administrators access, and OpenSSH refuses it with *UNPROTECTED
-PRIVATE KEY FILE*. `segtrain remote check` detects this and
-`--fix-key` repairs it (`icacls /inheritance:r /grant:r`).
+They come out roughly as:
 
-Three things the transfer does deliberately:
+```bash
+module purge
+module load StdEnv/2023 python/3.11.5 cuda/12.6
+virtualenv --no-download $HOME/segtrain-env
+source $HOME/segtrain-env/bin/activate
+pip install --no-index --upgrade pip
+pip install --no-index torch nnunetv2 SimpleITK nibabel
+pip install --no-deps -e /path/to/this/repo
+```
 
-- **Converts locally.** The 117 binary masks are 9.1 GB and merge to ~0.7 GB.
-  Uploading converted datasets rather than the Zenodo tree saves that transfer
-  *and* moves the CPU work off a machine billed by the GPU-hour.
-- **Uploads images once.** All six tasks share byte-identical `imagesTr`. Images
-  go to a shared pool and are hardlinked into each task, so six tasks cost
-  ~21 GB plus ~0.7 GB each, not six full copies.
-- **Streams with `tar`, not `scp`.** A dataset is ~2500 files; `scp` pays a round
-  trip per file. Transfers resume by diffing a remote listing, so a dropped
-  connection costs only the current 200-file batch.
+Three details that are easy to get wrong and expensive to debug:
 
-`remote train` runs planning, preprocessing and training inside `nohup setsid`,
-so closing your laptop cannot kill an hour of preprocessing.
+- **`--no-index`, always.** It installs from the Alliance wheelhouse: builds
+  matched to this cluster's CUDA, drivers and CPU. PyPI's `torch` bundles its own
+  CUDA and is the usual reason a job imports torch happily and then cannot see
+  the GPU. H100s need torch ≥ 2.5.1. The whole nnU-Net v2 stack is in the
+  wheelhouse, so the install needs no internet beyond the login node.
+- **The venv goes in `$HOME`.** Compute nodes can read `$HOME`; `$SCRATCH` "may
+  get partially deleted", which surfaces weeks later as an `ImportError` in
+  block 7 of a chain.
+- **Everything else goes in `$SCRATCH`.** `$HOME` and `$PROJECT` are read-only
+  from compute nodes, so a run whose `nnunet_results` is in either dies on its
+  first write — after its queue wait.
 
-### Instance sizing
+Then set `account` and the five paths in `configs/dataset.local.yaml`, and check
+the lot before spending a queue wait on it:
 
-nnU-Net's default plan targets **8 GB**, so every current rental option has more
-VRAM than this workload can use. The real constraint is **vCPU count** —
-3d_fullres is dataloader-bound on fast GPUs, and augmentation is CPU work. A
-26-vCPU H100 will idle waiting on its own dataloader. `remote check` warns below
-12 vCPUs.
+```bash
+segtrain scinet check
+```
 
-Rough Stage 1 cost on Lambda (1000 epochs, estimates ±30%):
+It verifies the account, the venv, the walltime arithmetic, and — the one that
+actually bites — whether any configured path is on a filesystem the compute nodes
+cannot write to.
 
-| GPU | $/hr | vCPUs | est. hours | est. total |
-|---|---|---|---|---|
-| GH200 | 2.29 | 64 | ~16 | **~$37** |
-| Quadro RTX 6000 | 0.69 | 14 | ~90 | ~$62 |
-| A100 SXM | 1.99 | 30 | ~36 | ~$72 |
-| H100 SXM | 4.29 | 26 | ~24 | ~$103 |
+### Running a stage
 
-GH200's 96 GB and 64 vCPUs also let you train ~4 of the Stage 2 group models
-concurrently, which is what takes Stage 2 from ~$400 to ~$140. Its Grace CPU is
-ARM, so expect more dependency friction than x86.
+```bash
+segtrain scinet fetch   --task 701                # login node: no compute-node internet
+segtrain scinet prepare --task 701 --convert      # CPU job: convert + plan + preprocess
+segtrain scinet submit  --task 701 --fold 0       # GPU job chain
+segtrain scinet status  --task 701 --fold 0 --watch
+segtrain scinet queue                             # what's running and why it's pending
+segtrain scinet cancel  --task 701 --fold 0
+```
+
+`prepare` asks for no GPU. Fingerprinting, planning and preprocessing are CPU and
+I/O work, and Trillium's CPU subcluster is 1224 nodes against the GPU
+subcluster's 63 — so it is both cheaper against the allocation and usually far
+quicker to start.
+
+### Crossing the 24-hour wall
+
+Stage 1 is roughly 24–40 GPU-hours; the cap is 24. So `scinet submit` doesn't
+submit one job, it submits a **chain**:
+
+```
+block 1 ──train 23.3 h──▶ checkpoint, pause ──▶ block 2 ──resume──▶ … ──▶ complete
+```
+
+`SEGTRAIN_MAX_SECONDS` stops the trainer at an epoch boundary with time to spare,
+writes `checkpoint_latest.pth`, and — critically — exits *without* nnU-Net's
+`on_train_end`, which deletes that very file. The next block finds the checkpoint
+and resumes with `--c`.
+
+The chain is created **at submit time, from the login node**, as one
+`sbatch --array=1-N%1`. The obvious alternative, a job that ends by submitting
+its own successor, cannot work here: Trillium blocks job submission from compute
+nodes, so that script fails on its last line every time and the run stops after
+one block having looked fine throughout. Blocks that start after the run has
+finished check the event stream and exit in seconds.
+
+If job arrays turn out to be restricted, `chain_mode: dependency` submits N
+separate jobs chained with `--dependency=afterany` instead. `afterany` rather
+than `afterok` because a block killed at the walltime exits nonzero, and that is
+exactly when its successor is needed.
+
+Cancelling is `segtrain scinet cancel`, which kills the queued successors
+*before* the running block — the other order satisfies the dependency and starts
+the block you were trying to stop.
+
+### Sizing, and one Trillium-specific trap
+
+nnU-Net's default plan targets **8 GB of VRAM**, so one 80 GB H100 is already far
+more than this workload can use; asking for four would idle three of them. The
+real constraint is core count, and a 1-GPU job gets 24 — enough that the
+dataloader keeps up.
+
+**Trillium nodes have no local disk.** `$SLURM_TMPDIR` is a RAM disk, and what
+you put in it comes out of the job's own memory. Every "stage your dataset to
+node-local NVMe" tutorial is therefore wrong here. `stage_to_tmpdir` is off by
+default; turning it on is reasonable for Stage 1 (~10 GB of 3 mm data against
+~188 GiB) and not for the 1.5 mm groups (~75 GB, roughly doubled by nnU-Net's
+`.npz` → `.npy` unpacking). The job script measures the dataset against the
+cgroup limit and skips staging rather than being OOM-killed — `df` inside the job
+reports the RAM disk as the size of physical memory, and will happily let you
+overfill it.
+
+It matters less here than the usual advice implies, in any case: Trillium's
+storage is all-NVMe rated at ten million read IOPS, not the Lustre that the
+"avoid many small files" guidance was written for.
 
 ## Watching it train in Slicer
 
@@ -250,10 +309,16 @@ ARM, so expect more dependency friction than x86.
    `slicer/SegmentatorTrainMonitor` into **Additional module paths**, restart.
 2. Open **Segmentation → Segmentator Train Monitor**.
 3. Point it at a run directory — a local path, or
-   `ubuntu@203.0.113.10:/home/ubuntu/segtrain/runs/Dataset701_Total3mm__fold0`,
-   and set **SSH key** to your `.pem` for a rented instance.
+   `you@trillium.alliancecan.ca:/scratch/g/grp/you/runs/Dataset701_Total3mm__fold0`,
+   optionally with an **SSH key** if `~/.ssh/config` does not already name one.
 
-`segtrain remote train` prints the exact `host:path` to paste.
+`segtrain scinet submit` prints the exact `host:path` to paste.
+
+The run directory lives on `$SCRATCH`, which the login nodes share with the
+compute nodes, so the monitor reads the live file while the job writes it —
+there is no staging step and nothing to synchronise. Setting up `ControlMaster`
+for the host in `~/.ssh/config` is worth the two lines: the monitor polls every
+ten seconds, and Toronto is several hundred milliseconds of handshake away.
 
 You get loss and pseudo-Dice curves, a per-structure Dice table sorted weakest
 first, and the live model's segmentation of a **held-out** case loaded over the
@@ -266,7 +331,7 @@ reads far too high early on; it is shown on the curve but is not what the table
 reports once previews exist.
 
 No pip installs into Slicer's Python: the module imports the stdlib-only
-`segtrain.events` from `src/`, and shells out to `ssh`/`scp`.
+`segtrain.events` from `src/`, and shells out to the system `ssh`/`scp`.
 
 Verify the module against a finished run:
 
@@ -356,12 +421,35 @@ Tests needing the dataset are marked `needs_data` and skip without it.
 
 Verified end to end on CPU with a 24-case subset: convert → plan → preprocess →
 train → preview → status, plus the Slicer module against a real run (91 segments
-imported with correct anatomical names). What has **not** been exercised is a
-full-scale GPU run: the 1000-epoch schedule, multi-GPU, the SSH and SLURM
-backends against real hosts, and `evaluate` over the 89 test cases.
+imported with correct anatomical names). The SLURM layer is unit-tested — script
+rendering, walltime arithmetic, chain wiring, the resume decision — but has
+**not** yet been run against Trillium's scheduler. Also unexercised: the
+1000-epoch schedule, multi-GPU, and `evaluate` over the 89 test cases.
+
+## Acknowledging SciNet
+
+Any publication using compute from this pipeline should carry SciNet's
+[requested acknowledgement](https://docs.scinet.utoronto.ca/index.php/Acknowledging_SciNet):
+
+> Computations were performed on the Trillium supercomputer at the SciNet HPC
+> Consortium. SciNet is funded by Innovation, Science and Economic Development
+> Canada; the Digital Research Alliance of Canada; the Ontario Research Fund:
+> Research Excellence; and the University of Toronto.
+
+SciNet also asks that these two papers be cited:
+
+- M. Ponce et al., "Deploying a Top-100 Supercomputer for Large Parallel
+  Workloads: the Niagara Supercomputer", *PEARC'19 Proceedings*, 2019.
+  [doi:10.1145/3332186.3332195](https://doi.org/10.1145/3332186.3332195)
+- C. Loken et al., "SciNet: Lessons Learned from Building a Power-efficient
+  Top-20 System and Data Centre", *J. Phys.: Conf. Ser.* **256** 012026, 2010.
+  [doi:10.1088/1742-6596/256/1/012026](https://doi.org/10.1088/1742-6596/256/1/012026)
 
 ## Licence
 
 MIT for this pipeline. nnU-Net is Apache-2.0; the TotalSegmentator dataset
 carries its own terms — check them before redistributing any trained weights,
 since the weights' licence follows the training data, not this repo.
+
+The SciNet logo in this README is reproduced from the SciNet documentation wiki,
+which invites its use; it is not covered by this repository's MIT licence.

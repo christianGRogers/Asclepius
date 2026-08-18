@@ -1,0 +1,42 @@
+# Phase 1: the coronary tree by major branch.
+#
+# HAND-WRITTEN. Unlike all117.yaml and the five group files, this is not produced
+# by scripts/gen_label_configs.py -- that script derives its label sets from the
+# TotalSegmentator dataset, which contains no coronary structures at all.
+#
+# Label indices are 1-based and contiguous; 0 is background. This order is the
+# trained model's output-channel order, so it must never be reshuffled once a
+# model exists: reordering silently remaps every prediction a model has ever
+# made, and nothing downstream can detect it.
+#
+# Four classes rather than the full AHA 17/18-segment scheme, because these are
+# what can be labelled reliably and consistently today. The segment-level split
+# (LAD proximal/mid/distal, diagonals, obtuse marginals, ...) arrives with the
+# finer data, and when it does it belongs in a NEW label set and a NEW dataset
+# id -- not as an edit to this file. Splitting `left_anterior_descending` into
+# three would renumber everything after it, so a model trained against this file
+# would keep loading without complaint and predict the wrong structures.
+#
+# `coronary_ext` is a strict superset: indices 1-4 are identical, so a model
+# trained here has output channels that line up with the first four of that set.
+
+name: coronary
+count: 4
+labels:
+  # Left main (LMCA): ostium at the left coronary sinus to the LAD/LCx
+  # bifurcation. Short -- often under 10 mm -- so it is the class most sensitive
+  # to target spacing, and the one to watch first when tuning resolution.
+  left_main:                 1
+
+  # Left anterior descending (LAD), running the anterior interventricular
+  # groove toward the apex. Diagonal branches are included here in phase 1.
+  left_anterior_descending:  2
+
+  # Left circumflex (LCx), in the left atrioventricular groove. Obtuse marginal
+  # branches are included here in phase 1.
+  left_circumflex:           3
+
+  # Right coronary artery (RCA), right atrioventricular groove. In a
+  # right-dominant heart (~85% of people) this continues into the posterior
+  # descending artery, which phase 1 does not separate -- see coronary_ext.
+  right_coronary_artery:     4

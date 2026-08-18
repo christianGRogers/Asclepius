@@ -1,8 +1,8 @@
 """SLURM job scripts, and the chain that carries a run past the 24-hour cap.
 
-Trillium caps every job at 24 hours. Stage 1 is roughly 24-40 GPU-hours on an
-H100 and the 1.5 mm group models are longer, so a run has to survive being
-stopped and restarted. Three pieces cooperate:
+Trillium caps every job at 24 hours. A 1000-epoch 3d_fullres run is tens of
+GPU-hours on an H100 -- more once a larger patch size is planned for -- so a run
+has to survive being stopped and restarted. Three pieces cooperate:
 
 1. ``SEGTRAIN_MAX_SECONDS`` in ``nnUNetTrainer_segtrain`` stops training at an
    epoch boundary before the wall, writes ``checkpoint_latest.pth``, and exits
@@ -401,10 +401,11 @@ def _staging_block(cfg: Config, task: TaskConfig) -> list[str]:
     whose contents count against the job's memory cgroup. So this trades RAM for
     filesystem I/O, and a 1-GPU job has about 188 GiB of it.
 
-    That makes it a good deal for Stage 1 -- ~10 GB of 3 mm data, unpacked to
-    ~14 GB, against 188 GiB -- and a bad one for the 1.5 mm group models, where
-    preprocessed data is ~75 GB and nnU-Net's ``.npz`` -> ``.npy`` unpacking
-    roughly doubles it. Hence ``stage_to_tmpdir`` defaults to off.
+    Whether that is a good trade depends entirely on the dataset's preprocessed
+    size against the ~188 GiB a 1-GPU job holds. CCTA at ~0.35 mm isotropic is not
+    small, and nnU-Net's ``.npz`` -> ``.npy`` unpacking roughly doubles it; the
+    1.5 mm phase 2 tasks are ~75 GB before unpacking and do not fit. Measure
+    first, which is why ``stage_to_tmpdir`` defaults to off.
 
     It is also less necessary here than the usual advice implies. That advice was
     written for Lustre; Trillium's storage is all-NVMe VAST rated at ten million

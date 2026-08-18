@@ -1,21 +1,22 @@
 """``segtrain`` command line interface.
 
-A normal Stage 1 run, start to finish::
+A phase 1 coronary run, start to finish::
 
-    segtrain convert    --task 701
-    segtrain plan       --task 701          # fingerprint + plans + splits
-    segtrain preprocess --task 701
-    segtrain train      --task 701 --fold 0
-    segtrain preview    --task 701 --fold 0 --watch   # second terminal
-    segtrain evaluate   --task 701
+    segtrain index      --root /data/coronary   # scan cases -> meta.csv
+    segtrain convert    --task 710
+    segtrain plan       --task 710 --gpu-mem 24 # fingerprint + plans + splits
+    segtrain preprocess --task 710
+    segtrain train      --task 710 --fold 0
+    segtrain preview    --task 710 --fold 0 --watch   # second terminal
+    segtrain evaluate   --task 710
 
 The same run on a SciNet cluster, from a login node::
 
     segtrain scinet check                              # config, paths, quotas
-    segtrain scinet fetch   --task 701                 # login node: no compute-node internet
-    segtrain scinet prepare --task 701 --convert       # CPU job
-    segtrain scinet submit  --task 701 --fold 0        # chained GPU job
-    segtrain scinet status  --task 701 --fold 0 --watch
+    segtrain index          --root $SCRATCH/coronary   # login node
+    segtrain scinet prepare --task 710 --convert       # CPU job
+    segtrain scinet submit  --task 710 --fold 0        # chained GPU job
+    segtrain scinet status  --task 710 --fold 0 --watch
 
 Heavy imports (torch, nnU-Net) happen inside the subcommands that need them, so
 ``convert``, ``splits``, ``status`` and ``evaluate --score-only`` all run on a
@@ -78,7 +79,7 @@ def cmd_info(args) -> int:
     for name in list_tasks():
         t = load_task(name)
         print(f"  {t.nnunet_name:<24} {t.label_set.n_classes:>3} classes  "
-              f"{t.spacing[0]:>4} mm  {t.configuration}")
+              f"{t.spacing_label:>9}  {t.configuration}")
 
     print("\ncompute:")
     try:
@@ -132,6 +133,64 @@ def cmd_convert(args) -> int:
     return 0 if report.ok else 1
 
 
+# -------------------------------------------------------------------------- index
+
+
+def cmd_index(args) -> int:
+    """Scan a dataset directory and write the meta.csv the pipeline reads.
+
+    This is the entry point for your own labelled data. TotalSegmentator ships
+    its own meta.csv with a published split; anything else needs one written, and
+    once it exists every other subcommand works identically.
+    """
+    from .index import build_rows, read_overrides, scan, summarize, write_meta
+
+    cfg, _ = _load(args)
+    root = Path(args.root) if args.root else cfg.zenodo_root
+
+    cases = scan(root)
+    if not cases:
+        print(f"no cases found under {root}\n"
+              "Expected one directory per case, each containing ct.nii.gz "
+              "(or image.nii.gz, or <case>.nii.gz).", file=sys.stderr)
+        return 1
+
+    overrides = read_overrides(Path(args.overrides)) if args.overrides else None
+    rows = build_rows(
+        cases,
+        val_fraction=args.val_fraction,
+        test_fraction=args.test_fraction,
+        seed=args.seed,
+        study_type=args.study_type,
+        overrides=overrides,
+    )
+
+    print(f"root     {root}")
+    print(summarize(cases, rows, args.val_fraction, args.test_fraction))
+    if overrides:
+        print(f"  pinned:  {len(overrides)} case(s) placed by {args.overrides}")
+
+    out = Path(args.out) if args.out else root / "meta.csv"
+    if args.dry_run:
+        print(f"\n[dry-run] would write {out}")
+        return 0
+
+    # Refuse to silently rewrite an index that other artefacts already depend on:
+    # a converted dataset and a splits_final.json were built against the old one,
+    # and reassigning splits underneath them moves test cases into training.
+    if out.exists() and not args.force:
+        print(f"\n{out} already exists. Re-writing it can move cases between "
+              "splits,\nwhich invalidates anything already converted or trained. "
+              "Pass --force if that is what you want.", file=sys.stderr)
+        return 1
+
+    write_meta(out, rows)
+    print(f"\nwrote {out}")
+    print(f"next: segtrain convert --task {args.task}" if getattr(args, "task", None)
+          else "next: segtrain convert --task 710")
+    return 0
+
+
 # ------------------------------------------------------------------------- splits
 
 
@@ -164,7 +223,7 @@ def cmd_plan(args) -> int:
         print(f"extracting fingerprint for {task.nnunet_name} ...")
         extract_fingerprint(cfg, task, check_integrity=args.verify_integrity)
 
-    print(f"planning at {task.spacing[0]} mm ...")
+    print(f"planning at {task.spacing_label} target spacing ...")
     plan_experiment(cfg, task, gpu_memory_target_gb=args.gpu_mem)
 
     path = write_splits(cfg, task, scheme=args.scheme, n_folds=args.folds, seed=args.seed)
@@ -948,7 +1007,7 @@ def build_parser() -> argparse.ArgumentParser:
 
     task_opt = argparse.ArgumentParser(add_help=False)
     task_opt.add_argument("--task", "-t", required=True,
-                          help="dataset id (701), name (Organs), or Dataset701_Total3mm")
+                          help="dataset id (710), name (Coronary), or Dataset710_Coronary")
 
     fold_opt = argparse.ArgumentParser(add_help=False)
     fold_opt.add_argument("--fold", "-f", type=int, default=0)
@@ -971,6 +1030,22 @@ def build_parser() -> argparse.ArgumentParser:
     s.add_argument("--no-test", action="store_true", help="skip the held-out test cases")
     s.add_argument("--dry-run", action="store_true")
     s.set_defaults(func=cmd_convert)
+
+    s = sub.add_parser("index", parents=[common],
+                       help="scan your own dataset directory and write meta.csv")
+    s.add_argument("--root", help="dataset root; defaults to the configured data root")
+    s.add_argument("--out", help="where to write meta.csv (default: <root>/meta.csv)")
+    s.add_argument("--val-fraction", type=float, default=0.15)
+    s.add_argument("--test-fraction", type=float, default=0.15)
+    s.add_argument("--seed", type=int, default=12345,
+                   help="changing this reshuffles every case; do not change it "
+                        "once you have trained anything")
+    s.add_argument("--study-type", default="ccta",
+                   help="recorded per case; used to stratify --scheme cv5 folds")
+    s.add_argument("--overrides", help="CSV of case_id,split to pin specific cases")
+    s.add_argument("--force", action="store_true", help="overwrite an existing meta.csv")
+    s.add_argument("--dry-run", action="store_true")
+    s.set_defaults(func=cmd_index)
 
     s = sub.add_parser("splits", parents=[common, task_opt, split_opt],
                        help="write splits_final.json from meta.csv")

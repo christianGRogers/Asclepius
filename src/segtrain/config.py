@@ -129,8 +129,8 @@ class SciNetConfig:
     # Copy the preprocessed task into $SLURM_TMPDIR and train from there.
     # Off by default, and read segtrain.slurm before turning it on: Trillium
     # nodes have no local disk, so $SLURM_TMPDIR is a RAM disk that spends the
-    # job's own memory. Reasonable for Stage 1 at 3 mm (~10 GB of ~188 GiB);
-    # not for the 1.5 mm groups (~75 GB, roughly doubled by unpacking).
+    # job's own memory (~188 GiB for a 1-GPU job). Measure the preprocessed size
+    # first -- the 1.5 mm phase 2 tasks are ~75 GB and do not fit.
     stage_to_tmpdir: bool = False
 
     # -- the CPU-only plan/preprocess job
@@ -340,10 +340,28 @@ class LabelSet:
 
     The order is a trained model's output-channel order. Once a model exists it
     is frozen: reordering silently remaps every prediction.
+
+    ``source_values`` is for datasets labelled as one integer volume per case
+    rather than one binary mask per structure. It says which value in *their*
+    file means which of *our* structures, so a segmentation exported with
+    1=RCA, 2=LM, 3=LAD converts correctly instead of being read positionally and
+    mislabelling every vessel. Empty means the file already uses our indices.
     """
 
     name: str
     labels: dict[str, int]
+    source_values: dict[str, int] = field(default_factory=dict)
+
+    def source_to_index(self) -> dict[int, int]:
+        """``{value in the source file: our label index}``.
+
+        Identity when no mapping is declared, which is the case for data
+        converted from per-structure masks.
+        """
+        if not self.source_values:
+            return {i: i for i in self.labels.values()}
+        return {self.source_values[n]: i for n, i in self.labels.items()
+                if n in self.source_values}
 
     @property
     def names(self) -> list[str]:
@@ -400,27 +418,74 @@ def load_label_set(name: str, labels_dir: Optional[Path] = None) -> LabelSet:
     if declared is not None and int(declared) != len(labels):
         raise ConfigError(f"{path}: declared count {declared} != {len(labels)} labels")
 
-    return LabelSet(name=data.get("name", name), labels=labels)
+    source_values = data.get("source_values") or {}
+    if source_values:
+        if not isinstance(source_values, dict):
+            raise ConfigError(f"{path}: 'source_values' must be a mapping")
+        source_values = {str(k): int(v) for k, v in source_values.items()}
+        unknown = sorted(set(source_values) - set(labels))
+        if unknown:
+            raise ConfigError(
+                f"{path}: source_values names {unknown} which are not in 'labels'"
+            )
+        # Two structures reading the same source value means one of them can
+        # never be produced, and the conversion would look entirely successful.
+        seen: dict[int, str] = {}
+        for structure, value in sorted(source_values.items()):
+            if value in seen:
+                raise ConfigError(
+                    f"{path}: source value {value} is claimed by both "
+                    f"{seen[value]!r} and {structure!r}"
+                )
+            seen[value] = structure
+        if 0 in seen:
+            raise ConfigError(
+                f"{path}: source value 0 is background and cannot map to "
+                f"{seen[0]!r}"
+            )
+
+    return LabelSet(name=data.get("name", name), labels=labels,
+                    source_values=source_values)
 
 
 @dataclass
 class TaskConfig:
-    """One nnU-Net Dataset: which structures, at what resolution, trained how."""
+    """One nnU-Net Dataset: which structures, at what resolution, trained how.
+
+    ``spacing`` of None means "native": do not override, and let nnU-Net's own
+    median-spacing rule pick the target. That is the right answer whenever the
+    goal is the highest resolution the data supports, because nnU-Net already
+    computes exactly that. Forcing a number is for when you want something
+    *other* than native -- and the only reason to want that is a deliberately
+    coarser model.
+    """
 
     dataset_id: int
     dataset_name: str
     label_set: LabelSet
-    spacing: tuple[float, float, float]
+    spacing: Optional[tuple[float, float, float]]
     configuration: str = "3d_fullres"
     trainer: str = "nnUNetTrainer_segtrain"
     plans_name: str = "nnUNetPlans"
     epochs: int = 1000
     folds: list[int] = field(default_factory=lambda: [0])
+    # Refuse a planned target spacing coarser than this. Only meaningful
+    # alongside `spacing: native`, and there it closes the one hole native
+    # leaves: nnU-Net picks the *median* spacing of the dataset, so mixing a few
+    # thick-slice studies into a CCTA set drags the target coarse and quietly
+    # interpolates away the structures the model exists to find. A distal vessel
+    # is 1-2 mm across; at 1 mm spacing it is one voxel wide.
+    max_spacing_mm: Optional[float] = None
     source_path: Optional[Path] = None
 
     @property
+    def spacing_label(self) -> str:
+        """Human-readable target spacing, for logs and tables."""
+        return "native" if self.spacing is None else f"{self.spacing[0]:g} mm"
+
+    @property
     def nnunet_name(self) -> str:
-        """nnU-Net's directory name, e.g. 'Dataset701_Total3mm'."""
+        """nnU-Net's directory name, e.g. 'Dataset710_Coronary'."""
         return f"Dataset{self.dataset_id:03d}_{self.dataset_name}"
 
     def raw_dir(self, cfg: Config) -> Path:
@@ -446,7 +511,7 @@ def load_task(
     tasks_dir: Optional[Path] = None,
     labels_dir: Optional[Path] = None,
 ) -> TaskConfig:
-    """Load a task by dataset id (701), name (Organs), or full nnU-Net name."""
+    """Load a task by dataset id (710), name (Coronary), or full nnU-Net name."""
     ref_s = str(ref)
     candidates = _task_files(tasks_dir)
     if not candidates:
@@ -455,7 +520,7 @@ def load_task(
     match: Optional[Path] = None
     for path in candidates:
         # Filename is Dataset<id>_<name>.yaml -- match on either part so
-        # `--task 701`, `--task Organs` and `--task Dataset702_Organs` all work.
+        # `--task 710`, `--task Organs` and `--task Dataset702_Organs` all work.
         m = re.match(r"Dataset(\d+)_(.+)", path.stem)
         if not m:
             continue
@@ -475,15 +540,28 @@ def load_task(
         if key not in data:
             raise ConfigError(f"{match}: missing required key {key!r}")
 
-    spacing = data["spacing"]
-    if not isinstance(spacing, (list, tuple)) or len(spacing) != 3:
-        raise ConfigError(f"{match}: spacing must be a list of 3 numbers, got {spacing!r}")
+    # `spacing: native` (or null) leaves the target spacing to nnU-Net. The key
+    # is still required, so a task file always states the intent explicitly
+    # rather than defaulting into one behaviour or the other by omission.
+    raw_spacing = data["spacing"]
+    if raw_spacing is None or (isinstance(raw_spacing, str)
+                               and raw_spacing.strip().lower() == "native"):
+        spacing = None
+    elif isinstance(raw_spacing, (list, tuple)) and len(raw_spacing) == 3:
+        spacing = (float(raw_spacing[0]), float(raw_spacing[1]), float(raw_spacing[2]))
+    else:
+        raise ConfigError(
+            f"{match}: spacing must be a list of 3 numbers or 'native', "
+            f"got {raw_spacing!r}"
+        )
 
     return TaskConfig(
         dataset_id=int(data["dataset_id"]),
         dataset_name=str(data["dataset_name"]),
         label_set=load_label_set(str(data["label_set"]), labels_dir=labels_dir),
-        spacing=(float(spacing[0]), float(spacing[1]), float(spacing[2])),
+        spacing=spacing,
+        max_spacing_mm=(float(data["max_spacing_mm"])
+                        if data.get("max_spacing_mm") is not None else None),
         configuration=str(data.get("configuration", "3d_fullres")),
         trainer=str(data.get("trainer", "nnUNetTrainer_segtrain")),
         plans_name=str(data.get("plans_name", "nnUNetPlans")),

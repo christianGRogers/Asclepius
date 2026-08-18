@@ -9,7 +9,7 @@ is no path by which nnU-Net can peek at them.
 Two schemes are offered:
 
 ``official`` (default)
-    One fold, exactly the published split. This is what Stage 1 and Stage 2 use.
+    One fold, using the `val` column exactly as written. The default.
     splits_final.json contains a single entry, which nnU-Net accepts.
 
 ``cv5``

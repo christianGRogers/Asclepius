@@ -38,7 +38,7 @@ def cfg(tmp_path) -> Config:
 
 @pytest.fixture
 def task():
-    return load_task("701")
+    return load_task("710")
 
 
 # ----------------------------------------------------------------- walltime

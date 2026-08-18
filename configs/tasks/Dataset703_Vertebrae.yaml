@@ -1,4 +1,4 @@
-# Stage 2 group: vertebrae C1-C7, T1-T12, L1-L5, S1 (25 classes).
+# PHASE 2 region model: vertebrae C1-C7, T1-T12, L1-L5, S1 (25 classes).
 #
 # The hard part is labelling, not segmentation: neighbouring vertebrae look
 # nearly identical, so errors are overwhelmingly off-by-one shifts along the

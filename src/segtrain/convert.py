@@ -1,25 +1,36 @@
-"""Convert the TotalSegmentator Zenodo layout into an nnU-Net raw dataset.
+"""Convert a case-per-directory dataset into an nnU-Net raw dataset.
 
-Source layout (read-only, never modified)::
+Source layout (read-only, never modified). Either one binary mask per
+structure::
 
-    <zenodo_root>/sXXXX/ct.nii.gz
-    <zenodo_root>/sXXXX/segmentations/<structure>.nii.gz   x117 binary masks
+    <data_root>/<case>/ct.nii.gz
+    <data_root>/<case>/segmentations/<structure>.nii.gz
+
+or a single integer label volume, which is what a case hand-labelled in Slicer
+usually looks like::
+
+    <data_root>/<case>/ct.nii.gz
+    <data_root>/<case>/labels.nii.gz
+
+The form is detected per case, so a dataset part-way through relabelling still
+converts. For the second form the label set's ``source_values`` says which
+integer means which structure; see ``segtrain.config.LabelSet``.
 
 nnU-Net layout::
 
-    <nnUNet_raw>/Dataset701_Total3mm/imagesTr/sXXXX_0000.nii.gz
-    <nnUNet_raw>/Dataset701_Total3mm/labelsTr/sXXXX.nii.gz  one uint8 multilabel
-    <nnUNet_raw>/Dataset701_Total3mm/imagesTs/, labelsTs/    the 89 test cases
-    <nnUNet_raw>/Dataset701_Total3mm/dataset.json
+    <nnUNet_raw>/Dataset710_Coronary/imagesTr/<case>_0000.nii.gz
+    <nnUNet_raw>/Dataset710_Coronary/labelsTr/<case>.nii.gz   one uint8 multilabel
+    <nnUNet_raw>/Dataset710_Coronary/imagesTs/, labelsTs/     held-out test cases
+    <nnUNet_raw>/Dataset710_Coronary/dataset.json
 
 Two things make this cheap:
 
-* **Merging shrinks the labels.** 117 separate gzipped masks are ~5-10 MB per
-  case, largely header overhead and near-empty volumes; the merged uint8 volume
-  is 0.1-0.3 MB. The full label set for 1228 cases is about 0.3 GB.
+* **Merging shrinks the labels.** Separate gzipped masks are mostly header
+  overhead and near-empty volume; the merged uint8 volume is a fraction of the
+  size. Across TotalSegmentator's 1228 cases, 9.1 GB of masks become ~0.3 GB.
 * **Images are linked, not copied.** A hardlink costs nothing and nnU-Net only
-  needs the ``_0000`` filename convention. Copying would duplicate 21 GB per
-  task, six times over.
+  needs the ``_0000`` filename convention. Copying would duplicate the whole
+  image set once per task.
 """
 
 from __future__ import annotations
@@ -86,6 +97,11 @@ class CaseResult:
     n_labels_written: int = 0
     missing: list[str] = field(default_factory=list)
     overlaps: int = 0
+    # Label data that could not be used and was dropped: a mask whose geometry
+    # disagrees with the CT, or an integer value the label set does not account
+    # for. Dropping is reported loudly because the alternative -- a structure
+    # silently becoming background -- looks exactly like a model that failed to
+    # learn it.
     geometry_mismatch: list[str] = field(default_factory=list)
     error: str = ""
     skipped: bool = False
@@ -235,25 +251,99 @@ def merge_masks(
     return out, missing, overlaps, mismatch
 
 
+def remap_multilabel(
+    label_path: Path,
+    label_set,
+    reference: nib.Nifti1Image,
+) -> tuple[np.ndarray, list[str], list[str]]:
+    """Read a single integer label volume and remap it onto our indices.
+
+    Returns ``(labels, missing, problems)``, where ``missing`` names structures
+    with no voxels in this case and ``problems`` holds anything that made a
+    voxel unusable.
+
+    There is no overlap resolution to do here: an integer volume already has one
+    owner per voxel. What replaces it is a harder question -- whether the values
+    in the file mean what we think they mean. Values not covered by the label
+    set are **dropped and reported** rather than passed through. Passing them
+    through would put a foreign index into the training labels; silently zeroing
+    them would turn a whole structure into background and read as a model that
+    simply never learned it.
+    """
+    img = nib.load(str(label_path))
+    problems: list[str] = []
+
+    if img.shape != reference.shape:
+        return (np.zeros(reference.shape, dtype=np.uint8), [],
+                [f"labels shape {img.shape} != CT {reference.shape}"])
+
+    zooms = [float(z) for z in reference.header.get_zooms()[:3]]
+    tolerance_mm = GEOMETRY_TOLERANCE_VOXELS * min(zooms or [1.0])
+    offset = geometry_offset_mm(img.affine, reference.affine, reference.shape)
+    if offset > tolerance_mm:
+        return (np.zeros(reference.shape, dtype=np.uint8), [],
+                [f"labels geometry differs from CT by {offset:.3f} mm"])
+
+    source = np.asanyarray(img.dataobj)
+    mapping = label_set.source_to_index()
+
+    out = np.zeros(reference.shape, dtype=np.uint8)
+    present: set[int] = set()
+    for value in np.unique(source):
+        value = int(value)
+        if value == 0:
+            continue
+        target = mapping.get(value)
+        if target is None:
+            n = int((source == value).sum())
+            problems.append(
+                f"unmapped label value {value} ({n} voxels) dropped -- declare it "
+                "in the label set's source_values, or remove it from the file"
+            )
+            continue
+        out[source == value] = target
+        present.add(target)
+
+    missing = [n for n, i in sorted(label_set.labels.items(), key=lambda kv: kv[1])
+               if i not in present]
+    return out, missing, problems
+
+
 def convert_case(
     case_id: str,
     zenodo_root: Path,
     images_dir: Path,
     labels_dir: Path,
-    names: Sequence[str],
+    label_set,
     link_mode: str,
     overwrite: bool,
     overlap_policy: str = OVERLAP_SMALLER_WINS,
 ) -> CaseResult:
-    """Convert one subject. Runs in a worker process; must not raise."""
+    """Convert one subject. Runs in a worker process; must not raise.
+
+    Handles both source forms: one binary mask per structure (TotalSegmentator,
+    and the form that carries the most information), or a single integer volume
+    (what a hand-labelled case exported from Slicer usually looks like). Which
+    one a case uses is detected per case, so a dataset part-way through
+    relabelling still converts.
+    """
     try:
+        from .index import find_image, find_labels
+
         subject = Path(zenodo_root) / case_id
-        ct_path = subject / "ct.nii.gz"
-        seg_dir = subject / "segmentations"
-        if not ct_path.is_file():
-            return CaseResult(case_id, False, error=f"missing {ct_path}")
-        if not seg_dir.is_dir():
-            return CaseResult(case_id, False, error=f"missing {seg_dir}")
+        names = label_set.names
+
+        ct_path = find_image(subject)
+        if ct_path is None:
+            return CaseResult(case_id, False,
+                              error=f"no image found in {subject} "
+                                    f"(looked for ct.nii.gz, image.nii.gz, "
+                                    f"{case_id}.nii.gz)")
+        seg_dir, multilabel = find_labels(subject)
+        if seg_dir is None and multilabel is None:
+            return CaseResult(case_id, False,
+                              error=f"no labels found in {subject} (neither a "
+                                    "segmentations/ directory nor labels.nii.gz)")
 
         label_path = Path(labels_dir) / f"{case_id}.nii.gz"
         image_path = Path(images_dir) / f"{case_id}_0000.nii.gz"
@@ -262,9 +352,13 @@ def convert_case(
             return CaseResult(case_id, True, skipped=True)
 
         ct = nib.load(str(ct_path))
-        labels, missing, overlaps, mismatch = merge_masks(
-            seg_dir, names, ct, overlap_policy=overlap_policy
-        )
+        if seg_dir is not None:
+            labels, missing, overlaps, mismatch = merge_masks(
+                seg_dir, names, ct, overlap_policy=overlap_policy
+            )
+        else:
+            labels, missing, mismatch = remap_multilabel(multilabel, label_set, ct)
+            overlaps = 0
 
         # Write via a temp name then rename, so an interrupted run never leaves a
         # truncated .nii.gz that a later run would happily skip as "done".
@@ -308,8 +402,8 @@ def write_dataset_json(
         # Provenance, ignored by nnU-Net but invaluable when several datasets
         # with similar names accumulate on a training box.
         "description": (
-            f"TotalSegmentator CT, label set '{task.label_set.name}' "
-            f"({task.label_set.n_classes} classes) at {task.spacing[0]} mm; "
+            f"{task.dataset_name}: label set '{task.label_set.name}' "
+            f"({task.label_set.n_classes} classes) at {task.spacing_label}; "
             f"generated by segtrain"
         ),
         "numTest": n_test,
@@ -378,8 +472,8 @@ class ConvertReport:
             n = len(self.with_mismatch)
             ex = self.with_mismatch[0]
             lines.append(
-                f"  WARNING: {n} case(s) had masks whose geometry differs from the CT, "
-                f"e.g. {ex.case_id}: {ex.geometry_mismatch[0]}. Those masks were DROPPED."
+                f"  WARNING: {n} case(s) had unusable label data, e.g. "
+                f"{ex.case_id}: {ex.geometry_mismatch[0]}. Those labels were DROPPED."
             )
         if self.failures:
             lines.append(f"  FAILED: {len(self.failures)} case(s)")
@@ -444,7 +538,7 @@ def convert_dataset(
                 cfg.zenodo_root,
                 img_dir,
                 lbl_dir,
-                names,
+                task.label_set,
                 cfg.link_mode,
                 overwrite,
                 cfg.overlap_policy,

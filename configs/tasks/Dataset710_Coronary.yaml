@@ -1,0 +1,87 @@
+# Phase 1: the coronary tree by major branch, at full resolution.
+#
+# This is the model the project is built around. One high-resolution model over
+# four vessels; there is deliberately no low-resolution counterpart, because
+# nothing useful survives downsampling here. A distal LAD is 1.5-2 mm across, so
+# at the 3 mm spacing an overview model would use it is sub-voxel -- the model
+# would be trained to predict a structure thinner than the grid it predicts on.
+#
+# The 1.5 mm regional models (tasks 702-706) are phase 2 and share none of this
+# task's assumptions.
+
+dataset_id: 710
+dataset_name: Coronary
+label_set: coronary
+
+# `native` means: do not override, and let nnU-Net's median-spacing rule choose.
+#
+# That is the right setting rather than a hedge. nnU-Net already computes the
+# finest target the data supports, which is exactly what this task wants, and it
+# computes it from *your* CCTA rather than from an assumption about it. A typical
+# coronary CTA reconstructs around 0.3-0.5 mm in plane at 0.5 mm slices, but that
+# varies by scanner and protocol, and forcing a number would resample every
+# volume to something the data never had.
+#
+# Run `segtrain plan --task 710` and read the printed fingerprint to see what it
+# actually picked. Set an explicit [x, y, z] here only if you have a reason to
+# want something other than native.
+spacing: native
+
+# The one hole `native` leaves. nnU-Net picks the *median* spacing of the
+# dataset, so mixing a handful of thick-slice studies into a CCTA set drags the
+# target coarse, resamples every volume toward it, and interpolates the thinnest
+# vessels out of existence before training starts. Nothing fails: preprocessing
+# succeeds, training runs, and the model simply never learns the distal branches.
+#
+# 0.5 mm is the floor because published coronary work that resampled coarser than
+# this lost accuracy, and at least one result was best at native spacing with no
+# resampling at all. `segtrain plan` warns if the plan exceeds this.
+max_spacing_mm: 0.5
+
+configuration: 3d_fullres
+trainer: nnUNetTrainer_segtrain
+plans_name: segtrainPlans_coronary
+
+epochs: 1000
+folds: [0]
+
+# Four things about this task that the whole-body tasks do not have to deal with.
+#
+# **Severe class imbalance.** The coronary tree is well under 1% of the voxels in
+# a cardiac CT -- orders of magnitude rarer than any structure in tasks 702-706.
+# nnU-Net's foreground oversampling (a third of patches guaranteed to contain
+# foreground) is what makes this trainable at all, and it is on by default. Do
+# not be reassured by a near-perfect global accuracy; read the per-class Dice
+# table in the Slicer monitor instead.
+#
+# **Connectivity matters more than overlap.** A vessel broken in two by a
+# one-voxel gap scores almost the same Dice as an intact one, and is useless
+# downstream. Dice is also brutally harsh on a 3-4-voxel-diameter tube, where a
+# one-voxel boundary error costs proportionally far more than on an organ. Read
+# NSD alongside Dice -- `segtrain evaluate` computes both.
+#
+# **Patch size is the dominant architectural choice.** The published ImageCAS
+# benchmark is stark: 64^3 patches scored 72.0% Dice against 80.6% for
+# full-image input on the same data. Small patches destroy vessel continuity.
+# nnU-Net sizes patches against an 8 GB VRAM budget by default, which is
+# needlessly small on an 80 GB H100 -- pass `--gpu-mem` to `segtrain plan` to buy
+# larger patches. Note that changes the architecture, so plans made at one budget
+# are not interchangeable with checkpoints trained under another.
+#
+# **Do not let nnU-Net's connected-component post-processing near this.** It
+# prunes all but the largest component for any class that is single-component
+# across the training labels. The coronary tree is naturally two or three
+# disconnected trees plus branches, so that rule deletes valid vessels. This
+# pipeline never applies it -- `segtrain evaluate` scores raw predictions -- but
+# if you run `nnUNetv2_determine_postprocessing` by hand, check what it decides
+# before believing it.
+#
+# What "good" looks like, for calibration: published full-volume binary-lumen
+# Dice sits around 0.82-0.85, and inter-observer agreement between human
+# annotators on this task is about 0.856. A per-branch model over four classes is
+# a harder problem than that binary number. Treat anything above ~0.90 as a sign
+# you are evaluating on a cropped region rather than a whole volume.
+#
+# Also deliberate: `3d_fullres`, not `3d_cascade_fullres`. The cascade's low
+# resolution first stage downsamples far too aggressively for a structure this
+# thin, which is the same reason there is no low-res model in this project.

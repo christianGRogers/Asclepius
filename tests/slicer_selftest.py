@@ -4,7 +4,7 @@ The widget needs a running Slicer application, so this cannot live in the pytest
 suite. Run it with::
 
     "C:\\...\\Slicer.exe" --no-splash --python-script tests\\slicer_selftest.py \\
-        --run-dir C:\\segtrain\\runs\\Dataset701_Total3mm__fold0
+        --run-dir C:\\segtrain\\runs\\Dataset710_Coronary__fold0
 
 It exercises the parts that actually break: importing the stdlib-only event
 reader out of ``src/``, folding a real event stream into run state, building the

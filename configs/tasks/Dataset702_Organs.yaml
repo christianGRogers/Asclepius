@@ -1,9 +1,13 @@
-# Stage 2 group: soft-tissue organs (26 classes).
+# PHASE 2 region model: soft-tissue organs (26 classes).
 #
 # Includes the five lung lobes, the abdominal viscera, brain and spinal cord.
 # The large dynamic range here -- liver at ~1.5 L next to adrenal glands at a few
 # mL -- is the main reason the structure set is split at all: a single model over
 # all 117 classes lets the large organs dominate the loss.
+#
+# Phase 2. These five tasks are not on the critical path for the coronary model
+# (task 710) and share none of its data: they train on TotalSegmentator, which
+# contains no coronary structures whatsoever.
 
 dataset_id: 702
 dataset_name: Organs

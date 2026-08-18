@@ -2,14 +2,18 @@
 
 nnU-Net self-configures everything from the dataset -- patch size, batch size,
 network depth, normalization -- which is precisely what the reference paper
-relies on ("hyperparameter optimization was not performed"). We deliberately
-override exactly one thing: the **target spacing**.
+relies on ("hyperparameter optimization was not performed"). The only thing we
+ever override is the **target spacing**, and the coronary task does not even do
+that.
 
-That one override is load-bearing. The Zenodo data is already 1.5 mm isotropic,
-so nnU-Net's median-spacing rule would choose 1.5 mm for every task, and the
-Stage 1 "3 mm, all 117 classes" model would silently become a full-resolution
-117-class model that neither fits in VRAM nor trains in reasonable time. Forcing
-the spacing is what makes Stage 1 a genuinely different, cheaper configuration.
+Both choices are deliberate. A task with an explicit ``spacing`` forces it,
+which is how the phase 2 regional models pin themselves to 1.5 mm. The coronary
+task sets ``spacing: native`` instead and lets nnU-Net's median-spacing rule
+decide, because that rule already computes the finest target the data supports --
+exactly what a high-resolution vessel model wants. What native cannot protect
+against is the median itself moving: a few thick-slice studies in an otherwise
+fine CCTA set drag the target coarse and interpolate the thinnest vessels away.
+``max_spacing_mm`` and ``spacing_warnings`` below exist for that.
 
 Everything else -- loss (Dice + cross-entropy), deep supervision, SGD with
 momentum 0.99, polynomial LR decay from 0.01, 1000 epochs of 250 iterations --
@@ -91,9 +95,15 @@ def plan_experiment(
 
     kwargs = dict(
         dataset_ids=[task.dataset_id],
-        overwrite_target_spacing=tuple(float(s) for s in task.spacing),
         overwrite_plans_name=task.plans_name,
     )
+    # spacing None means native: leave nnU-Net's median-spacing rule alone. It
+    # already computes the finest target the data supports, which is exactly what
+    # a high-resolution task wants -- overriding it with a guess would resample
+    # the data for no reason, and resampling a 1.5 mm-wide distal vessel is not
+    # a free operation.
+    if task.spacing is not None:
+        kwargs["overwrite_target_spacing"] = tuple(float(s) for s in task.spacing)
     if gpu_memory_target_gb is not None:
         kwargs["gpu_memory_target_in_gb"] = float(gpu_memory_target_gb)
 
@@ -231,5 +241,43 @@ def describe_plans(cfg: Config, task: TaskConfig) -> str:
     ]
     median = plans.get("original_median_spacing_after_transp")
     if median:
-        lines.append(f"  source spacing   {median}  (overridden to {list(task.spacing)})")
+        override = "not overridden (native)" if task.spacing is None else (
+            f"overridden to {list(task.spacing)}")
+        lines.append(f"  source spacing   {median}  ({override})")
+
+    for warning in spacing_warnings(task, conf.get("spacing")):
+        lines.append(f"  WARNING          {warning}")
     return "\n".join(lines)
+
+
+def spacing_warnings(task: TaskConfig, planned) -> list[str]:
+    """Flag a planned target spacing too coarse for this task's structures.
+
+    Exists because `spacing: native` delegates the choice to nnU-Net, which picks
+    the dataset *median*. That is right for a homogeneous CCTA set and wrong the
+    moment a handful of thick-slice studies are mixed in: the median moves, every
+    volume is resampled toward it, and the thinnest vessels are interpolated out
+    of existence before training ever starts.
+
+    Nothing fails at that point. Preprocessing succeeds, training runs, and the
+    model simply never learns the distal branches -- which reads as a modelling
+    problem rather than the data problem it is. Hence a warning at plan time,
+    when it is still cheap to fix.
+    """
+    if task.max_spacing_mm is None or not planned:
+        return []
+    try:
+        worst = max(float(s) for s in planned)
+    except (TypeError, ValueError):
+        return []
+    if worst <= task.max_spacing_mm:
+        return []
+    return [
+        f"planned target spacing {list(planned)} is coarser than this task's "
+        f"limit of {task.max_spacing_mm} mm.\n"
+        "                   nnU-Net picks the median spacing of the dataset, so "
+        "this usually means some\n"
+        "                   cases are thick-slice. Either drop them, or set an "
+        "explicit `spacing:` in\n"
+        "                   the task file to stop the median deciding for you."
+    ]

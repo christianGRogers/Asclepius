@@ -44,6 +44,7 @@ class QueueResource(Resource):
         self.route('GET', ('mine',), self.listMine)
         self.route('POST', ('next',), self.nextCase)
         self.route('GET', ('case', ':caseId', 'download'), self.downloadCase)
+        self.route('GET', ('case', ':caseId', 'asset', ':kind'), self.downloadAsset)
         self.route('POST', ('assignment', ':assignmentId', 'submit'), self.submit)
         self.route('POST', ('assignment', ':assignmentId', 'release'), self.release)
         self.route('POST', ('assignment', ':assignmentId', 'heartbeat'), self.heartbeat)
@@ -178,14 +179,7 @@ class QueueResource(Resource):
     )
     def downloadCase(self, case):
         user = requireAnnotator(self.getCurrentUser())
-        assignment = Assignment().findOne({
-            'caseId': case['_id'],
-            'userId': user['_id'],
-            'state': {'$in': sorted(st.OPEN_STATES)},
-        })
-        if assignment is None:
-            refuse('not_assigned_to_you',
-                   'That case is not currently assigned to you.', status=403)
+        assignment = self._requireOpenAssignment(case, user)
 
         # Picking a rejected case back up *is* starting the rework, so it
         # happens here rather than needing the client to call a separate
@@ -203,6 +197,56 @@ class QueueResource(Resource):
             Assignment().transition(assignment, st.DOWNLOAD)
 
         return File().download(fileForCase(case))
+
+    # --------------------------------------------------------- case assets
+
+    @access.user
+    @autoDescribeRoute(
+        Description('Download a helper mask that ships with a case.')
+        .notes('``region`` is the heart mask from the source dataset; ``seed`` '
+               'is a pre-existing binary coronary lumen mask. Neither is a '
+               'label the annotator submits -- they exist so the extension can '
+               'frame the view, confine editing, and let the annotator split an '
+               'existing tree instead of drawing one. Most cases have neither, '
+               'and a 404 here is a normal answer.')
+        .modelParam('caseId', 'The case.', model=Case, force=True, destName='case')
+        .param('kind', 'region or seed.', paramType='path')
+        .errorResponse('That case is not assigned to you.', 403)
+        .errorResponse('This case has no asset of that kind.', 404)
+    )
+    def downloadAsset(self, case, kind):
+        user = requireAnnotator(self.getCurrentUser())
+        if kind not in protocol.ASSET_KINDS:
+            refuse(protocol.ERR_NO_ASSET,
+                   f'Unknown asset kind {kind!r}.', status=400)
+
+        # Same authorisation as the volume itself, deliberately: these masks are
+        # derived from the patient's scan, so "you may see the CT" and "you may
+        # see its heart mask" have to be one decision, not two.
+        self._requireOpenAssignment(case, user)
+
+        fileId = case.get('regionFileId' if kind == protocol.ASSET_REGION
+                          else 'seedFileId')
+        if not fileId:
+            refuse(protocol.ERR_NO_ASSET,
+                   f'This case has no {kind} mask.', status=404)
+        file = File().load(fileId, force=True)
+        if file is None:
+            refuse(protocol.ERR_NO_ASSET,
+                   f'The {kind} mask for this case is missing from storage.',
+                   status=404)
+        return File().download(file)
+
+    def _requireOpenAssignment(self, case, user):
+        assignment = Assignment().findOne({
+            'caseId': case['_id'],
+            'userId': user['_id'],
+            'state': {'$in': sorted(st.OPEN_STATES)},
+        })
+        if assignment is None:
+            refuse('not_assigned_to_you',
+                   'That case is not currently assigned to you.', status=403)
+        return assignment
 
     # -------------------------------------------------------------- submit
 
@@ -383,4 +427,6 @@ class QueueResource(Resource):
             assigned_at=assignedAt.timestamp() if assignedAt else None,
             deadline=deadline.timestamp() if deadline else None,
             reviewer_comment=assignment.get('reviewerComment', ''),
+            has_region=bool(case.get('regionFileId')),
+            has_seed=bool(case.get('seedFileId')),
         )

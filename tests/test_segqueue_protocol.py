@@ -170,3 +170,62 @@ def test_a_client_below_the_minimum_is_told_how_to_fix_it():
     assert err.code == ERR_CLIENT_TOO_OLD
     assert err.detail["minProtocol"] == MIN_CLIENT_PROTOCOL
     assert "Reinstall" in str(err)
+
+
+# --------------------------------------------------------- case assets
+
+
+def test_an_assignment_reports_what_ships_with_the_case():
+    info = AssignmentInfo(assignment_id="a1", has_seed=True, has_region=True)
+    back = AssignmentInfo.from_dict(info.to_dict())
+
+    assert back.has_seed and back.has_region
+    # Safe to expose, unlike `kind`: these are properties of the source data,
+    # not of the assignment, so they leak nothing about gold or duplicate status.
+    assert back.kind is None
+
+
+def test_a_case_with_no_extras_says_so_rather_than_omitting_the_field():
+    # An older server that omits the keys must read as "no extras", not as a
+    # crash and not as "yes" -- the client branches on these to decide whether
+    # to spend a round trip fetching a mask that does not exist.
+    back = AssignmentInfo.from_dict({"assignmentId": "a1"})
+    assert back.has_seed is False
+    assert back.has_region is False
+
+
+def test_the_asset_route_is_built_from_the_kind():
+    from segqueue.protocol import ASSET_KINDS, ASSET_REGION, ASSET_SEED, CASE_ASSET
+
+    assert path(CASE_ASSET, case_id="c1", kind=ASSET_SEED) == "segqueue/case/c1/asset/seed"
+    assert path(CASE_ASSET, case_id="c1", kind=ASSET_REGION) \
+        == "segqueue/case/c1/asset/region"
+    assert set(ASSET_KINDS) == {ASSET_SEED, ASSET_REGION}
+
+
+def test_the_helper_segment_names_cannot_collide_with_a_project_segment():
+    """The scene's scaffolding must never be mistaken for a vessel.
+
+    Checked against the coronary label set itself rather than a copy, because
+    that file is what `segtrain convert` reads: if a helper name ever became a
+    structure name, the dataset's own coronary mask could be submitted as
+    though a student had drawn it, and every dashboard number would look fine.
+    """
+    from pathlib import Path
+
+    import yaml
+
+    from segqueue.protocol import REGION_SEGMENT_NAME, SEED_SEGMENT_NAME
+
+    labels = yaml.safe_load(
+        (Path(__file__).resolve().parents[1] / "configs" / "labels" / "coronary.yaml")
+        .read_text(encoding="utf-8-sig"))
+    structures = set(labels["labels"])
+    assert "left_main" in structures  # the file is the one we think it is
+
+    for name in (SEED_SEGMENT_NAME, REGION_SEGMENT_NAME):
+        assert name not in structures
+        # Prefixed so they sort together and read as scaffolding. The export
+        # excludes them structurally, but a name that looked like anatomy would
+        # still invite somebody to "fix" it.
+        assert name.startswith("~")

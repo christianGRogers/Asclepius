@@ -40,6 +40,10 @@ PROTOCOL_HEADER = "X-SegQueue-Protocol"
 NEXT = "next"
 MINE = "mine"
 CASE_DOWNLOAD = "case/{case_id}/download"
+#: Optional extras that ship with a case: the heart-region mask used to frame
+#: the view and confine editing, and a pre-existing coronary lumen mask used as
+#: a starting point. Neither is ever submitted back.
+CASE_ASSET = "case/{case_id}/asset/{kind}"
 CASE_SUBMIT = "assignment/{assignment_id}/submit"
 CASE_RELEASE = "assignment/{assignment_id}/release"
 HEARTBEAT = "assignment/{assignment_id}/heartbeat"
@@ -74,6 +78,25 @@ ERR_CHECKSUM = "checksum_mismatch"
 ERR_CLIENT_TOO_OLD = "client_too_old"
 #: HTTP 403: the annotator has used up an admin-set quota.
 ERR_QUOTA = "quota_exhausted"
+#: HTTP 404: the case has no asset of the requested kind. Normal, not a fault --
+#: most cases have no coronary seed.
+ERR_NO_ASSET = "no_such_asset"
+
+# --------------------------------------------------------- case asset kinds
+
+#: A whole-heart (or chamber) mask from the source dataset.
+ASSET_REGION = "region"
+#: A pre-existing binary coronary lumen mask from the source dataset.
+ASSET_SEED = "seed"
+ASSET_KINDS = (ASSET_REGION, ASSET_SEED)
+
+#: Names the extension gives the two helper segments in the scene. They are
+#: prefixed so they sort together, read as scaffolding rather than anatomy, and
+#: cannot collide with a project segment name -- the submission export copies
+#: only the project's own segments, so anything named here is structurally
+#: incapable of reaching the server.
+SEED_SEGMENT_NAME = "~ coronary seed (not submitted)"
+REGION_SEGMENT_NAME = "~ heart region (not submitted)"
 
 
 class ProtocolError(RuntimeError):
@@ -240,6 +263,14 @@ class AssignmentInfo:
     #: Server-side flavour (normal/gold/duplicate). Present in admin responses
     #: and *absent* from anything an annotator sees -- blind means blind.
     kind: Optional[str] = None
+    #: The case ships a heart-region mask. The extension uses it to frame the
+    #: view and, optionally, to keep edits inside the heart.
+    has_region: bool = False
+    #: The case ships a pre-existing binary coronary mask. The extension loads
+    #: it as a helper segment so the annotator splits a tree rather than drawing
+    #: one. Safe to expose: it says nothing about gold or duplicate status,
+    #: because it is a property of the source data, not of the assignment.
+    has_seed: bool = False
 
     def to_dict(self) -> dict:
         data = {
@@ -253,6 +284,8 @@ class AssignmentInfo:
             "assignedAt": self.assigned_at,
             "deadline": self.deadline,
             "reviewerComment": self.reviewer_comment,
+            "hasRegion": self.has_region,
+            "hasSeed": self.has_seed,
         }
         if self.kind is not None:
             data["kind"] = self.kind
@@ -272,6 +305,8 @@ class AssignmentInfo:
             deadline=data.get("deadline"),
             reviewer_comment=data.get("reviewerComment", "") or "",
             kind=data.get("kind"),
+            has_region=bool(data.get("hasRegion", False)),
+            has_seed=bool(data.get("hasSeed", False)),
         )
 
 

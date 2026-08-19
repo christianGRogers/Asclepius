@@ -502,6 +502,50 @@ An annotator's whole workflow is: log in, press **Get next case**, segment, pres
 server path, and never accumulate data — the local copy is deleted the moment the
 server confirms the submission.
 
+Four structures, fixed by the server and obeyed by the extension: `left_main`,
+`left_anterior_descending`, `left_circumflex`, `right_coronary_artery`, with the
+same label values as [`configs/labels/coronary.yaml`](configs/labels/coronary.yaml).
+
+### The data, and what the presegmentation buys
+
+The default source is the TotalSegmentator release on Zenodo
+([record 10047292](https://zenodo.org/records/10047292)) — about 1,200 whole-body
+CT studies, each already segmented into 117 structures. Ingest reads those
+filenames and never opens an image, which gives two things for free:
+
+* **Only cases with a heart are loaded.** Most of a whole-body dataset is legs,
+  heads and abdomens with no coronary anatomy in the field of view. Assigning
+  those spends the one resource the project is short of. The eligible cases also
+  ship their heart mask to the client, which uses it to centre the views.
+* **A case that already carries a `coronary_arteries` mask hands it over.** That
+  mask is a binary lumen, not per-branch labels — a head start, not an answer.
+  The annotator splits an existing tree into four branches instead of drawing
+  one, which is minutes instead of an hour. (The base Zenodo release does not
+  include it; if your copy has it, from the licensed task or your own model,
+  ingest picks it up with no extra flags.)
+
+Helper masks are structurally incapable of being submitted: the export copies
+only the project's own segments, and refuses outright if any other label value
+appears in the exported volume.
+
+### What the extension does for the annotator
+
+The Segment Editor can already do all of this. It is worth wrapping because it
+cannot do it *for this task* — a first-year undergraduate should not have to
+work out which of twenty effects segments a 3 mm vessel.
+
+* **Four labelled buttons, keys 1–4**, to change branch — with a tick against
+  each one that has voxels in it. Built from the server's segment list, so a
+  fifth branch is a settings change.
+* **Tools that suit a coronary**, on one key each: paint with a 3 mm sphere
+  brush sized in millimetres, level tracing, scissors, islands.
+* **Masking that makes fast painting safe.** Edits are confined to the existing
+  coronary mask when the case has one, and to the opacified range (150–1000 HU)
+  otherwise, so a sloppy stroke still leaves a clean lumen edge. Branches never
+  overwrite each other.
+* **The view set up on arrival**: CTA window/level, four-up layout, slices
+  centred on the heart mask, and a surface view a click away.
+
 ### Why Girder rather than XNAT or something bespoke
 
 Accounts, tokens, groups, a REST framework, chunked **resumable** uploads,
@@ -521,6 +565,7 @@ resumable uploads, which is the one part you cannot afford to get subtly wrong.
 | `server/girder_segqueue/` | The Girder 5 plugin: models, REST, ingest CLI, QA worker |
 | `slicer/SegQueue/` | The annotator's extension. `SegQueueLib/` is Slicer-free, so the network layer and the cache are unit-tested without Slicer |
 | `deploy/` | Compose stack, Caddyfile, backup script. See [deploy/README.md](deploy/README.md) |
+| `docs/` | [Server runbook](docs/SERVER-SETUP.md) and the [setup &amp; testing guide](docs/SegQueue-Setup-Guide.pdf) |
 
 The shared package is the load-bearing idea. A route name, a state name or a
 validation rule cannot drift between client and server, because there is one
@@ -552,7 +597,9 @@ is the only version of this loop that teaches anyone anything.
 ```sh
 cd deploy && cp .env.example .env   # edit DATA_ROOT, SEGQUEUE_DOMAIN
 docker compose up -d --build
+docker compose exec girder segqueue-ingest --root /incoming --dry-run
 docker compose exec girder segqueue-ingest --root /incoming --target coronary
+python ../tests/segqueue_e2e.py --url https://<domain>
 ```
 
 Then in Slicer: **Edit → Application Settings → Modules**, add
@@ -562,16 +609,21 @@ which Slicer already bundles. (Not `girder-client`: version 5 requires Python
 3.10 and Slicer 5.8 ships 3.9. That constraint is also why `src/segqueue` is
 stdlib-only.)
 
-Full deployment, ingest, backup and upgrade notes: **[deploy/README.md](deploy/README.md)**.
+Full deployment, ingest, backup and upgrade notes:
+**[docs/SERVER-SETUP.md](docs/SERVER-SETUP.md)**. The annotator-facing setup and
+a manual test walkthrough are in
+**[docs/SegQueue-Setup-Guide.pdf](docs/SegQueue-Setup-Guide.pdf)**.
 
 ### Status
 
-Verified end to end against the real Compose stack: register → assetstore →
-create annotator → ingest → assign → download with checksum verification →
-resumable chunked upload → submit → review → reject with comment → rework as
-attempt 2 with the lease renewed → resubmit → approve. Empty segments, resampled
-geometry and mismatched checksums are all refused with the message the annotator
-needs, and the 30-annotator concurrent claim race is tested against real MongoDB.
+Verified end to end against the real Compose stack, by `tests/segqueue_e2e.py`:
+register → assetstore → create annotator → ingest (heart filter, coronary seed) →
+assign → download with checksum verification → fetch the heart and coronary masks
+→ resumable chunked upload → submit → review → reject with comment → rework as
+attempt 2 with the lease renewed → resubmit → approve. Empty segments, stray
+marks, off-protocol segments, resampled geometry and mismatched checksums are all
+refused with the message the annotator needs, and the 30-annotator concurrent
+claim race is tested against real MongoDB.
 
 Not yet exercised: the Slicer UI against a live server (the logic and the network
 layer are tested; the Qt panel is not), gold and duplicate scoring on real label
@@ -664,7 +716,7 @@ case looks great and means nothing.
 ## Tests
 
 ```bash
-pytest                    # 343 tests
+pytest                    # 366 tests
 pytest -m "not slow"      # skip the full-case merge round-trip
 
 # The SegQueue concurrency tests need a real MongoDB -- the whole point of them

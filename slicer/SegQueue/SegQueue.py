@@ -49,6 +49,7 @@ if os.path.isdir(_SRC) and _SRC not in sys.path:
     sys.path.insert(0, _SRC)
 
 try:
+    from segqueue import protocol
     from segqueue import states as st
     from segqueue.checksum import sha256_file, verify_file
     from segqueue.protocol import SubmissionMeta
@@ -56,6 +57,7 @@ try:
     _IMPORT_ERROR = None
 except ImportError as exc:  # pragma: no cover - surfaced in the UI instead
     st = None
+    protocol = None
     _IMPORT_ERROR = str(exc)
 
 from SegQueueLib import CacheError, CaseCache, SegQueueClient, SegQueueError, defaultRoot
@@ -72,6 +74,37 @@ AUTOSAVE_SECONDS = 120
 #: measured in days, so this only needs to be frequent enough to distinguish
 #: "working slowly" from "closed the laptop and went home in October".
 HEARTBEAT_SECONDS = 300
+
+#: Window/level for contrast-enhanced coronary CT. Auto window/level on a
+#: whole-chest CT lands somewhere useless for 3 mm vessels -- wide enough that
+#: lumen and myocardium look alike. These are the numbers a cardiac reader would
+#: dial in, applied automatically so nobody has to.
+CTA_WINDOW = 800
+CTA_LEVEL = 300
+
+#: Sphere brush diameter in millimetres. A left main is 4-5 mm and a distal LAD
+#: under 2, so a 3 mm brush covers most of the tree in one pass without spilling
+#: into myocardium. The annotator can still change it in the effect's own panel.
+BRUSH_DIAMETER_MM = 3.0
+
+#: Editable intensity window, in HU. Opacified lumen sits well above 150 and
+#: below dense calcium; restricting paint to this range means a slightly sloppy
+#: brush stroke still produces a clean lumen edge.
+LUMEN_HU_MIN = 150
+LUMEN_HU_MAX = 1000
+
+#: Effects offered as one-click buttons, with their keyboard shortcut. Chosen
+#: for *this* task rather than exposing all twenty: level tracing and scissors
+#: are how a vessel actually gets segmented quickly, and islands is how a stray
+#: blob gets removed.
+VESSEL_EFFECTS = (
+    ('Paint', 'Q', 'Paint the lumen. Sphere brush, sized for a coronary.'),
+    ('Erase', 'W', 'Erase from the active segment only.'),
+    ('Level tracing', 'E', 'Click inside the lumen to trace its boundary on this slice.'),
+    ('Scissors', 'R', 'Cut away everything outside (or inside) a drawn outline.'),
+    ('Islands', 'T', 'Keep the largest island, or remove a stray blob.'),
+    ('Smoothing', 'Y', 'Even out a jagged vessel wall.'),
+)
 
 #: Settings keys. Stored in Slicer's own QSettings so a returning annotator does
 #: not retype the server URL. The token is deliberately *not* stored -- see
@@ -117,6 +150,11 @@ class SegQueueLogic(ScriptedLoadableModuleLogic):
         self.volumeNode = None
         self.segmentationNode = None
         self._sessionStart = None
+        #: Segment ids of the two helper segments, when the case ships them.
+        #: Held here rather than looked up by name each time, so that a rename by
+        #: a curious annotator cannot silently turn scaffolding into anatomy.
+        self.seedSegmentId = None
+        self.regionSegmentId = None
 
     # ------------------------------------------------------------ session
 
@@ -197,9 +235,160 @@ class SegQueueLogic(ScriptedLoadableModuleLogic):
         self.volumeNode = slicer.util.loadVolume(volumePath)
         self.volumeNode.SetName(assignment.case_name or "case")
         self._loadOrCreateSegmentation(manifest)
+        self._loadHelpers(assignment)
         slicer.util.setSliceViewerLayers(background=self.volumeNode, fit=True)
+        self.applyViewPreset()
         self._sessionStart = time.time()
         return manifest
+
+    # ------------------------------------------------------- helper masks
+
+    def _loadHelpers(self, assignment):
+        """Bring the case's heart mask and coronary seed into the scene.
+
+        Both come from the source dataset, both are scaffolding, and neither is
+        ever submitted -- the export in ``exportLabelmap`` copies only the
+        project's own segments, so a helper is *structurally* unable to reach
+        the server rather than merely conventionally excluded.
+
+        They live in the working segmentation node rather than one of their own
+        because the Segment Editor can only mask against segments in the same
+        segmentation, and masking to the seed is the largest time saving
+        available here: painting inside an existing tree is minutes, drawing one
+        is an hour.
+        """
+        self.seedSegmentId = self._helperId(protocol.SEED_SEGMENT_NAME)
+        self.regionSegmentId = self._helperId(protocol.REGION_SEGMENT_NAME)
+
+        if assignment.has_region and self.regionSegmentId is None:
+            self.regionSegmentId = self._fetchHelper(
+                assignment, protocol.ASSET_REGION,
+                protocol.REGION_SEGMENT_NAME, (0.85, 0.55, 0.55), fill=0.08)
+        if assignment.has_seed and self.seedSegmentId is None:
+            self.seedSegmentId = self._fetchHelper(
+                assignment, protocol.ASSET_SEED,
+                protocol.SEED_SEGMENT_NAME, (0.95, 0.95, 0.35), fill=0.35)
+
+    def _helperId(self, name):
+        """Segment id for a helper already in the scene -- e.g. from a draft."""
+        return self.segmentIdFor(name)
+
+    def _fetchHelper(self, assignment, kind, name, color, fill):
+        path = os.path.join(self.cache.caseDir(assignment.assignment_id),
+                            kind + ".nii.gz")
+        try:
+            if not os.path.isfile(path):
+                if self.client.downloadAsset(assignment.case_id, kind, path) is None:
+                    return None
+            return self._importHelper(path, name, color, fill)
+        except Exception:
+            # A missing or unreadable helper is a degraded experience, never a
+            # blocked case: the annotator can still segment, just without the
+            # head start. Failing the whole case load over scaffolding would be
+            # the wrong trade every time.
+            return None
+
+    def _importHelper(self, path, name, color, fill):
+        """Load a binary mask and add it to the working segmentation, named."""
+        segmentation = self.segmentationNode.GetSegmentation()
+        before = {segmentation.GetNthSegmentID(i)
+                  for i in range(segmentation.GetNumberOfSegments())}
+
+        labelNode = None
+        try:
+            labelNode = slicer.util.loadLabelVolume(path)
+            slicer.modules.segmentations.logic().ImportLabelmapToSegmentationNode(
+                labelNode, self.segmentationNode)
+        finally:
+            if labelNode is not None:
+                slicer.mrmlScene.RemoveNode(labelNode)
+
+        after = [segmentation.GetNthSegmentID(i)
+                 for i in range(segmentation.GetNumberOfSegments())]
+        added = [s for s in after if s not in before]
+        if not added:
+            return None
+
+        # A mask carrying more than one label value would arrive as several
+        # segments. Keep the first and discard the rest rather than leaving
+        # debris named Label_2 in the annotator's segment list.
+        for extra in added[1:]:
+            segmentation.RemoveSegment(extra)
+
+        segmentId = added[0]
+        segment = segmentation.GetSegment(segmentId)
+        segment.SetName(name)
+        segment.SetColor(*color)
+
+        display = self.segmentationNode.GetDisplayNode()
+        if display is not None:
+            display.SetSegmentOpacity2DFill(segmentId, fill)
+            display.SetSegmentOpacity2DOutline(segmentId, 0.6)
+            display.SetSegmentOpacity3D(segmentId, 0.0)
+        return segmentId
+
+    def helperIds(self):
+        return [s for s in (self.seedSegmentId, self.regionSegmentId) if s]
+
+    # ------------------------------------------------------------- viewing
+
+    def applyViewPreset(self):
+        """Window/level for CTA, and centre the views on the heart.
+
+        Slicer's automatic window/level on a whole-chest CT lands somewhere that
+        makes a 3 mm opacified vessel look much like myocardium. Every annotator
+        would otherwise dial the same numbers in on every case, and some would
+        not bother.
+        """
+        if self.volumeNode is None:
+            return
+        display = self.volumeNode.GetDisplayNode()
+        if display is not None:
+            display.SetAutoWindowLevel(False)
+            display.SetWindowLevel(CTA_WINDOW, CTA_LEVEL)
+        self.jumpToHeart()
+
+    def jumpToHeart(self):
+        """Centre the slice views on the heart mask, when the case has one."""
+        if self.segmentationNode is None or not self.regionSegmentId:
+            return False
+        try:
+            centre = self.segmentationNode.GetSegmentCenterRAS(self.regionSegmentId)
+        except Exception:
+            return False
+        if centre is None:
+            return False
+        slicer.modules.markups.logic().JumpSlicesToLocation(
+            centre[0], centre[1], centre[2], True)
+        return True
+
+    def segmentIdFor(self, name):
+        if self.segmentationNode is None:
+            return None
+        segmentation = self.segmentationNode.GetSegmentation()
+        for i in range(segmentation.GetNumberOfSegments()):
+            segmentId = segmentation.GetNthSegmentID(i)
+            if segmentation.GetSegment(segmentId).GetName() == name:
+                return segmentId
+        return None
+
+    def segmentHasContent(self, name):
+        """Whether a segment has any voxels, cheaply.
+
+        Reads the internal labelmap, which Slicer keeps cropped to the segment's
+        own extent -- for a coronary branch that is a few hundred kilobytes, so
+        this is affordable on a timer in a way re-exporting the whole volume
+        would not be.
+        """
+        segmentId = self.segmentIdFor(name)
+        if not segmentId:
+            return False
+        try:
+            array = slicer.util.arrayFromSegmentBinaryLabelmap(
+                self.segmentationNode, segmentId)
+        except Exception:
+            return False
+        return array is not None and array.size > 0 and bool(array.any())
 
     def _cachedVolumeIsGood(self, path, assignment):
         if not path or not os.path.isfile(path):
@@ -328,21 +517,33 @@ class SegQueueLogic(ScriptedLoadableModuleLogic):
     def exportLabelmap(self, path):
         """Write the segmentation as a label volume on the source grid.
 
-        Deliberately not a plain ``saveNode`` of the segmentation. Slicer stores
-        a ``.seg.nrrd`` binary labelmap cropped to the segments' own bounding
-        box, so the file's grid is *not* the source volume's -- it would fail the
-        geometry check this module is about to run, and downstream code would
-        have to re-register every submission against its CT. Exporting against
-        the reference geometry gives a volume that overlays the source voxel for
-        voxel, which is what both the QA scorer and the training conversion want.
+        Two deliberate departures from the obvious implementation.
+
+        **Not a plain ``saveNode``.** Slicer stores a ``.seg.nrrd`` binary
+        labelmap cropped to the segments' own bounding box, so the file's grid is
+        *not* the source volume's -- it would fail the geometry check this module
+        is about to run, and downstream code would have to re-register every
+        submission against its CT. Exporting against the reference geometry gives
+        a volume that overlays the source voxel for voxel, which is what both the
+        QA scorer and the training conversion want.
+
+        **Not the working node.** The scene also holds the heart mask and the
+        coronary seed, which came from the source dataset and must never be
+        submitted as if an annotator had drawn them. Rather than exporting
+        everything and filtering afterwards -- where one renamed segment would
+        leak an entire pre-existing tree into the training set, silently, and
+        look like excellent work -- the protocol's segments are copied into a
+        throwaway segmentation and that is what gets exported. Anything not in
+        the project's list is structurally incapable of reaching the server.
 
         Returns ``(voxelCounts, sourceGeometry, segmentationGeometry)``.
         """
+        exportNode = self._protocolOnlySegmentation()
         labelmapNode = slicer.mrmlScene.AddNewNodeByClass(
             "vtkMRMLLabelMapVolumeNode", "SegQueueExport")
         try:
             ok = slicer.modules.segmentations.logic().ExportAllSegmentsToLabelmapNode(
-                self.segmentationNode, labelmapNode,
+                exportNode, labelmapNode,
                 slicer.vtkSegmentation.EXTENT_REFERENCE_GEOMETRY)
             if not ok:
                 raise RuntimeError(
@@ -350,9 +551,51 @@ class SegQueueLogic(ScriptedLoadableModuleLogic):
             if not slicer.util.saveNode(labelmapNode, path):
                 raise RuntimeError("Could not write the segmentation to " + path)
             counts = self._voxelCounts(labelmapNode)
+            self._assertNoStrayLabels(labelmapNode)
             return counts, self.sourceGeometry(), _geometryOf(labelmapNode)
         finally:
             slicer.mrmlScene.RemoveNode(labelmapNode)
+            slicer.mrmlScene.RemoveNode(exportNode)
+
+    def _protocolOnlySegmentation(self):
+        """A throwaway segmentation holding only the project's own segments."""
+        exportNode = slicer.mrmlScene.AddNewNodeByClass(
+            "vtkMRMLSegmentationNode", "SegQueueExportSource")
+        exportNode.SetReferenceImageGeometryParameterFromVolumeNode(self.volumeNode)
+        source = self.segmentationNode.GetSegmentation()
+        target = exportNode.GetSegmentation()
+
+        for spec in self.project.segments:
+            segmentId = self.segmentIdFor(spec.name)
+            if segmentId is None:
+                continue
+            target.CopySegmentFromSegmentation(source, segmentId, False)
+            copied = target.GetSegment(target.GetSegmentIdBySegmentName(spec.name))
+            if copied is not None:
+                try:
+                    copied.SetLabelValue(int(spec.label))
+                except AttributeError:  # pragma: no cover - old Slicer
+                    pass
+        return exportNode
+
+    def _assertNoStrayLabels(self, labelmapNode):
+        """Refuse to submit a volume containing a label the protocol does not name.
+
+        The copy above should make this impossible. It is checked anyway because
+        the failure it guards against -- shipping the dataset's own coronary mask
+        back as though a student had drawn it -- would corrupt the training set
+        while every dashboard number looked healthy.
+        """
+        array = slicer.util.arrayFromVolume(labelmapNode)
+        expected = {0} | {int(s.label) for s in self.project.segments}
+        present = {int(v) for v in set(array.flatten().tolist())} if array.size else {0}
+        stray = sorted(present - expected)
+        if stray:
+            raise RuntimeError(
+                "The exported segmentation contains label value(s) "
+                + ", ".join(str(v) for v in stray)
+                + " that are not part of this project. Nothing has been "
+                "submitted. Please report this.")
 
     def _voxelCounts(self, labelmapNode):
         """Voxels per segment, counted from the exported volume.
@@ -473,8 +716,11 @@ class SegQueueWidget(ScriptedLoadableModuleWidget):
         self.autosaveTimer = None
         self.heartbeatTimer = None
         self.clockTimer = None
+        self.checklistTimer = None
         self._reviewRows = []
         self._claimedSubmission = None
+        self._segmentButtons = {}
+        self._shortcuts = []
 
     # ------------------------------------------------------------------ setup
 
@@ -494,10 +740,12 @@ class SegQueueWidget(ScriptedLoadableModuleWidget):
 
         self._buildLoginSection()
         self._buildCaseSection()
+        self._buildVesselSection()
         self._buildEditorSection()
         self._buildSubmitSection()
         self._buildReviewSection()
         self.layout.addStretch(1)
+        self._installShortcuts()
 
         self._startTimers()
         self._updateEnabled()
@@ -581,6 +829,126 @@ class SegQueueWidget(ScriptedLoadableModuleWidget):
 
         self.timerLabel = qt.QLabel("Time on this case: --")
         layout.addWidget(self.timerLabel)
+
+    def _buildVesselSection(self):
+        """The task-specific panel: which vessel, which tool, what help there is.
+
+        The Segment Editor below can do everything in here already. It is worth
+        the duplication because it cannot do it *for this task*: a first-year
+        undergraduate should not have to learn which of twenty effects segments a
+        3 mm vessel, nor scroll a segment list to change branch two hundred times
+        an hour. Four labelled buttons and a number key each is the whole
+        interface most of the time.
+        """
+        box = ctk.ctkCollapsibleButton()
+        box.text = "Vessel tools"
+        self.layout.addWidget(box)
+        layout = qt.QVBoxLayout(box)
+        self.vesselBox = box
+
+        layout.addWidget(_caption("Which vessel are you labelling?  (keys 1-4)"))
+        self.segmentButtonRow = qt.QGridLayout()
+        layout.addLayout(self.segmentButtonRow)
+
+        self.segmentHintLabel = qt.QLabel()
+        self.segmentHintLabel.setWordWrap(True)
+        self.segmentHintLabel.setStyleSheet("QLabel { color: #444; }")
+        layout.addWidget(self.segmentHintLabel)
+
+        layout.addWidget(_caption("Tools"))
+        toolRow = qt.QGridLayout()
+        for i, (name, key, tip) in enumerate(VESSEL_EFFECTS):
+            button = qt.QPushButton("{}  ({})".format(name, key))
+            button.setToolTip(tip)
+            button.clicked.connect(lambda _checked=False, n=name: self.onEffect(n))
+            toolRow.addWidget(button, i // 3, i % 3)
+        layout.addLayout(toolRow)
+
+        # -- the head start, when the case ships one
+        self.seedGroup = qt.QGroupBox("This case comes with a coronary mask")
+        seedLayout = qt.QVBoxLayout(self.seedGroup)
+        seedLayout.addWidget(_caption(
+            "The dataset already contains the coronary tree as one unlabelled "
+            "mask. Your job is to split it into the four branches -- not to "
+            "redraw it."))
+
+        self.maskToSeedCheck = qt.QCheckBox("Only let me paint inside that mask")
+        self.maskToSeedCheck.setToolTip(
+            "Confines every effect to the existing tree, so a fast, sloppy "
+            "brush stroke still produces a clean vessel edge.")
+        self.maskToSeedCheck.setChecked(True)
+        self.maskToSeedCheck.toggled.connect(self.onMaskingChanged)
+        seedLayout.addWidget(self.maskToSeedCheck)
+
+        self.copySeedButton = qt.QPushButton("Add the whole mask to this vessel")
+        self.copySeedButton.setToolTip(
+            "Copies the entire tree into the selected branch. Useful for the "
+            "branch that dominates the tree -- then trim with Scissors.")
+        self.copySeedButton.clicked.connect(self.onCopySeed)
+        seedLayout.addWidget(self.copySeedButton)
+        self.seedGroup.setVisible(False)
+        layout.addWidget(self.seedGroup)
+
+        # -- view helpers
+        viewRow = qt.QHBoxLayout()
+        self.jumpButton = qt.QPushButton("Centre on heart")
+        self.jumpButton.setToolTip(
+            "Jumps the slice views to the middle of the heart mask.")
+        self.jumpButton.clicked.connect(self.onJumpToHeart)
+        viewRow.addWidget(self.jumpButton)
+
+        self.presetButton = qt.QPushButton("CTA window/level")
+        self.presetButton.setToolTip(
+            "Resets brightness and contrast to {}/{}, where opacified lumen is "
+            "clearly separable from myocardium.".format(CTA_WINDOW, CTA_LEVEL))
+        self.presetButton.clicked.connect(lambda: self.logic.applyViewPreset())
+        viewRow.addWidget(self.presetButton)
+
+        self.show3dButton = qt.QPushButton("Show in 3D")
+        self.show3dButton.setToolTip(
+            "Builds a surface of what you have drawn. The fastest way to spot a "
+            "branch that stops early or a stray blob.")
+        self.show3dButton.clicked.connect(self.onShow3d)
+        viewRow.addWidget(self.show3dButton)
+        layout.addLayout(viewRow)
+
+        self.lumenMaskCheck = qt.QCheckBox(
+            "Only paint over opacified lumen ({}-{} HU)".format(
+                LUMEN_HU_MIN, LUMEN_HU_MAX))
+        self.lumenMaskCheck.setToolTip(
+            "Ignores voxels outside the contrast range, so the brush cannot "
+            "spill into myocardium or fat.")
+        self.lumenMaskCheck.setChecked(True)
+        self.lumenMaskCheck.toggled.connect(self.onMaskingChanged)
+        layout.addWidget(self.lumenMaskCheck)
+
+    def _buildSegmentButtons(self):
+        """One button per project segment, rebuilt whenever the project changes.
+
+        Built from the server's segment list rather than hardcoded, so adding a
+        fifth branch mid-project changes a server setting and nothing else.
+        """
+        for button in self._segmentButtons.values():
+            button.setParent(None)
+        self._segmentButtons = {}
+        if self.logic is None or self.logic.project is None:
+            return
+
+        for i, spec in enumerate(self.logic.project.segments):
+            label = "{}  {}".format(i + 1, _shortName(spec.name))
+            button = qt.QPushButton(label)
+            button.setCheckable(True)
+            button.setToolTip(spec.hint or spec.name)
+            colour = "rgb({},{},{})".format(*[int(255 * c) for c in spec.color])
+            button.setStyleSheet(
+                "QPushButton { text-align: left; padding: 4px 8px; "
+                "border-left: 6px solid %s; }"
+                "QPushButton:checked { font-weight: bold; background: #dfe8f0; }"
+                % colour)
+            button.clicked.connect(
+                lambda _checked=False, n=spec.name: self.onSelectSegment(n))
+            self.segmentButtonRow.addWidget(button, i // 2, i % 2)
+            self._segmentButtons[spec.name] = button
 
     def _buildEditorSection(self):
         box = ctk.ctkCollapsibleButton()
@@ -702,15 +1070,27 @@ class SegQueueWidget(ScriptedLoadableModuleWidget):
         self.clockTimer.timeout.connect(self._updateClock)
         self.clockTimer.start()
 
+        # The checklist reads each segment's internal labelmap, which is cropped
+        # to the vessel's own extent and therefore small. Five seconds is often
+        # enough to feel live and rare enough to cost nothing.
+        self.checklistTimer = qt.QTimer()
+        self.checklistTimer.setInterval(5000)
+        self.checklistTimer.timeout.connect(self._updateChecklist)
+        self.checklistTimer.start()
+
     def cleanup(self):
         """Slicer is closing or the module is being reloaded.
 
         The last autosave here is the one that saves an annotator who quits
         Slicer without submitting, which is a routine end to a session.
         """
-        for timer in (self.autosaveTimer, self.heartbeatTimer, self.clockTimer):
+        for timer in (self.autosaveTimer, self.heartbeatTimer, self.clockTimer,
+                      self.checklistTimer):
             if timer is not None:
                 timer.stop()
+        for shortcut in self._shortcuts:
+            shortcut.setParent(None)
+        self._shortcuts = []
         if self.logic is not None:
             self.logic.autosave()
         if self.editorWidget is not None:
@@ -753,6 +1133,7 @@ class SegQueueWidget(ScriptedLoadableModuleWidget):
         self.instructionsBrowser.setMarkdown(project.instructions or "")
         self.loginBox.collapsed = True
 
+        self._buildSegmentButtons()
         self.reviewBox.setVisible(self.logic.isReviewer())
         self._updateEnabled()
         self._offerResume()
@@ -851,8 +1232,19 @@ class SegQueueWidget(ScriptedLoadableModuleWidget):
         self.reworkBox.setVisible(bool(assignment.reviewer_comment))
         self.reworkLabel.setText(assignment.reviewer_comment or "")
         self._bindEditor(self.logic.segmentationNode, self.logic.volumeNode)
+
+        self.seedGroup.setVisible(bool(self.logic.seedSegmentId))
+        self.jumpButton.setEnabled(bool(self.logic.regionSegmentId))
+        slicer.app.layoutManager().setLayout(
+            slicer.vtkMRMLLayoutNode.SlicerLayoutFourUpView)
+        self.onMaskingChanged()
+        if self.logic.project.segments:
+            self.onSelectSegment(self.logic.project.segments[0].name)
+        self._updateChecklist()
+
         self.caseBox.collapsed = False
-        self.editorBox.collapsed = False
+        self.vesselBox.collapsed = False
+        self.editorBox.collapsed = True
         self._updateEnabled()
 
     def _bindEditor(self, segmentationNode, volumeNode):
@@ -863,6 +1255,163 @@ class SegQueueWidget(ScriptedLoadableModuleWidget):
             self.editorWidget.setSourceVolumeNode(volumeNode)
         except AttributeError:  # pragma: no cover - Slicer < 5.2 naming
             self.editorWidget.setMasterVolumeNode(volumeNode)
+
+        if segmentationNode is not None and self.editorNode is not None:
+            # Branches are disjoint anatomy, so painting one must never erase
+            # another. The default overwrites, and an annotator who finds their
+            # LAD half gone after working on the LCx has no way to know why.
+            self.editorNode.SetOverwriteMode(
+                slicer.vtkMRMLSegmentEditorNode.OverwriteNone)
+
+    # ----------------------------------------------------- vessel tooling
+
+    def onSelectSegment(self, name):
+        """Make one branch active, everywhere it matters."""
+        if self.logic is None or self.logic.segmentationNode is None:
+            return
+        segmentId = self.logic.segmentIdFor(name)
+        if segmentId and self.editorNode is not None:
+            self.editorNode.SetSelectedSegmentID(segmentId)
+
+        for otherName, button in self._segmentButtons.items():
+            button.setChecked(otherName == name)
+
+        spec = next((x for x in self.logic.project.segments if x.name == name), None)
+        self.segmentHintLabel.setText(spec.hint if spec else "")
+
+    def onEffect(self, name):
+        """Activate an effect, pre-tuned for a coronary artery."""
+        if self.editorWidget is None:
+            return
+        self.editorWidget.setActiveEffectByName(name)
+        effect = self.editorWidget.activeEffect()
+        if effect is None:
+            slicer.util.errorDisplay(
+                "This build of Slicer has no '{}' effect.".format(name))
+            return
+        if name == "Paint":
+            # A brush sized in millimetres rather than screen pixels, so it stays
+            # correct when the annotator zooms -- which they will, constantly.
+            effect.setParameter("BrushSphere", "1")
+            effect.setParameter("BrushDiameterIsRelative", "0")
+            effect.setParameter("BrushAbsoluteDiameter", str(BRUSH_DIAMETER_MM))
+
+    def onMaskingChanged(self):
+        """Apply the two masks that make sloppy-but-fast painting safe."""
+        if self.logic is None or self.editorNode is None:
+            return
+        if self.logic.segmentationNode is None:
+            return
+
+        seedId = self.logic.seedSegmentId
+        if self.maskToSeedCheck.checked and seedId:
+            self.editorNode.SetMaskMode(
+                slicer.vtkMRMLSegmentationNode.EditAllowedInsideSingleSegment)
+            self.editorNode.SetMaskSegmentID(seedId)
+        else:
+            self.editorNode.SetMaskMode(
+                slicer.vtkMRMLSegmentationNode.EditAllowedEverywhere)
+
+        on = bool(self.lumenMaskCheck.checked)
+        # Renamed in Slicer 5.2 when "master volume" became "source volume".
+        for setEnabled, setRange in (
+                ("SetSourceVolumeIntensityMask", "SetSourceVolumeIntensityMaskRange"),
+                ("SetMasterVolumeIntensityMask", "SetMasterVolumeIntensityMaskRange")):
+            if hasattr(self.editorNode, setEnabled):
+                getattr(self.editorNode, setEnabled)(on)
+                if on:
+                    getattr(self.editorNode, setRange)(LUMEN_HU_MIN, LUMEN_HU_MAX)
+                break
+
+    def onCopySeed(self):
+        """Union the whole pre-existing tree into the active branch."""
+        if self.logic is None or not self.logic.seedSegmentId:
+            return
+        active = next((n for n, b in self._segmentButtons.items() if b.checked), None)
+        if active is None:
+            slicer.util.errorDisplay("Choose a vessel first.")
+            return
+        if not slicer.util.confirmYesNoDisplay(
+                "Add the entire coronary mask to '{}'?\n\nYou would then trim it "
+                "down with Scissors. For most branches, painting inside the mask "
+                "is faster.".format(active)):
+            return
+
+        self.onSelectSegment(active)
+        self.editorWidget.setActiveEffectByName("Logical operators")
+        effect = self.editorWidget.activeEffect()
+        if effect is None:
+            slicer.util.errorDisplay(
+                "This build of Slicer has no 'Logical operators' effect.")
+            return
+        effect.setParameter("Operation", "UNION")
+        effect.setParameter("ModifierSegmentID", self.logic.seedSegmentId)
+        # Without this the copy is clipped by the very mask being copied from,
+        # which silently does nothing and looks like a broken button.
+        effect.setParameter("BypassMasking", "1")
+        effect.self().onApply()
+        self.editorWidget.setActiveEffectByName("")
+        self._updateChecklist()
+
+    def onJumpToHeart(self):
+        if self.logic is not None and not self.logic.jumpToHeart():
+            slicer.util.errorDisplay("This case has no heart mask to centre on.")
+
+    def onShow3d(self):
+        if self.logic is None or self.logic.segmentationNode is None:
+            return
+        with _busy():
+            self.logic.segmentationNode.CreateClosedSurfaceRepresentation()
+            display = self.logic.segmentationNode.GetDisplayNode()
+            if display is not None:
+                # Scaffolding stays out of the 3D view: a solid heart would hide
+                # the very tree the annotator opened 3D to inspect.
+                for segmentId in self.logic.helperIds():
+                    display.SetSegmentOpacity3D(segmentId, 0.0)
+            slicer.app.layoutManager().setLayout(
+                slicer.vtkMRMLLayoutNode.SlicerLayoutFourUpView)
+
+    def _updateChecklist(self):
+        """Tick the vessels that have something in them."""
+        if self.logic is None or self.logic.assignment is None:
+            for button in self._segmentButtons.values():
+                button.setText(button.text.replace("  \u2713", ""))
+            return
+        for i, spec in enumerate(self.logic.project.segments):
+            button = self._segmentButtons.get(spec.name)
+            if button is None:
+                continue
+            done = self.logic.segmentHasContent(spec.name)
+            required = "" if spec.required else "  (optional)"
+            button.setText("{}  {}{}{}".format(
+                i + 1, _shortName(spec.name), required,
+                "  \u2713" if done else ""))
+
+    def _installShortcuts(self):
+        """Number keys pick a vessel; letters pick a tool.
+
+        Keyboard rather than mouse because branch changes happen hundreds of
+        times an hour, and every one of them through a list widget is a second
+        of attention taken off the image.
+        """
+        bindings = []
+        for i in range(1, 10):
+            bindings.append((str(i), lambda index=i - 1: self._selectByIndex(index)))
+        for name, key, _tip in VESSEL_EFFECTS:
+            bindings.append((key, lambda n=name: self.onEffect(n)))
+
+        for key, handler in bindings:
+            shortcut = qt.QShortcut(slicer.util.mainWindow())
+            shortcut.setKey(qt.QKeySequence(key))
+            shortcut.connect("activated()", handler)
+            self._shortcuts.append(shortcut)
+
+    def _selectByIndex(self, index):
+        if self.logic is None or self.logic.project is None:
+            return
+        segments = self.logic.project.segments
+        if 0 <= index < len(segments):
+            self.onSelectSegment(segments[index].name)
 
     # -------------------------------------------------------------- actions
 
@@ -963,7 +1512,9 @@ class SegQueueWidget(ScriptedLoadableModuleWidget):
         self.problemsLabel.setText("")
         self.caseLabel.setText("Submitted. Press 'Get next case' when you are ready.")
         self.reworkBox.setVisible(False)
+        self.seedGroup.setVisible(False)
         self._bindEditor(None, None)
+        self._updateChecklist()
         self._updateEnabled()
 
     def onRelease(self):
@@ -981,7 +1532,9 @@ class SegQueueWidget(ScriptedLoadableModuleWidget):
                 return
         self.caseLabel.setText("No case open.")
         self.reworkBox.setVisible(False)
+        self.seedGroup.setVisible(False)
         self._bindEditor(None, None)
+        self._updateChecklist()
         self._updateEnabled()
 
     # --------------------------------------------------------------- review
@@ -1089,6 +1642,7 @@ class SegQueueWidget(ScriptedLoadableModuleWidget):
                        self.releaseButton):
             button.setEnabled(hasCase)
         self.editorBox.setEnabled(hasCase)
+        self.vesselBox.setEnabled(hasCase)
 
 
 def _deadlineText(deadline):
@@ -1107,6 +1661,22 @@ def _problemsHtml(problems):
         lines.append("<span style='color:{}'>&bull; {}</span>".format(
             color, _escape(problem.message)))
     return "<br>".join(lines)
+
+
+def _caption(text):
+    label = qt.QLabel(text)
+    label.setWordWrap(True)
+    label.setStyleSheet("QLabel { color: #5a5f66; }")
+    return label
+
+
+def _shortName(name):
+    """``left_anterior_descending`` -> ``Left anterior descending``.
+
+    The underscored form is what the file format needs and what the server
+    stores. It is not what anyone should have to read two hundred times a day.
+    """
+    return name.replace("_", " ").capitalize()
 
 
 def _escape(text):

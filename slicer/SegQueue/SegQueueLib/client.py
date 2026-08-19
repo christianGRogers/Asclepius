@@ -211,6 +211,33 @@ class SegQueueClient:
         os.rename(partPath, destPath)
         return written
 
+    def downloadAsset(self, caseId, kind, destPath, progress=None):
+        """Fetch a case's helper mask. ``None`` when the case has none.
+
+        A missing asset is the common answer, not an error -- most cases have no
+        coronary seed -- so it is a return value the UI can branch on rather
+        than an exception it has to catch around every case load.
+        """
+        try:
+            response = self._request(
+                'GET', protocol.path(protocol.CASE_ASSET, case_id=caseId, kind=kind),
+                stream=True)
+        except SegQueueError as exc:
+            if getattr(exc, 'code', None) == protocol.ERR_NO_ASSET:
+                return None
+            raise
+
+        written = 0
+        with open(destPath, 'wb') as handle:
+            for chunk in response.iter_content(chunk_size=CHUNK_BYTES):
+                if not chunk:
+                    continue
+                handle.write(chunk)
+                written += len(chunk)
+                if progress is not None:
+                    progress(written, 0)
+        return destPath
+
     def heartbeat(self, assignmentId):
         """Best-effort. A failed heartbeat must never interrupt segmenting."""
         try:

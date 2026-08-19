@@ -1,0 +1,758 @@
+<title>SegQueue Setup Guide</title>
+<style>
+  :root {
+    --ink: #1a1a1a;
+    --muted: #5a5f66;
+    --rule: #d8dce1;
+    --accent: #1f5c8b;
+    --warn: #8a3b00;
+    --good: #1d6b33;
+    --code-bg: #f5f6f8;
+  }
+  @page { size: Letter; margin: 17mm 15mm 17mm 15mm; }
+
+  * { box-sizing: border-box; }
+  body {
+    font-family: Georgia, "Times New Roman", serif;
+    font-size: 10.2pt;
+    line-height: 1.5;
+    color: var(--ink);
+    margin: 0;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  h1, h2, h3, h4 {
+    font-family: "Segoe UI", Helvetica, Arial, sans-serif;
+    line-height: 1.22;
+    margin: 0 0 .35em;
+  }
+  h2 {
+    font-size: 17pt;
+    break-before: page;
+    padding-bottom: .25em;
+    border-bottom: 2px solid var(--accent);
+    color: var(--accent);
+    margin-top: 0;
+  }
+  h2.first { break-before: auto; }
+  h3 { font-size: 12.4pt; margin-top: 1.5em; }
+  h4 { font-size: 10.6pt; margin-top: 1.2em; color: var(--muted); }
+  p { margin: 0 0 .7em; }
+  ul, ol { margin: 0 0 .8em; padding-left: 1.3em; }
+  li { margin-bottom: .3em; }
+  code, kbd {
+    font-family: Consolas, "DejaVu Sans Mono", monospace;
+    font-size: 8.9pt;
+    background: var(--code-bg);
+    padding: .5pt 3pt;
+    border-radius: 2px;
+  }
+  pre {
+    font-family: Consolas, "DejaVu Sans Mono", monospace;
+    font-size: 8.4pt;
+    line-height: 1.42;
+    background: var(--code-bg);
+    border-left: 3px solid var(--accent);
+    padding: 7pt 9pt;
+    margin: 0 0 .9em;
+    white-space: pre-wrap;
+    word-break: break-word;
+    break-inside: avoid;
+  }
+  pre code { background: none; padding: 0; font-size: inherit; }
+  pre .c { color: var(--muted); }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 9.1pt;
+    margin: 0 0 1em;
+    break-inside: avoid;
+  }
+  th, td { text-align: left; vertical-align: top; padding: 4pt 6pt; border-bottom: 1px solid var(--rule); }
+  th { font-family: "Segoe UI", Helvetica, Arial, sans-serif; font-size: 8.6pt; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); border-bottom: 1.5px solid var(--rule); }
+  td code { font-size: 8.3pt; }
+
+  .cover { text-align: left; padding-top: 34mm; break-after: page; }
+  .cover h1 { font-size: 30pt; letter-spacing: -.5px; margin-bottom: .1em; }
+  .cover .sub { font-size: 13pt; color: var(--muted); font-family: "Segoe UI", Helvetica, Arial, sans-serif; margin-bottom: 2.2em; }
+  .cover .meta { font-size: 9.4pt; color: var(--muted); border-top: 1px solid var(--rule); padding-top: 8pt; }
+
+  .note, .warn, .good {
+    padding: 7pt 10pt;
+    margin: 0 0 1em;
+    font-size: 9.4pt;
+    border-left: 3px solid var(--accent);
+    background: #f2f7fb;
+    break-inside: avoid;
+  }
+  .warn { border-left-color: var(--warn); background: #fdf5ee; }
+  .good { border-left-color: var(--good); background: #f1f8f2; }
+  .note b, .warn b, .good b { font-family: "Segoe UI", Helvetica, Arial, sans-serif; }
+
+  .diagram {
+    border: 1px solid var(--rule);
+    padding: 10pt;
+    margin-bottom: 1em;
+    font-family: Consolas, "DejaVu Sans Mono", monospace;
+    font-size: 8.2pt;
+    line-height: 1.5;
+    white-space: pre;
+    overflow-x: auto;
+    break-inside: avoid;
+  }
+  .toc { font-family: "Segoe UI", Helvetica, Arial, sans-serif; font-size: 10pt; }
+  .toc li { margin-bottom: .25em; }
+  .toc .n { color: var(--muted); display: inline-block; width: 2.2em; }
+  .lead { font-size: 11pt; color: var(--muted); margin-bottom: 1.4em; }
+  .keep { break-inside: avoid; }
+</style>
+
+<div class="cover">
+  <h1>SegQueue</h1>
+  <div class="sub">Setup &amp; acceptance testing guide</div>
+  <p style="max-width: 34em; font-size: 11pt;">
+    A self-hosted platform for producing per-segment coronary labels with a team
+    of annotators: a Girder&nbsp;5 server that owns the case pool, and a 3D&nbsp;Slicer
+    extension that hands one annotator one case at a time and leaves nothing on
+    their disk.
+  </p>
+  <div class="meta">
+    Asclepius &middot; coronary segmentation<br>
+    Covers server deployment, TotalSegmentator ingest, the Slicer client, and a
+    full acceptance test. Server-only runbook: <code>docs/SERVER-SETUP.md</code>.
+  </div>
+</div>
+
+<h2 class="first">1 &nbsp; What you are setting up</h2>
+
+<p>Four processes on one Linux box, plus an extension on each annotator's
+machine. Nothing runs in a cloud account and nothing phones home.</p>
+
+<div class="diagram">  Annotator's laptop                    Your server
+  ┌────────────────────────┐            ┌──────────────────────────────────────┐
+  │ 3D Slicer              │            │  Caddy   :80 :443                    │
+  │  └ SegQueue extension  │──── TLS ──▶│   └ automatic certificate, renewal   │
+  │     one case at a time │            │        │                             │
+  │     purged on submit   │            │        ▼                             │
+  └────────────────────────┘            │  Girder 5 + SegQueue plugin  :8080   │
+                                        │        │              │              │
+                                        │        ▼              ▼              │
+                                        │   MongoDB        /data/assetstore    │
+                                        │   (metadata)     (volumes + work)    │
+                                        │                                      │
+                                        │  worker: QA scoring + lease sweep    │
+                                        └──────────────────────────────────────┘</div>
+
+<table>
+  <tr><th>Container</th><th>What it does</th><th>Fails how</th></tr>
+  <tr><td><code>caddy</code></td><td>TLS termination and reverse proxy. Obtains and renews the certificate itself.</td><td>Nobody can connect; annotators see a TLS error.</td></tr>
+  <tr><td><code>girder</code></td><td>The API: accounts, tokens, resumable uploads, storage, plus the SegQueue plugin's queue, leases and review.</td><td>Everything stops, but no data is lost.</td></tr>
+  <tr><td><code>mongo</code></td><td>All metadata: cases, assignments, submissions, reviews.</td><td>Girder refuses to start. Restore from the nightly dump.</td></tr>
+  <tr><td><code>worker</code></td><td>Scores gold and duplicate submissions every 30&nbsp;s; reclaims lapsed leases every hour.</td><td>Silent. Scores stop appearing and stranded cases stay stranded — check its log weekly.</td></tr>
+</table>
+
+<h3>1.1 &nbsp; The task</h3>
+
+<p>Four structures, fixed by the server and obeyed by the extension. The label
+values are the ones <code>configs/labels/coronary.yaml</code> uses, so a finished
+submission converts straight into a training set.</p>
+
+<table>
+  <tr><th>Segment</th><th>Label</th><th>Required</th><th>Where it runs</th></tr>
+  <tr><td><code>left_main</code></td><td>1</td><td>yes</td><td>Ostium at the left coronary sinus to the LAD/LCx bifurcation. Often under 10&nbsp;mm.</td></tr>
+  <tr><td><code>left_anterior_descending</code></td><td>2</td><td>yes</td><td>Anterior interventricular groove, toward the apex. Diagonals included.</td></tr>
+  <tr><td><code>left_circumflex</code></td><td>3</td><td>yes</td><td>Left atrioventricular groove. Obtuse marginals included.</td></tr>
+  <tr><td><code>right_coronary_artery</code></td><td>4</td><td>no</td><td>Right atrioventricular groove. May be small or absent in a left-dominant system.</td></tr>
+</table>
+
+<h3>1.2 &nbsp; The three ideas worth knowing before you start</h3>
+
+<p><b>The server owns the labelling protocol.</b> Segment names, label values,
+colours and the instruction text are server settings. The extension creates
+exactly those segments before the annotator can touch anything, so there is no
+free-text segment name to get wrong across thirty people. Adding a structure
+mid-project is a settings change; nobody reinstalls anything.</p>
+
+<p><b>Local data is a lease, not a library.</b> The extension keeps one case in
+one managed directory and deletes it the moment the server confirms a submission
+— or on release, or at logout. The disk cost of the whole project on a student's
+laptop is one CT.</p>
+
+<p><b>State lives on the assignment, not the case.</b> A case can legitimately be
+in two annotators' hands at once (a blind duplicate), so "the case is assigned"
+is not a thing that can be said. Each <i>assignment</i> moves through
+<code>assigned → downloaded → submitted → approved</code>, with
+<code>rejected → assigned</code> for rework.</p>
+
+<h2>2 &nbsp; Before you start</h2>
+
+<table>
+  <tr><th>You need</th><th>Why, and how much</th></tr>
+  <tr><td>A Linux host with Docker and the Compose plugin</td><td>Ubuntu 22.04+ or equivalent. Compose v2 (<code>docker compose</code>, not <code>docker-compose</code>).</td></tr>
+  <tr><td>16–32 GB RAM</td><td>MongoDB's working set plus the page cache doing the real work on a file-heavy load. 16 is enough; 32 is comfortable.</td></tr>
+  <tr><td>A data disk, on RAID1 or a ZFS mirror</td><td>Budget <b>~300 MB per case</b>: about 1.5 TB for 5,000 CTs plus their segmentations. A single-disk failure part-way through is a year of undergraduate labour, not an inconvenience.</td></tr>
+  <tr><td>A DNS name pointing at the box, <b>or</b> a VPN</td><td>Off-campus annotators are the norm. See §3.6 — this is the decision most likely to bite you later.</td></tr>
+  <tr><td>The case data</td><td>By default the TotalSegmentator release on Zenodo — see §5. Bring-your-own CCTA works too, as NRRD or NIfTI: DICOM directories are not ingested, because converting once centrally beats thirty students meeting Slicer's DICOM import dialogue.</td></tr>
+  <tr><td>3D Slicer 5.8 on each annotator machine</td><td>No pip installs needed. The extension uses <code>requests</code>, which Slicer already bundles.</td></tr>
+  <tr><td>A UPS</td><td>MongoDB survives power loss far better with one. Cheap insurance on a machine holding the only copy of a term's work.</td></tr>
+</table>
+
+<div class="note"><b>Just want to see it work first?</b> Skip to <b>§4 — Trying it
+on a laptop</b>. That path takes about five minutes, needs no domain name, no
+certificate and no data disk, and runs the same image the production stack does.</div>
+
+<h2>3 &nbsp; Production install</h2>
+
+<h3>3.1 &nbsp; Get the code and configure</h3>
+
+<pre><code>git clone https://github.com/christianGRogers/Asclepius.git /srv/segqueue
+cd /srv/segqueue
+git checkout segqueue-platform
+
+cd deploy
+cp .env.example .env
+$EDITOR .env</code></pre>
+
+<table>
+  <tr><th>Setting</th><th>What to put</th></tr>
+  <tr><td><code>SEGQUEUE_DOMAIN</code></td><td>The public name, e.g. <code>segqueue.example.edu</code>. A hostname gets a real Let's Encrypt certificate. An <code>https://10.0.0.5</code> here gets a self-signed one instead — read §3.6 before choosing that.</td></tr>
+  <tr><td><code>SEGQUEUE_TLS_EMAIL</code></td><td>Where Let's Encrypt sends expiry warnings. Leave blank on the self-signed path.</td></tr>
+  <tr><td><code>DATA_ROOT</code></td><td>The mirrored data disk, e.g. <code>/srv/segqueue-data</code>. Mongo's files and the Girder assetstore both live under it. <b>Not the system disk.</b></td></tr>
+  <tr><td><code>CASE_SOURCE_ROOT</code></td><td>Optional. A directory of CTs waiting to be ingested; mounted read-only at <code>/incoming</code> inside the container.</td></tr>
+  <tr><td><code>MONGO_CACHE_GB</code></td><td>Roughly a quarter of system RAM.</td></tr>
+</table>
+
+<h3>3.2 &nbsp; Start it</h3>
+
+<pre><code>docker compose up -d --build
+docker compose logs -f girder</code></pre>
+
+<p>You are looking for these three lines, in this order:</p>
+
+<pre><code>INFO:girder.models:Connecting to MongoDB: mongodb://mongo:27017/girder
+INFO:girder.plugin:Loaded plugin "segqueue"
+INFO:girder.asgi:Girder server running</code></pre>
+
+<div class="warn"><b>If the plugin line is missing</b>, the API will answer but
+every <code>/segqueue/…</code> route will 404. See §9, first row.</div>
+
+<h3>3.3 &nbsp; Create the first account</h3>
+
+<p>Open <code>https://&lt;your domain&gt;/</code> and register. <b>The first user
+Girder sees becomes a site administrator</b>, so do this before telling anyone
+the address.</p>
+
+<div class="note">On a brand-new database the plugin loads before any account
+exists, so it cannot yet create the <code>segqueue-annotators</code> and
+<code>segqueue-reviewers</code> groups — Girder requires an owner for a group.
+This is handled: the groups are created on the next restart, or the first time
+you create an annotator, whichever comes first. Nothing for you to do.</div>
+
+<h3>3.4 &nbsp; Create the assetstore</h3>
+
+<div class="warn"><b>Nothing works until you do this, and the failure is
+confusing if you skip it.</b> Girder has no storage configured out of the box.</div>
+
+<p>Admin console → <b>Assetstores</b> → <b>Create new filesystem assetstore</b>:</p>
+
+<table>
+  <tr><th>Field</th><th>Value</th></tr>
+  <tr><td>Name</td><td><code>store</code> (anything)</td></tr>
+  <tr><td>Root directory</td><td><code>/data/assetstore</code> — the path <i>inside the container</i>. Compose maps it to <code>$DATA_ROOT/assetstore</code> on the host.</td></tr>
+</table>
+
+<p>The ingest CLI checks for this and refuses to start without it, rather than
+failing halfway through a 1.5 TB import.</p>
+
+<h3>3.5 &nbsp; Verify the plugin</h3>
+
+<pre><code>curl -s https://&lt;domain&gt;/api/v1/system/version
+curl -s https://&lt;domain&gt;/api/v1/describe | grep -o segqueue | head -1</code></pre>
+
+<p>Or open <code>https://&lt;domain&gt;/api/v1</code> in a browser: the generated
+API docs should show a <b>segqueue</b> section containing <code>project</code>,
+<code>next</code>, <code>mine</code>, <code>review/queue</code>,
+<code>stats</code> and <code>sweep</code>.</p>
+
+<h3>3.6 &nbsp; The certificate decision</h3>
+
+<p>Three options, in descending order of how much trouble they save you:</p>
+
+<ol>
+  <li><b>A real DNS name.</b> Caddy gets a Let's Encrypt certificate and renews
+  it forever. Nothing to install on annotator machines. Requires ports 80 and 443
+  reachable from the internet at certificate-issue time.</li>
+  <li><b>A VPN with a real name.</b> Tailscale or WireGuard, with the box having
+  a proper hostname inside it. Same as above, plus the server is never exposed.
+  This is the recommended setup for a campus box.</li>
+  <li><b>Self-signed.</b> Caddy issues its own. The Slicer extension will then
+  <b>refuse to connect</b> until Caddy's local CA root is installed on each
+  annotator machine — the root is at
+  <code>/data/caddy/pki/authorities/local/root.crt</code> inside the caddy
+  container. Workable for a handful of lab machines, painful for thirty
+  students.</li>
+</ol>
+
+<h2>4 &nbsp; Trying it on a laptop</h2>
+
+<p>Docker Desktop on Windows or macOS, no domain, no certificate. This is the
+fastest way to see the whole system work, and it is exactly how the acceptance
+test in §7 was validated.</p>
+
+<div class="note">Compose is not used here on purpose: MongoDB's storage engine
+is unreliable on a Windows bind mount. Running the containers directly with a
+Docker-managed volume sidesteps it entirely.</div>
+
+<pre><code><span class="c"># from the repository root</span>
+docker network create segq-test
+docker run -d --name segq-mongo --network segq-test mongo:7
+
+docker build -f deploy/Dockerfile -t segqueue:test .
+
+docker run -d --name segq-girder --network segq-test -p 8099:8080 \
+  -e GIRDER_MONGO_URI=mongodb://segq-mongo:27017/girder \
+  -e GIRDER_SERVER_MODE=production \
+  segqueue:test
+
+docker logs segq-girder | tail -5</code></pre>
+
+<p>Then <code>http://localhost:8099/</code> — register the first user, and
+create the assetstore at <code>/data/assetstore</code> exactly as in §3.4.</p>
+
+<p>Make yourself some cases. They do not have to be real CTs: the server hashes
+and stores them without opening them, so random bytes exercise the same path.</p>
+
+<pre><code>docker exec segq-girder sh -c \
+  'mkdir -p /tmp/incoming; for i in 1 2 3; do
+     head -c 200000 /dev/urandom &gt; /tmp/incoming/case00$i.nrrd; done'
+
+docker exec segq-girder segqueue-ingest \n    --root /tmp/incoming --layout flat --target coronary</code></pre>
+
+<div class="warn"><b>Git Bash on Windows</b> rewrites <code>/tmp/incoming</code>
+into <code>C:/Users/…</code> before Docker sees it, and the command fails with
+<i>"is not a directory"</i>. Prefix with <code>MSYS_NO_PATHCONV=1</code>, or use
+PowerShell.</div>
+
+<p>Tear down with <code>docker rm -f segq-girder segq-mongo</code> and
+<code>docker network rm segq-test</code>. The Mongo data goes with it.</p>
+
+<h2>5 &nbsp; The data, and loading it</h2>
+
+<p>The default source is the TotalSegmentator release on Zenodo:</p>
+
+<pre><code>https://zenodo.org/records/10047292</code></pre>
+
+<p>About 1,200 whole-body CT studies, each <b>already segmented</b> into 117
+structures. That presegmentation is the whole reason this dataset is a good
+starting point, because it lets the ingest decide two things from filenames alone
+without opening a single image.</p>
+
+<pre><code>&lt;root&gt;/s0011/ct.nii.gz
+&lt;root&gt;/s0011/segmentations/heart.nii.gz               <span class="c">&larr; this case has a heart</span>
+&lt;root&gt;/s0011/segmentations/coronary_arteries.nii.gz   <span class="c">&larr; ... and a head start</span>
+&lt;root&gt;/s0011/segmentations/liver.nii.gz
+&lt;root&gt;/s0012/ct.nii.gz
+&lt;root&gt;/s0012/segmentations/femur_left.nii.gz          <span class="c">&larr; skipped: no heart</span></code></pre>
+
+<h3>5.1 &nbsp; Only cases with a heart</h3>
+
+<p>Most of a whole-body dataset is legs, heads and abdomens with no coronary
+anatomy in the field of view at all. Assigning those spends the one resource this
+project is short of &mdash; annotator hours &mdash; on scans that cannot be
+annotated. A case qualifies if it carries any of <code>heart</code>,
+<code>heart_myocardium</code>, <code>heart_atrium_left</code>,
+<code>heart_atrium_right</code>, <code>heart_ventricle_left</code> or
+<code>heart_ventricle_right</code>: v2 ships the first, v1 the rest, and both
+releases are in circulation.</p>
+
+<p>Qualifying cases also send their heart mask to the client, which uses it to
+centre the slice views on arrival.</p>
+
+<h3>5.2 &nbsp; A coronary mask, when the case has one</h3>
+
+<p>If a case carries <code>coronary_arteries</code>, it travels with the case and
+the extension loads it as a helper segment. It is a <b>binary lumen</b>, not
+per-branch labels &mdash; so it is a head start rather than an answer. The
+annotator splits an existing tree into four branches instead of drawing one,
+which is minutes of work instead of an hour.</p>
+
+<div class="note">The base Zenodo release does <b>not</b> include coronary masks;
+TotalSegmentator's <code>coronary_arteries</code> task is licensed separately. If
+your copy has them &mdash; from that task, or from your own earlier model &mdash;
+ingest picks them up with no extra flags. If not, everything still works and
+annotators draw from scratch.</div>
+
+<div class="good">Helper masks cannot be submitted. The export copies only the
+project's own four segments into a throwaway segmentation, and then refuses
+outright if any label value outside the protocol appears in the result. Shipping
+the dataset's own mask back as a student's work would corrupt the training set
+while every dashboard number looked healthy, so it is prevented structurally
+rather than by convention.</div>
+
+<h3>5.3 &nbsp; Running the ingest</h3>
+
+<pre><code><span class="c"># always first: changes nothing, tells you what the filter did</span>
+docker compose exec girder segqueue-ingest --root /incoming --dry-run
+
+<span class="c"># then</span>
+docker compose exec girder segqueue-ingest --root /incoming --target coronary</code></pre>
+
+<p>A real run against a five-case test tree &mdash; yours will be larger:</p>
+
+<pre><code>Scanned /incoming
+  5 case(s) with a CT
+  3 with a heart segmentation, 2 without
+  1 with a pre-existing coronary mask
+  0 with an expert reference
+
+  + s0001  [coronary seed, heart]
+  + s0002  [heart]
+  + s0003  [heart]
+
+ingested 3 case(s): 3 with a heart mask, 1 with a coronary head start, 0 gold.</code></pre>
+
+<p>The <i>rejected</i> count is printed on purpose. A scan that quietly returns
+12 cases out of 1,200 looks identical to a correct one until somebody asks why
+the project finished early.</p>
+
+<table>
+  <tr><th>Flag</th><th>Meaning</th></tr>
+  <tr><td><code>--root</code></td><td>Directory holding one subdirectory per case.</td></tr>
+  <tr><td><code>--layout</code></td><td><code>totalsegmentator</code> (default), or <code>flat</code> for a plain directory of volume files.</td></tr>
+  <tr><td><code>--all-cases</code></td><td>Ingest cases with no heart segmentation too. Off by default.</td></tr>
+  <tr><td><code>--no-seed</code></td><td>Do not ship pre-existing coronary masks. Use this to measure unaided annotation time.</td></tr>
+  <tr><td><code>--no-region</code></td><td>Do not ship heart masks. The extension then cannot centre the view.</td></tr>
+  <tr><td><code>--gold-root</code></td><td>A <b>separate</b> directory of expert per-branch references &mdash; see below.</td></tr>
+  <tr><td><code>--target</code></td><td>Recorded on each case. Defaults to <code>coronary</code>.</td></tr>
+  <tr><td><code>--priority</code></td><td>Higher is served first. Useful for a pilot batch.</td></tr>
+  <tr><td><code>--limit</code></td><td>Stop after N new cases. Good for a first run.</td></tr>
+  <tr><td><code>--dry-run</code></td><td>Report and change nothing.</td></tr>
+</table>
+
+<p><b>Ingest is idempotent by case name.</b> An interrupted import resumes by
+running the same command again &mdash; which matters, because that is exactly the
+kind of job that gets interrupted. The SHA-256 of every CT is computed here, once,
+and every later transfer verified against it, so a file corrupt on arrival is
+caught by the first annotator rather than blamed on their connection.</p>
+
+<h3>5.4 &nbsp; Gold-standard cases</h3>
+
+<pre><code>docker compose exec girder segqueue-ingest \
+    --root /incoming --gold-root /incoming-gold --target coronary</code></pre>
+
+<p>Expert references live in a parallel directory, never beside the volumes. A
+mis-scoped <code>--root</code> that swept them into the case pool would hand
+annotators the answers to the very cases used to measure them, and the failure
+would be invisible in the metrics. Aim for about <b>5%</b> of the pool.</p>
+
+<h2>6 &nbsp; People and the Slicer client</h2>
+
+<h3>6.1 &nbsp; Create annotators</h3>
+
+<pre><code>curl -u admin1 -X POST "https://&lt;domain&gt;/api/v1/segqueue/users" \
+     -d login=student01 -d email=student01@example.edu \
+     -d firstName=Ada -d lastName=Lovelace \
+     -d password=... -d quota=200</code></pre>
+
+<p>Or through Girder's own admin UI: create the user, then add them to the
+<code>segqueue-annotators</code> group. Reviewers additionally join
+<code>segqueue-reviewers</code>; site admins review by right.</p>
+
+<table>
+  <tr><th>Operation</th><th>Call</th></tr>
+  <tr><td>Change a quota</td><td><code>PATCH /segqueue/users/&lt;id&gt;?quota=300</code> (<code>-1</code> removes the cap)</td></tr>
+  <tr><td>Grant reviewer</td><td><code>PATCH /segqueue/users/&lt;id&gt;?reviewer=true</code></td></tr>
+  <tr><td>Student left the course</td><td><code>PATCH /segqueue/users/&lt;id&gt;?disabled=true</code> — also releases every case they were holding</td></tr>
+</table>
+
+<h3>6.2 &nbsp; Install the extension</h3>
+
+<ol>
+  <li>Give each annotator a checkout of the repository (or a copy of the
+  <code>slicer/</code> and <code>src/</code> directories — the extension imports
+  <code>segqueue</code> from <code>src/</code>).</li>
+  <li>Slicer → <b>Edit → Application Settings → Modules</b>. Drag
+  <code>slicer/SegQueue</code> into <b>Additional module paths</b>.</li>
+  <li>Restart Slicer. Open <b>Segmentation → SegQueue</b>.</li>
+</ol>
+
+<p>No pip install, no internet access needed at install time. If the panel
+instead shows <i>"Could not import the segqueue package"</i>, the module was
+loaded from outside the repository — see §9.</p>
+
+<h3>6.3 &nbsp; What an annotator does</h3>
+
+<ol>
+  <li>Enter the server address and log in. The address is remembered; the
+  password never is.</li>
+  <li><b>Get next case.</b> The volume downloads, its checksum is verified, the
+  project's segments appear already named and coloured, the view lands on the
+  heart at CTA window/level, and any coronary mask the case carries is loaded
+  ready to split.</li>
+  <li>Pick a vessel with <b>1&ndash;4</b>, pick a tool with <b>Q/W/E/R/T/Y</b>,
+  and paint.</li>
+  <li><b>Validate &amp; submit.</b> Problems are listed in plain language before
+  anything is uploaded. On success the local copy is deleted.</li>
+</ol>
+
+<p>Drafts autosave every two minutes, and the elapsed-time clock is accumulated
+into a file rather than held in the panel, so a Slicer crash at minute forty
+comes back to the work with the clock intact.</p>
+
+<h3>6.4 &nbsp; The vessel tools</h3>
+
+<p>Slicer's Segment Editor can already do every one of these. It is worth
+wrapping because it cannot do them <i>for this task</i>: a first-year
+undergraduate should not have to work out which of twenty effects segments a
+3&nbsp;mm vessel, nor scroll a segment list to change branch two hundred times an
+hour.</p>
+
+<table>
+  <tr><th>Control</th><th>What it does, and why it is there</th></tr>
+  <tr><td><b>1 &ndash; 4</b></td><td>Select the branch. Each button carries the vessel's colour, its one-line hint, and a tick once it has voxels in it — so "have I done the RCA yet" is answered by looking, not by clicking through segments. Built from the server's segment list, so a fifth branch is a settings change.</td></tr>
+  <tr><td><b>Q</b> Paint</td><td>Sphere brush, 3&nbsp;mm, sized in millimetres rather than screen pixels so it stays correct through the constant zooming this work involves.</td></tr>
+  <tr><td><b>E</b> Level tracing</td><td>Click inside the lumen and it traces the boundary on that slice. The fastest way through a well-opacified vessel.</td></tr>
+  <tr><td><b>R</b> Scissors</td><td>Cut away everything outside a drawn outline. This is how a copied whole tree gets trimmed down to one branch.</td></tr>
+  <tr><td><b>T</b> Islands</td><td>Keep the largest island, or delete a stray blob — the two most common cleanups.</td></tr>
+  <tr><td><i>Only paint inside that mask</i></td><td>Confines every effect to the case's existing coronary mask. A fast, sloppy stroke then still produces a clean vessel edge, which is what turns "split the tree" into minutes of work.</td></tr>
+  <tr><td><i>Only paint over opacified lumen</i></td><td>Restricts editing to 150&ndash;1000&nbsp;HU, so the brush cannot spill into myocardium or fat.</td></tr>
+  <tr><td><i>Add the whole mask to this vessel</i></td><td>Unions the entire pre-existing tree into the selected branch, to be trimmed with Scissors. Useful for whichever branch dominates the tree.</td></tr>
+  <tr><td><i>Centre on heart</i> / <i>CTA window/level</i></td><td>Both are applied automatically when the case opens; the buttons put them back after the annotator has explored.</td></tr>
+  <tr><td><i>Show in 3D</i></td><td>Builds a surface of what has been drawn. The fastest way to spot a branch that stops early or a stray blob. Helper masks are kept out of the 3D view, since a solid heart would hide the tree.</td></tr>
+</table>
+
+<p>Two behaviours are set for the annotator and not exposed: branches never
+overwrite each other (so painting the LCx cannot silently erase half the LAD),
+and the helper masks are excluded from the submission by construction.</p>
+
+<h2>7 &nbsp; Acceptance test</h2>
+
+<p>Run this once after any install or upgrade. It drives the real HTTP API with
+the <i>same client the Slicer extension uses</i>, so a pass means the extension
+will work.</p>
+
+<pre><code>python tests/segqueue_e2e.py --url http://localhost:8099</code></pre>
+
+<p>It needs at least one unclaimed case in the pool (two to also check the
+concurrency guard), and it is idempotent — a second run reuses the accounts the
+first one made. Expected tail:</p>
+
+<pre><code>================================================================
+34 passed, 0 failed
+================================================================</code></pre>
+
+<h3>7.1 &nbsp; What each check proves</h3>
+
+<table>
+  <tr><th>Check</th><th>What would be broken if it failed</th></tr>
+  <tr><td>a filesystem assetstore exists</td><td>§3.4 was skipped; no upload can succeed.</td></tr>
+  <tr><td>the server sends the labelling protocol</td><td>The project setting is empty; annotators would draw free-text segments.</td></tr>
+  <tr><td>the server names an upload folder</td><td>Annotators have nowhere they are permitted to write.</td></tr>
+  <tr><td>the case flavour is hidden from the annotator</td><td>Gold and duplicate cases would be identifiable, making every QA number meaningless.</td></tr>
+  <tr><td>the volume matches its checksum</td><td>Silent data corruption in transit — the failure mode requirement N3 exists to prevent.</td></tr>
+  <tr><td>empty / stray / off-protocol / resampled submissions refused</td><td>Bad work would reach reviewers, and the training conversion would receive segments it cannot interpret.</td></tr>
+  <tr><td>a corrupted upload is refused</td><td>The server is trusting the client's checksum instead of recomputing it.</td></tr>
+  <tr><td>the first case goes to a human</td><td>The training gate is off; a new annotator could accumulate a hundred cases of the same misunderstanding.</td></tr>
+  <tr><td>a rejection with no comment is refused</td><td>Rework would go back to a student with no idea what to change.</td></tr>
+  <tr><td>reworking renews the lease and bumps the attempt</td><td>Rework would expire mid-fix, or overwrite the original attempt's record.</td></tr>
+  <tr><td>a claimed case is not handed to a second annotator</td><td>The atomic claim is broken — two people would silently duplicate each other's work.</td></tr>
+</table>
+
+<h3>7.2 &nbsp; The unit suites</h3>
+
+<pre><code>pytest                                  <span class="c"># 366 tests, no server needed</span>
+
+<span class="c"># The concurrency tests need a real MongoDB: the whole point is that the</span>
+<span class="c"># atomic claim survives thirty annotators starting at once, which no fake</span>
+<span class="c"># can demonstrate.</span>
+docker run -d --rm -p 27099:27017 mongo:7
+SEGQUEUE_TEST_MONGO=mongodb://localhost:27099 pytest tests/test_segqueue_server.py</code></pre>
+
+<p>Tests needing the TotalSegmentator dataset are marked <code>needs_data</code>
+and those needing a database <code>needs_mongo</code>; both skip cleanly, so the
+suite runs on a bare checkout.</p>
+
+<h3>7.3 &nbsp; Manual walkthrough in Slicer</h3>
+
+<p>The automated test covers everything below the UI. This covers the UI. Budget
+fifteen minutes.</p>
+
+<table>
+  <tr><th>#</th><th>Do this</th><th>Expect</th></tr>
+  <tr><td>1</td><td>Open <b>Segmentation → SegQueue</b>, enter the server, log in.</td><td>Status shows your login and remaining quota. The <b>Server</b> section collapses. Instructions appear.</td></tr>
+  <tr><td>2</td><td>Press <b>Get next case</b>.</td><td>A progress bar, then the CT in the slice views, with the project's segments listed — named, coloured, empty.</td></tr>
+  <tr><td>3</td><td>Check the <b>Case</b> panel.</td><td>Case name, "attempt 1", and a due date. The clock starts counting.</td></tr>
+  <tr><td>4</td><td>Press <b>Validate &amp; submit</b> with nothing segmented.</td><td>Refused, listing each empty required segment by name. Nothing uploads.</td></tr>
+  <tr><td>5</td><td>Paint a few voxels in one segment only, submit again.</td><td>Still refused — the painted one now passes, the rest are still named as empty.</td></tr>
+  <tr><td>6</td><td>Paint all required segments properly. Press <b>Check without submitting</b>.</td><td>"All checks passed", in green. Optional segments left empty appear as amber warnings, not errors.</td></tr>
+  <tr><td>7</td><td>Quit Slicer without submitting. Reopen, log in.</td><td>Offered the case back. The segmentation is as you left it and <b>the clock carries on</b> from where it stopped.</td></tr>
+  <tr><td>8</td><td><b>Validate &amp; submit</b>, confirm.</td><td>Upload progress, then "Submitted." Check the cache directory (<code>~/.segqueue/cases</code>) — <b>it is empty</b>.</td></tr>
+  <tr><td>9</td><td>As a reviewer, expand <b>Review</b> → <b>Refresh queue</b>.</td><td>The submission is listed with annotator, attempt, auto score and flags.</td></tr>
+  <tr><td>10</td><td>Claim it, press <b>Reject</b> with an empty comment.</td><td>Refused before anything is sent.</td></tr>
+  <tr><td>11</td><td>Reject with a real comment.</td><td>Scene clears; the queue refreshes without it.</td></tr>
+  <tr><td>12</td><td>Back as the annotator, press <b>Get next case</b>.</td><td>You get <b>the same case back</b>, attempt 2, with the reviewer's comment in an orange box above the instructions — not a new case.</td></tr>
+  <tr><td>13</td><td>Fix and resubmit; approve as reviewer.</td><td><code>GET /segqueue/stats</code> shows <code>cases.complete</code> incremented.</td></tr>
+</table>
+
+<h3>7.4 &nbsp; Things worth breaking deliberately</h3>
+
+<table>
+  <tr><th>Break this</th><th>Should happen</th></tr>
+  <tr><td>Pull the network cable mid-upload, reconnect.</td><td>The upload resumes from the server's real offset — not from zero, and not by resending a chunk that already landed.</td></tr>
+  <tr><td>Stop the server mid-download.</td><td>The partial file is deleted, not left looking complete. The message names the byte counts.</td></tr>
+  <tr><td>Ask for a second case while holding one.</td><td>Refused: finish or give back the one you have.</td></tr>
+  <tr><td>Set <code>lease_days</code> to a tiny value, wait, then <code>POST /segqueue/sweep?dryRun=true</code>.</td><td>The held case is listed as reclaimable, with a reason. Without <code>dryRun</code> it returns to the pool.</td></tr>
+  <tr><td>Fill the annotator's disk.</td><td>The download is refused <i>before it starts</i>, naming how much is needed and how much is free.</td></tr>
+  <tr><td>Disable an annotator holding two cases.</td><td>Both cases are released and immediately available to others.</td></tr>
+</table>
+
+<h2>8 &nbsp; Configuration</h2>
+
+<p>Two settings hold everything tunable. Both are validated on write — a bad
+value is rejected immediately rather than failing when the fiftieth annotator
+asks for a case.</p>
+
+<pre><code><span class="c"># read</span>
+docker compose exec girder sh -c 'cat &gt; /tmp/s.py &lt;&lt;EOF
+from girder.models.setting import Setting
+import json
+print(json.dumps(Setting().get("segqueue.policy"), indent=2))
+EOF
+girder shell /tmp/s.py'</code></pre>
+
+<pre><code><span class="c"># write</span>
+docker compose exec girder sh -c 'cat &gt; /tmp/s.py &lt;&lt;EOF
+from girder.models.setting import Setting
+policy = Setting().get("segqueue.policy")
+policy["base_review_rate"] = 0.30
+Setting().set("segqueue.policy", policy)
+EOF
+girder shell /tmp/s.py'</code></pre>
+
+<h3>8.1 &nbsp; <code>segqueue.policy</code></h3>
+
+<table>
+  <tr><th>Key</th><th>Default</th><th>What it controls</th></tr>
+  <tr><td><code>training_gate_cases</code></td><td>5</td><td>Every annotator's first N cases are reviewed by a human, whatever the sampling says.</td></tr>
+  <tr><td><code>base_review_rate</code></td><td>0.20</td><td>Fraction of ordinary work reviewed once past the gate.</td></tr>
+  <tr><td><code>trusted_review_rate</code></td><td>0.10</td><td>Rate for annotators with a long clean streak.</td></tr>
+  <tr><td><code>trusted_after_clean</code></td><td>20</td><td>Consecutive approvals needed to earn the trusted rate.</td></tr>
+  <tr><td><code>probation_cases</code></td><td>3</td><td>Cases reviewed at 100% immediately after any rejection.</td></tr>
+  <tr><td><code>gold_rate</code></td><td>0.05</td><td>Share of assignments that are gold-seeded.</td></tr>
+  <tr><td><code>duplicate_rate</code></td><td>0.05</td><td>Share that are blind duplicates of already-approved cases.</td></tr>
+  <tr><td><code>gold_first_case</code></td><td>true</td><td>Make an annotator's very first case a gold one, so you have a baseline for them from day one.</td></tr>
+  <tr><td><code>lease_days</code></td><td>7.0</td><td>How long a case may be held before the sweeper reclaims it.</td></tr>
+  <tr><td><code>stale_heartbeat_hours</code></td><td>72.0</td><td>Silence after which a case is reclaimable even inside its lease.</td></tr>
+  <tr><td><code>max_concurrent</code></td><td>1</td><td>Cases one annotator may hold at once. Raising it also raises the extension's local cache cap.</td></tr>
+  <tr><td><code>gold_dice_flag</code></td><td>0.70</td><td>Mean Dice against the expert reference below which a submission is pulled back for a human.</td></tr>
+  <tr><td><code>duplicate_dice_flag</code></td><td>0.70</td><td>Same, for agreement between a duplicate pair.</td></tr>
+</table>
+
+<p>Gold and duplicate rates are drawn from <b>one</b> random number partitioned
+across the two, so they can never overlap and a case is never both.</p>
+
+<h3>8.2 &nbsp; <code>segqueue.project</code></h3>
+
+<p><code>name</code>, <code>instructions</code> (Markdown, shown above the
+segment list), and <code>segments</code>. Each segment has <code>name</code>,
+<code>label</code>, <code>color</code>, <code>required</code> and
+<code>hint</code>. Duplicate names <i>and</i> duplicate label values are both
+rejected on save.</p>
+
+<p>The shipped default matches this repository's phase 1 task:</p>
+
+<table>
+  <tr><th>Name</th><th>Label</th><th>Required</th></tr>
+  <tr><td><code>left_main</code></td><td>1</td><td>yes</td></tr>
+  <tr><td><code>left_anterior_descending</code></td><td>2</td><td>yes</td></tr>
+  <tr><td><code>left_circumflex</code></td><td>3</td><td>yes</td></tr>
+  <tr><td><code>right_coronary_artery</code></td><td>4</td><td>no — may be small or absent in a left-dominant system</td></tr>
+</table>
+
+<div class="warn">These label values must match
+<code>configs/labels/coronary.yaml</code>. If they drift, <code>segtrain
+convert</code> will happily build a training set with the wrong structures under
+the right names — the worst possible outcome, and silent.</div>
+
+<h2>9 &nbsp; Troubleshooting</h2>
+
+<table>
+  <tr><th>Symptom</th><th>Cause and fix</th></tr>
+  <tr><td>Every <code>/segqueue/…</code> route 404s</td><td>The plugin did not load. Check <code>docker compose logs girder | grep plugin</code>. Usually the image was built without the repository root — see the next row.</td></tr>
+  <tr><td><code>ImportError: girder-segqueue needs the segqueue package</code></td><td>The plugin is installed but the shared package is not. <code>girder-segqueue</code> deliberately does not declare it as a dependency, because the distribution providing it is named <code>segtrain</code> and an unrelated project owns that name on PyPI. Install the repository root first: <code>pip install /repo</code> before <code>pip install /repo/server</code>. The supplied Dockerfile already does.</td></tr>
+  <tr><td><code>Girder has no assetstore configured</code> from ingest</td><td>§3.4 was skipped.</td></tr>
+  <tr><td>Uploads fail with a permission error</td><td>The annotator is not in <code>segqueue-annotators</code>. That group is the only place they are granted write access, and only to the drop-box folder.</td></tr>
+  <tr><td>Extension: <i>"Could not reach the server… If you are off campus, check that the VPN is connected."</i></td><td>Exactly what it says — or a self-signed certificate whose CA root is not installed. See §3.6.</td></tr>
+  <tr><td>Extension: <i>"the server returned something that is not JSON"</i></td><td>A captive portal or proxy is intercepting. Common on hotel and campus guest wifi.</td></tr>
+  <tr><td>Extension: <i>"Could not import the segqueue package"</i></td><td>The module was loaded from a copy outside the repository. It imports <code>segqueue</code> from the sibling <code>src/</code> directory; both must travel together.</td></tr>
+  <tr><td>Annotator gets "no cases available" while cases clearly remain</td><td>Normal near the end: every remaining case has already been shown to them, and nobody is offered the same case twice. Check <code>GET /segqueue/stats</code>.</td></tr>
+  <tr><td>Submissions accepted but never scored</td><td>The worker container is down or lacks the scoring extras. <code>docker compose logs worker</code>.</td></tr>
+  <tr><td>Progress has stalled and cases are held by nobody</td><td><code>POST /segqueue/sweep?dryRun=true</code> to see them. The worker sweeps hourly on its own; the endpoint is for when you do not want to wait.</td></tr>
+  <tr><td>Git Bash: <i>"--root C:/Users/… is not a directory"</i></td><td>MSYS is rewriting container paths. Prefix the command with <code>MSYS_NO_PATHCONV=1</code>, or use PowerShell.</td></tr>
+  <tr><td>Mongo crashes on Windows</td><td>Its data directory is on a bind mount. Use a Docker-managed volume (§4) — this affects laptop testing only.</td></tr>
+</table>
+
+<h2>10 &nbsp; Running it</h2>
+
+<h3>10.1 &nbsp; Watching the project</h3>
+
+<table>
+  <tr><th>Question</th><th>Call</th></tr>
+  <tr><td>How is it going?</td><td><code>GET /api/v1/segqueue/stats</code> — burn-down, 14-day velocity, projected finish date</td></tr>
+  <tr><td>Who is doing what, how fast?</td><td><code>GET /api/v1/segqueue/stats/annotators</code> — throughput, median time per case, QA pass rate</td></tr>
+  <tr><td>Anything stranded?</td><td><code>POST /api/v1/segqueue/sweep?dryRun=true</code></td></tr>
+  <tr><td>Is QA keeping up?</td><td><code>docker compose logs --tail=50 worker</code></td></tr>
+</table>
+
+<h3>10.2 &nbsp; Backups</h3>
+
+<pre><code>0 2 * * * RESTIC_REPOSITORY=/mnt/backup/segqueue \
+          RESTIC_PASSWORD_FILE=/root/.restic-pass \
+          /srv/segqueue/deploy/backup.sh &gt;&gt; /var/log/segqueue-backup.log 2&gt;&amp;1</code></pre>
+
+<p>The script dumps MongoDB <i>first</i>, into the tree restic then reads, so the
+metadata snapshot is never newer than the files it describes. The other order
+produces a backup that references submissions it does not contain — which looks
+fine until the day you restore it.</p>
+
+<p>Restore is <code>mongorestore --archive --gzip</code> followed by a restic
+restore of the assetstore, in that order. <b>Test it once, on purpose, before you
+need it.</b> An untested backup is a hypothesis.</p>
+
+<h3>10.3 &nbsp; Upgrading</h3>
+
+<pre><code>cd /srv/segqueue &amp;&amp; git pull
+cd deploy &amp;&amp; docker compose up -d --build
+python ../tests/segqueue_e2e.py --url https://&lt;domain&gt;</code></pre>
+
+<p>The extension–server protocol is versioned. If a release changes it
+incompatibly, old extensions receive a refusal telling the student to update,
+rather than writing subtly wrong data for a month before anyone notices.
+Annotators update by pulling the repository; there is nothing to reinstall.</p>
+
+<h2>11 &nbsp; Known gaps</h2>
+
+<p>Stated plainly, so you do not discover them at an awkward moment.</p>
+
+<ul>
+  <li><b>No export to the training layout.</b> Approved submissions sit in the
+  assetstore as label volumes on the source grid — the right contents — but
+  reshaping them into the <code>&lt;case&gt;/segmentations/</code> layout
+  <code>segtrain convert</code> reads is manual today.</li>
+  <li><b>The Slicer panel has no automated test.</b> The network layer, the local
+  cache, the state machine and the sampling policy are all unit-tested without
+  Slicer; the Qt widgets are exercised only by §7.3.</li>
+  <li><b>Gold and duplicate scoring has not run on real label volumes.</b> The
+  metric code is the same as the training pipeline's and is unit-tested, but the
+  end-to-end path from a real <code>.seg.nrrd</code> to a Dice number has not
+  been through a live case.</li>
+  <li><b>Nothing has been run at 5,000-case scale.</b> The 30-annotator claim race
+  is tested against real MongoDB; sustained load over a term is not.</li>
+  <li><b>No admin web UI.</b> Admin operations are REST calls and Girder's stock
+  console. Deliberate — a dashboard is a lot of code to maintain for one grad
+  student, and <code>stats</code> answers the questions that matter.</li>
+</ul>
+
+<div class="good" style="margin-top:1.5em"><b>If §7 passes and §7.3 behaves as
+described, the system is working.</b> Everything else in this document is either
+setup that precedes those tests or operations that follow them.</div>

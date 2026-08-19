@@ -75,12 +75,15 @@ class Case(AccessControlledModel):
         doc.setdefault('assignedUserIds', [])
         doc.setdefault('target', '')
         doc.setdefault('checksum', '')
+        doc.setdefault('regionFileId', None)
+        doc.setdefault('seedFileId', None)
         return doc
 
     # ------------------------------------------------------------- creation
 
     def createCase(self, name, fileId, checksum, sizeBytes, creator, target='',
-                   priority=0, replicasWanted=1, isGold=False, goldFileId=None):
+                   priority=0, replicasWanted=1, isGold=False, goldFileId=None,
+                   regionFileId=None, seedFileId=None):
         """Register a volume that has already been uploaded into Girder.
 
         The file is uploaded first and registered second, so a failed transfer
@@ -91,6 +94,11 @@ class Case(AccessControlledModel):
             'name': name,
             'fileId': fileId,
             'goldFileId': goldFileId,
+            # Optional extras from the source dataset. Both are read-only aids
+            # for the annotator and are never part of a submission: the client
+            # exports only the project's own segments.
+            'regionFileId': regionFileId,
+            'seedFileId': seedFileId,
             'checksum': (checksum or '').lower(),
             'sizeBytes': sizeBytes,
             'target': target,

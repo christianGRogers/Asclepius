@@ -604,8 +604,15 @@ python ../tests/segqueue_e2e.py --url https://<domain>
 
 Then in Slicer: **Edit → Application Settings → Modules**, add
 `slicer/SegQueue` to **Additional module paths**, restart, open
-**Segmentation → SegQueue**. No pip installs — the extension uses `requests`,
-which Slicer already bundles. (Not `girder-client`: version 5 requires Python
+**Segmentation → SegQueue**. Or paste
+`exec(open(r"…/slicer/install-segqueue.py").read())` into the Python Console,
+which does the same and checks the layout first.
+
+It is a **scripted module, not a packaged extension** — the Extension Manager's
+*Install from file* wants a CMake-built `.s4ext` package and refuses it. The
+trade is deliberate: annotators need no build tools, no admin rights and no
+internet access, and an update is a `git pull`. No pip installs either — the
+extension uses `requests`, which Slicer already bundles. (Not `girder-client`: version 5 requires Python
 3.10 and Slicer 5.8 ships 3.9. That constraint is also why `src/segqueue` is
 stdlib-only.)
 

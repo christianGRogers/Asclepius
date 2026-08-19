@@ -467,14 +467,28 @@ would be invisible in the metrics. Aim for about <b>5%</b> of the pool.</p>
 
 <h3>6.2 &nbsp; Install the extension</h3>
 
+<div class="warn"><b>Not through the Extension Manager.</b> SegQueue is a
+<i>scripted module</i>, not a packaged extension. <b>Install from file</b> expects
+a CMake-built package carrying a <code>.s4ext</code> descriptor and rejects
+anything else with <i>"No extension description found in archive"</i>. Use a
+module path instead — which is also why annotators need no build tools, no
+admin rights and no internet access to install it.</div>
+
 <ol>
-  <li>Give each annotator a checkout of the repository (or a copy of the
-  <code>slicer/</code> and <code>src/</code> directories — the extension imports
-  <code>segqueue</code> from <code>src/</code>).</li>
+  <li>Give each annotator a checkout of the repository, or a zip holding
+  <code>slicer/</code> and <code>src/</code> side by side — the module imports
+  <code>segqueue</code> from <code>src/</code> <i>two directories above
+  itself</i>, so those two folders have to travel together.</li>
   <li>Slicer → <b>Edit → Application Settings → Modules</b>. Drag
-  <code>slicer/SegQueue</code> into <b>Additional module paths</b>.</li>
+  <code>slicer/SegQueue</code> into <b>Additional module paths</b> — that inner
+  directory, not the top of the unzipped folder.</li>
   <li>Restart Slicer. Open <b>Segmentation → SegQueue</b>.</li>
 </ol>
+
+<p>Or, in Slicer's Python Console (<b>View → Python Console</b>), one line that
+does steps 2 and 3 and checks the layout first:</p>
+
+<pre><code>exec(open(r"C:\SegQueue\slicer\install-segqueue.py").read())</code></pre>
 
 <p>No pip install, no internet access needed at install time. If the panel
 instead shows <i>"Could not import the segqueue package"</i>, the module was

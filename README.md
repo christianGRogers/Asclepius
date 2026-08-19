@@ -122,9 +122,12 @@ nnU-Net both come from the Alliance wheelhouse there, not PyPI.
 
 ## Your coronary data
 
-Phase 1 trains on your own labelled CCTA. Lay it out one directory per case, in
-either of two forms — the choice is detected per case, so a dataset part-way
-through relabelling still works:
+Phase 1 trains on your own labelled CCTA. If you are still *producing* those
+labels, see [SegQueue](#segqueue-labelling-at-scale) — the annotation platform in
+this repo, which collects them from a team of annotators.
+
+Lay the result out one directory per case, in either of two forms — the choice is
+detected per case, so a dataset part-way through relabelling still works:
 
 ```
 <root>/<case>/ct.nii.gz                            # or image.nii.gz, or <case>.nii.gz
@@ -479,6 +482,107 @@ Verify the module against a finished run:
 
 ---
 
+## SegQueue: labelling at scale
+
+The bottleneck for Phase 1 is not the model, it is **per-segment coronary labels
+that do not exist publicly**. SegQueue is the platform for producing them with a
+class of undergraduate annotators: a self-hosted server that owns the case pool,
+and a Slicer extension that hands one annotator one case at a time.
+
+```
+Slicer + SegQueue extension  ──TLS──▶  Caddy ──▶  Girder 5 + SegQueue plugin
+   one case at a time                                │        │
+   nothing left on disk                            Mongo   /data assetstore
+                                                            │
+                                                    worker: QA scoring + lease sweep
+```
+
+An annotator's whole workflow is: log in, press **Get next case**, segment, press
+**Validate & submit**. They never choose a case, never name a file, never see a
+server path, and never accumulate data — the local copy is deleted the moment the
+server confirms the submission.
+
+### Why Girder rather than XNAT or something bespoke
+
+Accounts, tokens, groups, a REST framework, chunked **resumable** uploads,
+pluggable storage and an admin UI are all things this project needs and none of
+them are things worth writing. Girder supplies them; the plugin under `server/`
+adds only what is actually specific to running a workforce — an atomic case
+claim, a lease that expires, a review queue, and the sampling that decides whose
+work gets looked at. XNAT would have brought a heavier imaging-specific data
+model that mostly gets in the way here; a bespoke server would have meant writing
+resumable uploads, which is the one part you cannot afford to get subtly wrong.
+
+### What the pieces are
+
+| Path | What it is |
+|---|---|
+| `src/segqueue/` | State machine, sampling policy, wire protocol, checksums, submission checks. Stdlib-only and Python 3.9-clean, because **both** sides import it |
+| `server/girder_segqueue/` | The Girder 5 plugin: models, REST, ingest CLI, QA worker |
+| `slicer/SegQueue/` | The annotator's extension. `SegQueueLib/` is Slicer-free, so the network layer and the cache are unit-tested without Slicer |
+| `deploy/` | Compose stack, Caddyfile, backup script. See [deploy/README.md](deploy/README.md) |
+
+The shared package is the load-bearing idea. A route name, a state name or a
+validation rule cannot drift between client and server, because there is one
+definition and both import it — and the submission checks that refuse an empty
+segment client-side are the *same function* that refuses it again server-side.
+
+### Quality, without reading every case
+
+Reviewing 5,000 segmentations by hand is not a plan. Four mechanisms instead:
+
+* **A training gate.** Every annotator's first five cases are reviewed by a
+  human. Nobody accumulates a hundred cases of a misunderstanding.
+* **Gold seeds** (~5%). Cases with an expert reference, indistinguishable from
+  ordinary work. Scored automatically with the same Dice and HD95 the training
+  pipeline reports — one implementation, so the numbers in the QA dashboard and
+  the numbers in the paper cannot disagree.
+* **Blind duplicates** (~5%). The same case to two annotators, scored
+  symmetrically against each other, which is what inter-rater reliability
+  actually means when there is no ground truth.
+* **Sampled review** thereafter: 20% falling to 10% for consistently clean work,
+  and back up after any rejection. A bad automatic score pulls a case back for a
+  human even when the sampling roll had let it through.
+
+Rejections go back to the **same** annotator with the reviewer's comment, which
+is the only version of this loop that teaches anyone anything.
+
+### Running it
+
+```sh
+cd deploy && cp .env.example .env   # edit DATA_ROOT, SEGQUEUE_DOMAIN
+docker compose up -d --build
+docker compose exec girder segqueue-ingest --root /incoming --target coronary
+```
+
+Then in Slicer: **Edit → Application Settings → Modules**, add
+`slicer/SegQueue` to **Additional module paths**, restart, open
+**Segmentation → SegQueue**. No pip installs — the extension uses `requests`,
+which Slicer already bundles. (Not `girder-client`: version 5 requires Python
+3.10 and Slicer 5.8 ships 3.9. That constraint is also why `src/segqueue` is
+stdlib-only.)
+
+Full deployment, ingest, backup and upgrade notes: **[deploy/README.md](deploy/README.md)**.
+
+### Status
+
+Verified end to end against the real Compose stack: register → assetstore →
+create annotator → ingest → assign → download with checksum verification →
+resumable chunked upload → submit → review → reject with comment → rework as
+attempt 2 with the lease renewed → resubmit → approve. Empty segments, resampled
+geometry and mismatched checksums are all refused with the message the annotator
+needs, and the 30-annotator concurrent claim race is tested against real MongoDB.
+
+Not yet exercised: the Slicer UI against a live server (the logic and the network
+layer are tested; the Qt panel is not), gold and duplicate scoring on real label
+volumes, and anything at 5,000-case scale.
+
+Not yet built: an export from approved submissions into the
+[case layout](#your-coronary-data) `segtrain convert` reads. Approved work sits
+in the assetstore as label volumes on the source grid — the right *contents*, one
+directory rename away from the right *shape* — but the step is manual today.
+---
+
 ## Three things that will cost you if you miss them
 
 **Oblique volumes are unreadable by nnU-Net's default reader.** SimpleITK rejects
@@ -560,12 +664,18 @@ case looks great and means nothing.
 ## Tests
 
 ```bash
-pytest                    # 229 tests
+pytest                    # 343 tests
 pytest -m "not slow"      # skip the full-case merge round-trip
+
+# The SegQueue concurrency tests need a real MongoDB -- the whole point of them
+# is that the atomic claim survives thirty annotators starting at once, which no
+# fake can demonstrate. 19 more tests.
+docker run -d --rm -p 27099:27017 mongo:7
+SEGQUEUE_TEST_MONGO=mongodb://localhost:27099 pytest tests/test_segqueue_server.py
 ```
 
-Tests needing a dataset are marked `needs_data` and skip without it, so the suite
-runs on a checkout alone.
+Tests needing a dataset are marked `needs_data`, and those needing a database
+`needs_mongo`; both skip without them, so the suite runs on a checkout alone.
 
 ---
 

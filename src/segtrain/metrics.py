@@ -1,6 +1,6 @@
-"""Segmentation metrics: Dice and normalized surface distance.
+"""Segmentation metrics: Dice, normalized surface distance, and HD95.
 
-These are the two metrics the reference paper reports, and they answer different
+Dice and NSD are the two metrics the reference paper reports, and they answer different
 questions. Dice measures volumetric overlap and is dominated by the interior of
 a structure, so it flatters large organs and punishes thin ones -- a rib can be
 segmented perfectly well and still score poorly simply because a one-voxel
@@ -8,6 +8,15 @@ boundary error removes a large fraction of a structure two voxels thick. NSD
 measures how much of the *surface* is within a tolerance of the reference, which
 is closer to "would a human have to fix this", and is the metric to trust for
 ribs, vessels and muscle interfaces.
+
+HD95 -- the 95th percentile of the symmetric surface distance -- came later, for
+SegQueue's quality assurance: it is the number that says *how far off* a
+disagreement is, in millimetres, which is what a reviewer deciding whether two
+annotators drew the same vessel actually wants. It lives here rather than in the
+platform code so that "how good is the model" and "how well do two students
+agree" are computed by one implementation. Two implementations would eventually
+disagree in a way nobody could explain, and both sets of numbers end up in the
+same paper.
 
 Absent structures are reported as NaN rather than 0, and NaN is excluded from
 means. Scoring an absent structure as 0 would drag every whole-body average down
@@ -120,6 +129,84 @@ def normalized_surface_distance(
         (d_ref_to_pred <= tolerance_mm).sum()
     )
     return within / total
+
+
+def hausdorff95(
+    pred: np.ndarray,
+    ref: np.ndarray,
+    spacing: Sequence[float],
+) -> float:
+    """95th-percentile symmetric Hausdorff distance, in millimetres.
+
+    Added for the annotation platform rather than for training. NSD answers
+    "how much of the boundary is right", which is what you want when comparing
+    models; HD95 answers "how far wrong is the worst part", which is what you
+    want when deciding whether a student has misplaced a whole vessel. A
+    gold-standard case can score a respectable Dice while an entire distal
+    branch sits ten millimetres away, and only HD95 says so.
+
+    The 95th percentile rather than the maximum, for the usual reason: a single
+    voxel of noise should not decide the number.
+
+    NaN when the structure is absent from both, and +inf when it is present in
+    exactly one -- there is no finite distance to an empty set, and returning a
+    large finite number instead would quietly pollute any mean taken over it.
+    """
+    n_pred, n_ref = int(pred.sum()), int(ref.sum())
+    if n_pred == 0 and n_ref == 0:
+        return float("nan")
+    if n_pred == 0 or n_ref == 0:
+        return float("inf")
+
+    d_pred_to_ref, d_ref_to_pred = surface_distances(pred, ref, spacing)
+    if d_pred_to_ref.size == 0 or d_ref_to_pred.size == 0:
+        return float("nan")
+    return float(max(
+        np.percentile(d_pred_to_ref, 95),
+        np.percentile(d_ref_to_pred, 95),
+    ))
+
+
+def agreement(
+    a_labels: np.ndarray,
+    b_labels: np.ndarray,
+    names: Sequence[str],
+    spacing: Sequence[float],
+) -> dict:
+    """Per-structure Dice and HD95 between two labellings of the same case.
+
+    Used two ways by SegQueue, with no difference in the computation: against an
+    expert reference (a gold case) and against a second annotator (a blind
+    duplicate). Keeping it symmetric is deliberate -- for a duplicate pair there
+    is no ground truth, so any metric that treated one argument as correct would
+    be reporting something it cannot know.
+
+    ``inf`` is serialised as ``None`` so the result drops straight into JSON.
+    """
+    if a_labels.shape != b_labels.shape:
+        raise ValueError(
+            f"shapes differ: {a_labels.shape} != {b_labels.shape}"
+        )
+
+    per_structure = {}
+    dices = []
+    for idx, name in enumerate(names, start=1):
+        a = a_labels == idx
+        b = b_labels == idx
+        d = dice_score(a, b)
+        h = hausdorff95(a, b, spacing)
+        per_structure[name] = {
+            "dice": None if d != d else round(d, 4),
+            "hd95": None if (h != h or h == float("inf")) else round(h, 3),
+            "voxels_a": int(a.sum()),
+            "voxels_b": int(b.sum()),
+        }
+        dices.append(d)
+
+    return {
+        "mean_dice": nanmean(dices),
+        "per_structure": per_structure,
+    }
 
 
 def score_case(

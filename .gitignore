@@ -6,6 +6,11 @@ build/
 dist/
 .venv/
 venv/
+.venv-*/
+
+# Deployment secrets: the compose stack reads this, deploy/.env.example is the
+# tracked template.
+deploy/.env
 .pytest_cache/
 .ruff_cache/
 .coverage

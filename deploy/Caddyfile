@@ -1,0 +1,40 @@
+# TLS, and nothing else. Caddy obtains and renews a Let's Encrypt certificate on
+# its own, which is the single largest saving in this deployment: requirement N2
+# is "TLS everywhere" and the usual cost of that is a certbot cron job nobody
+# maintains until it silently expires in March.
+#
+# For a server with no public DNS name -- the common case on a campus network --
+# set SEGQUEUE_DOMAIN to something like `https://10.0.0.5` and Caddy issues a
+# local self-signed certificate instead. Annotators then need the CA installed,
+# or reach the box over Tailscale/WireGuard, which is the better answer anyway.
+
+{
+	email {$SEGQUEUE_TLS_EMAIL}
+}
+
+{$SEGQUEUE_DOMAIN} {
+	encode zstd gzip
+
+	reverse_proxy girder:8080 {
+		# Downloads are streamed straight out of the assetstore; buffering them
+		# would mean holding a 400 MB CT in proxy memory per annotator, and a
+		# class of thirty starting at once would take the box out.
+		flush_interval -1
+
+		# Long enough for a slow home connection to finish an 8 MiB upload chunk
+		# and for the server to hash a submission before replying.
+		transport http {
+			read_timeout 600s
+			write_timeout 600s
+		}
+	}
+
+	# Girder's own logs are noisy and useless for this; the access log is what
+	# actually answers "did the upload reach us?" when a student says it failed.
+	log {
+		output file /data/access.log {
+			roll_size 50MiB
+			roll_keep 10
+		}
+	}
+}

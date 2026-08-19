@@ -41,10 +41,22 @@ from slicer.ScriptedLoadableModule import (
     ScriptedLoadableModuleWidget,
 )
 
-# Same trick SegmentatorTrainMonitor uses: make the repository's own packages
-# importable without installing anything into Slicer's Python.
-_REPO_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+# Make the repository's own `segqueue` package importable without installing
+# anything into Slicer's Python. Two layouts have to work, because the module
+# ships both ways:
+#
+#   checkout   <repo>/slicer/SegQueue/SegQueue.py  with  <repo>/src/segqueue
+#   packaged   .../qt-scripted-modules/SegQueue.py with  .../qt-scripted-modules/segqueue
+#
+# The packaged case needs no help -- Slicer puts a scripted module's own
+# directory on sys.path, which is the same mechanism that finds SegQueueLib --
+# so this only has to add the checkout's src/. Both are recorded for the error
+# message, since "it could not find its own code" is otherwise a bad five
+# minutes for whoever installed it.
+_MODULE_DIR = os.path.dirname(os.path.abspath(__file__))
+_REPO_ROOT = os.path.dirname(os.path.dirname(_MODULE_DIR))
 _SRC = os.path.join(_REPO_ROOT, "src")
+_SEARCHED = (os.path.join(_MODULE_DIR, "segqueue"), _SRC)
 if os.path.isdir(_SRC) and _SRC not in sys.path:
     sys.path.insert(0, _SRC)
 
@@ -548,6 +560,19 @@ class SegQueueLogic(ScriptedLoadableModuleLogic):
             if not ok:
                 raise RuntimeError(
                     "Slicer could not export the segments to a label volume.")
+
+            # Nothing drawn yet: Slicer exports a labelmap of zero extent, and
+            # every way of writing that to disk fails. Reporting the write
+            # failure would be technically true and useless -- the annotator
+            # would see "could not write the segmentation" at the exact moment
+            # the honest answer is "you have not segmented anything yet". Hand
+            # back empty counts instead and let the ordinary checks say which
+            # vessels are missing, by name.
+            image = labelmapNode.GetImageData()
+            if image is None or 0 in tuple(image.GetDimensions()):
+                empty = {spec.name: 0 for spec in self.project.segments}
+                return empty, self.sourceGeometry(), None
+
             if not slicer.util.saveNode(labelmapNode, path):
                 raise RuntimeError("Could not write the segmentation to " + path)
             counts = self._voxelCounts(labelmapNode)
@@ -646,6 +671,14 @@ class SegQueueLogic(ScriptedLoadableModuleLogic):
                 "This segmentation is not ready to submit:\n\n"
                 + summarise(blocking(problems)))
 
+        # Belt and braces for a project whose segments are all optional: the
+        # checks above would pass on an empty scene, and the export writes no
+        # file in that case. Uploading nothing must not look like a submission.
+        if not os.path.isfile(path):
+            raise SegQueueError(
+                "There is nothing to submit -- none of the segments has any "
+                "voxels in it.")
+
         meta = SubmissionMeta(
             checksum=sha256_file(path),
             size_bytes=os.path.getsize(path),
@@ -729,9 +762,10 @@ class SegQueueWidget(ScriptedLoadableModuleWidget):
 
         if _IMPORT_ERROR:
             label = qt.QLabel(
-                "Could not import the segqueue package:\n{}\n\nExpected it at {}.\n"
-                "Load this module from inside a checkout of the Asclepius "
-                "repository.".format(_IMPORT_ERROR, _SRC))
+                "Could not import the segqueue package:\n{}\n\nLooked in:\n"
+                "  {}\n\nInstall the extension package, or load this module from "
+                "inside a checkout of the Asclepius repository with src/ beside "
+                "slicer/.".format(_IMPORT_ERROR, "\n  ".join(_SEARCHED)))
             label.setWordWrap(True)
             self.layout.addWidget(label)
             return
@@ -1305,9 +1339,15 @@ class SegQueueWidget(ScriptedLoadableModuleWidget):
 
         seedId = self.logic.seedSegmentId
         if self.maskToSeedCheck.checked and seedId:
+            # Segment id *before* mode, and not the other way round. Setting the
+            # mode first makes the editor node validate against a mask segment
+            # that is still empty, whereupon it silently falls back to
+            # "everywhere" -- the checkbox looks applied and confines nothing,
+            # which on this task is the difference between splitting a tree in
+            # minutes and painting it by hand. Verified against Slicer 5.8.
+            self.editorNode.SetMaskSegmentID(seedId)
             self.editorNode.SetMaskMode(
                 slicer.vtkMRMLSegmentationNode.EditAllowedInsideSingleSegment)
-            self.editorNode.SetMaskSegmentID(seedId)
         else:
             self.editorNode.SetMaskMode(
                 slicer.vtkMRMLSegmentationNode.EditAllowedEverywhere)

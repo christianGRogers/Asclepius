@@ -564,6 +564,7 @@ resumable uploads, which is the one part you cannot afford to get subtly wrong.
 | `src/segqueue/` | State machine, sampling policy, wire protocol, checksums, submission checks. Stdlib-only and Python 3.9-clean, because **both** sides import it |
 | `server/girder_segqueue/` | The Girder 5 plugin: models, REST, ingest CLI, QA worker |
 | `slicer/SegQueue/` | The annotator's extension. `SegQueueLib/` is Slicer-free, so the network layer and the cache are unit-tested without Slicer |
+| `slicer/build-extension.py` | Packages it for the Extension Manager. Plain Python, no CMake |
 | `deploy/` | Compose stack, Caddyfile, backup script. See [deploy/README.md](deploy/README.md) |
 | `docs/` | [Server runbook](docs/SERVER-SETUP.md) and the [setup &amp; testing guide](docs/SegQueue-Setup-Guide.pdf) |
 
@@ -602,17 +603,25 @@ docker compose exec girder segqueue-ingest --root /incoming --target coronary
 python ../tests/segqueue_e2e.py --url https://<domain>
 ```
 
-Then in Slicer: **Edit → Application Settings → Modules**, add
-`slicer/SegQueue` to **Additional module paths**, restart, open
-**Segmentation → SegQueue**. Or paste
-`exec(open(r"…/slicer/install-segqueue.py").read())` into the Python Console,
-which does the same and checks the layout first.
+Then build the extension package and hand it to annotators:
 
-It is a **scripted module, not a packaged extension** — the Extension Manager's
-*Install from file* wants a CMake-built `.s4ext` package and refuses it. The
-trade is deliberate: annotators need no build tools, no admin rights and no
-internet access, and an update is a `git pull`. No pip installs either — the
-extension uses `requests`, which Slicer already bundles. (Not `girder-client`: version 5 requires Python
+```sh
+python slicer/build-extension.py     # -> dist/SegQueue-<version>-Slicer-5.8.zip
+```
+
+In Slicer: **Extensions Manager → Install from file →** pick that zip → restart.
+No pip installs, no build tools, no admin rights, no internet access — the
+module uses `requests`, which Slicer already bundles, and the shared `segqueue`
+package is vendored into the archive.
+
+Two other routes work for development: add `slicer/SegQueue` to **Additional
+module paths** (Edit → Application Settings → Modules), or paste
+`exec(open(r"…/slicer/install-segqueue.py").read())` into the Python Console.
+Both run the module straight out of the checkout, so a `git pull` updates it.
+
+**Rebuild the package after any change to `src/segqueue`** — the copy inside the
+archive is what annotators run, and a stale one speaks an old wire protocol to a
+new server. (Not `girder-client`: version 5 requires Python
 3.10 and Slicer 5.8 ships 3.9. That constraint is also why `src/segqueue` is
 stdlib-only.)
 
@@ -632,9 +641,18 @@ marks, off-protocol segments, resampled geometry and mismatched checksums are al
 refused with the message the annotator needs, and the 30-annotator concurrent
 claim race is tested against real MongoDB.
 
-Not yet exercised: the Slicer UI against a live server (the logic and the network
-layer are tested; the Qt panel is not), gold and duplicate scoring on real label
-volumes, and anything at 5,000-case scale.
+The Slicer panel is verified against a real Slicer 5.8.1: the packaged extension
+installs through the Extension Manager, the module loads from the installed
+location, all six offered effects activate, editing is confined to the coronary
+seed and to the opacified HU range, branches do not overwrite each other, and an
+export with the seed present in the scene excludes it and lands on the source
+grid. Two bugs came out of that pass — mask mode silently resetting when set
+before the mask segment id, and an empty scene reporting a file-write failure
+instead of naming the vessels still to draw.
+
+Not yet exercised: the panel against a live server end to end (each half is
+tested, the join is not), gold and duplicate scoring on real label volumes, and
+anything at 5,000-case scale.
 
 Not yet built: an export from approved submissions into the
 [case layout](#your-coronary-data) `segtrain convert` reads. Approved work sits

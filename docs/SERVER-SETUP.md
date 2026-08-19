@@ -8,6 +8,16 @@ The annotator side — installing the Slicer extension, what the panel does — 
 [`SegQueue-Setup-Guide.pdf`](SegQueue-Setup-Guide.pdf). This document is the
 server runbook.
 
+To hand annotators the client, build the extension package once per release:
+
+```sh
+python slicer/build-extension.py     # -> dist/SegQueue-<version>-Slicer-5.8.zip
+```
+
+They install it with **Extensions Manager -> Install from file**. Rebuild it
+after any change to `src/segqueue`, or their copy speaks an older wire protocol
+than this server.
+
 ---
 
 ## 1. What you are installing
@@ -432,9 +442,11 @@ than writing subtly wrong data for a month before anyone notices.
   assetstore as label volumes on the source grid — the right contents — but
   reshaping them into the `<case>/segmentations/` layout `segtrain convert` reads
   is manual today.
-- **The Slicer panel has no automated test.** The network layer, the cache, the
-  state machine and the sampling policy are unit-tested without Slicer; the Qt
-  widgets are exercised only by the manual walkthrough in the PDF guide.
+- **The Slicer panel is verified, but not against a live server.** The packaged
+  extension installs and loads in a real Slicer 5.8.1, the effects, masking and
+  export were checked there, and the network layer is tested against a stub. What
+  has not been done is one annotator driving the panel through a real case from
+  *Get next case* to *Submit*.
 - **Gold and duplicate scoring has not run on real label volumes.** The metric
   code is the training pipeline's own and is unit-tested, but the path from a
   real `.seg.nrrd` to a Dice number has not been through a live case.

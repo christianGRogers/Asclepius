@@ -467,32 +467,36 @@ would be invisible in the metrics. Aim for about <b>5%</b> of the pool.</p>
 
 <h3>6.2 &nbsp; Install the extension</h3>
 
-<div class="warn"><b>Not through the Extension Manager.</b> SegQueue is a
-<i>scripted module</i>, not a packaged extension. <b>Install from file</b> expects
-a CMake-built package carrying a <code>.s4ext</code> descriptor and rejects
-anything else with <i>"No extension description found in archive"</i>. Use a
-module path instead — which is also why annotators need no build tools, no
-admin rights and no internet access to install it.</div>
+<p>Build the package once per release, on any machine with Python. No CMake and
+no Slicer needed to build it:</p>
 
-<ol>
-  <li>Give each annotator a checkout of the repository, or a zip holding
-  <code>slicer/</code> and <code>src/</code> side by side — the module imports
-  <code>segqueue</code> from <code>src/</code> <i>two directories above
-  itself</i>, so those two folders have to travel together.</li>
-  <li>Slicer → <b>Edit → Application Settings → Modules</b>. Drag
-  <code>slicer/SegQueue</code> into <b>Additional module paths</b> — that inner
-  directory, not the top of the unzipped folder.</li>
-  <li>Restart Slicer. Open <b>Segmentation → SegQueue</b>.</li>
-</ol>
+<pre><code>python slicer/build-extension.py
+<span class="c"># -&gt; dist/SegQueue-0.1.0-Slicer-5.8.zip</span></code></pre>
 
-<p>Or, in Slicer's Python Console (<b>View → Python Console</b>), one line that
-does steps 2 and 3 and checks the layout first:</p>
+<p>Then each annotator: <b>Extensions Manager &rarr; Install from file</b>, pick
+the zip, restart, and open <b>Segmentation &rarr; SegQueue</b>. No pip install,
+no build tools, no admin rights and no internet access at install time &mdash; the
+module uses <code>requests</code>, which Slicer already ships, and the shared
+<code>segqueue</code> package is vendored into the archive.</p>
 
-<pre><code>exec(open(r"C:\SegQueue\slicer\install-segqueue.py").read())</code></pre>
+<div class="warn"><b>Rebuild after any change to <code>src/segqueue</code>.</b>
+The copy inside the archive is what annotators actually run. A stale one speaks
+an older wire protocol than the server, and the server will refuse it &mdash;
+politely, but it will refuse it.</div>
 
-<p>No pip install, no internet access needed at install time. If the panel
-instead shows <i>"Could not import the segqueue package"</i>, the module was
-loaded from outside the repository — see §9.</p>
+<p>Two other routes exist, both running the module straight out of a checkout so
+that <code>git pull</code> updates it. Useful while developing, awkward to give
+to thirty students:</p>
+
+<ul>
+  <li>Slicer &rarr; <b>Edit &rarr; Application Settings &rarr; Modules</b>, drag
+  <code>slicer/SegQueue</code> into <b>Additional module paths</b>, restart.
+  Keep <code>slicer/</code> and <code>src/</code> side by side &mdash; the module
+  imports <code>segqueue</code> from two directories above itself.</li>
+  <li>In the Python Console (<b>View &rarr; Python Console</b>), one line that
+  does the same and checks the layout first:
+  <pre><code>exec(open(r"C:\Asclepius\slicer\install-segqueue.py").read())</code></pre></li>
+</ul>
 
 <h3>6.3 &nbsp; What an annotator does</h3>
 

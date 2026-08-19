@@ -77,13 +77,14 @@ class Case(AccessControlledModel):
         doc.setdefault('checksum', '')
         doc.setdefault('regionFileId', None)
         doc.setdefault('seedFileId', None)
+        doc['geometryFixed'] = bool(doc.get('geometryFixed', False))
         return doc
 
     # ------------------------------------------------------------- creation
 
     def createCase(self, name, fileId, checksum, sizeBytes, creator, target='',
                    priority=0, replicasWanted=1, isGold=False, goldFileId=None,
-                   regionFileId=None, seedFileId=None):
+                   regionFileId=None, seedFileId=None, geometryFixed=False):
         """Register a volume that has already been uploaded into Girder.
 
         The file is uploaded first and registered second, so a failed transfer
@@ -99,6 +100,11 @@ class Case(AccessControlledModel):
             # exports only the project's own segments.
             'regionFileId': regionFileId,
             'seedFileId': seedFileId,
+            # Provenance: this case's direction cosines were orthonormalised at
+            # ingest so ITK would accept them. Worth recording rather than
+            # inferring later -- it is the sort of thing a reviewer of the
+            # dataset will ask about.
+            'geometryFixed': bool(geometryFixed),
             'checksum': (checksum or '').lower(),
             'sizeBytes': sizeBytes,
             'target': target,

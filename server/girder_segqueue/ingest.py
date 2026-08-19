@@ -33,13 +33,16 @@ Two layouts, and the default is the interesting one:
 
 import argparse
 import os
+import shutil
 import sys
+import tempfile
 
 from girder.models.assetstore import Assetstore
 from girder.models.upload import Upload
 from girder.models.user import User
 from segqueue import dataset
 from segqueue.checksum import sha256_file
+from segtrain import geometry
 
 from .models import Case
 from .utils import casesFolder, goldFolder
@@ -87,18 +90,25 @@ def uploadFile(path, folder, user, assetstore=None):
 
 
 def ingestOne(caseFiles, user, folder, priority=0, target='',
-              replicasWanted=1, withRegion=True, withSeed=True, dryRun=False):
+              replicasWanted=1, withRegion=True, withSeed=True,
+              fixGeometry=True, dryRun=False):
     """Register one case. Returns ``(case, created)``.
 
-    The checksum is computed here, once, from the file on disk, and every later
-    transfer of this case is verified against it. Computing it at ingest rather
-    than at first download means a file that was already corrupt on arrival is
-    caught by the first annotator rather than blamed on their connection.
+    The checksum is computed here, once, from the file as stored, and every
+    later transfer of this case is verified against it. Computing it at ingest
+    rather than at first download means a file that was already corrupt on
+    arrival is caught by the first annotator rather than blamed on their
+    connection.
 
     Only the CT is checksummed. The helper masks are aids, never submitted and
     never scored, so a corrupt one costs an annotator a puzzled moment rather
     than corrupting the dataset -- not worth an extra full read of every file in
     a 1.5 TB import.
+
+    Obliquely acquired volumes are corrected here, before anything is stored,
+    because ITK -- and therefore Slicer -- refuses to open them at all. See
+    ``segtrain.geometry``. The correction happens once, centrally, so the
+    annotator, the reviewer and the training conversion all read the same file.
     """
     existing = Case().findOne({'name': caseFiles.name})
     if existing is not None:
@@ -107,16 +117,35 @@ def ingestOne(caseFiles, user, folder, priority=0, target='',
         return {'name': caseFiles.name,
                 'sizeBytes': os.path.getsize(caseFiles.volume)}, True
 
-    checksum = sha256_file(caseFiles.volume)
-    volume = uploadFile(caseFiles.volume, folder, user)
+    workDir = None
+    try:
+        volumePath = caseFiles.volume
+        regionPath, seedPath = caseFiles.region, caseFiles.seed
+        fixedGeometry = False
 
-    regionFileId = seedFileId = goldFileId = None
-    if withRegion and caseFiles.region:
-        regionFileId = uploadFile(caseFiles.region, folder, user)['_id']
-    if withSeed and caseFiles.seed:
-        seedFileId = uploadFile(caseFiles.seed, folder, user)['_id']
-    if caseFiles.gold:
-        goldFileId = uploadFile(caseFiles.gold, goldFolder(user), user)['_id']
+        if fixGeometry:
+            workDir = tempfile.mkdtemp(prefix='segqueue-geometry-')
+            volumePath, corrected, fixedGeometry = geometry.normaliseCase(
+                caseFiles.volume, [caseFiles.region, caseFiles.seed],
+                workDir=workDir)
+            regionPath = corrected.get(caseFiles.region, caseFiles.region)
+            seedPath = corrected.get(caseFiles.seed, caseFiles.seed)
+
+        # Of the stored bytes, not the source: the annotator verifies what they
+        # were sent, and after a correction those are no longer the same file.
+        checksum = sha256_file(volumePath)
+        volume = uploadFile(volumePath, folder, user)
+
+        regionFileId = seedFileId = goldFileId = None
+        if withRegion and regionPath:
+            regionFileId = uploadFile(regionPath, folder, user)['_id']
+        if withSeed and seedPath:
+            seedFileId = uploadFile(seedPath, folder, user)['_id']
+        if caseFiles.gold:
+            goldFileId = uploadFile(caseFiles.gold, goldFolder(user), user)['_id']
+    finally:
+        if workDir:
+            shutil.rmtree(workDir, ignore_errors=True)
 
     case = Case().createCase(
         name=caseFiles.name, fileId=volume['_id'], checksum=checksum,
@@ -124,6 +153,7 @@ def ingestOne(caseFiles, user, folder, priority=0, target='',
         priority=priority, replicasWanted=replicasWanted,
         isGold=bool(goldFileId), goldFileId=goldFileId,
         regionFileId=regionFileId, seedFileId=seedFileId,
+        geometryFixed=fixedGeometry,
     )
     return case, True
 
@@ -160,6 +190,12 @@ def buildParser():
                         help='Do not ship pre-existing coronary masks to '
                              'annotators. Use this if you want every tree drawn '
                              'from scratch, e.g. to measure unaided time.')
+    parser.add_argument('--no-fix-geometry', action='store_true',
+                        help='Do not correct obliquely acquired volumes. About '
+                             'one TotalSegmentator case in nine has direction '
+                             'cosines ITK rejects, and Slicer cannot open those '
+                             'at all -- so this mostly means those cases reach '
+                             'an annotator who cannot work on them.')
     parser.add_argument('--no-region', action='store_true',
                         help='Do not ship heart masks. The extension then '
                              'cannot frame the view on the heart.')
@@ -217,14 +253,14 @@ def main(argv=None):
 
     folder = casesFolder(user) if not args.dry_run else None
     created = skipped = 0
-    seeded = withHeart = goldCount = 0
+    seeded = withHeart = goldCount = straightened = 0
 
     for caseFiles in cases:
         case, isNew = ingestOne(
             caseFiles, user, folder, priority=args.priority, target=args.target,
             replicasWanted=args.replicas,
             withRegion=not args.no_region, withSeed=not args.no_seed,
-            dryRun=args.dry_run)
+            fixGeometry=not args.no_fix_geometry, dryRun=args.dry_run)
         if not isNew:
             skipped += 1
             continue
@@ -233,7 +269,9 @@ def main(argv=None):
         seeded += 1 if (caseFiles.seed and not args.no_seed) else 0
         withHeart += 1 if caseFiles.region else 0
         goldCount += 1 if caseFiles.gold else 0
-        print(f'  + {case["name"]}{_flags(caseFiles)}')
+        straightened += 1 if case.get('geometryFixed') else 0
+        note = '  [geometry corrected]' if case.get('geometryFixed') else ''
+        print(f'  + {case["name"]}{_flags(caseFiles)}{note}')
         if args.limit and created >= args.limit:
             break
 
@@ -241,6 +279,9 @@ def main(argv=None):
     print(f'\n{verb} {created} case(s): {withHeart} with a heart mask, '
           f'{seeded} with a coronary head start, {goldCount} gold. '
           f'{skipped} already present.')
+    if straightened:
+        print(f'{straightened} had oblique direction cosines corrected so that '
+              f'Slicer can open them.')
     return 0
 
 

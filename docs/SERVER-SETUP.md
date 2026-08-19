@@ -221,6 +221,34 @@ docker compose exec girder segqueue-ingest --root /incoming --target coronary
 | `--admin` | Login owning the uploads. Defaults to the first site admin. |
 | `--dry-run` | Report and change nothing. |
 
+### 5.2 Oblique volumes are corrected on the way in
+
+About one TotalSegmentator case in nine is obliquely acquired and, stored as
+float32, has direction cosines just outside ITK's tolerance:
+
+```
+ITK ERROR: ITK only supports orthonormal direction cosines.
+```
+
+Training reads those with nibabel and never notices. **An annotator cannot** —
+3D Slicer *is* ITK, so the case does not open at all. Ingest therefore
+orthonormalises the direction matrix (an SVD polar decomposition, the nearest
+orthonormal matrix) before storing anything. Voxels, spacing and origin are
+untouched; on a real case the axes move by 0.007 degrees, orders of magnitude
+below a voxel. Corrected cases are marked `geometryFixed` and counted in the
+ingest summary.
+
+Heart and coronary masks get the *volume's* corrected affine rather than their
+own, so they cannot drift off the grid they are defined on.
+
+Pass `--no-fix-geometry` to skip it, which mostly means those cases reach an
+annotator who cannot work on them.
+
+> **If you ingested before this existed**, already-stored cases keep their
+> original geometry — ingest is idempotent, so re-running skips them. Retire and
+> re-ingest the affected cases, or start with a fresh database if the pool is
+> still small.
+
 **Ingest is idempotent by case name.** An interrupted import resumes by running
 the same command again — which matters, because that is exactly the kind of job
 that gets interrupted.
@@ -424,6 +452,7 @@ than writing subtly wrong data for a month before anyone notices.
 | Every `/segqueue/…` route 404s | The plugin did not load. `docker compose logs girder \| grep plugin`. Usually the image was built without the repository root — see the next row. |
 | `ImportError: girder-segqueue needs the segqueue package` | The plugin is installed but the shared package is not. It deliberately does not declare it as a dependency: the distribution providing it is named `segtrain`, and an unrelated project owns that name on PyPI. Install the repo root first (`pip install /repo`, then `pip install /repo/server`). The supplied Dockerfile already does. |
 | `Girder has no assetstore configured` from ingest | §4.2 was skipped. |
+| Slicer: *"Failed to load node from file"* on a case | The volume is obliquely acquired and was ingested before geometry correction existed. Re-ingest that case; see §5.2. |
 | Ingest finds 0 eligible cases | The tree is not in TotalSegmentator layout (no `<case>/segmentations/`), or genuinely has no cardiac scans. Try `--layout flat`, or `--all-cases` to bypass the heart filter. |
 | Uploads fail with a permission error | The annotator is not in `segqueue-annotators`. That group is the only place they get write access, and only to the drop-box folder. |
 | Extension: *"Could not reach the server… check that the VPN is connected."* | Exactly that — or a self-signed certificate whose CA root is not installed. See §7. |
@@ -442,11 +471,12 @@ than writing subtly wrong data for a month before anyone notices.
   assetstore as label volumes on the source grid — the right contents — but
   reshaping them into the `<case>/segmentations/` layout `segtrain convert` reads
   is manual today.
-- **The Slicer panel is verified, but not against a live server.** The packaged
-  extension installs and loads in a real Slicer 5.8.1, the effects, masking and
-  export were checked there, and the network layer is tested against a stub. What
-  has not been done is one annotator driving the panel through a real case from
-  *Get next case* to *Submit*.
+- **The Slicer panel has been driven against a live server, but not by a human.**
+  The packaged extension installs and loads in a real Slicer 5.8.1; logging in,
+  claiming a case, downloading it with its heart and coronary masks, loading all
+  three into the scene, and releasing with a purge were all exercised end to end
+  against a running stack. The effects, masking and export were checked there
+  too. What remains is somebody actually segmenting a case and pressing Submit.
 - **Gold and duplicate scoring has not run on real label volumes.** The metric
   code is the training pipeline's own and is unit-tested, but the path from a
   real `.seg.nrrd` to a Dice number has not been through a live case.

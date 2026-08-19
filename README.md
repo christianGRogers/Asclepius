@@ -528,6 +528,14 @@ Helper masks are structurally incapable of being submitted: the export copies
 only the project's own segments, and refuses outright if any other label value
 appears in the exported volume.
 
+**Oblique volumes are corrected at ingest.** [Three things that will cost
+you](#three-things-that-will-cost-you-if-you-miss-them) notes that 11% of
+TotalSegmentator is obliquely acquired and ITK rejects it. Training reads those
+with nibabel; an annotator cannot, because Slicer *is* ITK. Ingest
+orthonormalises the direction cosines — voxels, spacing and origin untouched,
+axes moved by 0.007° — so the case opens, and the same corrected file is what
+the training conversion later reads.
+
 ### What the extension does for the annotator
 
 The Segment Editor can already do all of this. It is worth wrapping because it
@@ -650,9 +658,12 @@ grid. Two bugs came out of that pass — mask mode silently resetting when set
 before the mask segment id, and an empty scene reporting a file-write failure
 instead of naming the vessels still to draw.
 
-Not yet exercised: the panel against a live server end to end (each half is
-tested, the join is not), gold and duplicate scoring on real label volumes, and
-anything at 5,000-case scale.
+The join has since been exercised too: against a running stack, the module logs
+in, claims an oblique case, downloads it with its heart and coronary masks, loads
+all three into the scene, and releases with a purge.
+
+Not yet exercised: a human segmenting a case through to Submit, gold and
+duplicate scoring on real label volumes, and anything at 5,000-case scale.
 
 Not yet built: an export from approved submissions into the
 [case layout](#your-coronary-data) `segtrain convert` reads. Approved work sits

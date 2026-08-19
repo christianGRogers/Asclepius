@@ -53,6 +53,7 @@ markers = [
     "needs_data: requires the TotalSegmentator dataset on disk",
     "needs_network: queries a public API; skips when it is unreachable",
     "slow: takes more than a few seconds",
+    "needs_mongo: requires a MongoDB; set SEGQUEUE_TEST_MONGO to its URI",
 ]
 
 [tool.ruff]

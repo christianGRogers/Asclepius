@@ -1,0 +1,70 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "girder-segqueue"
+version = "0.1.0"
+description = "Case assignment, submission and QA workflow for distributed CT segmentation, as a Girder 5 plugin"
+readme = "README.md"
+# Girder 5 requires >=3.10, so the server side is free of the Python 3.9
+# constraint that governs src/segqueue (which also has to load inside Slicer).
+requires-python = ">=3.10"
+license = { text = "MIT" }
+authors = [{ name = "Christian Rogers" }]
+
+# Deliberately short. Girder brings the web server, Mongo driver, auth, users,
+# groups, file storage and the admin UI; this plugin adds a data model and about
+# a dozen endpoints on top.
+#
+# `segqueue` -- the shared state machine and wire protocol -- is NOT listed here.
+# It ships inside this repository's `segtrain` distribution (src/segqueue), and
+# `segtrain` on PyPI is an unrelated project, so naming it as a dependency would
+# install a stranger's package. Install the repository root first instead:
+#
+#     pip install /path/to/Asclepius          # provides segqueue
+#     pip install /path/to/Asclepius/server   # provides this plugin
+#
+# The Dockerfile in deploy/ does exactly that, in that order.
+dependencies = [
+    "girder>=5,<6",
+]
+
+[project.optional-dependencies]
+# The QA worker that scores gold cases and duplicate pairs. Separated because
+# the web server does not need numpy or SimpleITK to serve the queue -- only the
+# worker container installs these.
+scoring = [
+    "numpy>=1.21",
+    "scipy>=1.7",
+    "SimpleITK>=2.2",
+]
+dev = [
+    "pytest>=7",
+    "ruff>=0.4",
+]
+
+# This is what makes Girder find the plugin: it scans the `girder.plugin`
+# entry point namespace at startup.
+[project.entry-points."girder.plugin"]
+segqueue = "girder_segqueue:SegQueuePlugin"
+
+[project.scripts]
+segqueue-ingest = "girder_segqueue.ingest:main"
+segqueue-score = "girder_segqueue.scoring:main"
+
+[tool.setuptools.packages.find]
+include = ["girder_segqueue*"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+ignore = ["UP045"]
+
+[tool.ruff.lint.per-file-ignores]
+# Girder's own API is camelCase throughout, and endpoint handlers take their
+# parameter names from the route description, so matching it is not optional.
+"girder_segqueue/rest/*" = ["N803", "N815"]

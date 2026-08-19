@@ -1,0 +1,89 @@
+# The whole platform: a reverse proxy that gets its own certificate, Girder with
+# the SegQueue plugin, MongoDB, and one background worker.
+#
+# Deliberately four containers and no orchestrator. Requirement N5 is that a
+# single graduate student can keep this alive; `docker compose up -d` and
+# `docker compose logs -f` are the entire operational vocabulary.
+#
+#   cp .env.example .env    # then edit it
+#   docker compose up -d --build
+#
+name: segqueue
+
+services:
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      # Certificates and ACME account keys. Losing this volume means re-issuing
+      # from Let's Encrypt, which is rate-limited -- so it is a named volume
+      # rather than something living in a container layer.
+      - caddy_data:/data
+      - caddy_config:/config
+    environment:
+      SEGQUEUE_DOMAIN: ${SEGQUEUE_DOMAIN:?set SEGQUEUE_DOMAIN in .env}
+      SEGQUEUE_TLS_EMAIL: ${SEGQUEUE_TLS_EMAIL:-}
+    depends_on:
+      - girder
+
+  mongo:
+    image: mongo:7
+    restart: unless-stopped
+    # No published port. The database is reachable only from the compose
+    # network, which is the difference between "self-hosted" and "on the
+    # internet with no authentication".
+    command: ["--wiredTigerCacheSizeGB", "${MONGO_CACHE_GB:-2}"]
+    volumes:
+      - ${DATA_ROOT:?set DATA_ROOT in .env}/mongo:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping')"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  girder:
+    build:
+      # The repository root, because the image installs both the root package
+      # (src/segqueue) and server/.
+      context: ..
+      dockerfile: deploy/Dockerfile
+    restart: unless-stopped
+    environment:
+      GIRDER_MONGO_URI: mongodb://mongo:27017/girder
+      GIRDER_SERVER_MODE: production
+    volumes:
+      # Girder's filesystem assetstore: source volumes and every submitted
+      # segmentation. This is the directory the backup job cares about.
+      - ${DATA_ROOT}/assetstore:/data/assetstore
+      # Read-only mount of the incoming CT collection, for `segqueue-ingest`.
+      - ${CASE_SOURCE_ROOT:-/dev/null}:/incoming:ro
+    depends_on:
+      mongo:
+        condition: service_healthy
+
+  worker:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile
+    restart: unless-stopped
+    # Same image, different job: score gold and duplicate submissions, and
+    # reclaim assignments whose lease or heartbeat has lapsed. Runs in-process
+    # against the models rather than calling the REST API, so it needs no
+    # credentials of its own.
+    command: ["segqueue-score", "--poll", "30", "--sweep", "3600"]
+    environment:
+      GIRDER_MONGO_URI: mongodb://mongo:27017/girder
+      GIRDER_SERVER_MODE: production
+    volumes:
+      - ${DATA_ROOT}/assetstore:/data/assetstore
+    depends_on:
+      mongo:
+        condition: service_healthy
+
+volumes:
+  caddy_data:
+  caddy_config:

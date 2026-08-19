@@ -229,3 +229,16 @@ def test_the_helper_segment_names_cannot_collide_with_a_project_segment():
         # excludes them structurally, but a name that looked like anatomy would
         # still invite somebody to "fix" it.
         assert name.startswith("~")
+
+
+def test_an_assignment_carries_the_volumes_real_filename():
+    # The client names its local copy from this before downloading, so it can
+    # tell whether the case is already cached -- and Slicer chooses its reader
+    # from the extension, so getting it wrong makes a perfectly transferred file
+    # unopenable.
+    info = AssignmentInfo(assignment_id="a1", volume_name="s0004.nii.gz")
+    assert AssignmentInfo.from_dict(info.to_dict()).volume_name == "s0004.nii.gz"
+
+
+def test_a_server_that_omits_the_filename_reads_as_blank():
+    assert AssignmentInfo.from_dict({"assignmentId": "a1"}).volume_name == ""

@@ -64,6 +64,7 @@ try:
     from segqueue import protocol
     from segqueue import states as st
     from segqueue.checksum import sha256_file, verify_file
+    from segqueue.dataset import sniff_suffix, suffix_for
     from segqueue.protocol import SubmissionMeta
     from segqueue.segcheck import ERROR, Geometry, blocking, check_submission, summarise
     _IMPORT_ERROR = None
@@ -234,14 +235,37 @@ class SegQueueLogic(ScriptedLoadableModuleLogic):
         manifest = self.cache.open(assignment)
         self.assignment = assignment
 
-        volumePath = manifest.get("volumePath") or self.cache.volumePath(
-            assignment.assignment_id, assignment.case_name)
+        # Named from the server's own filename, because Slicer chooses its
+        # reader from the extension. A gzipped NIfTI saved as `.nrrd` downloads
+        # cleanly, verifies its checksum cleanly, and then fails to open with an
+        # error that says nothing about the name.
+        suffix = suffix_for(assignment.volume_name, default=".nrrd")
+        volumePath = self.cache.volumePath(
+            assignment.assignment_id, assignment.case_name, suffix)
+
+        cached = manifest.get("volumePath")
+        if cached and cached != volumePath and os.path.isfile(cached):
+            # A copy left by an older build under the wrong name. The bytes are
+            # right -- it is only the name Slicer objects to -- so rename rather
+            # than make the annotator wait for the same 400 MB twice.
+            try:
+                os.replace(cached, volumePath)
+            except OSError:
+                pass
+
         if not self._cachedVolumeIsGood(volumePath, assignment):
             self.client.downloadCase(assignment.case_id, volumePath, progress=progress)
             # Verify before loading, not after. A truncated NRRD often loads
             # perfectly well and is simply missing its last slices, which is
             # exactly the kind of silent data loss requirement N3 forbids.
             verify_file(volumePath, assignment.checksum)
+
+        # Last line of defence on the name. A server too old to send
+        # `volumeName` leaves the suffix guessed, and a guessed suffix that
+        # disagrees with the file's own magic number produces a load failure
+        # whose message never mentions the filename. The checksum has already
+        # proved the bytes; only the name can still be wrong.
+        volumePath = self._correctSuffix(volumePath)
         self.cache.update(assignment.assignment_id, volumePath=volumePath)
 
         self.volumeNode = slicer.util.loadVolume(volumePath)
@@ -286,11 +310,14 @@ class SegQueueLogic(ScriptedLoadableModuleLogic):
         return self.segmentIdFor(name)
 
     def _fetchHelper(self, assignment, kind, name, color, fill):
-        path = os.path.join(self.cache.caseDir(assignment.assignment_id),
-                            kind + ".nii.gz")
+        stem = os.path.join(self.cache.caseDir(assignment.assignment_id), kind)
         try:
-            if not os.path.isfile(path):
-                if self.client.downloadAsset(assignment.case_id, kind, path) is None:
+            path = self._cachedHelper(stem)
+            if path is None:
+                # downloadAsset appends the server's own extension and hands
+                # back the path it actually wrote.
+                path = self.client.downloadAsset(assignment.case_id, kind, stem)
+                if path is None:
                     return None
             return self._importHelper(path, name, color, fill)
         except Exception:
@@ -299,6 +326,18 @@ class SegQueueLogic(ScriptedLoadableModuleLogic):
             # head start. Failing the whole case load over scaffolding would be
             # the wrong trade every time.
             return None
+
+    def _cachedHelper(self, stem):
+        """An already-downloaded helper, whatever extension it arrived with."""
+        directory, prefix = os.path.dirname(stem), os.path.basename(stem)
+        try:
+            names = os.listdir(directory)
+        except OSError:
+            return None
+        for filename in sorted(names):
+            if filename.startswith(prefix + "."):
+                return os.path.join(directory, filename)
+        return None
 
     def _importHelper(self, path, name, color, fill):
         """Load a binary mask and add it to the working segmentation, named."""
@@ -401,6 +440,26 @@ class SegQueueLogic(ScriptedLoadableModuleLogic):
         except Exception:
             return False
         return array is not None and array.size > 0 and bool(array.any())
+
+    def _correctSuffix(self, path):
+        """Rename a volume to match what its bytes actually are.
+
+        Returns the path to use. A no-op in the normal case, where the server
+        told us the name; it earns its keep against a server too old to send
+        one, where the alternative is Slicer refusing to open a file that
+        downloaded and verified perfectly.
+        """
+        actual = sniff_suffix(path)
+        if not actual or path.lower().endswith(actual):
+            return path
+
+        current = suffix_for(path, default="")
+        corrected = (path[: -len(current)] if current else path) + actual
+        try:
+            os.replace(path, corrected)
+        except OSError:
+            return path
+        return corrected
 
     def _cachedVolumeIsGood(self, path, assignment):
         if not path or not os.path.isfile(path):

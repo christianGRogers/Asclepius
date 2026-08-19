@@ -182,3 +182,76 @@ def test_the_summary_counts_cases_the_filter_would_drop(tmp_path):
     assert summary["cases"] == 1
     assert summary["with_heart"] == 0
     assert list(dataset.find_cases(str(tmp_path))) == []
+
+
+# ------------------------------------------------------------- extensions
+
+
+@pytest.mark.parametrize("name,expected", [
+    ("s0004.nii.gz", ".nii.gz"),
+    ("s0004.nii", ".nii"),
+    ("s0004.nrrd", ".nrrd"),
+    ("ct.mha", ".mha"),
+    ("ct.mhd", ".mhd"),
+    ("ct.nhdr", ".nhdr"),
+    ("S0004.NII.GZ", ".nii.gz"),
+    ("/some/path/s0004.nii.gz", ".nii.gz"),
+])
+def test_the_compound_extension_wins_over_the_short_one(name, expected):
+    # os.path.splitext would call this ".gz", and a volume named ".gz" is a
+    # volume Slicer cannot open.
+    assert dataset.suffix_for(name) == expected
+
+
+def test_an_unrecognised_name_falls_back_rather_than_guessing():
+    assert dataset.suffix_for("volume") == ""
+    assert dataset.suffix_for("", default=".nrrd") == ".nrrd"
+    assert dataset.suffix_for(None, default=".nrrd") == ".nrrd"
+
+
+def test_every_ingestable_suffix_survives_a_round_trip():
+    """What ingest accepts, the client must be able to name locally.
+
+    This is the pairing that broke in the field: the server stored `ct.nii.gz`,
+    the client wrote `s0004.nrrd`, the checksum matched, and Slicer refused to
+    open it because it picks its reader from the extension.
+    """
+    for suffix in dataset.MASK_SUFFIXES:
+        assert dataset.suffix_for("case" + suffix) == suffix
+
+
+# ------------------------------------------------------ content sniffing
+
+
+def test_a_gzipped_file_is_recognised_whatever_it_is_called(tmp_path):
+    # The field failure exactly: the server held a .nii.gz, the client wrote
+    # .nrrd, the checksum matched, and Slicer refused to open it.
+    import gzip
+
+    path = tmp_path / "s0004.nrrd"
+    path.write_bytes(gzip.compress(b"x" * 100))
+    assert dataset.sniff_suffix(str(path)) == ".nii.gz"
+
+
+def test_an_nrrd_is_recognised_by_its_header(tmp_path):
+    path = tmp_path / "volume.dat"
+    path.write_bytes(b"NRRD0004\n# Complete NRRD file format specification\n")
+    assert dataset.sniff_suffix(str(path)) == ".nrrd"
+
+
+def test_an_uncompressed_nifti_is_recognised_at_its_offset(tmp_path):
+    # NIfTI puts its magic 344 bytes in, after the header struct, so this cannot
+    # be a prefix test the way the other two are.
+    path = tmp_path / "volume.dat"
+    path.write_bytes(b"\x00" * dataset.NIFTI_MAGIC_OFFSET + b"n+1\x00" + b"rest")
+    assert dataset.sniff_suffix(str(path)) == ".nii"
+
+
+def test_something_unrecognisable_is_left_alone(tmp_path):
+    path = tmp_path / "volume.dat"
+    path.write_bytes(b"this is not a medical image")
+    assert dataset.sniff_suffix(str(path)) is None
+
+
+def test_a_missing_file_does_not_raise(tmp_path):
+    assert dataset.sniff_suffix(str(tmp_path / "absent")) is None

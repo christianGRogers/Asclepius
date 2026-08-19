@@ -22,6 +22,7 @@ import requests
 
 from segqueue import PROTOCOL_VERSION, protocol
 from segqueue.checksum import CHUNK_BYTES
+from segqueue.dataset import suffix_for
 
 #: Chunk size for resumable uploads. 8 MiB balances "few round trips" against
 #: "how much has to be resent when a home connection drops mid-chunk".
@@ -35,6 +36,21 @@ TIMEOUT = (10, 120)
 
 class SegQueueError(RuntimeError):
     """Anything that went wrong talking to the server, with usable text."""
+
+
+def filenameFromResponse(response):
+    """The filename a server suggested in Content-Disposition, or ''.
+
+    Girder sends one on every file download. It is the only way to learn the
+    extension of a helper mask without adding a field to the wire protocol for
+    each one -- and the extension is what Slicer reads to choose a loader.
+    """
+    header = response.headers.get('Content-Disposition', '') or ''
+    for part in header.split(';'):
+        part = part.strip()
+        if part.lower().startswith('filename='):
+            return part.split('=', 1)[1].strip().strip('"\'')
+    return ''
 
 
 class SegQueueClient:
@@ -217,6 +233,11 @@ class SegQueueClient:
         A missing asset is the common answer, not an error -- most cases have no
         coronary seed -- so it is a return value the UI can branch on rather
         than an exception it has to catch around every case load.
+
+        ``destPath`` is a stem: the server's own extension is appended, because
+        Slicer chooses its reader from the filename and a NIfTI written as
+        ``.nrrd`` fails to open with an error that never mentions the name.
+        Returns the path actually written.
         """
         try:
             response = self._request(
@@ -226,6 +247,10 @@ class SegQueueClient:
             if getattr(exc, 'code', None) == protocol.ERR_NO_ASSET:
                 return None
             raise
+
+        suffix = suffix_for(filenameFromResponse(response), default='.nii.gz')
+        if not destPath.lower().endswith(suffix):
+            destPath += suffix
 
         written = 0
         with open(destPath, 'wb') as handle:

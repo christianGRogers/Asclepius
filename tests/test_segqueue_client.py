@@ -522,3 +522,52 @@ def test_a_hostile_case_name_cannot_escape_the_cache(tmp_path):
     path = cache.volumePath("a1", "../../etc/passwd")
     assert os.path.commonpath([str(tmp_path), os.path.abspath(path)]) == str(tmp_path)
     assert ".." not in os.path.basename(path)
+
+
+# --------------------------------------------------- case asset filenames
+
+
+def _assetResponse(disposition, payload=b"mask"):
+    headers = {"Content-Length": str(len(payload))}
+    if disposition:
+        headers["Content-Disposition"] = disposition
+    return FakeResponse(200, headers=headers, chunks=[payload])
+
+
+def test_a_helper_mask_is_saved_under_the_servers_own_extension(tmp_path):
+    # Slicer picks its reader from the filename. A NIfTI written as .nrrd
+    # downloads and verifies perfectly, then refuses to open.
+    session = FakeSession({("GET", "asset/seed"): _assetResponse(
+        'attachment; filename="coronary_arteries.nii.gz"')})
+    stem = str(tmp_path / "seed")
+
+    path = makeClient(session).downloadAsset("c1", "seed", stem)
+
+    assert path == stem + ".nii.gz"
+    assert os.path.isfile(path)
+
+
+def test_a_server_that_names_an_nrrd_gets_an_nrrd(tmp_path):
+    session = FakeSession({("GET", "asset/region"): _assetResponse(
+        "attachment; filename=heart.nrrd")})
+    path = makeClient(session).downloadAsset("c1", "region", str(tmp_path / "region"))
+    assert path.endswith(".nrrd")
+
+
+def test_a_missing_content_disposition_falls_back_rather_than_failing(tmp_path):
+    session = FakeSession({("GET", "asset/seed"): _assetResponse(None)})
+    path = makeClient(session).downloadAsset("c1", "seed", str(tmp_path / "seed"))
+    assert path.endswith(".nii.gz")
+
+
+def test_a_stem_that_already_carries_the_extension_is_not_doubled(tmp_path):
+    session = FakeSession({("GET", "asset/seed"): _assetResponse(
+        'attachment; filename="x.nii.gz"')})
+    stem = str(tmp_path / "seed.nii.gz")
+    assert makeClient(session).downloadAsset("c1", "seed", stem) == stem
+
+
+def test_a_case_with_no_such_asset_still_reads_as_absent(tmp_path):
+    session = FakeSession({("GET", "asset/seed"): girderError(
+        protocol.ERR_NO_ASSET, "This case has no seed mask.", status=404)})
+    assert makeClient(session).downloadAsset("c1", "seed", str(tmp_path / "s")) is None

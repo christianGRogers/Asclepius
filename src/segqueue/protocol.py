@@ -255,6 +255,12 @@ class AssignmentInfo:
     size_bytes: int = 0
     #: Lowercase hex SHA-256 of the source volume, verified after download.
     checksum: str = ""
+    #: The volume's filename on the server, e.g. ``s0004.nii.gz``. Sent because
+    #: the client has to name the local copy *before* downloading it -- to know
+    #: whether it is already cached -- and because Slicer picks its reader from
+    #: the extension. A gzipped NIfTI saved as ``.nrrd`` transfers and verifies
+    #: perfectly, then refuses to open.
+    volume_name: str = ""
     #: Unix timestamps; None where the step has not happened.
     assigned_at: Optional[float] = None
     deadline: Optional[float] = None
@@ -281,6 +287,7 @@ class AssignmentInfo:
             "attempt": self.attempt,
             "sizeBytes": self.size_bytes,
             "checksum": self.checksum,
+            "volumeName": self.volume_name,
             "assignedAt": self.assigned_at,
             "deadline": self.deadline,
             "reviewerComment": self.reviewer_comment,
@@ -301,6 +308,7 @@ class AssignmentInfo:
             attempt=int(data.get("attempt", 1)),
             size_bytes=int(data.get("sizeBytes", 0)),
             checksum=data.get("checksum", "") or "",
+            volume_name=data.get("volumeName", "") or "",
             assigned_at=data.get("assignedAt"),
             deadline=data.get("deadline"),
             reviewer_comment=data.get("reviewerComment", "") or "",

@@ -43,6 +43,63 @@ SEGMENTATIONS_DIR = "segmentations"
 #: Extensions a mask may carry, in preference order.
 MASK_SUFFIXES = (".nii.gz", ".nii", ".nrrd", ".nhdr", ".mha", ".mhd")
 
+#: Every extension a volume or mask can arrive as, longest first so that
+#: ``.nii.gz`` is recognised before ``.gz`` would be. Medical imaging is full of
+#: two-part extensions and ``os.path.splitext`` handles exactly one of them.
+VOLUME_SUFFIXES = tuple(sorted(
+    set(MASK_SUFFIXES) | {".nii.gz", ".nrrd", ".mhd", ".mha", ".nhdr", ".nii"},
+    key=len, reverse=True))
+
+
+def suffix_for(name, default=""):
+    """The recognised extension of a filename, e.g. ``s0004.nii.gz`` -> ``.nii.gz``.
+
+    This exists because Slicer chooses its reader from the extension, not from
+    the file's contents. Saving a gzipped NIfTI as ``.nrrd`` downloads perfectly,
+    verifies its checksum perfectly, and then fails to open with an error that
+    says nothing about the name being wrong.
+    """
+    lowered = (name or "").lower()
+    for suffix in VOLUME_SUFFIXES:
+        if lowered.endswith(suffix):
+            return suffix
+    return default
+
+
+#: File signatures. NIfTI puts its magic 344 bytes in, after the header
+#: struct, which is why this cannot be a simple prefix test.
+GZIP_MAGIC = b"\x1f\x8b"
+NRRD_MAGIC = b"NRRD"
+NIFTI_MAGIC_OFFSET = 344
+NIFTI_MAGICS = (b"n+1\x00", b"ni1\x00")
+
+
+#: Magic numbers, checked against the file's own first bytes. Used only as a
+#: fallback: the server normally names the file, but a client talking to a
+#: server older than that field would otherwise write a NIfTI as ``.nrrd`` and
+#: hand Slicer something it cannot open.
+def sniff_suffix(path):
+    """Guess a volume's format from its contents, or None.
+
+    Content beats convention here for one specific reason: the checksum already
+    proved the bytes are right, so the only thing that can still be wrong is the
+    name -- and the name is what Slicer reads to choose a loader.
+    """
+    try:
+        with open(path, "rb") as handle:
+            head = handle.read(4)
+            if head[:2] == GZIP_MAGIC:
+                return ".nii.gz"  # gzip; NIfTI in practice for this dataset
+            if head[:4] == NRRD_MAGIC:
+                return ".nrrd"
+            handle.seek(NIFTI_MAGIC_OFFSET)
+            if handle.read(4) in NIFTI_MAGICS:
+                return ".nii"
+    except OSError:
+        return None
+    return None
+
+
 #: A case is only worth annotating if the scan actually contains a heart. In
 #: TotalSegmentator v2 that is one structure; v1 split it into four chambers plus
 #: myocardium, and both releases are in circulation, so both are accepted.

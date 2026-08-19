@@ -416,6 +416,11 @@ class QueueResource(Resource):
         case = Case().load(assignment['caseId'], force=True) or {}
         deadline = assignment.get('deadline')
         assignedAt = assignment.get('assignedAt')
+
+        # The client names its local copy from this, and Slicer picks its reader
+        # from the extension -- so the name has to survive the round trip. One
+        # indexed lookup per row, and there are at most a handful of rows.
+        volumeFile = File().load(case['fileId'], force=True) if case.get('fileId') else None
         return protocol.AssignmentInfo(
             assignment_id=str(assignment['_id']),
             case_id=str(assignment['caseId']),
@@ -424,6 +429,7 @@ class QueueResource(Resource):
             attempt=assignment.get('attempt', 1),
             size_bytes=case.get('sizeBytes', 0),
             checksum=case.get('checksum', ''),
+            volume_name=(volumeFile or {}).get('name', ''),
             assigned_at=assignedAt.timestamp() if assignedAt else None,
             deadline=deadline.timestamp() if deadline else None,
             reviewer_comment=assignment.get('reviewerComment', ''),

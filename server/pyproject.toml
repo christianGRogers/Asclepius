@@ -52,6 +52,7 @@ segqueue = "girder_segqueue:SegQueuePlugin"
 [project.scripts]
 segqueue-ingest = "girder_segqueue.ingest:main"
 segqueue-score = "girder_segqueue.scoring:main"
+segqueue-export = "girder_segqueue.export:main"
 
 [tool.setuptools.packages.find]
 include = ["girder_segqueue*"]

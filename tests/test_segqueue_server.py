@@ -60,6 +60,21 @@ def girder_db():
     except ImportError:
         pytest.skip("girder is not installed in this environment")
 
+    # Girder binds its connection the first time a girder.models module is
+    # imported. If anything did that before this fixture ran -- a test module
+    # importing girder.models at collection time, say -- the redirect above was
+    # too late and the models below are pointed at the *default* database. The
+    # `models` fixture clears collections, so being wrong here empties somebody's
+    # real case pool rather than a scratch one. Refuse instead.
+    from girder_segqueue.models import Case
+
+    bound = Case().collection.database.name
+    if bound != dbName:
+        pytest.fail(
+            f"girder is bound to database {bound!r}, not the scratch database "
+            f"{dbName!r}. Some module imported girder.models before this fixture "
+            "ran; import girder inside test functions, not at module scope.")
+
     yield dbName
     client.drop_database(dbName)
 
@@ -394,3 +409,196 @@ def test_the_mongo_servability_predicate_agrees_with_the_python_one(models):
         query["_id"] = case["_id"]
         actual = caseModel.collection.count_documents(query) == 1
         assert actual == expected, (wanted, active, approved, retired)
+
+
+# ------------------------------------------------------- the incoming drop box
+
+
+def _emptyIncoming():
+    """Start each drop-box test from empty, so siblings cannot leak into it."""
+    from girder.models.folder import Folder
+    from girder.models.item import Item
+    from girder.models.upload import Upload
+    from girder_segqueue.utils import incomingFolder
+
+    for item in list(Folder().childItems(incomingFolder())):
+        Item().remove(item)
+    Upload().collection.delete_many({"parentType": "item"})
+
+
+def _incomingItem(name, ageSeconds):
+    """Plant an item in the incoming folder, backdated by ``ageSeconds``."""
+    import datetime
+
+    from girder.models.item import Item
+    from girder_segqueue.utils import incomingFolder
+
+    folder = incomingFolder()
+    item = Item().createItem(name=name, creator=_adminUser(), folder=folder)
+    stamp = (datetime.datetime.now(datetime.timezone.utc)
+             - datetime.timedelta(seconds=ageSeconds))
+    Item().collection.update_one(
+        {"_id": item["_id"]}, {"$set": {"created": stamp, "updated": stamp}})
+    return Item().load(item["_id"], force=True)
+
+
+def _adminUser():
+    """A real Girder user, because Item().createItem needs a creator."""
+    from girder.models.user import User
+
+    existing = User().findOne({"login": "sweeptest"})
+    if existing is not None:
+        return existing
+    return User().createUser(
+        login="sweeptest", password="sweeptest-password", email="sweep@example.edu",
+        firstName="Sweep", lastName="Test", admin=True)
+
+
+def test_the_sweeper_empties_only_stale_uploads_from_incoming(girder_db):
+    """The drop box is the one folder annotators can write to, so it must drain.
+
+    Its docstring claimed the sweeper emptied it long before anything did.
+    """
+    _emptyIncoming()
+    from girder.models.item import Item
+    from girder_segqueue.maintenance import INCOMING_MAX_AGE_SECONDS, sweepIncoming
+
+    stale = _incomingItem("abandoned.nrrd", INCOMING_MAX_AGE_SECONDS + 3600)
+    fresh = _incomingItem("in-progress.nrrd", 60)
+
+    discarded = sweepIncoming()
+
+    assert [d["itemId"] for d in discarded] == [str(stale["_id"])]
+    assert Item().load(stale["_id"], force=True) is None, "stale upload survived"
+    assert Item().load(fresh["_id"], force=True) is not None, "fresh upload deleted"
+
+
+def test_the_sweeper_leaves_an_upload_still_streaming_alone(girder_db):
+    """An item exists from the first chunk; deleting it races the uploader."""
+    _emptyIncoming()
+    from girder.models.item import Item
+    from girder.models.upload import Upload
+    from girder_segqueue.maintenance import INCOMING_MAX_AGE_SECONDS, sweepIncoming
+
+    item = _incomingItem("slow-link.nrrd", INCOMING_MAX_AGE_SECONDS + 3600)
+    Upload().collection.insert_one(
+        {"parentType": "item", "parentId": item["_id"], "received": 1})
+
+    assert sweepIncoming() == []
+    assert Item().load(item["_id"], force=True) is not None
+
+
+def test_sweeping_incoming_twice_discards_nothing_the_second_time(girder_db):
+    _emptyIncoming()
+    from girder_segqueue.maintenance import INCOMING_MAX_AGE_SECONDS, sweepIncoming
+
+    _incomingItem("abandoned-twice.nrrd", INCOMING_MAX_AGE_SECONDS + 3600)
+
+    assert len(sweepIncoming()) == 1
+    assert sweepIncoming() == []
+
+
+def test_a_dry_run_sweep_of_incoming_deletes_nothing(girder_db):
+    _emptyIncoming()
+    from girder.models.item import Item
+    from girder_segqueue.maintenance import INCOMING_MAX_AGE_SECONDS, sweepIncoming
+
+    item = _incomingItem("dry-run.nrrd", INCOMING_MAX_AGE_SECONDS + 3600)
+
+    assert [d["itemId"] for d in sweepIncoming(dryRun=True)] == [str(item["_id"])]
+    assert Item().load(item["_id"], force=True) is not None
+
+
+# ------------------------------------------------------------ segqueue-export
+#
+# These live here rather than in their own module for a reason worth keeping:
+# importing `girder_segqueue` binds Girder's Mongo connection, and a separate
+# test file would do that at its own execution time -- before this file's
+# fixture can redirect the connection at a scratch database. The `models`
+# fixture then clears collections, so the pool it clears would be the live one.
+
+
+def _segments():
+    from segqueue.protocol import SegmentSpec
+
+    return [
+        SegmentSpec(name="left_main", label=1),
+        SegmentSpec(name="left_anterior_descending", label=2),
+        SegmentSpec(name="left_circumflex", label=3),
+        SegmentSpec(name="right_coronary_artery", label=4),
+    ]
+
+
+def _labelVolume(np):
+    """A label volume holding three of the four vessels; LCx is never drawn."""
+    labels = np.zeros((4, 4, 4), dtype=np.uint8)
+    labels[0, 0, 0] = 1
+    labels[1, 1, :2] = 2
+    labels[3, 3, 3] = 4
+    return labels
+
+
+def test_each_vessel_becomes_its_own_binary_mask(girder_db):
+    np = pytest.importorskip("numpy")
+    pytest.importorskip("SimpleITK")
+    from girder_segqueue.export import splitLabels
+
+    masks = splitLabels(_labelVolume(np), _segments())
+
+    assert set(masks) == {s.name for s in _segments()}
+    assert masks["left_main"].sum() == 1
+    assert masks["left_anterior_descending"].sum() == 2
+    assert masks["right_coronary_artery"].sum() == 1
+    assert set(np.unique(masks["left_main"])) <= {0, 1}, "not binary"
+
+
+def test_a_vessel_nobody_drew_is_an_empty_mask_not_a_missing_one(girder_db):
+    """The distinction the per-vessel layout exists to preserve.
+
+    A merged labels.nii.gz cannot tell "not labelled here" from "not present";
+    an empty mask can, so it must still be produced rather than skipped.
+    """
+    np = pytest.importorskip("numpy")
+    pytest.importorskip("SimpleITK")
+    from girder_segqueue.export import splitLabels
+
+    masks = splitLabels(_labelVolume(np), _segments())
+
+    assert "left_circumflex" in masks
+    assert masks["left_circumflex"].sum() == 0
+
+
+def test_a_label_value_outside_the_project_is_not_exported(girder_db):
+    """A stray value must not silently become somebody else's vessel."""
+    np = pytest.importorskip("numpy")
+    pytest.importorskip("SimpleITK")
+    from girder_segqueue.export import splitLabels
+
+    labels = np.zeros((2, 2, 2), dtype=np.uint8)
+    labels[0, 0, 0] = 9
+
+    assert all(m.sum() == 0 for m in splitLabels(labels, _segments()).values())
+
+
+def test_exported_masks_do_not_overlap(girder_db):
+    """Splitting by value cannot produce a voxel claimed by two vessels."""
+    np = pytest.importorskip("numpy")
+    pytest.importorskip("SimpleITK")
+    from girder_segqueue.export import splitLabels
+
+    masks = splitLabels(_labelVolume(np), _segments())
+
+    assert sum(m.astype(int) for m in masks.values()).max() <= 1
+
+
+def test_unreviewed_work_is_excluded_from_export_by_default(girder_db):
+    from girder_segqueue.export import selectable
+
+    assert selectable() == [st.APPROVED]
+    assert st.SUBMITTED not in selectable()
+
+
+def test_unreviewed_work_is_exported_only_when_asked_for(girder_db):
+    from girder_segqueue.export import selectable
+
+    assert set(selectable(includeUnreviewed=True)) == {st.APPROVED, st.SUBMITTED}

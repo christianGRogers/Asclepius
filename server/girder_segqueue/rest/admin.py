@@ -286,8 +286,11 @@ class AdminResource(Resource):
                dataType='boolean', required=False, default=False)
     )
     def sweep(self, dryRun):
-        released = sweepStranded(dryRun=dryRun)
-        return {'released': released, 'count': len(released), 'dryRun': bool(dryRun)}
+        result = sweepStranded(dryRun=dryRun)
+        released, discarded = result['released'], result['discarded']
+        return {'released': released, 'count': len(released),
+                'discarded': discarded, 'discardedCount': len(discarded),
+                'dryRun': bool(dryRun)}
 
 
 def _median(values):

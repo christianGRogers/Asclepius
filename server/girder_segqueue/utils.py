@@ -117,8 +117,9 @@ def incomingFolder(creator=None):
     """Where clients upload before calling /submit.
 
     Separate from ``submissions`` so that an abandoned or rejected upload never
-    sits among accepted work looking like part of the dataset. The sweeper
-    empties it; nothing downstream ever reads from it.
+    sits among accepted work looking like part of the dataset. Nothing downstream
+    ever reads from it, and ``maintenance.sweepIncoming`` discards whatever is
+    left here for longer than ``INCOMING_MAX_AGE_SECONDS``.
 
     The annotator group gets WRITE here and nowhere else. That is the whole
     reason this folder exists as a distinct object: Girder's chunked uploader

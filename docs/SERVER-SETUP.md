@@ -14,9 +14,10 @@ To hand annotators the client, build the extension package once per release:
 python slicer/build-extension.py     # -> dist/SegQueue-<version>-Slicer-5.8.zip
 ```
 
-They install it with **Extensions Manager -> Install from file**. Rebuild it
-after any change to `src/segqueue`, or their copy speaks an older wire protocol
-than this server.
+They install it with **Extensions Manager -> Install from file**, plus the
+**SegmentEditorExtraEffects** extension, which provides the *Draw tube* effect
+the module is built around. Rebuild the package after any change to
+`src/segqueue`, or their copy speaks an older wire protocol than this server.
 
 ---
 

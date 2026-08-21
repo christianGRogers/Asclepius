@@ -474,10 +474,17 @@ no Slicer needed to build it:</p>
 <span class="c"># -&gt; dist/SegQueue-0.1.0-Slicer-5.8.zip</span></code></pre>
 
 <p>Then each annotator: <b>Extensions Manager &rarr; Install from file</b>, pick
-the zip, restart, and open <b>Segmentation &rarr; SegQueue</b>. No pip install,
-no build tools, no admin rights and no internet access at install time &mdash; the
-module uses <code>requests</code>, which Slicer already ships, and the shared
-<code>segqueue</code> package is vendored into the archive.</p>
+the zip, restart, and open <b>Segmentation &rarr; SegQueue</b>. No pip install, no
+build tools and no admin rights &mdash; the module uses <code>requests</code>,
+which Slicer already ships, and the shared <code>segqueue</code> package is
+vendored into the archive.</p>
+
+<div class="warn"><b>One dependency: SegmentEditorExtraEffects.</b> It provides
+the <i>Draw tube</i> effect, which is the tool this module is built around.
+Install it from the Extensions Manager's <b>Install Extensions</b> tab on each
+annotator machine. The package declares the dependency, but a local <i>Install
+from file</i> does not resolve dependencies &mdash; so the panel checks at
+startup and names it if missing, and Paint still works meanwhile.</div>
 
 <div class="warn"><b>Rebuild after any change to <code>src/segqueue</code>.</b>
 The copy inside the archive is what annotators actually run. A stale one speaks
@@ -507,8 +514,8 @@ to thirty students:</p>
   project's segments appear already named and coloured, the view lands on the
   heart at CTA window/level, and any coronary mask the case carries is loaded
   ready to split.</li>
-  <li>Pick a vessel with <b>1&ndash;4</b>, pick a tool with <b>Q/W/E/R/T/Y</b>,
-  and paint.</li>
+  <li>Pick a vessel with <b>1&ndash;4</b>. Draw the artery as a tube with
+  <b>Q</b>, adjusting the radius as it tapers; tidy up with <b>W</b>.</li>
   <li><b>Validate &amp; submit.</b> Problems are listed in plain language before
   anything is uploaded. On success the local copy is deleted.</li>
 </ol>
@@ -527,17 +534,20 @@ hour.</p>
 
 <table>
   <tr><th>Control</th><th>What it does, and why it is there</th></tr>
-  <tr><td><b>1 &ndash; 4</b></td><td>Select the branch. Each button carries the vessel's colour, its one-line hint, and a tick once it has voxels in it — so "have I done the RCA yet" is answered by looking, not by clicking through segments. Built from the server's segment list, so a fifth branch is a settings change.</td></tr>
-  <tr><td><b>Q</b> Paint</td><td>Sphere brush, 3&nbsp;mm, sized in millimetres rather than screen pixels so it stays correct through the constant zooming this work involves.</td></tr>
-  <tr><td><b>E</b> Level tracing</td><td>Click inside the lumen and it traces the boundary on that slice. The fastest way through a well-opacified vessel.</td></tr>
-  <tr><td><b>R</b> Scissors</td><td>Cut away everything outside a drawn outline. This is how a copied whole tree gets trimmed down to one branch.</td></tr>
-  <tr><td><b>T</b> Islands</td><td>Keep the largest island, or delete a stray blob — the two most common cleanups.</td></tr>
-  <tr><td><i>Only paint inside that mask</i></td><td>Confines every effect to the case's existing coronary mask. A fast, sloppy stroke then still produces a clean vessel edge, which is what turns "split the tree" into minutes of work.</td></tr>
+  <tr><td><b>1 &ndash; 4</b></td><td>Select the branch. Each button carries the vessel's colour, its one-line hint, and a tick once it has voxels in it &mdash; so "have I done the RCA yet" is answered by looking, not by clicking through segments. Built from the server's segment list, so a fifth branch is a settings change.</td></tr>
+  <tr><td><b>Q</b> Draw tube</td><td><b>The main tool.</b> A coronary artery is a tube: click a handful of points down its centreline and the effect sweeps a tube along them. Faster than slice-by-slice painting, and far more consistent between annotators, because the cross-section is defined by one number instead of by whoever is holding the mouse.</td></tr>
+  <tr><td><i>Tube radius</i></td><td>Live. Vessels taper &mdash; a left main is around 2&nbsp;mm in radius and a distal LAD under 1 &mdash; so the radius has to change part-way down a vessel. Drag it while placing points and the preview reshapes with it. The value is remembered between sessions.</td></tr>
+  <tr><td><b>W</b> Paint</td><td>Touch up what the tube missed: an ostium, a bifurcation, a short branch that does not deserve its own tube. Sized in millimetres rather than screen pixels, so it stays the same size as you zoom.</td></tr>
+  <tr><td><i>Only paint inside that mask</i></td><td>Confines every effect to the case's existing coronary mask, when it has one. A fast, sloppy stroke then still produces a clean vessel edge.</td></tr>
   <tr><td><i>Only paint over opacified lumen</i></td><td>Restricts editing to 150&ndash;1000&nbsp;HU, so the brush cannot spill into myocardium or fat.</td></tr>
-  <tr><td><i>Add the whole mask to this vessel</i></td><td>Unions the entire pre-existing tree into the selected branch, to be trimmed with Scissors. Useful for whichever branch dominates the tree.</td></tr>
+  <tr><td><i>Add the whole mask to this vessel</i></td><td>Unions the entire pre-existing tree into the selected branch, to be trimmed down. Useful for whichever branch dominates the tree.</td></tr>
   <tr><td><i>Centre on heart</i> / <i>CTA window/level</i></td><td>Both are applied automatically when the case opens; the buttons put them back after the annotator has explored.</td></tr>
   <tr><td><i>Show in 3D</i></td><td>Builds a surface of what has been drawn. The fastest way to spot a branch that stops early or a stray blob. Helper masks are kept out of the 3D view, since a solid heart would hide the tree.</td></tr>
 </table>
+
+<p>Only these two effects get buttons. Erase, scissors, islands and the rest are
+still in the Segment Editor immediately below &mdash; they are simply not what a
+coronary needs often enough to occupy the top of the panel.</p>
 
 <p>Two behaviours are set for the annotator and not exposed: branches never
 overwrite each other (so painting the LCx cannot silently erase half the LAD),

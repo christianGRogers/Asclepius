@@ -68,9 +68,15 @@ scm git
 scmurl {homepage}
 scmrevision {revision}
 
-# No other extensions are required. The module talks to its server with
-# `requests`, which Slicer already ships, so there is nothing to pip install.
-depends NA
+# SegmentEditorExtraEffects provides "Draw tube", which is the tool this module
+# is built around: a coronary artery is a tube, and sweeping one along a few
+# centreline points is both faster and more consistent between annotators than
+# painting slice by slice. Everything else the module needs -- `requests` -- is
+# already in Slicer, so there is nothing to pip install.
+#
+# Note that "Install from file" does not resolve dependencies, so the module also
+# checks at runtime and says which extension to install.
+depends SegmentEditorExtraEffects
 
 build_subdirectory .
 

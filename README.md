@@ -545,8 +545,12 @@ work out which of twenty effects segments a 3 mm vessel.
 * **Four labelled buttons, keys 1–4**, to change branch — with a tick against
   each one that has voxels in it. Built from the server's segment list, so a
   fifth branch is a settings change.
-* **Tools that suit a coronary**, on one key each: paint with a 3 mm sphere
-  brush sized in millimetres, level tracing, scissors, islands.
+* **Two tools, not twenty.** A coronary artery is a tube, so the main tool is
+  *Draw tube* (**Q**): click a few points down the centreline, set the radius,
+  apply. The radius slider is live — vessels taper, and the preview follows the
+  slider while you are still placing points. *Paint* (**W**) fixes what the tube
+  missed, with a brush sized in millimetres so it survives zooming. Every other
+  effect is still in the Segment Editor below; none of them earns a button.
 * **Masking that makes fast painting safe.** Edits are confined to the existing
   coronary mask when the case has one, and to the opacified range (150–1000 HU)
   otherwise, so a sloppy stroke still leaves a clean lumen edge. Branches never
@@ -618,9 +622,14 @@ python slicer/build-extension.py     # -> dist/SegQueue-<version>-Slicer-5.8.zip
 ```
 
 In Slicer: **Extensions Manager → Install from file →** pick that zip → restart.
-No pip installs, no build tools, no admin rights, no internet access — the
-module uses `requests`, which Slicer already bundles, and the shared `segqueue`
-package is vendored into the archive.
+No pip installs, no build tools and no admin rights — the module uses `requests`,
+which Slicer already bundles, and the shared `segqueue` package is vendored into
+the archive.
+
+One dependency: **SegmentEditorExtraEffects**, which provides *Draw tube*.
+Install it from the Extensions Manager on each annotator machine. The package
+declares it, but a local *Install from file* does not resolve dependencies, so
+the panel also checks at startup and says so if it is missing.
 
 Two other routes work for development: add `slicer/SegQueue` to **Additional
 module paths** (Edit → Application Settings → Modules), or paste

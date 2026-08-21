@@ -95,10 +95,11 @@ HEARTBEAT_SECONDS = 300
 CTA_WINDOW = 800
 CTA_LEVEL = 300
 
-#: Sphere brush diameter in millimetres. A left main is 4-5 mm and a distal LAD
-#: under 2, so a 3 mm brush covers most of the tree in one pass without spilling
-#: into myocardium. The annotator can still change it in the effect's own panel.
-BRUSH_DIAMETER_MM = 3.0
+#: Sphere brush diameter in millimetres, for touching up what the tube missed.
+#: Smaller than the vessel on purpose: a brush wider than the lumen cannot be
+#: used to correct an edge, only to bury it.
+BRUSH_DIAMETER_MM = 1.5
+BRUSH_RANGE_MM = (0.25, 8.0)
 
 #: Editable intensity window, in HU. Opacified lumen sits well above 150 and
 #: below dense calcium; restricting paint to this range means a slightly sloppy
@@ -106,22 +107,44 @@ BRUSH_DIAMETER_MM = 3.0
 LUMEN_HU_MIN = 150
 LUMEN_HU_MAX = 1000
 
-#: Effects offered as one-click buttons, with their keyboard shortcut. Chosen
-#: for *this* task rather than exposing all twenty: level tracing and scissors
-#: are how a vessel actually gets segmented quickly, and islands is how a stray
-#: blob gets removed.
+#: The tube effect, from the SegmentEditorExtraEffects extension. Named as a
+#: constant because it is referenced in three places and is the one tool this
+#: whole panel is arranged around.
+TUBE_EFFECT = 'Draw tube'
+
+#: The extension that provides it. Declared as a dependency in the .s4ext too,
+#: but a local "Install from file" does not resolve dependencies, so the panel
+#: also has to say so at the moment it matters.
+TUBE_EXTENSION = 'SegmentEditorExtraEffects'
+
+#: Tube radius in millimetres, and the range the slider offers. A left main
+#: lumen is around 2 mm in radius and a distal LAD under 1, so the useful band is
+#: narrow and the default sits mid-vessel. The effect's own default is 1.0.
+TUBE_RADIUS_MM = 1.25
+TUBE_RADIUS_RANGE_MM = (0.25, 6.0)
+
+#: The two effects offered as buttons, with their keyboard shortcut.
+#:
+#: Deliberately two, not twenty. A coronary artery is a tube: clicking a handful
+#: of points down its centreline and letting the effect sweep a tube along them
+#: is both faster and more consistent between annotators than any amount of
+#: slice-by-slice painting -- and the radius is exactly the degree of freedom
+#: that matters, because vessels taper. Paint is here to fix what the tube got
+#: wrong, and nothing else earns a button. Every other effect is still one click
+#: away in the Segment Editor below.
 VESSEL_EFFECTS = (
-    ('Paint', 'Q', 'Paint the lumen. Sphere brush, sized for a coronary.'),
-    ('Erase', 'W', 'Erase from the active segment only.'),
-    ('Level tracing', 'E', 'Click inside the lumen to trace its boundary on this slice.'),
-    ('Scissors', 'R', 'Cut away everything outside (or inside) a drawn outline.'),
-    ('Islands', 'T', 'Keep the largest island, or remove a stray blob.'),
-    ('Smoothing', 'Y', 'Even out a jagged vessel wall.'),
+    (TUBE_EFFECT, 'Q',
+     'Click points down the middle of the vessel, adjust the radius, then Apply. '
+     'The radius can be changed while you are placing points -- the preview '
+     'follows it.'),
+    ('Paint', 'W', 'Touch up what the tube missed. Sphere brush, sized in mm.'),
 )
 
 #: Settings keys. Stored in Slicer's own QSettings so a returning annotator does
 #: not retype the server URL. The token is deliberately *not* stored -- see
 #: SegQueueClient's docstring.
+_SETTING_TUBE_RADIUS = "SegQueue/tubeRadiusMm"
+_SETTING_BRUSH = "SegQueue/brushDiameterMm"
 _SETTING_SERVER = "SegQueue/serverUrl"
 _SETTING_USER = "SegQueue/lastUser"
 _SETTING_CACHE = "SegQueue/cacheRoot"
@@ -949,13 +972,41 @@ class SegQueueWidget(ScriptedLoadableModuleWidget):
         layout.addWidget(self.segmentHintLabel)
 
         layout.addWidget(_caption("Tools"))
-        toolRow = qt.QGridLayout()
-        for i, (name, key, tip) in enumerate(VESSEL_EFFECTS):
+        toolRow = qt.QHBoxLayout()
+        self._toolButtons = {}
+        for name, key, tip in VESSEL_EFFECTS:
             button = qt.QPushButton("{}  ({})".format(name, key))
             button.setToolTip(tip)
             button.clicked.connect(lambda _checked=False, n=name: self.onEffect(n))
-            toolRow.addWidget(button, i // 3, i % 3)
+            toolRow.addWidget(button)
+            self._toolButtons[name] = button
         layout.addLayout(toolRow)
+
+        sizes = qt.QFormLayout()
+        self.tubeRadiusSlider = _mmSlider(
+            TUBE_RADIUS_RANGE_MM,
+            _storedFloat(_SETTING_TUBE_RADIUS, TUBE_RADIUS_MM),
+            "Radius of the tube swept along the points you place. Change it "
+            "mid-vessel as the artery tapers -- the preview updates as you drag.")
+        self.tubeRadiusSlider.connect("valueChanged(double)", self.onTubeRadiusChanged)
+        sizes.addRow("Tube radius:", self.tubeRadiusSlider)
+
+        self.brushSlider = _mmSlider(
+            BRUSH_RANGE_MM, _storedFloat(_SETTING_BRUSH, BRUSH_DIAMETER_MM),
+            "Diameter of the paint brush, in millimetres rather than screen "
+            "pixels, so it stays the same size as you zoom.")
+        self.brushSlider.connect("valueChanged(double)", self.onBrushChanged)
+        sizes.addRow("Brush diameter:", self.brushSlider)
+        layout.addLayout(sizes)
+
+        self.toolWarning = qt.QLabel()
+        self.toolWarning.setWordWrap(True)
+        self.toolWarning.setStyleSheet("QLabel { color: #8a3b00; }")
+        self.toolWarning.setVisible(False)
+        layout.addWidget(self.toolWarning)
+
+        layout.addWidget(_caption(
+            "Every other effect is still available in the Segment Editor below."))
 
         # -- the head start, when the case ships one
         self.seedGroup = qt.QGroupBox("This case comes with a coronary mask")
@@ -1326,6 +1377,7 @@ class SegQueueWidget(ScriptedLoadableModuleWidget):
         self.reworkLabel.setText(assignment.reviewer_comment or "")
         self._bindEditor(self.logic.segmentationNode, self.logic.volumeNode)
 
+        self._checkToolsAvailable()
         self.seedGroup.setVisible(bool(self.logic.seedSegmentId))
         self.jumpButton.setEnabled(bool(self.logic.regionSegmentId))
         slicer.app.layoutManager().setLayout(
@@ -1373,21 +1425,72 @@ class SegQueueWidget(ScriptedLoadableModuleWidget):
         self.segmentHintLabel.setText(spec.hint if spec else "")
 
     def onEffect(self, name):
-        """Activate an effect, pre-tuned for a coronary artery."""
+        """Activate an effect and apply this panel's sizes to it."""
         if self.editorWidget is None:
             return
         self.editorWidget.setActiveEffectByName(name)
         effect = self.editorWidget.activeEffect()
         if effect is None:
-            slicer.util.errorDisplay(
-                "This build of Slicer has no '{}' effect.".format(name))
+            self._reportMissingEffect(name)
             return
+
         if name == "Paint":
-            # A brush sized in millimetres rather than screen pixels, so it stays
-            # correct when the annotator zooms -- which they will, constantly.
-            effect.setParameter("BrushSphere", "1")
-            effect.setParameter("BrushDiameterIsRelative", "0")
-            effect.setParameter("BrushAbsoluteDiameter", str(BRUSH_DIAMETER_MM))
+            self._applyBrush(effect)
+        elif name == TUBE_EFFECT:
+            self._applyTubeRadius(effect)
+
+    def _reportMissingEffect(self, name):
+        """Say which extension is missing, rather than that something failed."""
+        if name == TUBE_EFFECT:
+            message = (
+                "The '{}' effect is not installed.\n\nIt comes from the {} "
+                "extension: Extensions Manager \u2192 Install Extensions \u2192 "
+                "search for it \u2192 restart Slicer.\n\nUntil then you can "
+                "still segment with Paint, it is just slower."
+            ).format(TUBE_EFFECT, TUBE_EXTENSION)
+        else:
+            message = "This build of Slicer has no '{}' effect.".format(name)
+        self.toolWarning.setText(message.replace("\n\n", " "))
+        self.toolWarning.setVisible(True)
+        slicer.util.errorDisplay(message)
+
+    def _applyBrush(self, effect):
+        # Sized in millimetres rather than screen pixels, so it stays correct
+        # when the annotator zooms -- which they will, constantly.
+        effect.setParameter("BrushSphere", "1")
+        effect.setParameter("BrushDiameterIsRelative", "0")
+        effect.setParameter("BrushAbsoluteDiameter", str(self.brushSlider.value))
+
+    def _applyTubeRadius(self, effect):
+        """Push the slider's radius into the tube effect.
+
+        The radius is not a scripted-effect parameter -- it lives on the
+        effect's own logic object, and its spin box is what keeps the two in
+        step. Writing the spin box rather than the logic attribute is therefore
+        deliberate: it updates the effect's visible control *and* triggers the
+        preview redraw, so dragging this slider reshapes the tube already on
+        screen. Setting ``logic.radius`` alone would change the next apply and
+        nothing the annotator can see.
+        """
+        try:
+            effect.self().radiusSpinBox.value = float(self.tubeRadiusSlider.value)
+            return True
+        except AttributeError:
+            # A future version of the effect that renamed its control. The tube
+            # still works at its own default; only this slider stops steering it.
+            return False
+
+    def onTubeRadiusChanged(self, value):
+        qt.QSettings().setValue(_SETTING_TUBE_RADIUS, float(value))
+        effect = self.editorWidget.activeEffect() if self.editorWidget else None
+        if effect is not None and effect.name == TUBE_EFFECT:
+            self._applyTubeRadius(effect)
+
+    def onBrushChanged(self, value):
+        qt.QSettings().setValue(_SETTING_BRUSH, float(value))
+        effect = self.editorWidget.activeEffect() if self.editorWidget else None
+        if effect is not None and effect.name == "Paint":
+            self._applyBrush(effect)
 
     def onMaskingChanged(self):
         """Apply the two masks that make sloppy-but-fast painting safe."""
@@ -1451,6 +1554,28 @@ class SegQueueWidget(ScriptedLoadableModuleWidget):
         effect.self().onApply()
         self.editorWidget.setActiveEffectByName("")
         self._updateChecklist()
+
+    def _checkToolsAvailable(self):
+        """Flag a missing tube effect on case open, not on first click.
+
+        An annotator who discovers the main tool is absent halfway through their
+        first case has already wasted the part of the session where they were
+        most willing to ask for help.
+        """
+        if self.editorWidget is None:
+            return
+        available = list(self.editorWidget.availableEffectNames())
+        missing = TUBE_EFFECT not in available
+        button = self._toolButtons.get(TUBE_EFFECT)
+        if button is not None:
+            button.setEnabled(not missing)
+        if missing:
+            self.toolWarning.setText(
+                "The '{}' effect is missing. Install the {} extension "
+                "(Extensions Manager \u2192 Install Extensions) and restart. "
+                "Paint still works meanwhile.".format(TUBE_EFFECT, TUBE_EXTENSION))
+        self.toolWarning.setVisible(missing)
+        self.tubeRadiusSlider.setEnabled(not missing)
 
     def onJumpToHeart(self):
         if self.logic is not None and not self.logic.jumpToHeart():
@@ -1760,6 +1885,25 @@ def _problemsHtml(problems):
         lines.append("<span style='color:{}'>&bull; {}</span>".format(
             color, _escape(problem.message)))
     return "<br>".join(lines)
+
+
+def _mmSlider(rangeMm, value, tooltip):
+    """A millimetre slider with a spin box beside it, for a physical size."""
+    slider = ctk.ctkSliderWidget()
+    slider.minimum, slider.maximum = rangeMm
+    slider.singleStep = 0.05
+    slider.decimals = 2
+    slider.suffix = " mm"
+    slider.value = max(rangeMm[0], min(rangeMm[1], float(value)))
+    slider.setToolTip(tooltip)
+    return slider
+
+
+def _storedFloat(key, default):
+    try:
+        return float(slicer.util.settingsValue(key, str(default)))
+    except (TypeError, ValueError):
+        return default
 
 
 def _caption(text):

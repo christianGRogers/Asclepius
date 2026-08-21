@@ -468,10 +468,10 @@ than writing subtly wrong data for a month before anyone notices.
 
 ## 12. Known gaps
 
-- **No export to the training layout.** Approved submissions sit in the
-  assetstore as label volumes on the source grid — the right contents — but
-  reshaping them into the `<case>/segmentations/` layout `segtrain convert` reads
-  is manual today.
+- **The export has not been round-tripped.** `segqueue-export` writes approved
+  submissions into the `<case>/segmentations/` layout `segtrain convert` reads,
+  and is unit-tested — but no tree produced from real human segmentations has
+  been fed to `segtrain convert` yet.
 - **The Slicer panel has been driven against a live server, but not by a human.**
   The packaged extension installs and loads in a real Slicer 5.8.1; logging in,
   claiming a case, downloading it with its heart and coronary masks, loading all

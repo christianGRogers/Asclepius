@@ -53,7 +53,13 @@ python tests/segqueue_e2e.py --url http://localhost:8099 # expect 34 passed, 0 f
 
 ## 3. Tasks
 
-Ordered by what blocks the project. T1 and T2 are operational; T3 and T4 are code.
+Ordered by what blocks the project. T1 and T2 are operational.
+
+> **T3 and T4 were completed in `2951b7c`, `3b40ce5` and `cc9836f`** —
+> `segqueue-export` exists, and the drop box is swept. They are kept below,
+> struck through, because the acceptance criteria have not been run against real
+> approved work yet: nobody has exported a tree and fed it to `segtrain convert`.
+> That check is now part of T5.
 
 ### T1 — Deploy to the real host *(blocks everything)*
 
@@ -93,7 +99,7 @@ Consider a `--refresh-geometry` mode that repairs already-stored cases in place
 rather than requiring a re-import. Not built; be careful with assignments in
 flight.
 
-### T3 — Export approved work into the training layout *(the missing feature)*
+### ~~T3 — Export approved work into the training layout~~ *(done — verify)*
 
 This is the one thing that stops the platform being end-to-end useful. Approved
 submissions sit in the assetstore as label volumes on the source grid — the right
@@ -135,7 +141,7 @@ Notes that will save you time:
 **Acceptance:** `segtrain index --root <out>` then `segtrain convert` runs
 without geometry-mismatch or missing-structure errors on the exported tree.
 
-### T4 — Empty the incoming drop box *(real bug)*
+### ~~T4 — Empty the incoming drop box~~ *(done — verify)*
 
 `utils.incomingFolder`'s docstring says *"The sweeper empties it; nothing
 downstream ever reads from it."* **Nothing empties it.** `maintenance.sweep` only
@@ -153,7 +159,7 @@ in `rest/queue.py`'s `submit`). Guard against deleting an upload in flight.
 folder, sweeps, and asserts only the old one is gone. Fix the docstring either
 way — right now it documents behaviour that does not exist.
 
-### T5 — Prove the QA scoring path on real volumes
+### T5 — Prove the QA scoring path, and the exporter, on real data
 
 `girder_segqueue/scoring.py` computes Dice and HD95 for gold and duplicate
 submissions via `segtrain.metrics`. The metric code is unit-tested; **the path
@@ -170,6 +176,11 @@ array order. If HD95 looks wrong along one axis only, that is where to look.
 
 **Acceptance:** a gold submission gets a `mean_dice`, and one deliberately poor
 segmentation is flagged `needsReview` by falling under `gold_dice_flag` (0.70).
+
+Then close out T3 with the same real work: `segqueue-export --out <tree>`,
+`segtrain index --root <tree>`, `segtrain convert`. The exporter is written and
+unit-tested; what has not happened is a round trip from a human's segmentation to
+a training set.
 
 ### T6 — Test the restore, not just the backup
 

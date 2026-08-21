@@ -118,6 +118,12 @@ TUBE_EFFECT = 'Draw tube'
 #: also has to say so at the moment it matters.
 TUBE_EXTENSION = 'SegmentEditorExtraEffects'
 
+#: A hidden segment the tube is applied into before being merged. It exists
+#: because Draw tube *replaces* the selected segment's contents rather than
+#: adding to them -- see ``onApplyTube``. Never exported: the submission is built
+#: from an explicit list of the project's own segments.
+TUBE_SCRATCH_SEGMENT = "~ tube section (working)"
+
 #: Tube radius in millimetres, and the range the slider offers. A left main
 #: lumen is around 2 mm in radius and a distal LAD under 1, so the useful band is
 #: narrow and the default sits mid-vessel. The effect's own default is 1.0.
@@ -135,9 +141,10 @@ TUBE_RADIUS_RANGE_MM = (0.25, 6.0)
 #: away in the Segment Editor below.
 VESSEL_EFFECTS = (
     (TUBE_EFFECT, 'Q',
-     'Click points down the middle of the vessel, then Apply (A). Point '
-     'placement starts as soon as you press this. The radius can be changed '
-     'while you are placing -- the preview follows it.'),
+     'Click points down the middle of the vessel, then Apply (A). Placement '
+     'starts as soon as you press this, and Apply leaves you ready for the next '
+     'section -- so a tapering artery is drawn as several sections, each with '
+     'its own radius, all adding into the same vessel.'),
     ('Paint', 'W', 'Touch up what the tube missed. Sphere brush, sized in mm.'),
 )
 
@@ -402,8 +409,32 @@ class SegQueueLogic(ScriptedLoadableModuleLogic):
             display.SetSegmentOpacity3D(segmentId, 0.0)
         return segmentId
 
+    def scratchSegmentId(self):
+        """A hidden segment to apply a tube into, created on first use.
+
+        Draw tube replaces whatever is in the selected segment. Applying
+        straight into a vessel therefore erases every section drawn before it,
+        which makes a tapering artery -- wide proximally, narrow distally --
+        impossible to build. Applying into this instead, then merging, turns
+        each apply into an addition.
+        """
+        segmentId = self.segmentIdFor(TUBE_SCRATCH_SEGMENT)
+        if segmentId:
+            return segmentId
+        segmentation = self.segmentationNode.GetSegmentation()
+        segmentId = segmentation.AddEmptySegment(
+            TUBE_SCRATCH_SEGMENT, TUBE_SCRATCH_SEGMENT, [0.6, 0.6, 0.6])
+        display = self.segmentationNode.GetDisplayNode()
+        if display is not None:
+            # Invisible: it holds one section for a fraction of a second, and a
+            # grey blob flashing over the vessel would be pure noise.
+            display.SetSegmentVisibility(segmentId, False)
+        return segmentId
+
+
     def helperIds(self):
-        return [s for s in (self.seedSegmentId, self.regionSegmentId) if s]
+        return [s for s in (self.seedSegmentId, self.regionSegmentId,
+                            self.segmentIdFor(TUBE_SCRATCH_SEGMENT)) if s]
 
     # ------------------------------------------------------------- viewing
 
@@ -977,8 +1008,9 @@ class SegQueueWidget(ScriptedLoadableModuleWidget):
 
         self.applyTubeButton = qt.QPushButton("Apply tube  (A)")
         self.applyTubeButton.setToolTip(
-            "Turn the points you placed into part of the selected vessel, then "
-            "start the next stretch. Needs at least two points.")
+            "Add the section you just placed to the selected vessel, then start "
+            "the next one. Sections accumulate, so draw a wide one proximally "
+            "and narrower ones as the artery tapers. Needs at least two points.")
         self.applyTubeButton.clicked.connect(self.onApplyTube)
         layout.addWidget(self.applyTubeButton)
 
@@ -1509,18 +1541,31 @@ class SegQueueWidget(ScriptedLoadableModuleWidget):
         return effect
 
     def onApplyTube(self):
-        """Turn the placed points into voxels, then arm the next vessel.
+        """Add the placed section to the selected vessel, then start the next.
 
-        The effect's own Apply only writes a log line when there are too few
-        points, which from the annotator's side is indistinguishable from the
-        button not working. And its Apply resets placement mode, so without
-        re-arming here every vessel after the first would need two extra clicks.
+        Draw tube applies with ``ModificationModeSet``: it *replaces* the
+        selected segment rather than adding to it. Applied directly, a second
+        section would erase the first, and a coronary artery cannot be drawn as
+        one tube -- it tapers, so it takes a wide proximal section and
+        progressively narrower ones down the vessel.
+
+        So the tube goes into a hidden scratch segment, which is then unioned
+        into the vessel and emptied. Each apply becomes an addition, and the
+        radius slider is free to change between sections. Slicer's own Undo
+        still covers the whole thing, because both steps save undo state.
         """
         effect = self._tubeEffect()
         if effect is None:
             slicer.util.errorDisplay(
                 "Select the {} tool first (Q).".format(TUBE_EFFECT))
             return
+
+        active = next((n for n, b in self._segmentButtons.items() if b.checked), None)
+        target = self.logic.segmentIdFor(active) if active else None
+        if target is None:
+            slicer.util.errorDisplay("Choose a vessel first (1-4).")
+            return
+
         try:
             placed = effect.self().getNumberOfDefinedControlPoints()
         except AttributeError:
@@ -1533,10 +1578,50 @@ class SegQueueWidget(ScriptedLoadableModuleWidget):
             return
 
         with _busy():
+            scratch = self.logic.scratchSegmentId()
+            self.editorNode.SetSelectedSegmentID(scratch)
             effect.self().onApply()
-            self._setTubePlaceMode(effect, True)
-            self._applyTubeRadius(effect)
+
+            self.editorNode.SetSelectedSegmentID(target)
+            merged = self._logicalOp("UNION", scratch)
+            # Emptied, not deleted. Deleting it is tidier -- it leaves no extra
+            # row in the segment list -- but removing a segment reshuffles the
+            # segmentation's labelmap layers, and measurably cost voxels from
+            # sections already merged: three tapering sections came to 620 voxels
+            # deleted against 810 emptied. An extra clearly-labelled empty row is
+            # a much smaller price than silently losing part of a vessel.
+            self._logicalOp("CLEAR", None, segmentId=scratch)
+
+            self.editorNode.SetSelectedSegmentID(target)
+            self.editorWidget.setActiveEffectByName(TUBE_EFFECT)
+            effect = self.editorWidget.activeEffect()
+            if effect is not None:
+                self._applyTubeRadius(effect)
+                self._setTubePlaceMode(effect, True)
+
+        if not merged:
+            slicer.util.errorDisplay(
+                "Could not merge the section into {!r}. The 'Logical operators' "
+                "effect is missing from this Slicer.".format(active))
         self._updateChecklist()
+
+    def _logicalOp(self, operation, modifierSegmentId, segmentId=None):
+        """Run one Logical operators apply. Returns False if the effect is absent."""
+        if segmentId is not None:
+            self.editorNode.SetSelectedSegmentID(segmentId)
+        self.editorWidget.setActiveEffectByName("Logical operators")
+        effect = self.editorWidget.activeEffect()
+        if effect is None:
+            return False
+        effect.setParameter("Operation", operation)
+        if modifierSegmentId:
+            effect.setParameter("ModifierSegmentID", modifierSegmentId)
+        # Without this the merge is clipped by whatever mask is in force -- the
+        # coronary seed, or the intensity window -- and a section drawn slightly
+        # outside either would be silently trimmed on the way in.
+        effect.setParameter("BypassMasking", "1")
+        effect.self().onApply()
+        return True
 
     def onTubeRadiusChanged(self, value):
         qt.QSettings().setValue(_SETTING_TUBE_RADIUS, float(value))
@@ -1598,18 +1683,10 @@ class SegQueueWidget(ScriptedLoadableModuleWidget):
             return
 
         self.onSelectSegment(active)
-        self.editorWidget.setActiveEffectByName("Logical operators")
-        effect = self.editorWidget.activeEffect()
-        if effect is None:
+        if not self._logicalOp("UNION", self.logic.seedSegmentId):
             slicer.util.errorDisplay(
                 "This build of Slicer has no 'Logical operators' effect.")
             return
-        effect.setParameter("Operation", "UNION")
-        effect.setParameter("ModifierSegmentID", self.logic.seedSegmentId)
-        # Without this the copy is clipped by the very mask being copied from,
-        # which silently does nothing and looks like a broken button.
-        effect.setParameter("BypassMasking", "1")
-        effect.self().onApply()
         self.editorWidget.setActiveEffectByName("")
         self._updateChecklist()
 

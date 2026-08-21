@@ -514,8 +514,9 @@ to thirty students:</p>
   project's segments appear already named and coloured, the view lands on the
   heart at CTA window/level, and any coronary mask the case carries is loaded
   ready to split.</li>
-  <li>Pick a vessel with <b>1&ndash;4</b>. Draw the artery as a tube with
-  <b>Q</b>, adjusting the radius as it tapers; tidy up with <b>W</b>.</li>
+  <li>Pick a vessel with <b>1&ndash;4</b>. Draw the artery with <b>Q</b> as a
+  series of tube sections, narrowing the radius as it tapers and pressing
+  <b>A</b> after each; tidy up with <b>W</b>.</li>
   <li><b>Validate &amp; submit.</b> Problems are listed in plain language before
   anything is uploaded. On success the local copy is deleted.</li>
 </ol>
@@ -536,7 +537,8 @@ hour.</p>
   <tr><th>Control</th><th>What it does, and why it is there</th></tr>
   <tr><td><b>1 &ndash; 4</b></td><td>Select the branch. Each button carries the vessel's colour, its one-line hint, and a tick once it has voxels in it &mdash; so "have I done the RCA yet" is answered by looking, not by clicking through segments. Built from the server's segment list, so a fifth branch is a settings change.</td></tr>
   <tr><td><b>Q</b> Draw tube</td><td><b>The main tool.</b> A coronary artery is a tube: click a handful of points down its centreline and the effect sweeps a tube along them. Faster than slice-by-slice painting, and far more consistent between annotators, because the cross-section is defined by one number instead of by whoever is holding the mouse.</td></tr>
-  <tr><td><i>Tube radius</i></td><td>Live. Vessels taper &mdash; a left main is around 2&nbsp;mm in radius and a distal LAD under 1 &mdash; so the radius has to change part-way down a vessel. Drag it while placing points and the preview reshapes with it. The value is remembered between sessions.</td></tr>
+  <tr><td><b>A</b> Apply tube</td><td>Adds the section you placed to the vessel and arms the next one. <b>Sections accumulate</b>, which is what lets one artery be drawn as several: a wide section proximally, narrower ones as it tapers. (The effect on its own replaces the segment each time, which would erase every section but the last.)</td></tr>
+  <tr><td><i>Tube radius</i></td><td>Live. Vessels taper &mdash; a left main is around 2&nbsp;mm in radius and a distal LAD under 1 &mdash; so change it between sections, or while placing points, and the preview reshapes with it. Remembered between sessions.<br><br>Below about 0.75&nbsp;mm the tube is thinner than a voxel on 1.5&nbsp;mm data and starts to render patchily; finish those distal stretches with Paint.</td></tr>
   <tr><td><b>W</b> Paint</td><td>Touch up what the tube missed: an ostium, a bifurcation, a short branch that does not deserve its own tube. Sized in millimetres rather than screen pixels, so it stays the same size as you zoom.</td></tr>
   <tr><td><i>Only paint inside that mask</i></td><td>Confines every effect to the case's existing coronary mask, when it has one. A fast, sloppy stroke then still produces a clean vessel edge.</td></tr>
   <tr><td><i>Only paint over opacified lumen</i></td><td>Restricts editing to 150&ndash;1000&nbsp;HU, so the brush cannot spill into myocardium or fat.</td></tr>

@@ -547,10 +547,12 @@ work out which of twenty effects segments a 3 mm vessel.
   fifth branch is a settings change.
 * **Two tools, not twenty.** A coronary artery is a tube, so the main tool is
   *Draw tube* (**Q**): click a few points down the centreline, set the radius,
-  apply. The radius slider is live — vessels taper, and the preview follows the
-  slider while you are still placing points. *Paint* (**W**) fixes what the tube
-  missed, with a brush sized in millimetres so it survives zooming. Every other
-  effect is still in the Segment Editor below; none of them earns a button.
+  **Apply** (**A**). Sections *accumulate* into the vessel, so an artery is drawn
+  as several — wide proximally, narrower as it tapers — each with its own radius,
+  and Apply leaves you armed for the next one. The radius slider is live: the
+  preview follows it while you are still placing points. *Paint* (**W**) fixes
+  what the tube missed, with a brush sized in millimetres so it survives zooming.
+  Every other effect is still in the Segment Editor below; none earns a button.
 * **Masking that makes fast painting safe.** Edits are confined to the existing
   coronary mask when the case has one, and to the opacified range (150–1000 HU)
   otherwise, so a sloppy stroke still leaves a clean lumen edge. Branches never

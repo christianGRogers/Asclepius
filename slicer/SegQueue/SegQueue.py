@@ -35,6 +35,7 @@ import traceback
 import ctk
 import qt
 import slicer
+import vtk
 from slicer.ScriptedLoadableModule import (
     ScriptedLoadableModule,
     ScriptedLoadableModuleLogic,
@@ -134,9 +135,9 @@ TUBE_RADIUS_RANGE_MM = (0.25, 6.0)
 #: away in the Segment Editor below.
 VESSEL_EFFECTS = (
     (TUBE_EFFECT, 'Q',
-     'Click points down the middle of the vessel, adjust the radius, then Apply. '
-     'The radius can be changed while you are placing points -- the preview '
-     'follows it.'),
+     'Click points down the middle of the vessel, then Apply (A). Point '
+     'placement starts as soon as you press this. The radius can be changed '
+     'while you are placing -- the preview follows it.'),
     ('Paint', 'W', 'Touch up what the tube missed. Sphere brush, sized in mm.'),
 )
 
@@ -621,23 +622,34 @@ class SegQueueLogic(ScriptedLoadableModuleLogic):
         a volume that overlays the source voxel for voxel, which is what both the
         QA scorer and the training conversion want.
 
-        **Not the working node.** The scene also holds the heart mask and the
-        coronary seed, which came from the source dataset and must never be
-        submitted as if an annotator had drawn them. Rather than exporting
-        everything and filtering afterwards -- where one renamed segment would
-        leak an entire pre-existing tree into the training set, silently, and
-        look like excellent work -- the protocol's segments are copied into a
-        throwaway segmentation and that is what gets exported. Anything not in
-        the project's list is structurally incapable of reaching the server.
+        **Named segments, not everything in the scene.** The scene also holds the
+        heart mask and the coronary seed, which came from the source dataset and
+        must never be submitted as if an annotator had drawn them. Passing an
+        explicit id list is what excludes them -- structurally, not by
+        convention.
+
+        That id list is also load-bearing for a subtler reason. A segmentation
+        keeps its binary labelmaps in *layers*, and Slicer adds a layer whenever
+        segments might overlap -- which Draw tube does on every apply. Copying
+        segments into a scratch segmentation and exporting that silently drops
+        everything above layer 0, so the second vessel an annotator draws comes
+        out empty. ``ExportSegmentsToLabelmapNode`` walks the layers properly.
+        The symptom was a validation failure insisting a vessel was empty while
+        it was plainly on screen.
 
         Returns ``(voxelCounts, sourceGeometry, segmentationGeometry)``.
         """
-        exportNode = self._protocolOnlySegmentation()
+        segmentIds = vtk.vtkStringArray()
+        for spec in self.project.segments:
+            segmentId = self.segmentIdFor(spec.name)
+            if segmentId:
+                segmentIds.InsertNextValue(segmentId)
+
         labelmapNode = slicer.mrmlScene.AddNewNodeByClass(
             "vtkMRMLLabelMapVolumeNode", "SegQueueExport")
         try:
-            ok = slicer.modules.segmentations.logic().ExportAllSegmentsToLabelmapNode(
-                exportNode, labelmapNode,
+            ok = slicer.modules.segmentations.logic().ExportSegmentsToLabelmapNode(
+                self.segmentationNode, segmentIds, labelmapNode, self.volumeNode,
                 slicer.vtkSegmentation.EXTENT_REFERENCE_GEOMETRY)
             if not ok:
                 raise RuntimeError(
@@ -662,36 +674,17 @@ class SegQueueLogic(ScriptedLoadableModuleLogic):
             return counts, self.sourceGeometry(), _geometryOf(labelmapNode)
         finally:
             slicer.mrmlScene.RemoveNode(labelmapNode)
-            slicer.mrmlScene.RemoveNode(exportNode)
-
-    def _protocolOnlySegmentation(self):
-        """A throwaway segmentation holding only the project's own segments."""
-        exportNode = slicer.mrmlScene.AddNewNodeByClass(
-            "vtkMRMLSegmentationNode", "SegQueueExportSource")
-        exportNode.SetReferenceImageGeometryParameterFromVolumeNode(self.volumeNode)
-        source = self.segmentationNode.GetSegmentation()
-        target = exportNode.GetSegmentation()
-
-        for spec in self.project.segments:
-            segmentId = self.segmentIdFor(spec.name)
-            if segmentId is None:
-                continue
-            target.CopySegmentFromSegmentation(source, segmentId, False)
-            copied = target.GetSegment(target.GetSegmentIdBySegmentName(spec.name))
-            if copied is not None:
-                try:
-                    copied.SetLabelValue(int(spec.label))
-                except AttributeError:  # pragma: no cover - old Slicer
-                    pass
-        return exportNode
 
     def _assertNoStrayLabels(self, labelmapNode):
         """Refuse to submit a volume containing a label the protocol does not name.
 
-        The copy above should make this impossible. It is checked anyway because
-        the failure it guards against -- shipping the dataset's own coronary mask
-        back as though a student had drawn it -- would corrupt the training set
-        while every dashboard number looked healthy.
+        The explicit id list should make this impossible. It is checked anyway
+        because the failure it guards against -- shipping the dataset's own
+        coronary mask back as though a student had drawn it -- would corrupt the
+        training set while every dashboard number looked healthy. It also catches
+        a subtler drift: if a future Slicer numbered exported segments by
+        position rather than by each segment's label value, a project whose
+        labels are not 1..N would quietly relabel every vessel.
         """
         array = slicer.util.arrayFromVolume(labelmapNode)
         expected = {0} | {int(s.label) for s in self.project.segments}
@@ -981,6 +974,13 @@ class SegQueueWidget(ScriptedLoadableModuleWidget):
             toolRow.addWidget(button)
             self._toolButtons[name] = button
         layout.addLayout(toolRow)
+
+        self.applyTubeButton = qt.QPushButton("Apply tube  (A)")
+        self.applyTubeButton.setToolTip(
+            "Turn the points you placed into part of the selected vessel, then "
+            "start the next stretch. Needs at least two points.")
+        self.applyTubeButton.clicked.connect(self.onApplyTube)
+        layout.addWidget(self.applyTubeButton)
 
         sizes = qt.QFormLayout()
         self.tubeRadiusSlider = _mmSlider(
@@ -1389,7 +1389,11 @@ class SegQueueWidget(ScriptedLoadableModuleWidget):
 
         self.caseBox.collapsed = False
         self.vesselBox.collapsed = False
-        self.editorBox.collapsed = True
+        # Left open on purpose. Draw tube's Apply button, and its point add and
+        # delete controls, live in the effect's own options frame inside this
+        # widget -- collapsing it leaves the annotator with a tool they can
+        # start and cannot finish.
+        self.editorBox.collapsed = False
         self._updateEnabled()
 
     def _bindEditor(self, segmentationNode, volumeNode):
@@ -1438,6 +1442,13 @@ class SegQueueWidget(ScriptedLoadableModuleWidget):
             self._applyBrush(effect)
         elif name == TUBE_EFFECT:
             self._applyTubeRadius(effect)
+            # The effect's activate() explicitly turns point placement *off*,
+            # expecting the annotator to arm it from its own options frame. Ours
+            # is a one-press button, so pressing it has to mean "I am about to
+            # place points" -- otherwise the tool looks broken: it lights up and
+            # clicking the image does nothing.
+            self._setTubePlaceMode(effect, True)
+            self.editorBox.collapsed = False
 
     def _reportMissingEffect(self, name):
         """Say which extension is missing, rather than that something failed."""
@@ -1479,6 +1490,53 @@ class SegQueueWidget(ScriptedLoadableModuleWidget):
             # A future version of the effect that renamed its control. The tube
             # still works at its own default; only this slider stops steering it.
             return False
+
+    def _setTubePlaceMode(self, effect, enabled):
+        """Arm or disarm control-point placement for the tube effect."""
+        try:
+            effect.self().fiducialPlacementToggle.setPlaceModeEnabled(bool(enabled))
+            return True
+        except AttributeError:
+            return False
+
+    def _tubeEffect(self):
+        """The active tube effect, or None."""
+        if self.editorWidget is None:
+            return None
+        effect = self.editorWidget.activeEffect()
+        if effect is None or effect.name != TUBE_EFFECT:
+            return None
+        return effect
+
+    def onApplyTube(self):
+        """Turn the placed points into voxels, then arm the next vessel.
+
+        The effect's own Apply only writes a log line when there are too few
+        points, which from the annotator's side is indistinguishable from the
+        button not working. And its Apply resets placement mode, so without
+        re-arming here every vessel after the first would need two extra clicks.
+        """
+        effect = self._tubeEffect()
+        if effect is None:
+            slicer.util.errorDisplay(
+                "Select the {} tool first (Q).".format(TUBE_EFFECT))
+            return
+        try:
+            placed = effect.self().getNumberOfDefinedControlPoints()
+        except AttributeError:
+            placed = 2  # unknown build; let the effect decide
+        if placed < 2:
+            slicer.util.errorDisplay(
+                "Place at least two points down the middle of the vessel "
+                "before applying.\n\nClick along the artery in a slice view; "
+                "the tube follows the points.")
+            return
+
+        with _busy():
+            effect.self().onApply()
+            self._setTubePlaceMode(effect, True)
+            self._applyTubeRadius(effect)
+        self._updateChecklist()
 
     def onTubeRadiusChanged(self, value):
         qt.QSettings().setValue(_SETTING_TUBE_RADIUS, float(value))
@@ -1576,6 +1634,7 @@ class SegQueueWidget(ScriptedLoadableModuleWidget):
                 "Paint still works meanwhile.".format(TUBE_EFFECT, TUBE_EXTENSION))
         self.toolWarning.setVisible(missing)
         self.tubeRadiusSlider.setEnabled(not missing)
+        self.applyTubeButton.setEnabled(not missing)
 
     def onJumpToHeart(self):
         if self.logic is not None and not self.logic.jumpToHeart():
@@ -1623,6 +1682,7 @@ class SegQueueWidget(ScriptedLoadableModuleWidget):
             bindings.append((str(i), lambda index=i - 1: self._selectByIndex(index)))
         for name, key, _tip in VESSEL_EFFECTS:
             bindings.append((key, lambda n=name: self.onEffect(n)))
+        bindings.append(("A", self.onApplyTube))
 
         for key, handler in bindings:
             shortcut = qt.QShortcut(slicer.util.mainWindow())

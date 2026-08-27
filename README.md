@@ -10,9 +10,11 @@ Training runs on [SciNet](https://www.scinet.utoronto.ca/)'s Trillium
 supercomputer — see [Running on SciNet](#running-on-scinet) and
 [Acknowledging SciNet](#acknowledging-scinet).
 
-> **The training plan is being rewritten.** Class schema, target spacing, fold
-> scheme, loss and evaluation protocol are all currently unset — see
-> `docs/PLAN-STATUS.md`. The retired plan is preserved on the `plan-v1` branch.
+> **The training plan is in [`docs/TRAINING-PLAN.md`](docs/TRAINING-PLAN.md):**
+> one-stage nnU-Net `3d_fullres` at native spacing, no cascade, no heart crop,
+> patch sized against the H100's 80 GB, binary model first. The class schema and
+> fold scheme are still open there. The retired previous plan is preserved on
+> the `plan-v1` branch.
 
 ---
 
@@ -328,8 +330,8 @@ server path, and never accumulate data — the local copy is deleted the moment 
 server confirms the submission.
 
 The structure list is fixed by the server and obeyed by the extension, so an
-annotator cannot invent or rename a segment. **Which structures** is a training
-plan decision and is currently unset — see `docs/PLAN-STATUS.md`.
+annotator cannot invent or rename a segment. **Which structures** is the class
+schema — still open in [`docs/TRAINING-PLAN.md`](docs/TRAINING-PLAN.md).
 
 ### The data, and what the presegmentation buys
 
@@ -563,8 +565,8 @@ them.
 train/val overlap or test leakage, and preview cases are checked to be genuinely
 held out.
 
-> **Split ratios, scheme and stratification are part of the training plan and are
-> currently unset.** See `docs/PLAN-STATUS.md`.
+> **Split ratios, scheme and stratification are still open in the training
+> plan.** See [`docs/TRAINING-PLAN.md`](docs/TRAINING-PLAN.md).
 
 ## Tests
 

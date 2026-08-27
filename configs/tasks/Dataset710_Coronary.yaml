@@ -1,23 +1,40 @@
-# Coronary task. The training plan that populated this file has been retired --
-# see docs/PLAN-STATUS.md; the previous version is on branch `plan-v1`.
+# Coronary task. The plan behind these values is docs/TRAINING-PLAN.md; the
+# retired previous plan is on branch `plan-v1`.
 #
-# The values below are placeholders chosen to keep the pipeline loadable, NOT
-# plan decisions. Every one of them is open: class schema, target spacing and
-# whether a floor is enforced, configuration, patch size against the H100's
-# 80 GB, schedule, and fold scheme.
+# Decided there: `3d_fullres` at native spacing, no cascade, no heart crop, and
+# a patch budget sized against the H100's 80 GB -- plan with:
+#
+#     segtrain plan --task 710 --gpu-mem 70
+#
+# and check three things in the printout before submitting anything: the patch
+# covers >= 12.5% of the median image shape (so no cascade is planned), the
+# target spacing came out native rather than dragged coarse by thick-slice
+# outliers, and batch size is 2.
+#
+# Still open there, and deliberately unset here: the class schema (label_set is
+# a one-class placeholder until it is decided -- the binary lumen model trains
+# against exactly this), the fold scheme, and any loss beyond the defaults.
 
 dataset_id: 710
 dataset_name: Coronary
 
+# Placeholder until the class schema is decided (docs/TRAINING-PLAN.md, "Still
+# open"). One class is what the source ImageCAS masks contain, so the binary
+# stage of the plan's sequence trains against this as-is.
 label_set: placeholder
 
-# `native` = let nnU-Net's median-spacing rule choose. This is the absence of a
-# decision, not a decision. No resolution floor is declared.
+# Decided: nnU-Net's median-spacing rule, on a near-isotropic ~0.35 mm cohort.
+# No resolution floor is set yet; revisit if the fingerprint shows thick-slice
+# outliers dragging the median.
 spacing: native
 
+# Decided: full resolution end to end. Never 3d_cascade_fullres -- its low-res
+# first stage downsamples distal branches below their own diameter.
 configuration: 3d_fullres
 trainer: nnUNetTrainer_segtrain
 plans_name: segtrainPlans_coronary
 
 epochs: 1000
+
+# Fold scheme is open; fold 0 keeps the chain testable.
 folds: [0]

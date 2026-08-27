@@ -1,12 +1,13 @@
 # Training plan: status
 
-The previous training plan has been retired. It is preserved in full on the
-**`plan-v1`** branch (`git show plan-v1:README.md`), including the four-class
-label set, the extended six-class set, the five TotalSegmentator regional tasks,
-and the task-710 rationale.
+**The current plan lives in [`TRAINING-PLAN.md`](TRAINING-PLAN.md).** This file
+records what was removed when the previous plan was retired, and where it went.
 
-Nothing about the plan is currently decided. The pipeline, the SegQueue
-annotation platform and the SciNet job chain are unaffected and still work.
+The previous plan is preserved in full on the **`plan-v1`** branch
+(`git show plan-v1:README.md`), including the four-class label set, the extended
+six-class set, the five TotalSegmentator regional tasks, and the task-710
+rationale. The pipeline, the SegQueue annotation platform and the SciNet job
+chain were unaffected throughout.
 
 ## What was removed
 
@@ -20,20 +21,12 @@ annotation platform and the SciNet job chain are unaffected and still work.
 | Split ratios and fold scheme | `README.md` |
 | Roadmap / status | `README.md` |
 
-## What is undecided
+## What is decided vs open
 
-- **Class schema.** How many vessels are labelled separately, and whether the
-  diagonal and obtuse marginal branches are their own classes or folded into the
-  LAD and LCx.
-- **Target spacing** and whether a resolution floor is enforced.
-- **Configuration**: patch size against the H100's 80 GB, and the VRAM budget
-  passed to `segtrain plan`.
-- **Fold scheme** and split ratios.
-- **Loss**: nnU-Net defaults only, or a topology-aware term.
-- **Evaluation protocol**: which metrics are primary, and what the acceptance
-  bar is.
-- **Post-processing**: connected-component policy for a structure that is
-  naturally several disconnected trees.
+See [`TRAINING-PLAN.md`](TRAINING-PLAN.md). In brief: one-stage nnU-Net
+`3d_fullres` at native spacing, no cascade, no heart crop, ~70 GB patch budget,
+binary-first sequencing. Open: class schema, fold scheme, loss, acceptance
+thresholds, annotation protocol details.
 
 ## Fixed constraints
 

@@ -1,0 +1,13 @@
+# Placeholder label set. NOT a plan decision.
+#
+# The class schema is undecided (see docs/PLAN-STATUS.md). This one-class set
+# exists so the pipeline stays loadable and its tests stay runnable while the
+# new plan is written. One class, because that is what the source ImageCAS masks
+# actually contain: a single merged lumen.
+#
+# Replace this with the real schema. Do not train against it and expect anything.
+
+name: placeholder
+count: 1
+labels:
+  vessel: 1

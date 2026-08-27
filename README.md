@@ -1,14 +1,7 @@
 # segmentator-train
 
-Training pipeline for **coronary artery segmentation from cardiac CT** — the
-coronary tree by major branch, nnU-Net v2, with the run visible live inside 3D
-Slicer.
-
-The method follows Akinci D'Antonoli & Wasserthal et al., *TotalSegmentator MRI*
-(Radiology 2025, [doi:10.1148/radiol.241613](https://doi.org/10.1148/radiol.241613)):
-**nnU-Net with its self-configured defaults and no hyperparameter tuning**, and
-the structure set **split across several models** rather than one network over
-everything. Applied here to CCTA.
+Training pipeline for **multiclass coronary artery segmentation from CCTA**,
+nnU-Net v2, with the run visible live inside 3D Slicer.
 
 The pipeline is the deliverable, not just the weights. It lives in its own repo,
 separate from the inference extension that will eventually ship the model.
@@ -16,6 +9,10 @@ separate from the inference extension that will eventually ship the model.
 Training runs on [SciNet](https://www.scinet.utoronto.ca/)'s Trillium
 supercomputer — see [Running on SciNet](#running-on-scinet) and
 [Acknowledging SciNet](#acknowledging-scinet).
+
+> **The training plan is being rewritten.** Class schema, target spacing, fold
+> scheme, loss and evaluation protocol are all currently unset — see
+> `docs/PLAN-STATUS.md`. The retired plan is preserved on the `plan-v1` branch.
 
 ---
 
@@ -32,69 +29,6 @@ your labelled CCTA        nnU-Net raw            training                 Slicer
 The trainer never talks to Slicer. It appends to `events.jsonl`; Slicer polls
 that file. So a run can be attached to late, detached from, or watched from
 another machine, and nothing the monitor does can disturb training.
-
----
-
-## Phase 1: the coronary model
-
-One high-resolution model over the four major branches. **There is no
-low-resolution model, and there will not be one.**
-
-| Task | Classes | Spacing | |
-|---|---|---|---|
-| `Dataset710_Coronary` | 4 | native (~0.35–0.5 mm) | `left_main`, `left_anterior_descending`, `left_circumflex`, `right_coronary_artery` |
-
-That is not a stylistic preference. A distal LAD is 1.5–2 mm across, so at the
-3 mm spacing an overview model would use, it is sub-voxel — the model would be
-trained to predict a structure thinner than the grid it predicts on. The same
-reasoning rules out nnU-Net's `3d_cascade_fullres`, whose low-resolution first
-stage downsamples just as aggressively.
-
-`spacing: native` means nnU-Net's own median-spacing rule picks the target. It
-already computes the finest spacing the data supports, from *your* CCTA rather
-than from an assumption about it. The task sets `max_spacing_mm: 0.5` to close
-the one hole that leaves: the rule takes the dataset **median**, so a handful of
-thick-slice studies drags the target coarse and interpolates the thinnest vessels
-away before training starts. Nothing fails when that happens — preprocessing
-succeeds, training runs, and the model just never learns the distal branches.
-`segtrain plan` warns instead.
-
-`configs/labels/coronary_ext.yaml` adds `ramus_intermedius` and
-`posterior_descending_artery` as indices 5 and 6. It is a strict superset, so the
-two sets share an output-channel prefix. Use it only if your labelling actually
-distinguishes them — both are anatomically optional, so their per-class Dice is
-computed over a minority of cases and will look far noisier than the four main
-branches. That is the anatomy, not the model.
-
-**Finer labels are a new label set and a new dataset id, never an edit to the
-existing one.** Splitting `left_anterior_descending` into proximal/mid/distal
-renumbers everything after it, and a model trained against the old file would
-keep loading without complaint while predicting the wrong vessel for every voxel.
-Nothing downstream can detect that.
-
-## Phase 2: regional models
-
-Whole-body regions, at 1.5 mm, trained on TotalSegmentator v2.0.1 — which
-contains **no coronary structures at all**, so these share no data with phase 1
-and are not on its critical path.
-
-| Task | Classes | Why |
-|---|---|---|
-| `Dataset702_Organs` | 26 | Soft-tissue organs |
-| `Dataset703_Vertebrae` | 25 | C1–S1 |
-| `Dataset704_Cardiac` | 18 | Heart and great vessels |
-| `Dataset705_Muscles` | 10 | Gluteals, autochthon, iliopsoas |
-| `Dataset706_Bones` | 38 | Ribs, sternum, limb and pelvic bones, skull |
-
-The five groups partition all 117 TotalSegmentator structures exactly — enforced
-by a test, not by care. Those label files are generated from the dataset itself:
-
-```bash
-python scripts/gen_label_configs.py /data/Totalsegmentator_dataset_v201
-```
-
-The coronary label sets are hand-written instead, for the reason above: there is
-nothing in TotalSegmentator to generate them from.
 
 ---
 
@@ -177,88 +111,6 @@ the model would just score better than it should. Pin specific cases with
 Re-running `index` over an existing `meta.csv` is refused without `--force`,
 because anything already converted or trained was built against the old one.
 
-## Phase 2 data: TotalSegmentator
-
-Only needed for tasks 702–706. [Zenodo record
-10047292](https://zenodo.org/records/10047292) — one 22 GB archive that expands
-to ~30 GB of subject directories, and it ships its own `meta.csv` with a
-published split, so `segtrain index` is not involved.
-
-```bash
-python scripts/init_dataset.py --dest /data/Totalsegmentator_dataset_v201
-```
-
-It downloads, checks the published MD5, extracts, verifies the result is 1228
-subjects with 117 masks each, and deletes the archive (`--keep-zip` to keep it).
-Both the download and the extraction resume, and a dataset root that already
-looks complete is left alone. Stdlib only, so it works before `pip install -e .`.
-
-On SciNet, download it **on a login or datamover node** — compute nodes have no
-outbound internet, so a download submitted to the queue waits for hours and then
-fails at the first HTTP request:
-
-```bash
-segtrain scinet fetch --task 702     # runs here, not in a job
-```
-
-Put it under `$SCRATCH`. `$HOME` and `$PROJECT` are mounted read-only on
-Trillium's compute nodes, so a dataset in either is unusable by the job that
-needs it. The ~145,000 files are not a quota problem there — `$SCRATCH` allows
-25 TB and 10M files — but they are worth deleting once every task has been
-converted, since nothing downstream reads the Zenodo tree again.
-
-### More labelled CT, from the NCI Imaging Data Commons
-
-[IDC](https://imaging.datacommons.cancer.gov/) publishes public cancer imaging
-with a SQL-queryable index and anonymously readable buckets. The same script
-fetches from it — no `idc-index`, no credentials, still stdlib only:
-
-```bash
-python scripts/init_dataset.py --list-idc                    # what is there
-python scripts/init_dataset.py --idc expert                  # every human-drawn set
-python scripts/init_dataset.py --idc pediatric_ct_seg --limit-cases 25
-```
-
-| | labels | provenance | cases | size |
-|---|---|---|---|---|
-| `pediatric_ct_seg` | 29 organs | expert | 359 | 64 GB |
-| `nsclc_radiomics` | lungs, oesophagus, heart, cord | expert | 422 | 27 GB (**CC BY-NC**) |
-| `mediastinal_lymph_node_seg` | lymph nodes | expert | 513 | 34 GB |
-| `c4kc_kits` | kidney + tumour | expert | 210 | 40 GB |
-| `prostate_anatomical_edge_cases` | prostate, bladder, rectum, femoral heads | expert | 131 | 17 GB |
-| `pancreas_ct` | pancreas | expert | 80 | 10 GB |
-| `lctsc` | oesophagus, heart, lungs, cord | expert | 60 | 5 GB |
-| `spine_mets_ct_seg` | vertebrae + metastases | expert | 55 | 20 GB |
-| `adrenal_acc_ki67_seg` | adrenal gland | expert | 53 | 10 GB |
-| `totalsegmentator_ct_segmentations` | ~77 structures, this label set | **model** | 26,194 | 22 TB |
-| `bamf_aimi_annotations` | organs + tumours | mixed | 4,226 | varies |
-
-Three things decide whether any of this is worth pulling.
-
-**Most of it by volume is not ground truth.** `totalsegmentator_ct_segmentations`
-is 126,051 series — TotalSegmentator's *own output* over NLST. Training on it
-distils the model this pipeline reproduces; it cannot beat it. It is also chest
-screening CT only, so it carries no abdominal or pelvic anatomy. Useful for
-pretraining or semi-supervised work, and it is the reason `--limit-cases` exists.
-
-**The expert sets are small and complementary.** `pediatric_ct_seg` is the one
-worth the trouble: 359 paediatric CTs with 29 human-contoured organs, covering a
-population the TotalSegmentator training set barely has. The rest add pathology —
-diseased vertebrae, kidneys with tumour, hard-to-contour pelvic anatomy.
-
-**Licences differ per series, and weights inherit them.** `nsclc_radiomics` is
-CC BY-NC and is skipped unless you pass `--allow-noncommercial`; `pancreas_ct`
-has CC BY 3.0 images with CC BY 4.0 labels. Each download writes an
-`ATTRIBUTION.txt` beside the data.
-
-IDC ships DICOM, and this pipeline reads NIfTI plus one mask per structure. So
-`--idc` gets you the data, its layout by patient, and its provenance — **not a
-drop-in dataset.** Converting DICOM to NIfTI, turning SEG/RTSTRUCT into
-per-structure masks, and mapping names like `Deep muscle of back` or
-`Femoral Head Rig` onto the 117 is still to be written.
-
----
-
 ## Running the coronary model
 
 ```bash
@@ -285,33 +137,6 @@ start a long run, not halfway through.
 Read `segtrain plan`'s output rather than skipping past it: it prints the target
 spacing nnU-Net chose, the patch and batch size that followed, and a warning if
 the spacing came out coarser than the task's 0.5 mm floor.
-
-### What "good" looks like
-
-Calibrate expectations before the first run finishes. Published full-volume Dice
-for binary coronary lumen sits around **0.82–0.85**, and **inter-observer
-agreement between human annotators on this task is about 0.856** — that is the
-ceiling, not a target to beat. A four-class per-branch model is a harder problem
-than that binary number describes.
-
-Treat anything above ~0.90 as evidence you are evaluating on a cropped region
-rather than a whole volume.
-
-Two metric caveats specific to vessels:
-
-- **Dice is brutally harsh on a 3–4-voxel-diameter tube**, where a one-voxel
-  boundary error costs proportionally far more than it would on an organ.
-- **Dice barely notices a broken vessel.** A tree split in two by a one-voxel gap
-  scores almost the same as an intact one, and is useless downstream. Read NSD
-  alongside Dice — `segtrain evaluate` computes both.
-
-Do not let nnU-Net's connected-component post-processing near this model. It
-prunes all but the largest component for any class that is single-component
-across the training labels, and the coronary tree is naturally two or three
-disconnected trees plus branches — so that rule deletes valid vessels. This
-pipeline never applies it (`segtrain evaluate` scores raw predictions), but if you
-run `nnUNetv2_determine_postprocessing` by hand, check what it decided before
-believing it.
 
 ---
 
@@ -502,9 +327,9 @@ An annotator's whole workflow is: log in, press **Get next case**, segment, pres
 server path, and never accumulate data — the local copy is deleted the moment the
 server confirms the submission.
 
-Four structures, fixed by the server and obeyed by the extension: `left_main`,
-`left_anterior_descending`, `left_circumflex`, `right_coronary_artery`, with the
-same label values as [`configs/labels/coronary.yaml`](configs/labels/coronary.yaml).
+The structure list is fixed by the server and obeyed by the extension, so an
+annotator cannot invent or rename a segment. **Which structures** is a training
+plan decision and is currently unset — see `docs/PLAN-STATUS.md`.
 
 ### The data, and what the presegmentation buys
 
@@ -715,23 +540,10 @@ oversight.
 
 ## Disk
 
-The coronary figures depend on your case count and reconstruction, so measure
-rather than trust an estimate — CCTA at ~0.35 mm isotropic preprocesses large, and
-nnU-Net's `.npz` → `.npy` unpacking roughly doubles it while training. The
-TotalSegmentator numbers below are measured, and are the phase 2 figures:
-
-| | |
-|---|---|
-| Source images (1228) | 21.0 GB |
-| Source masks (117 × 1228) | 9.1 GB |
-| Merged multilabel labels | **~0.3–0.7 GB** — the merge is nearly free |
-| Images in `nnUNet_raw` | **0 bytes** via hardlink on the same filesystem |
-| Preprocessed @ 1.5 mm, per task | ~75 GB (up to ~110 GB peak on nnU-Net ≤ 2.5, which keeps both `.npz` and unpacked `.npy`) |
-| Checkpoints | ~1 GB per fold per task |
-
-So provision **~250 GB** for all five phase 2 tasks — or ~110 GB if you preprocess
-one group at a time and delete between them. Five-fold CV multiplies GPU time by
-five but adds only ~25 GB, since folds share preprocessed data.
+Measure rather than trust an estimate — CCTA at ~0.35 mm isotropic preprocesses
+large, and nnU-Net's `.npz` → `.npy` unpacking roughly doubles it while training.
+Checkpoints run ~1 GB per fold. Provisioning depends on the case count, spacing
+and fold scheme the new plan settles on.
 
 `--npz` is **off by default**. It writes float16 softmax per class per voxel —
 hundreds of GB across a multi-class dataset — and is only needed to build a
@@ -741,29 +553,23 @@ cross-fold ensemble.
 
 ## Splits
 
-For your coronary data, `segtrain index` writes `meta.csv` with a hash-derived
-split (15% val / 15% test by default). See [Your coronary data](#your-coronary-data)
-for why hashing rather than shuffling. Test cases never enter `imagesTr`, so no
-training, model-selection or postprocessing decision can see them.
+`segtrain index` writes `meta.csv` with a hash-derived split. Splits are assigned
+by **hashing the case id**, not by shuffling, so adding case 200 to a 199-case
+dataset leaves the first 199 exactly where they were. Test cases never enter
+`imagesTr`, so no training, model-selection or postprocessing decision can see
+them.
 
-- `--scheme official` (default) — one fold, using the `val` column as written.
-- `--scheme cv5` — stratified 5-fold over the non-test cases, balanced by
-  `study_type`. Use only if you intend to train and ensemble five models.
+`--scheme` selects how folds are drawn; `validate_splits` fails loudly on
+train/val overlap or test leakage, and preview cases are checked to be genuinely
+held out.
 
-For phase 2, TotalSegmentator's `meta.csv` carries its published split — **1082
-train / 57 val / 89 test** — and `--scheme official` reproduces that boundary
-exactly, so those results stay comparable to the paper.
-
-`validate_splits` fails loudly on train/val overlap or test leakage, and preview
-cases are checked to be genuinely held out — a preview rendered on a training
-case looks great and means nothing.
-
----
+> **Split ratios, scheme and stratification are part of the training plan and are
+> currently unset.** See `docs/PLAN-STATUS.md`.
 
 ## Tests
 
 ```bash
-pytest                    # 366 tests
+pytest                    # 415 tests
 pytest -m "not slow"      # skip the full-case merge round-trip
 
 # The SegQueue concurrency tests need a real MongoDB -- the whole point of them
@@ -777,39 +583,6 @@ Tests needing a dataset are marked `needs_data`, and those needing a database
 `needs_mongo`; both skip without them, so the suite runs on a checkout alone.
 
 ---
-
-## Status
-
-**Phase 1 has no training data in this repo yet.** The pipeline, the coronary
-label sets and the task are in place; supply your own labelled CCTA as described
-under [Your coronary data](#your-coronary-data).
-
-Worth knowing before you go looking for a shortcut: **no public dataset provides
-per-segment coronary labels on 3D CCTA.** The large public sets — ImageCAS
-(1000 cases), ASOCA (60) — ship a single merged binary lumen mask. ImageCAS's
-paper mentions AHA 17-segment naming, but that describes which vessels were
-included in the annotation *extent*, not separate label values; the released
-label file is 0/1, and the paper says so twice. TotalSegmentator's
-`coronary_arteries` task is one binary class and sits behind a licence key. The
-only genuinely per-segment public labels are 2D X-ray angiography (ARCADE, CC0),
-which is the wrong modality. So hand-labelling, or deriving segments from a
-binary model plus centreline tree labelling, is the real path.
-
-Verified end to end on CPU with a 24-case subset of TotalSegmentator: convert →
-plan → preprocess → train → preview → status, plus the Slicer module against a
-real run (91 segments imported with correct anatomical names).
-
-Unit-tested but never run against real infrastructure: the SLURM layer (script
-rendering, walltime arithmetic, chain wiring, the resume decision) against
-Trillium's scheduler, and the index/convert paths against a real CCTA tree. Also
-unexercised: the 1000-epoch schedule, multi-GPU, and `evaluate` at scale.
-
-Known deviations from nnU-Net defaults worth considering later, deliberately not
-taken yet because the stated method is defaults-only: a **topology-aware loss**
-(clDice, or cbDice which corrects clDice's bias toward large-diameter vessels and
-ships as an nnU-Net v2 plugin) is the standard upgrade for vessel segmentation,
-and **graph-based reconnection** of broken vessels as a post-processing stage is
-what the strongest published coronary results add on top.
 
 ## Acknowledging SciNet
 

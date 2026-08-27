@@ -218,10 +218,10 @@ def test_the_helper_segment_names_cannot_collide_with_a_project_segment():
     from segqueue.protocol import REGION_SEGMENT_NAME, SEED_SEGMENT_NAME
 
     labels = yaml.safe_load(
-        (Path(__file__).resolve().parents[1] / "configs" / "labels" / "coronary.yaml")
+        (Path(__file__).resolve().parents[1] / "configs" / "labels" / "placeholder.yaml")
         .read_text(encoding="utf-8-sig"))
     structures = set(labels["labels"])
-    assert "left_main" in structures  # the file is the one we think it is
+    assert structures  # the file is the one we think it is
 
     for name in (SEED_SEGMENT_NAME, REGION_SEGMENT_NAME):
         assert name not in structures

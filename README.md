@@ -1,615 +1,141 @@
 # segmentator-train
 
-Training pipeline for **multiclass coronary artery segmentation from CCTA**,
-nnU-Net v2, with the run visible live inside 3D Slicer.
-
-The pipeline is the deliverable, not just the weights. It lives in its own repo,
-separate from the inference extension that will eventually ship the model.
+Multiclass coronary artery segmentation from CCTA. **nnU-Net v2, `3d_fullres`,
+at native spacing, with no downsampling anywhere in the path** — no cascade, no
+coarsened resampling, no heart crop. The full plan, with the reasoning and the
+evidence, is [`docs/TRAINING-PLAN.md`](docs/TRAINING-PLAN.md); the retired
+previous plan is on the `plan-v1` branch.
 
 Training runs on [SciNet](https://www.scinet.utoronto.ca/)'s Trillium
-supercomputer — see [Running on SciNet](#running-on-scinet) and
-[Acknowledging SciNet](#acknowledging-scinet).
+supercomputer, one H100 80 GB per job.
 
-> **The training plan is in [`docs/TRAINING-PLAN.md`](docs/TRAINING-PLAN.md):**
-> one-stage nnU-Net `3d_fullres` at native spacing, no cascade, no heart crop,
-> patch sized against the H100's 80 GB, binary model first. The class schema and
-> fold scheme are still open there. The retired previous plan is preserved on
-> the `plan-v1` branch.
+## The method
 
----
+A distal coronary branch is 1.5–2 mm across — a few voxels at the ~0.35 mm the
+scans are acquired at. Anything that downsamples destroys exactly the structures
+being labelled, so the model reads the data at acquired resolution end to end:
 
-## What it does
+- **`spacing: native`** — nnU-Net's median-spacing rule, on a near-isotropic
+  cohort, keeps the acquired grid.
+- **No `3d_cascade_fullres`.** Its low-resolution first stage resamples distal
+  branches below their own diameter.
+- **No heart crop.** The H100 sets the patch size, not the crop: a ~70 GB
+  budget buys a ~256³ patch, ~27–30 % of a whole volume — above the 12.5 %
+  threshold at which nnU-Net would plan a cascade, and large enough to hold the
+  coronary tree with the aortic root and both ostia in one view. Whole volumes
+  also teach the model to reject coronary look-alikes (pulmonary vessels, bone
+  edges), and there is no cropper to silently clip a low-running RCA.
 
-```
-your labelled CCTA        nnU-Net raw            training                 Slicer
-<case>/ct.nii.gz     ──▶  imagesTr/  ──▶ plan ──▶ nnUNetTrainer_segtrain ──▶ events.jsonl ──▶ monitor
-<case>/segmentations/     labelsTr/                       │                       ▲
-  one mask per vessel       1 multilabel                  └── preview daemon ─────┘
-    (or labels.nii.gz)                                        (infers + scores held-out cases)
-```
+Sequence: a **binary lumen model first**, trained on the 1000 ImageCAS masks
+that already exist — it proves the Trillium chain, calibrates against the
+published 82.96 % Dice benchmark, and seeds the annotators' presegmentations.
+The **multiclass model** trains on the same configuration once per-branch
+labels flow. One paired **ResEnc** run afterwards decides the encoder.
 
-The trainer never talks to Slicer. It appends to `events.jsonl`; Slicer polls
-that file. So a run can be attached to late, detached from, or watched from
-another machine, and nothing the monitor does can disturb training.
+Ruled out, deliberately: tree/graph-structured models as the primary segmenter
+(unrecoverable when the pre-segmentation misses a vessel), nnU-Net's
+largest-component post-processing (the coronary tree is naturally several
+disconnected components; the rule deletes real vessels), and mirroring
+augmentation (it swaps the left coronary tree for the right).
 
----
+## Data
 
-## Install
-
-```bash
-python -m venv .venv && .venv/bin/activate     # Windows: .venv\Scripts\activate
-pip install -e .                                # data prep + monitor, no GPU needed
-pip install -e ".[train]"                       # adds nnU-Net; install torch to match your CUDA
-```
-
-Do **not** create the venv with `--system-site-packages`; nnU-Net pulls numpy 2.x
-and will collide with older host packages compiled against numpy 1.x.
-
-Copy `configs/dataset.yaml` to `configs/dataset.local.yaml` and set the paths.
-Precedence is CLI flag → environment (`nnUNet_raw` etc.) → `.local.yaml` →
-tracked template, so the same checkout drives a laptop and a cluster with no
-edits to tracked files.
-
-On SciNet, install into the venv described under [Running on
-SciNet](#running-on-scinet) rather than with the `[train]` extra: torch and
-nnU-Net both come from the Alliance wheelhouse there, not PyPI.
-
----
-
-## Your coronary data
-
-Phase 1 trains on your own labelled CCTA. If you are still *producing* those
-labels, see [SegQueue](#segqueue-labelling-at-scale) — the annotation platform in
-this repo, which collects them from a team of annotators.
-
-Lay the result out one directory per case, in either of two forms — the choice is
-detected per case, so a dataset part-way through relabelling still works:
+One directory per case:
 
 ```
-<root>/<case>/ct.nii.gz                            # or image.nii.gz, or <case>.nii.gz
-<root>/<case>/segmentations/left_main.nii.gz       # one binary mask per vessel
-<root>/<case>/segmentations/left_circumflex.nii.gz
+<root>/<case>/ct.nii.gz
+<root>/<case>/segmentations/<structure>.nii.gz   # one binary mask per vessel
   ... or ...
-<root>/<case>/labels.nii.gz                        # one integer volume
+<root>/<case>/labels.nii.gz                      # one integer volume
 ```
 
-Prefer the per-vessel form when you have it: it distinguishes "this vessel was
-not labelled in this case" from "this vessel is not present", which a merged
-integer volume has already thrown away. `segtrain convert` reports absent
-structures per case.
+Prefer the per-vessel form: it distinguishes "not labelled" from "not present",
+which a merged volume has thrown away. For the single-file form, map the
+integers in `configs/labels/<set>.local.yaml` (`source_values:`) — segment order
+in an export is drawing order, so reading positionally mislabels every vessel
+while reporting success. A vessel absent from a case (ramus intermedius in most
+people; the PDA off the LCx in a left-dominant heart) gets **no mask**, not an
+empty one.
 
-For the single-file form, tell the label set which integer means which vessel:
+Three conversion traps, handled but worth knowing:
 
-```yaml
-# configs/labels/coronary.local.yaml
-source_values:
-  left_main:                7
-  left_anterior_descending: 2
-  left_circumflex:          4
-  right_coronary_artery:    1
-```
+- **Oblique volumes**: ITK rejects direction cosines that are not orthonormal
+  to its tolerance, and cardiac CT is frequently reconstructed oblique. The
+  conversion writes `NibabelIOWithReorient` into `dataset.json`; do not remove it.
+- **Overlapping masks**: independently drawn masks disagree by a voxel at
+  bifurcations. `overlap_policy: smaller_wins` gives contested voxels to the
+  smaller structure so trunks do not erode their branches.
+- **Splits are hash-derived**, not shuffled, so a growing dataset never moves
+  yesterday's test cases into today's training set. Test cases never enter
+  `imagesTr`. `validate_splits` fails loudly on leakage.
 
-This matters more than it looks. An exported segmentation numbers its segments in
-the order they were drawn, so reading them positionally mislabels every vessel —
-and the conversion reports complete success while doing it. Values the label set
-does not account for are dropped and reported loudly rather than passed through
-or silently zeroed; a vessel quietly becoming background looks exactly like a
-model that failed to learn it.
-
-Then build the index. There is no `meta.csv` until you write one:
+## Running it
 
 ```bash
-segtrain index --root /data/coronary            # writes <root>/meta.csv
-segtrain index --root /data/coronary --dry-run  # see the split first
+pip install -e .                # data prep, no GPU needed
+pip install -e ".[train]"       # adds nnU-Net (not on SciNet -- see below)
+
+segtrain index --root /data/coronary       # meta.csv, hash-derived split
+segtrain plan  --task 710 --gpu-mem 70     # fingerprint + plans, no GPU needed
 ```
 
-Splits are assigned by **hashing the case id**, not by shuffling. Adding case 200
-to a 199-case dataset therefore leaves the first 199 exactly where they were.
-Shuffle-and-slice would reassign every case each time the dataset grows, quietly
-moving yesterday's test cases into today's training set — nothing would crash,
-the model would just score better than it should. Pin specific cases with
-`--overrides cases.csv` (`case_id,split`) when you have a reason to.
+**Read the plan printout before submitting anything.** Three gates: the patch
+covers ≥ 12.5 % of the median image shape (no cascade planned), the target
+spacing came out native rather than dragged coarse by thick-slice outliers, and
+batch size is 2. Plans made at one `--gpu-mem` are not interchangeable with
+checkpoints trained under another.
 
-Re-running `index` over an existing `meta.csv` is refused without `--force`,
-because anything already converted or trained was built against the old one.
-
-## Running the coronary model
+On Trillium:
 
 ```bash
-segtrain info                              # resolved paths, tasks, whether a GPU exists
-segtrain index      --root /data/coronary  # scan cases -> meta.csv
-segtrain convert    --task 710             # masks -> one multilabel; images hardlinked
-segtrain plan       --task 710 --gpu-mem 24    # fingerprint + plans + splits
-segtrain preprocess --task 710
-segtrain train      --task 710 --fold 0
-segtrain preview    --task 710 --fold 0 --watch    # second terminal, beside the GPU
-segtrain status     --task 710 --fold 0 --worst 10
-segtrain evaluate   --task 710                     # held-out test set, Dice + NSD
-```
-
-**`--gpu-mem` is the flag that matters most here.** nnU-Net sizes patches against
-an 8 GB VRAM budget by default, and patch size is the dominant lever on coronary
-accuracy — the published ImageCAS benchmark scored 72.0% Dice with 64³ patches
-against 80.6% for full-image input on the same data. Small patches cut vessels
-into disconnected fragments. On an 80 GB H100 the default leaves most of the card
-unused. Note it changes the architecture, so plans made at one budget are not
-interchangeable with checkpoints trained under another — pick a number before you
-start a long run, not halfway through.
-
-Read `segtrain plan`'s output rather than skipping past it: it prints the target
-spacing nnU-Net chose, the patch and batch size that followed, and a warning if
-the spacing came out coarser than the task's 0.5 mm floor.
-
----
-
-## Running on SciNet
-
-<img src="docs/scinet-logo.png" alt="SciNet" width="260">
-
-Training runs on Trillium's GPU subcluster; you watch from your laptop. That is
-what the event-stream design is for — nothing but OpenSSH is needed locally, and
-the monitor reads the same `events.jsonl` the job is writing.
-
-**Trillium GPU**, as of this writing: 63 nodes, each 4 × NVIDIA H100 SXM 80 GB,
-96 AMD EPYC cores, 768 GB RAM. Scheduling is by whole GPU — one GPU brings a
-quarter node with it (24 cores, ~188 GiB). Walltime is capped at **24 hours**.
-
-### Setting up, once
-
-```bash
-ssh you@trillium-gpu.alliancecan.ca      # GPU jobs submit from the GPU login node
-segtrain scinet setup                    # prints the exact commands; paste them
-```
-
-They come out roughly as:
-
-```bash
-module purge
-module load StdEnv/2023 python/3.11.5 cuda/12.6
-virtualenv --no-download $HOME/segtrain-env
-source $HOME/segtrain-env/bin/activate
-pip install --no-index --upgrade pip
-pip install --no-index torch nnunetv2 SimpleITK nibabel
-pip install --no-deps -e /path/to/this/repo
-```
-
-Three details that are easy to get wrong and expensive to debug:
-
-- **`--no-index`, always.** It installs from the Alliance wheelhouse: builds
-  matched to this cluster's CUDA, drivers and CPU. PyPI's `torch` bundles its own
-  CUDA and is the usual reason a job imports torch happily and then cannot see
-  the GPU. H100s need torch ≥ 2.5.1. The whole nnU-Net v2 stack is in the
-  wheelhouse, so the install needs no internet beyond the login node.
-- **The venv goes in `$HOME`.** Compute nodes can read `$HOME`; `$SCRATCH` "may
-  get partially deleted", which surfaces weeks later as an `ImportError` in
-  block 7 of a chain.
-- **Everything else goes in `$SCRATCH`.** `$HOME` and `$PROJECT` are read-only
-  from compute nodes, so a run whose `nnunet_results` is in either dies on its
-  first write — after its queue wait.
-
-Then set `account` and the five paths in `configs/dataset.local.yaml`, and check
-the lot before spending a queue wait on it:
-
-```bash
-segtrain scinet check
-```
-
-It verifies the account, the venv, the walltime arithmetic, and — the one that
-actually bites — whether any configured path is on a filesystem the compute nodes
-cannot write to.
-
-### Running a stage
-
-```bash
-segtrain index          --root $SCRATCH/coronary  # login node: writes meta.csv
-segtrain scinet prepare --task 710 --convert      # CPU job: convert + plan + preprocess
-segtrain scinet submit  --task 710 --fold 0       # GPU job chain
+ssh you@trillium-gpu.alliancecan.ca
+segtrain scinet setup                     # prints the venv commands; paste them
+segtrain scinet check                     # verifies account, venv, paths, walltime
+segtrain scinet prepare --task 710 --convert   # CPU job: convert + plan + preprocess
+segtrain scinet submit  --task 710 --fold 0    # GPU job chain
 segtrain scinet status  --task 710 --fold 0 --watch
-segtrain scinet queue                             # what's running and why it's pending
-segtrain scinet cancel  --task 710 --fold 0
 ```
 
-`prepare` asks for no GPU. Fingerprinting, planning and preprocessing are CPU and
-I/O work, and Trillium's CPU subcluster is 1224 nodes against the GPU
-subcluster's 63 — so it is both cheaper against the allocation and usually far
-quicker to start.
+The cluster details that matter:
 
-### Crossing the 24-hour wall
+- **Install with `--no-index`** from the Alliance wheelhouse (torch ≥ 2.5.1 for
+  H100); PyPI's torch bundles its own CUDA and cannot see the GPU here. The venv
+  lives in `$HOME`; all data and results live in `$SCRATCH` — `$HOME` and
+  `$PROJECT` are read-only from compute nodes.
+- **Ask for one GPU.** Scheduling is by whole GPU; one brings 24 cores and
+  ~188 GiB with it, and nnU-Net trains on a single device.
+- **The 24-hour walltime** is crossed by a job chain (`sbatch --array=1-N%1`),
+  created at submit time from the login node — compute nodes cannot submit
+  jobs. `SEGTRAIN_MAX_SECONDS` checkpoints at an epoch boundary and exits
+  without nnU-Net's `on_train_end`, which would delete the checkpoint. Cancel
+  kills queued successors before the running block.
+- **No node-local disk**: `$SLURM_TMPDIR` is a RAM disk charged against the
+  job's memory; `stage_to_tmpdir` stays off unless the preprocessed set fits.
+- Preprocessed data at native spacing, uncropped, is large (order 250 GB, and
+  the `.npz`→`.npy` unpack roughly doubles it transiently). Measure, and
+  provision `$SCRATCH` accordingly. `--npz` stays off.
 
-A 1000-epoch run is tens of GPU-hours; the cap is 24. So `scinet submit` doesn't
-submit one job, it submits a **chain**:
-
-```
-block 1 ──train 23.3 h──▶ checkpoint, pause ──▶ block 2 ──resume──▶ … ──▶ complete
-```
-
-`SEGTRAIN_MAX_SECONDS` stops the trainer at an epoch boundary with time to spare,
-writes `checkpoint_latest.pth`, and — critically — exits *without* nnU-Net's
-`on_train_end`, which deletes that very file. The next block finds the checkpoint
-and resumes with `--c`.
-
-The chain is created **at submit time, from the login node**, as one
-`sbatch --array=1-N%1`. The obvious alternative, a job that ends by submitting
-its own successor, cannot work here: Trillium blocks job submission from compute
-nodes, so that script fails on its last line every time and the run stops after
-one block having looked fine throughout. Blocks that start after the run has
-finished check the event stream and exit in seconds.
-
-If job arrays turn out to be restricted, `chain_mode: dependency` submits N
-separate jobs chained with `--dependency=afterany` instead. `afterany` rather
-than `afterok` because a block killed at the walltime exits nonzero, and that is
-exactly when its successor is needed.
-
-Cancelling is `segtrain scinet cancel`, which kills the queued successors
-*before* the running block — the other order satisfies the dependency and starts
-the block you were trying to stop.
-
-### Sizing, and one Trillium-specific trap
-
-Ask for **one** GPU. Trillium schedules whole GPUs, so one buys a quarter node —
-1 H100, 24 of the 96 cores, ~188 GiB — and 2 or 3 are rejected outright. Four
-would idle three of them, since nnU-Net trains this on a single device.
-
-But do not leave the card's 80 GB unused. The default plan targets 8 GB of VRAM,
-and as noted above patch size is the dominant lever on coronary accuracy — spend
-the rest of the card via `segtrain plan --gpu-mem`. Twenty-four cores is enough
-that the dataloader keeps up with the larger patches that follows.
-
-**Trillium nodes have no local disk.** `$SLURM_TMPDIR` is a RAM disk, and what
-you put in it comes out of the job's own memory. Every "stage your dataset to
-node-local NVMe" tutorial is therefore wrong here. `stage_to_tmpdir` is off by
-default. Whether to turn it on depends on how big your preprocessed coronary set
-is against the ~188 GiB a 1-GPU job holds: at ~0.35 mm isotropic, CCTA volumes
-preprocess large, and nnU-Net's `.npz` → `.npy` unpacking roughly doubles them.
-Check the size before enabling it. The job script measures the dataset against the
-cgroup limit and skips staging rather than being OOM-killed — `df` inside the job
-reports the RAM disk as the size of physical memory, and will happily let you
-overfill it.
-
-It matters less here than the usual advice implies, in any case: Trillium's
-storage is all-NVMe rated at ten million read IOPS, not the Lustre that the
-"avoid many small files" guidance was written for.
-
-## Watching it train in Slicer
-
-1. Slicer → **Edit → Application Settings → Modules**, drag
-   `slicer/SegmentatorTrainMonitor` into **Additional module paths**, restart.
-2. Open **Segmentation → Segmentator Train Monitor**.
-3. Point it at a run directory — a local path, or
-   `you@trillium.alliancecan.ca:/scratch/g/grp/you/runs/Dataset710_Coronary__fold0`,
-   optionally with an **SSH key** if `~/.ssh/config` does not already name one.
-
-`segtrain scinet submit` prints the exact `host:path` to paste.
-
-The run directory lives on `$SCRATCH`, which the login nodes share with the
-compute nodes, so the monitor reads the live file while the job writes it —
-there is no staging step and nothing to synchronise. Setting up `ControlMaster`
-for the host in `~/.ssh/config` is worth the two lines: the monitor polls every
-ten seconds, and Toronto is several hundred milliseconds of handshake away.
-
-You get loss and pseudo-Dice curves, a per-structure Dice table sorted weakest
-first, and the live model's segmentation of a **held-out** case loaded over the
-CT in the 3D view — with an epoch slider, so you can watch a structure sharpen,
-or catch a vertebra label sliding by one.
-
-Per-structure Dice in the table comes from the preview daemon scoring real
-held-out cases. nnU-Net's own pseudo-Dice is computed on training patches and
-reads far too high early on; it is shown on the curve but is not what the table
-reports once previews exist.
-
-No pip installs into Slicer's Python: the module imports the stdlib-only
-`segtrain.events` from `src/`, and shells out to the system `ssh`/`scp`.
-
-Verify the module against a finished run:
+Evaluate with `segtrain evaluate` — raw predictions, no post-processing; Dice
+alongside NSD, with the full metric set (clDice, branch detection, AHD,
+per-class) specified in the plan.
 
 ```bash
-"…/Slicer.exe" --no-splash --python-script tests/slicer_selftest.py \
-    --run-dir /data/runs/Dataset710_Coronary__fold0
+pytest                    # 415 tests; SegQueue concurrency tests need MongoDB
 ```
 
----
+## Everything else
 
-## SegQueue: labelling at scale
+- [`docs/TRAINING-PLAN.md`](docs/TRAINING-PLAN.md) — the plan of record
+- [`docs/SEGQUEUE.md`](docs/SEGQUEUE.md) — the annotation platform producing the per-branch labels
+- [`docs/SLICER-MONITOR.md`](docs/SLICER-MONITOR.md) — watching a run live in 3D Slicer
+- [`docs/SERVER-SETUP.md`](docs/SERVER-SETUP.md), [`docs/SERVER-HANDOFF.md`](docs/SERVER-HANDOFF.md) — the Girder server
 
-The bottleneck for Phase 1 is not the model, it is **per-segment coronary labels
-that do not exist publicly**. SegQueue is the platform for producing them with a
-class of undergraduate annotators: a self-hosted server that owns the case pool,
-and a Slicer extension that hands one annotator one case at a time.
+## Acknowledgement and licence
 
-```
-Slicer + SegQueue extension  ──TLS──▶  Caddy ──▶  Girder 5 + SegQueue plugin
-   one case at a time                                │        │
-   nothing left on disk                            Mongo   /data assetstore
-                                                            │
-                                                    worker: QA scoring + lease sweep
-```
+Publications using this compute carry SciNet's
+[requested acknowledgement](https://docs.scinet.utoronto.ca/index.php/Acknowledging_SciNet)
+and cite Ponce et al. 2019 ([doi:10.1145/3332186.3332195](https://doi.org/10.1145/3332186.3332195))
+and Loken et al. 2010 ([doi:10.1088/1742-6596/256/1/012026](https://doi.org/10.1088/1742-6596/256/1/012026)).
 
-An annotator's whole workflow is: log in, press **Get next case**, segment, press
-**Validate & submit**. They never choose a case, never name a file, never see a
-server path, and never accumulate data — the local copy is deleted the moment the
-server confirms the submission.
-
-The structure list is fixed by the server and obeyed by the extension, so an
-annotator cannot invent or rename a segment. **Which structures** is the class
-schema — still open in [`docs/TRAINING-PLAN.md`](docs/TRAINING-PLAN.md).
-
-### The data, and what the presegmentation buys
-
-The default source is the TotalSegmentator release on Zenodo
-([record 10047292](https://zenodo.org/records/10047292)) — about 1,200 whole-body
-CT studies, each already segmented into 117 structures. Ingest reads those
-filenames and never opens an image, which gives two things for free:
-
-* **Only cases with a heart are loaded.** Most of a whole-body dataset is legs,
-  heads and abdomens with no coronary anatomy in the field of view. Assigning
-  those spends the one resource the project is short of. The eligible cases also
-  ship their heart mask to the client, which uses it to centre the views.
-* **A case that already carries a `coronary_arteries` mask hands it over.** That
-  mask is a binary lumen, not per-branch labels — a head start, not an answer.
-  The annotator splits an existing tree into four branches instead of drawing
-  one, which is minutes instead of an hour. (The base Zenodo release does not
-  include it; if your copy has it, from the licensed task or your own model,
-  ingest picks it up with no extra flags.)
-
-Helper masks are structurally incapable of being submitted: the export copies
-only the project's own segments, and refuses outright if any other label value
-appears in the exported volume.
-
-**Oblique volumes are corrected at ingest.** [Three things that will cost
-you](#three-things-that-will-cost-you-if-you-miss-them) notes that 11% of
-TotalSegmentator is obliquely acquired and ITK rejects it. Training reads those
-with nibabel; an annotator cannot, because Slicer *is* ITK. Ingest
-orthonormalises the direction cosines — voxels, spacing and origin untouched,
-axes moved by 0.007° — so the case opens, and the same corrected file is what
-the training conversion later reads.
-
-### What the extension does for the annotator
-
-The Segment Editor can already do all of this. It is worth wrapping because it
-cannot do it *for this task* — a first-year undergraduate should not have to
-work out which of twenty effects segments a 3 mm vessel.
-
-* **Four labelled buttons, keys 1–4**, to change branch — with a tick against
-  each one that has voxels in it. Built from the server's segment list, so a
-  fifth branch is a settings change.
-* **Two tools, not twenty.** A coronary artery is a tube, so the main tool is
-  *Draw tube* (**Q**): click a few points down the centreline, set the radius,
-  **Apply** (**A**). Sections *accumulate* into the vessel, so an artery is drawn
-  as several — wide proximally, narrower as it tapers — each with its own radius,
-  and Apply leaves you armed for the next one. The radius slider is live: the
-  preview follows it while you are still placing points. *Paint* (**W**) fixes
-  what the tube missed, with a brush sized in millimetres so it survives zooming.
-  Every other effect is still in the Segment Editor below; none earns a button.
-* **Masking that makes fast painting safe.** Edits are confined to the existing
-  coronary mask when the case has one, and to the opacified range (150–1000 HU)
-  otherwise, so a sloppy stroke still leaves a clean lumen edge. Branches never
-  overwrite each other.
-* **The view set up on arrival**: CTA window/level, four-up layout, slices
-  centred on the heart mask, and a surface view a click away.
-
-### Why Girder rather than XNAT or something bespoke
-
-Accounts, tokens, groups, a REST framework, chunked **resumable** uploads,
-pluggable storage and an admin UI are all things this project needs and none of
-them are things worth writing. Girder supplies them; the plugin under `server/`
-adds only what is actually specific to running a workforce — an atomic case
-claim, a lease that expires, a review queue, and the sampling that decides whose
-work gets looked at. XNAT would have brought a heavier imaging-specific data
-model that mostly gets in the way here; a bespoke server would have meant writing
-resumable uploads, which is the one part you cannot afford to get subtly wrong.
-
-### What the pieces are
-
-| Path | What it is |
-|---|---|
-| `src/segqueue/` | State machine, sampling policy, wire protocol, checksums, submission checks. Stdlib-only and Python 3.9-clean, because **both** sides import it |
-| `server/girder_segqueue/` | The Girder 5 plugin: models, REST, ingest CLI, QA worker |
-| `slicer/SegQueue/` | The annotator's extension. `SegQueueLib/` is Slicer-free, so the network layer and the cache are unit-tested without Slicer |
-| `slicer/build-extension.py` | Packages it for the Extension Manager. Plain Python, no CMake |
-| `deploy/` | Compose stack, Caddyfile, backup script. See [deploy/README.md](deploy/README.md) |
-| `docs/` | [Server runbook](docs/SERVER-SETUP.md) and the [setup &amp; testing guide](docs/SegQueue-Setup-Guide.pdf) |
-
-The shared package is the load-bearing idea. A route name, a state name or a
-validation rule cannot drift between client and server, because there is one
-definition and both import it — and the submission checks that refuse an empty
-segment client-side are the *same function* that refuses it again server-side.
-
-### Quality, without reading every case
-
-Reviewing 5,000 segmentations by hand is not a plan. Four mechanisms instead:
-
-* **A training gate.** Every annotator's first five cases are reviewed by a
-  human. Nobody accumulates a hundred cases of a misunderstanding.
-* **Gold seeds** (~5%). Cases with an expert reference, indistinguishable from
-  ordinary work. Scored automatically with the same Dice and HD95 the training
-  pipeline reports — one implementation, so the numbers in the QA dashboard and
-  the numbers in the paper cannot disagree.
-* **Blind duplicates** (~5%). The same case to two annotators, scored
-  symmetrically against each other, which is what inter-rater reliability
-  actually means when there is no ground truth.
-* **Sampled review** thereafter: 20% falling to 10% for consistently clean work,
-  and back up after any rejection. A bad automatic score pulls a case back for a
-  human even when the sampling roll had let it through.
-
-Rejections go back to the **same** annotator with the reviewer's comment, which
-is the only version of this loop that teaches anyone anything.
-
-### Running it
-
-```sh
-cd deploy && cp .env.example .env   # edit DATA_ROOT, SEGQUEUE_DOMAIN
-docker compose up -d --build
-docker compose exec girder segqueue-ingest --root /incoming --dry-run
-docker compose exec girder segqueue-ingest --root /incoming --target coronary
-python ../tests/segqueue_e2e.py --url https://<domain>
-```
-
-Then build the extension package and hand it to annotators:
-
-```sh
-python slicer/build-extension.py     # -> dist/SegQueue-<version>-Slicer-5.8.zip
-```
-
-In Slicer: **Extensions Manager → Install from file →** pick that zip → restart.
-No pip installs, no build tools and no admin rights — the module uses `requests`,
-which Slicer already bundles, and the shared `segqueue` package is vendored into
-the archive.
-
-One dependency: **SegmentEditorExtraEffects**, which provides *Draw tube*.
-Install it from the Extensions Manager on each annotator machine. The package
-declares it, but a local *Install from file* does not resolve dependencies, so
-the panel also checks at startup and says so if it is missing.
-
-Two other routes work for development: add `slicer/SegQueue` to **Additional
-module paths** (Edit → Application Settings → Modules), or paste
-`exec(open(r"…/slicer/install-segqueue.py").read())` into the Python Console.
-Both run the module straight out of the checkout, so a `git pull` updates it.
-
-**Rebuild the package after any change to `src/segqueue`** — the copy inside the
-archive is what annotators run, and a stale one speaks an old wire protocol to a
-new server. (Not `girder-client`: version 5 requires Python
-3.10 and Slicer 5.8 ships 3.9. That constraint is also why `src/segqueue` is
-stdlib-only.)
-
-Full deployment, ingest, backup and upgrade notes:
-**[docs/SERVER-SETUP.md](docs/SERVER-SETUP.md)**. The annotator-facing setup and
-a manual test walkthrough are in
-**[docs/SegQueue-Setup-Guide.pdf](docs/SegQueue-Setup-Guide.pdf)**.
-
-### Status
-
-Verified end to end against the real Compose stack, by `tests/segqueue_e2e.py`:
-register → assetstore → create annotator → ingest (heart filter, coronary seed) →
-assign → download with checksum verification → fetch the heart and coronary masks
-→ resumable chunked upload → submit → review → reject with comment → rework as
-attempt 2 with the lease renewed → resubmit → approve. Empty segments, stray
-marks, off-protocol segments, resampled geometry and mismatched checksums are all
-refused with the message the annotator needs, and the 30-annotator concurrent
-claim race is tested against real MongoDB.
-
-The Slicer panel is verified against a real Slicer 5.8.1: the packaged extension
-installs through the Extension Manager, the module loads from the installed
-location, all six offered effects activate, editing is confined to the coronary
-seed and to the opacified HU range, branches do not overwrite each other, and an
-export with the seed present in the scene excludes it and lands on the source
-grid. Two bugs came out of that pass — mask mode silently resetting when set
-before the mask segment id, and an empty scene reporting a file-write failure
-instead of naming the vessels still to draw.
-
-The join has since been exercised too: against a running stack, the module logs
-in, claims an oblique case, downloads it with its heart and coronary masks, loads
-all three into the scene, and releases with a purge.
-
-Not yet exercised: a human segmenting a case through to Submit, gold and
-duplicate scoring on real label volumes, and anything at 5,000-case scale.
-
-Not yet built: an export from approved submissions into the
-[case layout](#your-coronary-data) `segtrain convert` reads. Approved work sits
-in the assetstore as label volumes on the source grid — the right *contents*, one
-directory rename away from the right *shape* — but the step is manual today.
----
-
-## Three things that will cost you if you miss them
-
-**Oblique volumes are unreadable by nnU-Net's default reader.** SimpleITK rejects
-any NIfTI whose direction cosines are not orthonormal to ITK's tolerance — *"ITK
-only supports orthonormal direction cosines"* — and obliquely-acquired volumes
-stored as float32 routinely fall just outside it. Cardiac CT is frequently
-reconstructed on an oblique grid, so this is not a rare corner. Those cases fail
-to preprocess and disappear from the training set quietly; in TotalSegmentator it
-is 136 of 1228 volumes, 11.1%, and unevenly distributed across study types.
-`convert` therefore writes `overwrite_image_reader_writer:
-NibabelIOWithReorient` into `dataset.json`. Do not remove it.
-
-**Independently drawn masks overlap.** A multilabel volume needs one owner per
-voxel, but masks drawn per structure disagree by a voxel or two at shared
-interfaces — for the coronary tree, the LM/LAD and LM/LCx bifurcations and the
-RCA/PDA continuation. The default `overlap_policy: smaller_wins` gives contested
-voxels to the smaller structure, so a thin distal vessel is not eroded by the
-trunk it branches from. The alternative, `label_order`, is alphabetical and
-therefore anatomically arbitrary; it exists only to measure the difference.
-(A single integer label volume has no overlaps to resolve — the exporter already
-picked a winner, and you cannot see what it discarded.)
-
-**A vessel absent from a case is not the same as a vessel not labelled.** The
-`ramus_intermedius` genuinely does not exist in most people, and the PDA comes off
-the LCx rather than the RCA in a left-dominant heart. Leave the mask out rather
-than writing an empty one; `convert` reports absent structures per case, which is
-the signal you want. An empty mask is indistinguishable from a labelling
-oversight.
-
----
-
-## Disk
-
-Measure rather than trust an estimate — CCTA at ~0.35 mm isotropic preprocesses
-large, and nnU-Net's `.npz` → `.npy` unpacking roughly doubles it while training.
-Checkpoints run ~1 GB per fold. Provisioning depends on the case count, spacing
-and fold scheme the new plan settles on.
-
-`--npz` is **off by default**. It writes float16 softmax per class per voxel —
-hundreds of GB across a multi-class dataset — and is only needed to build a
-cross-fold ensemble.
-
----
-
-## Splits
-
-`segtrain index` writes `meta.csv` with a hash-derived split. Splits are assigned
-by **hashing the case id**, not by shuffling, so adding case 200 to a 199-case
-dataset leaves the first 199 exactly where they were. Test cases never enter
-`imagesTr`, so no training, model-selection or postprocessing decision can see
-them.
-
-`--scheme` selects how folds are drawn; `validate_splits` fails loudly on
-train/val overlap or test leakage, and preview cases are checked to be genuinely
-held out.
-
-> **Split ratios, scheme and stratification are still open in the training
-> plan.** See [`docs/TRAINING-PLAN.md`](docs/TRAINING-PLAN.md).
-
-## Tests
-
-```bash
-pytest                    # 415 tests
-pytest -m "not slow"      # skip the full-case merge round-trip
-
-# The SegQueue concurrency tests need a real MongoDB -- the whole point of them
-# is that the atomic claim survives thirty annotators starting at once, which no
-# fake can demonstrate. 19 more tests.
-docker run -d --rm -p 27099:27017 mongo:7
-SEGQUEUE_TEST_MONGO=mongodb://localhost:27099 pytest tests/test_segqueue_server.py
-```
-
-Tests needing a dataset are marked `needs_data`, and those needing a database
-`needs_mongo`; both skip without them, so the suite runs on a checkout alone.
-
----
-
-## Acknowledging SciNet
-
-Any publication using compute from this pipeline should carry SciNet's
-[requested acknowledgement](https://docs.scinet.utoronto.ca/index.php/Acknowledging_SciNet):
-
-> Computations were performed on the Trillium supercomputer at the SciNet HPC
-> Consortium. SciNet is funded by Innovation, Science and Economic Development
-> Canada; the Digital Research Alliance of Canada; the Ontario Research Fund:
-> Research Excellence; and the University of Toronto.
-
-SciNet also asks that these two papers be cited:
-
-- M. Ponce et al., "Deploying a Top-100 Supercomputer for Large Parallel
-  Workloads: the Niagara Supercomputer", *PEARC'19 Proceedings*, 2019.
-  [doi:10.1145/3332186.3332195](https://doi.org/10.1145/3332186.3332195)
-- C. Loken et al., "SciNet: Lessons Learned from Building a Power-efficient
-  Top-20 System and Data Centre", *J. Phys.: Conf. Ser.* **256** 012026, 2010.
-  [doi:10.1088/1742-6596/256/1/012026](https://doi.org/10.1088/1742-6596/256/1/012026)
-
-## Licence
-
-MIT for this pipeline. nnU-Net is Apache-2.0; the TotalSegmentator dataset
-carries its own terms — check them before redistributing any trained weights,
-since the weights' licence follows the training data, not this repo.
-
-The SciNet logo in this README is reproduced from the SciNet documentation wiki,
-which invites its use; it is not covered by this repository's MIT licence.
+MIT for this pipeline; nnU-Net is Apache-2.0. Trained weights follow the
+training data's terms, not this repo's.

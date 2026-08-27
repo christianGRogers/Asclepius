@@ -31,7 +31,7 @@ thresholds, annotation protocol details.
 ## Fixed constraints
 
 - Training runs on **Trillium** (SciNet). One H100 per job, 24-hour walltime cap,
-  job-chain resume. See [Running on SciNet](../README.md#running-on-scinet).
+  job-chain resume. See the README's “Running it” section.
 - Case data is **1000 ImageCAS CCTA volumes**, held on a self-hosted **Girder**
   server and already ingested into the SegQueue case pool. Per-branch labelling
   has not started.

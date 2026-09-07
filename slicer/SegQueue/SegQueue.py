@@ -153,13 +153,21 @@ VESSEL_EFFECTS = (
 )
 
 #: Settings keys. Stored in Slicer's own QSettings so a returning annotator does
-#: not retype the server URL. The token is deliberately *not* stored -- see
+#: not retype the server URL or re-dial their tool sizes. Neither the username
+#: nor the token is stored -- see ``_SETTING_LEGACY_USER`` below and
 #: SegQueueClient's docstring.
 _SETTING_TUBE_RADIUS = "SegQueue/tubeRadiusMm"
 _SETTING_BRUSH = "SegQueue/brushDiameterMm"
 _SETTING_SERVER = "SegQueue/serverUrl"
-_SETTING_USER = "SegQueue/lastUser"
 _SETTING_CACHE = "SegQueue/cacheRoot"
+
+#: The username used to be remembered here. It no longer is: the password field
+#: is deliberately blank at every login so that a shared annotation workstation
+#: cannot attribute one person's submissions to another, and a pre-filled
+#: username undoes most of that -- the next person tabs past a name that is not
+#: theirs and only the password stands between them and someone else's queue.
+#: The key is kept solely to delete the value left behind by earlier versions.
+_SETTING_LEGACY_USER = "SegQueue/lastUser"
 
 
 class SegQueue(ScriptedLoadableModule):
@@ -893,6 +901,11 @@ class SegQueueWidget(ScriptedLoadableModuleWidget):
 
         self.logic = SegQueueLogic()
 
+        # Older versions remembered the username. Drop anything they stored, so
+        # upgrading actually stops the autofill instead of merely not adding to
+        # it. Harmless when the key is already absent.
+        qt.QSettings().remove(_SETTING_LEGACY_USER)
+
         self._buildHeader()
         self._buildLoginSection()
         self._buildCaseSection()
@@ -985,7 +998,14 @@ class SegQueueWidget(ScriptedLoadableModuleWidget):
             "Base URL of the SegQueue server. /api/v1 is added automatically.")
         form.addRow("Server:", self.serverEdit)
 
-        self.userEdit = qt.QLineEdit(slicer.util.settingsValue(_SETTING_USER, ""))
+        # Deliberately empty, and never pre-filled from settings: see
+        # _SETTING_LEGACY_USER. Whoever is sitting here types who they are.
+        self.userEdit = qt.QLineEdit()
+        self.userEdit.setPlaceholderText("Your SegQueue username")
+        self.userEdit.setToolTip(
+            "Not saved. Type it each session, so submissions are always "
+            "attributed to whoever is actually at this machine.")
+        self.userEdit.returnPressed.connect(self.onLogin)
         form.addRow("Username:", self.userEdit)
 
         self.passwordEdit = qt.QLineEdit()
@@ -1381,7 +1401,6 @@ class SegQueueWidget(ScriptedLoadableModuleWidget):
                 self.passwordEdit.setText("")
 
         qt.QSettings().setValue(_SETTING_SERVER, server)
-        qt.QSettings().setValue(_SETTING_USER, username)
 
         project = self.logic.project
         quota = ("" if project.quota_remaining is None

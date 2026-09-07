@@ -77,8 +77,14 @@ drag `slicer/SegQueue` into *Additional module paths* → restart.
 | Field | |
 |---|---|
 | **Server** | Base URL of the SegQueue server. `/api/v1` is appended automatically. Remembered between sessions |
-| **Username** | Remembered between sessions |
-| **Password** | **Never saved.** One login per Slicer session — on a shared machine a remembered password means every submission is attributed to whoever logged in last |
+| **Username** | **Not saved.** Typed each session |
+| **Password** | **Not saved.** One login per Slicer session |
+
+Neither the username nor the password is remembered, and an upgrade deletes
+any username an earlier version stored. This is what keeps a shared
+annotation workstation honest: a pre-filled name means the next person tabs
+past someone else's identity, and only the password stands between them and
+that person's queue. Only the server URL, cache root and tool sizes persist.
 
 **Log out and purge** ends the session *and* deletes every cached case, which is
 what makes a shared teaching workstation safe to walk away from.

@@ -58,6 +58,10 @@ _MODULE_DIR = os.path.dirname(os.path.abspath(__file__))
 _REPO_ROOT = os.path.dirname(os.path.dirname(_MODULE_DIR))
 _SRC = os.path.join(_REPO_ROOT, "src")
 _SEARCHED = (os.path.join(_MODULE_DIR, "segqueue"), _SRC)
+
+#: Icons and logo artwork. Sits beside this file in both layouts -- the
+#: checkout and the installed extension -- so no second search is needed.
+_RESOURCES = os.path.join(_MODULE_DIR, "Resources")
 if os.path.isdir(_SRC) and _SRC not in sys.path:
     sys.path.insert(0, _SRC)
 
@@ -76,7 +80,7 @@ except ImportError as exc:  # pragma: no cover - surfaced in the UI instead
 
 from SegQueueLib import CacheError, CaseCache, SegQueueClient, SegQueueError, defaultRoot
 
-__version__ = "0.1.0"
+__version__ = "0.2.0"
 
 #: How often the in-progress segmentation is written to disk. Two minutes is
 #: chosen against the cost of losing work rather than the cost of the write: a
@@ -167,8 +171,19 @@ class SegQueue(ScriptedLoadableModule):
         self.parent.contributors = ["Christian Rogers"]
         self.parent.helpText = __doc__
         self.parent.acknowledgementText = (
-            "Distributed CT segmentation for the Asclepius coronary dataset."
+            "Distributed CT segmentation for the Asclepius coronary dataset. "
+            "Built and operated by Bradensbay."
         )
+
+        # Slicer gives a scripted module with no icon of its own the application's
+        # generic module logo -- which is what used to appear in the module
+        # selector and in the header above the panel. The base class does look for
+        # Resources/Icons/<ModuleName>.{svg,png}, but it resolves that against
+        # `parent.path`, which differs between a checkout and an installed
+        # extension; setting the icon here makes it independent of that.
+        _icon = os.path.join(_RESOURCES, "Icons", "SegQueue.png")
+        if os.path.isfile(_icon):
+            self.parent.icon = qt.QIcon(_icon)
 
 
 # =============================================================================
@@ -878,6 +893,7 @@ class SegQueueWidget(ScriptedLoadableModuleWidget):
 
         self.logic = SegQueueLogic()
 
+        self._buildHeader()
         self._buildLoginSection()
         self._buildCaseSection()
         self._buildVesselSection()
@@ -889,6 +905,72 @@ class SegQueueWidget(ScriptedLoadableModuleWidget):
 
         self._startTimers()
         self._updateEnabled()
+
+    # ----------------------------------------------------------------- header
+
+    def _buildHeader(self):
+        """The Bradensbay identity strip at the top of the module panel.
+
+        This replaces Slicer's own logo, and it is not decoration. An annotator
+        is about to send de-identified patient imaging to a server they typed a
+        URL for once, weeks ago; the panel should say whose service that is
+        without them having to open Help & Acknowledgement to find out.
+
+        Two pixmaps rather than one recoloured at runtime: on a dark background
+        the mark inverts -- the bay turns white and the trace navy -- which is a
+        different drawing, not a lighter one, so a single asset cannot serve both
+        of Slicer's themes.
+        """
+        strip = qt.QWidget()
+        row = qt.QHBoxLayout(strip)
+        row.setContentsMargins(0, 2, 0, 6)
+        row.setSpacing(8)
+
+        banner = self._bannerPixmap()
+        logo = qt.QLabel()
+        if banner is not None:
+            logo.setPixmap(banner)
+        else:
+            # A missing or unreadable asset is cosmetic. It must never be the
+            # reason an annotator cannot reach the queue, so fall back to text.
+            logo.setText("<b>bradensbay</b>")
+        logo.setToolTip("SegQueue {} -- Bradensbay".format(__version__))
+        row.addWidget(logo)
+        row.addStretch(1)
+
+        version = qt.QLabel("SegQueue {}".format(__version__))
+        version.setStyleSheet("color: palette(mid); font-size: 11px;")
+        version.setAlignment(qt.Qt.AlignRight | qt.Qt.AlignBottom)
+        row.addWidget(version)
+
+        self.layout.addWidget(strip)
+
+        rule = qt.QFrame()
+        rule.setFrameShape(qt.QFrame.HLine)
+        rule.setFrameShadow(qt.QFrame.Sunken)
+        self.layout.addWidget(rule)
+
+    def _bannerPixmap(self):
+        """The wordmark for the current theme, or None if it will not load."""
+        dark = False
+        try:
+            dark = slicer.app.palette().color(qt.QPalette.Window).lightness() < 128
+        except Exception:
+            pass
+        path = os.path.join(_RESOURCES, "Icons",
+                            "banner-dark.png" if dark else "banner-light.png")
+        if not os.path.isfile(path):
+            return None
+        pixmap = qt.QPixmap(path)
+        if pixmap.isNull():
+            return None
+        try:
+            # Drawn at 2x so it stays sharp on a HiDPI laptop, which is what most
+            # annotators are on. Qt divides it back to a 182x40 logical strip.
+            pixmap.setDevicePixelRatio(2.0)
+        except Exception:
+            pixmap = pixmap.scaledToHeight(40, qt.Qt.SmoothTransformation)
+        return pixmap
 
     def _buildLoginSection(self):
         box = ctk.ctkCollapsibleButton()

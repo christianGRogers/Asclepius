@@ -13,6 +13,7 @@ real installation rather than inferred::
       lib/Slicer-5.8/qt-scripted-modules/SegQueue.py
       lib/Slicer-5.8/qt-scripted-modules/SegQueueLib/...
       lib/Slicer-5.8/qt-scripted-modules/segqueue/...     <- vendored
+      lib/Slicer-5.8/qt-scripted-modules/Resources/...    <- icon + wordmark
       share/Slicer-5.8/SegQueue.s4ext                     <- the descriptor
 
 Two things about that are worth knowing.
@@ -42,6 +43,11 @@ EXTENSION_NAME = "SegQueue"
 CATEGORY = "Segmentation"
 CONTRIBUTORS = "Christian Rogers"
 HOMEPAGE = "https://github.com/christianGRogers/Asclepius"
+#: Shown beside the entry in the Extension Manager. Must be a URL the manager
+#: can reach without a checkout, so it points at the file in the repository
+#: rather than at the copy inside the archive.
+ICON_URL = ("https://raw.githubusercontent.com/christianGRogers/Asclepius/"
+            "main/slicer/SegQueue/Resources/Icons/SegQueue.png")
 DESCRIPTION = (
     "Distributed coronary artery segmentation. Fetches one assigned CT case at a "
     "time from a SegQueue server, creates the project's segments already named "
@@ -83,7 +89,7 @@ build_subdirectory .
 homepage {homepage}
 contributors {contributors}
 category {category}
-iconurl
+iconurl {iconurl}
 status
 description {description}
 screenshoturls
@@ -141,6 +147,19 @@ def build(outDir, slicerVersion=DEFAULT_SLICER_VERSION, keepStaging=False):
     shutil.copytree(os.path.join(MODULE_DIR, EXTENSION_NAME + "Lib"),
                     os.path.join(scripted, EXTENSION_NAME + "Lib"), ignore=_ignore)
 
+    # The module README, so an installed extension carries its own instructions.
+    readme = os.path.join(MODULE_DIR, "README.md")
+    if os.path.isfile(readme):
+        shutil.copy(readme, scripted)
+
+    # Icons and logo artwork. Without Resources/Icons/SegQueue.png beside the
+    # module, Slicer falls back to its own generic module logo, and the panel
+    # header falls back to plain text -- so this is not optional dressing.
+    resources = os.path.join(MODULE_DIR, "Resources")
+    if os.path.isdir(resources):
+        shutil.copytree(resources, os.path.join(scripted, "Resources"),
+                        ignore=_ignore)
+
     # The shared wire-protocol package, vendored beside them.
     shutil.copytree(SHARED_PACKAGE, os.path.join(scripted, "segqueue"), ignore=_ignore)
 
@@ -148,7 +167,7 @@ def build(outDir, slicerVersion=DEFAULT_SLICER_VERSION, keepStaging=False):
               encoding="utf-8", newline="\n") as handle:
         handle.write(S4EXT_TEMPLATE.format(
             homepage=HOMEPAGE, revision=revision, contributors=CONTRIBUTORS,
-            category=CATEGORY, description=DESCRIPTION))
+            category=CATEGORY, description=DESCRIPTION, iconurl=ICON_URL))
 
     archive = os.path.join(
         outDir, f"{EXTENSION_NAME}-{version}-Slicer-{slicerVersion}.zip")

@@ -1,0 +1,178 @@
+# Build the SegQueue extension on every push to main, and publish it as a
+# release the moment its version changes.
+#
+# The module checks this repository's releases when an annotator opens it and
+# offers a one-press update, so "publishing" is not an administrative step at
+# the end of a project -- it is how a fix reaches thirty laptops. Two properties
+# matter more than anything else here:
+#
+# * **A push that does not bump the version publishes nothing.** The tag is
+#   derived from __version__, and an existing tag means the work is already
+#   released. Otherwise every README typo would prompt every annotator to
+#   restart Slicer.
+# * **A broken build never becomes a release.** The shared package's tests and a
+#   structural check of the archive both run first. An annotator pressing
+#   "Update and restart" is trusting this file.
+
+name: SegQueue release
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "slicer/**"
+      - "src/segqueue/**"
+      - "tests/test_segqueue_*.py"
+      - ".github/workflows/segqueue-release.yml"
+  workflow_dispatch:
+
+# Creating the tag and the release needs write access to the repository.
+permissions:
+  contents: write
+
+# Two pushes in quick succession must not race to create the same tag.
+concurrency:
+  group: segqueue-release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # build-extension.py stamps the commit into the .s4ext, and the tag
+          # check reads the remote's tags.
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install test dependencies
+        run: |
+          python -m pip install --upgrade pip
+          # The project's own light dependencies plus pytest; conftest.py imports
+          # segtrain, so the package has to be importable even for these tests.
+          pip install -e ".[dev]" requests
+
+      - name: Test the shared package
+        # Only the client-side segqueue tests. The server tests want a MongoDB
+        # and the training tests want a 300 GB dataset; neither says anything
+        # about whether this archive is safe to hand an annotator.
+        run: |
+          python -m pytest -q \
+            tests/test_segqueue_release.py \
+            tests/test_segqueue_updater.py \
+            tests/test_segqueue_protocol.py \
+            tests/test_segqueue_states.py \
+            tests/test_segqueue_policy.py \
+            tests/test_segqueue_segcheck.py \
+            tests/test_segqueue_checksum.py \
+            tests/test_segqueue_dataset.py \
+            tests/test_segqueue_client.py
+
+      - name: Read the module version
+        id: version
+        run: |
+          VERSION=$(python slicer/build-extension.py --print-version)
+          test -n "$VERSION" || { echo "could not read __version__"; exit 1; }
+          echo "version=$VERSION"          >> "$GITHUB_OUTPUT"
+          echo "tag=segqueue-v$VERSION"    >> "$GITHUB_OUTPUT"
+          echo "SegQueue \`$VERSION\`"     >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Build the extension archive
+        run: python slicer/build-extension.py --out dist
+
+      - name: Check the archive is installable
+        # The same shape check the updater runs on an annotator's machine before
+        # it overwrites anything, run here where a failure costs nobody an
+        # afternoon.
+        run: |
+          python - <<'PY'
+          import glob, sys, zipfile
+          sys.path.insert(0, "src")
+          from segqueue.release import ASSET_PATTERN, archive_members
+
+          archives = glob.glob("dist/*.zip")
+          if len(archives) != 1:
+              raise SystemExit("expected exactly one archive, found %r" % archives)
+          path = archives[0]
+
+          name = path.split("/")[-1]
+          match = ASSET_PATTERN.match(name)
+          if match is None:
+              raise SystemExit("%s is not named the way the updater expects" % name)
+          slicer_version = match.group("slicer")
+
+          with zipfile.ZipFile(path) as archive:
+              names = archive.namelist()
+              broken = archive.testzip()
+          if broken is not None:
+              raise SystemExit("archive is corrupt at %s" % broken)
+
+          members = archive_members(names, slicer_version)
+          required = [
+              "SegQueue.py",
+              "SegQueueLib/updater.py",
+              "segqueue/release.py",
+              "Resources/Icons/SegQueue.png",
+              "Resources/Icons/wordmark-light.png",
+              "Resources/Icons/wordmark-dark.png",
+          ]
+          missing = [r for r in required
+                     if not any(m.endswith("/" + r) for m in members)]
+          if missing:
+              raise SystemExit("archive is missing %s" % ", ".join(missing))
+          if "SegQueue/share/Slicer-%s/SegQueue.s4ext" % slicer_version not in names:
+              raise SystemExit("archive has no .s4ext; the Extension Manager will refuse it")
+          print("%s: %d module files, descriptor present" % (name, len(members)))
+          PY
+
+      - name: Keep the archive on the run
+        # Uploaded whether or not a release is cut, so a push that only changes
+        # code still leaves something installable to test by hand.
+        uses: actions/upload-artifact@v4
+        with:
+          name: SegQueue-${{ steps.version.outputs.version }}
+          path: dist/*.zip
+          if-no-files-found: error
+
+      - name: Has this version already been released?
+        id: tag
+        run: |
+          if git ls-remote --exit-code --tags origin "refs/tags/${{ steps.version.outputs.tag }}" >/dev/null 2>&1; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+            echo "Tag \`${{ steps.version.outputs.tag }}\` already exists - built, not released. Bump \`__version__\` to publish." >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Publish the release
+        if: steps.tag.outputs.exists == 'false'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.version.outputs.tag }}
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          cat > notes.md <<'MD'
+          ## Install
+
+          **Already running SegQueue?** Open the module in Slicer. It checks for
+          updates on its own and offers **Update and restart** - one press, no
+          download to find, no Extensions Manager.
+
+          **First install:** download the `.zip` below, then in Slicer go to
+          **Extensions Manager -> Install from file**, pick it, and restart.
+          Install **SegmentEditorExtraEffects** first if you have not already -
+          it provides *Draw tube*, and "Install from file" does not resolve
+          dependencies.
+
+          ---
+          MD
+          gh release create "$TAG" dist/*.zip \
+            --title "SegQueue $VERSION" \
+            --notes-file notes.md \
+            --generate-notes \
+            --target "$GITHUB_SHA"
+          echo "Released [\`$TAG\`](https://github.com/$GITHUB_REPOSITORY/releases/tag/$TAG)." >> "$GITHUB_STEP_SUMMARY"

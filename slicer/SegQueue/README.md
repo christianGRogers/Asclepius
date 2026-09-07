@@ -1,7 +1,7 @@
 <p align="left">
   <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="Resources/Icons/banner-dark.png">
-    <img src="Resources/Icons/banner-light.png" width="182" alt="Bradensbay">
+    <source media="(prefers-color-scheme: dark)" srcset="Resources/Icons/wordmark-dark.png">
+    <img src="Resources/Icons/wordmark-light.png" width="190" alt="Bradensbay">
   </picture>
 </p>
 
@@ -71,6 +71,48 @@ exec(open(r"<repo>/slicer/install-segqueue.py").read())
 That adds `slicer/SegQueue` to *Additional module paths* and offers to restart.
 By hand it is the same three clicks: **Edit → Application Settings → Modules →**
 drag `slicer/SegQueue` into *Additional module paths* → restart.
+
+## Updating
+
+The module checks for a newer published release when you open it, and offers to
+install it in one press.
+
+```
+[ SegQueue 0.3.0 is available. You are running 0.2.0. ]
+[ Update and restart ]  [ What changed ]  [ Not now ]
+```
+
+**Update and restart** downloads the release archive, checks it is a real
+SegQueue package for this Slicer version, copies the current install aside, swaps
+the files in, and offers to restart. Your draft is autosaved before anything is
+touched, and the case you are on is still assigned to you when Slicer comes back
+— so updating mid-case costs a restart, not your work.
+
+It refuses rather than guesses in three cases, each with a message saying what
+to do instead: the module is running from a **git checkout** (use `git pull`),
+it is **not installed as an extension**, or Slicer's extension folder is **not
+writable** by your account.
+
+The backup it takes is a sibling directory named
+`qt-scripted-modules.backup-<timestamp>`. Nothing deletes it; if an update ever
+goes wrong, that is the previous version, intact.
+
+Some details worth knowing:
+
+- **The check is quiet.** Offline, behind a proxy, GitHub down, rate-limited —
+  all of them mean "no update" and none of them shows you a dialog. It runs a
+  second after the panel appears, never before, so it cannot delay you getting
+  into a case.
+- **It runs at most every 6 hours per machine.** Unauthenticated GitHub allows
+  60 requests an hour *per address*, which a teaching lab shares. **Check for
+  updates** in the Server section ignores that cache and always tells you what
+  it found.
+- **Only SegQueue releases count.** This repository also holds the training
+  pipeline; the check only considers tags shaped `segqueue-v<version>` that
+  carry an archive built for your Slicer version. Prereleases are ignored.
+- **Nothing is deleted from your install.** Files are added and overwritten.
+  A file from an older version that no longer ships is left in place — Slicer
+  ignores it, and deleting the wrong file mid-swap is not recoverable.
 
 ## First run
 
@@ -147,42 +189,87 @@ password.
 
 ## Branding
 
-The module ships its own identity rather than Slicer's generic module logo:
+The module ships its own identity in two places, and Slicer's own logo in
+neither:
 
 ```
-Resources/Icons/SegQueue.png        module icon (256 px), what Slicer shows in the module selector
-Resources/Icons/banner-light.png    panel wordmark, light themes
-Resources/Icons/banner-dark.png     panel wordmark, dark themes
-Resources/Logo/*.svg                vector sources: mark, lockup, reversed, one-colour
+Resources/Icons/SegQueue.png         module icon (256 px), shown in the module selector
+Resources/Icons/wordmark-light.png   panel title-bar wordmark, light themes
+Resources/Icons/wordmark-dark.png    panel title-bar wordmark, dark themes
+Resources/Logo/*.svg                 vector sources: mark, wordmark, lockup, reversed, one-colour
 ```
 
-The panel picks light or dark at startup from the application palette. The mark
-*inverts* on dark backgrounds — the bay turns white, the trace navy — so the two
-banners are different drawings, not one asset lightened; recolouring a single
-PNG will look wrong. To change the mark, edit the SVGs under `Resources/Logo/`
-and re-render:
+**The module icon** is picked up by Slicer automatically from
+`Resources/Icons/<ModuleName>.png`, and set explicitly in `SegQueue.__init__`
+as well — the automatic lookup resolves against `parent.path`, which differs
+between a checkout and an installed extension.
+
+**The panel wordmark** replaces the 3D Slicer logo that sits above the module
+panel. That logo is a `QLabel` named `LogoLabel`, installed by the application
+as the panel dock's title-bar widget, and it is *shared application chrome* —
+so the module borrows it in `enter()` and hands the original pixmap back in
+`exit()` and `cleanup()`. Switch to Volumes and Slicer's logo is there again,
+unmodified. The wordmark is scaled to the exact pixel height and device pixel
+ratio of the logo it replaces, so the title bar never changes size as you move
+between modules.
+
+The wordmark carries the name only — no mark. The mark is already the module
+icon in the selector directly below it, and stacking the two reads as two
+pieces of branding rather than one.
+
+Light and dark are chosen from the application palette. They are two drawings,
+not one asset lightened: on a dark background the wordmark is white, and the
+mark inverts outright — the bay turns white and the trace navy. Recolouring a
+single PNG will look wrong.
+
+To change either, edit the SVGs under `Resources/Logo/` and re-render:
 
 ```bash
 python -c "import cairosvg; cairosvg.svg2png(url='Resources/Logo/bradensbay-mark.svg', \
     write_to='Resources/Icons/SegQueue.png', output_width=256, output_height=256)"
+python -c "import cairosvg; cairosvg.svg2png(url='Resources/Logo/bradensbay-wordmark.svg', \
+    write_to='Resources/Icons/wordmark-light.png', output_height=128)"
 ```
 
-Banners are rendered at 364×80 and displayed at a 2× device pixel ratio, i.e. a
-182×40 logical strip, so they stay sharp on HiDPI laptops. Missing or unreadable
-artwork degrades to a text wordmark — it never stops the module loading.
+Missing or unreadable artwork is ignored rather than fatal: the panel keeps
+Slicer's logo and the module loads normally.
 
 Palette: deep navy `#0A2540`, clinical blue `#1466D8`, teal `#16BFB2`.
 
-## Building the package
+## Releases and CI
+
+`.github/workflows/segqueue-release.yml` runs on every push to `main` that
+touches `slicer/`, `src/segqueue/` or the client tests. It:
+
+1. runs the client-side `segqueue` tests (not the server ones — they want a
+   MongoDB, and say nothing about whether this archive is safe to install);
+2. builds the archive;
+3. checks the archive is installable — correctly named, not corrupt, carrying
+   the module, the updater, the shared package and the icons, with a `.s4ext`
+   descriptor — using the same check the updater runs on an annotator's machine;
+4. uploads it as a run artifact regardless;
+5. publishes a release **only if `segqueue-v<__version__>` does not already
+   exist**.
+
+So **bumping `__version__` in `SegQueue.py` is what ships a release.** A push
+that does not bump it is built and tested but publishes nothing — otherwise a
+README typo would prompt thirty annotators to restart Slicer.
+
+The tag shape matters: the updater matches `segqueue-v*` and ignores every other
+tag in the repository. `tests/test_segqueue_release.py` asserts the prefix, so
+changing it in one place and not the other fails CI rather than silently
+stranding every installed client.
+
+To build locally:
 
 ```bash
-python slicer/build-extension.py
+python slicer/build-extension.py            # -> dist/SegQueue-<version>-Slicer-5.8.zip
+python slicer/build-extension.py --print-version
 ```
 
-Writes `dist/SegQueue-<version>-Slicer-5.8.zip`. Plain Python — no CMake, no
-Slicer needed to build it. The archive vendors `src/segqueue` beside the module,
-**so rebuild after any change to `src/segqueue`** or annotators run an old wire
-protocol against a new server.
+Plain Python — no CMake, no Slicer needed. The archive vendors `src/segqueue`
+beside the module, **so rebuild after any change to `src/segqueue`** or
+annotators run an old wire protocol against a new server.
 
 ## Troubleshooting
 
@@ -197,18 +284,36 @@ do not hand-zip the module directory.
 **Draw tube is missing** — SegmentEditorExtraEffects is not installed. Extensions
 Manager → Install Extensions → SegmentEditorExtraEffects → restart.
 
-**The generic Slicer logo still shows** — `Resources/` did not make it into the
-install. Check that `Resources/Icons/SegQueue.png` sits beside `SegQueue.py` in
+**The Slicer logo still shows above the panel** — `Resources/` did not make it
+into the install. Check that `Resources/Icons/` sits beside `SegQueue.py` in
 `.../Slicer 5.8.1/.../Extensions-<rev>/SegQueue/lib/Slicer-5.8/qt-scripted-modules/`,
-and rebuild if not.
+and rebuild if not. The swap also happens on `enter()`, so it appears when you
+open the module, not at startup.
+
+**The update banner never appears** — the check is silent by design. Press
+**Check for updates** in the Server section: it ignores the 6-hour cache and
+reports what it found, including why it could not look.
+
+**"GitHub is rate-limiting update checks from this network"** — 60
+unauthenticated requests an hour are shared by everyone on your address. It
+clears within the hour; installs from the releases page still work meanwhile.
 
 **An upload died halfway** — uploads are chunked and resumable; retry the submit.
 The client asks the server how much it already has and continues from there.
 
 ## Version history
 
-**0.2.0** — Bradensbay identity: module icon, panel wordmark with light/dark
-variants, vector sources, and `iconurl` in the extension descriptor. `Resources/`
-is now packaged by `build-extension.py`. No protocol or workflow changes.
+**0.3.0** — Self-update. The module checks GitHub for a newer release when it
+is opened and installs it in one press, with a backup and a refusal to touch a
+checkout. Releases are now built and published by GitHub Actions on every
+version bump. Adds `segqueue.release` (release selection, unit-tested) and
+`SegQueueLib/updater.py`.
+
+**0.2.0** — Bradensbay identity: module icon, and the Bradensbay wordmark in
+place of the Slicer logo above the panel while SegQueue is open (restored on
+the way out). Light and dark variants, vector sources, and `iconurl` in the
+extension descriptor. The username is no longer remembered between sessions,
+and any username stored by an earlier version is deleted on upgrade. No
+protocol changes.
 
 **0.1.0** — Initial release.

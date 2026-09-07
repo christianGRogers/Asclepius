@@ -27,8 +27,11 @@ and talks to the server with ``requests``, which Slicer already ships. (The
 obvious ``girder-client`` needs Python 3.10; see ``SegQueueLib/client.py``.)
 """
 
+import json
 import os
+import shutil
 import sys
+import tempfile
 import time
 import traceback
 
@@ -62,11 +65,20 @@ _SEARCHED = (os.path.join(_MODULE_DIR, "segqueue"), _SRC)
 #: Icons and logo artwork. Sits beside this file in both layouts -- the
 #: checkout and the installed extension -- so no second search is needed.
 _RESOURCES = os.path.join(_MODULE_DIR, "Resources")
+
+#: Slicer's own logo lives above the module panel, in a QLabel the application
+#: installs as the panel dock's title-bar widget. It is application chrome
+#: shared by every module, so this one *borrows* it for as long as SegQueue is
+#: the open module and hands it back untouched on the way out -- an annotator
+#: who switches to Volumes should see Slicer's branding, not ours.
+_LOGO_LABEL_NAME = "LogoLabel"
+_PANEL_DOCK_NAME = "PanelDockWidget"
 if os.path.isdir(_SRC) and _SRC not in sys.path:
     sys.path.insert(0, _SRC)
 
 try:
     from segqueue import protocol
+    from segqueue import release as rel
     from segqueue import states as st
     from segqueue.checksum import sha256_file, verify_file
     from segqueue.dataset import sniff_suffix, suffix_for
@@ -75,18 +87,38 @@ try:
     _IMPORT_ERROR = None
 except ImportError as exc:  # pragma: no cover - surfaced in the UI instead
     st = None
+    rel = None
     protocol = None
     _IMPORT_ERROR = str(exc)
 
-from SegQueueLib import CacheError, CaseCache, SegQueueClient, SegQueueError, defaultRoot
+from SegQueueLib import (
+    CacheError,
+    CaseCache,
+    SegQueueClient,
+    SegQueueError,
+    UpdateError,
+    defaultRoot,
+    updater,
+)
 
-__version__ = "0.2.0"
+__version__ = "0.3.0"
 
 #: How often the in-progress segmentation is written to disk. Two minutes is
 #: chosen against the cost of losing work rather than the cost of the write: a
 #: 400-slice segmentation saves in well under a second, and no annotator should
 #: have to redo more than two minutes of tracing after a crash.
 AUTOSAVE_SECONDS = 120
+
+#: How long a "no update available" answer is trusted before GitHub is asked
+#: again. Unauthenticated GitHub allows sixty requests an hour *per address*,
+#: and a teaching lab is thirty annotators behind one NAT who each open the
+#: module several times a day. Six hours is far more often than releases happen
+#: and far less often than the module is opened.
+UPDATE_CHECK_HOURS = 6
+
+#: Delay before the update check fires, in milliseconds. The panel draws first;
+#: an annotator opening the module to start work should never wait on GitHub.
+UPDATE_CHECK_DELAY_MS = 1200
 
 #: How often the client tells the server it is still alive. The server's lease is
 #: measured in days, so this only needs to be frequent enough to distinguish
@@ -160,6 +192,9 @@ _SETTING_TUBE_RADIUS = "SegQueue/tubeRadiusMm"
 _SETTING_BRUSH = "SegQueue/brushDiameterMm"
 _SETTING_SERVER = "SegQueue/serverUrl"
 _SETTING_CACHE = "SegQueue/cacheRoot"
+#: Last update check: {"checkedAt": <unix seconds>, "tag": <tag or "">}. Cached
+#: so the rate limit is spent on real checks rather than on reopening a panel.
+_SETTING_UPDATE = "SegQueue/updateCheck"
 
 #: The username used to be remembered here. It no longer is: the password field
 #: is deliberately blank at every login so that a shared annotation workstation
@@ -883,6 +918,8 @@ class SegQueueWidget(ScriptedLoadableModuleWidget):
         self._claimedSubmission = None
         self._segmentButtons = {}
         self._shortcuts = []
+        self._slicerLogo = None
+        self._pendingUpdate = None
 
     # ------------------------------------------------------------------ setup
 
@@ -906,7 +943,7 @@ class SegQueueWidget(ScriptedLoadableModuleWidget):
         # it. Harmless when the key is already absent.
         qt.QSettings().remove(_SETTING_LEGACY_USER)
 
-        self._buildHeader()
+        self._buildUpdateBanner()
         self._buildLoginSection()
         self._buildCaseSection()
         self._buildVesselSection()
@@ -919,70 +956,320 @@ class SegQueueWidget(ScriptedLoadableModuleWidget):
         self._startTimers()
         self._updateEnabled()
 
-    # ----------------------------------------------------------------- header
+    # ----------------------------------------------------------------- update
 
-    def _buildHeader(self):
-        """The Bradensbay identity strip at the top of the module panel.
+    def _buildUpdateBanner(self):
+        """A strip that stays hidden until there is something to install.
 
-        This replaces Slicer's own logo, and it is not decoration. An annotator
-        is about to send de-identified patient imaging to a server they typed a
-        URL for once, weeks ago; the panel should say whose service that is
-        without them having to open Help & Acknowledgement to find out.
-
-        Two pixmaps rather than one recoloured at runtime: on a dark background
-        the mark inverts -- the bay turns white and the trace navy -- which is a
-        different drawing, not a lighter one, so a single asset cannot serve both
-        of Slicer's themes.
+        Hidden rather than showing "you are up to date", because the panel's job
+        is to get an annotator into a case and every permanent widget is a small
+        tax on that. It appears when it has something to say and not before.
         """
-        strip = qt.QWidget()
-        row = qt.QHBoxLayout(strip)
-        row.setContentsMargins(0, 2, 0, 6)
-        row.setSpacing(8)
+        frame = qt.QFrame()
+        frame.setFrameShape(qt.QFrame.StyledPanel)
+        frame.setVisible(False)
+        self.updateBanner = frame
 
-        banner = self._bannerPixmap()
-        logo = qt.QLabel()
-        if banner is not None:
-            logo.setPixmap(banner)
-        else:
-            # A missing or unreadable asset is cosmetic. It must never be the
-            # reason an annotator cannot reach the queue, so fall back to text.
-            logo.setText("<b>bradensbay</b>")
-        logo.setToolTip("SegQueue {} -- Bradensbay".format(__version__))
-        row.addWidget(logo)
-        row.addStretch(1)
+        layout = qt.QVBoxLayout(frame)
+        layout.setContentsMargins(8, 6, 8, 6)
 
-        version = qt.QLabel("SegQueue {}".format(__version__))
-        version.setStyleSheet("color: palette(mid); font-size: 11px;")
-        version.setAlignment(qt.Qt.AlignRight | qt.Qt.AlignBottom)
-        row.addWidget(version)
+        self.updateLabel = qt.QLabel()
+        self.updateLabel.setWordWrap(True)
+        layout.addWidget(self.updateLabel)
 
-        self.layout.addWidget(strip)
+        row = qt.QHBoxLayout()
+        self.updateButton = qt.QPushButton("Update and restart")
+        self.updateButton.setToolTip(
+            "Downloads the new version, installs it over this one and restarts "
+            "Slicer. Your draft is saved first and the case you are on is "
+            "waiting when Slicer comes back.")
+        self.updateButton.clicked.connect(self.onUpdateNow)
+        row.addWidget(self.updateButton)
 
-        rule = qt.QFrame()
-        rule.setFrameShape(qt.QFrame.HLine)
-        rule.setFrameShadow(qt.QFrame.Sunken)
-        self.layout.addWidget(rule)
+        self.updateNotesButton = qt.QPushButton("What changed")
+        self.updateNotesButton.setToolTip("Opens the release notes in a browser.")
+        self.updateNotesButton.clicked.connect(self.onOpenReleaseNotes)
+        row.addWidget(self.updateNotesButton)
 
-    def _bannerPixmap(self):
-        """The wordmark for the current theme, or None if it will not load."""
+        self.updateLaterButton = qt.QPushButton("Not now")
+        self.updateLaterButton.setToolTip(
+            "Hides this until the next time you open the module.")
+        self.updateLaterButton.clicked.connect(
+            lambda: self.updateBanner.setVisible(False))
+        row.addWidget(self.updateLaterButton)
+        layout.addLayout(row)
+
+        self.updateProgress = qt.QProgressBar()
+        self.updateProgress.setVisible(False)
+        layout.addWidget(self.updateProgress)
+
+        self.layout.addWidget(frame)
+
+    def _slicerMinorVersion(self):
+        """``"5.8"`` -- the version extensions are packaged against."""
+        try:
+            return "{}.{}".format(int(slicer.app.majorVersion),
+                                  int(slicer.app.minorVersion))
+        except Exception:
+            pass
+        try:
+            parts = str(slicer.app.applicationVersion).split(".")
+            return "{}.{}".format(int(parts[0]), int(parts[1]))
+        except Exception:
+            return ""
+
+    def _checkForUpdateQuietly(self):
+        """The startup check. Silent about everything except a real update.
+
+        Every failure here -- offline, proxied, rate-limited, GitHub down -- is
+        treated as "no update". None of them is the annotator's problem, and a
+        dialogue box about one is worse than not knowing.
+        """
+        cached = updater.readCache(slicer.util.settingsValue(_SETTING_UPDATE, ""))
+        if updater.cacheIsFresh(cached, UPDATE_CHECK_HOURS * 3600):
+            return
+        try:
+            release = updater.checkForUpdate(__version__, self._slicerMinorVersion())
+        except UpdateError:
+            return
+        except Exception:
+            return
+        self._recordCheck(release)
+        if release is not None:
+            self._showUpdate(release)
+
+    def onCheckForUpdates(self):
+        """The manual check. Ignores the cache and always says what it found."""
+        with _busy():
+            try:
+                release = updater.checkForUpdate(
+                    __version__, self._slicerMinorVersion())
+            except UpdateError as exc:
+                slicer.util.errorDisplay(str(exc))
+                return
+        self._recordCheck(release)
+        if release is None:
+            slicer.util.infoDisplay(
+                "SegQueue {} is the newest published version.".format(__version__))
+            return
+        self._showUpdate(release)
+
+    def _recordCheck(self, release):
+        tag = str((release or {}).get("tag_name") or "")
+        qt.QSettings().setValue(_SETTING_UPDATE, json.dumps({
+            "checkedAt": time.time(), "tag": tag}))
+
+    def _showUpdate(self, release):
+        self._pendingUpdate = release
+        ok, reason = updater.canInstall(_MODULE_DIR)
+        self.updateLabel.setText(
+            "<b>SegQueue {} is available.</b> You are running {}.{}".format(
+                rel.describe(release), __version__,
+                "" if ok else "<br><span style='color:#b26500'>{}</span>".format(reason)))
+        self.updateButton.setEnabled(ok)
+        self.updateNotesButton.setEnabled(bool(release.get("html_url")))
+        self.updateBanner.setVisible(True)
+
+    def onOpenReleaseNotes(self):
+        url = str((self._pendingUpdate or {}).get("html_url") or "")
+        if url:
+            qt.QDesktopServices.openUrl(qt.QUrl(url))
+
+    def onUpdateNow(self):
+        """Download, install, restart. One press, and reversible until the last.
+
+        The order matters. The draft is saved before anything is touched, so the
+        worst case -- a failed swap on a machine that then has to be reinstalled
+        by hand -- still leaves the annotator's work on disk and their case
+        assigned to them.
+        """
+        release = self._pendingUpdate
+        if not release:
+            return
+        ok, reason = updater.canInstall(_MODULE_DIR)
+        if not ok:
+            slicer.util.errorDisplay(reason)
+            return
+
+        asset = rel.asset_for(release, self._slicerMinorVersion())
+        if asset is None:
+            slicer.util.errorDisplay(
+                "That release has no archive for Slicer {}.".format(
+                    self._slicerMinorVersion()))
+            return
+
+        openCase = self.logic.assignment is not None if self.logic else False
+        if not slicer.util.confirmYesNoDisplay(
+                "Install SegQueue {} and restart Slicer?\n\n{}".format(
+                    rel.describe(release),
+                    "Your draft is saved first, and the case you are on is still "
+                    "yours when Slicer comes back."
+                    if openCase else
+                    "Slicer will restart when the update is installed.")):
+            return
+
+        if self.logic is not None:
+            self.logic.autosave()
+
+        self.updateProgress.setVisible(True)
+        self.updateProgress.setValue(0)
+        self.updateButton.setEnabled(False)
+
+        def progress(done, total):
+            self.updateProgress.setMaximum(max(1, total))
+            self.updateProgress.setValue(done)
+            slicer.app.processEvents()
+
+        staging = tempfile.mkdtemp(prefix="segqueue-download-")
+        try:
+            with _busy():
+                archive = os.path.join(staging, str(asset.get("name") or "SegQueue.zip"))
+                updater.downloadAsset(asset, archive, progress=progress)
+                backup = updater.installArchive(
+                    archive, _MODULE_DIR, self._slicerMinorVersion())
+        except UpdateError as exc:
+            slicer.util.errorDisplay(str(exc))
+            return
+        except Exception:
+            slicer.util.errorDisplay(
+                "The update failed:\n\n" + traceback.format_exc()
+                + "\n\nNothing has been lost -- your draft is saved and the "
+                  "previous version is still installed.")
+            return
+        finally:
+            self.updateProgress.setVisible(False)
+            self.updateButton.setEnabled(True)
+            shutil.rmtree(staging, ignore_errors=True)
+
+        # The check cache is cleared rather than refreshed: the version this
+        # answer was computed for is about to stop being the running version.
+        qt.QSettings().remove(_SETTING_UPDATE)
+        self.updateBanner.setVisible(False)
+
+        if slicer.util.confirmOkCancelDisplay(
+                "SegQueue {} is installed.\n\nSlicer needs to restart to load "
+                "it. The previous version was backed up to:\n{}".format(
+                    rel.describe(release), backup)):
+            self._restartSlicer()
+
+    def _restartSlicer(self):
+        for restart in (getattr(slicer.util, "restart", None),
+                        getattr(slicer.app, "restart", None)):
+            if restart is None:
+                continue
+            try:
+                restart()
+                return
+            except Exception:
+                continue
+        slicer.util.infoDisplay(
+            "Please close and reopen Slicer to finish the update.")
+
+    # --------------------------------------------------------------- branding
+
+    def enter(self):
+        """The module became visible: put our name above the panel, and see
+        whether the annotator is running a version we have since replaced."""
+        if self.logic is None:
+            return
+        self._applyPanelBranding()
+        # Deferred so the panel is on screen first. An annotator sitting down to
+        # segment must never wait on GitHub to see the Get next case button.
+        qt.QTimer.singleShot(UPDATE_CHECK_DELAY_MS, self._checkForUpdateQuietly)
+
+    def _logoLabel(self):
+        """Slicer's logo label above the module panel, or None."""
+        try:
+            main = slicer.util.mainWindow()
+        except Exception:
+            return None
+        if main is None:
+            return None
+        label = main.findChild(qt.QLabel, _LOGO_LABEL_NAME)
+        if label is not None:
+            return label
+        # A renamed or customised build still puts the same widget in the same
+        # place, so reach it by role rather than by name.
+        dock = main.findChild(qt.QDockWidget, _PANEL_DOCK_NAME)
+        widget = dock.titleBarWidget() if dock is not None else None
+        return widget if hasattr(widget, "setPixmap") else None
+
+    def _applyPanelBranding(self):
+        """Swap the Slicer logo for the Bradensbay wordmark.
+
+        The wordmark only -- no mark. The mark is already the module's icon in
+        the selector immediately below, and stacking the two reads as two
+        separate pieces of branding rather than one.
+        """
+        label = self._logoLabel()
+        if label is None:
+            return
+        if self._slicerLogo is None:
+            try:
+                # Copied, not referenced: the label owns the pixmap it is
+                # showing, and it is about to be showing a different one.
+                self._slicerLogo = qt.QPixmap(label.pixmap)
+            except Exception:
+                self._slicerLogo = qt.QPixmap()
+        wordmark = self._wordmarkPixmap()
+        if wordmark is None:
+            return
+        label.setPixmap(wordmark)
+        label.setToolTip("SegQueue {} -- Bradensbay".format(__version__))
+
+    def _restorePanelBranding(self):
+        """Give Slicer its logo back, on the way out of the module."""
+        label = self._logoLabel()
+        if label is None or self._slicerLogo is None:
+            return
+        try:
+            if self._slicerLogo.isNull():
+                label.clear()
+            else:
+                label.setPixmap(self._slicerLogo)
+            label.setToolTip("")
+        except Exception:
+            pass
+
+    def _wordmarkPixmap(self):
+        """The wordmark for the current theme, scaled to the logo it replaces.
+
+        Matching the original's pixel height and device pixel ratio is what
+        keeps the title bar from changing size as the annotator moves between
+        modules. Two assets rather than one recoloured: on a dark background the
+        wordmark is white, not a lightened navy.
+        """
         dark = False
         try:
             dark = slicer.app.palette().color(qt.QPalette.Window).lightness() < 128
         except Exception:
             pass
         path = os.path.join(_RESOURCES, "Icons",
-                            "banner-dark.png" if dark else "banner-light.png")
+                            "wordmark-dark.png" if dark else "wordmark-light.png")
         if not os.path.isfile(path):
             return None
         pixmap = qt.QPixmap(path)
         if pixmap.isNull():
             return None
+
+        height, ratio = 0, 1.0
+        original = self._slicerLogo
+        if original is not None and not original.isNull():
+            height = int(original.height())
+            try:
+                ratio = float(original.devicePixelRatio()) or 1.0
+            except Exception:
+                ratio = 1.0
+        if height <= 0:
+            # No logo to measure -- a customised build, or Qt handed back
+            # nothing. 24 device pixels is the height Slicer's own logo uses.
+            height, ratio = 24, 1.0
+
+        pixmap = pixmap.scaledToHeight(height, qt.Qt.SmoothTransformation)
         try:
-            # Drawn at 2x so it stays sharp on a HiDPI laptop, which is what most
-            # annotators are on. Qt divides it back to a 182x40 logical strip.
-            pixmap.setDevicePixelRatio(2.0)
+            pixmap.setDevicePixelRatio(ratio)
         except Exception:
-            pixmap = pixmap.scaledToHeight(40, qt.Qt.SmoothTransformation)
+            pass
         return pixmap
 
     def _buildLoginSection(self):
@@ -1026,6 +1313,16 @@ class SegQueueWidget(ScriptedLoadableModuleWidget):
         row.addWidget(self.loginButton)
         row.addWidget(self.logoutButton)
         form.addRow(row)
+
+        # Deliberately here rather than in the update banner: the banner only
+        # exists when there is an update, and "am I on the current version?" is
+        # a question people ask when there is not.
+        self.checkUpdateButton = qt.QPushButton("Check for updates")
+        self.checkUpdateButton.setToolTip(
+            "Asks GitHub whether a newer SegQueue has been published. Runs "
+            "automatically when you open the module, at most a few times a day.")
+        self.checkUpdateButton.clicked.connect(self.onCheckForUpdates)
+        form.addRow(self.checkUpdateButton)
 
         self.statusLabel = qt.QLabel("Not logged in.")
         self.statusLabel.setWordWrap(True)
@@ -1369,6 +1666,7 @@ class SegQueueWidget(ScriptedLoadableModuleWidget):
         for shortcut in self._shortcuts:
             shortcut.setParent(None)
         self._shortcuts = []
+        self._restorePanelBranding()
         if self.logic is not None:
             self.logic.autosave()
         if self.editorWidget is not None:
@@ -1378,7 +1676,9 @@ class SegQueueWidget(ScriptedLoadableModuleWidget):
             self.editorNode = None
 
     def exit(self):
-        # Leaving the module for another one should not lose work either.
+        # Leaving the module for another one should not lose work either, and
+        # should not leave our name over somebody else's panel.
+        self._restorePanelBranding()
         if self.logic is not None:
             self.logic.autosave()
 

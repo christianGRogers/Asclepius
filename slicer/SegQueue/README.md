@@ -149,6 +149,8 @@ what makes a shared teaching workstation safe to walk away from.
 5. **Validate & submit.** The submission is checked, uploaded in resumable
    chunks, and the local copy deleted.
 
+If anything about the case is worth passing on — a stent, a motion artefact, an ambiguous branch — put it in **Case notes** before you submit. See below.
+
 Everything else in the Segment Editor is still one click away — the four buttons
 are the fast path, not a cage.
 
@@ -171,6 +173,45 @@ are the fast path, not a cage.
   it locally. Use it instead of leaving a case parked.
 * **Centre on heart**, **CTA window/level**, **Show in 3D** — view helpers.
 
+## Case notes
+
+The panel carries a **message thread on each case**. It replaced the project
+instructions, which were the same text on every case and read once in week one;
+this space is worth more as the thing that *differs* between cases.
+
+Type a line, press Enter or **Post**, and it is on the server. Everyone who
+works on that case sees it, with your name on it.
+
+Notes follow the **case**, not the assignment. The annotator doing the rework,
+the reviewer who rejected it, and whoever had the case before them all read the
+same thread — which is the point, because "the RCA ostium is behind a stent, the
+seed mask is wrong from slice 180" belongs to the case and would vanish with the
+assignment.
+
+- **Append-only.** Nothing can be edited or deleted. A shared editable field
+  loses one person's text the moment two people have the case open, and loses
+  attribution always — and a remark from a reviewer is not the same claim as the
+  same words from a first-week annotator.
+- **The author comes from your session**, never from the client. An identifier a
+  client could set is a claim about identity, not a fact about it.
+- **Rejections post themselves.** When a reviewer rejects an attempt, the server
+  adds a note saying who, which attempt, and why. The rework is usually done by
+  someone else, who would otherwise see the reviewer comment with no idea what
+  was tried before.
+- **Unposted text is saved with the case.** Your half-written note goes into the
+  case's manifest on every autosave, on **Save draft now**, and when you leave
+  the module or close Slicer — and comes back when you reopen the case. It is
+  purged with the case on submit, like everything else local.
+- **The thread refreshes every 90 seconds** while a case is open, and on
+  **Refresh**. Slow on purpose: notes are left for the next person, not chatted
+  in real time, and every poll is thirty machines against one small server.
+
+Visibility is "anyone who has ever held this case, plus reviewers". An annotator
+who has never seen a case cannot read remarks about it — the thread names
+people, and thirty undergraduates share a queue.
+
+Notes are capped at 2,000 characters and truncated rather than refused.
+
 ## Review
 
 Reviewers get an extra section: refresh the queue, **Claim & open selected**,
@@ -180,8 +221,13 @@ downloads the reviewer's copy alongside the source volume.
 ## What lands on disk
 
 ```
-~/.segqueue/cases/          one case at a time, purged on submit, release or logout
+~/.segqueue/cases/case-<assignmentId>/
+    <casename>.nrrd          the downloaded CT
+    segmentation.seg.nrrd    the autosaved draft
+    segqueue.json            manifest: elapsed time, paths, and your unposted note
 ```
+
+One case at a time, purged on submit, release or logout.
 
 The cache root is configurable in the panel. Slicer's own `QSettings` keeps the
 server URL, username, tube radius and brush diameter — never the token or the
@@ -302,6 +348,13 @@ clears within the hour; installs from the releases page still work meanwhile.
 The client asks the server how much it already has and continues from there.
 
 ## Version history
+
+**0.4.0** — Case notes. The panel area that held the project instructions is now
+a per-case message thread: append-only, attributed server-side, visible to
+everyone who has worked on the case, with unposted text saved alongside the
+segmentation draft. Reviewer verdicts post themselves into it. Adds
+`GET`/`POST /segqueue/case/<id>/notes` — **the server must be redeployed for
+this release to do anything.**
 
 **0.3.0** — Self-update. The module checks GitHub for a newer release when it
 is opened and installs it in one press, with a backup and a refusal to touch a

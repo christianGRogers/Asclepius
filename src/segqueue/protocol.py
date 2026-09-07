@@ -44,6 +44,11 @@ CASE_DOWNLOAD = "case/{case_id}/download"
 #: the view and confine editing, and a pre-existing coronary lumen mask used as
 #: a starting point. Neither is ever submitted back.
 CASE_ASSET = "case/{case_id}/asset/{kind}"
+#: Notes on a case: a thread anybody who has touched that case can read and add
+#: to. Keyed by *case*, not by assignment, because the point is continuity --
+#: the annotator doing the rework, the reviewer who rejected it and whoever had
+#: the case before them are all looking at the same list.
+CASE_NOTES = "case/{case_id}/notes"
 CASE_SUBMIT = "assignment/{assignment_id}/submit"
 CASE_RELEASE = "assignment/{assignment_id}/release"
 HEARTBEAT = "assignment/{assignment_id}/heartbeat"
@@ -78,6 +83,10 @@ ERR_CHECKSUM = "checksum_mismatch"
 ERR_CLIENT_TOO_OLD = "client_too_old"
 #: HTTP 403: the annotator has used up an admin-set quota.
 ERR_QUOTA = "quota_exhausted"
+#: HTTP 403: reading or writing notes on a case the caller has never held and
+#: does not review. Not 404: pretending the case does not exist would make an
+#: ordinary permission problem look like a bug in the client.
+ERR_NOT_YOUR_CASE = "not_your_case"
 #: HTTP 404: the case has no asset of the requested kind. Normal, not a fault --
 #: most cases have no coronary seed.
 ERR_NO_ASSET = "no_such_asset"
@@ -97,6 +106,17 @@ ASSET_KINDS = (ASSET_REGION, ASSET_SEED)
 #: incapable of reaching the server.
 SEED_SEGMENT_NAME = "~ coronary seed (not submitted)"
 REGION_SEGMENT_NAME = "~ heart region (not submitted)"
+
+
+#: Longest a single case note may be. Not a storage limit -- it is a shape
+#: limit. A note is a remark to the next person who opens this case ("the RCA
+#: ostium is obscured by a stent"), and anything longer is a document that
+#: belongs in the project instructions instead.
+NOTE_MAX_CHARS = 2000
+
+#: How many notes a case listing returns. Long threads are a symptom, not a
+#: feature, and showing the newest few is the useful behaviour.
+NOTE_PAGE_SIZE = 50
 
 
 class ProtocolError(RuntimeError):
@@ -316,6 +336,71 @@ class AssignmentInfo:
             has_region=bool(data.get("hasRegion", False)),
             has_seed=bool(data.get("hasSeed", False)),
         )
+
+
+@dataclass(frozen=True)
+class CaseNote:
+    """One message on a case, by one person, at one time.
+
+    Append-only and attributed. The alternative -- a single shared free-text
+    field per case -- loses one person's text the moment two people edit it, and
+    loses the more important fact of *who said it*: "the seed mask is wrong
+    here" from a reviewer and from a first-week annotator are not the same
+    claim.
+
+    ``author`` is the display name the server resolved; the client never sends
+    it. An identifier supplied by a client is a claim about identity, and this
+    thread is read by people deciding whether to trust a segmentation.
+    """
+
+    id: str = ""
+    case_id: str = ""
+    #: Login or full name, resolved server-side.
+    author: str = ""
+    author_id: str = ""
+    text: str = ""
+    #: Unix timestamp, UTC.
+    created_at: Optional[float] = None
+    #: True for notes the server wrote itself -- a rejection, a reclaimed lease.
+    #: Rendered differently, and never written by a client.
+    system: bool = False
+
+    def to_dict(self) -> dict:
+        return {
+            "id": self.id,
+            "caseId": self.case_id,
+            "author": self.author,
+            "authorId": self.author_id,
+            "text": self.text,
+            "createdAt": self.created_at,
+            "system": self.system,
+        }
+
+    @classmethod
+    def from_dict(cls, data: dict) -> CaseNote:
+        return cls(
+            id=str(data.get("id", "") or ""),
+            case_id=str(data.get("caseId", "") or ""),
+            author=data.get("author", "") or "",
+            author_id=str(data.get("authorId", "") or ""),
+            text=data.get("text", "") or "",
+            created_at=data.get("createdAt"),
+            system=bool(data.get("system", False)),
+        )
+
+
+def clean_note(text: Any) -> str:
+    """Normalise a note on the way in. Returns "" for anything unusable.
+
+    Applied on both ends: client-side so the Post button can be disabled before
+    a round trip, server-side because a client can be old or patched. The length
+    cap truncates rather than refuses -- losing the tail of an over-long note is
+    kinder than losing all of it and the annotator's patience with it.
+    """
+    if text is None:
+        return ""
+    cleaned = str(text).replace("\r\n", "\n").replace("\r", "\n").strip()
+    return cleaned[:NOTE_MAX_CHARS]
 
 
 @dataclass

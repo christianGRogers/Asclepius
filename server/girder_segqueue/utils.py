@@ -216,6 +216,30 @@ def loadOwnAssignment(assignmentModel, assignmentId, user):
     return assignment
 
 
+def requireCaseInvolvement(assignmentModel, caseId, user):
+    """Refuse unless the caller has a stake in this case.
+
+    A stake is: having ever held it -- any assignment in any state, including
+    released and rejected ones -- or being a reviewer. That is deliberately
+    wider than "holds it right now", because the whole value of the case thread
+    is what the *previous* annotator left for the next one, and an annotator who
+    submitted last week should still be able to read the reply.
+
+    It is not wider than that. An annotator who has never seen a case has no
+    business reading remarks about it: the thread names people, and this is a
+    teaching project where thirty undergraduates share a queue.
+    """
+    if isReviewer(user):
+        return True
+    held = assignmentModel.collection.count_documents(
+        {'caseId': caseId, 'userId': user['_id']}, limit=1)
+    if not held:
+        refuse(protocol.ERR_NOT_YOUR_CASE,
+               'You can only read or add notes on cases you have worked on.',
+               status=403)
+    return True
+
+
 def checkClientProtocol(clientProtocol):
     """Translate the shared version check into a Girder refusal."""
     try:

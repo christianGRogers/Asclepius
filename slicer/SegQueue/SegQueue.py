@@ -101,13 +101,18 @@ from SegQueueLib import (
     updater,
 )
 
-__version__ = "0.3.0"
+__version__ = "0.4.0"
 
 #: How often the in-progress segmentation is written to disk. Two minutes is
 #: chosen against the cost of losing work rather than the cost of the write: a
 #: 400-slice segmentation saves in well under a second, and no annotator should
 #: have to redo more than two minutes of tracing after a crash.
 AUTOSAVE_SECONDS = 120
+
+#: How often the case-note thread is refetched while a case is open. Slow on
+#: purpose: notes are left for the next person, not chatted in real time, and
+#: every poll is a request from thirty machines against one small server.
+NOTES_REFRESH_SECONDS = 90
 
 #: How long a "no update available" answer is trusted before GitHub is asked
 #: again. Unauthenticated GitHub allows sixty requests an hour *per address*,
@@ -691,6 +696,38 @@ class SegQueueLogic(ScriptedLoadableModuleLogic):
         self.cache.update(self.assignment.assignment_id, workPath=path)
         return True
 
+    # ------------------------------------------------------------- notes
+
+    def noteDraft(self):
+        """Whatever the annotator had typed and not posted, from the manifest."""
+        if self.assignment is None:
+            return ""
+        manifest = self.cache.manifest(self.assignment.assignment_id) or {}
+        return manifest.get("noteDraft", "") or ""
+
+    def saveNoteDraft(self, text):
+        """Keep an unposted note with the case rather than in the widget.
+
+        A half-written note is the kind of thing that is only written once. It
+        rides along with the segmentation draft -- same directory, same purge --
+        so a crash costs nothing and a submitted case takes it with it.
+        """
+        if self.assignment is None:
+            return False
+        self.cache.update(self.assignment.assignment_id,
+                          noteDraft=(text or "")[:protocol.NOTE_MAX_CHARS])
+        return True
+
+    def caseNotes(self, limit=None):
+        if self.assignment is None or not self.loggedIn:
+            return []
+        return self.client.caseNotes(self.assignment.case_id, limit=limit)
+
+    def addCaseNote(self, text):
+        if self.assignment is None:
+            raise SegQueueError("There is no case open to add a note to.")
+        return self.client.addCaseNote(self.assignment.case_id, text)
+
     def heartbeat(self):
         if self.assignment is None or not self.loggedIn:
             return False
@@ -914,6 +951,7 @@ class SegQueueWidget(ScriptedLoadableModuleWidget):
         self.heartbeatTimer = None
         self.clockTimer = None
         self.checklistTimer = None
+        self.notesTimer = None
         self._reviewRows = []
         self._claimedSubmission = None
         self._segmentButtons = {}
@@ -1165,6 +1203,104 @@ class SegQueueWidget(ScriptedLoadableModuleWidget):
         slicer.util.infoDisplay(
             "Please close and reopen Slicer to finish the update.")
 
+    # ------------------------------------------------------------------ notes
+
+    def _renderNotes(self, notes):
+        """Draw the thread. Newest at the bottom, and scrolled to it.
+
+        Chronological rather than newest-first because the thread is read as a
+        history of one case -- what was tried, what the reviewer said, what was
+        done about it -- and that only makes sense forwards.
+        """
+        if not notes:
+            self.notesBrowser.setHtml(
+                "<span style='color:#888'>No notes on this case yet.</span>")
+            return
+        blocks = []
+        for note in notes:
+            when = ""
+            if note.created_at:
+                try:
+                    when = time.strftime("%d %b %H:%M", time.localtime(note.created_at))
+                except (ValueError, OSError):
+                    when = ""
+            colour = "#6a6a6a" if note.system else "#1466D8"
+            blocks.append(
+                "<p style='margin:0 0 8px 0'>"
+                "<b style='color:{colour}'>{author}</b>"
+                "<span style='color:#8a8a8a'>  {when}</span><br>{text}</p>".format(
+                    colour=colour, author=_escape(note.author or "unknown"),
+                    when=_escape(when),
+                    text=_escape(note.text).replace("\n", "<br>")))
+        self.notesBrowser.setHtml("".join(blocks))
+        # The newest note is the one worth reading; a thread that opens at the
+        # top hides it behind three months of history.
+        scrollBar = self.notesBrowser.verticalScrollBar()
+        scrollBar.setValue(scrollBar.maximum)
+
+    def onRefreshNotes(self, quiet=True):
+        """Refetch the thread. Silent on failure when it was the timer asking.
+
+        A note thread that cannot be fetched is a missing panel. It is never a
+        reason an annotator cannot get on with the case, so the timer swallows
+        everything and only a deliberate press reports.
+        """
+        if self.logic is None or self.logic.assignment is None:
+            self._renderNotes([])
+            return
+        try:
+            notes = self.logic.caseNotes()
+        except SegQueueError as exc:
+            if not quiet:
+                slicer.util.errorDisplay(str(exc))
+            return
+        except Exception:
+            if not quiet:
+                slicer.util.errorDisplay(
+                    "Could not fetch the notes:\n\n" + traceback.format_exc())
+            return
+        self._renderNotes(notes)
+
+    def onPostNote(self):
+        """Send what is in the box. One press, and it is on the server."""
+        if self.logic is None or self.logic.assignment is None:
+            return
+        text = protocol.clean_note(self.noteInput.text)
+        if not text:
+            return
+        with _busy():
+            try:
+                self.logic.addCaseNote(text)
+            except SegQueueError as exc:
+                slicer.util.errorDisplay(str(exc))
+                return
+            except Exception:
+                slicer.util.errorDisplay(
+                    "The note could not be posted, so it has been left in the "
+                    "box:\n\n" + traceback.format_exc())
+                return
+        # Only now: an unsent note must survive a failed send.
+        self.noteInput.setText("")
+        self.logic.saveNoteDraft("")
+        self.onRefreshNotes()
+
+    def _clearNotes(self):
+        """Empty the thread and the compose box when the case goes away."""
+        self.noteInput.setText("")
+        self._renderNotes([])
+
+    def onNotesTimer(self):
+        if self.logic is not None and self.logic.assignment is not None:
+            self.onRefreshNotes()
+
+    def _saveNoteDraft(self):
+        """Persist the unposted note. Cheap, and called wherever work is saved."""
+        if self.logic is not None and self.logic.assignment is not None:
+            try:
+                self.logic.saveNoteDraft(self.noteInput.text)
+            except Exception:
+                pass
+
     # --------------------------------------------------------------- branding
 
     def enter(self):
@@ -1357,10 +1493,46 @@ class SegQueueWidget(ScriptedLoadableModuleWidget):
         self.reworkBox.setVisible(False)
         layout.addWidget(self.reworkBox)
 
-        self.instructionsBrowser = qt.QTextBrowser()
-        self.instructionsBrowser.setMaximumHeight(160)
-        self.instructionsBrowser.setOpenExternalLinks(True)
-        layout.addWidget(self.instructionsBrowser)
+        # Where the project instructions used to be. They were the same text on
+        # every case, read once in week one and then wallpaper; this space is
+        # worth more as the thing that differs between cases. Notes follow the
+        # *case*, so the annotator doing the rework, the reviewer who rejected
+        # it and whoever had it before are all reading the same list.
+        self.notesBox = qt.QGroupBox("Case notes")
+        notesLayout = qt.QVBoxLayout(self.notesBox)
+        notesLayout.setContentsMargins(8, 6, 8, 6)
+
+        self.notesBrowser = qt.QTextBrowser()
+        self.notesBrowser.setMaximumHeight(150)
+        self.notesBrowser.setOpenExternalLinks(True)
+        notesLayout.addWidget(self.notesBrowser)
+
+        noteRow = qt.QHBoxLayout()
+        self.noteInput = qt.QLineEdit()
+        self.noteInput.setPlaceholderText(
+            "Something the next person should know about this case")
+        self.noteInput.setToolTip(
+            "Everyone who works on this case sees this, with your name on it. "
+            "Notes cannot be edited or deleted once posted. Your unposted text "
+            "is saved with the case, so closing Slicer does not lose it.")
+        self.noteInput.setMaxLength(protocol.NOTE_MAX_CHARS)
+        self.noteInput.returnPressed.connect(self.onPostNote)
+        noteRow.addWidget(self.noteInput)
+
+        self.postNoteButton = qt.QPushButton("Post")
+        self.postNoteButton.clicked.connect(self.onPostNote)
+        noteRow.addWidget(self.postNoteButton)
+
+        self.refreshNotesButton = qt.QPushButton("Refresh")
+        self.refreshNotesButton.setToolTip(
+            "Fetch new notes now. This happens on its own every couple of "
+            "minutes while a case is open.")
+        self.refreshNotesButton.clicked.connect(lambda: self.onRefreshNotes(quiet=False))
+        noteRow.addWidget(self.refreshNotesButton)
+        notesLayout.addLayout(noteRow)
+
+        layout.addWidget(self.notesBox)
+        self._renderNotes([])
 
         self.progressBar = qt.QProgressBar()
         self.progressBar.setVisible(False)
@@ -1653,6 +1825,11 @@ class SegQueueWidget(ScriptedLoadableModuleWidget):
         self.checklistTimer.timeout.connect(self._updateChecklist)
         self.checklistTimer.start()
 
+        self.notesTimer = qt.QTimer()
+        self.notesTimer.setInterval(NOTES_REFRESH_SECONDS * 1000)
+        self.notesTimer.timeout.connect(self.onNotesTimer)
+        self.notesTimer.start()
+
     def cleanup(self):
         """Slicer is closing or the module is being reloaded.
 
@@ -1660,13 +1837,14 @@ class SegQueueWidget(ScriptedLoadableModuleWidget):
         Slicer without submitting, which is a routine end to a session.
         """
         for timer in (self.autosaveTimer, self.heartbeatTimer, self.clockTimer,
-                      self.checklistTimer):
+                      self.checklistTimer, self.notesTimer):
             if timer is not None:
                 timer.stop()
         for shortcut in self._shortcuts:
             shortcut.setParent(None)
         self._shortcuts = []
         self._restorePanelBranding()
+        self._saveNoteDraft()
         if self.logic is not None:
             self.logic.autosave()
         if self.editorWidget is not None:
@@ -1679,6 +1857,7 @@ class SegQueueWidget(ScriptedLoadableModuleWidget):
         # Leaving the module for another one should not lose work either, and
         # should not leave our name over somebody else's panel.
         self._restorePanelBranding()
+        self._saveNoteDraft()
         if self.logic is not None:
             self.logic.autosave()
 
@@ -1707,7 +1886,6 @@ class SegQueueWidget(ScriptedLoadableModuleWidget):
                  else "  |  {} case(s) left in your quota".format(project.quota_remaining))
         self.statusLabel.setText("Logged in as {}{}".format(
             user.get("login", username), quota))
-        self.instructionsBrowser.setMarkdown(project.instructions or "")
         self.loginBox.collapsed = True
 
         self._buildSegmentButtons()
@@ -1725,6 +1903,7 @@ class SegQueueWidget(ScriptedLoadableModuleWidget):
             self.logic.disconnect()
         self.statusLabel.setText("Not logged in.")
         self.caseLabel.setText("No case open.")
+        self._clearNotes()
         self.reworkBox.setVisible(False)
         self.reviewBox.setVisible(False)
         self._bindEditor(None, None)
@@ -1808,6 +1987,8 @@ class SegQueueWidget(ScriptedLoadableModuleWidget):
                 _deadlineText(assignment.deadline)))
         self.reworkBox.setVisible(bool(assignment.reviewer_comment))
         self.reworkLabel.setText(assignment.reviewer_comment or "")
+        self.noteInput.setText(self.logic.noteDraft())
+        self.onRefreshNotes()
         self._bindEditor(self.logic.segmentationNode, self.logic.volumeNode)
 
         self._checkToolsAvailable()
@@ -2178,6 +2359,7 @@ class SegQueueWidget(ScriptedLoadableModuleWidget):
     # -------------------------------------------------------------- actions
 
     def onSaveDraft(self):
+        self._saveNoteDraft()
         if self.logic.autosave():
             self.problemsLabel.setText("Draft saved.")
         else:
@@ -2185,6 +2367,7 @@ class SegQueueWidget(ScriptedLoadableModuleWidget):
 
     def onAutosave(self):
         self.logic.autosave()
+        self._saveNoteDraft()
 
     def onHeartbeat(self):
         self.logic.heartbeat()
@@ -2271,6 +2454,7 @@ class SegQueueWidget(ScriptedLoadableModuleWidget):
                 self.progressBar.setVisible(False)
 
         self.noteEdit.setText("")
+        self._clearNotes()
         self.problemsLabel.setText("")
         self.caseLabel.setText("Submitted. Press 'Get next case' when you are ready.")
         self.reworkBox.setVisible(False)
@@ -2293,6 +2477,7 @@ class SegQueueWidget(ScriptedLoadableModuleWidget):
                 slicer.util.errorDisplay(str(exc))
                 return
         self.caseLabel.setText("No case open.")
+        self._clearNotes()
         self.reworkBox.setVisible(False)
         self.seedGroup.setVisible(False)
         self._bindEditor(None, None)
@@ -2405,6 +2590,7 @@ class SegQueueWidget(ScriptedLoadableModuleWidget):
             button.setEnabled(hasCase)
         self.editorBox.setEnabled(hasCase)
         self.vesselBox.setEnabled(hasCase)
+        self.notesBox.setEnabled(hasCase)
 
 
 def _deadlineText(deadline):

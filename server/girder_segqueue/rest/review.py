@@ -15,7 +15,7 @@ from segqueue import policy as pol
 from segqueue import protocol
 from segqueue import states as st
 
-from ..models import Assignment, Case, Review, Submission
+from ..models import Assignment, Case, Note, Review, Submission
 from ..models.review import APPROVE, REJECT
 from ..settings import getPolicy
 from ..utils import fileForCase, refuse, requireReviewer
@@ -195,6 +195,18 @@ class ReviewResource(Resource):
             refuse(protocol.ERR_BAD_STATE,
                    'Another reviewer decided this one first.',
                    status=409, state=assignment['state'])
+
+        # The verdict goes into the case thread as well as onto the assignment.
+        # The rework is usually done by a *different* annotator, who otherwise
+        # sees the reviewer comment with no idea what was tried before -- and the
+        # reviewer who picks it up next sees neither. systemNote never raises:
+        # losing a line of the thread must not cost a reviewer their verdict.
+        Note().systemNote(
+            assignment['caseId'],
+            '{} {}d attempt {}{}'.format(
+                user.get('login') or 'A reviewer', verdict,
+                assignment.get('attempt', 1),
+                ': ' + (comment or '').strip() if (comment or '').strip() else '.'))
 
         if verdict == APPROVE:
             # The replica slot converts from active to approved, which is what

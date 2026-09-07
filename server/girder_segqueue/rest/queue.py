@@ -21,7 +21,7 @@ from segqueue.checksum import matches
 from segqueue.segcheck import Geometry, blocking, check_submission, summarise
 
 from ..constants import MAX_ASSIGN_ATTEMPTS
-from ..models import Assignment, Case, Submission
+from ..models import Assignment, Case, Note, Submission
 from ..settings import getPolicy, getProject
 from ..utils import (
     checkClientProtocol,
@@ -31,6 +31,7 @@ from ..utils import (
     loadOwnAssignment,
     refuse,
     requireAnnotator,
+    requireCaseInvolvement,
     submissionsFolder,
 )
 
@@ -45,6 +46,8 @@ class QueueResource(Resource):
         self.route('POST', ('next',), self.nextCase)
         self.route('GET', ('case', ':caseId', 'download'), self.downloadCase)
         self.route('GET', ('case', ':caseId', 'asset', ':kind'), self.downloadAsset)
+        self.route('GET', ('case', ':caseId', 'notes'), self.listNotes)
+        self.route('POST', ('case', ':caseId', 'notes'), self.addNote)
         self.route('POST', ('assignment', ':assignmentId', 'submit'), self.submit)
         self.route('POST', ('assignment', ':assignmentId', 'release'), self.release)
         self.route('POST', ('assignment', ':assignmentId', 'heartbeat'), self.heartbeat)
@@ -400,6 +403,58 @@ class QueueResource(Resource):
         assignment = loadOwnAssignment(Assignment(), assignmentId, user)
         Assignment().heartbeat(assignment)
         return {'ok': True}
+
+    # --------------------------------------------------------------- notes
+
+    @access.user
+    @autoDescribeRoute(
+        Description('Read the note thread on a case.')
+        .notes('Visible to anyone who has ever held the case, and to reviewers. '
+               'Oldest first, capped at the newest few -- a thread long enough '
+               'to page is a case that needs a conversation, not a UI.')
+        .modelParam('caseId', 'The case.', model=Case, force=True, destName='case')
+        .param('limit', 'How many of the newest notes to return.',
+               dataType='integer', required=False)
+        .errorResponse('You have never worked on that case.', 403)
+    )
+    def listNotes(self, case, limit):
+        user = requireAnnotator(self.getCurrentUser())
+        requireCaseInvolvement(Assignment(), case['_id'], user)
+        return [self._noteInfo(n).to_dict()
+                for n in Note().forCase(case['_id'], limit)]
+
+    @access.user
+    @autoDescribeRoute(
+        Description('Add a note to a case.')
+        .notes('Append-only: notes cannot be edited or deleted, because the '
+               'thread is read by people deciding whether to trust a '
+               'segmentation. The author is resolved from the session, never '
+               'taken from the request.')
+        .modelParam('caseId', 'The case.', model=Case, force=True, destName='case')
+        .param('text', 'The note. Trimmed, and truncated at the protocol limit.')
+        .errorResponse('You have never worked on that case.', 403)
+        .errorResponse('The note was empty.', 400)
+    )
+    def addNote(self, case, text):
+        user = requireAnnotator(self.getCurrentUser())
+        requireCaseInvolvement(Assignment(), case['_id'], user)
+        cleaned = protocol.clean_note(text)
+        if not cleaned:
+            refuse('empty_note', 'A note cannot be empty.', status=400)
+        note = Note().createNote(case['_id'], user, cleaned)
+        return self._noteInfo(note).to_dict()
+
+    def _noteInfo(self, note):
+        created = note.get('created')
+        return protocol.CaseNote(
+            id=str(note['_id']),
+            case_id=str(note.get('caseId', '')),
+            author=note.get('author', '') or '',
+            author_id=str(note.get('authorId') or ''),
+            text=note.get('text', '') or '',
+            created_at=created.timestamp() if created else None,
+            system=bool(note.get('system', False)),
+        )
 
     # -------------------------------------------------------------- shared
 

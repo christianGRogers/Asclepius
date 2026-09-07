@@ -277,6 +277,37 @@ class SegQueueClient:
                                                 assignment_id=assignmentId),
                           params={'reason': reason})
 
+    # --------------------------------------------------------------- notes
+
+    def caseNotes(self, caseId, limit=None):
+        """The case's note thread, oldest first. ``[]`` when there is none.
+
+        Read every time a case is opened and on a slow timer while it is open,
+        so it is deliberately cheap and deliberately forgiving: a thread that
+        cannot be fetched is a missing panel, not a case an annotator cannot
+        work on.
+        """
+        params = {}
+        if limit:
+            params['limit'] = int(limit)
+        rows = self._json('GET', protocol.path(protocol.CASE_NOTES, case_id=caseId),
+                          params=params) or []
+        return [protocol.CaseNote.from_dict(row) for row in rows]
+
+    def addCaseNote(self, caseId, text):
+        """Append one note. Returns it as the server stored it.
+
+        The author is not sent: the server resolves it from the session. A
+        client-supplied name in a thread people use to judge segmentations would
+        be a claim about identity rather than a fact about it.
+        """
+        cleaned = protocol.clean_note(text)
+        if not cleaned:
+            raise SegQueueError('There is nothing to post.')
+        row = self._json('POST', protocol.path(protocol.CASE_NOTES, case_id=caseId),
+                         params={'text': cleaned})
+        return protocol.CaseNote.from_dict(row or {})
+
     # -------------------------------------------------------------- upload
 
     def uploadFile(self, path, folderId, name=None, progress=None):

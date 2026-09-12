@@ -78,6 +78,7 @@ if os.path.isdir(_SRC) and _SRC not in sys.path:
     sys.path.insert(0, _SRC)
 
 try:
+    from segqueue import lasso as lasso_geom
     from segqueue import protocol
     from segqueue import release as rel
     from segqueue import seedsplit
@@ -92,6 +93,7 @@ except ImportError as exc:  # pragma: no cover - surfaced in the UI instead
     rel = None
     protocol = None
     seedsplit = None
+    lasso_geom = None
     _IMPORT_ERROR = str(exc)
 
 from SegQueueLib import (
@@ -104,7 +106,7 @@ from SegQueueLib import (
     updater,
 )
 
-__version__ = "0.5.0"
+__version__ = "0.6.0"
 
 #: How often the in-progress segmentation is written to disk. Two minutes is
 #: chosen against the cost of losing work rather than the cost of the write: a
@@ -203,6 +205,12 @@ DIVIDE_MARKUP_PREFIX = "~ divide: "
 #: through it -- which is the comparison the 3D view is open for.
 SEED_3D_OPACITY = 0.35
 
+#: The loop an annotator drags around a branch, while they are dragging it.
+#: Bright against both the mask and the vessels, and 2 px so it reads as a
+#: gesture rather than as another thing rendered in the scene.
+LASSO_COLOUR = (1.0, 0.85, 0.1)
+LASSO_WIDTH = 2.0
+
 #: A division that places fewer than this share of the mask usually means the
 #: markers missed rather than that the mask is odd, and saying so immediately
 #: beats the annotator discovering it at submission.
@@ -232,6 +240,142 @@ _SETTING_UPDATE = "SegQueue/updateCheck"
 #: theirs and only the password stands between them and someone else's queue.
 #: The key is kept solely to delete the value left behind by earlier versions.
 _SETTING_LEGACY_USER = "SegQueue/lastUser"
+
+
+class _LassoTool(object):
+    """One freehand loop dragged in a 3D view.
+
+    Deliberately one-shot: it arms, takes a single loop, and disarms itself.
+    While it is armed the left button draws instead of rotating the camera --
+    there is no way to have both on one button -- and a mode that stays on is a
+    mode an annotator forgets they are in and then fights, having dragged the
+    view and got a loop. Arming per loop costs one keypress and removes that
+    entirely: between loops the view behaves exactly as Slicer always does.
+
+    The loop is drawn on screen as it goes. A lasso you cannot see is a guess.
+    """
+
+    def __init__(self, view, onDone):
+        self._view = view
+        self._onDone = onDone
+        self._interactor = view.interactor()
+        self._renderer = view.renderWindow().GetRenderers().GetFirstRenderer()
+        self._path = []
+        self._drawing = False
+        self._tags = []
+        self._commands = []
+        self._actor = None
+
+    # ------------------------------------------------------------- arming
+
+    def start(self):
+        if self._tags:
+            return
+        self._path = []
+        self._drawing = False
+        events = (
+            (vtk.vtkCommand.LeftButtonPressEvent, self._onPress),
+            (vtk.vtkCommand.MouseMoveEvent, self._onMove),
+            (vtk.vtkCommand.LeftButtonReleaseEvent, self._onRelease),
+        )
+        for event, handler in events:
+            # Above the camera interactor's own priority, so the drag reaches
+            # here first and can be swallowed before it rotates the scene.
+            tag = self._interactor.AddObserver(event, handler, 10.0)
+            self._tags.append(tag)
+            self._commands.append(self._interactor.GetCommand(tag))
+
+    def stop(self):
+        for tag in self._tags:
+            self._interactor.RemoveObserver(tag)
+        self._tags = []
+        self._commands = []
+        self._path = []
+        self._drawing = False
+        self._clearOverlay()
+
+    @property
+    def armed(self):
+        return bool(self._tags)
+
+    # ------------------------------------------------------------- events
+
+    def _abort(self):
+        """Stop the event before the camera style sees it."""
+        for command in self._commands:
+            if command is not None:
+                command.AbortFlagOn()
+
+    def _onPress(self, caller, event):
+        self._drawing = True
+        self._path = [self._position()]
+        self._abort()
+
+    def _onMove(self, caller, event):
+        if not self._drawing:
+            return
+        self._path.append(self._position())
+        self._drawOverlay()
+        self._abort()
+
+    def _onRelease(self, caller, event):
+        if not self._drawing:
+            return
+        self._drawing = False
+        self._path.append(self._position())
+        path = list(self._path)
+        self._abort()
+        # Disarm before handing the loop over: the callback shows dialogs and
+        # runs a division, and leaving observers live across that means a stray
+        # click lands in a half-finished lasso.
+        self.stop()
+        self._onDone(path, self._renderer)
+
+    def _position(self):
+        x, y = self._interactor.GetEventPosition()
+        return (float(x), float(y))
+
+    # ------------------------------------------------------------ overlay
+
+    def _drawOverlay(self):
+        if len(self._path) < 2:
+            return
+        points = vtk.vtkPoints()
+        lines = vtk.vtkCellArray()
+        for x, y in self._path:
+            points.InsertNextPoint(x, y, 0.0)
+        lines.InsertNextCell(len(self._path))
+        for i in range(len(self._path)):
+            lines.InsertCellPoint(i)
+
+        polygon = vtk.vtkPolyData()
+        polygon.SetPoints(points)
+        polygon.SetLines(lines)
+
+        if self._actor is None:
+            coordinate = vtk.vtkCoordinate()
+            coordinate.SetCoordinateSystemToDisplay()
+            mapper = vtk.vtkPolyDataMapper2D()
+            mapper.SetTransformCoordinate(coordinate)
+            self._actor = vtk.vtkActor2D()
+            self._actor.SetMapper(mapper)
+            self._actor.GetProperty().SetColor(*LASSO_COLOUR)
+            self._actor.GetProperty().SetLineWidth(LASSO_WIDTH)
+            self._renderer.AddActor2D(self._actor)
+        self._actor.GetMapper().SetInputData(polygon)
+        self._view.forceRender()
+
+    def _clearOverlay(self):
+        if self._actor is None:
+            return
+        self._renderer.RemoveActor2D(self._actor)
+        self._actor = None
+        try:
+            self._view.forceRender()
+        except Exception:
+            # The view can be gone by the time a case is torn down, and failing
+            # to rub out a line is not worth an error on the way out.
+            pass
 
 
 class SegQueue(ScriptedLoadableModule):
@@ -289,6 +433,11 @@ class SegQueueLogic(ScriptedLoadableModuleLogic):
         #: What the last seed division gave each branch, by segment name. See
         #: ``rememberSplit``.
         self._lastSplit = {}
+        #: Voxels circled in the 3D view, by segment name. Sources for the
+        #: division exactly as the clicked markers are; see ``addLassoVoxels``.
+        self._lassoVoxels = {}
+        #: The mask's connected pieces, cached per case. See ``seedPieces``.
+        self._seedPieces = None
 
     # ------------------------------------------------------------ session
 
@@ -394,6 +543,7 @@ class SegQueueLogic(ScriptedLoadableModuleLogic):
         self._loadOrCreateSegmentation(manifest)
         self._loadHelpers(assignment)
         self.restoreMarkers(self.savedMarkers())
+        self.restoreLasso()
         slicer.util.setSliceViewerLayers(background=self.volumeNode, fit=True)
         self.applyViewPreset()
         self._sessionStart = time.time()
@@ -563,6 +713,117 @@ class SegQueueLogic(ScriptedLoadableModuleLogic):
         i, j, k, _ = matrix.MultiplyPoint((ras[0], ras[1], ras[2], 1.0))
         return (int(round(k)), int(round(j)), int(round(i)))
 
+    def projectSeed(self, renderer, voxels=None):
+        """Every seed voxel as ``(voxel, x, y, depth)`` in one renderer's view.
+
+        Screen pixels from the camera's projection, and depth in **millimetres
+        along the view direction** rather than the clip-space z the same matrix
+        would give. Clip-space depth is non-linear, so a tolerance expressed in
+        it means something different at the front of the heart than at the back;
+        millimetres are what "within a vessel's thickness" is actually about.
+
+        Vectorised because it runs on a mouse release with tens of thousands of
+        voxels. The same work through ``renderer.WorldToDisplay`` one voxel at a
+        time is the difference between a loop that lands and one the annotator
+        draws twice thinking they missed.
+        """
+        voxels = self.seedVoxels() if voxels is None else voxels
+        if not voxels or renderer is None:
+            return []
+
+        index = np.array(sorted(voxels), dtype=np.float64)
+        # Array order is (k, j, i); the geometry matrices want (i, j, k, 1).
+        homogeneous = np.empty((len(index), 4), dtype=np.float64)
+        homogeneous[:, 0] = index[:, 2]
+        homogeneous[:, 1] = index[:, 1]
+        homogeneous[:, 2] = index[:, 0]
+        homogeneous[:, 3] = 1.0
+
+        ras = homogeneous @ _matrixArray(self._ijkToRas()).T
+
+        camera = renderer.GetActiveCamera()
+        size = renderer.GetSize()
+        width, height = float(size[0]), float(size[1])
+        if width <= 0 or height <= 0:
+            return []
+
+        clip = ras @ _matrixArray(
+            camera.GetCompositeProjectionTransformMatrix(
+                width / height, -1.0, 1.0)).T
+        w = clip[:, 3]
+        # w <= 0 is behind the camera, where the perspective divide is
+        # meaningless and the point is not on screen to be circled anyway.
+        visible = w > 1e-9
+        if not visible.any():
+            return []
+
+        ndc = clip[visible, :3] / w[visible, None]
+        x = (ndc[:, 0] + 1.0) * 0.5 * width
+        y = (ndc[:, 1] + 1.0) * 0.5 * height
+
+        position = np.array(camera.GetPosition(), dtype=np.float64)
+        direction = np.array(camera.GetFocalPoint(), dtype=np.float64) - position
+        norm = np.linalg.norm(direction)
+        if norm <= 0:
+            return []
+        depth = (ras[visible, :3] - position) @ (direction / norm)
+
+        keys = [tuple(v) for v in index[visible].astype(np.int64).tolist()]
+        return list(zip(keys, x.tolist(), y.tolist(), depth.tolist()))
+
+    def _ijkToRas(self):
+        matrix = vtk.vtkMatrix4x4()
+        self.volumeNode.GetIJKToRASMatrix(matrix)
+        return matrix
+
+    def seedPieces(self):
+        """The mask's connected pieces, computed once per case.
+
+        Cached because a loop needs them on every mouse release and the mask does
+        not change while the case is open -- the vessels are built beside it, not
+        out of it. Half a second per loop, spent once.
+        """
+        if self._seedPieces is None:
+            if seedsplit is None:
+                return []
+            self._seedPieces = seedsplit.components(self.seedVoxels())
+        return self._seedPieces
+
+    def addLassoVoxels(self, name, voxels):
+        """Record a circled region as belonging to one branch.
+
+        Kept apart from the clicked markers rather than converted into them. A
+        loop yields thousands of voxels, and a thousand fiducials in the scene
+        would be unusable as well as unreadable -- but they are the same thing to
+        ``computeSplit``, which only ever wanted source voxels.
+        """
+        if not voxels:
+            return 0
+        voxels = set(voxels)
+        # The newest gesture wins. A loose loop around the LAD catches a little
+        # of the LCx, and the LCx loop that follows has to be able to take it
+        # back -- otherwise the same voxel is a source for two branches, the
+        # partition silently gives it to whichever comes first in the project,
+        # and circling a branch again does not fix it.
+        for other, claimed in self._lassoVoxels.items():
+            if other != name:
+                claimed -= voxels
+        current = self._lassoVoxels.setdefault(name, set())
+        current |= voxels
+        return len(current)
+
+    def lassoVoxels(self, name):
+        return self._lassoVoxels.get(name, set())
+
+    def hasLasso(self):
+        return any(self._lassoVoxels.values())
+
+    def clearLasso(self, name=None):
+        if name is None:
+            self._lassoVoxels = {}
+        else:
+            self._lassoVoxels.pop(name, None)
+
     def computeSplit(self, markers):
         """Work out which part of the seed belongs to which branch.
 
@@ -590,9 +851,9 @@ class SegQueueLogic(ScriptedLoadableModuleLogic):
                 "(5.8). Painting inside the mask still works either way.")
 
         sources = {}
-        for name, points in markers.items():
+        for name in self._sourceNames(markers):
             landed = []
-            for ras in points:
+            for ras in markers.get(name, ()):
                 voxel = self.rasToVoxel(ras)
                 snapped = seedsplit.snap_to_mask(voxel, voxels)
                 # A marker that missed by more than a few voxels is kept where it
@@ -600,9 +861,27 @@ class SegQueueLogic(ScriptedLoadableModuleLogic):
                 # stray and the panel can name the branch it was meant for. A
                 # silently discarded marker produces an empty vessel and no clue.
                 landed.append(snapped if snapped is not None else voxel)
+            # Circled regions need no snapping: they were selected *from* the
+            # mask, so they are on it by construction.
+            landed.extend(sorted(self.lassoVoxels(name) & voxels))
             sources[name] = landed
 
         return seedsplit.geodesic_partition(voxels, sources)
+
+    def _sourceNames(self, markers):
+        """Branches with any source at all, in the project's own order.
+
+        The project's order, not the dict's, because ties in the partition go to
+        whichever branch was offered first -- so the order has to be a property
+        of the project rather than of which vessel the annotator happened to
+        circle first, or the same markers divide differently between two runs.
+        """
+        named = set(markers) | set(self._lassoVoxels)
+        ordered = [spec.name for spec in self.project.segments
+                   if spec.name in named]
+        # Anything not in the project any more still gets a turn, at the end,
+        # rather than vanishing without the panel being able to say so.
+        return ordered + [name for name in named if name not in set(ordered)]
 
     def splitBuffer(self):
         """A zeroed array on the source grid, for handing voxels to a segment."""
@@ -778,8 +1057,12 @@ class SegQueueLogic(ScriptedLoadableModuleLogic):
         if self.assignment is None:
             return False
         try:
-            self.cache.update(self.assignment.assignment_id,
-                              dividePoints=self.allMarkerPoints())
+            self.cache.update(
+                self.assignment.assignment_id,
+                dividePoints=self.allMarkerPoints(),
+                divideLasso={name: sorted(voxels)
+                             for name, voxels in self._lassoVoxels.items()
+                             if voxels})
         except Exception:
             # Runs from closeCase and from the autosave timer. A manifest that
             # will not take the markers is not a reason to fail either.
@@ -793,6 +1076,28 @@ class SegQueueLogic(ScriptedLoadableModuleLogic):
         manifest = self.cache.manifest(self.assignment.assignment_id) or {}
         points = manifest.get("dividePoints") or {}
         return points if isinstance(points, dict) else {}
+
+    def restoreLasso(self):
+        """Put circled regions back after a reopen.
+
+        Stored as voxel indices, which are only meaningful against this case's
+        own grid -- which is fine, because they are stored in this case's own
+        manifest and purged with it. Never raises, for the same reason
+        ``restoreMarkers`` does not: coming back without them costs a gesture,
+        and refusing to open the case costs the case.
+        """
+        if self.assignment is None:
+            return
+        manifest = self.cache.manifest(self.assignment.assignment_id) or {}
+        stored = manifest.get("divideLasso") or {}
+        if not isinstance(stored, dict):
+            return
+        for name, voxels in stored.items():
+            try:
+                self._lassoVoxels[name] = {
+                    (int(v[0]), int(v[1]), int(v[2])) for v in voxels}
+            except (TypeError, ValueError, IndexError):
+                continue
 
     def clearMarkers(self, name=None):
         """Remove one branch's markers, or every branch's."""
@@ -996,6 +1301,8 @@ class SegQueueLogic(ScriptedLoadableModuleLogic):
         self.saveMarkers()
         self.removeMarkerNodes()
         self.forgetSplit()
+        self.clearLasso()
+        self._seedPieces = None
         for node in (self.segmentationNode, self.volumeNode):
             if node is not None:
                 slicer.mrmlScene.RemoveNode(node)
@@ -1308,6 +1615,16 @@ class SegQueueWidget(ScriptedLoadableModuleWidget):
         self._shortcuts = []
         self._slicerLogo = None
         self._pendingUpdate = None
+        #: The armed freehand loop, while one is armed. See ``_LassoTool``.
+        self._lasso = None
+        #: What the last loop picked up, kept so the division it triggers can
+        #: show it rather than replacing it a tenth of a second later.
+        self._lassoNote = ""
+
+    def _stopLasso(self):
+        if self._lasso is not None:
+            self._lasso.stop()
+            self._lasso = None
 
     # ------------------------------------------------------------------ setup
 
@@ -1987,10 +2304,26 @@ class SegQueueWidget(ScriptedLoadableModuleWidget):
         seedLayout.addWidget(self.seed3dCheck)
 
         seedLayout.addWidget(_caption(
-            "To divide it: pick a vessel above, press <b>Mark branch</b> and "
-            "click a few points down that artery — in the 3D view or on the "
-            "slices — then do the same for the others and press "
-            "<b>Divide</b>. Every voxel of the mask goes to the branch whose "
+            "The fastest way to split it: pick a vessel above, press "
+            "<b>Circle branch</b>, and drag a loop around that artery in the 3D "
+            "view. It fills in straight away. Repeat for each branch.<br><br>"
+            "Everything under the loop goes to that vessel — what is "
+            "<i>behind</i> another branch is left alone, so circling the LAD "
+            "does not take the RCA sitting behind it. The rest of the branch "
+            "fills in from what you circled, so you only need the part you can "
+            "see."))
+
+        self.lassoButton = qt.QPushButton("Circle branch in 3D  (L)")
+        self.lassoButton.setToolTip(
+            "Drag a loop around the selected vessel in the 3D view. One loop "
+            "per press: the view rotates normally again as soon as you let go.")
+        self.lassoButton.clicked.connect(self.onLasso)
+        seedLayout.addWidget(self.lassoButton)
+
+        seedLayout.addWidget(_caption(
+            "Or mark the branches by clicking points down them — better where "
+            "two vessels overlap from every angle — then press <b>Divide</b>. "
+            "Either way, every voxel of the mask goes to the branch whose "
             "points are nearest <i>along the vessel</i>, so the LAD and the LCx "
             "separate correctly even though they meet at the left main."))
 
@@ -2246,6 +2579,7 @@ class SegQueueWidget(ScriptedLoadableModuleWidget):
         self._shortcuts = []
         self._restorePanelBranding()
         self._stopPlacing()
+        self._stopLasso()
         self._saveNoteDraft()
         if self.logic is not None:
             self.logic.autosave()
@@ -2262,6 +2596,7 @@ class SegQueueWidget(ScriptedLoadableModuleWidget):
         # land a branch marker in a module that has never heard of them.
         self._restorePanelBranding()
         self._stopPlacing()
+        self._stopLasso()
         self._saveNoteDraft()
         if self.logic is not None:
             self.logic.autosave()
@@ -2742,16 +3077,99 @@ class SegQueueWidget(ScriptedLoadableModuleWidget):
         interaction = slicer.app.applicationLogic().GetInteractionNode()
         interaction.SetCurrentInteractionMode(interaction.ViewTransform)
 
+    # ------------------------------------------------------ circling in 3D
+
+    def _threeDView(self):
+        layoutManager = slicer.app.layoutManager()
+        if layoutManager is None or layoutManager.threeDViewCount < 1:
+            return None
+        widget = layoutManager.threeDWidget(0)
+        return widget.threeDView() if widget is not None else None
+
+    def onLasso(self):
+        """Arm one freehand loop in the 3D view for the selected vessel."""
+        if self.logic is None or self.logic.assignment is None:
+            return
+        if not self.logic.seedSegmentId:
+            return
+        active = self._activeSegmentName()
+        if active is None:
+            slicer.util.errorDisplay("Choose a vessel first (1-4).")
+            return
+        if not self.seed3dCheck.checked:
+            slicer.util.errorDisplay(
+                "Turn on 'Show the mask in the 3D view' first — there is "
+                "nothing to circle otherwise.")
+            return
+
+        view = self._threeDView()
+        if view is None:
+            slicer.util.errorDisplay(
+                "This layout has no 3D view. Switch to Four-Up and try again.")
+            return
+
+        # Neither of these should be live while the left button is drawing a
+        # loop: one would paint under it, the other would drop a marker.
+        self._stopPlacing()
+        if self.editorWidget is not None:
+            self.editorWidget.setActiveEffectByName("")
+
+        if self._lasso is not None:
+            self._lasso.stop()
+        self._lasso = _LassoTool(
+            view, lambda path, renderer, name=active: self._onLassoDone(
+                path, renderer, name))
+        self._lasso.start()
+        self._setDivideStatus(
+            "Drag a loop around <b>{}</b> in the 3D view.".format(
+                _shortName(active)))
+
+    def _onLassoDone(self, path, renderer, name):
+        """A loop was drawn: take what is under it and re-divide."""
+        self._lasso = None
+        if self.logic is None or lasso_geom is None:
+            return
+
+        polygon = lasso_geom.simplify(path)
+        if len(polygon) < 3:
+            self._setDivideStatus("")
+            return
+
+        with _busy():
+            try:
+                voxels = self.logic.seedVoxels()
+                projected = self.logic.projectSeed(renderer, voxels)
+                picked = lasso_geom.select_visible(
+                    projected, polygon, pieces=self.logic.seedPieces())
+            except Exception:
+                slicer.util.errorDisplay(
+                    "Could not read what that loop covered:\n\n"
+                    + traceback.format_exc())
+                return
+
+        if not picked:
+            self._setDivideStatus(lasso_geom.describe(picked, _shortName(name)))
+            return
+
+        self.logic.addLassoVoxels(name, picked.voxels)
+        self._lassoNote = lasso_geom.describe(picked, _shortName(name))
+        # Divide straight away. "Circle a branch and it becomes that branch" is
+        # the whole gesture, and making the annotator press a second button to
+        # see whether it worked breaks the loop they are actually in: circle,
+        # look, adjust.
+        self.onDivide()
+
     def onDivide(self):
         """Split the mask between the marked branches and fill them in."""
         if self.logic is None or not self.logic.seedSegmentId:
             return
         markers = self.logic.allMarkerPoints()
-        if not markers:
+        if not markers and not self.logic.hasLasso():
             slicer.util.errorDisplay(
-                "Nothing is marked yet.\n\nPick a vessel, press 'Mark branch' "
-                "(M) and click a few points down that artery. Repeat for each "
-                "branch, then press Divide.")
+                "Nothing is marked yet.\n\nPick a vessel and either press "
+                "'Circle branch in 3D' (L) and drag a loop around that artery "
+                "in the 3D view, or press 'Mark branch' (M) and click a few "
+                "points down it. Repeat for each branch.")
             return
 
         self._stopPlacing()
@@ -2826,6 +3244,9 @@ class SegQueueWidget(ScriptedLoadableModuleWidget):
         status = "Divided: {}.".format(summary) if summary else ""
         if leftovers:
             status = (status + " " + leftovers).strip()
+        if self._lassoNote:
+            status = (self._lassoNote + " " + status).strip()
+            self._lassoNote = ""
         self._setDivideStatus(status)
 
         problems = []
@@ -2853,11 +3274,14 @@ class SegQueueWidget(ScriptedLoadableModuleWidget):
             slicer.util.warningDisplay("\n\n".join(problems))
 
     def onClearMarkers(self):
-        """Forget every branch marker, leaving what has been divided in place."""
+        """Forget every marker and circled region, leaving the vessels as they are."""
         if self.logic is None:
             return
         self._stopPlacing()
+        self._stopLasso()
+        self._lassoNote = ""
         self.logic.clearMarkers()
+        self.logic.clearLasso()
         # Forgetting the markers has to forget the division they produced too.
         # Otherwise the next divide subtracts a partition nothing on screen
         # refers to any more, and takes the annotator's corrections with it.
@@ -2962,6 +3386,7 @@ class SegQueueWidget(ScriptedLoadableModuleWidget):
         bindings.append(("A", self.onApplyTube))
         bindings.append(("M", self.onMarkBranch))
         bindings.append(("D", self.onDivide))
+        bindings.append(("L", self.onLasso))
 
         for key, handler in bindings:
             shortcut = qt.QShortcut(slicer.util.mainWindow())
@@ -3079,6 +3504,7 @@ class SegQueueWidget(ScriptedLoadableModuleWidget):
         self.caseLabel.setText("Submitted. Press 'Get next case' when you are ready.")
         self.reworkBox.setVisible(False)
         self.seedGroup.setVisible(False)
+        self._stopLasso()
         self._setDivideStatus("")
         self._bindEditor(None, None)
         self._updateChecklist()
@@ -3101,6 +3527,7 @@ class SegQueueWidget(ScriptedLoadableModuleWidget):
         self._clearNotes()
         self.reworkBox.setVisible(False)
         self.seedGroup.setVisible(False)
+        self._stopLasso()
         self._setDivideStatus("")
         self._bindEditor(None, None)
         self._updateChecklist()
@@ -3250,6 +3677,17 @@ def _storedFloat(key, default):
         return float(slicer.util.settingsValue(key, str(default)))
     except (TypeError, ValueError):
         return default
+
+
+def _matrixArray(matrix):
+    """A vtkMatrix4x4 as a 4x4 numpy array, so points can be transformed in bulk.
+
+    VTK's own ``MultiplyPoint`` is per-point and crosses the Python boundary each
+    time, which is fine for a marker and hopeless for a mask: the projection in
+    ``projectSeed`` runs it over tens of thousands of voxels on a mouse release.
+    """
+    return np.array([[matrix.GetElement(row, column) for column in range(4)]
+                     for row in range(4)], dtype=np.float64)
 
 
 def _storedBool(key, default):

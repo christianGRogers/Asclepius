@@ -138,9 +138,9 @@ what makes a shared teaching workstation safe to walk away from.
    coronary CT (W 800 / L 300 — auto window/level on a whole-chest CT is useless
    for a 3 mm vessel), and the Segment Editor opens on it. If the case ships a
    coronary mask, it is standing in the 3D view by the time you look up.
-2. **Divide the mask**, if the case has one — mark each branch, press `D`, and
-   the tree is split into the project's vessels. See below. What is left is
-   touch-up rather than tracing.
+2. **Divide the mask**, if the case has one — circle each branch in the 3D view
+   (`L`) and it fills in. See below. What is left is touch-up rather than
+   tracing.
 3. **Pick a vessel** — number keys `1`–`4` (and up to `9`), or the buttons. The
    button shows a ✓ once that vessel has content, and `(optional)` where the
    project does not require it.
@@ -163,7 +163,8 @@ are the fast path, not a cage.
 | Key | |
 |---|---|
 | `1`–`9` | Select vessel *n* |
-| `M` | Mark the selected branch on the coronary mask |
+| `L` | Circle the selected branch in the 3D view |
+| `M` | Mark the selected branch by clicking points down it |
 | `D` | Divide the mask between the branches you have marked |
 | `Q` | Draw tube |
 | `W` | Paint |
@@ -187,7 +188,40 @@ vessels — something already did — it is to say which part of that mask is th
 LAD, which is the LCx, and which is the RCA.
 
 So the mask is **rendered in the 3D view as the case opens**, and there is a tool
-that splits it:
+that splits it.
+
+### Circling a branch
+
+1. **Pick a vessel** (`1`–`4`).
+2. **Circle branch in 3D (`L`)**, and drag a loop around that artery in the 3D
+   view. It fills in as soon as you let go.
+3. Repeat for the next vessel.
+
+One loop per press: while you are drawing, the left button draws instead of
+rotating, and as soon as you release, the view goes back to behaving normally.
+So rotating between loops needs no mode switch, and you can never drag the view
+and discover you drew a lasso.
+
+**What is behind another branch is left alone.** A loop on a flat screen is a
+tube through the volume, so circling the LAD would naively take the RCA sitting
+behind it — which is worse than useless, because it is a mislabelling that looks
+like progress. Two rules stop that: within the loop each pixel keeps only what is
+nearest the camera, and the loop then keeps **one connected piece** of the tree,
+the one it mostly covers. Circling the LAD with the RCA directly behind it takes
+none of the RCA.
+
+**You only need to circle the part you can see.** What a loop selects are
+markers; the rest of the branch fills in from them through the mask, far side
+included. A rough loop over the visible length of a vessel is enough.
+
+If a branch is broken into two pieces by the source model, circle each — loops
+accumulate. And if a loose loop around the LAD catches a little of the LCx,
+circling the LCx afterwards takes it back: the newest loop wins.
+
+### Marking a branch by clicking
+
+Better where two vessels overlap from every angle, and the same partition
+underneath:
 
 1. **Pick a vessel** (`1`–`4`).
 2. **Mark branch (`M`)** — click a few points down that artery, in the 3D view or
@@ -197,6 +231,10 @@ that splits it:
    mid-run; you do not press `M` again.
 4. **Divide (`D`).** Every voxel of the mask is given to the branch whose markers
    are nearest, and the vessels fill in.
+
+The two mix freely: circle what is easy to circle, click down whatever is left.
+
+### How the split is decided
 
 Nearest **along the vessel**, not through the air. That is the entire reason this
 works:
@@ -218,8 +256,7 @@ start, not a verdict.
 
 Some details worth knowing:
 
-- **Dividing again is safe.** Divide, look at it in 3D, drop two more points on
-  the branch that came out wrong, divide again. The previous division is taken
+- **Dividing again is safe.** Circle or mark again, and divide again. The previous division is taken
   back out of each vessel before the new one goes in, so **anything you painted
   by hand survives**. *Clear markers* forgets the division as well as the points,
   which is the one thing that ends that guarantee — after it, a fresh divide adds
@@ -233,8 +270,11 @@ Some details worth knowing:
   vessel would hand a whole branch to a label you never pointed at — which looks
   like work rather than like a mistake. A branch marked and still empty is called
   out by name.
-- **The markers are saved with the case**, beside the draft and the unposted
-  note, and come back when you reopen it. Purged with everything else on submit.
+- **Markers and circled regions are saved with the case**, beside the draft and
+  the unposted note, and come back when you reopen it. Purged with everything
+  else on submit.
+- **Circling needs the mask showing in 3D**, since it is the thing you are
+  drawing around. The button says so rather than quietly doing nothing.
 - **The mask is never submitted.** It stays scaffolding — the export copies only
   the project's own segments, so it is structurally unable to reach the server no
   matter what the division does. *Only let me paint inside that mask* and *Add
@@ -421,6 +461,15 @@ clears within the hour; installs from the releases page still work meanwhile.
 The client asks the server how much it already has and continues from there.
 
 ## Version history
+
+**0.6.0** — Circling a branch in 3D. Drag a loop around an artery in the 3D
+view and it fills in: **Circle branch in 3D** (`L`), one loop per press, with the
+view rotating normally in between. What is behind another branch is left alone —
+per-pixel nearest-surface, then a single connected piece of the tree — so
+circling the LAD with the RCA behind it takes none of the RCA, and circling only
+the visible length of a vessel still claims all of it. Adds `segqueue.lasso`
+(the screen-space selection, unit-tested); loops and clicked markers are the same
+thing to the partition and mix freely. Still client-side only.
 
 **0.5.0** — Dividing the coronary mask. The pre-existing tree is now rendered in
 the 3D view as the case opens, and **Mark branch** / **Divide** split it between

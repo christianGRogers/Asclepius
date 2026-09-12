@@ -136,17 +136,21 @@ what makes a shared teaching workstation safe to walk away from.
 1. **Get next case.** The server assigns one; it downloads, the segments are
    created already named and coloured, window/level is set for contrast-enhanced
    coronary CT (W 800 / L 300 — auto window/level on a whole-chest CT is useless
-   for a 3 mm vessel), and the Segment Editor opens on it.
-2. **Pick a vessel** — number keys `1`–`4` (and up to `9`), or the buttons. The
+   for a 3 mm vessel), and the Segment Editor opens on it. If the case ships a
+   coronary mask, it is standing in the 3D view by the time you look up.
+2. **Divide the mask**, if the case has one — mark each branch, press `D`, and
+   the tree is split into the project's vessels. See below. What is left is
+   touch-up rather than tracing.
+3. **Pick a vessel** — number keys `1`–`4` (and up to `9`), or the buttons. The
    button shows a ✓ once that vessel has content, and `(optional)` where the
    project does not require it.
-3. **Draw tube (`Q`)** — click points down the centreline of the artery, then
+4. **Draw tube (`Q`)** — click points down the centreline of the artery, then
    **Apply (`A`)**. Sections *accumulate*: draw a wide one proximally and
    narrower ones as the vessel tapers, all adding into the same segment. Radius
    defaults to 1.25 mm (a left main lumen is ~2 mm, a distal LAD under 1).
-4. **Paint (`W`)** to fix what the tube missed. Sphere brush, 1.5 mm, restricted
+5. **Paint (`W`)** to fix what the tube missed. Sphere brush, 1.5 mm, restricted
    to 150–1000 HU so a slightly sloppy stroke still gives a clean lumen edge.
-5. **Validate & submit.** The submission is checked, uploaded in resumable
+6. **Validate & submit.** The submission is checked, uploaded in resumable
    chunks, and the local copy deleted.
 
 If anything about the case is worth passing on — a stent, a motion artefact, an ambiguous branch — put it in **Case notes** before you submit. See below.
@@ -159,6 +163,8 @@ are the fast path, not a cage.
 | Key | |
 |---|---|
 | `1`–`9` | Select vessel *n* |
+| `M` | Mark the selected branch on the coronary mask |
+| `D` | Divide the mask between the branches you have marked |
 | `Q` | Draw tube |
 | `W` | Paint |
 | `A` | Apply the tube section you just placed, and start the next |
@@ -172,6 +178,73 @@ are the fast path, not a cage.
 * **Give this case back** — releases the assignment (with a reason) and purges
   it locally. Use it instead of leaving a case parked.
 * **Centre on heart**, **CTA window/level**, **Show in 3D** — view helpers.
+
+## Dividing the coronary mask
+
+Most cases arrive with the coronary tree **already drawn**, as one unlabelled
+mask the source dataset shipped. On those cases the job is not to trace the
+vessels — something already did — it is to say which part of that mask is the
+LAD, which is the LCx, and which is the RCA.
+
+So the mask is **rendered in the 3D view as the case opens**, and there is a tool
+that splits it:
+
+1. **Pick a vessel** (`1`–`4`).
+2. **Mark branch (`M`)** — click a few points down that artery, in the 3D view or
+   on the slices. Placement stays armed, so it is a run of clicks, not a
+   click-and-return-to-the-button.
+3. Pick the next vessel and mark it. The number keys move the marking with you
+   mid-run; you do not press `M` again.
+4. **Divide (`D`).** Every voxel of the mask is given to the branch whose markers
+   are nearest, and the vessels fill in.
+
+Nearest **along the vessel**, not through the air. That is the entire reason this
+works:
+
+- The **LAD and the LCx are joined** at the left main, so no straight-line rule
+  separates them — but measured along the lumen, a voxel in the mid-LAD is far
+  from an LCx marker even where the two vessels sit millimetres apart in space.
+- The **RCA is usually a separate piece** of the mask, so one marker anywhere on
+  it claims all of it, and a marker on the left tree cannot reach it at any
+  distance.
+- Where the boundary between two branches lands is **what the markers are for**.
+  With one marker at the end of each arm it falls halfway along the left main;
+  marking further down one arm pulls it the other way. That is how you say "the
+  left main belongs to the LAD" without painting a voxel.
+
+Then **paint (`W`) and draw tube (`Q`) as usual** — to extend a branch the mask
+stopped short of, or to fix a boundary you disagree with. The division is a head
+start, not a verdict.
+
+Some details worth knowing:
+
+- **Dividing again is safe.** Divide, look at it in 3D, drop two more points on
+  the branch that came out wrong, divide again. The previous division is taken
+  back out of each vessel before the new one goes in, so **anything you painted
+  by hand survives**. *Clear markers* forgets the division as well as the points,
+  which is the one thing that ends that guarantee — after it, a fresh divide adds
+  to what is already there.
+- **What it cannot place, it hands back.** A piece of the mask with no marker on
+  it — an aortic root fragment, a vein the model caught — is left out and
+  reported, rather than being glued to whichever branch happens to be nearest. If
+  that is most of the mask, you are told a branch is probably unmarked.
+- **A marker that misses snaps onto the mask**, but only by a few voxels. Beyond
+  that the click was meant for something else, and dragging it onto the nearest
+  vessel would hand a whole branch to a label you never pointed at — which looks
+  like work rather than like a mistake. A branch marked and still empty is called
+  out by name.
+- **The markers are saved with the case**, beside the draft and the unposted
+  note, and come back when you reopen it. Purged with everything else on submit.
+- **The mask is never submitted.** It stays scaffolding — the export copies only
+  the project's own segments, so it is structurally unable to reach the server no
+  matter what the division does. *Only let me paint inside that mask* and *Add
+  the whole mask to this vessel* are both still there.
+- **Show the mask in the 3D view** can be turned off, and is remembered. The
+  heart mask is never in the 3D view: a solid chamber wall would hide the tree.
+
+This is client-side only. The mask already shipped with the case (`hasSeed` and
+`GET /segqueue/case/<id>/asset/seed`, both since 0.1.0) — 0.5.0 is the first
+version to do anything with it beyond masking the brush.
 
 ## Case notes
 
@@ -348,6 +421,15 @@ clears within the hour; installs from the releases page still work meanwhile.
 The client asks the server how much it already has and continues from there.
 
 ## Version history
+
+**0.5.0** — Dividing the coronary mask. The pre-existing tree is now rendered in
+the 3D view as the case opens, and **Mark branch** / **Divide** split it between
+the project's vessels: every voxel goes to the branch whose markers are nearest
+*measured along the vessel*, so the LAD and the LCx separate at the left main and
+a separate RCA needs one marker. Re-dividing keeps hand-painted corrections;
+unmarked pieces are reported rather than absorbed. Adds `segqueue.seedsplit`
+(the partition, unit-tested). **Client-side only — no server change, and cases
+already ship the mask.**
 
 **0.4.0** — Case notes. The panel area that held the project instructions is now
 a per-case message thread: append-only, attributed server-side, visible to

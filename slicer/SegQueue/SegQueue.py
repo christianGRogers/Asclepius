@@ -36,6 +36,7 @@ import time
 import traceback
 
 import ctk
+import numpy as np
 import qt
 import slicer
 import vtk
@@ -79,6 +80,7 @@ if os.path.isdir(_SRC) and _SRC not in sys.path:
 try:
     from segqueue import protocol
     from segqueue import release as rel
+    from segqueue import seedsplit
     from segqueue import states as st
     from segqueue.checksum import sha256_file, verify_file
     from segqueue.dataset import sniff_suffix, suffix_for
@@ -89,6 +91,7 @@ except ImportError as exc:  # pragma: no cover - surfaced in the UI instead
     st = None
     rel = None
     protocol = None
+    seedsplit = None
     _IMPORT_ERROR = str(exc)
 
 from SegQueueLib import (
@@ -101,7 +104,7 @@ from SegQueueLib import (
     updater,
 )
 
-__version__ = "0.4.0"
+__version__ = "0.5.0"
 
 #: How often the in-progress segmentation is written to disk. Two minutes is
 #: chosen against the cost of losing work rather than the cost of the write: a
@@ -189,6 +192,22 @@ VESSEL_EFFECTS = (
     ('Paint', 'W', 'Touch up what the tube missed. Sphere brush, sized in mm.'),
 )
 
+#: Prefix for the per-vessel marker lists used to divide the coronary seed. One
+#: markups node per branch, named for it, so the annotator can see and drag the
+#: points that decided the division rather than re-running a black box -- and so
+#: the tilde sorts them beside the other scaffolding in the data module.
+DIVIDE_MARKUP_PREFIX = "~ divide: "
+
+#: How solid the seed looks in the 3D view. Enough to read the shape of the tree
+#: at a glance, sheer enough to see the branches an annotator has already claimed
+#: through it -- which is the comparison the 3D view is open for.
+SEED_3D_OPACITY = 0.35
+
+#: A division that places fewer than this share of the mask usually means the
+#: markers missed rather than that the mask is odd, and saying so immediately
+#: beats the annotator discovering it at submission.
+DIVIDE_COVERAGE_WARNING = 0.75
+
 #: Settings keys. Stored in Slicer's own QSettings so a returning annotator does
 #: not retype the server URL or re-dial their tool sizes. Neither the username
 #: nor the token is stored -- see ``_SETTING_LEGACY_USER`` below and
@@ -197,6 +216,11 @@ _SETTING_TUBE_RADIUS = "SegQueue/tubeRadiusMm"
 _SETTING_BRUSH = "SegQueue/brushDiameterMm"
 _SETTING_SERVER = "SegQueue/serverUrl"
 _SETTING_CACHE = "SegQueue/cacheRoot"
+#: Whether the coronary seed is rendered in the 3D view when a case opens. On by
+#: default: the tree is the thing the annotator is about to divide, and seeing
+#: its shape whole is what tells them where the branches go before they have
+#: scrolled a single slice.
+_SETTING_SEED_3D = "SegQueue/showSeedIn3d"
 #: Last update check: {"checkedAt": <unix seconds>, "tag": <tag or "">}. Cached
 #: so the rate limit is spent on real checks rather than on reopening a panel.
 _SETTING_UPDATE = "SegQueue/updateCheck"
@@ -262,6 +286,9 @@ class SegQueueLogic(ScriptedLoadableModuleLogic):
         #: a curious annotator cannot silently turn scaffolding into anatomy.
         self.seedSegmentId = None
         self.regionSegmentId = None
+        #: What the last seed division gave each branch, by segment name. See
+        #: ``rememberSplit``.
+        self._lastSplit = {}
 
     # ------------------------------------------------------------ session
 
@@ -366,6 +393,7 @@ class SegQueueLogic(ScriptedLoadableModuleLogic):
         self.volumeNode.SetName(assignment.case_name or "case")
         self._loadOrCreateSegmentation(manifest)
         self._loadHelpers(assignment)
+        self.restoreMarkers(self.savedMarkers())
         slicer.util.setSliceViewerLayers(background=self.volumeNode, fit=True)
         self.applyViewPreset()
         self._sessionStart = time.time()
@@ -499,6 +527,293 @@ class SegQueueLogic(ScriptedLoadableModuleLogic):
         return [s for s in (self.seedSegmentId, self.regionSegmentId,
                             self.segmentIdFor(TUBE_SCRATCH_SEGMENT)) if s]
 
+    # -------------------------------------------------- dividing the seed
+
+    def seedVoxels(self):
+        """The coronary seed as a set of ``(k, j, i)`` on the volume's own grid.
+
+        On the *volume's* grid specifically, not the segment's. Slicer keeps each
+        segment's binary labelmap cropped to its own extent, so two segments'
+        arrays are indexed differently and comparing them voxel for voxel is
+        quietly wrong -- the same mistake ``exportLabelmap`` exists to avoid at
+        the other end of the case.
+        """
+        if not self.seedSegmentId or self.volumeNode is None:
+            return set()
+        array = self._segmentArray(self.seedSegmentId)
+        if array is None:
+            return set()
+        # tolist() converts once, in C, and yields real Python ints -- the set
+        # comprehension over numpy rows instead does eighty thousand scalar
+        # extractions for the same answer, on the press of a button.
+        return {tuple(voxel) for voxel in np.argwhere(array > 0).tolist()}
+
+    def _segmentArray(self, segmentId):
+        """One segment as a numpy array on the source grid, or None."""
+        try:
+            return slicer.util.arrayFromSegmentBinaryLabelmap(
+                self.segmentationNode, segmentId, self.volumeNode)
+        except Exception:
+            return None
+
+    def rasToVoxel(self, ras):
+        """A scene point as an array index. ``MultiplyPoint`` gives IJK; arrays are KJI."""
+        matrix = vtk.vtkMatrix4x4()
+        self.volumeNode.GetRASToIJKMatrix(matrix)
+        i, j, k, _ = matrix.MultiplyPoint((ras[0], ras[1], ras[2], 1.0))
+        return (int(round(k)), int(round(j)), int(round(i)))
+
+    def computeSplit(self, markers):
+        """Work out which part of the seed belongs to which branch.
+
+        ``markers`` maps a project segment name to RAS points the annotator
+        dropped on that branch. Returns a ``seedsplit.Split``. Nothing is written
+        here and nothing is judged here: the panel decides what counts as a
+        division worth keeping, and the panel writes it, because writing goes
+        through the Segment Editor's own merge and that lives on the Qt side.
+        """
+        if seedsplit is None:
+            raise SegQueueError(
+                "This install is missing the segqueue package and cannot divide "
+                "the mask. Reinstall the extension from a release.")
+        if not self.seedSegmentId:
+            raise SegQueueError("This case has no coronary mask to divide.")
+        voxels = self.seedVoxels()
+        if not voxels:
+            # Two ways to get here and the annotator can act on both, so the
+            # message names both rather than picking one and being wrong half the
+            # time. Reading a segment on the source grid is the part an older
+            # Slicer cannot do.
+            raise SegQueueError(
+                "Could not read this case's coronary mask.\n\nEither it is "
+                "empty, or this Slicer is older than the divide tool needs "
+                "(5.8). Painting inside the mask still works either way.")
+
+        sources = {}
+        for name, points in markers.items():
+            landed = []
+            for ras in points:
+                voxel = self.rasToVoxel(ras)
+                snapped = seedsplit.snap_to_mask(voxel, voxels)
+                # A marker that missed by more than a few voxels is kept where it
+                # fell rather than dropped, so the partition can report it as
+                # stray and the panel can name the branch it was meant for. A
+                # silently discarded marker produces an empty vessel and no clue.
+                landed.append(snapped if snapped is not None else voxel)
+            sources[name] = landed
+
+        return seedsplit.geodesic_partition(voxels, sources)
+
+    def splitBuffer(self):
+        """A zeroed array on the source grid, for handing voxels to a segment."""
+        return np.zeros(
+            slicer.util.arrayFromVolume(self.volumeNode).shape, dtype=np.uint8)
+
+    def loadScratch(self, voxels, buffer=None):
+        """Put an arbitrary set of voxels into the hidden working segment.
+
+        The one genuinely new thing this feature asks of Slicer. Everything after
+        it -- adding those voxels to a vessel, taking a previous division back
+        out -- is the same ``Logical operators`` merge that Draw tube has been
+        going through since 0.1.0, so the division inherits its undo behaviour,
+        its layer handling and its indifference to the editor's masking.
+        """
+        scratch = self.scratchSegmentId()
+        buffer = self.splitBuffer() if buffer is None else buffer
+        buffer.fill(0)
+        if voxels:
+            index = np.array(list(voxels), dtype=np.int64)
+            buffer[index[:, 0], index[:, 1], index[:, 2]] = 1
+        self._setSegmentArray(scratch, buffer)
+        return scratch
+
+    def _setSegmentArray(self, segmentId, array):
+        """Write a whole-volume binary array into one segment.
+
+        Two routes because the one-line one is not present in every build this
+        module is asked to run in, and an annotator meeting a bare
+        ``AttributeError`` halfway through a division has no way to read it as
+        "your Slicer is older than this feature".
+        """
+        try:
+            slicer.util.updateSegmentBinaryLabelmapFromArray(
+                array, self.segmentationNode, segmentId, self.volumeNode)
+            return
+        except AttributeError:
+            pass
+
+        labelNode = slicer.modules.volumes.logic().CreateAndAddLabelVolume(
+            slicer.mrmlScene, self.volumeNode, "SegQueueDivideScratch")
+        try:
+            slicer.util.updateVolumeFromArray(labelNode, array)
+            targets = vtk.vtkStringArray()
+            targets.InsertNextValue(segmentId)
+            ok = slicer.modules.segmentations.logic().ImportLabelmapToSegmentationNode(
+                labelNode, self.segmentationNode, targets)
+            if not ok:
+                raise RuntimeError("import returned false")
+        except Exception as exc:
+            raise SegQueueError(
+                "This build of Slicer cannot be written to by the divide tool "
+                "({}). Divide needs Slicer 5.8; you can still paint inside the "
+                "mask by hand.".format(exc))
+        finally:
+            slicer.mrmlScene.RemoveNode(labelNode)
+
+    def rememberSplit(self, split):
+        """Record what the last division gave each branch.
+
+        Kept so that dividing *again* can take the previous answer back out of
+        each vessel before putting the new one in. An annotator divides, looks at
+        it in 3D, drops two more points on the branch that came out wrong and
+        divides again -- and anything they painted by hand in between has to
+        survive that, or the 3D view becomes a thing you dare not act on.
+        """
+        self._lastSplit = {name: set(claimed)
+                           for name, claimed in split.assigned.items()}
+
+    def previousShare(self, name):
+        """What the last division gave this branch, or an empty set."""
+        return self._lastSplit.get(name, set())
+
+    def forgetSplit(self):
+        """Drop the record of the last division.
+
+        Called when the markers are cleared, and whenever a case leaves the
+        scene. Without it the next division would subtract a partition the
+        annotator has explicitly walked away from, taking their hand-painted
+        corrections inside it along with it.
+        """
+        self._lastSplit = {}
+
+    # ------------------------------------------------------- branch markers
+
+    def markerNode(self, name, create=True):
+        """The markups node holding one branch's division points.
+
+        One node per branch rather than one node with labelled points, because
+        the annotator has to be able to see which points belong to which vessel
+        at a glance in a 3D view with four trees of them, and Slicer gives a
+        colour to a *node*. It also makes "clear this branch's markers" a node
+        operation rather than a search.
+        """
+        if self.project is None:
+            return None
+        nodeName = DIVIDE_MARKUP_PREFIX + name
+        node = slicer.mrmlScene.GetFirstNodeByName(nodeName)
+        if node is not None or not create:
+            return node
+
+        node = slicer.mrmlScene.AddNewNodeByClass(
+            "vtkMRMLMarkupsFiducialNode", nodeName)
+        # Excluded from the scene views an annotator might save, and from the
+        # segmentation entirely: these are an instruction to this module, not
+        # anatomy, and nothing about them should reach the server.
+        node.SetSaveWithScene(False)
+        node.CreateDefaultDisplayNodes()
+        spec = next((s for s in self.project.segments if s.name == name), None)
+        display = node.GetDisplayNode()
+        if display is not None and spec is not None:
+            display.SetSelectedColor(*spec.color)
+            display.SetColor(*spec.color)
+            # Small glyphs and no text. The points sit on a 3 mm vessel, and the
+            # default glyph is wider than the artery it is marking -- an
+            # annotator cannot tell whether they hit the lumen or missed it.
+            display.SetGlyphScale(1.5)
+            display.SetTextScale(0.0)
+        return node
+
+    def markerPoints(self, name):
+        """One branch's markers, as RAS triples."""
+        node = self.markerNode(name, create=False)
+        if node is None:
+            return []
+        return [[float(c) for c in node.GetNthControlPointPosition(i)]
+                for i in range(node.GetNumberOfControlPoints())]
+
+    def allMarkerPoints(self):
+        """Every branch's markers, keyed by segment name, branches with none omitted."""
+        if self.project is None:
+            return {}
+        points = {}
+        for spec in self.project.segments:
+            placed = self.markerPoints(spec.name)
+            if placed:
+                points[spec.name] = placed
+        return points
+
+    def restoreMarkers(self, points):
+        """Put saved markers back, so reopening a case does not mean re-marking.
+
+        Never raises. A case that comes back without its markers costs a minute;
+        a case that refuses to open because a saved coordinate was malformed
+        costs the annotator the case.
+        """
+        if self.project is None or not points:
+            return
+        names = {spec.name for spec in self.project.segments}
+        for name, placed in points.items():
+            if name not in names:
+                # A branch the project no longer has. Dropping its markers is
+                # right: there is no segment left for them to fill.
+                continue
+            node = self.markerNode(name)
+            if node is None:
+                continue
+            for ras in placed:
+                try:
+                    node.AddControlPoint(
+                        vtk.vtkVector3d(float(ras[0]), float(ras[1]), float(ras[2])))
+                except Exception:
+                    continue
+
+    def saveMarkers(self):
+        """Keep the branch markers with the case, beside the draft and the note.
+
+        The markers *are* the division: given them, the same split is one press
+        away, and without them an annotator who closes Slicer mid-case comes back
+        to a segmentation they cannot adjust without re-marking every branch.
+        They ride in the manifest and are purged with everything else on submit.
+        """
+        if self.assignment is None:
+            return False
+        try:
+            self.cache.update(self.assignment.assignment_id,
+                              dividePoints=self.allMarkerPoints())
+        except Exception:
+            # Runs from closeCase and from the autosave timer. A manifest that
+            # will not take the markers is not a reason to fail either.
+            return False
+        return True
+
+    def savedMarkers(self):
+        """Markers stored with the case by an earlier session."""
+        if self.assignment is None:
+            return {}
+        manifest = self.cache.manifest(self.assignment.assignment_id) or {}
+        points = manifest.get("dividePoints") or {}
+        return points if isinstance(points, dict) else {}
+
+    def clearMarkers(self, name=None):
+        """Remove one branch's markers, or every branch's."""
+        if self.project is None:
+            return
+        for spec in self.project.segments:
+            if name is not None and spec.name != name:
+                continue
+            node = self.markerNode(spec.name, create=False)
+            if node is not None:
+                node.RemoveAllControlPoints()
+
+    def removeMarkerNodes(self):
+        """Take the marker nodes out of the scene entirely, on case close."""
+        if self.project is None:
+            return
+        for spec in self.project.segments:
+            node = self.markerNode(spec.name, create=False)
+            if node is not None:
+                slicer.mrmlScene.RemoveNode(node)
+
     # ------------------------------------------------------------- viewing
 
     def applyViewPreset(self):
@@ -516,6 +831,37 @@ class SegQueueLogic(ScriptedLoadableModuleLogic):
             display.SetAutoWindowLevel(False)
             display.SetWindowLevel(CTA_WINDOW, CTA_LEVEL)
         self.jumpToHeart()
+
+    def showSeedIn3d(self, on):
+        """Render the coronary seed in the 3D view, or stop.
+
+        The seed is the thing the annotator has been asked to divide, so seeing
+        the whole tree at once is not a nicety: which arm is the LAD and which is
+        the LCx is a question about the *shape* of the tree, and answering it by
+        scrolling slices is how a branch ends up half-labelled. The 2D views show
+        a cross-section of a vessel; the 3D view shows the vessel.
+
+        The heart mask deliberately stays out of it -- a solid chamber wall would
+        hide the very tree this is for.
+
+        Returns whether the seed is now showing. Building the surface is the
+        expensive part and only happens when turning it on. A case with no seed
+        is not an early return: the heart mask still has to be pushed out of the
+        3D view, which is what this loop does for every helper that is not the
+        seed.
+        """
+        if self.segmentationNode is None:
+            return False
+        display = self.segmentationNode.GetDisplayNode()
+        if display is None:
+            return False
+        if on and self.seedSegmentId:
+            self.segmentationNode.CreateClosedSurfaceRepresentation()
+        for segmentId in self.helperIds():
+            display.SetSegmentOpacity3D(
+                segmentId,
+                SEED_3D_OPACITY if (on and segmentId == self.seedSegmentId) else 0.0)
+        return bool(on and self.seedSegmentId)
 
     def jumpToHeart(self):
         """Centre the slice views on the heart mask, when the case has one."""
@@ -647,6 +993,9 @@ class SegQueueLogic(ScriptedLoadableModuleLogic):
     def closeCase(self, purge=False):
         """Take the case out of the scene, banking any elapsed time first."""
         self.bankTime()
+        self.saveMarkers()
+        self.removeMarkerNodes()
+        self.forgetSplit()
         for node in (self.segmentationNode, self.volumeNode):
             if node is not None:
                 slicer.mrmlScene.RemoveNode(node)
@@ -694,6 +1043,7 @@ class SegQueueLogic(ScriptedLoadableModuleLogic):
         except Exception:
             return False
         self.cache.update(self.assignment.assignment_id, workPath=path)
+        self.saveMarkers()
         return True
 
     # ------------------------------------------------------------- notes
@@ -1627,12 +1977,63 @@ class SegQueueWidget(ScriptedLoadableModuleWidget):
         self.maskToSeedCheck.toggled.connect(self.onMaskingChanged)
         seedLayout.addWidget(self.maskToSeedCheck)
 
+        self.seed3dCheck = qt.QCheckBox("Show the mask in the 3D view")
+        self.seed3dCheck.setToolTip(
+            "Renders the whole tree at once. Which arm is the LAD and which is "
+            "the LCx is a question about the shape of the tree, and the 3D view "
+            "is where that is one glance rather than forty slices.")
+        self.seed3dCheck.setChecked(_storedBool(_SETTING_SEED_3D, True))
+        self.seed3dCheck.toggled.connect(self.onShowSeed3d)
+        seedLayout.addWidget(self.seed3dCheck)
+
+        seedLayout.addWidget(_caption(
+            "To divide it: pick a vessel above, press <b>Mark branch</b> and "
+            "click a few points down that artery — in the 3D view or on the "
+            "slices — then do the same for the others and press "
+            "<b>Divide</b>. Every voxel of the mask goes to the branch whose "
+            "points are nearest <i>along the vessel</i>, so the LAD and the LCx "
+            "separate correctly even though they meet at the left main."))
+
+        divideRow = qt.QHBoxLayout()
+        self.markButton = qt.QPushButton("Mark branch (M)")
+        self.markButton.setToolTip(
+            "Starts dropping points on the selected vessel. Click down the "
+            "middle of the artery; a few are plenty, and more only matter where "
+            "two branches meet. Press again after switching vessel.")
+        self.markButton.clicked.connect(self.onMarkBranch)
+        divideRow.addWidget(self.markButton)
+
+        self.divideButton = qt.QPushButton("Divide (D)")
+        self.divideButton.setToolTip(
+            "Splits the mask between the branches you have marked and fills "
+            "them in. Safe to run again after adding points -- your own painting "
+            "is kept.")
+        self.divideButton.clicked.connect(self.onDivide)
+        divideRow.addWidget(self.divideButton)
+        seedLayout.addLayout(divideRow)
+
+        self.divideStatus = qt.QLabel()
+        self.divideStatus.setWordWrap(True)
+        self.divideStatus.setStyleSheet("QLabel { color: #5a5f66; }")
+        self.divideStatus.setVisible(False)
+        seedLayout.addWidget(self.divideStatus)
+
+        extraRow = qt.QHBoxLayout()
+        self.clearMarkersButton = qt.QPushButton("Clear markers")
+        self.clearMarkersButton.setToolTip(
+            "Removes every branch marker. What has already been divided into "
+            "the vessels stays -- this only forgets where the points were.")
+        self.clearMarkersButton.clicked.connect(self.onClearMarkers)
+        extraRow.addWidget(self.clearMarkersButton)
+
         self.copySeedButton = qt.QPushButton("Add the whole mask to this vessel")
         self.copySeedButton.setToolTip(
             "Copies the entire tree into the selected branch. Useful for the "
             "branch that dominates the tree -- then trim with Scissors.")
         self.copySeedButton.clicked.connect(self.onCopySeed)
-        seedLayout.addWidget(self.copySeedButton)
+        extraRow.addWidget(self.copySeedButton)
+        seedLayout.addLayout(extraRow)
+
         self.seedGroup.setVisible(False)
         layout.addWidget(self.seedGroup)
 
@@ -1844,6 +2245,7 @@ class SegQueueWidget(ScriptedLoadableModuleWidget):
             shortcut.setParent(None)
         self._shortcuts = []
         self._restorePanelBranding()
+        self._stopPlacing()
         self._saveNoteDraft()
         if self.logic is not None:
             self.logic.autosave()
@@ -1855,8 +2257,11 @@ class SegQueueWidget(ScriptedLoadableModuleWidget):
 
     def exit(self):
         # Leaving the module for another one should not lose work either, and
-        # should not leave our name over somebody else's panel.
+        # should not leave our name over somebody else's panel -- nor our point
+        # placement armed over somebody else's views, where every click would
+        # land a branch marker in a module that has never heard of them.
         self._restorePanelBranding()
+        self._stopPlacing()
         self._saveNoteDraft()
         if self.logic is not None:
             self.logic.autosave()
@@ -1996,6 +2401,12 @@ class SegQueueWidget(ScriptedLoadableModuleWidget):
         self.jumpButton.setEnabled(bool(self.logic.regionSegmentId))
         slicer.app.layoutManager().setLayout(
             slicer.vtkMRMLLayoutNode.SlicerLayoutFourUpView)
+        # The mask goes into the 3D view as the case opens rather than on a
+        # button, because it is the first question of the case -- where do these
+        # branches go -- and an annotator who has to ask for it has usually
+        # already started scrolling slices to answer it the slow way.
+        self._setDivideStatus("")
+        self.onShowSeed3d()
         self.onMaskingChanged()
         if self.logic.project.segments:
             self.onSelectSegment(self.logic.project.segments[0].name)
@@ -2041,6 +2452,32 @@ class SegQueueWidget(ScriptedLoadableModuleWidget):
 
         spec = next((x for x in self.logic.project.segments if x.name == name), None)
         self.segmentHintLabel.setText(spec.hint if spec else "")
+        self._followMarkerTarget(name)
+
+    def _followMarkerTarget(self, name):
+        """While marking branches, a vessel change moves the markers with it.
+
+        Pressing 2 in the middle of marking means "this next run of clicks is the
+        LCx", and having it silently keep filing them under the LAD is a mistake
+        an annotator only finds after dividing. Does nothing unless placement is
+        actually armed, so the number keys behave exactly as before at every
+        other moment.
+        """
+        if self.logic is None or not self.logic.seedSegmentId:
+            return
+        interaction = slicer.app.applicationLogic().GetInteractionNode()
+        if interaction.GetCurrentInteractionMode() != interaction.Place:
+            return
+        node = self.logic.markerNode(name)
+        if node is None:
+            return
+        selection = slicer.app.applicationLogic().GetSelectionNode()
+        if selection.GetActivePlaceNodeID() == node.GetID():
+            return
+        selection.SetActivePlaceNodeID(node.GetID())
+        self._setDivideStatus(
+            "Clicking down <b>{}</b>. Press D to divide, or pick another vessel."
+            .format(_shortName(name)))
 
     def onEffect(self, name):
         """Activate an effect and apply this panel's sizes to it."""
@@ -2250,6 +2687,187 @@ class SegQueueWidget(ScriptedLoadableModuleWidget):
                     getattr(self.editorNode, setRange)(LUMEN_HU_MIN, LUMEN_HU_MAX)
                 break
 
+    # ------------------------------------------------------ dividing the seed
+
+    def _activeSegmentName(self):
+        return next((n for n, b in self._segmentButtons.items() if b.checked), None)
+
+    def onShowSeed3d(self, checked=None):
+        """Put the coronary mask into the 3D view, or take it out."""
+        if self.logic is None:
+            return
+        on = bool(self.seed3dCheck.checked)
+        qt.QSettings().setValue(_SETTING_SEED_3D, on)
+        if not self.logic.seedSegmentId:
+            return
+        with _busy():
+            self.logic.showSeedIn3d(on)
+
+    def onMarkBranch(self):
+        """Start dropping division markers on the selected vessel.
+
+        Placement is persistent, so the annotator clicks their way down the
+        artery without going back to a button between points -- which is the same
+        bargain Draw tube makes, and for the same reason: the points come in runs
+        of five or ten, not singly.
+        """
+        if self.logic is None or self.logic.project is None:
+            return
+        if self.logic.assignment is None:
+            return
+        active = self._activeSegmentName()
+        if active is None:
+            slicer.util.errorDisplay("Choose a vessel first (1-4).")
+            return
+        node = self.logic.markerNode(active)
+        if node is None:
+            return
+
+        # Leaving an effect armed while placing markers means the next click
+        # paints as well as marking.
+        if self.editorWidget is not None:
+            self.editorWidget.setActiveEffectByName("")
+
+        selection = slicer.app.applicationLogic().GetSelectionNode()
+        selection.SetReferenceActivePlaceNodeClassName("vtkMRMLMarkupsFiducialNode")
+        selection.SetActivePlaceNodeID(node.GetID())
+        interaction = slicer.app.applicationLogic().GetInteractionNode()
+        interaction.SetPlaceModePersistence(1)
+        interaction.SetCurrentInteractionMode(interaction.Place)
+        self._setDivideStatus(
+            "Clicking down <b>{}</b>. Press D to divide, or pick another vessel "
+            "and press M again.".format(_shortName(active)))
+
+    def _stopPlacing(self):
+        interaction = slicer.app.applicationLogic().GetInteractionNode()
+        interaction.SetCurrentInteractionMode(interaction.ViewTransform)
+
+    def onDivide(self):
+        """Split the mask between the marked branches and fill them in."""
+        if self.logic is None or not self.logic.seedSegmentId:
+            return
+        markers = self.logic.allMarkerPoints()
+        if not markers:
+            slicer.util.errorDisplay(
+                "Nothing is marked yet.\n\nPick a vessel, press 'Mark branch' "
+                "(M) and click a few points down that artery. Repeat for each "
+                "branch, then press Divide.")
+            return
+
+        self._stopPlacing()
+        with _busy():
+            try:
+                split = self.logic.computeSplit(markers)
+                self._applySplit(split)
+            except SegQueueError as exc:
+                slicer.util.errorDisplay(str(exc))
+                return
+            except Exception:
+                slicer.util.errorDisplay(
+                    "Could not divide the mask:\n\n" + traceback.format_exc())
+                return
+            self.logic.rememberSplit(split)
+            active = self._activeSegmentName()
+            if active:
+                self.onSelectSegment(active)
+
+        self._updateChecklist()
+        self._reportSplit(split)
+
+    def _applySplit(self, split):
+        """Move each branch's share of the mask into its segment.
+
+        Through the same ``Logical operators`` merge Draw tube applies with,
+        rather than by writing the vessel's labelmap directly. That path has
+        already been made to handle the two things that quietly break here --
+        segmentation layers, and the editor's active mask clipping the write --
+        and a second implementation of it would get to discover both again.
+        """
+        buffer = self.logic.splitBuffer()
+        for name, claimed in split.assigned.items():
+            target = self.logic.segmentIdFor(name)
+            if target is None:
+                continue
+            # Out with the last division before in with this one, so re-dividing
+            # after adding a marker keeps whatever was painted by hand.
+            previous = self.logic.previousShare(name)
+            if previous:
+                scratch = self.logic.loadScratch(previous, buffer)
+                if not self._logicalOp("SUBTRACT", scratch, segmentId=target):
+                    raise SegQueueError(
+                        "This build of Slicer has no 'Logical operators' effect, "
+                        "which the divide tool needs.")
+            scratch = self.logic.loadScratch(claimed, buffer)
+            if not self._logicalOp("UNION", scratch, segmentId=target):
+                raise SegQueueError(
+                    "This build of Slicer has no 'Logical operators' effect, "
+                    "which the divide tool needs.")
+
+        self._logicalOp("CLEAR", None, segmentId=self.logic.scratchSegmentId())
+
+    def _reportSplit(self, split):
+        """Say what the division did, and complain about what it could not do.
+
+        The split between the status line and a dialog is the whole point of this
+        method. A real mask nearly always leaves a few disconnected specks, so a
+        dialog for *any* leftover would put a modal in front of the annotator on
+        every single divide -- and a warning that always fires is one nobody
+        reads by the third case. The line under the buttons carries the ordinary
+        result; the dialog is kept for the three things that mean the division is
+        actually wrong and they need to do something about it.
+        """
+        counts = split.counts()
+        placed = split.total_assigned()
+        total = placed + len(split.unreachable)
+        leftovers = seedsplit.describe_leftovers(split.unreachable)
+
+        summary = ", ".join(
+            "{} {}".format(_shortName(name), counts[name]) for name in counts)
+        status = "Divided: {}.".format(summary) if summary else ""
+        if leftovers:
+            status = (status + " " + leftovers).strip()
+        self._setDivideStatus(status)
+
+        problems = []
+        empty = split.empty_labels()
+        if empty:
+            problems.append(
+                "These branches are marked but came out empty: {}.\n\nThe marker "
+                "is probably beside the vessel rather than on it. Drag it onto "
+                "the mask and divide again.".format(
+                    ", ".join(_shortName(name) for name in empty)))
+
+        strayed = [name for name, points in split.stray.items() if points]
+        if strayed:
+            problems.append(
+                "Some markers are not on the mask at all ({}), and were "
+                "ignored.".format(", ".join(_shortName(name) for name in strayed)))
+
+        if leftovers and total and placed < total * DIVIDE_COVERAGE_WARNING:
+            problems.append(
+                leftovers + "\n\nThat is most of the mask, so a branch you have "
+                "not marked is probably sitting there unclaimed. Mark it and "
+                "divide again.")
+
+        if problems:
+            slicer.util.warningDisplay("\n\n".join(problems))
+
+    def onClearMarkers(self):
+        """Forget every branch marker, leaving what has been divided in place."""
+        if self.logic is None:
+            return
+        self._stopPlacing()
+        self.logic.clearMarkers()
+        # Forgetting the markers has to forget the division they produced too.
+        # Otherwise the next divide subtracts a partition nothing on screen
+        # refers to any more, and takes the annotator's corrections with it.
+        self.logic.forgetSplit()
+        self._setDivideStatus("")
+
+    def _setDivideStatus(self, text):
+        self.divideStatus.setText(text)
+        self.divideStatus.setVisible(bool(text))
+
     def onCopySeed(self):
         """Union the whole pre-existing tree into the active branch."""
         if self.logic is None or not self.logic.seedSegmentId:
@@ -2304,12 +2922,12 @@ class SegQueueWidget(ScriptedLoadableModuleWidget):
             return
         with _busy():
             self.logic.segmentationNode.CreateClosedSurfaceRepresentation()
-            display = self.logic.segmentationNode.GetDisplayNode()
-            if display is not None:
-                # Scaffolding stays out of the 3D view: a solid heart would hide
-                # the very tree the annotator opened 3D to inspect.
-                for segmentId in self.logic.helperIds():
-                    display.SetSegmentOpacity3D(segmentId, 0.0)
+            # Scaffolding stays out of the 3D view -- a solid heart would hide
+            # the very tree the annotator opened 3D to inspect -- with the
+            # coronary mask the deliberate exception, because comparing the
+            # branches drawn so far against the mask they came from is most of
+            # what the 3D view is for on a seeded case.
+            self.logic.showSeedIn3d(bool(self.seed3dCheck.checked))
             slicer.app.layoutManager().setLayout(
                 slicer.vtkMRMLLayoutNode.SlicerLayoutFourUpView)
 
@@ -2342,6 +2960,8 @@ class SegQueueWidget(ScriptedLoadableModuleWidget):
         for name, key, _tip in VESSEL_EFFECTS:
             bindings.append((key, lambda n=name: self.onEffect(n)))
         bindings.append(("A", self.onApplyTube))
+        bindings.append(("M", self.onMarkBranch))
+        bindings.append(("D", self.onDivide))
 
         for key, handler in bindings:
             shortcut = qt.QShortcut(slicer.util.mainWindow())
@@ -2459,6 +3079,7 @@ class SegQueueWidget(ScriptedLoadableModuleWidget):
         self.caseLabel.setText("Submitted. Press 'Get next case' when you are ready.")
         self.reworkBox.setVisible(False)
         self.seedGroup.setVisible(False)
+        self._setDivideStatus("")
         self._bindEditor(None, None)
         self._updateChecklist()
         self._updateEnabled()
@@ -2480,6 +3101,7 @@ class SegQueueWidget(ScriptedLoadableModuleWidget):
         self._clearNotes()
         self.reworkBox.setVisible(False)
         self.seedGroup.setVisible(False)
+        self._setDivideStatus("")
         self._bindEditor(None, None)
         self._updateChecklist()
         self._updateEnabled()
@@ -2628,6 +3250,16 @@ def _storedFloat(key, default):
         return float(slicer.util.settingsValue(key, str(default)))
     except (TypeError, ValueError):
         return default
+
+
+def _storedBool(key, default):
+    """A checkbox's remembered state.
+
+    ``settingsValue`` hands back the string QSettings stored, and ``bool("false")``
+    is ``True`` -- which would turn every remembered "off" back on at the next
+    launch, silently, once per annotator per session.
+    """
+    return slicer.util.settingsValue(key, default, converter=slicer.util.toBool)
 
 
 def _caption(text):

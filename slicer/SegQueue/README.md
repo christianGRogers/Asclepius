@@ -402,6 +402,14 @@ The client asks the server how much it already has and continues from there.
 
 ## Version history
 
+**0.7.1** — Fixes a dead panel in 0.7.0: every vessel button raised on click,
+because one call to a method deleted in that release survived the refactor. Adds
+a static check over the module's own `self.x` calls, signal connections and key
+bindings, which catches that class of mistake without a running Slicer — it is
+invisible to `pyflakes` and shows up only as a control that silently does
+nothing. A vessel is also now handed the remainder at most once per case;
+**Start this vessel over** is the way to refill one.
+
 **0.7.0** — Dividing by trimming. A vessel now starts as everything the mask
 has left, and the annotator cuts away what is not it with **Trim** (`E`); the
 next vessel starts as exactly what was cut off. Replaces the marker-and-divide

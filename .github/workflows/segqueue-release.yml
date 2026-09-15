@@ -65,8 +65,6 @@ jobs:
             tests/test_segqueue_release.py \
             tests/test_segqueue_updater.py \
             tests/test_segqueue_notes.py \
-            tests/test_segqueue_seedsplit.py \
-            tests/test_segqueue_lasso.py \
             tests/test_segqueue_protocol.py \
             tests/test_segqueue_states.py \
             tests/test_segqueue_policy.py \

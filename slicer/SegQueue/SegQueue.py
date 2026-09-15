@@ -101,7 +101,7 @@ from SegQueueLib import (
     updater,
 )
 
-__version__ = "0.7.0"
+__version__ = "0.7.1"
 
 #: How often the in-progress segmentation is written to disk. Two minutes is
 #: chosen against the cost of losing work rather than the cost of the write: a
@@ -1006,6 +1006,8 @@ class SegQueueWidget(ScriptedLoadableModuleWidget):
         self._shortcuts = []
         self._slicerLogo = None
         self._pendingUpdate = None
+        #: Vessels already handed the unclaimed remainder on this case.
+        self._filledVessels = set()
 
     # ------------------------------------------------------------------ setup
 
@@ -2055,6 +2057,7 @@ class SegQueueWidget(ScriptedLoadableModuleWidget):
         # button, because it is the first question of the case -- where do these
         # branches go -- and an annotator who has to ask for it has usually
         # already started scrolling slices to answer it the slow way.
+        self._filledVessels = set()
         self.onShowSeed3d()
         self.onMaskingChanged()
         if self.logic.project.segments:
@@ -2108,12 +2111,18 @@ class SegQueueWidget(ScriptedLoadableModuleWidget):
         # in it is left alone -- coming back to a branch must never wipe the
         # trimming done on it, and that is also what makes a reopened draft
         # resume rather than restart.
+        #
+        # Once per vessel per case, too. Before any trimming the first vessel
+        # holds the whole tree and every other one's remainder is empty, so
+        # without this, clicking between them would re-run a copy and three
+        # subtracts each time to arrive back at empty. "Start this vessel over"
+        # is the deliberate way to refill one.
         if (self.logic.seedSegmentId and segmentId
+                and name not in self._filledVessels
                 and not self.logic.segmentHasContent(name)):
             with _busy():
                 self._fillWithRemainder(name)
             self._updateChecklist()
-        self._followMarkerTarget(name)
 
     def onEffect(self, name):
         """Activate an effect and apply this panel's sizes to it."""
@@ -2413,6 +2422,7 @@ class SegQueueWidget(ScriptedLoadableModuleWidget):
             if other and self.logic.segmentHasContent(spec.name):
                 self._logicalOp("SUBTRACT", other, segmentId=target)
 
+        self._filledVessels.add(name)
         if self.editorNode is not None:
             self.editorNode.SetSelectedSegmentID(target)
         if before and before != "Logical operators":

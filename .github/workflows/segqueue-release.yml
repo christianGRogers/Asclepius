@@ -62,6 +62,7 @@ jobs:
         # about whether this archive is safe to hand an annotator.
         run: |
           python -m pytest -q \
+            tests/test_segqueue_module.py \
             tests/test_segqueue_release.py \
             tests/test_segqueue_updater.py \
             tests/test_segqueue_notes.py \

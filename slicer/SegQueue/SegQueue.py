@@ -101,7 +101,7 @@ from SegQueueLib import (
     updater,
 )
 
-__version__ = "0.7.1"
+__version__ = "0.7.2"
 
 #: How often the in-progress segmentation is written to disk. Two minutes is
 #: chosen against the cost of losing work rather than the cost of the write: a
@@ -153,6 +153,14 @@ LUMEN_HU_MAX = 1000
 #: constant because it is referenced in three places and is the one tool this
 #: whole panel is arranged around.
 SCISSORS_EFFECT = 'Scissors'
+
+#: How the trim tool is configured. Scissors is a C++ effect and these strings
+#: are converted to enums by name, with no validation on the way in and no error
+#: on the way out -- an unrecognised value becomes -1 and the tool silently stops
+#: drawing. They are exactly the defaults Slicer writes into a fresh segment
+#: editor node, which is what ``tests/slicer_selftest.py`` checks them against.
+SCISSORS_OPERATION = 'EraseInside'
+SCISSORS_SHAPE = 'FreeForm'
 
 TUBE_EFFECT = 'Draw tube'
 
@@ -2160,15 +2168,21 @@ class SegQueueWidget(ScriptedLoadableModuleWidget):
         they live in the Segment Editor's parameter node, so an annotator who
         last used Scissors to fill a circle gets that again here, on a button
         labelled as a trim.
+
+        **The spelling is load-bearing and is not checked by anything at
+        runtime.** Scissors is a C++ effect; ``setParameter`` stores whatever
+        string it is handed, and the effect converts it to an enum on use,
+        mapping anything it does not recognise to -1. A misspelt ``Shape``
+        therefore builds no drawing pipeline at all: the tool activates, the
+        button lights up, and dragging in a view does nothing whatever. 0.7.0
+        shipped ``FREE_FORM`` and that is exactly what it did.
+
+        So these values are pinned by ``SCISSORS_OPERATION`` and
+        ``SCISSORS_SHAPE``, and ``tests/slicer_selftest.py`` checks them against
+        the defaults Slicer itself writes into a fresh editor node.
         """
-        for key, value in (("Operation", "ERASE_INSIDE"), ("Shape", "FREE_FORM")):
-            try:
-                effect.setParameter(key, value)
-            except Exception:
-                # Parameter names have moved between Slicer versions, and the
-                # defaults are already erase-inside free-form. Not worth failing
-                # the tool over.
-                pass
+        effect.setParameter("Operation", SCISSORS_OPERATION)
+        effect.setParameter("Shape", SCISSORS_SHAPE)
 
     def _reportMissingEffect(self, name):
         """Say which extension is missing, rather than that something failed."""

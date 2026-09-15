@@ -359,6 +359,31 @@ tag in the repository. `tests/test_segqueue_release.py` asserts the prefix, so
 changing it in one place and not the other fails CI rather than silently
 stranding every installed client.
 
+### Checking it against a real Slicer
+
+The pytest suite cannot import `SegQueue.py` — it needs Qt, VTK and Slicer — so
+the module's dependencies on Slicer are checked by a script Slicer runs itself:
+
+```bash
+"C:\...\Slicer.exe" --no-splash --no-main-window --python-script tests\slicer_selftest.py --exit-after-startup
+```
+
+It exits non-zero on failure; set `SEGQUEUE_SELFTEST_OUT` to a path to also get
+the report as a file. **Run it before a release.** CI does not — there is no
+Slicer on a GitHub runner — so this is a manual gate.
+
+It checks the things whose failure mode is *silence*: that the effects the panel
+drives are present, that the trim tool's parameter spellings match the ones
+Slicer itself writes, and that the vessel-fill arithmetic produces exactly the
+right voxel counts. Effect parameters are strings converted to enums by name with
+no validation, so a misspelling gives a tool that activates and then ignores the
+mouse; segment arithmetic through Logical operators does not raise on a wrong
+operation name, it just produces the wrong voxels.
+
+It loads the module **by path**, not by `import SegQueue`, because Slicer
+pre-imports an installed copy of the extension if one exists — so a plain import
+tests the installed build rather than the one being edited.
+
 To build locally:
 
 ```bash
@@ -401,6 +426,15 @@ clears within the hour; installs from the releases page still work meanwhile.
 The client asks the server how much it already has and continues from there.
 
 ## Version history
+
+**0.7.2** — Fixes the trim tool not drawing. Scissors is a C++ effect whose
+`Shape` and `Operation` parameters are strings converted to enums by name, with
+no validation: 0.7.0 set `FREE_FORM` where Slicer spells it `FreeForm`, which
+converts to -1, builds no drawing pipeline, and leaves a tool that activates and
+then ignores the mouse. `tests/slicer_selftest.py` is rewritten to run the module
+inside Slicer and check exactly this class of thing — the parameter spellings
+against the defaults Slicer itself writes, and the vessel-fill arithmetic against
+known voxel counts.
 
 **0.7.1** — Fixes a dead panel in 0.7.0: every vessel button raised on click,
 because one call to a method deleted in that release survived the refactor. Adds

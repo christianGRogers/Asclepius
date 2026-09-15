@@ -138,9 +138,9 @@ what makes a shared teaching workstation safe to walk away from.
    coronary CT (W 800 / L 300 — auto window/level on a whole-chest CT is useless
    for a 3 mm vessel), and the Segment Editor opens on it. If the case ships a
    coronary mask, it is standing in the 3D view by the time you look up.
-2. **Divide the mask**, if the case has one — circle each branch in the 3D view
-   (`L`) and it fills in. See below. What is left is touch-up rather than
-   tracing.
+2. **Divide the mask**, if the case has one — each vessel starts as everything
+   still unclaimed, and you trim (`E`) away what is not it. See below. The
+   result is touch-up rather than tracing.
 3. **Pick a vessel** — number keys `1`–`4` (and up to `9`), or the buttons. The
    button shows a ✓ once that vessel has content, and `(optional)` where the
    project does not require it.
@@ -163,9 +163,7 @@ are the fast path, not a cage.
 | Key | |
 |---|---|
 | `1`–`9` | Select vessel *n* |
-| `L` | Circle the selected branch in the 3D view |
-| `M` | Mark the selected branch by clicking points down it |
-| `D` | Divide the mask between the branches you have marked |
+| `E` | Trim — cut away what is not this vessel |
 | `Q` | Draw tube |
 | `W` | Paint |
 | `A` | Apply the tube section you just placed, and start the next |
@@ -187,104 +185,46 @@ mask the source dataset shipped. On those cases the job is not to trace the
 vessels — something already did — it is to say which part of that mask is the
 LAD, which is the LCx, and which is the RCA.
 
-So the mask is **rendered in the 3D view as the case opens**, and there is a tool
-that splits it.
+So the mask is **rendered in the 3D view as the case opens**, and you divide it
+by cutting it up:
 
-### Circling a branch
+1. **Pick a vessel** (`1`–`4`). It arrives holding **everything still
+   unclaimed** — for the first vessel, the whole tree.
+2. **Trim (`E`)** away what is not that vessel. Drag a loop round it in the 3D
+   view or on a slice; what is inside the loop is cut.
+3. **Pick the next vessel.** It starts as exactly what you just cut off.
 
-1. **Pick a vessel** (`1`–`4`).
-2. **Circle branch in 3D (`L`)**, and drag a loop around that artery in the 3D
-   view. It fills in as soon as you let go.
-3. Repeat for the next vessel.
+Repeat until the last vessel, which usually needs no trimming at all — by then
+the only thing left is itself.
 
-One loop per press: while you are drawing, the left button draws instead of
-rotating, and as soon as you release, the view goes back to behaving normally.
-So rotating between loops needs no mode switch, and you can never drag the view
-and discover you drew a lasso.
+**Nothing you cut is lost.** A cut does not delete anything from the case; it
+hands it to the vessel you have not got to yet. So trimming is never a decision
+you have to be sure about in advance: cut generously, and whatever you took off
+is in front of you the moment you switch.
 
-**What is behind another branch is left alone.** A loop on a flat screen is a
-tube through the volume, so circling the LAD would naively take the RCA sitting
-behind it — which is worse than useless, because it is a mislabelling that looks
-like progress. Two rules stop that: within the loop each pixel keeps only what is
-nearest the camera, and the loop then keeps **one connected piece** of the tree,
-the one it mostly covers. Circling the LAD with the RCA directly behind it takes
-none of the RCA.
-
-**You only need to circle the part you can see.** What a loop selects are
-markers; the rest of the branch fills in from them through the mask, far side
-included. A rough loop over the visible length of a vessel is enough.
-
-If a branch is broken into two pieces by the source model, circle each — loops
-accumulate. And if a loose loop around the LAD catches a little of the LCx,
-circling the LCx afterwards takes it back: the newest loop wins.
-
-### Marking a branch by clicking
-
-Better where two vessels overlap from every angle, and the same partition
-underneath:
-
-1. **Pick a vessel** (`1`–`4`).
-2. **Mark branch (`M`)** — click a few points down that artery, in the 3D view or
-   on the slices. Placement stays armed, so it is a run of clicks, not a
-   click-and-return-to-the-button.
-3. Pick the next vessel and mark it. The number keys move the marking with you
-   mid-run; you do not press `M` again.
-4. **Divide (`D`).** Every voxel of the mask is given to the branch whose markers
-   are nearest, and the vessels fill in.
-
-The two mix freely: circle what is easy to circle, click down whatever is left.
-
-### How the split is decided
-
-Nearest **along the vessel**, not through the air. That is the entire reason this
-works:
-
-- The **LAD and the LCx are joined** at the left main, so no straight-line rule
-  separates them — but measured along the lumen, a voxel in the mid-LAD is far
-  from an LCx marker even where the two vessels sit millimetres apart in space.
-- The **RCA is usually a separate piece** of the mask, so one marker anywhere on
-  it claims all of it, and a marker on the left tree cannot reach it at any
-  distance.
-- Where the boundary between two branches lands is **what the markers are for**.
-  With one marker at the end of each arm it falls halfway along the left main;
-  marking further down one arm pulls it the other way. That is how you say "the
-  left main belongs to the LAD" without painting a voxel.
-
-Then **paint (`W`) and draw tube (`Q`) as usual** — to extend a branch the mask
-stopped short of, or to fix a boundary you disagree with. The division is a head
-start, not a verdict.
+This is also why the workflow cannot be short-circuited. A vessel you never
+trimmed leaves nothing for the ones after it, so they come up empty — and an
+empty required vessel blocks submission. There is no path to submitting the
+whole tree as one branch.
 
 Some details worth knowing:
 
-- **Dividing again is safe.** Circle or mark again, and divide again. The previous division is taken
-  back out of each vessel before the new one goes in, so **anything you painted
-  by hand survives**. *Clear markers* forgets the division as well as the points,
-  which is the one thing that ends that guarantee — after it, a fresh divide adds
-  to what is already there.
-- **What it cannot place, it hands back.** A piece of the mask with no marker on
-  it — an aortic root fragment, a vein the model caught — is left out and
-  reported, rather than being glued to whichever branch happens to be nearest. If
-  that is most of the mask, you are told a branch is probably unmarked.
-- **A marker that misses snaps onto the mask**, but only by a few voxels. Beyond
-  that the click was meant for something else, and dragging it onto the nearest
-  vessel would hand a whole branch to a label you never pointed at — which looks
-  like work rather than like a mistake. A branch marked and still empty is called
-  out by name.
-- **Markers and circled regions are saved with the case**, beside the draft and
-  the unposted note, and come back when you reopen it. Purged with everything
-  else on submit.
-- **Circling needs the mask showing in 3D**, since it is the thing you are
-  drawing around. The button says so rather than quietly doing nothing.
-- **The mask is never submitted.** It stays scaffolding — the export copies only
-  the project's own segments, so it is structurally unable to reach the server no
-  matter what the division does. *Only let me paint inside that mask* and *Add
-  the whole mask to this vessel* are both still there.
-- **Show the mask in the 3D view** can be turned off, and is remembered. The
-  heart mask is never in the 3D view: a solid chamber wall would hide the tree.
+- **Coming back to a vessel does not refill it.** Only an empty vessel is handed
+  the remainder, so switching back to check your work never wipes it — and a
+  draft reopened tomorrow resumes rather than restarts. **Start this vessel
+  over** is the deliberate way to refill one.
+- **Trimming ignores both masks.** The intensity range that keeps a sloppy brush
+  inside the lumen would also stop a cut removing anything outside 150–1000 HU,
+  scattering specks of one branch through the next. Paint still respects them.
+- **Paint (`W`) and draw tube (`Q`) work as they always have** — to put back a
+  little too much trimming, or to extend a branch past where the mask stops.
+- **Ordinary undo works.** `Ctrl+Z` steps back through cuts like any other
+  Segment Editor edit.
+- **The mask is never submitted.** It stays scaffolding: the export copies only
+  the project's own segments, so it is structurally incapable of reaching the
+  server however you cut it up.
 
-This is client-side only. The mask already shipped with the case (`hasSeed` and
-`GET /segqueue/case/<id>/asset/seed`, both since 0.1.0) — 0.5.0 is the first
-version to do anything with it beyond masking the brush.
+Client-side only. The mask has shipped with cases since 0.1.0.
 
 ## Case notes
 
@@ -461,6 +401,15 @@ clears within the hour; installs from the releases page still work meanwhile.
 The client asks the server how much it already has and continues from there.
 
 ## Version history
+
+**0.7.0** — Dividing by trimming. A vessel now starts as everything the mask
+has left, and the annotator cuts away what is not it with **Trim** (`E`); the
+next vessel starts as exactly what was cut off. Replaces the marker-and-divide
+and circle-to-select workflows of 0.5.0 and 0.6.0, and the panel with them —
+three controls and no prose. Nothing cut is lost, an untrimmed vessel starves
+the ones after it so the workflow cannot be skipped, and trimming ignores the
+brush masks so a cut cannot leave specks behind. Removes `segqueue.seedsplit`
+and `segqueue.lasso`. Still client-side only.
 
 **0.6.0** — Circling a branch in 3D. Drag a loop around an artery in the 3D
 view and it fills in: **Circle branch in 3D** (`L`), one loop per press, with the

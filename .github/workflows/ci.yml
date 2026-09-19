@@ -1,0 +1,299 @@
+# Everything that has to be true before a change can reach `main`.
+#
+# `main` is not a staging area: a push to it that bumps `__version__` publishes
+# a release, and the extension then offers every annotator "Update and restart"
+# (see segqueue-release.yml). So the jobs below are not a formality — they are
+# the last thing standing between a bad merge and thirty laptops.
+#
+# The suite is arranged by what each job can catch that the others cannot:
+#
+#   lint / test            the ordinary suite, on Linux, where the POSIX checks
+#                          that fail on a Windows laptop are real checks again
+#   slicer-python          proves src/segqueue still imports on Python 3.9 with
+#                          nothing installed — Slicer's situation exactly
+#   server-integration     the atomic claim, against a real MongoDB, because a
+#                          mocked database verifies the mock
+#   acceptance             the real client against a real server over real HTTP
+#
+# Only `acceptance` needs anything to be running, and it builds that itself.
+
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main, dev]
+
+# A second push to the same branch makes the first one's answer irrelevant.
+# `main` is exempt below by virtue of being pushed to rarely and deliberately.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+permissions:
+  contents: read
+
+jobs:
+  # --------------------------------------------------------------------------
+  branch-name:
+    name: Branch name
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - name: The prefix has to say what kind of change this is
+        env:
+          BRANCH: ${{ github.head_ref }}
+        run: |
+          # Not tidiness: the prefix is what tells a reviewer, before they open
+          # the diff, whether this change can reach an annotator.
+          if [[ "$BRANCH" =~ ^(feat|fix|docs|ci|chore|exp)/[a-z0-9][a-z0-9._-]*$ ]]; then
+            echo "\`$BRANCH\` :white_check_mark:" >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          # `dev` proposes itself to `main`; the archive branches are frozen and
+          # kept only so `git show plan-v1:README.md` keeps working.
+          case "$BRANCH" in
+            dev|plan-v1|scinet-training|segqueue-platform|dependabot/*)
+              echo "\`$BRANCH\` is exempt." >> "$GITHUB_STEP_SUMMARY"; exit 0 ;;
+          esac
+          {
+            echo "### Branch \`$BRANCH\` does not follow the naming rule"
+            echo
+            echo 'Use `<type>/<short-slug>`, lowercase and hyphenated, where type is'
+            echo 'one of `feat`, `fix`, `docs`, `ci`, `chore`, `exp`.'
+            echo 'See CONTRIBUTING.md §4. Rename with:'
+            echo
+            echo '```sh'
+            echo "git branch -m $BRANCH fix/your-slug"
+            echo "git push origin -u fix/your-slug && git push origin --delete $BRANCH"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+          exit 1
+
+  # --------------------------------------------------------------------------
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      # Pinned, not floating. The lint config ignores UP045, a selector that
+      # only exists from ruff 0.9 -- and a ruff that does not know a selector
+      # refuses to parse pyproject.toml rather than warning, so "ruff check"
+      # fails with a config error that reads nothing like a lint failure. A
+      # floating version also means a ruff release can turn every open pull
+      # request red overnight. Bump this deliberately.
+      - run: pip install ruff==0.16.8
+      # Both trees. ruff resolves configuration per file from the nearest
+      # pyproject.toml, so the root run already lints server/ under
+      # server/pyproject.toml (py310) rather than the root's py39 -- the second
+      # run is here to fail loudly if that ever stops being true.
+      - run: ruff check --output-format=github .
+      - run: ruff check --output-format=github .
+        working-directory: server
+
+  # --------------------------------------------------------------------------
+  test:
+    name: Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - name: Install
+        run: |
+          python -m pip install --upgrade pip
+          # `requests` is not a package dependency — the Slicer extension gets
+          # it from Slicer — but the client tests import it.
+          pip install -e ".[dev]" requests
+      - name: pytest
+        # Everything that needs no database, no dataset and no network. The
+        # marked tests are covered by the jobs below, or are not CI's business.
+        run: pytest -q -rs --junitxml=junit.xml
+      - name: Fail if nothing ran
+        # A collection error that skips the whole suite returns 0 from pytest
+        # and would otherwise show as a green tick.
+        if: always()
+        run: |
+          python - <<'PY'
+          import sys, xml.etree.ElementTree as ET
+          suite = ET.parse("junit.xml").getroot().find("testsuite")
+          ran = int(suite.get("tests")) - int(suite.get("skipped"))
+          print(f"{ran} tests ran, {suite.get('skipped')} skipped")
+          if ran < 400:
+              sys.exit(f"only {ran} tests ran; the suite did not collect properly")
+          PY
+
+  # --------------------------------------------------------------------------
+  slicer-python:
+    name: Shared package on Slicer's Python
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          # Slicer 5.8 bundles 3.9. We cannot pip-install into an annotator's
+          # Slicer, so this is the version the shared package has to satisfy.
+          python-version: "3.9"
+      - name: Import every shared module with nothing installed
+        # Deliberately no `pip install` of any kind. That is the whole point:
+        # if this passes, the package cannot be relying on something a
+        # developer's virtualenv happens to have and Slicer does not.
+        run: |
+          cd src
+          python - <<'PY'
+          import importlib, pathlib, sys
+
+          modules = sorted(p.stem for p in pathlib.Path("segqueue").glob("*.py")
+                           if p.stem != "__init__")
+          print("Python", sys.version.split()[0])
+          for name in ["segqueue"] + [f"segqueue.{m}" for m in modules]:
+              importlib.import_module(name)
+              print("  ok", name)
+          PY
+
+  # --------------------------------------------------------------------------
+  server-integration:
+    name: Server against a real MongoDB
+    runs-on: ubuntu-latest
+    services:
+      mongo:
+        image: mongo:7
+        ports: ["27099:27017"]
+        options: >-
+          --health-cmd "mongosh --quiet --eval 'db.adminCommand({ping:1})'"
+          --health-interval 10s --health-timeout 5s --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - name: Install
+        # Root first, then the plugin: girder-segqueue deliberately does not
+        # declare `segqueue` as a dependency, because the distribution that
+        # provides it is named `segtrain` and an unrelated project owns that
+        # name on PyPI. The Dockerfile does the same, in the same order.
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev]"
+          pip install ./server pymongo
+      - name: The claim race, against the real database
+        env:
+          SEGQUEUE_TEST_MONGO: mongodb://localhost:27099
+        run: pytest -q -rs tests/test_segqueue_server.py --junitxml=junit.xml
+      - name: Fail if these skipped
+        # These tests skip themselves when Girder or MongoDB is missing, which
+        # is right on a laptop and wrong here: in CI both are present, so a skip
+        # means the install is broken and the atomic claim went untested.
+        if: always()
+        run: |
+          python - <<'PY'
+          import sys, xml.etree.ElementTree as ET
+          suite = ET.parse("junit.xml").getroot().find("testsuite")
+          skipped, tests = int(suite.get("skipped")), int(suite.get("tests"))
+          print(f"{tests - skipped} of {tests} ran")
+          if skipped:
+              sys.exit(f"{skipped} server test(s) skipped in CI — "
+                       "girder, pymongo or MongoDB is not actually available")
+          PY
+
+  # --------------------------------------------------------------------------
+  acceptance:
+    name: The real client against a real server
+    runs-on: ubuntu-latest
+    services:
+      mongo:
+        image: mongo:7
+        ports: ["27017:27017"]
+        options: >-
+          --health-cmd "mongosh --quiet --eval 'db.adminCommand({ping:1})'"
+          --health-interval 10s --health-timeout 5s --health-retries 10
+    env:
+      GIRDER_MONGO_URI: mongodb://localhost:27017/segqueue_ci
+      SEGQUEUE_URL: http://localhost:8099
+      ADMIN_LOGIN: admin1
+      ADMIN_PASSWORD: hunter2xyz
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - name: Install the server the way the Dockerfile does
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e .
+          pip install "./server[scoring]" requests
+
+      - name: Start Girder
+        run: |
+          mkdir -p "$GITHUB_WORKSPACE/assetstore"
+          girder serve --mode development -H 0.0.0.0 -p 8099 > girder.log 2>&1 &
+          echo $! > girder.pid
+          for i in $(seq 1 60); do
+            if curl -fsS "$SEGQUEUE_URL/api/v1/system/version" >/dev/null 2>&1; then
+              echo "Girder answered after ${i}s"; exit 0
+            fi
+            sleep 1
+          done
+          echo "Girder never came up:"; cat girder.log; exit 1
+
+      - name: Bootstrap an admin and an assetstore
+        # The first account Girder sees becomes a site administrator, and
+        # segqueue-ingest refuses to run without one — and without somewhere to
+        # put the files.
+        run: |
+          curl -fsS -X POST "$SEGQUEUE_URL/api/v1/user" \
+            -d "login=$ADMIN_LOGIN" -d "email=$ADMIN_LOGIN@example.edu" \
+            -d "firstName=Ada" -d "lastName=Admin" \
+            -d "password=$ADMIN_PASSWORD" > /dev/null
+          TOKEN=$(curl -fsS -u "$ADMIN_LOGIN:$ADMIN_PASSWORD" \
+            "$SEGQUEUE_URL/api/v1/user/authentication" \
+            | python -c 'import json,sys; print(json.load(sys.stdin)["authToken"]["token"])')
+          curl -fsS -X POST "$SEGQUEUE_URL/api/v1/assetstore" \
+            -H "Girder-Token: $TOKEN" \
+            -d "type=0" -d "name=store" -d "root=$GITHUB_WORKSPACE/assetstore" > /dev/null
+
+      - name: Put some cases in the pool
+        # Synthetic volumes, not real CT: the acceptance test is about the
+        # queue, the claim, the checksum and the refusals, none of which look at
+        # a voxel. Four, because the concurrency check needs spares.
+        run: |
+          mkdir -p "$GITHUB_WORKSPACE/incoming"
+          python - <<'PY'
+          import os
+          import nibabel as nib
+          import numpy as np
+
+          root = os.path.join(os.environ["GITHUB_WORKSPACE"], "incoming")
+          affine = np.diag([0.4, 0.4, 0.5, 1.0])
+          for i in range(4):
+              data = np.zeros((64, 64, 40), dtype=np.int16)
+              data[20:40, 20:40, 10:30] = 300 + i
+              nib.save(nib.Nifti1Image(data, affine),
+                       os.path.join(root, f"ci{i:03d}.nii.gz"))
+          print("wrote", sorted(os.listdir(root)))
+          PY
+          # --no-fix-geometry: these volumes are axis-aligned by construction,
+          # and the oblique-correction path has its own unit tests.
+          segqueue-ingest --root "$GITHUB_WORKSPACE/incoming" \
+            --layout flat --no-fix-geometry --admin "$ADMIN_LOGIN"
+
+      - name: Acceptance test
+        # The same client the Slicer extension uses, over real HTTP. A pass here
+        # means the extension's half of the conversation still works.
+        run: |
+          python tests/segqueue_e2e.py \
+            --url "$SEGQUEUE_URL" \
+            --admin-login "$ADMIN_LOGIN" --admin-password "$ADMIN_PASSWORD" \
+            --assetstore-root "$GITHUB_WORKSPACE/assetstore"
+
+      - name: Girder log
+        if: failure()
+        run: tail -200 girder.log

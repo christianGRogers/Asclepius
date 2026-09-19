@@ -1,0 +1,128 @@
+# The one test that runs the module inside a real 3D Slicer.
+#
+# Deliberately NOT on pull requests. It downloads ~1.5 GB of Slicer, installs an
+# extension from a third-party server, and drives a Qt application under a
+# virtual framebuffer — three things that fail for reasons that have nothing to
+# do with the change under review. Gating every PR on that would train everyone
+# to merge past a red tick, which is worse than not running it.
+#
+# So it runs weekly and on demand, and when it fails it means something: either
+# SegQueue broke, or a new Slicer release broke SegQueue, and both are worth
+# knowing before an annotator finds out.
+#
+# What only this job can catch (see tests/slicer_selftest.py):
+#   * Segment Editor effect parameters are strings mapped to enums by name, and
+#     nothing validates them. `Shape="FREE_FORM"` instead of `"FreeForm"` gave
+#     0.7.0 a trim tool that activated and would not draw. No error anywhere.
+#   * Segment arithmetic through the Logical operators effect does not raise on
+#     a wrong operation name — it produces the wrong voxels, which is a
+#     mislabelled artery nobody notices until the submission is scored.
+
+name: Slicer self-test
+
+on:
+  schedule:
+    # Mondays, 06:00 UTC. Early enough that a failure is triaged before the
+    # week's labelling starts.
+    - cron: "0 6 * * 1"
+  workflow_dispatch:
+    inputs:
+      slicer_stability:
+        description: "Which Slicer to test against"
+        type: choice
+        default: release
+        options: [release, preview]
+
+permissions:
+  contents: read
+
+jobs:
+  selftest:
+    name: SegQueue inside Slicer
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: What Slicer needs to start without a screen
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            xvfb libpulse-dev libnss3 libglu1-mesa libxcb-icccm4 \
+            libxcb-image0 libxcb-keysyms1 libxcb-randr0 libxcb-render-util0 \
+            libxcb-xinerama4 libxcb-xkb1 libxkbcommon-x11-0 libxrender1 \
+            libsm6 libxt6 libasound2t64 || \
+          sudo apt-get install -y --no-install-recommends libasound2
+
+      - name: Download Slicer
+        env:
+          STABILITY: ${{ inputs.slicer_stability || 'release' }}
+        run: |
+          # The redirect gives the current build for the chosen channel. It
+          # drifts as Slicer releases, and that drift is the point: this job is
+          # also the early warning that a new Slicer broke the module.
+          curl -L --retry 3 --retry-delay 5 -o slicer.tar.gz \
+            "https://download.slicer.org/download?os=linux&stability=$STABILITY"
+          mkdir -p "$HOME/slicer"
+          tar -xzf slicer.tar.gz -C "$HOME/slicer" --strip-components=1
+          echo "SLICER=$HOME/slicer/Slicer" >> "$GITHUB_ENV"
+          "$HOME/slicer/Slicer" --version || true
+
+      - name: Install SegmentEditorExtraEffects
+        # The module is built around *Draw tube*, which this extension provides
+        # and Slicer core does not. The selftest checks it is present, so
+        # without this step the job fails for the wrong reason.
+        #
+        # The Extensions Manager loads what it installed at the *next* start,
+        # which is why this is its own Slicer invocation.
+        run: |
+          xvfb-run -a "$SLICER" --no-splash --no-main-window \
+            --python-code "
+          import sys, slicer
+          model = slicer.app.extensionsManagerModel()
+          name = 'SegmentEditorExtraEffects'
+          if model.isExtensionInstalled(name):
+              print('already installed'); sys.exit(0)
+          ok = False
+          for attempt in ('installExtensionFromServer', 'downloadAndInstallExtensionByName'):
+              call = getattr(model, attempt, None)
+              if call is None:
+                  continue
+              try:
+                  ok = bool(call(name)) or model.isExtensionInstalled(name)
+              except Exception as exc:
+                  print(attempt, 'failed:', exc)
+              if ok:
+                  print('installed via', attempt); break
+          sys.exit(0 if ok else 'could not install ' + name)
+          " 2>&1 | tail -20
+
+      - name: Run the self-test
+        env:
+          SEGQUEUE_SELFTEST_OUT: ${{ github.workspace }}/selftest.txt
+        run: |
+          # Slicer's stdout is noisy and it swallows a bare sys.exit from a
+          # --python-script, which is why the script writes its report to the
+          # file named above and sets the process status itself.
+          xvfb-run -a "$SLICER" --no-splash --no-main-window \
+            --python-script tests/slicer_selftest.py --exit-after-startup
+          echo "status $?"
+
+      - name: The report
+        if: always()
+        run: |
+          if [ -f selftest.txt ]; then
+            cat selftest.txt
+            { echo '```'; cat selftest.txt; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "No report was written — Slicer did not reach the script." \
+              >> "$GITHUB_STEP_SUMMARY"
+            exit 1
+          fi
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: slicer-selftest-report
+          path: selftest.txt
+          if-no-files-found: ignore

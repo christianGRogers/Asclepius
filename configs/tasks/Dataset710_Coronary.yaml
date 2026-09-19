@@ -1,4 +1,5 @@
-# Coronary task. The plan behind these values is docs/TRAINING-PLAN.md; the
+# Coronary task. The plan behind these values is
+# vault/Training method/Training plan.md; the
 # retired previous plan is on branch `plan-v1`.
 #
 # Decided there: `3d_fullres` at native spacing, no cascade, no heart crop, and
@@ -18,7 +19,8 @@
 dataset_id: 710
 dataset_name: Coronary
 
-# Placeholder until the class schema is decided (docs/TRAINING-PLAN.md, "Still
+# Placeholder until the class schema is decided (vault/Training method/
+# Training plan.md, "Still
 # open"). One class is what the source ImageCAS masks contain, so the binary
 # stage of the plan's sequence trains against this as-is.
 label_set: placeholder

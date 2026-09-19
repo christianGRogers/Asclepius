@@ -1,0 +1,11 @@
+blank_issues_enabled: true
+contact_links:
+  - name: How to install or update SegQueue
+    url: https://github.com/christianGRogers/Asclepius/blob/main/docs/SegQueue-Setup-Guide.pdf
+    about: The annotator guide — installing the extension, and what the panel does.
+  - name: Standing up or operating the server
+    url: https://github.com/christianGRogers/Asclepius/blob/main/docs/SERVER-SETUP.md
+    about: The operator runbook — containers, ingest, accounts, backups.
+  - name: How the model is trained, and why
+    url: https://github.com/christianGRogers/Asclepius/blob/main/vault/README.md
+    about: The Obsidian vault — the training method, the decisions, and what is still open.

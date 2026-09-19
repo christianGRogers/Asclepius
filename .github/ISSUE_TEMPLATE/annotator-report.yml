@@ -1,0 +1,80 @@
+name: Something went wrong while labelling
+description: For annotators using the SegQueue module in 3D Slicer.
+title: "[annotator] "
+labels: ["labelling-app", "annotator-report"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting this — a button that quietly does nothing looks
+        exactly like a tool you misunderstood, so it is worth telling us even
+        when you are not sure it is a bug.
+
+        **Please do not attach patient images.** The case name is enough for us
+        to find it on the server.
+
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: What you were doing, what you expected, and what you got instead.
+      placeholder: |
+        I pressed Trim after circling a branch in the 3D view, and nothing was
+        removed. The button highlighted but the mask did not change.
+    validations:
+      required: true
+
+  - type: input
+    id: case
+    attributes:
+      label: Case name
+      description: Shown in the SegQueue panel. Leave blank if it happened before a case was assigned.
+      placeholder: s0042
+    validations:
+      required: false
+
+  - type: input
+    id: version
+    attributes:
+      label: SegQueue version
+      description: At the bottom of the SegQueue panel, e.g. "SegQueue 0.7.2".
+      placeholder: "0.7.2"
+    validations:
+      required: true
+
+  - type: input
+    id: slicer
+    attributes:
+      label: Slicer version
+      description: Slicer → Help → About 3D Slicer.
+      placeholder: "5.8.1"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: frequency
+    attributes:
+      label: How often does it happen?
+      options:
+        - Every time
+        - Sometimes
+        - It happened once
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: blocked
+    attributes:
+      label: Are you blocked?
+      options:
+        - label: I cannot carry on labelling because of this.
+
+  - type: textarea
+    id: extra
+    attributes:
+      label: Anything else
+      description: |
+        Screenshots of the panel help. If Slicer showed an error, the text of it
+        helps more — the Python console is under View → Python Console.
+    validations:
+      required: false

@@ -41,7 +41,9 @@ scoring = [
 ]
 dev = [
     "pytest>=7",
-    "ruff>=0.4",
+    # >=0.9 because the lint config ignores UP045, which older ruff cannot even
+    # parse as a selector. See the note in the repository root's pyproject.toml.
+    "ruff>=0.9",
 ]
 
 # This is what makes Girder find the plugin: it scans the `girder.plugin`

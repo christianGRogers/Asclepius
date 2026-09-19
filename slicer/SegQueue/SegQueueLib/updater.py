@@ -88,7 +88,8 @@ def checkForUpdate(currentVersion, slicerVersion, session=None,
             headers={"Accept": "application/vnd.github+json"},
             timeout=timeout)
     except Exception as exc:  # requests raises a family, not a single class
-        raise UpdateError("Could not reach GitHub to check for updates: {}".format(exc))
+        raise UpdateError("Could not reach GitHub to check for updates: "
+                          "{}".format(exc)) from exc
 
     if response.status_code == 403:
         # Unauthenticated GitHub allows 60 requests an hour per address. A lab
@@ -103,7 +104,7 @@ def checkForUpdate(currentVersion, slicerVersion, session=None,
     try:
         releases = response.json()
     except ValueError:
-        raise UpdateError("GitHub's reply to the update check was not JSON.")
+        raise UpdateError("GitHub's reply to the update check was not JSON.") from None
     if not isinstance(releases, list):
         raise UpdateError("GitHub's reply to the update check was not a release list.")
 
@@ -154,7 +155,7 @@ def downloadAsset(asset, destPath, session=None, progress=None,
         raise
     except Exception as exc:
         _quietUnlink(partPath)
-        raise UpdateError("Downloading the update failed: {}".format(exc))
+        raise UpdateError("Downloading the update failed: {}".format(exc)) from exc
 
     if declared and written != declared:
         _quietUnlink(partPath)
@@ -230,7 +231,7 @@ def inspectArchive(zipPath, slicerVersion):
             bad = archive.testzip()
     except zipfile.BadZipFile:
         raise UpdateError("The downloaded update is not a valid archive. Nothing "
-                          "has been changed; try again.")
+                          "has been changed; try again.") from None
     if bad is not None:
         raise UpdateError("The downloaded update is corrupt ({}). Nothing has "
                           "been changed; try again.".format(bad))
@@ -239,7 +240,8 @@ def inspectArchive(zipPath, slicerVersion):
         # Belt and braces against a crafted archive escaping the target
         # directory. Python 3.9's extractall does sanitise, but this code writes
         # into a live Slicer install and the check costs nothing.
-        if name.startswith("/") or name.startswith("\\") or ".." in name.replace("\\", "/").split("/"):
+        parts = name.replace("\\", "/").split("/")
+        if name.startswith("/") or name.startswith("\\") or ".." in parts:
             raise UpdateError("The downloaded update contains an unsafe path "
                               "({}) and was rejected.".format(name))
 
@@ -285,7 +287,7 @@ def installArchive(zipPath, moduleDir, slicerVersion, backupRoot=None):
             raise UpdateError(
                 "Installing the update failed and the previous version has been "
                 "put back ({}). Nothing is lost; try again, or install the zip "
-                "through Extensions Manager.".format(exc))
+                "through Extensions Manager.".format(exc)) from exc
     finally:
         shutil.rmtree(staging, ignore_errors=True)
 

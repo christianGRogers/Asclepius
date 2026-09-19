@@ -1,10 +1,30 @@
-# segmentator-train
+# Asclepius
+
+Multiclass coronary artery segmentation from CCTA, and the labelling platform
+that produces its training data. Two components, one repository:
+
+| | What it is | Where |
+|---|---|---|
+| **SegQueue** | The labelling app: a Girder server that owns the case pool, and a 3D Slicer extension that hands one annotator one case at a time. In use by a class of annotators, and it updates itself from this repository's releases. | `server/`, `slicer/`, shared protocol in `src/segqueue/` |
+| **segtrain** | The training pipeline: nnU-Net v2 data prep, planning, evaluation, and the SciNet job chain. | `src/segtrain/`, `configs/`, `scripts/` |
+
+Start here: **[CONTRIBUTING.md](CONTRIBUTING.md)** for how to set up, test,
+branch and release — the release rules in particular, because a version bump
+merged to `main` reaches every annotator's laptop. Operators want
+[`docs/SERVER-SETUP.md`](docs/SERVER-SETUP.md); annotators want
+[`docs/SegQueue-Setup-Guide.pdf`](docs/SegQueue-Setup-Guide.pdf); the reasoning
+behind the model lives in the Obsidian vault at [`vault/`](vault/README.md).
+
+---
+
+## The model
 
 Multiclass coronary artery segmentation from CCTA. **nnU-Net v2, `3d_fullres`,
 at native spacing, with no downsampling anywhere in the path** — no cascade, no
 coarsened resampling, no heart crop. The full plan, with the reasoning and the
-evidence, is [`docs/TRAINING-PLAN.md`](docs/TRAINING-PLAN.md); the retired
-previous plan is on the `plan-v1` branch.
+evidence, is [`vault/Training method/Training plan.md`](vault/Training%20method/Training%20plan.md) in the
+repository's Obsidian vault; the retired previous plan is on the `plan-v1`
+branch.
 
 Training runs on [SciNet](https://www.scinet.utoronto.ca/)'s Trillium
 supercomputer, one H100 80 GB per job.
@@ -37,8 +57,6 @@ Ruled out, deliberately: tree/graph-structured models as the primary segmenter
 largest-component post-processing (the coronary tree is naturally several
 disconnected components; the rule deletes real vessels), and mirroring
 augmentation (it swaps the left coronary tree for the right).
-
-
 
 ## Acknowledgement and licence
 

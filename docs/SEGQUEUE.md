@@ -22,7 +22,8 @@ server confirms the submission.
 
 The structure list is fixed by the server and obeyed by the extension, so an
 annotator cannot invent or rename a segment. **Which structures** is the class
-schema — still open in [`docs/TRAINING-PLAN.md`](docs/TRAINING-PLAN.md).
+schema — still open in
+[`vault/Training method/Training plan.md`](../vault/Training%20method/Training%20plan.md).
 
 ### The data, and what the presegmentation buys
 
@@ -96,8 +97,8 @@ resumable uploads, which is the one part you cannot afford to get subtly wrong.
 | `server/girder_segqueue/` | The Girder 5 plugin: models, REST, ingest CLI, QA worker |
 | `slicer/SegQueue/` | The annotator's extension. `SegQueueLib/` is Slicer-free, so the network layer and the cache are unit-tested without Slicer |
 | `slicer/build-extension.py` | Packages it for the Extension Manager. Plain Python, no CMake |
-| `deploy/` | Compose stack, Caddyfile, backup script. See [deploy/README.md](deploy/README.md) |
-| `docs/` | [Server runbook](docs/SERVER-SETUP.md) and the [setup &amp; testing guide](docs/SegQueue-Setup-Guide.pdf) |
+| `deploy/` | Compose stack, Caddyfile, backup script. See [deploy/README.md](../deploy/README.md) |
+| `docs/` | [Server runbook](SERVER-SETUP.md) and the [setup &amp; testing guide](SegQueue-Setup-Guide.pdf) |
 
 The shared package is the load-bearing idea. A route name, a state name or a
 validation rule cannot drift between client and server, because there is one
@@ -162,9 +163,9 @@ new server. (Not `girder-client`: version 5 requires Python
 stdlib-only.)
 
 Full deployment, ingest, backup and upgrade notes:
-**[docs/SERVER-SETUP.md](docs/SERVER-SETUP.md)**. The annotator-facing setup and
+**[docs/SERVER-SETUP.md](SERVER-SETUP.md)**. The annotator-facing setup and
 a manual test walkthrough are in
-**[docs/SegQueue-Setup-Guide.pdf](docs/SegQueue-Setup-Guide.pdf)**.
+**[docs/SegQueue-Setup-Guide.pdf](SegQueue-Setup-Guide.pdf)**.
 
 ### Status
 

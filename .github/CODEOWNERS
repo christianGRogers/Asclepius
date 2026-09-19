@@ -1,0 +1,40 @@
+# Review routing. GitHub requests a review from the owner of every path a pull
+# request touches, so the point of this file is that nothing reaching an
+# annotator merges without someone who knows the deployed surface looking at it.
+#
+# Paths are matched last-wins, so the specific entries below override the
+# catch-all on the first line.
+
+*                           @christianGRogers
+
+# --- The labelling app: in the hands of annotators, updates itself ----------
+
+# The wire protocol and state machine, shared by the server (3.11) and the
+# Slicer extension (3.9). A change here can lock out a client nobody has
+# updated yet.
+/src/segqueue/              @christianGRogers
+
+# The extension. Changes here reach laptops through the auto-updater.
+/slicer/                    @christianGRogers
+
+# The Girder plugin: case pool, atomic claim, leases, review, QA scoring.
+/server/                    @christianGRogers
+
+# Deployment of the server the annotators depend on.
+/deploy/                    @christianGRogers
+
+# --- Release and CI machinery ----------------------------------------------
+
+# segqueue-release.yml turns a version bump into a prompt on thirty laptops.
+/.github/workflows/         @christianGRogers
+
+# --- The training pipeline: one operator, one cluster ----------------------
+
+/src/segtrain/              @christianGRogers
+/configs/                   @christianGRogers
+/scripts/                   @christianGRogers
+
+# --- Documentation and the vault -------------------------------------------
+
+/docs/                      @christianGRogers
+/vault/                     @christianGRogers

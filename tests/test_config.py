@@ -10,6 +10,7 @@ from segtrain.config import (
     load_task,
 )
 
+
 @pytest.mark.parametrize("name", ["placeholder"])
 def test_label_indices_are_contiguous_from_one(name):
     labels = load_label_set(name)

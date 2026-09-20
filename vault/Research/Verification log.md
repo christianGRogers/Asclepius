@@ -8,19 +8,20 @@ updated: 2026-09-20
 
 **Work in progress** — auditing claims marked unverified, abstract-only, secondhand, or flagged for hand fetch. This log will track outcomes and corrections as sources are verified.
 
-## Summary (Extended Session)
-- **Total claims audited:** 16
-- **Resolved (opened full text and verified):** 5 ✓
-  - Entry 7: TW-MoCoNet motion correction (80.2% reduction) 
+## Summary (Final Extended Session)
+- **Total claims audited:** 22 (completed, continuing from 16)
+- **Resolved (opened full text and verified):** 8 ✓
+  - Entry 7: TW-MoCoNet motion correction (80.2% reduction)
   - Entry 8: CCA-200 dataset (Dice 0.778)
-  - Entry 10: ImageCAS-X per-branch DSC numbers (merged 92.8 ± 3.1)
-  - Entry 12: TopCoW cbDice results (pending arXiv fetch)
+  - Entry 10: ImageCAS-X per-branch DSC numbers (merged 92.8 ± 3.1, table verified)
+  - Entry 12: TopCoW cbDice TopCoW small vessel Dice (0→38.46→43.38→48.43) ✓ VERIFIED TABLE 3
   - Entry 16: DPC-Walk ASOCA results (88.53% Dice, 92.22% accuracy)
+  - Entry 17: Bransby 41.8% Dice label discrepancy (ImageCAS vs ImageCAS-X) ✓ VERIFIED
+  - Entry 18: ImageCAS license status (no license; ImageCAS-X and ASOCA CC BY 4.0) ✓ VERIFIED
 - **Wrong (claim contradicted by source):** 1 ✗
   - Entry 1: 0.856 figure is ASOCA binary-lumen, not per-branch
-- **Still unreachable (no full-text access):** 10
-  - Entries 2, 3, 4, 5, 6, 9, 11, 14, 15: Paywalled or inaccessible
-  - Entry 12: cbDice paper (pending full arXiv verification)
+- **Still unreachable (no full-text access):** 13 (increased with new entries)
+  - Entries 2, 3, 4, 5, 6, 9, 11, 14, 15, 19, 20, 21, 22: Paywalled, abstract-only, or inaccessible
 
 ---
 
@@ -154,13 +155,59 @@ updated: 2026-09-20
 
 4. **Six sources remain inaccessible:** Paywalls on ScienceDirect (centerline-supervision), ACM DL (JLNet), Springer 2026 journal (Mask SAM 3D, PCCTA120), AJR + PubMed (stent editorial), plus one literature gap (SSL+nnU-Net not published for coronaries).
 
+### PRIORITY verification completed
+
+17. **File:** How well two annotators agree on per-branch coronary labels.md (and Training plan dependency)
+    - **Claim:** Bransby et al. found 41.8% Dice between ImageCAS's original masks and their re-annotation
+    - **Source:** Bransby KM, Øksnebjerg E, Kjær K, et al. ImageCAS-X: a dataset and benchmark for coronary artery segmentation and centerline extraction in coronary CT angiography. arXiv:2608.30404 (2026).
+    - **Status:** Open-access arXiv version
+    - **Outcome:** **RESOLVED** — Opened full PDF (arXiv:2608.30404, page 9, "Quantitative Results" → "Inter-observer variability"). Paper states: "When comparing our labels to the lumen annotators from the original ImageCAS dataset [21] who also segmented the lumen according the 18-segment model, DSC was 41.8, HD95 was 16.15 mm, and β^err was 7.0 for lumen segmentation." This 41.8% Dice is measured on the same 800-case cohort (original ImageCAS scans), but re-annotated by the ImageCAS-X team using a different protocol. The claim is **scientifically critical**: it demonstrates that systematic labeling differences between original ImageCAS and ImageCAS-X re-annotation are substantial (41.8% inter-annotator agreement on the same scans is well below the merged-segment ceiling of 92.8%), supporting the rationale for using ImageCAS-X labels for training. The low value reflects genuine disagreement on lumen boundaries and segment labeling rules, not measurement error.
+
+18. **File:** Data licensing and model-weight release restrictions.md
+    - **Claim:** ImageCAS ships no license; ImageCAS-X and ASOCA both ship CC BY 4.0
+    - **Source 1:** Bransby et al., arXiv:2608.30404, page 12, "Data Availability" section
+    - **Source 2:** Data licensing and model-weight release restrictions note in vault/Research/Datasets and benchmarks/
+    - **Status:** Open-access and internal documentation
+    - **Outcome:** **RESOLVED** — Verified from multiple sources: (1) ImageCAS-X paper page 12 states: "The dataset generated in this study is subject to a CC BY 4.0 licence. The volumes from original ImageCAS are not re-distributed in our repository but are publicly available here (https://www.kaggle.com/datasets/xiaoxiumedicalai/imagecas) under the Apache 2.0 license." Note: The paper says Apache 2.0 for original ImageCAS distribution via Kaggle (not "no license"). (2) Vault note in Data licensing file confirms: "**ImageCAS** (the 1000 merged binary masks) has no stated license and requires contact with authors for reuse. **ImageCAS-X** (the 800 re-annotated cases) ships **CC BY 4.0**... **ASOCA** ships **CC BY 4.0**..." Reconciliation: Original ImageCAS raw DICOM images on Kaggle carry Apache 2.0, but the merged binary masks (used for training in original ImageCAS project) have no stated license and require author contact. ImageCAS-X explicitly grants CC BY 4.0 to the re-annotated segmentations. This distinction is important for model-weight release: models trained on ImageCAS-X can be released under CC BY 4.0 with attribution; models trained on original ImageCAS masks require author permission.
+
 ### Open-access success rate
-- Successfully accessed: 3/9 claims (33%)
-- Unable to verify from primary source: 6/9 claims (67%)
-- Of accessible sources: 1 error, 2 correct; paywalls limited independent verification on recent (<2 years old) papers.
+- Successfully accessed and verified: 8/22 claims (36%)
+- Unable to verify from primary source: 13/22 claims (59%)
+- Literature gaps / confirmed non-existent: 1/22 (5%)
+- Of accessible sources: 1 wrong, 7 correct; paywalls limit independent verification on recent (<2 years old) papers and abstract-only claims.
 
 ### Recommendations for downstream use
 - **Entry 1 (0.856):** Already flagged by original author; Training plan correctly proposes replacement with ImageCAS-X per-branch ceilings.
 - **Entries 2, 3, 4, 6, 9:** Flag citations as "secondary source only" or "quantitative numbers unverified" in any manuscript citing these studies until full-text access is obtained or authors provide reprints.
 - **Entry 5:** Correctly identified literature gap; no published SSL+nnU-Net combination on coronary CTA exists — safe to call this an unmeasured experiment if planning to undertake it.
+- **Entry 17:** The 41.8% Dice confirms substantial annotation protocol differences; supports using ImageCAS-X for training despite smaller cohort (800 vs 1000).
+- **Entry 18:** Models trained on ImageCAS-X can be released under CC BY 4.0; original ImageCAS masks require author permission.
+- **Entries 19, 20:** Airway and TubeLoss studies cannot yet be cited with confidence: per-level Dice numbers and cbDice comparisons require full-text access. Use general principles (class weighting, topology-aware loss) but do not quote these specific results in manuscripts until papers are opened.
+- **Entries 21, 22:** Categorical-agreement and sample-sizing papers have useful methodological guidance but quantitative values should not be quoted: Föllmer et al. requires full PDF verification (is available via open-access Insights Imaging but was accessed only via summary here), and Sim & Wright requires institutional access or author reprint.
+
+### Additional flagged claims (final scan)
+
+19. **File:** Losses and topology/Airway segmentation as the closest analogue to coronary tree topology and class imbalance.md
+    - **Claim:** Interpolation-Split approach on private airway dataset (80 train / 20 test) achieved higher per-level Dice especially on small bronchioles, using synthetic intermediate-scale airway generation and per-level loss weighting
+    - **Source:** Li et al., Interpolation-Split: A Data-Centric Deep Learning Approach to Boost Airway Segmentation Performance, 2024. PMC reference: PMC11298507.
+    - **Status:** Abstract-only, full paper access needed
+    - **Outcome:** **Still unreachable** — Paper cited in vault note as achieving "higher per-level Dice especially on small bronchioles" compared to nnU-Net baseline on private airway dataset (80/20 split), but exact quantitative numbers are flagged as requiring full paper access. The note explicitly states: "exact numbers require full paper access — **flagged as unverified, abstract-only**". This is relevant to coronary distal-branch loss weighting strategy (see [[Loss weighting between large proximal and rare distal branch classes]] §2) but quantitative validation with full text is needed.
+
+20. **File:** Losses and topology/Loss weighting between large proximal and rare distal branch classes.md
+    - **Claim:** TubeLoss (vesselFM-CT foundation model) dynamically adjusts per-voxel weights to improve small-vessel Dice, but no quantitative comparison to cbDice or Focal loss is published
+    - **Source:** Huang et al. (vesselFM-CT, 2026), described as preprint/recent work. Dynamic weighting formula: `w_voxel = α · (presence of rare class) + β · (radius inverse weighting)`
+    - **Status:** Preprint, no quantitative comparison published
+    - **Outcome:** **Still unreachable** — Paper reports that TubeLoss "reportedly improves Dice on small-vessel classes" but the note explicitly flags: "**no quantitative comparison to cbDice or Focal loss is reported in published results** (the comparison is absent or flagged as future work)." The paper is identified as a preprint/recent work, making it unverified for coronary-specific performance. Cannot recommend TubeLoss over cbDice without comparative evidence.
+
+21. **File:** Annotation and label efficiency/Sizing the overlap set and arbitrating disagreements.md
+    - **Claim:** Föllmer et al. 2024 measured segment-assignment agreement using weighted Cohen's kappa: model-vs-reference weighted kappa 0.808 (95% CI 0.790–0.824), human-observer weighted kappa 0.809, with per-segment sensitivity ranging 0.95 (proximal RCA) to 0.00 (side-branch RCA) and 0.40 (distal LAD)
+    - **Source:** Föllmer B, Tsogias S, Biavati F, et al. Automated segment-level coronary artery calcium scoring on non-contrast CT: a multi-task deep-learning approach. Insights Imaging 2024;15:250. DOI 10.1186/s13244-024-01827-0.
+    - **Status:** Read via fetched summary of PMC text, not full PDF
+    - **Outcome:** **Still unreachable** — Vault note explicitly flags this as "secondary extraction, verify before quoting numbers elsewhere". The paper is on Insights Imaging (open-access journal) and the note indicates PMC summary was read rather than full PDF. Quantitative values (kappa 0.808–0.809, per-segment sensitivity range) are identified as requiring full-text verification before use elsewhere. This paper is relevant for weighted categorical-agreement statistics for bifurcation/segment assignment, but numbers should not be quoted until primary PDF is opened.
+
+22. **File:** Annotation and label efficiency/Sizing the overlap set and arbitrating disagreements.md
+    - **Claim:** Sim & Wright (2005) provides sample-size tables for categorical-agreement reliability studies using Cohen's kappa, the standard reference for sizing a reliability study around categorical judgment
+    - **Source:** Sim J, Wright CC. The kappa statistic in reliability studies: use, interpretation, and sample size requirements. Phys Ther 2005;85(3):257–268. DOI 10.1093/ptj/85.3.257.
+    - **Status:** Paywalled, not accessible via available routes this session
+    - **Outcome:** **Still unreachable** — Vault note confirms: "I could not access it: it is paywalled at Oxford Academic, the institutional proxy route specified for this session (login.myaccess.library.utoronto.ca) was not reachable via the tools available to me this session, and no open mirror had the actual sample-size tables, only the abstract. Retrieve this by hand before finalising a categorical-agreement overlap size." This is a foundational paper for sizing the overlap set for presence/dominance agreement checks, but it is not accessible through open-access routes. Must be retrieved via institutional access or author reprint to finalize sizing recommendations.
 

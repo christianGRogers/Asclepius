@@ -54,6 +54,80 @@ MULTILABEL_NAMES = ("labels.nii.gz", "label.nii.gz", "seg.nii.gz",
 
 SEGMENTATIONS_DIR = "segmentations"
 
+# ---------------------------------------------------------------- flat layout
+#
+# ImageCAS does not ship one directory per case. It ships two files per case in
+# one directory::
+#
+#     <root>/1.img.nii.gz
+#     <root>/1.label.nii.gz
+#
+# which the nested scanner above sees as an empty root. Rather than ask anyone
+# to reshuffle 1000 pairs of files into directories before they can index them,
+# the flat form is detected and paired here.
+#
+# Pairing is by *marker*, not by position: a file whose stem ends in one of
+# these is the label for the case named by the rest of the stem. Checked
+# longest-first so ``.segmentation`` is not mistaken for ``.seg``.
+LABEL_MARKERS = (".segmentation", "_segmentation", ".label", "_label",
+                 ".seg", "_seg", "_gt", ".gt", ".mask", "_mask")
+
+#: Same idea for the image half. A file with no marker at all is taken as the
+#: image, which is how ``1.nii.gz`` + ``1.label.nii.gz`` datasets are named.
+IMAGE_MARKERS = (".image", "_image", ".img", "_img", ".ccta", "_ccta", ".ct", "_ct")
+
+NIFTI_SUFFIX = ".nii.gz"
+
+
+def _strip_marker(stem: str, markers: tuple[str, ...]) -> Optional[str]:
+    """``("1.label", LABEL_MARKERS) -> "1"``; None when no marker matches."""
+    for marker in sorted(markers, key=len, reverse=True):
+        if stem.endswith(marker) and len(stem) > len(marker):
+            return stem[: -len(marker)]
+    return None
+
+
+def scan_flat(root: Path) -> list[ScannedCase]:
+    """Cases stored as ``<id><image marker>.nii.gz`` beside ``<id><label marker>.nii.gz``.
+
+    A case with an image and no label is still returned, so a partially
+    delivered dataset indexes and `segtrain index` can report what is missing
+    rather than silently listing fewer cases than arrived.
+    """
+    root = Path(root)
+    images: dict[str, Path] = {}
+    labels: dict[str, Path] = {}
+
+    for path in sorted(root.glob("*" + NIFTI_SUFFIX)):
+        stem = path.name[: -len(NIFTI_SUFFIX)]
+
+        case_id = _strip_marker(stem, LABEL_MARKERS)
+        if case_id is not None:
+            labels[case_id] = path
+            continue
+
+        case_id = _strip_marker(stem, IMAGE_MARKERS)
+        images[case_id if case_id is not None else stem] = path
+
+    return [
+        ScannedCase(case_id, images[case_id], None, labels.get(case_id))
+        for case_id in sorted(images)
+    ]
+
+
+def looks_flat(root: Path) -> bool:
+    """True when ``root`` holds NIfTI files directly and no case directories.
+
+    Deliberately conservative: a root holding both is treated as nested, since
+    stray exports sitting beside real case directories are far more common than
+    a genuinely mixed dataset.
+    """
+    root = Path(root)
+    if any(p.is_dir() and find_image(p) is not None for p in root.iterdir()):
+        return False
+    return any(root.glob("*" + NIFTI_SUFFIX))
+
+
 
 class IndexError_(RuntimeError):
     """Named with a trailing underscore to avoid shadowing the builtin."""
@@ -107,11 +181,20 @@ def find_labels(case_dir: Path) -> tuple[Optional[Path], Optional[Path]]:
     return None, None
 
 
-def scan(root: Path) -> list[ScannedCase]:
-    """Every case directory under ``root`` that has an image."""
+def scan(root: Path, layout: str = "auto") -> list[ScannedCase]:
+    """Every case under ``root`` that has an image.
+
+    ``layout`` is ``nested`` (one directory per case), ``flat`` (two files per
+    case in one directory, as ImageCAS ships), or ``auto`` to decide by looking.
+    """
     root = Path(root)
     if not root.is_dir():
         raise IndexError_(f"dataset root does not exist: {root}")
+    if layout not in ("auto", "nested", "flat"):
+        raise IndexError_(f"unknown layout {layout!r}; expected auto, nested or flat")
+
+    if layout == "flat" or (layout == "auto" and looks_flat(root)):
+        return scan_flat(root)
 
     cases: list[ScannedCase] = []
     for case_dir in sorted(p for p in root.iterdir() if p.is_dir()):

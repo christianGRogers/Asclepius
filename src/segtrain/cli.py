@@ -138,16 +138,19 @@ def cmd_convert(args) -> int:
 def cmd_index(args) -> int:
     """Scan a dataset directory and write the meta.csv the pipeline reads.
 
-    This is the entry point for your own labelled data. TotalSegmentator ships
-    its own meta.csv with a published split; anything else needs one written, and
-    once it exists every other subcommand works identically.
+    This is the entry point for a labelled dataset. Once meta.csv exists every
+    other subcommand works identically, whichever layout the data arrived in.
+
+    Two layouts are understood and auto-detected: one directory per case, and
+    the flat two-files-per-case form ImageCAS ships. Pass --layout to force
+    one if the guess is wrong.
     """
     from .index import build_rows, read_overrides, scan, summarize, write_meta
 
     cfg, _ = _load(args)
     root = Path(args.root) if args.root else cfg.zenodo_root
 
-    cases = scan(root)
+    cases = scan(root, layout=args.layout)
     if not cases:
         print(f"no cases found under {root}\n"
               "Expected one directory per case, each containing ct.nii.gz "
@@ -969,14 +972,16 @@ def build_parser() -> argparse.ArgumentParser:
 
     task_opt = argparse.ArgumentParser(add_help=False)
     task_opt.add_argument("--task", "-t", required=True,
-                          help="dataset id (710), name (Coronary), or Dataset710_Coronary")
+                          help="dataset id (710), name (CoronaryLumen), or "
+                               "Dataset710_CoronaryLumen")
 
     fold_opt = argparse.ArgumentParser(add_help=False)
     fold_opt.add_argument("--fold", "-f", type=int, default=0)
 
     split_opt = argparse.ArgumentParser(add_help=False)
     split_opt.add_argument("--scheme", choices=("official", "cv5"), default="official",
-                           help="'official' keeps the published 1082/57 split (default)")
+                           help="'official' keeps the split recorded in meta.csv "
+                                "(default); 'cv5' builds 5-fold CV over train+val")
     split_opt.add_argument("--folds", type=int, default=5, help="folds when scheme=cv5")
     split_opt.add_argument("--seed", type=int, default=12345)
 
@@ -1004,7 +1009,12 @@ def build_parser() -> argparse.ArgumentParser:
                         "once you have trained anything")
     s.add_argument("--study-type", default="ccta",
                    help="recorded per case; used to stratify --scheme cv5 folds")
-    s.add_argument("--overrides", help="CSV of case_id,split to pin specific cases")
+    s.add_argument("--layout", default="auto", choices=("auto", "nested", "flat"),
+                   help="nested: one directory per case. flat: <id>.img.nii.gz "
+                        "beside <id>.label.nii.gz, as ImageCAS ships (default: auto)")
+    s.add_argument("--overrides",
+                   help="CSV of case_id,split to pin specific cases -- this is how "
+                        "an official published split is honoured instead of hashing")
     s.add_argument("--force", action="store_true", help="overwrite an existing meta.csv")
     s.add_argument("--dry-run", action="store_true")
     s.set_defaults(func=cmd_index)

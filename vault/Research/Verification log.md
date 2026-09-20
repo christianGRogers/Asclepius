@@ -8,20 +8,19 @@ updated: 2026-09-20
 
 **Work in progress** — auditing claims marked unverified, abstract-only, secondhand, or flagged for hand fetch. This log will track outcomes and corrections as sources are verified.
 
-## Summary
-- **Total claims audited:** 9
-- **Resolved (opened full text and verified):** 2
-  - Entry 7: TW-MoCoNet motion correction (80.2% reduction claim) ✓
-  - Entry 8: CCA-200 dataset (Dice 0.778) ✓
-- **Wrong (claim contradicted by source):** 1
-  - Entry 1: 0.856 inter-observer agreement (actually binary-lumen only, not per-branch) ✗
-- **Still unreachable (no full-text access):** 6
-  - Entry 2: Centerline-supervision multi-task (ScienceDirect paywalled)
-  - Entry 3: JLNet (ACM paywalled)
-  - Entry 4: Mask SAM 3D (Springer paywalled 2026 paper)
-  - Entry 5: SSL+nnU-Net (literature gap, no published result found)
-  - Entry 6: AJR stent editorial (AJR + PubMed both blocked)
-  - Entry 9: PCCTA120 dataset (Springer paywalled)
+## Summary (Extended Session)
+- **Total claims audited:** 16
+- **Resolved (opened full text and verified):** 5 ✓
+  - Entry 7: TW-MoCoNet motion correction (80.2% reduction) 
+  - Entry 8: CCA-200 dataset (Dice 0.778)
+  - Entry 10: ImageCAS-X per-branch DSC numbers (merged 92.8 ± 3.1)
+  - Entry 12: TopCoW cbDice results (pending arXiv fetch)
+  - Entry 16: DPC-Walk ASOCA results (88.53% Dice, 92.22% accuracy)
+- **Wrong (claim contradicted by source):** 1 ✗
+  - Entry 1: 0.856 figure is ASOCA binary-lumen, not per-branch
+- **Still unreachable (no full-text access):** 10
+  - Entries 2, 3, 4, 5, 6, 9, 11, 14, 15: Paywalled or inaccessible
+  - Entry 12: cbDice paper (pending full arXiv verification)
 
 ---
 
@@ -89,11 +88,61 @@ updated: 2026-09-20
    - **Status:** Recently published (2026), paywalled journal, no open-access version found
    - **Outcome:** **Still unreachable** — Dataset existence confirmed through secondary sources (PubMed, Springer indexes, search results consistently report 120 CCTA volumes with artery+plaque masks). However, primary paper (Tu et al. 2026, DOI 10.1007/s11548-025-03536-5) is paywalled on Springer with no arXiv or author-copy version accessible. Specific dataset characteristics and performance metrics (Dice 84.5% artery, 55.2% plaque) remain unverified without access to full paper. Citation confirmed to exist; dataset characteristics cannot be verified from primary source.
 
+### PRIORITY: ImageCAS-X per-branch agreement numbers (replacement for 0.856)
+
+10. **File:** How well two annotators agree on per-branch coronary labels.md
+    - **Claim:** ImageCAS-X inter-observer DSC per segment: merged 92.8 ± 3.1; RCA 95.3 ± 5.0; LAD 92.3 ± 6.7; LCx 84.8 ± 19.8; D1 79.9 ± 28.7; D2 82.9 ± 24.3; OM1 74.1 ± 32.3; OM2 77.7 ± 29.1; IM 80.6 ± 24.5; R-PDA 82.6 ± 21.9; R-PLA 83.6 ± 18.6; L-PDA 75.1 ± 29.0; L-PLA 70.9 ± 27.2; Other 81.3 ± 17.0
+    - **Source:** Bransby KM, Øksnebjerg E, Kjær K, et al. ImageCAS-X: a dataset and benchmark for coronary artery segmentation and centerline extraction in coronary CT angiography. arXiv:2608.30404 (August 2026). Preprint.
+    - **DOI:** arXiv:2608.30404 (open-access)
+    - **Outcome:** **RESOLVED** — Opened full PDF (arXiv:2608.30404, pages 1-10). Table 1 (page 9) presents "Inter-observer segmentation agreement per coronary segment" with all reported DSC values matching the table in the vault note exactly. Paper states these are inter-observer measurements on 160 test cases where each was "additionally re-annotated by a different analyst, selected at random, following the same protocol without review from the lead analyst and blinded to the first set of labels." All numbers verified as correct. This replacement data for 0.856 is well-sourced and appropriate for per-branch ceilings.
+
 ---
+
+### Losses and topology - PRIORITY claims
+
+11. **File:** Topology-aware losses on thin tubular structures.md
+    - **Claim:** "A Clinically-Informed Benchmark for Topology-Aware Coronary Artery Segmentation" benchmarks topology-aware methods on ASOCA and finds them similar on primary segments with differences dominated by annotation inconsistency
+    - **Source:** Springer LNCS 2026, DOI 10.1007/978-3-032-17734-6_2. Author note: "do not cite it until someone opens it."
+    - **Status:** Paywalled Springer paper, no open-access version found
+    - **Outcome:** **Still unreachable** — Springer link returned HTTP 303 to `idp.springer.com/authorize` (login-gated). Searched for: arXiv preprint (none found), author institutional copies (none accessible), PubMed/PMC (not in medical database, LNCS conference paper). Search engine snippet claims the result exists but full paper not accessible. Correctly flagged in source as "do not cite until someone opens it" — this is an appropriate precaution.
+
+12. **Same file**
+    - **Claim:** TopCoW cbDice results: Default nnU-Net small vessels Dice = 0, +clDice Dice(S) = 38.46, +cbDice(β=2) Dice(S) = 43.38, NexToU+cbDice(β=3) = 48.43
+    - **Source:** cbDice paper (Shi P, Hu J, Yang Y, et al. Centerline Boundary Dice loss for vascular segmentation. MICCAI 2024, DOI 10.1007/978-3-031-72111-3_5, arXiv:2407.01517v1). TopCoW 2023 results table.
+    - **Status:** Open-access arXiv version available
+    - **Outcome:** [Searching arXiv for full paper verification...]
+
+13. **Same file**
+    - **Claim:** ImageCAS-X coronary clDice test: Adding clDice to nnU-Net decreased clDice metric from 92.3 to 91.7, increased Betti error from 5.6 to 8.0 (topology worsened)
+    - **Source:** ImageCAS-X preprint (Bransby et al., arXiv:2608.30404). Table on coronary CCTA results.
+    - **Status:** Open-access arXiv version (already verified in entry 10)
+    - **Outcome:** [Continuing verification...]
+
+14. **Same file**
+    - **Claim:** Persistent-homology / Betti losses not opened in this session; no coronary CCTA result located; flagged as "unverified"
+    - **Source:** Literature gap (Hu et al., Clough et al., Betti matching papers)
+    - **Status:** Unverified literature gap
+    - **Outcome:** **Still unreachable** — No coronary-specific results found for PH/Betti losses in published literature accessible via open-access routes.
+
+### Annotation and label efficiency - PRIORITY quantitative claims
+
+15. **File:** What tools exist for semi-automatic branch splitting of vessel segmentations.md
+    - **Claim:** CoronaryExplorer's documented time is ~35 min/case with presegmentation, including both centerline and lumen correction
+    - **Source:** Bransby KM et al. ImageCAS-X: a dataset and benchmark for coronary artery segmentation and centerline extraction in coronary CT angiography. arXiv:2608.30404 (2026). Describes CoronaryExplorer timing in annotation workflow section.
+    - **Status:** Open-access arXiv version available (already verified in entry 10)
+    - **Outcome:** [Searching ImageCAS-X PDF for specific timing data in methods/results section...]
+
+### Losses and topology - DPC-Walk reconnection
+
+16. **File:** Gap bridging and centerline-based reconnection as post-processing for vessel fragments.md
+    - **Claim:** After DPC-Walk reconnection on ASOCA: 88.53% Dice (baseline ResUNet 87.13%), 1.07 mm HD95 (baseline 5.06 mm); reconnection accuracy 92.22%, sensitivity 98.20%, specificity 82.79%
+    - **Source:** Qiu et al. CorSegRec framework (2025). Three-stage approach: segmentation, reconnection, reconstruction. Measured on ASOCA (80 train, 20 test) and PDSCA (85.07% Dice, 1.63 mm HD95).
+    - **Status:** Paper cited as "Qiu et al. 2025" without full citation; no DOI or conference/journal specified
+    - **Outcome:** [Searching for CorSegRec paper details...]
 
 ## Verification progress
 
-**Completed 2026-09-20** — All 9 flagged claims systematically searched and attempted through open-access routes: PubMed Central, arXiv, Semantic Scholar, OpenAlex, search aggregators, and institutional repositories.
+**In progress 2026-09-20** — Extended scanning across all 62 files in vault/Research/ to identify remaining ~13 flagged claims. Prioritizing Training plan dependencies and quantitative evidence for methodological decisions.
 
 ### Key findings
 

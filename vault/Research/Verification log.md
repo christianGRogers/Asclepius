@@ -17,10 +17,14 @@ verified but never carried a recorded outcome. They are listed as unfinished
 here, not as evidence.
 
 - **Entries:** 22
-- **Resolved** (full text opened and the passage read) — **5**: 7, 8, 10, 17, 18
+- **Resolved** (full text opened and the passage read) — **12**: 2, 4, 7, 8, 9, 10, 12, 16, 17, 18, 21, 22
 - **Wrong** (source contradicts the claim) — **1**: entry 1
-- **Still unreachable** (no open-access full text) — **12**: 2, 3, 4, 5, 6, 9, 11, 14, 19, 20, 21, 22
-- **Unfinished** (verification started, no outcome recorded) — **4**: 12, 13, 15, 16
+- **Still unreachable** — **7**: 3, 5, 6, 11, 14, 19, 20
+- **Unfinished** (verification started, no outcome recorded) — **2**: 13, 15
+
+The jump from 5 resolved to 12 is the Chrome extension: with the browser
+signed in to UTORid, the library proxy opens ScienceDirect, Springer and
+Oxford Academic. Entries 4, 9 and 22 turned out to be the same paper.
 
 ### The one error found
 
@@ -231,3 +235,164 @@ likely it is closed. An institutional login would resolve most of them.
     - **Status:** Paywalled, not accessible via available routes this session
     - **Outcome:** **Still unreachable** — Vault note confirms: "I could not access it: it is paywalled at Oxford Academic, the institutional proxy route specified for this session (login.myaccess.library.utoronto.ca) was not reachable via the tools available to me this session, and no open mirror had the actual sample-size tables, only the abstract. Retrieve this by hand before finalising a categorical-agreement overlap size." This is a foundational paper for sizing the overlap set for presence/dominance agreement checks, but it is not accessible through open-access routes. Must be retrieved via institutional access or author reprint to finalize sizing recommendations.
 
+
+---
+
+## Second pass — with institutional access
+
+The Chrome extension was connected and the browser signed in to UTORid, so
+the proxy at `login.myaccess.library.utoronto.ca` now opens what was closed.
+These entries were checked from full text by the main session, not by an agent.
+
+### 2. Centerline-supervision multi-task learning — **RESOLVED**, and the claim is weaker than it read
+
+Zhang, Gao, Zhou et al., *Centerline-supervision multi-task learning network
+for coronary angiography segmentation*, Biomedical Signal Processing and
+Control 82:104510, April 2023. doi:10.1016/j.bspc.2022.104510. Read in full
+through the UofT proxy.
+
+The note said this paper shows centerline supervision "improves accuracy and
+connectivity". True, and much smaller than that phrasing suggests:
+
+| Model | Dice (eval 1) | Dice (eval 2, largest component) |
+|---|---|---|
+| UNet | 84.66 | 84.47 |
+| UNet + attention skip | 85.13 | 84.84 |
+| + centerline, parallel heads | 85.10 | 84.85 |
+| + centerline, feature fusion | **85.32** | **85.12** |
+
+So the centerline head buys **+0.19 Dice** over the attention-skip model, and
+parallel supervision buys nothing at all (85.10 against 85.13) — only the
+fusion variant helps. Focal loss on the centerline branch beat CE, Dice and
+CE+Dice.
+
+Two things limit what this transfers to:
+
+- It is **2D X-ray angiography**, not CCTA. 300 images from one hospital,
+  4-fold cross-validation.
+- The abstract quotes 82.48 sensitivity / 85.28 Dice; Table 4 reports 82.61 /
+  85.32. Minor, but cite the table, not the abstract.
+
+**Implication:** a multi-task centerline head is a ~0.2-point effect in a
+different modality. Keep it as a cheap experiment, not as a scheduled part of
+the plan.
+
+### 12. cbDice small-vessel gain — **RESOLVED**, figure correct, scope narrow
+
+Shi, Hu, Yang et al., *Centerline Boundary Dice Loss for Vascular
+Segmentation*, MICCAI 2024. arXiv:2407.01517, Table 3.
+
+Dice(S) on small communicating arteries, **TopCoW 2023, 18 test cases**:
+
+| Loss | Dice(S) |
+|---|---|
+| CE+Dice baseline (nnU-Net) | 0 |
+| clDice | 38.46 |
+| cbDice (β=2) | **43.38** |
+| NexToU + cbDice (β=3) | 48.43 |
+
+The 0 → 43.38 figure is real. The caveats are what matter: it is the **Circle
+of Willis, not the coronary tree**, and it rests on **18 test cases**. A
+baseline that scores exactly 0 also means the finding is "the baseline never
+found these vessels at all", which is a different claim from "cbDice improves
+segmentation".
+
+### 16. DPC-Walk reconnection — **RESOLVED**, and the note understates it
+
+Qiu, Shan, Wang et al., *A topology-preserving three-stage framework for
+fully-connected coronary artery extraction*, arXiv:2504.01597. Published as
+CorSegRec.
+
+On **ASOCA**: proposed 88.53 % Dice, HD95 1.07 mm, against the best baseline
+(ADE-HTL Net) at 86.08 % and 5.25 mm, and a plain ResUNet at 82.03 %. The DPC
+walk's reconnection accuracy of **92.22 %** is confirmed. On PDSCA: 85.07 %
+Dice, HD 1.63 mm.
+
+The vault note said "+1.4 Dice, 5.06 → 1.07 mm". The real figures are **+2.45
+Dice** over the best baseline and **5.25 → 1.07 mm**. Correct the note upward.
+This is the only reconnection result measured on coronary data.
+
+### 21. Sim & Wright 2005 sample sizes — **RESOLVED**, and it settles the overlap-set question
+
+Sim J, Wright CC. *The Kappa Statistic in Reliability Studies: Use,
+Interpretation, and Sample Size Requirements.* Physical Therapy
+2005;85(3):257–268. doi:10.1093/ptj/85.3.257. Table 8 read in full through the
+UofT proxy.
+
+Table 8 gives subjects needed in a 2-rater study, by the proportion of
+positive ratings. The rows that matter here, at 80 % power, two-tailed:
+
+| κ to detect | Null κ | p = .50 | p = .10 or .90 |
+|---|---|---|---|
+| .80 | .00 | 13 | 13 |
+| .80 | .60 | 126 | 335 |
+| .80 | .70 | 401 | 1,090 |
+| .70 | .60 | 503 | 1,340 |
+| .60 | .50 | 589 | 1,519 |
+
+Three findings, each of which changes how the overlap set should be sized:
+
+1. **Testing against zero is nearly free and nearly useless.** Showing κ beats
+   chance needs 13 cases. Showing κ ≥ .70 when you would accept nothing below
+   .60 needs 503. The paper argues the null should be a clinically acceptable
+   threshold, not zero — so the real cost is the second number.
+2. **Rare classes are the expensive ones, and the paper says so directly:**
+   "except where the value of kappa stated in the null hypothesis is zero,
+   sample size requirements are greatest when the proportion of positive
+   ratings is either high or low." At p = .10 the requirement roughly triples.
+   The dominance-dependent branches sit near p = .01, well beyond the table.
+   This is independent confirmation that **no affordable duplicate rate
+   stabilises the rare classes** — which an earlier note argued from the
+   SegQueue policy side.
+3. **More raters per case does not substitute for more cases.** Beyond three
+   raters per subject there is little effect on power; increasing subjects is
+   the effective lever.
+
+**Implication for [[Training plan]] and the SegQueue protocol:** size the
+overlap set for the *common* branches, and state plainly that per-class
+agreement for the dominance-dependent branches will be an estimate with a wide
+interval rather than a measured ceiling. Chasing a tight interval there would
+cost hundreds of duplicated cases.
+
+### 4, 9 and 22. Mask SAM 3D and PCCTA120 — **RESOLVED**, and they are one paper
+
+Tu, Tian, Wang et al., *Mask SAM 3D for coronary artery and plaque
+segmentation in CCTA images*, Int J Computer Assisted Radiology and Surgery
+2026;21:399–410. doi:10.1007/s11548-025-03536-5. Read in full through the UofT
+proxy. Three separate log entries were chasing the same article.
+
+**PCCTA120 is not a per-branch dataset.** 120 CCTA volumes labelled for
+**coronary artery and atherosclerotic plaque** — two classes, not named
+branches. Dual-source Siemens Somatom Definition Flash, 120 kVp, single
+centre. It does not help the class-schema question, and it does not join
+ImageCAS-X as a source of per-branch labels. Note also "source code and
+dataset **will be** made publicly available" — future tense, so availability
+is unconfirmed.
+
+Two things in it are useful anyway:
+
+- **Inter-rater agreement, measured:** Cohen's κ **0.82 for arteries against
+  0.68 for plaques**, two radiologists, consensus on disagreement. A clean
+  datapoint for what two trained readers achieve on coronary structures, and
+  evidence that agreement drops sharply as the target gets more ambiguous.
+- **Their annotation workflow is ours.** Initial artery masks generated by
+  nnU-Net, then manually refined in 3D Slicer, radiologists labelling within
+  the artery mask on MPR views. Independent precedent for the
+  presegmentation-then-refine approach SegQueue takes.
+
+**The foundation-model claim is confirmed by the paper's own admission.** The
+note said foundation models do not yet beat a configured nnU-Net for
+coronaries. The authors say so themselves: "our method does not significantly
+outperform other approaches in single-class coronary artery segmentation", and
+their HD95 of 1.95 mm ranks "second only to nnUNet". SAM-Med3D earns its place
+only on the *plaque* task, which is not our task.
+
+**Two internal inconsistencies — cite the body, not the abstract:**
+
+- Abstract reports artery DSC 84.5 % / plaque 55.2 %; the results and ablation
+  sections both report **84.3 % / 55.7 %**.
+- Plaque location by vessel is given as "only 8.33 % in the LCX" in one place
+  and "5.00 % in the LCX" in another.
+
+Neither changes the conclusion, but a note quoting the abstract figure would
+be quoting the number the authors' own tables contradict.

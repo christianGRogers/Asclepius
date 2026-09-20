@@ -100,3 +100,35 @@ the centerline and each lumen voxel takes the name of its nearest centerline
 point. Adopting the schema means adopting that construction, so the annotation
 app's per-branch step should edit centerline segment names. (How the annotation
 workflow is organised around this belongs to the annotation-protocol owner.)
+
+## 3b. Define a taper rule for segment endpoints
+
+Evidence: [[Ostial definitions and segment endpoints in coronary imaging]].
+
+Segments taper as they branch distally and vessels approach sub-resolution
+(<1.5 mm diameter). The SCCT standard does not specify when to stop labeling a
+tapered branch. Without a rule, inter-annotator agreement on distal branches
+will be lower than on proximal ones.
+
+Recommended rule (choose one based on QA calibration):
+- **Diameter-based**: label the vessel until it narrows below 1.0 mm
+- **Visibility-based**: label the clearly-delineated portion; stop when confidence drops
+- **Centerline-following**: follow the automated centerline extraction; label while the skeleton continues
+
+Recommend a 5–10 case spot-check after the rule is drafted: two annotators
+from the guideline, checking agreement on taper endpoints in cases with obvious
+small distal branches. If agreement >95 % Dice, proceed; if <90 %, the guideline
+needs exemplar images or rewording.
+
+## 3c. SCCT prose boundary rule vs. Voronoi voxel assignment: unvalidated
+
+Evidence: [[SCCT prose bifurcation rule versus Voronoi voxel assignment remains
+unvalidated]].
+
+The SCCT reporting standard's prose definition ("a daughter branch owns its own
+ostium") and ImageCAS-X's nearest-centerline Voronoi rule produce the same voxel
+assignment at a bifurcation — but this has never been validated in the
+literature. Not a blocking issue (the difference affects only a handful of carina
+voxels per bifurcation, tiny compared to branch volumes), but flag as a future
+risk if the plan ever claims voxel-level comparability with SCCT segment volumes
+(e.g., for CAD-RADS plaque reporting).

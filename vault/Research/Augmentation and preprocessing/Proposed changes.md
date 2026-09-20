@@ -90,3 +90,15 @@ denoising papers cited only via search summary (35.1→21.0 HU noise reduction
 figure, unverified primary source). None of these numbers are currently cited as
 evidence in the folder's notes; all are flagged as leads only.
 **Evidence:** [[Calcified plaque, stents and motion are the CCTA failure modes, and only some of them are augmentable]].
+
+## 8. Add elastic deformation as a conditional diagnostic lever
+
+**Where:** §5 "Standing experiments" or evaluation section.
+**Proposed:** "**Elastic deformation tuning** is deferred-conditional. Elastic deformation is nnU-Net's default and is preserved in the baseline. If the multiclass baseline exhibits slow convergence (<100 epochs to early-stop) or distal-class Dice remains below 20 % despite per-class weighting, measure the effect of disabling elastic deformation (set `p_elastic = 0` in trainer) and retrain from the best baseline checkpoint for another 24 h. If distal-class Dice improves and convergence speed increases, elastic deformation is a harm on this cohort; document the change. Otherwise, poor performance is attributed to class imbalance or model capacity, not augmentation."
+**Evidence:** [[Elastic and spatial augmentation for thin tubular structures]].
+
+## 9. Add inference-strategy tuning as a deferred post-baseline choice
+
+**Where:** Evaluation section.
+**Proposed:** "**Inference strategy optimization** (sliding-window overlap vs test-time augmentation) is deferred to post-baseline. If validation Dice gap between multiclass baseline and acceptance threshold is >1 pp at test time, measure: (a) Increasing sliding-window inference overlap to 90 % (from default 50 %) by retraining from the best-validation checkpoint with modified trainer settings, vs. (b) Test-time augmentation (scaling variants only: ±10%, no rotation/mirroring per plan §4–5) applied post-hoc to the baseline. Accept either if Dice gain exceeds 1 pp and inference time is acceptable for deployment. If both improve the metric, choose the lower inference cost. Note: TTA on coronary CCTA is untested; the cardiac-imaging positive result (Datta et al. 2025) is abstract-only and unverified. Architectural constraints (rotation ruled out, mirroring ruled out for multiclass) limit effective TTA."
+**Evidence:** [[Test-time augmentation for vessel segmentation and its inference cost]].

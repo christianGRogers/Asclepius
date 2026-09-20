@@ -104,3 +104,77 @@ annotator-confusion estimation outperformed both a single rater's labels and
 plain majority vote on a directly comparable multi-rater medical classification
 task. Worth the loss-function owner's attention alongside the existing
 clDice/cbDice candidate.
+
+## 7. CoronaryExplorer tool and time budget for branch splitting
+
+Evidence: [[What tools exist for semi-automatic branch splitting of vessel
+segmentations]].
+
+The only published coronary-specific semi-automatic tool is CoronaryExplorer
+(a 3D Slicer extension used in ImageCAS-X). Time cost: ~35 min/case with a
+pre-provided binary lumen segmentation (centerline refinement ~15 min, lumen
+review ~20 min). This is the benchmark for SegQueue's presegmentation-seeding
+workflow. If the binary model is worse than published (>5 % Dice drop), lumen-
+correction time will increase.
+
+## 8. Active learning does not consistently improve efficiency for 3D medical segmentation
+
+Evidence: [[Active learning strategies for 3D medical segmentation do not
+consistently beat random sampling]].
+
+Published comparison (Schlemper et al., 2022, arXiv:2207.00845) found that
+uncertainty sampling, representativeness sampling, and other sophisticated query
+strategies provided "no large margin" improvement over random case selection on
+three 3D medical segmentation datasets (heart, hippocampus, prostate). The reason:
+model uncertainty is spatially correlated in 3D volumes, making many selected
+slices redundant. Simple random or stratified-random case selection is defensible
+and avoids implementation overhead.
+
+**Recommendation**: Do not prioritize active learning. Simpler alternatives are
+more reliable: random selection, stratified selection (ensure cases span dominance
+patterns), or deliberate domain-specific heuristics (oversample left-dominant
+cases). If the team wants to experiment with active learning anyway, compare
+against random-selection baseline, not against no baseline.
+
+## 9. Annotator proficiency curves and training time
+
+Evidence: [[How much training and how fast does annotator agreement improve]].
+
+No coronary-specific study measures "cases to proficiency," but endoscopic
+procedure annotation studies show proficiency emerging over ~28–40 examples on
+complex tasks. For coronary branch splitting (simpler than full procedures),
+expect entry-level proficiency after 20–30 scored cases, with the steepest
+learning curve in the first 15–20. Speed improves ~10 % between round 1 and
+round 10–20. Accuracy improves ~7–10 % with feedback and repetition.
+
+**Practical implications**:
+- Budget onboarding as a 5-case gate on gold standards, as SegQueue already does
+- Accept cases 1–15 from new annotators as lower-quality; weight them lower in overlap-set arbitration
+- Track per-annotator learning curves; new annotators should show improving Dice against gold through case ~30
+- A new annotator should reach ~2 credible cases/day in their first month (~35 min/case × 0.67 proficiency)
+
+## 10. Automated quality control rules that do not need duplicate assignment
+
+Evidence: [[Quality control rules that do not need duplicate assignment]].
+
+Three classes of QC checks can flag problems on single annotations without
+requiring a duplicate:
+
+**Topological validation** (no cost, high confidence):
+- Check that labeled vessels form a valid tree (one parent per segment except LM, no cycles)
+- Enforce parent-child constraints (e.g., RCA cannot descend from LAD)
+- Recommend implementing immediately in `scoring.py`
+
+**Anatomical plausibility checks** (low cost, moderate false-positive risk):
+- Containment in binary seed (≥95 % Dice overlap with presegmentation)
+- Vessel diameter constraints (flag impossible pinching without bifurcation)
+- Spatial proximity (LM voxels near aortic root, distal branches not beyond expected extent)
+
+**Missed-structure detection** (Karimi mechanism, high value):
+- Compare annotator's output against model's own predictions
+- Flag connected components >100 voxels in the binary seed that are <50 % labeled
+- Track per-annotator miss rates over time; high miss rates on small/distal branches indicate fatigue or carelessness
+
+**Recommendation**: Validate thresholds on ImageCAS-X (100 cases) before live use.
+Start with topological validation; add others after calibration. None replace
+duplicates for detecting subtle boundary disagreements.

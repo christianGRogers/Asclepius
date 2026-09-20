@@ -7,7 +7,6 @@ A phase 1 coronary run, start to finish::
     segtrain plan       --task 710 --gpu-mem 24 # fingerprint + plans + splits
     segtrain preprocess --task 710
     segtrain train      --task 710 --fold 0
-    segtrain preview    --task 710 --fold 0 --watch   # second terminal
     segtrain evaluate   --task 710
 
 The same run on a SciNet cluster, from a login node::
@@ -276,7 +275,7 @@ def _train_command(cfg: Config, task: TaskConfig, args) -> list[str]:
 def cmd_train(args) -> int:
     from .backends import get_backend
     from .plans import configure_nnunet_env
-    from .preview import env_for_training
+    from .events import env_for_training
 
     cfg, task = _load(args)
     configure_nnunet_env(cfg)
@@ -325,33 +324,8 @@ def cmd_train(args) -> int:
     job = backend.submit(cmd, str(run_dir), env=env, cwd=str(Path.cwd()))
     print(f"\nlaunched: {job.describe()}")
     print(f"logs:     {run_dir / 'train.log'}")
-    print(f"monitor:  segtrain status --task {task.dataset_id} --fold {args.fold}")
-    print("          or point the Slicer SegmentatorTrainMonitor module at the run dir")
+    print(f"watch:    segtrain status --task {task.dataset_id} --fold {args.fold} --watch")
     return 0
-
-
-# ------------------------------------------------------------------------ preview
-
-
-def cmd_preview(args) -> int:
-    from .preview import preview_once, watch
-
-    cfg, task = _load(args)
-    from .plans import configure_nnunet_env
-
-    configure_nnunet_env(cfg)
-
-    cases = args.cases.split(",") if args.cases else None
-    if args.watch:
-        print(f"watching {task.nnunet_name} fold {args.fold}; Ctrl-C to stop")
-        watch(cfg, task, args.fold, cases=cases, device=args.device,
-              poll_seconds=args.poll, compute_nsd=args.nsd)
-        return 0
-
-    n = preview_once(cfg, task, args.fold, cases=cases, device=args.device,
-                     checkpoint_name=args.checkpoint, compute_nsd=args.nsd)
-    print(f"rendered {n} preview(s) into {task.run_dir(cfg, args.fold) / 'previews'}")
-    return 0 if n else 1
 
 
 # ------------------------------------------------------------------------- status
@@ -396,18 +370,6 @@ def cmd_status(args) -> int:
     if ys:
         print(f"pseudo Dice  latest {ys[-1]:.4f}  best {max(ys):.4f}")
 
-    if state.previews:
-        p = state.previews[-1]
-        dice = p.get("dice") or {}
-        mean = sum(dice.values()) / len(dice) if dice else float("nan")
-        print(f"preview  epoch {p.get('epoch')} case {p.get('case')} "
-              f"mean Dice {mean:.4f} over {len(dice)} structures")
-
-    if args.worst and state.previews:
-        dice = state.previews[-1].get("dice") or {}
-        print(f"\nweakest {args.worst} structures in the latest preview:")
-        for name, value in sorted(dice.items(), key=lambda kv: kv[1])[: args.worst]:
-            print(f"  {name:<32} {value:.4f}")
 
     for m in state.messages[-5:]:
         print(f"  [{m.get('level')}] {m.get('message')}")
@@ -736,8 +698,7 @@ def cmd_scinet_submit(args) -> int:
     script_path = run_dir / "job.sh"
 
     text = render_train_script(cfg, task, args.fold, epochs=args.epochs,
-                               iterations=args.iterations,
-                               preview=not args.no_preview)
+                               iterations=args.iterations)
     write_script(script_path, text)
 
     block = parse_walltime(sc.walltime)
@@ -898,9 +859,10 @@ def cmd_scinet_cancel(args) -> int:
 def cmd_scinet_pull(args) -> int:
     """Copy a run directory, and optionally its checkpoints, to this machine.
 
-    For working offline or archiving a finished run. To *watch* a run, point the
-    Slicer monitor straight at ``user@host:/path`` instead -- it reads the live
-    file on the shared filesystem and needs no copy at all.
+    For working offline or archiving a finished run. To *watch* a run there is
+    no need to copy anything: ``segtrain scinet status --watch`` reads
+    events.jsonl over ssh, and the login nodes share $SCRATCH with the compute
+    nodes, so the file being read is the one the job is writing.
     """
     import subprocess
 
@@ -923,7 +885,7 @@ def cmd_scinet_pull(args) -> int:
 
     print(f"run directory -> {dest / run_name}")
     # Exclude checkpoints from the default sweep: the run directory is a few MB
-    # of events and previews, and pulling ~1 GB of .pth every time would make the
+    # of events, and pulling ~1 GB of .pth every time would make the
     # common case unusable over a home connection.
     cmd = ["scp", *base, "-r", f"{host}:{remote_runs}/{run_name}", str(dest)]
     print("+ " + " ".join(cmd))
@@ -1085,23 +1047,9 @@ def build_parser() -> argparse.ArgumentParser:
                    help=argparse.SUPPRESS)
     s.set_defaults(func=cmd_train)
 
-    s = sub.add_parser("preview", parents=[common, task_opt, fold_opt],
-                       help="render held-out cases from the current checkpoint")
-    s.add_argument("--watch", action="store_true", help="follow the run until it ends")
-    s.add_argument("--cases", help="comma-separated case ids (default: config)")
-    s.add_argument("--device", default="cuda", choices=("cuda", "cpu", "mps"))
-    s.add_argument("--checkpoint", default="checkpoint_latest.pth")
-    s.add_argument("--poll", type=float, default=30.0, help="seconds between checks")
-    s.add_argument("--nsd", action="store_true", help="also compute NSD (slow)")
-    s.set_defaults(func=cmd_preview)
-
     s = sub.add_parser("status", parents=[common, task_opt, fold_opt],
                        help="summarise a run from its event stream")
     s.add_argument("--run-dir", help="read this directory instead of the configured one")
-    s.add_argument("--worst", type=int, default=0, help="list the N weakest structures")
-    # Used by the SLURM job script to decide whether to cancel its own queued
-    # successor: the trainer exits 0 for both "paused at the wall" and "finished",
-    # so only the event stream can tell them apart.
     s.add_argument("--is-complete", action="store_true",
                    help="print nothing; exit 0 only if the run finished all its epochs")
     s.set_defaults(func=cmd_status)
@@ -1148,8 +1096,6 @@ def build_parser() -> argparse.ArgumentParser:
                    help="override scinet.chain_max: how many walltime blocks")
     s.add_argument("--chain-mode", choices=("array", "dependency"),
                    help="one --array=1-N%%1 job (default) or N --dependency jobs")
-    s.add_argument("--no-preview", action="store_true",
-                   help="do not run the preview daemon alongside training")
     s.add_argument("--dry-run", action="store_true", help="print the script, submit nothing")
     s.set_defaults(func=cmd_scinet_submit)
 

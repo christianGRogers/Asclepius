@@ -224,7 +224,7 @@ def score_case(
 
     NSD is far more expensive than Dice -- two distance transforms over the whole
     volume per class -- so ``compute_nsd=False`` is the right choice for the
-    live previews during training, where speed matters and relative movement is
+    scoring during training, where speed matters and relative movement is
     what you are watching.
     """
     if pred_labels.shape != ref_labels.shape:
@@ -274,7 +274,7 @@ def summarize_case(scores: Sequence[ClassScore]) -> dict:
 
 
 def dice_dict(scores: Sequence[ClassScore]) -> dict[str, float]:
-    """Per-structure Dice as a plain dict, for embedding in a preview event.
+    """Per-structure Dice as a plain dict, for embedding in an event.
 
     NaN is dropped rather than serialised: JSON has no NaN, and an absent
     structure is better represented by absence than by a null the UI must

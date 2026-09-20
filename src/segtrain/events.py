@@ -1,19 +1,21 @@
-"""Append-only JSONL event stream: the one interface between trainer and monitor.
+"""Append-only JSONL event stream: what a run says about itself while it runs.
 
-The trainer never talks to Slicer. It appends newline-delimited JSON to
-``<run_dir>/events.jsonl`` and writes preview segmentations next to it; the
-Slicer module polls that file and reads whatever is new. Everything follows from
-that choice:
+The trainer appends newline-delimited JSON to ``<run_dir>/events.jsonl``.
+``segtrain scinet status`` reads it, and so can anything else. Everything
+follows from it being a plain append-only file:
 
 * the same code path works for a local run, an SSH-mounted run and a SLURM job
-* the monitor can attach late, detach, crash, or reconnect without the trainer
-  noticing or caring
-* the full history of a run survives as a plain file you can replay, diff, or
-  hand to someone else -- which is also how the Slicer UI gets developed on a
-  laptop with no GPU
+* a reader can attach late, detach, or crash without the trainer noticing
+* the full history of a run survives as a file you can replay, diff, or hand to
+  someone else -- which matters most for a job chained across three 24-hour
+  blocks, where the only evidence of block 1 is what it wrote down
 
-**This module must stay importable from Slicer's Python 3.9 with stdlib only.**
-No numpy, no torch, no yaml. The Slicer module imports it directly.
+Readers ignore event kinds they do not recognise, so adding a kind never breaks
+an older reader.
+
+Stdlib only. No numpy, no torch, no yaml -- this is read on login nodes and
+from job scripts, where importing torch to print a progress line would be
+antisocial.
 """
 
 from __future__ import annotations
@@ -26,14 +28,12 @@ from pathlib import Path
 from typing import Any, Optional
 
 EVENTS_FILENAME = "events.jsonl"
-PREVIEWS_DIRNAME = "previews"
 
 # Event kinds. Readers must ignore kinds they don't recognise so that adding a
-# new one never breaks an older Slicer module.
+# new one never breaks an older reader.
 RUN_START = "run_start"
 EPOCH = "epoch"
 CHECKPOINT = "checkpoint"
-PREVIEW = "preview"
 LOG = "log"
 RUN_END = "run_end"
 
@@ -53,7 +53,6 @@ class EventWriter:
     def __init__(self, run_dir: Path, fsync: bool = False):
         self.run_dir = Path(run_dir)
         self.run_dir.mkdir(parents=True, exist_ok=True)
-        (self.run_dir / PREVIEWS_DIRNAME).mkdir(exist_ok=True)
         self.path = self.run_dir / EVENTS_FILENAME
         # fsync is off by default: it is a real cost per epoch on network
         # storage, and a lost tail on a hard crash costs nothing we can't
@@ -72,7 +71,7 @@ class EventWriter:
         return record
 
     # Convenience wrappers so call sites stay readable and field names stay
-    # consistent across the trainer, the preview daemon and the Slicer reader.
+    # consistent between the trainer and whatever reads the stream.
 
     def run_start(self, **payload: Any) -> dict:
         return self.emit(RUN_START, **payload)
@@ -100,25 +99,6 @@ class EventWriter:
 
     def checkpoint(self, epoch: int, path: str, kind: str = "latest", **extra: Any) -> dict:
         return self.emit(CHECKPOINT, epoch=int(epoch), path=str(path), kind=kind, **extra)
-
-    def preview(
-        self,
-        epoch: int,
-        case: str,
-        seg: str,
-        dice: Optional[dict] = None,
-        reference_image: Optional[str] = None,
-        **extra: Any,
-    ) -> dict:
-        return self.emit(
-            PREVIEW,
-            epoch=int(epoch),
-            case=case,
-            seg=str(seg),
-            dice={k: _maybe_float(v) for k, v in (dice or {}).items()},
-            reference_image=reference_image,
-            **extra,
-        )
 
     def log(self, message: str, level: str = "info", **extra: Any) -> dict:
         return self.emit(LOG, message=str(message), level=level, **extra)
@@ -260,7 +240,6 @@ class RunState:
         self.meta: dict = {}
         self.epochs: list[dict] = []
         self.checkpoints: list[dict] = []
-        self.previews: list[dict] = []
         self.messages: list[dict] = []
         self.last_event_time: Optional[float] = None
 
@@ -277,8 +256,6 @@ class RunState:
                 self.epochs.append(e)
             elif kind == CHECKPOINT:
                 self.checkpoints.append(e)
-            elif kind == PREVIEW:
-                self.previews.append(e)
             elif kind == LOG:
                 self.messages.append(e)
             elif kind == RUN_END:
@@ -295,20 +272,6 @@ class RunState:
     def total_epochs(self) -> Optional[int]:
         return self.meta.get("epochs")
 
-    @property
-    def latest_preview(self) -> Optional[dict]:
-        return self.previews[-1] if self.previews else None
-
-    def previews_for(self, case: str) -> list[dict]:
-        return [p for p in self.previews if p.get("case") == case]
-
-    def preview_cases(self) -> list[str]:
-        seen: list[str] = []
-        for p in self.previews:
-            c = p.get("case")
-            if c and c not in seen:
-                seen.append(c)
-        return seen
 
     def series(self, key: str) -> tuple[list[int], list[float]]:
         """(epochs, values) for a scalar epoch field, skipping nulls.
@@ -354,3 +317,16 @@ class RunState:
 def read_run(run_dir: Path) -> RunState:
     """Convenience: fold an entire existing run into a RunState in one call."""
     return RunState().update(EventReader(run_dir).read_all())
+
+
+def env_for_training(run_dir: Path, task_name: str, epochs: Optional[int] = None) -> dict:
+    """Environment the trainer needs to find the run directory it writes to.
+
+    Lives here rather than beside the trainer because the run directory is an
+    events.jsonl and nothing else now -- this is the module that owns what that
+    directory means.
+    """
+    env = {"SEGTRAIN_RUN_DIR": str(run_dir), "SEGTRAIN_TASK": task_name}
+    if epochs is not None:
+        env["SEGTRAIN_EPOCHS"] = str(int(epochs))
+    return {**os.environ, **env}

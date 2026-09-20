@@ -35,8 +35,7 @@ nnunet_raw: /data/nnUNet_raw                   # env: nnUNet_raw
 nnunet_preprocessed: /data/nnUNet_preprocessed # env: nnUNet_preprocessed
 nnunet_results: /data/nnUNet_results           # env: nnUNet_results
 
-# Where run directories live (events.jsonl, previews/, logs). Small. This is the
-# directory the Slicer monitor connects to.
+# Where run directories live (events.jsonl, job scripts, SLURM logs). Small.
 runs_root: /data/runs
 
 # On Trillium every one of the five paths above must be under $SCRATCH. $HOME and
@@ -189,26 +188,6 @@ scinet:
   mail_user: ""
   mail_type: "FAIL,TIME_LIMIT"
 
-  # Only used to print a paste-ready address for the Slicer monitor, and by
-  # `segtrain scinet pull`.
+  # Used by `segtrain scinet pull`.
   login_host: ""                  # e.g. you@trillium.alliancecan.ca
 
-preview:
-  # Cases the preview daemon runs the live checkpoint on, rendered into the
-  # Slicer monitor so you can watch a vessel sharpen over training.
-  #
-  # These MUST be in the validation split -- a preview rendered on a training
-  # case looks excellent and means nothing. `segtrain preview` checks this
-  # against splits_final.json and refuses rather than quietly flattering the run.
-  #
-  # Left empty because the right choice depends on your cases. Pick two or three
-  # from the val split once `segtrain index` has assigned them, spanning what you
-  # care about: one clean/normal, one calcified or stenotic (where the model will
-  # struggle first), and one with an anatomical variant if you have the extended
-  # label set.
-  cases: []
-  # Run a preview at most this often, in epochs. Inference on a whole volume
-  # costs real GPU time, so keep this well above 1.
-  every_n_epochs: 25
-  # Skip a preview if the previous one has not finished. Training always wins.
-  skip_if_busy: true

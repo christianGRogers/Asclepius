@@ -1,8 +1,8 @@
 """Build the dataset index for a bring-your-own labelled dataset.
 
 TotalSegmentator ships a ``meta.csv`` carrying its published train/val/test
-split, and the whole pipeline reads it: splits, conversion, preview-case
-validation and `segtrain status` all go through ``segtrain.splits.read_meta``.
+split, and the whole pipeline reads it: splits, conversion and
+`segtrain status` all go through ``segtrain.splits.read_meta``.
 Your own CCTA data has no such file.
 
 Rather than teach every one of those to work without an index, this writes the

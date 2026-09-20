@@ -10,7 +10,7 @@ So the division is:
 
 ``segtrain scinet submit``
     The real path for a multi-day run. Self-chaining, resumes from checkpoints,
-    stages data to node-local disk, runs the preview daemon.
+    stages data to node-local disk.
 
 ``segtrain train --backend slurm``
     One job, one walltime block, no successor. Right for a short smoke test on a

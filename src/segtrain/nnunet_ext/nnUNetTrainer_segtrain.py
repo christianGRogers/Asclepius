@@ -16,7 +16,7 @@ Configured entirely by environment variable, because nnU-Net constructs trainers
 with a fixed signature we cannot extend:
 
 ``SEGTRAIN_RUN_DIR``
-    Where events.jsonl and previews/ go. Defaults to nnU-Net's output folder.
+    Where events.jsonl goes. Defaults to nnU-Net's output folder.
 ``SEGTRAIN_EPOCHS``
     Override the epoch count. Used for smoke tests; leave unset for real runs.
 ``SEGTRAIN_ITERATIONS``
@@ -82,7 +82,7 @@ def _safe_list(logger, key: str, step: int = -1) -> Optional[list]:
 
 
 class nnUNetTrainer_segtrain(nnUNetTrainer):
-    """Default nnU-Net training, plus an events.jsonl the Slicer monitor reads."""
+    """Default nnU-Net training, plus an events.jsonl `segtrain status` reads."""
 
     def __init__(
         self,
@@ -218,7 +218,7 @@ class nnUNetTrainer_segtrain(nnUNetTrainer):
             return
         try:
             name = os.path.basename(str(filename))
-            # 'best' vs 'latest' matters downstream: the preview daemon follows
+            # 'best' vs 'latest' matters downstream: a resumed chain block follows
             # 'latest' so the picture tracks training, while packaging uses 'best'.
             kind = "best" if "best" in name else ("final" if "final" in name else "latest")
             w.checkpoint(epoch=int(self.current_epoch), path=str(filename), kind=kind)
@@ -329,7 +329,7 @@ class nnUNetTrainer_segtrain_5epochs(nnUNetTrainer_segtrain):
     """Five epochs, for proving the pipeline end to end without burning GPU-days.
 
     Used by the CPU smoke test: it exercises conversion, planning, preprocessing,
-    the event stream, the preview daemon and the Slicer monitor in a few minutes.
+    the event stream and `segtrain status` in a few minutes.
     """
 
     def __init__(self, plans, configuration, fold, dataset_json,

@@ -51,7 +51,7 @@ def predict_test_set(
     predictor = nnUNetPredictor(
         tile_step_size=0.5,
         use_gaussian=True,
-        # Mirroring IS enabled here, unlike in previews: this is the final number
+        # Mirroring IS enabled here: this is the final number
         # and nnU-Net's default inference includes test-time augmentation.
         use_mirroring=True,
         perform_everything_on_device=(device != "cpu"),

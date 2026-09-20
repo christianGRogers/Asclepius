@@ -235,28 +235,3 @@ def load_splits(path: Path) -> list[dict[str, list[str]]]:
         return json.load(fh)
 
 
-def resolve_preview_cases(
-    rows: list[CaseMeta],
-    requested: Iterable[str],
-    splits: Optional[list[dict[str, list[str]]]] = None,
-    fold: int = 0,
-) -> list[str]:
-    """Check that requested preview cases are genuinely held out for this fold.
-
-    A preview rendered on a training case looks great and means nothing. This is
-    easy to get wrong by hand, so it is checked rather than trusted.
-    """
-    known = {r.case_id for r in rows}
-    val_ids = set(splits[fold]["val"]) if splits and fold < len(splits) else None
-
-    resolved = []
-    for case_id in requested:
-        if case_id not in known:
-            raise SplitError(f"preview case {case_id!r} is not in meta.csv")
-        if val_ids is not None and case_id not in val_ids:
-            raise SplitError(
-                f"preview case {case_id!r} is not in fold {fold}'s validation set; "
-                "previews must use held-out cases"
-            )
-        resolved.append(case_id)
-    return resolved

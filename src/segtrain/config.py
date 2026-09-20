@@ -57,15 +57,6 @@ def _read_yaml(path: Path) -> dict:
 
 
 @dataclass
-class PreviewConfig:
-    """Which cases the live-preview daemon renders, and how often."""
-
-    cases: list[str] = field(default_factory=list)
-    every_n_epochs: int = 25
-    skip_if_busy: bool = True
-
-
-@dataclass
 class SciNetConfig:
     """How a run is submitted to SLURM on a SciNet cluster.
 
@@ -152,7 +143,7 @@ class SciNetConfig:
     mail_user: str = ""
     mail_type: str = "FAIL,TIME_LIMIT"
 
-    # Only used to print a paste-ready address for the Slicer monitor.
+    # Only used to print a paste-ready ``user@host:/path`` for a run.
     login_host: str = ""
 
     def validate(self) -> None:
@@ -180,7 +171,7 @@ class SciNetConfig:
         return train_budget_seconds(self)
 
     def run_address(self, run_dir: str) -> str:
-        """``user@host:/path`` for the Slicer monitor, or the bare path."""
+        """``user@host:/path`` for a run directory, or the bare path."""
         return f"{self.login_host}:{run_dir}" if self.login_host else str(run_dir)
 
 
@@ -197,7 +188,6 @@ class Config:
     convert_workers: int = 0
     overlap_policy: str = "smaller_wins"
     reader_writer: str = "NibabelIOWithReorient"
-    preview: PreviewConfig = field(default_factory=PreviewConfig)
     scinet: SciNetConfig = field(default_factory=SciNetConfig)
 
     @property
@@ -267,13 +257,6 @@ def load_config(
         if value is not None:
             base[key] = value
 
-    preview_raw = base.get("preview") or {}
-    preview = PreviewConfig(
-        cases=list(preview_raw.get("cases") or []),
-        every_n_epochs=int(preview_raw.get("every_n_epochs", 25)),
-        skip_if_busy=bool(preview_raw.get("skip_if_busy", True)),
-    )
-
     scinet_raw = base.get("scinet") or {}
     defaults = SciNetConfig()
     scinet_cfg = SciNetConfig(
@@ -327,7 +310,6 @@ def load_config(
         convert_workers=int(base.get("convert_workers", 0)),
         overlap_policy=str(base.get("overlap_policy", "smaller_wins")),
         reader_writer=str(base.get("reader_writer", "NibabelIOWithReorient")),
-        preview=preview,
         scinet=scinet_cfg,
     )
     cfg.validate()
@@ -498,7 +480,7 @@ class TaskConfig:
         return cfg.nnunet_results / self.nnunet_name
 
     def run_dir(self, cfg: Config, fold: int) -> Path:
-        """Where events.jsonl and previews/ live for one fold of this task."""
+        """Where events.jsonl and the job's logs live for one fold of this task."""
         return cfg.runs_root / f"{self.nnunet_name}__fold{fold}"
 
 

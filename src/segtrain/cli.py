@@ -274,8 +274,8 @@ def _train_command(cfg: Config, task: TaskConfig, args) -> list[str]:
 
 def cmd_train(args) -> int:
     from .backends import get_backend
-    from .plans import configure_nnunet_env
     from .events import env_for_training
+    from .plans import configure_nnunet_env
 
     cfg, task = _load(args)
     configure_nnunet_env(cfg)

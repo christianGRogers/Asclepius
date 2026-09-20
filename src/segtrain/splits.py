@@ -28,7 +28,6 @@ from collections.abc import Iterable
 from dataclasses import dataclass
 from pathlib import Path
 from random import Random
-from typing import Optional
 
 SPLIT_TRAIN = "train"
 SPLIT_VAL = "val"

@@ -1,12 +1,21 @@
+---
+aliases: [TRAINING-PLAN, Training plan]
+tags: [training/method, nnunet, coronary, decision-record]
+status: living
+repo: Asclepius
+updated: 2026-09-19
+---
+
 # Training plan
 
 The plan for the multiclass coronary model, as decided so far. Decisions are
 recorded with their reasoning and the evidence behind them; what is still open
 is listed at the bottom and is not implied by anything above it. The retired
-previous plan is preserved in full on the `plan-v1` branch.
+previous plan is preserved in full on the `plan-v1` branch of the Asclepius
+repository; [[Plan status]] records what was removed and why.
 
 Evidence cited as *ImageCAS* and *nnU-Net* refers to the two papers condensed in
-the research notes (Zeng et al., CMIG 2023; Isensee et al., Nat Methods 2021).
+[[Research context]] (Zeng et al., CMIG 2023; Isensee et al., Nat Methods 2021).
 
 ## Fixed constraints
 

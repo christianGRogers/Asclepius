@@ -68,8 +68,9 @@ def main():
     if MODULE_DIR not in sys.path:
         sys.path.insert(0, MODULE_DIR)
 
-    import slicer
     import vtk
+
+    import slicer
 
     # ---------------------------------------------------------------- import
     #

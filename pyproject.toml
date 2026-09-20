@@ -32,7 +32,12 @@ train = [
 dev = [
     "pytest>=7",
     "pytest-cov",
-    "ruff>=0.4",
+    # Not `>=0.4`: the lint config below ignores UP045, which ruff only grew in
+    # 0.9. An older ruff does not warn about the unknown selector -- it refuses
+    # to parse pyproject.toml at all, and `ruff check` fails with a config
+    # error that reads nothing like a lint failure. CI pins an exact version;
+    # see .github/workflows/ci.yml.
+    "ruff>=0.9",
 ]
 
 [project.scripts]
@@ -67,6 +72,12 @@ ignore = [
     # `Optional[X]` is explicit and reads fine; rewriting to `X | None` across
     # the codebase would be churn for no benefit.
     "UP045",
+    # Same argument, same codebase: `Dict[str, int]` says what it means, and
+    # `src/segqueue` is read by people maintaining a Python 3.9 Slicer module
+    # where the explicit spelling is the familiar one. UP006/UP035 would
+    # rewrite every annotation in `release.py` to prove a point about builtins.
+    "UP006",
+    "UP035",
 ]
 
 [tool.ruff.lint.per-file-ignores]
@@ -75,4 +86,11 @@ ignore = [
 # imports genuinely cannot all sit at the top: `src/` must be put on sys.path
 # before `segtrain.events` can be imported at all.
 "slicer/**" = ["E402", "I001", "UP031", "UP032"]
-"tests/**" = ["UP031"]
+# `.format()` over f-strings in the tests too: the two suites that matter most
+# here read the Slicer module and mirror its idiom, and a test that looks like
+# the code it checks is easier to trust.
+"tests/**" = ["UP031", "UP032"]
+# slicer_selftest.py is Slicer code that happens to live in tests/ -- it runs
+# inside Slicer's own interpreter, never under pytest, and is written in the
+# same idiom as the module it exercises.
+"tests/slicer_selftest.py" = ["UP004", "UP020", "UP031", "UP032"]

@@ -1,0 +1,11 @@
+# Obsidian writes per-machine UI state into .obsidian/ and rewrites it on every
+# pane move. Tracking those files means a merge conflict every time two people
+# open the vault, so the churn is ignored and the shareable settings are not.
+.obsidian/workspace.json
+.obsidian/workspace-mobile.json
+.obsidian/cache
+.obsidian/graph.json
+
+# Obsidian's own trash. Deleting a note in the app moves it here rather than
+# removing it, which is useful locally and noise in the repository.
+.trash/

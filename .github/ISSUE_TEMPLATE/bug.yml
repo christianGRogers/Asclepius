@@ -1,0 +1,65 @@
+name: Bug (server, pipeline, or tooling)
+description: For a defect in the Girder plugin, the training pipeline, or the build.
+title: "[bug] "
+labels: ["bug"]
+body:
+  - type: dropdown
+    id: component
+    attributes:
+      label: Which component?
+      options:
+        - Labelling app — server (server/, deploy/)
+        - Labelling app — shared protocol (src/segqueue/)
+        - Labelling app — Slicer extension (slicer/)
+        - Training pipeline (src/segtrain/, configs/, scripts/)
+        - CI, packaging, or release
+        - Not sure
+    validations:
+      required: true
+
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened, and what did you expect?
+    validations:
+      required: true
+
+  - type: textarea
+    id: repro
+    attributes:
+      label: How to reproduce it
+      description: The shortest sequence that shows the problem. A failing test is ideal.
+      render: shell
+    validations:
+      required: true
+
+  - type: textarea
+    id: output
+    attributes:
+      label: Output
+      description: |
+        Traceback, failing test output, or the relevant container log
+        (`docker compose logs girder`). Scrub tokens and passwords first — the
+        e2e script deliberately does not echo bearer tokens, and neither should
+        an issue.
+      render: shell
+    validations:
+      required: false
+
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: OS, Python version, and the commit or release this is on.
+      placeholder: |
+        Ubuntu 24.04, Python 3.11, main at a2adde1
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: reach
+    attributes:
+      label: Reach
+      options:
+        - label: This affects annotators who are working right now.
+        - label: There is a workaround, and I have described it above.

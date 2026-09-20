@@ -1,7 +1,15 @@
+---
+aliases: [PLAN-STATUS, Plan status]
+tags: [training/method, decision-record, changelog]
+status: living
+repo: Asclepius
+updated: 2026-09-19
+---
+
 # Training plan: status
 
-**The current plan lives in [`TRAINING-PLAN.md`](TRAINING-PLAN.md).** This file
-records what was removed when the previous plan was retired, and where it went.
+**The current plan lives in [[Training plan]].** This note records what was
+removed when the previous plan was retired, and where it went.
 
 The previous plan is preserved in full on the **`plan-v1`** branch
 (`git show plan-v1:README.md`), including the four-class label set, the extended
@@ -23,7 +31,7 @@ chain were unaffected throughout.
 
 ## What is decided vs open
 
-See [`TRAINING-PLAN.md`](TRAINING-PLAN.md). In brief: one-stage nnU-Net
+See [[Training plan]]. In brief: one-stage nnU-Net
 `3d_fullres` at native spacing, no cascade, no heart crop, ~70 GB patch budget,
 binary-first sequencing. Open: class schema, fold scheme, loss, acceptance
 thresholds, annotation protocol details.
@@ -31,7 +39,7 @@ thresholds, annotation protocol details.
 ## Fixed constraints
 
 - Training runs on **Trillium** (SciNet). One H100 per job, 24-hour walltime cap,
-  job-chain resume. See the README's “Running it” section.
+  job-chain resume. See the Asclepius README's “Running it” section.
 - Case data is **1000 ImageCAS CCTA volumes**, held on a self-hosted **Girder**
   server and already ingested into the SegQueue case pool. Per-branch labelling
   has not started.

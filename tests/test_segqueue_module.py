@@ -19,7 +19,6 @@ check every ``self.x`` it reads is something the same class defines.
 """
 
 import ast
-import io
 from pathlib import Path
 
 import pytest
@@ -39,7 +38,7 @@ INHERITED = {
 
 
 def _module_tree():
-    return ast.parse(io.open(MODULE, encoding="utf-8").read())
+    return ast.parse(open(MODULE, encoding="utf-8").read())
 
 
 def _self_attributes(classdef):
@@ -120,7 +119,7 @@ def test_every_widget_signal_is_connected_to_something_that_exists():
     assert handlers, "found no signal connections at all -- has the parse drifted?"
     dead = [(name, line) for name, line in handlers if name not in defined]
     assert not dead, "signals wired to nothing: {}".format(
-        ", ".join("self.{} (line {})".format(n, l) for n, l in sorted(dead)))
+        ", ".join("self.{} (line {})".format(n, ln) for n, ln in sorted(dead)))
 
 
 def test_the_keyboard_shortcuts_are_wired_to_methods_that_exist():
@@ -138,6 +137,6 @@ def test_the_keyboard_shortcuts_are_wired_to_methods_that_exist():
             bound.append((node.attr, node.lineno))
 
     assert bound, "no shortcut bindings found"
-    dead = [(n, l) for n, l in bound if n not in defined]
+    dead = [(n, ln) for n, ln in bound if n not in defined]
     assert not dead, "shortcuts bound to nothing: {}".format(
-        ", ".join("self.{} (line {})".format(n, l) for n, l in sorted(dead)))
+        ", ".join("self.{} (line {})".format(n, ln) for n, ln in sorted(dead)))

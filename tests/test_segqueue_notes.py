@@ -19,9 +19,7 @@ if str(_EXTENSION) not in sys.path:
     sys.path.insert(0, str(_EXTENSION))
 
 from SegQueueLib import SegQueueError  # noqa: E402
-
 from test_segqueue_client import FakeResponse, FakeSession, makeClient  # noqa: E402
-
 
 # ------------------------------------------------------------------ the shape
 

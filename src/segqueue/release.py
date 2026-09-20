@@ -166,7 +166,7 @@ def describe(release: Dict[str, Any]) -> str:
     parsed = parse_version(tag)
     version = ".".join(str(n) for n in parsed[0]) + parsed[1] if parsed else tag
     name = str(release.get("name") or "").strip()
-    return "{} -- {}".format(version, name) if name and name != tag else version
+    return f"{version} -- {name}" if name and name != tag else version
 
 
 def archive_members(names: Sequence[str], slicer_version: str) -> List[str]:
@@ -176,6 +176,6 @@ def archive_members(names: Sequence[str], slicer_version: str) -> List[str]:
     archive that does not contain the module at the expected path is not a
     SegQueue package, whatever its filename says.
     """
-    prefix = "SegQueue/lib/Slicer-{}/qt-scripted-modules/".format(slicer_version)
+    prefix = f"SegQueue/lib/Slicer-{slicer_version}/qt-scripted-modules/"
     return [name for name in names
             if name.startswith(prefix) and not name.endswith("/")]

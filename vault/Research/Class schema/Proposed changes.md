@@ -67,6 +67,30 @@ prevalence (ImageCAS-X's own 800 scans: 91.1 % right, 5.1 % left, 3.8 %
 co-dominant). A large deviation is a cheap early warning that the rare classes
 have collapsed.
 
+## 2d. Adjacent-segment-discounted weighted kappa for boundary evaluation
+
+Evidence: [[Bifurcation ownership and carina voxel assignment]], citing
+Föllmer et al., Insights Imaging 2024.
+
+If the plan's evaluation ever scores segment/branch *identity* agreement
+(model vs reference, or annotator vs annotator) as a categorical statistic
+rather than voxel Dice, use a weighted Cohen's kappa that discounts confusion
+between anatomically adjacent classes (e.g. a proximal/mid boundary call, or
+parent/daughter at a bifurcation) rather than scoring every misclassification
+equally. This is an evaluation-metric proposal, not a schema one — for the
+metrics/acceptance-thresholds owner to take or leave; recorded here because it
+falls out of the bifurcation-ownership research.
+
+## 2e. SYNTAX/ARCADE confirms the recommendation, does not change it
+
+Evidence: [[SYNTAX segmentation and the ARCADE dataset]].
+
+No schema change. ARCADE's ~25-class SYNTAX-derived schema achieving only
+Dice 0.49 (YOLOv8 baseline, 2D X-ray) and inter-rater Dice 0.73–0.90 even
+among the clinicians who defined the classes is independent, cross-modality
+support for staying at ImageCAS-X's 14 classes rather than the full 16–25
+segment clinical models.
+
 ## 3. Labelling is done on named centerlines, not painted voxels
 
 Evidence: [[Class schema options]], "Written policies in ImageCAS-X".

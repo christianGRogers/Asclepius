@@ -88,7 +88,7 @@ staff "knowledgeable regarding retinal anatomy" as junior annotators.**
 - They explicitly rejected model pre-annotation because the best published
   algorithm reached only ~0.82 Dice, which they judged too weak to seed ground
   truth. Our situation differs (see
-  [[Seeding annotation with model predictions]]), but the reasoning — seed
+  [[Seeding annotation with model predictions and label efficiency]]), but the reasoning — seed
   quality sets the bias floor — is the same one we have to answer.
 
 Two things to take: the **intra > senior–junior > junior–junior ordering**

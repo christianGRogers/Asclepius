@@ -25,3 +25,11 @@ and belong to another topic owner. One line each, no follow-up done here.
 - **Architecture / patch sampling owner:** ImageCAS measured patch size as the
   dominant factor in their patch pipeline — 79.56 / 81.22 / 82.34 % Dice for
   16³ / 32³ / 64³ (p < 0.0001, p < 0.001 pairwise), on ImageCAS.
+- **Datasets / benchmarks owner:** stent prevalence in the 1000 ImageCAS volumes is
+  unverified — worth a direct check, since stents are a distinct metal-artifact
+  confounder no augmentation can substitute for if under-represented in training
+  data. See [[Calcified plaque, stents and motion are the CCTA failure modes, and only some of them are augmentable]].
+- **Datasets / benchmarks owner:** ASOCA and GeoCAD (Zhang et al. 2025, J Imaging
+  Inform Med, DOI 10.1007/s10278-025-01677-2) is a second cross-site coronary pair,
+  with a measured ASOCA→GeoCAD Dice drop, additional to the ASOCA/TotalSegmentator
+  candidates already logged above.

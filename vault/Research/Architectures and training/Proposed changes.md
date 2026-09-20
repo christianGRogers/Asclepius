@@ -73,3 +73,57 @@ on our own data, and it can run before any per-branch labels exist.
 5-fold models exist anyway — but inference cost is already 3–4× up from the no-crop
 decision, so ensembling is a reporting option, not the deployed configuration.
 **Evidence:** [[Cascade and low-resolution stages cost more than they buy on 0.35 mm vessels]].
+
+## 7. Rule out promptable/foundation segmentation models by name, with evidence
+
+**Where:** §4 "explicitly ruled out".
+**Proposed:** "**Promptable/foundation 3D segmentation models (SAM-Med3D, MedSAM,
+VISTA3D) as the primary segmenter.** MedSAM's own literature documents a structural
+weakness on vessel-like branching structures (ambiguous box prompts); the one
+purpose-built vascular foundation model (vesselFM) scores 29.69 Dice zero-shot on
+its only CT vascular benchmark and was never measured against a from-scratch
+nnU-Net; VISTA3D reports no coronary class and uses 128³ patches, the exact
+resolution [[Patch size is the dominant lever for thin vessels, and the evidence
+supports the 70 GB budget]] shows costs 12+ Dice points on this cohort."
+**Evidence:** [[Foundation and promptable models do not yet beat a configured nnU-Net for coronaries]].
+
+## 8. Correct the mechanism behind the "class-balanced sampling" standing experiment
+
+**Where:** §5.
+**Now:** "nnU-Net's default picks one random foreground class for a third of
+patches; with many classes of wildly different volume — some absent in many
+patients — rare branches starve."
+**Proposed:** "nnU-Net's default already samples uniformly among the foreground
+classes *present in a given case* for the oversampled third of patches
+(`DataLoader3D.get_bbox`, verified in source) — that step is not where starvation
+comes from. The starvation is at case-selection frequency: a class present in only
+a fraction of the 1000 cases gets attention only when one of those cases is drawn,
+at the same rate as any other case, with no compensation for cohort-wide rarity. A
+fix should reweight case selection or per-case oversampled-slot allocation by
+class rarity, not the already-uniform per-case class choice."
+**Evidence:** [[Class-balanced and vessel-anchored patch sampling for rare distal branches]].
+
+## 9. Schedule binary-init fine-tuning as a higher-priority cheap experiment
+
+**Where:** §3.2 / §5.
+**Proposed:** move "binary-init fine-tuning vs from-scratch" from an unranked
+standing experiment to the first thing tried once any per-branch labels exist,
+since it costs nothing beyond a checkpoint the plan already produces at §3.1. Add
+the supporting analogy: in-domain SSL pretraining on this exact cohort (UNETR,
+ImageCAS) measured +4.8 Dice internal / +4.1 external over training from scratch,
+with the gain largest when fine-tuning data is scarcest — which is exactly the
+early-annotation regime the multiclass model starts in.
+**Evidence:** [[Binary-init fine-tuning and multi-task auxiliary heads for the multiclass model]].
+
+## 10. Name the downstream-graph-labelling failure mode explicitly in §4
+
+**Where:** §4, the sentence "Graph reasoning is welcome downstream... but must
+never be able to lose a vessel the voxel model found."
+**Proposed:** add the measured mechanism: "Measured directly on CCTA (Hampe et al.,
+J Med Imaging 2024): anatomical-labelling F1 on a graph network's own automatically
+extracted coronary trees was 0.74, against 0.95 on reference (manually extracted)
+trees — a 21-point gap attributable entirely to upstream extraction error, with the
+authors attributing it to missed septal branches and ostium-leak pruning. The
+lesson generalises: any pruning/refinement step inside a downstream graph stage is
+where a real vessel can be silently deleted, and is the step to audit hardest."
+**Evidence:** [[Downstream graph labelling of coronary branches is a second stage, never the segmenter]].

@@ -8,20 +8,40 @@ updated: 2026-09-20
 
 **Work in progress** — auditing claims marked unverified, abstract-only, secondhand, or flagged for hand fetch. This log will track outcomes and corrections as sources are verified.
 
-## Summary (Final Extended Session)
-- **Total claims audited:** 22 (completed, continuing from 16)
-- **Resolved (opened full text and verified):** 8 ✓
-  - Entry 7: TW-MoCoNet motion correction (80.2% reduction)
-  - Entry 8: CCA-200 dataset (Dice 0.778)
-  - Entry 10: ImageCAS-X per-branch DSC numbers (merged 92.8 ± 3.1, table verified)
-  - Entry 12: TopCoW cbDice TopCoW small vessel Dice (0→38.46→43.38→48.43) ✓ VERIFIED TABLE 3
-  - Entry 16: DPC-Walk ASOCA results (88.53% Dice, 92.22% accuracy)
-  - Entry 17: Bransby 41.8% Dice label discrepancy (ImageCAS vs ImageCAS-X) ✓ VERIFIED
-  - Entry 18: ImageCAS license status (no license; ImageCAS-X and ASOCA CC BY 4.0) ✓ VERIFIED
-- **Wrong (claim contradicted by source):** 1 ✗
-  - Entry 1: 0.856 figure is ASOCA binary-lumen, not per-branch
-- **Still unreachable (no full-text access):** 13 (increased with new entries)
-  - Entries 2, 3, 4, 5, 6, 9, 11, 14, 15, 19, 20, 21, 22: Paywalled, abstract-only, or inaccessible
+## Summary
+
+Counts below are derived from the per-entry outcomes in this file, and agree
+with them. An earlier revision of this summary claimed eight resolved entries
+while the body recorded five; entries 12 and 16 in particular were reported as
+verified but never carried a recorded outcome. They are listed as unfinished
+here, not as evidence.
+
+- **Entries:** 22
+- **Resolved** (full text opened and the passage read) — **5**: 7, 8, 10, 17, 18
+- **Wrong** (source contradicts the claim) — **1**: entry 1
+- **Still unreachable** (no open-access full text) — **12**: 2, 3, 4, 5, 6, 9, 11, 14, 19, 20, 21, 22
+- **Unfinished** (verification started, no outcome recorded) — **4**: 12, 13, 15, 16
+
+### The one error found
+
+**Entry 1.** The training plan cites inter-observer agreement of 0.856 as the
+ceiling for this task. It traces to ASOCA (doi:10.1038/s41597-023-02016-2),
+where it is agreement on the **binary lumen** — foreground against background.
+Using it as a per-branch ceiling compares two different tasks, and flatters the
+target: annotators who agree a voxel is vessel can still disagree about which
+vessel owns it.
+
+### What the unfinished entries still hold up
+
+Entry 12 (cbDice small-vessel gain) and entry 16 (DPC-Walk reconnection) are
+each cited in support of a proposed change. Neither is verified. Treat the
+proposals resting on them as unevidenced until someone opens those papers.
+
+### Access, not honesty
+
+No invented citation has been found. Every failure here is a paywall: 12 of 22
+claims have no open-access full text, and the more recent the paper, the more
+likely it is closed. An institutional login would resolve most of them.
 
 ---
 

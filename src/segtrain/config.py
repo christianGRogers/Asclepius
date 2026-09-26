@@ -176,6 +176,46 @@ class SciNetConfig:
 
 
 @dataclass
+class TransferConfig:
+    """Where the training export comes from, and how hard to try.
+
+    Exactly one of ``remote`` and ``local_path`` is used. ``remote`` is an rsync
+    source as rsync spells it -- ``user@host:/srv/segqueue/export`` -- and is the
+    normal case, because the Girder host and the cluster are different machines.
+    ``local_path`` covers a shared filesystem, which is cheaper and correct when
+    it exists.
+
+    Neither is required at config load. Like ``scinet.account``, a missing value
+    is an error at the moment it is needed rather than on every unrelated
+    command: `segtrain info` should not fail because nobody has set up a transfer
+    yet.
+    """
+
+    remote: str = ""
+    local_path: str = ""
+    ssh_options: list[str] = field(default_factory=list)
+    bandwidth_limit: str = ""
+    attempts: int = 3
+    verify: str = "full"
+
+    def validate(self) -> None:
+        if self.remote and self.local_path:
+            raise ConfigError(
+                "transfer.remote and transfer.local_path are both set; they are "
+                "alternatives, so one of them is being silently ignored"
+            )
+        if self.verify not in ("full", "quick"):
+            raise ConfigError(
+                f"transfer.verify must be 'full' or 'quick', got {self.verify!r}"
+            )
+        if self.attempts < 1:
+            raise ConfigError(f"transfer.attempts must be at least 1, got {self.attempts}")
+
+    def describe_source(self) -> str:
+        return self.remote or self.local_path or "(not configured)"
+
+
+@dataclass
 class Config:
     """Resolved paths and settings for one invocation."""
 
@@ -189,6 +229,7 @@ class Config:
     overlap_policy: str = "smaller_wins"
     reader_writer: str = "NibabelIOWithReorient"
     scinet: SciNetConfig = field(default_factory=SciNetConfig)
+    transfer: TransferConfig = field(default_factory=TransferConfig)
 
     @property
     def meta_csv(self) -> Path:
@@ -223,6 +264,7 @@ class Config:
                 f"got {self.overlap_policy!r}"
             )
         self.scinet.validate()
+        self.transfer.validate()
         if require_data:
             if not self.zenodo_root.is_dir():
                 raise ConfigError(f"zenodo_root does not exist: {self.zenodo_root}")
@@ -295,6 +337,17 @@ def load_config(
         login_host=str(scinet_raw.get("login_host") or ""),
     )
 
+    transfer_raw = base.get("transfer") or {}
+    transfer_defaults = TransferConfig()
+    transfer_cfg = TransferConfig(
+        remote=str(transfer_raw.get("remote") or os.environ.get("SEGTRAIN_TRANSFER_REMOTE", "")),
+        local_path=str(transfer_raw.get("local_path") or ""),
+        ssh_options=[str(o) for o in (transfer_raw.get("ssh_options") or [])],
+        bandwidth_limit=str(transfer_raw.get("bandwidth_limit") or ""),
+        attempts=int(transfer_raw.get("attempts", transfer_defaults.attempts)),
+        verify=str(transfer_raw.get("verify") or transfer_defaults.verify),
+    )
+
     required = ["zenodo_root", "nnunet_raw", "nnunet_preprocessed", "nnunet_results", "runs_root"]
     missing = [k for k in required if not base.get(k)]
     if missing:
@@ -311,6 +364,7 @@ def load_config(
         overlap_policy=str(base.get("overlap_policy", "smaller_wins")),
         reader_writer=str(base.get("reader_writer", "NibabelIOWithReorient")),
         scinet=scinet_cfg,
+        transfer=transfer_cfg,
     )
     cfg.validate()
     return cfg

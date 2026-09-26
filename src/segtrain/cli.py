@@ -587,51 +587,182 @@ def cmd_scinet_setup(args) -> int:
     return 0
 
 
-def cmd_scinet_fetch(args) -> int:
-    """Download the dataset onto the cluster from a login node.
+def _transport(cfg, args):
+    """Pick the transport, or say what is missing."""
+    from .transfer import LocalTransport, RsyncTransport
 
-    Deliberately not a job: compute nodes have no outbound internet, so a
-    download submitted to the queue would wait for hours and then fail at the
-    first HTTP request.
+    remote = getattr(args, "remote", None) or cfg.transfer.remote
+    local = getattr(args, "from_path", None) or cfg.transfer.local_path
+    if remote and local:
+        raise ConfigError(
+            "a remote and a local source were both given; they are alternatives"
+        )
+    if local:
+        return LocalTransport(source=str(Path(local).expanduser()))
+    if remote:
+        return RsyncTransport(
+            remote=remote,
+            ssh_options=cfg.transfer.ssh_options,
+            bandwidth_limit=getattr(args, "bwlimit", None) or cfg.transfer.bandwidth_limit,
+        )
+    raise ConfigError(
+        "no transfer source. Set `transfer.remote` in configs/dataset.local.yaml "
+        "to the export directory on the Girder host, as rsync spells it "
+        "(transfer.remote: segqueue@girder.example.org:/srv/segqueue/export), or "
+        "pass --remote / --from once. `segqueue-export --out <dir>` on the server "
+        "is what produces that directory."
+    )
+
+
+def cmd_scinet_fetch(args) -> int:
+    """Pull the training export onto the cluster and verify it arrived intact.
+
+    Deliberately not a job: compute nodes have no outbound network, so a transfer
+    submitted to the queue waits for its allocation and then fails at the first
+    connection.
     """
-    import subprocess
+    from segqueue.manifest import FULL, QUICK
+
+    from .transfer import TransferError, advise_destination, advise_host, pull
 
     cfg, task = _load(args)
     dest = Path(args.dest) if args.dest else cfg.zenodo_root
-    script = Path(__file__).resolve().parents[2] / "scripts" / "init_dataset.py"
+    transport = _transport(cfg, args)
+    mode = QUICK if (args.quick or cfg.transfer.verify == "quick") else FULL
 
+    print(f"source   {getattr(transport, 'remote', None) or getattr(transport, 'source', '')}")
     print(f"dest     {dest}")
-    print("source   zenodo.org/records/10047292 -- TotalSegmentator v2.0.1, ~22 GB")
-    print("          expands to ~30 GB and about 145,000 files.")
+    print(f"verify   {mode}")
     print()
-    print("Two things to check before this runs:")
-    print("  * that this is a login or datamover node (tri-dm1.scinet.utoronto.ca).")
-    print("    Compute nodes have no outbound internet and cannot reach Zenodo,")
-    print("    so this can never be a batch job.")
-    print("  * that `dest` is under $SCRATCH. $HOME and $PROJECT are read-only")
-    print("    from compute nodes, so a dataset in either is unusable by a job.")
-    print()
-    print("Space, not inodes, is the constraint here: $SCRATCH allows 25 TB and")
-    print("10M files, so 145,000 is not a problem. The download resumes, so an")
-    print("interrupted transfer costs only the remainder.")
-    print()
+    for note in advise_host() + advise_destination(dest):
+        print(f"  !  {note}")
+        print()
+
     if args.dry_run:
-        print("[dry-run] not downloading")
+        print("[dry-run] fetching the manifest only, to report what would move")
+        try:
+            from segqueue.manifest import Manifest, needed
+            dest.mkdir(parents=True, exist_ok=True)
+            transport.fetch_manifest(str(dest))
+            manifest = Manifest.read(dest)
+        except (TransferError, OSError) as exc:
+            print(f"error: {exc}", file=sys.stderr)
+            return 1
+        outstanding = needed(dest, manifest)
+        totals = manifest.totals
+        print(f"manifest {totals['cases']} case(s), {totals['files']} file(s), "
+              f"{_human(totals['bytes'])}")
+        print(f"would move {len(outstanding)} file(s); "
+              f"{totals['files'] - len(outstanding)} already present")
         return 0
 
-    cmd = [sys.executable, str(script), "--dest", str(dest)]
-    if args.keep_zip:
-        cmd.append("--keep-zip")
-    print("+ " + " ".join(cmd))
-    code = subprocess.run(cmd).returncode
-    if code != 0:
-        return code
+    def progress(attempt, remaining):
+        label = "attempt" if attempt == 1 else "retry"
+        print(f"[{label} {attempt}] {remaining} file(s) outstanding")
+
+    try:
+        report = pull(transport, dest, attempts=cfg.transfer.attempts, mode=mode,
+                      progress=progress)
+    except TransferError as exc:
+        print("", file=sys.stderr)
+        print(f"error: {exc}", file=sys.stderr)
+        return 1
+
+    receipt = report.write(dest)
+    totals = report.totals
+    print()
+    print(f"manifest {totals['cases']} case(s), {totals['files']} file(s), "
+          f"{_human(totals['bytes'])}  (exported {report.manifest_created})")
+    print(f"moved    {len(report.transferred)} file(s) in {report.attempts} attempt(s), "
+          f"{report.seconds:.0f}s")
+    print(f"verify   {report.verified.summary()}")
+    print(f"receipt  {receipt}")
+
+    if not report.ok:
+        print()
+        broken = report.verified.broken_cases
+        print(f"{len(broken)} case(s) did not arrive intact and must not be trained on:",
+              file=sys.stderr)
+        for case in broken[:20]:
+            print(f"  {case}", file=sys.stderr)
+        if len(broken) > 20:
+            print(f"  ... and {len(broken) - 20} more", file=sys.stderr)
+        print("", file=sys.stderr)
+        print("Re-run this command: the work list is recomputed from what is "
+              "here, so it will fetch only these.", file=sys.stderr)
+        return 1
 
     print()
-    print("Once every task is converted the Zenodo tree is no longer needed --")
-    print(f"~30 GB and ~145,000 files back:  rm -rf {dest}")
-    print(f"next: segtrain scinet prepare --task {task.dataset_id} --convert")
+    print(f"next: segtrain index --root {dest}")
     return 0
+
+
+def cmd_verify(args) -> int:
+    """Check a local tree against the manifest that travelled with it."""
+    from segqueue.manifest import FULL, QUICK, Manifest, ManifestError, verify
+
+    cfg, _task = _load(args)
+    root = Path(args.root) if args.root else cfg.zenodo_root
+    mode = QUICK if args.quick else FULL
+
+    try:
+        manifest = Manifest.read(root)
+    except ManifestError as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 2
+
+    totals = manifest.totals
+    print(f"root     {root}")
+    print(f"manifest {totals['cases']} case(s), {totals['files']} file(s), "
+          f"{_human(totals['bytes'])}  (exported {manifest.created})")
+    if manifest.source:
+        segments = manifest.source.get("segments")
+        if segments:
+            print(f"labels   {len(segments)}: {', '.join(str(s) for s in segments)}")
+    print()
+
+    state = {"last": -1}
+
+    def progress(path, index, total):
+        if mode == FULL and total > 100:
+            percent = (index * 100) // total
+            if percent >= state["last"] + 10:
+                state["last"] = percent
+                print(f"  {percent}% ({index}/{total})", flush=True)
+
+    result = verify(root, manifest, mode=mode, progress=progress)
+    print(f"result   {result.summary()}")
+
+    for label, paths in (("missing", result.missing), ("corrupt", result.corrupt)):
+        for path in paths[:20]:
+            print(f"  {label}: {path}")
+        if len(paths) > 20:
+            print(f"  ... and {len(paths) - 20} more {label}")
+    for path, expected, found in result.truncated[:20]:
+        print(f"  truncated: {path} ({found} of {expected} bytes)")
+    if args.show_extra:
+        for path in result.extra[:20]:
+            print(f"  extra: {path}")
+
+    if not result.is_clean:
+        print()
+        broken = result.broken_cases
+        print(f"{len(broken)} of {totals['cases']} case(s) are not as promised. "
+              "`segtrain fetch` re-fetches exactly these.", file=sys.stderr)
+        return 1
+
+    print("")
+    print(f"All {totals['cases']} case(s) are byte-for-byte what was exported.")
+    return 0
+
+
+def _human(count: int) -> str:
+    size = float(count)
+    for unit in ("B", "KiB", "MiB", "GiB", "TiB"):
+        if size < 1024 or unit == "TiB":
+            return f"{size:.1f} {unit}" if unit != "B" else f"{int(size)} B"
+        size /= 1024
+    return f"{size:.1f} TiB"
 
 
 def cmd_scinet_prepare(args) -> int:
@@ -1019,6 +1150,20 @@ def build_parser() -> argparse.ArgumentParser:
     s.add_argument("--dry-run", action="store_true")
     s.set_defaults(func=cmd_index)
 
+    s = sub.add_parser(
+        "verify", parents=[common],
+        help="check a data tree against the manifest that came with it",
+        description="Answer the question `segtrain index` cannot: not how many "
+                    "cases are here, but whether they are the ones that were sent "
+                    "and all of them. Reads manifest.json at the root of the tree.")
+    s.add_argument("--root", help="tree to check (default: zenodo_root)")
+    s.add_argument("--quick", action="store_true",
+                   help="compare sizes only. A stat per file instead of reading "
+                        "every byte; catches truncation, not corruption")
+    s.add_argument("--show-extra", action="store_true",
+                   help="also list files present here but not in the manifest")
+    s.set_defaults(func=cmd_verify)
+
     s = sub.add_parser("splits", parents=[common, task_opt, split_opt],
                        help="write splits_final.json from meta.csv")
     s.set_defaults(func=cmd_splits)
@@ -1081,12 +1226,26 @@ def build_parser() -> argparse.ArgumentParser:
                         "--no-download` wrapper")
     s.set_defaults(func=cmd_scinet_setup)
 
-    s = scisub.add_parser("fetch", parents=[common, task_opt],
-                          help="download the dataset here, on a login node")
-    s.add_argument("--dest", help="override zenodo_root for this download")
-    s.add_argument("--keep-zip", action="store_true",
-                   help="keep the 22 GB archive after extracting")
-    s.add_argument("--dry-run", action="store_true")
+    s = scisub.add_parser(
+        "fetch", parents=[common, task_opt],
+        help="pull the training export here and verify it, on a login node",
+        description="Pull an export written by `segqueue-export` and check every "
+                    "file against the manifest that travelled with it. Re-running "
+                    "fetches only what is missing or wrong, so an interrupted "
+                    "transfer costs the remainder rather than the whole thing. Run "
+                    "this on a login or datamover node: compute nodes have no "
+                    "outbound network.")
+    s.add_argument("--dest", help="override zenodo_root as the destination")
+    s.add_argument("--remote", help="rsync source, e.g. user@host:/srv/segqueue/export "
+                                    "(overrides transfer.remote)")
+    s.add_argument("--from", dest="from_path",
+                   help="a mounted source directory instead of a remote")
+    s.add_argument("--bwlimit", help="rsync --bwlimit value, e.g. 50m")
+    s.add_argument("--quick", action="store_true",
+                   help="verify sizes only, not contents. Catches a truncated "
+                        "transfer but not a corrupted byte")
+    s.add_argument("--dry-run", action="store_true",
+                   help="fetch the manifest and report what would move")
     s.set_defaults(func=cmd_scinet_fetch)
 
     s = scisub.add_parser("prepare", parents=[common, task_opt],

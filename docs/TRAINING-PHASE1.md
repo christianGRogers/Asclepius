@@ -90,6 +90,71 @@ weights for six methods. Phase 1 reads only the lumen annotation.
 and auto-detects which it is given. Force it with `--layout flat` or
 `--layout nested` if the guess is ever wrong.
 
+Both of those are public datasets, pulled straight from Zenodo or Kaggle onto a
+datamover node. **Our own annotated data comes from the Girder server instead,
+and that path is checksummed end to end.**
+
+### 3b. Pulling annotated cases off the annotation server
+
+On the Girder host, write the export and its manifest:
+
+```sh
+segqueue-export --out /srv/segqueue/export
+```
+
+That produces one directory per case — `ct.nii.gz` plus `segmentations/*.nii.gz` —
+and a `manifest.json` listing every file with its size and SHA-256, plus a total.
+Hashing happens here, on the machine that has both the data and the authority on
+what the data should be. A manifest generated at the far end would certify
+whatever arrived, including a truncated volume.
+
+Then, **on `tri-dm1`, not in a job**:
+
+```sh
+segtrain scinet fetch --task 710 --dry-run    # what would move, and how much
+segtrain scinet fetch --task 710
+```
+
+Compute nodes have no outbound network, so a queued transfer waits for its
+allocation and then fails at the first connection. `fetch` warns if `$SLURM_JOB_ID`
+is set, or if the destination is not under `$SCRATCH` — `$HOME` and `$PROJECT` are
+read-only from compute nodes, and that failure otherwise arrives after the queue
+wait.
+
+What it does, and why each part is there:
+
+| Behaviour | The failure it exists for |
+|---|---|
+| Fetches `manifest.json` first, then compares it against the destination and asks the transport for exactly the missing paths | A retry after 900 of 1000 cases copies 100. Without it every interruption restarts an hour, so the operator stops retrying and starts improvising |
+| Retries with backoff, recomputing the work list each time | A multi-hour ssh across a campus network drops. Each retry is strictly less work than the one before |
+| rsync `--partial-dir`, so interrupted files are quarantined in a dot-directory | A half-written `ct.nii.gz` sitting beside the real ones is indistinguishable from a complete one, to the next pass and to `index` |
+| rsync `--append-verify` | A resumed file is checksummed rather than assumed to match its prefix |
+| No `--delete`, ever | `$SCRATCH` holds other work, and a transfer is not entitled to remove what it did not bring |
+| Verifies every byte against the manifest afterwards, and exits non-zero naming the broken **cases** | `rsync exited 0` and `the training data is correct` are different claims. rsync is faithful about what it was asked to copy and silent about what it was never told to |
+| Writes `transfer-receipt.json` beside the data | Three weeks later the question is "what was this model trained on", and it should be answerable from the disk |
+
+Re-running is safe and cheap: a complete tree transfers nothing, and a damaged one
+transfers only the damage.
+
+To re-check a tree at any time — before a long GPU chain, or after a `$SCRATCH`
+scare — without transferring anything:
+
+```sh
+segtrain verify                  # every byte, against the manifest that came with it
+segtrain verify --quick          # sizes only; catches truncation, not corruption
+```
+
+`verify` exits 1 and names the cases that are not as promised, so it belongs in a
+prepare script ahead of `convert`. It answers the question `index` cannot: not how
+many cases are here, but whether they are the ones that were sent, and all of
+them.
+
+**One thing it will not catch.** The manifest records the label-set names the
+export was built against. If `segqueue.project` on the server has since changed —
+4 classes to 14, say — a fresh export is internally consistent and disagrees with
+an older one, and the `labels` line `verify` prints is the only warning anybody
+gets. Read it.
+
 ---
 
 ## 4. Index the cases

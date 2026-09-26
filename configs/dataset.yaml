@@ -29,6 +29,45 @@
 # reason.
 zenodo_root: /data/coronary
 
+# How the training data gets here from the annotation server.
+#
+# `segqueue-export --out <dir>` on the Girder host writes the per-case tree plus
+# a manifest.json: every file with its size and SHA-256, and a total. `segtrain
+# scinet fetch` pulls that here and checks it; `segtrain verify` re-checks it any
+# time afterwards. The manifest is the only thing that can tell "rsync exited 0"
+# apart from "the training data is correct", and they are not the same claim.
+#
+# Run fetch on a login or datamover node (tri-dm1), never in a job: compute nodes
+# have no outbound network, so a queued transfer waits for its allocation and then
+# fails at the first connection.
+transfer:
+  # An rsync source, spelled the way rsync spells it. The trailing slash is added
+  # for you.
+  remote: ""                      # e.g. segqueue@girder.example.org:/srv/segqueue/export
+
+  # Use this instead when the export directory is already visible here -- a shared
+  # filesystem is cheaper and more reliable than a copy. Setting both is an error
+  # rather than a silent preference.
+  local_path: ""
+
+  # Passed to `ssh` by rsync. A key and a known_hosts file belong here rather than
+  # in an agent, because this runs unattended on a datamover node.
+  ssh_options: []                 # e.g. ["-i", "~/.ssh/id_ed25519"]
+
+  # rsync --bwlimit. Worth setting if the Girder host also serves annotators:
+  # saturating its uplink with a 65 GB transfer takes the queue down with it.
+  bandwidth_limit: ""             # e.g. 50m
+
+  # Transport attempts before giving up. Each retry recomputes what is still
+  # missing, so a retry is strictly less work than the attempt before it.
+  attempts: 3
+
+  # full  - compare sizes and SHA-256. Reads every byte; the only mode that proves
+  #         the data is right rather than merely the right length (default)
+  # quick - compare sizes only. Catches a truncated transfer, which is what an
+  #         interruption produces, and misses a corrupted byte.
+  verify: full
+
 # nnU-Net's three roots. These are the ones that get large -- see README for
 # sizing. Put them on the training machine's fastest large disk.
 nnunet_raw: /data/nnUNet_raw                   # env: nnUNet_raw

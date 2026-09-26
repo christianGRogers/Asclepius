@@ -39,18 +39,24 @@ being labelled, so the model reads the data at acquired resolution end to end:
   cohort, keeps the acquired grid.
 - **No `3d_cascade_fullres`.** Its low-resolution first stage resamples distal
   branches below their own diameter.
-- **No heart crop.** The H100 sets the patch size, not the crop: a ~70 GB
-  budget buys a ~256³ patch, ~27–30 % of a whole volume above the 12.5 %
-  threshold at which nnU-Net would plan a cascade, and large enough to hold the
-  coronary tree with the aortic root and both ostia in one view. Whole volumes
-  also teach the model to reject coronary look-alikes (pulmonary vessels, bone
-  edges), and there is no cropper to silently clip a low-running RCA.
+- **No heart crop.** The H100 sets the patch size, not the crop: the budget buys a
+  ~256³ patch, ~23–31 % of a whole volume against the **25 %** threshold at which
+  nnU-Net would plan a cascade, and large enough to hold the coronary tree with
+  the aortic root and both ostia in one view. There is no cropper to silently
+  clip a low-running RCA.
 
-Sequence: a **binary lumen model first**, trained on the 1000 ImageCAS masks
-that already exist — it proves the Trillium chain, calibrates against the
-published 82.96 % Dice benchmark, and seeds the annotators' presegmentations.
-The **multiclass model** trains on the same configuration once per-branch
-labels flow. One paired **ResEnc** run afterwards decides the encoder.
+Sequence: a **binary lumen model first**, in two separate tasks, because proving
+the chain and producing annotator seeds are not the same job —
+`710_CoronaryLumen` on the original 1000 masks and ImageCAS's official split is
+the chain test and the only place the published 82.96 % means anything;
+`711_CoronaryLumenX` on the ImageCAS-X re-annotated lumen is the model we keep,
+because its predictions become the seeds and the original masks disagree with
+re-annotation at 41.8 % Dice. The **multiclass model** trains on the same
+configuration. One paired **ResEnc** run afterwards decides the encoder.
+
+Per-branch labels for 800 of the 1000 cases already exist, under CC BY 4.0, so
+what the annotation programme is *for* is an open question — see
+[the review summary](vault/Review/Review%20summary.md).
 
 Ruled out, deliberately: tree/graph-structured models as the primary segmenter
 (unrecoverable when the pre-segmentation misses a vessel), nnU-Net's

@@ -17,7 +17,7 @@ Active learning (selecting the most informative unlabeled cases to annotate next
 
 ## Direct evidence from 3D medical segmentation
 
-**Schlemper J, et al. *Less Is More: A Comparison of Active Learning Strategies for 3D Medical Image Segmentation.* arXiv:2207.00845, 2022.** Read the HTML version via arXiv.
+**Burmeister et al. *Less Is More: A Comparison of Active Learning Strategies for 3D Medical Image Segmentation.* arXiv:2207.00845, 2022.** (Previously miscited here as "Schlemper J, et al.") Read the HTML version via arXiv.
 
 Design: Compared six query strategies (two uncertainty-based, three representativeness-based, one baseline) on three 3D segmentation tasks (cardiac, hippocampus, prostate).
 

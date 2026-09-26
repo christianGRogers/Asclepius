@@ -23,8 +23,13 @@ Evidence cited as *ImageCAS* and *nnU-Net* refers to the two papers condensed in
   walltime, job-chain resume. Everything below assumes that card.
 - Data is the **1000 ImageCAS CCTA volumes** (512 × 512 × 206–275, ~0.29–0.45 mm,
   near-isotropic), held on the project's Girder server, already ingested into
-  SegQueue. ImageCAS ships one merged binary lumen mask per case; per-branch
-  labels are produced by our annotators and do not exist yet.
+  SegQueue. ImageCAS ships one merged binary lumen mask per case. **Per-branch
+  labels exist for 800 of the 1000 cases**: ImageCAS-X (Bransby et al.,
+  arXiv:2608.30404; Zenodo 10.5281/zenodo.21887809) re-annotated them into a
+  14-class schema under CC BY 4.0, with centerlines, meshes and scan-level
+  descriptors. What our annotators produce, and whether they produce it at all,
+  is now an open question rather than a premise — see
+  [[Proposed changes to the training plan]] §0 and [[Review summary]].
 
 ## Decided
 
@@ -48,11 +53,21 @@ detail back up.
 ### 2. No heart crop. The patch budget does the work instead
 
 Plan with `segtrain plan --task 710 --gpu-mem 70`. The default 8 GB budget sizes
-patches around 128³ (~2 M voxels); ~70 GB buys roughly 256³–288×288×224
-(~17–20 M voxels) at batch 2, which is **~27–30 % of a full volume — clear of
-nnU-Net's 12.5 % cascade trigger with no cropping at all**. A ~90 mm patch
-landing near the mediastinum contains most of the coronary tree plus the
-aortic root and both ostia — the context that separates LAD from LCx.
+patches around 128³ (~2 M voxels); a large budget buys **256³ (16.8 M voxels), and
+that is the ceiling** — the planner rescales its initial guess to the volume of a
+256³ patch and from there only ever shrinks. So the patch is **~23–31 % of a full
+volume, against nnU-Net's real 25 % cascade trigger, with no cropping at all**,
+and the fraction does not improve with a larger budget. A ~90 mm patch landing
+near the mediastinum contains most of the coronary tree plus the aortic root and
+both ostia — the context that separates LAD from LCx.
+
+Two things this section used to get wrong, both verified in the planner's own
+source. The trigger is 25 %, not 12.5 %, so the margin is a few points rather
+than more than double. And `--gpu-mem 70` does not buy "17–20 M voxels at batch
+2": above ~52 GB the surplus goes to **batch size**, so 70 GB returns batch 3 at
+the same patch — which fails gate (c) below and which the planner's own memory
+model puts at 77.3 GB on an 80 GB card. Whether to move the budget to ~56 GB is a
+decision, not a correction, and it is open. See [[Architecture and compute]].
 
 The crop never made the patch bigger; VRAM does that. What the crop bought
 (patch-fraction, sampling efficiency) the big patch and the sampler now buy,
@@ -71,10 +86,21 @@ A heart-cropped variant is a **paired experiment for later**, decided by
 measurement, not a prerequisite.
 
 **Gates before any GPU submission** — from the planner printout, which needs no
-GPU: (a) patch fraction ≥ 12.5 % so no cascade is planned; (b) target spacing
-came out native, not dragged coarse by thick-slice outliers; (c) batch size 2.
-The ~256³ figure above is scaling arithmetic; the planner's number is the real
-one.
+GPU: (a) patch fraction ≥ **25 %** so no cascade is planned
+(`lowres_creation_threshold` is 0.25, verified in nnU-Net source at `v2.5.1`,
+`v2.6.2` and `master` — the 12.5 % this gate used to name was wrong);
+(b) target spacing came out native, not dragged coarse by thick-slice outliers;
+(c) batch size 2. The ~256³ figure above is scaling arithmetic; the planner's
+number is the real one.
+
+Two things about gate (a) are now known and change how it should be read. The
+planner **caps the patch at the volume of a 256³ patch and only ever shrinks
+it**, spending surplus VRAM on batch size instead, so patch fraction is pinned
+near 16.8 M voxels ÷ median volume — roughly 23–31 %, and not something a larger
+`--gpu-mem` can raise. And ImageCAS's z-extent of 206–275 straddles the
+threshold: z = 256 lands on 25.0 % exactly, z = 275 on 23.3 %. So (a) has no
+remedy behind it and should be recorded rather than gated on, with a sub-25 %
+outcome accepted in advance. See [[Architecture and compute]].
 
 ### 3. Sequence: binary first, multiclass second, ResEnc third
 
@@ -93,7 +119,16 @@ one.
 
 On the published benchmark: ImageCAS's 82.96 % was trained ~21 k iterations on
 one RTX 3090; nnU-Net's schedule is ~250 k. Beating it is a sanity check, not
-the contribution. The contribution is the per-branch labelling.
+the contribution — and it is a weaker sanity check than it looks, because 82.96 %
+was scored against labels a later re-annotation disagrees with at 41.8 % Dice.
+
+**What the contribution is, is open.** This plan used to say it was the
+per-branch labelling; ImageCAS-X's release makes that false as written, and
+nothing has replaced it yet. The candidates, and the case for each, are in
+[[Review summary]] and [[Red team of the whole plan]]; the one the reviewers
+prefer is the first automated per-branch benchmark on these labels, which nobody
+has built. **This is the decision that blocks the most and it has not been
+made.**
 
 ### 4. What is explicitly ruled out
 
@@ -137,9 +172,27 @@ and both papers acknowledge it. Report alongside it, per class: **clDice /
 centerline overlap**, **branch detection rate** (was the vessel found at all),
 **NSD**, connected-component count against expected, and an AHA-segment
 confusion matrix. Distances as **AHD**, not HD, which single outliers dominate.
-Calibration: published binary lumen Dice is 0.82–0.85 and inter-observer
-agreement ≈ 0.856 — the ceiling, not a target. Per-branch inter-rater agreement
-from the annotation overlap set becomes the multiclass ceiling once measured.
+Calibration, corrected. The 0.856 this section used to cite as "the ceiling" is
+ASOCA's agreement on the **binary lumen** — one class, foreground against
+background — and using it as a per-branch ceiling compares two different tasks.
+Annotators who agree a voxel is vessel can still disagree about which vessel owns
+it.
+
+Use ImageCAS-X's figures on this cohort instead, and note that the ceiling is a
+curve by vessel rather than a number: merged lumen 92.8 ± 3.1, RCA 95.3 ± 5.0,
+LAD 92.3 ± 6.7, LM 91.9 ± 13.7, LCx 84.8 ± 19.8, down to OM1 74.1 ± 32.3 and
+L-PLA 70.9 ± 27.2. Those standard deviations are not noise around a mean — at
+SD 32 on a bounded metric the distribution is bimodal, and the honest reading is
+that in a substantial minority of cases two trained analysts do not agree the
+vessel is there at all.
+
+Two consequences worth stating here, because they are easy to get wrong. The
+92.8 is itself a **merged-lumen** number, so it is the binary calibration target
+and not the multiclass ceiling; a macro mean over the 14 per-segment figures is
+**82.4**, which is what a 14-class macro Dice can actually be compared against.
+And every published calibration number for this cohort — 82.96, 89.8, 92.8 — is
+merged lumen. Per-branch inter-rater agreement from our own overlap set becomes
+the multiclass ceiling once measured. See [[Metrics and evaluation]].
 
 ## Still open
 

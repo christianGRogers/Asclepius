@@ -168,9 +168,12 @@ empirical choices made from cross-validation.
 - **Batch size**: 2 whenever the patch was reduced; otherwise grown to fill the
   GPU, capped so a minibatch is ≤ 5 % of the total training voxels.
 - **Cascade trigger**: the 3D cascade is configured **only when the `3d_fullres`
-  patch covers less than 12.5 % of the median image shape**; the low-resolution
-  spacing is then increased in 1 % steps until the patch covers 25 %. This is the
-  threshold the plan's §2 gate is written against.
+  patch covers less than 25 % of the median image shape**
+  (`lowres_creation_threshold = 0.25`, verified in source at `v2.5.1`, `v2.6.2`
+  and `master`); the low-resolution spacing is then increased in 1 % steps until
+  the patch clears it. **This note previously said 12.5 % and said the plan's §2
+  gate was correctly written against it. Both were wrong**, and the plan inherited
+  the error from here — see [[Architecture and compute]].
 
 ### Empirical
 
@@ -220,9 +223,10 @@ labelled as such throughout this vault.
    Replace it with the ImageCAS-X inter-observer figure (92.8 ± 3.1 % DSC on
    their test set, their labels) or drop it — see
    [[State of the art on ImageCAS]].
-3. §2's 12.5 % gate is exactly nnU-Net's cascade trigger, correctly stated, and
-   the planner needs no GPU to report it — so the gate is checkable before any
-   submission.
+3. §2's gate is checkable before any submission, because the planner needs no GPU
+   to report it — but the threshold it named was **wrong**. nnU-Net's trigger is
+   25 %, not 12.5 %, so the plan's claimed margin of "more than double" was
+   really two to five points. Corrected above and in [[Training plan]].
 4. Add **mirroring test-time augmentation** to the list of things to disable for
    the multiclass model. The plan disables mirroring augmentation but not the
    TTA, and nnU-Net applies both by default.

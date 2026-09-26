@@ -111,7 +111,7 @@ Coronary ostia should be near the root of the aorta (anatomically, within ~10 mm
 
 ## What this implies for [[Training plan]]
 
-- **Implement topological validation immediately.** This is a one-time coding effort, catches obvious errors, and has almost no false positives. Add it to `src/segqueue/scoring.py` as a pass/fail step before Dice calculation.
+- **Implement topological validation immediately.** This is a one-time coding effort, catches obvious errors, and has almost no false positives. Add it to `server/girder_segqueue/scoring.py` (**there is no `src/segqueue/scoring.py`**) as a pass/fail step before Dice calculation.
 - **Add missed-structure flagging as a standing experiment.** Store per-annotator rates of "voxels the model found that the human omitted," and track over time (see [[Detecting a drifting or bad annotator]] for per-annotator trend detection). This is the Karimi mechanism: smaller branches are more likely to be missed, so flag an annotator with high miss rates on small/distal branches.
 - **Build a tunable plausibility rule set**, not a hard constraint.** Do not reject a case; flag it for review. SegQueue's QA can then decide if the flag is a true error or an acceptable variant annotation. This trades automation for accuracy.
 - **Validate thresholds on ImageCAS-X first** (if imported). Apply each proposed rule to 100 random ImageCAS-X cases and check: how many get flagged? Are the flagged cases actually annotated incorrectly, or false positives? This calibration is essential before using rules on live annotations.

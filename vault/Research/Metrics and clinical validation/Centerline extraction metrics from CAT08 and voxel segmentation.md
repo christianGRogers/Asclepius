@@ -53,7 +53,9 @@ CAT08's test set was small: **8 training CCTA scans with 32 reference centerline
 
 ## The modern analogue for voxel segmentation: clDice
 
-**Centerline Dice (clDice)** (Moccia et al. 2018, "Towards Automatic Coronary Calcium Scoring in a Screening Study with Low-Dose Chest CT," IEEE TMI; further developed in 2020s vessel-segmentation literature) directly measures centerline overlap **on voxel predictions**:
+**Centerline Dice (clDice)** (Shit, Paetzold, Sekuboyina et al., *clDice — a Novel Topology-Preserving Loss Function for Tubular Structure Segmentation*, CVPR 2021, arXiv:2003.07311) directly measures centerline overlap **on voxel predictions**:
+
+> **Corrected 2026-09-26.** This line previously attributed clDice to *"Moccia et al. 2018, Towards Automatic Coronary Calcium Scoring in a Screening Study with Low-Dose Chest CT, IEEE TMI"*. That citation does not exist. It is a composite of three real and unrelated works: Moccia et al. 2018 is a vessel-segmentation *review* in Comput Methods Programs Biomed; the title and journal belong to Lessmann et al. on coronary calcium scoring; clDice is Shit et al., CVPR 2021. It is the only invented citation found in the vault, and no decision rested on it — clDice is cited correctly in [[Loss function evidence]] and [[Topology-aware losses on thin tubular structures]].
 
 1. Extract the centerline from both reference and prediction voxel masks via skeletonization (Euler characteristic = number of connected components = number of "skeleton trees")
 2. Compute Dice on the centerline skeletons: clDice = 2 × (overlap of skeletons) / (reference skeleton + prediction skeleton voxels)

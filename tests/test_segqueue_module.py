@@ -123,11 +123,22 @@ def test_every_widget_signal_is_connected_to_something_that_exists():
 
 
 def test_the_keyboard_shortcuts_are_wired_to_methods_that_exist():
-    """Same again for the key bindings, which bypass the buttons entirely."""
+    """Same again for the key bindings, which bypass the buttons entirely.
+
+    The panel installed its own ``QShortcut`` set while it had vessel and tool
+    buttons to drive. It has neither now -- segment selection and effects both
+    happen in the Segment Editor, which brings its own shortcuts -- so there is
+    nothing here to check *unless* the panel starts binding keys again. Written as
+    a conditional check rather than deleted: the day somebody adds
+    ``_installShortcuts`` back, this is the test that keeps its bindings honest.
+    """
     widget = next(c for c in _classes() if c.name == "SegQueueWidget")
     defined, _ = _self_attributes(widget)
-    install = next(n for n in ast.walk(widget)
-                   if isinstance(n, ast.FunctionDef) and n.name == "_installShortcuts")
+    install = next((n for n in ast.walk(widget)
+                    if isinstance(n, ast.FunctionDef)
+                    and n.name == "_installShortcuts"), None)
+    if install is None:
+        pytest.skip("the panel installs no shortcuts of its own")
 
     bound = []
     for node in ast.walk(install):

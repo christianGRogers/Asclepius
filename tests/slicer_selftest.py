@@ -9,17 +9,21 @@ command-line flags through to the script, so an environment variable is the only
 thing that reliably arrives.
 
 **Why this exists.** ``SegQueue.py`` imports Qt, VTK and Slicer, so the pytest
-suite cannot touch it, and the module's two hardest dependencies on Slicer are
-both of a kind that fails *silently*:
+suite cannot touch it, and what the module asks of Slicer is mostly of a kind
+that fails *silently*:
 
-* **Effect parameters are strings converted to enums by name.** Nothing
-  validates them. ``Scissors`` shipped in 0.7.0 with ``Shape="FREE_FORM"``
-  instead of ``"FreeForm"``; the effect mapped that to -1, built no drawing
-  pipeline, and the trim tool activated but would not draw. No error anywhere.
-* **Segment arithmetic goes through the Logical operators effect.** A wrong
-  operation name or a stale modifier id does not raise -- it quietly produces
-  the wrong voxels, which is a mislabelled artery nobody notices until the
-  submission is scored.
+* **One mask written into four segments.** Every branch starts as a copy of the
+  coronary mask, which means four segments covering the same voxels. A
+  segmentation stores that by splitting them across labelmap *layers*, and a
+  write that landed in the shared layer instead would erase the segments beside
+  it -- leaving three empty branches and no error anywhere.
+* **The export flattens those layers into one label per voxel.** So the overlap
+  the new start creates has to be measured before the export, and the two numbers
+  have to be counted on the same grid, or the check either misses a mislabelled
+  artery or invents one.
+* **The 3D camera keeps the last case's framing.** Nothing raises; the surface is
+  simply off screen. The calls that reframe it are guarded against
+  ``AttributeError``, which makes a rename in Slicer silent too.
 
 So the checks here are the ones whose failure mode is silence. Anything that
 raises an exception on its own is already covered by the annotator noticing.
@@ -27,6 +31,7 @@ raises an exception on its own is already covered by the annotator noticing.
 
 import os
 import sys
+import tempfile
 import traceback
 
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -121,76 +126,166 @@ def main():
     editor.setSourceVolumeNode(volume)
 
     # ------------------------------------------------------------- the tools
-    report.say("\n2. effects the module drives")
+    #
+    # Trimming is done with Scissors from the Segment Editor itself now, so what
+    # matters is that the effect the workflow depends on is in the build at all.
+    # The panel no longer configures it -- the annotator picks it up in the editor,
+    # which is also where its own defaults come from.
+    report.say('\n2. the effects the workflow needs')
     available = list(editor.availableEffectNames())
-    report.check("Scissors present", mod.SCISSORS_EFFECT in available)
+    report.check("Scissors present", "Scissors" in available,
+                 "" if "Scissors" in available else "core Slicer effect is missing")
     report.check("Logical operators present", "Logical operators" in available)
-    report.check("{} present".format(mod.TUBE_EFFECT), mod.TUBE_EFFECT in available,
-                 "" if mod.TUBE_EFFECT in available
-                 else "install " + mod.TUBE_EXTENSION)
 
-    # --------------------------------------------------- the scissors spelling
+    # -------------------------------------------- the calls that centre 3D
     #
-    # Against the defaults Slicer itself writes, not against a second copy of
-    # the same guess: activating Scissors on a virgin editor node makes the
-    # effect store its own defaults, which are erase-inside and free-form -- the
-    # exact configuration the trim tool wants. If Slicer ever renames these, the
-    # module's constants stop matching and this fails instead of the tool
-    # quietly refusing to draw.
-    report.say("\n3. the trim tool's parameters are spelled the way Slicer spells them")
-    virgin = slicer.mrmlScene.AddNewNodeByClass("vtkMRMLSegmentEditorNode")
-    probe = slicer.qMRMLSegmentEditorWidget()
-    probe.setMRMLScene(slicer.mrmlScene)
-    probe.setMRMLSegmentEditorNode(virgin)
-    probe.setSegmentationNode(segmentation)
-    probe.setSourceVolumeNode(volume)
-    probe.setActiveEffectByName(mod.SCISSORS_EFFECT)
+    # ``centre3d`` swallows AttributeError, because a Slicer that spells these
+    # differently must not cost an annotator a case over a camera. That makes a
+    # rename silent in exactly the way this file exists to catch: the 3D view
+    # stays pointed wherever the previous case left it, the mask renders off
+    # screen, and the module looks like it never built one. Checked on a view
+    # constructed here rather than on the layout manager's, because this runs
+    # under --no-main-window and there is no layout to ask.
+    report.say('\n3. the 3D view exposes the calls that frame it')
+    try:
+        view = slicer.qMRMLThreeDView()
+    except Exception:
+        report.say(traceback.format_exc())
+        report.check("a 3D view can be constructed", False)
+    else:
+        for call in ("forceRender", "resetFocalPoint", "resetCamera"):
+            report.check("qMRMLThreeDView.{}() exists".format(call),
+                         callable(getattr(view, call, None)))
 
-    defaultOperation = virgin.GetAttribute("Scissors.Operation")
-    defaultShape = virgin.GetAttribute("Scissors.Shape")
-    report.check("Operation matches Slicer's default",
-                 mod.SCISSORS_OPERATION == defaultOperation,
-                 "module {!r} vs Slicer {!r}".format(
-                     mod.SCISSORS_OPERATION, defaultOperation))
-    report.check("Shape matches Slicer's default",
-                 mod.SCISSORS_SHAPE == defaultShape,
-                 "module {!r} vs Slicer {!r}".format(
-                     mod.SCISSORS_SHAPE, defaultShape))
-
-    # ------------------------------------------------- the fill arithmetic
-    #
-    # The whole trimming workflow rests on this: a vessel is the mask minus
-    # every other vessel. Done here with the same effect and the same operation
-    # names the panel uses, on segments whose voxels are known exactly.
-    report.say("\n4. filling a vessel from the unclaimed remainder")
-    seg = segmentation.GetSegmentation()
-    maskId = seg.AddEmptySegment("mask", "mask", [1.0, 1.0, 0.0])
-    takenId = seg.AddEmptySegment("taken", "taken", [1.0, 0.0, 0.0])
-    targetId = seg.AddEmptySegment("target", "target", [0.0, 1.0, 0.0])
-
-    _paint(slicer, segmentation, volume, maskId, zrange=(2, 18))
-    _paint(slicer, segmentation, volume, takenId, zrange=(2, 10))
-
-    maskCount = _count(slicer, segmentation, maskId, volume)
-    takenCount = _count(slicer, segmentation, takenId, volume)
-    report.check("test masks are non-empty and nested",
-                 maskCount > takenCount > 0,
-                 "mask {} taken {}".format(maskCount, takenCount))
-
-    _logical(editor, editorNode, "COPY", maskId, targetId)
-    afterCopy = _count(slicer, segmentation, targetId, volume)
-    report.check("COPY puts the whole mask in the target",
-                 afterCopy == maskCount, "{} vs {}".format(afterCopy, maskCount))
-
-    _logical(editor, editorNode, "SUBTRACT", takenId, targetId)
-    afterSubtract = _count(slicer, segmentation, targetId, volume)
-    report.check("SUBTRACT leaves exactly the remainder",
-                 afterSubtract == maskCount - takenCount,
-                 "{} vs {}".format(afterSubtract, maskCount - takenCount))
-    report.check("the remainder is disjoint from what was already taken",
-                 _overlap(slicer, segmentation, targetId, takenId, volume) == 0)
+    # ------------------------------------------- starting the branches from the mask
+    report.say('\n4. starting the branches from the mask, and the overlap it makes possible')
+    try:
+        _branch_flow(report, mod, slicer, volume)
+    except Exception:
+        report.say(traceback.format_exc())
+        report.check("the branch flow runs", False)
 
     return _finish(report)
+
+
+def _branch_flow(report, mod, slicer, volume):
+    """Open a seeded case, check what the annotator lands in, then trim it.
+
+    Driven through the logic's own methods on a hand-built scene, because
+    ``openCase`` wants a server and a 400 MB download and none of what is being
+    checked here is about either. What *is* being checked can only be checked in
+    Slicer: whether writing one mask into four segments leaves four segments each
+    holding that mask, which is a question about how a segmentation stores
+    overlapping labelmaps in layers, and whether the export then flattens them in
+    the way the overlap check assumes.
+    """
+    from segqueue import protocol
+
+    segmentation = slicer.mrmlScene.AddNewNodeByClass("vtkMRMLSegmentationNode", "branch")
+    segmentation.CreateDefaultDisplayNodes()
+    segmentation.SetReferenceImageGeometryParameterFromVolumeNode(volume)
+
+    logic = mod.SegQueueLogic(cacheRoot=tempfile.mkdtemp(prefix="segqueue-selftest-"))
+    logic.volumeNode = volume
+    logic.segmentationNode = segmentation
+    logic.resumedDraft = False
+    logic.project = protocol.ProjectConfig(segments=[
+        protocol.SegmentSpec(name="lad", label=1, color=(1.0, 0.0, 0.0)),
+        protocol.SegmentSpec(name="lcx", label=2, color=(0.0, 1.0, 0.0)),
+        protocol.SegmentSpec(name="rca", label=3, color=(0.0, 0.0, 1.0)),
+    ])
+    names = [spec.name for spec in logic.project.segments]
+
+    # The project's segments first, then the helper -- the order
+    # ``_loadOrCreateSegmentation`` uses, and not an arbitrary one. ``_applyTemplate``
+    # pins each segment's label value to the protocol's, and segments in one
+    # segmentation can share a labelmap layer, so a helper painted *before* the
+    # template holds label 1 and the first branch's ``SetLabelValue(1)`` then aims
+    # at the same voxels: the branch reads back as the whole mask before anything
+    # has copied it there. Written down because this test made exactly that
+    # mistake and reported failures the module was not responsible for.
+    logic._applyTemplate()
+    ids = {name: logic.segmentIdFor(name) for name in names}
+    report.check("the template created the project's segments",
+                 all(ids.values()), repr(ids))
+
+    seg = segmentation.GetSegmentation()
+    seedId = seg.AddEmptySegment(protocol.SEED_SEGMENT_NAME,
+                                 protocol.SEED_SEGMENT_NAME, [0.95, 0.95, 0.35])
+    logic.seedSegmentId = seedId
+    _paint(slicer, segmentation, volume, seedId, zrange=(2, 18))
+    maskCount = _count(slicer, segmentation, seedId, volume)
+    report.check("the mask is non-empty and the branches are not it",
+                 maskCount > 0
+                 and all(_count(slicer, segmentation, ids[n], volume) == 0
+                         for n in names),
+                 "mask {}".format(maskCount))
+
+    # -- what the annotator lands in
+    started = logic._startBranchesFromSeed()
+    report.check("every branch was started", started == len(names),
+                 "{} of {}".format(started, len(names)))
+
+    drawn = logic.drawnCounts()
+    report.check("every branch now holds the whole mask",
+                 all(drawn.get(n) == maskCount for n in names),
+                 " ".join("{} {}".format(n, drawn.get(n)) for n in names))
+    report.check("and the mask itself is untouched",
+                 _count(slicer, segmentation, seedId, volume) == maskCount)
+
+    display = segmentation.GetDisplayNode()
+    report.check("every branch is hidden",
+                 all(not display.GetSegmentVisibility(ids[n]) for n in names))
+    report.check("and the mask is not",
+                 bool(display.GetSegmentVisibility(seedId)))
+
+    # -- the overlap the new start makes possible, measured the way submit does
+    exported, drawnBefore = _export_counts(report, mod, slicer, logic, names)
+    lost = {n: drawnBefore.get(n, 0) - exported.get(n, 0) for n in names}
+    report.check("three identical branches lose voxels on export",
+                 any(v > 0 for v in lost.values()),
+                 " ".join("{} -{}".format(n, lost[n]) for n in names))
+    report.check("and one of them survives whole, because a voxel gets one label",
+                 sum(exported.values()) == maskCount,
+                 "{} vs {}".format(sum(exported.values()), maskCount))
+
+    # -- trimmed apart, the two measures agree again
+    _paint(slicer, segmentation, volume, ids["lad"], zrange=(2, 8))
+    _paint(slicer, segmentation, volume, ids["lcx"], zrange=(8, 13))
+    _paint(slicer, segmentation, volume, ids["rca"], zrange=(13, 18))
+
+    exported, drawnAfter = _export_counts(report, mod, slicer, logic, names)
+    report.check("trimmed apart, nothing is lost on export",
+                 all(drawnAfter.get(n) == exported.get(n) for n in names),
+                 " ".join("{} {}/{}".format(n, drawnAfter.get(n), exported.get(n))
+                          for n in names))
+    report.check("and the three branches add back up to the mask",
+                 sum(exported.values()) == maskCount,
+                 "{} vs {}".format(sum(exported.values()), maskCount))
+    report.check("no two branches share a voxel",
+                 _overlap(slicer, segmentation, ids["lad"], ids["lcx"], volume) == 0
+                 and _overlap(slicer, segmentation, ids["lcx"], ids["rca"], volume) == 0
+                 and _overlap(slicer, segmentation, ids["lad"], ids["rca"], volume) == 0)
+
+    # -- a reopened draft keeps the annotator's trimming
+    logic.resumedDraft = True
+    report.check("a resumed draft is not restarted from the mask",
+                 logic._startBranchesFromSeed() == 0)
+    report.check("and still holds what was trimmed",
+                 logic.drawnCounts() == drawnAfter)
+
+
+def _export_counts(report, mod, slicer, logic, names):
+    """``(exported, drawn)`` counts, measured the way pressing Check measures them."""
+    directory = tempfile.mkdtemp(prefix="segqueue-export-")
+    path = os.path.join(directory, "check.seg.nrrd")
+    drawn = logic.drawnCounts()
+    counts, _source, _seg = logic.exportLabelmap(path)
+    try:
+        os.unlink(path)
+    except OSError:
+        pass
+    return counts, drawn
 
 
 def _paint(slicer, segmentationNode, volumeNode, segmentId, zrange):
@@ -213,18 +308,6 @@ def _overlap(slicer, segmentationNode, a, b, volumeNode):
     first = slicer.util.arrayFromSegmentBinaryLabelmap(segmentationNode, a, volumeNode)
     second = slicer.util.arrayFromSegmentBinaryLabelmap(segmentationNode, b, volumeNode)
     return int(((first > 0) & (second > 0)).sum())
-
-
-def _logical(editor, editorNode, operation, modifierId, targetId):
-    """The panel's ``_logicalOp``, in the smallest form that still tests it."""
-    editorNode.SetSelectedSegmentID(targetId)
-    editor.setActiveEffectByName("Logical operators")
-    effect = editor.activeEffect()
-    effect.setParameter("Operation", operation)
-    if modifierId:
-        effect.setParameter("ModifierSegmentID", modifierId)
-    effect.setParameter("BypassMasking", "1")
-    effect.self().onApply()
 
 
 def _finish(report):

@@ -114,6 +114,58 @@ def test_an_implausibly_fast_case_warns_but_does_not_block():
     assert not blocking(problems)
 
 
+def test_a_branch_overwritten_on_export_blocks_submission():
+    """Two segments claiming one voxel: the export keeps one, so say so.
+
+    Every branch now starts as the whole coronary mask, so overlap is the state a
+    case *opens* in rather than an unlikely accident. A label volume holds one
+    label per voxel, which means an untrimmed pair submits silently wrong.
+    """
+    drawn = dict(GOOD_COUNTS, left_circumflex=5000)
+    problems = check_submission(GOOD_COUNTS, CORONARY, GRID, GRID,
+                                annotation_seconds=1800, drawn_counts=drawn)
+    assert codes(problems) == {"overlapping_segments"}
+    assert blocking(problems)
+    assert "1900 of its 5000" in problems[0].message
+    assert "left_circumflex" in problems[0].message
+
+
+def test_every_overwritten_branch_is_named_not_just_the_first():
+    drawn = dict(GOOD_COUNTS, left_main=900, left_circumflex=5000)
+    problems = check_submission(GOOD_COUNTS, CORONARY, GRID, GRID,
+                                annotation_seconds=1800, drawn_counts=drawn)
+    named = {name for name in GOOD_COUNTS
+             for p in problems if name in p.message}
+    assert named == {"left_main", "left_circumflex"}
+
+
+def test_counts_that_agree_with_what_was_drawn_pass_clean():
+    problems = check_submission(GOOD_COUNTS, CORONARY, GRID, GRID,
+                                annotation_seconds=1800,
+                                drawn_counts=dict(GOOD_COUNTS))
+    assert problems == []
+
+
+def test_an_export_larger_than_what_was_drawn_is_not_an_overlap():
+    """Only a *loss* means a voxel went to another segment.
+
+    Guarded because the obvious implementation compares the two numbers for
+    inequality, and a segment read back on a coarser grid can round upward -- a
+    false accusation of overlap would send the annotator hunting for something
+    that is not there.
+    """
+    drawn = dict(GOOD_COUNTS, left_main=799)
+    problems = check_submission(GOOD_COUNTS, CORONARY, GRID, GRID,
+                                annotation_seconds=1800, drawn_counts=drawn)
+    assert problems == []
+
+
+def test_no_drawn_counts_means_no_overlap_check():
+    """An older client, or the server re-checking a stored submission."""
+    assert check_submission(GOOD_COUNTS, CORONARY, GRID, GRID,
+                            annotation_seconds=1800) == []
+
+
 def test_errors_sort_ahead_of_warnings():
     counts = dict(GOOD_COUNTS, left_main=0, right_coronary_artery=0)
     problems = check_submission(counts, CORONARY, GRID, GRID, annotation_seconds=5)

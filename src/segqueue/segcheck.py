@@ -93,12 +93,16 @@ def check_submission(
     segmentation_geometry: Optional[Geometry] = None,
     annotation_seconds: Optional[float] = None,
     min_plausible_seconds: float = 60.0,
+    drawn_counts: Optional[dict] = None,
 ) -> list:
     """Every problem with a proposed submission, worst first.
 
     ``segments`` is the project's ``SegmentSpec`` list from ``protocol.py``;
-    ``voxel_counts`` maps segment name to the number of labelled voxels. An
-    empty result means the submission is good to send.
+    ``voxel_counts`` maps segment name to the number of labelled voxels, counted
+    from the *exported* label volume. ``drawn_counts`` is the same measure taken
+    from the editor's own segments before the export: where it is larger, two
+    segments claimed the same voxel and the export kept only one of them. An empty
+    result means the submission is good to send.
     """
     problems = []
     expected = {s.name: s for s in segments}
@@ -132,6 +136,23 @@ def check_submission(
                 f"{name!r} is not part of this project's protocol. Delete it "
                 "before submitting -- renamed or extra segments break the training "
                 "conversion downstream.",
+            ))
+
+    # A label volume holds one label per voxel, so two segments covering the same
+    # voxel cannot both survive the export -- one is silently overwritten. On a
+    # workflow where every branch starts as the whole coronary mask that is not a
+    # remote possibility but the starting state, so it is checked rather than
+    # assumed away, and checked against what the annotator actually drew.
+    for spec in segments:
+        drawn = int((drawn_counts or {}).get(spec.name, 0) or 0)
+        exported = int(voxel_counts.get(spec.name, 0) or 0)
+        if drawn > exported:
+            problems.append(Problem(
+                ERROR, "overlapping_segments",
+                f"{spec.name!r} loses {drawn - exported} of its {drawn} voxels on "
+                "export, because another segment covers the same voxels. Two "
+                "structures cannot both own a voxel: trim them until they no "
+                "longer overlap.",
             ))
 
     if source_geometry is not None and segmentation_geometry is not None:

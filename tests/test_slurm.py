@@ -14,7 +14,7 @@ import pytest
 
 from segtrain import slurm
 from segtrain.backends import BackendError, get_backend
-from segtrain.config import Config, ConfigError, PreviewConfig, SciNetConfig, load_task
+from segtrain.config import Config, ConfigError, SciNetConfig, load_task
 
 
 @pytest.fixture
@@ -26,7 +26,6 @@ def cfg(tmp_path) -> Config:
         nnunet_preprocessed=tmp_path / "pre",
         nnunet_results=tmp_path / "res",
         runs_root=tmp_path / "runs",
-        preview=PreviewConfig(),
         scinet=SciNetConfig(
             account="rrg-example",
             modules=["StdEnv/2023", "python/3.11.5"],
@@ -254,12 +253,6 @@ def test_dataloader_workers_can_be_pinned(cfg, task):
     assert "export nnUNet_n_proc_DA=8" in script
 
 
-def test_preview_daemon_is_optional(cfg, task):
-    with_preview = slurm.render_train_script(cfg, task, 0, preview=True)
-    without = slurm.render_train_script(cfg, task, 0, preview=False)
-    assert "segtrain preview" in with_preview
-    assert "PREVIEW_PID" in with_preview
-    assert "segtrain preview" not in without
 
 
 def test_staging_is_off_by_default_and_guards_the_ram_disk(cfg, task):

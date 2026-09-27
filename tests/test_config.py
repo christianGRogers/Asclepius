@@ -11,7 +11,7 @@ from segtrain.config import (
 )
 
 
-@pytest.mark.parametrize("name", ["placeholder"])
+@pytest.mark.parametrize("name", ["coronary_lumen"])
 def test_label_indices_are_contiguous_from_one(name):
     labels = load_label_set(name)
     assert sorted(labels.labels.values()) == list(range(1, labels.n_classes + 1))
@@ -55,7 +55,7 @@ def test_all_tasks_load():
         load_task(name)
 
 
-@pytest.mark.parametrize("ref", [710, "710", "Coronary", "Dataset710_Coronary"])
+@pytest.mark.parametrize("ref", [710, "710", "CoronaryLumen", "Dataset710_CoronaryLumen"])
 def test_task_lookup_accepts_several_forms(ref):
     assert load_task(ref).dataset_id == 710
 
@@ -66,7 +66,7 @@ def test_dataset_ids_are_unique():
 
 
 def test_nnunet_name_is_zero_padded():
-    assert load_task(710).nnunet_name == "Dataset710_Coronary"
+    assert load_task(710).nnunet_name == "Dataset710_CoronaryLumen"
 
 
 def test_label_set_name_lookup_round_trips():
@@ -118,7 +118,7 @@ def test_source_values_reject_unknown_structures(tmp_path):
 
 def test_spacing_accepts_native(tmp_path):
     (tmp_path / "Dataset800_N.yaml").write_text(
-        "dataset_id: 800\ndataset_name: N\nlabel_set: placeholder\nspacing: native\n",
+        "dataset_id: 800\ndataset_name: N\nlabel_set: coronary_lumen\nspacing: native\n",
         encoding="utf-8")
     task = load_task(800, tasks_dir=tmp_path)
     assert task.spacing is None
@@ -127,7 +127,7 @@ def test_spacing_accepts_native(tmp_path):
 
 def test_spacing_rejects_a_malformed_value(tmp_path):
     (tmp_path / "Dataset800_N.yaml").write_text(
-        "dataset_id: 800\ndataset_name: N\nlabel_set: placeholder\nspacing: 0.4\n",
+        "dataset_id: 800\ndataset_name: N\nlabel_set: coronary_lumen\nspacing: 0.4\n",
         encoding="utf-8")
     with pytest.raises(ConfigError, match="3 numbers or 'native'"):
         load_task(800, tasks_dir=tmp_path)
@@ -135,7 +135,7 @@ def test_spacing_rejects_a_malformed_value(tmp_path):
 
 def _floor_task(tmp_path, floor=None):
     body = ("dataset_id: 800\ndataset_name: N\n"
-            "label_set: placeholder\nspacing: native\n")
+            "label_set: coronary_lumen\nspacing: native\n")
     if floor is not None:
         body += f"max_spacing_mm: {floor}\n"
     (tmp_path / "Dataset800_N.yaml").write_text(body, encoding="utf-8")

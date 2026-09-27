@@ -127,3 +127,21 @@ authors attributing it to missed septal branches and ostium-leak pruning. The
 lesson generalises: any pruning/refinement step inside a downstream graph stage is
 where a real vessel can be silently deleted, and is the step to audit hardest."
 **Evidence:** [[Downstream graph labelling of coronary branches is a second stage, never the segmenter]].
+
+## 11. Schedule deep supervision as a standing experiment with conditional activation
+
+**Where:** §5 "Standing experiments."
+**Proposed:** add "**Deep supervision (DBDS variant)**: add intermediate supervision losses at encoder and decoder branches of the network. Use a default α (intermediate-loss weight) in range 0.1–0.4, tuned by validation loss during training. Same fold/harness as multiclass baseline. Acceptance criterion: convergence speed (epoch count to early-stop) improves and final validation Dice does not drop >1 pp; if both hold, this becomes the default trainer going forward. Conditional on multiclass labeling; does not block binary model."
+**Evidence:** [[Deep supervision and patch overlap for segmenting tubular structures at native resolution]].
+
+## 12. Confirm patch-overlap percentage and tune as post-baseline lever
+
+**Where:** §2 gates / evaluation section.
+**Proposed:** "(f) Confirm from `nnUNetv2_find_best_configuration` output that sliding-window inference overlap is 50%. If the multiclass baseline shows excessive fragmentation (β₀ component count >> expected anatomy), rerun inference from the best-validation checkpoint with 90% overlap (via trainer override) and measure Dice, HD95, and component count. Accept 90% overlap only if Dice improves >1 pp and component count moves toward expected."
+**Evidence:** [[Deep supervision and patch overlap for segmenting tubular structures at native resolution]].
+
+## 13. Add per-class validation Dice monitoring for multiclass convergence decisions
+
+**Where:** Evaluation and training monitoring section.
+**Proposed:** "Log per-class validation Dice at every 500 epochs during multiclass training, up to early-stopping. If any class (especially rare branches with <50 mean voxels per case) shows continued improvement past the mean-loss early-stopping point (validation loss plateau for 60 epochs), note this disagreement. If rare-class Dice is still <50 % at the loss-based stop, consider a third 24-h job to extend training — decision deferred to inspection of the specific run."
+**Evidence:** [[Training schedule length and early stopping on a 24-hour walltime with job-chain resume]].

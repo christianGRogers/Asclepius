@@ -7,7 +7,6 @@ A phase 1 coronary run, start to finish::
     segtrain plan       --task 710 --gpu-mem 24 # fingerprint + plans + splits
     segtrain preprocess --task 710
     segtrain train      --task 710 --fold 0
-    segtrain preview    --task 710 --fold 0 --watch   # second terminal
     segtrain evaluate   --task 710
 
 The same run on a SciNet cluster, from a login node::
@@ -128,6 +127,7 @@ def cmd_convert(args) -> int:
         include_test=not args.no_test,
         dry_run=args.dry_run,
         progress=None if args.dry_run else _progress,
+        layout=args.layout,
     )
     print(report.render())
     return 0 if report.ok else 1
@@ -139,16 +139,19 @@ def cmd_convert(args) -> int:
 def cmd_index(args) -> int:
     """Scan a dataset directory and write the meta.csv the pipeline reads.
 
-    This is the entry point for your own labelled data. TotalSegmentator ships
-    its own meta.csv with a published split; anything else needs one written, and
-    once it exists every other subcommand works identically.
+    This is the entry point for a labelled dataset. Once meta.csv exists every
+    other subcommand works identically, whichever layout the data arrived in.
+
+    Two layouts are understood and auto-detected: one directory per case, and
+    the flat two-files-per-case form ImageCAS ships. Pass --layout to force
+    one if the guess is wrong.
     """
     from .index import build_rows, read_overrides, scan, summarize, write_meta
 
     cfg, _ = _load(args)
     root = Path(args.root) if args.root else cfg.zenodo_root
 
-    cases = scan(root)
+    cases = scan(root, layout=args.layout)
     if not cases:
         print(f"no cases found under {root}\n"
               "Expected one directory per case, each containing ct.nii.gz "
@@ -275,8 +278,8 @@ def _train_command(cfg: Config, task: TaskConfig, args) -> list[str]:
 
 def cmd_train(args) -> int:
     from .backends import get_backend
+    from .events import env_for_training
     from .plans import configure_nnunet_env
-    from .preview import env_for_training
 
     cfg, task = _load(args)
     configure_nnunet_env(cfg)
@@ -325,33 +328,8 @@ def cmd_train(args) -> int:
     job = backend.submit(cmd, str(run_dir), env=env, cwd=str(Path.cwd()))
     print(f"\nlaunched: {job.describe()}")
     print(f"logs:     {run_dir / 'train.log'}")
-    print(f"monitor:  segtrain status --task {task.dataset_id} --fold {args.fold}")
-    print("          or point the Slicer SegmentatorTrainMonitor module at the run dir")
+    print(f"watch:    segtrain status --task {task.dataset_id} --fold {args.fold} --watch")
     return 0
-
-
-# ------------------------------------------------------------------------ preview
-
-
-def cmd_preview(args) -> int:
-    from .preview import preview_once, watch
-
-    cfg, task = _load(args)
-    from .plans import configure_nnunet_env
-
-    configure_nnunet_env(cfg)
-
-    cases = args.cases.split(",") if args.cases else None
-    if args.watch:
-        print(f"watching {task.nnunet_name} fold {args.fold}; Ctrl-C to stop")
-        watch(cfg, task, args.fold, cases=cases, device=args.device,
-              poll_seconds=args.poll, compute_nsd=args.nsd)
-        return 0
-
-    n = preview_once(cfg, task, args.fold, cases=cases, device=args.device,
-                     checkpoint_name=args.checkpoint, compute_nsd=args.nsd)
-    print(f"rendered {n} preview(s) into {task.run_dir(cfg, args.fold) / 'previews'}")
-    return 0 if n else 1
 
 
 # ------------------------------------------------------------------------- status
@@ -396,18 +374,6 @@ def cmd_status(args) -> int:
     if ys:
         print(f"pseudo Dice  latest {ys[-1]:.4f}  best {max(ys):.4f}")
 
-    if state.previews:
-        p = state.previews[-1]
-        dice = p.get("dice") or {}
-        mean = sum(dice.values()) / len(dice) if dice else float("nan")
-        print(f"preview  epoch {p.get('epoch')} case {p.get('case')} "
-              f"mean Dice {mean:.4f} over {len(dice)} structures")
-
-    if args.worst and state.previews:
-        dice = state.previews[-1].get("dice") or {}
-        print(f"\nweakest {args.worst} structures in the latest preview:")
-        for name, value in sorted(dice.items(), key=lambda kv: kv[1])[: args.worst]:
-            print(f"  {name:<32} {value:.4f}")
 
     for m in state.messages[-5:]:
         print(f"  [{m.get('level')}] {m.get('message')}")
@@ -622,51 +588,182 @@ def cmd_scinet_setup(args) -> int:
     return 0
 
 
-def cmd_scinet_fetch(args) -> int:
-    """Download the dataset onto the cluster from a login node.
+def _transport(cfg, args):
+    """Pick the transport, or say what is missing."""
+    from .transfer import LocalTransport, RsyncTransport
 
-    Deliberately not a job: compute nodes have no outbound internet, so a
-    download submitted to the queue would wait for hours and then fail at the
-    first HTTP request.
+    remote = getattr(args, "remote", None) or cfg.transfer.remote
+    local = getattr(args, "from_path", None) or cfg.transfer.local_path
+    if remote and local:
+        raise ConfigError(
+            "a remote and a local source were both given; they are alternatives"
+        )
+    if local:
+        return LocalTransport(source=str(Path(local).expanduser()))
+    if remote:
+        return RsyncTransport(
+            remote=remote,
+            ssh_options=cfg.transfer.ssh_options,
+            bandwidth_limit=getattr(args, "bwlimit", None) or cfg.transfer.bandwidth_limit,
+        )
+    raise ConfigError(
+        "no transfer source. Set `transfer.remote` in configs/dataset.local.yaml "
+        "to the export directory on the Girder host, as rsync spells it "
+        "(transfer.remote: segqueue@girder.example.org:/srv/segqueue/export), or "
+        "pass --remote / --from once. `segqueue-export --out <dir>` on the server "
+        "is what produces that directory."
+    )
+
+
+def cmd_scinet_fetch(args) -> int:
+    """Pull the training export onto the cluster and verify it arrived intact.
+
+    Deliberately not a job: compute nodes have no outbound network, so a transfer
+    submitted to the queue waits for its allocation and then fails at the first
+    connection.
     """
-    import subprocess
+    from segqueue.manifest import FULL, QUICK
+
+    from .transfer import TransferError, advise_destination, advise_host, pull
 
     cfg, task = _load(args)
     dest = Path(args.dest) if args.dest else cfg.zenodo_root
-    script = Path(__file__).resolve().parents[2] / "scripts" / "init_dataset.py"
+    transport = _transport(cfg, args)
+    mode = QUICK if (args.quick or cfg.transfer.verify == "quick") else FULL
 
+    print(f"source   {getattr(transport, 'remote', None) or getattr(transport, 'source', '')}")
     print(f"dest     {dest}")
-    print("source   zenodo.org/records/10047292 -- TotalSegmentator v2.0.1, ~22 GB")
-    print("          expands to ~30 GB and about 145,000 files.")
+    print(f"verify   {mode}")
     print()
-    print("Two things to check before this runs:")
-    print("  * that this is a login or datamover node (tri-dm1.scinet.utoronto.ca).")
-    print("    Compute nodes have no outbound internet and cannot reach Zenodo,")
-    print("    so this can never be a batch job.")
-    print("  * that `dest` is under $SCRATCH. $HOME and $PROJECT are read-only")
-    print("    from compute nodes, so a dataset in either is unusable by a job.")
-    print()
-    print("Space, not inodes, is the constraint here: $SCRATCH allows 25 TB and")
-    print("10M files, so 145,000 is not a problem. The download resumes, so an")
-    print("interrupted transfer costs only the remainder.")
-    print()
+    for note in advise_host() + advise_destination(dest):
+        print(f"  !  {note}")
+        print()
+
     if args.dry_run:
-        print("[dry-run] not downloading")
+        print("[dry-run] fetching the manifest only, to report what would move")
+        try:
+            from segqueue.manifest import Manifest, needed
+            dest.mkdir(parents=True, exist_ok=True)
+            transport.fetch_manifest(str(dest))
+            manifest = Manifest.read(dest)
+        except (TransferError, OSError) as exc:
+            print(f"error: {exc}", file=sys.stderr)
+            return 1
+        outstanding = needed(dest, manifest)
+        totals = manifest.totals
+        print(f"manifest {totals['cases']} case(s), {totals['files']} file(s), "
+              f"{_human(totals['bytes'])}")
+        print(f"would move {len(outstanding)} file(s); "
+              f"{totals['files'] - len(outstanding)} already present")
         return 0
 
-    cmd = [sys.executable, str(script), "--dest", str(dest)]
-    if args.keep_zip:
-        cmd.append("--keep-zip")
-    print("+ " + " ".join(cmd))
-    code = subprocess.run(cmd).returncode
-    if code != 0:
-        return code
+    def progress(attempt, remaining):
+        label = "attempt" if attempt == 1 else "retry"
+        print(f"[{label} {attempt}] {remaining} file(s) outstanding")
+
+    try:
+        report = pull(transport, dest, attempts=cfg.transfer.attempts, mode=mode,
+                      progress=progress)
+    except TransferError as exc:
+        print("", file=sys.stderr)
+        print(f"error: {exc}", file=sys.stderr)
+        return 1
+
+    receipt = report.write(dest)
+    totals = report.totals
+    print()
+    print(f"manifest {totals['cases']} case(s), {totals['files']} file(s), "
+          f"{_human(totals['bytes'])}  (exported {report.manifest_created})")
+    print(f"moved    {len(report.transferred)} file(s) in {report.attempts} attempt(s), "
+          f"{report.seconds:.0f}s")
+    print(f"verify   {report.verified.summary()}")
+    print(f"receipt  {receipt}")
+
+    if not report.ok:
+        print()
+        broken = report.verified.broken_cases
+        print(f"{len(broken)} case(s) did not arrive intact and must not be trained on:",
+              file=sys.stderr)
+        for case in broken[:20]:
+            print(f"  {case}", file=sys.stderr)
+        if len(broken) > 20:
+            print(f"  ... and {len(broken) - 20} more", file=sys.stderr)
+        print("", file=sys.stderr)
+        print("Re-run this command: the work list is recomputed from what is "
+              "here, so it will fetch only these.", file=sys.stderr)
+        return 1
 
     print()
-    print("Once every task is converted the Zenodo tree is no longer needed --")
-    print(f"~30 GB and ~145,000 files back:  rm -rf {dest}")
-    print(f"next: segtrain scinet prepare --task {task.dataset_id} --convert")
+    print(f"next: segtrain index --root {dest}")
     return 0
+
+
+def cmd_verify(args) -> int:
+    """Check a local tree against the manifest that travelled with it."""
+    from segqueue.manifest import FULL, QUICK, Manifest, ManifestError, verify
+
+    cfg, _task = _load(args)
+    root = Path(args.root) if args.root else cfg.zenodo_root
+    mode = QUICK if args.quick else FULL
+
+    try:
+        manifest = Manifest.read(root)
+    except ManifestError as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 2
+
+    totals = manifest.totals
+    print(f"root     {root}")
+    print(f"manifest {totals['cases']} case(s), {totals['files']} file(s), "
+          f"{_human(totals['bytes'])}  (exported {manifest.created})")
+    if manifest.source:
+        segments = manifest.source.get("segments")
+        if segments:
+            print(f"labels   {len(segments)}: {', '.join(str(s) for s in segments)}")
+    print()
+
+    state = {"last": -1}
+
+    def progress(path, index, total):
+        if mode == FULL and total > 100:
+            percent = (index * 100) // total
+            if percent >= state["last"] + 10:
+                state["last"] = percent
+                print(f"  {percent}% ({index}/{total})", flush=True)
+
+    result = verify(root, manifest, mode=mode, progress=progress)
+    print(f"result   {result.summary()}")
+
+    for label, paths in (("missing", result.missing), ("corrupt", result.corrupt)):
+        for path in paths[:20]:
+            print(f"  {label}: {path}")
+        if len(paths) > 20:
+            print(f"  ... and {len(paths) - 20} more {label}")
+    for path, expected, found in result.truncated[:20]:
+        print(f"  truncated: {path} ({found} of {expected} bytes)")
+    if args.show_extra:
+        for path in result.extra[:20]:
+            print(f"  extra: {path}")
+
+    if not result.is_clean:
+        print()
+        broken = result.broken_cases
+        print(f"{len(broken)} of {totals['cases']} case(s) are not as promised. "
+              "`segtrain fetch` re-fetches exactly these.", file=sys.stderr)
+        return 1
+
+    print("")
+    print(f"All {totals['cases']} case(s) are byte-for-byte what was exported.")
+    return 0
+
+
+def _human(count: int) -> str:
+    size = float(count)
+    for unit in ("B", "KiB", "MiB", "GiB", "TiB"):
+        if size < 1024 or unit == "TiB":
+            return f"{size:.1f} {unit}" if unit != "B" else f"{int(size)} B"
+        size /= 1024
+    return f"{size:.1f} TiB"
 
 
 def cmd_scinet_prepare(args) -> int:
@@ -680,7 +777,8 @@ def cmd_scinet_prepare(args) -> int:
     log_dir.mkdir(parents=True, exist_ok=True)
     script_path = log_dir / "prepare.sh"
     text = render_prepare_script(cfg, task, scheme=args.scheme,
-                                 convert=args.convert, workers=args.workers)
+                                 convert=args.convert, workers=args.workers,
+                                 layout=args.layout)
     write_script(script_path, text)
 
     print(f"task     {task.nnunet_name}")
@@ -736,8 +834,7 @@ def cmd_scinet_submit(args) -> int:
     script_path = run_dir / "job.sh"
 
     text = render_train_script(cfg, task, args.fold, epochs=args.epochs,
-                               iterations=args.iterations,
-                               preview=not args.no_preview)
+                               iterations=args.iterations)
     write_script(script_path, text)
 
     block = parse_walltime(sc.walltime)
@@ -898,9 +995,10 @@ def cmd_scinet_cancel(args) -> int:
 def cmd_scinet_pull(args) -> int:
     """Copy a run directory, and optionally its checkpoints, to this machine.
 
-    For working offline or archiving a finished run. To *watch* a run, point the
-    Slicer monitor straight at ``user@host:/path`` instead -- it reads the live
-    file on the shared filesystem and needs no copy at all.
+    For working offline or archiving a finished run. To *watch* a run there is
+    no need to copy anything: ``segtrain scinet status --watch`` reads
+    events.jsonl over ssh, and the login nodes share $SCRATCH with the compute
+    nodes, so the file being read is the one the job is writing.
     """
     import subprocess
 
@@ -923,7 +1021,7 @@ def cmd_scinet_pull(args) -> int:
 
     print(f"run directory -> {dest / run_name}")
     # Exclude checkpoints from the default sweep: the run directory is a few MB
-    # of events and previews, and pulling ~1 GB of .pth every time would make the
+    # of events, and pulling ~1 GB of .pth every time would make the
     # common case unusable over a home connection.
     cmd = ["scp", *base, "-r", f"{host}:{remote_runs}/{run_name}", str(dest)]
     print("+ " + " ".join(cmd))
@@ -1007,14 +1105,16 @@ def build_parser() -> argparse.ArgumentParser:
 
     task_opt = argparse.ArgumentParser(add_help=False)
     task_opt.add_argument("--task", "-t", required=True,
-                          help="dataset id (710), name (Coronary), or Dataset710_Coronary")
+                          help="dataset id (710), name (CoronaryLumen), or "
+                               "Dataset710_CoronaryLumen")
 
     fold_opt = argparse.ArgumentParser(add_help=False)
     fold_opt.add_argument("--fold", "-f", type=int, default=0)
 
     split_opt = argparse.ArgumentParser(add_help=False)
     split_opt.add_argument("--scheme", choices=("official", "cv5"), default="official",
-                           help="'official' keeps the published 1082/57 split (default)")
+                           help="'official' keeps the split recorded in meta.csv "
+                                "(default); 'cv5' builds 5-fold CV over train+val")
     split_opt.add_argument("--folds", type=int, default=5, help="folds when scheme=cv5")
     split_opt.add_argument("--seed", type=int, default=12345)
 
@@ -1028,6 +1128,10 @@ def build_parser() -> argparse.ArgumentParser:
     s.add_argument("--limit", type=int, help="convert only the first N training cases")
     s.add_argument("--overwrite", action="store_true", help="redo cases that already exist")
     s.add_argument("--no-test", action="store_true", help="skip the held-out test cases")
+    s.add_argument("--layout", default="auto", choices=("auto", "nested", "flat"),
+                   help="source layout, as for `index`. Auto-detected, and it has "
+                        "to match what index saw or meta.csv names cases convert "
+                        "cannot find")
     s.add_argument("--dry-run", action="store_true")
     s.set_defaults(func=cmd_convert)
 
@@ -1042,10 +1146,29 @@ def build_parser() -> argparse.ArgumentParser:
                         "once you have trained anything")
     s.add_argument("--study-type", default="ccta",
                    help="recorded per case; used to stratify --scheme cv5 folds")
-    s.add_argument("--overrides", help="CSV of case_id,split to pin specific cases")
+    s.add_argument("--layout", default="auto", choices=("auto", "nested", "flat"),
+                   help="nested: one directory per case. flat: <id>.img.nii.gz "
+                        "beside <id>.label.nii.gz, as ImageCAS ships (default: auto)")
+    s.add_argument("--overrides",
+                   help="CSV of case_id,split to pin specific cases -- this is how "
+                        "an official published split is honoured instead of hashing")
     s.add_argument("--force", action="store_true", help="overwrite an existing meta.csv")
     s.add_argument("--dry-run", action="store_true")
     s.set_defaults(func=cmd_index)
+
+    s = sub.add_parser(
+        "verify", parents=[common],
+        help="check a data tree against the manifest that came with it",
+        description="Answer the question `segtrain index` cannot: not how many "
+                    "cases are here, but whether they are the ones that were sent "
+                    "and all of them. Reads manifest.json at the root of the tree.")
+    s.add_argument("--root", help="tree to check (default: zenodo_root)")
+    s.add_argument("--quick", action="store_true",
+                   help="compare sizes only. A stat per file instead of reading "
+                        "every byte; catches truncation, not corruption")
+    s.add_argument("--show-extra", action="store_true",
+                   help="also list files present here but not in the manifest")
+    s.set_defaults(func=cmd_verify)
 
     s = sub.add_parser("splits", parents=[common, task_opt, split_opt],
                        help="write splits_final.json from meta.csv")
@@ -1085,23 +1208,9 @@ def build_parser() -> argparse.ArgumentParser:
                    help=argparse.SUPPRESS)
     s.set_defaults(func=cmd_train)
 
-    s = sub.add_parser("preview", parents=[common, task_opt, fold_opt],
-                       help="render held-out cases from the current checkpoint")
-    s.add_argument("--watch", action="store_true", help="follow the run until it ends")
-    s.add_argument("--cases", help="comma-separated case ids (default: config)")
-    s.add_argument("--device", default="cuda", choices=("cuda", "cpu", "mps"))
-    s.add_argument("--checkpoint", default="checkpoint_latest.pth")
-    s.add_argument("--poll", type=float, default=30.0, help="seconds between checks")
-    s.add_argument("--nsd", action="store_true", help="also compute NSD (slow)")
-    s.set_defaults(func=cmd_preview)
-
     s = sub.add_parser("status", parents=[common, task_opt, fold_opt],
                        help="summarise a run from its event stream")
     s.add_argument("--run-dir", help="read this directory instead of the configured one")
-    s.add_argument("--worst", type=int, default=0, help="list the N weakest structures")
-    # Used by the SLURM job script to decide whether to cancel its own queued
-    # successor: the trainer exits 0 for both "paused at the wall" and "finished",
-    # so only the event stream can tell them apart.
     s.add_argument("--is-complete", action="store_true",
                    help="print nothing; exit 0 only if the run finished all its epochs")
     s.set_defaults(func=cmd_status)
@@ -1123,12 +1232,26 @@ def build_parser() -> argparse.ArgumentParser:
                         "--no-download` wrapper")
     s.set_defaults(func=cmd_scinet_setup)
 
-    s = scisub.add_parser("fetch", parents=[common, task_opt],
-                          help="download the dataset here, on a login node")
-    s.add_argument("--dest", help="override zenodo_root for this download")
-    s.add_argument("--keep-zip", action="store_true",
-                   help="keep the 22 GB archive after extracting")
-    s.add_argument("--dry-run", action="store_true")
+    s = scisub.add_parser(
+        "fetch", parents=[common, task_opt],
+        help="pull the training export here and verify it, on a login node",
+        description="Pull an export written by `segqueue-export` and check every "
+                    "file against the manifest that travelled with it. Re-running "
+                    "fetches only what is missing or wrong, so an interrupted "
+                    "transfer costs the remainder rather than the whole thing. Run "
+                    "this on a login or datamover node: compute nodes have no "
+                    "outbound network.")
+    s.add_argument("--dest", help="override zenodo_root as the destination")
+    s.add_argument("--remote", help="rsync source, e.g. user@host:/srv/segqueue/export "
+                                    "(overrides transfer.remote)")
+    s.add_argument("--from", dest="from_path",
+                   help="a mounted source directory instead of a remote")
+    s.add_argument("--bwlimit", help="rsync --bwlimit value, e.g. 50m")
+    s.add_argument("--quick", action="store_true",
+                   help="verify sizes only, not contents. Catches a truncated "
+                        "transfer but not a corrupted byte")
+    s.add_argument("--dry-run", action="store_true",
+                   help="fetch the manifest and report what would move")
     s.set_defaults(func=cmd_scinet_fetch)
 
     s = scisub.add_parser("prepare", parents=[common, task_opt],
@@ -1136,6 +1259,9 @@ def build_parser() -> argparse.ArgumentParser:
     s.add_argument("--scheme", choices=("official", "cv5"), default="official")
     s.add_argument("--convert", action="store_true",
                    help="also run `convert` in the job, before planning")
+    s.add_argument("--layout", default="auto", choices=("auto", "nested", "flat"),
+                   help="source layout for the convert step, written into the job "
+                        "script so it cannot guess differently hours later")
     s.add_argument("--workers", type=int, help="preprocessing worker processes")
     s.add_argument("--dry-run", action="store_true", help="print the script, submit nothing")
     s.set_defaults(func=cmd_scinet_prepare)
@@ -1148,8 +1274,6 @@ def build_parser() -> argparse.ArgumentParser:
                    help="override scinet.chain_max: how many walltime blocks")
     s.add_argument("--chain-mode", choices=("array", "dependency"),
                    help="one --array=1-N%%1 job (default) or N --dependency jobs")
-    s.add_argument("--no-preview", action="store_true",
-                   help="do not run the preview daemon alongside training")
     s.add_argument("--dry-run", action="store_true", help="print the script, submit nothing")
     s.set_defaults(func=cmd_scinet_submit)
 

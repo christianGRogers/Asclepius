@@ -1,0 +1,53 @@
+# Phase 1, run B: binary lumen on the ImageCAS-X re-annotated labels.
+#
+# This is the model that matters. Its predictions become the presegmentation
+# seeds SegQueue hands annotators, so the quality of its labels is the quality
+# of every per-branch label drawn on top of them.
+#
+# Why different labels from run A. Bransby et al. re-annotated 800 of the 1000
+# ImageCAS scans and measured 41.8 % Dice against the originals
+# (arXiv:2608.30404, verified) -- a systematic disagreement about where a lumen
+# boundary sits, not observer noise. The originals also include plaque,
+# pulmonary vessels and coronary veins. Seeding an annotator with a mask that
+# confidently outlines a pulmonary vein costs more than seeding them with
+# nothing, because a seed is trusted.
+#
+# Comparators here are ImageCAS-X's own table, on their 160-case test set, all
+# binary lumen: nnU-Net 89.8 +/- 3.2, CAS-Net 91.2 +/- 2.8, inter-observer
+# 92.8 +/- 3.1. Do NOT compare this run to 82.96 % -- different labels,
+# different split, different task in every way that matters.
+#
+# Get the data first (CC BY 4.0, Zenodo 10.5281/zenodo.21887809):
+#
+#   segtrain index   --root $SCRATCH/imagecas-x --layout flat
+#   segtrain plan    --task 711 --gpu-mem 70
+#   segtrain scinet submit --task 711 --fold 0
+#
+# LEAKAGE CONSTRAINT, and it is easy to trip. If this model is ever used to
+# initialise the multiclass model, its training set must exclude ImageCAS-X's
+# 160 test cases -- otherwise the multiclass test set has leaked in through
+# initialisation, and nothing downstream will detect it. Either seal those 160
+# here too, or do not use this checkpoint as an init.
+
+dataset_id: 711
+dataset_name: CoronaryLumenX
+
+# Same one foreground class. ImageCAS-X also ships per-branch segment labels;
+# this task deliberately reads only the lumen. Per-branch is a separate schema
+# decision that has not been taken -- see
+# vault/Proposed changes to the training plan.md, §0 and §2.1.
+label_set: coronary_lumen
+
+spacing: native
+max_spacing_mm: 0.5
+
+configuration: 3d_fullres
+trainer: nnUNetTrainer_segtrain
+plans_name: segtrainPlans_coronary
+
+epochs: 1000
+
+# Fold 0 to start. The fold scheme for anything reportable is 5-fold CV over
+# the 640 train+val cases with the 160-case test set sealed; that is a
+# proposal, not yet a decision.
+folds: [0]

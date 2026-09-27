@@ -10,7 +10,6 @@ from segtrain.splits import (
     build_splits,
     check_expected_counts,
     read_meta,
-    resolve_preview_cases,
     select,
     training_pool,
     validate_splits,
@@ -98,20 +97,6 @@ def test_unknown_scheme_is_rejected():
         build_splits(_rows(), scheme="bogus")
 
 
-def test_preview_cases_must_be_held_out():
-    rows = _rows()
-    splits = build_splits(rows, scheme="official")
-    resolve_preview_cases(rows, ["va000"], splits, fold=0)
-    with pytest.raises(SplitError, match="not in fold 0"):
-        resolve_preview_cases(rows, ["tr000"], splits, fold=0)
-    with pytest.raises(SplitError, match="not in meta.csv"):
-        resolve_preview_cases(rows, ["nope"], splits, fold=0)
-
-
-# -- against the real dataset ------------------------------------------------
-
-
-@pytest.mark.needs_data
 def test_real_meta_csv_matches_published_counts(meta_rows):
     assert check_expected_counts(meta_rows, strict=True) == EXPECTED_COUNTS
 

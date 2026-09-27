@@ -15,6 +15,16 @@ in `configs/`, and anything an operator follows belongs in `docs/`.
   short summary and points here.
 - **[[Plan status]]** — what was removed when the previous plan was retired, and
   where it went. The plan itself is preserved on the `plan-v1` branch.
+- **[[Proposed changes to the training plan]]** — everything the literature
+  research argues for, in one reviewable set, ordered by what it would change
+  and marked by how good its evidence is. Nothing here has been applied to the
+  plan. Start with §0: per-branch labels for 800 of the 1000 cases turn out to
+  already exist.
+- **[[Verification log]]** — which claims in the research were checked against
+  full text, which were wrong, and which are still behind a paywall.
+
+`vault/Research/` holds the notes those two summarise: seven topic folders, 84
+notes, each carrying its reasoning and its sources.
 
 `[[Research context]]` is linked from the training plan and is deliberately
 unresolved: the condensed ImageCAS and nnU-Net notes live outside the

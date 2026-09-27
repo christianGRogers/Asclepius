@@ -1,0 +1,21 @@
+# Phase 1: the binary coronary lumen.
+#
+# One foreground class, because that is what the source labels contain. Both
+# ImageCAS's merged masks and ImageCAS-X's lumen annotation are a single
+# vessel/background volume -- neither carries per-branch identity, so there is
+# nothing here to choose. This is not a placeholder for the class schema; it is
+# the schema the binary stage of the plan trains against.
+#
+# The multiclass schema is a separate label set and a separate task, and it is a
+# decision that has not been taken yet. See
+# vault/Proposed changes to the training plan.md, §2.1.
+#
+# `source_values` is deliberately absent: both sources label foreground as 1,
+# which is already our index. Declare it only if a source numbers its vessel
+# something else -- reading that positionally would mislabel every voxel while
+# appearing to succeed.
+
+name: coronary_lumen
+count: 1
+labels:
+  lumen: 1

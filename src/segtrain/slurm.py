@@ -243,7 +243,6 @@ def render_train_script(
     *,
     epochs: Optional[int] = None,
     iterations: Optional[int] = None,
-    preview: bool = True,
 ) -> str:
     """One block of the training chain.
 
@@ -286,9 +285,6 @@ def render_train_script(
 
     status_args = ["status", "--task", str(task.dataset_id), "--fold", str(fold),
                    "--run-dir", str(run_dir), "--is-complete"]
-    preview_args = ["preview", "--task", str(task.dataset_id), "--fold", str(fold),
-                    "--watch", "--device", "cuda", "--poll", "60", *roots]
-
     array = f"1-{sc.chain_max}%1" if sc.chain_mode == "array" else None
     log = f"{run_dir}/slurm-%A_%a.out" if array else f"{run_dir}/slurm-%j.out"
 
@@ -357,18 +353,6 @@ def render_train_script(
         "fi",
         "",
     ]
-
-    if preview:
-        body += [
-            "# The preview daemon shares this job's GPU. A second allocation for a",
-            "# few seconds of inference every 25 epochs would double both the cost",
-            "# of the run and the queue wait. Separate process, so a preview crash",
-            "# cannot take training with it.",
-            f"segtrain {' '.join(shlex.quote(a) for a in preview_args)} &",
-            "PREVIEW_PID=$!",
-            'trap \'kill "$PREVIEW_PID" 2>/dev/null\' EXIT',
-            "",
-        ]
 
     body += [
         "# timeout is a backstop, not the mechanism: SEGTRAIN_MAX_SECONDS should",
@@ -456,6 +440,7 @@ def render_prepare_script(
     scheme: str = "official",
     convert: bool = False,
     workers: Optional[int] = None,
+    layout: str = "auto",
 ) -> str:
     """A CPU-only job for convert / plan / preprocess.
 
@@ -480,7 +465,11 @@ def render_prepare_script(
     ]
     steps = []
     if convert:
-        steps.append(["convert", "--task", str(task.dataset_id), *roots])
+        # --layout is passed explicitly rather than left to auto-detection: this
+        # script runs hours later in a queue, and a scripted step should not make a
+        # different guess about the data than the operator did at index time.
+        steps.append(["convert", "--task", str(task.dataset_id),
+                      "--layout", layout, *roots])
     steps.append(["plan", "--task", str(task.dataset_id), "--scheme", scheme, *roots])
     pre = ["preprocess", "--task", str(task.dataset_id), *roots]
     if workers:

@@ -89,3 +89,21 @@ multiclass-adjacent coronary imbalance. Neither claim above is currently cited a
 evidence; both are unverified pending access.
 **Evidence:** [[Topology-aware losses on thin tubular structures]],
 [[Class imbalance in multiclass vessel segmentation]].
+
+## 7. Add per-class loss weighting as a conditional second experiment
+
+**Where:** §5 "Standing experiments."
+**Proposed:** add "**Per-class weighted loss (inverse-frequency)**: if the multiclass baseline shows any class scoring <20 % Dice despite being present in >20 % of training cases, run one paired experiment with per-class weights `w_c = 1.0 / (N_c / N_max)` (class weight = 1 / normalized per-class voxel count). Same fold/harness. Measure per-class Dice, clDice, and β₀ separately. Accept weighted loss only if rare-class Dice improves >10 pp and proximal-class Dice does not drop >2 pp. This experiment is conditional; do not schedule if baseline rare-class performance is acceptable (>50 % Dice)."
+**Evidence:** [[Loss weighting between large proximal and rare distal branch classes]].
+
+## 8. Record centerline-based gap bridging (DPC-Walk) as a conditional post-processing candidate
+
+**Where:** §4, after the graph-reasoning carve-out sentence.
+**Proposed:** extend existing text (Proposed change #5): "**Centerline-based gap bridging (DPC-Walk framework)** is a third candidate for conditional post-processing if the multiclass baseline exhibits excessive fragmentation (β₀ > 2× expected anatomical branch count). Measured on ASOCA with ResUNet: +1.4 Dice, −4 mm HD95 over baseline. Conditional on fragmentation; not scheduled. Requires predicted probability map and centerline extraction; verify CorSegRec code is open-source and compatible with ImageCAS preprocessing before committing to this experiment."
+**Evidence:** [[Gap bridging and centerline-based reconnection as post-processing for vessel fragments]].
+
+## 9. Add airway-analogue insights to evaluation and rare-class handling
+
+**Where:** Evaluation section and §5.
+**Proposed:** "(a) Report **per-branch detection rate** (recall) and **per-class Dice separately**, following airway segmentation precedent (NaviAirway, Xu et al. 2022). A model scoring 85 % mean Dice while detecting only 70 % of distal branches is failure, not success. (b) For rare-class handling: airway literature confirms per-class loss weighting helps small bronchioles (Li et al. 2024, abstract-only, flagged for verification); use this as the primary lever ahead of architecture changes."
+**Evidence:** [[Airway segmentation as the closest analogue to coronary tree topology and class imbalance]].

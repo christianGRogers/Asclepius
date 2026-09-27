@@ -131,12 +131,22 @@ class AdminResource(Resource):
         ]
 
     def _agreementScores(self, userId):
+        """Per-submission mean Dice, skipping anything that is not a real number.
+
+        ``pol.usable_score`` rather than ``is not None``, because NaN is not None:
+        it passes an identity check and it propagates through the ``sum()`` below,
+        so one stored NaN used to turn this annotator's whole
+        ``meanAgreementDice`` into NaN with nothing on the dashboard to say which
+        case caused it. ``agreement()`` no longer emits one, but records written
+        before that fix are still in the database, and a reader is not the right
+        place to assume its inputs.
+        """
         scores = []
         for submission in Submission().find(
             {'userId': userId, 'scored': True}, fields=['autoScore']
         ):
             mean = (submission.get('autoScore') or {}).get('mean_dice')
-            if mean is not None:
+            if pol.usable_score(mean):
                 scores.append(mean)
         return scores
 

@@ -11,7 +11,6 @@ def test_round_trip(tmp_path):
         w.epoch(0, train_loss=-0.2, val_loss=-0.3, pseudo_dice=[0.4, 0.5],
                 lr=0.01, epoch_seconds=12.0)
         w.checkpoint(0, "checkpoint_best.pth", kind="best")
-        w.preview(0, "s0001", "previews/ep0000_s0001.nii.gz", dice={"liver": 0.8})
         w.run_end(status="completed")
 
     state = read_run(tmp_path)
@@ -19,7 +18,6 @@ def test_round_trip(tmp_path):
     assert state.total_epochs == 10
     assert state.current_epoch == 0
     assert len(state.checkpoints) == 1
-    assert state.latest_preview["case"] == "s0001"
     assert state.finished and state.status == "completed"
 
 
@@ -122,18 +120,5 @@ def test_eta_uses_recent_epoch_durations(tmp_path):
     assert abs(read_run(tmp_path).eta_seconds() - 700.0) < 1.0
 
 
-def test_preview_helpers(tmp_path):
-    w = EventWriter(tmp_path)
-    w.preview(0, "a", "previews/a0.nii.gz", dice={"liver": 0.5})
-    w.preview(0, "b", "previews/b0.nii.gz", dice={"liver": 0.6})
-    w.preview(1, "a", "previews/a1.nii.gz", dice={"liver": 0.7})
-    w.close()
-    state = read_run(tmp_path)
-    assert state.preview_cases() == ["a", "b"]
-    assert len(state.previews_for("a")) == 2
-    assert state.previews_for("a")[-1]["epoch"] == 1
 
 
-def test_previews_directory_is_created(tmp_path):
-    EventWriter(tmp_path).close()
-    assert (tmp_path / "previews").is_dir()

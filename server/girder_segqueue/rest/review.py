@@ -267,7 +267,7 @@ class ReviewResource(Resource):
         score = submission.get('autoScore') or {}
         mean = score.get('mean_dice')
         kind = submission.get('kind', pol.NORMAL)
-        if mean is not None:
+        if pol.usable_score(mean):
             threshold = (policy.gold_dice_flag if kind == pol.GOLD
                          else policy.duplicate_dice_flag)
             if mean < threshold:

@@ -1,7 +1,7 @@
 """Where a training run executes.
 
 Two backends, one output contract. Both produce the same ``events.jsonl`` in a
-run directory, so the preview daemon and the Slicer monitor neither know nor care
+run directory, so whatever reads that directory neither knows nor cares
 which one ran -- and a run can be watched from a laptop while it executes on a
 compute node three provinces away.
 

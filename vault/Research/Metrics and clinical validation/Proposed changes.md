@@ -53,6 +53,44 @@ been applied — the plan and the code are owned elsewhere.
 | M13 | No Betti matching error (only plain Betti-0 count is proposed in M3). Betti-0 is cancellation-blind: a dropped branch plus an unrelated hallucinated fragment can net to the same aggregate error as one clean mistake | [[Topology and connectivity metrics for coronary trees]] — larger addition (persistent-homology dependency), scope separately from M3 |
 | M14 | No subgroup breakdown (coronary dominance, disease status) in `aggregate()`/`summarize()` — everything is pooled across the whole test set | [[CLAIM and TRIPOD+AI checklists for a coronary segmentation manuscript]] (TRIPOD+AI item 23a), [[Fold schemes and split ratios]] (same stratification already proposed for folds) |
 
+## Per-class Dice aggregation (new, from this session)
+
+| # | Change | Evidence |
+|---|---|---|
+| E19 | **Report per-class Dice in a table always.** Do not rely on a headline mean; macro vs micro averaging can differ by 2–5 points on coronary data (where L-PDA/L-PLA are <1% of test set) | [[Per-class Dice aggregation and handling of absent classes]] |
+| E20 | **State the averaging method explicitly:** "Macro averaging over 14 classes" or "Micro averaging (pooled voxels)" or "Weighted by prevalence." Metrics Reloaded recommends macro for equal clinical importance per class | same |
+| E21 | **State NaN handling policy:** "Per-case Dice is computed only for cases where the class is present in reference. Absent-absent predictions are excluded from aggregation." This is standard; state it to avoid ambiguity | same |
+| E22 | **For rare classes (L-PDA n=8, L-PLA n=9 in 160-case test):** report per-class score with CI and sample size. Do not gate acceptance on these classes; state: "These classes are underpowered for statistical claims" | same |
+| E23 | **Confidence intervals on the macro mean:** use bootstrap or Bayesian methods when sample sizes are unequal across classes; asymptotic normal theory is unreliable | same |
+| E24 | **Comparison to ImageCAS-X:** clarify which averaging method they used (likely macro, likely excluding absent-absent, but this is unclear in the paper). If methods differ, note potential source of apparent disagreement | same |
+
+## Centerline extraction metrics for voxel segmentation (new, from this session)
+
+| # | Change | Evidence |
+|---|---|---|
+| E25 | **Do not use CAT08 metrics** (overlap, OTF, AI) as benchmarks for voxel segmentation. CAT08 evaluates 1D centerline paths; voxel segmentation is 3D binary masks. CAT08 host is unreachable as of 2026 anyway | [[Centerline extraction metrics from CAT08 and voxel segmentation]] |
+| E26 | **clDice is the voxel-segmentation analogue** for centerline overlap. Use clDice per-branch alongside Dice (already in [[Training plan]]). For directed-overlap ("did you track the whole path?"), compute overlap-percentage along the reference centerline within a distance tolerance | same |
+| E27 | **If centerline extraction is a downstream goal:** it is a separate post-segmentation step, not evaluated via CAT08 metrics on the voxel predictions | same |
+
+## Confidence and uncertainty estimation (new, from this session)
+
+| # | Change | Evidence |
+|---|---|---|
+| E28 | **Uncertainty estimation is optional** for binary and multiclass baselines; do not add to critical path. It is valuable only if used for test-time adaptation, active-learning annotation, or clinical decision support — none are currently planned | [[Confidence and uncertainty estimation in segmentation]] |
+| E29 | **If annotation efficiency matters:** compute entropy-based confidence on binary model predictions; use it to prioritize annotator review of hard cases. Cost <5%; potential benefit: reduced annotation effort | same |
+| E30 | **If reporting uncertainty:** use entropy-based or MC-dropout epistemic uncertainty. State explicitly: "This is epistemic uncertainty (model disagreement), not aleatoric (data noise)." Report per-case distribution and per-branch mean | same |
+| E31 | **If weights are released:** clearly state "This model outputs a single voxel-level class prediction with no confidence/uncertainty estimate" | same |
+
+## Reporting without overclaiming deployment readiness (new, from this session)
+
+| # | Change | Evidence |
+|---|---|---|
+| E32 | **Frame as "research-stage" explicitly** in abstract/keywords. Distinguish three claim levels: (1) "predicts accurately on this test set" [this project], (2) "generalizes clinically" [not this project], (3) "FDA-cleared" [not this project]. Avoid language conflating levels | Research-stage reporting guidelines (new note) |
+| E33 | **In limitations section:** state (a) single-centre, single-scanner data, (b) no clinical outcome study, (c) deployment requires multi-centre validation and regulatory pathway. Do not leave deployment status implicit | same |
+| E34 | **In conclusions:** state prerequisites to deployment. These are left to future work, not gaps to apologize for | same |
+| E35 | **Include failure cases** (CLAIM item 37): show 3–5 examples where model failed, with visual explanation. More informative than mean Dice; demonstrates scientific integrity | same |
+| E36 | **Avoid overclaiming language:** do not say "could help radiologists" (implies clinical use without evidence), "advances automated coronary assessment" (conflates research with clinical readiness), "state-of-the-art" (invites level-2 interpretation). Say instead: "first per-branch voxel benchmark on ImageCAS" (factual, level-1) | same |
+
 ## Open, not yet proposed
 
 - Acceptance thresholds themselves — now closed by

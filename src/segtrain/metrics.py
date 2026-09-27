@@ -181,7 +181,16 @@ def agreement(
     is no ground truth, so any metric that treated one argument as correct would
     be reporting something it cannot know.
 
-    ``inf`` is serialised as ``None`` so the result drops straight into JSON.
+    Every number here is JSON-safe: ``inf`` and ``NaN`` both serialise as
+    ``None``. That is load-bearing rather than tidy. JSON has no NaN, so
+    ``json.dumps`` emits a bare ``NaN`` token that a strict parser rejects and
+    ``JSON.parse`` throws on -- and this dict is stored on a submission and read
+    back by the admin dashboard. ``mean_dice`` used to escape that treatment while
+    the per-structure entries got it, so a submission where no listed structure
+    appeared in either volume wrote a bare NaN, and one such submission turned an
+    annotator's whole ``meanAgreementDice`` into NaN with nothing to say which case
+    did it. NaN also propagates silently through ``sum()``, which is why the
+    consumer's ``is not None`` check did not catch it.
     """
     if a_labels.shape != b_labels.shape:
         raise ValueError(
@@ -203,8 +212,17 @@ def agreement(
         }
         dices.append(d)
 
+    mean = nanmean(dices)
+    scored = sum(1 for d in dices if d == d)
     return {
-        "mean_dice": nanmean(dices),
+        # None, not NaN: see the docstring. None means "no listed structure was
+        # present in either volume", which is a real outcome for an empty
+        # submission and must not be averaged into anything.
+        "mean_dice": None if mean != mean else round(mean, 4),
+        # How many structures the mean is over. Without it, a mean of 0.90 over
+        # one structure and over fourteen are the same number on the dashboard.
+        "n_scored": scored,
+        "n_structures": len(dices),
         "per_structure": per_structure,
     }
 
@@ -224,7 +242,7 @@ def score_case(
 
     NSD is far more expensive than Dice -- two distance transforms over the whole
     volume per class -- so ``compute_nsd=False`` is the right choice for the
-    live previews during training, where speed matters and relative movement is
+    scoring during training, where speed matters and relative movement is
     what you are watching.
     """
     if pred_labels.shape != ref_labels.shape:
@@ -274,7 +292,7 @@ def summarize_case(scores: Sequence[ClassScore]) -> dict:
 
 
 def dice_dict(scores: Sequence[ClassScore]) -> dict[str, float]:
-    """Per-structure Dice as a plain dict, for embedding in a preview event.
+    """Per-structure Dice as a plain dict, for embedding in an event.
 
     NaN is dropped rather than serialised: JSON has no NaN, and an absent
     structure is better represented by absence than by a null the UI must
@@ -288,9 +306,28 @@ def aggregate(
 ) -> dict[str, dict[str, float]]:
     """Average each structure's metrics across cases.
 
-    Keyed by structure name; each value carries mean Dice, mean NSD, and how many
-    cases actually contained the structure. That count is essential context: a
-    Dice of 0.62 over 3 cases and over 80 cases mean very different things.
+    Keyed by structure name; each value carries mean Dice, mean NSD, and the case
+    counts they rest on. Those counts are essential context: a Dice of 0.62 over
+    3 cases and over 80 cases mean very different things.
+
+    **The denominator is stated because it is not obvious, and it used to be
+    wrong.** Three situations have to be told apart:
+
+    * absent from the reference *and* from the prediction -- Dice is NaN and the
+      case is skipped, because there was nothing to score;
+    * present in the reference -- scored normally;
+    * **absent from the reference but predicted anyway** -- Dice is ``0.0``, which
+      is a number, so it entered the mean, while ``n_cases_present`` counted only
+      the second group. The reported Dice was an average over more cases than the
+      count printed beside it, and nothing said so.
+
+    On coronaries that third case is not exotic, it is the norm: a model that
+    hallucinates L-PDA in the ~95% of patients who do not have one had that rare
+    class's Dice dragged toward zero against a case count claiming the score
+    rested on a handful of cases. So ``dice`` and ``nsd`` are now means over
+    ``n_cases_scored`` -- every case where the metric was a real number, which is
+    the reference-present cases plus the false-positive ones -- and the two
+    populations are reported separately rather than one being implied.
     """
     by_structure: dict[str, list[ClassScore]] = {}
     for scores in per_case.values():
@@ -299,11 +336,18 @@ def aggregate(
 
     out: dict[str, dict[str, float]] = {}
     for name, scores in by_structure.items():
-        present = [s for s in scores if s.present_in_reference]
+        dices = [s.dice for s in scores]
         out[name] = {
-            "dice": nanmean(s.dice for s in scores),
+            "dice": nanmean(dices),
             "nsd": nanmean(s.nsd for s in scores),
-            "n_cases_present": len(present),
+            # The denominator `dice` is actually over.
+            "n_cases_scored": sum(1 for d in dices if d == d),
+            # Of those, how many had the structure in the reference at all. The
+            # difference is the count of cases where the model invented it.
+            "n_cases_present": sum(1 for s in scores if s.present_in_reference),
+            "n_cases_false_positive": sum(
+                1 for s in scores if not s.present_in_reference and s.pred_voxels > 0
+            ),
             "n_cases": len(scores),
         }
     return out

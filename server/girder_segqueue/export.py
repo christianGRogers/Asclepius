@@ -35,6 +35,7 @@ and for the same reason: the files are already on this disk.
 import argparse
 import datetime
 import os
+import socket
 import sys
 import tempfile
 
@@ -231,6 +232,37 @@ def collect(since=None, includeUnreviewed=False, limit=0, replicas='first'):
                 return
 
 
+def _writeManifest(out, cases, segments, args, since):
+    """Describe what was just written, so the far end can prove it arrived.
+
+    Hashing is the expensive part of an export -- every byte, once -- and it is
+    worth it here rather than later: this is the only moment at which the data and
+    the authority on what the data should be are on the same disk. A manifest
+    generated at the receiving end certifies whatever arrived, including a
+    truncated volume.
+
+    ``segments`` is recorded because a label volume is only interpretable against
+    the label set that produced it, and that setting is mutable: a manifest whose
+    segment list disagrees with ``configs/labels/`` is the one warning anybody
+    will get that a 4-class export is being fed to a 14-class task.
+    """
+    from segqueue.manifest import build
+
+    def progress(path, index, total):
+        if total > 50 and index % 50 == 0:
+            print(f'  hashing {index}/{total}', flush=True)
+
+    manifest = build(out, cases=sorted(cases), progress=progress, source={
+        'kind': 'segqueue-export',
+        'host': socket.gethostname(),
+        'segments': [s.name for s in segments],
+        'replicas': args.replicas,
+        'include_unreviewed': bool(args.include_unreviewed),
+        'since': since.isoformat() if since else None,
+    })
+    return manifest.write(out)
+
+
 def buildParser():
     parser = argparse.ArgumentParser(
         prog='segqueue-export',
@@ -284,6 +316,7 @@ def main(argv=None):
 
     written = skippedReplicas = failed = 0
     emptyStructures = {}
+    exportedCases = []
     verb = 'would export' if args.dry_run else 'exported'
 
     for case, submission, name in collect(
@@ -302,12 +335,19 @@ def main(argv=None):
             continue
 
         written += 1
+        exportedCases.append(result['case'])
         for structure in result.get('empty', ()):
             emptyStructures[structure] = emptyStructures.get(structure, 0) + 1
         note = f'  [{len(result["empty"])} empty]' if result.get('empty') else ''
         print(f'  + {result["case"]}{note}')
 
     print(f'\n{verb} {written} case(s) into {args.out}.')
+
+    if written and not args.dry_run:
+        path = _writeManifest(args.out, exportedCases, segments, args, since)
+        print(f'Wrote {path} -- {len(exportedCases)} case(s) with a SHA-256 each.')
+        print('It travels with the data. `segtrain fetch` checks arrivals against '
+              'it, and `segtrain verify` re-checks any copy at any time.')
     if emptyStructures:
         print('Structures with no voxels in some cases (absent, not missing): '
               + ', '.join(f'{k} x{v}' for k, v in sorted(emptyStructures.items())))

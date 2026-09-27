@@ -1,0 +1,63 @@
+# Phase 1, run A: binary lumen on the original ImageCAS masks.
+#
+# This run exists to answer two questions and it is worth being explicit about
+# which, because they used to be one line in the plan and they are not the same
+# question:
+#
+#   1. Does the Trillium chain work end to end -- convert, plan, preprocess,
+#      train across three chained 24-hour blocks, resume from checkpoint,
+#      evaluate? This is the real purpose. It costs one queue wait to find out,
+#      and finding out with the multiclass model would cost a term.
+#   2. Does it land near the published 82.96 % Dice? This is the ONLY
+#      configuration in which that comparison means anything, because 82.96 %
+#      was measured on these labels, on this split.
+#
+# The official split is honoured by writing it out as a two-column
+# `case_id,split` CSV and passing it to --overrides; nothing else in the
+# pipeline needs to know it came from ImageCAS rather than from a hash. See
+# docs/TRAINING-PHASE1.md.
+#
+# What this run is NOT for: producing the presegmentation seeds annotators are
+# handed. Its labels disagree with a later re-annotation of the same scans at
+# 41.8 % Dice and include plaque, pulmonary vessels and coronary veins
+# (Bransby et al., arXiv:2608.30404). A model trained here learns those errors,
+# and seeding annotators with them propagates the bias into everything they
+# draw. Run B (Dataset711_CoronaryLumenX) makes the seeds.
+#
+#   segtrain index   --root $SCRATCH/imagecas --layout flat \
+#                    --overrides official-split1.csv
+#   segtrain plan    --task 710 --gpu-mem 70
+#   segtrain scinet submit --task 710 --fold 0
+#
+# Before submitting, check the planner printout: patch fraction >= 25 %
+# (nnU-Net's real lowres_creation_threshold, not the 12.5 % the plan used to
+# state), target spacing came out native rather than dragged coarse, batch
+# size 2.
+
+dataset_id: 710
+dataset_name: CoronaryLumen
+
+label_set: coronary_lumen
+
+# Decided: nnU-Net's median-spacing rule on a near-isotropic ~0.29-0.45 mm
+# cohort. The floor below is the guard that rule needs -- see max_spacing_mm.
+spacing: native
+
+# Refuse a planned target coarser than this. ImageCAS is 0.29-0.45 mm, so a
+# planned target at or beyond 0.5 mm means the median was dragged by
+# thick-slice studies that should not be in the cohort. At 1 mm a distal branch
+# is one voxel wide, and the failure is silent: preprocessing succeeds and the
+# vessels this project exists to find have been interpolated away.
+max_spacing_mm: 0.5
+
+# Decided: full resolution end to end. Never 3d_cascade_fullres -- its low-res
+# first stage downsamples distal branches below their own diameter.
+configuration: 3d_fullres
+trainer: nnUNetTrainer_segtrain
+plans_name: segtrainPlans_coronary
+
+epochs: 1000
+
+# One fold. This run is a chain test and a calibration number, not a result to
+# report with a confidence interval.
+folds: [0]

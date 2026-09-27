@@ -1,11 +1,13 @@
 """Dice and NSD, including the absent-structure convention."""
 
+import json
 import math
 
 import numpy as np
 
 from segtrain.metrics import (
     aggregate,
+    agreement,
     dice_dict,
     dice_score,
     nanmean,
@@ -138,3 +140,103 @@ def test_only_labels_restricts_work():
     scores = score_case(ref.copy(), ref, ["a", "b"], SPACING, compute_nsd=False,
                         only_labels=[2])
     assert len(scores) == 1 and scores[0].name == "b"
+
+
+# ------------------------------------------------- the two live reporting bugs
+#
+# Both of these produced a wrong number that looked like a right one, which is
+# why they are here with the reasoning attached rather than as bare assertions.
+
+
+def test_agreement_mean_dice_is_json_safe_when_nothing_was_present():
+    """JSON has no NaN, and this dict is stored and read back by the dashboard.
+
+    `json.dumps` emits a bare `NaN` token that a strict parser rejects and
+    `JSON.parse` throws on. The per-structure entries were sanitised; `mean_dice`
+    was not, so a submission where no listed structure appeared in either volume
+    wrote one.
+    """
+    zeros = np.zeros((4, 4, 4), np.uint8)
+
+    result = agreement(zeros, zeros, ["left_main"], SPACING)
+
+    assert result["mean_dice"] is None
+    assert result["n_scored"] == 0
+    # Round-trips through a parser that refuses the non-standard constants.
+    def _reject(constant):
+        raise AssertionError(f"emitted a bare {constant}")
+
+    json.loads(json.dumps(result), parse_constant=_reject)
+
+
+def test_a_single_empty_submission_cannot_poison_an_annotators_mean():
+    """The consequence of the above, stated as the thing that actually went wrong.
+
+    NaN is not None, so an `is not None` guard passes it; and NaN propagates
+    through `sum()`. One such record turned a whole `meanAgreementDice` into NaN
+    with nothing to say which case caused it.
+    """
+    zeros = np.zeros((4, 4, 4), np.uint8)
+    ref = np.zeros((4, 4, 4), np.uint8)
+    ref[0:2] = 1
+
+    empty = agreement(zeros, zeros, ["left_main"], SPACING)["mean_dice"]
+    real = agreement(ref.copy(), ref, ["left_main"], SPACING)["mean_dice"]
+
+    usable = [m for m in (empty, real) if isinstance(m, (int, float)) and math.isfinite(m)]
+    assert usable == [1.0]
+    assert sum(usable) / len(usable) == 1.0
+
+
+def test_agreement_says_how_many_structures_its_mean_is_over():
+    ref = np.zeros((8, 8, 8), np.uint8)
+    ref[0:4] = 1  # only structure "a" is present
+
+    result = agreement(ref.copy(), ref, ["a", "b"], SPACING)
+
+    assert result["mean_dice"] == 1.0
+    assert result["n_scored"] == 1, "b was in neither volume"
+    assert result["n_structures"] == 2
+
+
+def test_aggregate_dice_and_its_denominator_describe_the_same_cases():
+    """A class absent from the reference but predicted scores 0.0, not NaN.
+
+    So it entered the mean while `n_cases_present` counted only the cases that
+    had the structure -- the reported Dice was an average over more cases than the
+    count printed beside it. On coronaries this is the norm, not an edge case: a
+    model that invents L-PDA in the ~95 % of patients without one had that class's
+    Dice dragged toward zero against a count claiming a handful of cases.
+    """
+    ref = np.zeros((8, 8, 8), np.uint8)
+    ref[0:4] = 1
+    present = score_case(ref.copy(), ref, ["a"], SPACING, compute_nsd=False)
+
+    # Reference has no "a"; the prediction claims one anyway.
+    pred = np.zeros((8, 8, 8), np.uint8)
+    pred[0:4] = 1
+    invented = score_case(pred, np.zeros((8, 8, 8), np.uint8), ["a"], SPACING,
+                          compute_nsd=False)
+
+    row = aggregate({"real": present, "hallucinated": invented})["a"]
+
+    assert row["dice"] == 0.5, "mean of 1.0 and 0.0"
+    assert row["n_cases_scored"] == 2, "and the denominator says so"
+    assert row["n_cases_present"] == 1
+    assert row["n_cases_false_positive"] == 1
+
+
+def test_aggregate_skips_cases_where_there_was_nothing_to_score():
+    """Absent from both is not a zero; it is not a data point at all."""
+    empty = np.zeros((8, 8, 8), np.uint8)
+    nothing = score_case(empty.copy(), empty, ["a"], SPACING, compute_nsd=False)
+    ref = np.zeros((8, 8, 8), np.uint8)
+    ref[0:4] = 1
+    present = score_case(ref.copy(), ref, ["a"], SPACING, compute_nsd=False)
+
+    row = aggregate({"blank": nothing, "real": present})["a"]
+
+    assert row["dice"] == 1.0, "the blank case must not average in as a zero"
+    assert row["n_cases_scored"] == 1
+    assert row["n_cases"] == 2
+    assert row["n_cases_false_positive"] == 0

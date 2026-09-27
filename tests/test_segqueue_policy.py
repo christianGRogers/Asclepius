@@ -2,6 +2,7 @@
 
 import pytest
 
+from segqueue import policy as pol
 from segqueue.policy import (
     DUPLICATE,
     GOLD,
@@ -190,3 +191,58 @@ def test_a_policy_that_cannot_mean_anything_is_rejected():
         SamplingPolicy(lease_days=0).validate()
     with pytest.raises(ValueError, match="in .0, 1."):
         SamplingPolicy(base_review_rate=1.5).validate()
+
+
+# ----------------------------------------------------------- automatic scores
+#
+# Every consumer of a stored `mean_dice` used to guard with `is not None`, which
+# lets NaN through. These are the cases that guard got wrong.
+
+
+def test_a_real_score_is_usable():
+    assert pol.usable_score(0.0) is True
+    assert pol.usable_score(0.87) is True
+    assert pol.usable_score(1) is True
+
+
+def test_nan_is_not_usable_even_though_it_is_not_none():
+    """The bug this exists for: NaN passes `is not None` and poisons a mean."""
+    nan = float("nan")
+
+    assert nan is not None, "which is exactly why `is not None` was not enough"
+    assert pol.usable_score(nan) is False
+
+
+def test_nan_would_have_defeated_a_threshold_comparison_silently():
+    """Every comparison against NaN is False, so a flag never fires."""
+    nan = float("nan")
+
+    assert (nan < 0.70) is False
+    assert (nan >= 0.70) is False
+    assert pol.usable_score(nan) is False, "so the comparison is never reached"
+
+
+def test_nan_would_have_poisoned_a_mean():
+    scores = [0.9, float("nan"), 0.8]
+
+    naive = [s for s in scores if s is not None]
+    assert sum(naive) / len(naive) != sum(naive) / len(naive), "NaN spreads"
+
+    usable = [s for s in scores if pol.usable_score(s)]
+    assert sum(usable) / len(usable) == pytest.approx(0.85)
+
+
+def test_infinity_is_not_usable():
+    assert pol.usable_score(float("inf")) is False
+    assert pol.usable_score(float("-inf")) is False
+
+
+def test_none_and_non_numbers_are_not_usable():
+    for value in (None, "0.9", "", [], {}, object()):
+        assert pol.usable_score(value) is False, value
+
+
+def test_a_bool_is_not_a_score():
+    """True == 1 in Python, and a stored `True` is a bug, not a Dice of 1.0."""
+    assert pol.usable_score(True) is False
+    assert pol.usable_score(False) is False

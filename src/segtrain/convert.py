@@ -48,6 +48,7 @@ import nibabel as nib
 import numpy as np
 
 from .config import Config, TaskConfig
+from .index import ScannedCase, scan
 from .splits import SPLIT_TEST, CaseMeta
 
 # Geometry agreement is checked as a physical displacement, not as an element-wise
@@ -310,8 +311,7 @@ def remap_multilabel(
 
 
 def convert_case(
-    case_id: str,
-    zenodo_root: Path,
+    case: ScannedCase,
     images_dir: Path,
     labels_dir: Path,
     label_set,
@@ -321,29 +321,33 @@ def convert_case(
 ) -> CaseResult:
     """Convert one subject. Runs in a worker process; must not raise.
 
+    Takes a case the scanner has already resolved rather than a case id and a
+    root, because the two layouts this pipeline accepts cannot both be derived
+    from an id. ImageCAS ships ``<id>.img.nii.gz`` beside ``<id>.label.nii.gz``
+    in one directory; the annotation export ships a directory per case. Deriving
+    ``root / case_id`` silently assumes the second, so on the layout the real data
+    arrives in every case failed here while ``segtrain index`` had just reported
+    them all found.
+
     Handles both source forms: one binary mask per structure (TotalSegmentator,
     and the form that carries the most information), or a single integer volume
     (what a hand-labelled case exported from Slicer usually looks like). Which
     one a case uses is detected per case, so a dataset part-way through
     relabelling still converts.
     """
+    case_id = case.case_id
     try:
-        from .index import find_image, find_labels
-
-        subject = Path(zenodo_root) / case_id
         names = label_set.names
 
-        ct_path = find_image(subject)
-        if ct_path is None:
+        ct_path = case.image
+        if ct_path is None or not Path(ct_path).is_file():
             return CaseResult(case_id, False,
-                              error=f"no image found in {subject} "
-                                    f"(looked for ct.nii.gz, image.nii.gz, "
-                                    f"{case_id}.nii.gz)")
-        seg_dir, multilabel = find_labels(subject)
+                              error=f"image is gone since indexing: {ct_path}")
+        seg_dir, multilabel = case.seg_dir, case.multilabel
         if seg_dir is None and multilabel is None:
             return CaseResult(case_id, False,
-                              error=f"no labels found in {subject} (neither a "
-                                    "segmentations/ directory nor labels.nii.gz)")
+                              error="no labels found for this case (neither a "
+                                    "segmentations/ directory nor a label volume)")
 
         label_path = Path(labels_dir) / f"{case_id}.nii.gz"
         image_path = Path(images_dir) / f"{case_id}_0000.nii.gz"
@@ -497,8 +501,15 @@ def convert_dataset(
     include_test: bool = True,
     dry_run: bool = False,
     progress: Optional[callable] = None,
+    layout: str = "auto",
 ) -> ConvertReport:
-    """Convert every case for one task."""
+    """Convert every case for one task.
+
+    The source tree is scanned once here, not once per worker, and the resolved
+    paths are handed to the workers. That is what makes both layouts work: the
+    scanner knows whether this is a directory per case or ImageCAS's flat pair of
+    files, and a worker given only a case id cannot know.
+    """
     raw_dir = task.raw_dir(cfg)
     names = task.label_set.names
 
@@ -518,24 +529,42 @@ def convert_dataset(
         report.n_train, report.n_test = len(train_ids), len(test_ids)
         return report
 
-    jobs: list[tuple[str, Path, Path, bool]] = []
+    # One scan for the whole dataset, in the parent, before any work is queued.
+    found = {case.case_id: case for case in scan(cfg.zenodo_root, layout=layout)}
+
+    jobs: list[tuple[ScannedCase, Path, Path, bool]] = []
     for case_id in train_ids:
-        jobs.append((case_id, raw_dir / "imagesTr", raw_dir / "labelsTr", False))
+        if case_id in found:
+            jobs.append((found[case_id], raw_dir / "imagesTr", raw_dir / "labelsTr", False))
     for case_id in test_ids:
-        jobs.append((case_id, raw_dir / "imagesTs", raw_dir / "labelsTs", True))
+        if case_id in found:
+            jobs.append((found[case_id], raw_dir / "imagesTs", raw_dir / "labelsTs", True))
+
+    # meta.csv naming a case the tree does not contain is its own failure, and it
+    # is reported once here rather than as an identical error from every worker.
+    # It means the index is stale or the transfer was incomplete -- `segtrain
+    # verify` is the thing that distinguishes those two.
+    for case_id in train_ids + test_ids:
+        if case_id not in found:
+            report.add(
+                CaseResult(case_id, False,
+                           error=f"in meta.csv but not found under {cfg.zenodo_root} "
+                                 "-- re-run `segtrain index`, or `segtrain verify` if "
+                                 "this followed a transfer"),
+                case_id in test_ids,
+            )
 
     for _, img_dir, lbl_dir, _ in jobs:
         img_dir.mkdir(parents=True, exist_ok=True)
         lbl_dir.mkdir(parents=True, exist_ok=True)
 
-    n_workers = max(1, min(cfg.n_workers(), len(jobs)))
+    n_workers = max(1, min(cfg.n_workers(), len(jobs) or 1))
     done = 0
     with ProcessPoolExecutor(max_workers=n_workers) as pool:
         futures = {
             pool.submit(
                 convert_case,
-                case_id,
-                cfg.zenodo_root,
+                case,
                 img_dir,
                 lbl_dir,
                 task.label_set,
@@ -543,7 +572,7 @@ def convert_dataset(
                 overwrite,
                 cfg.overlap_policy,
             ): is_test
-            for case_id, img_dir, lbl_dir, is_test in jobs
+            for case, img_dir, lbl_dir, is_test in jobs
         }
         for fut in as_completed(futures):
             report.add(fut.result(), futures[fut])
@@ -561,8 +590,12 @@ def convert_dataset(
     return report
 
 
-def iter_case_ids(zenodo_root: Path) -> Iterable[str]:
-    """Subject directories actually present on disk, for cross-checking meta.csv."""
-    for p in sorted(Path(zenodo_root).iterdir()):
-        if p.is_dir() and (p / "ct.nii.gz").is_file():
-            yield p.name
+def iter_case_ids(zenodo_root: Path, layout: str = "auto") -> Iterable[str]:
+    """Case ids actually present on disk, for cross-checking meta.csv.
+
+    Goes through the scanner rather than looking for ``<case>/ct.nii.gz``, which
+    saw nothing at all on a flat ImageCAS tree and would have reported every case
+    in meta.csv as absent.
+    """
+    for case in scan(Path(zenodo_root), layout=layout):
+        yield case.case_id

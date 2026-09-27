@@ -9,6 +9,7 @@ import pytest
 from segtrain import index
 from segtrain.config import LabelSet
 from segtrain.convert import convert_case, remap_multilabel
+from segtrain.index import scan
 from segtrain.splits import SPLIT_TEST, SPLIT_TRAIN, SPLIT_VAL, read_meta
 
 CORONARY = LabelSet(
@@ -269,15 +270,27 @@ def test_multilabel_shape_disagreement_is_refused(tmp_path):
 # -------------------------------------------------------------- convert_case
 
 
+def _only(root):
+    """The one case in `root`, resolved the way the pipeline resolves it."""
+    cases = scan(root)
+    assert len(cases) == 1, cases
+    return cases[0]
+
+
+def _dirs(tmp_path):
+    images, labels = tmp_path / "img", tmp_path / "lbl"
+    images.mkdir()
+    labels.mkdir()
+    return images, labels
+
+
 @pytest.mark.parametrize("form", ["per-structure", "multilabel"])
 def test_convert_case_handles_either_form(tmp_path, form):
     root = tmp_path / "data"
     _case(root, "c001", form)
-    images, labels = tmp_path / "img", tmp_path / "lbl"
-    images.mkdir()
-    labels.mkdir()
+    images, labels = _dirs(tmp_path)
 
-    result = convert_case("c001", root, images, labels, CORONARY, "copy", False)
+    result = convert_case(_only(root), images, labels, CORONARY, "copy", False)
 
     assert result.ok, result.error
     assert (images / "c001_0000.nii.gz").is_file()
@@ -288,36 +301,34 @@ def test_convert_case_handles_either_form(tmp_path, form):
 def test_convert_case_reports_a_case_with_no_labels(tmp_path):
     root = tmp_path / "data"
     _volume(root / "c001" / "ct.nii.gz", np.zeros((4, 4, 4), dtype=np.int16))
-    images, labels = tmp_path / "img", tmp_path / "lbl"
-    images.mkdir()
-    labels.mkdir()
+    images, labels = _dirs(tmp_path)
 
-    result = convert_case("c001", root, images, labels, CORONARY, "copy", False)
+    result = convert_case(_only(root), images, labels, CORONARY, "copy", False)
     assert not result.ok
     assert "no labels" in result.error
 
 
-def test_convert_case_reports_a_missing_image(tmp_path):
+def test_convert_case_reports_an_image_that_vanished_after_indexing(tmp_path):
+    """The scanner found it; something removed it before the worker ran."""
     root = tmp_path / "data"
-    (root / "c001").mkdir(parents=True)
-    images, labels = tmp_path / "img", tmp_path / "lbl"
-    images.mkdir()
-    labels.mkdir()
+    _case(root, "c001")
+    case = _only(root)
+    case.image.unlink()
+    images, labels = _dirs(tmp_path)
 
-    result = convert_case("c001", root, images, labels, CORONARY, "copy", False)
+    result = convert_case(case, images, labels, CORONARY, "copy", False)
     assert not result.ok
-    assert "no image" in result.error
+    assert "gone since indexing" in result.error
 
 
 def test_convert_case_skips_work_already_done(tmp_path):
     root = tmp_path / "data"
     _case(root, "c001")
-    images, labels = tmp_path / "img", tmp_path / "lbl"
-    images.mkdir()
-    labels.mkdir()
+    images, labels = _dirs(tmp_path)
+    case = _only(root)
 
-    assert convert_case("c001", root, images, labels, CORONARY, "copy", False).ok
-    again = convert_case("c001", root, images, labels, CORONARY, "copy", False)
+    assert convert_case(case, images, labels, CORONARY, "copy", False).ok
+    again = convert_case(case, images, labels, CORONARY, "copy", False)
     assert again.skipped
 
 

@@ -86,9 +86,14 @@ $SCRATCH/imagecas/1.label.nii.gz
 also ships centerlines, mesh surfaces, scan-level descriptors and pretrained
 weights for six methods. Phase 1 reads only the lumen annotation.
 
-`segtrain index` understands both the flat form above and one-directory-per-case,
-and auto-detects which it is given. Force it with `--layout flat` or
-`--layout nested` if the guess is ever wrong.
+`segtrain index` and `segtrain convert` both understand the flat form above and
+one-directory-per-case, and auto-detect which they are given. Force it with
+`--layout flat` or `--layout nested` if the guess is ever wrong — and pass the same
+value to both, because `convert` cannot find a case `index` resolved differently.
+
+`segtrain scinet prepare --convert` writes the layout into the job script rather
+than leaving it to auto-detection, so a step that runs hours later in a queue
+cannot make a different guess about the data than you did.
 
 Both of those are public datasets, pulled straight from Zenodo or Kaggle onto a
 datamover node. **Our own annotated data comes from the Girder server instead,

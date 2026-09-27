@@ -440,6 +440,7 @@ def render_prepare_script(
     scheme: str = "official",
     convert: bool = False,
     workers: Optional[int] = None,
+    layout: str = "auto",
 ) -> str:
     """A CPU-only job for convert / plan / preprocess.
 
@@ -464,7 +465,11 @@ def render_prepare_script(
     ]
     steps = []
     if convert:
-        steps.append(["convert", "--task", str(task.dataset_id), *roots])
+        # --layout is passed explicitly rather than left to auto-detection: this
+        # script runs hours later in a queue, and a scripted step should not make a
+        # different guess about the data than the operator did at index time.
+        steps.append(["convert", "--task", str(task.dataset_id),
+                      "--layout", layout, *roots])
     steps.append(["plan", "--task", str(task.dataset_id), "--scheme", scheme, *roots])
     pre = ["preprocess", "--task", str(task.dataset_id), *roots]
     if workers:

@@ -127,6 +127,7 @@ def cmd_convert(args) -> int:
         include_test=not args.no_test,
         dry_run=args.dry_run,
         progress=None if args.dry_run else _progress,
+        layout=args.layout,
     )
     print(report.render())
     return 0 if report.ok else 1
@@ -776,7 +777,8 @@ def cmd_scinet_prepare(args) -> int:
     log_dir.mkdir(parents=True, exist_ok=True)
     script_path = log_dir / "prepare.sh"
     text = render_prepare_script(cfg, task, scheme=args.scheme,
-                                 convert=args.convert, workers=args.workers)
+                                 convert=args.convert, workers=args.workers,
+                                 layout=args.layout)
     write_script(script_path, text)
 
     print(f"task     {task.nnunet_name}")
@@ -1126,6 +1128,10 @@ def build_parser() -> argparse.ArgumentParser:
     s.add_argument("--limit", type=int, help="convert only the first N training cases")
     s.add_argument("--overwrite", action="store_true", help="redo cases that already exist")
     s.add_argument("--no-test", action="store_true", help="skip the held-out test cases")
+    s.add_argument("--layout", default="auto", choices=("auto", "nested", "flat"),
+                   help="source layout, as for `index`. Auto-detected, and it has "
+                        "to match what index saw or meta.csv names cases convert "
+                        "cannot find")
     s.add_argument("--dry-run", action="store_true")
     s.set_defaults(func=cmd_convert)
 
@@ -1253,6 +1259,9 @@ def build_parser() -> argparse.ArgumentParser:
     s.add_argument("--scheme", choices=("official", "cv5"), default="official")
     s.add_argument("--convert", action="store_true",
                    help="also run `convert` in the job, before planning")
+    s.add_argument("--layout", default="auto", choices=("auto", "nested", "flat"),
+                   help="source layout for the convert step, written into the job "
+                        "script so it cannot guess differently hours later")
     s.add_argument("--workers", type=int, help="preprocessing worker processes")
     s.add_argument("--dry-run", action="store_true", help="print the script, submit nothing")
     s.set_defaults(func=cmd_scinet_prepare)

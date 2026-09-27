@@ -28,7 +28,7 @@ Both trees share:
 
 ### 1. Topology-aware losses
 
-**Airway Segmentation Based on Topological Structure Enhancement Using Multi-task Learning (MICCAI 2024, Kingma et al.)**:
+**Airway Segmentation Based on Topological Structure Enhancement Using Multi-task Learning (MICCAI 2024, Yang, X. et al., LNCS 15009, doi:10.1007/978-3-031-72114-4_9)** — previously miscited here as "Kingma et al.":
 - Problem: "standard 3D-UNet segmentation results typically exhibit airway topology breakage".
 - Solution: multi-task learning combining segmentation + centerline auxiliary head.
 - **Mechanism**: centerline supervision forces the network to learn connectivity; centerline is extracted from the label by skeletonization, then dilated to a tubular prior.

@@ -9,7 +9,7 @@ aliases: [Licensing, Open access, Model weights, CC-BY, Data reuse]
 
 Whether models trained on ImageCAS, ImageCAS-X, or ASOCA can have their weights released publicly, based on the data licenses. Relevant to [[Training plan]]'s discussion of project outcomes and whether a trained model can be made available to the research community.
 
-**Short answer.** **ImageCAS** (the 1000 merged binary masks) has no stated license and requires contact with authors for reuse. **ImageCAS-X** (the 800 re-annotated cases) ships **CC BY 4.0**, permitting trained-model release if attribution is given. **ASOCA** ships **CC BY 4.0** with a registration-required access gate, same permissive license. Models trained on any of these can be released under the same license (or more restrictive), provided data provenance is disclosed.
+**Short answer.** **ImageCAS** (the 1000 merged binary masks) has no stated license and requires contact with authors for reuse. **ImageCAS-X** (the 800 re-annotated cases) ships **CC BY 4.0**, permitting trained-model release if attribution is given. **ASOCA** is **not** CC BY 4.0: the *article* is, but the *data* sits at UK Data Service ReShare 855916 under **safeguarded/registered access**, where applicants must supply evidence of ethics review and approval or a waiver, under the UKDS End User Licence. This note previously called it "CC BY 4.0 with a registration-required access gate, same permissive license" — that is the same article-versus-data conflation this vault corrected in the 0.856 ceiling, and it means external validation on ASOCA has an approval lead time nobody has budgeted. Models trained on any of these can be released under the same license (or more restrictive), provided data provenance is disclosed.
 
 ## ImageCAS (1000 merged masks)
 
@@ -22,7 +22,7 @@ The Zeng et al. paper (CMIG 2023, arXiv:2211.01607v2) does **not state a license
 **No public license = no legal permission to redistribute or use beyond the original study without author contact.** Standard practice in academic contexts:
 
 - Authors hold copyright to the dataset
-- Use in a derivative work (training a model, publishing results) is permitted for research purposes under the doctrine of fair use
+- Use in a derivative work (training a model, publishing results) is **not settled by this note**. It previously asserted such use was "permitted for research purposes under the doctrine of fair use" — but fair use is US doctrine, and this project runs at a Canadian institution on Canadian infrastructure, where the doctrine is *fair dealing* and is narrower. No authority was cited then and none is cited now: this needs a real answer before any weight release.
 - *Releasing* a model trained on the data, or releasing the data itself, requires **explicit permission from the authors**
 
 If this project trains a binary model on the original 1000 ImageCAS masks and wishes to release trained weights, the options are:
@@ -53,7 +53,7 @@ Bransby et al. (arXiv:2608.30404v1, preprint) explicitly state: **"CC BY 4.0"** 
 - Removing the attribution statement
 - Trademark use (cannot use "ImageCAS-X" as a brand name for the model)
 
-Models trained on ImageCAS-X data can be released under CC BY 4.0 or a more restrictive license (e.g., CC BY-SA, CC BY-NC), provided the original dataset attribution and license are disclosed.
+Models trained on ImageCAS-X data can be released under **CC BY 4.0**. This note previously added "or a more restrictive license (e.g., CC BY-SA, CC BY-NC)" — that is backwards. CC BY 4.0 §3(a) and §2(a)(5)(B) forbid imposing terms that restrict recipients from doing what the licence permits, so releasing weights that embed CC BY 4.0 labels under CC BY-NC is the textbook "no additional restrictions" violation, and CC BY-SA imports a copyleft the source does not have. (Whether trained weights are Adapted Material at all is legally unsettled; this note assumes they are without saying so.)
 
 ### Recommendation
 

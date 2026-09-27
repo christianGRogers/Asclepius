@@ -14,7 +14,7 @@ applied; this folder does not edit the plan.
 ## 1. Correct the cascade-trigger threshold (factual error)
 
 **Where:** §2, gate (a); and the header comment of
-`configs/tasks/Dataset710_Coronary.yaml` (line ~11).
+`configs/tasks/Dataset710_CoronaryLumen.yaml` (line ~11).
 **Now:** "patch fraction ≥ 12.5 % so no cascade is planned".
 **Proposed:** "patch fraction ≥ 25 % — nnU-Net v2's `lowres_creation_threshold` —
 so the patch sees at least a quarter of the median volume. If a `3d_lowres` entry is

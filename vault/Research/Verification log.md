@@ -10,21 +10,32 @@ updated: 2026-09-20
 
 ## Summary
 
-Counts below are derived from the per-entry outcomes in this file, and agree
-with them. An earlier revision of this summary claimed eight resolved entries
-while the body recorded five; entries 12 and 16 in particular were reported as
-verified but never carried a recorded outcome. They are listed as unfinished
-here, not as evidence.
+Counts below were re-derived on 2026-09-26 by an independent audit
+([[Citation integrity]]), which found the previous set misfiled in two places.
 
 - **Entries:** 22
-- **Resolved** (full text opened and the passage read) — **12**: 2, 4, 7, 8, 9, 10, 12, 16, 17, 18, 21, 22
+- **Resolved** (full text opened and the passage read) — **13**: 2, 4, 7, 8, 9, 10, 12, 13, 15, 16, 17, 18, 22
 - **Wrong** (source contradicts the claim) — **1**: entry 1
-- **Still unreachable** — **7**: 3, 5, 6, 11, 14, 19, 20
-- **Unfinished** (verification started, no outcome recorded) — **2**: 13, 15
+- **Still unreachable** — **8**: 3, 5, 6, 11, 14, 19, 20, 21
+- **Unfinished** — **0**
 
-The jump from 5 resolved to 12 is the Chrome extension: with the browser
-signed in to UTORid, the library proxy opens ScienceDirect, Springer and
-Oxford Academic. Entries 4, 9 and 22 turned out to be the same paper.
+Two corrections to the previous counts. **Entry 21 (Föllmer) was listed as
+resolved while its body still reads "Still unreachable"** and no second-pass
+section covers it; it is unreachable. **Entries 13 and 15 were listed as
+unfinished and are now resolved** — entry 13's clDice ablation (clDice metric
+92.3 → 91.7, Betti error 5.6 → 8.0; DSC in fact *rose* 89.8 → 90.0, which this
+log did not record) and entry 15's 35 min/case (verbatim in the paper, and
+independently 200 h + 270 h ÷ 800 = 35.25) were both confirmed from primary
+sources.
+
+The jump in resolutions is the Chrome extension: with the browser signed in to
+UTORid, the library proxy opens ScienceDirect, Springer and Oxford Academic.
+
+**The claim that "entries 4, 9 and 22 turned out to be the same paper" was
+false.** Entries 4 and 9 are Mask SAM 3D; entry 22 is Sim & Wright 2005, an
+unrelated kappa paper. The second pass is off by one through that region — its
+heading `### 21. Sim & Wright` is really entry 22, and `### 4, 9 and 22` is
+really 4 and 9.
 
 ### The one error found
 
@@ -35,17 +46,39 @@ Using it as a per-branch ceiling compares two different tasks, and flatters the
 target: annotators who agree a voxel is vessel can still disagree about which
 vessel owns it.
 
-### What the unfinished entries still hold up
+### A stale paragraph, kept for the record
 
-Entry 12 (cbDice small-vessel gain) and entry 16 (DPC-Walk reconnection) are
-each cited in support of a proposed change. Neither is verified. Treat the
-proposals resting on them as unevidenced until someone opens those papers.
+This section used to say entries 12 (cbDice) and 16 (DPC-Walk) were unverified
+and that the proposals resting on them were unevidenced. That contradicted both
+the summary list above it and the second pass below it, which resolved both. It
+was text left behind after the second pass, and it is the kind of drift the
+counts are now derived to prevent.
 
 ### Access, not honesty
 
-No invented citation has been found. Every failure here is a paywall: 12 of 22
-claims have no open-access full text, and the more recent the paper, the more
-likely it is closed. An institutional login would resolve most of them.
+**Both halves of this heading were wrong, and the audit of 2026-09-26 corrected
+them.**
+
+**One invented citation exists.** `Centerline extraction metrics from CAT08 and
+voxel segmentation.md` attributed clDice to "Moccia et al. 2018, *Towards
+Automatic Coronary Calcium Scoring in a Screening Study with Low-Dose Chest CT*,
+IEEE TMI" — a composite of three real and unrelated works, naming a paper that
+does not exist. It is the only one found in 137 identifier strings, and no
+decision rested on it. Corrected at source.
+
+**And not every failure is a paywall.** Entries 13 and 15, and the
+partial-annotation claim in §5 of [[Proposed changes to the training plan]], were
+open-access PDFs that were never opened — effort and tooling failures, recorded
+as access failures. Entries 19 (PMC11298507) and 21 (*Insights into Imaging*,
+open access) need no login either. An institutional login would resolve much of
+the rest, but it is not the whole explanation and saying so obscured the part
+that was fixable for free.
+
+Separately, of the numeric claims marked **[reported]** — the tier nobody
+re-checked — a sample of 14 found **3 hard errors (~21 %)**, all of them scope,
+count or attribution slips, and **none an invented number**. Treat a [reported]
+figure as roughly one-in-five wrong in its details and safe to act on only after
+someone re-reads the source table.
 
 ---
 
@@ -95,7 +128,7 @@ likely it is closed. An institutional login would resolve most of them.
 
 7. **Same file**
    - **Claim:** TW-MoCoNet motion-correction reports 80.2% reduction in moderate-artifact segments (from 26.37% to 5.22%)
-   - **Source:** Song et al. Deep Learning-Based Cardiac CT Coronary Motion Correction Method with Temporal Weight Adjustment: Clinical Data Evaluation. J Imaging Informatics in Medicine (Springer). 2025. DOI 10.1007/s10278-025-01683-4. PMID 41028564.
+   - **Source:** Yao D, Yan C, Du W, et al. Deep Learning-Based Cardiac CT Coronary Motion Correction Method with Temporal Weight Adjustment: Clinical Data Evaluation. J Imaging Inform Med 2025;39(3):2706-2718. DOI 10.1007/s10278-025-01683-4. PMID 41028564. (**Recorded here as "Song et al." until 2026-09-26; Crossref gives no Song in the author list.**)
    - **Status:** Published 2025, open-access PMC version available
    - **Outcome:** **RESOLVED** — Opened full text via PMC (pmc.ncbi.nlm.nih.gov/articles/PMC13230368/). Paper reports: "The proportion of the segments with moderate artifacts, scored 2 points, has a notable decrease of **80.2% (from 26.37 to 5.22%)**" comparing SRA baseline to wTWM method. Additional results: FOR improved 6.57%, LIRS improved 7.73%, MAS improved 13.38%; artifact-free segments (score 4) increased to 50.0%; all improvements p<0.001 (Wilcoxon rank-sum). Claim is correct as stated in the research note.
 

@@ -17,7 +17,7 @@ The **ostium** of a coronary artery is its point of origin from the aorta, forma
 
 ## The taper problem: where does a segment end when the vessel vanishes below resolution?
 
-A coronary artery does not end with a sharp cut. Instead, it tapers — the lumen diameter progressively narrows as the vessel branches and its flow diminishes. This is universal in coronary anatomy: main trunks measure **4.5 ± 0.5 mm** in diameter, while distal left anterior descending branches measure **1.9 ± 0.4 mm**. CCTA imaging resolution is approximately **1.5 mm**, meaning smaller distal branches approach or fall below the resolution limit.
+A coronary artery does not end with a sharp cut. Instead, it tapers — the lumen diameter progressively narrows as the vessel branches and its flow diminishes. This is universal in coronary anatomy: main trunks measure **4.5 ± 0.5 mm** in diameter, while distal left anterior descending branches measure **1.9 ± 0.4 mm**. CCTA voxel resolution on this cohort is **0.25–0.45 mm** (ImageCAS; ASOCA 0.3–0.4 mm in-plane), so distal branches of ~1.9 mm are still several voxels across. This note previously said resolution was "approximately 1.5 mm", which is wrong by 3–4× — 1.5 mm is SCCT's side-branch *naming* threshold, not a resolution limit. The taper problem is real, but it is a question of visibility and convention rather than of voxels.
 
 ### What this means for labeling
 

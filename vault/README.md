@@ -22,13 +22,21 @@ in `configs/`, and anything an operator follows belongs in `docs/`.
   already exist.
 - **[[Verification log]]** — which claims in the research were checked against
   full text, which were wrong, and which are still behind a paywall.
+- **[[Review summary]]** — ten independent reviews of everything above, run in
+  parallel on 2026-09-26, each checking primary sources rather than this vault's
+  summary of them. Read this before acting on the plan: it is what found that the
+  plan's stated contribution no longer exists, that phase 1 is not runnable, and
+  that the patch budget cannot do what §2 says it does.
 
-`vault/Research/` holds the notes those two summarise: seven topic folders, 84
-notes, each carrying its reasoning and its sources.
+`vault/Research/` holds the notes those summarise: seven topic folders, 84
+notes, each carrying its reasoning and its sources. `vault/Review/` holds the ten
+reviews of them.
 
-`[[Research context]]` is linked from the training plan and is deliberately
-unresolved: the condensed ImageCAS and nnU-Net notes live outside the
-repository. Drop them in as a note of that name and the link resolves.
+`[[Research context]]` is linked from the training plan and carries the condensed
+ImageCAS and nnU-Net notes. This README used to say the link was deliberately
+unresolved and the notes lived outside the repository; the note exists and
+resolves, and one of the errors the review found — the 12.5 % cascade threshold —
+was inherited from it.
 
 ## Conventions
 
@@ -36,7 +44,7 @@ repository. Drop them in as a note of that name and the link resolves.
   `Training plan`, not `TRAINING-PLAN.md`. The old filenames survive as
   `aliases` in the frontmatter, so links and searches for them still land.
 - Link between notes with `[[wikilinks]]`. Link *out* to code as an inline path
-  (`configs/tasks/Dataset710_Coronary.yaml`) — a relative link would break in
+  (`configs/tasks/Dataset710_CoronaryLumen.yaml`) — a relative link would break in
   one of the two tools.
 - Frontmatter carries `tags`, `status` and `updated`. Update `updated` when the
   substance changes, not for a typo.

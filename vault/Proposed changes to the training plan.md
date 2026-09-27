@@ -48,8 +48,15 @@ This does not make the annotation programme pointless, but it changes what it
 is for. Three options, and this is a decision only you can make:
 
 1. **Train the multiclass model on ImageCAS-X now**, and redirect annotators to
-   the 200 cases ImageCAS-X excluded, to independent verification of a sample,
-   or to a second opinion on the classes where agreement is weakest.
+   independent verification of a sample, or to a second opinion on the classes
+   where agreement is weakest. **Not to the 200 cases ImageCAS-X excluded** — this
+   item used to name them first, and they were excluded as *non-diagnostic*
+   (motion artefact n = 114, step artefact n = 76, poor contrast mixing n = 7,
+   plus 3 others), for causing "anatomically implausible vessel boundaries". The
+   research layer already said so: `Research/Datasets and benchmarks/Proposed
+   changes.md` D12 keeps them out of every split unless reported as a separate
+   non-diagnostic set. Pointing the least experienced annotators at the scans four
+   trained analysts rejected is the worst available use of the time.
 2. **Keep annotating from scratch** and treat ImageCAS-X as a held-out
    comparison — defensible if you want labels whose protocol you control end to
    end, but it costs a term of annotator time to reproduce something that
@@ -67,13 +74,17 @@ and it states **Creative Commons Attribution 4.0 International**. Contents:
 - `ImageCAS-X_dataset.zip` (1.4 GB) — voxel-wise annotations of vessel lumen
   **and coronary segments**, coronary centerlines, mesh surfaces, and
   scan-level descriptors.
-- `pretrained_weights.zip` (1.6 GB) — pretrained weights for **six** coronary
-  segmentation methods.
+- `pretrained_weights.zip` (1.6 GB) — pretrained weights for the benchmarked
+  methods. **Eight, not six**: TotalSegmentator, 3D-FFR-UNet, ADE-HTL,
+  Swin-UNETR, ImageCAS (2023), nnU-Net, nnU-Net+clDice and CAS-Net.
 
 Two things worth noticing. The centerlines and descriptors come with it, which
 is what §2.1's centerline-based labelling and §2.2's dominance stratification
-both need. And six pretrained baselines arrive for free — the comparators for
-a paired experiment, without training any of them.
+both need. And eight pretrained baselines arrive for free — but **all eight are
+binary lumen**, so they are comparators for the binary task only. For the
+14-class task there are no comparators at all, because no automated method has
+ever been benchmarked on those labels. That is simultaneously the limit of this
+sentence and the reason the per-branch benchmark is available as a contribution.
 
 One caveat: the Zenodo page says "coronary segments" without naming the schema.
 The 14 classes come from the paper, not the record. The *ImageCAS-X import
@@ -100,26 +111,53 @@ target: annotators who agree a voxel is vessel can still disagree about which
 vessel owns it.
 
 **Replace with** ImageCAS-X's per-branch figures on the same cohort **[verified]**:
-92.8 merged, ~95 RCA, ~92 LAD, ~85 LCx, 74–84 named branches, 71–81 for the
-dominance-dependent branches. Note how steeply that falls — the ceiling is not
-one number, it is a curve by vessel.
+merged lumen 92.8 ± 3.1, RCA 95.3 ± 5.0, LAD 92.3 ± 6.7, **LM 91.9 ± 13.7**
+(this row used to be missing, and it is the one class whose failure is
+unambiguously clinically consequential), LCx 84.8 ± 19.8, D1 79.9 ± 28.7,
+D2 82.9 ± 24.3, OM1 74.1 ± 32.3, OM2 77.7 ± 29.1, IM 80.6 ± 24.5,
+R-PDA 82.6 ± 21.9, R-PLA 83.6 ± 18.6, L-PDA 75.1 ± 29.0, L-PLA 70.9 ± 27.2,
+Other 81.3 ± 17.0. Note how steeply that falls — the ceiling is not one number,
+it is a curve by vessel.
+
+**Never quote a mean from that table without its SD.** An SD of 32 on a bounded
+metric is not noise around a mean, it is a bimodal distribution: in a substantial
+minority of cases two trained analysts do not agree the vessel is there at all.
+And 92.8 is itself a **merged-lumen** figure — the same quantity as the 0.856 this
+section is correcting — so it is the binary calibration target, not the multiclass
+ceiling. The macro mean over the 14 per-segment figures is **82.4**.
 
 ### 1.2 The cascade trigger is 25 %, not 12.5 % **[source]**
 
 §2 gate (a) says *"patch fraction ≥ 12.5 % so no cascade is planned"*. nnU-Net
 v2's `lowres_creation_threshold` is **0.25**, verified at tags `v2.5.1`,
 `v2.6.2` and `master`. The same figure appears in
-`configs/tasks/Dataset710_Coronary.yaml`.
+`configs/tasks/Dataset710_CoronaryLumen.yaml` (this item used to cite
+`Dataset710_Coronary.yaml`, which was renamed in `405e7c3`).
 
 The plan's estimated 27–30 % patch fraction is a few points clear of the real
 threshold, not more than double it. The conclusion survives; the margin is much
 thinner than written, which matters because the gate exists to catch exactly
 that.
 
+**And the margin cannot be widened.** The planner caps the patch at the volume of
+a 256³ patch and only ever shrinks it, spending surplus VRAM on batch size, so
+patch fraction is pinned at roughly 23–31 % for any budget above ~52 GB.
+ImageCAS's z-extent of 206–275 straddles the threshold — z = 256 is 25.0 %
+exactly, z = 275 is 23.3 %. Gate (a) therefore has no remedy behind it and should
+be recorded rather than gated on. See [[Architecture and compute]].
+
 ### 1.3 The rare-branch starvation mechanism is misdescribed **[source]**
 
-§5 says nnU-Net *"picks one random foreground class for a third of patches"*, so
-rare branches starve. Verified in `DataLoader3D.get_bbox`: the per-case choice
+§5 says nnU-Net *"picks one random foreground class for a third of patches"*. The
+fraction is also wrong: `_oversample_last_XX_percent` forces foreground in
+`round(batch × (1 − 0.333))` samples, which at **batch 2 is one of two — 50 %, not
+33 %** (it is 33 % only at batch 3, which is what `--gpu-mem 70` would actually
+return). So
+rare branches starve. Verified in `nnUNetDataLoaderBase.get_bbox`
+(`nnunetv2/training/dataloading/base_data_loader.py`, `v2.5.1`) — **this item
+previously cited `DataLoader3D.get_bbox` and an `fg_locations.eligible_classes()`
+API, and neither the class, the file nor the method exists**; the conclusion was
+right and the citation was invented. The per-case choice
 among classes **present in that case** is already uniform. That step is not
 where starvation comes from.
 
@@ -261,8 +299,12 @@ uncomfortable:
 | Show κ ≥ .70 when you would reject below .60 | 503 |
 
 And requirements rise sharply as a class gets rare — roughly triple at 10 %
-prevalence. Your dominance-dependent branches sit near 1 %, past the end of the
-table.
+prevalence. Your dominance-dependent branches sit near **5 %**, not the 1 % this
+paragraph used to claim — ImageCAS-X reports 41 left-dominant and 30 co-dominant
+of 800 (5.1 % / 3.8 %), and L-PDA/L-PLA are 8 and 9 of the 160 test cases
+(5.0 % / 5.6 %). The 5× error was deployed precisely to argue the requirement runs
+off the end of the table. It does run off the end, but for the reason below rather
+than this one.
 
 **So: size the overlap set for the common branches, and report the rare ones as
 wide-interval estimates rather than measured ceilings.** No affordable duplicate
@@ -304,8 +346,11 @@ Added to the existing patch-fraction / spacing / batch-size gates:
 
 The single most important one: **report per-class tables always, and state the
 averaging rule.** Macro and micro differ by 2–5 Dice points on this class
-distribution, because the dominance-dependent branches appear in under 1 % of
-cases. A headline mean without a stated rule is ambiguous. **[reported]**
+distribution, because the dominance-dependent branches appear in about 5 % of
+cases (not "under 1 %", as this line used to say) and the mid-prevalence side
+branches in 27–83 %. Measured on ImageCAS-X's own table the macro-versus-merged
+gap is **10.4 points**, not 2–5, and it is driven by those mid-prevalence side
+branches — dropping L-PDA and L-PLA moves the macro mean by only 1.5. A headline mean without a stated rule is ambiguous. **[reported]**
 
 Beyond that:
 - **NSD tolerance is currently indefensible.** The 1.5 mm default is ~4 voxels
@@ -348,7 +393,7 @@ is a completeness gap, not a neutral omission.
 | 2 | **Patch-budget sanity run** | Plan the binary model at `--gpu-mem 24` and `--gpu-mem 70`, train both on one fold. Published patch-size curves stop at 64³, and nnU-Net Revisited showed VRAM scaling going *negative* on three of six datasets. Converts the plan's central extrapolation into a measurement, before any per-branch labels exist. **[reported]** |
 | 3 | **Skeleton Recall** | §2.3 |
 | 4 | **Class-balanced sampling**, reimplemented at case-selection frequency | §1.3 |
-| 5 | **Partial-annotation self-training** | 24.29 % of branches labelled reached parity with full annotation via self-training. The largest available lever on annotator hours if it holds — but **[unverified]**, abstract only, and it should be tested before the team commits a term. |
+| 5 | **Partial-annotation self-training** | Corrected: 24.29 % of **vessels**, and parity was reached **in trunk continuity only**, not in overall segmentation — and trunks are the part this project already gets right. The PDF is reachable (§5's "fetch limits" was a tooling failure, not a paywall). Much weaker than "the largest available lever on annotator hours", and redundant if the annotation programme shrinks. |
 | 6 | **Deep supervision**, **elastic-deformation ablation**, **TTA / overlap tuning** | All conditional on the baseline showing the specific failure each addresses. |
 
 **Write down the expected effect size for the ResEnc run before you run it.**
@@ -361,7 +406,11 @@ walltime. **[reported]**
 ### 3.5 Things to add to "explicitly ruled out"
 
 - **Mamba-based U-Nets** — the "No-Mamba Base" ablation matched or beat both
-  U-Mamba variants on five of six datasets at lower VRAM. Nothing to buy. **[reported]**
+  U-Mamba variants on **four** of six datasets at lower VRAM — it loses KiTS
+  (85.98 vs 86.22/86.34) and AMOS (89.04 vs 89.13); "five of six" was a miscount
+  of a table this vault reproduces correctly elsewhere. The conclusion stands, and
+  the paper states outright that "the mamba layers actually have no effect on
+  performance". Nothing to buy. **[verified]**
 - **Promptable / foundation models as the primary segmenter** — MedSAM has a
   documented weakness on branching vessels; vesselFM scores 29.69 Dice zero-shot
   on its only CT vascular benchmark; VISTA3D reports no coronary class and uses
@@ -390,7 +439,7 @@ relabelling pass** for fragments found and connected but misnamed.
 |---|---|---|
 | ImageCAS (1000 merged masks) | None stated; Kaggle distribution carries Apache 2.0 but the masks do not | Author permission needed before releasing weights trained on them |
 | ImageCAS-X (800 cases) | CC BY 4.0 | Weights releasable with attribution |
-| ASOCA (40 cases) | CC BY 4.0 | External-validation results publishable |
+| ASOCA (40 cases) | **Registered/safeguarded access** — UK Data Service ReShare 855916, applicants must provide evidence of ethics review and approval, or a waiver; the CC BY licence covers the *article*, not the data | §3.3 has a lead time: the application must be approved before the 40 cases can be downloaded. If no waiver is obtainable, §3.3 does not happen and its closing paragraph becomes the whole of §3.3 |
 
 Pick a licence for the labels this project creates — CC BY 4.0, for consistency
 — and say so in the release. Your README already says weights follow the
@@ -421,7 +470,7 @@ silently corrupt results, first:
 
 | Claim | Status |
 |---|---|
-| Partial annotation at 24.29 % reaches parity | **[unverified]** — abstract only, PDF exceeded fetch limits |
+| Partial annotation at 24.29 % reaches parity | **Resolved and downgraded** — PDF read: 24.29 % of *vessels*, parity on *trunk continuity* only |
 | Annotator proficiency at 20–30 cases | **[unverified]** — extrapolated from endoscopy, no coronary source |
 | Per-class weighting helps small bronchioles (airway analogue) | **[unverified]** — abstract only |
 | Tversky loss on CCTA | **[unverified]** — paywalled, never opened |

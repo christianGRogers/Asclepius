@@ -122,7 +122,7 @@ correction time will increase.
 Evidence: [[Active learning strategies for 3D medical segmentation do not
 consistently beat random sampling]].
 
-Published comparison (Schlemper et al., 2022, arXiv:2207.00845) found that
+Published comparison (Burmeister et al., 2022, arXiv:2207.00845) found that
 uncertainty sampling, representativeness sampling, and other sophisticated query
 strategies provided "no large margin" improvement over random case selection on
 three 3D medical segmentation datasets (heart, hippocampus, prostate). The reason:

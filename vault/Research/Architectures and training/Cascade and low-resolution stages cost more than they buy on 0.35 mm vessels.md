@@ -63,7 +63,7 @@ cascade has been shown to lose".
 
 ## The gate in §2 is stated against the wrong number — a code check
 
-The plan and `configs/tasks/Dataset710_Coronary.yaml` both instruct the operator to
+The plan and `configs/tasks/Dataset710_CoronaryLumen.yaml` both instruct the operator to
 check that "the patch covers ≥ 12.5 % of the median image shape (so no cascade is
 planned)". The current nnU-Net v2 planner uses **25 %**, not 12.5 %. In
 `nnunetv2/experiment_planning/experiment_planners/default_experiment_planner.py`
@@ -100,7 +100,7 @@ Consequences for the plan's arithmetic:
 ## What this implies for [[Training plan]]
 
 1. **Correct the threshold** in §2's gate (a) and in the header comment of
-   `configs/tasks/Dataset710_Coronary.yaml`: the trigger is 25 % of the median image
+   `configs/tasks/Dataset710_CoronaryLumen.yaml`: the trigger is 25 % of the median image
    voxels, not 12.5 %. Proposed wording is in `Proposed changes.md`.
 2. **Re-frame gate (a)** from "so no cascade is planned" to "so the patch sees at
    least a quarter of the volume". Whether nnU-Net writes a `3d_lowres` entry is

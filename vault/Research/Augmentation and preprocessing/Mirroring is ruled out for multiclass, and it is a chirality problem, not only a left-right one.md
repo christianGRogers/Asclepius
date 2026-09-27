@@ -91,7 +91,7 @@ Consequences for this repository:
   asking it for a right-coronary answer. Turning mirroring off in training is
   therefore also what turns it off in evaluation; there is no second switch to
   forget, but there *is* a first switch to forget.
-- `src/segtrain/preview.py` already sets `use_mirroring=False` for speed, so
+- `src/segtrain/preview.py` (**removed in `27b2b13`; this evidence line no longer resolves**) already sets `use_mirroring=False` for speed, so
   previews and final numbers can differ in TTA even today. Worth knowing when
   comparing them.
 
@@ -103,9 +103,9 @@ Consequences for this repository:
    `configure_rotation_dummyDA_mirroring_and_inital_patch_size` the way
    `nnUNetTrainerNoMirroring` does, gated on the task being multiclass. Today
    nothing in `src/segtrain/nnunet_ext/nnUNetTrainer_segtrain.py` or
-   `configs/tasks/Dataset710_Coronary.yaml` encodes the decision.
+   `configs/tasks/Dataset710_CoronaryLumen.yaml` encodes the decision.
 2. **Add a pre-submission gate** alongside the three existing planner gates in
-   `configs/tasks/Dataset710_Coronary.yaml`: for a multiclass task, assert that
+   `configs/tasks/Dataset710_CoronaryLumen.yaml`: for a multiclass task, assert that
    the trainer reports `mirror_axes = None` in its log line. The plan's rule is
    currently only enforceable by memory.
 3. **Do not substitute `onlyMirror01`.** Any single-axis flip inverts handedness;

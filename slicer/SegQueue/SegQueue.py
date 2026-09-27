@@ -7,6 +7,12 @@ volume arrives with the project's segments already created and named, the
 Segment Editor opens on it, and *Validate & submit* uploads the result and
 deletes the local copy.
 
+On a case that ships a coronary mask -- most of them -- each of those segments
+arrives holding a copy of the whole tree, hidden, and the work is to show one and
+cut it back to a single vessel. That happens entirely in the Segment Editor: this
+module creates the case, checks it and sends it, and puts no tooling of its own
+in front of Slicer's.
+
 Three decisions shape the whole module:
 
 * **The server owns the protocol.** Segment names, label values and colours come
@@ -101,7 +107,7 @@ from SegQueueLib import (
     updater,
 )
 
-__version__ = "0.7.2"
+__version__ = "0.8.0"
 
 #: How often the in-progress segmentation is written to disk. Two minutes is
 #: chosen against the cost of losing work rather than the cost of the write: a
@@ -137,90 +143,16 @@ HEARTBEAT_SECONDS = 300
 CTA_WINDOW = 800
 CTA_LEVEL = 300
 
-#: Sphere brush diameter in millimetres, for touching up what the tube missed.
-#: Smaller than the vessel on purpose: a brush wider than the lumen cannot be
-#: used to correct an edge, only to bury it.
-BRUSH_DIAMETER_MM = 1.5
-BRUSH_RANGE_MM = (0.25, 8.0)
-
-#: Editable intensity window, in HU. Opacified lumen sits well above 150 and
-#: below dense calcium; restricting paint to this range means a slightly sloppy
-#: brush stroke still produces a clean lumen edge.
-LUMEN_HU_MIN = 150
-LUMEN_HU_MAX = 1000
-
-#: The tube effect, from the SegmentEditorExtraEffects extension. Named as a
-#: constant because it is referenced in three places and is the one tool this
-#: whole panel is arranged around.
-SCISSORS_EFFECT = 'Scissors'
-
-#: How the trim tool is configured. Scissors is a C++ effect and these strings
-#: are converted to enums by name, with no validation on the way in and no error
-#: on the way out -- an unrecognised value becomes -1 and the tool silently stops
-#: drawing. They are exactly the defaults Slicer writes into a fresh segment
-#: editor node, which is what ``tests/slicer_selftest.py`` checks them against.
-SCISSORS_OPERATION = 'EraseInside'
-SCISSORS_SHAPE = 'FreeForm'
-
-TUBE_EFFECT = 'Draw tube'
-
-#: The extension that provides it. Declared as a dependency in the .s4ext too,
-#: but a local "Install from file" does not resolve dependencies, so the panel
-#: also has to say so at the moment it matters.
-TUBE_EXTENSION = 'SegmentEditorExtraEffects'
-
-#: A hidden segment the tube is applied into before being merged. It exists
-#: because Draw tube *replaces* the selected segment's contents rather than
-#: adding to them -- see ``onApplyTube``. Never exported: the submission is built
-#: from an explicit list of the project's own segments.
-TUBE_SCRATCH_SEGMENT = "~ tube section (working)"
-
-#: Tube radius in millimetres, and the range the slider offers. A left main
-#: lumen is around 2 mm in radius and a distal LAD under 1, so the useful band is
-#: narrow and the default sits mid-vessel. The effect's own default is 1.0.
-TUBE_RADIUS_MM = 1.25
-TUBE_RADIUS_RANGE_MM = (0.25, 6.0)
-
-#: The two effects offered as buttons, with their keyboard shortcut.
-#:
-#: Deliberately two, not twenty. A coronary artery is a tube: clicking a handful
-#: of points down its centreline and letting the effect sweep a tube along them
-#: is both faster and more consistent between annotators than any amount of
-#: slice-by-slice painting -- and the radius is exactly the degree of freedom
-#: that matters, because vessels taper. Paint is here to fix what the tube got
-#: wrong, and nothing else earns a button. Every other effect is still one click
-#: away in the Segment Editor below.
-VESSEL_EFFECTS = (
-    (TUBE_EFFECT, 'Q',
-     'Click points down the middle of the vessel, then Apply (A). Placement '
-     'starts as soon as you press this, and Apply leaves you ready for the next '
-     'section -- so a tapering artery is drawn as several sections, each with '
-     'its own radius, all adding into the same vessel.'),
-    ('Paint', 'W', 'Touch up what the tube missed. Sphere brush, sized in mm.'),
-    (SCISSORS_EFFECT, 'E',
-     'Cut away the part of the mask that is not this vessel. Drag a loop round '
-     'it in any view. Nothing you cut is lost -- it is what the next vessel '
-     'starts as.'),
-)
-
 #: How solid the seed looks in the 3D view. Enough to read the shape of the tree
 #: at a glance, sheer enough to see the branches an annotator has already claimed
 #: through it -- which is the comparison the 3D view is open for.
 SEED_3D_OPACITY = 0.35
 
 #: Settings keys. Stored in Slicer's own QSettings so a returning annotator does
-#: not retype the server URL or re-dial their tool sizes. Neither the username
-#: nor the token is stored -- see ``_SETTING_LEGACY_USER`` below and
-#: SegQueueClient's docstring.
-_SETTING_TUBE_RADIUS = "SegQueue/tubeRadiusMm"
-_SETTING_BRUSH = "SegQueue/brushDiameterMm"
+#: not retype the server URL. Neither the username nor the token is stored -- see
+#: ``_SETTING_LEGACY_USER`` below and SegQueueClient's docstring.
 _SETTING_SERVER = "SegQueue/serverUrl"
 _SETTING_CACHE = "SegQueue/cacheRoot"
-#: Whether the coronary seed is rendered in the 3D view when a case opens. On by
-#: default: the tree is the thing the annotator is about to cut up, and a branch
-#: is far easier to trim off a shape you can see whole than off forty
-#: cross-sections of it.
-_SETTING_SEED_3D = "SegQueue/showSeedIn3d"
 #: Last update check: {"checkedAt": <unix seconds>, "tag": <tag or "">}. Cached
 #: so the rate limit is spent on real checks rather than on reopening a panel.
 _SETTING_UPDATE = "SegQueue/updateCheck"
@@ -242,10 +174,7 @@ class SegQueue(ScriptedLoadableModule):
         self.parent.dependencies = []
         self.parent.contributors = ["Christian Rogers"]
         self.parent.helpText = __doc__
-        self.parent.acknowledgementText = (
-            "Distributed CT segmentation for the Asclepius coronary dataset. "
-            "Built and operated by Bradensbay."
-        )
+        self.parent.acknowledgementText = ""
 
         # Slicer gives a scripted module with no icon of its own the application's
         # generic module logo -- which is what used to appear in the module
@@ -286,6 +215,8 @@ class SegQueueLogic(ScriptedLoadableModuleLogic):
         #: a curious annotator cannot silently turn scaffolding into anatomy.
         self.seedSegmentId = None
         self.regionSegmentId = None
+        #: Whether this case opened from an autosaved draft rather than fresh.
+        self.resumedDraft = False
 
     # ------------------------------------------------------------ session
 
@@ -390,6 +321,8 @@ class SegQueueLogic(ScriptedLoadableModuleLogic):
         self.volumeNode.SetName(assignment.case_name or "case")
         self._loadOrCreateSegmentation(manifest)
         self._loadHelpers(assignment)
+        # After the helpers, necessarily: the mask it copies is one of them.
+        self._startBranchesFromSeed()
         slicer.util.setSliceViewerLayers(background=self.volumeNode, fit=True)
         self.applyViewPreset()
         self._sessionStart = time.time()
@@ -496,32 +429,8 @@ class SegQueueLogic(ScriptedLoadableModuleLogic):
             display.SetSegmentOpacity3D(segmentId, 0.0)
         return segmentId
 
-    def scratchSegmentId(self):
-        """A hidden segment to apply a tube into, created on first use.
-
-        Draw tube replaces whatever is in the selected segment. Applying
-        straight into a vessel therefore erases every section drawn before it,
-        which makes a tapering artery -- wide proximally, narrow distally --
-        impossible to build. Applying into this instead, then merging, turns
-        each apply into an addition.
-        """
-        segmentId = self.segmentIdFor(TUBE_SCRATCH_SEGMENT)
-        if segmentId:
-            return segmentId
-        segmentation = self.segmentationNode.GetSegmentation()
-        segmentId = segmentation.AddEmptySegment(
-            TUBE_SCRATCH_SEGMENT, TUBE_SCRATCH_SEGMENT, [0.6, 0.6, 0.6])
-        display = self.segmentationNode.GetDisplayNode()
-        if display is not None:
-            # Invisible: it holds one section for a fraction of a second, and a
-            # grey blob flashing over the vessel would be pure noise.
-            display.SetSegmentVisibility(segmentId, False)
-        return segmentId
-
-
     def helperIds(self):
-        return [s for s in (self.seedSegmentId, self.regionSegmentId,
-                            self.segmentIdFor(TUBE_SCRATCH_SEGMENT)) if s]
+        return [s for s in (self.seedSegmentId, self.regionSegmentId) if s]
 
     # ------------------------------------------------------------- viewing
 
@@ -587,6 +496,48 @@ class SegQueueLogic(ScriptedLoadableModuleLogic):
             centre[0], centre[1], centre[2], True)
         return True
 
+    def centre3d(self):
+        """Frame the 3D view on what is in it. Returns whether a view moved.
+
+        The 3D camera belongs to Slicer, not to the case: it keeps the focal
+        point and the zoom it was left with, which after the case before this one
+        is a point in space this patient does not occupy. The surface builds
+        correctly and is simply not on screen -- so the annotator learns to reach
+        for the view controller's centre button on every case, and the one who
+        does not know that button exists concludes the 3D view is broken.
+
+        The render is forced first because the camera is fitted to the bounds of
+        the actors actually in the renderer, and a segment's surface actor does
+        not exist until something has drawn it. Then the focal point, as the
+        centre button does, and then the distance -- a tree correctly centred and
+        two metres away is still not in view.
+        """
+        layoutManager = slicer.app.layoutManager()
+        if layoutManager is None:  # pragma: no cover - no main window
+            return False
+        try:
+            count = layoutManager.threeDViewCount
+        except AttributeError:  # pragma: no cover - old Slicer naming
+            return False
+
+        moved = False
+        for index in range(count):
+            widget = layoutManager.threeDWidget(index)
+            view = widget.threeDView() if widget is not None else None
+            if view is None:
+                continue
+            try:
+                view.forceRender()
+                view.resetFocalPoint()
+                view.resetCamera()
+            except AttributeError:  # pragma: no cover - old Slicer naming
+                # Never fail a case open over a camera. A build that spells these
+                # differently costs the annotator one click on the centre button;
+                # raising here would cost them the case.
+                continue
+            moved = True
+        return moved
+
     def segmentIdFor(self, name):
         if self.segmentationNode is None:
             return None
@@ -645,11 +596,18 @@ class SegQueueLogic(ScriptedLoadableModuleLogic):
         return sha256_file(path) == assignment.checksum
 
     def _loadOrCreateSegmentation(self, manifest):
-        """Reopen the autosaved draft, or lay out a fresh set of template segments."""
+        """Reopen the autosaved draft, or lay out a fresh set of template segments.
+
+        Sets ``resumedDraft``, which is what stops ``_startBranchesFromSeed``
+        overwriting an annotator's own trimming with four fresh copies of the
+        mask when they come back to a case tomorrow.
+        """
+        self.resumedDraft = False
         draft = manifest.get("workPath")
         if draft and os.path.isfile(draft):
             try:
                 self.segmentationNode = slicer.util.loadSegmentation(draft)
+                self.resumedDraft = self.segmentationNode is not None
             except Exception:
                 # A corrupt autosave must not lock the annotator out of the case.
                 # Losing the draft is bad; losing the case is worse.
@@ -658,6 +616,7 @@ class SegQueueLogic(ScriptedLoadableModuleLogic):
                     "it has been discarded and the case reset to empty segments.\n\n"
                     + traceback.format_exc())
                 self.segmentationNode = None
+                self.resumedDraft = False
         if self.segmentationNode is None:
             self.segmentationNode = slicer.mrmlScene.AddNewNodeByClass(
                 "vtkMRMLSegmentationNode", "Segmentation")
@@ -699,6 +658,95 @@ class SegQueueLogic(ScriptedLoadableModuleLogic):
                 segment.SetLabelValue(int(spec.label))
             except AttributeError:  # pragma: no cover - old Slicer
                 pass
+
+    def _startBranchesFromSeed(self):
+        """Start every branch as its own copy of the coronary mask, all hidden.
+
+        On a seeded case the tree is already drawn; the job is to say which part
+        of it is which. So every branch begins as the whole tree and is cut back
+        to one vessel, and the Segment Editor's own segment list -- show the one
+        you are working on, hide the rest -- is the entire interface for that.
+
+        Four independent copies rather than one tree handed round in turn. The
+        branches can then be done in any order, no branch's work rests on
+        another's having been finished first, and there is no state to explain:
+        what a branch holds is what the annotator left in it.
+
+        **Hidden, all of them.** Four identical masks stacked on the same voxels
+        is not a picture of anything, and the one thing worth seeing on opening is
+        the tree about to be divided -- which is the mask itself, and stays
+        visible. The eyes in the segment list are how they come back.
+
+        Only on a case with no work on it: a reopened draft is the annotator's own
+        trimming and has to survive being closed. Returns how many branches were
+        started.
+
+        Copied through the segment arrays rather than the Logical operators
+        effect, because nothing here needs the Segment Editor -- this runs while
+        the case is still being assembled, before any panel is bound to it -- and
+        because on the source grid a copy is a copy. Both counts come back from
+        the same geometry, which is what ``drawnCounts`` later relies on.
+        """
+        if self.resumedDraft or self.segmentationNode is None:
+            return 0
+        if not self.seedSegmentId or self.project is None:
+            return 0
+
+        try:
+            mask = slicer.util.arrayFromSegmentBinaryLabelmap(
+                self.segmentationNode, self.seedSegmentId, self.volumeNode)
+        except Exception:
+            # A case whose mask cannot be read is still a case the annotator can
+            # segment by hand. Empty branches are a worse start, never a blocked
+            # one.
+            return 0
+        if mask is None or not mask.size or not mask.any():
+            return 0
+
+        display = self.segmentationNode.GetDisplayNode()
+        started = 0
+        for spec in self.project.segments:
+            segmentId = self.segmentIdFor(spec.name)
+            if not segmentId:
+                continue
+            slicer.util.updateSegmentBinaryLabelmapFromArray(
+                mask, self.segmentationNode, segmentId, self.volumeNode)
+            if display is not None:
+                display.SetSegmentVisibility(segmentId, False)
+            started += 1
+        return started
+
+    def drawnCounts(self):
+        """Voxels per branch as the editor holds them, on the source grid.
+
+        The counterpart to ``_voxelCounts``, which counts the *export*. Every
+        branch now starts as the whole mask, so two branches can hold the same
+        voxel until both have been trimmed -- and a label volume has one label per
+        voxel, so exporting that silently drops the loser. Comparing the two
+        counts is what turns it into an error the annotator sees instead of a
+        mislabelled artery three weeks downstream.
+
+        On the source grid deliberately, the same geometry the export uses, so a
+        difference between the two numbers means voxels were actually lost and
+        never that they were counted on two different grids.
+        """
+        counts = {}
+        if self.segmentationNode is None or self.project is None:
+            return counts
+        for spec in self.project.segments:
+            segmentId = self.segmentIdFor(spec.name)
+            if not segmentId:
+                counts[spec.name] = 0
+                continue
+            try:
+                array = slicer.util.arrayFromSegmentBinaryLabelmap(
+                    self.segmentationNode, segmentId, self.volumeNode)
+            except Exception:
+                # Unknown is not zero, and it is not a loss either: leave the
+                # name out rather than claim a number the check would act on.
+                continue
+            counts[spec.name] = int((array > 0).sum()) if array is not None and array.size else 0
+        return counts
 
     def closeCase(self, purge=False):
         """Take the case out of the scene, banking any elapsed time first."""
@@ -896,13 +944,14 @@ class SegQueueLogic(ScriptedLoadableModuleLogic):
     def sourceGeometry(self):
         return _geometryOf(self.volumeNode)
 
-    def validate(self, voxelCounts, sourceGeometry, segGeometry):
+    def validate(self, voxelCounts, sourceGeometry, segGeometry, drawnCounts=None):
         return check_submission(
             voxel_counts=voxelCounts,
             segments=self.project.segments,
             source_geometry=sourceGeometry,
             segmentation_geometry=segGeometry,
             annotation_seconds=self.elapsedSeconds() or None,
+            drawn_counts=drawnCounts,
         )
 
     # -------------------------------------------------------------- submit
@@ -1006,16 +1055,11 @@ class SegQueueWidget(ScriptedLoadableModuleWidget):
         self.autosaveTimer = None
         self.heartbeatTimer = None
         self.clockTimer = None
-        self.checklistTimer = None
         self.notesTimer = None
         self._reviewRows = []
         self._claimedSubmission = None
-        self._segmentButtons = {}
-        self._shortcuts = []
         self._slicerLogo = None
         self._pendingUpdate = None
-        #: Vessels already handed the unclaimed remainder on this case.
-        self._filledVessels = set()
 
     # ------------------------------------------------------------------ setup
 
@@ -1042,12 +1086,10 @@ class SegQueueWidget(ScriptedLoadableModuleWidget):
         self._buildUpdateBanner()
         self._buildLoginSection()
         self._buildCaseSection()
-        self._buildVesselSection()
         self._buildEditorSection()
         self._buildSubmitSection()
         self._buildReviewSection()
         self.layout.addStretch(1)
-        self._installShortcuts()
 
         self._startTimers()
         self._updateEnabled()
@@ -1599,167 +1641,6 @@ class SegQueueWidget(ScriptedLoadableModuleWidget):
         self.timerLabel = qt.QLabel("Time on this case: --")
         layout.addWidget(self.timerLabel)
 
-    def _buildVesselSection(self):
-        """The task-specific panel: which vessel, which tool, what help there is.
-
-        The Segment Editor below can do everything in here already. It is worth
-        the duplication because it cannot do it *for this task*: a first-year
-        undergraduate should not have to learn which of twenty effects segments a
-        3 mm vessel, nor scroll a segment list to change branch two hundred times
-        an hour. Four labelled buttons and a number key each is the whole
-        interface most of the time.
-        """
-        box = ctk.ctkCollapsibleButton()
-        box.text = "Vessel tools"
-        self.layout.addWidget(box)
-        layout = qt.QVBoxLayout(box)
-        self.vesselBox = box
-
-        layout.addWidget(_caption("Which vessel are you labelling?  (keys 1-4)"))
-        self.segmentButtonRow = qt.QGridLayout()
-        layout.addLayout(self.segmentButtonRow)
-
-        self.segmentHintLabel = qt.QLabel()
-        self.segmentHintLabel.setWordWrap(True)
-        self.segmentHintLabel.setStyleSheet("QLabel { color: #444; }")
-        layout.addWidget(self.segmentHintLabel)
-
-        layout.addWidget(_caption("Tools"))
-        toolRow = qt.QHBoxLayout()
-        self._toolButtons = {}
-        for name, key, tip in VESSEL_EFFECTS:
-            button = qt.QPushButton("{}  ({})".format(name, key))
-            button.setToolTip(tip)
-            button.clicked.connect(lambda _checked=False, n=name: self.onEffect(n))
-            toolRow.addWidget(button)
-            self._toolButtons[name] = button
-        layout.addLayout(toolRow)
-
-        self.applyTubeButton = qt.QPushButton("Apply tube  (A)")
-        self.applyTubeButton.setToolTip(
-            "Add the section you just placed to the selected vessel, then start "
-            "the next one. Sections accumulate, so draw a wide one proximally "
-            "and narrower ones as the artery tapers. Needs at least two points.")
-        self.applyTubeButton.clicked.connect(self.onApplyTube)
-        layout.addWidget(self.applyTubeButton)
-
-        sizes = qt.QFormLayout()
-        self.tubeRadiusSlider = _mmSlider(
-            TUBE_RADIUS_RANGE_MM,
-            _storedFloat(_SETTING_TUBE_RADIUS, TUBE_RADIUS_MM),
-            "Radius of the tube swept along the points you place. Change it "
-            "mid-vessel as the artery tapers -- the preview updates as you drag.")
-        self.tubeRadiusSlider.connect("valueChanged(double)", self.onTubeRadiusChanged)
-        sizes.addRow("Tube radius:", self.tubeRadiusSlider)
-
-        self.brushSlider = _mmSlider(
-            BRUSH_RANGE_MM, _storedFloat(_SETTING_BRUSH, BRUSH_DIAMETER_MM),
-            "Diameter of the paint brush, in millimetres rather than screen "
-            "pixels, so it stays the same size as you zoom.")
-        self.brushSlider.connect("valueChanged(double)", self.onBrushChanged)
-        sizes.addRow("Brush diameter:", self.brushSlider)
-        layout.addLayout(sizes)
-
-        self.toolWarning = qt.QLabel()
-        self.toolWarning.setWordWrap(True)
-        self.toolWarning.setStyleSheet("QLabel { color: #8a3b00; }")
-        self.toolWarning.setVisible(False)
-        layout.addWidget(self.toolWarning)
-
-        layout.addWidget(_caption(
-            "Every other effect is still available in the Segment Editor below."))
-
-        # -- the head start, when the case ships one
-        self.seedGroup = qt.QGroupBox("Coronary mask")
-        seedLayout = qt.QVBoxLayout(self.seedGroup)
-
-        self.seed3dCheck = qt.QCheckBox("Show in 3D")
-        self.seed3dCheck.setToolTip(
-            "Renders the whole tree at once, which is where trimming one branch "
-            "off it is a single gesture rather than forty slices.")
-        self.seed3dCheck.setChecked(_storedBool(_SETTING_SEED_3D, True))
-        self.seed3dCheck.toggled.connect(self.onShowSeed3d)
-        seedLayout.addWidget(self.seed3dCheck)
-
-        self.maskToSeedCheck = qt.QCheckBox("Only let me paint inside the mask")
-        self.maskToSeedCheck.setToolTip(
-            "Confines painting to the existing tree, so a fast, sloppy brush "
-            "stroke still produces a clean vessel edge. Trimming ignores it.")
-        self.maskToSeedCheck.setChecked(True)
-        self.maskToSeedCheck.toggled.connect(self.onMaskingChanged)
-        seedLayout.addWidget(self.maskToSeedCheck)
-
-        self.resetVesselButton = qt.QPushButton("Start this vessel over")
-        self.resetVesselButton.setToolTip(
-            "Fills this vessel again with everything no other vessel has "
-            "claimed, discarding the trimming done on it.")
-        self.resetVesselButton.clicked.connect(self.onResetVessel)
-        seedLayout.addWidget(self.resetVesselButton)
-
-        self.seedGroup.setVisible(False)
-        layout.addWidget(self.seedGroup)
-
-        # -- view helpers
-        viewRow = qt.QHBoxLayout()
-        self.jumpButton = qt.QPushButton("Centre on heart")
-        self.jumpButton.setToolTip(
-            "Jumps the slice views to the middle of the heart mask.")
-        self.jumpButton.clicked.connect(self.onJumpToHeart)
-        viewRow.addWidget(self.jumpButton)
-
-        self.presetButton = qt.QPushButton("CTA window/level")
-        self.presetButton.setToolTip(
-            "Resets brightness and contrast to {}/{}, where opacified lumen is "
-            "clearly separable from myocardium.".format(CTA_WINDOW, CTA_LEVEL))
-        self.presetButton.clicked.connect(lambda: self.logic.applyViewPreset())
-        viewRow.addWidget(self.presetButton)
-
-        self.show3dButton = qt.QPushButton("Show in 3D")
-        self.show3dButton.setToolTip(
-            "Builds a surface of what you have drawn. The fastest way to spot a "
-            "branch that stops early or a stray blob.")
-        self.show3dButton.clicked.connect(self.onShow3d)
-        viewRow.addWidget(self.show3dButton)
-        layout.addLayout(viewRow)
-
-        self.lumenMaskCheck = qt.QCheckBox(
-            "Only paint over opacified lumen ({}-{} HU)".format(
-                LUMEN_HU_MIN, LUMEN_HU_MAX))
-        self.lumenMaskCheck.setToolTip(
-            "Ignores voxels outside the contrast range, so the brush cannot "
-            "spill into myocardium or fat.")
-        self.lumenMaskCheck.setChecked(True)
-        self.lumenMaskCheck.toggled.connect(self.onMaskingChanged)
-        layout.addWidget(self.lumenMaskCheck)
-
-    def _buildSegmentButtons(self):
-        """One button per project segment, rebuilt whenever the project changes.
-
-        Built from the server's segment list rather than hardcoded, so adding a
-        fifth branch mid-project changes a server setting and nothing else.
-        """
-        for button in self._segmentButtons.values():
-            button.setParent(None)
-        self._segmentButtons = {}
-        if self.logic is None or self.logic.project is None:
-            return
-
-        for i, spec in enumerate(self.logic.project.segments):
-            label = "{}  {}".format(i + 1, _shortName(spec.name))
-            button = qt.QPushButton(label)
-            button.setCheckable(True)
-            button.setToolTip(spec.hint or spec.name)
-            colour = "rgb({},{},{})".format(*[int(255 * c) for c in spec.color])
-            button.setStyleSheet(
-                "QPushButton { text-align: left; padding: 4px 8px; "
-                "border-left: 6px solid %s; }"
-                "QPushButton:checked { font-weight: bold; background: #dfe8f0; }"
-                % colour)
-            button.clicked.connect(
-                lambda _checked=False, n=spec.name: self.onSelectSegment(n))
-            self.segmentButtonRow.addWidget(button, i // 2, i % 2)
-            self._segmentButtons[spec.name] = button
-
     def _buildEditorSection(self):
         box = ctk.ctkCollapsibleButton()
         box.text = "Segment Editor"
@@ -1880,14 +1761,6 @@ class SegQueueWidget(ScriptedLoadableModuleWidget):
         self.clockTimer.timeout.connect(self._updateClock)
         self.clockTimer.start()
 
-        # The checklist reads each segment's internal labelmap, which is cropped
-        # to the vessel's own extent and therefore small. Five seconds is often
-        # enough to feel live and rare enough to cost nothing.
-        self.checklistTimer = qt.QTimer()
-        self.checklistTimer.setInterval(5000)
-        self.checklistTimer.timeout.connect(self._updateChecklist)
-        self.checklistTimer.start()
-
         self.notesTimer = qt.QTimer()
         self.notesTimer.setInterval(NOTES_REFRESH_SECONDS * 1000)
         self.notesTimer.timeout.connect(self.onNotesTimer)
@@ -1900,12 +1773,9 @@ class SegQueueWidget(ScriptedLoadableModuleWidget):
         Slicer without submitting, which is a routine end to a session.
         """
         for timer in (self.autosaveTimer, self.heartbeatTimer, self.clockTimer,
-                      self.checklistTimer, self.notesTimer):
+                      self.notesTimer):
             if timer is not None:
                 timer.stop()
-        for shortcut in self._shortcuts:
-            shortcut.setParent(None)
-        self._shortcuts = []
         self._restorePanelBranding()
         self._saveNoteDraft()
         if self.logic is not None:
@@ -1918,9 +1788,7 @@ class SegQueueWidget(ScriptedLoadableModuleWidget):
 
     def exit(self):
         # Leaving the module for another one should not lose work either, and
-        # should not leave our name over somebody else's panel -- nor our point
-        # placement armed over somebody else's views, where every click would
-        # land a branch marker in a module that has never heard of them.
+        # should not leave our name over somebody else's panel.
         self._restorePanelBranding()
         self._saveNoteDraft()
         if self.logic is not None:
@@ -1953,7 +1821,6 @@ class SegQueueWidget(ScriptedLoadableModuleWidget):
             user.get("login", username), quota))
         self.loginBox.collapsed = True
 
-        self._buildSegmentButtons()
         self.reviewBox.setVisible(self.logic.isReviewer())
         self._updateEnabled()
         self._offerResume()
@@ -2056,28 +1923,19 @@ class SegQueueWidget(ScriptedLoadableModuleWidget):
         self.onRefreshNotes()
         self._bindEditor(self.logic.segmentationNode, self.logic.volumeNode)
 
-        self._checkToolsAvailable()
-        self.seedGroup.setVisible(bool(self.logic.seedSegmentId))
-        self.jumpButton.setEnabled(bool(self.logic.regionSegmentId))
         slicer.app.layoutManager().setLayout(
             slicer.vtkMRMLLayoutNode.SlicerLayoutFourUpView)
         # The mask goes into the 3D view as the case opens rather than on a
         # button, because it is the first question of the case -- where do these
         # branches go -- and an annotator who has to ask for it has usually
-        # already started scrolling slices to answer it the slow way.
-        self._filledVessels = set()
-        self.onShowSeed3d()
-        self.onMaskingChanged()
-        if self.logic.project.segments:
-            self.onSelectSegment(self.logic.project.segments[0].name)
-        self._updateChecklist()
+        # already started scrolling slices to answer it the slow way. Centred as
+        # well as built: a mask rendered off camera is the same as no mask.
+        self.logic.showSeedIn3d(True)
+        self.logic.centre3d()
 
         self.caseBox.collapsed = False
-        self.vesselBox.collapsed = False
-        # Left open on purpose. Draw tube's Apply button, and its point add and
-        # delete controls, live in the effect's own options frame inside this
-        # widget -- collapsing it leaves the annotator with a tool they can
-        # start and cannot finish.
+        # Left open on purpose: it is now the whole interface. Every effect, the
+        # masking options and the per-segment eyes all live in there.
         self.editorBox.collapsed = False
         self._updateEnabled()
 
@@ -2096,452 +1954,6 @@ class SegQueueWidget(ScriptedLoadableModuleWidget):
             # LAD half gone after working on the LCx has no way to know why.
             self.editorNode.SetOverwriteMode(
                 slicer.vtkMRMLSegmentEditorNode.OverwriteNone)
-
-    # ----------------------------------------------------- vessel tooling
-
-    def onSelectSegment(self, name):
-        """Make one branch active, everywhere it matters."""
-        if self.logic is None or self.logic.segmentationNode is None:
-            return
-        segmentId = self.logic.segmentIdFor(name)
-        if segmentId and self.editorNode is not None:
-            self.editorNode.SetSelectedSegmentID(segmentId)
-
-        for otherName, button in self._segmentButtons.items():
-            button.setChecked(otherName == name)
-
-        spec = next((x for x in self.logic.project.segments if x.name == name), None)
-        self.segmentHintLabel.setText(spec.hint if spec else "")
-
-        # An empty vessel on a seeded case is handed everything still unclaimed:
-        # the whole tree for the first one, and thereafter exactly what was
-        # trimmed off the vessel before it. A vessel that already has something
-        # in it is left alone -- coming back to a branch must never wipe the
-        # trimming done on it, and that is also what makes a reopened draft
-        # resume rather than restart.
-        #
-        # Once per vessel per case, too. Before any trimming the first vessel
-        # holds the whole tree and every other one's remainder is empty, so
-        # without this, clicking between them would re-run a copy and three
-        # subtracts each time to arrive back at empty. "Start this vessel over"
-        # is the deliberate way to refill one.
-        if (self.logic.seedSegmentId and segmentId
-                and name not in self._filledVessels
-                and not self.logic.segmentHasContent(name)):
-            with _busy():
-                self._fillWithRemainder(name)
-            self._updateChecklist()
-
-    def onEffect(self, name):
-        """Activate an effect and apply this panel's sizes to it."""
-        if self.editorWidget is None:
-            return
-        self.editorWidget.setActiveEffectByName(name)
-        effect = self.editorWidget.activeEffect()
-        if effect is None:
-            self._reportMissingEffect(name)
-            return
-
-        if name == "Paint":
-            self._applyBrush(effect)
-        elif name == SCISSORS_EFFECT:
-            self._applyScissors(effect)
-        elif name == TUBE_EFFECT:
-            self._applyTubeRadius(effect)
-            # The effect's activate() explicitly turns point placement *off*,
-            # expecting the annotator to arm it from its own options frame. Ours
-            # is a one-press button, so pressing it has to mean "I am about to
-            # place points" -- otherwise the tool looks broken: it lights up and
-            # clicking the image does nothing.
-            self._setTubePlaceMode(effect, True)
-            self.editorBox.collapsed = False
-
-        # Masking depends on which tool is active -- trimming has to ignore both
-        # masks -- so it is settled here, after the switch, rather than only when
-        # a checkbox moves.
-        self.onMaskingChanged()
-
-    def _applyScissors(self, effect):
-        """Free-form erase, which is what trimming is.
-
-        These are Scissors' own defaults, set explicitly because they are sticky:
-        they live in the Segment Editor's parameter node, so an annotator who
-        last used Scissors to fill a circle gets that again here, on a button
-        labelled as a trim.
-
-        **The spelling is load-bearing and is not checked by anything at
-        runtime.** Scissors is a C++ effect; ``setParameter`` stores whatever
-        string it is handed, and the effect converts it to an enum on use,
-        mapping anything it does not recognise to -1. A misspelt ``Shape``
-        therefore builds no drawing pipeline at all: the tool activates, the
-        button lights up, and dragging in a view does nothing whatever. 0.7.0
-        shipped ``FREE_FORM`` and that is exactly what it did.
-
-        So these values are pinned by ``SCISSORS_OPERATION`` and
-        ``SCISSORS_SHAPE``, and ``tests/slicer_selftest.py`` checks them against
-        the defaults Slicer itself writes into a fresh editor node.
-        """
-        effect.setParameter("Operation", SCISSORS_OPERATION)
-        effect.setParameter("Shape", SCISSORS_SHAPE)
-
-    def _reportMissingEffect(self, name):
-        """Say which extension is missing, rather than that something failed."""
-        if name == TUBE_EFFECT:
-            message = (
-                "The '{}' effect is not installed.\n\nIt comes from the {} "
-                "extension: Extensions Manager \u2192 Install Extensions \u2192 "
-                "search for it \u2192 restart Slicer.\n\nUntil then you can "
-                "still segment with Paint, it is just slower."
-            ).format(TUBE_EFFECT, TUBE_EXTENSION)
-        else:
-            message = "This build of Slicer has no '{}' effect.".format(name)
-        self.toolWarning.setText(message.replace("\n\n", " "))
-        self.toolWarning.setVisible(True)
-        slicer.util.errorDisplay(message)
-
-    def _applyBrush(self, effect):
-        # Sized in millimetres rather than screen pixels, so it stays correct
-        # when the annotator zooms -- which they will, constantly.
-        effect.setParameter("BrushSphere", "1")
-        effect.setParameter("BrushDiameterIsRelative", "0")
-        effect.setParameter("BrushAbsoluteDiameter", str(self.brushSlider.value))
-
-    def _applyTubeRadius(self, effect):
-        """Push the slider's radius into the tube effect.
-
-        The radius is not a scripted-effect parameter -- it lives on the
-        effect's own logic object, and its spin box is what keeps the two in
-        step. Writing the spin box rather than the logic attribute is therefore
-        deliberate: it updates the effect's visible control *and* triggers the
-        preview redraw, so dragging this slider reshapes the tube already on
-        screen. Setting ``logic.radius`` alone would change the next apply and
-        nothing the annotator can see.
-        """
-        try:
-            effect.self().radiusSpinBox.value = float(self.tubeRadiusSlider.value)
-            return True
-        except AttributeError:
-            # A future version of the effect that renamed its control. The tube
-            # still works at its own default; only this slider stops steering it.
-            return False
-
-    def _setTubePlaceMode(self, effect, enabled):
-        """Arm or disarm control-point placement for the tube effect."""
-        try:
-            effect.self().fiducialPlacementToggle.setPlaceModeEnabled(bool(enabled))
-            return True
-        except AttributeError:
-            return False
-
-    def _tubeEffect(self):
-        """The active tube effect, or None."""
-        if self.editorWidget is None:
-            return None
-        effect = self.editorWidget.activeEffect()
-        if effect is None or effect.name != TUBE_EFFECT:
-            return None
-        return effect
-
-    def onApplyTube(self):
-        """Add the placed section to the selected vessel, then start the next.
-
-        Draw tube applies with ``ModificationModeSet``: it *replaces* the
-        selected segment rather than adding to it. Applied directly, a second
-        section would erase the first, and a coronary artery cannot be drawn as
-        one tube -- it tapers, so it takes a wide proximal section and
-        progressively narrower ones down the vessel.
-
-        So the tube goes into a hidden scratch segment, which is then unioned
-        into the vessel and emptied. Each apply becomes an addition, and the
-        radius slider is free to change between sections. Slicer's own Undo
-        still covers the whole thing, because both steps save undo state.
-        """
-        effect = self._tubeEffect()
-        if effect is None:
-            slicer.util.errorDisplay(
-                "Select the {} tool first (Q).".format(TUBE_EFFECT))
-            return
-
-        active = next((n for n, b in self._segmentButtons.items() if b.checked), None)
-        target = self.logic.segmentIdFor(active) if active else None
-        if target is None:
-            slicer.util.errorDisplay("Choose a vessel first (1-4).")
-            return
-
-        try:
-            placed = effect.self().getNumberOfDefinedControlPoints()
-        except AttributeError:
-            placed = 2  # unknown build; let the effect decide
-        if placed < 2:
-            slicer.util.errorDisplay(
-                "Place at least two points down the middle of the vessel "
-                "before applying.\n\nClick along the artery in a slice view; "
-                "the tube follows the points.")
-            return
-
-        with _busy():
-            scratch = self.logic.scratchSegmentId()
-            self.editorNode.SetSelectedSegmentID(scratch)
-            effect.self().onApply()
-
-            self.editorNode.SetSelectedSegmentID(target)
-            merged = self._logicalOp("UNION", scratch)
-            # Emptied, not deleted. Deleting it is tidier -- it leaves no extra
-            # row in the segment list -- but removing a segment reshuffles the
-            # segmentation's labelmap layers, and measurably cost voxels from
-            # sections already merged: three tapering sections came to 620 voxels
-            # deleted against 810 emptied. An extra clearly-labelled empty row is
-            # a much smaller price than silently losing part of a vessel.
-            self._logicalOp("CLEAR", None, segmentId=scratch)
-
-            self.editorNode.SetSelectedSegmentID(target)
-            self.editorWidget.setActiveEffectByName(TUBE_EFFECT)
-            effect = self.editorWidget.activeEffect()
-            if effect is not None:
-                self._applyTubeRadius(effect)
-                self._setTubePlaceMode(effect, True)
-
-        if not merged:
-            slicer.util.errorDisplay(
-                "Could not merge the section into {!r}. The 'Logical operators' "
-                "effect is missing from this Slicer.".format(active))
-        self._updateChecklist()
-
-    def _logicalOp(self, operation, modifierSegmentId, segmentId=None):
-        """Run one Logical operators apply. Returns False if the effect is absent."""
-        if segmentId is not None:
-            self.editorNode.SetSelectedSegmentID(segmentId)
-        self.editorWidget.setActiveEffectByName("Logical operators")
-        effect = self.editorWidget.activeEffect()
-        if effect is None:
-            return False
-        effect.setParameter("Operation", operation)
-        if modifierSegmentId:
-            effect.setParameter("ModifierSegmentID", modifierSegmentId)
-        # Without this the merge is clipped by whatever mask is in force -- the
-        # coronary seed, or the intensity window -- and a section drawn slightly
-        # outside either would be silently trimmed on the way in.
-        effect.setParameter("BypassMasking", "1")
-        effect.self().onApply()
-        return True
-
-    def onTubeRadiusChanged(self, value):
-        qt.QSettings().setValue(_SETTING_TUBE_RADIUS, float(value))
-        effect = self.editorWidget.activeEffect() if self.editorWidget else None
-        if effect is not None and effect.name == TUBE_EFFECT:
-            self._applyTubeRadius(effect)
-
-    def onBrushChanged(self, value):
-        qt.QSettings().setValue(_SETTING_BRUSH, float(value))
-        effect = self.editorWidget.activeEffect() if self.editorWidget else None
-        if effect is not None and effect.name == "Paint":
-            self._applyBrush(effect)
-
-    def onMaskingChanged(self):
-        """Apply the two masks that make sloppy-but-fast painting safe.
-
-        Both are off while trimming, and that is not a detail. A cut has to be
-        able to remove *any* voxel of the vessel it is aimed at: under the
-        intensity mask it would leave behind everything outside 150-1000 HU, so
-        each cut would scatter specks of one branch through the next one --
-        exactly what the annotator cut to prevent, and invisible until the
-        submission is checked.
-        """
-        if self.logic is None or self.editorNode is None:
-            return
-        if self.logic.segmentationNode is None:
-            return
-
-        trimming = self._activeEffectName() == SCISSORS_EFFECT
-        seedId = self.logic.seedSegmentId
-        if self.maskToSeedCheck.checked and seedId and not trimming:
-            # Segment id *before* mode, and not the other way round. Setting the
-            # mode first makes the editor node validate against a mask segment
-            # that is still empty, whereupon it silently falls back to
-            # "everywhere" -- the checkbox looks applied and confines nothing,
-            # which on this task is the difference between splitting a tree in
-            # minutes and painting it by hand. Verified against Slicer 5.8.
-            self.editorNode.SetMaskSegmentID(seedId)
-            self.editorNode.SetMaskMode(
-                slicer.vtkMRMLSegmentationNode.EditAllowedInsideSingleSegment)
-        else:
-            self.editorNode.SetMaskMode(
-                slicer.vtkMRMLSegmentationNode.EditAllowedEverywhere)
-
-        on = bool(self.lumenMaskCheck.checked) and not trimming
-        # Renamed in Slicer 5.2 when "master volume" became "source volume".
-        for setEnabled, setRange in (
-                ("SetSourceVolumeIntensityMask", "SetSourceVolumeIntensityMaskRange"),
-                ("SetMasterVolumeIntensityMask", "SetMasterVolumeIntensityMaskRange")):
-            if hasattr(self.editorNode, setEnabled):
-                getattr(self.editorNode, setEnabled)(on)
-                if on:
-                    getattr(self.editorNode, setRange)(LUMEN_HU_MIN, LUMEN_HU_MAX)
-                break
-
-    # ------------------------------------------------------ dividing the seed
-
-    def _activeSegmentName(self):
-        return next((n for n, b in self._segmentButtons.items() if b.checked), None)
-
-    def _activeEffectName(self):
-        effect = self.editorWidget.activeEffect() if self.editorWidget else None
-        return effect.name if effect is not None else ""
-
-    def onShowSeed3d(self, checked=None):
-        """Put the coronary mask into the 3D view, or take it out."""
-        if self.logic is None:
-            return
-        on = bool(self.seed3dCheck.checked)
-        qt.QSettings().setValue(_SETTING_SEED_3D, on)
-        if not self.logic.seedSegmentId:
-            return
-        with _busy():
-            self.logic.showSeedIn3d(on)
-
-    def _fillWithRemainder(self, name):
-        """Give this vessel every voxel of the mask no other vessel has claimed.
-
-        This is the whole workflow in one method. The first vessel an annotator
-        opens starts as the entire tree; they cut away what is not that vessel;
-        and the next vessel starts as exactly what they cut off, because that is
-        what "not claimed by another vessel" means once the first one is trimmed.
-        Nothing they remove is ever lost -- it is handed to the vessel after.
-
-        Built out of Logical operators rather than by writing voxels, so it is
-        the same merge Draw tube has applied through since 0.1.0: copy the mask
-        in, then subtract every other vessel. That also makes it free of numpy,
-        of the source grid, and of every way the two can disagree.
-        """
-        seedId = self.logic.seedSegmentId
-        target = self.logic.segmentIdFor(name)
-        if not seedId or target is None:
-            return False
-
-        # Filling runs through the Logical operators effect, which leaves itself
-        # as the active tool. Put back whatever the annotator had: trimming one
-        # vessel and pressing 2 to trim the next has to keep the trim tool in
-        # their hand, or the workflow costs a tool click per vessel.
-        before = self._activeEffectName()
-
-        if not self._logicalOp("COPY", seedId, segmentId=target):
-            slicer.util.errorDisplay(
-                "This build of Slicer has no 'Logical operators' effect, which "
-                "is what fills a vessel from the mask.")
-            return False
-        for spec in self.logic.project.segments:
-            if spec.name == name:
-                continue
-            other = self.logic.segmentIdFor(spec.name)
-            if other and self.logic.segmentHasContent(spec.name):
-                self._logicalOp("SUBTRACT", other, segmentId=target)
-
-        self._filledVessels.add(name)
-        if self.editorNode is not None:
-            self.editorNode.SetSelectedSegmentID(target)
-        if before and before != "Logical operators":
-            self.onEffect(before)
-        else:
-            self.editorWidget.setActiveEffectByName("")
-        return True
-
-    def onResetVessel(self):
-        """Fill this vessel again from what is unclaimed, dropping its trimming."""
-        if self.logic is None or self.logic.assignment is None:
-            return
-        if not self.logic.seedSegmentId:
-            return
-        active = self._activeSegmentName()
-        if active is None:
-            slicer.util.errorDisplay("Choose a vessel first (1-4).")
-            return
-        with _busy():
-            self._fillWithRemainder(active)
-        self._updateChecklist()
-
-    def _checkToolsAvailable(self):
-        """Flag a missing tube effect on case open, not on first click.
-
-        An annotator who discovers the main tool is absent halfway through their
-        first case has already wasted the part of the session where they were
-        most willing to ask for help.
-        """
-        if self.editorWidget is None:
-            return
-        available = list(self.editorWidget.availableEffectNames())
-        missing = TUBE_EFFECT not in available
-        button = self._toolButtons.get(TUBE_EFFECT)
-        if button is not None:
-            button.setEnabled(not missing)
-        if missing:
-            self.toolWarning.setText(
-                "The '{}' effect is missing. Install the {} extension "
-                "(Extensions Manager \u2192 Install Extensions) and restart. "
-                "Paint still works meanwhile.".format(TUBE_EFFECT, TUBE_EXTENSION))
-        self.toolWarning.setVisible(missing)
-        self.tubeRadiusSlider.setEnabled(not missing)
-        self.applyTubeButton.setEnabled(not missing)
-
-    def onJumpToHeart(self):
-        if self.logic is not None and not self.logic.jumpToHeart():
-            slicer.util.errorDisplay("This case has no heart mask to centre on.")
-
-    def onShow3d(self):
-        if self.logic is None or self.logic.segmentationNode is None:
-            return
-        with _busy():
-            self.logic.segmentationNode.CreateClosedSurfaceRepresentation()
-            # Scaffolding stays out of the 3D view -- a solid heart would hide
-            # the very tree the annotator opened 3D to inspect -- with the
-            # coronary mask the deliberate exception, because comparing the
-            # branches drawn so far against the mask they came from is most of
-            # what the 3D view is for on a seeded case.
-            self.logic.showSeedIn3d(bool(self.seed3dCheck.checked))
-            slicer.app.layoutManager().setLayout(
-                slicer.vtkMRMLLayoutNode.SlicerLayoutFourUpView)
-
-    def _updateChecklist(self):
-        """Tick the vessels that have something in them."""
-        if self.logic is None or self.logic.assignment is None:
-            for button in self._segmentButtons.values():
-                button.setText(button.text.replace("  \u2713", ""))
-            return
-        for i, spec in enumerate(self.logic.project.segments):
-            button = self._segmentButtons.get(spec.name)
-            if button is None:
-                continue
-            done = self.logic.segmentHasContent(spec.name)
-            required = "" if spec.required else "  (optional)"
-            button.setText("{}  {}{}{}".format(
-                i + 1, _shortName(spec.name), required,
-                "  \u2713" if done else ""))
-
-    def _installShortcuts(self):
-        """Number keys pick a vessel; letters pick a tool.
-
-        Keyboard rather than mouse because branch changes happen hundreds of
-        times an hour, and every one of them through a list widget is a second
-        of attention taken off the image.
-        """
-        bindings = []
-        for i in range(1, 10):
-            bindings.append((str(i), lambda index=i - 1: self._selectByIndex(index)))
-        for name, key, _tip in VESSEL_EFFECTS:
-            bindings.append((key, lambda n=name: self.onEffect(n)))
-        bindings.append(("A", self.onApplyTube))
-
-        for key, handler in bindings:
-            shortcut = qt.QShortcut(slicer.util.mainWindow())
-            shortcut.setKey(qt.QKeySequence(key))
-            shortcut.connect("activated()", handler)
-            self._shortcuts.append(shortcut)
-
-    def _selectByIndex(self, index):
-        if self.logic is None or self.logic.project is None:
-            return
-        segments = self.logic.project.segments
-        if 0 <= index < len(segments):
-            self.onSelectSegment(segments[index].name)
 
     # -------------------------------------------------------------- actions
 
@@ -2587,6 +1999,9 @@ class SegQueueWidget(ScriptedLoadableModuleWidget):
             "check.seg.nrrd")
         with _busy():
             try:
+                # Before the export, because the export is what flattens the
+                # overlap this is here to notice.
+                drawn = self.logic.drawnCounts()
                 counts, source, seg = self.logic.exportLabelmap(scratch)
             except Exception:
                 slicer.util.errorDisplay(
@@ -2595,7 +2010,7 @@ class SegQueueWidget(ScriptedLoadableModuleWidget):
             finally:
                 if os.path.exists(scratch):
                     os.unlink(scratch)
-            return self.logic.validate(counts, source, seg)
+            return self.logic.validate(counts, source, seg, drawnCounts=drawn)
 
     def onSubmit(self):
         if self.logic.assignment is None:
@@ -2645,9 +2060,7 @@ class SegQueueWidget(ScriptedLoadableModuleWidget):
         self.problemsLabel.setText("")
         self.caseLabel.setText("Submitted. Press 'Get next case' when you are ready.")
         self.reworkBox.setVisible(False)
-        self.seedGroup.setVisible(False)
         self._bindEditor(None, None)
-        self._updateChecklist()
         self._updateEnabled()
 
     def onRelease(self):
@@ -2666,9 +2079,7 @@ class SegQueueWidget(ScriptedLoadableModuleWidget):
         self.caseLabel.setText("No case open.")
         self._clearNotes()
         self.reworkBox.setVisible(False)
-        self.seedGroup.setVisible(False)
         self._bindEditor(None, None)
-        self._updateChecklist()
         self._updateEnabled()
 
     # --------------------------------------------------------------- review
@@ -2776,7 +2187,6 @@ class SegQueueWidget(ScriptedLoadableModuleWidget):
                        self.releaseButton):
             button.setEnabled(hasCase)
         self.editorBox.setEnabled(hasCase)
-        self.vesselBox.setEnabled(hasCase)
         self.notesBox.setEnabled(hasCase)
 
 
@@ -2796,51 +2206,6 @@ def _problemsHtml(problems):
         lines.append("<span style='color:{}'>&bull; {}</span>".format(
             color, _escape(problem.message)))
     return "<br>".join(lines)
-
-
-def _mmSlider(rangeMm, value, tooltip):
-    """A millimetre slider with a spin box beside it, for a physical size."""
-    slider = ctk.ctkSliderWidget()
-    slider.minimum, slider.maximum = rangeMm
-    slider.singleStep = 0.05
-    slider.decimals = 2
-    slider.suffix = " mm"
-    slider.value = max(rangeMm[0], min(rangeMm[1], float(value)))
-    slider.setToolTip(tooltip)
-    return slider
-
-
-def _storedFloat(key, default):
-    try:
-        return float(slicer.util.settingsValue(key, str(default)))
-    except (TypeError, ValueError):
-        return default
-
-
-def _storedBool(key, default):
-    """A checkbox's remembered state.
-
-    ``settingsValue`` hands back the string QSettings stored, and ``bool("false")``
-    is ``True`` -- which would turn every remembered "off" back on at the next
-    launch, silently, once per annotator per session.
-    """
-    return slicer.util.settingsValue(key, default, converter=slicer.util.toBool)
-
-
-def _caption(text):
-    label = qt.QLabel(text)
-    label.setWordWrap(True)
-    label.setStyleSheet("QLabel { color: #5a5f66; }")
-    return label
-
-
-def _shortName(name):
-    """``left_anterior_descending`` -> ``Left anterior descending``.
-
-    The underscored form is what the file format needs and what the server
-    stores. It is not what anyone should have to read two hundred times a day.
-    """
-    return name.replace("_", " ").capitalize()
 
 
 def _escape(text):

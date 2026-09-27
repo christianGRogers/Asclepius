@@ -36,13 +36,14 @@ Three decisions shape everything below.
 | | |
 |---|---|
 | 3D Slicer | **5.8** (extensions are packaged per minor version; a 5.8 build is not offered to 5.9) |
-| SegmentEditorExtraEffects | **Required.** Provides *Draw tube*, the tool this module is built around |
+| SegmentEditorExtraEffects | **Optional.** Adds *Draw tube* and other effects to the Segment Editor. Nothing in the workflow needs it — trimming uses *Scissors*, which is core Slicer |
 | Python packages | None. `requests` already ships with Slicer, and the shared `segqueue` package is stdlib-only and vendored into the archive |
 
-Install **SegmentEditorExtraEffects first**, from Extensions Manager → Install
-Extensions. "Install from file" does not resolve dependencies, so installing
-SegQueue will not pull it in — the panel checks at runtime and says so, but it
-is one less restart if you do it up front.
+SegmentEditorExtraEffects was required up to 0.7.x, when the panel drove *Draw
+tube* itself. It no longer does: every effect is reached through the Segment
+Editor, and the one the workflow is built around is *Scissors*, which ships with
+Slicer. Install the extension if you want the extra effects, but a case can be
+finished without it.
 
 ## Install
 
@@ -126,7 +127,7 @@ Neither the username nor the password is remembered, and an upgrade deletes
 any username an earlier version stored. This is what keeps a shared
 annotation workstation honest: a pre-filled name means the next person tabs
 past someone else's identity, and only the password stands between them and
-that person's queue. Only the server URL, cache root and tool sizes persist.
+that person's queue. Only the server URL and cache root persist.
 
 **Log out and purge** ends the session *and* deletes every cached case, which is
 what makes a shared teaching workstation safe to walk away from.
@@ -137,46 +138,30 @@ what makes a shared teaching workstation safe to walk away from.
    created already named and coloured, window/level is set for contrast-enhanced
    coronary CT (W 800 / L 300 — auto window/level on a whole-chest CT is useless
    for a 3 mm vessel), and the Segment Editor opens on it. If the case ships a
-   coronary mask, it is standing in the 3D view by the time you look up.
-2. **Divide the mask**, if the case has one — each vessel starts as everything
-   still unclaimed, and you trim (`E`) away what is not it. See below. The
-   result is touch-up rather than tracing.
-3. **Pick a vessel** — number keys `1`–`4` (and up to `9`), or the buttons. The
-   button shows a ✓ once that vessel has content, and `(optional)` where the
-   project does not require it.
-4. **Draw tube (`Q`)** — click points down the centreline of the artery, then
-   **Apply (`A`)**. Sections *accumulate*: draw a wide one proximally and
-   narrower ones as the vessel tapers, all adding into the same segment. Radius
-   defaults to 1.25 mm (a left main lumen is ~2 mm, a distal LAD under 1).
-5. **Paint (`W`)** to fix what the tube missed. Sphere brush, 1.5 mm, restricted
-   to 150–1000 HU so a slightly sloppy stroke still gives a clean lumen edge.
-6. **Validate & submit.** The submission is checked, uploaded in resumable
+   coronary mask, it is standing centred in the 3D view by the time you look up.
+2. **Divide the mask**, if the case has one. Every branch already holds a copy of
+   the whole tree; show one, cut it back to that vessel, hide it, move on. See
+   below.
+3. **Validate & submit.** The submission is checked, uploaded in resumable
    chunks, and the local copy deleted.
 
-If anything about the case is worth passing on — a stent, a motion artefact, an ambiguous branch — put it in **Case notes** before you submit. See below.
+If anything about the case is worth passing on — a stent, a motion artefact, an
+ambiguous branch — put it in **Case notes** before you submit. See below.
 
-Everything else in the Segment Editor is still one click away — the four buttons
-are the fast path, not a cage.
+Everything between step 1 and step 3 happens in the **Segment Editor**: which
+segment you are editing, which effect you are using, what it is masked to, and
+which segments are visible. The module deliberately puts nothing in front of it.
 
-### Keys
+### The panel's own buttons
 
-| Key | |
-|---|---|
-| `1`–`9` | Select vessel *n* |
-| `E` | Trim — cut away what is not this vessel |
-| `Q` | Draw tube |
-| `W` | Paint |
-| `A` | Apply the tube section you just placed, and start the next |
-
-### The other buttons
-
+* **Get next case** — asks the server for an assignment.
 * **Save draft now** — the segmentation autosaves every two minutes; this forces
   it.
 * **Check without submitting** — runs the full validation and reports, without
   uploading.
+* **Validate & submit** — checks, uploads, and deletes the local copy.
 * **Give this case back** — releases the assignment (with a reason) and purges
   it locally. Use it instead of leaving a case parked.
-* **Centre on heart**, **CTA window/level**, **Show in 3D** — view helpers.
 
 ## Dividing the coronary mask
 
@@ -185,44 +170,41 @@ mask the source dataset shipped. On those cases the job is not to trace the
 vessels — something already did — it is to say which part of that mask is the
 LAD, which is the LCx, and which is the RCA.
 
-So the mask is **rendered in the 3D view as the case opens**, and you divide it
-by cutting it up:
+So when a case with no work on it opens, **every branch already holds a copy of
+the whole tree**, and all of them are **hidden**. The mask itself is visible, on
+the slices and standing centred in the 3D view, and that is the only thing you
+see. Then, for each vessel:
 
-1. **Pick a vessel** (`1`–`4`). It arrives holding **everything still
-   unclaimed** — for the first vessel, the whole tree.
-2. **Trim (`E`)** away what is not that vessel. Drag a loop round it in the 3D
-   view or on a slice; what is inside the loop is cut.
-3. **Pick the next vessel.** It starts as exactly what you just cut off.
+1. **Show it** — click its eye in the Segment Editor's segment list. It comes up
+   as the entire tree.
+2. **Cut it back** to just that vessel. **Scissors** with *Erase inside* and a
+   free-form shape is the fast way: drag a loop round what is *not* this vessel,
+   in the 3D view or on a slice, and it is gone from this segment. Every other
+   effect works too — this is the ordinary Segment Editor.
+3. **Hide it again** and move to the next.
 
-Repeat until the last vessel, which usually needs no trimming at all — by then
-the only thing left is itself.
-
-**Nothing you cut is lost.** A cut does not delete anything from the case; it
-hands it to the vessel you have not got to yet. So trimming is never a decision
-you have to be sure about in advance: cut generously, and whatever you took off
-is in front of you the moment you switch.
-
-This is also why the workflow cannot be short-circuited. A vessel you never
-trimmed leaves nothing for the ones after it, so they come up empty — and an
-empty required vessel blocks submission. There is no path to submitting the
-whole tree as one branch.
+The branches are independent copies, so they can be done in any order, and
+nothing you cut from one affects another. There is no state to keep track of:
+what a branch holds is what you left in it.
 
 Some details worth knowing:
 
-- **Coming back to a vessel does not refill it.** Only an empty vessel is handed
-  the remainder, so switching back to check your work never wipes it — and a
-  draft reopened tomorrow resumes rather than restarts. **Start this vessel
-  over** is the deliberate way to refill one.
-- **Trimming ignores both masks.** The intensity range that keeps a sloppy brush
-  inside the lumen would also stop a cut removing anything outside 150–1000 HU,
-  scattering specks of one branch through the next. Paint still respects them.
-- **Paint (`W`) and draw tube (`Q`) work as they always have** — to put back a
-  little too much trimming, or to extend a branch past where the mask stops.
-- **Ordinary undo works.** `Ctrl+Z` steps back through cuts like any other
-  Segment Editor edit.
+- **Two branches must not end up sharing a voxel.** A label volume holds one
+  label per voxel, so an overlap cannot survive the export — one of the two would
+  be silently overwritten. **Check without submitting** catches it and names the
+  branch that would lose voxels, and submission is blocked until it is trimmed
+  apart. This is the one thing the old one-vessel-at-a-time workflow made
+  impossible and this one does not, so it is checked rather than trusted.
+- **Set overwrite mode to *Overwrite none*** — the module already does, on every
+  case. It is what stops editing one branch from carving into another.
 - **The mask is never submitted.** It stays scaffolding: the export copies only
   the project's own segments, so it is structurally incapable of reaching the
-  server however you cut it up.
+  server however you cut it up. The same goes for the heart region mask.
+- **A reopened draft resumes.** The copy-from-the-mask start happens only on a
+  case with no work on it; coming back tomorrow gives you your own trimming
+  back, untouched.
+- **Ordinary undo works.** `Ctrl+Z` steps back through cuts like any other
+  Segment Editor edit.
 
 Client-side only. The mask has shipped with cases since 0.1.0.
 
@@ -283,8 +265,7 @@ downloads the reviewer's copy alongside the source volume.
 One case at a time, purged on submit, release or logout.
 
 The cache root is configurable in the panel. Slicer's own `QSettings` keeps the
-server URL, username, tube radius and brush diameter — never the token or the
-password.
+server URL and the cache root — never the username, the token or the password.
 
 ## Branding
 
@@ -369,16 +350,22 @@ the module's dependencies on Slicer are checked by a script Slicer runs itself:
 ```
 
 It exits non-zero on failure; set `SEGQUEUE_SELFTEST_OUT` to a path to also get
-the report as a file. **Run it before a release.** CI does not — there is no
-Slicer on a GitHub runner — so this is a manual gate.
+the report as a file. **Run it before a release.** `.github/workflows/slicer-selftest.yml`
+also runs it weekly and on demand against the current Slicer release — which is
+the early warning that a new Slicer broke the module — but deliberately not on
+pull requests, where downloading 1.5 GB of Slicer under a virtual framebuffer
+fails for reasons that have nothing to do with the change under review.
 
-It checks the things whose failure mode is *silence*: that the effects the panel
-drives are present, that the trim tool's parameter spellings match the ones
-Slicer itself writes, and that the vessel-fill arithmetic produces exactly the
-right voxel counts. Effect parameters are strings converted to enums by name with
-no validation, so a misspelling gives a tool that activates and then ignores the
-mouse; segment arithmetic through Logical operators does not raise on a wrong
-operation name, it just produces the wrong voxels.
+It checks the things whose failure mode is *silence*: that the effects the
+workflow needs are in the build, that the 3D view still answers the calls that
+frame it, that writing one mask into four segments leaves four segments each
+holding that mask, and that the export then flattens overlapping segments the way
+the overlap check assumes. A segmentation stores overlapping labelmaps across
+*layers*, and a write that landed in the shared layer instead would erase the
+segments beside it — three empty branches and no error anywhere. The 3D camera
+calls are guarded against `AttributeError`, so a rename in Slicer would be silent
+too. And a case that opens with the wrong thing in its branches is wrong in a way
+every individual piece of it is right.
 
 It loads the module **by path**, not by `import SegQueue`, because Slicer
 pre-imports an installed copy of the extension if one exists — so a plain import
@@ -406,7 +393,13 @@ vendored copy. Install the release zip, or load the module from a full checkout.
 do not hand-zip the module directory.
 
 **Draw tube is missing** — SegmentEditorExtraEffects is not installed. Extensions
-Manager → Install Extensions → SegmentEditorExtraEffects → restart.
+Manager → Install Extensions → SegmentEditorExtraEffects → restart. Optional since
+0.8.0: trimming uses *Scissors*, which ships with Slicer.
+
+**"… loses N of its M voxels on export"** — two branches cover the same voxels,
+and a label volume can only give a voxel to one of them. Show both in the Segment
+Editor and trim until they no longer overlap. Overwrite mode should be *Overwrite
+none*, which the module sets on every case.
 
 **The Slicer logo still shows above the panel** — `Resources/` did not make it
 into the install. Check that `Resources/Icons/` sits beside `SegQueue.py` in
@@ -426,6 +419,41 @@ clears within the hour; installs from the releases page still work meanwhile.
 The client asks the server how much it already has and continues from there.
 
 ## Version history
+
+**0.8.0** — **The Vessel tools panel is gone, and so is the workflow it existed
+to sequence.** Every branch now simply starts as its own copy of the coronary
+mask, hidden, and the annotator shows one, cuts it back to that vessel, and hides
+it again — in the Segment Editor, which could already do all of it.
+
+What that removes: the vessel buttons and their checklist, the tool buttons, the
+tube radius and brush sliders, **Apply tube**, the masking checkboxes, **Start
+this vessel over**, the view-helper buttons, and the panel's own keyboard
+shortcuts. Also the remainder arithmetic underneath them — a vessel being handed
+"everything no other vessel has claimed" was the source of both 0.7.3 bugs, and
+of the ordering rule that made them possible: which branch you opened first
+changed what the others started as.
+
+What it costs: branches can now overlap, because they start identical. A label
+volume holds one label per voxel, so an overlap cannot survive the export — one
+branch would be silently overwritten. **Check without submitting** now measures
+what is in the editor against what the export produces and blocks submission
+naming the branch that would lose voxels. Window/level and centring still happen
+automatically on case open; only the buttons that re-applied them are gone.
+
+The 3D view is also **centred** when the mask goes into it, which it never was:
+the surface built correctly and sat outside the camera's frame, so every case
+started by reaching for the view controller's centre button. And
+SegmentEditorExtraEffects is no longer required — trimming uses *Scissors*, from
+core Slicer.
+
+`tests/slicer_selftest.py` is rewritten around what only a real Slicer can
+answer: that one mask written into four segments leaves four segments each
+holding it (a segmentation splits overlapping labelmaps across *layers*, and a
+write into the shared layer would erase its neighbours silently), that the export
+then flattens them the way the overlap check assumes, and that a trimmed-apart
+case is not falsely accused.
+
+**0.7.3** — Unreleased; folded into 0.8.0.
 
 **0.7.2** — Fixes the trim tool not drawing. Scissors is a C++ effect whose
 `Shape` and `Operation` parameters are strings converted to enums by name, with

@@ -131,6 +131,31 @@ class AnnotatorRecord:
         return self.approved + self.rejected
 
 
+# ------------------------------------------------------------ automatic scores
+
+
+def usable_score(value) -> bool:
+    """Whether a stored automatic score is a number you can compare or average.
+
+    Every consumer of ``autoScore.mean_dice`` needs this same question answered,
+    and each one used to answer it with ``is not None`` -- which is wrong in a way
+    that is invisible until it matters. **NaN is not None.** It passes an identity
+    check, every comparison against it is ``False`` (so a flagging threshold
+    silently never fires), and it propagates through ``sum()`` (so one bad record
+    turns an annotator's whole mean into NaN, with nothing to say which case did
+    it). A score read back out of a database is also not guaranteed to be a number
+    at all.
+
+    So the guard is "is this a finite number", it lives here with the other pure
+    decisions, and it is one function rather than three spellings in three files.
+    """
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        return False
+    # NaN != NaN, and inf is not something to average either. Written without
+    # `math.isfinite` so this module stays importable anywhere.
+    return value == value and value not in (float("inf"), float("-inf"))
+
+
 # --------------------------------------------------------------- review policy
 
 

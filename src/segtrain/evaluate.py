@@ -144,8 +144,13 @@ def write_reports(
     agg = aggregate(per_case)
     per_structure_csv = out_dir / f"{prefix}_per_structure.csv"
     with open(per_structure_csv, "w", newline="", encoding="utf-8") as fh:
+        # n_cases_scored is the denominator `dice` is actually over, so it comes
+        # first of the counts; n_cases_present and n_cases_false_positive say how
+        # that population splits. See `aggregate`.
         writer = csv.DictWriter(
-            fh, fieldnames=["structure", "dice", "nsd", "n_cases_present", "n_cases"]
+            fh,
+            fieldnames=["structure", "dice", "nsd", "n_cases_scored",
+                        "n_cases_present", "n_cases_false_positive", "n_cases"],
         )
         writer.writeheader()
         for name, row in sorted(agg.items(), key=lambda kv: kv[1]["dice"]):
@@ -169,14 +174,19 @@ def summarize(per_case: dict[str, list[ClassScore]], n_worst: int = 10) -> str:
         f"mean NSD:          {nanmean(all_nsd):.4f}",
         "",
         f"weakest {n_worst} structures by Dice:",
-        f"  {'structure':<32} {'dice':>7} {'nsd':>7} {'cases':>6}",
+        f"  {'structure':<32} {'dice':>7} {'nsd':>7} {'scored':>7} {'present':>8} {'FP':>4}",
     ]
     ranked = sorted(agg.items(), key=lambda kv: (kv[1]["dice"] != kv[1]["dice"], kv[1]["dice"]))
     for name, row in ranked[:n_worst]:
         lines.append(
             f"  {name:<32} {row['dice']:>7.4f} {row['nsd']:>7.4f} "
-            f"{int(row['n_cases_present']):>6}"
+            f"{int(row['n_cases_scored']):>7} {int(row['n_cases_present']):>8} "
+            f"{int(row['n_cases_false_positive']):>4}"
         )
+    lines.append(
+        "  scored = cases the mean is over; present = had it in the reference; "
+        "FP = predicted where the reference had none"
+    )
 
     # A structure present in very few test cases has a statistically meaningless
     # score; flagging it prevents over-reading a single bad case.

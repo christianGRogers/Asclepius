@@ -159,7 +159,7 @@ def scoreOne(submission, policy=None):
     # A bad automatic score pulls the submission back for a human even if the
     # sampling roll had already let it through. This is the mechanism the whole
     # gold-seeding idea exists for; without it the scores are just a report.
-    needsReview = mean is not None and mean < threshold
+    needsReview = pol.usable_score(mean) and mean < threshold
 
     Submission().recordScore(submission['_id'], score, needsReview=needsReview)
     if needsReview:

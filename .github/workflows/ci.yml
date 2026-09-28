@@ -182,7 +182,12 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -e ".[dev]"
-          pip install ./server pymongo
+          # `[scoring]` is not optional here even though the API server does not
+          # need it: four of these tests cover the QA scorer and skip without
+          # SimpleITK, and the guard below treats any skip in this job as a
+          # broken install. Installing it is what makes the scorer actually
+          # tested rather than quietly excused.
+          pip install "./server[scoring]" pymongo
       - name: The claim race, against the real database
         env:
           SEGQUEUE_TEST_MONGO: mongodb://localhost:27099

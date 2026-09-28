@@ -204,9 +204,23 @@ jobs:
           suite = ET.parse("junit.xml").getroot().find("testsuite")
           skipped, tests = int(suite.get("skipped")), int(suite.get("tests"))
           print(f"{tests - skipped} of {tests} ran")
-          if skipped:
-              sys.exit(f"{skipped} server test(s) skipped in CI — "
-                       "girder, pymongo or MongoDB is not actually available")
+          if not skipped:
+              sys.exit(0)
+
+          # The reasons, as workflow annotations. A skip here is the failure, and
+          # its reason is the whole diagnosis -- but the raw job log needs admin
+          # rights on the repository to read, whereas annotations are readable by
+          # anyone who can see the run. So the reason goes where it can be read.
+          reasons = {}
+          for case in suite.iter("testcase"):
+              for skip in case.iter("skipped"):
+                  reasons.setdefault(skip.get("message", "?"), 0)
+                  reasons[skip.get("message", "?")] += 1
+          for reason, count in sorted(reasons.items(), key=lambda kv: -kv[1]):
+              one = " ".join(reason.split())[:400]
+              print(f"::error title=Server test skipped ({count})::{one}")
+          sys.exit(f"{skipped} of {tests} server test(s) skipped in CI - "
+                   "girder, pymongo or MongoDB is not actually available")
           PY
 
       - name: What the server tests said

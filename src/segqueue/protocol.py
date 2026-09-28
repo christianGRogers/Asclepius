@@ -56,6 +56,18 @@ PROJECT = "project"
 REVIEW_QUEUE = "review/queue"
 REVIEW_CLAIM = "review/{submission_id}/claim"
 REVIEW_VERDICT = "review/{submission_id}/verdict"
+#: Every case and what has happened to it -- the submission viewer's own view.
+#: Distinct from ``REVIEW_QUEUE``, which is only the sampled fraction awaiting a
+#: verdict: a reviewer asking "where is case s0042?" is not asking that question.
+REVIEW_CASES = "review/cases"
+#: Every submission ever made against one case, oldest first. Submissions are
+#: append-only, so this is the whole history including superseded attempts and
+#: any reviewer revisions.
+REVIEW_CASE_SUBMISSIONS = "review/case/{case_id}/submissions"
+#: A reviewer's own corrected version of a submission, which also approves it.
+REVIEW_REVISE = "review/{submission_id}/revise"
+#: Send a submitted case back to the pool for a different annotator.
+REVIEW_POOL = "review/{submission_id}/pool"
 STATS = "stats"
 
 

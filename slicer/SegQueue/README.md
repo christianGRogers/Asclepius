@@ -247,13 +247,55 @@ people, and thirty undergraduates share a queue.
 
 Notes are capped at 2,000 characters and truncated rather than refused.
 
-## Review
+## Submissions
 
-Reviewers get an extra section: refresh the queue, **Claim & open selected**,
-then **Approve** or **Reject & send back** with a comment. A claimed submission
-downloads the reviewer's copy alongside the source volume.
+Reviewers get an extra **Submissions** section: every case in the project, what
+has happened to it, and what to do about it. It replaced a review *queue*, which
+listed only the sampled fraction awaiting a verdict and so could not answer the
+question reviewers arrive with — *where is case s0042, and who has it*.
+
+The top table is one row per lease, so a case out with two annotators at once
+shows twice, and a case nobody has been given still gets a row saying so. Filter
+it by state, or by **Unassigned**. Selecting a row fills the lower table with
+**every submission ever made against that case**, oldest first: submissions are
+append-only, nothing is ever replaced, and a superseded attempt is still there
+months later.
+
+Then, with a submission selected:
+
+* **Open selected submission** — downloads the segmentation and its source
+  volume and loads both. Takes the highlighted history row, so you can open an
+  older attempt and compare it against what replaced it; with no history row
+  highlighted it opens the case's latest.
+* **Approve** — accept it as it stands. Approval is the only state the training
+  export selects.
+* **Save my changes & approve** — upload whatever is now in the scene as *your*
+  corrected version and approve that. Edit it in the Segment Editor first; this
+  is the fast path for a submission that is nearly right.
+* **Return to pool** — hand the case back so somebody else gets it.
+
+Two things about that worth knowing.
+
+**Your corrections are stored beside the annotator's, never over them.** Saving
+writes another submission on the same assignment, credited to you, and the
+annotator's upload is kept exactly as they sent it. That is not just for the
+audit trail: per-annotator agreement numbers are computed from the author, and
+quietly attributing a reviewer's fixes to the annotator would flatter precisely
+the submissions that needed fixing.
+
+**A returned case does not go back to the same annotator.** `assignedUserIds` is
+a permanent record of everyone who has held a case and `Case.claim` excludes
+them, so the case is offered to somebody else. That is the same list that keeps
+a blind duplicate's two annotators independent, so it is not a per-case setting.
+
+**Reject was retired in 0.9.0.** A reviewer who can open a submission and fix it
+in Slicer has a shorter path to a correct label than a round trip through the
+annotator, and where the work genuinely needs redoing, returning it to the pool
+covers it. Assignments already sitting in `rejected` when this shipped still
+transition normally — the states remain in the machine, nothing new enters them.
 
 ## What lands on disk
+
 
 ```
 ~/.segqueue/cases/case-<assignmentId>/
@@ -419,6 +461,27 @@ clears within the hour; installs from the releases page still work meanwhile.
 The client asks the server how much it already has and continues from there.
 
 ## Version history
+
+**0.9.0** — **The review queue is now a submission viewer.** Reviewers get
+every case in the project with what has happened to it, plus the full
+append-only submission history of whichever case is selected, instead of a queue
+holding only the sampled fraction awaiting a verdict.
+
+**Fixes review not loading at all.** The old path wrote the downloaded volume to
+`volume.nrrd` regardless of what it was. This project's volumes are `.nii.gz`,
+Slicer picks its reader from the extension, and a gzipped NIfTI under a `.nrrd`
+name downloads cleanly, verifies cleanly and then refuses to open with a message
+that never mentions the name — so **Claim & open** appeared to do nothing. The
+real filenames now travel with the submission row, and the bytes are sniffed
+afterwards as a fallback, which is the protection the annotator path has had
+since 0.2.0.
+
+New reviewer actions: **Save my changes & approve**, which stores the reviewer's
+corrected version as another submission credited to them and leaves the
+annotator's exactly as sent, and **Return to pool**, which frees the case for a
+different annotator. **Reject & send back is retired** — the `rejected` and
+`rework` transitions stay in the state machine so assignments already in flight
+can still finish, but no endpoint enters them.
 
 **0.8.0** — **The Vessel tools panel is gone, and so is the workflow it existed
 to sequence.** Every branch now simply starts as its own copy of the coronary

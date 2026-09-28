@@ -8,13 +8,16 @@ it is not picked up by accident. Run it by hand once after deploying:
 It exercises the real loop over real HTTP, using the *same* client the Slicer
 extension uses, so a pass means the extension will work. In order: register the
 first admin, create the assetstore, create an annotator, claim a case, verify its
-checksum, upload a submission in resumable chunks, submit, get it rejected with a
-comment, rework it as attempt 2, and get it approved. Along the way it checks
-that empty segments, resampled geometry and corrupted uploads are all refused.
+checksum, upload a submission in resumable chunks, submit, find it in the
+reviewer's submission viewer, download it back, correct it as the reviewer and
+have that approve the case, then send a second case back to the pool. Along the
+way it checks that empty segments, resampled geometry and corrupted uploads are
+all refused.
 
 Everything it creates is idempotent. Run it twice and the second run reuses the
 accounts from the first; what it cannot reuse is cases, so it needs one unclaimed
-case per run (two to also check the concurrency guard).
+case per run -- three, to also check the concurrency guard and the
+send-back-to-the-pool path.
 
 The one thing it deliberately does not test is the Qt panel. Everything below the
 UI is here.
@@ -234,50 +237,143 @@ def main(argv=None):
 
     # -------------------------------------------------------------- reviewer
 
-    heading('Review, rejection and rework')
+    heading('The submission viewer')
     reviewer = SegQueueClient(args.url, extensionVersion='e2e')
     reviewer.login(args.admin_login, args.admin_password)
 
-    queue = reviewer.reviewQueue()
-    row = next((q for q in queue if q['caseName'] == assignment.case_name), None)
-    if not check('the submission appears in the review queue', row is not None):
+    def reviewerUpload(name):
+        """An upload owned by the reviewer, not the annotator.
+
+        ``revise`` loads the file with WRITE as the calling user. A site admin
+        would get through either way, which is exactly why the reviewer uploads
+        here: otherwise the test passes on admin privilege and says nothing about
+        whether an ordinary reviewer could do it.
+        """
+        return reviewer.uploadFile(seg, project.upload_folder_id, name=name)['_id']
+
+    cases = reviewer.caseOverview()
+    entry = next((c for c in cases if c['caseName'] == assignment.case_name), None)
+    if not check('the case appears in the viewer', entry is not None):
         return report()
-    check('the reviewer sees the case flavour', 'kind' in row, row.get('kind'))
+    check('the viewer lists cases, not just a review queue', len(cases) >= 1,
+          f'{len(cases)} case(s)')
 
-    refuses('a rejection with no comment is refused',
-            lambda: reviewer.submitVerdict(row['submissionId'], 'reject', comment=''),
-            'what to fix')
+    lease = next((a for a in entry['assignments'] if a['state'] == 'submitted'), None)
+    if not check('the submitted lease is on the case', lease is not None,
+                 str([a['state'] for a in entry['assignments']])):
+        return report()
+    check('the viewer names the annotator',
+          lease['annotator'] == args.annotator_login, lease['annotator'])
+    check('and counts the submissions', lease['submissionCount'] == 1,
+          str(lease['submissionCount']))
 
-    reviewer.claimReview(row['submissionId'])
-    verdict = reviewer.submitVerdict(
-        row['submissionId'], 'reject',
-        comment='The LAD stops at the first diagonal. Continue it distally.',
-        secondsSpent=90)
-    check('the rejection is recorded', verdict.get('state') == 'rejected')
+    # The filename is what "review does not load" turned on. Slicer picks its
+    # reader from the extension, so a .nii.gz volume has to arrive saying so.
+    check('the case carries its volume filename',
+          str(entry.get('volumeName') or '').endswith(('.nii.gz', '.nii', '.nrrd')),
+          entry.get('volumeName'))
 
-    mine = student.myAssignments()
-    back = next((a for a in mine if a.assignment_id == assignment.assignment_id), None)
-    check('the case returns to the same annotator', back is not None)
-    check('the reviewer comment reaches the annotator',
-          bool(back and back.reviewer_comment),
-          (back.reviewer_comment if back else '')[:70])
+    history = reviewer.caseSubmissions(entry['caseId'])
+    if not check('the submission history has the attempt in it', len(history) == 1,
+                 f'{len(history)} submission(s)'):
+        return report()
+    check('the history says who authored it',
+          history[0].get('authorRole') == 'annotator', history[0].get('authorRole'))
+    check('and carries both filenames the client saves under',
+          bool(history[0].get('volumeName')) and bool(history[0].get('submissionName')),
+          f"{history[0].get('volumeName')} / {history[0].get('submissionName')}")
 
-    student.downloadCase(back.case_id, volume)
-    after = next(a for a in student.myAssignments()
-                 if a.assignment_id == assignment.assignment_id)
-    check('reworking renews the lease and bumps the attempt',
-          after.attempt == 2, f'attempt {after.attempt}, state {after.state}')
+    submissionId = history[0]['submissionId']
+    volumeCopy = os.path.join(tempfile.gettempdir(), 'segqueue_review_volume')
+    segCopy = os.path.join(tempfile.gettempdir(), 'segqueue_review_submission')
+    reviewer.downloadReviewFile(submissionId, 'volume', volumeCopy)
+    reviewer.downloadReviewFile(submissionId, 'download', segCopy)
+    check('the reviewer can download the source volume',
+          sha256_file(volumeCopy) == assignment.checksum,
+          'checksum matches the case')
+    check('and the submitted segmentation',
+          sha256_file(segCopy) == digest,
+          'checksum matches what the annotator sent')
 
-    submitWith(protocol.SubmissionMeta(
-        checksum=digest, size_bytes=size, annotation_seconds=2600.0,
-        voxel_counts={s.name: 1100 for s in project.segments},
-        annotator_note='extended the LAD distally'))
-    row2 = next(q for q in reviewer.reviewQueue()
-                if q['caseName'] == assignment.case_name)
-    check('the rework is queued as attempt 2', row2['attempt'] == 2)
-    reviewer.claimReview(row2['submissionId'])
-    final = reviewer.submitVerdict(row2['submissionId'], 'approve', comment='Good.')
-    check('the rework is approved', final.get('state') == 'approved')
+    heading('Reject is retired')
+    refuses('rejecting says where the verb went',
+            lambda: reviewer.submitVerdict(submissionId, 'reject',
+                                           comment='no longer a thing'),
+            'no longer a verdict')
+
+    heading("The reviewer's own corrected version")
+    revision = reviewer.reviseSubmission(
+        submissionId,
+        protocol.SubmissionMeta(
+            checksum=digest, size_bytes=size, annotation_seconds=180.0,
+            voxel_counts={s.name: 950 for s in project.segments},
+            slicer_version='5.8.0', extension_version='e2e',
+            annotator_note='reviewer corrected the LAD'),
+        reviewerUpload('revision.seg.nrrd'))
+    check('the revision is stored', bool(revision.get('submissionId')))
+    check('and it approves the case', revision.get('state') == 'approved',
+          revision.get('state'))
+
+    history = reviewer.caseSubmissions(entry['caseId'])
+    check("the annotator's submission is still there", len(history) == 2,
+          f'{len(history)} submission(s)')
+    roles = [h.get('authorRole') for h in history]
+    check('one annotator submission, then one reviewer revision',
+          roles == ['annotator', 'reviewer'], str(roles))
+    if len(history) == 2:
+        check('the revision is credited to the reviewer, not the annotator',
+              history[1]['annotator']['login'] == args.admin_login,
+              history[1]['annotator']['login'])
+        check('and records which submission it corrected',
+              history[1].get('revisionOf') == submissionId,
+              str(history[1].get('revisionOf')))
+        check('the original row is untouched',
+              history[0]['submissionId'] == submissionId
+              and history[0]['annotator']['login'] == args.annotator_login)
+
+    refuses('an approved case cannot be revised again',
+            lambda: reviewer.reviseSubmission(
+                submissionId,
+                protocol.SubmissionMeta(
+                    checksum=digest, size_bytes=size, annotation_seconds=10.0,
+                    voxel_counts={s.name: 950 for s in project.segments}),
+                reviewerUpload('revision2.seg.nrrd')),
+            'cannot be revised')
+
+    heading('Back into circulation')
+    spare = student.nextCase()
+    if check('there is another case to send back', spare is not None):
+        student.downloadCase(spare.case_id, volume)
+        spareResponse = student.submit(
+            spare.assignment_id,
+            protocol.SubmissionMeta(
+                checksum=digest, size_bytes=size, annotation_seconds=1500.0,
+                voxel_counts={s.name: 700 for s in project.segments}),
+            upload('spare.seg.nrrd'),
+            geometry={'source': GEOMETRY, 'segmentation': GEOMETRY})
+        spareId = spareResponse.get('submissionId')
+        check('the spare case is submitted', bool(spareId))
+
+        returned = reviewer.returnToPool(spareId, reason='needs a second opinion')
+        check('it goes back to the pool', returned.get('returned') is True)
+        check('and the lease is released', returned.get('state') == 'released',
+              str(returned.get('state')))
+
+        check('the submission survives being sent back',
+              len(reviewer.caseSubmissions(spare.case_id)) == 1)
+        held = {a.case_name for a in student.myAssignments()}
+        check('the annotator no longer holds it',
+              spare.case_name not in held, str(sorted(held)))
+
+        # `assignedUserIds` is permanent, so the case is servable again but never
+        # to the person who already did it. Not a setting: it is the same list
+        # that keeps a blind duplicate's two annotators independent.
+        again = student.nextCase()
+        check('and is not handed back to the same annotator',
+              again is None or again.case_name != spare.case_name,
+              'got nothing' if again is None else again.case_name)
+        if again is not None:
+            student.releaseCase(again.assignment_id, reason='e2e tidy-up')
 
     # ------------------------------------------------------------ invariants
 

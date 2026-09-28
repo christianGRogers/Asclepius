@@ -181,8 +181,13 @@ class ReviewResource(Resource):
                'needs redoing, `pool` hands it to somebody else. Approval is '
                'also the only state the training export selects.')
         .param('submissionId', 'The submission being approved.', paramType='path')
-        .param('verdict', 'approve. Kept so older clients still parse.',
-               required=False, default=APPROVE, enum=[APPROVE])
+        # Deliberately no `enum`. autoDescribeRoute validates an enum itself
+        # and answers "invalid value for parameter verdict", which is exactly the
+        # message an old client sending `reject` must not get: it reads like a
+        # malformed request rather than a retired verb. The handler checks the
+        # value so that it can say where the verb went.
+        .param('verdict', 'approve. Anything else is refused by name.',
+               required=False, default=APPROVE)
         .param('comment', 'Optional note for the case thread.',
                required=False, default='')
         .jsonParam('rubric', 'Optional per-criterion scores.', required=False,

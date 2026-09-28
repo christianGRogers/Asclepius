@@ -186,7 +186,13 @@ jobs:
       - name: The claim race, against the real database
         env:
           SEGQUEUE_TEST_MONGO: mongodb://localhost:27099
-        run: pytest -q -rs tests/test_segqueue_server.py --junitxml=junit.xml
+        # `-rs` names every skip reason, and the output is kept: a skip here is
+        # a broken install rather than a passing build, and the reason is the
+        # only thing that says which part of the install broke.
+        run: |
+          set -o pipefail
+          pytest -q -rs tests/test_segqueue_server.py --junitxml=junit.xml \
+            2>&1 | tee server-tests.log
       - name: Fail if these skipped
         # These tests skip themselves when Girder or MongoDB is missing, which
         # is right on a laptop and wrong here: in CI both are present, so a skip
@@ -202,6 +208,19 @@ jobs:
               sys.exit(f"{skipped} server test(s) skipped in CI — "
                        "girder, pymongo or MongoDB is not actually available")
           PY
+
+      - name: What the server tests said
+        # Into the step summary, not only the log: reading a raw job log needs
+        # admin rights on the repository, and the reason a test skipped is the
+        # entire diagnosis.
+        if: always()
+        run: |
+          {
+            echo '### Server integration'
+            echo '```'
+            tail -40 server-tests.log 2>/dev/null || echo "(no output captured)"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
 
   # --------------------------------------------------------------------------
   acceptance:
@@ -292,10 +311,26 @@ jobs:
         # The same client the Slicer extension uses, over real HTTP. A pass here
         # means the extension's half of the conversation still works.
         run: |
+          set -o pipefail
           python tests/segqueue_e2e.py \
             --url "$SEGQUEUE_URL" \
             --admin-login "$ADMIN_LOGIN" --admin-password "$ADMIN_PASSWORD" \
-            --assetstore-root "$GITHUB_WORKSPACE/assetstore"
+            --assetstore-root "$GITHUB_WORKSPACE/assetstore" 2>&1 | tee e2e.log
+
+      - name: Which acceptance checks failed
+        # The script prints one line per check and a tally at the end. Putting
+        # that in the step summary is what makes a failure diagnosable without
+        # admin rights on the repository -- which is what reading the raw job
+        # log needs, and what the Checks API does not have.
+        if: always()
+        run: |
+          {
+            echo '### Acceptance test'
+            echo '```'
+            grep -E 'FAIL|FAILED:|passed,' e2e.log | head -40 \
+              || echo "(no output captured)"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Girder log
         if: failure()

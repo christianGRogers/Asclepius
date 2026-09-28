@@ -82,6 +82,14 @@ APPROVE = "approve"
 REJECT = "reject"
 REWORK = "rework"
 RELEASE = "release"
+#: A reviewer sends a submitted case back to the pool for somebody else.
+#:
+#: Deliberately its own event rather than reusing ``RELEASE``. Release is the
+#: annotator's verb, guarded by "is this your assignment?", and a submitted case
+#: is exactly the one an annotator must *not* be able to hand back -- they are
+#: finished with it. Separating the two keeps that guard meaningful and leaves
+#: the audit trail able to say which of the two happened.
+RETURN_TO_POOL = "return_to_pool"
 EXPIRE = "expire"
 
 ALL_EVENTS = (
@@ -94,16 +102,24 @@ ALL_EVENTS = (
     REJECT,
     REWORK,
     RELEASE,
+    RETURN_TO_POOL,
     EXPIRE,
 )
 
 #: ``(state, event) -> next state``. The absence of a key is a refusal.
 #:
-#: Two entries deserve a note. ``(ASSIGNED, SUBMIT)`` is absent on purpose: you
+#: Three entries deserve a note. ``(ASSIGNED, SUBMIT)`` is absent on purpose: you
 #: cannot submit a segmentation of a volume you never downloaded, and permitting
 #: it would let a broken client fabricate work. ``(SUBMITTED, APPROVE)`` is
 #: present without a review claim because most submissions are auto-approved --
 #: only the sampled fraction is ever seen by a human (``policy.review_needed``).
+#:
+#: ``REJECT`` and ``REWORK`` are **retained but no longer reachable through the
+#: API**. Reviewers get approve and return-to-pool; sending a case back to the
+#: same annotator was retired in 0.9.0. The transitions stay because an
+#: assignment already sitting in ``REJECTED`` when that shipped still needs a
+#: legal move -- ``REWORK`` to finish it or ``RELEASE`` to let it go. Deleting
+#: the rows would strand exactly the cases that were mid-flight at the upgrade.
 TRANSITIONS = {
     (ASSIGNED, DOWNLOAD): DOWNLOADED,
     (ASSIGNED, RELEASE): RELEASED,
@@ -116,10 +132,12 @@ TRANSITIONS = {
     (SUBMITTED, CLAIM_REVIEW): UNDER_REVIEW,
     (SUBMITTED, APPROVE): APPROVED,
     (SUBMITTED, REJECT): REJECTED,
+    (SUBMITTED, RETURN_TO_POOL): RELEASED,
 
     (UNDER_REVIEW, APPROVE): APPROVED,
     (UNDER_REVIEW, REJECT): REJECTED,
     (UNDER_REVIEW, ABANDON_REVIEW): SUBMITTED,
+    (UNDER_REVIEW, RETURN_TO_POOL): RELEASED,
 
     (REJECTED, REWORK): ASSIGNED,
     # An annotator who has left cannot rework. Reclaiming a rejected assignment

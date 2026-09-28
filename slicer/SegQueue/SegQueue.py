@@ -107,7 +107,7 @@ from SegQueueLib import (
     updater,
 )
 
-__version__ = "0.8.0"
+__version__ = "0.9.0"
 
 #: How often the in-progress segmentation is written to disk. Two minutes is
 #: chosen against the cost of losing work rather than the cost of the write: a
@@ -142,6 +142,24 @@ HEARTBEAT_SECONDS = 300
 #: dial in, applied automatically so nobody has to.
 CTA_WINDOW = 800
 CTA_LEVEL = 300
+
+#: The state filters the submission viewer offers, in lifecycle order so the
+#: list reads as a progression rather than as an alphabetised set of jargon. The
+#: labels are the words a reviewer would use, not the stored state names.
+REVIEW_FILTERS = (
+    ("assigned", "Assigned, not downloaded"),
+    ("downloaded", "Being worked on"),
+    ("submitted", "Submitted"),
+    ("under_review", "Under review"),
+    ("approved", "Approved"),
+    ("rejected", "Rejected (historical)"),
+    ("released", "Given back"),
+)
+
+#: States in which there is nothing left for a reviewer to decide. Approving or
+#: returning one of these is refused by the server anyway; disabling the buttons
+#: is the difference between that refusal and a reviewer who never tried.
+REVIEW_DECIDED_STATES = frozenset({"approved", "released"})
 
 #: How solid the seed looks in the 3D view. Enough to read the shape of the tree
 #: at a glance, sheer enough to see the branches an annotator has already claimed
@@ -314,7 +332,7 @@ class SegQueueLogic(ScriptedLoadableModuleLogic):
         # disagrees with the file's own magic number produces a load failure
         # whose message never mentions the filename. The checksum has already
         # proved the bytes; only the name can still be wrong.
-        volumePath = self._correctSuffix(volumePath)
+        volumePath = self.correctSuffix(volumePath)
         self.cache.update(assignment.assignment_id, volumePath=volumePath)
 
         self.volumeNode = slicer.util.loadVolume(volumePath)
@@ -566,7 +584,7 @@ class SegQueueLogic(ScriptedLoadableModuleLogic):
             return False
         return array is not None and array.size > 0 and bool(array.any())
 
-    def _correctSuffix(self, path):
+    def correctSuffix(self, path):
         """Rename a volume to match what its bytes actually are.
 
         Returns the path to use. A no-op in the normal case, where the server
@@ -1015,6 +1033,59 @@ class SegQueueLogic(ScriptedLoadableModuleLogic):
         self.closeCase(purge=True)
         return response
 
+    def reviseSubmission(self, submissionId, note="", seconds=None, progress=None):
+        """Upload the open scene as a reviewer's corrected version of a submission.
+
+        The annotator's upload is never touched. This adds another submission on
+        the same assignment, credited to the reviewer, and the server approves the
+        case on the strength of it -- see the ``revise`` endpoint for why the
+        authorship matters more than it looks.
+
+        Validated with the same checks the annotator's submission runs, including
+        the overlap check: a reviewer correcting a case by hand is exactly as able
+        to leave two branches sharing a voxel as an annotator is.
+        """
+        if self.segmentationNode is None or self.volumeNode is None:
+            raise SegQueueError("There is no segmentation open to save.")
+        if self.client is None or self.project is None:
+            raise SegQueueError("You are not logged in.")
+
+        directory = os.path.join(self.cache.root, "review")
+        try:
+            os.makedirs(directory)
+        except OSError:
+            pass
+        path = os.path.join(directory, "revision.seg.nrrd")
+
+        counts, sourceGeom, segGeom = self.exportLabelmap(path)
+        problems = self.validate(counts, sourceGeom, segGeom,
+                                 drawnCounts=self.drawnCounts())
+        if blocking(problems):
+            raise SegQueueError(
+                "This segmentation is not ready to save:\n\n"
+                + summarise(blocking(problems)))
+        if not os.path.isfile(path):
+            raise SegQueueError(
+                "There is nothing to save -- none of the segments has any "
+                "voxels in it.")
+
+        meta = SubmissionMeta(
+            checksum=sha256_file(path),
+            size_bytes=os.path.getsize(path),
+            # The reviewer's own time on it, not the annotator's. Recording the
+            # annotator's here would put their minutes on the reviewer's row.
+            annotation_seconds=float(seconds or 0.0),
+            voxel_counts=counts,
+            slicer_version=slicer.app.applicationVersion,
+            extension_version=__version__,
+            annotator_note=note,
+        )
+        uploaded = self.client.uploadFile(
+            path, self.project.upload_folder_id,
+            name="revision_{}.seg.nrrd".format(submissionId),
+            progress=progress)
+        return self.client.reviseSubmission(submissionId, meta, uploaded["_id"])
+
     def release(self, reason=""):
         """Give a case back to the pool and purge it locally."""
         assignment = self.assignment
@@ -1057,7 +1128,10 @@ class SegQueueWidget(ScriptedLoadableModuleWidget):
         self.clockTimer = None
         self.notesTimer = None
         self._reviewRows = []
+        self._reviewCases = []
+        self._historyRows = []
         self._claimedSubmission = None
+        self._reviewStart = None
         self._slicerLogo = None
         self._pendingUpdate = None
 
@@ -1704,8 +1778,20 @@ class SegQueueWidget(ScriptedLoadableModuleWidget):
         layout.addWidget(self.problemsLabel)
 
     def _buildReviewSection(self):
+        """The submission viewer: every case, what happened to it, and what to do.
+
+        It replaced a review *queue*, which showed only the sampled fraction
+        awaiting a verdict and could not answer the question reviewers actually
+        arrive with -- where is case s0042, and who has it. So this lists every
+        case in the project, assigned or not, submitted or not, finished or not.
+
+        Two tables rather than one. The top one is cases; selecting a case fills
+        the bottom one with every submission ever made against it, because
+        submissions are append-only and "what did they send the first time?" is
+        a question worth being able to answer months later.
+        """
         box = ctk.ctkCollapsibleButton()
-        box.text = "Review"
+        box.text = "Submissions"
         box.collapsed = True
         # Hidden until the server confirms the role, so an annotator never sees
         # a section that would only ever tell them they are not allowed.
@@ -1714,36 +1800,372 @@ class SegQueueWidget(ScriptedLoadableModuleWidget):
         self.reviewBox = box
         layout = qt.QVBoxLayout(box)
 
-        self.refreshReviewButton = qt.QPushButton("Refresh queue")
+        controls = qt.QHBoxLayout()
+        self.refreshReviewButton = qt.QPushButton("Refresh")
         self.refreshReviewButton.clicked.connect(self.onRefreshReview)
-        layout.addWidget(self.refreshReviewButton)
+        controls.addWidget(self.refreshReviewButton)
+
+        self.reviewFilter = qt.QComboBox()
+        # The order is the lifecycle, so the list reads as a progression rather
+        # than as an alphabetised set of jargon.
+        self.reviewFilter.addItem("All cases", "")
+        self.reviewFilter.addItem("Unassigned", "unassigned")
+        for state, label in REVIEW_FILTERS:
+            self.reviewFilter.addItem(label, state)
+        self.reviewFilter.setToolTip(
+            "Narrow the list to cases with an assignment in one state. "
+            "'Unassigned' is the cases nobody has been given yet.")
+        self.reviewFilter.currentIndexChanged.connect(
+            lambda _index: self.onRefreshReview())
+        controls.addWidget(self.reviewFilter)
+        controls.addStretch(1)
+        layout.addLayout(controls)
 
         self.reviewTable = qt.QTableWidget()
-        self.reviewTable.setColumnCount(5)
+        self.reviewTable.setColumnCount(7)
         self.reviewTable.setHorizontalHeaderLabels(
-            ["Case", "Annotator", "Attempt", "Auto score", "Flags"])
+            ["Case", "Annotator", "State", "Attempt", "Submitted", "Subs", "Flags"])
         self.reviewTable.setSelectionBehavior(qt.QAbstractItemView.SelectRows)
+        self.reviewTable.setSelectionMode(qt.QAbstractItemView.SingleSelection)
         self.reviewTable.setEditTriggers(qt.QAbstractItemView.NoEditTriggers)
-        self.reviewTable.setMinimumHeight(160)
+        self.reviewTable.setMinimumHeight(170)
+        self.reviewTable.itemSelectionChanged.connect(self.onReviewRowChanged)
         layout.addWidget(self.reviewTable)
 
-        self.openReviewButton = qt.QPushButton("Claim && open selected")
+        layout.addWidget(_caption(
+            "Every submission against the selected case, oldest first. Nothing "
+            "is ever overwritten, so a superseded attempt is still here."))
+        self.historyTable = qt.QTableWidget()
+        self.historyTable.setColumnCount(5)
+        self.historyTable.setHorizontalHeaderLabels(
+            ["When", "Author", "Role", "Attempt", "Auto score"])
+        self.historyTable.setSelectionBehavior(qt.QAbstractItemView.SelectRows)
+        self.historyTable.setSelectionMode(qt.QAbstractItemView.SingleSelection)
+        self.historyTable.setEditTriggers(qt.QAbstractItemView.NoEditTriggers)
+        self.historyTable.setMinimumHeight(110)
+        layout.addWidget(self.historyTable)
+
+        self.openReviewButton = qt.QPushButton("Open selected submission")
+        self.openReviewButton.setToolTip(
+            "Loads the volume and that segmentation into the scene. Picks the "
+            "highlighted row in the history table, or the case's latest "
+            "submission if none is highlighted.")
         self.openReviewButton.clicked.connect(self.onOpenReview)
         layout.addWidget(self.openReviewButton)
 
+        self.reviewStatusLabel = qt.QLabel()
+        self.reviewStatusLabel.setWordWrap(True)
+        layout.addWidget(self.reviewStatusLabel)
+
         self.verdictComment = qt.QLineEdit()
         self.verdictComment.setPlaceholderText(
-            "comment (required when rejecting -- say what to fix)")
+            "optional note for the case thread")
         layout.addWidget(self.verdictComment)
 
         row = qt.QHBoxLayout()
         self.approveButton = qt.QPushButton("Approve")
+        self.approveButton.setToolTip(
+            "Accept this submission as it stands. Approval is the only state "
+            "the training export selects.")
         self.approveButton.clicked.connect(lambda: self.onVerdict("approve"))
-        self.rejectButton = qt.QPushButton("Reject && send back")
-        self.rejectButton.clicked.connect(lambda: self.onVerdict("reject"))
         row.addWidget(self.approveButton)
-        row.addWidget(self.rejectButton)
+
+        self.reviseButton = qt.QPushButton("Save my changes && approve")
+        self.reviseButton.setToolTip(
+            "Upload what is now in the scene as your own corrected version and "
+            "approve it. The annotator's submission is kept exactly as they "
+            "sent it; yours is stored beside it, credited to you.")
+        self.reviseButton.clicked.connect(self.onReviseSubmission)
+        row.addWidget(self.reviseButton)
+
+        self.poolButton = qt.QPushButton("Return to pool")
+        self.poolButton.setToolTip(
+            "Give the case back to the pool for another annotator. The "
+            "submission stays on record.")
+        self.poolButton.clicked.connect(self.onReturnToPool)
+        row.addWidget(self.poolButton)
         layout.addLayout(row)
+
+    # ------------------------------------------------------ submission viewer
+
+    def onRefreshReview(self):
+        """Reload the case list. Cheap enough to be the answer to most doubts."""
+        if self.logic is None or self.logic.client is None:
+            return
+        selected = self.reviewFilter.itemData(self.reviewFilter.currentIndex)
+        with _busy():
+            try:
+                self._reviewCases = self.logic.client.caseOverview(
+                    state=None if selected in ("", "unassigned") else selected,
+                    unassigned=(selected == "unassigned"))
+            except SegQueueError as exc:
+                slicer.util.errorDisplay(str(exc))
+                return
+
+        # One row per *assignment*, not per case: a case can be out with two
+        # annotators at once, and each of them has their own state to show. A
+        # case nobody holds still gets a row, because "nothing has happened to
+        # this one" is the most useful thing the viewer can say about it.
+        self._reviewRows = []
+        for case in self._reviewCases:
+            assignments = case.get("assignments") or []
+            if not assignments:
+                self._reviewRows.append((case, None))
+                continue
+            for assignment in assignments:
+                self._reviewRows.append((case, assignment))
+
+        self.reviewTable.setRowCount(len(self._reviewRows))
+        for index, (case, assignment) in enumerate(self._reviewRows):
+            assignment = assignment or {}
+            cells = [
+                case.get("caseName", ""),
+                assignment.get("annotator", "") or "--",
+                assignment.get("state", "") or "unassigned",
+                str(assignment.get("attempt", "")) or "--",
+                _shortTime(assignment.get("submittedAt")),
+                str(assignment.get("submissionCount", 0)),
+                ", ".join(assignment.get("flagged") or []),
+            ]
+            for column, text in enumerate(cells):
+                self.reviewTable.setItem(index, column, qt.QTableWidgetItem(text))
+        self.reviewTable.resizeColumnsToContents()
+        self._clearHistory()
+        self._updateReviewEnabled()
+
+    def onReviewRowChanged(self):
+        """Fill the history table for whichever case is selected."""
+        case, _assignment = self._selectedReviewRow()
+        if case is None:
+            self._clearHistory()
+            self._updateReviewEnabled()
+            return
+        with _busy():
+            try:
+                self._historyRows = self.logic.client.caseSubmissions(case["caseId"])
+            except SegQueueError as exc:
+                self._historyRows = []
+                self.reviewStatusLabel.setText(_escape(str(exc)))
+
+        self.historyTable.setRowCount(len(self._historyRows))
+        for index, entry in enumerate(self._historyRows):
+            score = (entry.get("autoScore") or {}).get("mean_dice")
+            cells = [
+                _shortTime(entry.get("created")),
+                (entry.get("annotator") or {}).get("login", ""),
+                entry.get("authorRole", "annotator"),
+                str(entry.get("attempt", 1)),
+                "--" if score is None else "{:.3f}".format(score),
+            ]
+            for column, text in enumerate(cells):
+                self.historyTable.setItem(index, column, qt.QTableWidgetItem(text))
+        self.historyTable.resizeColumnsToContents()
+        self._updateReviewEnabled()
+
+    def _clearHistory(self):
+        self._historyRows = []
+        self.historyTable.setRowCount(0)
+
+    def _selectedReviewRow(self):
+        row = self.reviewTable.currentRow()
+        if row < 0 or row >= len(self._reviewRows):
+            return None, None
+        return self._reviewRows[row]
+
+    def _selectedSubmission(self):
+        """The submission to act on: the highlighted history row, else the latest.
+
+        Defaulting to the latest is what makes the common path one click. Being
+        able to pick an older row is what makes the history worth showing at all
+        -- comparing an attempt against what replaced it is most of why a
+        reviewer opens this.
+        """
+        row = self.historyTable.currentRow()
+        if 0 <= row < len(self._historyRows):
+            return self._historyRows[row]
+        _case, assignment = self._selectedReviewRow()
+        if assignment and assignment.get("submissionId"):
+            return next((e for e in self._historyRows
+                         if e.get("submissionId") == assignment["submissionId"]),
+                        None) or {"submissionId": assignment["submissionId"]}
+        return None
+
+    def _updateReviewEnabled(self):
+        submission = self._selectedSubmission()
+        _case, assignment = self._selectedReviewRow()
+        state = (assignment or {}).get("state", "")
+        hasSubmission = bool(submission and submission.get("submissionId"))
+        decided = state in REVIEW_DECIDED_STATES
+
+        self.openReviewButton.setEnabled(hasSubmission)
+        self.approveButton.setEnabled(hasSubmission and not decided)
+        self.poolButton.setEnabled(hasSubmission and not decided)
+        # Revising uploads whatever is in the scene, so it needs an opened
+        # submission as well as an undecided one -- otherwise the obvious
+        # accident is approving the previous case's segmentation onto this one.
+        self.reviseButton.setEnabled(
+            bool(self._claimedSubmission) and hasSubmission and not decided)
+
+    def _reviewPaths(self, entry):
+        """``(volumePath, segPath)`` named after what the files actually are.
+
+        The whole bug this method exists for: Slicer chooses its reader from the
+        extension, and these volumes are ``.nii.gz``. Written as ``volume.nrrd``
+        they download, verify and then fail to open with a message that never
+        mentions the name -- which is precisely what "the review does not load"
+        was. The server sends the real names; where it is too old to, the bytes
+        get sniffed after the download, the same fallback ``_correctSuffix`` is.
+        """
+        directory = os.path.join(self.logic.cache.root, "review")
+        try:
+            os.makedirs(directory)
+        except OSError:
+            pass
+        return (os.path.join(directory, _safeName(entry.get("volumeName"),
+                                                  "volume.nrrd")),
+                os.path.join(directory, _safeName(entry.get("submissionName"),
+                                                  "submission.seg.nrrd")))
+
+    def onOpenReview(self):
+        """Load a submission into the scene, whichever one is selected."""
+        entry = self._selectedSubmission()
+        if not entry or not entry.get("submissionId"):
+            slicer.util.errorDisplay("Select a submission first.")
+            return
+        if self.logic.assignment is not None:
+            slicer.util.errorDisplay(
+                "You have a case of your own open. Submit it or give it back "
+                "before reviewing -- opening a submission clears the scene.")
+            return
+        submissionId = entry["submissionId"]
+
+        with _busy():
+            volumePath, segPath = self._reviewPaths(entry)
+            try:
+                self.logic.client.downloadReviewFile(
+                    submissionId, "volume", volumePath)
+                self.logic.client.downloadReviewFile(
+                    submissionId, "download", segPath)
+            except SegQueueError as exc:
+                slicer.util.errorDisplay(str(exc))
+                return
+
+            # Last line of defence on the name, for a server too old to send it.
+            volumePath = self.logic.correctSuffix(volumePath)
+
+            slicer.mrmlScene.Clear(False)
+            try:
+                volumeNode = slicer.util.loadVolume(volumePath)
+                segmentationNode = slicer.util.loadSegmentation(segPath)
+            except Exception:
+                slicer.util.errorDisplay(
+                    "The submission downloaded but Slicer could not open it:\n\n"
+                    + traceback.format_exc())
+                return
+            slicer.util.setSliceViewerLayers(background=volumeNode, fit=True)
+            self.logic.volumeNode = volumeNode
+            self.logic.segmentationNode = segmentationNode
+            self.logic.applyViewPreset()
+            self._bindEditor(segmentationNode, volumeNode)
+            slicer.app.layoutManager().setLayout(
+                slicer.vtkMRMLLayoutNode.SlicerLayoutFourUpView)
+            self.logic.centre3d()
+
+        self._claimedSubmission = submissionId
+        self._reviewStart = time.time()
+        self.reviewStatusLabel.setText(
+            "Reviewing <b>{}</b> by {} — edit it in the Segment Editor if you "
+            "want to correct it.".format(
+                _escape(entry.get("caseName", "")),
+                _escape((entry.get("annotator") or {}).get("login", ""))))
+        self.editorBox.collapsed = False
+        self._updateReviewEnabled()
+
+    def onReviseSubmission(self):
+        """Upload what is in the scene as the reviewer's own version, and approve."""
+        if not self._claimedSubmission:
+            slicer.util.errorDisplay("Open a submission first.")
+            return
+        if self.logic.segmentationNode is None:
+            slicer.util.errorDisplay("There is no segmentation in the scene.")
+            return
+        if not slicer.util.confirmYesNoDisplay(
+                "Save what is in the scene as your own corrected version and "
+                "approve this case?\n\nThe annotator's submission is kept "
+                "exactly as they sent it."):
+            return
+
+        seconds = (time.time() - self._reviewStart) if self._reviewStart else None
+        with _busy():
+            try:
+                self.logic.reviseSubmission(
+                    self._claimedSubmission,
+                    note=self.verdictComment.text.strip(), seconds=seconds)
+            except (SegQueueError, RuntimeError) as exc:
+                slicer.util.errorDisplay(str(exc))
+                return
+            except Exception:
+                slicer.util.errorDisplay(
+                    "Could not save the revision:\n\n" + traceback.format_exc())
+                return
+
+        self._claimedSubmission = None
+        self.reviewStatusLabel.setText(
+            "Saved your version and approved the case.")
+        self.verdictComment.setText("")
+        self.onRefreshReview()
+
+    def onReturnToPool(self):
+        """Give the case back so a different annotator can be handed it."""
+        entry = self._selectedSubmission()
+        if not entry or not entry.get("submissionId"):
+            slicer.util.errorDisplay("Select a submission first.")
+            return
+        case = _escape(entry.get("caseName", "this case"))
+        if not slicer.util.confirmYesNoDisplay(
+                "Send {} back to the pool?\n\nThe annotator loses the case and "
+                "somebody else will be handed it. Their submission stays on "
+                "record.".format(entry.get("caseName", "this case"))):
+            return
+
+        with _busy():
+            try:
+                self.logic.client.returnToPool(
+                    entry["submissionId"], reason=self.verdictComment.text.strip())
+            except SegQueueError as exc:
+                slicer.util.errorDisplay(str(exc))
+                return
+
+        if self._claimedSubmission == entry["submissionId"]:
+            self._claimedSubmission = None
+        self.reviewStatusLabel.setText("Sent {} back to the pool.".format(case))
+        self.verdictComment.setText("")
+        self.onRefreshReview()
+
+    def onVerdict(self, verdict):
+        """Approve the selected submission. Approve is the only verdict."""
+        entry = self._selectedSubmission()
+        if not entry or not entry.get("submissionId"):
+            slicer.util.errorDisplay("Select a submission first.")
+            return
+        seconds = (time.time() - self._reviewStart) if self._reviewStart else None
+        with _busy():
+            try:
+                self.logic.client.submitVerdict(
+                    entry["submissionId"], verdict,
+                    comment=self.verdictComment.text.strip(),
+                    secondsSpent=seconds)
+            except SegQueueError as exc:
+                slicer.util.errorDisplay(str(exc))
+                return
+
+        if self._claimedSubmission == entry["submissionId"]:
+            self._claimedSubmission = None
+        self._reviewStart = None
+        self.reviewStatusLabel.setText("Approved {}.".format(
+            _escape(entry.get("caseName", "the case"))))
+        self.verdictComment.setText("")
+        self.onRefreshReview()
 
     def _startTimers(self):
         self.autosaveTimer = qt.QTimer()
@@ -2084,92 +2506,6 @@ class SegQueueWidget(ScriptedLoadableModuleWidget):
 
     # --------------------------------------------------------------- review
 
-    def onRefreshReview(self):
-        with _busy():
-            try:
-                self._reviewRows = self.logic.client.reviewQueue()
-            except SegQueueError as exc:
-                slicer.util.errorDisplay(str(exc))
-                return
-        self.reviewTable.setRowCount(len(self._reviewRows))
-        for row, entry in enumerate(self._reviewRows):
-            score = entry.get("autoScore") or {}
-            mean = score.get("mean_dice")
-            cells = [
-                entry.get("caseName", ""),
-                entry.get("annotator", ""),
-                str(entry.get("attempt", 1)),
-                "--" if mean is None else "{:.3f}".format(mean),
-                ", ".join(entry.get("flagged") or []),
-            ]
-            for column, text in enumerate(cells):
-                self.reviewTable.setItem(row, column, qt.QTableWidgetItem(text))
-        self.reviewTable.resizeColumnsToContents()
-
-    def onOpenReview(self):
-        row = self.reviewTable.currentRow()
-        if row < 0 or row >= len(self._reviewRows):
-            slicer.util.errorDisplay("Select a submission first.")
-            return
-        entry = self._reviewRows[row]
-        submissionId = entry["submissionId"]
-
-        with _busy():
-            try:
-                self.logic.client.claimReview(submissionId)
-            except SegQueueError as exc:
-                slicer.util.errorDisplay(str(exc))
-                return
-
-            directory = os.path.join(self.logic.cache.root, "review")
-            try:
-                os.makedirs(directory)
-            except OSError:
-                pass
-            volumePath = os.path.join(directory, "volume.nrrd")
-            segPath = os.path.join(directory, "submission.seg.nrrd")
-            try:
-                self.logic.client.downloadReviewFile(submissionId, "volume", volumePath)
-                self.logic.client.downloadReviewFile(submissionId, "download", segPath)
-            except SegQueueError as exc:
-                slicer.util.errorDisplay(str(exc))
-                return
-
-            slicer.mrmlScene.Clear(False)
-            volumeNode = slicer.util.loadVolume(volumePath)
-            slicer.util.loadSegmentation(segPath)
-            slicer.util.setSliceViewerLayers(background=volumeNode, fit=True)
-
-        self._claimedSubmission = submissionId
-        self._reviewStart = time.time()
-
-    def onVerdict(self, verdict):
-        if not self._claimedSubmission:
-            slicer.util.errorDisplay("Claim and open a submission first.")
-            return
-        comment = self.verdictComment.text.strip()
-        if verdict == "reject" and not comment:
-            # The server enforces this too. Doing it here as well is the
-            # difference between a useful sentence and a round trip: a rejection
-            # with no comment sends the case back to a student who has no idea
-            # what to change.
-            slicer.util.errorDisplay(
-                "A rejection needs a comment saying what to fix.")
-            return
-        seconds = int(time.time() - getattr(self, "_reviewStart", time.time()))
-        with _busy():
-            try:
-                self.logic.client.submitVerdict(
-                    self._claimedSubmission, verdict, comment=comment,
-                    secondsSpent=seconds)
-            except SegQueueError as exc:
-                slicer.util.errorDisplay(str(exc))
-                return
-        self._claimedSubmission = None
-        self.verdictComment.setText("")
-        slicer.mrmlScene.Clear(False)
-        self.onRefreshReview()
-
     # ---------------------------------------------------------------- state
 
     def _updateEnabled(self):
@@ -2206,6 +2542,44 @@ def _problemsHtml(problems):
         lines.append("<span style='color:{}'>&bull; {}</span>".format(
             color, _escape(problem.message)))
     return "<br>".join(lines)
+
+
+def _safeName(name, default):
+    """A server-supplied filename, reduced to something safe to write.
+
+    Used verbatim rather than rebuilt from a sniffed extension, because the whole
+    extension is what matters: ``suffix_for`` maps ``s0042.seg.nrrd`` to
+    ``.nrrd``, which loses the ``.seg`` that tells Slicer the file is a
+    segmentation rather than a labelmap volume. Taking the basename is what keeps
+    a server-supplied string from writing outside the review directory.
+    """
+    name = os.path.basename((name or "").strip().replace("\\", "/"))
+    if not name or name in (".", "..") or name.startswith("."):
+        return default
+    return name
+
+
+def _caption(text):
+    label = qt.QLabel(text)
+    label.setWordWrap(True)
+    label.setStyleSheet("QLabel { color: #5a5f66; }")
+    return label
+
+
+def _shortTime(value):
+    """An ISO timestamp as ``2026-09-27 15:04``, or ``--``.
+
+    Local time, seconds dropped. A reviewer comparing two attempts wants to know
+    which came first and roughly when, and a column of full ISO strings with
+    microseconds and an offset makes that harder rather than easier.
+    """
+    if not value:
+        return "--"
+    text = str(value).replace("T", " ")
+    for cut in ("+", "."):
+        if cut in text:
+            text = text.split(cut)[0]
+    return text[:16]
 
 
 def _escape(text):

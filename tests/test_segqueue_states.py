@@ -29,6 +29,31 @@ def test_rework_returns_to_the_same_annotator_not_the_pool():
     assert st.apply_event(st.REJECTED, st.REWORK) == st.ASSIGNED
 
 
+def test_a_reviewer_can_send_a_submitted_case_back_to_the_pool():
+    assert st.apply_event(st.SUBMITTED, st.RETURN_TO_POOL) == st.RELEASED
+    assert st.apply_event(st.UNDER_REVIEW, st.RETURN_TO_POOL) == st.RELEASED
+
+
+def test_returning_to_the_pool_is_not_the_annotators_release():
+    """The two verbs must not collapse into one.
+
+    ``RELEASE`` is the annotator's, and the REST layer guards it with "is this
+    your assignment?". If a submitted case could be released, an annotator could
+    hand back work they had already finished -- and the reviewer's own verb would
+    be indistinguishable from theirs in the audit trail.
+    """
+    assert not st.can(st.SUBMITTED, st.RELEASE)
+    assert not st.can(st.UNDER_REVIEW, st.RELEASE)
+    for state in (st.ASSIGNED, st.DOWNLOADED, st.REJECTED):
+        assert not st.can(state, st.RETURN_TO_POOL), state
+
+
+def test_a_decided_case_cannot_be_sent_back():
+    """Approved is terminal, and an already-released case has nothing to return."""
+    for state in st.TERMINAL_STATES:
+        assert not st.can(state, st.RETURN_TO_POOL), state
+
+
 def test_rejected_work_can_still_be_reclaimed():
     """The commonest way a case would strand: rejected, then the student leaves."""
     assert st.can(st.REJECTED, st.EXPIRE)

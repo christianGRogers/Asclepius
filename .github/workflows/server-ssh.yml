@@ -1,0 +1,254 @@
+# Test and deploy the server plugin on the real box, over SSH.
+#
+# Everything CI can answer without a server, CI already answers: `ci.yml` runs
+# the Girder models against a real MongoDB and the real client against a real
+# Girder over HTTP, both in throwaway containers. This workflow is for the two
+# questions those cannot reach -- does the plugin load *on that machine*, and is
+# the running deployment the code we think it is.
+#
+# **Manual only, and one mode at a time.** A deploy rebuilds containers that
+# thirty annotators are talking to, so it does not hang off a push. Pick the mode
+# deliberately:
+#
+#   smoke    read-only. Ask the running server what it is and which routes it
+#            has. Safe at any time.
+#   test     run the server test suite inside the girder container. Creates a
+#            scratch database named segqueue_test_<random> and drops it again;
+#            it never touches `girder`.
+#   deploy   check the ref out on the box, rebuild, wait for health, then smoke.
+#            Rolls back to the previous commit if the new one will not serve.
+#
+# Secrets: SSH_HOST, SSH_PORT, SSH_USERNAME, SSH_PASSWORD.
+#
+# SSH_KNOWN_HOSTS is optional and worth adding. Without it this workflow accepts
+# whatever host key the server presents on first contact, which authenticates the
+# password to the server but does nothing to prove the server is the right one --
+# and the password is a secret being handed over on the strength of that. Get the
+# value with `ssh-keyscan -p <port> <host>` from somewhere you trust.
+
+name: Server over SSH
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "What to do on the server"
+        type: choice
+        required: true
+        default: smoke
+        options: [smoke, test, deploy]
+      ref:
+        description: "Branch or SHA to deploy (deploy mode only)"
+        type: string
+        required: false
+        default: ""
+      path:
+        description: "The checkout on the server"
+        type: string
+        required: false
+        default: /srv/segqueue
+
+# Two deploys at once would race on `docker compose up`, and a smoke test during
+# a rebuild reports on whichever container happened to answer.
+concurrency:
+  group: server-ssh
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  ssh:
+    name: ${{ inputs.mode }} on the server
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check the secrets are set
+        # A missing secret otherwise shows up as ssh failing to resolve an empty
+        # hostname, which reads like a network problem for about ten minutes.
+        env:
+          HOST: ${{ secrets.SSH_HOST }}
+          USERNAME: ${{ secrets.SSH_USERNAME }}
+          PASSWORD: ${{ secrets.SSH_PASSWORD }}
+        run: |
+          set -euo pipefail
+          missing=()
+          [ -n "$HOST" ]     || missing+=(SSH_HOST)
+          [ -n "$USERNAME" ] || missing+=(SSH_USERNAME)
+          [ -n "$PASSWORD" ] || missing+=(SSH_PASSWORD)
+          if [ ${#missing[@]} -gt 0 ]; then
+            echo "Not set: ${missing[*]}" >> "$GITHUB_STEP_SUMMARY"
+            exit 1
+          fi
+          echo "All four SSH secrets are present." >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Install sshpass
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends sshpass
+
+      - name: Trust the host key
+        env:
+          HOST: ${{ secrets.SSH_HOST }}
+          PORT: ${{ secrets.SSH_PORT }}
+          KNOWN: ${{ secrets.SSH_KNOWN_HOSTS }}
+        run: |
+          set -euo pipefail
+          mkdir -p ~/.ssh && chmod 700 ~/.ssh
+          if [ -n "$KNOWN" ]; then
+            printf '%s\n' "$KNOWN" > ~/.ssh/known_hosts
+            echo "Host key pinned from SSH_KNOWN_HOSTS." >> "$GITHUB_STEP_SUMMARY"
+          else
+            ssh-keyscan -p "${PORT:-22}" -H "$HOST" > ~/.ssh/known_hosts 2>/dev/null
+            {
+              echo ":warning: **No \`SSH_KNOWN_HOSTS\` secret**, so this run"
+              echo "accepted whatever host key the server offered. Add the secret"
+              echo '(`ssh-keyscan -p <port> <host>`) to close that window.'
+            } >> "$GITHUB_STEP_SUMMARY"
+          fi
+          chmod 600 ~/.ssh/known_hosts
+          test -s ~/.ssh/known_hosts
+
+      # One helper for every remote command, so the password is passed through
+      # the environment (`sshpass -e`) and never appears in a command line that
+      # `ps` on a shared runner could read.
+      - name: Write the ssh helper
+        env:
+          HOST: ${{ secrets.SSH_HOST }}
+          PORT: ${{ secrets.SSH_PORT }}
+          USERNAME: ${{ secrets.SSH_USERNAME }}
+        run: |
+          set -euo pipefail
+          cat > "$RUNNER_TEMP/remote" <<EOF
+          #!/usr/bin/env bash
+          set -euo pipefail
+          exec sshpass -e ssh \
+            -o BatchMode=no -o ConnectTimeout=20 \
+            -o UserKnownHostsFile=\$HOME/.ssh/known_hosts \
+            -o StrictHostKeyChecking=yes \
+            -p "${PORT:-22}" "${USERNAME}@${HOST}" "\$@"
+          EOF
+          chmod +x "$RUNNER_TEMP/remote"
+
+      - name: Deploy
+        if: inputs.mode == 'deploy'
+        env:
+          SSHPASS: ${{ secrets.SSH_PASSWORD }}
+          REF: ${{ inputs.ref || github.sha }}
+          DIR: ${{ inputs.path }}
+        run: |
+          set -euo pipefail
+          "$RUNNER_TEMP/remote" bash -s <<REMOTE
+          set -euo pipefail
+          cd "$DIR"
+          previous=\$(git rev-parse HEAD)
+          echo "currently on \$previous"
+          git fetch --all --tags --prune
+          git checkout --detach "$REF"
+          echo "now on \$(git rev-parse HEAD)"
+          cd deploy
+          docker compose up -d --build girder worker
+          # Health, not "did compose exit 0": a container that starts and then
+          # dies on an import error exits 0 from compose.
+          for i in \$(seq 1 60); do
+            if docker compose exec -T girder curl -fsS \
+                 http://localhost:8080/api/v1/system/version >/dev/null 2>&1; then
+              echo "girder answered after \${i}s"
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "girder did not come up; rolling back to \$previous"
+          docker compose logs --tail 80 girder || true
+          cd "$DIR" && git checkout --detach "\$previous"
+          cd deploy && docker compose up -d --build girder worker
+          exit 1
+          REMOTE
+
+      - name: Server test suite
+        if: inputs.mode == 'test'
+        env:
+          SSHPASS: ${{ secrets.SSH_PASSWORD }}
+          DIR: ${{ inputs.path }}
+        run: |
+          set -euo pipefail
+          # On the box, against a MongoDB of its own -- not the production one.
+          # The fixture drops the scratch database it creates, but "it cleans up
+          # after itself" is a weaker guarantee than "it was never pointed at
+          # your data", and `models` clears collections wholesale. The image does
+          # not ship tests/ or pytest either, so both arrive here.
+          "$RUNNER_TEMP/remote" bash -s <<REMOTE
+          set -euo pipefail
+          cd "$DIR"
+          net=segqueue-ssh-test-\$\$
+          mongo=segqueue-ssh-mongo-\$\$
+          cleanup() {
+            docker rm -f "\$mongo" >/dev/null 2>&1 || true
+            docker network rm "\$net" >/dev/null 2>&1 || true
+          }
+          trap cleanup EXIT
+
+          docker build -q -f deploy/Dockerfile -t segqueue-ssh-test .
+          docker network create "\$net" >/dev/null
+          docker run -d --rm --name "\$mongo" --network "\$net" mongo:7 >/dev/null
+          for i in \$(seq 1 30); do
+            docker exec "\$mongo" mongosh --quiet --eval 'db.adminCommand({ping:1})' \
+              >/dev/null 2>&1 && break
+            sleep 1
+          done
+
+          docker run --rm --network "\$net" --user root \
+            -v "\$PWD/tests:/tests:ro" \
+            -e SEGQUEUE_TEST_MONGO="mongodb://\$mongo:27017" \
+            segqueue-ssh-test \
+            bash -c 'pip install --quiet pytest pymongo \
+                     && python -m pytest -q -rs -p no:cacheprovider /tests/test_segqueue_server.py'
+          REMOTE
+
+      - name: Smoke test
+        # Runs after a deploy as well, which is the point: "it restarted" and "it
+        # works" are different claims.
+        if: inputs.mode != 'test'
+        env:
+          SSHPASS: ${{ secrets.SSH_PASSWORD }}
+          DIR: ${{ inputs.path }}
+        run: |
+          set -euo pipefail
+          "$RUNNER_TEMP/remote" bash -s > smoke.json <<REMOTE
+          set -euo pipefail
+          cd "$DIR/deploy"
+          docker compose exec -T girder curl -fsS \
+            http://localhost:8080/api/v1/describe 2>/dev/null
+          REMOTE
+          python - <<'PY'
+          import json, sys
+
+          with open("smoke.json") as handle:
+              spec = json.load(handle)
+          paths = spec.get("paths") or {}
+
+          # The routes this branch adds. A plugin that failed to load answers
+          # /describe perfectly well and simply has none of them, which is the
+          # failure worth catching: Girder serves on regardless.
+          wanted = [
+              "/segqueue/review/cases",
+              "/segqueue/review/case/{caseId}/submissions",
+              "/segqueue/review/{submissionId}/revise",
+              "/segqueue/review/{submissionId}/pool",
+          ]
+          have = set(paths)
+          missing = [w for w in wanted if w not in have]
+
+          lines = ["### Smoke test", "",
+                   f"{len(have)} routes described, "
+                   f"{sum(1 for p in have if p.startswith('/segqueue'))} of them segqueue."]
+          for route in wanted:
+              lines.append(f"- {'x' if route in have else ' '} `{route}`")
+          with open("summary.md", "w") as handle:
+              handle.write("\n".join(lines) + "\n")
+
+          if missing:
+              sys.exit("the deployed server does not have: " + ", ".join(missing))
+          print("all four new reviewer routes are live")
+          PY
+          cat summary.md >> "$GITHUB_STEP_SUMMARY"

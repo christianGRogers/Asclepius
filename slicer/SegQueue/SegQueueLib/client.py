@@ -387,6 +387,39 @@ class SegQueueClient:
         return self._json('GET', protocol.path(protocol.REVIEW_QUEUE),
                           params={'limit': limit}) or []
 
+    def caseOverview(self, limit=200, offset=0, state=None, unassigned=False):
+        """Every case and every lease ever taken on it.
+
+        The submission viewer's own call, and deliberately not ``reviewQueue``:
+        that returns only the sampled fraction awaiting a verdict, which cannot
+        answer "where is case s0042?" -- the question a reviewer actually has.
+        """
+        params = {'limit': limit, 'offset': offset}
+        if state:
+            params['state'] = state
+        if unassigned:
+            params['unassigned'] = True
+        return self._json('GET', protocol.path(protocol.REVIEW_CASES),
+                          params=params) or []
+
+    def caseSubmissions(self, caseId):
+        """Every submission ever made against one case, oldest first."""
+        return self._json('GET', protocol.path(protocol.REVIEW_CASE_SUBMISSIONS,
+                                               case_id=caseId)) or []
+
+    def reviseSubmission(self, submissionId, meta, fileId):
+        """Store a reviewer's corrected version, which also approves the case."""
+        return self._json(
+            'POST', protocol.path(protocol.REVIEW_REVISE,
+                                  submission_id=submissionId),
+            params={'fileId': fileId, 'meta': json.dumps(meta.to_dict())})
+
+    def returnToPool(self, submissionId, reason=''):
+        """Send a submitted case back to the pool for a different annotator."""
+        return self._json('POST', protocol.path(protocol.REVIEW_POOL,
+                                                submission_id=submissionId),
+                          params={'reason': reason})
+
     def claimReview(self, submissionId):
         return self._json('POST', protocol.path(protocol.REVIEW_CLAIM,
                                                 submission_id=submissionId))
@@ -401,7 +434,13 @@ class SegQueueClient:
 
     def downloadReviewFile(self, submissionId, what, destPath, progress=None):
         """Fetch a reviewer's copy of the submission (``download``) or the
-        source volume (``volume``)."""
+        source volume (``volume``).
+
+        ``destPath`` has to carry the *right* extension. Slicer picks its reader
+        from the name, so a gzipped NIfTI written as ``volume.nrrd`` downloads
+        cleanly, verifies cleanly and then refuses to open -- which is what
+        "review does not load" looked like before 0.9.0. The names travel with
+        the submission row for exactly this; see ``_reviewPaths``."""
         path = f'{protocol.API_PREFIX}/review/{submissionId}/{what}'
         response = self._request('GET', path, stream=True)
         total = int(response.headers.get('Content-Length') or 0)

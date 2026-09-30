@@ -9,16 +9,30 @@ working through the queue in parallel.
 from girder.api import access
 from girder.api.describe import Description, autoDescribeRoute
 from girder.api.rest import Resource
+from girder.constants import AccessType
 from girder.models.file import File
+from girder.models.item import Item
 from girder.models.user import User
 from segqueue import policy as pol
 from segqueue import protocol
 from segqueue import states as st
+from segqueue.checksum import matches
 
 from ..models import Assignment, Case, Note, Review, Submission
-from ..models.review import APPROVE, REJECT
+from ..models import submission as sub
+from ..models.review import APPROVE
 from ..settings import getPolicy
-from ..utils import fileForCase, refuse, requireReviewer
+from ..utils import (
+    fileForCase,
+    hashStoredFile,
+    refuse,
+    requireReviewer,
+    submissionsFolder,
+)
+
+
+def _iso(value):
+    return value.isoformat() if value is not None else None
 
 
 class ReviewResource(Resource):
@@ -32,6 +46,9 @@ class ReviewResource(Resource):
 
     def attachTo(self, parent):
         parent.route('GET', ('review', 'queue'), self.reviewQueue)
+        parent.route('GET', ('review', 'cases'), self.listCases)
+        parent.route('GET', ('review', 'case', ':caseId', 'submissions'),
+                     self.caseSubmissions)
         parent.route('GET', ('review', ':submissionId'), self.getSubmission)
         parent.route('GET', ('review', ':submissionId', 'download'),
                      self.downloadSubmission)
@@ -39,6 +56,8 @@ class ReviewResource(Resource):
         parent.route('POST', ('review', ':submissionId', 'claim'), self.claim)
         parent.route('POST', ('review', ':submissionId', 'release'), self.releaseClaim)
         parent.route('POST', ('review', ':submissionId', 'verdict'), self.verdict)
+        parent.route('POST', ('review', ':submissionId', 'revise'), self.revise)
+        parent.route('POST', ('review', ':submissionId', 'pool'), self.returnToPool)
         return self
 
     # --------------------------------------------------------------- queue
@@ -150,23 +169,31 @@ class ReviewResource(Resource):
                    status=409, state=assignment['state'])
         return {'released': True}
 
-    # ------------------------------------------------------------- verdict
+    # ------------------------------------------------------------- approve
 
     @access.user
     @autoDescribeRoute(
-        Description('Approve or reject a submission.')
-        .notes('A rejection returns the case to the same annotator with the '
-               'comment attached. That is deliberate: reassigning it silently '
-               'to someone else costs the same effort and teaches nobody.')
-        .param('submissionId', 'The submission being decided.', paramType='path')
-        .param('verdict', 'approve or reject.', enum=[APPROVE, REJECT])
-        .param('comment', 'What to fix. Required when rejecting.',
+        Description('Approve a submission.')
+        .notes('Approve is the only verdict. Rejecting a case back to the same '
+               'annotator was retired in 0.9.0 -- a reviewer who can open the '
+               'submission and correct it in Slicer has a faster path to a '
+               'correct label than a round trip, and where the work genuinely '
+               'needs redoing, `pool` hands it to somebody else. Approval is '
+               'also the only state the training export selects.')
+        .param('submissionId', 'The submission being approved.', paramType='path')
+        # Deliberately no `enum`. autoDescribeRoute validates an enum itself
+        # and answers "invalid value for parameter verdict", which is exactly the
+        # message an old client sending `reject` must not get: it reads like a
+        # malformed request rather than a retired verb. The handler checks the
+        # value so that it can say where the verb went.
+        .param('verdict', 'approve. Anything else is refused by name.',
+               required=False, default=APPROVE)
+        .param('comment', 'Optional note for the case thread.',
                required=False, default='')
         .jsonParam('rubric', 'Optional per-criterion scores.', required=False,
                    requireObject=True)
         .param('secondsSpent', 'How long the review took.', dataType='number',
                required=False)
-        .errorResponse('A rejection needs a comment.', 400)
         .errorResponse('That submission has already been decided.', 409)
     )
     def verdict(self, submissionId, verdict, comment, rubric, secondsSpent):
@@ -174,47 +201,291 @@ class ReviewResource(Resource):
         submission = self._loadSubmission(submissionId)
         assignment = Assignment().load(submission['assignmentId'], force=True)
 
-        if verdict == REJECT and not (comment or '').strip():
-            refuse('comment_required',
-                   'Rejections must say what to fix -- the annotator gets this '
-                   'text and nothing else.', status=400)
+        if verdict != APPROVE:
+            # An old client asking to reject. Say where the verb went rather
+            # than 400 with a schema complaint.
+            refuse('verdict_retired',
+                   f'{verdict!r} is no longer a verdict. Approve the '
+                   'submission, correct it yourself and approve that, or send '
+                   'the case back to the pool for another annotator.',
+                   status=400)
 
-        event = st.APPROVE if verdict == APPROVE else st.REJECT
-        if not st.can(assignment['state'], event):
+        if not st.can(assignment['state'], st.APPROVE):
             refuse(protocol.ERR_BAD_STATE,
                    f"This submission is {assignment['state']} and cannot be "
-                   f'{verdict}d.', status=409, state=assignment['state'])
+                   'approved.', status=409, state=assignment['state'])
 
-        Review().createReview(submission, user, verdict, comment=comment,
+        Review().createReview(submission, user, APPROVE, comment=comment,
                               rubric=rubric, secondsSpent=secondsSpent)
 
         extra = {'reviewerComment': (comment or '').strip(), 'reviewerId': user['_id']}
         try:
-            assignment = Assignment().transition(assignment, event, **extra)
+            assignment = Assignment().transition(assignment, st.APPROVE, **extra)
         except st.TransitionError:
             refuse(protocol.ERR_BAD_STATE,
                    'Another reviewer decided this one first.',
                    status=409, state=assignment['state'])
 
-        # The verdict goes into the case thread as well as onto the assignment.
-        # The rework is usually done by a *different* annotator, who otherwise
-        # sees the reviewer comment with no idea what was tried before -- and the
-        # reviewer who picks it up next sees neither. systemNote never raises:
-        # losing a line of the thread must not cost a reviewer their verdict.
+        # The verdict goes onto the case thread as well as onto the assignment,
+        # so the next person to open this case sees who accepted it and why.
+        # systemNote never raises: losing a line of the thread must not cost a
+        # reviewer their verdict.
         Note().systemNote(
             assignment['caseId'],
-            '{} {}d attempt {}{}'.format(
-                user.get('login') or 'A reviewer', verdict,
+            '{} approved attempt {}{}'.format(
+                user.get('login') or 'A reviewer',
                 assignment.get('attempt', 1),
                 ': ' + (comment or '').strip() if (comment or '').strip() else '.'))
 
-        if verdict == APPROVE:
-            # The replica slot converts from active to approved, which is what
-            # moves the project's completion number.
-            Case().completeSlot(assignment['caseId'])
+        # The replica slot converts from active to approved, which is what moves
+        # the project's completion number.
+        Case().completeSlot(assignment['caseId'])
 
         return {
-            'verdict': verdict,
+            'verdict': APPROVE,
+            'state': assignment['state'],
+            'caseId': str(assignment['caseId']),
+        }
+
+    # --------------------------------------------------------- the viewer
+
+    @access.user
+    @autoDescribeRoute(
+        Description('Every case and what has happened to it.')
+        .notes('The submission viewer. Unlike the review queue this answers '
+               '"where is case s0042?" rather than "what is waiting for me?", so '
+               'it lists cases nobody has been assigned and cases already '
+               'approved alongside the ones needing attention.')
+        .param('state', 'Only cases with an assignment in this state.',
+               required=False, enum=list(st.ALL_STATES))
+        .param('unassigned', 'Only cases nobody is working on or has finished.',
+               dataType='boolean', required=False, default=False)
+        .pagingParams(defaultSort='name', defaultSortDir=1)
+    )
+    def listCases(self, state, unassigned, limit, offset, sort):
+        requireReviewer(self.getCurrentUser())
+
+        rows = []
+        for case in Case().find({}, limit=limit, offset=offset, sort=sort):
+            assignments = list(Assignment().find({'caseId': case['_id']},
+                                                 sort=[('assignedAt', 1)]))
+            if state and not any(a['state'] == state for a in assignments):
+                continue
+            if unassigned and assignments:
+                continue
+            rows.append(self._caseRow(case, assignments))
+        return rows
+
+    def _caseRow(self, case, assignments):
+        """One case, with every lease ever taken on it.
+
+        A case is not a single row of state and never was -- it can be out with
+        two annotators at once (a blind duplicate), and each of them has their own
+        lifecycle. So the row carries the case's own counts and a list, rather
+        than pretending there is one annotator and one state per case.
+        """
+        return {
+            'caseId': str(case['_id']),
+            'caseName': case.get('name', ''),
+            'volumeName': self._volumeName(case),
+            'replicasWanted': case.get('replicasWanted', 1),
+            'activeCount': case.get('activeCount', 0),
+            'approvedCount': case.get('approvedCount', 0),
+            'retired': bool(case.get('retired', False)),
+            'isGold': bool(case.get('isGold', False)),
+            'assignments': [self._assignmentRow(a) for a in assignments],
+        }
+
+    def _assignmentRow(self, assignment):
+        annotator = User().load(assignment['userId'], force=True) or {}
+        submission = Submission().latestForAssignment(assignment['_id'])
+        row = {
+            'assignmentId': str(assignment['_id']),
+            'state': assignment['state'],
+            'attempt': assignment.get('attempt', 1),
+            'annotator': annotator.get('login', ''),
+            'assignedAt': _iso(assignment.get('assignedAt')),
+            'submittedAt': _iso(assignment.get('submittedAt')),
+            'decidedAt': _iso(assignment.get('decidedAt')),
+            'submissionCount': Submission().countForAssignment(assignment['_id']),
+            'submissionId': None,
+            'autoScore': None,
+            'flagged': [],
+        }
+        if submission is not None:
+            row['submissionId'] = str(submission['_id'])
+            row['autoScore'] = submission.get('autoScore')
+            row['flagged'] = self._flagged(submission, getPolicy())
+            row['authorRole'] = submission.get('authorRole', sub.ANNOTATOR)
+        return row
+
+    def _volumeName(self, case):
+        """The volume's own filename, so a client can save it under the right one.
+
+        Not cosmetic. Slicer picks its reader from the extension, and this
+        project's volumes are ``.nii.gz``: a gzipped NIfTI written to disk as
+        ``volume.nrrd`` downloads cleanly, verifies cleanly and then fails to
+        open with a message that never mentions the name. The annotator path
+        learned that in 0.2.0 and the review path never did -- which is why
+        opening a submission did nothing at all before 0.9.0.
+        """
+        file = File().load(case.get('fileId'), force=True) if case.get('fileId') else None
+        return (file or {}).get('name', '') or ''
+
+    def _submissionName(self, submission):
+        """The stored segmentation's own filename, for the same reason."""
+        if not submission.get('fileId'):
+            return ''
+        file = File().load(submission['fileId'], force=True)
+        return (file or {}).get('name', '') or ''
+
+    @access.user
+    @autoDescribeRoute(
+        Description('Every submission ever made against one case, oldest first.')
+        .notes('Submissions are append-only, so this includes superseded '
+               'attempts and any reviewer revisions. Nothing is ever replaced, '
+               'which is what makes "what did they actually send the first '
+               'time?" answerable months later.')
+        .param('caseId', 'The case.', paramType='path')
+    )
+    def caseSubmissions(self, caseId):
+        requireReviewer(self.getCurrentUser())
+        case = Case().load(caseId, force=True)
+        if case is None:
+            refuse('no_such_case', 'That case no longer exists.', status=404)
+
+        rows = []
+        for submission in Submission().forCase(case['_id']):
+            assignment = Assignment().load(submission['assignmentId'], force=True)
+            if assignment is None:
+                continue
+            row = self._row(assignment, submission)
+            row['authorRole'] = submission.get('authorRole', sub.ANNOTATOR)
+            row['revisionOf'] = (str(submission['revisionOf'])
+                                 if submission.get('revisionOf') else None)
+            row['created'] = _iso(submission.get('created'))
+            rows.append(row)
+        return rows
+
+    # ------------------------------------------------------------- revise
+
+    @access.user
+    @autoDescribeRoute(
+        Description("Store a reviewer's corrected version, and approve the case.")
+        .notes('Saved as another submission on the same assignment rather than '
+               'as an edit of the annotator\'s, which is left exactly as it was '
+               'sent. The correction is credited to the reviewer: per-annotator '
+               'agreement numbers come from the author, and attributing a '
+               "reviewer's fixes to the annotator would flatter precisely the "
+               'submissions that needed fixing.')
+        .param('submissionId', 'The submission being corrected.', paramType='path')
+        .param('fileId', 'Girder file id of the uploaded .seg.nrrd.')
+        .jsonParam('meta', 'Submission metadata.', requireObject=True)
+        .errorResponse('That case has already been decided.', 409)
+    )
+    def revise(self, submissionId, fileId, meta):
+        user = requireReviewer(self.getCurrentUser())
+        original = self._loadSubmission(submissionId)
+        assignment = Assignment().load(original['assignmentId'], force=True)
+
+        if not st.can(assignment['state'], st.APPROVE):
+            refuse(protocol.ERR_BAD_STATE,
+                   f"This case is {assignment['state']} and cannot be revised.",
+                   status=409, state=assignment['state'])
+
+        submissionMeta = protocol.SubmissionMeta.from_dict(meta)
+        file = File().load(fileId, level=AccessType.WRITE, user=user)
+        if file is None:
+            refuse('no_such_file', 'That upload could not be found.', status=404)
+
+        actual = hashStoredFile(file)
+        if not matches(submissionMeta.checksum, actual):
+            refuse(protocol.ERR_CHECKSUM,
+                   'The uploaded revision does not match its checksum, so it '
+                   'was corrupted in transit. Nothing has been recorded.',
+                   status=400, expected=submissionMeta.checksum, actual=actual)
+        submissionMeta.checksum = actual
+
+        item = Item().load(file['itemId'], force=True)
+        if item is not None:
+            Item().move(item, submissionsFolder(user))
+
+        revision = Submission().createSubmission(
+            assignment, submissionMeta, file['_id'],
+            needsReview=False, author=user, revisionOf=original['_id'],
+        )
+
+        Review().createReview(revision, user, APPROVE,
+                              comment='Corrected by the reviewer.')
+        try:
+            assignment = Assignment().transition(
+                assignment, st.APPROVE,
+                reviewerId=user['_id'], submissionId=revision['_id'])
+        except st.TransitionError:
+            refuse(protocol.ERR_BAD_STATE,
+                   'Another reviewer decided this one first. The revision has '
+                   'been stored but the case was not approved again.',
+                   status=409, state=assignment['state'])
+
+        Note().systemNote(
+            assignment['caseId'],
+            '{} corrected and approved attempt {}.'.format(
+                user.get('login') or 'A reviewer', assignment.get('attempt', 1)))
+        Case().completeSlot(assignment['caseId'])
+
+        return {
+            'submissionId': str(revision['_id']),
+            'state': assignment['state'],
+            'caseId': str(assignment['caseId']),
+        }
+
+    # ------------------------------------------------------- back to the pool
+
+    @access.user
+    @autoDescribeRoute(
+        Description('Send a submitted case back to the pool for another annotator.')
+        .notes('The assignment is released and the replica slot freed, so the '
+               'case is servable again to whoever asks next -- including the '
+               'annotator who did it, which is deliberate: carrying a per-case '
+               'exclusion list for the rest of the project is a lot of machinery '
+               'for a case that is about to be segmented by one of thirty '
+               'people. The submission stays on record either way.')
+        .param('submissionId', 'A submission on the assignment to return.',
+               paramType='path')
+        .param('reason', 'Why it is going back. Recorded on the case thread.',
+               required=False, default='')
+        .errorResponse('That case is not out with anybody.', 409)
+    )
+    def returnToPool(self, submissionId, reason):
+        user = requireReviewer(self.getCurrentUser())
+        submission = self._loadSubmission(submissionId)
+        assignment = Assignment().load(submission['assignmentId'], force=True)
+
+        try:
+            assignment = Assignment().transition(
+                assignment, st.RETURN_TO_POOL,
+                reviewerId=user['_id'],
+                releaseReason=(reason or '').strip() or 'returned to the pool by a reviewer')
+        except st.TransitionError:
+            refuse(protocol.ERR_BAD_STATE,
+                   f"This case is {assignment['state']}, so there is nothing to "
+                   'send back.',
+                   status=409, state=assignment['state'])
+
+        # The slot has to be freed or the case stays unservable: `activeCount`
+        # is what /next filters on, and an assignment released without it is a
+        # case that looks busy forever.
+        Case().releaseSlot(assignment['caseId'])
+
+        Note().systemNote(
+            assignment['caseId'],
+            '{} returned attempt {} to the pool{}'.format(
+                user.get('login') or 'A reviewer',
+                assignment.get('attempt', 1),
+                ': ' + reason.strip() if (reason or '').strip() else '.'))
+
+        return {
+            'returned': True,
             'state': assignment['state'],
             'caseId': str(assignment['caseId']),
         }
@@ -239,6 +510,12 @@ class ReviewResource(Resource):
             'assignmentId': str(assignment['_id']),
             'caseId': str(submission['caseId']),
             'caseName': case.get('name', ''),
+            # Both filenames travel with the row, because Slicer chooses its
+            # reader from the extension: a `.nii.gz` volume saved as `volume.nrrd`
+            # downloads cleanly, verifies cleanly and then will not open. See
+            # ``_volumeName``.
+            'volumeName': self._volumeName(case),
+            'submissionName': self._submissionName(submission),
             'state': assignment['state'],
             'attempt': submission.get('attempt', 1),
             'annotator': {

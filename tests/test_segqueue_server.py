@@ -178,6 +178,51 @@ def test_the_slot_floor_survives_a_double_release(models):
     assert caseModel.claim(case["_id"], _user("bob")["_id"]) is not None
 
 
+def test_returning_a_submission_to_the_pool_frees_it_for_somebody_else(models):
+    """The reviewer's send-back, end to end through the models.
+
+    Also pins the part that is *not* configurable: ``assignedUserIds`` is a
+    permanent record of who has held a case and ``claim`` excludes them, so a
+    returned case goes to a different annotator whether or not anyone asked for
+    that. Un-excluding the original would mean deleting them from that list,
+    which is the same list that keeps a blind duplicate's two annotators
+    independent.
+    """
+    caseModel, assignmentModel = models
+    case = _case(caseModel, "sent-back")
+    alice, bob = _user("alice"), _user("bob")
+
+    caseModel.claim(case["_id"], alice["_id"])
+    assignment = assignmentModel.createAssignment(case, alice)
+    assignment = assignmentModel.transition(assignment, st.DOWNLOAD)
+    assignment = assignmentModel.transition(assignment, st.SUBMIT)
+
+    assignment = assignmentModel.transition(assignment, st.RETURN_TO_POOL)
+    caseModel.releaseSlot(case["_id"])
+
+    assert assignment["state"] == st.RELEASED
+    stored = caseModel.load(case["_id"], force=True)
+    assert stored["activeCount"] == 0, "a returned case must be servable again"
+    assert caseModel.claim(case["_id"], bob["_id"]) is not None
+    assert caseModel.claim(case["_id"], alice["_id"]) is None, "she has seen it"
+
+
+def test_a_returned_submission_is_still_on_record(models):
+    """Sending the case back must not erase what was sent."""
+    caseModel, assignmentModel = models
+    case = _case(caseModel, "kept")
+    alice = _user("alice")
+    caseModel.claim(case["_id"], alice["_id"])
+    assignment = assignmentModel.createAssignment(case, alice)
+    assignment = assignmentModel.transition(assignment, st.DOWNLOAD)
+    assignment = assignmentModel.transition(assignment, st.SUBMIT)
+    assignmentModel.transition(assignment, st.RETURN_TO_POOL)
+
+    stored = assignmentModel.load(assignment["_id"], force=True)
+    assert stored["state"] == st.RELEASED
+    assert stored["submittedAt"] is not None, "the submission timestamp survives"
+
+
 def test_approval_moves_a_slot_from_active_to_approved(models):
     caseModel, _ = models
     case = _case(caseModel, "done")

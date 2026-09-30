@@ -39,6 +39,7 @@ _TIMESTAMP_FOR_EVENT = {
     st.REJECT: 'decidedAt',
     st.REWORK: 'reworkedAt',
     st.RELEASE: 'releasedAt',
+    st.RETURN_TO_POOL: 'releasedAt',
     st.EXPIRE: 'releasedAt',
 }
 

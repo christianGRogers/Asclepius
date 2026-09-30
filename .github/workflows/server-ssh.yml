@@ -43,10 +43,10 @@ on:
         required: false
         default: ""
       path:
-        description: "The checkout on the server"
+        description: "Override the checkout path (blank = find it)"
         type: string
         required: false
-        default: /srv/segqueue
+        default: ""
 
 # Two deploys at once would race on `docker compose up`, and a smoke test during
 # a rebuild reports on whichever container happened to answer.
@@ -129,18 +129,76 @@ jobs:
             -p "${PORT:-22}" "${USERNAME}@${HOST}" "\$@"
           EOF
           chmod +x "$RUNNER_TEMP/remote"
+      # Where the deployment actually is, asked rather than assumed. The first
+      # real run of this workflow failed with "not a git repository" because the
+      # default guess of /srv/segqueue was wrong, and a wrong path is both the
+      # likeliest thing to be wrong and the easiest to find out: compose records
+      # the directory it was brought up from, on the containers themselves.
+      - name: Locate the deployment
+        env:
+          SSHPASS: ${{ secrets.SSH_PASSWORD }}
+          HINT: ${{ inputs.path }}
+        run: |
+          set -euo pipefail
+          found=$("$RUNNER_TEMP/remote" bash -s <<REMOTE
+          set -euo pipefail
+          hint="$HINT"
+
+          # A hint that is a checkout wins: an operator naming a path knows
+          # something this discovery does not, such as which of two checkouts is
+          # the live one.
+          if [ -n "\$hint" ] && [ -d "\$hint/.git" ]; then
+            echo "\$hint"
+            exit 0
+          fi
+
+          cid=\$(docker ps -q --filter label=com.docker.compose.project=segqueue | head -1)
+          if [ -n "\$cid" ]; then
+            wd=\$(docker inspect "\$cid" \
+                  --format '{{index .Config.Labels "com.docker.compose.project.working_dir"}}' \
+                  2>/dev/null || true)
+            # The label points at deploy/, because that is where compose was run.
+            if [ -n "\$wd" ] && [ -d "\$(dirname "\$wd")/.git" ]; then
+              dirname "\$wd"
+              exit 0
+            fi
+          fi
+
+          for candidate in /srv/segqueue /opt/segqueue /srv/Asclepius /opt/Asclepius \
+                           "\$HOME/segqueue" "\$HOME/Asclepius"; do
+            if [ -d "\$candidate/.git" ]; then
+              echo "\$candidate"
+              exit 0
+            fi
+          done
+
+          echo "NOTFOUND"
+          REMOTE
+          )
+          found=$(printf '%s' "$found" | tr -d '\r' | tail -1)
+          if [ "$found" = "NOTFOUND" ] || [ -z "$found" ]; then
+            {
+              echo "### Could not find the checkout"
+              echo
+              echo 'Nothing with a `.git` was found, and the running compose'
+              echo 'project did not point at one. Re-run with `path` set to the'
+              echo 'checkout on the server (the directory holding `deploy/`).'
+            } >> "$GITHUB_STEP_SUMMARY"
+            exit 1
+          fi
+          echo "SEGQUEUE_DIR=$found" >> "$GITHUB_ENV"
+          echo "Deployment at \`$found\`" >> "$GITHUB_STEP_SUMMARY"
 
       - name: Deploy
         if: inputs.mode == 'deploy'
         env:
           SSHPASS: ${{ secrets.SSH_PASSWORD }}
           REF: ${{ inputs.ref || github.sha }}
-          DIR: ${{ inputs.path }}
         run: |
           set -euo pipefail
           "$RUNNER_TEMP/remote" bash -s <<REMOTE
           set -euo pipefail
-          cd "$DIR"
+          cd "$SEGQUEUE_DIR"
           previous=\$(git rev-parse HEAD)
           echo "currently on \$previous"
           git fetch --all --tags --prune
@@ -153,14 +211,14 @@ jobs:
           for i in \$(seq 1 60); do
             if docker compose exec -T girder curl -fsS \
                  http://localhost:8080/api/v1/system/version >/dev/null 2>&1; then
-              echo "girder answered after \${i}s"
+              echo "girder answered after \$((i * 2))s"
               exit 0
             fi
             sleep 2
           done
           echo "girder did not come up; rolling back to \$previous"
           docker compose logs --tail 80 girder || true
-          cd "$DIR" && git checkout --detach "\$previous"
+          cd "$SEGQUEUE_DIR" && git checkout --detach "\$previous"
           cd deploy && docker compose up -d --build girder worker
           exit 1
           REMOTE
@@ -169,17 +227,16 @@ jobs:
         if: inputs.mode == 'test'
         env:
           SSHPASS: ${{ secrets.SSH_PASSWORD }}
-          DIR: ${{ inputs.path }}
         run: |
           set -euo pipefail
           # On the box, against a MongoDB of its own -- not the production one.
           # The fixture drops the scratch database it creates, but "it cleans up
           # after itself" is a weaker guarantee than "it was never pointed at
-          # your data", and `models` clears collections wholesale. The image does
-          # not ship tests/ or pytest either, so both arrive here.
+          # your data", and the `models` fixture clears collections wholesale.
+          # The image ships neither tests/ nor pytest, so both arrive here.
           "$RUNNER_TEMP/remote" bash -s <<REMOTE
           set -euo pipefail
-          cd "$DIR"
+          cd "$SEGQUEUE_DIR"
           net=segqueue-ssh-test-\$\$
           mongo=segqueue-ssh-mongo-\$\$
           cleanup() {
@@ -207,29 +264,38 @@ jobs:
 
       - name: Smoke test
         # Runs after a deploy as well, which is the point: "it restarted" and "it
-        # works" are different claims.
+        # works" are different claims. Asks the container by label rather than by
+        # directory, because a deploy has just replaced it with a new one.
         if: inputs.mode != 'test'
         env:
           SSHPASS: ${{ secrets.SSH_PASSWORD }}
-          DIR: ${{ inputs.path }}
         run: |
           set -euo pipefail
-          "$RUNNER_TEMP/remote" bash -s > smoke.json <<REMOTE
+          "$RUNNER_TEMP/remote" bash -s > smoke.json <<'REMOTE'
           set -euo pipefail
-          cd "$DIR/deploy"
-          docker compose exec -T girder curl -fsS \
-            http://localhost:8080/api/v1/describe 2>/dev/null
+          cid=$(docker ps -q \
+                --filter label=com.docker.compose.project=segqueue \
+                --filter label=com.docker.compose.service=girder | head -1)
+          if [ -z "$cid" ]; then
+            echo "NOCONTAINER" >&2
+            exit 1
+          fi
+          docker exec -i "$cid" curl -fsS http://localhost:8080/api/v1/describe
           REMOTE
           python - <<'PY'
           import json, sys
 
-          with open("smoke.json") as handle:
-              spec = json.load(handle)
+          try:
+              with open("smoke.json") as handle:
+                  spec = json.load(handle)
+          except Exception as exc:
+              sys.exit(f"the server did not return a usable API description: {exc}")
           paths = spec.get("paths") or {}
 
-          # The routes this branch adds. A plugin that failed to load answers
-          # /describe perfectly well and simply has none of them, which is the
-          # failure worth catching: Girder serves on regardless.
+          # The routes this release adds. A plugin that failed to load answers
+          # /describe perfectly well and simply has none of them -- which is the
+          # failure worth catching, because Girder serves on regardless and the
+          # client's 400 then looks like a client bug.
           wanted = [
               "/segqueue/review/cases",
               "/segqueue/review/case/{caseId}/submissions",
@@ -241,14 +307,17 @@ jobs:
 
           lines = ["### Smoke test", "",
                    f"{len(have)} routes described, "
-                   f"{sum(1 for p in have if p.startswith('/segqueue'))} of them segqueue."]
+                   f"{sum(1 for p in have if p.startswith('/segqueue'))} of them segqueue.",
+                   ""]
           for route in wanted:
-              lines.append(f"- {'x' if route in have else ' '} `{route}`")
+              lines.append(f"- [{'x' if route in have else ' '}] `{route}`")
           with open("summary.md", "w") as handle:
               handle.write("\n".join(lines) + "\n")
 
           if missing:
-              sys.exit("the deployed server does not have: " + ", ".join(missing))
+              for route in missing:
+                  print(f"::error title=Route missing on the server::{route}")
+              sys.exit("the deployed server does not serve: " + ", ".join(missing))
           print("all four new reviewer routes are live")
           PY
           cat summary.md >> "$GITHUB_STEP_SUMMARY"

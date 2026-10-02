@@ -191,6 +191,11 @@ jobs:
           echo "LS_TARGET \$(ls -1a "\${hint:-/srv/segqueue}" 2>/dev/null | tr '\n' ' ')"
           echo "COMPOSEFILES \$(find / -maxdepth 6 \( -name 'docker-compose.y*ml' -o -name 'compose.y*ml' \) 2>/dev/null | head -8 | tr '\n' ' ')"
           echo "GITDIRS \$(find / -maxdepth 6 -type d -name .git 2>/dev/null | head -8 | tr '\n' ' ')"
+          echo "LXC \$(lxc list --format csv -c ns 2>/dev/null | tr '\n' ' ')"
+          echo "LXC_ERR \$(lxc list 2>&1 >/dev/null | head -1)"
+          echo "SNAP \$(ls -1 /var/snap 2>/dev/null | tr '\n' ' ')"
+          echo "UNITS \$(systemctl list-units --type=service --no-legend 2>/dev/null | grep -iE 'segqueue|girder|docker|caddy' | awk '{print \$1}' | tr '\n' ' ')"
+          echo "LISTEN \$(ss -ltnp 2>/dev/null | awk 'NR>1{print \$4}' | tr '\n' ' ')"
           REMOTE
 
           sed -i 's/\r$//' probe.txt || true

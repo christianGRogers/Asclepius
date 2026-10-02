@@ -40,3 +40,14 @@ configs/*.local.yaml
 .idea/
 Thumbs.db
 .DS_Store
+
+# Server access. `.secrets/` is yours and never leaves this machine; the tracked
+# template is .secrets/server.env.example. Ignored as a whole directory rather
+# than by filename, so a second credentials file dropped in beside it is covered
+# too -- the usual way a secret reaches a public repository is a name nobody
+# thought to add.
+# Files inside, not the directory itself: git cannot re-include anything under
+# an excluded *directory*, so `.secrets/` plus a negation would silently ignore
+# the template too.
+.secrets/*
+!.secrets/server.env.example

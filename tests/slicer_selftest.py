@@ -165,7 +165,71 @@ def main():
         report.say(traceback.format_exc())
         report.check("the branch flow runs", False)
 
+    # ------------------------------------------- what a reviewer opens into
+    report.say('\n5. what a reviewer opens into')
+    try:
+        _review_view(report, mod, slicer, volume)
+    except Exception:
+        report.say(traceback.format_exc())
+        report.check("the review view runs", False)
+
     return _finish(report)
+
+
+def _review_view(report, mod, slicer, volume):
+    """A submission has to arrive visible, in 3D, and in frame.
+
+    The reviewer's complaint was that it did not: the segments were loaded and
+    the 3D view was empty. Two separate causes, both only visible in Slicer --
+    a loaded segmentation can carry its segments hidden, and ``centre3d`` fits
+    the camera to the actors in the renderer, so centring before the surface
+    exists frames nothing at all.
+    """
+    import math
+
+    segmentation = slicer.mrmlScene.AddNewNodeByClass("vtkMRMLSegmentationNode", "sub")
+    segmentation.CreateDefaultDisplayNodes()
+    segmentation.SetReferenceImageGeometryParameterFromVolumeNode(volume)
+
+    logic = mod.SegQueueLogic(cacheRoot=tempfile.mkdtemp(prefix="segqueue-review-"))
+    logic.volumeNode = volume
+    logic.segmentationNode = segmentation
+
+    ids = []
+    for name, zrange in (("lad", (2, 8)), ("lcx", (8, 13)), ("rca", (13, 18))):
+        segmentId = segmentation.GetSegmentation().AddEmptySegment(name, name, [1, 0, 0])
+        _paint(slicer, segmentation, volume, segmentId, zrange=zrange)
+        ids.append(segmentId)
+
+    display = segmentation.GetDisplayNode()
+    for segmentId in ids:
+        display.SetSegmentVisibility(segmentId, False)
+    report.check("a submission can arrive with every segment hidden",
+                 not any(display.GetSegmentVisibility(s) for s in ids))
+
+    shown = logic.showSubmissionIn3d()
+    report.check("opening it shows every segment", shown == len(ids),
+                 "{} of {}".format(shown, len(ids)))
+    report.check("and they are visible in the segment list",
+                 all(display.GetSegmentVisibility(s) for s in ids))
+
+    name = slicer.vtkSegmentationConverter.GetSegmentationClosedSurfaceRepresentationName()
+    report.check("the 3D surface is built, not waited for",
+                 segmentation.GetSegmentation().ContainsRepresentation(name))
+
+    camera = slicer.util.getNode("vtkMRMLCameraNode*")
+    if camera is None:
+        report.say("  [SKIP] no camera in this session (--no-main-window)")
+        return
+    centre = segmentation.GetSegmentCenterRAS(ids[1])
+    camera.SetFocalPoint(-900.0, 900.0, -900.0)
+    camera.SetPosition(-900.0, 900.0, -400.0)
+    before = math.dist(camera.GetFocalPoint(), centre)
+    logic.centre3d()
+    after = math.dist(camera.GetFocalPoint(), centre)
+    report.check("and the 3D view is framed on it",
+                 after < 25.0 < before,
+                 "{:.0f} mm -> {:.0f} mm".format(before, after))
 
 
 def _branch_flow(report, mod, slicer, volume):

@@ -107,7 +107,7 @@ from SegQueueLib import (
     updater,
 )
 
-__version__ = "0.9.0"
+__version__ = "0.9.1"
 
 #: How often the in-progress segmentation is written to disk. Two minutes is
 #: chosen against the cost of losing work rather than the cost of the write: a
@@ -513,6 +513,45 @@ class SegQueueLogic(ScriptedLoadableModuleLogic):
         slicer.modules.markups.logic().JumpSlicesToLocation(
             centre[0], centre[1], centre[2], True)
         return True
+
+    def showSubmissionIn3d(self):
+        """Put every segment of the open segmentation into the 3D view.
+
+        The opposite of what a case open does. An annotator starts with four
+        identical copies of one mask, so they are hidden and only the mask shows:
+        stacked on the same voxels they are not a picture of anything. A reviewer
+        is looking at the finished division, where every segment is a different
+        vessel and the arrangement between them is the thing being judged -- so
+        all of them show, and the surface is built rather than waited for.
+
+        Returns how many segments were made visible.
+        """
+        if self.segmentationNode is None:
+            return 0
+        self.segmentationNode.CreateClosedSurfaceRepresentation()
+        display = self.segmentationNode.GetDisplayNode()
+        if display is None:
+            return 0
+
+        display.SetVisibility(True)
+        for setter in ("SetVisibility3D", "SetVisibility2DFill",
+                       "SetVisibility2DOutline"):
+            try:
+                getattr(display, setter)(True)
+            except AttributeError:  # pragma: no cover - old Slicer naming
+                pass
+
+        segmentation = self.segmentationNode.GetSegmentation()
+        shown = 0
+        for i in range(segmentation.GetNumberOfSegments()):
+            segmentId = segmentation.GetNthSegmentID(i)
+            display.SetSegmentVisibility(segmentId, True)
+            try:
+                display.SetSegmentOpacity3D(segmentId, 1.0)
+            except AttributeError:  # pragma: no cover - old Slicer
+                pass
+            shown += 1
+        return shown
 
     def centre3d(self):
         """Frame the 3D view on what is in it. Returns whether a view moved.
@@ -2069,6 +2108,10 @@ class SegQueueWidget(ScriptedLoadableModuleWidget):
             self._bindEditor(segmentationNode, volumeNode)
             slicer.app.layoutManager().setLayout(
                 slicer.vtkMRMLLayoutNode.SlicerLayoutFourUpView)
+            # Built and shown before centring, not after: the camera is fitted to
+            # the bounds of the actors in the renderer, so centring an empty 3D
+            # view frames nothing and the submission opens off screen.
+            self.logic.showSubmissionIn3d()
             self.logic.centre3d()
 
         self._claimedSubmission = submissionId
@@ -2080,6 +2123,9 @@ class SegQueueWidget(ScriptedLoadableModuleWidget):
                 _escape((entry.get("annotator") or {}).get("login", ""))))
         self.editorBox.collapsed = False
         self._updateReviewEnabled()
+        # The Segment Editor is enabled by whether there is something to edit,
+        # which during a review is the submission rather than an assignment.
+        self._updateEnabled()
 
     def onReviseSubmission(self):
         """Upload what is in the scene as the reviewer's own version, and approve."""
@@ -2114,6 +2160,7 @@ class SegQueueWidget(ScriptedLoadableModuleWidget):
             "Saved your version and approved the case.")
         self.verdictComment.setText("")
         self.onRefreshReview()
+        self._updateEnabled()
 
     def onReturnToPool(self):
         """Give the case back so a different annotator can be handed it."""
@@ -2141,6 +2188,7 @@ class SegQueueWidget(ScriptedLoadableModuleWidget):
         self.reviewStatusLabel.setText("Sent {} back to the pool.".format(case))
         self.verdictComment.setText("")
         self.onRefreshReview()
+        self._updateEnabled()
 
     def onVerdict(self, verdict):
         """Approve the selected submission. Approve is the only verdict."""
@@ -2166,6 +2214,7 @@ class SegQueueWidget(ScriptedLoadableModuleWidget):
             _escape(entry.get("caseName", "the case"))))
         self.verdictComment.setText("")
         self.onRefreshReview()
+        self._updateEnabled()
 
     def _startTimers(self):
         self.autosaveTimer = qt.QTimer()
@@ -2344,6 +2393,9 @@ class SegQueueWidget(ScriptedLoadableModuleWidget):
         self.noteInput.setText(self.logic.noteDraft())
         self.onRefreshNotes()
         self._bindEditor(self.logic.segmentationNode, self.logic.volumeNode)
+        # Taking a case ends any review: the scene is this case now.
+        self._claimedSubmission = None
+        self._reviewStart = None
 
         slicer.app.layoutManager().setLayout(
             slicer.vtkMRMLLayoutNode.SlicerLayoutFourUpView)
@@ -2511,6 +2563,10 @@ class SegQueueWidget(ScriptedLoadableModuleWidget):
     def _updateEnabled(self):
         loggedIn = self.logic is not None and self.logic.loggedIn
         hasCase = loggedIn and self.logic.assignment is not None
+        # A reviewer holds no assignment, so gating the Segment Editor on one
+        # left them with the submission loaded and the segment list greyed out --
+        # which looked like the segments had not loaded at all.
+        reviewing = loggedIn and bool(self._claimedSubmission)
 
         self.loginButton.setEnabled(not loggedIn)
         self.logoutButton.setEnabled(loggedIn)
@@ -2522,7 +2578,7 @@ class SegQueueWidget(ScriptedLoadableModuleWidget):
         for button in (self.saveButton, self.checkButton, self.submitButton,
                        self.releaseButton):
             button.setEnabled(hasCase)
-        self.editorBox.setEnabled(hasCase)
+        self.editorBox.setEnabled(hasCase or reviewing)
         self.notesBox.setEnabled(hasCase)
 
 

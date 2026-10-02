@@ -143,21 +143,16 @@ jobs:
             | "$(dirname "$0")/remote" "sudo -S -p '' bash -c 'echo $b64 | base64 -d | bash'"
           EOF
           chmod +x "$RUNNER_TEMP/remote-root"
-      # Where the deployment is, asked as root.
+      # Where the deployment is, asked of the running process.
       #
-      # Three attempts failed before this one, and the reason each time was the
-      # same: the deploy account cannot see the deployment. It is not in the
-      # `docker` group, so `docker ps` is denied, and `find` as an unprivileged
-      # user silently skips every directory it cannot read -- which is where a
-      # root-owned checkout lives. So the probe reported an empty /srv/segqueue
-      # and concluded there was nothing there, three times, while the stack was
-      # running the whole time.
+      # This box does not run Docker. It runs the stack natively -- mongod,
+      # girder and the score worker, started by `segqueue-data/segqueue.sh` --
+      # which is why every earlier version of this workflow failed: it hunted for
+      # a compose file and a /srv checkout that have never existed here, and
+      # reported "no deployment" while the service was serving.
       #
-      # The account is in `sudo` and sudo wants a password, which we have. It
-      # goes to sudo on stdin, never on a command line: sshpass feeds ssh's own
-      # prompt through a pty and leaves stdin alone, so the two passwords do not
-      # collide. The script travels as base64 in the command line because stdin
-      # is spoken for; it holds no secret.
+      # The girder process knows where its own code is, so ask it. That survives
+      # the directory being renamed, and it cannot be fooled by a stray clone.
       - name: Locate the deployment
         env:
           SSHPASS: ${{ secrets.SSH_PASSWORD }}
@@ -165,56 +160,34 @@ jobs:
         run: |
           set -euo pipefail
           cat > probe.sh <<'PROBE'
-          echo "ROOT $(id -un)"
-          echo "DOCKER_PS $(docker ps -q 2>&1 | head -1 | cut -c1-40)"
-          docker ps -a --format '{{.Names}}|{{.Image}}|{{index .Labels "com.docker.compose.project"}}|{{index .Labels "com.docker.compose.project.working_dir"}}' 2>/dev/null \
-            | head -12 | while IFS= read -r l; do echo "CONTAINER $l"; done
-          find / -maxdepth 8 \( -name 'docker-compose.y*ml' -o -name 'compose.y*ml' \) \
-            -not -path '*/node_modules/*' -not -path '/proc/*' -not -path '/sys/*' \
-            -not -path '/var/lib/docker/*' -not -path '/var/snap/lxd/*' 2>/dev/null \
-            | head -10 | while IFS= read -r l; do echo "COMPOSE $l"; done
-          find / -maxdepth 8 -type d -name .git -not -path '/proc/*' -not -path '/sys/*' \
-            -not -path '/tmp/*' -not -path '/var/lib/docker/*' -not -path '/var/snap/lxd/*' 2>/dev/null \
-            | head -10 | while IFS= read -r l; do echo "GIT $(dirname "$l")"; done
+          repo="$HINT_REPO"
+          if [ -z "$repo" ]; then
+            # /proc/<pid>/cmdline holds the venv path the server was started from.
+            exe=$(pgrep -af 'girder serve' | awk '{print $2}' | head -1)
+            [ -n "$exe" ] && repo=$(dirname "$(dirname "$(dirname "$exe")")")
+          fi
+          echo "REPO ${repo:-}"
+          [ -n "$repo" ] && [ -d "$repo/.git" ] && echo "GIT ok" || echo "GIT missing"
+          echo "LAUNCHER $(ls /home/*/segqueue-data/segqueue.sh 2>/dev/null | head -1)"
+          echo "VENV $([ -x "$repo/.venv/bin/girder" ] && echo ok || echo missing)"
           PROBE
+          sed -i "s|\$HINT_REPO|$HINT|" probe.sh
           "$RUNNER_TEMP/remote-root" < probe.sh > probe.txt 2>probe.err || true
           sed -i 's/\r$//' probe.txt probe.err 2>/dev/null || true
-
           while read -r line; do
-            [ -n "$line" ] && echo "::notice title=Server (root)::${line:0:400}"
+            [ -n "$line" ] && echo "::notice title=Server::${line:0:300}"
           done < probe.txt
-          if [ ! -s probe.txt ]; then
-            echo "::error title=Root probe produced nothing::$(head -3 probe.err | tr '\n' ' ')"
-          fi
 
-          # A checkout that actually holds this project's deploy directory, so a
-          # stray clone elsewhere on the box cannot be mistaken for the live one.
-          found=""
-          if [ -n "$HINT" ]; then
-            found="$HINT"
-          else
-            while read -r line; do
-              case "$line" in
-                "COMPOSE "*/deploy/docker-compose.y*)
-                  found=$(dirname "$(dirname "${line#COMPOSE }")")
-                  break ;;
-              esac
-            done < probe.txt
-          fi
-          if [ -z "$found" ]; then
-            found=$(grep -m1 '^GIT ' probe.txt | cut -d' ' -f2- || true)
-          fi
-
-          if [ -z "$found" ]; then
-            echo "::error title=No deployment found::Even as root, nothing compose-shaped turned up. See the notices above."
-            { echo '### Root probe'; echo '```'; cat probe.txt probe.err; echo '```'; } \
-              >> "$GITHUB_STEP_SUMMARY"
+          repo=$(grep -m1 '^REPO ' probe.txt | cut -d' ' -f2- || true)
+          launcher=$(grep -m1 '^LAUNCHER ' probe.txt | cut -d' ' -f2- || true)
+          if [ -z "$repo" ] || [ -z "$launcher" ]; then
+            echo "::error title=No deployment found::repo='$repo' launcher='$launcher'. $(head -2 probe.err | tr '\n' ' ')"
+            { echo '### Probe'; echo '```'; cat probe.txt probe.err; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
             exit 1
           fi
-          echo "SEGQUEUE_DIR=$found" >> "$GITHUB_ENV"
-          echo "Deployment at \`$found\`" >> "$GITHUB_STEP_SUMMARY"
-          echo "::notice title=Deployment::$found"
-
+          echo "SEGQUEUE_DIR=$repo" >> "$GITHUB_ENV"
+          echo "SEGQUEUE_LAUNCHER=$launcher" >> "$GITHUB_ENV"
+          echo "Deployment \`$repo\`, launcher \`$launcher\`" >> "$GITHUB_STEP_SUMMARY"
 
       - name: Deploy
         if: inputs.mode == 'deploy'
@@ -227,26 +200,32 @@ jobs:
           set -euo pipefail
           cd "$SEGQUEUE_DIR"
           previous=\$(git rev-parse HEAD)
-          echo "currently on \$previous"
+          echo "was \$previous"
           git fetch --all --tags --prune
           git checkout --detach "$REF"
-          echo "now on \$(git rev-parse HEAD)"
-          cd deploy
-          docker compose up -d --build girder worker
-          # Health, not "did compose exit 0": a container that starts and then
-          # dies on an import error exits 0 from compose.
-          for i in \$(seq 1 60); do
-            if docker compose exec -T girder curl -fsS \
-                 http://localhost:8080/api/v1/system/version >/dev/null 2>&1; then
+          echo "now \$(git rev-parse HEAD)"
+
+          # Reinstall both, in the order the packages require: the root provides
+          # \`segqueue\`, which girder-segqueue deliberately does not declare as a
+          # dependency because the distribution that carries it is named
+          # \`segtrain\` and a stranger owns that name on PyPI.
+          .venv/bin/python -m pip install --quiet .
+          .venv/bin/python -m pip install --quiet "./server[scoring]"
+
+          bash "$SEGQUEUE_LAUNCHER" restart
+
+          for i in \$(seq 1 45); do
+            if curl -fsS http://127.0.0.1:8080/api/v1/system/version >/dev/null 2>&1; then
               echo "girder answered after \$((i * 2))s"
               exit 0
             fi
             sleep 2
           done
-          echo "girder did not come up; rolling back to \$previous"
-          docker compose logs --tail 80 girder || true
-          cd "$SEGQUEUE_DIR" && git checkout --detach "\$previous"
-          cd deploy && docker compose up -d --build girder worker
+          echo "girder did not come back; rolling back to \$previous"
+          tail -40 /home/*/segqueue-data/logs/girder.log 2>/dev/null || true
+          git checkout --detach "\$previous"
+          .venv/bin/python -m pip install --quiet . && .venv/bin/python -m pip install --quiet "./server[scoring]"
+          bash "$SEGQUEUE_LAUNCHER" restart
           exit 1
           REMOTE
 
@@ -256,95 +235,52 @@ jobs:
           SSHPASS: ${{ secrets.SSH_PASSWORD }}
         run: |
           set -euo pipefail
-          # On the box, against a MongoDB of its own -- not the production one.
-          # The fixture drops the scratch database it creates, but "it cleans up
-          # after itself" is a weaker guarantee than "it was never pointed at
-          # your data", and the `models` fixture clears collections wholesale.
-          # The image ships neither tests/ nor pytest, so both arrive here.
+          # Against a scratch database on the box's own mongod. The fixture names
+          # it segqueue_test_<random> and drops it; it never touches `girder`.
           "$RUNNER_TEMP/remote-root" <<REMOTE
           set -euo pipefail
           cd "$SEGQUEUE_DIR"
-          net=segqueue-ssh-test-\$\$
-          mongo=segqueue-ssh-mongo-\$\$
-          cleanup() {
-            docker rm -f "\$mongo" >/dev/null 2>&1 || true
-            docker network rm "\$net" >/dev/null 2>&1 || true
-          }
-          trap cleanup EXIT
-
-          docker build -q -f deploy/Dockerfile -t segqueue-ssh-test .
-          docker network create "\$net" >/dev/null
-          docker run -d --rm --name "\$mongo" --network "\$net" mongo:7 >/dev/null
-          for i in \$(seq 1 30); do
-            docker exec "\$mongo" mongosh --quiet --eval 'db.adminCommand({ping:1})' \
-              >/dev/null 2>&1 && break
-            sleep 1
-          done
-
-          docker run --rm --network "\$net" --user root \
-            -v "\$PWD/tests:/tests:ro" \
-            -e SEGQUEUE_TEST_MONGO="mongodb://\$mongo:27017" \
-            segqueue-ssh-test \
-            bash -c 'pip install --quiet pytest pymongo \
-                     && python -m pytest -q -rs -p no:cacheprovider /tests/test_segqueue_server.py'
+          .venv/bin/python -m pip install --quiet pytest pymongo
+          SEGQUEUE_TEST_MONGO=mongodb://127.0.0.1:27017 \
+            .venv/bin/python -m pytest -q -rs -p no:cacheprovider tests/test_segqueue_server.py 2>&1 | tail -30
           REMOTE
 
       - name: Smoke test
-        # Runs after a deploy as well, which is the point: "it restarted" and "it
-        # works" are different claims. Asks the container by label rather than by
-        # directory, because a deploy has just replaced it with a new one.
+        # After a deploy as well: "it restarted" and "it works" are different
+        # claims, and a plugin that failed to load serves /describe perfectly
+        # well with none of its routes in it.
         if: inputs.mode != 'test'
         env:
           SSHPASS: ${{ secrets.SSH_PASSWORD }}
         run: |
           set -euo pipefail
           "$RUNNER_TEMP/remote-root" > smoke.json <<'REMOTE'
-          set -euo pipefail
-          cid=$(docker ps -q \
-                --filter label=com.docker.compose.project=segqueue \
-                --filter label=com.docker.compose.service=girder | head -1)
-          if [ -z "$cid" ]; then
-            echo "NOCONTAINER" >&2
-            exit 1
-          fi
-          docker exec -i "$cid" curl -fsS http://localhost:8080/api/v1/describe
+          curl -fsS http://127.0.0.1:8080/api/v1/describe
           REMOTE
           python - <<'PY'
           import json, sys
-
           try:
-              with open("smoke.json") as handle:
-                  spec = json.load(handle)
+              spec = json.load(open("smoke.json"))
           except Exception as exc:
               sys.exit(f"the server did not return a usable API description: {exc}")
-          paths = spec.get("paths") or {}
-
-          # The routes this release adds. A plugin that failed to load answers
-          # /describe perfectly well and simply has none of them -- which is the
-          # failure worth catching, because Girder serves on regardless and the
-          # client's 400 then looks like a client bug.
+          have = set(spec.get("paths") or {})
           wanted = [
               "/segqueue/review/cases",
               "/segqueue/review/case/{caseId}/submissions",
               "/segqueue/review/{submissionId}/revise",
               "/segqueue/review/{submissionId}/pool",
           ]
-          have = set(paths)
           missing = [w for w in wanted if w not in have]
-
           lines = ["### Smoke test", "",
-                   f"{len(have)} routes described, "
-                   f"{sum(1 for p in have if p.startswith('/segqueue'))} of them segqueue.",
-                   ""]
+                   f"{len(have)} routes, "
+                   f"{sum(1 for p in have if p.startswith('/segqueue'))} of them segqueue.", ""]
           for route in wanted:
               lines.append(f"- [{'x' if route in have else ' '}] `{route}`")
-          with open("summary.md", "w") as handle:
-              handle.write("\n".join(lines) + "\n")
-
+          open("summary.md", "w").write("\n".join(lines) + "\n")
+          for route in missing:
+              print(f"::error title=Route missing on the server::{route}")
           if missing:
-              for route in missing:
-                  print(f"::error title=Route missing on the server::{route}")
               sys.exit("the deployed server does not serve: " + ", ".join(missing))
-          print("all four new reviewer routes are live")
+          print("all four reviewer routes are live")
           PY
           cat summary.md >> "$GITHUB_STEP_SUMMARY"

@@ -1,5 +1,16 @@
 # Deploying SegQueue
 
+> **janus.bradensbay.com does not run Docker.** It runs the same four parts
+> natively -- mongod, girder and the score worker -- started by
+> `~/segqueue-data/segqueue.sh {start|stop|restart|status}`, with the checkout at
+> `~/Asclepius` and its own `.venv`. The compose instructions below describe the
+> packaged deployment; for that box, read "Upgrading" at the end instead.
+>
+> This is worth knowing before you tidy anything: deleting the checkout does not
+> stop the running server -- Linux keeps deleted files open -- so the API goes on
+> answering while every route that reads a file from disk starts failing. That is
+> what took the web UI down on 2026-09-30 and left it 404ing until 2026-10-02.
+
 One Linux box, four containers, no cloud account. Start to finish this is about
 an hour, most of which is waiting for the CT volumes to copy.
 
@@ -118,9 +129,28 @@ untested backup is a hypothesis.
 
 ## Upgrading
 
+Packaged (Docker) deployments:
+
 ```sh
 git pull && docker compose up -d --build
 ```
+
+janus.bradensbay.com, which is native:
+
+```sh
+cd ~/Asclepius && git fetch origin && git checkout main && git pull
+.venv/bin/python -m pip install .            # provides `segqueue`
+.venv/bin/python -m pip install "./server[scoring]"
+bash ~/segqueue-data/segqueue.sh restart
+bash ~/segqueue-data/segqueue.sh status
+```
+
+The root package first, then the plugin: `girder-segqueue` deliberately does not
+declare `segqueue` as a dependency, because the distribution carrying it is named
+`segtrain` and an unrelated project owns that name on PyPI.
+
+`.github/workflows/server-ssh.yml` does exactly this over SSH -- run it with
+`mode: deploy` rather than doing it by hand.
 
 The wire protocol between the extension and the server is versioned. If a
 release changes it incompatibly, bump `PROTOCOL_VERSION` and

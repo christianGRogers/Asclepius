@@ -129,93 +129,91 @@ jobs:
             -p "${PORT:-22}" "${USERNAME}@${HOST}" "\$@"
           EOF
           chmod +x "$RUNNER_TEMP/remote"
-      # Where the deployment actually is, asked rather than assumed, and said out
-      # loud when the answer is "nowhere I looked". The first two attempts at
-      # this failed blind -- once on a wrong default path, once on discovery
-      # finding nothing -- because the step reported only pass or fail. A job log
-      # needs admin rights on the repository to read, so the findings go out as
-      # annotations, which anyone who can see the run can read.
+
+          # The same, as root. Everything this workflow does needs it: the deploy
+          # account is not in the `docker` group, so every docker call is denied,
+          # and the checkout is root-owned. The script arrives as base64 in argv
+          # because stdin carries the sudo password -- it holds nothing secret,
+          # while a password on a command line would be readable in `ps`.
+          cat > "$RUNNER_TEMP/remote-root" <<'EOF'
+          #!/usr/bin/env bash
+          set -euo pipefail
+          b64=$(cat | base64 -w0)
+          printf '%s\n' "$SSHPASS" \
+            | "$(dirname "$0")/remote" "sudo -S -p '' bash -c 'echo $b64 | base64 -d | bash'"
+          EOF
+          chmod +x "$RUNNER_TEMP/remote-root"
+      # Where the deployment is, asked as root.
+      #
+      # Three attempts failed before this one, and the reason each time was the
+      # same: the deploy account cannot see the deployment. It is not in the
+      # `docker` group, so `docker ps` is denied, and `find` as an unprivileged
+      # user silently skips every directory it cannot read -- which is where a
+      # root-owned checkout lives. So the probe reported an empty /srv/segqueue
+      # and concluded there was nothing there, three times, while the stack was
+      # running the whole time.
+      #
+      # The account is in `sudo` and sudo wants a password, which we have. It
+      # goes to sudo on stdin, never on a command line: sshpass feeds ssh's own
+      # prompt through a pty and leaves stdin alone, so the two passwords do not
+      # collide. The script travels as base64 in the command line because stdin
+      # is spoken for; it holds no secret.
       - name: Locate the deployment
         env:
           SSHPASS: ${{ secrets.SSH_PASSWORD }}
           HINT: ${{ inputs.path }}
         run: |
           set -euo pipefail
-          # Deliberately no `set -e` on the remote side: every line below is a
-          # probe, and a probe that fails is a finding rather than an error.
-          "$RUNNER_TEMP/remote" bash -s > probe.txt <<REMOTE || true
-          hint="$HINT"
-          echo "WHOAMI \$(id -un 2>/dev/null) groups=\$(id -Gn 2>/dev/null | tr ' ' ',')"
+          cat > probe.sh <<'PROBE'
+          echo "ROOT $(id -un)"
+          echo "DOCKER_PS $(docker ps -q 2>&1 | head -1 | cut -c1-40)"
+          docker ps -a --format '{{.Names}}|{{.Image}}|{{index .Labels "com.docker.compose.project"}}|{{index .Labels "com.docker.compose.project.working_dir"}}' 2>/dev/null \
+            | head -12 | while IFS= read -r l; do echo "CONTAINER $l"; done
+          find / -maxdepth 8 \( -name 'docker-compose.y*ml' -o -name 'compose.y*ml' \) \
+            -not -path '*/node_modules/*' -not -path '/proc/*' -not -path '/sys/*' \
+            -not -path '/var/lib/docker/*' -not -path '/var/snap/lxd/*' 2>/dev/null \
+            | head -10 | while IFS= read -r l; do echo "COMPOSE $l"; done
+          find / -maxdepth 8 -type d -name .git -not -path '/proc/*' -not -path '/sys/*' \
+            -not -path '/tmp/*' -not -path '/var/lib/docker/*' -not -path '/var/snap/lxd/*' 2>/dev/null \
+            | head -10 | while IFS= read -r l; do echo "GIT $(dirname "$l")"; done
+          PROBE
+          "$RUNNER_TEMP/remote-root" < probe.sh > probe.txt 2>probe.err || true
+          sed -i 's/\r$//' probe.txt probe.err 2>/dev/null || true
 
-          if command -v docker >/dev/null 2>&1; then
-            echo "DOCKER present"
-            if docker ps >/dev/null 2>&1; then
-              echo "DOCKER_PS ok"
-              D=docker
-            elif sudo -n docker ps >/dev/null 2>&1; then
-              echo "DOCKER_PS needs-sudo"
-              D="sudo -n docker"
-            else
-              echo "DOCKER_PS denied"
-              D=""
-            fi
-          else
-            echo "DOCKER absent"
-            D=""
-          fi
-
-          if [ -n "\$D" ]; then
-            echo "PROJECTS \$(\$D ps -a --format '{{index .Labels \"com.docker.compose.project\"}}' 2>/dev/null | sort -u | tr '\n' ' ')"
-            cid=\$(\$D ps -aq --filter label=com.docker.compose.project=segqueue 2>/dev/null | head -1)
-            if [ -n "\$cid" ]; then
-              wd=\$(\$D inspect "\$cid" --format '{{index .Config.Labels "com.docker.compose.project.working_dir"}}' 2>/dev/null)
-              echo "WORKDIR \$wd"
-              [ -n "\$wd" ] && [ -d "\$(dirname "\$wd")/.git" ] && echo "FOUND \$(dirname "\$wd")"
-            else
-              echo "WORKDIR none (no container labelled segqueue)"
-            fi
-          fi
-
-          for c in "\$hint" /srv/segqueue /opt/segqueue /srv/Asclepius /opt/Asclepius \
-                   "\$HOME/segqueue" "\$HOME/Asclepius" /home/*/segqueue /home/*/Asclepius; do
-            [ -z "\$c" ] && continue
-            if [ -d "\$c/.git" ]; then
-              echo "FOUND \$c"
-            elif [ -d "\$c" ]; then
-              echo "EXISTS_NO_GIT \$c"
-            fi
-          done
-
-          echo "SUDO_N \$(sudo -n true 2>&1 | head -1 || echo needs-password)"
-          echo "LS_SRV \$(ls -1 /srv 2>/dev/null | tr '\n' ' ')"
-          echo "LS_TARGET \$(ls -1a "\${hint:-/srv/segqueue}" 2>/dev/null | tr '\n' ' ')"
-          echo "COMPOSEFILES \$(find / -maxdepth 6 \( -name 'docker-compose.y*ml' -o -name 'compose.y*ml' \) 2>/dev/null | head -8 | tr '\n' ' ')"
-          echo "GITDIRS \$(find / -maxdepth 6 -type d -name .git 2>/dev/null | head -8 | tr '\n' ' ')"
-          echo "LXC \$(lxc list --format csv -c ns 2>/dev/null | tr '\n' ' ')"
-          echo "LXC_ERR \$(lxc list 2>&1 >/dev/null | head -1)"
-          echo "SNAP \$(ls -1 /var/snap 2>/dev/null | tr '\n' ' ')"
-          echo "UNITS \$(systemctl list-units --type=service --no-legend 2>/dev/null | grep -iE 'segqueue|girder|docker|caddy' | awk '{print \$1}' | tr '\n' ' ')"
-          echo "LISTEN \$(ss -ltnp 2>/dev/null | awk 'NR>1{print \$4}' | tr '\n' ' ')"
-          REMOTE
-
-          sed -i 's/\r$//' probe.txt || true
           while read -r line; do
-            [ -n "$line" ] && echo "::notice title=Server probe::$line"
+            [ -n "$line" ] && echo "::notice title=Server (root)::${line:0:400}"
           done < probe.txt
+          if [ ! -s probe.txt ]; then
+            echo "::error title=Root probe produced nothing::$(head -3 probe.err | tr '\n' ' ')"
+          fi
 
-          found=$(grep -m1 '^FOUND ' probe.txt | cut -d' ' -f2- || true)
+          # A checkout that actually holds this project's deploy directory, so a
+          # stray clone elsewhere on the box cannot be mistaken for the live one.
+          found=""
+          if [ -n "$HINT" ]; then
+            found="$HINT"
+          else
+            while read -r line; do
+              case "$line" in
+                "COMPOSE "*/deploy/docker-compose.y*)
+                  found=$(dirname "$(dirname "${line#COMPOSE }")")
+                  break ;;
+              esac
+            done < probe.txt
+          fi
           if [ -z "$found" ]; then
-            echo "::error title=No checkout found::Nothing with a .git turned up; see the probe notices above, then re-run with the path input set."
-            {
-              echo "### Could not find the checkout"
-              echo '```'
-              cat probe.txt
-              echo '```'
-            } >> "$GITHUB_STEP_SUMMARY"
+            found=$(grep -m1 '^GIT ' probe.txt | cut -d' ' -f2- || true)
+          fi
+
+          if [ -z "$found" ]; then
+            echo "::error title=No deployment found::Even as root, nothing compose-shaped turned up. See the notices above."
+            { echo '### Root probe'; echo '```'; cat probe.txt probe.err; echo '```'; } \
+              >> "$GITHUB_STEP_SUMMARY"
             exit 1
           fi
           echo "SEGQUEUE_DIR=$found" >> "$GITHUB_ENV"
           echo "Deployment at \`$found\`" >> "$GITHUB_STEP_SUMMARY"
+          echo "::notice title=Deployment::$found"
 
 
       - name: Deploy
@@ -225,7 +223,7 @@ jobs:
           REF: ${{ inputs.ref || github.sha }}
         run: |
           set -euo pipefail
-          "$RUNNER_TEMP/remote" bash -s <<REMOTE
+          "$RUNNER_TEMP/remote-root" <<REMOTE
           set -euo pipefail
           cd "$SEGQUEUE_DIR"
           previous=\$(git rev-parse HEAD)
@@ -263,7 +261,7 @@ jobs:
           # after itself" is a weaker guarantee than "it was never pointed at
           # your data", and the `models` fixture clears collections wholesale.
           # The image ships neither tests/ nor pytest, so both arrive here.
-          "$RUNNER_TEMP/remote" bash -s <<REMOTE
+          "$RUNNER_TEMP/remote-root" <<REMOTE
           set -euo pipefail
           cd "$SEGQUEUE_DIR"
           net=segqueue-ssh-test-\$\$
@@ -300,7 +298,7 @@ jobs:
           SSHPASS: ${{ secrets.SSH_PASSWORD }}
         run: |
           set -euo pipefail
-          "$RUNNER_TEMP/remote" bash -s > smoke.json <<'REMOTE'
+          "$RUNNER_TEMP/remote-root" > smoke.json <<'REMOTE'
           set -euo pipefail
           cid=$(docker ps -q \
                 --filter label=com.docker.compose.project=segqueue \

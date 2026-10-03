@@ -18,7 +18,6 @@ from segqueue import policy as pol
 from segqueue import protocol
 from segqueue import states as st
 from segqueue.checksum import matches
-from segqueue.segcheck import Geometry, blocking, check_submission, summarise
 
 from ..constants import MAX_ASSIGN_ATTEMPTS
 from ..models import Assignment, Case, Note, Submission
@@ -286,14 +285,11 @@ class QueueResource(Resource):
         if file is None:
             refuse('no_such_file', 'That upload could not be found.', status=404)
 
+        # The bytes are still checked -- a truncated transfer is corruption,
+        # not a difference of opinion. What the submission *contains* is not:
+        # every one is seen by a human reviewer, and a server that refuses the
+        # work cannot be overruled by them.
         self._verifyUpload(file, submissionMeta)
-        problems = self._recheck(assignment, submissionMeta, geometry or {})
-        if blocking(problems):
-            refuse('failed_validation',
-                   'This segmentation did not pass the submission checks:\n'
-                   + summarise(blocking(problems)),
-                   status=400,
-                   problems=[p.code for p in problems])
 
         # Move the accepted upload out of `incoming` so that scratch uploads and
         # real submissions never share a folder. Girder files hang off items, not
@@ -311,8 +307,7 @@ class QueueResource(Resource):
         )
 
         submission = Submission().createSubmission(
-            assignment, submissionMeta, file['_id'],
-            warnings=[p.code for p in problems], needsReview=needsReview,
+            assignment, submissionMeta, file['_id'], needsReview=needsReview,
         )
         assignment = Assignment().transition(
             assignment, st.SUBMIT,
@@ -329,7 +324,7 @@ class QueueResource(Resource):
         return {
             'assignment': self._assignmentInfo(assignment).to_dict(),
             'submissionId': str(submission['_id']),
-            'warnings': [p.message for p in problems],
+            'warnings': [],
             'awaitingReview': needsReview,
         }
 
@@ -349,23 +344,6 @@ class QueueResource(Resource):
                    'submit again.',
                    status=400, expected=meta.checksum, actual=actual)
         meta.checksum = actual
-
-    def _recheck(self, assignment, meta, geometry):
-        """Run the client-side checks again on the server.
-
-        The client already ran these and refused to send if they failed, so in
-        normal operation this finds nothing. It exists because "the client
-        already checked" is not a security property, and because a client one
-        version behind may not have had the check at all.
-        """
-        project = getProject()
-        return check_submission(
-            voxel_counts=meta.voxel_counts,
-            segments=project.segments,
-            source_geometry=Geometry.from_dict(geometry.get('source')),
-            segmentation_geometry=Geometry.from_dict(geometry.get('segmentation')),
-            annotation_seconds=meta.annotation_seconds or None,
-        )
 
     # ------------------------------------------------------------- release
 

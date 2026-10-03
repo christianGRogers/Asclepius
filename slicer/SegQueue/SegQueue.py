@@ -89,7 +89,7 @@ try:
     from segqueue.checksum import sha256_file, verify_file
     from segqueue.dataset import sniff_suffix, suffix_for
     from segqueue.protocol import SubmissionMeta
-    from segqueue.segcheck import ERROR, Geometry, blocking, check_submission, summarise
+    from segqueue.segcheck import Geometry
     _IMPORT_ERROR = None
 except ImportError as exc:  # pragma: no cover - surfaced in the UI instead
     st = None
@@ -107,7 +107,7 @@ from SegQueueLib import (
     updater,
 )
 
-__version__ = "0.11.1"
+__version__ = "0.12.0"
 
 #: How often the in-progress segmentation is written to disk. Two minutes is
 #: chosen against the cost of losing work rather than the cost of the write: a
@@ -924,32 +924,9 @@ class SegQueueLogic(ScriptedLoadableModuleLogic):
             if not slicer.util.saveNode(labelmapNode, path):
                 raise RuntimeError("Could not write the segmentation to " + path)
             counts = self._voxelCounts(labelmapNode)
-            self._assertNoStrayLabels(labelmapNode)
             return counts, self.sourceGeometry(), _geometryOf(labelmapNode)
         finally:
             slicer.mrmlScene.RemoveNode(labelmapNode)
-
-    def _assertNoStrayLabels(self, labelmapNode):
-        """Refuse to submit a volume containing a label the protocol does not name.
-
-        The explicit id list should make this impossible. It is checked anyway
-        because the failure it guards against -- shipping the dataset's own
-        coronary mask back as though a student had drawn it -- would corrupt the
-        training set while every dashboard number looked healthy. It also catches
-        a subtler drift: if a future Slicer numbered exported segments by
-        position rather than by each segment's label value, a project whose
-        labels are not 1..N would quietly relabel every vessel.
-        """
-        array = slicer.util.arrayFromVolume(labelmapNode)
-        expected = {0} | {int(s.label) for s in self.project.segments}
-        present = {int(v) for v in set(array.flatten().tolist())} if array.size else {0}
-        stray = sorted(present - expected)
-        if stray:
-            raise RuntimeError(
-                "The exported segmentation contains label value(s) "
-                + ", ".join(str(v) for v in stray)
-                + " that are not part of this project. Nothing has been "
-                "submitted. Please report this.")
 
     def _voxelCounts(self, labelmapNode):
         """Voxels per segment, counted from the exported volume.
@@ -968,15 +945,6 @@ class SegQueueLogic(ScriptedLoadableModuleLogic):
     def sourceGeometry(self):
         return _geometryOf(self.volumeNode)
 
-    def validate(self, voxelCounts, sourceGeometry, segGeometry):
-        return check_submission(
-            voxel_counts=voxelCounts,
-            segments=self.project.segments,
-            source_geometry=sourceGeometry,
-            segmentation_geometry=segGeometry,
-            annotation_seconds=self.elapsedSeconds() or None,
-        )
-
     # -------------------------------------------------------------- submit
 
     def submit(self, note="", progress=None):
@@ -994,15 +962,9 @@ class SegQueueLogic(ScriptedLoadableModuleLogic):
                             "submission.seg.nrrd")
         counts, sourceGeom, segGeom = self.exportLabelmap(path)
 
-        problems = self.validate(counts, sourceGeom, segGeom)
-        if blocking(problems):
-            raise SegQueueError(
-                "This segmentation is not ready to submit:\n\n"
-                + summarise(blocking(problems)))
-
-        # Belt and braces for a project whose segments are all optional: the
-        # checks above would pass on an empty scene, and the export writes no
-        # file in that case. Uploading nothing must not look like a submission.
+        # Nothing judges the contents. The one refusal left is not a
+        # judgement: the export writes no file at all for an empty scene,
+        # and uploading nothing must not look like a submission.
         if not os.path.isfile(path):
             raise SegQueueError(
                 "There is nothing to submit -- none of the segments has any "
@@ -1063,11 +1025,6 @@ class SegQueueLogic(ScriptedLoadableModuleLogic):
         path = os.path.join(directory, "revision.seg.nrrd")
 
         counts, sourceGeom, segGeom = self.exportLabelmap(path)
-        problems = self.validate(counts, sourceGeom, segGeom)
-        if blocking(problems):
-            raise SegQueueError(
-                "This segmentation is not ready to save:\n\n"
-                + summarise(blocking(problems)))
         if not os.path.isfile(path):
             raise SegQueueError(
                 "There is nothing to save -- none of the segments has any "
@@ -1761,9 +1718,6 @@ class SegQueueWidget(ScriptedLoadableModuleWidget):
         self.saveButton.clicked.connect(self.onSaveDraft)
         layout.addWidget(self.saveButton)
 
-        self.checkButton = qt.QPushButton("Check without submitting")
-        self.checkButton.clicked.connect(self.onCheck)
-        layout.addWidget(self.checkButton)
 
         self.submitButton = qt.QPushButton("Validate && submit")
         self.submitButton.setToolTip(
@@ -2727,56 +2681,13 @@ class SegQueueWidget(ScriptedLoadableModuleWidget):
         self.timerLabel.setText("Time on this case: {:d}:{:02d}:{:02d}".format(
             seconds // 3600, (seconds % 3600) // 60, seconds % 60))
 
-    def onCheck(self):
-        problems = self._runChecks()
-        if problems is None:
-            return
-        if not problems:
-            self.problemsLabel.setText(
-                "<span style='color:#2e7d32'>All checks passed.</span>")
-            return
-        self.problemsLabel.setText(_problemsHtml(problems))
-
-    def _runChecks(self):
-        """Export to a scratch file and validate it. Returns problems, or None."""
-        if self.logic.assignment is None:
-            slicer.util.errorDisplay("There is no case open.")
-            return None
-        scratch = os.path.join(
-            self.logic.cache.caseDir(self.logic.assignment.assignment_id),
-            "check.seg.nrrd")
-        with _busy():
-            try:
-                counts, source, seg = self.logic.exportLabelmap(scratch)
-            except Exception:
-                slicer.util.errorDisplay(
-                    "Could not export the segmentation:\n\n" + traceback.format_exc())
-                return None
-            finally:
-                if os.path.exists(scratch):
-                    os.unlink(scratch)
-            return self.logic.validate(counts, source, seg)
-
     def onSubmit(self):
         if self.logic.assignment is None:
             slicer.util.errorDisplay("There is no case open.")
             return
-        problems = self._runChecks()
-        if problems is None:
-            return
-        if blocking(problems):
-            self.problemsLabel.setText(_problemsHtml(problems))
-            slicer.util.errorDisplay(
-                "This segmentation cannot be submitted yet:\n\n"
-                + summarise(blocking(problems)))
-            return
-
-        warningText = ""
-        if problems:
-            warningText = "\n\nWarnings:\n" + summarise(problems)
         if not slicer.util.confirmYesNoDisplay(
                 "Submit '{}'?\n\nThe local copy is deleted once the server has "
-                "it.{}".format(self.logic.assignment.case_name, warningText)):
+                "it.".format(self.logic.assignment.case_name)):
             return
 
         self.progressBar.setVisible(True)
@@ -2846,8 +2757,7 @@ class SegQueueWidget(ScriptedLoadableModuleWidget):
         self.passwordEdit.setEnabled(not loggedIn)
 
         self.nextButton.setEnabled(loggedIn and not hasCase)
-        for button in (self.saveButton, self.checkButton, self.submitButton,
-                       self.releaseButton):
+        for button in (self.saveButton, self.submitButton, self.releaseButton):
             button.setEnabled(hasCase)
         self.editorBox.setEnabled(hasCase or reviewing)
         self.notesBox.setEnabled(hasCase)
@@ -2860,15 +2770,6 @@ def _deadlineText(deadline):
     if days < 0:
         return "  |  <span style='color:#b00'>overdue</span>"
     return "  |  due in {:.0f} day(s)".format(max(1.0, days))
-
-
-def _problemsHtml(problems):
-    lines = []
-    for problem in problems:
-        color = "#b00" if problem.level == ERROR else "#8a6d00"
-        lines.append("<span style='color:{}'>&bull; {}</span>".format(
-            color, _escape(problem.message)))
-    return "<br>".join(lines)
 
 
 def _safeName(name, default):

@@ -75,7 +75,6 @@ jobs:
             tests/test_segqueue_protocol.py \
             tests/test_segqueue_states.py \
             tests/test_segqueue_policy.py \
-            tests/test_segqueue_segcheck.py \
             tests/test_segqueue_checksum.py \
             tests/test_segqueue_dataset.py \
             tests/test_segqueue_client.py

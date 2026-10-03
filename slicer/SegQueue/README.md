@@ -157,9 +157,10 @@ which segments are visible. The module deliberately puts nothing in front of it.
 * **Get next case** — asks the server for an assignment.
 * **Save draft now** — the segmentation autosaves every two minutes; this forces
   it.
-* **Check without submitting** — runs the full validation and reports, without
-  uploading.
-* **Validate & submit** — checks, uploads, and deletes the local copy.
+* **Submit** — uploads and deletes the local copy. Nothing is checked first:
+  every submission is seen by a human reviewer, and a panel that refuses the work
+  cannot be overruled by them. The only refusal left is an empty scene, where
+  there is no file to upload at all.
 * **Give this case back** — releases the assignment (with a reason) and purges
   it locally. Use it instead of leaving a case parked.
 
@@ -486,6 +487,25 @@ clears within the hour; installs from the releases page still work meanwhile.
 The client asks the server how much it already has and continues from there.
 
 ## Version history
+
+**0.12.0** — **Removes submission validation entirely.** Empty required segments,
+stray paint clicks, segment names outside the protocol, a resampled or shifted
+grid: all of it is gone, client and server, along with **Check without
+submitting**.
+
+Every submission is seen by a human reviewer, and a check that refuses the work
+cannot be overruled by them. The checks were also wrong often enough to be worse
+than nothing — a segment plainly on screen reported as empty after a draft was
+reopened, which cost an annotator a finished case and taught the room to
+distrust the panel. Demoting them to advisory warnings did not fix that: a
+warning nobody can act on and nobody believes is noise on the one screen that
+has to be unambiguous.
+
+What survives is upstream of judgement. The server still checks the uploaded
+bytes against their declared checksum and size, because a truncated transfer is
+corruption rather than an opinion, and the client still refuses an empty scene,
+because there is no file to upload. `segqueue.segcheck` is now just the
+`Geometry` a submission declares — recorded, not judged.
 
 **0.11.1** — Removes the overlap check. Between 0.8.0 and 0.11.0 a submission was
 refused when two branches claimed the same voxel, on the grounds that a label

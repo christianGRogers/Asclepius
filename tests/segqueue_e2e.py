@@ -64,6 +64,15 @@ def refuses(name, call, expectText=''):
     return check(name, False, 'the server ACCEPTED it')
 
 
+def _accepts(submit, meta, geometry=None):
+    """True when a submission goes through. Used where a refusal would be news."""
+    try:
+        submit(meta, geometry)
+        return True
+    except SegQueueError:
+        return False
+
+
 def heading(text):
     print(f'\n{text}\n' + '-' * len(text))
 
@@ -187,37 +196,38 @@ def main(argv=None):
                               geometry=geometry or {'source': GEOMETRY,
                                                     'segmentation': GEOMETRY})
 
-    heading('Submission checks (each of these must be refused)')
-    refuses(
-        'an empty required segment is refused',
-        lambda: submitWith(protocol.SubmissionMeta(
+    heading('What is still refused, and what is not')
+    # Validation was removed: every submission is seen by a human reviewer, and a
+    # server that refuses the work cannot be overruled by them. What a client
+    # sends is now its own business -- except for the bytes.
+    for name, meta in (
+        ('an empty segmentation', protocol.SubmissionMeta(
             checksum=digest, size_bytes=size, annotation_seconds=900.0,
             voxel_counts={})),
-        'is empty')
-    refuses(
-        'a stray-mark segment is refused',
-        lambda: submitWith(protocol.SubmissionMeta(
+        ('a stray-mark segmentation', protocol.SubmissionMeta(
             checksum=digest, size_bytes=size, annotation_seconds=900.0,
             voxel_counts={s.name: 3 for s in project.segments})),
-        'stray')
-    refuses(
-        'a segment outside the protocol is refused',
-        lambda: submitWith(protocol.SubmissionMeta(
+        ('a segment outside the protocol', protocol.SubmissionMeta(
             checksum=digest, size_bytes=size, annotation_seconds=900.0,
             voxel_counts=dict({s.name: 800 for s in project.segments},
                               Segment_1=500))),
-        'not part of this project')
+    ):
+        try:
+            submitWith(meta)
+            check('%s is accepted' % name, True)
+        except SegQueueError as exc:
+            check('%s is accepted' % name, False, str(exc).splitlines()[0][:110])
+
+    check('a resampled grid is accepted too', _accepts(
+        submitWith, protocol.SubmissionMeta(
+            checksum=digest, size_bytes=size, annotation_seconds=900.0,
+            voxel_counts={s.name: 800 for s in project.segments}),
+        {'source': GEOMETRY,
+         'segmentation': dict(GEOMETRY, spacing=[1.0, 1.0, 1.0])}))
+
+    # The bytes are not a matter of opinion.
     refuses(
-        'a resampled segmentation is refused',
-        lambda: submitWith(
-            protocol.SubmissionMeta(checksum=digest, size_bytes=size,
-                                    annotation_seconds=900.0,
-                                    voxel_counts={s.name: 800 for s in project.segments}),
-            geometry={'source': GEOMETRY,
-                      'segmentation': dict(GEOMETRY, spacing=[1.0, 1.0, 1.0])}),
-        'resampled')
-    refuses(
-        'a corrupted upload is refused',
+        'a corrupted upload is still refused',
         lambda: submitWith(protocol.SubmissionMeta(
             checksum='00' * 32, size_bytes=size, annotation_seconds=900.0,
             voxel_counts={s.name: 800 for s in project.segments})),

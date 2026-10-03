@@ -107,7 +107,7 @@ from SegQueueLib import (
     updater,
 )
 
-__version__ = "0.9.1"
+__version__ = "0.9.2"
 
 #: How often the in-progress segmentation is written to disk. Two minutes is
 #: chosen against the cost of losing work rather than the cost of the write: a
@@ -2413,9 +2413,43 @@ class SegQueueWidget(ScriptedLoadableModuleWidget):
         self.editorBox.collapsed = False
         self._updateEnabled()
 
+    def _ensureEditorNode(self):
+        """Make sure the editor still has a parameter node that is in the scene.
+
+        ``mrmlScene.Clear`` removes it. It is an ordinary node, not a singleton,
+        so clearing the scene to load a submission for review took it with it --
+        and the widget was left holding a node the scene no longer had. From
+        there every binding is refused ("need to set segment editor and
+        segmentation nodes first"), silently, and the segment table stays empty
+        however many segments the segmentation actually has. That is precisely
+        what a submission opened for review looked like.
+
+        Checked here rather than after the one ``Clear`` that caused it, so that
+        any future scene reset is covered by construction instead of by somebody
+        remembering.
+        """
+        if self.editorWidget is None:
+            return None
+        node = self.editorNode
+        # Both conditions: a removed node has its scene reference cleared, and
+        # the id lookup catches the case where it was replaced. Checking the id
+        # alone would be fooled by a *different* editor node that happened to be
+        # given the same id -- which is not exotic, because clearing the scene
+        # resets the counter that generates them.
+        if (node is not None and node.GetScene() is not None
+                and slicer.mrmlScene.GetNodeByID(node.GetID()) is not None):
+            return node
+        self.editorWidget.setMRMLScene(slicer.mrmlScene)
+        self.editorNode = slicer.mrmlScene.AddNewNodeByClass("vtkMRMLSegmentEditorNode")
+        self.editorWidget.setMRMLSegmentEditorNode(self.editorNode)
+        return self.editorNode
+
     def _bindEditor(self, segmentationNode, volumeNode):
         if self.editorWidget is None:
             return
+        # Order matters: the widget refuses a segmentation while its parameter
+        # node is missing, and says so only in the application log.
+        self._ensureEditorNode()
         self.editorWidget.setSegmentationNode(segmentationNode)
         try:
             self.editorWidget.setSourceVolumeNode(volumeNode)

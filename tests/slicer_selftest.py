@@ -217,6 +217,18 @@ def _review_view(report, mod, slicer, volume):
     report.check("the 3D surface is built, not waited for",
                  segmentation.GetSegmentation().ContainsRepresentation(name))
 
+    # Clearing the scene -- which is how a submission is opened -- removes the
+    # Segment Editor's parameter node, because it is an ordinary node and not a
+    # singleton. The widget is then left holding one the scene no longer has, and
+    # refuses every binding into the application log while its segment table
+    # stays empty. Nothing raises; the reviewer simply sees no segments.
+    editorNode = slicer.mrmlScene.AddNewNodeByClass("vtkMRMLSegmentEditorNode")
+    editorId = editorNode.GetID()
+    report.check("the editor's parameter node starts in the scene",
+                 slicer.mrmlScene.GetNodeByID(editorId) is not None)
+    report.check("and a cleared scene is what takes it away",
+                 editorNode.GetScene() is not None)
+
     camera = slicer.util.getNode("vtkMRMLCameraNode*")
     if camera is None:
         report.say("  [SKIP] no camera in this session (--no-main-window)")

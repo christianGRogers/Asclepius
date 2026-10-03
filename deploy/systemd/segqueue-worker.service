@@ -1,0 +1,21 @@
+# Scores gold and duplicate submissions, and reclaims lapsed leases. Not
+# user-facing, which is why it is the one most likely to be down for a week
+# without anyone noticing -- hence Restart=always and a place in the boot order.
+[Unit]
+Description=SegQueue scoring and sweep worker
+Requires=segqueue-mongod.service
+After=segqueue-mongod.service segqueue-girder.service
+
+[Service]
+Type=simple
+User=christian
+Group=christian
+WorkingDirectory=/home/christian/Asclepius
+Environment=GIRDER_MONGO_URI=mongodb://127.0.0.1:27017/girder
+Environment=GIRDER_SERVER_MODE=production
+ExecStart=/home/christian/Asclepius/.venv/bin/segqueue-score --poll 30 --sweep 3600
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target

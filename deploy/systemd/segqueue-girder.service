@@ -1,0 +1,25 @@
+# The API the annotators and reviewers talk to.
+[Unit]
+Description=SegQueue Girder API
+Requires=segqueue-mongod.service
+After=segqueue-mongod.service
+
+[Service]
+Type=simple
+User=christian
+Group=christian
+# Load-bearing: systemd refuses to start a unit whose WorkingDirectory does not
+# exist. Deleting the checkout therefore fails loudly here instead of leaving a
+# server running out of deleted files -- which is exactly what happened on
+# 2026-09-30 and took three days to notice, because the API went on answering
+# while every route that reads a file from disk returned 404 or 500.
+WorkingDirectory=/home/christian/Asclepius
+Environment=GIRDER_MONGO_URI=mongodb://127.0.0.1:27017/girder
+Environment=GIRDER_SERVER_MODE=production
+ExecStart=/home/christian/Asclepius/.venv/bin/girder serve \
+    --mode production -H 0.0.0.0 -p 8080
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

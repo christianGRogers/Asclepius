@@ -385,6 +385,44 @@ def main(argv=None):
                     if a.case_name == free['caseName'])
         student.releaseCase(held.assignment_id, reason='e2e tidy-up')
 
+    heading('A reviewer taking a case and doing it themselves')
+    mineNow = reviewer.allCases()
+    spare2 = next((c for c in mineNow if not c['assignments']), None)
+    if check('there is an untouched case to take', spare2 is not None,
+             'none left' if spare2 is None else spare2['caseName']):
+        who = reviewer.whoami()
+        taken = reviewer.assignCase(spare2['caseId'], who['_id'])
+        check('a reviewer can assign a case to themselves',
+              taken.get('annotator') == args.admin_login, str(taken.get('annotator')))
+
+        held = next((a for a in reviewer.myAssignments()
+                     if a.case_id == spare2['caseId']), None)
+        if check('and it arrives in their own queue', held is not None):
+            # The point of routing this through an ordinary assignment: from
+            # here the normal annotator path works unchanged, which is what
+            # makes the submission a real one rather than a special case.
+            reviewer.downloadCase(held.case_id, volume)
+            submitted = reviewer.submit(
+                held.assignment_id,
+                protocol.SubmissionMeta(
+                    checksum=digest, size_bytes=size, annotation_seconds=1400.0,
+                    voxel_counts={s.name: 820 for s in project.segments},
+                    slicer_version='5.8.0', extension_version='e2e',
+                    annotator_note='reviewer segmented this one'),
+                reviewerUpload('reviewer_own.seg.nrrd'),
+                geometry={'source': GEOMETRY, 'segmentation': GEOMETRY})
+            check('and they can submit it like any other case',
+                  bool(submitted.get('submissionId')),
+                  str(submitted.get('submissionId'))[:24])
+
+            history = reviewer.caseSubmissions(spare2['caseId'])
+            check('which lands in the case history as an annotator submission',
+                  len(history) == 1
+                  and history[0].get('authorRole') == 'annotator',
+                  '{} row(s), role {}'.format(
+                      len(history),
+                      history[0].get('authorRole') if history else '-'))
+
     heading('Back into circulation')
     spare = student.nextCase()
     if check('there is another case to send back', spare is not None):

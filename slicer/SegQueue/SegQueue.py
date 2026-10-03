@@ -107,7 +107,7 @@ from SegQueueLib import (
     updater,
 )
 
-__version__ = "0.10.0"
+__version__ = "0.11.0"
 
 #: How often the in-progress segmentation is written to disk. Two minutes is
 #: chosen against the cost of losing work rather than the cost of the write: a
@@ -1901,6 +1901,14 @@ class SegQueueWidget(ScriptedLoadableModuleWidget):
             "image is what says whether the scan is usable at all.")
         self.openCaseButton.clicked.connect(self.onOpenCase)
         openRow.addWidget(self.openCaseButton)
+
+        self.takeCaseButton = qt.QPushButton("Take case && segment it")
+        self.takeCaseButton.setToolTip(
+            "Assigns the selected case to you and opens it as an ordinary case, "
+            "so you can segment and submit it yourself. It becomes genuinely "
+            "yours: it shows in your queue and is reviewed like any other.")
+        self.takeCaseButton.clicked.connect(self.onTakeCase)
+        openRow.addWidget(self.takeCaseButton)
         layout.addLayout(openRow)
 
         self.reviewStatusLabel = qt.QLabel()
@@ -2073,6 +2081,11 @@ class SegQueueWidget(ScriptedLoadableModuleWidget):
         self.openReviewButton.setEnabled(hasSubmission)
         # A case with no submission can still be opened and still be handed out.
         self.openCaseButton.setEnabled(_case is not None)
+        # Taking a case needs a free hand: holding one already is what the
+        # concurrency limit exists to prevent.
+        self.takeCaseButton.setEnabled(
+            _case is not None and self.logic is not None
+            and self.logic.assignment is None)
         self.assignButton.setEnabled(
             _case is not None and self.annotatorCombo.count > 0)
         self.approveButton.setEnabled(hasSubmission and not decided)
@@ -2286,6 +2299,75 @@ class SegQueueWidget(ScriptedLoadableModuleWidget):
                 _escape(case.get("caseName", ""))))
         self._updateEnabled()
         self._updateReviewEnabled()
+
+    def onTakeCase(self):
+        """Assign the selected case to yourself and open it as a case.
+
+        A reviewer looking at an unassigned case often wants to *do* it -- a
+        tricky one, a demonstration, or simply the last few nobody picked up.
+
+        Deliberately routed through an ordinary assignment rather than a
+        reviewer-only way to submit. Everything that makes a submission correct
+        hangs off having one: the project's segments created with the right names
+        and label values, the branches started from the coronary mask, the
+        autosave, the elapsed-time record, the overlap check, and the upload the
+        server will accept. A second path to submitting would have to reproduce
+        all of that, and would drift from it.
+
+        So the case becomes genuinely theirs -- it shows in their queue, counts
+        against their quota, and is submitted and reviewed like any other.
+        """
+        case, _assignment = self._selectedReviewRow()
+        if case is None:
+            slicer.util.errorDisplay("Select a case first.")
+            return
+        if self.logic.assignment is not None:
+            slicer.util.errorDisplay(
+                "Finish or give back the case you already have before taking "
+                "another one.")
+            return
+        if case.get("assignments"):
+            # Not a hard refusal: a case can want a second annotator. But taking
+            # one somebody is already working on is much more often a misclick
+            # than a decision, so it is worth one sentence.
+            if not slicer.util.confirmYesNoDisplay(
+                    "{} is already out with {}.\n\nTake it as well?".format(
+                        case.get("caseName", "This case"),
+                        ", ".join(sorted({a.get("annotator", "?")
+                                          for a in case["assignments"]})))):
+                return
+        elif not slicer.util.confirmYesNoDisplay(
+                "Take {} and start segmenting it yourself?".format(
+                    case.get("caseName", "this case"))):
+            return
+
+        with _busy():
+            try:
+                me = self.logic.client.whoami() or {}
+                myId = me.get("_id")
+                if not myId:
+                    slicer.util.errorDisplay("The server did not say who you are.")
+                    return
+                self.logic.client.assignCase(case["caseId"], myId)
+                assignment = next(
+                    (a for a in self.logic.outstanding()
+                     if a.case_id == case["caseId"]), None)
+            except SegQueueError as exc:
+                slicer.util.errorDisplay(str(exc))
+                return
+
+        if assignment is None:
+            slicer.util.errorDisplay(
+                "The case was assigned to you but did not come back in your "
+                "list. Press 'Get next case' to pick it up.")
+            self.onRefreshReview()
+            return
+
+        self.reviewStatusLabel.setText(
+            "Took <b>{}</b> — it is yours now, and submits like any other "
+            "case.".format(_escape(case.get("caseName", ""))))
+        self._openAssignment(assignment)
+        self.onRefreshReview()
 
     def _loadCaseHelpers(self, case, directory):
         """Bring the case's heart and coronary masks in, if it ships them."""

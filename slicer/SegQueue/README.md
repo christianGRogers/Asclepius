@@ -280,6 +280,17 @@ Then, with a submission selected:
 * **Open case image** — loads the case's own volume and whatever masks ship with
   it. A case nobody has worked on has no submission to open, and the image is
   what says whether the scan is usable at all.
+* **Take case & segment it** — assigns the case to *you* and opens it as an
+  ordinary case, so you can segment and submit it yourself. It becomes genuinely
+  yours: it shows in your queue, counts against your quota, and is submitted and
+  reviewed like anyone else's.
+
+  Deliberately an ordinary assignment rather than a reviewer-only way to submit.
+  Everything that makes a submission correct hangs off having one — the project's
+  segments with the right names and label values, the branches started from the
+  coronary mask, the autosave, the elapsed-time record, the overlap check, and an
+  upload the server will accept. A second path would have to reproduce all of
+  that, and would drift from it.
 * **Assign case** — hands the selected case to the chosen annotator straight
   away, without waiting for them to ask. The count beside each name is what they
   are already holding, which is the number that decides who should get the next

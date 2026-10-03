@@ -107,7 +107,7 @@ from SegQueueLib import (
     updater,
 )
 
-__version__ = "0.12.0"
+__version__ = "0.12.1"
 
 #: How often the in-progress segmentation is written to disk. Two minutes is
 #: chosen against the cost of losing work rather than the cost of the write: a
@@ -513,6 +513,67 @@ class SegQueueLogic(ScriptedLoadableModuleLogic):
         slicer.modules.markups.logic().JumpSlicesToLocation(
             centre[0], centre[1], centre[2], True)
         return True
+
+    def applyProjectNames(self):
+        """Put the project's names and colours back onto a loaded submission.
+
+        A submission is stored as a *labelmap*: integers on the source grid, with
+        no names and no colours, because that is the one form whose geometry
+        matches the CT voxel for voxel and that ``segtrain convert`` can read
+        without re-registering anything. The cost is that loading one back gives
+        ``Segment_1``, ``Segment_2`` and whatever colours Slicer picked, which
+        tells a reviewer nothing about which artery they are looking at.
+
+        The label values do survive, and they are the protocol's -- that is what
+        ``_applyTemplate`` pins them to -- so they are enough to put the names
+        back. Done on the way in rather than by changing what is stored: the
+        stored form is correct, and every submission ever made can be read this
+        way, including the ones already on the server.
+
+        It also makes the reviewer's own edits exportable. ``exportLabelmap``
+        looks segments up *by name*, so without this a revision saved from a
+        submission would find nothing to export and silently write an empty file.
+
+        Returns how many segments were matched.
+        """
+        if self.segmentationNode is None or self.project is None:
+            return 0
+        byLabel = {int(spec.label): spec for spec in self.project.segments}
+        segmentation = self.segmentationNode.GetSegmentation()
+        display = self.segmentationNode.GetDisplayNode()
+
+        # Only when the label values actually tell the segments apart. A label
+        # value is unique within a *layer*, not within a segmentation: a working
+        # scene can hold four segments that all carry 1 in four separate layers,
+        # and renaming by value there would give every one of them the same name
+        # and wipe the template. A submission loaded from a labelmap is the case
+        # this is for, and there the values are distinct by construction.
+        values = [_labelValueOf(segmentation.GetSegment(segmentation.GetNthSegmentID(i)),
+                                segmentation.GetNthSegmentID(i))
+                  for i in range(segmentation.GetNumberOfSegments())]
+        known = [v for v in values if v in byLabel]
+        if len(known) != len(set(known)):
+            return 0
+
+        matched = 0
+        for i in range(segmentation.GetNumberOfSegments()):
+            segmentId = segmentation.GetNthSegmentID(i)
+            segment = segmentation.GetSegment(segmentId)
+            spec = byLabel.get(_labelValueOf(segment, segmentId))
+            if spec is None:
+                continue
+            segment.SetName(spec.name)
+            segment.SetColor(*spec.color)
+            if display is not None:
+                # The display node caches the colour it was given when the
+                # segment was created, so setting it on the segment alone leaves
+                # the slice views showing the old one.
+                try:
+                    display.SetSegmentOverrideColor(segmentId, *spec.color)
+                except AttributeError:  # pragma: no cover - old Slicer
+                    pass
+            matched += 1
+        return matched
 
     def showSubmissionIn3d(self):
         """Put every segment of the open segmentation into the 3D view.
@@ -1055,6 +1116,25 @@ class SegQueueLogic(ScriptedLoadableModuleLogic):
         response = self.client.releaseCase(assignment.assignment_id, reason=reason)
         self.closeCase(purge=True)
         return response
+
+
+def _labelValueOf(segment, segmentId):
+    """The label value a loaded segment carries, however this Slicer exposes it.
+
+    ``GetLabelValue`` is the answer on 5.2 and later. Older builds do not have
+    it, and there the name Slicer generated -- ``Segment_3`` for label 3 -- is
+    the only record of it, which is exactly the name this is being used to
+    replace.
+    """
+    try:
+        return int(segment.GetLabelValue())
+    except (AttributeError, TypeError, ValueError):
+        pass
+    for text in (segment.GetName() or "", segmentId or ""):
+        tail = text.rsplit("_", 1)[-1]
+        if tail.isdigit():
+            return int(tail)
+    return None
 
 
 def _geometryOf(node):
@@ -2074,6 +2154,10 @@ class SegQueueWidget(ScriptedLoadableModuleWidget):
             slicer.util.setSliceViewerLayers(background=volumeNode, fit=True)
             self.logic.volumeNode = volumeNode
             self.logic.segmentationNode = segmentationNode
+            # A submission is stored as a labelmap, so it comes back as
+            # Segment_1, Segment_2 ... in colours Slicer chose. The label values
+            # are the protocol's, which is enough to put the names back.
+            self.logic.applyProjectNames()
             self.logic.applyViewPreset()
             self._bindEditor(segmentationNode, volumeNode)
             slicer.app.layoutManager().setLayout(

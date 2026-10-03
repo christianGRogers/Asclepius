@@ -11,6 +11,7 @@ from girder.api.describe import Description, autoDescribeRoute
 from girder.api.rest import Resource
 from girder.constants import AccessType
 from girder.models.file import File
+from girder.models.group import Group
 from girder.models.item import Item
 from girder.models.user import User
 from segqueue import policy as pol
@@ -18,6 +19,7 @@ from segqueue import protocol
 from segqueue import states as st
 from segqueue.checksum import matches
 
+from ..constants import ANNOTATOR_GROUP
 from ..models import Assignment, Case, Note, Review, Submission
 from ..models import submission as sub
 from ..models.review import APPROVE
@@ -25,6 +27,7 @@ from ..settings import getPolicy
 from ..utils import (
     fileForCase,
     hashStoredFile,
+    isAnnotator,
     refuse,
     requireReviewer,
     submissionsFolder,
@@ -47,6 +50,13 @@ class ReviewResource(Resource):
     def attachTo(self, parent):
         parent.route('GET', ('review', 'queue'), self.reviewQueue)
         parent.route('GET', ('review', 'cases'), self.listCases)
+        parent.route('GET', ('review', 'annotators'), self.listAnnotators)
+        parent.route('POST', ('review', 'case', ':caseId', 'assign'),
+                     self.assignCase)
+        parent.route('GET', ('review', 'case', ':caseId', 'volume'),
+                     self.downloadCaseVolume)
+        parent.route('GET', ('review', 'case', ':caseId', 'asset', ':kind'),
+                     self.downloadCaseAsset)
         parent.route('GET', ('review', 'case', ':caseId', 'submissions'),
                      self.caseSubmissions)
         parent.route('GET', ('review', ':submissionId'), self.getSubmission)
@@ -265,16 +275,57 @@ class ReviewResource(Resource):
     def listCases(self, state, unassigned, limit, offset, sort):
         requireReviewer(self.getCurrentUser())
 
-        rows = []
-        for case in Case().find({}, limit=limit, offset=offset, sort=sort):
-            assignments = list(Assignment().find({'caseId': case['_id']},
-                                                 sort=[('assignedAt', 1)]))
-            if state and not any(a['state'] == state for a in assignments):
-                continue
-            if unassigned and assignments:
-                continue
-            rows.append(self._caseRow(case, assignments))
-        return rows
+        # Filtered in the query, not after the page is read. Post-filtering
+        # returns a short -- or empty -- page while later pages still match,
+        # which makes honest paging impossible: a caller walking the list cannot
+        # tell "no matches on this page" from "no more cases", and stops early on
+        # a project where the matches happen to start at page two.
+        query = {}
+        if state:
+            query['_id'] = {'$in': Assignment().collection.distinct(
+                'caseId', {'state': state})}
+        elif unassigned:
+            query['_id'] = {'$nin': Assignment().collection.distinct('caseId')}
+
+        cases = list(Case().find(query, limit=limit, offset=offset, sort=sort))
+        if not cases:
+            return []
+
+        # Batched deliberately. A row needs the case's assignments, each
+        # assignment's annotator, and each one's latest submission and count --
+        # four lookups per assignment done one at a time. Over a thousand cases
+        # that is thousands of round trips for a list the reviewer expects to
+        # scroll, so it is four queries for the whole page instead.
+        caseIds = [c['_id'] for c in cases]
+        assignments = list(Assignment().find({'caseId': {'$in': caseIds}},
+                                             sort=[('assignedAt', 1)]))
+        byCase = {}
+        for assignment in assignments:
+            byCase.setdefault(assignment['caseId'], []).append(assignment)
+
+        userIds = {a['userId'] for a in assignments}
+        self._userCache = {
+            u['_id']: u for u in User().find({'_id': {'$in': list(userIds)}})
+        } if userIds else {}
+
+        assignmentIds = [a['_id'] for a in assignments]
+        self._latest, self._counts = {}, {}
+        if assignmentIds:
+            for submission in Submission().find(
+                    {'assignmentId': {'$in': assignmentIds}},
+                    sort=[('created', 1)]):
+                key = submission['assignmentId']
+                # Ascending, so the last one seen for a key is the latest.
+                self._latest[key] = submission
+                self._counts[key] = self._counts.get(key, 0) + 1
+
+        try:
+            return [self._caseRow(case, byCase.get(case['_id'], []))
+                    for case in cases]
+        finally:
+            # Per-request scratch, not state: leaving it set would have the next
+            # request read a cache built for different cases.
+            self._userCache = self._latest = self._counts = None
 
     def _caseRow(self, case, assignments):
         """One case, with every lease ever taken on it.
@@ -297,8 +348,18 @@ class ReviewResource(Resource):
         }
 
     def _assignmentRow(self, assignment):
-        annotator = User().load(assignment['userId'], force=True) or {}
-        submission = Submission().latestForAssignment(assignment['_id'])
+        # Served from the page's batch when listCases built one, and fetched
+        # singly otherwise -- caseSubmissions and claim both call this for one
+        # assignment, where a batch would be more work than the lookup.
+        cache = getattr(self, '_userCache', None)
+        if cache is not None:
+            annotator = cache.get(assignment['userId']) or {}
+            submission = self._latest.get(assignment['_id'])
+            count = self._counts.get(assignment['_id'], 0)
+        else:
+            annotator = User().load(assignment['userId'], force=True) or {}
+            submission = Submission().latestForAssignment(assignment['_id'])
+            count = Submission().countForAssignment(assignment['_id'])
         row = {
             'assignmentId': str(assignment['_id']),
             'state': assignment['state'],
@@ -307,7 +368,7 @@ class ReviewResource(Resource):
             'assignedAt': _iso(assignment.get('assignedAt')),
             'submittedAt': _iso(assignment.get('submittedAt')),
             'decidedAt': _iso(assignment.get('decidedAt')),
-            'submissionCount': Submission().countForAssignment(assignment['_id']),
+            'submissionCount': count,
             'submissionId': None,
             'autoScore': None,
             'flagged': [],
@@ -489,6 +550,136 @@ class ReviewResource(Resource):
             'state': assignment['state'],
             'caseId': str(assignment['caseId']),
         }
+
+    # ------------------------------------------------- handing work out
+
+    @access.user
+    @autoDescribeRoute(
+        Description('Who a case can be assigned to.')
+        .notes('Members of the annotator group, with how much each is already '
+               'holding -- which is the number that decides who gets the next '
+               'one, and is otherwise a question nobody can answer from the '
+               'case list.')
+    )
+    def listAnnotators(self):
+        requireReviewer(self.getCurrentUser())
+        group = Group().findOne({'name': ANNOTATOR_GROUP})
+        if group is None:
+            return []
+
+        rows = []
+        for user in Group().listMembers(group):
+            rows.append({
+                'userId': str(user['_id']),
+                'login': user.get('login', ''),
+                'name': f"{user.get('firstName', '')} "
+                        f"{user.get('lastName', '')}".strip(),
+                'openCases': Assignment().countOpenForUser(user['_id']),
+                'quota': user.get('segqueueQuota'),
+                'disabled': user.get('status') == 'disabled',
+            })
+        return sorted(rows, key=lambda r: (r['disabled'], r['login']))
+
+    @access.user
+    @autoDescribeRoute(
+        Description('Assign a specific case to a specific annotator.')
+        .notes('The escape hatch for everything the queue cannot express: a '
+               'case that needs a particular person, a hand-over after someone '
+               'leaves, or simply getting a thousand cases moving without '
+               'waiting for each annotator to ask.\n\n'
+               'Reviewer-gated rather than admin-gated, because handing work out '
+               'is what the people watching the queue actually do; the identical '
+               'admin route stays for scripts.')
+        .param('caseId', 'The case to assign.', paramType='path')
+        .param('userId', 'Who to assign it to.')
+        .errorResponse('That case has no free replica slot.', 409)
+    )
+    def assignCase(self, caseId, userId):
+        requireReviewer(self.getCurrentUser())
+        case = Case().load(caseId, force=True)
+        if case is None:
+            refuse('no_such_case', 'That case no longer exists.', status=404)
+        user = User().load(userId, force=True)
+        if user is None:
+            refuse('no_such_user', 'No such user.', status=404)
+        if not isAnnotator(user):
+            refuse('not_an_annotator',
+                   f"{user.get('login')!r} is not in the annotator group, so "
+                   'they cannot be given a case.', status=400)
+
+        # `claim` is the atomic one: it consumes a replica slot and records the
+        # person in `assignedUserIds` in a single update, so two reviewers
+        # assigning the same case at the same moment cannot both win.
+        claimed = Case().claim(case['_id'], user['_id'])
+        if claimed is None:
+            refuse('case_unavailable',
+                   'That case is retired, already out with someone, or has '
+                   'previously been assigned to this person.',
+                   status=409)
+
+        assignment = Assignment().createAssignment(
+            claimed, user, kind=pol.NORMAL, policy=getPolicy())
+        Note().systemNote(
+            case['_id'],
+            '{} assigned this case to {}.'.format(
+                self.getCurrentUser().get('login') or 'A reviewer',
+                user.get('login') or 'an annotator'))
+        return {
+            'assignmentId': str(assignment['_id']),
+            'caseId': str(case['_id']),
+            'caseName': case.get('name', ''),
+            'annotator': user.get('login', ''),
+            'state': assignment['state'],
+        }
+
+    # ------------------------------------------- opening a case with no work
+
+    @access.user
+    @autoDescribeRoute(
+        Description('Download any case\'s source volume.')
+        .notes('The reviewer-side counterpart of the annotator download, which '
+               'requires holding the case. A reviewer looking over a thousand '
+               'cases holds none of them, and a case nobody has touched has no '
+               'submission to open either -- so without this there is no way to '
+               'look at one before deciding who should get it.')
+        .param('caseId', 'The case.', paramType='path')
+    )
+    def downloadCaseVolume(self, caseId):
+        requireReviewer(self.getCurrentUser())
+        case = Case().load(caseId, force=True)
+        if case is None:
+            refuse('no_such_case', 'That case no longer exists.', status=404)
+        return File().download(fileForCase(case))
+
+    @access.user
+    @autoDescribeRoute(
+        Description('Download a helper mask that ships with any case.')
+        .param('caseId', 'The case.', paramType='path')
+        .param('kind', 'region or seed.', paramType='path',
+               enum=list(protocol.ASSET_KINDS))
+    )
+    def downloadCaseAsset(self, caseId, kind):
+        requireReviewer(self.getCurrentUser())
+        case = Case().load(caseId, force=True)
+        if case is None:
+            refuse('no_such_case', 'That case no longer exists.', status=404)
+        if kind not in protocol.ASSET_KINDS:
+            refuse(protocol.ERR_NO_ASSET, f'Unknown asset kind {kind!r}.',
+                   status=400)
+        fileId = case.get('regionFileId' if kind == protocol.ASSET_REGION
+                          else 'seedFileId')
+        if not fileId:
+            # Most cases ship neither, and the client asks for both on every one,
+            # so absence is an answer rather than a failure -- the same contract
+            # the annotator-side route has.
+            refuse(protocol.ERR_NO_ASSET, f'This case has no {kind} mask.',
+                   status=404)
+        file = File().load(fileId, force=True)
+        if file is None:
+            refuse(protocol.ERR_NO_ASSET,
+                   f'The {kind} mask for this case is missing from storage.',
+                   status=404)
+        return File().download(file)
 
     # -------------------------------------------------------------- shared
 

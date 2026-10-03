@@ -68,6 +68,13 @@ REVIEW_CASE_SUBMISSIONS = "review/case/{case_id}/submissions"
 REVIEW_REVISE = "review/{submission_id}/revise"
 #: Send a submitted case back to the pool for a different annotator.
 REVIEW_POOL = "review/{submission_id}/pool"
+#: Who a case can be handed to, and how much each is already holding.
+REVIEW_ANNOTATORS = "review/annotators"
+#: Hand one case to one annotator, rather than waiting for them to ask.
+REVIEW_ASSIGN = "review/case/{case_id}/assign"
+#: Any case's volume and helper masks, for a reviewer who holds none of them.
+REVIEW_CASE_VOLUME = "review/case/{case_id}/volume"
+REVIEW_CASE_ASSET = "review/case/{case_id}/asset/{kind}"
 STATS = "stats"
 
 

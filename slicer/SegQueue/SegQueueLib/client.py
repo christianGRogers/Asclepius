@@ -402,6 +402,33 @@ class SegQueueClient:
         return self._json('GET', protocol.path(protocol.REVIEW_CASES),
                           params=params) or []
 
+    def allCases(self, state=None, unassigned=False, page=200, progress=None):
+        """Every case in the project, paged.
+
+        One request would be simpler and wrong: the endpoint pages, and a
+        project of a thousand cases silently returns the first page to a caller
+        who asked for all of them -- which looks like the pool being smaller
+        than it is, the one mistake a reviewer cannot detect by eye.
+
+        A filtered page can also come back *short* without the listing being
+        over, because the state filter is applied after the page is read. So the
+        loop stops on an empty page, not on a short one.
+        """
+        out, offset = [], 0
+        while True:
+            batch = self.caseOverview(limit=page, offset=offset, state=state,
+                                      unassigned=unassigned)
+            if not batch:
+                return out
+            out.extend(batch)
+            offset += page
+            if progress is not None:
+                progress(len(out))
+            if len(out) > 100000:  # pragma: no cover - a loop that cannot end
+                raise SegQueueError(
+                    'The server kept returning cases past any plausible project '
+                    'size; stopping rather than filling memory.')
+
     def caseSubmissions(self, caseId):
         """Every submission ever made against one case, oldest first."""
         return self._json('GET', protocol.path(protocol.REVIEW_CASE_SUBMISSIONS,
@@ -413,6 +440,51 @@ class SegQueueClient:
             'POST', protocol.path(protocol.REVIEW_REVISE,
                                   submission_id=submissionId),
             params={'fileId': fileId, 'meta': json.dumps(meta.to_dict())})
+
+    def annotators(self):
+        """Who a case can be handed to, with how much each already holds."""
+        return self._json('GET', protocol.path(protocol.REVIEW_ANNOTATORS)) or []
+
+    def assignCase(self, caseId, userId):
+        """Hand one case to one annotator."""
+        return self._json('POST', protocol.path(protocol.REVIEW_ASSIGN,
+                                                case_id=caseId),
+                          params={'userId': userId})
+
+    def downloadCaseVolume(self, caseId, destPath, progress=None):
+        """A case's source volume, for a reviewer who does not hold it."""
+        return self._stream(
+            protocol.path(protocol.REVIEW_CASE_VOLUME, case_id=caseId),
+            destPath, progress=progress)
+
+    def downloadCaseAsset(self, caseId, kind, destPath, progress=None):
+        """A case's helper mask, or None when it ships none."""
+        try:
+            return self._stream(
+                protocol.path(protocol.REVIEW_CASE_ASSET, case_id=caseId,
+                              kind=kind),
+                destPath, progress=progress)
+        except SegQueueError as exc:
+            # Most cases ship neither mask and the panel asks for both on every
+            # one, so absence is an answer rather than a failure.
+            if getattr(exc, 'code', None) == protocol.ERR_NO_ASSET:
+                return None
+            raise
+
+    def _stream(self, path, destPath, progress=None):
+        """Download to a file, reporting progress. Returns the bytes written."""
+        response = self._request('GET', path, stream=True)
+        total = int(response.headers.get('Content-Length') or 0)
+        written = 0
+        with open(destPath, 'wb') as handle:
+            for chunk in response.iter_content(chunk_size=CHUNK_BYTES):
+                if not chunk:
+                    continue
+                handle.write(chunk)
+                written += len(chunk)
+                if progress is not None:
+                    progress(written, total)
+        return written
 
     def returnToPool(self, submissionId, reason=''):
         """Send a submitted case back to the pool for a different annotator."""

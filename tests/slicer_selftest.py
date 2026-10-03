@@ -302,7 +302,7 @@ def _branch_flow(report, mod, slicer, volume):
     report.check("every branch was started", started == len(names),
                  "{} of {}".format(started, len(names)))
 
-    drawn = logic.drawnCounts()
+    drawn = _drawn_counts(slicer, logic, segmentation, volume)
     report.check("every branch now holds the whole mask",
                  all(drawn.get(n) == maskCount for n in names),
                  " ".join("{} {}".format(n, drawn.get(n)) for n in names))
@@ -348,14 +348,31 @@ def _branch_flow(report, mod, slicer, volume):
     report.check("a resumed draft is not restarted from the mask",
                  logic._startBranchesFromSeed() == 0)
     report.check("and still holds what was trimmed",
-                 logic.drawnCounts() == drawnAfter)
+                 _drawn_counts(slicer, logic, segmentation, volume) == drawnAfter)
+
+
+def _drawn_counts(slicer, logic, segmentation, volume):
+    """Voxels per project segment as the editor holds them, on the source grid.
+
+    Was ``SegQueueLogic.drawnCounts`` until 0.11.1, where it existed to feed the
+    overlap check. The check is gone and so is the method; the measurement stays
+    here because the export's flattening is still worth asserting on -- it is
+    what makes an untrimmed branch come out small.
+    """
+    counts = {}
+    for spec in logic.project.segments:
+        segmentId = logic.segmentIdFor(spec.name)
+        array = slicer.util.arrayFromSegmentBinaryLabelmap(
+            segmentation, segmentId, volume)
+        counts[spec.name] = int((array > 0).sum()) if array is not None else 0
+    return counts
 
 
 def _export_counts(report, mod, slicer, logic, names):
     """``(exported, drawn)`` counts, measured the way pressing Check measures them."""
     directory = tempfile.mkdtemp(prefix="segqueue-export-")
     path = os.path.join(directory, "check.seg.nrrd")
-    drawn = logic.drawnCounts()
+    drawn = _drawn_counts(slicer, logic, logic.segmentationNode, logic.volumeNode)
     counts, _source, _seg = logic.exportLabelmap(path)
     try:
         os.unlink(path)

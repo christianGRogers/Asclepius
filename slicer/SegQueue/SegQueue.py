@@ -107,7 +107,7 @@ from SegQueueLib import (
     updater,
 )
 
-__version__ = "0.11.0"
+__version__ = "0.11.1"
 
 #: How often the in-progress segmentation is written to disk. Two minutes is
 #: chosen against the cost of losing work rather than the cost of the write: a
@@ -741,8 +741,7 @@ class SegQueueLogic(ScriptedLoadableModuleLogic):
         Copied through the segment arrays rather than the Logical operators
         effect, because nothing here needs the Segment Editor -- this runs while
         the case is still being assembled, before any panel is bound to it -- and
-        because on the source grid a copy is a copy. Both counts come back from
-        the same geometry, which is what ``drawnCounts`` later relies on.
+        because on the source grid a copy is a copy.
         """
         if self.resumedDraft or self.segmentationNode is None:
             return 0
@@ -772,38 +771,6 @@ class SegQueueLogic(ScriptedLoadableModuleLogic):
                 display.SetSegmentVisibility(segmentId, False)
             started += 1
         return started
-
-    def drawnCounts(self):
-        """Voxels per branch as the editor holds them, on the source grid.
-
-        The counterpart to ``_voxelCounts``, which counts the *export*. Every
-        branch now starts as the whole mask, so two branches can hold the same
-        voxel until both have been trimmed -- and a label volume has one label per
-        voxel, so exporting that silently drops the loser. Comparing the two
-        counts is what turns it into an error the annotator sees instead of a
-        mislabelled artery three weeks downstream.
-
-        On the source grid deliberately, the same geometry the export uses, so a
-        difference between the two numbers means voxels were actually lost and
-        never that they were counted on two different grids.
-        """
-        counts = {}
-        if self.segmentationNode is None or self.project is None:
-            return counts
-        for spec in self.project.segments:
-            segmentId = self.segmentIdFor(spec.name)
-            if not segmentId:
-                counts[spec.name] = 0
-                continue
-            try:
-                array = slicer.util.arrayFromSegmentBinaryLabelmap(
-                    self.segmentationNode, segmentId, self.volumeNode)
-            except Exception:
-                # Unknown is not zero, and it is not a loss either: leave the
-                # name out rather than claim a number the check would act on.
-                continue
-            counts[spec.name] = int((array > 0).sum()) if array is not None and array.size else 0
-        return counts
 
     def closeCase(self, purge=False):
         """Take the case out of the scene, banking any elapsed time first."""
@@ -1001,14 +968,13 @@ class SegQueueLogic(ScriptedLoadableModuleLogic):
     def sourceGeometry(self):
         return _geometryOf(self.volumeNode)
 
-    def validate(self, voxelCounts, sourceGeometry, segGeometry, drawnCounts=None):
+    def validate(self, voxelCounts, sourceGeometry, segGeometry):
         return check_submission(
             voxel_counts=voxelCounts,
             segments=self.project.segments,
             source_geometry=sourceGeometry,
             segmentation_geometry=segGeometry,
             annotation_seconds=self.elapsedSeconds() or None,
-            drawn_counts=drawnCounts,
         )
 
     # -------------------------------------------------------------- submit
@@ -1097,8 +1063,7 @@ class SegQueueLogic(ScriptedLoadableModuleLogic):
         path = os.path.join(directory, "revision.seg.nrrd")
 
         counts, sourceGeom, segGeom = self.exportLabelmap(path)
-        problems = self.validate(counts, sourceGeom, segGeom,
-                                 drawnCounts=self.drawnCounts())
+        problems = self.validate(counts, sourceGeom, segGeom)
         if blocking(problems):
             raise SegQueueError(
                 "This segmentation is not ready to save:\n\n"
@@ -2782,9 +2747,6 @@ class SegQueueWidget(ScriptedLoadableModuleWidget):
             "check.seg.nrrd")
         with _busy():
             try:
-                # Before the export, because the export is what flattens the
-                # overlap this is here to notice.
-                drawn = self.logic.drawnCounts()
                 counts, source, seg = self.logic.exportLabelmap(scratch)
             except Exception:
                 slicer.util.errorDisplay(
@@ -2793,7 +2755,7 @@ class SegQueueWidget(ScriptedLoadableModuleWidget):
             finally:
                 if os.path.exists(scratch):
                     os.unlink(scratch)
-            return self.logic.validate(counts, source, seg, drawnCounts=drawn)
+            return self.logic.validate(counts, source, seg)
 
     def onSubmit(self):
         if self.logic.assignment is None:

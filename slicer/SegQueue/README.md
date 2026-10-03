@@ -189,12 +189,14 @@ what a branch holds is what you left in it.
 
 Some details worth knowing:
 
-- **Two branches must not end up sharing a voxel.** A label volume holds one
-  label per voxel, so an overlap cannot survive the export — one of the two would
-  be silently overwritten. **Check without submitting** catches it and names the
-  branch that would lose voxels, and submission is blocked until it is trimmed
-  apart. This is the one thing the old one-vessel-at-a-time workflow made
-  impossible and this one does not, so it is checked rather than trusted.
+- **Try not to leave two branches sharing a voxel.** A label volume holds one
+  label per voxel, so where they overlap the export keeps one of them. Nothing
+  refuses a submission over it: between 0.8.0 and 0.11.0 something did, and what
+  it caught was almost always a few voxels along a shared boundary — trimming to
+  a seam exact to the voxel is not something these tools make reasonable to ask
+  for, and a finished case blocked over it costs far more than the voxels. What
+  still matters is a branch nobody trimmed at all, which loses its voxels to
+  whichever segment the export writes last and comes out implausibly small.
 - **Set overwrite mode to *Overwrite none*** — the module already does, on every
   case. It is what stops editing one branch from carving into another.
 - **The mask is never submitted.** It stays scaffolding: the export copies only
@@ -288,8 +290,8 @@ Then, with a submission selected:
   Deliberately an ordinary assignment rather than a reviewer-only way to submit.
   Everything that makes a submission correct hangs off having one — the project's
   segments with the right names and label values, the branches started from the
-  coronary mask, the autosave, the elapsed-time record, the overlap check, and an
-  upload the server will accept. A second path would have to reproduce all of
+  coronary mask, the autosave, the elapsed-time record, and an upload the server
+  will accept. A second path would have to reproduce all of
   that, and would drift from it.
 * **Assign case** — hands the selected case to the chosen annotator straight
   away, without waiting for them to ask. The count beside each name is what they
@@ -460,10 +462,11 @@ do not hand-zip the module directory.
 Manager → Install Extensions → SegmentEditorExtraEffects → restart. Optional since
 0.8.0: trimming uses *Scissors*, which ships with Slicer.
 
-**"… loses N of its M voxels on export"** — two branches cover the same voxels,
-and a label volume can only give a voxel to one of them. Show both in the Segment
-Editor and trim until they no longer overlap. Overwrite mode should be *Overwrite
-none*, which the module sets on every case.
+**A branch comes out far smaller than it looks** — it overlaps another one, and
+a label volume can only give each voxel to one segment, so the export keeps the
+other. Show both in the Segment Editor and trim the overlap away. Overwrite mode
+should be *Overwrite none*, which the module sets on every case. Submission is
+not blocked by this: see "Dividing the coronary mask".
 
 **The Slicer logo still shows above the panel** — `Resources/` did not make it
 into the install. Check that `Resources/Icons/` sits beside `SegQueue.py` in
@@ -483,6 +486,20 @@ clears within the hour; installs from the releases page still work meanwhile.
 The client asks the server how much it already has and continues from there.
 
 ## Version history
+
+**0.11.1** — Removes the overlap check. Between 0.8.0 and 0.11.0 a submission was
+refused when two branches claimed the same voxel, on the grounds that a label
+volume gives each voxel one label and the export therefore keeps only one of
+them. That is still true, but what the check caught in practice was a handful of
+voxels along a shared boundary: cosmetically an overlap, clinically nothing, and
+refusing a finished case over it cost far more than the voxels were worth —
+trimming to a seam exact to the voxel is not something these tools make
+reasonable to ask for.
+
+What it leaves uncaught is a branch nobody trimmed at all, which loses its voxels
+to whichever segment the export writes last. That surfaces as an implausibly
+small count for one branch rather than as nothing at all, and a reviewer sees the
+result either way.
 
 **0.9.0** — **The review queue is now a submission viewer.** Reviewers get
 every case in the project with what has happened to it, plus the full

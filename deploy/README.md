@@ -112,6 +112,47 @@ sweeps lapsed leases every hour. There is no cron job to forget: a case whose
 annotator dropped the course is back in the pool within the hour, and the
 `sweep` endpoint exists only for when an admin does not want to wait.
 
+## Moving a native deployment into containers
+
+janus was set up natively and can be moved onto the compose stack without moving
+its data: `DATA_ROOT` is expected to hold `mongo/` and `assetstore/`, which is
+exactly what `segqueue-data/` already is, so the same directories are
+bind-mounted in.
+
+```sh
+sudo bash deploy/containerize.sh --check      # read-only; says what it would do
+sudo bash deploy/containerize.sh              # does it
+sudo bash deploy/containerize.sh --rollback   # back to the native stack
+```
+
+Three things change, and each is the sort that loses a dataset quietly if it is
+skipped. The script does all three and refuses to start if any precondition
+fails.
+
+**The assetstore path lives in the database.** Girder stores the absolute root of
+its filesystem assetstore in Mongo. Natively that is `<DATA_ROOT>/assetstore`;
+inside the container the same bytes are at `/data/assetstore`. Without the
+rewrite Girder starts perfectly and reports every file as missing — 86 GB of
+annotation work, apparently gone, with nothing in any log.
+
+**Mongo data files are version-specific.** The `mongo:7` image refuses data
+written by a newer server, and data from an older one needs its
+featureCompatibilityVersion raised one major version at a time. Checked, not
+assumed.
+
+**The files are owned by a host user.** The image runs as uid 1000. If the data
+belongs to anybody else the containers fail on write, which surfaces as failed
+uploads rather than as a startup failure.
+
+Caddy stays off unless you ask for it: `docker compose --profile tls up -d`.
+Where TLS already terminates somewhere else — a tunnel, a front proxy, another
+host — starting Caddy fights for 80 and 443 with whatever already serves the
+name. janus is that case, so girder publishes `${GIRDER_PORT:-8080}` and the
+existing front end keeps working untouched.
+
+Nothing is deleted by any of this. The native launcher stays where it is, which
+is what makes `--rollback` possible.
+
 ## Keeping it running
 
 The native deployment on janus started as `nohup` from somebody's shell, which

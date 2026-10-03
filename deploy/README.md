@@ -112,6 +112,86 @@ sweeps lapsed leases every hour. There is no cron job to forget: a case whose
 annotator dropped the course is back in the pool within the hour, and the
 `sweep` endpoint exists only for when an admin does not want to wait.
 
+## Moving a native deployment into containers
+
+janus was set up natively and can be moved onto the compose stack without moving
+its data: `DATA_ROOT` is expected to hold `mongo/` and `assetstore/`, which is
+exactly what `segqueue-data/` already is, so the same directories are
+bind-mounted in.
+
+```sh
+sudo bash deploy/containerize.sh --check      # read-only; says what it would do
+sudo bash deploy/containerize.sh              # does it
+sudo bash deploy/containerize.sh --rollback   # back to the native stack
+```
+
+Three things change, and each is the sort that loses a dataset quietly if it is
+skipped. The script does all three and refuses to start if any precondition
+fails.
+
+**The assetstore path lives in the database.** Girder stores the absolute root of
+its filesystem assetstore in Mongo. Natively that is `<DATA_ROOT>/assetstore`;
+inside the container the same bytes are at `/data/assetstore`. Without the
+rewrite Girder starts perfectly and reports every file as missing — 86 GB of
+annotation work, apparently gone, with nothing in any log.
+
+**Mongo data files are version-specific.** The `mongo:7` image refuses data
+written by a newer server, and data from an older one needs its
+featureCompatibilityVersion raised one major version at a time. Checked, not
+assumed.
+
+**The files are owned by a host user.** The image runs as uid 1000. If the data
+belongs to anybody else the containers fail on write, which surfaces as failed
+uploads rather than as a startup failure.
+
+Caddy stays off unless you ask for it: `docker compose --profile tls up -d`.
+Where TLS already terminates somewhere else — a tunnel, a front proxy, another
+host — starting Caddy fights for 80 and 443 with whatever already serves the
+name. janus is that case, so girder publishes `${GIRDER_PORT:-8080}` and the
+existing front end keeps working untouched.
+
+Nothing is deleted by any of this. The native launcher stays where it is, which
+is what makes `--rollback` possible.
+
+## Keeping it running
+
+The native deployment on janus started as `nohup` from somebody's shell, which
+means two things were true until the units below existed: it did not come back
+after a reboot, and nothing restarted it if it died. The box had been up since
+February, so neither had ever been tested.
+
+`deploy/systemd/` holds three units -- mongod, girder, the worker -- with
+`Restart=always` and the right ordering. Install them once:
+
+```sh
+sudo cp deploy/systemd/segqueue-*.service /etc/systemd/system/
+sudo systemctl daemon-reload
+bash ~/segqueue-data/segqueue.sh stop            # stop the hand-started stack
+sudo systemctl enable --now segqueue-mongod segqueue-girder segqueue-worker
+systemctl is-active segqueue-mongod segqueue-girder segqueue-worker
+curl -fsS localhost:8080/api/v1/system/version
+```
+
+After that `segqueue.sh` is only a fallback; `systemctl restart segqueue-girder`
+is the normal verb, and `journalctl -u segqueue-girder -f` the normal log.
+
+One line in `segqueue-girder.service` is load-bearing beyond supervision:
+
+```
+WorkingDirectory=/home/christian/Asclepius
+```
+
+systemd refuses to start a unit whose working directory does not exist. Deleting
+the checkout therefore fails *loudly* rather than leaving a server running out of
+deleted files, which is what happened on 2026-09-30: the API went on answering
+from memory while every route that reads a file returned 404 or 500, and it took
+three days to notice.
+
+`deploy/segqueue.sh` is the launcher, tracked here so it is reproducible. The
+deployed copy deliberately lives *outside* the checkout, at
+`~/segqueue-data/segqueue.sh` -- which is the only reason it survived that
+deletion and the stack could be restarted at all.
+
 ## Backups
 
 `backup.sh` dumps MongoDB and hands both the dump and the assetstore to restic.

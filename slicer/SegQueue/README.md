@@ -254,6 +254,10 @@ has happened to it, and what to do about it. It replaced a review *queue*, which
 listed only the sampled fraction awaiting a verdict and so could not answer the
 question reviewers arrive with — *where is case s0042, and who has it*.
 
+The list is **every case in the project**, paged through in full rather than
+one page deep: a thousand-case pool that showed its first two hundred and looked
+complete is the one mistake a reviewer cannot catch by eye.
+
 The top table is one row per lease, so a case out with two annotators at once
 shows twice, and a case nobody has been given still gets a row saying so. Filter
 it by state, or by **Unassigned**. Selecting a row fills the lower table with
@@ -273,6 +277,13 @@ Then, with a submission selected:
   corrected version and approve that. Edit it in the Segment Editor first; this
   is the fast path for a submission that is nearly right.
 * **Return to pool** — hand the case back so somebody else gets it.
+* **Open case image** — loads the case's own volume and whatever masks ship with
+  it. A case nobody has worked on has no submission to open, and the image is
+  what says whether the scan is usable at all.
+* **Assign case** — hands the selected case to the chosen annotator straight
+  away, without waiting for them to ask. The count beside each name is what they
+  are already holding, which is the number that decides who should get the next
+  one. Refused if the case is retired, already out, or has been theirs before.
 
 Two things about that worth knowing.
 

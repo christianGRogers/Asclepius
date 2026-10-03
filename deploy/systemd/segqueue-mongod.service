@@ -1,0 +1,28 @@
+# The database. Everything else Requires= this, so a boot brings it up first and
+# a failure here takes the rest down rather than leaving an API that answers
+# every request with an error.
+[Unit]
+Description=SegQueue MongoDB
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=christian
+Group=christian
+# No --fork: systemd supervises the process itself, and a forking daemon it
+# cannot see is one it cannot restart.
+ExecStart=/home/christian/opt/mongodb/bin/mongod \
+    --dbpath /home/christian/segqueue-data/mongo \
+    --bind_ip 127.0.0.1 --port 27017 \
+    --wiredTigerCacheSizeGB 2 \
+    --logpath /home/christian/segqueue-data/logs/mongod.log
+Restart=always
+RestartSec=5
+# A database gets time to finish a checkpoint. Killing mongod mid-write is how a
+# repair ends up being needed on the next boot.
+TimeoutStopSec=120
+KillSignal=SIGTERM
+
+[Install]
+WantedBy=multi-user.target

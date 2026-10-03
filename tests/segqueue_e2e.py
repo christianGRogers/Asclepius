@@ -340,6 +340,51 @@ def main(argv=None):
                 reviewerUpload('revision2.seg.nrrd')),
             'cannot be revised')
 
+    heading('Seeing and handing out the whole pool')
+    allCases = reviewer.allCases()
+    check('the viewer pages through every case, not just the first page',
+          len(allCases) >= len(cases), '{} via paging vs {} in one page'.format(
+              len(allCases), len(cases)))
+    names = [c['caseName'] for c in allCases]
+    check('and returns each case once', len(names) == len(set(names)),
+          '{} rows, {} distinct'.format(len(names), len(set(names))))
+
+    people = reviewer.annotators()
+    check('the reviewer can see who a case can go to', bool(people),
+          ', '.join(p['login'] for p in people) or 'nobody')
+    mine = next((p for p in people if p['login'] == args.annotator_login), None)
+    if not check('the annotator is in that list', mine is not None):
+        return report()
+    check('with what they are already holding',
+          isinstance(mine.get('openCases'), int), str(mine.get('openCases')))
+
+    free = next((c for c in allCases if not c['assignments']), None)
+    if check('there is an untouched case to hand out', free is not None,
+             'none left' if free is None else free['caseName']):
+        # A case nobody has worked on has no submission, so the only way to look
+        # at it before handing it out is its own volume.
+        volumeCopy = os.path.join(tempfile.gettempdir(), 'segqueue_case_peek')
+        reviewer.downloadCaseVolume(free['caseId'], volumeCopy)
+        check('a reviewer can open a case with no submission on it',
+              os.path.getsize(volumeCopy) > 0,
+              '{} bytes'.format(os.path.getsize(volumeCopy)))
+
+        handed = reviewer.assignCase(free['caseId'], mine['userId'])
+        check('and hand it to a named annotator',
+              handed.get('annotator') == args.annotator_login,
+              str(handed.get('annotator')))
+        check('which puts it in their queue',
+              free['caseName'] in {a.case_name for a in student.myAssignments()},
+              free['caseName'])
+
+        refuses('the same case cannot be handed to them twice',
+                lambda: reviewer.assignCase(free['caseId'], mine['userId']),
+                'previously been assigned')
+
+        held = next(a for a in student.myAssignments()
+                    if a.case_name == free['caseName'])
+        student.releaseCase(held.assignment_id, reason='e2e tidy-up')
+
     heading('Back into circulation')
     spare = student.nextCase()
     if check('there is another case to send back', spare is not None):

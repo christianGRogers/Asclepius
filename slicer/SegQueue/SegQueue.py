@@ -107,7 +107,7 @@ from SegQueueLib import (
     updater,
 )
 
-__version__ = "0.9.2"
+__version__ = "0.10.0"
 
 #: How often the in-progress segmentation is written to disk. Two minutes is
 #: chosen against the cost of losing work rather than the cost of the write: a
@@ -1168,6 +1168,7 @@ class SegQueueWidget(ScriptedLoadableModuleWidget):
         self.notesTimer = None
         self._reviewRows = []
         self._reviewCases = []
+        self._annotators = []
         self._historyRows = []
         self._claimedSubmission = None
         self._reviewStart = None
@@ -1884,13 +1885,23 @@ class SegQueueWidget(ScriptedLoadableModuleWidget):
         self.historyTable.setMinimumHeight(110)
         layout.addWidget(self.historyTable)
 
+        openRow = qt.QHBoxLayout()
         self.openReviewButton = qt.QPushButton("Open selected submission")
         self.openReviewButton.setToolTip(
             "Loads the volume and that segmentation into the scene. Picks the "
             "highlighted row in the history table, or the case's latest "
             "submission if none is highlighted.")
         self.openReviewButton.clicked.connect(self.onOpenReview)
-        layout.addWidget(self.openReviewButton)
+        openRow.addWidget(self.openReviewButton)
+
+        self.openCaseButton = qt.QPushButton("Open case image")
+        self.openCaseButton.setToolTip(
+            "Loads the case's own volume and whatever masks ship with it. For a "
+            "case nobody has worked on there is no submission to open, and the "
+            "image is what says whether the scan is usable at all.")
+        self.openCaseButton.clicked.connect(self.onOpenCase)
+        openRow.addWidget(self.openCaseButton)
+        layout.addLayout(openRow)
 
         self.reviewStatusLabel = qt.QLabel()
         self.reviewStatusLabel.setWordWrap(True)
@@ -1925,6 +1936,26 @@ class SegQueueWidget(ScriptedLoadableModuleWidget):
         row.addWidget(self.poolButton)
         layout.addLayout(row)
 
+        # -- handing work out
+        layout.addWidget(_caption(
+            "Give the selected case to someone. The count beside each name is "
+            "what they are already holding."))
+        assignRow = qt.QHBoxLayout()
+        self.annotatorCombo = qt.QComboBox()
+        self.annotatorCombo.setToolTip(
+            "Annotators, with how many cases each has open. Refreshed with the "
+            "case list.")
+        assignRow.addWidget(self.annotatorCombo, 1)
+
+        self.assignButton = qt.QPushButton("Assign case")
+        self.assignButton.setToolTip(
+            "Hands the selected case to the chosen annotator straight away, "
+            "without waiting for them to ask for one. Refused if the case is "
+            "retired, already out, or has been theirs before.")
+        self.assignButton.clicked.connect(self.onAssignCase)
+        assignRow.addWidget(self.assignButton)
+        layout.addLayout(assignRow)
+
     # ------------------------------------------------------ submission viewer
 
     def onRefreshReview(self):
@@ -1934,7 +1965,9 @@ class SegQueueWidget(ScriptedLoadableModuleWidget):
         selected = self.reviewFilter.itemData(self.reviewFilter.currentIndex)
         with _busy():
             try:
-                self._reviewCases = self.logic.client.caseOverview(
+                # Every case, not the first page: a thousand-case project
+                # would otherwise show its first two hundred and look complete.
+                self._reviewCases = self.logic.client.allCases(
                     state=None if selected in ("", "unassigned") else selected,
                     unassigned=(selected == "unassigned"))
             except SegQueueError as exc:
@@ -1969,6 +2002,7 @@ class SegQueueWidget(ScriptedLoadableModuleWidget):
             for column, text in enumerate(cells):
                 self.reviewTable.setItem(index, column, qt.QTableWidgetItem(text))
         self.reviewTable.resizeColumnsToContents()
+        self._refreshAnnotators()
         self._clearHistory()
         self._updateReviewEnabled()
 
@@ -2037,6 +2071,10 @@ class SegQueueWidget(ScriptedLoadableModuleWidget):
         decided = state in REVIEW_DECIDED_STATES
 
         self.openReviewButton.setEnabled(hasSubmission)
+        # A case with no submission can still be opened and still be handed out.
+        self.openCaseButton.setEnabled(_case is not None)
+        self.assignButton.setEnabled(
+            _case is not None and self.annotatorCombo.count > 0)
         self.approveButton.setEnabled(hasSubmission and not decided)
         self.poolButton.setEnabled(hasSubmission and not decided)
         # Revising uploads whatever is in the scene, so it needs an opened
@@ -2126,6 +2164,161 @@ class SegQueueWidget(ScriptedLoadableModuleWidget):
         # The Segment Editor is enabled by whether there is something to edit,
         # which during a review is the submission rather than an assignment.
         self._updateEnabled()
+
+    def _refreshAnnotators(self):
+        """Fill the picker with who can be given a case, and what they hold.
+
+        The holding count is the whole reason this is a list rather than a text
+        box: handing out a thousand cases without it means handing most of them
+        to whoever is top of the alphabet.
+        """
+        current = self.annotatorCombo.currentText
+        try:
+            self._annotators = self.logic.client.annotators()
+        except SegQueueError:
+            # Not fatal: the rest of the viewer works, and this only costs the
+            # ability to hand work out until the next refresh.
+            self._annotators = []
+
+        self.annotatorCombo.clear()
+        for person in self._annotators:
+            if person.get("disabled"):
+                continue
+            label = "{}  ({} open)".format(person.get("login", "?"),
+                                           person.get("openCases", 0))
+            quota = person.get("quota")
+            if quota is not None:
+                label += ", quota {}".format(quota)
+            self.annotatorCombo.addItem(label, person.get("userId"))
+        index = self.annotatorCombo.findText(current)
+        if index >= 0:
+            self.annotatorCombo.setCurrentIndex(index)
+
+    def onAssignCase(self):
+        """Hand the selected case to the chosen annotator."""
+        case, _assignment = self._selectedReviewRow()
+        if case is None:
+            slicer.util.errorDisplay("Select a case first.")
+            return
+        userId = self.annotatorCombo.itemData(self.annotatorCombo.currentIndex)
+        who = self.annotatorCombo.currentText.split("  (")[0]
+        if not userId:
+            slicer.util.errorDisplay(
+                "There is nobody to assign to. Check the annotator group has "
+                "members.")
+            return
+        if not slicer.util.confirmYesNoDisplay(
+                "Give {} to {}?".format(case.get("caseName", "this case"), who)):
+            return
+
+        with _busy():
+            try:
+                self.logic.client.assignCase(case["caseId"], userId)
+            except SegQueueError as exc:
+                slicer.util.errorDisplay(str(exc))
+                return
+        self.reviewStatusLabel.setText(
+            "Assigned <b>{}</b> to {}.".format(
+                _escape(case.get("caseName", "")), _escape(who)))
+        self.onRefreshReview()
+
+    def onOpenCase(self):
+        """Load a case's own volume, for one with no submission to open.
+
+        A case nobody has worked on has nothing in the history table, so the
+        submission path has nothing to download. Looking at the image before
+        deciding who should get it is most of why a reviewer opens a case at
+        all, and it is the only way to tell a usable scan from a broken one.
+        """
+        case, _assignment = self._selectedReviewRow()
+        if case is None:
+            slicer.util.errorDisplay("Select a case first.")
+            return
+        if self.logic.assignment is not None:
+            slicer.util.errorDisplay(
+                "You have a case of your own open. Submit it or give it back "
+                "first -- opening a case clears the scene.")
+            return
+
+        directory = os.path.join(self.logic.cache.root, "review")
+        try:
+            os.makedirs(directory)
+        except OSError:
+            pass
+        volumePath = os.path.join(
+            directory, _safeName(case.get("volumeName"), "case.nrrd"))
+
+        with _busy():
+            try:
+                self.logic.client.downloadCaseVolume(case["caseId"], volumePath)
+            except SegQueueError as exc:
+                slicer.util.errorDisplay(str(exc))
+                return
+            volumePath = self.logic.correctSuffix(volumePath)
+
+            slicer.mrmlScene.Clear(False)
+            try:
+                volumeNode = slicer.util.loadVolume(volumePath)
+            except Exception:
+                slicer.util.errorDisplay(
+                    "The case downloaded but Slicer could not open it:\n\n"
+                    + traceback.format_exc())
+                return
+
+            self.logic.volumeNode = volumeNode
+            self.logic.segmentationNode = None
+            slicer.util.setSliceViewerLayers(background=volumeNode, fit=True)
+            self.logic.applyViewPreset()
+
+            # The masks that ship with the case, when it has them. They are what
+            # makes the 3D view worth looking at before anyone has segmented
+            # anything -- and whether a case has a usable coronary mask is
+            # exactly what decides how long it will take whoever gets it.
+            self._loadCaseHelpers(case, directory)
+
+            slicer.app.layoutManager().setLayout(
+                slicer.vtkMRMLLayoutNode.SlicerLayoutFourUpView)
+            self.logic.centre3d()
+
+        self._claimedSubmission = None
+        self.reviewStatusLabel.setText(
+            "Viewing <b>{}</b> — no submission on it yet.".format(
+                _escape(case.get("caseName", ""))))
+        self._updateEnabled()
+        self._updateReviewEnabled()
+
+    def _loadCaseHelpers(self, case, directory):
+        """Bring the case's heart and coronary masks in, if it ships them."""
+        if self.logic.segmentationNode is None:
+            self.logic.segmentationNode = slicer.mrmlScene.AddNewNodeByClass(
+                "vtkMRMLSegmentationNode", "Case masks")
+            self.logic.segmentationNode.CreateDefaultDisplayNodes()
+            self.logic.segmentationNode.SetReferenceImageGeometryParameterFromVolumeNode(
+                self.logic.volumeNode)
+
+        self.logic.seedSegmentId = None
+        self.logic.regionSegmentId = None
+        wanted = ((protocol.ASSET_REGION, protocol.REGION_SEGMENT_NAME,
+                   (0.85, 0.55, 0.55), 0.08),
+                  (protocol.ASSET_SEED, protocol.SEED_SEGMENT_NAME,
+                   (0.95, 0.95, 0.35), 0.35))
+        for kind, name, colour, fill in wanted:
+            path = os.path.join(directory, "case_{}.nii.gz".format(kind))
+            try:
+                got = self.logic.client.downloadCaseAsset(
+                    case["caseId"], kind, path)
+            except SegQueueError:
+                got = None
+            if not got:
+                continue
+            segmentId = self.logic._importHelper(path, name, colour, fill)
+            if kind == protocol.ASSET_SEED:
+                self.logic.seedSegmentId = segmentId
+            else:
+                self.logic.regionSegmentId = segmentId
+
+        if self.logic.seedSegmentId:
+            self.logic.showSeedIn3d(True)
 
     def onReviseSubmission(self):
         """Upload what is in the scene as the reviewer's own version, and approve."""

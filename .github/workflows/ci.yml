@@ -301,10 +301,11 @@ jobs:
       - name: Put some cases in the pool
         # Synthetic volumes, not real CT: the acceptance test is about the
         # queue, the claim, the checksum and the refusals, none of which look at
-        # a voxel. Eight, because the run consumes one case per annotator-side
+        # a voxel. Ten, because the run consumes one case per annotator-side
         # path -- the submission, the one sent back to the pool, the one proving
         # it is not handed back to the same person, the untouched one a reviewer
-        # hands out by name -- and the concurrency check needs spares after all
+        # hands out by name, the one a reviewer takes and submits themselves --
+        # and the concurrency check needs spares after all
         # of those.
         run: |
           mkdir -p "$GITHUB_WORKSPACE/incoming"
@@ -315,7 +316,7 @@ jobs:
 
           root = os.path.join(os.environ["GITHUB_WORKSPACE"], "incoming")
           affine = np.diag([0.4, 0.4, 0.5, 1.0])
-          for i in range(8):
+          for i in range(10):
               data = np.zeros((64, 64, 40), dtype=np.int16)
               data[20:40, 20:40, 10:30] = 300 + i
               nib.save(nib.Nifti1Image(data, affine),

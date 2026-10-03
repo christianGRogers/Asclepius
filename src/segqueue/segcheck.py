@@ -1,40 +1,31 @@
-"""Pre-flight checks on a segmentation, run client-side and again on the server.
+"""The geometry a submission declares. Nothing here judges a submission.
 
-The cheapest rejection is the one that never becomes a submission. Most of what
-a reviewer would send back is mechanical -- a segment left empty, a stray
-segment named "Segment_1", a segmentation resampled onto a different grid than
-the source volume -- and all of it is detectable before the upload starts. So
-the extension runs these checks at the click of Submit and refuses to send;
-the server runs the identical checks on receipt, because a client can be old,
-patched, or simply lying.
+This module used to validate before sending: empty required segments, stray
+paint clicks, segment names outside the protocol, a segmentation exported on a
+resampled or shifted grid. All of it is gone, including the advisory version that
+replaced it for one commit.
 
-That double-run is why this module takes *summaries* rather than volumes. The
-client has a ``vtkSegmentation`` and the server has a ``.seg.nrrd``, and neither
-can hand the other its own objects -- but both can produce a dict of segment
-names to voxel counts and a small geometry record. Keeping the rules over those
-summaries means one implementation, tested once, with no numpy in sight.
+**Why.** Every submission is seen by a human reviewer, and a check that refuses
+the work cannot be overruled by them. The checks were also wrong often enough to
+be worse than nothing -- a segment plainly on screen reported as empty after a
+draft was reopened, which cost an annotator a finished case and taught the room
+to distrust the panel. Demoting them to warnings did not fix that: a warning
+nobody can act on and nobody believes is noise on the one screen that has to be
+unambiguous.
+
+What survives lives where it belongs and is not a matter of judgement -- the
+server still checks the uploaded bytes against their declared checksum and size,
+because a truncated transfer is corruption, not an opinion about anatomy.
+
+``Geometry`` stays because a submission still *declares* the grid it was exported
+on. It is recorded, and read later by whoever is converting the data; it is not
+checked here.
 """
 
 from __future__ import annotations
 
 from dataclasses import dataclass
 from typing import Optional
-
-#: A submission cannot proceed.
-ERROR = "error"
-#: Worth telling the annotator, but not worth blocking on. Warnings are also
-#: recorded on the submission, so a reviewer sees what the annotator saw.
-WARNING = "warning"
-
-
-@dataclass(frozen=True)
-class Problem:
-    level: str
-    code: str
-    message: str
-
-    def __str__(self) -> str:
-        return f"{self.level.upper()}: {self.message}"
 
 
 @dataclass(frozen=True)
@@ -67,144 +58,3 @@ class Geometry:
             "spacing": list(self.spacing),
             "origin": list(self.origin),
         }
-
-
-#: Tolerance for spacing and origin comparison, in the volume's own units (mm).
-#: NRRD stores these as decimal text, so a round-trip through Slicer can move
-#: the last digit; anything at 1e-4 mm is a formatting artefact, not a resample.
-GEOMETRY_TOLERANCE_MM = 1e-3
-
-#: Voxel count at or below which a segment is treated as an accidental stray
-#: mark rather than a structure. A single errant paint click leaves a handful of
-#: voxels, and blocking submission on it is friendlier than a rejection later.
-STRAY_VOXELS = 8
-
-
-def _close(a, b, tol: float) -> bool:
-    if len(a) != len(b):
-        return False
-    return all(abs(float(x) - float(y)) <= tol for x, y in zip(a, b))
-
-
-def check_submission(
-    voxel_counts: dict,
-    segments,
-    source_geometry: Optional[Geometry] = None,
-    segmentation_geometry: Optional[Geometry] = None,
-    annotation_seconds: Optional[float] = None,
-    min_plausible_seconds: float = 60.0,
-    drawn_counts: Optional[dict] = None,
-) -> list:
-    """Every problem with a proposed submission, worst first.
-
-    ``segments`` is the project's ``SegmentSpec`` list from ``protocol.py``;
-    ``voxel_counts`` maps segment name to the number of labelled voxels, counted
-    from the *exported* label volume. ``drawn_counts`` is the same measure taken
-    from the editor's own segments before the export: where it is larger, two
-    segments claimed the same voxel and the export kept only one of them. An empty
-    result means the submission is good to send.
-    """
-    problems = []
-    expected = {s.name: s for s in segments}
-
-    for spec in segments:
-        count = int(voxel_counts.get(spec.name, 0) or 0)
-        if count == 0:
-            if spec.required:
-                problems.append(Problem(
-                    ERROR, "empty_required_segment",
-                    f"{spec.name!r} is empty. Segment it, or ask a reviewer to "
-                    "mark it not-applicable for this case.",
-                ))
-            else:
-                problems.append(Problem(
-                    WARNING, "empty_optional_segment",
-                    f"{spec.name!r} is empty -- fine if the structure is genuinely "
-                    "absent or outside the field of view.",
-                ))
-        elif 0 < count <= STRAY_VOXELS:
-            problems.append(Problem(
-                ERROR, "stray_voxels",
-                f"{spec.name!r} has only {count} voxels, which is almost certainly "
-                "a stray paint click rather than a structure.",
-            ))
-
-    for name, count in sorted(voxel_counts.items()):
-        if name not in expected and int(count or 0) > 0:
-            problems.append(Problem(
-                ERROR, "unexpected_segment",
-                f"{name!r} is not part of this project's protocol. Delete it "
-                "before submitting -- renamed or extra segments break the training "
-                "conversion downstream.",
-            ))
-
-    # A label volume holds one label per voxel, so two segments covering the same
-    # voxel cannot both survive the export -- one is silently overwritten. On a
-    # workflow where every branch starts as the whole coronary mask that is not a
-    # remote possibility but the starting state, so it is checked rather than
-    # assumed away, and checked against what the annotator actually drew.
-    for spec in segments:
-        drawn = int((drawn_counts or {}).get(spec.name, 0) or 0)
-        exported = int(voxel_counts.get(spec.name, 0) or 0)
-        if drawn > exported:
-            problems.append(Problem(
-                ERROR, "overlapping_segments",
-                f"{spec.name!r} loses {drawn - exported} of its {drawn} voxels on "
-                "export, because another segment covers the same voxels. Two "
-                "structures cannot both own a voxel: trim them until they no "
-                "longer overlap.",
-            ))
-
-    if source_geometry is not None and segmentation_geometry is not None:
-        problems.extend(_check_geometry(source_geometry, segmentation_geometry))
-
-    if annotation_seconds is not None and annotation_seconds < min_plausible_seconds:
-        # A warning, not an error. The server records it and the dashboard
-        # aggregates it; blocking here would only teach people to idle first.
-        problems.append(Problem(
-            WARNING, "implausibly_fast",
-            f"This case took {annotation_seconds:.0f} seconds. That is unusually "
-            "fast -- please check you have not submitted an unfinished segmentation.",
-        ))
-
-    problems.sort(key=lambda p: 0 if p.level == ERROR else 1)
-    return problems
-
-
-def _check_geometry(source: Geometry, seg: Geometry) -> list:
-    problems = []
-    if source.size and seg.size and tuple(source.size) != tuple(seg.size):
-        problems.append(Problem(
-            ERROR, "geometry_size",
-            f"The segmentation grid is {list(seg.size)} but the source volume is "
-            f"{list(source.size)}. Export the labelmap using the source volume as "
-            "the reference geometry.",
-        ))
-    if source.spacing and seg.spacing and not _close(source.spacing, seg.spacing,
-                                                     GEOMETRY_TOLERANCE_MM):
-        problems.append(Problem(
-            ERROR, "geometry_spacing",
-            f"The segmentation was resampled to spacing {list(seg.spacing)}; the "
-            f"source volume is {list(source.spacing)}. Coronary work must stay on "
-            "the native grid.",
-        ))
-    if source.origin and seg.origin and not _close(source.origin, seg.origin,
-                                                   GEOMETRY_TOLERANCE_MM):
-        problems.append(Problem(
-            ERROR, "geometry_origin",
-            f"The segmentation origin {list(seg.origin)} does not match the "
-            f"source volume {list(source.origin)}.",
-        ))
-    return problems
-
-
-def blocking(problems) -> list:
-    """Only the problems that must stop a submission."""
-    return [p for p in problems if p.level == ERROR]
-
-
-def summarise(problems) -> str:
-    """Multi-line text for a Qt label or an HTTP error body."""
-    if not problems:
-        return "No problems found."
-    return "\n".join(f"- {p.message}" for p in problems)

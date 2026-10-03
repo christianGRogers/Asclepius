@@ -86,6 +86,10 @@ ignore = [
 # imports genuinely cannot all sit at the top: `src/` must be put on sys.path
 # before `segtrain.events` can be imported at all.
 "slicer/**" = ["E402", "I001", "UP031", "UP032"]
+# Same idiom for the scripts that run *inside* Slicer rather than under pytest:
+# they are read beside the module they diagnose, and matching its formatting is
+# worth more than consistency with the pipeline code they never touch.
+"scripts/diagnose-*.py" = ["E402", "UP031", "UP032"]
 # `.format()` over f-strings in the tests too: the two suites that matter most
 # here read the Slicer module and mirror its idiom, and a test that looks like
 # the code it checks is easier to trust.

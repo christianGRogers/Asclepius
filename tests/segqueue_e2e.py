@@ -64,15 +64,6 @@ def refuses(name, call, expectText=''):
     return check(name, False, 'the server ACCEPTED it')
 
 
-def _accepts(submit, meta, geometry=None):
-    """True when a submission goes through. Used where a refusal would be news."""
-    try:
-        submit(meta, geometry)
-        return True
-    except SegQueueError:
-        return False
-
-
 def heading(text):
     print(f'\n{text}\n' + '-' * len(text))
 
@@ -196,36 +187,12 @@ def main(argv=None):
                               geometry=geometry or {'source': GEOMETRY,
                                                     'segmentation': GEOMETRY})
 
-    heading('What is still refused, and what is not')
-    # Validation was removed: every submission is seen by a human reviewer, and a
-    # server that refuses the work cannot be overruled by them. What a client
-    # sends is now its own business -- except for the bytes.
-    for name, meta in (
-        ('an empty segmentation', protocol.SubmissionMeta(
-            checksum=digest, size_bytes=size, annotation_seconds=900.0,
-            voxel_counts={})),
-        ('a stray-mark segmentation', protocol.SubmissionMeta(
-            checksum=digest, size_bytes=size, annotation_seconds=900.0,
-            voxel_counts={s.name: 3 for s in project.segments})),
-        ('a segment outside the protocol', protocol.SubmissionMeta(
-            checksum=digest, size_bytes=size, annotation_seconds=900.0,
-            voxel_counts=dict({s.name: 800 for s in project.segments},
-                              Segment_1=500))),
-    ):
-        try:
-            submitWith(meta)
-            check('%s is accepted' % name, True)
-        except SegQueueError as exc:
-            check('%s is accepted' % name, False, str(exc).splitlines()[0][:110])
-
-    check('a resampled grid is accepted too', _accepts(
-        submitWith, protocol.SubmissionMeta(
-            checksum=digest, size_bytes=size, annotation_seconds=900.0,
-            voxel_counts={s.name: 800 for s in project.segments}),
-        {'source': GEOMETRY,
-         'segmentation': dict(GEOMETRY, spacing=[1.0, 1.0, 1.0])}))
-
-    # The bytes are not a matter of opinion.
+    heading('What is still refused')
+    # Validation was removed, so the only refusal left here is about the bytes:
+    # a truncated transfer is corruption, not an opinion about anatomy. The
+    # things that used to be refused are checked further down, on a case of their
+    # own -- an accepted submission consumes its assignment, so they cannot all
+    # be tried against this one.
     refuses(
         'a corrupted upload is still refused',
         lambda: submitWith(protocol.SubmissionMeta(
@@ -437,15 +404,27 @@ def main(argv=None):
     spare = student.nextCase()
     if check('there is another case to send back', spare is not None):
         student.downloadCase(spare.case_id, volume)
+        # Everything that used to block a submission, in one submission: an
+        # empty required segment, a stray-mark count, a name outside the
+        # protocol, a resampled grid, and a minute's work. All of it accepted --
+        # a human reviewer decides what is good, and a panel that refuses the
+        # work cannot be overruled by one.
         spareResponse = student.submit(
             spare.assignment_id,
             protocol.SubmissionMeta(
-                checksum=digest, size_bytes=size, annotation_seconds=1500.0,
-                voxel_counts={s.name: 700 for s in project.segments}),
+                checksum=digest, size_bytes=size, annotation_seconds=4.0,
+                voxel_counts=dict({s.name: 3 for s in project.segments},
+                                  **{project.segments[0].name: 0,
+                                     'Segment_1': 500})),
             upload('spare.seg.nrrd'),
-            geometry={'source': GEOMETRY, 'segmentation': GEOMETRY})
+            geometry={'source': GEOMETRY,
+                      'segmentation': dict(GEOMETRY, spacing=[1.0, 1.0, 1.0])})
         spareId = spareResponse.get('submissionId')
-        check('the spare case is submitted', bool(spareId))
+        check('everything that used to be refused is now accepted', bool(spareId),
+              'empty + stray + unexpected name + resampled grid + 4 seconds')
+        check('and the server records no warnings about it',
+              spareResponse.get('warnings') == [],
+              str(spareResponse.get('warnings')))
 
         returned = reviewer.returnToPool(spareId, reason='needs a second opinion')
         check('it goes back to the pool', returned.get('returned') is True)

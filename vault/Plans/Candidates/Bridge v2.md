@@ -27,7 +27,7 @@ All three requests in ruling §4 are answered with measurements:
 
 - **End to end:** [[Bridge - On real stage-1 output, the two-stage namer is within 0.01-0.03 tree-F1 of perfect naming]].
 - **Lumen convention:** the same note. The namer was built on thick Girder masks and was never refit,
-  yet it names the thin ImageCAS-X lumen at tF1 0.996 with the ramus excluded. It works under either
+  yet it names the thin ImageCAS-X lumen at tF1 0.990 with the ramus excluded (63 test cases). It works under either
   human decision in §5.1.
 - **Cost:** 0 extra GPU-hours (§7).
 
@@ -43,9 +43,9 @@ to the ostium**. On that metric, naming is a few discrete decisions per tree:
 - where the ramus goes.
 
 A graph namer makes those decisions consistently and for the whole tree. A voxel model makes them voxel
-by voxel. Measured on real stage-1 output, the namer gives up **at most 0.009–0.029 tF1** against
-*perfect* naming of the same lumen (0.884 vs 0.893 with the ramus convention set aside, 0.864 vs 0.893
-with it), with **0 swaps in 9 cases**. So the only open question is empirical: does the master's direct
+by voxel. Measured on real stage-1 output (19 ImageCAS-X test cases, 13 never seen), the namer gives up
+**0.007 tF1 [CI 0.004–0.011]** against *perfect* naming of the same lumen with the ramus convention set
+aside (0.908 vs 0.915), and 0.037 with it (0.881 vs 0.918). The only swap is the ramus convention. So the only open question is empirical: does the master's direct
 model name better than that? The master's validation predictions answer it for free. Rename their
 foreground, score both on tF1, keep whichever wins, decided by a rule written now.
 
@@ -64,7 +64,7 @@ binary mask on the case grid and returns a 4-class map in which every class is a
 1. 26-connected components; TEASAR skeleton (kimimaro, scale 1.5, const 2 mm, anisotropic).
 2. **Naming bridges, 4 mm.** A component whose endpoint lies within 4 mm of another is joined to it in the
    *graph*. Voxels are never added or removed, so this is compatible with A2's "never delete" rule.
-   Measured: needed on real output (c0675: tF1 0.215 → 0.765). One wrong join in 9 cases (c0407 −0.021).
+   Measured: needed on real output (c0675: tF1 0.215 → 0.765). One wrong join in 19 cases (c0407 −0.021).
 3. Left/right by tree centroid. Fused trees (single tree > 800 mm skeleton) are flagged, not named.
 4. Ostium: learned endpoint score + plausibility re-rank (0.957 CV; 0.98 on held-out Girder masks).
    **Change for v2:** when a TotalSegmentator aorta mask exists (Delta is producing them for A1's
@@ -72,7 +72,8 @@ binary mask on the case grid and returns a 4-class map in which every class is a
    and the sealed-test metric use the same ostium definition.
 5. LAD/LCx split (anterior/posterior split score); subtree inheritance.
 6. **Ramus: a switch** (`to_LCx` / `to_LAD` / `pointing`). It is set to whatever rule the humans write
-   (ruling §5.2), before any decision is scored. It moved one case's tF1 by 0.13.
+   (ruling §5.2), before any decision is scored. It moves tF1 by up to 0.15 in a case, and 9 of 19 test
+   cases carry a ramus.
 
 ### 2.3 Three candidate outputs per validation case
 
@@ -114,14 +115,14 @@ softmax, so it stays a candidate until R1 exists.
 All new evidence is on real data:
 
 1. [[Bridge - On real stage-1 output, the two-stage namer is within 0.01-0.03 tree-F1 of perfect naming]]
-   — **new, end to end.** Real stage-1 output on ImageCAS-X test cases:
-   - tF1 @ 1.5 mm: namer 0.864, oracle naming 0.893.
-   - With the ramus excluded: namer 0.884 vs 0.893.
-   - On the 4 never-seen cases: −0.010.
-   - 0 swaps.
-   - Without bridges: 0.805.
-   - On the reference lumen: 0.972, or 0.996 with the ramus excluded.
-   - The cuts come from stage 1 and are identical in both arms.
+   — **new, end to end.** Real stage-1 output on 19 ImageCAS-X test cases (13 never seen):
+   - tF1 @ 1.5 mm: namer 0.881, oracle naming 0.918.
+   - With the ramus excluded: namer 0.908 vs 0.915; paired gap −0.007, CI [−0.011, −0.004]. On the
+     13 never-seen cases the gap is the same, −0.007.
+   - 1 swap (the ramus, also present on the reference lumen).
+   - Without bridges: 0.853.
+   - On the reference lumen of 63 test cases: 0.981, or 0.990 with the ramus excluded, never refit.
+   - The cuts come from stage 1 and are scored alike in both arms.
 2. [[Bridge - A rule-based labeller names LM, LAD, LCx and RCA on our binary masks]] — Round 1, held out on
    Girder masks: 94.9 % of cases with all four classes ≥ 0.8; 98.9 % pooled voxel agreement.
 3. [[Atlas - The rule labeller disagrees with the projected proxy on 0.3 percent of voxels, all at the carina]]
@@ -157,8 +158,8 @@ All new evidence is on real data:
   construction. They are complementary: run A2 first, then R/H on its output. Delta's E8 counted 17 of 22
   real gaps ≤ 4 mm. My naming bridges are exactly the "implemented bridging step evaluated on real
   predictions" that the ruling asked of Delta, but **for naming**. Measured, including the one false join.
-- **Crucible (option A, thin lumen).** The namer is convention-agnostic: 0.996 tF1 on the thin reference
-  lumen with the ramus excluded, never refit. It serves either human decision.
+- **Crucible (option A, thin lumen).** The namer is convention-agnostic: 0.990 tF1 on the thin reference
+  lumen of 63 test cases with the ramus excluded, never refit. It serves either human decision.
 - **v1.** It dropped: the separate binary model, the comparator arm (~430 h), the patch-context
   argument, and Dice as the deciding metric. It kept: the namer, the ostium model, bridging, and the
   "decide by measurement" rule.
@@ -181,3 +182,12 @@ All new evidence is on real data:
 - **Ramus is now an explicit switch.**
 - **Aorta-contact ostium** preferred when a mask exists.
 - **H (hybrid tree decoding of D's softmax) added** as an unmeasured candidate.
+
+## 9. Pending (stated so the judge can discount it)
+
+- **End-to-end sample.** 19 cases. Two more queued cases (c0041, c0907) were not run: c0041 was
+  OOM-killed on the shared machine, and a container restart stopped the queue. The thin-lumen naming
+  ceiling covers 63 of the 160 ImageCAS-X test cases, interrupted by the same restart. Both runs can be
+  resumed (`e2e.py`, `ceiling.py` skip finished cases).
+- **Not measured yet:** H (needs real 4-class softmax), the aorta-contact ostium preference (needs aorta
+  masks for more cases), and the behaviour of R on the master's own predictions (needs R1).

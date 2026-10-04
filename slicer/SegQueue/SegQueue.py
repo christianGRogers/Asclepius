@@ -1891,15 +1891,25 @@ class SegQueueWidget(ScriptedLoadableModuleWidget):
         layout.addLayout(controls)
 
         self.reviewTable = qt.QTableWidget()
-        # Six columns rather than seven. "Attempt" had a column of its own
-        # and was "1" on almost every row; it is now a suffix on the state,
-        # and only when it is not the first attempt -- which is the only time
-        # anybody looks for it. Seven columns did not fit the dock, and the
-        # table was read through a horizontal scrollbar.
-        self.reviewTable.setColumnCount(6)
+        # Five columns rather than the original seven, because the dock is
+        # narrow and the case name is the one thing every row is looked up
+        # by -- it gets whatever width it needs and the rest give way.
+        #
+        # "Attempt" was a column of its own and read "1" on almost every
+        # row; it is a suffix on the state now, and only when it is not the
+        # first attempt, which is the only time anybody looks for it.
+        # "Flags" held whole sentences -- "mean Dice 0.62 against the
+        # reference" -- in forty pixels, so it was never once readable. It
+        # is a mark against the state and the sentence in the row's tooltip.
+        self.reviewTable.setColumnCount(5)
         self.reviewTable.setHorizontalHeaderLabels(
-            ["Case", "Annotator", "State", "Submitted", "Subs", "Flags"])
-        _tidyTable(self.reviewTable, [52, 76, 96, 106, 34, 40], 190)
+            ["Case", "Annotator", "State", "Submitted", "#"])
+        # "#" rather than "Subs": the column holds a single digit, and the word
+        # was forty pixels wide to label it -- forty the case name wanted.
+        header = self.reviewTable.horizontalHeaderItem(4)
+        if header is not None:
+            header.setToolTip("How many submissions have been made on this case.")
+        _tidyTable(self.reviewTable, [104, 70, 110, 78, 26], 190)
         self.reviewTable.itemSelectionChanged.connect(self.onReviewRowChanged)
         layout.addWidget(self.reviewTable)
 
@@ -2045,6 +2055,9 @@ class SegQueueWidget(ScriptedLoadableModuleWidget):
                     state = "{} #{}".format(state, int(attempt))
             except (TypeError, ValueError):
                 pass
+            flagged = assignment.get("flagged") or []
+            if flagged:
+                state = "\u26a0 " + state
             cells = [
                 case.get("caseName", ""),
                 assignment.get("annotator", "") or "--",
@@ -2055,15 +2068,26 @@ class SegQueueWidget(ScriptedLoadableModuleWidget):
                 # this last touched", and the time cost a column of width.
                 _shortTime(assignment.get("submittedAt"))[:10],
                 str(assignment.get("submissionCount", 0)),
-                ", ".join(assignment.get("flagged") or []),
             ]
+            # One tooltip for the whole row: the flags are sentences, and a
+            # reviewer who sees the mark wants them wherever they point.
+            tip = "\n".join(flagged)
             for column, text in enumerate(cells):
                 item = qt.QTableWidgetItem(text)
                 if column == 3:
-                    item.setToolTip(_shortTime(assignment.get("submittedAt")))
+                    item.setToolTip(_shortTime(assignment.get("submittedAt"))
+                                    or tip)
+                elif tip:
+                    item.setToolTip(tip)
                 self.reviewTable.setItem(index, column, item)
-        # No resizeColumnsToContents: it measures every row, and this table
-        # is the whole project. The widths are set once, in _tidyTable.
+        # No resizeColumnsToContents: it measures every row of every column,
+        # and this table is the whole project. Only the case name is sized to
+        # its contents, because it is what every row is looked up by and the
+        # names differ between projects -- `s0042` in one, `imagecas_0001` in
+        # this one, and a width that suits the first clips the second.
+        _fitColumn(self.reviewTable, 0,
+                   [case.get("caseName", "") for case in self._reviewCases],
+                   floor=70, ceiling=150)
         self._refreshAnnotators()
         self._clearHistory()
         self._updateReviewEnabled()
@@ -3046,6 +3070,33 @@ def _separator():
     return line
 
 
+def _fitColumn(table, column, texts, floor, ceiling):
+    """Widen one column to the longest string it will actually hold.
+
+    The alternative, ``resizeColumnsToContents``, lays out every row of
+    every column; this measures one string. The longest of a thousand case
+    names is found by comparing strings, which costs nothing, and only that
+    one is handed to the font.
+
+    Fixed widths were wrong here for a reason worth keeping: they were
+    chosen against the names in a test fixture, and the real project's are
+    `imagecas_0001` -- half as wide again, and clipped on every row.
+    """
+    longest = ""
+    for text in texts:
+        if len(text) > len(longest):
+            longest = text
+    try:
+        metrics = qt.QFontMetrics(table.font)
+        try:
+            width = metrics.horizontalAdvance(longest)
+        except AttributeError:  # pragma: no cover - Qt < 5.11
+            width = metrics.width(longest)
+        table.setColumnWidth(column, min(ceiling, max(floor, width + 14)))
+    except Exception:  # pragma: no cover - no font metrics available
+        table.setColumnWidth(column, floor)
+
+
 def _tidyTable(table, widths, minimumHeight):
     """The look both tables in the panel share.
 
@@ -3055,10 +3106,11 @@ def _tidyTable(table, widths, minimumHeight):
     affordable for the ten rows in the history table and not for the thousand
     in the case list.
 
-    Every column gets a width, the last one included. ``stretchLastSection``
-    grows the last column into space left over but never shrinks it, so leaving
-    it at the default 100px pushed the table past the edge of the dock and put a
-    horizontal scrollbar under a list that fits.
+    Every column gets a width, the last one included -- any the caller leaves
+    out get a narrow default rather than Qt's 100px. ``stretchLastSection``
+    grows the last column into space left over but never shrinks it, so one
+    unsized column pushes the whole table past the edge of the dock and puts a
+    horizontal scrollbar under a list that would otherwise fit.
     """
     table.setSelectionBehavior(qt.QAbstractItemView.SelectRows)
     table.setSelectionMode(qt.QAbstractItemView.SingleSelection)
@@ -3073,8 +3125,9 @@ def _tidyTable(table, widths, minimumHeight):
         header = table.horizontalHeader()
         header.setStretchLastSection(True)
         header.setHighlightSections(False)
-        for column, width in enumerate(widths):
-            table.setColumnWidth(column, width)
+        for column in range(table.columnCount):
+            table.setColumnWidth(
+                column, widths[column] if column < len(widths) else 44)
     except AttributeError:  # pragma: no cover - a Qt without these accessors
         pass
     return table

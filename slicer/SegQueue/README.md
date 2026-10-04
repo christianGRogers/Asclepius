@@ -523,11 +523,23 @@ said "Draft saved."
 **Submit case**, **Open submission**, **Log in**. Every button used to look the
 same, so a section read as a wall of controls with no way in.
 
-*The tables fit the dock.* Both had a horizontal scrollbar and clipped columns.
-The case list drops its **Attempt** column — "1" on nearly every row — and
-puts the number on the state instead (`in progress #2`), only when it is not the
-first attempt. Neither table calls `resizeColumnsToContents` any more: it
-measures every row, and that table is the whole project.
+*The tables fit the dock, and the case name is readable in full.* Both had a
+horizontal scrollbar and clipped columns, and the case list is looked up by name
+— so the **Case** column is now sized to the longest name actually in the
+project, which is `imagecas_0001` here and `s0042` elsewhere. A fixed width
+suits one and clips the other.
+
+The room comes from two columns that were not earning it. **Attempt** read "1" on
+nearly every row and is a suffix on the state now (`in progress #2`), shown only
+when it is not the first attempt. **Flags** held whole sentences — "mean Dice
+0.62 against the reference" — in forty pixels, so it was never once readable;
+a flagged row carries ⚠ on its state and the sentences in its tooltip, where
+they can be read. And the **Subs** heading cost forty pixels to label a column of
+single digits, so it is **#**, with the words in the header's tooltip.
+
+Neither table calls `resizeColumnsToContents` any more: it measures every row of
+every column, and that table is the whole project. Only the case name is measured,
+from the strings rather than from the layout.
 
 *Renamed, for what they do:* **Validate & submit** is **Submit case** (nothing
 has been validated since 0.12.0), **Log out and purge** is **Log out**, **Open

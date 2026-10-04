@@ -89,6 +89,8 @@ CK = OUT + '/ckpt.pt'
 if os.path.exists(CK):  # resume (container restarts)
     ck = torch.load(CK); net.load_state_dict(ck['net']); opt.load_state_dict(ck['opt']); start = ck['it']
     rng = np.random.default_rng(SEED + start); print('resumed', start, file=log, flush=True)
+if os.path.exists(OUT + '/net.pt'):  # training already finished: inference only
+    net.load_state_dict(torch.load(OUT + '/net.pt')); start = ITERS
 for it in range(start, ITERS):
     if it % 100 == 0 and it > start:
         torch.save({'net': net.state_dict(), 'opt': opt.state_dict(), 'it': it}, CK)
@@ -97,7 +99,7 @@ for it in range(start, ITERS):
     x = torch.from_numpy(np.stack([a for a, _ in b])[:, None]); y = torch.from_numpy(np.stack([c for _, c in b]))
     l = loss_fn(net(x), y); opt.zero_grad(); l.backward(); opt.step()
     if it % 100 == 0 or it == 20: print(it, round(float(l.detach()), 4), round(time.time() - t0), 's', file=log, flush=True)
-torch.save(net.state_dict(), OUT + '/net.pt')
+if not os.path.exists(OUT + '/net.pt'): torch.save(net.state_dict(), OUT + '/net.pt')
 
 # sliding-window inference on the test crops (160x160x112 tiles, step 3/4 tile, uniform averaging)
 net.eval()

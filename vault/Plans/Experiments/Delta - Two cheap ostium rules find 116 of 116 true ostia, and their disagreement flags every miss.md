@@ -58,7 +58,7 @@ both rules are within 2.5 mm of the truth.
    would have zeroed RCA tree-F1 in c0526. The cross-check is what makes it safe.
 3. The same rules give the *deployable* anchor for gap bridging (largest predicted components within
    3 mm of the aorta / pools) without any reference — see
-   [[Delta - Gap-centred re-inference plus 3 mm bridging repairs the cut trees and never made a case worse]].
+   [[Delta - Real bridging on 17 nnU-Net predictions gains little alone, half its 3 mm joins are false positives, and gap-centred re-inference makes it work]].
 
 ## Limits
 

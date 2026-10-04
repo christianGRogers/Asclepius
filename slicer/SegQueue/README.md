@@ -488,6 +488,19 @@ The client asks the server how much it already has and continues from there.
 
 ## Version history
 
+**0.12.1** — A reviewer opening someone's submission saw `Segment_1`,
+`Segment_2`, `Segment_3` in colours Slicer picked at random, rather than the
+arteries. A submission is stored as a *labelmap* — integers on the source grid,
+with no names and no colours — because that is the one form whose geometry
+matches the CT voxel for voxel and that `segtrain convert` reads without
+re-registering anything. The label values survive and are the protocol's, so the
+names go back on as the submission is opened.
+
+Not only cosmetic: `exportLabelmap` looks segments up **by name**, so **Save my
+changes & approve** was quietly exporting nothing from a submission it had just
+loaded. The stored form was always correct; it is the way back in that was
+missing.
+
 **0.12.0** — **Removes submission validation entirely.** Empty required segments,
 stray paint clicks, segment names outside the protocol, a resampled or shifted
 grid: all of it is gone, client and server, along with **Check without

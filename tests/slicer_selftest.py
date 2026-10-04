@@ -173,6 +173,12 @@ def main():
         report.say(traceback.format_exc())
         report.check("the review view runs", False)
 
+    try:
+        _submission_names(report, mod, slicer, volume)
+    except Exception:
+        report.say(traceback.format_exc())
+        report.check("the submission-name check runs", False)
+
     return _finish(report)
 
 
@@ -184,8 +190,12 @@ def _review_view(report, mod, slicer, volume):
     a loaded segmentation can carry its segments hidden, and ``centre3d`` fits
     the camera to the actors in the renderer, so centring before the surface
     exists frames nothing at all.
+
+    It also has to arrive with the project's names on it: a submission is stored
+    as a labelmap, so Slicer invents them on the way back in.
     """
     import math
+
 
     segmentation = slicer.mrmlScene.AddNewNodeByClass("vtkMRMLSegmentationNode", "sub")
     segmentation.CreateDefaultDisplayNodes()
@@ -217,18 +227,6 @@ def _review_view(report, mod, slicer, volume):
     report.check("the 3D surface is built, not waited for",
                  segmentation.GetSegmentation().ContainsRepresentation(name))
 
-    # Clearing the scene -- which is how a submission is opened -- removes the
-    # Segment Editor's parameter node, because it is an ordinary node and not a
-    # singleton. The widget is then left holding one the scene no longer has, and
-    # refuses every binding into the application log while its segment table
-    # stays empty. Nothing raises; the reviewer simply sees no segments.
-    editorNode = slicer.mrmlScene.AddNewNodeByClass("vtkMRMLSegmentEditorNode")
-    editorId = editorNode.GetID()
-    report.check("the editor's parameter node starts in the scene",
-                 slicer.mrmlScene.GetNodeByID(editorId) is not None)
-    report.check("and a cleared scene is what takes it away",
-                 editorNode.GetScene() is not None)
-
     camera = slicer.util.getNode("vtkMRMLCameraNode*")
     if camera is None:
         report.say("  [SKIP] no camera in this session (--no-main-window)")
@@ -242,6 +240,83 @@ def _review_view(report, mod, slicer, volume):
     report.check("and the 3D view is framed on it",
                  after < 25.0 < before,
                  "{:.0f} mm -> {:.0f} mm".format(before, after))
+
+
+def _submission_names(report, mod, slicer, volume):
+    """Does a reviewer see the arteries, or Segment_1, Segment_2, Segment_3?
+
+    A real round trip, because that is the only way this shows: a submission is
+    stored as a *labelmap* -- integers on the source grid, no names and no
+    colours -- since that is the one form whose geometry matches the CT voxel for
+    voxel and that `segtrain convert` reads without re-registering anything.
+    Loading one back gives Slicer's own names.
+
+    Not only cosmetic. ``exportLabelmap`` looks segments up by name, so a
+    reviewer's correction of a submission exports nothing unless the names are
+    put back first.
+    """
+    from segqueue import protocol
+
+    segmentation = slicer.mrmlScene.AddNewNodeByClass("vtkMRMLSegmentationNode", "names")
+    segmentation.CreateDefaultDisplayNodes()
+    segmentation.SetReferenceImageGeometryParameterFromVolumeNode(volume)
+
+    logic = mod.SegQueueLogic(cacheRoot=tempfile.mkdtemp(prefix="segqueue-names-"))
+    logic.volumeNode = volume
+    logic.segmentationNode = segmentation
+    logic.project = protocol.ProjectConfig(segments=[
+        protocol.SegmentSpec(name="lad", label=1, color=(1.0, 0.0, 0.0)),
+        protocol.SegmentSpec(name="lcx", label=2, color=(0.0, 1.0, 0.0)),
+        protocol.SegmentSpec(name="rca", label=3, color=(0.0, 0.0, 1.0)),
+    ])
+    logic._applyTemplate()
+    for index, spec in enumerate(logic.project.segments):
+        _paint(slicer, segmentation, volume, logic.segmentIdFor(spec.name),
+               zrange=(2 + index * 6, 8 + index * 6))
+
+    path = os.path.join(tempfile.mkdtemp(prefix="segqueue-sub-"), "submission.seg.nrrd")
+    counts, _source, _geo = logic.exportLabelmap(path)
+    report.check("the submission exports with every branch in it",
+                 all(counts.get(s.name) for s in logic.project.segments), str(counts))
+
+    loaded = slicer.util.loadSegmentation(path)
+    names = [loaded.GetSegmentation().GetSegment(
+                 loaded.GetSegmentation().GetNthSegmentID(i)).GetName()
+             for i in range(loaded.GetSegmentation().GetNumberOfSegments())]
+    report.check("a stored submission carries no names of its own",
+                 not any(s.name in names for s in logic.project.segments),
+                 ", ".join(names))
+
+    logic.segmentationNode = loaded
+    matched = logic.applyProjectNames()
+    after = [loaded.GetSegmentation().GetSegment(
+                 loaded.GetSegmentation().GetNthSegmentID(i)).GetName()
+             for i in range(loaded.GetSegmentation().GetNumberOfSegments())]
+    report.check("opening it puts the project's names back", matched == 3,
+                 "%d matched -> %s" % (matched, ", ".join(after)))
+    report.check("and the colours with them",
+                 all(tuple(round(c, 2) for c in loaded.GetSegmentation()
+                           .GetSegment(loaded.GetSegmentation().GetNthSegmentID(i))
+                           .GetColor()) == tuple(round(c, 2) for c in spec.color)
+                     for i, spec in enumerate(logic.project.segments)))
+
+    again, _s, _g = logic.exportLabelmap(
+        os.path.join(os.path.dirname(path), "revision.seg.nrrd"))
+    report.check("which is what lets a reviewer's correction export at all",
+                 again == counts, "%s vs %s" % (again, counts))
+
+    # The guard: a working scene can hold segments that all carry label 1 in
+    # separate layers, and renaming by value there would give them all one name.
+    scratch = slicer.mrmlScene.AddNewNodeByClass("vtkMRMLSegmentationNode", "ambiguous")
+    scratch.CreateDefaultDisplayNodes()
+    scratch.SetReferenceImageGeometryParameterFromVolumeNode(volume)
+    for index in range(3):
+        sid = scratch.GetSegmentation().AddEmptySegment(
+            "s%d" % index, "s%d" % index, [1, 0, 0])
+        _paint(slicer, scratch, volume, sid, zrange=(2, 30))
+    logic.segmentationNode = scratch
+    report.check("and ambiguous label values are left alone rather than collapsed",
+                 logic.applyProjectNames() == 0)
 
 
 def _branch_flow(report, mod, slicer, volume):

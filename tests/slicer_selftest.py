@@ -227,7 +227,10 @@ def _review_view(report, mod, slicer, volume):
     report.check("the 3D surface is built, not waited for",
                  segmentation.GetSegmentation().ContainsRepresentation(name))
 
-    camera = slicer.util.getNode("vtkMRMLCameraNode*")
+    # GetFirstNodeByClass, not getNode: getNode *raises* when nothing matches,
+    # so the skip below could never be reached and a headless run reported this
+    # section as a failure rather than as skipped.
+    camera = slicer.mrmlScene.GetFirstNodeByClass("vtkMRMLCameraNode")
     if camera is None:
         report.say("  [SKIP] no camera in this session (--no-main-window)")
         return

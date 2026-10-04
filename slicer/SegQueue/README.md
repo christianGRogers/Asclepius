@@ -129,7 +129,7 @@ annotation workstation honest: a pre-filled name means the next person tabs
 past someone else's identity, and only the password stands between them and
 that person's queue. Only the server URL and cache root persist.
 
-**Log out and purge** ends the session *and* deletes every cached case, which is
+**Log out** ends the session *and* deletes every cached case, which is
 what makes a shared teaching workstation safe to walk away from.
 
 ## The loop
@@ -142,8 +142,8 @@ what makes a shared teaching workstation safe to walk away from.
 2. **Divide the mask**, if the case has one. Every branch already holds a copy of
    the whole tree; show one, cut it back to that vessel, hide it, move on. See
    below.
-3. **Validate & submit.** The submission is checked, uploaded in resumable
-   chunks, and the local copy deleted.
+3. **Submit.** The segmentation is uploaded in resumable chunks and the
+   local copy deleted.
 
 If anything about the case is worth passing on — a stent, a motion artefact, an
 ambiguous branch — put it in **Case notes** before you submit. See below.
@@ -155,9 +155,11 @@ which segments are visible. The module deliberately puts nothing in front of it.
 ### The panel's own buttons
 
 * **Get next case** — asks the server for an assignment.
-* **Save draft now** — the segmentation autosaves every two minutes; this forces
+* **Save draft** — the segmentation autosaves every two minutes; this forces
   it.
-* **Submit** — uploads and deletes the local copy. Nothing is checked first:
+* **Submit case** — uploads and deletes the local copy, and takes whatever is
+  still typed in **Case notes** with it as the note for the reviewer. Nothing
+  is checked first:
   every submission is seen by a human reviewer, and a panel that refuses the work
   cannot be overruled by them. The only refusal left is an empty scene, where
   there is no file to upload at all.
@@ -237,12 +239,19 @@ assignment.
   someone else, who would otherwise see the reviewer comment with no idea what
   was tried before.
 - **Unposted text is saved with the case.** Your half-written note goes into the
-  case's manifest on every autosave, on **Save draft now**, and when you leave
+  case's manifest on every autosave, on **Save draft**, and when you leave
   the module or close Slicer — and comes back when you reopen the case. It is
   purged with the case on submit, like everything else local.
-- **The thread refreshes every 90 seconds** while a case is open, and on
-  **Refresh**. Slow on purpose: notes are left for the next person, not chatted
-  in real time, and every poll is thirty machines against one small server.
+- **The thread refreshes every 90 seconds** while a case is open, and when a
+  case is opened. Slow on purpose: notes are left for the next person, not
+  chatted in real time, and every poll is thirty machines against one small
+  server. There is no refresh button; there was one, and it was pressed by
+  people who had just opened the case and so already had the thread.
+- **One box, two destinations.** **Post** puts the text in the thread now, for
+  whoever opens the case next. Leaving it unposted and submitting sends it with
+  the submission instead, as the note the reviewer reads. The panel used to
+  have a second note box in **Submit** for that, which meant choosing between
+  two boxes before writing a sentence; people wrote in whichever was nearer.
 
 Visibility is "anyone who has ever held this case, plus reviewers". An annotator
 who has never seen a case cannot read remarks about it — the thread names
@@ -270,20 +279,20 @@ months later.
 
 Then, with a submission selected:
 
-* **Open selected submission** — downloads the segmentation and its source
+* **Open submission** — downloads the segmentation and its source
   volume and loads both. Takes the highlighted history row, so you can open an
   older attempt and compare it against what replaced it; with no history row
   highlighted it opens the case's latest.
 * **Approve** — accept it as it stands. Approval is the only state the training
   export selects.
-* **Save my changes & approve** — upload whatever is now in the scene as *your*
+* **Save changes & approve** — upload whatever is now in the scene as *your*
   corrected version and approve that. Edit it in the Segment Editor first; this
   is the fast path for a submission that is nearly right.
 * **Return to pool** — hand the case back so somebody else gets it.
-* **Open case image** — loads the case's own volume and whatever masks ship with
+* **Image only** — loads the case's own volume and whatever masks ship with
   it. A case nobody has worked on has no submission to open, and the image is
   what says whether the scan is usable at all.
-* **Take case & segment it** — assigns the case to *you* and opens it as an
+* **Take & segment** — assigns the case to *you* and opens it as an
   ordinary case, so you can segment and submit it yourself. It becomes genuinely
   yours: it shows in your queue, counts against your quota, and is submitted and
   reviewed like anyone else's.
@@ -487,6 +496,43 @@ clears within the hour; installs from the releases page still work meanwhile.
 The client asks the server how much it already has and continues from there.
 
 ## Version history
+
+**0.13.0** — The panel, rebuilt. No change to what it does; a change to how
+much of it there is and how it reads.
+
+*Colour comes from the running theme.* Captions were `#5a5f66` and the reviewer's
+comment `#8a3b00`, both chosen against a white background. The workstations run
+**Dark Slicer**, where those are very nearly the background itself — so the
+caption under the submission history, the one that explains that nothing is ever
+overwritten, had been effectively invisible on every machine using it. Every
+colour is now picked from the palette Slicer is actually drawing with.
+
+*One note box, not two.* There was one in **Case notes** for the thread and one
+in **Submit** for the reviewer, so writing a sentence began with choosing which
+box it belonged in, and it was written in whichever was nearer. There is one now.
+**Post** puts it in the thread; leaving it unposted and submitting sends it to
+the reviewer with the case.
+
+*Gone:* the notes **Refresh** button (the thread refreshes on its own and on
+opening a case, and the button was pressed by people who had just opened one);
+the framed **Reviewer asked for changes** box, now a single tinted line; and the
+label that used to carry validation findings, which since 0.12.0 had only ever
+said "Draft saved."
+
+*One primary action per section*, in the accent colour — **Get next case**,
+**Submit case**, **Open submission**, **Log in**. Every button used to look the
+same, so a section read as a wall of controls with no way in.
+
+*The tables fit the dock.* Both had a horizontal scrollbar and clipped columns.
+The case list drops its **Attempt** column — "1" on nearly every row — and
+puts the number on the state instead (`in progress #2`), only when it is not the
+first attempt. Neither table calls `resizeColumnsToContents` any more: it
+measures every row, and that table is the whole project.
+
+*Renamed, for what they do:* **Validate & submit** is **Submit case** (nothing
+has been validated since 0.12.0), **Log out and purge** is **Log out**, **Open
+selected submission** is **Open submission**, **Open case image** is **Image
+only**, **Take case & segment it** is **Take & segment**.
 
 **0.12.1** — A reviewer opening someone's submission saw `Segment_1`,
 `Segment_2`, `Segment_3` in colours Slicer picked at random, rather than the

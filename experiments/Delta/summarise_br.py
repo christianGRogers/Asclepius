@@ -2,7 +2,11 @@
 import json, sys
 from collections import defaultdict
 import numpy as np
-rows = [json.loads(l) for l in open(sys.argv[1])]
+rows = [json.loads(l) for f in sys.argv[1:] for l in open(f)]
+last = {}
+for r in rows:  # later files supersede earlier rows for the same case and gap
+    last[(r['case'], r['gap'])] = r
+rows = list(last.values())
 by = defaultdict(list)
 for r in rows:
     by[r['gap']].append(r)

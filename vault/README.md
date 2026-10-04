@@ -10,6 +10,16 @@ in `configs/`, and anything an operator follows belongs in `docs/`.
 
 ## Notes
 
+- **[[Plans/README|Plan tournament]]** — where the training plan is now decided:
+  competing candidate plans backed by experiments on the real case data, a judge
+  that rules on them, the [[Master plan]] currently in force, and every plan
+  version ever submitted. Start here.
+
+On 2026-10-04 the vault was pruned to the goal — a four-class (LM, LAD, LCx,
+RCA) model trained on 1000 cases our labelling team annotates. Notes on running
+the annotation programme, the 14-class schema debate, publication checklists,
+regulation and licensing were removed; they remain in git history.
+
 - **[[Training plan]]** — the method for the multiclass coronary model: what is
   decided, the reasoning, and the evidence. The repository's README carries a
   short summary and points here.

@@ -322,7 +322,14 @@ test until it exists: the 160 ImageCAS-X test cases in the D0 convention.
 
 **Against Bridge (binary → rules).** The ruling found the patch-context argument refuted at 128 mm. The remaining
 question is whether rules name a predicted tree better than the network does. P3 answers that on the same val
-predictions, so the master contains Bridge's best version at zero extra GPU cost and no 360 H100-h stage-1 arm.
+predictions, so the master contains Bridge's best version at zero extra GPU cost and no 360 H100-h stage-1 arm. Bridge's new end-to-end note supports this design rather than a second stage
+([[Bridge - On real stage-1 output, the two-stage namer is within 0.01-0.03 tree-F1 of perfect naming]]). On 9
+real predictions, rules came within 0.01–0.03 tF1 of oracle naming, and the cut trees were cut by stage 1, not by
+the namer. Two things follow:
+- the namer cannot exceed oracle naming of the *same* lumen, so the route that yields the better lumen and tree
+  connectivity wins;
+- that stage 1 was the released small-patch binary model (48 × 56 × 56 mm), not the master's 128 mm model.
+Both routes therefore end in the master's P3 comparison: master lumen, model names vs rule names, scored by tF1.
 
 **Against Crucible (expert lumen, 14-class).** Its convention finding is D0/option A here, with the same re-seeding
 route. Its 14-class head is not adopted (§2.1: D0 makes it unnecessary, and it is unmeasured). Self-training on the

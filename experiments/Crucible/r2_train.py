@@ -84,8 +84,14 @@ def loss_fn(logit, y):
 
 
 net = UNet(NC); opt = torch.optim.Adam(net.parameters(), 1e-3, weight_decay=1e-5)
-log = open(OUT + '/train.log', 'a'); t0 = time.time()
-for it in range(ITERS):
+log = open(OUT + '/train.log', 'a'); t0 = time.time(); start = 0
+CK = OUT + '/ckpt.pt'
+if os.path.exists(CK):  # resume (container restarts)
+    ck = torch.load(CK); net.load_state_dict(ck['net']); opt.load_state_dict(ck['opt']); start = ck['it']
+    rng = np.random.default_rng(SEED + start); print('resumed', start, file=log, flush=True)
+for it in range(start, ITERS):
+    if it % 100 == 0 and it > start:
+        torch.save({'net': net.state_dict(), 'opt': opt.state_dict(), 'it': it}, CK)
     for g in opt.param_groups: g['lr'] = 1e-3 * (1 - it / ITERS) ** 0.9
     b = [sample() for _ in range(2)]
     x = torch.from_numpy(np.stack([a for a, _ in b])[:, None]); y = torch.from_numpy(np.stack([c for _, c in b]))
@@ -97,6 +103,7 @@ torch.save(net.state_dict(), OUT + '/net.pt')
 net.eval()
 with torch.no_grad():
     for c in test:
+        if os.path.exists(f'{OUT}/{c}_pred4.npy'): continue
         ct = norm(np.load(f'{D}/{c}_ct.npy')); sh = np.array(ct.shape); p = np.array(TILE)
         acc = np.zeros((NC,) + ct.shape, np.float32); cnt = np.zeros(ct.shape, np.float32)
         starts = [sorted(set(list(range(0, max(s - q, 0) + 1, 3 * q // 4)) + [max(s - q, 0)])) for s, q in zip(sh, p)]

@@ -8,7 +8,7 @@ print('cases', len(rows), 'errors', len(err), [e['case'] for e in err][:5])
 for side in ('left', 'right'):
     rs = [r[side] for r in rows if side in r]
     print(f'== {side}: {len(rs)} trees, true start points {sum(x["n_true"] for x in rs)}')
-    for rule in ('thick', 'pool_nearest', 'aorta5', 'aorta_nearest'):
+    for rule in ('thick', 'pool_nearest', 'pool_thick', 'aorta5', 'aorta_nearest'):
         d = [v for x in rs if x.get(rule) for v in x[rule]]
         missing = sum(x['n_true'] for x in rs if not x.get(rule))
         if not d:

@@ -22,6 +22,7 @@ import json
 import sys
 
 import cc3d
+import networkx as nx
 import nibabel as nib
 import numpy as np
 from scipy import ndimage as ndi
@@ -65,8 +66,12 @@ def set_aorta_roots(gt, ao, kind='ts_aorta'):
         de = d_ao[tuple(gt.pts[ends].T)]
         if kind == 'ts_aorta' and (de <= 5.0).any():
             sel = ends[de <= 5.0]
-        else:  # pool proxy contains chambers too: take only the nearest endpoint per tree
-            sel = ends[[int(np.argmin(de))]]
+        else:
+            # pool proxy contains chambers too: among endpoints within 3 mm of the closest one,
+            # take the thickest (median radius over ~20 neighbouring centreline voxels)
+            cand = ends[de <= de.min() + 3.0]
+            rad = lambda u: np.median([gt.r_sk[w] for w in nx.single_source_shortest_path_length(gt.G, u, cutoff=20)])
+            sel = np.array([max(cand, key=rad)])
         roots += [tuple(gt.pts[v]) for v in sel]
     if roots:
         gt.roots = roots

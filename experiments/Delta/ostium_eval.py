@@ -9,6 +9,7 @@ Candidates, computed on the ImageCAS-X reference lumen (this is the ostium tree-
   pool_nearest / pool2 : per tree the endpoint nearest to (all endpoints within 2 mm of) the large
            contrast blood pools (treelib.blood_pool: CT > 200 HU, 3 mm opening, >= 2 cm^3) -- a
            memory-cheap stand-in for the aorta (TotalSegmentator needed ~7 GB RSS here)
+  pool_thick : among endpoints within 3 mm of the pool-nearest one, the thickest (deployed rule)
   thick  : v1 heuristic -- per tree (left = classes LM/LAD/LCx, right = RCA) the skeleton endpoint
            with the largest median radius over ~20 neighbouring centreline voxels (LM end preferred)
   aorta  : per tree, every skeleton endpoint within 5 mm of the TotalSegmentator (fast, 3 mm)
@@ -77,7 +78,10 @@ def run(case, aorta_dir, cl_dir):
         res = dict(n_true=len(S), n_ends=int(len(ends)))
         cands = [('thick', [thick])]
         dp = d_pool[tuple(pts[ends].T)]
-        cands += [('pool_nearest', [ends[int(np.argmin(dp))]]), ('pool2', list(ends[dp <= 2.0]))]
+        pc = ends[dp <= dp.min() + 3.0]
+        rad = lambda u: np.median([r_sk[w] for w in nx.single_source_shortest_path_length(G, u, cutoff=20)])
+        cands += [('pool_nearest', [ends[int(np.argmin(dp))]]), ('pool2', list(ends[dp <= 2.0])),
+                  ('pool_thick', [max(pc, key=rad)])]
         res['n_pool2_ends'] = int((dp <= 2.0).sum())
         if d_ao is not None:
             de = d_ao[tuple(pts[ends].T)]

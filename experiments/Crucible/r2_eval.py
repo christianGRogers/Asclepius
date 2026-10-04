@@ -13,6 +13,8 @@ D = SCR + '/work/Crucible/r2data'; P = SCR + '/work/Crucible/r2pred'
 TERR = np.zeros(15, np.uint8); TERR[[1]] = 1; TERR[[2, 4, 5]] = 2; TERR[[3, 6, 7, 12, 13]] = 3; TERR[[9, 10, 11]] = 4
 meta = json.load(open(D + '/meta.json')); test = sorted(c for c, v in meta.items() if v['test'])
 S26 = np.ones((3, 3, 3))
+import os
+REF = os.environ.get('REF', 'thin')  # reference convention: thin (ICX lumen) or thick (Girder proxy)
 
 
 def thin4(lab):
@@ -73,10 +75,11 @@ def score(ref, p4, sp, refsk, rts, tol):
 out = []
 for run in sys.argv[1:]:
     for c in test:
-        ref = thin4(np.load(f'{D}/{c}_lab.npy')); sp = np.array(meta[c]['spacing'])
+        lab0 = np.load(f'{D}/{c}_lab.npy')
+        ref = ((lab0 >> 4) & 7).astype(np.uint8) if REF == 'thick' else thin4(lab0); sp = np.array(meta[c]['spacing'])
         p4 = drop_small(np.load(f'{P}/{run}/{c}_pred4.npy'))
         refsk = skeletonize(ref > 0); rts = roots(ref, refsk, sp)
-        row = {'run': run, 'case': c}
+        row = {'run': run, 'case': c, 'ref': REF}
         for tol in (0.0, 1.5):
             s = score(ref, p4, sp, refsk, rts, tol)
             row[f'tf1@{tol}'] = float(np.mean([v['tf1'] for v in s.values()]))
@@ -93,4 +96,4 @@ for run in sys.argv[1:]:
         # 'cut' = some class keeps < 80 % of its unrooted recall once rooting is required (at 1.5 mm)
         row['cut'] = bool(any(v['rec'] < 0.8 * v['rec_unrooted'] for v in s.values() if v['rec_unrooted'] > 0.2))
         out.append(row); print(json.dumps(row), flush=True)
-json.dump(out, open(P + '/eval_' + '_'.join(sys.argv[1:]) + '.json', 'w'))
+json.dump(out, open(P + f'/eval_ref{REF}_' + '_'.join(sys.argv[1:]) + '.json', 'w'))

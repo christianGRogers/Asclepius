@@ -15,7 +15,7 @@ TGT = {'thin4': 'thin4', 'thin14': 'icx14', 'thick4': 'thick4'}[ARM]
 NC = 15 if ARM == 'thin14' else 5
 TERR = np.zeros(15, np.uint8); TERR[[1]] = 1; TERR[[2, 4, 5]] = 2; TERR[[3, 6, 7, 12, 13]] = 3; TERR[[9, 10, 11]] = 4
 PATCH = (80, 80, 56)
-TILE = (160, 160, 112)  # inference tile (fully convolutional), step 3/4
+TILE = PATCH  # inference tile = training patch: InstanceNorm statistics depend on tile size (a 160x160x112 tile broke inference)
 meta = json.load(open(D + '/meta.json'))
 train = sorted(c for c, v in meta.items() if not v['test']); test = sorted(c for c, v in meta.items() if v['test'])
 rng = np.random.default_rng(SEED); torch.manual_seed(SEED)
@@ -101,14 +101,14 @@ for it in range(start, ITERS):
     if it % 100 == 0 or it == 20: print(it, round(float(l.detach()), 4), round(time.time() - t0), 's', file=log, flush=True)
 if not os.path.exists(OUT + '/net.pt'): torch.save(net.state_dict(), OUT + '/net.pt')
 
-# sliding-window inference on the test crops (160x160x112 tiles, step 3/4 tile, uniform averaging)
+# sliding-window inference on the test crops (training-patch tiles, step 1/2, uniform averaging)
 net.eval()
 with torch.no_grad():
     for c in test:
         if os.path.exists(f'{OUT}/{c}_pred4.npy'): continue
         ct = norm(np.load(f'{D}/{c}_ct.npy')); sh = np.array(ct.shape); p = np.array(TILE)
         acc = np.zeros((NC,) + ct.shape, np.float32); cnt = np.zeros(ct.shape, np.float32)
-        starts = [sorted(set(list(range(0, max(s - q, 0) + 1, 3 * q // 4)) + [max(s - q, 0)])) for s, q in zip(sh, p)]
+        starts = [sorted(set(list(range(0, max(s - q, 0) + 1, q // 2)) + [max(s - q, 0)])) for s, q in zip(sh, p)]
         for a in starts[0]:
             for bb in starts[1]:
                 for cc in starts[2]:

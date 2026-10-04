@@ -18,7 +18,7 @@ from skimage.morphology import skeletonize
 
 SCR = '/tmp/claude-0/-home-user-Asclepius/1b43aea1-ed14-5dd0-84ee-25f776047e09/scratchpad'
 sys.path.insert(0, SCR + '/tools')
-from girder import mask_path  # noqa: E402
+from girder import mask_path, ct_path  # noqa: E402
 
 OFFS = [(a, b, c) for a in (-1, 0, 1) for b in (-1, 0, 1) for c in (-1, 0, 1) if (a, b, c) != (0, 0, 0)]
 
@@ -242,3 +242,24 @@ def load_icx(case, margin_mm=6.0, convention='subtree'):
     else:
         m = lab > 0
     return m, lab, raw, sp, lo, ''.join(nib.aff2axcodes(img.affine))
+
+
+# ---------------------------------------------------------------- blood-pool ostium proxy (round 2)
+def blood_pool(ct, sp, exclude=None, thr_hu=200.0, open_mm=3.0, min_cc_mm3=2000.0):
+    """Large contrast-filled pools (aortic root, chambers) from a CT crop, CPU-cheap.
+    Smooth (sigma 0.7 mm), threshold > thr_hu, remove `exclude` (coronary mask) dilated 1 mm,
+    morphological opening with a ball of radius open_mm (removes vessel-calibre structures),
+    keep 26-components >= min_cc_mm3. Used as a stand-in for the TotalSegmentator aorta when
+    memory does not allow it (TotalSegmentator fast used 4.6 + 2.7 GB RSS here)."""
+    g = ndi.gaussian_filter(ct.astype(np.float32), sigma=0.7 / np.asarray(sp))
+    m = g > thr_hu
+    if exclude is not None:
+        m &= ~ndi.binary_dilation(exclude, iterations=2)
+    # opening by a ball of radius open_mm, via two Euclidean distance transforms
+    er = ndi.distance_transform_edt(m, sampling=sp) > open_mm
+    m = ndi.distance_transform_edt(~er, sampling=sp) <= open_mm
+    lab, n = cc3d.connected_components(m, connectivity=26, return_N=True)
+    if n == 0:
+        return m
+    sz = np.bincount(lab.ravel()) * float(np.prod(sp)); sz[0] = 0
+    return np.isin(lab, np.nonzero(sz >= min_cc_mm3)[0])

@@ -72,7 +72,7 @@ ResEnc L native — LM 0.35, LAD 0.60, LCx 0.64, RCA 0.57.
    LAD-centred patches — Bridge's concern is real for that configuration.
 2. **At 0.5 mm with a 256³ patch it disappears**: the left tree fits in every case, the whole tree in 98 %, and
    97 % of LAD-centred patches contain the LM (99 % contain the LCx, i.e. the bifurcation's other child). At
-   inference, a 256-slice window spans ≥ 93 % of the height of every case (max 277 slices), so every window sees the
+   inference, a 256-slice window spans ≥ 92 % (256/277) of the height of every case (max 277 slices), so every window sees the
    ostia. Bridge's 0.47–0.56 used patches placed uniformly among all positions containing a voxel, ignoring that the
    image itself is barely taller than the patch; with nnU-Net's actual placement the figure is 0.97.
 3. Because 0.5 mm is lossless here ([[Atlas - Resampling to 0.5 mm isotropic loses nothing measurable, 0.7-0.8 mm does]]),

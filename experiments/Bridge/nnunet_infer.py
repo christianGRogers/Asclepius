@@ -1,8 +1,8 @@
-"""E8: real CNN errors.  Run ImageCAS-X's released nnU-Net (binary lumen, 3d_fullres, fold 0,
+"""Bridge R2: verbatim copy of Delta E8 inference (same model, crop, settings).  Run ImageCAS-X's released nnU-Net (binary lumen, 3d_fullres, fold 0,
 checkpoint_best; Zenodo 10.5281/zenodo.21887809 pretrained_weights.zip) on CPU on our cached CTs
 of ImageCAS-X *test* cases (never seen in any fold), and save the foreground probability.
 
-Usage: [FOLD=k] python nnunet_infer.py <model_dir> <out_dir> <tile_step> case [case ...]
+Usage: python nnunet_infer.py <model_dir> <out_dir> <tile_step> case [case ...]
 
 To fit the shared CPU, the CT is cropped to the ImageCAS-X reference tree's bounding box grown by
 ROI_MARGIN_MM (default 10 mm) before inference (false positives far outside the tree are not measured), mirroring TTA
@@ -35,7 +35,7 @@ if __name__ == '__main__':
     pred = nnUNetPredictor(tile_step_size=step, use_gaussian=True, use_mirroring=False,
                            perform_everything_on_device=False, device=torch.device('cpu'),
                            verbose=False, verbose_preprocessing=False, allow_tqdm=False)
-    pred.initialize_from_trained_model_folder(model_dir, use_folds=(int(os.environ.get('FOLD', '0')),), checkpoint_name='checkpoint_best.pth')
+    pred.initialize_from_trained_model_folder(model_dir, use_folds=(0,), checkpoint_name='checkpoint_best.pth')
     for case in sys.argv[4:]:
         if os.path.exists(f'{out_dir}/{case}_prob.npy'):
             continue

@@ -126,3 +126,64 @@ def absorb_islands(binary, lab, sp=(1, 1, 1), max_piece_mm3=25.0, max_iter=300):
 
 def relabel(binary, lab, sp, max_piece_mm3=25.0):
     return absorb_islands(binary, segment_vote(binary, lab, sp), sp, max_piece_mm3)
+
+
+# ------------------------------------------------------------------ geometric gap bridging (round 2)
+def _line_voxels(p, q, sp, r_vox=1):
+    """Voxels of a straight tube from p to q (index coords), radius r_vox voxels."""
+    p = np.asarray(p, float); q = np.asarray(q, float)
+    n = int(np.ceil(np.linalg.norm((q - p) * sp) / (0.25 * sp.min()))) + 2
+    pts = np.round(p[None] + (q - p)[None] * np.linspace(0, 1, n)[:, None]).astype(int)
+    if r_vox <= 0:
+        return pts
+    offs = np.array([(a, b, c) for a in range(-r_vox, r_vox + 1) for b in range(-r_vox, r_vox + 1)
+                     for c in range(-r_vox, r_vox + 1) if a * a + b * b + c * c <= r_vox * r_vox])
+    return (pts[:, None, :] + offs[None]).reshape(-1, 3)
+
+
+def bridge(lab, anchors, sp, max_gap_mm=3.0, min_vox=100, r_vox=1):
+    """Join every component (>= min_vox) not connected to an anchor to the nearest anchored
+    component if the gap is <= max_gap_mm, with a straight tube of radius r_vox voxels.
+    lab: uint8 class map (0 = background; binary also works). anchors: bool mask of voxels that
+    define 'connected to an ostium' (e.g. predicted voxels within 3 mm of the aorta).
+    The tube takes the class of the orphan component (its majority class).
+    Returns (new lab, list of bridges as dicts). Iterates until no component can be joined, so
+    chains of pieces are joined one hop at a time (nearest first)."""
+    lab = lab.copy()
+    sp = np.asarray(sp, float)
+    bridges = []
+    for _ in range(200):
+        fg = lab > 0
+        cl, n = cc3d.connected_components(fg, connectivity=26, return_N=True)
+        if n == 0:
+            break
+        sizes = np.bincount(cl.ravel())
+        anc_ids = set(np.unique(cl[anchors & fg])) - {0}
+        if not anc_ids:
+            break
+        anc = np.isin(cl, list(anc_ids))
+        dist, inds = ndi.distance_transform_edt(~anc, sampling=sp, return_indices=True)
+        best = None
+        for k in range(1, n + 1):
+            if k in anc_ids or sizes[k] < min_vox:
+                continue
+            m = cl == k
+            dk = dist[m]
+            j = int(np.argmin(dk))
+            if dk[j] <= max_gap_mm and (best is None or dk[j] < best[0]):
+                p = np.argwhere(m)[j]
+                best = (float(dk[j]), k, p)
+        if best is None:
+            break
+        d, k, p = best
+        q = np.array([inds[a][tuple(p)] for a in range(3)])
+        cls = int(np.bincount(lab[cl == k], minlength=5)[1:].argmax() + 1)
+        vox = _line_voxels(p, q, sp, r_vox)
+        vox = vox[np.all((vox >= 0) & (vox < np.array(lab.shape)), axis=1)]
+        vox = np.unique(vox, axis=0)
+        newv = vox[lab[tuple(vox.T)] == 0]
+        lab[tuple(newv.T)] = cls
+        bridges.append(dict(gap_mm=d, comp_vox=int(sizes[k]), cls=cls, added_vox=int(len(newv)),
+                            p=p.tolist(), q=q.tolist()))
+        del dist, inds
+    return lab, bridges

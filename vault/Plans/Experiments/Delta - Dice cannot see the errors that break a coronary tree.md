@@ -58,7 +58,7 @@ of *rooted, correctly-labelled* centreline recall and labelled centreline precis
 | side subtree → LCx | 1.000 | 0.959 | 1.000 | 1.000 | 0.941 | 0 | 1.000 | 0.941 |
 | D1 → LCx (expert D1) | 1.000 | 0.971 | 1.000 | 1.000 | 0.950 | 0 | 1.000 | 0.950 |
 | LM → LAD | 1.000 | 0.732 | 1.000 | 1.000 | 0.743 | 0 | 1.000 | 0.743 |
-| 5 label islands | 1.000 | 0.982 | 1.000 | 1.000 | 0.983 | 0 | 1.000 | 0.983 |
+| 5 label islands | 1.000 | 0.983 | 1.000 | 1.000 | 0.984 | 0 | 1.000 | 0.984 |
 
 (Per-class component excess: +1 for every label corruption, +10 for islands — the only number that
 "sees" islands as islands.)
@@ -89,7 +89,7 @@ of *rooted, correctly-labelled* centreline recall and labelled centreline precis
 ## Limits
 
 - Five cases; the label rows on 3–4 cases (structures absent in some). Corruptions are idealised:
-  real breaks are not uniform (see [[Delta - A released nnU-Net breaks coronary trees where vessels are thin, and the signal is still there]]
+  real breaks are not uniform (see [[Delta - A released nnU-Net cuts 3 of 8 test trees that Dice scores at 0.84-0.92]]
   for real ones).
 - Ostium = thickest centreline endpoint (LM end preferred); the plan replaces this with the aorta
   contact rule. tree-F1 with no gap tolerance treats a 1-voxel gap as a break.

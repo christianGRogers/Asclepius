@@ -138,6 +138,34 @@ if __name__ == '__main__':
                 r['class_rooted_recall'] = {int(c): float(rooted[gt.lab_sk == c].mean()) for c in (1, 2, 3, 4)
                                             if (gt.lab_sk == c).any()}
                 r['missed'] = missed_stretches(gt, pred, prob)
+                # gap tolerance: treat predicted pieces within d mm of each other as connected
+                # (equivalent to bridging gaps < d mm, as an FFR solver or graph bridging would)
+                sk_pred = T.skeletonise(pred)
+                plab = np.where(pred, gt.lab, 0)
+                add = pred & (gt.lab == 0)
+                if add.any():
+                    _, inds = ndi.distance_transform_edt(gt.lab == 0, sampling=gt.sp, return_indices=True)
+                    plab[add] = gt.lab[tuple(inds)][add]
+                    del inds
+                for d in (1.5, 3.0):
+                    dil = ndi.binary_dilation(pred, P.ball(d / 2, gt.sp))
+                    dl = cc3d.connected_components(dil, connectivity=26)
+                    rcs = {dl[rt] for rt in gt.roots if dl[rt] > 0}
+                    rt_ok = np.isin(dl[tuple(gt.pts.T)], list(rcs)) & inside
+                    tf = []
+                    for c in (1, 2, 3, 4):
+                        g = gt.lab_sk == c
+                        if not g.any():
+                            continue
+                        rec = float((rt_ok & g).sum() / g.sum())
+                        pc = plab[sk_pred] == c
+                        prec = float((gt.lab[sk_pred][pc] == c).mean()) if pc.any() else 0.0
+                        tf.append(2 * rec * prec / (rec + prec) if rec + prec else 0.0)
+                    r[f'rooted_tol{d}'] = float(rt_ok.mean())
+                    r[f'tf1_tol{d}'] = float(np.mean(tf))
+                # false-positive components: predicted components touching no reference voxel
+                fpc = set(np.unique(pl[pred])) - set(np.unique(pl[pred & gt.m]))
+                r['fp_components'] = len(fpc - {0})
                 r.update(case=case, variant=k, ncomp_gt=gt.ncomp, nroots=len(gt.roots),
                          pred_vox=int(pred.sum()), gt_vox=int(gt.m.sum()))
                 for x in ('dice_per_class', 'tf1_per_class'):

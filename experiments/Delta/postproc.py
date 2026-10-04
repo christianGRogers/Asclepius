@@ -3,8 +3,10 @@
 relabel(binary, lab, sp):
   1. Skeletonise the binary prediction; split the skeleton graph into segments at junctions.
   2. Every foreground voxel is owned by its nearest skeleton voxel -> by a segment.
-  3. Island repair along segments: a run of label L on a segment's centreline bounded on both
-     sides by the same label M is relabelled M, together with the L-voxels that run owns.
+  3. Island repair along segments: the shortest run of label L on a segment's centreline that is
+     bounded on both sides by the same label M *and is shorter than both of them* is relabelled M
+     (with the L-voxels it owns); repeated until none is left. (Without the 'shorter than both'
+     condition a trunk between two islands was itself treated as an island -- measured.)
      Label changes at segment ends (true class boundaries) are never touched.
   4. Island absorption (smallest first, iterated): any class piece that is not its class's
      largest piece in its binary tree takes the label it shares most 26-contact with -- but only
@@ -46,17 +48,31 @@ def segment_vote(binary, lab, sp):
     # segment end (a real class boundary, or a junction the skeleton missed) is left alone.
     target = np.zeros(len(pts), np.uint8)
     for s in segs:
-        sl = node_lab[s]
-        runs = []  # (label, start, stop)
-        st = 0
-        for i in range(1, len(sl) + 1):
-            if i == len(sl) or sl[i] != sl[st]:
-                runs.append((int(sl[st]), st, i)); st = i
-        for j in range(1, len(runs) - 1):
-            Lp, L, Ln = runs[j - 1][0], runs[j][0], runs[j + 1][0]
-            if Lp == Ln and L != Lp and Lp > 0:
-                for v in s[runs[j][1]:runs[j][2]]:
-                    target[v] = Lp
+        sl = [int(x) for x in node_lab[s]]
+        changed = True
+        while changed:
+            changed = False
+            runs = []  # [label, start, stop]
+            st = 0
+            for i in range(1, len(sl) + 1):
+                if i == len(sl) or sl[i] != sl[st]:
+                    runs.append([sl[st], st, i]); st = i
+            # the shortest interior run that is shorter than both neighbours and bounded on both
+            # sides by the same label is an island; relabel it and re-scan
+            best = None
+            for j in range(1, len(runs) - 1):
+                Lp, L, Ln = runs[j - 1][0], runs[j][0], runs[j + 1][0]
+                n = runs[j][2] - runs[j][1]
+                if Lp == Ln and L != Lp and Lp > 0 and n < min(runs[j - 1][2] - runs[j - 1][1],
+                                                              runs[j + 1][2] - runs[j + 1][1]):
+                    if best is None or n < best[0]:
+                        best = (n, j, Lp)
+            if best is not None:
+                _, j, Lp = best
+                for i in range(runs[j][1], runs[j][2]):
+                    sl[i] = Lp
+                    target[s[i]] = Lp
+                changed = True
     fg = binary & (lab > 0)
     tv = target[near[fg]]
     lv = lab[fg]

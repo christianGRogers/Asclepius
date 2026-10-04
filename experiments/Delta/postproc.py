@@ -3,11 +3,12 @@
 relabel(binary, lab, sp):
   1. Skeletonise the binary prediction; split the skeleton graph into segments at junctions.
   2. Every foreground voxel is owned by its nearest skeleton voxel -> by a segment.
-  3. Segment vote: each segment takes the majority label of the voxels it owns
-     (voxel-count weighted). A segment cannot be split-labelled internally.
-  4. Island absorption: for each class, 26-connected components of that class other than
-     the largest one in each binary tree are relabelled to the class they share the most
-     face-adjacent voxels with (if any), so each class is one piece per tree.
+  3. Island repair along segments: a run of label L on a segment's centreline bounded on both
+     sides by the same label M is relabelled M, together with the L-voxels that run owns.
+     Label changes at segment ends (true class boundaries) are never touched.
+  4. Island absorption (smallest first, iterated): any class piece that is not its class's
+     largest piece in its binary tree takes the label it shares most 26-contact with, so each
+     class ends as one piece per tree.
 Nothing is added or deleted: only labels of voxels the segmenter found change.
 """
 import cc3d
@@ -36,52 +37,69 @@ def segment_vote(binary, lab, sp):
     _, inds = ndi.distance_transform_edt(idx < 0, sampling=sp, return_indices=True)
     near = idx[tuple(inds)]
     del inds
+    node_lab = lab[tuple(pts.T)]
+    # interior islands along each segment: a run of label L on the centreline bounded on
+    # both sides by runs of the same label M (M != L) is relabelled M. A label change at a
+    # segment end (a real class boundary, or a junction the skeleton missed) is left alone.
+    target = np.zeros(len(pts), np.uint8)
+    for s in segs:
+        sl = node_lab[s]
+        runs = []  # (label, start, stop)
+        st = 0
+        for i in range(1, len(sl) + 1):
+            if i == len(sl) or sl[i] != sl[st]:
+                runs.append((int(sl[st]), st, i)); st = i
+        for j in range(1, len(runs) - 1):
+            Lp, L, Ln = runs[j - 1][0], runs[j][0], runs[j + 1][0]
+            if Lp == Ln and L != Lp and Lp > 0:
+                for v in s[runs[j][1]:runs[j][2]]:
+                    target[v] = Lp
     fg = binary & (lab > 0)
-    sv = seg_of[near[fg]]
+    tv = target[near[fg]]
     lv = lab[fg]
-    ok = sv >= 0
-    nseg = len(segs)
-    counts = np.zeros((nseg, 5), np.int64)
-    np.add.at(counts, (sv[ok], lv[ok]), 1)
-    maj = counts[:, 1:].argmax(1) + 1
+    flip = (tv > 0) & (lv == node_lab[near[fg]])
     out = lab.copy()
-    newv = lv.copy()
-    newv[ok] = maj[sv[ok]]
+    newv = lv.copy(); newv[flip] = tv[flip]
     out[fg] = newv
     return out
 
 
-def absorb_islands(binary, lab):
+def absorb_islands(binary, lab, max_iter=300):
+    """Repeatedly take the smallest class piece that is not its class's largest piece in its
+    tree, and give it the label it shares most contact with. Smallest-first matters: an island
+    that splits a trunk in two must be absorbed before the trunk's halves are judged."""
     out = lab.copy()
     trees = cc3d.connected_components(binary, connectivity=26)
-    for c in (1, 2, 3, 4):
-        cl = cc3d.connected_components(out == c, connectivity=26)
-        n = cl.max()
-        if n <= 1:
-            continue
-        sizes = np.bincount(cl.ravel())
-        # keep the largest class-c piece per tree
-        keep = set()
-        tree_of = {}
-        m = cl > 0
-        tree_of_arr = np.zeros(n + 1, np.int64)
-        tree_of_arr[cl[m]] = trees[m]
-        tree_of = {k: int(tree_of_arr[k]) for k in range(1, n + 1)}
-        for t in set(tree_of.values()):
-            ks = [k for k in tree_of if tree_of[k] == t]
-            keep.add(max(ks, key=lambda k: sizes[k]))
-        objs = ndi.find_objects(cl)
-        for k in range(1, n + 1):
-            if k in keep or objs[k - 1] is None:
+    for _ in range(max_iter):
+        cands = []
+        for c in (1, 2, 3, 4):
+            cl = cc3d.connected_components(out == c, connectivity=26)
+            n = int(cl.max())
+            if n <= 1:
                 continue
-            sl = tuple(slice(max(a.start - 1, 0), a.stop + 1) for a in objs[k - 1])
-            piece = cl[sl] == k
-            osl = out[sl]  # view
-            ring = ndi.binary_dilation(piece) & ~piece & (osl > 0)
-            nb = osl[ring]
-            nb = nb[nb != c]
-            if len(nb):
-                osl[piece] = np.bincount(nb, minlength=5)[1:].argmax() + 1
+            m = cl > 0
+            sizes = np.bincount(cl[m], minlength=n + 1)
+            tree_of = np.zeros(n + 1, np.int64); tree_of[cl[m]] = trees[m]
+            best = {}
+            for k in range(1, n + 1):
+                t = tree_of[k]
+                if t not in best or sizes[k] > sizes[best[t]]:
+                    best[t] = k
+            objs = ndi.find_objects(cl)
+            for k in range(1, n + 1):
+                if k != best[tree_of[k]] and objs[k - 1] is not None:
+                    cands.append((int(sizes[k]), c, k, cl, objs[k - 1]))
+        if not cands:
+            break
+        size, c, k, cl, ob = min(cands, key=lambda x: x[0])
+        sl = tuple(slice(max(a.start - 1, 0), a.stop + 1) for a in ob)
+        piece = cl[sl] == k
+        osl = out[sl]
+        ring = ndi.binary_dilation(piece, np.ones((3, 3, 3), bool)) & ~piece & (osl > 0)
+        nb = osl[ring]; nb = nb[nb != c]
+        if len(nb) == 0:
+            break  # isolated piece of its own tree: nothing to absorb into (should not happen)
+        osl[piece] = np.bincount(nb, minlength=5)[1:].argmax() + 1
     return out
 
 

@@ -2,7 +2,7 @@
 the project's 4 classes (trunk mapping LM=1,LAD=2,LCx=3,RCA=9; side branches -> background) for ALL available
 ImageCAS-X cases. Works on a 2 mm presence grid (max-pool), so it is fast.
 Patch geometries (mm, nibabel x,y,z order) come from planner_sweep.py output.
-Usage: extent_sampling.py <out.jsonl>"""
+Usage: extent_sampling.py <out.jsonl> [reverse]"""
 import os, sys, glob, json
 import numpy as np, nibabel as nib
 SCR = '/tmp/claude-0/-home-user-Asclepius/1b43aea1-ed14-5dd0-84ee-25f776047e09/scratchpad'
@@ -36,6 +36,7 @@ def boxsum(a, k):
             + c[:X, :Y, kz:kz + Z] + c[:X, ky:ky + Y, :Z] + c[kx:kx + X, :Y, :Z] - c[:X, :Y, :Z])
 
 files = sorted(glob.glob(W + '/icx/*.coronary.nii.gz'), key=lambda p: int(os.path.basename(p).split('.')[0]))
+if len(sys.argv) > 2 and sys.argv[2] == 'reverse': files = files[::-1]  # second worker walks from the other end
 with open(out, 'a') as fo:
     for p in files:
         i = int(os.path.basename(p).split('.')[0])

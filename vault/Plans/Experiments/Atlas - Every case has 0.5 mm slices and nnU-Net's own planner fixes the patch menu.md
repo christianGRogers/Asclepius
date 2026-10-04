@@ -25,7 +25,7 @@ updated: 2026-10-04
 - nnU-Net **v2.8.1** (pip, 2026-10-04). Planners: `ExperimentPlanner` (plain U-Net) at 8 / 24 / 40 / 70 GB;
   `nnUNetPlannerResEncM/L/XL`; `ResEncUNetPlanner` at 60 and 75 GB. Each also with
   `overwrite_target_spacing=[0.5,0.5,0.5]`.
-- Script: `experiments/Atlas/planner_sweep.py` (and the header pass inline in the same folder's notes).
+- Scripts: `experiments/Atlas/header_stats.py` (headers → `headers.json`), `experiments/Atlas/planner_sweep.py`.
 
 ## Result
 
@@ -84,7 +84,7 @@ Two source-code facts checked in v2.8.1 while doing this:
    **192 × 320 × 320 = 19.7 M voxels at batch 2** (27 % of the median case), not "256³ at batch 3". The Training
    plan's statements that 70 GB "returns batch 3 at the same patch" hold only at 0.5 mm iso.
 3. The ResEnc presets as shipped (M, L) give patches of 48–64 mm through-plane: too small to hold one coronary tree
-   (see [[Atlas - One 112 mm patch holds a whole coronary tree at native spacing]]). The recipe must set the VRAM
+   (see [[Atlas - A 128 mm patch at 0.5 mm holds the whole tree and the LM in almost every training patch]]). The recipe must set the VRAM
    target explicitly (`-gpu_memory_target`), not take a preset.
 4. The research note [[Training schedule length and early stopping on a 24-hour walltime with job-chain resume]]
    describes loss-based early stopping and "validation every 50 iterations". Neither exists in nnU-Net v2.8.1:

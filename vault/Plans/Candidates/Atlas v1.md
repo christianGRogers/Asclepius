@@ -17,7 +17,7 @@ convention the team will produce** (SegQueue confines annotator edits to our bin
 replace the projected ones case by case; the recipe never changes, only the labels get better. The recipe's key
 choices are measured on this data, not assumed: train at **0.5 mm isotropic** (z is already 0.5 mm in all 1000
 cases; the CT has no signal above 1 cycle/mm, so in-plane 0.35 → 0.5 mm loses nothing measurable) which lets a
-**256³ = 128 mm patch** hold the whole coronary tree in ~97 % of cases and put the LM in view of ~96 % of
+**256³ = 128 mm patch** hold the whole coronary tree in ~98 % of cases and put the LM in view of ~97 % of
 LAD-centred training patches; **override nnU-Net's CT window**, which on lumen labels clips calcium to the
 intensity of contrast; **no mirroring**; default Dice+CE, default sampling (measured to need no class balancing).
 Binary masks are not a training stage in this plan: they are the lumen extent that the labels partition.
@@ -34,7 +34,7 @@ were two-stage, so the challenge shows direct training is sufficient, not that s
 | Set | Cases | Labels used | Role |
 |---|---|---|---|
 | ImageCAS-X train + val | 560 + 80 (`filelist/`) | **Proxy 4-class** (below) until the team label for that case exists, then the team label | Training (val 80 = monitoring fold) |
-| ImageCAS-X test | 160 | Proxy now (interim test only); team labels when they arrive | **Sealed** — never trained on in any run |
+| ImageCAS-X test | 160 | Proxy now (interim test only); team labels when they arrive | 80 of them form the **sealed** test with 20 quality-0 cases; the other 80 are never proxy-trained and join training only once team-labelled |
 | ImageCAS-X excluded (image quality 0: motion 114, step 76, other 10) | 200 | none until team-labelled | 20 of them join the sealed test once labelled; rest join training as labelled |
 
 **Proxy label factory (CPU, no GPU, ~2 h on one cluster node).** For each of the 800 cases: every voxel of our
@@ -79,7 +79,7 @@ only) — see risks.
   — ResEnc L/XL over the original nnU-Net +2.1/+2.6 Dice on KiTS and +0.8/+1.0 on AMOS, the two large
   fine-structure CT datasets in the benchmark; it is the only architecture change their benchmark supports.
 - Why the VRAM target is set explicitly: the shipped presets give patches of 48–80 mm through-plane at native
-  spacing and do not contain one coronary tree (ResEnc L native: whole left tree in one patch in 3 % of cases).
+  spacing and do not contain one coronary tree (ResEnc L native: whole left tree in one patch in 7 % of cases; LM visible to 61 % of LAD-centred patches).
   [[Atlas - A 128 mm patch at 0.5 mm holds the whole tree and the LM in almost every training patch]]
 - Deep supervision on (default). Output 5 channels (bg + 4).
 
@@ -89,8 +89,8 @@ only) — see risks.
   on 13-class TopCoW with nnU-Net) is ablation A4, not default: on ImageCAS it recovered branches but roughly doubled
   connected components ([[Delta - Topology losses on coronaries are verified, and they recover branches but do not connect them]]).
 - **Sampling: nnU-Net default** (33 % foreground-forced patches, class picked uniformly among present classes).
-  With a 128 mm patch a random patch contains each of the four classes in ≥ 0.99 of positions and the whole tree
-  in ~97 % of cases, so the class-balanced sampler proposed in [[Training plan]] §5 has nothing to fix.
+  With a 128 mm patch a random patch contains each of the four classes in ≥ 0.985 of positions and the whole
+  tree fits in 98 % of cases, so the class-balanced sampler proposed in [[Training plan]] §5 has nothing to fix.
 - **Augmentation:** nnU-Net defaults (rotation ±30°, scaling 0.7–1.4, noise, blur, brightness, contrast, gamma,
   low-res simulation) **with mirroring off on every axis** (`nnUNetTrainerNoMirroring`; also disables mirror TTA).
   Mirroring swaps left and right trees; TopCoW's organisers make the same rule for multiclass vessels
@@ -164,7 +164,7 @@ component of class k that touches only class j) is added only if the val fold sh
 |---|---|
 | z = 0.5 mm in all 1000; planner's patch/batch menu for every preset and VRAM target | [[Atlas - Every case has 0.5 mm slices and nnU-Net's own planner fixes the patch menu]] |
 | 0.5 mm iso is lossless for image and labels; 0.7–0.8 mm is not | [[Atlas - Resampling to 0.5 mm isotropic loses nothing measurable, 0.7-0.8 mm does]] |
-| A 128 mm patch holds the tree and puts LM in view of ~96 % of LAD-centred patches; presets do not | [[Atlas - A 128 mm patch at 0.5 mm holds the whole tree and the LM in almost every training patch]] |
+| A 128 mm patch holds the tree (98 %) and puts LM in view of 97 % of LAD-centred patches; presets do not (7 % / 61 %) | [[Atlas - A 128 mm patch at 0.5 mm holds the whole tree and the LM in almost every training patch]] |
 | Default CT window erases fat and saturates calcium on lumen labels | [[Atlas - nnU-Net's automatic CT window on lumen labels flattens 38 percent of the heart box]] |
 | ImageCAS-X exists, CC BY 4.0, ids map to `c{id-1}`, LAD/LCx rule by course | [[Crucible - ImageCAS-X is real and its 800 cases are our cases c(id-1)]] |
 | Team labels will be partitions of our ~3× fatter binary masks; ICX names project onto 86 % of our voxels within 2 mm | `docs/SEGQUEUE.md`; [[Bridge - ImageCAS-X names transfer onto our binary masks, which are three times fatter]] |
@@ -194,7 +194,7 @@ cascade, no largest-component post-processing, no mirroring, ResEnc evaluated. C
 (1) the multiclass model starts on day 0 on 640 proxy-labelled cases instead of a binary model first — the binary
 model would learn the masks' convention well but its only downstream use (seeding annotators) is better served by
 4-class predictions; (2) **0.5 mm isotropic, not native 0.35 mm**: lossless here, and it turns the planner's
-19.7 Mvox native patch (96 × 112 × 112 mm, whole tree in ~65 % of cases) into a 128 mm cube (whole tree ~97 %) at
+19.7 Mvox native patch (96 × 112 × 112 mm, whole tree in 60 % of cases) into a 128 mm cube (whole tree 98 %) at
 lower VRAM; (3) ResEnc from the start, VRAM target set explicitly; (4) fixed CT window — a default-pipeline defect
 the plan does not mention; (5) the class-balanced sampler is unnecessary at this patch size; (6) schedule: there
 is no early stopping in nnU-Net v2 and the 1000-epoch run is ~2–3 links, not "two blocks until early stopping";
@@ -202,8 +202,8 @@ is no early stopping in nnU-Net v2 and the 1000-epoch run is ~2–3 links, not "
 
 **Against a binary-then-naming plan (Bridge's thesis).** The binary stage's strength — learning our masks'
 convention from all 1000 cases — is matched by training on labels that *are* partitions of those masks. The naming
-stage's claimed advantage, seeing the whole tree, is available to a 128 mm patch: 96 % of LAD-centred training
-patches contain the LM, and at inference every window spans ≥ 93 % of the volume's height. Naming rules fitted on
+stage's claimed advantage, seeing the whole tree, is available to a 128 mm patch: 97 % of LAD-centred training
+patches contain the LM, and at inference every 256-slice window spans ≥ 92 % of the volume's height. Naming rules fitted on
 tens of cases and applied after a binary model compound two error sources the second stage cannot correct (a vessel
 the binary model breaks becomes a separately-named fragment). The direct model also gives per-voxel class
 probabilities for review. Bridge's rule-labeller is still useful in this plan — as a second proxy and a QC

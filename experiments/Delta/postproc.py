@@ -7,8 +7,11 @@ relabel(binary, lab, sp):
      sides by the same label M is relabelled M, together with the L-voxels that run owns.
      Label changes at segment ends (true class boundaries) are never touched.
   4. Island absorption (smallest first, iterated): any class piece that is not its class's
-     largest piece in its binary tree takes the label it shares most 26-contact with, so each
-     class ends as one piece per tree.
+     largest piece in its binary tree takes the label it shares most 26-contact with -- but only
+     pieces <= max_piece_mm3 (default 25 mm^3). Larger orphaned pieces are left alone: when the
+     error is the *connection* (e.g. a carina stretch mislabelled), the orphan is usually a correct
+     side branch, and absorbing it would spread the error (measured: 543 -> 1365 wrong voxels on
+     c0039 carina5 without the cap).
 Nothing is added or deleted: only labels of voxels the segmenter found change.
 """
 import cc3d
@@ -64,7 +67,7 @@ def segment_vote(binary, lab, sp):
     return out
 
 
-def absorb_islands(binary, lab, max_iter=300):
+def absorb_islands(binary, lab, sp=(1, 1, 1), max_piece_mm3=25.0, max_iter=300):
     """Repeatedly take the smallest class piece that is not its class's largest piece in its
     tree, and give it the label it shares most contact with. Smallest-first matters: an island
     that splits a trunk in two must be absorbed before the trunk's halves are judged."""
@@ -89,6 +92,8 @@ def absorb_islands(binary, lab, max_iter=300):
             for k in range(1, n + 1):
                 if k != best[tree_of[k]] and objs[k - 1] is not None:
                     cands.append((int(sizes[k]), c, k, cl, objs[k - 1]))
+        vv = float(np.prod(sp))
+        cands = [x for x in cands if x[0] * vv <= max_piece_mm3]
         if not cands:
             break
         size, c, k, cl, ob = min(cands, key=lambda x: x[0])
@@ -103,5 +108,5 @@ def absorb_islands(binary, lab, max_iter=300):
     return out
 
 
-def relabel(binary, lab, sp):
-    return absorb_islands(binary, segment_vote(binary, lab, sp))
+def relabel(binary, lab, sp, max_piece_mm3=25.0):
+    return absorb_islands(binary, segment_vote(binary, lab, sp), sp, max_piece_mm3)

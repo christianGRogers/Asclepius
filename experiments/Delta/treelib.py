@@ -189,3 +189,56 @@ def pseudo_labels(mask, sp, axc, min_sub_mm=15.0):
     info = dict(root=pts[root].tolist(), bif=pts[bif].tolist() if bif is not None else None,
                 lm_len_mm=path_len(G, lm_path), n_left_skel=len(pts))
     return out, info
+
+
+# ---------------------------------------------------------------- ImageCAS-X reference labels
+# ImageCAS-X (Bransby et al., arXiv:2608.30404, Zenodo 10.5281/zenodo.21887809) class ids:
+# 1 LM, 2 LAD, 3 LCx, 4 D1, 5 D2, 6 OM1, 7 OM2, 8 IM, 9 RCA, 10 R-PDA, 11 R-PLA, 12 L-PDA, 13 L-PLA, 14 Other
+# Project 4-class, "subtree" convention: side branches inherit their parent trunk's class.
+# IM (ramus) has no parent trunk; it is put with LCx here (a convention choice, flagged).
+ICX_TO_4 = {1: 1, 2: 2, 4: 2, 5: 2, 3: 3, 6: 3, 7: 3, 8: 3, 12: 3, 13: 3, 9: 4, 10: 4, 11: 4}
+# "trunk-only" convention: only the four named trunks are labelled; side branches are background
+ICX_TRUNK = {1: 1, 2: 2, 3: 3, 9: 4}
+ICX_MAP_FILE = SCR + '/work/Delta/icxmap_copy.json'
+
+
+def icx_path(case):
+    import json
+    import os
+    mp = json.load(open(ICX_MAP_FILE))
+    if case not in mp:
+        return None
+    icx_id = mp[case][0]
+    for d in ('Crucible', 'Bridge', 'Atlas'):
+        for p in (f'{SCR}/work/{d}/icx/ImageCAS-X_dataset/segmentations/{icx_id}.coronary.nii.gz',
+                  f'{SCR}/work/{d}/icx/{icx_id}.coronary.nii.gz'):
+            if os.path.exists(p):
+                return p
+    return None
+
+
+def load_icx(case, margin_mm=6.0, convention='subtree'):
+    """Return (mask bool crop, 4-class labels crop, raw 14-class crop, sp, lo, axcodes)."""
+    p = icx_path(case)
+    img = nib.load(p)
+    sp = np.array(img.header.get_zooms()[:3], float)
+    raw = np.asanyarray(img.dataobj).astype(np.uint8)
+    m = raw > 0
+    idx = [np.nonzero(m.any(axis=tuple(j for j in range(3) if j != k)))[0] for k in range(3)]
+    mv = np.ceil(margin_mm / sp).astype(int)
+    lo = np.maximum([a[0] for a in idx] - mv, 0)
+    hi = np.minimum([a[-1] + 1 for a in idx] + mv, m.shape)
+    sl = tuple(slice(lo[k], hi[k]) for k in range(3))
+    raw = raw[sl]; m = m[sl]
+    lut = np.zeros(256, np.uint8)
+    for k, v in (ICX_TO_4 if convention == 'subtree' else ICX_TRUNK).items():
+        lut[k] = v
+    lab = lut[raw]
+    if convention == 'subtree':
+        rest = m & (lab == 0)  # 'Other' (14): nearest labelled voxel
+        if rest.any():
+            _, inds = ndi.distance_transform_edt(lab == 0, sampling=sp, return_indices=True)
+            lab[rest] = lab[tuple(inds)][rest]
+    else:
+        m = lab > 0
+    return m, lab, raw, sp, lo, ''.join(nib.aff2axcodes(img.affine))

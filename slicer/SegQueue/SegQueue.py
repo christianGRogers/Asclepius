@@ -107,7 +107,7 @@ from SegQueueLib import (
     updater,
 )
 
-__version__ = "0.12.1"
+__version__ = "0.13.0"
 
 #: How often the in-progress segmentation is written to disk. Two minutes is
 #: chosen against the cost of losing work rather than the cost of the write: a
@@ -1194,6 +1194,10 @@ class SegQueueWidget(ScriptedLoadableModuleWidget):
 
         self.logic = SegQueueLogic()
 
+        # Sections sit directly against each other by default, which is what
+        # made six collapsible buttons read as one undifferentiated list.
+        self.layout.setSpacing(10)
+
         # Older versions remembered the username. Drop anything they stored, so
         # upgrading actually stops the autofill instead of merely not adding to
         # it. Harmless when the key is already absent.
@@ -1430,7 +1434,8 @@ class SegQueueWidget(ScriptedLoadableModuleWidget):
         """
         if not notes:
             self.notesBrowser.setHtml(
-                "<span style='color:#888'>No notes on this case yet.</span>")
+                "<span style='color:{}'>No notes on this case yet.</span>".format(
+                    _themeColours()["muted"]))
             return
         blocks = []
         for note in notes:
@@ -1655,30 +1660,39 @@ class SegQueueWidget(ScriptedLoadableModuleWidget):
         self.passwordEdit.setToolTip("Not saved. You log in once per Slicer session.")
         form.addRow("Password:", self.passwordEdit)
 
-        self.loginButton = qt.QPushButton("Log in")
+        self.loginButton = _primary(qt.QPushButton("Log in"))
         self.loginButton.clicked.connect(self.onLogin)
-        self.logoutButton = qt.QPushButton("Log out and purge")
+        # "and purge" was in the label to warn, and warned nobody: it is one
+        # click behind a confirmation that spells out exactly what is deleted.
+        self.logoutButton = qt.QPushButton("Log out")
         self.logoutButton.setToolTip(
             "Logs out and deletes every locally cached case.")
         self.logoutButton.clicked.connect(self.onLogout)
         row = qt.QHBoxLayout()
-        row.addWidget(self.loginButton)
+        row.addWidget(self.loginButton, 1)
         row.addWidget(self.logoutButton)
         form.addRow(row)
 
+        statusRow = qt.QHBoxLayout()
+        # Deliberately not word-wrapped. A wrapping label in a row with a
+        # button gets the row's height from its unwrapped size hint, so the
+        # second line was drawn below the row and clipped. It is kept short
+        # instead, with the long form in the tooltip.
+        self.statusLabel = qt.QLabel("Not logged in.")
+        statusRow.addWidget(self.statusLabel, 1)
+
         # Deliberately here rather than in the update banner: the banner only
         # exists when there is an update, and "am I on the current version?" is
-        # a question people ask when there is not.
-        self.checkUpdateButton = qt.QPushButton("Check for updates")
+        # a question people ask when there is not. Beside the status line and
+        # flat, rather than a full-width button of its own, because it is a
+        # question asked about once a month.
+        self.checkUpdateButton = _link(qt.QPushButton("Check for updates"))
         self.checkUpdateButton.setToolTip(
             "Asks GitHub whether a newer SegQueue has been published. Runs "
             "automatically when you open the module, at most a few times a day.")
         self.checkUpdateButton.clicked.connect(self.onCheckForUpdates)
-        form.addRow(self.checkUpdateButton)
-
-        self.statusLabel = qt.QLabel("Not logged in.")
-        self.statusLabel.setWordWrap(True)
-        form.addRow(self.statusLabel)
+        statusRow.addWidget(self.checkUpdateButton)
+        form.addRow(statusRow)
 
     def _buildCaseSection(self):
         box = ctk.ctkCollapsibleButton()
@@ -1687,27 +1701,34 @@ class SegQueueWidget(ScriptedLoadableModuleWidget):
         layout = qt.QVBoxLayout(box)
         self.caseBox = box
 
-        self.nextButton = qt.QPushButton("Get next case")
+        layout.setSpacing(8)
+
+        self.nextButton = _primary(qt.QPushButton("Get next case"))
         self.nextButton.setToolTip(
             "Ask the server for your next assignment and download it.")
         self.nextButton.clicked.connect(self.onNextCase)
         layout.addWidget(self.nextButton)
 
+        # Which case, and how long it has taken, on one line. They were two
+        # rows with the notes box between them, which put the clock nowhere
+        # near the case it was timing.
+        headerRow = qt.QHBoxLayout()
         self.caseLabel = qt.QLabel("No case open.")
         self.caseLabel.setWordWrap(True)
-        layout.addWidget(self.caseLabel)
+        headerRow.addWidget(self.caseLabel, 1)
 
-        # Only shown for rework. The reviewer's comment is the single most
-        # important thing on screen when it exists, so it gets its own framed,
-        # coloured box rather than a line in a status label.
-        self.reworkBox = qt.QGroupBox("Reviewer asked for changes")
-        reworkLayout = qt.QVBoxLayout(self.reworkBox)
-        self.reworkLabel = qt.QLabel()
+        self.timerLabel = _muted(qt.QLabel("--"))
+        self.timerLabel.setToolTip("Time spent on the case that is open.")
+        headerRow.addWidget(self.timerLabel)
+        layout.addLayout(headerRow)
+
+        # Only shown for rework, and now a tinted line rather than the framed
+        # group box it used to be: the comment is a sentence, and a titled box
+        # around one sentence took more of the panel than the sentence did.
+        self.reworkLabel = _tint(qt.QLabel(), "warn")
         self.reworkLabel.setWordWrap(True)
-        self.reworkLabel.setStyleSheet("QLabel { color: #8a3b00; }")
-        reworkLayout.addWidget(self.reworkLabel)
-        self.reworkBox.setVisible(False)
-        layout.addWidget(self.reworkBox)
+        self.reworkLabel.setVisible(False)
+        layout.addWidget(self.reworkLabel)
 
         # Where the project instructions used to be. They were the same text on
         # every case, read once in week one and then wallpaper; this space is
@@ -1717,10 +1738,14 @@ class SegQueueWidget(ScriptedLoadableModuleWidget):
         self.notesBox = qt.QGroupBox("Case notes")
         notesLayout = qt.QVBoxLayout(self.notesBox)
         notesLayout.setContentsMargins(8, 6, 8, 6)
+        notesLayout.setSpacing(6)
 
         self.notesBrowser = qt.QTextBrowser()
         self.notesBrowser.setMaximumHeight(150)
         self.notesBrowser.setOpenExternalLinks(True)
+        # No frame: it is already inside the group box's frame, and two
+        # nested borders is what made this corner of the panel look busiest.
+        self.notesBrowser.setFrameShape(qt.QFrame.NoFrame)
         notesLayout.addWidget(self.notesBrowser)
 
         noteRow = qt.QHBoxLayout()
@@ -1730,21 +1755,17 @@ class SegQueueWidget(ScriptedLoadableModuleWidget):
         self.noteInput.setToolTip(
             "Everyone who works on this case sees this, with your name on it. "
             "Notes cannot be edited or deleted once posted. Your unposted text "
-            "is saved with the case, so closing Slicer does not lose it.")
+            "is saved with the case, so closing Slicer does not lose it, and "
+            "goes to the reviewer with the case when you submit.")
         self.noteInput.setMaxLength(protocol.NOTE_MAX_CHARS)
         self.noteInput.returnPressed.connect(self.onPostNote)
-        noteRow.addWidget(self.noteInput)
+        noteRow.addWidget(self.noteInput, 1)
 
         self.postNoteButton = qt.QPushButton("Post")
+        self.postNoteButton.setToolTip(
+            "Adds this to the thread now, for whoever opens the case next.")
         self.postNoteButton.clicked.connect(self.onPostNote)
         noteRow.addWidget(self.postNoteButton)
-
-        self.refreshNotesButton = qt.QPushButton("Refresh")
-        self.refreshNotesButton.setToolTip(
-            "Fetch new notes now. This happens on its own every couple of "
-            "minutes while a case is open.")
-        self.refreshNotesButton.clicked.connect(lambda: self.onRefreshNotes(quiet=False))
-        noteRow.addWidget(self.refreshNotesButton)
         notesLayout.addLayout(noteRow)
 
         layout.addWidget(self.notesBox)
@@ -1753,9 +1774,6 @@ class SegQueueWidget(ScriptedLoadableModuleWidget):
         self.progressBar = qt.QProgressBar()
         self.progressBar.setVisible(False)
         layout.addWidget(self.progressBar)
-
-        self.timerLabel = qt.QLabel("Time on this case: --")
-        layout.addWidget(self.timerLabel)
 
     def _buildEditorSection(self):
         box = ctk.ctkCollapsibleButton()
@@ -1786,35 +1804,43 @@ class SegQueueWidget(ScriptedLoadableModuleWidget):
         layout = qt.QVBoxLayout(box)
         self.submitBox = box
 
-        self.noteEdit = qt.QLineEdit()
-        self.noteEdit.setPlaceholderText(
-            "optional note for the reviewer, e.g. 'RCA barely opacified distally'")
-        layout.addWidget(self.noteEdit)
+        layout.setSpacing(8)
 
-        self.saveButton = qt.QPushButton("Save draft now")
+        # There is no note box here any more. There were two -- one in "Case
+        # notes" for the thread and one here for the reviewer -- so writing a
+        # sentence meant first deciding which of them it belonged in, and it
+        # was written in whichever happened to be nearer. One box now, in
+        # "Case notes", and whatever is still typed in it when the case is
+        # submitted travels with the submission too.
+        self.submitButton = _primary(qt.QPushButton("Submit case"))
+        self.submitButton.setToolTip(
+            "Uploads the segmentation and deletes the local copy. Anything "
+            "typed in 'Case notes' goes with it, for the reviewer.")
+        self.submitButton.clicked.connect(self.onSubmit)
+        layout.addWidget(self.submitButton)
+
+        row = qt.QHBoxLayout()
+        self.saveButton = qt.QPushButton("Save draft")
         self.saveButton.setToolTip(
             "Drafts also save automatically every {} minutes.".format(
                 AUTOSAVE_SECONDS // 60))
         self.saveButton.clicked.connect(self.onSaveDraft)
-        layout.addWidget(self.saveButton)
-
-
-        self.submitButton = qt.QPushButton("Validate && submit")
-        self.submitButton.setToolTip(
-            "Uploads the segmentation and deletes the local copy.")
-        self.submitButton.clicked.connect(self.onSubmit)
-        layout.addWidget(self.submitButton)
+        row.addWidget(self.saveButton)
 
         self.releaseButton = qt.QPushButton("Give this case back")
         self.releaseButton.setToolTip(
             "Returns the case to the pool for someone else. Your work on it is "
             "discarded.")
         self.releaseButton.clicked.connect(self.onRelease)
-        layout.addWidget(self.releaseButton)
+        row.addWidget(self.releaseButton)
+        layout.addLayout(row)
 
-        self.problemsLabel = qt.QLabel()
-        self.problemsLabel.setWordWrap(True)
-        layout.addWidget(self.problemsLabel)
+        # Named for what it says now. It was "problemsLabel" and carried the
+        # validation findings; those are gone, and all it reports is whether
+        # the draft went to disk.
+        self.saveStatusLabel = _muted(qt.QLabel())
+        self.saveStatusLabel.setWordWrap(True)
+        layout.addWidget(self.saveStatusLabel)
 
     def _buildReviewSection(self):
         """The submission viewer: every case, what happened to it, and what to do.
@@ -1838,12 +1864,12 @@ class SegQueueWidget(ScriptedLoadableModuleWidget):
         self.layout.addWidget(box)
         self.reviewBox = box
         layout = qt.QVBoxLayout(box)
+        layout.setSpacing(8)
 
+        # The filter first and wide, the refresh after it: choosing what to
+        # look at is the thing done on arrival, and reloading is the thing
+        # done when in doubt.
         controls = qt.QHBoxLayout()
-        self.refreshReviewButton = qt.QPushButton("Refresh")
-        self.refreshReviewButton.clicked.connect(self.onRefreshReview)
-        controls.addWidget(self.refreshReviewButton)
-
         self.reviewFilter = qt.QComboBox()
         # The order is the lifecycle, so the list reads as a progression rather
         # than as an alphabetised set of jargon.
@@ -1856,18 +1882,34 @@ class SegQueueWidget(ScriptedLoadableModuleWidget):
             "'Unassigned' is the cases nobody has been given yet.")
         self.reviewFilter.currentIndexChanged.connect(
             lambda _index: self.onRefreshReview())
-        controls.addWidget(self.reviewFilter)
-        controls.addStretch(1)
+        controls.addWidget(self.reviewFilter, 1)
+
+        self.refreshReviewButton = qt.QPushButton("Refresh")
+        self.refreshReviewButton.setToolTip("Reload the case list.")
+        self.refreshReviewButton.clicked.connect(self.onRefreshReview)
+        controls.addWidget(self.refreshReviewButton)
         layout.addLayout(controls)
 
         self.reviewTable = qt.QTableWidget()
-        self.reviewTable.setColumnCount(7)
+        # Five columns rather than the original seven, because the dock is
+        # narrow and the case name is the one thing every row is looked up
+        # by -- it gets whatever width it needs and the rest give way.
+        #
+        # "Attempt" was a column of its own and read "1" on almost every
+        # row; it is a suffix on the state now, and only when it is not the
+        # first attempt, which is the only time anybody looks for it.
+        # "Flags" held whole sentences -- "mean Dice 0.62 against the
+        # reference" -- in forty pixels, so it was never once readable. It
+        # is a mark against the state and the sentence in the row's tooltip.
+        self.reviewTable.setColumnCount(5)
         self.reviewTable.setHorizontalHeaderLabels(
-            ["Case", "Annotator", "State", "Attempt", "Submitted", "Subs", "Flags"])
-        self.reviewTable.setSelectionBehavior(qt.QAbstractItemView.SelectRows)
-        self.reviewTable.setSelectionMode(qt.QAbstractItemView.SingleSelection)
-        self.reviewTable.setEditTriggers(qt.QAbstractItemView.NoEditTriggers)
-        self.reviewTable.setMinimumHeight(170)
+            ["Case", "Annotator", "State", "Submitted", "#"])
+        # "#" rather than "Subs": the column holds a single digit, and the word
+        # was forty pixels wide to label it -- forty the case name wanted.
+        header = self.reviewTable.horizontalHeaderItem(4)
+        if header is not None:
+            header.setToolTip("How many submissions have been made on this case.")
+        _tidyTable(self.reviewTable, [104, 70, 110, 78, 26], 190)
         self.reviewTable.itemSelectionChanged.connect(self.onReviewRowChanged)
         layout.addWidget(self.reviewTable)
 
@@ -1877,23 +1919,20 @@ class SegQueueWidget(ScriptedLoadableModuleWidget):
         self.historyTable = qt.QTableWidget()
         self.historyTable.setColumnCount(5)
         self.historyTable.setHorizontalHeaderLabels(
-            ["When", "Author", "Role", "Attempt", "Auto score"])
-        self.historyTable.setSelectionBehavior(qt.QAbstractItemView.SelectRows)
-        self.historyTable.setSelectionMode(qt.QAbstractItemView.SingleSelection)
-        self.historyTable.setEditTriggers(qt.QAbstractItemView.NoEditTriggers)
-        self.historyTable.setMinimumHeight(110)
+            ["When", "Author", "Role", "Attempt", "Dice"])
+        _tidyTable(self.historyTable, [112, 72, 62, 48, 50], 110)
         layout.addWidget(self.historyTable)
 
         openRow = qt.QHBoxLayout()
-        self.openReviewButton = qt.QPushButton("Open selected submission")
+        self.openReviewButton = _primary(qt.QPushButton("Open submission"))
         self.openReviewButton.setToolTip(
             "Loads the volume and that segmentation into the scene. Picks the "
             "highlighted row in the history table, or the case's latest "
             "submission if none is highlighted.")
         self.openReviewButton.clicked.connect(self.onOpenReview)
-        openRow.addWidget(self.openReviewButton)
+        openRow.addWidget(self.openReviewButton, 1)
 
-        self.openCaseButton = qt.QPushButton("Open case image")
+        self.openCaseButton = qt.QPushButton("Image only")
         self.openCaseButton.setToolTip(
             "Loads the case's own volume and whatever masks ship with it. For a "
             "case nobody has worked on there is no submission to open, and the "
@@ -1901,7 +1940,7 @@ class SegQueueWidget(ScriptedLoadableModuleWidget):
         self.openCaseButton.clicked.connect(self.onOpenCase)
         openRow.addWidget(self.openCaseButton)
 
-        self.takeCaseButton = qt.QPushButton("Take case && segment it")
+        self.takeCaseButton = qt.QPushButton("Take && segment")
         self.takeCaseButton.setToolTip(
             "Assigns the selected case to you and opens it as an ordinary case, "
             "so you can segment and submit it yourself. It becomes genuinely "
@@ -1913,6 +1952,17 @@ class SegQueueWidget(ScriptedLoadableModuleWidget):
         self.reviewStatusLabel = qt.QLabel()
         self.reviewStatusLabel.setWordWrap(True)
         layout.addWidget(self.reviewStatusLabel)
+
+        # -- deciding
+        #
+        # Three verdict buttons, a comment box and the assignment controls
+        # used to run down the panel as one column of equally-weighted rows,
+        # which gave no clue that the first three act on the submission that
+        # is open and the last acts on the row that is selected. They are two
+        # groups, so they are drawn as two, each under what it operates on.
+        layout.addWidget(_separator())
+        layout.addWidget(_caption(
+            "What to do with the submission that is open."))
 
         self.verdictComment = qt.QLineEdit()
         self.verdictComment.setPlaceholderText(
@@ -1927,7 +1977,7 @@ class SegQueueWidget(ScriptedLoadableModuleWidget):
         self.approveButton.clicked.connect(lambda: self.onVerdict("approve"))
         row.addWidget(self.approveButton)
 
-        self.reviseButton = qt.QPushButton("Save my changes && approve")
+        self.reviseButton = qt.QPushButton("Save changes && approve")
         self.reviseButton.setToolTip(
             "Upload what is now in the scene as your own corrected version and "
             "approve it. The annotator's submission is kept exactly as they "
@@ -1944,6 +1994,7 @@ class SegQueueWidget(ScriptedLoadableModuleWidget):
         layout.addLayout(row)
 
         # -- handing work out
+        layout.addWidget(_separator())
         layout.addWidget(_caption(
             "Give the selected case to someone. The count beside each name is "
             "what they are already holding."))
@@ -1997,18 +2048,46 @@ class SegQueueWidget(ScriptedLoadableModuleWidget):
         self.reviewTable.setRowCount(len(self._reviewRows))
         for index, (case, assignment) in enumerate(self._reviewRows):
             assignment = assignment or {}
+            attempt = assignment.get("attempt")
+            state = assignment.get("state", "") or "unassigned"
+            try:
+                if int(attempt) > 1:
+                    state = "{} #{}".format(state, int(attempt))
+            except (TypeError, ValueError):
+                pass
+            flagged = assignment.get("flagged") or []
+            if flagged:
+                state = "\u26a0 " + state
             cells = [
                 case.get("caseName", ""),
                 assignment.get("annotator", "") or "--",
-                assignment.get("state", "") or "unassigned",
-                str(assignment.get("attempt", "")) or "--",
-                _shortTime(assignment.get("submittedAt")),
+                state,
+                # The date only. The minute matters when two attempts on one
+                # case are being compared, which is what the history table is
+                # for; here it is a thousand rows being scanned for "when was
+                # this last touched", and the time cost a column of width.
+                _shortTime(assignment.get("submittedAt"))[:10],
                 str(assignment.get("submissionCount", 0)),
-                ", ".join(assignment.get("flagged") or []),
             ]
+            # One tooltip for the whole row: the flags are sentences, and a
+            # reviewer who sees the mark wants them wherever they point.
+            tip = "\n".join(flagged)
             for column, text in enumerate(cells):
-                self.reviewTable.setItem(index, column, qt.QTableWidgetItem(text))
-        self.reviewTable.resizeColumnsToContents()
+                item = qt.QTableWidgetItem(text)
+                if column == 3:
+                    item.setToolTip(_shortTime(assignment.get("submittedAt"))
+                                    or tip)
+                elif tip:
+                    item.setToolTip(tip)
+                self.reviewTable.setItem(index, column, item)
+        # No resizeColumnsToContents: it measures every row of every column,
+        # and this table is the whole project. Only the case name is sized to
+        # its contents, because it is what every row is looked up by and the
+        # names differ between projects -- `s0042` in one, `imagecas_0001` in
+        # this one, and a width that suits the first clips the second.
+        _fitColumn(self.reviewTable, 0,
+                   [case.get("caseName", "") for case in self._reviewCases],
+                   floor=70, ceiling=150)
         self._refreshAnnotators()
         self._clearHistory()
         self._updateReviewEnabled()
@@ -2039,7 +2118,6 @@ class SegQueueWidget(ScriptedLoadableModuleWidget):
             ]
             for column, text in enumerate(cells):
                 self.historyTable.setItem(index, column, qt.QTableWidgetItem(text))
-        self.historyTable.resizeColumnsToContents()
         self._updateReviewEnabled()
 
     def _clearHistory(self):
@@ -2564,10 +2642,16 @@ class SegQueueWidget(ScriptedLoadableModuleWidget):
         qt.QSettings().setValue(_SETTING_SERVER, server)
 
         project = self.logic.project
+        login = user.get("login", username)
         quota = ("" if project.quota_remaining is None
-                 else "  |  {} case(s) left in your quota".format(project.quota_remaining))
-        self.statusLabel.setText("Logged in as {}{}".format(
-            user.get("login", username), quota))
+                 else "  ·  {} left in quota".format(project.quota_remaining))
+        self.statusLabel.setText(login + quota)
+        self.statusLabel.setToolTip(
+            "Logged in as {}{}".format(
+                login,
+                "" if project.quota_remaining is None
+                else ". {} case(s) left in your quota.".format(
+                    project.quota_remaining)))
         self.loginBox.collapsed = True
 
         self.reviewBox.setVisible(self.logic.isReviewer())
@@ -2585,7 +2669,7 @@ class SegQueueWidget(ScriptedLoadableModuleWidget):
         self.statusLabel.setText("Not logged in.")
         self.caseLabel.setText("No case open.")
         self._clearNotes()
-        self.reworkBox.setVisible(False)
+        self.reworkLabel.setVisible(False)
         self.reviewBox.setVisible(False)
         self._bindEditor(None, None)
         self._updateEnabled()
@@ -2666,8 +2750,10 @@ class SegQueueWidget(ScriptedLoadableModuleWidget):
             "<b>{}</b> — attempt {}{}".format(
                 assignment.case_name, assignment.attempt,
                 _deadlineText(assignment.deadline)))
-        self.reworkBox.setVisible(bool(assignment.reviewer_comment))
-        self.reworkLabel.setText(assignment.reviewer_comment or "")
+        self.reworkLabel.setVisible(bool(assignment.reviewer_comment))
+        self.reworkLabel.setText(
+            "Reviewer asked for changes: {}".format(
+                assignment.reviewer_comment or ""))
         self.noteInput.setText(self.logic.noteDraft())
         self.onRefreshNotes()
         self._bindEditor(self.logic.segmentationNode, self.logic.volumeNode)
@@ -2746,9 +2832,9 @@ class SegQueueWidget(ScriptedLoadableModuleWidget):
     def onSaveDraft(self):
         self._saveNoteDraft()
         if self.logic.autosave():
-            self.problemsLabel.setText("Draft saved.")
+            self.saveStatusLabel.setText("Draft saved.")
         else:
-            self.problemsLabel.setText("Nothing to save yet.")
+            self.saveStatusLabel.setText("Nothing to save yet.")
 
     def onAutosave(self):
         self.logic.autosave()
@@ -2759,10 +2845,10 @@ class SegQueueWidget(ScriptedLoadableModuleWidget):
 
     def _updateClock(self):
         if self.logic is None or self.logic.assignment is None:
-            self.timerLabel.setText("Time on this case: --")
+            self.timerLabel.setText("--")
             return
         seconds = int(self.logic.elapsedSeconds())
-        self.timerLabel.setText("Time on this case: {:d}:{:02d}:{:02d}".format(
+        self.timerLabel.setText("{:d}:{:02d}:{:02d}".format(
             seconds // 3600, (seconds % 3600) // 60, seconds % 60))
 
     def onSubmit(self):
@@ -2783,7 +2869,8 @@ class SegQueueWidget(ScriptedLoadableModuleWidget):
 
         with _busy():
             try:
-                self.logic.submit(note=self.noteEdit.text.strip(), progress=progress)
+                self.logic.submit(note=self.noteInput.text.strip(),
+                                  progress=progress)
             except SegQueueError as exc:
                 slicer.util.errorDisplay(str(exc))
                 return
@@ -2795,11 +2882,10 @@ class SegQueueWidget(ScriptedLoadableModuleWidget):
             finally:
                 self.progressBar.setVisible(False)
 
-        self.noteEdit.setText("")
         self._clearNotes()
-        self.problemsLabel.setText("")
+        self.saveStatusLabel.setText("")
         self.caseLabel.setText("Submitted. Press 'Get next case' when you are ready.")
-        self.reworkBox.setVisible(False)
+        self.reworkLabel.setVisible(False)
         self._bindEditor(None, None)
         self._updateEnabled()
 
@@ -2818,7 +2904,7 @@ class SegQueueWidget(ScriptedLoadableModuleWidget):
                 return
         self.caseLabel.setText("No case open.")
         self._clearNotes()
-        self.reworkBox.setVisible(False)
+        self.reworkLabel.setVisible(False)
         self._bindEditor(None, None)
         self._updateEnabled()
 
@@ -2871,11 +2957,180 @@ def _safeName(name, default):
     return name
 
 
+# Slicer ships a light and a dark theme and the workstations use both, so no
+# colour below is a literal. Each is picked from the running palette, which is
+# the only thing that knows which theme is on. The panel used to hardcode a
+# light-theme grey for its captions and a brown for its warning, and on "Dark
+# Slicer" -- what most of the workstations are set to -- both came out very
+# nearly the same colour as the background they were drawn on.
+
+_THEMES = {
+    "dark": {
+        "muted": "#9aa3ad",
+        "accent": "#4c9be8",
+        "accentHover": "#63aaf0",
+        "accentText": "#10171f",
+        "warn": "#e8a24c",
+        "ok": "#5fb878",
+        "line": "#4a515b",
+    },
+    "light": {
+        "muted": "#5a5f66",
+        "accent": "#1a6fb5",
+        "accentHover": "#2280cd",
+        "accentText": "#ffffff",
+        "warn": "#8a3b00",
+        "ok": "#1d7a3a",
+        "line": "#d4d8dd",
+    },
+    # Used only if the palette cannot be read. Deliberately not a copy of
+    # either of the others: these are the colours that are legible on both,
+    # which matters more here than being the best choice for one.
+    "unknown": {
+        "muted": "#808a94",
+        "accent": "#2f8fd8",
+        "accentHover": "#46a0e4",
+        "accentText": "#ffffff",
+        "warn": "#c07000",
+        "ok": "#2f9152",
+        "line": "#808a94",
+    },
+}
+
+
+def _themeColours():
+    """The palette for the theme Slicer is currently drawing in."""
+    try:
+        window = qt.QApplication.palette().color(qt.QPalette.Window)
+        return _THEMES["dark" if window.lightness() < 128 else "light"]
+    except Exception:  # pragma: no cover - no application, or an older Qt
+        return _THEMES["unknown"]
+
+
+def _muted(label):
+    """Secondary text: present, and clearly not the thing to read first."""
+    label.setStyleSheet("QLabel { color: %s; }" % _themeColours()["muted"])
+    return label
+
+
+def _tint(label, kind):
+    """``"warn"`` or ``"ok"`` -- a label that carries its own weight."""
+    label.setStyleSheet("QLabel { color: %s; }" % _themeColours()[kind])
+    return label
+
+
 def _caption(text):
     label = qt.QLabel(text)
     label.setWordWrap(True)
-    label.setStyleSheet("QLabel { color: #5a5f66; }")
-    return label
+    return _muted(label)
+
+
+def _primary(button):
+    """The one action a section exists for.
+
+    Every button in the panel used to be the same button, so "Get next case"
+    and "Check for updates" had equal weight and a section read as a wall of
+    controls with no way in. Exactly one button per section gets this.
+    """
+    colours = _themeColours()
+    button.setStyleSheet(
+        "QPushButton {"
+        " background-color: %(accent)s; color: %(accentText)s; border: none;"
+        " border-radius: 4px; padding: 7px 14px; font-weight: bold; }"
+        "QPushButton:hover { background-color: %(accentHover)s; }"
+        "QPushButton:disabled {"
+        " background-color: transparent; color: %(muted)s;"
+        " border: 1px solid %(line)s; font-weight: normal; }" % colours)
+    return button
+
+
+def _link(button):
+    """A rarely-wanted action: reads as text, behaves as a button."""
+    button.setFlat(True)
+    button.setStyleSheet(
+        "QPushButton { border: none; padding: 2px 6px; color: %s; }"
+        "QPushButton:hover { text-decoration: underline; }"
+        % _themeColours()["accent"])
+    return button
+
+
+def _separator():
+    """A hairline rule.
+
+    A one-pixel box with a background rather than an ``HLine``: a styled
+    ``HLine`` takes its colour from the frame palette and ignores the
+    stylesheet, which on the dark theme drew it in the background colour --
+    a rule that was there in the layout and invisible on screen.
+    """
+    line = qt.QFrame()
+    line.setFrameShape(qt.QFrame.NoFrame)
+    line.setFixedHeight(1)
+    line.setStyleSheet(
+        "QFrame { background-color: %s; }" % _themeColours()["line"])
+    return line
+
+
+def _fitColumn(table, column, texts, floor, ceiling):
+    """Widen one column to the longest string it will actually hold.
+
+    The alternative, ``resizeColumnsToContents``, lays out every row of
+    every column; this measures one string. The longest of a thousand case
+    names is found by comparing strings, which costs nothing, and only that
+    one is handed to the font.
+
+    Fixed widths were wrong here for a reason worth keeping: they were
+    chosen against the names in a test fixture, and the real project's are
+    `imagecas_0001` -- half as wide again, and clipped on every row.
+    """
+    longest = ""
+    for text in texts:
+        if len(text) > len(longest):
+            longest = text
+    try:
+        metrics = qt.QFontMetrics(table.font)
+        try:
+            width = metrics.horizontalAdvance(longest)
+        except AttributeError:  # pragma: no cover - Qt < 5.11
+            width = metrics.width(longest)
+        table.setColumnWidth(column, min(ceiling, max(floor, width + 14)))
+    except Exception:  # pragma: no cover - no font metrics available
+        table.setColumnWidth(column, floor)
+
+
+def _tidyTable(table, widths, minimumHeight):
+    """The look both tables in the panel share.
+
+    Row numbers off, because they number the rows on screen rather than the
+    cases, so on a filtered list they say something untrue. Column widths set
+    by hand rather than by ``ResizeToContents``, which measures every row --
+    affordable for the ten rows in the history table and not for the thousand
+    in the case list.
+
+    Every column gets a width, the last one included -- any the caller leaves
+    out get a narrow default rather than Qt's 100px. ``stretchLastSection``
+    grows the last column into space left over but never shrinks it, so one
+    unsized column pushes the whole table past the edge of the dock and puts a
+    horizontal scrollbar under a list that would otherwise fit.
+    """
+    table.setSelectionBehavior(qt.QAbstractItemView.SelectRows)
+    table.setSelectionMode(qt.QAbstractItemView.SingleSelection)
+    table.setEditTriggers(qt.QAbstractItemView.NoEditTriggers)
+    table.setAlternatingRowColors(True)
+    table.setShowGrid(False)
+    table.setWordWrap(False)
+    table.setMinimumHeight(minimumHeight)
+    try:
+        table.verticalHeader().setVisible(False)
+        table.verticalHeader().setDefaultSectionSize(22)
+        header = table.horizontalHeader()
+        header.setStretchLastSection(True)
+        header.setHighlightSections(False)
+        for column in range(table.columnCount):
+            table.setColumnWidth(
+                column, widths[column] if column < len(widths) else 44)
+    except AttributeError:  # pragma: no cover - a Qt without these accessors
+        pass
+    return table
 
 
 def _shortTime(value):

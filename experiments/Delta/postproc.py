@@ -141,14 +141,16 @@ def _line_voxels(p, q, sp, r_vox=1):
     return (pts[:, None, :] + offs[None]).reshape(-1, 3)
 
 
-def bridge(lab, anchors, sp, max_gap_mm=3.0, min_vox=100, r_vox=1):
+def bridge(lab, anchors, sp, max_gap_mm=3.0, min_vox=100, r_vox=1, eligible=None):
     """Join every component (>= min_vox) not connected to an anchor to the nearest anchored
     component if the gap is <= max_gap_mm, with a straight tube of radius r_vox voxels.
     lab: uint8 class map (0 = background; binary also works). anchors: bool mask of voxels that
     define 'connected to an ostium' (e.g. predicted voxels within 3 mm of the aorta).
     The tube takes the class of the orphan component (its majority class).
     Returns (new lab, list of bridges as dicts). Iterates until no component can be joined, so
-    chains of pieces are joined one hop at a time (nearest first)."""
+    chains of pieces are joined one hop at a time (nearest first).
+    eligible: optional bool mask; a component is joined only if >= 50 % of its voxels are eligible
+    (the 'support rule': the orphan was predicted again by a gap-centred second look)."""
     lab = lab.copy()
     sp = np.asarray(sp, float)
     bridges = []
@@ -168,6 +170,8 @@ def bridge(lab, anchors, sp, max_gap_mm=3.0, min_vox=100, r_vox=1):
             if k in anc_ids or sizes[k] < min_vox:
                 continue
             m = cl == k
+            if eligible is not None and eligible[m].mean() < 0.5:
+                continue
             dk = dist[m]
             j = int(np.argmin(dk))
             if dk[j] <= max_gap_mm and (best is None or dk[j] < best[0]):

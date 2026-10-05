@@ -2,7 +2,7 @@
 the project's 4 classes (trunk mapping LM=1,LAD=2,LCx=3,RCA=9; side branches -> background) for ALL available
 ImageCAS-X cases. Works on a 2 mm presence grid (max-pool), so it is fast.
 Patch geometries (mm, nibabel x,y,z order) come from planner_sweep.py output.
-Usage: extent_sampling.py <out.jsonl> [reverse]"""
+Usage: extent_sampling.py <out.jsonl> [reverse | @idlist]"""
 import os, sys, glob, json
 import numpy as np, nibabel as nib
 SCR = '/tmp/claude-0/-home-user-Asclepius/1b43aea1-ed14-5dd0-84ee-25f776047e09/scratchpad'
@@ -16,6 +16,7 @@ PATCHES = {  # x, y, z in mm
     'plain70_native_19.7M': (111.9, 111.9, 96.0),   # plain 70GB native: [192,320,320]
     'resenc75_native_22.9M': (111.9, 111.9, 112.0), # ResEnc 75GB native: [224,320,320]
     'iso05_70_16.8M': (128.0, 128.0, 128.0),        # 0.5 mm iso, 256^3
+    'iso05_XL_12.6M': (128.0, 128.0, 96.0),         # fallback: ResEnc XL preset at 0.5 mm, [192,256,256] zyx
 }
 done = set()
 if os.path.exists(out): done = {json.loads(l)['icx_id'] for l in open(out)}
@@ -37,6 +38,9 @@ def boxsum(a, k):
 
 files = sorted(glob.glob(W + '/icx/*.coronary.nii.gz'), key=lambda p: int(os.path.basename(p).split('.')[0]))
 if len(sys.argv) > 2 and sys.argv[2] == 'reverse': files = files[::-1]  # second worker walks from the other end
+if len(sys.argv) > 2 and sys.argv[2].startswith('@'):  # explicit id list file (one ImageCAS-X id per line)
+    keep = set(int(x) for x in open(sys.argv[2][1:]).read().split())
+    files = [f for f in files if int(os.path.basename(f).split('.')[0]) in keep]
 with open(out, 'a') as fo:
     for p in files:
         i = int(os.path.basename(p).split('.')[0])

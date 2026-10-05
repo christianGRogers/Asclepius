@@ -8,6 +8,9 @@ from scipy.spatial import cKDTree
 
 LMIN = 20.0      # mm of downstream skeleton for a child to count as a major branch
 BIFMODE = 'apsplit'
+RAMUS = 'inherit'   # 'inherit' (v3), 'LCx', 'LAD': class given to a ramus-like branch (A8 switch)
+RAMUS_WIN = 6.0     # mm downstream of the LM bifurcation where a ramus may leave the LAD/LCx
+RAMUS_MIN = 20.0    # mm of downstream skeleton for a ramus candidate
 BIFWIN = 40.0
 TREEMIN = 30.0   # mm of skeleton for a component to count as a tree
 NAMES = {1: 'LM', 2: 'LAD', 3: 'LCx', 4: 'RCA'}
@@ -188,6 +191,31 @@ def label_left(d, G, root, lmin=LMIN, ramus='closer'):
     for c, k in cls.items():
         for n in nx.descendants(T, c) | {c}:
             lab[n] = k
+    # A8 ramus switch: a major branch leaving within RAMUS_WIN mm of the bifurcation (or a 3rd major child at it)
+    # whose subtree lies between the LAD and the LCx in the anterior direction
+    ram = []
+    if RAMUS != 'inherit':
+        lo_a, hi_a = ant[i_lcx], ant[i_lad]
+        for i, c in enumerate(major):
+            if i not in (i_lad, i_lcx):
+                ram.append(c)
+        for c0 in (major[i_lad], major[i_lcx]):
+            cur = c0
+            while dist[cur] - dist[bif] <= RAMUS_WIN:
+                kids = sorted(T.successors(cur), key=lambda c: -L[c])
+                if not kids:
+                    break
+                for side in kids[1:]:
+                    if L[side] >= RAMUS_MIN:
+                        a_ = float((R3 @ (S[side] / L[side] - P[bif]))[1])
+                        if lo_a + 0.15 * (hi_a - lo_a) < a_ < hi_a - 0.15 * (hi_a - lo_a):
+                            ram.append(side)
+                cur = kids[0]
+        k = 3 if RAMUS == 'LCx' else 2
+        for c in ram:
+            for n in nx.descendants(T, c) | {c}:
+                lab[n] = k
+    info['n_ramus'] = len(ram)
     info.update(n_major=len(major), ant_sep=float(ant[i_lad] - ant[i_lcx]),
                 lad_len=float(sum(L[c] + G[bif][c]['w'] for c in cls if cls[c] == 2)),
                 lcx_len=float(sum(L[c] + G[bif][c]['w'] for c in cls if cls[c] == 3)),

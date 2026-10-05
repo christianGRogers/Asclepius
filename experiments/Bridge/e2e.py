@@ -97,34 +97,40 @@ def evaluate(gt, pred, plab):
 
 if __name__ == '__main__':
     out, ostw, pdirs = sys.argv[1], sys.argv[2], sys.argv[3].split(',')
+    import label as Lb
     load_ostium(ostw)
-    done = set()
-    if os.path.exists(out):
-        done = {(json.loads(l)['case'], json.loads(l)['arm']) for l in open(out)}
-    with open(out, 'a') as fo:
-        for case in sys.argv[4:]:
-            pdir = next((p for p in pdirs if os.path.exists(f'{p}/{case}_prob.npy')), None)
-            if pdir is None:
-                continue
-            t0 = time.time()
-            meta = json.load(open(f'{pdir}/{case}_meta.json'))
-            lo, hi = np.array(meta['lo']), np.array(meta['hi'])
-            prob = np.load(f'{pdir}/{case}_prob.npy').astype(np.float32)
-            gt = CropGT(case, lo, hi)
-            img = nib.load(mask_path(case)); A = img.affine; full = img.shape
-            pred = remove_small(prob >= 0.5)
-            arms = {}
-            arms['oracle'] = (pred, oracle_labels(gt, pred), {})
-            for nm, br in (('namer', 4.0), ('namer_nb', 0.0)):
-                lab, res, _ = name_mask(pred, A, gt.sp, lo, full, bridge=br)
-                arms[nm] = (pred, lab, res)
-            lab, res, _ = name_mask(gt.m, A, gt.sp, lo, full, bridge=4.0)
-            arms['ceiling'] = (gt.m, lab, res)
+    modes = os.environ.get('RAMUS_MODES', 'inherit').split(',')
+    outs = {m: (out if m == 'inherit' else out.replace('.jsonl', f'_{m}.jsonl')) for m in modes}
+    done = {m: ({(json.loads(l)['case'], json.loads(l)['arm']) for l in open(o)} if os.path.exists(o) else set())
+            for m, o in outs.items()}
+    fos = {m: open(o, 'a') for m, o in outs.items()}
+    for case in sys.argv[4:]:
+        pdir = next((p for p in pdirs if os.path.exists(f'{p}/{case}_prob.npy')), None)
+        if pdir is None:
+            continue
+        todo = [m for m in modes if any((case, a) not in done[m] for a in ('oracle', 'namer', 'namer_nb', 'ceiling'))]
+        if not todo:
+            continue
+        t0 = time.time()
+        meta = json.load(open(f'{pdir}/{case}_meta.json'))
+        lo, hi = np.array(meta['lo']), np.array(meta['hi'])
+        prob = np.load(f'{pdir}/{case}_prob.npy').astype(np.float32)
+        gt = CropGT(case, lo, hi)
+        img = nib.load(mask_path(case)); A = img.affine; full = img.shape
+        pred = remove_small(prob >= 0.5)
+        cache = {}
+        for mode in todo:
+            Lb.RAMUS = mode
+            arms = {'oracle': (pred, oracle_labels(gt, pred), {})}
+            for nm, br, msk in (('namer', 4.0, pred), ('namer_nb', 0.0, pred), ('ceiling', 4.0, gt.m)):
+                key = 'gt' if nm == 'ceiling' else 'pred'
+                lab, res, cache[key] = name_mask(msk, A, gt.sp, lo, full, bridge=br, cached=cache.get(key))
+                arms[nm] = (msk, lab, res)
             for arm, (pm, pl, res) in arms.items():
-                if (case, arm) in done:
+                if (case, arm) in done[mode]:
                     continue
                 r = evaluate(gt, pm, pl)
-                r.update(case=case, arm=arm, lm_len=res.get('L_lm_len'), namer_fail=res.get('fail'),
-                         n_trees=res.get('n_trees'), sec=round(time.time() - t0, 1))
-                fo.write(json.dumps(r) + '\n'); fo.flush()
-            print(case, 'done', round(time.time() - t0), flush=True)
+                r.update(case=case, arm=arm, ramus_mode=mode, n_ramus=res.get('L_n_ramus'), lm_len=res.get('L_lm_len'),
+                         namer_fail=res.get('fail'), n_trees=res.get('n_trees'), sec=round(time.time() - t0, 1))
+                fos[mode].write(json.dumps(r) + '\n'); fos[mode].flush()
+        print(case, 'done', round(time.time() - t0), flush=True)

@@ -62,9 +62,10 @@ def skeleton_case(m, A_full, z, lo, full_shape, cnt_lab=None):
     return d, assign, orph_idx
 
 
-def name_mask(m, A_full, z, lo, full_shape, method='rerank_learned', bridge=4.0, cnt_lab=None):
+def name_mask(m, A_full, z, lo, full_shape, method='rerank_learned', bridge=4.0, cnt_lab=None, cached=None):
+    """cached: (d, assign, orph_idx) from skeleton_case, to name the same mask several times (e.g. ramus modes)"""
     Lb.BRIDGE = bridge
-    d, assign, orph_idx = skeleton_case(m, A_full, z, lo, full_shape, cnt_lab)
+    d, assign, orph_idx = cached if cached is not None else skeleton_case(m, A_full, z, lo, full_shape, cnt_lab)
     out = np.zeros(m.shape, np.uint8)
     if d is None:
         return out, dict(fail='empty'), None
@@ -73,4 +74,4 @@ def name_mask(m, A_full, z, lo, full_shape, method='rerank_learned', bridge=4.0,
         out[tuple(idx.T)] = lab[j]
     for i, idx in enumerate(orph_idx):
         out[tuple(idx.T)] = olab[i] if len(olab) > i else 0
-    return out, res, (d, lab, olab)
+    return out, res, (d, assign, orph_idx)

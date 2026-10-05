@@ -59,6 +59,17 @@ def gap_sites(pred, anchors, sp):
     return sites
 
 
+def audit(br, pred_bin, gt):
+    """Per bridge: did the orphan touch the reference (true join) or not (FP blob joined)?"""
+    cl = cc3d.connected_components(pred_bin, connectivity=26)
+    out = []
+    for b in br:
+        k = cl[tuple(b['p'])]
+        comp = cl == k if k > 0 else np.zeros_like(pred_bin)
+        out.append(dict(gap_mm=round(b['gap_mm'], 2), comp_vox=b['comp_vox'], true_join=bool((comp & gt.m).any())))
+    return out
+
+
 def score(gt, pred_bin, plab_fn):
     plab = plab_fn(pred_bin)
     t0, r0 = BE.tf1_tol(gt, pred_bin, plab, 0.0)
@@ -94,6 +105,7 @@ if __name__ == '__main__':
             ct = np.asanyarray(img.dataobj)
             sp = gt.sp
             new_mean = prob.copy(); new_max = prob.copy()
+            second = np.zeros(prob.shape, np.float32)  # gap-centred second-look probability
             for s in sites:
                 c = np.array(s['mid']) + lo  # full-volume coords
                 a = np.clip(c - np.array(PATCH) // 2, 0, np.array(full) - np.array(PATCH))
@@ -110,6 +122,7 @@ if __name__ == '__main__':
                 dst = tuple(slice(s0[k], s1[k]) for k in range(3))
                 new_mean[dst] = 0.5 * (prob[dst] + pp[src])
                 new_max[dst] = np.maximum(new_max[dst], pp[src])
+                second[dst] = np.maximum(second[dst], pp[src])
             res = dict(case=case, n_sites=len(sites), sites=sites, anchor_kind=kind)
             for name, pm in (('first', prob), ('regap_mean', new_mean), ('regap_max', new_max)):
                 pb = A.remove_small(pm >= 0.5)
@@ -119,7 +132,16 @@ if __name__ == '__main__':
                 lab2, br = postproc.bridge(plab, anc2, gt.sp, max_gap_mm=3.0, min_vox=100)
                 sc2, _ = score(gt, lab2 > 0, lambda b: np.where(b, lab2, 0).astype(np.uint8))
                 sc2['n_bridges'] = len(br)
+                sc2['audit'] = audit(br, pb, gt)
                 res[name + '+bridge3'] = sc2
+                if name == 'regap_max':
+                    # support rule: join only orphans that the second look predicted again
+                    lab3, br3 = postproc.bridge(plab, anc2, gt.sp, max_gap_mm=3.0, min_vox=100,
+                                                eligible=second >= 0.5)
+                    sc3, _ = score(gt, lab3 > 0, lambda b: np.where(b, lab3, 0).astype(np.uint8))
+                    sc3['n_bridges'] = len(br3)
+                    sc3['audit'] = audit(br3, pb, gt)
+                    res[name + '+bridge3_supported'] = sc3
             res['seconds'] = time.time() - t
             f.write(json.dumps(res) + '\n'); f.flush()
             print(case, 'done', len(sites), round(time.time() - t), flush=True)

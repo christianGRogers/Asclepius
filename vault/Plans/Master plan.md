@@ -52,7 +52,7 @@ Round 1's A1–A6 as revised in Round 2, plus A7–A9. The full wording is in
 ## Human decisions
 
 Recorded in [[Human decisions]] (2026-10-05) and binding on every plan:
-territory side-branch rule; every case labelled twice; no four-class starting
-labels — annotators split the original ImageCAS mask; no relabelling cost. Still
-open: the ramus intermedius rule, the tF1 gap tolerance, and explicit
-confirmation of the lumen convention.
+the original ImageCAS mask (current Girder mask) is the lumen target, seed and
+reference; territory side-branch rule, ramus → LCx; every case labelled twice;
+no four-class starting labels; tF1 tolerance fixed at 1.5 mm; no relabelling
+cost. Nothing is open.

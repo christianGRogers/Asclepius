@@ -1,11 +1,11 @@
 ---
 tags: [plans, experiment, metrics, tree-f1, lumen-convention, imagecas-x]
 author: Crucible
-round: 2
+round: 3
 updated: 2026-10-04
 ---
 
-# A perfect segmentation drawn in the other lumen convention scores only 0.81 tree-F1
+# A perfect segmentation drawn in the other lumen convention scores only 0.81 tree-F1 (0.75 in reverse, with fake RCA cuts)
 
 ## Question
 
@@ -44,12 +44,27 @@ components: the loss is all precision (centreline the expert did not trace, i.e.
 veins; cf. [[Bridge - ImageCAS-X names transfer onto our binary masks, which are three times fatter]]) plus about
 12 % of expert centreline that the thick mask's naming misses.
 
-The reverse direction was **pending at the time of writing**: a perfect thin model scored against a thick team
-reference. It is queued as `REF=thick r2_eval.py`.
+**Reverse direction (added round 3):** the ICX lumen as the "prediction", scored against the thick Girder proxy as
+the reference (`REF=thick r2_eval.py ref_thin ref_thick`).
+
+| "Prediction" vs Girder-proxy reference | tF1@0 | tF1@1.5 | rooted recall | unrooted recall | precision | per-class clDice |
+|---|---|---|---|---|---|---|
+| Girder proxy itself | 1.000 | 1.000 | 0.999 | 0.999 | 1.000 | 1.000 |
+| **ICX lumen (perfect option-A model)** | **0.746** | **0.746** | 0.713 | 0.764 | 0.883 | 0.806 |
+
+Per class: LM 0.955, LAD 0.740, LCx 0.794, **RCA 0.497**. In 3 of 10 cases (c0111, c0250, c0264) the RCA tF1 is
+**0**: the thin RCA never comes within 1.5 mm of the thick reference's "ostium". The thickest-endpoint heuristic
+places that ostium on the bulky proximal stub of the Girder mask, beyond where the expert lumen starts. The metric
+then reads the whole RCA as cut. Those are **artefactual cuts**: a property of the reference convention plus the
+ostium rule, not of any model.
 
 ## What it implies
 
-1. **Under tF1, the lumen convention is worth about 0.19 points before any model is trained.** That is larger than
+0. **The penalty is asymmetric:** 0.19 tF1 for a thick model judged against thin, 0.25 for a thin model judged
+   against thick. The reverse direction also manufactures *cuts* (3/10 RCAs) through the ostium heuristic. A cut
+   count measured against a mixed or thick reference is therefore not evidence about the model. It is one more
+   reason the master's aorta-contact ostium (A1) must be in place before cut rates are compared.
+1. **Under tF1, the lumen convention is worth about 0.19–0.25 points before any model is trained.** That is larger than
    any architecture, loss or spacing effect in the vault. A model trained in convention B and scored against a team
    that drew convention A (or the reverse) is penalised by roughly this much for doing exactly what it was taught.
 2. So A3 is not a detail: **the training target, the seed and the reference must be one convention**, and it must be

@@ -49,9 +49,10 @@ Round 1's A1–A6 as revised in Round 2, plus A7–A9. The full wording is in
 - **A8 — the ramus rule is a switch** set from the humans' written rule.
 - **A9 — one implementation:** only the ported `src/segtrain` tF1 may decide.
 
-## Open human decisions
+## Human decisions
 
-Lumen convention (a perfect model in the wrong convention loses 0.19 tF1);
-side-branch and ramus rule; labelling order; the tF1 tolerance; whether
-annotators see 4-class seeds; whether Girder-seeded cases are redone. See
-[[Round 2]] §5.
+Recorded in [[Human decisions]] (2026-10-05) and binding on every plan:
+territory side-branch rule; every case labelled twice; no four-class starting
+labels — annotators split the original ImageCAS mask; no relabelling cost. Still
+open: the ramus intermedius rule, the tF1 gap tolerance, and explicit
+confirmation of the lumen convention.

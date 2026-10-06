@@ -9,7 +9,7 @@ import numpy as np
 from scipy import ndimage as ndi
 sys.path.insert(0, '/home/user/Asclepius/experiments/Delta')
 import perturb_metrics as PM
-out = open(sys.argv[1], 'a')
+out = open(sys.argv[1], "a")
 def roundtrip(lab, sp, t):
     zf = sp / t
     best = None; arg = np.zeros(lab.shape, np.uint8)

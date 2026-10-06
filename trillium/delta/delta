@@ -1,0 +1,224 @@
+#!/usr/bin/env bash
+# Delta's Trillium experiment. Run with no arguments from <root>/experiments/delta:   ./delta
+#
+#   ./delta            set up (venv, ImageCAS-X labels), submit the GPU job, or report / collect
+#   ./delta status     show job state and progress
+#   ./delta collect    copy finished results into ./results
+#   ./delta dryrun     everything except sbatch (prints the job script)
+#   ./delta smoke      CPU smoke test of the whole pipeline on a few cases (no SLURM, no modules)
+#
+# What it does: trains one 4-class nnU-Net on the decided thick convention and tests, on the 160
+# ImageCAS-X test cases, whether gap-centred re-inference + support-gated bridging (P1') beats
+# nnU-Net's default inference by tree-F1 @ 1.5 mm, with the tile-step-0.5 control. See README.md.
+set -euo pipefail
+
+HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+CMD="${1:-run}"
+JOBNAME=delta_p1
+PY_MODULES="StdEnv/2023 python/3.11.5"
+GPU_MODULES="cuda/12.6"
+BUDGET_S=$((24 * 3600))
+
+die() { echo "delta: ERROR: $*" >&2; exit 1; }
+say() { echo "delta: $*"; }
+
+# ---------------------------------------------------------------- find cases/ by walking up
+find_cases() {
+  if [[ -n "${CASES:-}" ]]; then echo "$CASES"; return; fi
+  local d="$HERE"
+  while [[ "$d" != "/" ]]; do
+    if [[ -d "$d/cases" ]]; then echo "$d/cases"; return; fi
+    d="$(dirname "$d")"
+  done
+  return 1
+}
+CASES_DIR="$(find_cases)" || die "no 'cases/' directory found in any parent of $HERE (looked up to /). Set CASES=/path to override."
+CASES_DIR="$(cd "$CASES_DIR" && pwd)"
+
+# ---------------------------------------------------------------- smoke test (local CPU)
+if [[ "$CMD" == smoke ]]; then
+  export DELTA_WORK="${DELTA_WORK:-$HERE/smoke_work}"
+  export DELTA_CASES="$CASES_DIR" DELTA_SMOKE=1 DELTA_DEVICE=cpu DELTA_NPROC="${DELTA_NPROC:-2}" DELTA_EPOCHS=1
+  export DELTA_ICX="${DELTA_ICX:-$DELTA_WORK/icx}"
+  mkdir -p "$DELTA_WORK"
+  python3 "$HERE/layout.py" "$CASES_DIR"
+  if [[ ! -f "$DELTA_ICX/ImageCAS-X_dataset/filelist/test.txt" ]]; then python3 "$HERE/fetch_icx.py" "$DELTA_ICX"; fi
+  python3 - <<EOF
+import os, nnunetv2, shutil
+d = os.path.join(os.path.dirname(nnunetv2.__file__), 'training', 'nnUNetTrainer', 'variants', 'delta')
+os.makedirs(d, exist_ok=True); open(os.path.join(d, '__init__.py'), 'a').close()
+shutil.copy('$HERE/nnUNetTrainerDelta.py', d)
+EOF
+  python3 "$HERE/pipeline.py" all
+  mkdir -p "$HERE/results_smoke"; cp "$DELTA_WORK/results/"* "$HERE/results_smoke/" 2>/dev/null || true
+  say "smoke test finished: $HERE/results_smoke"
+  exit 0
+fi
+
+# ---------------------------------------------------------------- cluster side
+[[ -n "${SCRATCH:-}" ]] || die "\$SCRATCH is not set: this must run on Trillium (or use ./delta smoke)."
+case "$(hostname -s)" in
+  trig-login*) ;;
+  *)
+    if [[ -z "${DELTA_NO_SSH:-}" && "$CMD" != dryrun ]]; then
+      say "GPU jobs must be submitted from the GPU login node; re-running there (ssh trig-login01)."
+      exec ssh trig-login01 "cd '$HERE' && CASES='$CASES_DIR' DELTA_NO_SSH=1 ./delta $CMD"
+    fi ;;
+esac
+
+WORK="$SCRATCH/delta_exp"
+VENV="${DELTA_VENV:-$HOME/venvs/delta}"
+mkdir -p "$WORK/logs" "$WORK/code"
+say "cases: $CASES_DIR"
+say "work:  $WORK   venv: $VENV"
+
+load_modules() {
+  if ! type module >/dev/null 2>&1; then
+    # shellcheck disable=SC1091
+    source /etc/profile >/dev/null 2>&1 || true
+  fi
+  type module >/dev/null 2>&1 || die "'module' command not available"
+  module purge >/dev/null 2>&1 || true
+  # shellcheck disable=SC2086
+  module load $PY_MODULES
+}
+
+used_seconds() {
+  local total=0 ids
+  [[ -f "$WORK/jobs.txt" ]] || { echo 0; return; }
+  ids="$(paste -sd, "$WORK/jobs.txt")"
+  if command -v sacct >/dev/null 2>&1 && [[ -n "$ids" ]]; then
+    while read -r s; do [[ "$s" =~ ^[0-9]+$ ]] && total=$((total + s)); done \
+      < <(sacct -j "$ids" -X -n -o ElapsedRaw 2>/dev/null || true)
+  fi
+  echo "$total"
+}
+
+collect() {
+  if [[ -f "$WORK/results/SUMMARY.md" ]]; then
+    mkdir -p "$HERE/results"
+    cp "$WORK/results/SUMMARY.md" "$WORK/results/results.json" "$HERE/results/" 2>/dev/null || true
+    cp "$WORK/results/per_case.jsonl" "$HERE/results/" 2>/dev/null || true
+    cp "$WORK/split.json" "$HERE/results/" 2>/dev/null || true
+    mkdir -p "$HERE/results/logs"
+    cp "$WORK"/logs/*.out "$HERE/results/logs/" 2>/dev/null || true
+    find "$WORK/nnUNet_results" -name 'training_log_*.txt' -exec cp {} "$HERE/results/logs/" \; 2>/dev/null || true
+    find "$WORK/nnUNet_results" -name 'progress.png' -exec cp {} "$HERE/results/logs/" \; 2>/dev/null || true
+    say "results copied to $HERE/results ($(du -sh "$HERE/results" | cut -f1))"
+    return 0
+  fi
+  return 1
+}
+
+running_job() { squeue -u "$USER" -h -n "$JOBNAME" -o '%i %T %M' 2>/dev/null || true; }
+
+if [[ "$CMD" == status ]]; then
+  r="$(running_job)"
+  if [[ -n "$r" ]]; then say "job: $r"; else say "no $JOBNAME job in the queue"; fi
+  say "used walltime so far: $(( $(used_seconds) / 60 )) min of $((BUDGET_S / 60))"
+  find "$WORK" -maxdepth 1 -name '.done_*' -printf '  done: %f\n' 2>/dev/null || true
+  [[ -f "$WORK/results/per_case.jsonl" ]] && say "evaluated case-bases: $(wc -l < "$WORK/results/per_case.jsonl")"
+  last="$(find "$WORK/logs" -name '*.out' -printf '%T@ %p\n' 2>/dev/null | sort -n | tail -1 | cut -d' ' -f2-)"
+  [[ -n "$last" ]] && tail -n 5 "$last"
+  exit 0
+fi
+if [[ "$CMD" == collect ]]; then collect || die "no results yet in $WORK/results"; exit 0; fi
+
+# ---------------------------------------------------------------- 1. results already there?
+if [[ -f "$WORK/.done_summary" ]]; then collect; say "experiment finished; see $HERE/results/SUMMARY.md"; exit 0; fi
+
+# ---------------------------------------------------------------- 2. job already queued/running?
+if [[ "$CMD" != dryrun ]]; then
+  r="$(running_job)"
+  if [[ -n "$r" ]]; then say "a $JOBNAME job is already queued/running: $r  (./delta status)"; exit 0; fi
+fi
+
+# ---------------------------------------------------------------- 3. case layout
+python3 "$HERE/layout.py" "$CASES_DIR" || die "case layout not recognised (see above)"
+
+# ---------------------------------------------------------------- 4. venv (login node, once)
+if [[ ! -f "$VENV/.delta_ok" ]]; then
+  if [[ "$CMD" == dryrun ]]; then say "(dryrun) would build venv at $VENV"; else
+    say "building venv $VENV (once; ~10 min)"
+    load_modules
+    rm -rf "$VENV"
+    virtualenv --no-download "$VENV" 2>/dev/null || python -m venv "$VENV"
+    # shellcheck disable=SC1091
+    source "$VENV/bin/activate"
+    pip install --no-index --upgrade pip >/dev/null 2>&1 || pip install --upgrade pip
+    # Alliance wheelhouse first (built for the cluster), PyPI as fallback
+    pip install --no-index torch 2>/dev/null || pip install torch
+    pip install "nnunetv2==2.8.1" connected-components-3d remotezip scikit-image networkx nibabel
+    python - <<EOF
+import os, shutil, nnunetv2
+d = os.path.join(os.path.dirname(nnunetv2.__file__), 'training', 'nnUNetTrainer', 'variants', 'delta')
+os.makedirs(d, exist_ok=True); open(os.path.join(d, '__init__.py'), 'a').close()
+shutil.copy('$HERE/nnUNetTrainerDelta.py', d)
+import torch, cc3d, skimage, networkx, nibabel
+from nnunetv2.training.nnUNetTrainer.variants.delta.nnUNetTrainerDelta import nnUNetTrainerDelta
+print('venv ok: torch', torch.__version__)
+EOF
+    touch "$VENV/.delta_ok"
+    deactivate
+  fi
+fi
+
+# ---------------------------------------------------------------- 5. ImageCAS-X names (internet: login node only)
+if [[ ! -f "$WORK/icx/ImageCAS-X_dataset/filelist/test.txt" ]]; then
+  if [[ "$CMD" == dryrun ]]; then say "(dryrun) would fetch ImageCAS-X into $WORK/icx"; else
+    "$VENV/bin/python" "$HERE/fetch_icx.py" "$WORK/icx"; fi
+fi
+
+# ---------------------------------------------------------------- 6. budget
+USED="$(used_seconds)"
+LEFT=$((BUDGET_S - USED))
+(( LEFT > 3600 )) || die "GPU budget exhausted: $((USED / 60)) min used of $((BUDGET_S / 60)). ./delta collect for partial results."
+WALL=$(( LEFT < BUDGET_S ? LEFT : BUDGET_S ))
+WALL_HMS="$(printf '%02d:%02d:00' $((WALL / 3600)) $(((WALL % 3600) / 60)))"
+
+# ---------------------------------------------------------------- 7. account
+ACCOUNT="${SLURM_ACCOUNT:-${SBATCH_ACCOUNT:-}}"
+if [[ -z "$ACCOUNT" ]] && command -v sshare >/dev/null 2>&1; then
+  ACCOUNT="$(sshare -U -u "$USER" -h -o Account 2>/dev/null | awk '{print $1}' | grep -E '^(rrg|rpp)-' | head -1 || true)"
+  [[ -n "$ACCOUNT" ]] || ACCOUNT="$(sshare -U -u "$USER" -h -o Account 2>/dev/null | awk '{print $1}' | grep -E '^def-' | head -1 || true)"
+fi
+[[ -n "$ACCOUNT" || "$CMD" == dryrun ]] || die "could not determine a SLURM account; set SLURM_ACCOUNT=def-xxx"
+say "account: ${ACCOUNT:-<none, dryrun>}   walltime: $WALL_HMS (budget left $((LEFT / 60)) min)"
+
+# ---------------------------------------------------------------- 8. job script
+cp "$HERE"/pipeline.py "$HERE"/deltalib.py "$HERE"/layout.py "$WORK/code/"
+JOB="$WORK/job.sh"
+cat > "$JOB" <<EOF
+#!/bin/bash
+#SBATCH --job-name=$JOBNAME
+#SBATCH --nodes=1
+#SBATCH --gpus-per-node=1
+#SBATCH --time=$WALL_HMS
+#SBATCH --output=$WORK/logs/%x_%j.out
+${ACCOUNT:+#SBATCH --account=$ACCOUNT}
+set -euo pipefail
+module purge
+module load $PY_MODULES $GPU_MODULES
+source "$VENV/bin/activate"
+export DELTA_WORK="$WORK" DELTA_CASES="$CASES_DIR" DELTA_ICX="$WORK/icx" DELTA_DEVICE=cuda
+export DELTA_NPROC=\${SLURM_CPUS_ON_NODE:-24}; DELTA_NPROC=\$(( DELTA_NPROC > 4 ? DELTA_NPROC - 4 : 1 ))
+export DELTA_JOB_END=\$(( \$(date +%s) + $WALL - 900 ))
+export nnUNet_raw="$WORK/nnUNet_raw" nnUNet_preprocessed="$WORK/nnUNet_preprocessed" nnUNet_results="$WORK/nnUNet_results"
+export nnUNet_n_proc_DA=\$(( DELTA_NPROC > 12 ? 12 : DELTA_NPROC ))
+export OMP_NUM_THREADS=1
+nvidia-smi || true
+cd "$WORK"
+python "$WORK/code/pipeline.py" all
+touch "$WORK/.done_summary"
+echo "DELTA DONE: results in $WORK/results (run ./delta again on the login node to copy them back)"
+EOF
+chmod +x "$JOB"
+
+if [[ "$CMD" == dryrun ]]; then say "(dryrun) job script:"; cat "$JOB"; exit 0; fi
+
+cd "$WORK"
+JID="$(sbatch --parsable "$JOB")"
+echo "$JID" >> "$WORK/jobs.txt"
+say "submitted job $JID ($JOBNAME, 1 x H100, $WALL_HMS)."
+say "progress: ./delta status    log: $WORK/logs/${JOBNAME}_$JID.out"
+say "when it finishes, run ./delta again: results land in $HERE/results/"

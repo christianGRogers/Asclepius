@@ -1,0 +1,174 @@
+#!/bin/bash
+# Atlas Trillium experiment: R0 benchmark (amendment A6) + a short real R1 of the master recipe, scored by tree-F1.
+#
+#   cd <root>/experiments/atlas && ./atlas            # set up (login node), submit ONE 1-GPU job, or report status
+#   ./atlas status                                     # job state and progress
+#   ./atlas collect                                    # copy results from $SCRATCH into ./results/
+#   ATLAS_DRYRUN=1 ./atlas                             # no modules, no pip, no sbatch: print what would happen
+#
+# Budget: one job, 1 x H100, --time=23:50:00 (<= 24 h total). Re-running never duplicates a running job and never
+# submits a second long job (see "budget guard").
+# Optional overrides (never needed): CASES=/path, ATLAS_ACCOUNT=def-xxx (else SLURM's default account),
+# ATLAS_VENV=$HOME/atlas-venv.
+set -euo pipefail
+
+HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+LIB="$HERE/lib"
+MODE="${1:-run}"
+DRY="${ATLAS_DRYRUN:-0}"
+JOBNAME="atlas-r0r1"
+WALLTIME="23:50:00"
+VENV="${ATLAS_VENV:-$HOME/atlas-venv}"
+NNUNET_VERSION="2.8.1"
+
+say() { printf '[atlas] %s\n' "$*"; }
+die() { printf '[atlas] ERROR: %s\n' "$*" >&2; exit 1; }
+
+if [ "$DRY" = "1" ]; then
+    : "${SCRATCH:=${TMPDIR:-/tmp}/atlas-dryrun-scratch}"
+    mkdir -p "$SCRATCH"
+fi
+[ -n "${SCRATCH:-}" ] || die "\$SCRATCH is not set (this must run on a Trillium login node)"
+W="$SCRATCH/atlas"
+mkdir -p "$W/logs"
+
+# ------------------------------------------------------------------ python on the login node
+load_modules() {
+    if [ "$DRY" = "1" ]; then return 0; fi
+    if command -v module >/dev/null 2>&1; then
+        module purge >/dev/null 2>&1 || true
+        module load StdEnv/2023 python/3.11.5
+    else
+        die "the 'module' command is missing; run this on a Trillium login node"
+    fi
+}
+
+setup_venv() {
+    if [ "$DRY" = "1" ]; then say "dry run: would build venv $VENV (torch from the Alliance wheelhouse, nnunetv2==$NNUNET_VERSION)"; PY=python3; return 0; fi
+    if [ ! -f "$VENV/.atlas_ok" ]; then
+        say "building venv $VENV (one-off, a few minutes)"
+        virtualenv --no-download "$VENV"
+        # shellcheck disable=SC1091
+        source "$VENV/bin/activate"
+        pip install --no-index --upgrade pip
+        pip install --no-index torch            # Alliance wheel, CUDA-enabled
+        pip install "nnunetv2==$NNUNET_VERSION" remotezip scikit-image nibabel scipy
+        deactivate
+        touch "$VENV/.atlas_ok"
+    fi
+    # shellcheck disable=SC1091
+    source "$VENV/bin/activate"
+    PY="$VENV/bin/python"
+    # install the experiment's trainers where nnUNetv2_train finds them (idempotent)
+    local tdir
+    tdir="$("$PY" -c 'import nnunetv2, os; print(os.path.join(os.path.dirname(nnunetv2.__file__), "training", "nnUNetTrainer", "variants", "atlas"))')"
+    mkdir -p "$tdir"; touch "$tdir/__init__.py"
+    cp "$LIB/atlas_trainers.py" "$tdir/atlas_trainers.py"
+    "$PY" -c "import nnunetv2, torch; from nnunetv2.training.nnUNetTrainer.variants.atlas.atlas_trainers import nnUNetTrainerAtlas; print('[atlas] venv ok: torch', torch.__version__)"
+}
+
+# ------------------------------------------------------------------ status helpers
+running_job() {
+    if [ "$DRY" = "1" ] || ! command -v squeue >/dev/null 2>&1; then return 1; fi
+    squeue -u "$USER" --name "$JOBNAME" -h -o '%i %T %M' | head -1
+}
+
+collect() {
+    if [ -d "$W/results" ]; then
+        if mkdir -p "$HERE/results" 2>/dev/null && [ -w "$HERE/results" ]; then
+            cp -r "$W/results/." "$HERE/results/"
+            cp "$W"/logs/slurm-*.out "$HERE/results/" 2>/dev/null || true
+            say "results copied to $HERE/results/ (SUMMARY.md, results.json, logs)"
+        else
+            say "results are in $W/results/ ($HERE is not writable)"
+        fi
+    else
+        say "no results yet in $W/results/"
+    fi
+}
+
+status() {
+    local rj
+    rj="$(running_job || true)"
+    if [ -n "$rj" ]; then say "job $rj"; fi
+    for m in .labels_done .plan_done .preprocess_done .bench_done .train_done DONE; do
+        [ -e "$W/$m" ] && say "stage done: $m"
+    done
+    tail -n 5 "$W"/logs/slurm-*.out 2>/dev/null || true
+}
+
+case "$MODE" in
+    status)  status; exit 0 ;;
+    collect) collect; exit 0 ;;
+    run|selftest) ;;
+    *) die "unknown mode '$MODE' (use: ./atlas | ./atlas status | ./atlas collect)" ;;
+esac
+
+# ------------------------------------------------------------------ 1. finished? running?
+if [ -e "$W/DONE" ]; then say "experiment finished"; collect; exit 0; fi
+RJ="$(running_job || true)"
+if [ -n "$RJ" ]; then say "already queued/running: $RJ (not submitting again)"; status; exit 0; fi
+
+# budget guard: one long job only. A previous job that ran >= 1 h without finishing means the budget is spent.
+if [ -f "$W/submitted_jobs" ] && [ "$DRY" != "1" ] && command -v sacct >/dev/null 2>&1; then
+    while read -r jid; do
+        el="$(sacct -j "$jid" -X -n -o ElapsedRaw 2>/dev/null | head -1 | tr -d ' ')"
+        if [ -n "$el" ] && [ "$el" -ge 3600 ]; then
+            say "job $jid already used $((el / 60)) min of GPU time and did not finish; not resubmitting (24 h budget)."
+            say "partial results:"; collect; exit 0
+        fi
+    done < "$W/submitted_jobs"
+fi
+
+# ------------------------------------------------------------------ 2. environment, cases, labels
+load_modules
+setup_venv
+say "scratch workdir: $W"
+"$PY" "$LIB/layout.py" "$HERE" "$W/layout.json"   # walks up to <root>/cases (or $CASES); fails loudly
+if [ "$DRY" = "1" ] && [ -n "${ATLAS_DRY_ICX:-}" ]; then
+    ICX="$ATLAS_DRY_ICX"; say "dry run: using local ImageCAS-X labels in $ICX"
+else
+    ICX="$W/icx"
+    "$PY" "$LIB/fetch_icx.py" "$ICX"   # login node: internet; ~14 MB
+fi
+
+if [ "$MODE" = "selftest" ]; then
+    say "selftest: proxy label for the first ImageCAS-X val case present"
+    "$PY" - "$W/layout.json" "$ICX" "$LIB" <<'PYEOF'
+import sys, json; sys.path.insert(0, sys.argv[3]); import proxy
+L = json.load(open(sys.argv[1])); val = ['c%04d' % (int(x) - 1) for x in open(sys.argv[2] + '/val.txt').read().split()]
+c = next(c for c in val if c in L['cases'])
+lab, aff, st = proxy.make_label(L['cases'][c]['mask'], f"{sys.argv[2]}/{int(c[1:]) + 1}.coronary.nii.gz")
+print('[atlas] selftest', c, st)
+PYEOF
+    exit 0
+fi
+
+# ------------------------------------------------------------------ 3. the job script
+JOB="$W/job.sh"
+ACCOUNT_LINE=""
+if [ -n "${ATLAS_ACCOUNT:-}" ]; then ACCOUNT_LINE="#SBATCH --account=$ATLAS_ACCOUNT"; fi
+cat > "$JOB" <<EOF
+#!/bin/bash
+#SBATCH --job-name=$JOBNAME
+#SBATCH --nodes=1
+#SBATCH --gpus-per-node=1
+#SBATCH --time=$WALLTIME
+#SBATCH --output=$W/logs/slurm-%j.out
+$ACCOUNT_LINE
+# No --partition and no --mem: Trillium docs say not to set them. A 1-GPU job gets 24 cores and ~188 GiB.
+set -uo pipefail
+export W="$W" LIB="$LIB" ICX="$ICX" VENV="$VENV" PYTHONUNBUFFERED=1
+bash "$LIB/job_body.sh"
+EOF
+chmod +x "$JOB"
+
+if [ "$DRY" = "1" ]; then
+    say "dry run: would submit (from $W):"; cat "$JOB"; exit 0
+fi
+cd "$W"   # Trillium: submit from \$SCRATCH so SLURM output lands on a writable file system
+JID="$(sbatch --parsable "$JOB")"
+echo "$JID" >> "$W/submitted_jobs"
+say "submitted job $JID ($JOBNAME, 1 x H100, $WALLTIME)."
+say "watch: ./atlas status    results when finished: ./atlas   (or ./atlas collect)"
+say "results will be written to $W/results/ and copied to $HERE/results/ by ./atlas collect"

@@ -1,0 +1,110 @@
+#!/bin/bash
+# Bridge Trillium experiment — single entry point (see README.md here and ../README.md for the contract).
+#   ./bridge            prepare on the login node (venv, ImageCAS-X fetch, case map) and submit the GPU job
+#   ./bridge status     queue state, budget used, last log lines
+#   ./bridge collect    copy the small results folder from $SCRATCH next to this script
+# Dry run on any machine (no SLURM, no modules, CPU, tiny training): BRIDGE_DRYRUN=1 BRIDGE_W=/tmp/x BRIDGE_VENV=/path ./bridge
+set -euo pipefail
+HERE=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
+CMD=${1:-run}
+JOBNAME=bridge-r3
+DRY=${BRIDGE_DRYRUN:-0}
+
+die () { echo "ERROR: $*" >&2; exit 1; }
+
+# GPU jobs can only be submitted from Trillium's GPU login node (Trillium Quickstart: "GPU compute nodes
+# must be submitted from the GPU login node"). Hop there once if we were started elsewhere.
+if [ "$DRY" != 1 ] && [ "$CMD" = run ] && [[ "$(hostname -s)" != trig-login* ]]; then
+  if [ -z "${BRIDGE_HOPPED:-}" ] && command -v ssh >/dev/null; then
+    echo "Not on the GPU login node ($(hostname -s)); re-running on trig-login01 ..."
+    exec ssh -o BatchMode=yes trig-login01 "cd '$HERE' && BRIDGE_HOPPED=1 CASES='${CASES:-}' BRIDGE_ACCOUNT='${BRIDGE_ACCOUNT:-}' ./bridge run" \
+      || die "could not ssh to trig-login01; log in there and run ./bridge again"
+  fi
+  die "GPU jobs must be submitted from trig-login01 (current host $(hostname -s))"
+fi
+
+if [ "$DRY" = 1 ]; then
+  W=${BRIDGE_W:?BRIDGE_W must be set for a dry run}
+  VENV=${BRIDGE_VENV:?BRIDGE_VENV must be set for a dry run}
+else
+  : "${SCRATCH:?\$SCRATCH is not set — are you on Trillium?}"
+  W=$SCRATCH/bridge_r3
+  VENV=$HOME/venvs/bridge_r3
+  module purge >/dev/null 2>&1 || true
+  module load StdEnv/2023 cuda/12.6 python/3.11.5 || die "module load failed (StdEnv/2023 cuda/12.6 python/3.11.5)"
+fi
+mkdir -p "$W/logs" "$W/results"
+
+case "$CMD" in
+  status)
+    command -v squeue >/dev/null && squeue -u "$USER" --name "$JOBNAME" || true
+    echo "budget used (s): $(awk '{s+=$1} END {print s+0}' "$W/gpu_seconds" 2>/dev/null || echo 0) of 86400"
+    for f in "$W"/logs/slurm-*.out; do [ -f "$f" ] && { echo "== $f"; tail -n 15 "$f"; }; done
+    [ -f "$W/done.all" ] && echo "FINISHED — run ./bridge collect"
+    exit 0 ;;
+  collect)
+    [ -f "$W/results/SUMMARY.md" ] || die "no results yet in $W/results"
+    mkdir -p "$HERE/results"
+    (cd "$W/results" && find . -type f -size -20M -print0 | xargs -0 -I{} cp --parents {} "$HERE/results/")
+    du -sh "$HERE/results"; echo "results copied to $HERE/results"; exit 0 ;;
+  run) ;;
+  *) die "unknown command '$CMD' (use: ./bridge | ./bridge status | ./bridge collect)" ;;
+esac
+
+# --- 1. python environment (login node has internet; compute nodes do not) -------------------------
+if [ ! -x "$VENV/bin/python" ]; then
+  echo "building venv $VENV"
+  if command -v virtualenv >/dev/null; then virtualenv --no-download "$VENV"; else python3 -m venv "$VENV"; fi
+fi
+# shellcheck disable=SC1091
+source "$VENV/bin/activate"
+if ! python -c "import torch, nnunetv2, kimimaro, cc3d, networkx, skimage, remotezip, nibabel" 2>/dev/null; then
+  pip install --upgrade pip >/dev/null 2>&1 || true
+  # Alliance wheelhouse first (torch built for the cluster), PyPI as fallback for what it lacks
+  pip install --no-index torch 2>/dev/null || pip install torch
+  for p in "nnunetv2==2.8.1" connected-components-3d kimimaro networkx scikit-image remotezip nibabel scipy; do
+    pip install --no-index "$p" 2>/dev/null || pip install "$p" || die "pip install $p failed"
+  done
+fi
+python -c "import torch, nnunetv2, kimimaro, cc3d, networkx, skimage, remotezip, nibabel; print('python env ok: torch', torch.__version__, 'nnunetv2', __import__('importlib.metadata').metadata.version('nnunetv2'))"
+# install the deadline-bounded, no-mirroring trainer where nnU-Net looks for trainers
+TDIR=$(python -c "import nnunetv2, os; print(os.path.join(os.path.dirname(nnunetv2.__file__), 'training', 'nnUNetTrainer', 'variants'))")
+cp "$HERE/py/nnUNetTrainer_bridge.py" "$TDIR/nnUNetTrainer_bridge.py"
+
+# --- 2. case data ---------------------------------------------------------------------------------
+python - "$HERE" "$W/casemap.json" <<'EOF'
+import json, os, sys
+sys.path.insert(0, os.path.join(sys.argv[1], 'py'))
+from cases import find_cases_dir, scan
+d, how = find_cases_dir(sys.argv[1])
+layout, m, notes = scan(d)
+print(f'cases: {d} ({how}); layout detected: {layout}; {len(m)} cases mapped to c0000..c0999 ids '
+      f'(ImageCAS id n -> c(n-1)); first {sorted(m)[:2]}')
+for n in notes[:5]:
+    print('  note:', n)
+json.dump(m, open(sys.argv[2], 'w'))
+EOF
+
+# --- 3. ImageCAS-X names for the proxy (login node: internet) ---------------------------------------
+python "$HERE/py/fetch_icx.py" "$W/icx"
+
+# --- 4. submit (once; resumable; within the 24 h budget) -------------------------------------------
+if [ -f "$W/done.all" ]; then echo "already finished; results in $W/results — run ./bridge collect"; exit 0; fi
+USED=$(awk '{s+=$1} END {print s+0}' "$W/gpu_seconds" 2>/dev/null || echo 0)
+if [ "$DRY" = 1 ]; then
+  echo "DRY RUN: running job.sh locally (CPU)"
+  W=$W HERE=$HERE VENV=$VENV BRIDGE_DRYRUN=1 bash "$HERE/job.sh" 2>&1 | tee "$W/logs/slurm-dryrun.out"
+  exit "${PIPESTATUS[0]}"
+fi
+if squeue -h -u "$USER" --name "$JOBNAME" | grep -q .; then
+  echo "job already queued/running:"; squeue -u "$USER" --name "$JOBNAME"; exit 0
+fi
+LEFT=$(( 86400 - ${USED%.*} ))
+[ "$LEFT" -gt 1800 ] || die "24 h GPU budget used up ($USED s); nothing submitted"
+HOURS=$(( LEFT / 3600 )); [ "$HOURS" -gt 24 ] && HOURS=24
+ACC=(); [ -n "${BRIDGE_ACCOUNT:-}" ] && ACC=(--account="$BRIDGE_ACCOUNT")
+cd "$W"   # Trillium: submit from $SCRATCH so SLURM output can be written
+JID=$(sbatch --parsable --job-name="$JOBNAME" --nodes=1 --gpus-per-node=1 --time="$(printf '%02d:00:00' "$HOURS")" \
+      "${ACC[@]}" --output="$W/logs/slurm-%j.out" --export=ALL,W="$W",HERE="$HERE",VENV="$VENV" "$HERE/job.sh")
+echo "submitted job $JID (1 x H100, ${HOURS} h). Results: $W/results (SUMMARY.md, results.json)."
+echo "Check with ./bridge status; when it finishes run ./bridge collect to copy them to $HERE/results."

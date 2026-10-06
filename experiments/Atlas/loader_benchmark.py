@@ -11,8 +11,9 @@ torch.set_num_threads(1)
 from batchgenerators.utilities.file_and_folder_operations import load_json
 from nnunetv2.training.nnUNetTrainer.variants.data_augmentation.nnUNetTrainerNoMirroring import nnUNetTrainerNoMirroring
 pp = W + '/pp/Dataset712_CCTAr0'
-plans = load_json(pp + '/nnUNetResEncUNetPlans_60G_iso05.json'); dj = load_json(pp + '/dataset.json')
+plans = load_json(pp + '/nnUNetResEncUNetPlans_60G_iso05.json'); plans['continue_training'] = False; dj = load_json(pp + '/dataset.json')
 tr = nnUNetTrainerNoMirroring(plans, '3d_fullres', 0, dj, device=torch.device('cpu'))
+tr._set_batch_size_and_oversample()
 t0 = time.time(); gen_tr, gen_val = tr.get_dataloaders(); t_start = time.time() - t0
 proc = psutil.Process()
 cpu0 = sum(p.cpu_times().user + p.cpu_times().system for p in [proc] + proc.children(recursive=True))

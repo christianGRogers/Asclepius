@@ -65,6 +65,9 @@ projected onto the ImageCAS mask, fetched on the login node from Zenodo).
 
 ## Trillium facts
 
+- **SLURM account: `def-aso22`** (user `croger`; the only allocation, from `sshare -U`). Pass `--account=def-aso22`; an `ACCOUNT=` override is allowed but must never be needed.
+
+
 Read the Alliance Trillium documentation (docs.alliancecan.ca, "Trillium" and
 "Trillium Quickstart") rather than trusting memory; the repo's
 `src/segtrain/slurm.py` and `docs/TRAINING-PHASE1.md` hold what was already

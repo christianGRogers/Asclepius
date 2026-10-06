@@ -3,302 +3,366 @@ tags: [plans, candidate, master, nnunet, multiclass]
 author: Atlas
 round: 3
 version: 3
-updated: 2026-10-04
+updated: 2026-10-05
 ---
 
-# Atlas v3 — one direct 4-class nnU-Net, one label convention, judged by tree-F1 on the raw prediction
+# Atlas v3 — one direct 4-class nnU-Net on the split ImageCAS mask, trained on two reads, judged by tree-F1
 
 ## 1. Thesis
 
-Train **one** nnU-Net v2 ResEnc model end to end on 4-class labels (LM, LAD, LCx, RCA):
+Train **one** nnU-Net v2 ResEnc model end to end on 4-class labels (LM, LAD, LCx, RCA). The recipe is unchanged from
+v2:
 
 - 0.5 mm isotropic, 256³ (128 mm) patch;
-- fixed CT window, no mirroring;
-- nnU-Net default loss, sampling and inference overlap.
+- fixed CT window [−300, 1300] HU, no mirroring;
+- nnU-Net default loss, sampling and inference overlap (tile step 0.5).
 
-**What the humans decide.** The convention is chosen at D0: expert lumen (A) or Girder seed (B), plus the
-side-branch and ramus rules. The procedures of A3 then keep every label, every wave and the sealed test in that one
-convention.
+The project lead's decisions ([[Human decisions]]) are binding:
 
-**What the evidence decides.** Everything after the network is a set of switchable, pre-registered competitors,
-scored on R1's val fold by one implementation of tree-F1 (A1 ostium, A9):
+- the **original ImageCAS mask, split into 4 classes**, is target, seed and reference (D0, D4);
+- side branches go to their parent's class, the **territory** rule (D1);
+- the **ramus intermedius → LCx** (D1b);
+- tF1 tolerance **1.5 mm** (D3);
+- **every case is read twice** (D2).
 
-- post-processing P1, P1′ and P2;
-- rule renaming R and hybrid decoding H;
-- an FP gate computed on the raw prediction, so no repair can game it.
+The labels therefore all live in one convention, the one the plan's projected proxy already uses. Training can
+start before any human label exists: ImageCAS-X names projected onto the ImageCAS mask, territory read-out, ramus →
+LCx.
 
-The direct model keeps whatever the evidence lets it keep.
+Two reads per case change two things. First, **the training target becomes the agreement of the two reads; where
+they disagree, nnU-Net's `ignore` label**. Two raters give no majority to vote with, and on an independent pair of
+namers splitting the same mask the disagreement is a thin shell at the carina. Cases where the reads disagree
+wholesale go to a third reader instead of being masked. Second, **the inter-rater tF1 is known for every case**. It
+gives a 1000-case per-class ceiling, an acceptance rule per class, and a per-case difficulty score for stratifying
+results and catching annotator drift.
 
-What v3 adds:
+Everything after the network is a set of switchable, pre-registered competitors scored on val by one tF1
+implementation (A1, A9):
 
-- the round-2 amendments, integrated;
-- the fallback configuration's extents, now measured in a note;
-- the nearest thing to R0 a CPU allows: a measured nnU-Net data-loader throughput and a measured activation-memory
-  model for the planned network.
+- post-processing P1, P1′, P2;
+- rule renaming R and hybrid decoding H.
+
+The FP gate is computed on the raw prediction.
 
 ## 2. Recipe
 
-### 2.0 Week-0 order of work
+### 2.0 Order of work
 
-| Step | When | Blocks | Who / cost |
+| Step | When | Blocks | Cost |
 |---|---|---|---|
-| **D0: human decision meeting** | this week | R1 (waits ≤ 1 week, then defaults to B) | Clinical lead and labelling lead decide, in writing: (1) lumen convention, A or B; (2) side-branch convention, territory or trunk; (3) **ramus rule**: LAD, LCx or background, which sets namer switch A8; (4) tF1 tolerance (1.5 mm unless changed now); (5) labelling order (sealed test first, plus 20 double reads); (6) whether 4-class seeds are shown, with Crucible's randomised 20/20 trial recommended; (7) if A, whether labels already made from Girder seeds are redone |
-| **R0** | first GPU job, 1-GPU `debugjob` ≤ 2 h | every other GPU job | 2 H100-h. Forecast and acceptance in §2.5 |
-| CPU prep | now | R1 | Proxy factory (all variants); A4 QA over 800 cases; **trunk-mode A4** if D0 picks trunk; TotalSegmentator aorta on all 1000; port tF1 to `src/segtrain/metrics.py` with the A1 ostium (~1 day); bridge audit wrapper (Delta's); P3/H wrappers (~0.5 day) |
+| **R0** (1-GPU `debugjob`, ≤ 120 min) | first GPU job | every other GPU job | 2 H100-h (§2.5) |
+| CPU prep | now | R1 | Territory proxy for 640 ImageCAS-X train/val cases; A4 QA (Bridge's labeller, ramus → LCx) over all 800; TotalSegmentator aorta on all 1000; tF1 port to `src/segtrain/metrics.py` with the A1 ostium; bridge-audit wrapper; R/H wrappers; **read-fusion script** (§2.1) |
+| R1 | after R0 | ablations, post-processing judgement | ~45 H100-h |
+| Labelling (two reads per case) | from now; sealed test first | waves (§2.7) | team |
 
-### 2.1 Labels: one convention, enforced
+No human decision blocks R1 any more. D0 was taken on 2026-10-05.
 
-Splits are unchanged:
+### 2.1 Labels
 
-| Set | Cases | Role |
+**Splits** (unchanged):
+
+| Set | Cases | Use |
 |---|---|---|
-| ImageCAS-X train / val | 560 / 80 | proxy until team-labelled |
-| ImageCAS-X test | 160 | 80 sealed; 80 enter training only with team labels |
-| quality-0 | 200 | 20 sealed; rest only with team labels |
+| ImageCAS-X train / val | 560 / 80 | proxy until team reads exist |
+| ImageCAS-X test | 160 | 80 sealed; 80 enter training only with team reads |
+| quality-0 | 200 | 20 sealed; rest only with team reads |
 
-**Option A (expert lumen).** The ImageCAS-X lumen and names, read out to 4 classes by D0's side-branch and ramus
-rule. SegQueue is re-seeded with the ImageCAS-X lumen.
+The sealed test is labelled first.
 
-**Option B (Girder seed; the default).** ImageCAS-X names projected onto our mask (nearest within 2 mm, geodesic
-for the rest), read out the same way.
+**Proxy (before team reads).** For each mask voxel, the ImageCAS-X class of the nearest ImageCAS-X voxel within
+2 mm; geodesic inheritance inside the mask for the rest. The 14 classes are read out by D1/D1b:
 
-**A4 QA, as revised.**
+- LM ← LM;
+- LAD ← LAD, D1, D2, D-Other;
+- LCx ← LCx, OM1, OM2, L-PDA, L-PLA, OM-Other, **IM**;
+- RCA ← RCA, R-PDA, R-PLA.
 
-- **Option B, voxel rule:** `ignore` only on near voxels where proxy ≠ Bridge's frozen labeller (median 0.26 %,
-  all within 10 mm of the carina).
-- **Option B, case rule:** the case is **excluded from training until reviewed** if the ostium is off by > 5 mm,
-  the LM Dice is < 0.5, or LAD↔LCx swaps exceed 5 % (10.5 % of cases)
-  ([[Atlas - The rule labeller disagrees with the projected proxy on 0.3 percent of voxels, all at the carina]]).
-- **Option A:** case flags only.
-- **Trunk mode (if D0 picks trunk).** The measurement above used territory counts. Trunk mode compares only voxels
-  that both namers call trunk. It needs a per-voxel projection rather than Bridge's per-vertex territory counts. It
-  is implemented and re-measured on the same 172 cases **before** R1 reads trunk labels: a CPU half-day.
+**A4 QA on the proxy, measured form**
+([[Atlas - The rule labeller disagrees with the projected proxy on 0.3 percent of voxels, all at the carina]]):
 
-**A3 convention-keeping procedures (binding, CPU and human cost only).**
+- voxels where proxy ≠ Bridge's frozen labeller (ramus switch = LCx) → `ignore`: median 0.26 %, all within 10 mm of
+  the carina;
+- cases with a wholesale disagreement (ostium > 5 mm, LM Dice < 0.5, LAD↔LCx swap > 5 %; 10.5 %) are **excluded
+  until a human reviews them**.
 
-1. **Seed tagging.** Every case carries `seed=girder` or `seed=icx`.
-2. **Per-case convention monitor on every wave.** Report:
-   - Dice of the team label's union against the ImageCAS-X lumen and against the Girder mask;
-   - Delta's calibre fraction (centreline in lumen < 4 voxels across).
+That measurement used Bridge's territory counts, which match D1, so no trunk-mode re-measurement is needed. One item
+is pending: Bridge's labeller must be re-run with the ramus switch at LCx before R1. It changes IM voxels only.
 
-   A case is "in convention" when its union is closer to the chosen convention's lumen. If **more than 10 % of a
-   wave** is out of convention, the wave **halts** for re-instruction. Out-of-convention cases are excluded from
-   training and from the sealed test until redone.
-3. **Single-convention sealed test.** Every sealed case passes the monitor before it is frozen.
-4. **First-20 check (pre-registered).** Run on the first 20 team labels, measured by the A9 tF1:
-   - macro tF1, branch-swap rate, and carina-vs-elsewhere error of each proxy variant;
-   - calibre (the A5 trigger);
-   - convention monitor.
+**Two reads per case (D2): the fusion rule.** For every case with two team reads, `fuse_reads.py` produces one
+training label:
 
-   Rules unchanged from v2: switch variant if beaten by CI; drop proxies if best < 0.80; if the labels are thin, A1
-   is mandatory and decisive.
+| Voxel state (inside the ImageCAS mask) | Training label |
+|---|---|
+| Both reads give the same class (incl. both background) | that class |
+| Reads give different named classes (e.g. LAD vs LCx at the carina) | `ignore` |
+| One read names it, the other leaves it unlabelled (a branch one annotator dropped) | `ignore` |
+| Outside the mask | background (no read can label there: edits are confined to the mask) |
 
-### 2.2 Preprocessing
+**Case rule.** If the two reads disagree wholesale, the case goes to a **third read (adjudication)** and stays out of
+training until resolved. "Wholesale" is tested between the two reads, scoring one against the other (A9
+implementation, both directions):
 
-Unchanged from v2:
+- inter-rater macro tF1 < 0.80, or
+- an ostium or LM disagreement > 5 mm, or
+- an LAD↔LCx swap > 5 %.
 
-- nnU-Net v2.8.1 `3d_fullres`;
-- **0.5 mm isotropic**: lossless for image and labels
-  ([[Atlas - Resampling to 0.5 mm isotropic loses nothing measurable, 0.7-0.8 mm does]]); on the thin convention a
-  0.5 mm round trip leaves tF1@0 ≥ 0.995 in the 10 hardest cases
-  ([[Atlas - On the thin convention a 0.5 mm round trip cuts no tree]]);
-- **fixed window [−300, 1300] HU**
-  ([[Atlas - nnU-Net's automatic CT window on lumen labels flattens 38 percent of the heart box]]);
-- no crop.
+After adjudication, the target is the majority of three reads per voxel, with residual three-way ties → `ignore`.
+
+Why this rule and not the alternatives:
+
+- **STAPLE / majority vote with two raters.** Majority vote has no majority wherever two raters differ, so it
+  reduces to this table. STAPLE's per-rater weights need more than two raters per case, or many shared cases, to
+  estimate. Where it was compared head to head (Karimi et al., MedIA 2020, Gleason, six raters), STAPLE did not beat
+  majority vote ([[Fusing multiple annotations and learning from noisy labels]]).
+- **Both reads as separate samples.** This trains the network on contradictory targets at exactly the disagreement
+  voxels. Its expected effect is calibrated, not sharper, boundaries. It is cheap to test (two identifiers per case;
+  same 250 iterations per epoch, so no extra GPU), and enters as **ablation A5r**.
+- **Soft labels** (mean of the two one-hots). nnU-Net's Dice+CE takes hard labels, so this needs a custom loss.
+  Deferred until A5r shows that keeping disagreement information helps at all.
+- **Cost of `ignore`.** On an independent pair of namers splitting the same mask (projected proxy vs rules), the
+  disagreement is 0.26 % of voxels per case, all at the carina. Two humans splitting one mask are expected to look
+  like this, not like two humans drawing two lumens. The first 20 double-read cases measure it for real (below).
+
+**Mixing team reads and proxy.** Fused team labels replace the proxy case by case. A case with only one team read so
+far uses that read, with the proxy-vs-read disagreement set to `ignore`.
+
+**Convention keeping (A3, run in the direction D0 implies).**
+
+- Every case is tagged `seed=girder`.
+- A per-case monitor on every wave compares each read's union with the ImageCAS mask, flagging a read **drawn
+  thin** (union Dice vs the ImageCAS mask < 0.9, or calibre closer to ImageCAS-X than to the mask).
+- A wave halts if more than 10 % of reads are flagged.
+- Flagged reads are excluded and redone.
+- The sealed test is single-convention by construction.
+
+**First-20 check (pre-registered), on the first 20 double-read cases:**
+
+1. Inter-rater tF1 (per class), fraction of voxels set to `ignore`, and where they lie relative to the carina.
+   *Prediction:* `ignore` ≤ 2 % of mask voxels in the median case, mostly at the carina. If it is larger, the
+   disagreement is about extent, not names. The fusion rule then needs re-examination before the next wave, and A5r
+   is promoted to run on that wave.
+2. Proxy vs fused team label: macro tF1, swap rate. If < 0.80, proxies are dropped from the next wave.
+3. Calibre (A5): with thick ImageCAS labels the spacing ablation A1 is expected not to trigger. If the reads come
+   out thin, A1 becomes mandatory and decisive.
+
+### 2.2 Preprocessing (unchanged)
+
+- nnU-Net v2.8.1 `3d_fullres`, never `3d_lowres`.
+- **0.5 mm iso**: lossless for image and labels
+  ([[Atlas - Resampling to 0.5 mm isotropic loses nothing measurable, 0.7-0.8 mm does]],
+  [[Atlas - On the thin convention a 0.5 mm round trip cuts no tree]]); the thick ImageCAS convention loses less
+  still.
+- **Fixed window [−300, 1300] HU.** The default fingerprint window on these labels would be ≈ [−164, 640] HU and
+  would saturate calcium
+  ([[Atlas - nnU-Net's automatic CT window on lumen labels flattens 38 percent of the heart box]]).
+- No crop.
 
 ### 2.3 Model
 
-- ResEnc U-Net from `ResEncUNetPlanner -gpu_memory_target 60 -overwrite_target_spacing 0.5 0.5 0.5`:
-  - **256³ patch, batch 2, 7 stages, 142 M parameters, 69 TFLOP per training step**;
-  - the tree fits one patch in 98 % of cases, and 97 % of LAD-centred patches contain the LM.
-- **Fallback if R0 fails: the ResEnc XL preset at 0.5 mm, 192 × 256 × 256 (96 × 128 × 128 mm).** Its extents are
-  now measured (FALLBACK_RESULT) ([[Atlas - The fallback 192 × 256 × 256 patch at 0.5 mm, measured]]).
-- Deep supervision on. Under option B, `ignore` = label 5.
+- ResEnc U-Net, `ResEncUNetPlanner -gpu_memory_target 60 -overwrite_target_spacing 0.5 0.5 0.5`. Re-planned on 6
+  real preprocessed cases this round: **256³, batch 2, spacing 0.5**, the same as the cohort-wide sweep.
+  - 142 M parameters, 69 TFLOP per step;
+  - tree fits one patch in 98 % of cases; LM in 97 % of LAD-centred patches.
+- `ignore` label = 5, used by A4 and the fusion rule.
+- **Fallback, measured** ([[Atlas - The fallback 192 × 256 × 256 patch at 0.5 mm, measured]]): ResEnc XL preset at
+  0.5 mm, 192 × 256 × 256.
+  - It holds the left tree in 93.5 % and the whole tree in 91.5 % of cases, which confirms v2's figures.
+  - But only **85 %** of LAD-centred patches contain the LM (97 % for the master).
+  - It is the last resort, after the loader and memory levers in §2.5.
 
 ### 2.4 Loss, sampling, augmentation
 
-All unchanged:
-
-- Dice + CE;
-- default sampling;
-- defaults with mirroring off;
-- rotation is ablation A3, and also a loader-cost lever.
-
-Skeleton Recall is ablation A4, judged after post-processing.
+- Dice + CE with the `ignore` label (nnU-Net-native).
+- Default sampling.
+- Defaults with mirroring off.
+- Rotation is ablation A3, and a loader-cost lever.
+- Skeleton Recall is ablation A4, judged after post-processing.
 
 ### 2.5 R0 and the compute model (A6)
 
-**What a CPU can measure before R0**
-([[Atlas - Without a GPU, nnU-Net's own loader delivers LOADER_RESULT and the activation memory model predicts MEMORY_RESULT]]):
+**Pre-measured on CPU**
+([[Atlas - Without a GPU, nnU-Net's own loader and a saved-tensor count bound R0]]):
 
-- LOADER_SUMMARY
-- MEMORY_SUMMARY
+- **Activation memory.** A saved-tensor count of the exact 256³ × 2 network on PyTorch's meta device gives
+  65.7 GiB fp32 (unique tensors; 98.6 GiB counting every save). Calibrated against the ResEnc L preset (its 0.5 mm
+  analogue counts 27.1 GiB fp32 unique; the nnU-Net authors measured 22.7 GB actual), the master should peak near
+  **55 GB** (≈ 50–62 GB). That is under the 75 GB acceptance and the 80 GB card. The fallback should peak near 41 GB.
+  If R0 still exceeds 75 GB, the first lever is batch 1 or activation checkpointing, which keeps the 128 mm context,
+  before the fallback patch.
+- **Loader.** LOADER_SUMMARY
 
-**Compute forecast (unchanged).** 17.2 EFLOP per 1000 epochs. That is 27 H100-h at the A100's measured utilisation
-fraction and 85 h at its absolute rate; central 45 h
-([[Atlas - A 256³ training step costs 69 TFLOP, and the CPU loader may set the pace]]).
+**Compute forecast (unchanged):** 17.2 EFLOP per 1000 epochs, i.e. **27–85 H100-h**, central 45.
 
-**R0 protocol** (1-GPU `debugjob`, ≤ 120 min, 24 cores, 188 GiB):
+**R0 protocol:**
 
-1. `nnUNetTrainerBenchmark_5epochs`: peak VRAM and s/epoch.
-2. One epoch each at `nnUNet_n_proc_DA` = 12, 20 and 22: GPU utilisation and iterations/s.
-3. Compare both with this note's predictions. Every GPU-hour figure in the plan is then replaced by R0's.
+1. `nnUNetTrainerBenchmark_5epochs`: peak VRAM, s/epoch.
+2. One epoch each at `nnUNet_n_proc_DA` = 12 / 20 / 22.
+3. Compare against the predictions above; R0's figures then replace every forecast.
 
-**R0 acceptance:** ≤ 306 s/epoch and peak VRAM ≤ 75 GB. On failure, in order: fallback config (VRAM or s/epoch);
-more workers, then a GPU spatial transform, then halved spatial-augmentation probabilities (loader-bound).
+**Acceptance:** ≤ 306 s/epoch, peak ≤ 75 GB.
 
-**Runs.** Same table as v2:
+On failure, in order:
 
-| Run | Epochs | H100-h |
-|---|---|---|
-| R0 | — | 2 |
-| R1 | 1000 | ~45 |
-| A0 (control) | 250 | ~11 |
-| A1 native spacing (mandatory if A5) | 250 | ~11 |
-| A2 default window | 250 | ~11 |
-| A3 no rotation | 250 | ~11 |
-| A4 Skeleton Recall | 250 | ~12 |
+1. More workers.
+2. GPU spatial transform.
+3. Halved spatial-augmentation probabilities (if loader-bound).
+4. Batch 1 or activation checkpointing (if over VRAM).
+5. Fallback patch.
+
+**Runs** (H100-h forecast):
+
+| Run | H100-h |
+|---|---|
+| R0 | 2 |
+| R1, 1000 epochs | ~45 |
+| A0 control, 250 epochs | ~11 |
+| A1 native spacing (only if A5 triggers) | ~11 |
+| A2 default window | ~11 |
+| A3 no rotation | ~11 |
+| A4 Skeleton Recall | ~12 |
+| **A5r both reads as samples**, on the first wave with ≥ 150 double-read cases, vs fused-agreement | ~22 |
 
 Ablation rule: paired tF1 CI excludes 0.
 
-**Inference:**
+**Inference:** tile step 0.5, Gaussian, no TTA; **`--save_probabilities`** on every val and test case (A7).
 
-- nnU-Net default **tile step 0.5**, Gaussian weighting, no TTA;
-- **`--save_probabilities` on every val and test prediction** (A7), so H, P1′ and any decoding change can be scored
-  without re-running the GPU.
+### 2.6 Post-processing (A2, A7, A8)
 
-### 2.6 Post-processing (A2 revised, A7, A8): competitors, not defaults
+**Always on:** threshold; drop components < 100 voxels; never delete ≥ 100 voxels; never force left and right apart.
 
-**Always on:**
+**FP gate on this raw output.**
 
-- threshold, then drop components < 100 voxels;
-- never delete a component ≥ 100 voxels;
-- never force left and right apart;
-- no largest-component logic.
+**Candidates, each adopted only if it wins on val by tF1 (CI):**
 
-**FP gate** = predicted components touching no reference vessel, computed on this **raw** prediction, before any
-step below (binding).
+| Step | What | Adoption rule |
+|---|---|---|
+| P1 | 3 mm bridging | CI + clean bridge audit; not expected to pass (+0.010, half its joins FP) |
+| P1′ | Gap-centred re-inference + support-gated bridging | Judged only against the tile-step-0.5 baseline |
+| P2 | Label repair | CI |
+| R | Bridge's rule renaming, ramus = LCx | CI excludes 0 **and** swap rate no higher |
+| H | Hybrid decoding from saved softmax | Same as R; no prior weight |
 
-**Candidates, each off until it wins on R1 val by the A9 tF1 (paired CI excludes 0):**
+The **bridge audit** (Delta's) is binding: bridges made, unsupported orphans, cross-tree joins, FP before/after.
 
-| Step | What | Prior evidence | Adoption rule |
-|---|---|---|---|
-| P1 | 3 mm geometric bridging (Delta) | +0.010 tF1 on 17 real predictions; 5 of 12 joins attached FP blobs ([[Delta - Real bridging on 17 nnU-Net predictions gains little alone, half its 3 mm joins are false positives, and gap-centred re-inference makes it work]]) | CI, **and** the bridge audit shows no FP-blob joins beyond reference-supported ones; not expected to pass |
-| P1′ | Gap-centred re-inference + support-gated bridging (Delta) | Unproven: CI touches 0, confounded by tile step 0.75 | **Judged only against the tile-step-0.5 baseline** that R1 uses. If default overlap already closes the gaps, P1′ is dropped |
-| P2 | Label repair (Delta `postproc.py`, regression-tested) | Fixes islands, not carina | CI |
-| P3 = R | Rule renaming of the model's vessel mask (Bridge's frozen labeller, naming bridges only, ramus switch set by D0, A8) | Within 0.007 (ramus excluded) to 0.037 (all classes) tF1 of oracle naming on a small-patch binary model | Ship only if CI excludes 0 in its favour **and** its swap rate is no higher (A7) |
-| P3b = H | Bridge's hybrid decoding from saved softmax | Unmeasured; no prior weight | Same as R |
-
-**Bridge audit (Delta's, binding; it replaces v2's off-reference tube count).** Per case:
-
-- bridges made;
-- orphans with no reference support;
-- cross-tree joins;
-- FP components before and after.
-
-The audit covers P1, P1′ and any naming joins R makes. Order when several pass: P1/P1′ → P2 → R/H. The QA flags
-are always computed.
+Order: P1/P1′ → P2 → R/H.
 
 ### 2.7 How labels arriving over time are used
 
-| Team labels | Action |
+| Team reads | Action |
 |---|---|
-| 0 | D0; R0; CPU prep; R1 + A0–A4; P1–H judged on R1 val |
-| first 20 | First-20 check (§2.1.4): switch / drop / A1-mandatory, as pre-registered |
-| every wave | Convention monitor; halt at > 10 % out of convention; seed tags |
-| 100 sealed + 20 double reads | Monitor-passed, frozen; inter-rater tF1 ceiling |
-| +150 / +300 / +600 | 250-epoch fine-tune on team ∪ proxy (team overrides); reviewed flagged cases re-enter |
-| ≥ 600 | Paired run, team-only vs team + proxy |
-| all 900 | Final from scratch, 1000 epochs; 5-fold only if the CV ensemble beats single by tF1 |
+| 0 | R0; CPU prep; R1 + A0–A4 on the proxy; P1–H judged on R1 val |
+| first 20 double-read cases | First-20 check (§2.1) |
+| sealed test (100 cases × 2 reads) | Fused, adjudicated where needed, frozen. Inter-rater ceiling on these 100 |
+| every wave | Convention monitor (thin-read flags, 10 % halt); fusion; adjudication queue |
+| ≥ 150 double-read training cases | Fine-tune 250 epochs on {fused team ∪ proxy}; **A5r** (separate samples vs fused agreement) |
+| +300 / +600 | Fine-tune 250 epochs; at ≥ 600, paired team-only vs team + proxy |
+| all 900 | Final from scratch, 1000 epochs, on the label form that won A5r; 5-fold only if it beats single by tF1 |
 
-## 3. Evaluation (A1 revised, A9)
+## 3. Evaluation
 
-**Decisive metric: macro tF1 @ 1.5 mm.** From R1 on, only the ported `src/segtrain` implementation decides (A9). It
-is regression-tested on Delta's E3 perturbations. Every number in the vault before it, including this plan's, is
-provisional.
+**Decisive metric:** macro tF1 @ **1.5 mm** (D3), from the ported `src/segtrain` implementation only (A9).
 
-**Ostium (A1 revised).** For each tree:
+**Ostium (A1):** TotalSegmentator aorta contact ≤ 5 mm, cross-checked with `thick` / `pool_thick`. A disagreement
+> 5 mm is flagged to a human. The check is validated on 30 val cases against ImageCAS-X `start_points`.
 
-- primary: the endpoint within 5 mm of the TotalSegmentator aorta (run on Trillium for all 1000);
-- cross-check: Delta's `thick` and `pool_thick` rules;
-- a tree where the rules disagree by > 5 mm is flagged to a human, not scored silently;
-- validated on 30 val cases against ImageCAS-X `start_points` before any sealed-test scoring.
+**FP gate:** on the raw prediction, ≤ 1 per case.
 
-**No comparison mixes ostium definitions** (A9).
+**Reference with two reads.** The decisive score of a model on a case is **the mean of its tF1 against read 1 and
+against read 2**. Adjudicated cases use the majority-of-three label. This uses both reads without inventing a fused
+truth for scoring, and it keeps the model on the same footing as a human.
 
-**FP gate** on the raw prediction, ≤ 1 component per case on average.
+**The 1000-case inter-rater ceiling (D2).** For every case, inter-rater tF1 is the mean of read 1 scored against
+read 2 and read 2 against read 1, per class. It is used four ways:
 
-**Reported alongside:**
+1. **Per-class ceiling and acceptance.** On the sealed test, the model's per-class tF1 must be ≥ the inter-rater
+   per-class tF1 − 5 points, both from the same cases. This replaces v2's 20-case ceiling.
+2. **Human-normalised score.** For each case, model tF1 ÷ inter-rater tF1, reported by stratum (dominance, disease,
+   quality). A model at 1.0 is "as good as a second annotator".
+3. **Difficulty stratification.** Results are reported per tertile of inter-rater tF1, so a model failing only
+   where humans also disagree is distinguishable from one failing on easy cases.
+4. **Annotator QA.** Per annotator, the running mean of their agreement with their co-reader. An annotator whose
+   agreement drifts below the cohort's 10th percentile over 20 cases is re-trained. This uses the same numbers and
+   needs no extra reads.
 
-- per-class clDice, Dice, HD95;
-- β₀ vs the reference's own count;
-- swap rate, LM length error, detection;
-- the bridge audit.
+**Reported alongside:** per-class clDice, Dice, HD95, β₀, swap rate, LM length, detection, bridge audit; and a
+**secondary cross-convention benchmark** against ImageCAS-X on the 80 sealed ImageCAS-X cases. That benchmark carries
+the 0.19 tF1 convention cost and is never decisive
+([[Crucible - A perfect segmentation in the wrong lumen convention loses 0.19 tree-F1]]).
 
-Results are stratified by dominance, disease and image quality.
+**Acceptance:**
 
-**Acceptance:** within 5 tF1 points of team inter-rater per class; FP ≤ 1; swap < 5 %.
+- per-class tF1 ≥ inter-rater − 5 points;
+- FP ≤ 1 per case;
+- swap rate < 5 %.
 
 ## 4. Evidence
 
-All v2 evidence rows stand. New this round:
+The v2 evidence table stands. New this round:
 
 | Claim | Evidence |
 |---|---|
-| Fallback 192 × 256 × 256 at 0.5 mm: extents and LM visibility | [[Atlas - The fallback 192 × 256 × 256 patch at 0.5 mm, measured]] |
-| CPU loader throughput and memory model for the 256³ config | [[Atlas - Without a GPU, nnU-Net's own loader delivers LOADER_RESULT and the activation memory model predicts MEMORY_RESULT]] |
-| Bridging alone +0.01; half its joins are FP; re-inference unproven | [[Delta - Real bridging on 17 nnU-Net predictions gains little alone, half its 3 mm joins are false positives, and gap-centred re-inference makes it work]] |
-| Cross-checked ostium finds 116/116 | [[Delta - Two cheap ostium rules find 116 of 116 true ostia, and their disagreement flags every miss]] |
-| Rule naming of a predicted tree is within 0.007–0.037 of oracle naming | [[Bridge - On real stage-1 output, the two-stage namer is within 0.01-0.03 tree-F1 of perfect naming]] |
-| A perfect model in the wrong convention loses 0.19 tF1 (one direction) | [[Crucible - A perfect segmentation in the wrong lumen convention loses 0.19 tree-F1]] |
+| Fallback 192 × 256 × 256: 93.5 % / 91.5 % / LM visible 85 % | [[Atlas - The fallback 192 × 256 × 256 patch at 0.5 mm, measured]] |
+| Activation memory ~55 GB predicted; loader throughput measured with nnU-Net's own pipeline | [[Atlas - Without a GPU, nnU-Net's own loader and a saved-tensor count bound R0]] |
+| Two independent splits of the same mask disagree on 0.26 % of voxels, at the carina | [[Atlas - The rule labeller disagrees with the projected proxy on 0.3 percent of voxels, all at the carina]] |
+| Majority vote ≈ STAPLE when raters are few; STAPLE needs raters to weight | [[Fusing multiple annotations and learning from noisy labels]] (Karimi et al. 2020) |
+| Bridging alone +0.01, half its joins FP | [[Delta - Real bridging on 17 nnU-Net predictions gains little alone, half its 3 mm joins are false positives, and gap-centred re-inference makes it work]] |
+| Cross-checked ostium 116/116 | [[Delta - Two cheap ostium rules find 116 of 116 true ostia, and their disagreement flags every miss]] |
+| Rule naming within 0.007–0.037 of oracle | [[Bridge - On real stage-1 output, the two-stage namer is within 0.01-0.03 tree-F1 of perfect naming]] |
 
 ## 5. Risks and early detection
 
-The v2 table stands, with these changes:
-
 | Risk | Early signal | Response |
 |---|---|---|
-| Mixed conventions (largest measured lever, 0.19 tF1 one way) | Per-wave convention monitor | Halt the wave at > 10 %; exclude and redo |
-| Repair hides FPs | FP gate on the raw prediction; bridge audit | Repair adopted only with a clean audit |
-| P1′ gain is just overlap | Its baseline is tile step 0.5 | Drop P1′ |
-| Loader-bound at 256³ | This round's loader note; R0 | Workers → GPU spatial transform → lower augmentation probabilities |
-| Every real-prediction number shares one small-patch model (ruling C3) | — | Nothing about cut rates is assumed until R1 val |
+| Reads disagree on extent, not just names (larger `ignore`) | First-20: `ignore` > 2 % median, away from the carina | Re-examine fusion; run A5r on that wave; brief annotators |
+| Wholesale disagreement common | Adjudication rate > 15 % on the first 100 | Re-instruct; third reads budgeted |
+| Annotators draw thin despite D0 | Per-read thin flag; wave halt at 10 % | Exclude and redo |
+| Over-VRAM at 256³ | Memory model (~55 GB) vs R0 | Batch 1 or checkpointing before fallback |
+| Loader-bound | Loader note vs R0 | Workers → GPU spatial transform → lower augmentation probabilities |
+| Repair hides FPs | Gate on raw output; audit | — |
+| Cut rate unknown (all vault predictions share one small-patch model) | R1 val | P1′ / R judged then |
 
 ## 6. Comparison
 
-All three challengers now run on the master's model, data, schedule and metric. Their contributions are in this
-plan as competitors with pre-registered adoption rules:
+The plan now conforms to D0–D5. Option-A machinery and the trunk/territory switch are removed. What v3 adds over v2
+and over the challengers is a concrete, cheap answer to the two-reads question:
 
-- Crucible's convention procedures (A3);
-- Delta's ostium, gate order and audit (A1, A2);
-- Bridge's renaming and ramus switch (A7, A8).
+- agreement plus `ignore`, adjudication for wholesale disagreement;
+- A5r as a test of the main alternative;
+- a scoring rule that uses both reads;
+- the 1000-case ceiling used per class, per case and per annotator.
 
-Accepting them costs no GPU time and none of the recipe's evidenced choices. The decisive fact still open is R1 val:
-D vs R vs H, and P1/P1′, under one metric.
+The challengers' adopted parts (A1–A9) are unchanged in role.
 
 ## 7. Cost
 
-As in v2: **≈ 220–470 H100-h**, ~105 h before any team label. Added this round:
+**GPU:** ≈ 220–470 H100-h (+22 h for A5r); ~105 h before any team read.
 
-- engineering: audit wrapper and trunk-mode A4, ~1 day if trunk is chosen;
-- human: per-wave convention monitor review (minutes per wave); possible redo of Girder-seeded labels if A is
-  chosen (D0 item 7).
+**Human, new:** third reads for wholesale-disagreement cases. Expected ≈ 10 %, from the 10.5 % wholesale rate between
+the two automatic namers, ≈ 100 extra reads over 1000 cases. Also the per-wave monitor review.
+
+**Engineering:** `fuse_reads.py` (0.5 day).
 
 ## 8. Changes since v2
 
-1. **A1 revised:** aorta-contact ostium cross-checked against `thick`/`pool_thick`, disagreement flagged;
-   validated against ImageCAS-X `start_points`.
-2. **A2 revised:**
+1. **Conforms to the human decisions.**
+   - D0/D4: target = split ImageCAS mask; option A removed; monitor flags thin reads.
+   - D1/D1b: territory, ramus → LCx; trunk-mode A4 dropped; namer switch = LCx.
+   - D3: 1.5 mm fixed.
+   - D5: no redo.
+2. **Two reads (D2):**
+   - fusion rule (agreement / `ignore` / third-read adjudication);
+   - A5r (both reads as samples);
+   - soft labels deferred;
+   - first-20 check redefined on double reads;
+   - scoring = mean of tF1 against each read.
+3. **1000-case inter-rater ceiling:** per-class acceptance, human-normalised score, difficulty tertiles, annotator QA.
+4. **A1–A9 of Round 2 integrated:**
+   - ostium cross-check;
    - FP gate on the raw prediction;
-   - Delta's audit replaces my tube count;
-   - P1 demoted;
-   - P1′ added, judged against tile step 0.5;
-   - inference fixed at step 0.5.
-3. **A3 strengthened:** seed tags, per-wave monitor with a 10 % halt, single-convention sealed test.
-4. **A4 revised:** measured form adopted; trunk mode required before R1 if trunk is chosen.
-5. **A7:** R with Bridge's adoption rule; `--save_probabilities`; H as P3b.
-6. **A8:** ramus is a namer switch set at D0.
-7. **A9:** only the ported tF1 decides from R1 on.
-8. **Fallback extents** moved into a measured note.
-9. **R0 pre-measurements:** loader throughput and memory model.
-10. **D0 item 7:** redo of Girder-seeded labels.
+   - Delta's audit;
+   - P1 demoted, P1′ judged against step 0.5;
+   - R with Bridge's rule; `--save_probabilities`, H;
+   - ramus switch;
+   - A9.
+5. **Fallback measured** and demoted behind memory and loader levers.
+6. **R0 pre-measurements:** memory model and nnU-Net loader throughput.

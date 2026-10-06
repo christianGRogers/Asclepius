@@ -8,6 +8,7 @@ ap.add_argument('--lmin', type=float, default=20.0); ap.add_argument('--cases')
 ap.add_argument('--ostw')
 a = ap.parse_args()
 Lb.BRIDGE = float(os.environ.get('BRIDGE', 0))
+Lb.RAMUS = os.environ.get('RAMUS', 'inherit')
 if a.ostw:
     w = json.load(open(a.ostw)); Lb.OSTIUM_W = dict(F=w['F'], mean=np.array(w['mean']), scale=np.array(w['scale']), coef=np.array(w['coef']))
 files = sorted(glob.glob(os.path.join(a.ex, 'c*.npz')))

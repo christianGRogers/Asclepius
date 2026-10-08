@@ -1,7 +1,7 @@
 """Crucible GPU experiment driver (runs INSIDE the SLURM job; also has a CPU smoke mode).
 
 Question: every case will be read twice (D2). Given two reads per case, which training target makes the best model:
-  single : one read only (what a single-read project would have)
+  single : one read only per case, alternating annotators across cases (what a single-read project would have)
   both   : both reads as two separate training samples
   agree  : voxels where the reads agree; disagreement -> nnU-Net ignore label
   union  : vessel if either read says vessel; class conflicts -> ignore
@@ -88,7 +88,7 @@ def prep_case(args):
     T, near14 = sim.truth(m, icx)
     rl = sim.local_radius(T > 0, sp); roots = sim.ostia(T, sp)
     rng = np.random.default_rng(int(c[1:]))
-    A = sim.make_read(T, near14, sp, rl, roots, rng); B = sim.make_read(T, near14, sp, rl, roots, rng)
+    A = sim.make_read(T, near14, sp, rl, roots, rng, who='X'); B = sim.make_read(T, near14, sp, rl, roots, rng, who='Y')
     ctimg = nib.load(paths['ct'])
     ct = np.asarray(ctimg.dataobj[sl]).astype(np.int16)
     aff = mimg.slicer[sl].affine
@@ -112,7 +112,8 @@ def write_raw(train, test):
         n = 0
         for c in train:
             src = os.path.join(WORK, 'cases', c)
-            items = {'single': [(c, 'A')], 'both': [(c + 'A', 'A'), (c + 'B', 'B')], 'agree': [(c, 'agree')],
+            # single: one read per case, annotators alternating across cases
+            items = {'single': [(c, 'A' if int(c[1:]) % 2 == 0 else 'B')], 'both': [(c + 'A', 'A'), (c + 'B', 'B')], 'agree': [(c, 'agree')],
                      'a11': [(c + 'A', 'a11A'), (c + 'B', 'a11B')],
                      'union': [(c, 'union')], 'oracle': [(c, 'T')]}[arm]
             for name, lab in items:
@@ -260,7 +261,7 @@ def stage_eval(st):
         rows = pool.map(eval_case, st['test'])
     res = {'question': 'two reads per case: which training target', 'arms': ARMS, 'epochs_per_arm': st.get('epochs'),
            't_epoch_s': st.get('t_epoch'), 'n_train': len(st['train']), 'n_test': len(st['test']),
-           'patch_size': st.get('plans_3d'), 'spacing': st.get('spacing'), 'noise_model': sim.PARAMS,
+           'patch_size': st.get('plans_3d'), 'spacing': st.get('spacing'), 'read_model': sim.READ_MODEL, 'noise_model': sim.PARAMS,
            'unfinished': [a for a in ARMS if st.get(f'unfinished_{a}')], 'smoke': SMOKE, 'cases': rows}
     rng = np.random.default_rng(0); summ = {}
     for arm in ARMS:
@@ -275,17 +276,19 @@ def stage_eval(st):
     summ['inter_read'] = {'tf1': float(np.mean([r['inter_read']['tf1'] for r in rows])),
                           'dice': float(np.mean([r['inter_read']['dice'] for r in rows]))}
     pairs = {}
-    for a in ('both', 'a11', 'agree', 'union', 'oracle'):
+    combos = [(a, 'single') for a in ('both', 'a11', 'agree', 'union', 'oracle')] + \
+             [(a, 'both') for a in ('a11', 'agree', 'union')]  # a11 - both vs truth is the decisive comparison
+    for a, base in combos:
         for ref in ('T', 'reads'):
-            ok = [r for r in rows if a in r and 'single' in r]
+            ok = [r for r in rows if a in r and base in r]
             if not ok: continue
             f = (lambda r, arm: r[arm][f'vs_{ref}']['tf1']) if ref == 'T' else \
                 (lambda r, arm: (r[arm]['vs_A']['tf1'] + r[arm]['vs_B']['tf1']) / 2)
-            dlt = np.array([f(r, a) - f(r, 'single') for r in ok])
+            dlt = np.array([f(r, a) - f(r, base) for r in ok])
             bs = [rng.choice(dlt, len(dlt)).mean() for _ in range(5000)]
-            pairs[f'{a}-single_vs_{ref}'] = {'mean': float(dlt.mean()), 'ci95': [float(np.percentile(bs, 2.5)), float(np.percentile(bs, 97.5))],
+            pairs[f'{a}-{base}_vs_{ref}'] = {'mean': float(dlt.mean()), 'ci95': [float(np.percentile(bs, 2.5)), float(np.percentile(bs, 97.5))],
                                              'wins': int((dlt > 0).sum()), 'n': len(dlt)}
-    res['summary'] = summ; res['paired_vs_single'] = pairs
+    res['summary'] = summ; res['paired'] = pairs
     rd = os.path.join(WORK, 'results'); os.makedirs(rd, exist_ok=True)
     json.dump(res, open(os.path.join(rd, 'results.json'), 'w'), indent=1)
     write_summary(res, os.path.join(rd, 'SUMMARY.md'))
@@ -298,7 +301,7 @@ def write_summary(res, path):
     L.append(f"{'SMOKE TEST (CPU, meaningless numbers). ' if res['smoke'] else ''}nnU-Net v2 3d_fullres, no mirroring, "
              f"{res['epochs_per_arm']} epochs x 250 iterations per arm ({res['t_epoch_s']} s/epoch), patch {res['patch_size']}, "
              f"spacing {res['spacing']}. {res['n_train']} training cases (ImageCAS-X train list), {res['n_test']} test cases "
-             f"(ImageCAS-X val list). Reads simulated (noise model {res['noise_model']}). Unfinished arms: {res['unfinished'] or 'none'}.\n")
+             f"(ImageCAS-X val list). Reads simulated (read model {res['read_model']}; base parameters {res['noise_model']}). Unfinished arms: {res['unfinished'] or 'none'}.\n")
     L.append('| arm | tF1 vs truth | tF1 vs reads (mean of A, B) | Dice vs truth | rooted recall vs truth | precision vs truth | fg volume / truth |')
     L.append('|---|---|---|---|---|---|---|')
     for a in res['arms']:
@@ -306,12 +309,12 @@ def write_summary(res, path):
             x = s[a]
             L.append(f"| {a} | {x['tf1_vs_T']:.3f} | {x['tf1_vs_reads']:.3f} | {x['dice_vs_T']:.3f} | {x['rec_vs_T']:.3f} | {x['prec_vs_T']:.3f} | {x['fg_ratio_vs_T']:.3f} |")
     L.append(f"\nInter-read ceiling (read B scored against read A): tF1 {s['inter_read']['tf1']:.3f}, Dice {s['inter_read']['dice']:.3f}.\n")
-    L.append('Paired differences against the single-read arm (per test case, bootstrap 95 % CI):\n')
-    for k, v in res['paired_vs_single'].items():
+    L.append('Paired differences (per test case, bootstrap 95 % CI); a11-both_vs_T is the decisive comparison:\n')
+    for k, v in res['paired'].items():
         L.append(f"- {k}: {v['mean']:+.3f} [{v['ci95'][0]:+.3f}, {v['ci95'][1]:+.3f}], better in {v['wins']}/{v['n']}")
-    L.append('\nReading guide: the scheme with the highest tF1 vs truth (CI excluding 0 vs single) is the recommended way to use '
-             'the team\'s two reads; "vs reads" shows what the same model scores against an individual annotator, i.e. how '
-             'evaluation against single reads under-states it. See vault/Plans/Experiments/Crucible - GPU experiment on '
+    L.append('\nReading guide: decisive is a11-both_vs_T (does the network fill the ignored carina band under opposite annotator '
+             'habits?). a11 >= both: A11 stands; a11 < both with CI excluding 0: narrow A11\'s ignore to cases without habits. '
+             '"vs reads" differences are expected to be ~0 whatever the truth says (A10 scoring cannot choose a fusion). See vault/Plans/Experiments/Crucible - GPU experiment on '
              'training with two reads per case (pending).md for the decision rule.')
     open(path, 'w').write('\n'.join(L) + '\n')
 

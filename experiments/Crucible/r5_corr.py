@@ -20,7 +20,7 @@ from skimage.morphology import skeletonize
 sys.path.insert(0, '/home/user/Asclepius/trillium/crucible/lib')
 import sim  # noqa: E402
 SCR = '/tmp/claude-0/-home-user-Asclepius/1b43aea1-ed14-5dd0-84ee-25f776047e09/scratchpad'
-D = SCR + '/work/Crucible/r2data'; OUT = SCR + '/work/Crucible/r5corr'; os.makedirs(OUT, exist_ok=True)
+D = SCR + '/work/Crucible/r2data'; OUT = SCR + '/work/Crucible/' + ('r5corr_fill' if os.environ.get('FILL') == '1' else 'r5corr_hier' if os.environ.get('HIER') == '1' else 'r5corr'); os.makedirs(OUT, exist_ok=True)
 S26 = np.ones((3, 3, 3)); IGN = sim.IGNORE
 meta = json.load(open(D + '/meta.json'))
 
@@ -67,9 +67,27 @@ def draw(sc, case_rng, rng, who):
     raise ValueError(sc)
 
 
+FILL = os.environ.get('FILL') == '1'
+
+
 def mode(stack):
     cnt = np.stack([(stack == k).sum(0) for k in range(5)]); tot = cnt.sum(0)
-    m = cnt.argmax(0).astype(np.uint8); m[tot == 0] = 0; return m
+    m = cnt.argmax(0).astype(np.uint8)
+    if FILL and (tot == 0).any():
+        # voxels ignored in EVERY sample: a network extrapolates from supervised neighbours rather than predicting
+        # background, so give them the label of the nearest supervised voxel (FILL=1; default = background, worst case)
+        _, ind = ndi.distance_transform_edt(tot == 0, return_indices=True); m = m[tuple(ind)]
+    else:
+        m[tot == 0] = 0
+    return m
+
+
+def hmode(stack):
+    # hierarchical read-out: vessel if vessel votes > background votes, then the plurality class among vessel votes
+    # (what argmax over [P(bg), sum P(classes)] then argmax over classes would give)
+    cnt = np.stack([(stack == k).sum(0) for k in range(5)])
+    ves = cnt[1:].sum(0) > cnt[0]
+    m = (cnt[1:].argmax(0) + 1).astype(np.uint8); m[~ves] = 0; return m
 
 
 class Ref:
@@ -123,6 +141,8 @@ if __name__ == '__main__':
                  'agree': mode(np.stack([sim.fuse(a, b, 'agree') for a, b in pairs])),
                  'union': mode(np.stack([sim.fuse(a, b, 'union') for a, b in pairs])),
                  'a11': mode(np.stack(a11)), 'truth': cs.T}
+            if os.environ.get('HIER') == '1':
+                P['both_hier'] = hmode(np.stack(ex)); P['a11_hier'] = hmode(np.stack(a11))
             refs = {'T': Ref(cs.T), 'A': Ref(A), 'B': Ref(B)}
             r = {'case': c, 'scenario': sc, 'inter_read': tf1(refs['A'], pred_info(B, cs.sp, cs.roots))}
             for k, p in P.items():

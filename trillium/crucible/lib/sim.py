@@ -8,6 +8,7 @@ read     : one simulated annotator split of T. Error model per read (independent
    connected to the ostia. Defaults calibrated on 49 cases to inter-read Dice LM 0.81 / LAD 0.93 / LCx 0.90 /
    RCA 0.96 (ImageCAS-X inter-observer: 0.92 / 0.92 / 0.85 / 0.95).
 """
+import os
 import numpy as np
 from scipy import ndimage as ndi
 from skimage.morphology import skeletonize
@@ -63,9 +64,26 @@ def local_radius(m, sp):
     return rad[tuple(ind)] * m
 
 
-def make_read(T, near14, sp, rad_local, roots, rng, P=PARAMS):
+# Read models. 'annot_bias' (default for the GPU run): two annotators with opposite, systematic habits -- X shifts the
+# carina distally (s ~ N(+1.5, 1) mm) and stops early (r_t ~ U(0.8, 1.1) mm); Y shifts it proximally (N(-1.5, 1)) and
+# traces further (U(0.55, 0.8)). Read A is always X, read B always Y. This is the regime where the CPU study
+# (experiments/Crucible/r5_corr.py) found that fusion choices change the result; under 'indep' (round-3 model:
+# s ~ N(0, 2), r_t ~ U(0.6, 1.05) for every read) all schemes converge to the same target.
+READ_MODEL = os.environ.get('CRUCIBLE_READS', 'annot_bias')
+
+
+def habit(who, rng, model=None):
+    model = model or READ_MODEL
+    if model == 'indep':
+        return rng.normal(0, PARAMS['SIG']), rng.uniform(PARAMS['R_LO'], PARAMS['R_HI'])
+    if model == 'annot_bias':
+        return (rng.normal(1.5, 1.0), rng.uniform(0.8, 1.1)) if who == 'X' else (rng.normal(-1.5, 1.0), rng.uniform(0.55, 0.8))
+    raise ValueError(model)
+
+
+def make_read(T, near14, sp, rad_local, roots, rng, P=PARAMS, who='X'):
     R = T.copy(); m = T > 0
-    s = rng.normal(0, P['SIG'])
+    s, rt = habit(who, rng)
     if s > 0:
         d = ndi.distance_transform_edt(R != 1, sampling=sp); R[np.isin(R, (2, 3)) & (d <= s)] = 1
     elif s < 0:
@@ -74,7 +92,6 @@ def make_read(T, near14, sp, rad_local, roots, rng, P=PARAMS):
     if rng.random() < P['P_RAMUS']: R[(near14 == 8) & m & (R == 3)] = 2
     if rng.random() < P['P_SIDE']:
         k = rng.choice([4, 6]); sel = (near14 == k) & m & np.isin(R, (2, 3)); R[sel] = 5 - R[sel]
-    rt = rng.uniform(P['R_LO'], P['R_HI'])
     lab, _ = ndi.label(m & (rad_local >= rt), S26)
     rootc = {lab[tuple(r)] for r in roots if lab[tuple(r)] > 0}
     R[~np.isin(lab, list(rootc))] = 0

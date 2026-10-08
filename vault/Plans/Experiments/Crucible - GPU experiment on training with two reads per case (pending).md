@@ -43,12 +43,14 @@ The code is at `trillium/crucible/`, under the README contract: entry point `./c
    160-case test list is never touched, because it is the master's sealed-test pool.
    - Truth T is the ImageCAS mask split into four classes by nearest ImageCAS-X name. This is D0 (thick), D1
      (territory) and D1b (ramus → LCx).
-   - Two reads per case are simulated with the calibrated error model of
-     [[Crucible - Simulated double reads and what each fusion rule teaches]]:
-     - carina shift N(0, 2 mm);
-     - distal truncation at a local radius ~ U(0.6, 1.05) mm, keeping what stays connected to the ostium;
-     - ramus slip, p 0.3;
-     - D1/OM1 swap, p 0.15.
+   - Two reads per case are simulated. **Round 4: the default read model is now `annot_bias`.** Read A comes from
+     annotator X (carina shifted +1.5 ± 1 mm, stops early at r_t ~ U(0.8, 1.1) mm); read B from annotator Y
+     (−1.5 ± 1 mm, traces further, U(0.55, 0.8)). Ramus and D1/OM1 slips are as before.
+   - This is the one regime where the CPU study found that fusion changes the result, and changes it in a direction
+     only real training can settle ([[Crucible - Correlated annotator errors change what fusion does, and A10 scoring cannot see it]]).
+     Under independent errors all schemes converge to the same target.
+   - The `single` arm alternates annotators across cases, so it is not biased toward one habit.
+   - `CRUCIBLE_READS=indep` restores the round-3 model, but the lead runs `./crucible` with nothing else.
    - Crop to the mask bounding box + 15 mm.
 3. **Stage `plan` / `preprocess`.**
    - **One plan for all arms.** It is made on the oracle dataset, set to the master's fixed CT window [−300, 1300] HU,
@@ -92,7 +94,8 @@ Let Δ be the paired tF1-vs-truth difference of an arm against `single`, with it
 
 | Result | Decision for the master plan |
 |---|---|
-| `a11` vs `both` (paired) | A prior for the master's pre-registered A11 test on real reads. If `a11` < `both` with the CI excluding 0, A11's name-conflict `ignore` costs carina supervision; otherwise A11 stands |
+| `a11` vs `both` (paired), **vs truth** | The CPU bracket under `annot_bias` runs from +0.018 (the network fills ignored carina voxels from their neighbours) to −0.075 (it does not). If `a11` ≥ `both`, the master's A11 default stands. If `a11` < `both` with the CI excluding 0, the ignored band is not being filled, and A11's name-conflict `ignore` should be narrowed to cases without systematic annotator habits (detected in A12) |
+| any fusion vs `both`, **vs reads** | Expected to be within ±0.002 whatever the truth-side result. If so, this confirms that A10 scoring cannot choose a fusion rule, and the A11 test on real reads (scored vs reads) needs the ImageCAS-X carina anchor as a second criterion |
 | `both` has Δ > 0 with the CI excluding 0, and ≥ `agree` and `union` | **Train on both reads as separate samples** (the simplest). Fusion is not needed |
 | `agree` or `union` beats `both` (CI of their difference excludes 0) | Use that fusion with nnU-Net's ignore label (`ignore` = 5 in dataset.json) |
 | No arm beats `single` | The second read is worth more as an **evaluation and QA** resource (ceiling, arbitration) than as training signal. Train on one read per case, chosen as the one closer to the namer QA |

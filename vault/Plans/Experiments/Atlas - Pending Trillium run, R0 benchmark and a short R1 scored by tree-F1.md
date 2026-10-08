@@ -83,6 +83,41 @@ Two things the master plan cannot settle without a GPU (Round 2 ruling §4, Atla
 - **`report.py`** on mock benchmarks plus two predictions (one with an RCA slab cut out) gives the right table: the
   cut case gets RCA tF1 0.80 against clDice ≈ 0.96 and is flagged as a cut tree. Output 16 kB.
 
+## A13: reuse by other experiments (added 2026-10-08)
+
+The Round 3 ruling (A13) puts this run first. Bridge's naming arms (D/R/H/O) and Delta's inference variants may then
+run as **inference-only** jobs against its model.
+
+**What the job saves for that.**
+
+- The final validation runs with `--npz`. Each of the 80 val cases gets `<case>.npz`: the softmax, key
+  `probabilities`, float32, (5, z, y, x) on the native grid, channels bg/LM/LAD/LCx/RCA. Each also gets the
+  segmentation and the properties `.pkl`.
+- nnU-Net keeps `checkpoint_final.pth` (and `checkpoint_best.pth`).
+- The trainer source goes to `$SCRATCH/atlas/export/`.
+
+**Where to find it.** `results/manifest.json` (copied back with `results/`; printed by `./atlas collect`) lists:
+
+- checkpoint, model dir, plans, dataset and splits JSON;
+- val softmax and segmentation dir, reference labels;
+- the nnU-Net env;
+- the exact `nnUNetv2_predict … -chk checkpoint_final.pth -step_size 0.5 --save_probabilities` command.
+
+Plans, dataset and splits JSON are also copied into `results/`, which stays small (no weights, no volumes, no
+softmax).
+
+**Sealed set.** No sealed case is touched: train is ImageCAS-X train, val is ImageCAS-X val. The manifest records
+`sealed_cases_touched: false`.
+
+**Tested on CPU.**
+
+- `nnUNetv2_train … --npz` with the tiny test architecture writes `checkpoint_final.pth` and
+  `validation/<case>.npz` with probabilities of shape (5, 275, 512, 512) float32.
+- The manifest and `collect` output were checked on a mock run.
+
+**Disk.** An untrained model's npz was 1.25 GB per case; a trained one compresses better. Allow ≤ 100 GB on
+`$SCRATCH` for the 80 val npz (quota 25 TB).
+
 ## What result would change which decision
 
 | Result | Decision it changes |

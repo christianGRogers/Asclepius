@@ -37,7 +37,8 @@ mkdir -p "$W/logs" "$W/results"
 
 case "$CMD" in
   status)
-    command -v squeue >/dev/null && squeue -u "$USER" --name "$JOBNAME" || true
+    command -v squeue >/dev/null && squeue -u "$USER" --name "$JOBNAME,$JOBNAME-a13" || true
+    [ -f "$W/atlas_link.json" ] && python3 -c "import json; d=json.load(open('$W/atlas_link.json')); print('A13 mode:', d['mode'], d.get('source') or d.get('why'))"
     echo "budget used (s): $(awk '{s+=$1} END {print s+0}' "$W/gpu_seconds" 2>/dev/null || echo 0) of 86400"
     for f in "$W"/logs/slurm-*.out; do [ -f "$f" ] && { echo "== $f"; tail -n 15 "$f"; }; done
     [ -f "$W/done.all" ] && echo "FINISHED — run ./bridge collect"
@@ -88,22 +89,42 @@ EOF
 # --- 3. ImageCAS-X names for the proxy (login node: internet) ---------------------------------------
 python "$HERE/py/fetch_icx.py" "$W/icx"
 
-# --- 4. submit (once; resumable; within the 24 h budget) -------------------------------------------
+# --- 4. A13: reuse the Atlas run if it exists (inference/scoring only), else train our own model ---
 if [ -f "$W/done.all" ]; then echo "already finished; results in $W/results — run ./bridge collect"; exit 0; fi
 USED=$(awk '{s+=$1} END {print s+0}' "$W/gpu_seconds" 2>/dev/null || echo 0)
+if [ "$DRY" != 1 ] && squeue -h -u "$USER" --name "$JOBNAME,$JOBNAME-a13" | grep -q .; then
+  echo "a Bridge job is already queued/running:"; squeue -u "$USER" --name "$JOBNAME,$JOBNAME-a13"; exit 0
+fi
+ATLAS_JID=""
+[ "$DRY" != 1 ] && ATLAS_JID=$(squeue -h -u "$USER" --name atlas-r0r1 -o %i 2>/dev/null | head -1 || true)
+python "$HERE/py/atlas_link.py" "$HERE" "$W/atlas_link.json" "$ATLAS_JID"
+MODE=$(python -c "import json; print(json.load(open('$W/atlas_link.json'))['mode'])")
+ACC=(--account="${ACCOUNT:-${BRIDGE_ACCOUNT:-def-aso22}}")   # Trillium allocation (README); ACCOUNT= overrides
+if [ "$MODE" != train ]; then
+  if [ "$DRY" = 1 ]; then
+    echo "DRY RUN: A13 inference-only job locally (CPU)"
+    export W HERE VENV BRIDGE_DRYRUN=1
+    bash "$HERE/job_atlas.sh" 2>&1 | tee "$W/logs/slurm-dryrun-a13.out"
+    exit "${PIPESTATUS[0]}"
+  fi
+  DEP=(); [ "$MODE" = atlas-pending ] && [ -n "$ATLAS_JID" ] && DEP=(--dependency=afterany:"$ATLAS_JID")
+  cd "$W"
+  JID=$(sbatch --parsable --job-name="$JOBNAME-a13" --nodes=1 --gpus-per-node=1 --time=04:00:00 "${ACC[@]}" "${DEP[@]}" \
+        --output="$W/logs/slurm-%j.out" --export=ALL,W="$W",HERE="$HERE",VENV="$VENV" "$HERE/job_atlas.sh")
+  echo "A13 mode ($MODE): submitted inference/scoring-only job $JID (1 x H100, <= 4 h)${DEP[*]:+, after Atlas job $ATLAS_JID}."
+  echo "No training: D/R/H/O are scored on the Atlas run's val predictions. Results: $W/results; then ./bridge collect."
+  exit 0
+fi
+echo "No usable Atlas run found: falling back to Bridge's own training run (as prepared)."
 if [ "$DRY" = 1 ]; then
   echo "DRY RUN: running job.sh locally (CPU)"
   export W HERE VENV BRIDGE_DRYRUN=1
   bash "$HERE/job.sh" 2>&1 | tee "$W/logs/slurm-dryrun.out"
   exit "${PIPESTATUS[0]}"
 fi
-if squeue -h -u "$USER" --name "$JOBNAME" | grep -q .; then
-  echo "job already queued/running:"; squeue -u "$USER" --name "$JOBNAME"; exit 0
-fi
 LEFT=$(( 86400 - ${USED%.*} ))
 [ "$LEFT" -gt 1800 ] || die "24 h GPU budget used up ($USED s); nothing submitted"
 HOURS=$(( LEFT / 3600 )); [ "$HOURS" -gt 24 ] && HOURS=24
-ACC=(--account="${ACCOUNT:-${BRIDGE_ACCOUNT:-def-aso22}}")   # Trillium allocation (README); ACCOUNT= overrides
 cd "$W"   # Trillium: submit from $SCRATCH so SLURM output can be written
 JID=$(sbatch --parsable --job-name="$JOBNAME" --nodes=1 --gpus-per-node=1 --time="$(printf '%02d:00:00' "$HOURS")" \
       "${ACC[@]}" --output="$W/logs/slurm-%j.out" --export=ALL,W="$W",HERE="$HERE",VENV="$VENV" "$HERE/job.sh")

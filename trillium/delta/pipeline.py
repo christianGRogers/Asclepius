@@ -20,7 +20,7 @@ import re
 import subprocess
 import sys
 import time
-from concurrent.futures import ProcessPoolExecutor, as_completed
+from concurrent.futures import ProcessPoolExecutor
 
 import numpy as np
 
@@ -35,6 +35,9 @@ NPROC = int(os.environ.get('DELTA_NPROC', '16'))
 DEVICE = os.environ.get('DELTA_DEVICE', 'cuda')
 JOB_END = float(os.environ.get('DELTA_JOB_END', '0')) or (time.time() + 24 * 3600)
 EVAL_RESERVE_H = float(os.environ.get('DELTA_EVAL_RESERVE_H', '8.0'))
+MODE = os.environ.get('DELTA_MODE', 'own')          # 'own' (train ResEnc-L) or 'atlas' (Atlas's checkpoint)
+ATLAS_MODEL_DIR = os.environ.get('DELTA_MODEL_DIR', '')
+ATLAS_CHK = os.environ.get('DELTA_CHK', '')
 DID, DNAME = 760, 'Dataset760_DeltaThick'
 PLANS = 'DeltaResEncL_iso05'
 TR = 'nnUNetTrainerDelta'
@@ -69,6 +72,30 @@ def icx_lists():
         ids = [int(x) for x in open(os.path.join(fl, f'{k}.txt')).read().split()]
         res[k] = [f'c{n - 1:04d}' for n in ids]
     return res
+
+
+def sealed_split(test):
+    """A13: the master's sealed test must never be evaluated. Returns (sealed set, source).
+    Priority: DELTA_SEALED_LIST (txt: one case id per line, or json with key 'sealed'); then the
+    split Delta published (icx_test_split.json next to this file), which applies only if no master
+    list exists. Any listed id, in either tournament (c0123) or ImageCAS (124) form, is excluded."""
+    def read(p):
+        txt = open(p).read()
+        try:
+            d = json.loads(txt)
+            ids = d['sealed'] if isinstance(d, dict) else d
+        except ValueError:
+            ids = txt.split()
+        out = set()
+        for x in ids:
+            x = str(x).strip()
+            out.add(x if x.startswith('c') else f'c{int(x) - 1:04d}')
+        return out
+    p = os.environ.get('DELTA_SEALED_LIST', '')
+    if p and os.path.exists(p):
+        return read(p), p
+    p = os.path.join(HERE, 'icx_test_split.json')
+    return read(p), p
 
 
 def icx_seg(case):
@@ -119,6 +146,11 @@ def step_prepare():
         raise SystemExit(f'no cases found under {CASES}')
     log(f'layout {layout}: {len(cases)} cases')
     lists = icx_lists()
+    sealed, src = sealed_split(lists['test'])
+    lists['test'] = [c for c in lists['test'] if c not in sealed]
+    log(f'sealed test excluded: {len(sealed)} cases from {src}; evaluating on {len(lists["test"])} open test cases')
+    if MODE == 'atlas':  # inference-only on Atlas's checkpoint: build reference labels for the test cases only
+        lists['train'], lists['val'] = [], []
     if SMOKE:
         avail = [c for c in lists['train'] + lists['val'] if c in cases]
         lists = dict(train=avail[:3], val=avail[3:4], test=[c for c in lists['test'] if c in cases][:1])
@@ -151,7 +183,8 @@ def step_prepare():
                    numTraining=ntr, file_ending='.nii.gz'), open(os.path.join(base, 'dataset.json'), 'w'), indent=1)
     have = lambda L: [c for c in L if c in status and c not in bad]
     json.dump(dict(layout=layout, n_cases_found=len(cases), train=have(lists['train']), val=have(lists['val']),
-                   test=have(lists['test']), bad=bad), open(os.path.join(WORK, 'split.json'), 'w'), indent=1)
+                   test=have(lists['test']), bad=bad, sealed_source=src, n_sealed_excluded=len(sealed), mode=MODE),
+              open(os.path.join(WORK, 'split.json'), 'w'), indent=1)
     log(f'proxy labels: {sum(s in ("ok", "exists") for s in status.values())} ok, {len(bad)} unusable: {list(bad.items())[:5]}')
 
 
@@ -161,6 +194,8 @@ def run(cmd):
 
 
 def step_plan():
+    if MODE == 'atlas':
+        log('inference-only mode: no planning'); return
     sp = json.load(open(os.path.join(WORK, 'split.json')))
     run(['nnUNetv2_extract_fingerprint', '-d', str(DID), '-np', str(NPROC)])
     run(['nnUNetv2_plan_experiment', '-d', str(DID), '-pl', 'nnUNetPlannerResEncL',
@@ -182,10 +217,14 @@ def step_plan():
 
 
 def model_dir():
+    if MODE == 'atlas':
+        return ATLAS_MODEL_DIR
     return os.path.join(RES, DNAME, f'{TR}__{PLANS}__3d_fullres')
 
 
 def step_train():
+    if MODE == 'atlas':
+        log('inference-only mode: using Atlas checkpoint', ATLAS_MODEL_DIR, ATLAS_CHK); return
     fold = os.path.join(model_dir(), 'fold_0')
     if os.path.exists(os.path.join(fold, 'checkpoint_final.pth')):
         log('training already finished'); return
@@ -263,13 +302,16 @@ def step_evaluate():
     from nnunetv2.inference.predict_from_raw_data import nnUNetPredictor
     sp_ = json.load(open(os.path.join(WORK, 'split.json')))
     test = sp_['test']
+    sealed, _ = sealed_split(test)
+    test = [c for c in test if c not in sealed]  # belt and braces (A13)
     resf = os.path.join(OUT, 'per_case.jsonl')
     done = set()
     if os.path.exists(resf):
         done = {(r['case'], r['base']) for r in map(json.loads, open(resf))}
     fold = os.path.join(model_dir(), 'fold_0')
-    chk = next(c for c in ('checkpoint_final.pth', 'checkpoint_latest.pth', 'checkpoint_best.pth')
-               if os.path.exists(os.path.join(fold, c)))
+    chk = ATLAS_CHK if (MODE == 'atlas' and ATLAS_CHK) else \
+        next(c for c in ('checkpoint_final.pth', 'checkpoint_latest.pth', 'checkpoint_best.pth')
+             if os.path.exists(os.path.join(fold, c)))
     log('evaluating with', chk)
     pred = nnUNetPredictor(tile_step_size=0.5, use_gaussian=True, use_mirroring=False,
                            perform_everything_on_device=(DEVICE == 'cuda'), device=torch.device(DEVICE),
@@ -346,18 +388,36 @@ def step_evaluate():
             np.savez_compressed(npz, case=case, base=base, sp=sp, ref=ref[sl], ct=ct[sl].astype(np.int16),
                                 pool=pool, lab_raw=lab[sl], lab_regap=lab_r[sl], second=second[sl],
                                 n_sites=len(sites), fp_full=fp_full)
-            futs.append(ex.submit(score_case, npz))
+            try:
+                futs.append(ex.submit(score_case, npz))
+            except Exception as e:  # noqa -- pool broken (a worker was killed): start a new one
+                log('process pool broken, restarting:', repr(e))
+                ex = ProcessPoolExecutor(NPROC)
+                futs = [f for f in futs if f.done()] + [ex.submit(score_case, npz)]
             del prob, prob_r
         log(f'eval GPU {i + 1}/{len(test)} {case}  ({(time.time() - t_start) / 60:.0f} min)')
-        # drain finished futures
+        # drain finished futures (a worker killed by the OS must not lose the whole evaluation:
+        # its npz stays on disk and is re-scored serially at the end)
         for f in [f for f in futs if f.done()]:
             futs.remove(f)
+            try:
+                res = f.result()
+            except Exception as e:  # noqa
+                log('worker failed:', repr(e)); continue
             with open(resf, 'a') as fh:
-                fh.write(json.dumps(f.result()) + '\n')
-    for f in as_completed(futs):
+                fh.write(json.dumps(res) + '\n')
+    for f in futs:
+        try:
+            res = f.result()
+        except Exception as e:  # noqa
+            log('worker failed:', repr(e)); continue
         with open(resf, 'a') as fh:
-            fh.write(json.dumps(f.result()) + '\n')
-    ex.shutdown()
+            fh.write(json.dumps(res) + '\n')
+    ex.shutdown(wait=False, cancel_futures=True)
+    for npz in sorted(glob.glob(os.path.join(tmp, '*.npz'))):  # serial fallback for anything left
+        log('re-scoring serially', os.path.basename(npz))
+        with open(resf, 'a') as fh:
+            fh.write(json.dumps(score_case(npz)) + '\n')
 
 
 # ------------------------------------------------------------------------------------- summary
@@ -422,17 +482,21 @@ def step_summarize():
                                                           if k in x['per_class_15']])) for k in ('1', '2', '3', '4')})
     split = json.load(open(os.path.join(WORK, 'split.json')))
     res = dict(table=table, comparisons=comps, facts=facts, split_sizes={k: len(split[k]) for k in ('train', 'val', 'test')},
-               layout=split['layout'], smoke=SMOKE)
+               layout=split['layout'], smoke=SMOKE, mode=MODE, model_dir=model_dir(),
+               sealed_source=split.get('sealed_source'), n_sealed_excluded=split.get('n_sealed_excluded'))
     tl = glob.glob(os.path.join(model_dir(), 'fold_0', 'training_log_*.txt'))
     if tl:
         txt = open(sorted(tl)[-1]).read()
         res['epochs_trained'] = len(re.findall(r'Epoch time', txt))
         res['epoch_seconds_median'] = float(np.median([float(x) for x in re.findall(r'Epoch time: ([\d.]+) s', txt)] or [np.nan]))
     json.dump(res, open(os.path.join(OUT, 'results.json'), 'w'), indent=1)
+    model_txt = ("Atlas's master-configuration checkpoint (ResEnc 60 GB plan, 256^3 patch, 0.5 mm iso), inference only"
+                 if MODE == 'atlas' else
+                 'Delta\'s own 4-class nnU-Net (ResEnc-L planner, 0.5 mm iso, fixed window, no mirroring, ~250 epochs)')
     L = ['# Delta Trillium experiment — results', '',
-         'One 4-class nnU-Net (ResEnc-L planner, 0.5 mm iso, fixed window, no mirroring, ~250 epochs) trained on the',
-         'thick convention (ImageCAS mask split by ImageCAS-X names, territory, ramus->LCx), tested on the',
-         f"{facts['n_test_cases']} ImageCAS-X test cases. Deciding metric: macro tree-F1 @ 1.5 mm.", '',
+         f'Model: {model_txt}. Reference: thick convention (ImageCAS mask split by ImageCAS-X names, territory,',
+         f"ramus->LCx). Tested on {facts['n_test_cases']} *open* ImageCAS-X test cases; the {split.get('n_sealed_excluded')}",
+         f"sealed cases ({split.get('sealed_source')}) were never predicted. Deciding metric: macro tree-F1 @ 1.5 mm.", '',
          '## Variants (mean over test cases)', '',
          '| variant | tF1@1.5 | tF1@0 | rooted@1.5 | macro Dice | FP comps after | bridges (FP joins, cross-tree) |',
          '|---|---|---|---|---|---|---|']

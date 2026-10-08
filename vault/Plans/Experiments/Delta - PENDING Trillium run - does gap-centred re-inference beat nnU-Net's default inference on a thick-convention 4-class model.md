@@ -3,7 +3,7 @@ tags: [plans, experiment, pending, trillium, gpu, topology, post-processing, tre
 author: Delta
 round: 3
 updated: 2026-10-08
-status: pending — prepared, not yet run
+status: pending — prepared, not yet run (revised for Round 3 ruling A13)
 ---
 
 # PENDING (Trillium, 1 × H100 ≤ 24 h): does gap-centred re-inference beat nnU-Net's default inference on a thick-convention 4-class model?
@@ -22,13 +22,31 @@ real **4-class** model trained on that convention:
 3. Does ≤ 3 mm bridging alone, or the support rule, help? And how many false-positive joins does each make?
 4. Does label repair help on real 4-class names?
 
+## Revision for A13 (Round 3 ruling)
+
+1. **Sealed test.** Only the **80 open** ImageCAS-X test cases are staged, predicted or scored. The
+   other 80, which belong to the master's sealed test, are never touched. The pipeline excludes them
+   in two places, at data preparation and again in evaluation.
+   - The master has not published a list, so Delta publishes a deterministic one:
+     `trillium/delta/icx_test_split.json`, made by ranking the ImageCAS-X test cases by
+     sha256("asclepius-sealed-v1:" + case) and sealing the first 80.
+   - Delta proposes the master adopt it. A list published by the master later takes precedence
+     automatically.
+2. **Model.** `./delta` decides the model by itself:
+   - if Atlas's run has finished, inference only on **Atlas's master-configuration checkpoint**
+     (256³ patch), in a ≤ 10 h job — this removes defects (i) and (iii);
+   - if Atlas's job is queued or running, it waits;
+   - only if Atlas has not been run does it fall back to its own ResEnc-L training.
+3. **C4.** The bridge audit records, for every join, whether the orphan touches the *thick*
+   reference. On Trillium the reference is thick anyway. The CPU re-read is in Delta v4.
+
 ## Method (code: `trillium/delta/`, entry point `./delta`)
 
 **Data.** The thick reference and target are built on the login node and inside the job:
 - ImageCAS-X names are fetched from Zenodo by HTTP range read (18 MB).
 - Each ImageCAS mask voxel takes the 4-class name of the nearest ImageCAS-X voxel. Territory rule;
   ramus → LCx; "Other" goes to its nearest named neighbour.
-- Train on the ImageCAS-X train + val lists (640). Test on the ImageCAS-X test list (160, never trained on).
+- In own-training mode, train on the ImageCAS-X train + val lists (640). Test on the 80 *open* cases of the ImageCAS-X test list (A13).
 
 **Model.** nnU-Net v2.8.1 with these settings:
 - `nnUNetPlannerResEncL` at 0.5 mm isotropic;
@@ -73,7 +91,7 @@ end-to-end smoke run (5 cases, 1 epoch, 64³ patch) passes; see Delta v3 §2.
 | C4 (bridging alone) ≈ 0, or FP joins ≥ true joins | A2's P1 bridging is removed rather than left switchable |
 | C5 (support rule) ≤ 0 | the support rule is dropped. CPU evidence already points this way, see Delta v3 |
 | C6 (label repair) CI > 0 | P2 label repair goes on by default |
-| cut-tree rate on the thick convention ≤ 1 case in 160 | the connectivity stage becomes QA-only; the A5 calibre trigger stays off |
+| cut-tree rate on the thick convention ≤ 1 case in 80 | the connectivity stage becomes QA-only; the A5 calibre trigger stays off |
 | cut-tree rate ≥ 5 % | connectivity stays a first-class model-selection criterion; tF1 remains decisive |
 
 ## Limits (stated in advance)

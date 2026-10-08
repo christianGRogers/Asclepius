@@ -92,4 +92,7 @@ def fuse(a, b, scheme):
         oa = (a > 0) & (b == 0); ob = (b > 0) & (a == 0); u[oa] = a[oa]; u[ob] = b[ob]
         u[(a > 0) & (b > 0) & (a != b)] = IGNORE
         return u
+    if scheme == 'a11':  # judge's A11: each read its own sample; name conflict inside shared vessel -> ignore
+        conflict = (a > 0) & (b > 0) & (a != b)
+        return np.where(conflict, IGNORE, a).astype(np.uint8), np.where(conflict, IGNORE, b).astype(np.uint8)
     raise ValueError(scheme)

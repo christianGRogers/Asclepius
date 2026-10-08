@@ -71,6 +71,30 @@ if preds:
                       degenerate_predictions=sum(bool(p.get('degenerate_prediction')) for p in per), swap_rate=m('swap_rate'),
                       cases_with_cut_tree=len(cut), cut_cases=cut,
                       tf1_min=float(min(p['tf1'] for p in per)))
+# ---- A13: manifest for inference-only reuse by other experiments (weights and softmax stay on $SCRATCH)
+pp_ds = f'{W}/nnunet_preprocessed/{DS}'
+ck = f'{fold_dir}/checkpoint_final.pth'
+manifest = dict(
+    what='Atlas master-recipe model (ResEnc, 0.5 mm iso, 256^3, mirroring off, fixed window), fold 0 of the projected proxy',
+    nnunetv2_version='2.8.1', dataset_id=713, dataset_name=DS, trainer='nnUNetTrainerAtlas', plans=PLANS,
+    configuration='3d_fullres', fold=0,
+    env=dict(nnUNet_raw=f'{W}/nnunet_raw', nnUNet_preprocessed=f'{W}/nnunet_preprocessed', nnUNet_results=f'{W}/nnunet_results'),
+    checkpoint_final=ck if os.path.exists(ck) else None, model_dir=fold_dir,
+    plans_json=f'{pp_ds}/{PLANS}.json', dataset_json=f'{pp_ds}/dataset.json', splits_json=f'{pp_ds}/splits_final.json',
+    trainer_source=f'{W}/export/atlas_trainers.py',
+    val_cases=sorted(os.path.basename(f)[:-7] for f in preds),
+    val_segmentations_dir=pred_dir, val_softmax_dir=pred_dir,
+    val_softmax_files=len(glob.glob(f'{pred_dir}/c*.npz')),
+    val_softmax_format=("nnU-Net export: <case>.npz key 'probabilities', float32, shape (5, z, y, x) in SimpleITK axis order "
+                        "on the case's native grid (channels: bg, LM, LAD, LCx, RCA); <case>.pkl holds the properties"),
+    reference_labels_dir=f'{W}/nnunet_raw/{DS}/labelsTr', images_dir=f'{W}/nnunet_raw/{DS}/imagesTr',
+    sealed_cases_touched=False,
+    inference_only_recipe=('copy trainer_source into <venv>/lib/python3.11/site-packages/nnunetv2/training/nnUNetTrainer/variants/atlas/ '
+                           '(with an empty __init__.py), export env, then: nnUNetv2_predict -i <dir of <case>_0000.nii.gz> -o <out> '
+                           f'-d 713 -tr nnUNetTrainerAtlas -p {PLANS} -c 3d_fullres -f 0 -chk checkpoint_final.pth -step_size 0.5 '
+                           '--save_probabilities'))
+json.dump(manifest, open(f'{OUT}/manifest.json', 'w'), indent=1)
+res['manifest'] = 'manifest.json'
 json.dump(res, open(f'{OUT}/results.json', 'w'), indent=1)
 
 def g(d, *ks):
@@ -95,6 +119,6 @@ lines += ['', f"1000-epoch forecast from the fastest setting: **{g(res, 'r0_fore
           f"| FP components per case (raw, gate ≤ 1) | {g(res, 'val', 'fp_components_mean')} |",
           f"| branch-swap rate (gate < 5 %) | {g(res, 'val', 'swap_rate')} |",
           f"| cases with a cut tree (some class: clDice − tF1 > 0.10) | {g(res, 'val', 'cases_with_cut_tree')} |", '',
-          'Reading: see `vault/Plans/Experiments/Atlas - Pending Trillium run, R0 benchmark and a short R1 scored by tree-F1.md`.']
+          '## Reuse by other experiments (A13)', '', f"Checkpoint: `{manifest['checkpoint_final']}`  ", f"Plans: `{manifest['plans_json']}`  ", f"Val softmax ({manifest['val_softmax_files']} npz) and segmentations: `{manifest['val_softmax_dir']}`  ", 'Full paths, env and the inference-only command: `manifest.json`. Weights and softmax stay on $SCRATCH.', '', 'Reading: see `vault/Plans/Experiments/Atlas - Pending Trillium run, R0 benchmark and a short R1 scored by tree-F1.md`.']
 open(f'{OUT}/SUMMARY.md', 'w').write('\n'.join(lines) + '\n')
 print('\n'.join(lines))

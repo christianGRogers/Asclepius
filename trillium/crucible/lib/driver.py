@@ -5,6 +5,8 @@ Question: every case will be read twice (D2). Given two reads per case, which tr
   both   : both reads as two separate training samples
   agree  : voxels where the reads agree; disagreement -> nnU-Net ignore label
   union  : vessel if either read says vessel; class conflicts -> ignore
+  a11    : judge's A11 hybrid -- each read a separate sample; where both reads call a voxel vessel but give different
+           classes -> ignore (in both samples); extent differences keep each read's own label
   oracle : the truth the reads were simulated from (upper bound)
 Reads are SIMULATED from truth with a calibrated error model (lib/sim.py) because no team labels exist yet.
 Scored on held-out cases with tree-F1 @ 1.5 mm against (i) the truth, (ii) each read, plus the inter-read ceiling.
@@ -21,8 +23,8 @@ import sim, tf1  # noqa: E402
 SMOKE = os.environ.get('CRUCIBLE_SMOKE') == '1'
 WORK = os.environ.get('CRUCIBLE_WORK') or os.path.join(os.environ.get('SCRATCH', '/tmp'), 'crucible_2reads')
 N_TRAIN, N_TEST = (4, 2) if SMOKE else (int(os.environ.get('CRUCIBLE_NTRAIN', 200)), int(os.environ.get('CRUCIBLE_NTEST', 50)))
-ARMS = ['single', 'both', 'agree', 'union', 'oracle']
-DSID = {'single': 951, 'both': 952, 'agree': 953, 'union': 954, 'oracle': 955}
+ARMS = ['single', 'both', 'a11', 'agree', 'union', 'oracle']  # oracle last: the arm a deadline would cut
+DSID = {'single': 951, 'both': 952, 'agree': 953, 'union': 954, 'oracle': 955, 'a11': 956}
 MARGIN_MM = 15.0
 JOB_END = float(os.environ.get('CRUCIBLE_JOB_END', time.time() + 24 * 3600))
 RESERVE = 1200 if SMOKE else 5400  # seconds kept for prediction + evaluation
@@ -91,7 +93,9 @@ def prep_case(args):
     ct = np.asarray(ctimg.dataobj[sl]).astype(np.int16)
     aff = mimg.slicer[sl].affine
     nib.save(nib.Nifti1Image(ct, aff), os.path.join(out, 'ct_0000.nii.gz'))
-    for name, arr in (('T', T), ('A', A), ('B', B), ('agree', sim.fuse(A, B, 'agree')), ('union', sim.fuse(A, B, 'union'))):
+    a11a, a11b = sim.fuse(A, B, 'a11')
+    for name, arr in (('T', T), ('A', A), ('B', B), ('agree', sim.fuse(A, B, 'agree')), ('union', sim.fuse(A, B, 'union')),
+                      ('a11A', a11a), ('a11B', a11b)):
         nib.save(nib.Nifti1Image(arr.astype(np.uint8), aff), os.path.join(out, f'{name}.nii.gz'))
     json.dump({'spacing': sp.tolist(), 'roots': [list(map(int, r)) for r in roots], 'test': is_test,
                'lo': lo.tolist(), 'shape': list(T.shape)}, open(os.path.join(out, 'meta.json'), 'w'))
@@ -109,6 +113,7 @@ def write_raw(train, test):
         for c in train:
             src = os.path.join(WORK, 'cases', c)
             items = {'single': [(c, 'A')], 'both': [(c + 'A', 'A'), (c + 'B', 'B')], 'agree': [(c, 'agree')],
+                     'a11': [(c + 'A', 'a11A'), (c + 'B', 'a11B')],
                      'union': [(c, 'union')], 'oracle': [(c, 'T')]}[arm]
             for name, lab in items:
                 for s, t in ((os.path.join(src, 'ct_0000.nii.gz'), os.path.join(d, 'imagesTr', f'{name}_0000.nii.gz')),
@@ -116,7 +121,7 @@ def write_raw(train, test):
                     if not os.path.lexists(t): os.symlink(s, t)
                 n += 1
         lab = dict(labels)
-        if arm in ('agree', 'union'):
+        if arm in ('agree', 'union', 'a11'):
             lab['ignore'] = sim.IGNORE
         json.dump({'channel_names': {'0': 'CT'}, 'labels': lab, 'numTraining': n, 'file_ending': '.nii.gz'},
                   open(os.path.join(d, 'dataset.json'), 'w'), indent=1)
@@ -270,7 +275,7 @@ def stage_eval(st):
     summ['inter_read'] = {'tf1': float(np.mean([r['inter_read']['tf1'] for r in rows])),
                           'dice': float(np.mean([r['inter_read']['dice'] for r in rows]))}
     pairs = {}
-    for a in ('both', 'agree', 'union', 'oracle'):
+    for a in ('both', 'a11', 'agree', 'union', 'oracle'):
         for ref in ('T', 'reads'):
             ok = [r for r in rows if a in r and 'single' in r]
             if not ok: continue

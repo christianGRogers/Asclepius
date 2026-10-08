@@ -30,6 +30,7 @@ import analyse_preds as A  # noqa: E402
 import bridge_eval as BE  # noqa: E402
 import perturb_metrics as P  # noqa: E402
 import postproc  # noqa: E402
+import treelib as T  # noqa: E402
 
 torch.set_num_threads(int(os.environ.get('TORCH_THREADS', '1')))
 from nnunetv2.inference.predict_from_raw_data import nnUNetPredictor  # noqa: E402
@@ -66,7 +67,12 @@ def audit(br, pred_bin, gt):
     for b in br:
         k = cl[tuple(b['p'])]
         comp = cl == k if k > 0 else np.zeros_like(pred_bin)
-        out.append(dict(gap_mm=round(b['gap_mm'], 2), comp_vox=b['comp_vox'], true_join=bool((comp & gt.m).any())))
+        d = dict(gap_mm=round(b['gap_mm'], 2), comp_vox=b['comp_vox'], true_join=bool((comp & gt.m).any()))
+        thick = getattr(gt, 'thick', None)
+        if thick is not None:  # C4: re-read against the decided thick reference (original ImageCAS mask)
+            d['touches_thick'] = bool((comp & thick).any())
+            d['frac_in_thick'] = float((comp & thick).sum() / max(comp.sum(), 1))
+        out.append(d)
     return out
 
 
@@ -93,6 +99,7 @@ if __name__ == '__main__':
             lo, hi = np.array(meta['lo']), np.array(meta['hi'])
             prob = np.load(f'{pdir}/{case}_prob.npy').astype(np.float32)
             gt = A.CropGT(case, lo.tolist(), hi.tolist())
+            gt.thick = (np.asanyarray(nib.load(T.mask_path(case)).dataobj) > 0.5)[lo[0]:hi[0], lo[1]:hi[1], lo[2]:hi[2]]
             ao, kind = BE.anchor_structure(case, lo, hi, gt, adir)
             d_ao = BE.set_aorta_roots(gt, ao, kind)
             _, inds = ndi.distance_transform_edt(gt.lab == 0, sampling=gt.sp, return_indices=True)

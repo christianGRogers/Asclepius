@@ -78,12 +78,16 @@ collect() {
         if mkdir -p "$HERE/results" 2>/dev/null && [ -w "$HERE/results" ]; then
             cp -r "$W/results/." "$HERE/results/"
             cp "$W"/logs/slurm-*.out "$HERE/results/" 2>/dev/null || true
-            say "results copied to $HERE/results/ (SUMMARY.md, results.json, logs)"
+            say "results copied to $HERE/results/ (SUMMARY.md, results.json, manifest.json, logs)"
         else
             say "results are in $W/results/ ($HERE is not writable)"
         fi
     else
         say "no results yet in $W/results/"
+    fi
+    if [ -f "$W/results/manifest.json" ]; then
+        say "A13 reuse (weights and val softmax stay on \$SCRATCH):"
+        grep -E '"(checkpoint_final|model_dir|plans_json|val_softmax_dir|val_softmax_files|trainer_source)"' "$W/results/manifest.json" | sed 's/^/[atlas]   /'
     fi
 }
 
@@ -172,3 +176,4 @@ echo "$JID" >> "$W/submitted_jobs"
 say "submitted job $JID ($JOBNAME, 1 x H100, $WALLTIME)."
 say "watch: ./atlas status    results when finished: ./atlas   (or ./atlas collect)"
 say "results will be written to $W/results/ and copied to $HERE/results/ by ./atlas collect"
+say "A13: checkpoint, plans and val softmax paths for inference-only reuse: $W/results/manifest.json"

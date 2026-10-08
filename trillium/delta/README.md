@@ -3,13 +3,28 @@
 Run: `cd <root>/experiments/delta && ./delta`. The command takes no arguments. Results land in
 `./results/`. To copy them back, run `./delta` again after the job finishes, or run `./delta collect`.
 
-What it does, all inside one job:
+**Mode, decided by `./delta` itself (Round 3 ruling A13):**
+- **Inference-only on Atlas's checkpoint.** Used when Atlas's run has finished: `$SCRATCH/atlas/DONE`
+  or `$SCRATCH/atlas/results/manifest.json` exists, and a `checkpoint_final|latest|best.pth` is found.
+  This uses the master configuration (256³ patch) and a ≤ 10 h job.
+- **Waiting.** If Atlas's job `atlas-r0r1` is queued or running, nothing is submitted. Atlas's run goes
+  first; run `./delta` again afterwards.
+- **Own training.** If Atlas has not been run at all, it falls back to training its own ResEnc-L model
+  (≤ 24 h). `DELTA_FORCE_MODE=atlas|own` overrides the choice, but should never be needed.
+
+**Sealed test (A13).** Only the **80 open** ImageCAS-X test cases are ever predicted. The other 80 are
+never staged or predicted. The sealed list comes from the master's published list if one exists
+(`$SCRATCH/atlas/results/sealed_test.{txt,json}` or `<root>/experiments/atlas/sealed_test.{txt,json}`).
+Otherwise it comes from `icx_test_split.json`: a deterministic sha256 split that Delta proposes the
+master adopt.
+
+What it does, all inside one job (own-training mode; inference-only mode skips steps 1–2's training):
 1. Builds thick-convention 4-class labels: the ImageCAS mask split by ImageCAS-X names, using the
    territory rule and ramus → LCx. ImageCAS-X is fetched from Zenodo on the login node, 18 MB.
 2. Trains one nnU-Net v2.8.1 model on the 640 ImageCAS-X train+val cases. Settings: ResEnc-L planner,
    0.5 mm isotropic, the master's fixed CT window, no mirroring, 250 epochs. The epoch budget is
    deadline-aware and reserves 8 h for evaluation.
-3. Predicts the 160 ImageCAS-X test cases at tile step 0.5 (nnU-Net's default) and at 0.75.
+3. Predicts the 80 open ImageCAS-X test cases at tile step 0.5 (nnU-Net's default) and at 0.75.
    It then adds gap-centred re-inference (P1′), ≤ 3 mm bridging (with and without the support rule),
    and label repair.
 4. Scores every variant by tree-F1 @ 1.5 mm against the thick reference. Alongside it records the raw

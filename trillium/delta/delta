@@ -67,10 +67,61 @@ case "$(hostname -s)" in
     fi ;;
 esac
 
-WORK="$SCRATCH/delta_exp"
 VENV="${DELTA_VENV:-$HOME/venvs/delta}"
+LEDGER="$SCRATCH/delta_jobs.txt"      # walltime ledger shared by both modes (24 h budget in total)
+
+# ---------------------------------------------------------------- mode (A13): Atlas's checkpoint, or our own model
+# Round 3 ruling A13: Atlas's run goes first; when it has finished, this experiment runs inference
+# only on Atlas's master-configuration checkpoint. If Atlas's run is still queued or running, wait.
+# If Atlas has not been run at all, fall back to training our own ResEnc-L model.
+ATLAS_W="${ATLAS_WORK:-$SCRATCH/atlas}"
+ATLAS_HERE="$(cd "$HERE/.." && pwd)/atlas"
+ATLAS_MODEL_DIR=""; ATLAS_CHK=""
+find_atlas_model() {
+  local m="$ATLAS_W/results/manifest.json" d c
+  if [[ -f "$m" ]]; then
+    d="$(python3 -c "import json,sys; j=json.load(open(sys.argv[1])); print(j.get('model_dir') or j.get('model_folder') or '')" "$m" 2>/dev/null || true)"
+    c="$(python3 -c "import json,sys,os; j=json.load(open(sys.argv[1])); print(os.path.basename(j.get('checkpoint') or ''))" "$m" 2>/dev/null || true)"
+    if [[ -n "$d" && -d "$d/fold_0" ]]; then ATLAS_MODEL_DIR="$d"; ATLAS_CHK="$c"; fi
+  fi
+  if [[ -z "$ATLAS_MODEL_DIR" ]]; then
+    for d in "$ATLAS_W"/nnunet_results/Dataset713_AtlasProxy/nnUNetTrainerAtlas__*__3d_fullres; do
+      [[ -d "$d/fold_0" ]] && ATLAS_MODEL_DIR="$d"
+    done
+  fi
+  [[ -n "$ATLAS_MODEL_DIR" ]] || return 1
+  if [[ -z "$ATLAS_CHK" || ! -f "$ATLAS_MODEL_DIR/fold_0/$ATLAS_CHK" ]]; then
+    ATLAS_CHK=""
+    for c in checkpoint_final.pth checkpoint_latest.pth checkpoint_best.pth; do
+      if [[ -f "$ATLAS_MODEL_DIR/fold_0/$c" ]]; then ATLAS_CHK="$c"; break; fi
+    done
+  fi
+  [[ -n "$ATLAS_CHK" ]]
+}
+MODE="${DELTA_FORCE_MODE:-}"
+if [[ -z "$MODE" ]]; then
+  if find_atlas_model && { [[ -e "$ATLAS_W/DONE" ]] || [[ -f "$ATLAS_W/results/manifest.json" ]]; }; then
+    MODE=atlas
+  elif squeue -u "$USER" -h -n atlas-r0r1 -o %i 2>/dev/null | grep -q .; then
+    if [[ "$CMD" == run ]]; then
+      say "Atlas's run (atlas-r0r1) is queued or running. A13: it goes first, and this experiment then runs"
+      say "inference-only on its checkpoint. Nothing submitted; run ./delta again once Atlas has finished."
+      exit 0
+    fi
+    MODE=atlas-pending
+  else
+    MODE=own
+  fi
+fi
+if [[ "$MODE" == atlas ]]; then
+  find_atlas_model || die "DELTA_FORCE_MODE=atlas but no Atlas checkpoint under $ATLAS_W"
+  WORK="$SCRATCH/delta_exp_atlas"; JOBNAME=delta_p1_atlas
+else
+  WORK="$SCRATCH/delta_exp"
+fi
 mkdir -p "$WORK/logs" "$WORK/code"
 say "cases: $CASES_DIR"
+say "mode:  $MODE${ATLAS_MODEL_DIR:+ (Atlas model $ATLAS_MODEL_DIR, $ATLAS_CHK)}"
 say "work:  $WORK   venv: $VENV"
 
 load_modules() {
@@ -86,8 +137,8 @@ load_modules() {
 
 used_seconds() {
   local total=0 ids
-  [[ -f "$WORK/jobs.txt" ]] || { echo 0; return; }
-  ids="$(paste -sd, "$WORK/jobs.txt")"
+  [[ -f "$LEDGER" ]] || { echo 0; return; }
+  ids="$(paste -sd, "$LEDGER")"
   if command -v sacct >/dev/null 2>&1 && [[ -n "$ids" ]]; then
     while read -r s; do [[ "$s" =~ ^[0-9]+$ ]] && total=$((total + s)); done \
       < <(sacct -j "$ids" -X -n -o ElapsedRaw 2>/dev/null || true)
@@ -165,16 +216,17 @@ EOF
 fi
 
 # ---------------------------------------------------------------- 5. ImageCAS-X names (internet: login node only)
-if [[ ! -f "$WORK/icx/ImageCAS-X_dataset/filelist/test.txt" ]]; then
-  if [[ "$CMD" == dryrun ]]; then say "(dryrun) would fetch ImageCAS-X into $WORK/icx"; else
-    "$VENV/bin/python" "$HERE/fetch_icx.py" "$WORK/icx"; fi
+if [[ ! -f "$SCRATCH/delta_icx/ImageCAS-X_dataset/filelist/test.txt" ]]; then
+  if [[ "$CMD" == dryrun ]]; then say "(dryrun) would fetch ImageCAS-X into $SCRATCH/delta_icx"; else
+    "$VENV/bin/python" "$HERE/fetch_icx.py" "$SCRATCH/delta_icx"; fi
 fi
 
 # ---------------------------------------------------------------- 6. budget
 USED="$(used_seconds)"
 LEFT=$((BUDGET_S - USED))
 (( LEFT > 3600 )) || die "GPU budget exhausted: $((USED / 60)) min used of $((BUDGET_S / 60)). ./delta collect for partial results."
-WALL=$(( LEFT < BUDGET_S ? LEFT : BUDGET_S ))
+CAP=$BUDGET_S; [[ "$MODE" == atlas ]] && CAP=$((10 * 3600))   # inference only: 10 h is ample for 80 cases
+WALL=$(( LEFT < CAP ? LEFT : CAP ))
 WALL_HMS="$(printf '%02d:%02d:00' $((WALL / 3600)) $(((WALL % 3600) / 60)))"
 
 # ---------------------------------------------------------------- 7. account
@@ -183,7 +235,23 @@ ACCOUNT="${ACCOUNT:-def-aso22}"
 say "account: $ACCOUNT   walltime: $WALL_HMS (budget left $((LEFT / 60)) min)"
 
 # ---------------------------------------------------------------- 8. job script
-cp "$HERE"/pipeline.py "$HERE"/deltalib.py "$HERE"/layout.py "$WORK/code/"
+cp "$HERE"/pipeline.py "$HERE"/deltalib.py "$HERE"/layout.py "$HERE"/icx_test_split.json "$WORK/code/"
+# A sealed list published by the master (Atlas) takes precedence over Delta's proposed split.
+SEALED_LIST=""
+for f in "$ATLAS_W/results/sealed_test.txt" "$ATLAS_W/results/sealed_test.json" "$ATLAS_HERE/sealed_test.txt" "$ATLAS_HERE/sealed_test.json"; do
+  if [[ -f "$f" ]]; then SEALED_LIST="$f"; break; fi
+done
+say "sealed test list: ${SEALED_LIST:-$HERE/icx_test_split.json, the split Delta published, as no master list was found}"
+if [[ "$MODE" == atlas && "$CMD" != dryrun ]]; then
+  # nnU-Net must be able to import Atlas's trainer class to rebuild its network
+  [[ -f "$ATLAS_HERE/lib/atlas_trainers.py" ]] || die "Atlas's trainer file not found at $ATLAS_HERE/lib/atlas_trainers.py"
+  "$VENV/bin/python" - "$ATLAS_HERE/lib/atlas_trainers.py" <<'PYEOF'
+import os, shutil, sys, nnunetv2
+d = os.path.join(os.path.dirname(nnunetv2.__file__), 'training', 'nnUNetTrainer', 'variants', 'delta')
+os.makedirs(d, exist_ok=True); open(os.path.join(d, '__init__.py'), 'a').close()
+shutil.copy(sys.argv[1], os.path.join(d, 'atlas_trainers.py'))
+PYEOF
+fi
 JOB="$WORK/job.sh"
 cat > "$JOB" <<EOF
 #!/bin/bash
@@ -197,7 +265,8 @@ set -euo pipefail
 module purge
 module load $PY_MODULES $GPU_MODULES
 source "$VENV/bin/activate"
-export DELTA_WORK="$WORK" DELTA_CASES="$CASES_DIR" DELTA_ICX="$WORK/icx" DELTA_DEVICE=cuda
+export DELTA_WORK="$WORK" DELTA_CASES="$CASES_DIR" DELTA_ICX="$SCRATCH/delta_icx" DELTA_DEVICE=cuda
+export DELTA_MODE="$MODE" DELTA_MODEL_DIR="$ATLAS_MODEL_DIR" DELTA_CHK="$ATLAS_CHK" DELTA_SEALED_LIST="$SEALED_LIST"
 export DELTA_NPROC=\${SLURM_CPUS_ON_NODE:-24}; DELTA_NPROC=\$(( DELTA_NPROC > 4 ? DELTA_NPROC - 4 : 1 ))
 export DELTA_JOB_END=\$(( \$(date +%s) + $WALL - 900 ))
 export nnUNet_raw="$WORK/nnUNet_raw" nnUNet_preprocessed="$WORK/nnUNet_preprocessed" nnUNet_results="$WORK/nnUNet_results"
@@ -215,7 +284,7 @@ if [[ "$CMD" == dryrun ]]; then say "(dryrun) job script:"; cat "$JOB"; exit 0; 
 
 cd "$WORK"
 JID="$(sbatch --parsable "$JOB")"
-echo "$JID" >> "$WORK/jobs.txt"
+echo "$JID" >> "$LEDGER"
 say "submitted job $JID ($JOBNAME, 1 x H100, $WALL_HMS)."
 say "progress: ./delta status    log: $WORK/logs/${JOBNAME}_$JID.out"
 say "when it finishes, run ./delta again: results land in $HERE/results/"

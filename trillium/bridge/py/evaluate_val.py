@@ -61,10 +61,11 @@ def one(args):
         prob = p.transpose(0, 3, 2, 1)[(slice(None),) + sl].astype(np.float32)
         del p
     fg = D > 0
-    arms = {'D': D}
+    arms = {}
     res = {}
     junk = fg.sum() > 10 * max((ref > 0).sum(), 1)   # a degenerate prediction would stall skeletonisation
     if not junk:
+        arms['D'] = D
         lab, res, _ = name_mask(fg, A, sp, lo, full, bridge=4.0)
         arms['R'] = lab
         if prob is not None:
@@ -102,7 +103,7 @@ def boot(d, n=10000, seed=0):
 
 
 def summarise(rows, outdir, meta):
-    res = dict(meta=meta, n_cases=len(rows), arms={}, paired={}, verdict={})
+    res = dict(meta=meta, n_cases=len(rows), n_junk=sum(1 for r in rows if r.get('junk_prediction')), arms={}, paired={}, verdict={})
     for a in ARMS:
         S = [r[a] for r in rows if a in r]
         if not S:
@@ -125,12 +126,18 @@ def summarise(rows, outdir, meta):
         mean, lo, hi = boot(diff)
         res['paired'][f'{a}-D'] = dict(n=len(diff), mean=mean, ci95=[lo, hi],
                                        better=int(sum(x > 1e-9 for x in diff)), worse=int(sum(x < -1e-9 for x in diff)))
-        if a in ('R', 'H'):
+        if a in ('R', 'H') and 'D' in res['arms']:
             adopt = lo > 0 and res['arms'][a]['swap_rate'] <= res['arms']['D']['swap_rate']
             res['verdict'][a] = 'ADOPT (A7 rule met)' if adopt else 'do not adopt (A7 rule not met)'
     json.dump(dict(res, cases=rows), open(os.path.join(outdir, 'results.json'), 'w'), indent=1)
+    if str(meta.get('mode', '')).startswith('A13'):
+        model_line = (f"Model: **the Atlas run's** master-recipe 4-class nnU-Net (A13, inference/scoring only; plan `{meta.get('plans')}`; "
+                      f"softmax: {meta.get('softmax')}; training details in Atlas's results). Scored on its val split "
+                      f"({len(rows)} cases) against Atlas's own proxy labels. tF1 @ 1.5 mm with reference-derived ostia (provisional per A9).")
+    else:
+        model_line = None
     L = ['# Bridge Trillium experiment: does rule naming (R) or grammar decoding (H) beat the direct model\'s own names (D)?', '',
-         f"Model: direct 4-class nnU-Net, master recipe (ResEnc, 0.5 mm iso, plan `{meta.get('plans')}`, patch {meta.get('patch')}, "
+         model_line or f"Model: direct 4-class nnU-Net, master recipe (ResEnc, 0.5 mm iso, plan `{meta.get('plans')}`, patch {meta.get('patch')}, "
          f"no mirroring), trained {meta.get('epochs_trained')} epochs ({meta.get('train_hours')} h) on the territory proxy "
          f"of {meta.get('n_train')} ImageCAS-X train cases (D0/D1/D1b). Scored on the master's val split "
          f"({len(rows)} cases), reference = the same proxy. tF1 @ 1.5 mm with reference-derived ostia (provisional per A9).", '',
@@ -141,6 +148,8 @@ def summarise(rows, outdir, meta):
     for a, v in res['arms'].items():
         L.append(f"| {names[a]} | {v['n']} | {v['tf1_1p5']:.3f} | {v['tf1_0']:.3f} | {v['macro_dice']:.3f} | "
                  f"{v['cases_with_swap']} | {v['centreline_label_acc']:.3f} | {v['fp_components']:.2f} |")
+    if res['n_junk']:
+        L += ['', f"**{res['n_junk']} case(s) had a degenerate prediction (> 10x the reference volume) and were not scored.**"]
     L += ['', '| Paired | mean diff tF1 | 95 % CI | better / worse cases |', '|---|---|---|---|']
     for k, v in res['paired'].items():
         L.append(f"| {k} | {v['mean']:+.4f} | [{v['ci95'][0]:+.4f}, {v['ci95'][1]:+.4f}] | {v['better']} / {v['worse']} |")
@@ -163,6 +172,7 @@ if __name__ == '__main__':
     rows = []
     with Pool(nproc, maxtasksperchild=4) as p:
         for r in p.imap_unordered(one, [(c, raw, vdir, outdir) for c in cases]):
-            rows.append(r); print(r['case'], {a: round(r[a]['tf1'], 3) for a in ARMS if a in r}, r['sec'], flush=True)
+            rows.append(r); print(r['case'], {a: round(r[a]['tf1'], 3) for a in ARMS if a in r},
+                                  'JUNK prediction (> 10x reference volume): not scored' if r.get('junk_prediction') else '', r['sec'], flush=True)
     meta = json.load(open(os.path.join(outdir, 'meta.json'))) if os.path.exists(os.path.join(outdir, 'meta.json')) else {}
     summarise(sorted(rows, key=lambda r: r['case']), outdir, meta)

@@ -69,15 +69,20 @@ PY
     ls "$nnUNet_results"/Dataset713_AtlasProxy/nnUNetTrainerAtlas__*/fold_0/checkpoint_latest.pth >/dev/null 2>&1 && CONT="--c"
     if [ "$EPOCHS" -gt 0 ]; then
         ATLAS_EPOCHS="$EPOCHS" ATLAS_DEADLINE=$((DEADLINE - 4500)) nnUNet_n_proc_DA="$DA" \
-            nnUNetv2_train 713 3d_fullres 0 -tr nnUNetTrainerAtlas -p "$PLANS" $CONT > "$W/logs/train.log" 2>&1 \
+            nnUNetv2_train 713 3d_fullres 0 -tr nnUNetTrainerAtlas -p "$PLANS" --npz $CONT > "$W/logs/train.log" 2>&1 \
             && touch "$W/.train_done" || echo "[job] training exited nonzero (see logs/train.log)"
     fi
 fi
 
+# --npz (A13): the final validation also saves the val-fold softmax (<case>.npz + .pkl) next to the predicted
+# segmentations, so other experiments can run inference-only analyses (naming R/H, P1') on this model.
+
 # ---- D. score + report (always, also on partial results) ---------------------------------------
+mkdir -p "$W/export" && cp "$LIB/atlas_trainers.py" "$W/export/"   # trainer source for inference-only reuse (A13)
 python "$LIB/report.py" "$W" "$W/results" "$NPROC" || echo "[job] report FAILED"
 cp "$W"/logs/*.log "$W/results/" 2>/dev/null || true
 cp "$nnUNet_results"/Dataset713_AtlasProxy/nnUNetTrainerAtlas__*/fold_0/{training_log_*.txt,progress.png} "$W/results/" 2>/dev/null || true
 cp "$W"/planner_output.json "$W"/schedule.json "$W"/bench_da*.json "$W/results/" 2>/dev/null || true
+cp "$nnUNet_preprocessed"/Dataset713_AtlasProxy/{nnUNetResEncUNetPlans_60G_iso05.json,dataset.json,splits_final.json} "$W/results/" 2>/dev/null || true
 [ -e "$W/.train_done" ] && [ -s "$W/results/per_case_val.json" ] && touch "$W/DONE"
 echo "=== atlas job finished $(date -Is) after $(( ($(date +%s) - T0) / 60 )) min ==="

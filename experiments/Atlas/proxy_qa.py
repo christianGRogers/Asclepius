@@ -11,6 +11,8 @@ SCR = '/tmp/claude-0/-home-user-Asclepius/1b43aea1-ed14-5dd0-84ee-25f776047e09/s
 sys.path.insert(0, '/home/user/Asclepius/experiments/Bridge')
 import label as Lb
 Lb.BRIDGE = 4.0
+RAMUS = os.environ.get('RAMUS', 'LCx')  # D1b: ramus -> LCx (A8 switch); 'inherit' reproduces the round-2 run
+Lb.RAMUS = RAMUS
 w = json.load(open(SCR + '/work/Bridge/ostium_w_dev2.json'))
 Lb.OSTIUM_W = dict(F=w['F'], mean=np.array(w['mean']), scale=np.array(w['scale']), coef=np.array(w['coef']))
 dev = set(open(SCR + '/work/Bridge/devset3.txt').read().replace('\n', '').split(','))
@@ -24,11 +26,18 @@ for f in sorted(glob.glob(SCR + '/work/Bridge/ex/c*.npz')):
     except Exception as e:
         out.write(json.dumps(dict(case=c, fail=repr(e)[:100])) + '\n'); continue
     CNT = d['CNT']; P = d['P']
-    near = CNT[:, 1:5]                       # proxy voxels per vertex with ICX class 1..4
+    near = CNT[:, 1:5].copy()                # proxy voxels per vertex with ICX class 1..4 (territory)
+    im = CNT[:, 5]                           # ImageCAS-X ramus (IM) voxels: under D1b the proxy calls them LCx
+    if RAMUS == 'LCx':
+        near[:, 2] += im
     tot_near = near.sum(); tot = CNT[:, 8].sum()
     agree = np.array([near[i, lab[i] - 1] if 1 <= lab[i] <= 4 else 0 for i in range(len(lab))])
     dis = near.sum(1) - agree                # voxels at vertex i where proxy != labeller
-    r = dict(case=c, held_out=c not in dev, nvox=int(tot), near_vox=int(tot_near), ignore_vox=int(dis.sum()),
+    # same, with ImageCAS-X ramus voxels left out (expert names; the namer cannot tell a ramus from an early diagonal)
+    near_noim = CNT[:, 1:5]
+    agree_noim = np.array([near_noim[i, lab[i] - 1] if 1 <= lab[i] <= 4 else 0 for i in range(len(lab))])
+    dis_noim = near_noim.sum(1) - agree_noim
+    r = dict(case=c, held_out=c not in dev, ignore_vox_excl_ramus=int(dis_noim.sum()), nvox=int(tot), near_vox=int(tot_near), ignore_vox=int(dis.sum()),
              ignore_frac_of_mask=float(dis.sum() / tot), ignore_frac_of_near=float(dis.sum() / max(tot_near, 1)))
     # per proxy class: fraction ignored
     r['ignore_by_proxy_class'] = {}
@@ -52,6 +61,14 @@ for f in sorted(glob.glob(SCR + '/work/Bridge/ex/c*.npz')):
         from scipy.spatial import cKDTree
         dist = cKDTree(P[Bv]).query(P[Mv])[0]; ost = P[Mv[np.argmax(dist)]]
         r['ostium_err'] = float(np.linalg.norm(np.asarray(res['ostium_vox']) * d['zooms'] - ost))
-    r['flag'] = bool(r['lm_dice'] < 0.5 or (r['ostium_err'] is not None and r['ostium_err'] > 5) or r['ladlcx_swap'] > 0.05)
+    # LAD<->LCx swap with ImageCAS-X ramus voxels left out: a ramus-only disagreement never excludes a case (A4 rev.)
+    swap_noim = (CNT[lab == 3, 2].sum() + CNT[lab == 2, 3].sum()) / max(CNT[:, 2:4].sum(), 1)
+    r['ladlcx_swap_excl_ramus'] = float(swap_noim)
+    r['im_vox'] = int(im.sum())
+    r['flag_ostium'] = bool(r['ostium_err'] is not None and r['ostium_err'] > 5)
+    r['flag_lm'] = bool(r['lm_dice'] < 0.5)
+    r['flag_swap'] = bool(r['ladlcx_swap'] > 0.05)
+    r['ramus_only'] = bool(r['flag_swap'] and not r['flag_ostium'] and not r['flag_lm'] and swap_noim <= 0.05)
+    r['flag'] = bool(r['flag_ostium'] or r['flag_lm'] or (r['flag_swap'] and not r['ramus_only']))
     r['fail'] = res.get('fail')
     out.write(json.dumps(r) + '\n'); out.flush()

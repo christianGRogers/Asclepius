@@ -57,7 +57,7 @@ The code is at `trillium/crucible/`, under the README contract: entry point `./c
      and copied to the other datasets with `nnUNetv2_move_plans_between_datasets`. Normalisation and patch are
      therefore identical across arms.
    - Default 3d_fullres: patch 96 × 160 × 160 at 0.5 × 0.35 × 0.35 mm on the smoke run. That is not the master's
-     256³ ResEnc, which would not fit five arms into 24 h.
+     256³ ResEnc, which would not fit six arms into 24 h.
 4. **Stage `probe`.** Four epochs measure s/epoch. Epochs per arm are then set to
    (remaining time − 1.5 h) / (6 × s/epoch), clamped to 20–300 and identical for every arm.
    - **Fairness:** every arm gets the same number of gradient steps. `both` sees twice the cases in the same steps.
@@ -99,7 +99,7 @@ Let Δ be the paired tF1-vs-truth difference of an arm against `single`, with it
 | `both` has Δ > 0 with the CI excluding 0, and ≥ `agree` and `union` | **Train on both reads as separate samples** (the simplest). Fusion is not needed |
 | `agree` or `union` beats `both` (CI of their difference excludes 0) | Use that fusion with nnU-Net's ignore label (`ignore` = 5 in dataset.json) |
 | No arm beats `single` | The second read is worth more as an **evaluation and QA** resource (ceiling, arbitration) than as training signal. Train on one read per case, chosen as the one closer to the namer QA |
-| Any arm's tF1 *vs reads* < tF1 *vs truth* by > 0.03 | Evaluation must score against the **fused reference** of both reads (or report the mean over both reads together with the inter-read ceiling), never one read |
+| Any arm's tF1 *vs reads* < tF1 *vs truth* by > 0.03 | Already decided by A10: score as the mean of tF1 against each read, never against one read and never against a fused reference. Report the gap as evidence of how far single-read scoring understates the truth |
 
 ## What would change which decision
 

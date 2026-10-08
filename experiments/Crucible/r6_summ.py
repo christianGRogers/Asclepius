@@ -21,3 +21,23 @@ I = [r for r in I if 'skip' not in r]
 if I:
     for k in ('inject_-2', 'inject_-1', 'inject_+1', 'inject_+2'):
         v = np.array([r[k] for r in I if r.get(k) is not None]); print(f'{k}: n={len(v)} read {v.mean():+.2f} ± {v.std(ddof=1):.2f} mm')
+
+# robust detection thresholds by resampling the measured floor (no distributional assumption)
+v = np.array([r['skelbif_minus_icx'] for r in ok if 'skelbif_minus_icx' in r])
+print('outliers |x|>5mm:', int((np.abs(v) > 5).sum()), 'of', len(v), sorted(np.round(v[np.abs(v) > 5], 1)))
+rng = np.random.default_rng(0)
+def power(stat, n, bias, two_groups=False, reps=2000):
+    hits = 0
+    for _ in range(reps):
+        if two_groups:
+            a = rng.choice(v, n) + bias; b = rng.choice(v, n)
+            bs = [stat(rng.choice(a, n)) - stat(rng.choice(b, n)) for _ in range(200)]
+        else:
+            a = rng.choice(v, n) + bias
+            bs = [stat(rng.choice(a, n)) - np.median(v) for _ in range(200)]
+        lo, hi = np.percentile(bs, [2.5, 97.5]); hits += (lo > 0) or (hi < 0)
+    return hits / reps
+for name, stat in (('median', np.median), ('mean', np.mean)):
+    for b in (0.0, 0.5, 1.0, 1.5, 2.0):
+        print(f'{name}: team-wide bias {b:+.1f} mm, n=50 -> detection rate {power(stat, 50, b, reps=300):.2f};'
+              f'  annotator difference {b:+.1f} mm, 25 vs 25 -> {power(stat, 25, b, True, reps=300):.2f}')

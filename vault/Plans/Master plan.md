@@ -2,20 +2,20 @@
 aliases: [Master plan]
 tags: [plans, master]
 status: living
-round: 3
+round: 4
 updated: 2026-10-08
 ---
 
 # Master plan
 
-**In force: [[Atlas v3]], as amended by the judge in [[Round 3]].** Won round 1
-(as [[Atlas v1]]) and held the title in rounds 2 and 3; round 3 was against
-[[Bridge v3]], [[Crucible v4]] and [[Delta v3]]. All three challengers now keep the master's
+**In force: [[Atlas v4]], as amended by the judge in [[Round 4]].** Won round 1
+(as [[Atlas v1]]) and held the title in rounds 2–4; round 4 was against
+[[Bridge v4]], [[Crucible v5]] and [[Delta v4]]. All three challengers now keep the master's
 model, data, schedule and deciding metric, and compete on additions to it.
 
 The plan text is the candidate file; the amendments below are binding and
 override it where they conflict. Full reasoning, scorecards and what would
-change the ruling: [[Round 3]] (earlier: [[Round 2]], [[Round 1]]).
+change the ruling: [[Round 4]] (earlier: [[Round 3]], [[Round 2]], [[Round 1]]).
 
 ## In one paragraph
 
@@ -68,6 +68,20 @@ Round 1's A1–A6 as revised in Round 2, plus A7–A9. The full wording is in
 - **A13:** Atlas's Trillium run goes first and saves the val softmax and final
   checkpoint; Bridge's and Delta's questions can then run inference-only on it.
   Delta's decisions may use only the 80 non-sealed test cases.
+
+## Round 4 changes (summary; full wording in [[Round 4]] §1)
+
+- **A14 — the official sealed test:** 80 ImageCAS-X test cases + 20 quality-0
+  cases, ranked by `sha256('asclepius-sealed-round4:' + case_id)` after excluding
+  every advocate's development cases. Published in [[Sealed test]] before any
+  Trillium job runs; supersedes Delta's `icx_test_split.json`.
+- **A11's test** runs only if wave 1 shows annotator habits or team bias, judged on
+  a carina anchor against ImageCAS-X rather than against the reads.
+- **A12** adds Crucible's habit test and carina anchor as diagnostics only, after
+  the anchor's noise floor is measured.
+- **A1/A2 confirmed** on new evidence (0 silent ostium errors in 130; bridging still
+  6/13 false-positive joins on the thick reference).
+- Atlas's decision-table row for the short R1 is now numeric (≤ 0.03 / > 0.10).
 
 ## Human decisions
 

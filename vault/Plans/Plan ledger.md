@@ -24,3 +24,7 @@ Every plan version ever submitted, and what happened to it.
 | 3 | [[Crucible v3]] | Crucible | Superseded within the round by Crucible v4 |
 | 3 | [[Crucible v4]] | Crucible | Lost (restart around two reads); scoring and acceptance rule adopted (A10), first-50 report (A12) |
 | 3 | [[Delta v3]] | Delta | Lost; per-component ostia (A1); its Trillium run must avoid the sealed 80 (A13) |
+| 4 | [[Atlas v4]] | Atlas | **Master plan** (held), with A1–A14 ([[Round 4]]) |
+| 4 | [[Bridge v4]] | Bridge | Lost; narrowed to measuring A7 on the master's model, inference-only on Atlas's run |
+| 4 | [[Crucible v5]] | Crucible | Lost; habit test and carina anchor added to A12 as diagnostics; A11 test made conditional |
+| 4 | [[Delta v4]] | Delta | Lost; A1/A2 confirmed; its hash split superseded by A14 |

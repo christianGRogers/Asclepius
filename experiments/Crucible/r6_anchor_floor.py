@@ -20,7 +20,7 @@ sys.path.insert(0, '/home/user/Asclepius/trillium/crucible/lib'); import sim  # 
 SCR = '/tmp/claude-0/-home-user-Asclepius/1b43aea1-ed14-5dd0-84ee-25f776047e09/scratchpad'
 sys.path.insert(0, SCR + '/tools'); from girder import mask_path  # noqa: E402
 ICX = SCR + '/work/Crucible/icx/ImageCAS-X_dataset'
-OUT = SCR + '/work/Crucible/r6anchor'; os.makedirs(OUT, exist_ok=True)
+OUT = SCR + '/work/Crucible/' + ('r6inject' if os.environ.get('INJECT') == '1' else 'r6anchor'); os.makedirs(OUT, exist_ok=True)
 S26 = np.ones((3, 3, 3))
 sealed = json.load(open('/home/user/Asclepius/trillium/sealed_test.json'))
 SEALED = set(sealed['sealed_icx_test']) | set(sealed['sealed_quality0'])
@@ -56,7 +56,7 @@ def run(c):
     lmv = np.argwhere(icx == 1); ost = lmv[np.argmax(d23[icx == 1])]
     near = lambda p: int(np.argmin((((pts - p) * sp) ** 2).sum(1)))
     o_node = near(ost)
-    d = dijkstra(G, indices=o_node)
+    d, pred = dijkstra(G, indices=o_node, return_predecessors=True)
     out = {'case': c}
     cP = junction_centroid(P); cI = junction_centroid(I4)
     if cP is None or cI is None: return {'case': c, 'skip': 'no LM/LAD-LCx contact'}
@@ -64,12 +64,37 @@ def run(c):
     if not (np.isfinite(d[nP]) and np.isfinite(d[nI])): return {'case': c, 'skip': 'carina not reachable on skeleton'}
     out['proxy_minus_icx'] = float(d[nP] - d[nI])
     out['icx_carina_d'] = float(d[nI]); out['icx_proj_dist_mm'] = float(np.sqrt((((pts[nI] - cI) * sp) ** 2).sum()))
-    deg = np.asarray((G > 0).sum(1)).ravel(); junc = np.nonzero((deg >= 3) & np.isfinite(d))[0]
-    if len(junc):
-        jn = junc[np.argmin((((pts[junc] - cI) * sp) ** 2).sum(1))]
-        out['skelbif_minus_icx'] = float(d[jn] - d[nI])
-        out['skelbif_euclid_from_icx_mm'] = float(np.sqrt((((pts[jn] - cI) * sp) ** 2).sum()))
+    # thick-tree bifurcation by topology, independent of where ImageCAS-X put its carina: lowest common ancestor (on the
+    # shortest-path tree from the ostium) of the farthest LAD point and the farthest LCx point (proxy names, which are
+    # correct far from the carina)
+    lab_sk = P[tuple(pts.T)]
+    def path(t):
+        p = [];  # noqa: E702
+        while t >= 0 and t != o_node: p.append(t); t = pred[t]
+        return p[::-1]
+    far = {}
+    for k in (2, 3):
+        cand = np.nonzero((lab_sk == k) & np.isfinite(d))[0]
+        if len(cand): far[k] = cand[np.argmax(d[cand])]
+    if len(far) == 2:
+        pa, pb = path(far[2]), path(far[3]); lca = o_node
+        for x, y in zip(pa, pb):
+            if x != y: break
+            lca = x
+        out['skelbif_minus_icx'] = float(d[lca] - d[nI])
+        out['skelbif_euclid_from_icx_mm'] = float(np.sqrt((((pts[lca] - cI) * sp) ** 2).sum()))
     out['icx_lm_len_mm'] = float(d[nI])
+    # recovery of an injected carina shift (sim.py's operation on the proxy): what does the anchor read?
+    if os.environ.get('INJECT') == '1':
+        d_lm = ndi.distance_transform_edt(P != 1, sampling=sp); d_23 = ndi.distance_transform_edt(~np.isin(P, (2, 3)), sampling=sp)
+        _, ind23 = ndi.distance_transform_edt(~np.isin(P, (2, 3)), return_indices=True)
+        for shv in (-2.0, -1.0, 1.0, 2.0):
+            R = P.copy()
+            if shv > 0: R[np.isin(R, (2, 3)) & (d_lm <= shv)] = 1
+            else:
+                sel = (R == 1) & (d_23 <= -shv); R[sel] = P[tuple(ind23)][sel]
+            cR = junction_centroid(R)
+            out[f'inject_{shv:+.0f}'] = float(d[near(cR)] - d[nI]) if cR is not None and np.isfinite(d[near(cR)]) else None
     return out
 
 

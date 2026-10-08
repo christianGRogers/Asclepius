@@ -72,6 +72,10 @@ A model identical to read A, scored against reads A and B with a 5 mm carina shi
 - Simulated second reads on 3 cases test the logic, not the size of real disagreement.
 - The ramus-only test is geometric. It cannot tell a ramus from an early diagonal: that is the D1b ambiguity itself,
   and Bridge's 88.2 % / 7.9 % applies.
-- Bridge's decision extractor (one of the A11 triggers) is not wired into `fuse_reads.py`. It is a separate call, to
-  be OR-ed in when the wave-1 pipeline is assembled.
-- The port to `src/segtrain` (A9) is still to do.
+- **Update (Round 5):** Bridge's decision extractor is now wired in as `bridge_decisions()`. It uses Bridge's
+  definitions (ostium = LM point farthest from LAD/LCx; LM end = LM point nearest them, each > 5 mm; LAD/LCx side by
+  majority; tree identity) and is OR-ed into `adjudication()`. On c0050 the re-run left every outcome unchanged:
+  carina shift and RCA truncation give no third read, the 12 mm carina branch is ramus-only, the full swap gives a
+  third read.
+- The port to `src/segtrain` (A9) is still to do. The tournament brief forbids advocates to edit `src/`, so it
+  needs the project lead or orchestrator.

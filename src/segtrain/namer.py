@@ -1,24 +1,27 @@
 """Rule-based coronary branch namer: amendments A4 (QA of proxy and read labels), A7 (renaming a
-prediction, "R"), A8 (ramus switch), under the human decisions D1 (territory: a side branch takes its
-parent's class) and D1b (ramus intermedius -> LCx).
+prediction, "R") and A8 (ramus switch), under the human decisions D1 (territory: a side branch takes
+its parent's class) and D1b (ramus intermedius -> LCx).
 
 Why rules and not a network: once the lumen is fixed, the four classes are decided by a handful of
-discrete choices per case -- which tree is left, where the left ostium is, where the left main ends, which
-child is the LAD, where a ramus goes -- and every other voxel inherits its name through connectivity. The
-rules make those choices consistently for the whole tree, so every class is a connected sub-tree by
-construction. Measured (vault, Bridge experiment notes): 88.2 % of 76 held-out thick-mask cases fully right
-(all four classes Dice >= 0.8) against ImageCAS-X names under D1b; on real stage-1 output within 0.010 tree-F1
-of perfect naming. Those numbers were produced by the experiment copy (`experiments/Bridge/label.py`, TEASAR
-skeletons from kimimaro); this port uses scikit-image skeletons and is re-validated in the implementation note.
+discrete choices per case -- which tree is left, where the left ostium is, where the left main ends,
+which child is the LAD, where a ramus goes -- and every other voxel inherits its name through
+connectivity. The rules make those choices once for the whole tree, so every class is a connected
+sub-tree by construction. Measured by the experiment copy (`experiments/Bridge/label.py`, TEASAR
+skeletons from kimimaro): 88.2 % of 76 held-out thick-mask cases fully right (all four classes Dice
+>= 0.8) against ImageCAS-X names under D1b; on real stage-1 output within 0.010 tree-F1 of perfect
+naming. This port uses scikit-image skeletons; it is re-validated against that run in the vault note
+"Bridge - Implementation of namer".
 
 API
-    name_tree(mask, affine)            -> NamingResult   binary or 4-class tree -> 4-class labels + decisions
-    rename(labels4, affine)            -> NamingResult   A7 "R": re-name a 4-class prediction's foreground
-    extract_decisions(labels4, affine) -> Decisions      ostium / LM end / tree identity of any labelling
-    compare(reference, named, affine)  -> Disagreement   A4/A11: `ignore` mask + wholesale flags (+ ramus exemption)
+    name_tree(mask, affine)            -> NamingResult  binary or 4-class tree -> labels + decisions
+    rename(labels4, affine)            -> NamingResult  A7 "R": re-name a 4-class prediction
+    extract_decisions(labels4, affine) -> Decisions     ostium / LM end / trees of any labelling
+    compare(reference, named, affine)  -> Disagreement  A4/A11 `ignore` mask + wholesale flags
+    disagreement(label, mask, sp|aff)  -> dict          A4 one-call QA used by segtrain.proxy
+    icx_to_four(icx)                   -> 4-class map   ImageCAS-X 14 classes under D1/D1b
 
-Everything is in the input voxel grid; the affine supplies spacing and patient directions (RAS: +x patient
-right... more precisely nibabel's RAS+, so the left tree has the more negative x, anterior is +y).
+Everything is in the input voxel grid. The affine supplies spacing and patient directions (nibabel
+RAS+: the left tree has the more negative world x, anterior is +y, superior is +z).
 Dependencies: numpy, scipy, scikit-image (skeletonisation, imported lazily).
 """
 
@@ -31,89 +34,155 @@ from typing import Dict, List, Optional
 import numpy as np
 from scipy import ndimage
 from scipy.sparse import coo_matrix
-from scipy.sparse.csgraph import connected_components, minimum_spanning_tree
+from scipy.sparse.csgraph import minimum_spanning_tree
 from scipy.spatial import cKDTree
 
 LM, LAD, LCX, RCA = 1, 2, 3, 4
-CLASS_NAMES = {LM: "left_main", LAD: "left_anterior_descending", LCX: "left_circumflex",
-               RCA: "right_coronary_artery"}
+CLASS_NAMES = {
+    LM: "left_main",
+    LAD: "left_anterior_descending",
+    LCX: "left_circumflex",
+    RCA: "right_coronary_artery",
+}
 
 # ImageCAS-X 14 segment classes -> the project's 4 (D1 territory, D1b ramus -> LCx). 14 ("Other":
 # D3/D4/OM3/OM4) has no fixed parent, so it maps to 0 and is named by the tree it hangs from.
-ICX_TO_4 = {1: LM, 2: LAD, 4: LAD, 5: LAD, 3: LCX, 6: LCX, 7: LCX, 8: LCX, 12: LCX, 13: LCX,
-            9: RCA, 10: RCA, 11: RCA, 14: 0}
+ICX_TO_4 = {
+    1: LM,
+    2: LAD,
+    4: LAD,
+    5: LAD,
+    3: LCX,
+    6: LCX,
+    7: LCX,
+    8: LCX,
+    12: LCX,
+    13: LCX,
+    9: RCA,
+    10: RCA,
+    11: RCA,
+    14: 0,
+}
 
-# ---- frozen parameters (experiments/Bridge/label.py, md5 06f53291..., Round 3) ---------------------
-MIN_COMPONENT_VOXELS = 100   # smaller components get no skeleton; they take the nearest named class
-TREE_MIN_MM = 30.0           # skeleton length for a component to count as a tree
-MAJOR_MIN_MM = 20.0          # downstream skeleton for a child to count as a major branch
-BIF_WINDOW_MM = 40.0         # the LM bifurcation is searched along the heavy path within this distance
-RAMUS_WINDOW_MM = 6.0        # a ramus leaves the LAD/LCx within this distance of the bifurcation
+# ---- frozen parameters (experiments/Bridge/label.py, md5 06f53291..., Round 3) ----------------
+MIN_COMPONENT_VOXELS = 100  # smaller components get no skeleton; they take the nearest named class
+TREE_MIN_MM = 30.0  # skeleton length for a component to count as a tree
+MAJOR_MIN_MM = 20.0  # downstream skeleton for a child to count as a major branch
+BIF_WINDOW_MM = 40.0  # the LM bifurcation is searched along the heavy path within this distance
+RAMUS_WINDOW_MM = 6.0  # a ramus leaves the LAD/LCx within this distance of the bifurcation
 RAMUS_MIN_MM = 20.0
-RAMUS_CANDIDATE_WINDOW_MM = 10.0   # looser region used only for the A11 ramus exemption
-FUSED_TREE_MM = 800.0        # one tree this long = left and right trees fused (flag)
-SPUR_SCALE, SPUR_CONST_MM = 1.5, 2.0  # spur pruning ~ TEASAR's invalidation sphere (scale 1.5, const 2 mm)
+RAMUS_CANDIDATE_WINDOW_MM = 10.0  # looser region used only for the A11 ramus exemption
+FUSED_TREE_MM = 800.0  # one tree this long = left and right trees fused (flag)
+SPUR_SCALE, SPUR_CONST_MM = (
+    1.5,
+    2.0,
+)  # spur pruning ~ TEASAR's invalidation sphere (scale 1.5, const 2 mm)
 N_RERANK = 5
 
-# learned ostium score (logistic regression on endpoint features, fit on 79 development cases; vault note
-# "Finding the left ostium is the crux of naming"). Standardised features are clipped to +-5.
-_OST_F = ['r6', 'r3', 'rmax6', 'h', 'sl', 'beyond', 'dR', 'r6_rk', 'r3_rk', 'h_rk', 'dR_rk']
-_OST_MEAN = np.array([1.2260055587372005, 1.0132613248828564, 1.6357369771988115, 0.5495513811425237,
-                      30.1229775443098, 0.9998746521729002, 45.651009351771286, 0.5, 0.5, 0.5, 0.5])
-_OST_SCALE = np.array([0.209151543865291, 0.1778348075599815, 0.36604398711788555, 0.3234323899884134,
-                       36.287147238657184, 0.00042258801628693485, 15.236790745060588, 0.3173992111756212,
-                       0.3173992111756212, 0.3173992111756212, 0.3173992111756212])
-_OST_COEF = np.array([-0.064966171223464, -0.5001573960311001, 1.1166941835083288, 2.088543257427978,
-                      -0.09785911296058337, -1.1985929834244, -1.028112411343153, 1.4916330195017398,
-                      -0.45314176063777406, 0.10962521518841653, -0.7717144014035534])
+# learned ostium score (logistic regression on endpoint features, fit on 79 development cases;
+# vault note "Finding the left ostium is the crux of naming"). Standardised features are
+# clipped to +-5.
+_OST_F = ["r6", "r3", "rmax6", "h", "sl", "beyond", "dR", "r6_rk", "r3_rk", "h_rk", "dR_rk"]
+_OST_MEAN = np.array(
+    [
+        1.2260055587372005,
+        1.0132613248828564,
+        1.6357369771988115,
+        0.5495513811425237,
+        30.1229775443098,
+        0.9998746521729002,
+        45.651009351771286,
+        0.5,
+        0.5,
+        0.5,
+        0.5,
+    ]
+)
+_OST_SCALE = np.array(
+    [
+        0.209151543865291,
+        0.1778348075599815,
+        0.36604398711788555,
+        0.3234323899884134,
+        36.287147238657184,
+        0.00042258801628693485,
+        15.236790745060588,
+        0.3173992111756212,
+        0.3173992111756212,
+        0.3173992111756212,
+        0.3173992111756212,
+    ]
+)
+_OST_COEF = np.array(
+    [
+        -0.064966171223464,
+        -0.5001573960311001,
+        1.1166941835083288,
+        2.088543257427978,
+        -0.09785911296058337,
+        -1.1985929834244,
+        -1.028112411343153,
+        1.4916330195017398,
+        -0.45314176063777406,
+        0.10962521518841653,
+        -0.7717144014035534,
+    ]
+)
 
 
 # ---------------------------------------------------------------------------------- data classes
 
+
 @dataclass
 class Decisions:
     """The discrete naming decisions of one case (voxel coordinates in the input grid)."""
-    ostium_vox: Optional[tuple] = None      # left-tree ostium
-    lm_end_vox: Optional[tuple] = None      # LM bifurcation (end of the left main)
+
+    ostium_vox: Optional[tuple] = None  # left-tree ostium
+    lm_end_vox: Optional[tuple] = None  # LM bifurcation (end of the left main)
     lm_length_mm: Optional[float] = None
-    left_component: Optional[int] = None    # skeleton component holding LM/LAD/LCx
-    right_component: Optional[int] = None   # skeleton component holding the RCA
-    n_ramus: int = 0                        # ramus-like branches renamed by the A8 switch
-    fused_trees: bool = False               # left and right trees in one component (flag for a human)
-    failure: Optional[str] = None           # 'empty', 'no_tree', 'single_tree', 'no_bifurcation'
+    left_component: Optional[int] = None  # skeleton component holding LM/LAD/LCx
+    right_component: Optional[int] = None  # skeleton component holding the RCA
+    n_ramus: int = 0  # ramus-like branches renamed by the A8 switch
+    fused_trees: bool = False  # left and right trees in one component (flag for a human)
+    failure: Optional[str] = None  # 'empty', 'no_tree', 'single_tree', 'no_bifurcation'
 
 
 @dataclass
 class NamingResult:
-    labels: np.ndarray                      # uint8, 0..4, same shape as the input mask
+    labels: np.ndarray  # uint8, 0..4, same shape as the input mask
     decisions: Decisions
-    ramus_candidates: np.ndarray            # bool: side branches near the LM end (used by the ramus exemption)
+    ramus_candidates: (
+        np.ndarray
+    )  # bool: side branches near the LM end (used by the ramus exemption)
     info: dict = field(default_factory=dict)
 
 
 @dataclass
 class Disagreement:
     """A4 / A11 comparison of a reference labelling against the namer (or of two reads)."""
-    ignore: np.ndarray                      # bool: voxels both call vessel but name differently
-    ignore_fraction: float                  # of the reference's vessel voxels
-    ignore_within_10mm_of_carina: float     # share of the ignore voxels within 10 mm of the LM end
+
+    ignore: np.ndarray  # bool: voxels both call vessel but name differently
+    ignore_fraction: float  # of the reference's vessel voxels
+    ignore_within_10mm_of_carina: float  # share of the ignore voxels within 10 mm of the LM end
     ostium_distance_mm: Optional[float]
     lm_dice: Optional[float]
-    lad_lcx_swap: float                     # share of reference LAD+LCx voxels named the other one
-    tree_swap: bool                         # a whole tree named left by one, right by the other
-    flags: list                             # wholesale triggers that fired: 'ostium', 'lm', 'swap', 'tree'
-    ramus_only: bool                        # the swap is confined to a ramus-like branch (exempt: D1b, A11)
-    wholesale: bool                         # any flag after the ramus exemption -> review the case, don't mask
+    lad_lcx_swap: float  # share of reference LAD+LCx voxels named the other one
+    tree_swap: bool  # a whole tree named left by one, right by the other
+    flags: list  # wholesale triggers that fired: 'ostium', 'lm', 'swap', 'tree'
+    ramus_only: bool  # the swap is confined to a ramus-like branch (exempt: D1b, A11)
+    wholesale: bool  # any flag after the ramus exemption -> review the case, don't mask
 
 
 # ---------------------------------------------------------------------------------- geometry
+
 
 def _spacing(affine):
     return np.sqrt((np.asarray(affine, float)[:3, :3] ** 2).sum(0))
 
 
 class _Skel:
-    """Skeleton graph of a vessel mask: vertices (voxel coords), radius (mm), edges, per-vertex component,
+    """Skeleton graph of a vessel mask: vertices (voxel coords), radius (mm), edges, per-vertex
+    component,
     and for every mask voxel the vertex that owns it."""
 
     def __init__(self, mask: np.ndarray, sp: np.ndarray):
@@ -123,12 +192,14 @@ class _Skel:
         st = np.ones((3, 3, 3), bool)
         comp, n = ndimage.label(mask, structure=st)
         sizes = np.bincount(comp.ravel(), minlength=n + 1)
-        big = np.zeros(n + 1, bool); big[1:] = sizes[1:] >= MIN_COMPONENT_VOXELS
+        big = np.zeros(n + 1, bool)
+        big[1:] = sizes[1:] >= MIN_COMPONENT_VOXELS
         keep = big[comp]
         sk = skeletonize(keep.astype(np.uint8)).astype(bool) if keep.any() else np.zeros_like(keep)
         # a component whose skeleton vanished (tiny blob) gets one vertex at its deepest voxel
         edt = ndimage.distance_transform_edt(mask, sampling=sp)
-        have = np.zeros(n + 1, bool); have[np.unique(comp[sk])] = True
+        have = np.zeros(n + 1, bool)
+        have[np.unique(comp[sk])] = True
         for k in np.nonzero(big & ~have)[0]:
             cv = np.argwhere(comp == k)
             sk[tuple(cv[np.argmax(edt[tuple(cv.T)])])] = True
@@ -141,14 +212,28 @@ class _Skel:
         idx = -np.ones(mask.shape, np.int64)
         idx[tuple(V.T)] = np.arange(len(V))
         rows, cols = [], []
-        for off in [(1, 0, 0), (0, 1, 0), (0, 0, 1), (1, 1, 0), (1, -1, 0), (1, 0, 1), (1, 0, -1), (0, 1, 1),
-                    (0, 1, -1), (1, 1, 1), (1, 1, -1), (1, -1, 1), (1, -1, -1)]:
+        for off in [
+            (1, 0, 0),
+            (0, 1, 0),
+            (0, 0, 1),
+            (1, 1, 0),
+            (1, -1, 0),
+            (1, 0, 1),
+            (1, 0, -1),
+            (0, 1, 1),
+            (0, 1, -1),
+            (1, 1, 1),
+            (1, 1, -1),
+            (1, -1, 1),
+            (1, -1, -1),
+        ]:
             q = V + np.array(off)
             ok = np.all((q >= 0) & (q < np.array(mask.shape)), axis=1)
             j = np.full(len(V), -1)
             j[ok] = idx[tuple(q[ok].T)]
             m = j >= 0
-            rows.append(np.nonzero(m)[0]); cols.append(j[m])
+            rows.append(np.nonzero(m)[0])
+            cols.append(j[m])
         r = np.concatenate(rows) if rows else np.zeros(0, int)
         c = np.concatenate(cols) if cols else np.zeros(0, int)
         w = np.linalg.norm(self.P[r] - self.P[c], axis=1) if len(r) else np.zeros(0)
@@ -167,19 +252,24 @@ class _Skel:
 
     @staticmethod
     def _tree_adjacency(nv, r, c, w) -> Dict[int, Dict[int, float]]:
-        """minimum spanning forest of the 26-neighbour graph (skeletons have small cycles at junction blobs)"""
+        """minimum spanning forest of the 26-neighbour graph (skeletons have small cycles at
+        junction blobs)"""
         adj: Dict[int, Dict[int, float]] = {i: {} for i in range(nv)}
         if nv == 0 or len(r) == 0:
             return adj
         g = coo_matrix((w + 1e-9, (r, c)), shape=(nv, nv)).tocsr()
         t = minimum_spanning_tree(g).tocoo()
         for a, b, x in zip(t.row, t.col, t.data):
-            adj[int(a)][int(b)] = float(x); adj[int(b)][int(a)] = float(x)
+            adj[int(a)][int(b)] = float(x)
+            adj[int(b)][int(a)] = float(x)
         return adj
 
     def _prune_spurs(self, passes: int = 2):
-        """drop terminal twigs shorter than TEASAR's invalidation radius at their junction (one or two voxels of
-        skimage boundary noise); TEASAR (the experiment's skeletoniser) never produces them"""
+        """drop terminal twigs that do not leave TEASAR's invalidation sphere at their junction
+        (radius 1.5 r + 2 mm): skimage boundary noise, which TEASAR (the experiment's skeletoniser)
+        never traces. A twig's reach is its length plus its tip radius, because a skimage skeleton
+        ends about one radius short of a vessel's cut end; on length alone a short left main
+        (whose cut end is the ostium) would be pruned away."""
         adj = self.adj
         for _ in range(passes):
             removed = False
@@ -191,11 +281,13 @@ class _Skel:
                     nxt = [x for x in adj[cur] if x != prev]
                     if len(nxt) != 1:
                         break
-                    acc += adj[cur][nxt[0]]; prev, cur = cur, nxt[0]
+                    acc += adj[cur][nxt[0]]
+                    prev, cur = cur, nxt[0]
                     if len(adj[cur]) != 2:
                         break
                     path.append(cur)
-                if len(adj.get(cur, {})) >= 3 and acc < SPUR_SCALE * self.R[cur] + SPUR_CONST_MM:
+                reach = acc + self.R[e]
+                if len(adj.get(cur, {})) >= 3 and reach < SPUR_SCALE * self.R[cur] + SPUR_CONST_MM:
                     for p in path:
                         for q in list(adj[p]):
                             adj[q].pop(p, None)
@@ -220,12 +312,15 @@ class _Skel:
         for s in vs:
             if s in seen:
                 continue
-            comp, q = [], deque([s]); seen.add(s)
+            comp, q = [], deque([s])
+            seen.add(s)
             while q:
-                u = q.popleft(); comp.append(u)
+                u = q.popleft()
+                comp.append(u)
                 for x in self.adj[u]:
                     if x not in seen:
-                        seen.add(x); q.append(x)
+                        seen.add(x)
+                        q.append(x)
             pieces.append(comp)
         return pieces
 
@@ -250,9 +345,12 @@ class _Rooted:
             u = q.popleft()
             for v, w in adj[u].items():
                 if v not in self.parent:
-                    self.parent[v] = u; self.children[v] = []; self.children[u].append(v)
+                    self.parent[v] = u
+                    self.children[v] = []
+                    self.children[u].append(v)
                     self.dist[v] = self.dist[u] + w
-                    self.order.append(v); q.append(v)
+                    self.order.append(v)
+                    q.append(v)
         self.L = {n: 0.0 for n in self.order}
         self.S = {n: np.zeros(3) for n in self.order}
         for n in reversed(self.order):
@@ -264,11 +362,14 @@ class _Rooted:
     def subtree(self, c):
         out, st = [], [c]
         while st:
-            u = st.pop(); out.append(u); st.extend(self.children[u])
+            u = st.pop()
+            out.append(u)
+            st.extend(self.children[u])
         return out
 
 
 # ---------------------------------------------------------------------------------- ostium
+
 
 def _endpoint_features(sk: _Skel, nodes, shape, other_P=None):
     adj, P, R, V = sk.adj, sk.P, sk.R, sk.V
@@ -285,10 +386,13 @@ def _endpoint_features(sk: _Skel, nodes, shape, other_P=None):
             if not nxt:
                 break
             x = max(nxt, key=lambda y: beyond(cur, y))
-            acc += adj[cur][x]; prev, cur = cur, x; path.append(cur)
+            acc += adj[cur][x]
+            prev, cur = cur, x
+            path.append(cur)
         return path
 
-    zs = V[nodes, 2]; zmin, zmax = zs.min(), zs.max()
+    zs = V[nodes, 2]
+    zmin, zmax = zs.min(), zs.max()
     okd = cKDTree(other_P) if other_P is not None and len(other_P) else None
     feats = []
     for e in nodes:
@@ -300,23 +404,30 @@ def _endpoint_features(sk: _Skel, nodes, shape, other_P=None):
             nxt = [x for x in adj[cur] if x != prev]
             if len(nxt) != 1:
                 break
-            sl += adj[cur][nxt[0]]; prev, cur = cur, nxt[0]
-        f = dict(e=int(e), r6=float(np.mean(R[p6])), r3=float(np.mean(R[p3])), rmax6=float(np.max(R[p6])),
-                 h=float((V[e, 2] - zmin) / max(zmax - zmin, 1e-6)), sl=sl,
-                 edge=bool(np.any(V[e] < 2.5) or np.any(V[e] > np.array(shape) - 3.5)),
-                 beyond=float(beyond(e, next(iter(adj[e])))) / max(tot, 1e-6),
-                 dR=float(okd.query(P[e])[0]) if okd is not None else 0.0)
+            sl += adj[cur][nxt[0]]
+            prev, cur = cur, nxt[0]
+        f = dict(
+            e=int(e),
+            r6=float(np.mean(R[p6])),
+            r3=float(np.mean(R[p3])),
+            rmax6=float(np.max(R[p6])),
+            h=float((V[e, 2] - zmin) / max(zmax - zmin, 1e-6)),
+            sl=sl,
+            edge=bool(np.any(V[e] < 2.5) or np.any(V[e] > np.array(shape) - 3.5)),
+            beyond=float(beyond(e, next(iter(adj[e])))) / max(tot, 1e-6),
+            dR=float(okd.query(P[e])[0]) if okd is not None else 0.0,
+        )
         feats.append(f)
-    for key in ('r6', 'r3', 'h', 'dR'):
+    for key in ("r6", "r3", "h", "dR"):
         vals = np.array([f[key] for f in feats])
         order = vals.argsort().argsort() / max(len(vals) - 1, 1)
         for f, o in zip(feats, order):
-            f[key + '_rk'] = float(o)
+            f[key + "_rk"] = float(o)
     return feats
 
 
 def _ostium_score(f) -> float:
-    if f['edge']:
+    if f["edge"]:
         return -1e9
     x = np.clip((np.array([f[k] for k in _OST_F]) - _OST_MEAN) / _OST_SCALE, -5, 5)
     return float(x @ _OST_COEF)
@@ -324,19 +435,26 @@ def _ostium_score(f) -> float:
 
 # ---------------------------------------------------------------------------------- left tree
 
+
 def _label_left(sk: _Skel, nodes, root, A, ramus):
     P, sp = sk.P, sk.sp
     t = _Rooted(sk.adj, root, P)
-    R3 = A[:3, :3] / sp                      # physical displacement -> RAS displacement
+    R3 = A[:3, :3] / sp  # physical displacement -> RAS displacement
     lab = {n: LM for n in t.order}
     cur, best = root, None
-    while t.dist[cur] <= BIF_WINDOW_MM:      # 'apsplit': big second branch, one child anterior one posterior
+    while (
+        t.dist[cur] <= BIF_WINDOW_MM
+    ):  # 'apsplit': big second branch, one child anterior one posterior
         ch = sorted(t.children[cur], key=lambda c: -t.L[c])
         if not ch:
             break
         if len(ch) >= 2 and t.L[ch[1]] >= MAJOR_MIN_MM:
             y = [float((R3 @ (t.S[c] / t.L[c] - P[cur]))[1]) for c in ch[:2]]
-            sc = t.L[ch[1]] / max(t.L[root], 1) + max(0.0, -y[0] * y[1]) ** 0.5 / 25 - t.dist[cur] / 100
+            sc = (
+                t.L[ch[1]] / max(t.L[root], 1)
+                + max(0.0, -y[0] * y[1]) ** 0.5 / 25
+                - t.dist[cur] / 100
+            )
             if best is None or sc > best[0]:
                 best = (sc, cur)
         cur = ch[0]
@@ -345,7 +463,7 @@ def _label_left(sk: _Skel, nodes, root, A, ramus):
     if bif is None:
         for n in t.order:
             lab[n] = LAD
-        info['fail'] = 'no_bifurcation'
+        info["fail"] = "no_bifurcation"
         return lab, info, t
     ch = t.children[bif]
     major = [c for c in ch if t.L[c] >= MAJOR_MIN_MM]
@@ -354,17 +472,27 @@ def _label_left(sk: _Skel, nodes, root, A, ramus):
     i_lad, i_lcx = int(np.argmax(ant)), int(np.argmin(ant))
     cls = {}
     for i, c in enumerate(major):
-        cls[c] = LAD if i == i_lad else LCX if i == i_lcx else \
-            (LAD if (ant[i] - ant[i_lcx]) > (ant[i_lad] - ant[i]) else LCX)
+        cls[c] = (
+            LAD
+            if i == i_lad
+            else LCX
+            if i == i_lcx
+            else (LAD if (ant[i] - ant[i_lcx]) > (ant[i_lad] - ant[i]) else LCX)
+        )
     for c in ch:
         if c not in cls:
             dv = R3 @ ((t.S[c] / t.L[c]) if t.L[c] > 0 else P[c]) - R3 @ P[bif]
-            j = int(np.argmax([np.dot(dv, f) / (np.linalg.norm(dv) * np.linalg.norm(f) + 1e-9) for f in feats]))
+            j = int(
+                np.argmax(
+                    [np.dot(dv, f) / (np.linalg.norm(dv) * np.linalg.norm(f) + 1e-9) for f in feats]
+                )
+            )
             cls[c] = cls[major[j]]
     for c, k in cls.items():
         for n in t.subtree(c):
             lab[n] = k
-    # A8 ramus switch: a major branch leaving within RAMUS_WINDOW_MM of the bifurcation (or a third major child)
+    # A8 ramus switch: a major branch leaving within RAMUS_WINDOW_MM of the bifurcation (or a third
+    # major child)
     # whose subtree lies between the LAD and the LCx in the anterior direction
     lo_a, hi_a = ant[i_lcx], ant[i_lad]
     ram, cand = [], []
@@ -385,40 +513,44 @@ def _label_left(sk: _Skel, nodes, root, A, ramus):
                     if lo_a + 0.15 * (hi_a - lo_a) < a_ < hi_a - 0.15 * (hi_a - lo_a):
                         ram.append(side)
             cur = kids[0]
-    if ramus in ('LCx', 'LAD'):
-        k = LCX if ramus == 'LCx' else LAD
+    if ramus in ("LCx", "LAD"):
+        k = LCX if ramus == "LCx" else LAD
         for c in ram:
             for n in t.subtree(c):
                 lab[n] = k
-    elif ramus != 'inherit':
+    elif ramus != "inherit":
         raise ValueError(f"ramus must be 'LCx', 'LAD' or 'inherit', not {ramus!r}")
-    info['ramus'] = ram
-    info['ramus_candidates'] = [n for c in set(cand) | set(ram) for n in t.subtree(c)]
+    info["ramus"] = ram
+    info["ramus_candidates"] = [n for c in set(cand) | set(ram) for n in t.subtree(c)]
     info.update(lad_dir=feats[i_lad].tolist(), lcx_dir=feats[i_lcx].tolist())
     return lab, info, t
 
 
 def _plausibility_penalty(sk, inf, e, A):
-    if inf.get('bif') is None:
+    if inf.get("bif") is None:
         return 10.0
-    pen, lm = 0.0, inf['lm_len']
+    pen, lm = 0.0, inf["lm_len"]
     if lm > 30:
         pen += (lm - 30) / 10
     if lm < 1.5:
         pen += 0.5
-    if inf['lad_dir'][1] < 0:
+    if inf["lad_dir"][1] < 0:
         pen += 0.5
-    if inf['lcx_dir'][1] > 0:
+    if inf["lcx_dir"][1] > 0:
         pen += 0.5
-    zo = (A[:3, :3] @ sk.V[e] + A[:3, 3])[2]; zb = (A[:3, :3] @ sk.V[inf['bif']] + A[:3, 3])[2]
+    zo = (A[:3, :3] @ sk.V[e] + A[:3, 3])[2]
+    zb = (A[:3, :3] @ sk.V[inf["bif"]] + A[:3, 3])[2]
     if zo < zb - 5:
         pen += (zb - 5 - zo) / 10
     return pen
 
 
 def _bridge(comps: Dict[int, List[int]], sk: _Skel, thr: float):
-    """naming bridges: join a component to its nearest neighbour when one of its endpoints lies within thr mm
-    (graph only -- no voxel is added or removed; A7/A2 audit records the joins)"""
+    """naming bridges: join a component to its nearest neighbour when the gap at one of its
+    endpoints is <= thr mm (graph only -- no voxel is added or removed; the joins are returned for
+    the A2/A7 audit). The gap is measured surface to surface: a scikit-image skeleton ends about one
+    radius inside a cut vessel, whereas TEASAR's (the experiment's) reach the surface, so the
+    endpoint's radius is subtracted, and the target's too when the target is itself an endpoint."""
     comps = {k: list(v) for k, v in comps.items()}
     joins = []
     changed = True
@@ -426,17 +558,30 @@ def _bridge(comps: Dict[int, List[int]], sk: _Skel, thr: float):
         changed = False
         for k in sorted(comps, key=lambda k: len(comps[k])):
             ends = [n for n in comps[k] if len(sk.adj[n]) <= 1]
+            if not ends:
+                continue
             others = [j for j in comps if j != k]
             on = np.concatenate([np.array(comps[j]) for j in others])
             oc = np.concatenate([np.full(len(comps[j]), j) for j in others])
             dd, jj = cKDTree(sk.P[on]).query(sk.P[ends])
-            i = int(np.argmin(dd))
-            if dd[i] <= thr:
-                a, b, j = ends[i], int(on[jj[i]]), int(oc[jj[i]])
-                sk.adj[a][b] = float(dd[i]); sk.adj[b][a] = float(dd[i])
-                comps[j] = comps[j] + comps[k]; del comps[k]
-                joins.append(dict(from_vox=tuple(int(x) for x in sk.V[a]), to_vox=tuple(int(x) for x in sk.V[b]),
-                                  gap_mm=float(dd[i])))
+            tgt = on[jj]
+            tip = np.array([len(sk.adj[int(t)]) <= 1 for t in tgt])
+            gap = np.maximum(dd - sk.R[ends] - np.where(tip, sk.R[tgt], 0.0), 0.0)
+            i = int(np.argmin(gap))
+            if gap[i] <= thr:
+                a, b, j = ends[i], int(tgt[i]), int(oc[jj[i]])
+                sk.adj[a][b] = float(dd[i])
+                sk.adj[b][a] = float(dd[i])
+                comps[j] = comps[j] + comps[k]
+                del comps[k]
+                joins.append(
+                    dict(
+                        from_vox=tuple(int(x) for x in sk.V[a]),
+                        to_vox=tuple(int(x) for x in sk.V[b]),
+                        gap_mm=float(gap[i]),
+                        centreline_mm=float(dd[i]),
+                    )
+                )
                 changed = True
                 break
     return comps, joins
@@ -444,29 +589,35 @@ def _bridge(comps: Dict[int, List[int]], sk: _Skel, thr: float):
 
 # ---------------------------------------------------------------------------------- public API
 
+
 def name_tree(mask, affine, *, ramus: str = "LCx", bridge_mm: float = 4.0) -> NamingResult:
     """Name a coronary tree.
 
-    mask   : 3D array, nonzero = vessel (a binary lumen mask or a 4-class labelling; names are ignored).
-    affine : voxel -> world (RAS+) 4x4 matrix of the NIfTI. Spacing and patient directions come from it.
-    ramus  : A8 switch. 'LCx' (D1b, the project rule), 'LAD', or 'inherit' (the branch keeps its parent's class).
+    mask   : 3D array, nonzero = vessel (a binary lumen mask or a 4-class labelling; names are
+             ignored).
+    affine : voxel -> world (RAS+) 4x4 matrix of the NIfTI; spacing and patient directions come
+             from it (`as_affine` turns bare spacings into the project's LAS grid).
+    ramus  : A8 switch. 'LCx' (D1b, the project rule), 'LAD', or 'inherit' (the branch keeps its
+             parent's class).
     bridge_mm : naming bridges between components (graph only; 0 disables).
 
-    Returns labels (uint8 0..4, every class a connected sub-tree of the skeleton), the decisions taken, and
-    the ramus-candidate mask used by `compare`'s ramus exemption.
+    Returns labels (uint8 0..4, every class a connected sub-tree of the skeleton), the decisions
+    taken, and the ramus-candidate mask used by `compare`'s ramus exemption.
     """
     m = np.asarray(mask) > 0
     A = np.asarray(affine, float)
     out = np.zeros(m.shape, np.uint8)
     empty_ram = np.zeros(m.shape, bool)
     if not m.any():
-        return NamingResult(out, Decisions(failure='empty'), empty_ram)
+        return NamingResult(out, Decisions(failure="empty"), empty_ram)
     # crop to the tree (+3 voxels) for speed; results are mapped back
     nz = np.argwhere(m)
-    lo = np.maximum(nz.min(0) - 3, 0); hi = np.minimum(nz.max(0) + 4, m.shape)
+    lo = np.maximum(nz.min(0) - 3, 0)
+    hi = np.minimum(nz.max(0) + 4, m.shape)
     sl = tuple(slice(a, b) for a, b in zip(lo, hi))
     sp = _spacing(A)
-    Ac = A.copy(); Ac[:3, 3] = A[:3, :3] @ lo + A[:3, 3]
+    Ac = A.copy()
+    Ac[:3, 3] = A[:3, :3] @ lo + A[:3, 3]
     sk = _Skel(m[sl], sp)
     comps = sk.components()
     joins = []
@@ -475,41 +626,47 @@ def name_tree(mask, affine, *, ramus: str = "LCx", bridge_mm: float = 4.0) -> Na
     tl = {k: _length(sk.adj, v) for k, v in comps.items()}
     trees = sorted([k for k in comps if tl[k] >= TREE_MIN_MM], key=lambda k: -tl[k])
     dec = Decisions()
-    info = dict(n_components=len(comps), tree_lengths_mm=[round(tl[k], 1) for k in trees[:4]], bridges=joins)
+    info = dict(
+        n_components=len(comps), tree_lengths_mm=[round(tl[k], 1) for k in trees[:4]], bridges=joins
+    )
     vlab = np.zeros(len(sk.V), np.uint8)
     ram_vertices: List[int] = []
     if not trees:
-        dec.failure = 'no_tree'
+        dec.failure = "no_tree"
     else:
         ras_x = {k: float((sk.V[comps[k]] @ Ac[:3, :3].T + Ac[:3, 3])[:, 0].mean()) for k in trees}
         if len(trees) >= 2:
-            left = min(trees[:2], key=lambda k: ras_x[k]); right = max(trees[:2], key=lambda k: ras_x[k])
+            left = min(trees[:2], key=lambda k: ras_x[k])
+            right = max(trees[:2], key=lambda k: ras_x[k])
         else:
             left, right = trees[0], None
-            dec.failure = 'single_tree'
+            dec.failure = "single_tree"
         dec.fused_trees = tl[left] > FUSED_TREE_MM
         dec.left_component, dec.right_component = left, right
         other = sk.P[comps[right]] if right is not None else None
         ef = _endpoint_features(sk, comps[left], m[sl].shape, other)
-        cands = sorted([f for f in ef if not f['edge']], key=lambda f: -_ostium_score(f))[:N_RERANK] or ef[:1]
+        cands = (
+            sorted([f for f in ef if not f["edge"]], key=lambda f: -_ostium_score(f))[:N_RERANK]
+            or ef[:1]
+        )
         best = None
         for f in cands:
-            lb, inf, t = _label_left(sk, comps[left], f['e'], Ac, ramus)
-            sc = _ostium_score(f) - _plausibility_penalty(sk, inf, f['e'], Ac)
+            lb, inf, t = _label_left(sk, comps[left], f["e"], Ac, ramus)
+            sc = _ostium_score(f) - _plausibility_penalty(sk, inf, f["e"], Ac)
             if best is None or sc > best[0]:
-                best = (sc, f['e'], lb, inf)
+                best = (sc, f["e"], lb, inf)
         if best is not None:
             _, root, labL, inf = best
             for n, k in labL.items():
                 vlab[n] = k
             dec.ostium_vox = tuple(int(x) for x in sk.V[root] + lo)
-            if inf.get('bif') is not None:
-                dec.lm_end_vox = tuple(int(x) for x in sk.V[inf['bif']] + lo)
-                dec.lm_length_mm = inf['lm_len']
-            dec.n_ramus = len(inf.get('ramus', []))
-            if inf.get('fail'):
-                dec.failure = dec.failure or inf['fail']
-            ram_vertices = inf.get('ramus_candidates', [])
+            if inf.get("bif") is not None:
+                dec.lm_end_vox = tuple(int(x) for x in sk.V[inf["bif"]] + lo)
+                dec.lm_length_mm = inf["lm_len"]
+            dec.n_ramus = len(inf.get("ramus", []))
+            if inf.get("fail"):
+                dec.failure = dec.failure or inf["fail"]
+            ram_vertices = inf.get("ramus_candidates", [])
         if right is not None:
             vlab[comps[right]] = RCA
         # every other component: majority class of the nearest named vertices
@@ -523,8 +680,10 @@ def name_tree(mask, affine, *, ramus: str = "LCx", bridge_mm: float = 4.0) -> Na
                 vlab[vs] = np.bincount(vlab[named][j], minlength=5).argmax()
             rest = np.array([v for v in sk.adj if vlab[v] == 0], int)
             if len(rest):
-                _, j = kd.query(sk.P[rest]); vlab[rest] = vlab[named][j]
-    # voxels: class of the owning vertex; orphan blobs (and vertices dropped by pruning): nearest named voxel
+                _, j = kd.query(sk.P[rest])
+                vlab[rest] = vlab[named][j]
+    # voxels: class of the owning vertex; orphan blobs (and vertices dropped by pruning): nearest
+    # named voxel
     oc = np.zeros(m[sl].shape, np.uint8)
     own = sk.owner >= 0
     oc[own] = vlab[sk.owner[own]]
@@ -535,8 +694,10 @@ def name_tree(mask, affine, *, ramus: str = "LCx", bridge_mm: float = 4.0) -> Na
     out[sl] = oc
     ram = np.zeros(m.shape, bool)
     if ram_vertices:
-        rv = np.zeros(len(sk.V), bool); rv[ram_vertices] = True
-        rc = np.zeros(oc.shape, bool); rc[own] = rv[sk.owner[own]]
+        rv = np.zeros(len(sk.V), bool)
+        rv[ram_vertices] = True
+        rc = np.zeros(oc.shape, bool)
+        rc[own] = rv[sk.owner[own]]
         ram[sl] = rc
     return NamingResult(out, dec, ram, info)
 
@@ -555,18 +716,20 @@ def extract_decisions(labels4, affine) -> Decisions:
     sp = _spacing(A)
     dec = Decisions()
     if not (lab > 0).any():
-        dec.failure = 'empty'
+        dec.failure = "empty"
         return dec
     sk = _Skel(lab > 0, sp)
     vl = lab[tuple(sk.V.T)] if len(sk.V) else np.zeros(0)
-    lm = np.nonzero(vl == LM)[0]; ll = np.nonzero((vl == LAD) | (vl == LCX))[0]
+    lm = np.nonzero(vl == LM)[0]
+    ll = np.nonzero((vl == LAD) | (vl == LCX))[0]
     if len(lm) and len(ll):
         d = cKDTree(sk.P[ll]).query(sk.P[lm])[0]
         dec.ostium_vox = tuple(int(x) for x in sk.V[lm[np.argmax(d)]])
         dec.lm_end_vox = tuple(int(x) for x in sk.V[lm[np.argmin(d)]])
     elif not len(lm):
-        dec.failure = 'no_lm'
-    left = np.nonzero(np.isin(vl, (LM, LAD, LCX)))[0]; right = np.nonzero(vl == RCA)[0]
+        dec.failure = "no_lm"
+    left = np.nonzero(np.isin(vl, (LM, LAD, LCX)))[0]
+    right = np.nonzero(vl == RCA)[0]
     if len(left):
         dec.left_component = int(np.bincount(sk.cid[left]).argmax())
     if len(right):
@@ -575,22 +738,33 @@ def extract_decisions(labels4, affine) -> Decisions:
     return dec
 
 
-def compare(reference, named, affine, *, ostium_mm: float = 5.0, lm_dice_min: float = 0.5,
-            swap_max: float = 0.05, ramus_candidates: Optional[np.ndarray] = None,
-            ramus_share: float = 0.8) -> Disagreement:
+def compare(
+    reference,
+    named,
+    affine,
+    *,
+    ostium_mm: float = 5.0,
+    lm_dice_min: float = 0.5,
+    swap_max: float = 0.05,
+    ramus_candidates: Optional[np.ndarray] = None,
+    ramus_share: float = 0.8,
+) -> Disagreement:
     """A4 (proxy vs namer) and A11 (read vs read) comparison of two 4-class labellings of one case.
 
-    ignore   : voxels both call vessel but name differently (A4: set to nnU-Net's ignore label in a proxy;
-               A11: ignore in both read samples). Extent differences are NOT in it (A11 keeps each read's extent).
-    flags    : wholesale triggers (Atlas/A11 thresholds): 'ostium' (decisions > ostium_mm apart), 'lm'
-               (LM Dice < lm_dice_min), 'swap' (> swap_max of reference LAD+LCx voxels named the other one),
-               'tree' (left and right trees exchanged).
-    ramus_only : when `ramus_candidates` (NamingResult.ramus_candidates) is given and >= ramus_share of the
-               swapped voxels lie in it, the 'swap' flag is a ramus-only disagreement: resolved by D1b, not by a
-               third read (A11) -> exempt from `wholesale`.
+    ignore   : voxels both call vessel but name differently (A4: set to nnU-Net's ignore label in a
+               proxy; A11: ignore in both read samples). Extent differences are NOT in it (A11 keeps
+               each read's extent).
+    flags    : wholesale triggers (Atlas/A11 thresholds): 'ostium' (decisions > ostium_mm apart),
+               'lm' (LM Dice < lm_dice_min), 'swap' (> swap_max of reference LAD+LCx voxels named
+               the other one), 'tree' (left and right trees exchanged).
+    ramus_only : when `ramus_candidates` (NamingResult.ramus_candidates) is given and >= ramus_share
+               of the swapped voxels lie in it, the 'swap' flag is a ramus-only disagreement:
+               resolved by D1b, not by a third read (A11) -> exempt from `wholesale`.
     """
-    ref = np.asarray(reference); nm = np.asarray(named)
-    A = np.asarray(affine, float); sp = _spacing(A)
+    ref = np.asarray(reference)
+    nm = np.asarray(named)
+    A = np.asarray(affine, float)
+    sp = _spacing(A)
     both = (ref > 0) & (nm > 0)
     ignore = both & (ref != nm)
     nref = max(int((ref > 0).sum()), 1)
@@ -607,27 +781,76 @@ def compare(reference, named, affine, *, ostium_mm: float = 5.0, lm_dice_min: fl
     ll = (ref == LAD) | (ref == LCX)
     swapped = ((ref == LAD) & (nm == LCX)) | ((ref == LCX) & (nm == LAD))
     swap = float(swapped.sum() / max(ll.sum(), 1))
-    rv, nv = ref > 0, nm > 0
-    tree_swap = bool(((ref == RCA) & nv & (nm != RCA)).sum() > 0.5 * max((ref == RCA).sum(), 1)
-                     or (((ref > 0) & (ref < RCA)) & (nm == RCA)).sum() > 0.5 * max(((ref > 0) & (ref < RCA)).sum(), 1))
+    left_ref, left_nm = (ref > 0) & (ref < RCA), (nm > 0) & (nm < RCA)
+    rca_lost = ((ref == RCA) & left_nm).sum() > 0.5 * max(int((ref == RCA).sum()), 1)
+    left_lost = (left_ref & (nm == RCA)).sum() > 0.5 * max(int(left_ref.sum()), 1)
+    tree_swap = bool(rca_lost or left_lost)
     flags = []
     if ost is not None and ost > ostium_mm:
-        flags.append('ostium')
+        flags.append("ostium")
     if lm_dice is not None and lm_dice < lm_dice_min:
-        flags.append('lm')
+        flags.append("lm")
     if swap > swap_max:
-        flags.append('swap')
+        flags.append("swap")
     if tree_swap:
-        flags.append('tree')
+        flags.append("tree")
     ramus_only = False
-    if 'swap' in flags and ramus_candidates is not None and swapped.any():
-        ramus_only = float((swapped & np.asarray(ramus_candidates, bool)).sum() / swapped.sum()) >= ramus_share
-    wholesale = bool([f for f in flags if not (f == 'swap' and ramus_only)])
-    del rv
-    return Disagreement(ignore=ignore, ignore_fraction=float(ignore.sum() / nref),
-                        ignore_within_10mm_of_carina=near, ostium_distance_mm=ost, lm_dice=lm_dice,
-                        lad_lcx_swap=swap, tree_swap=tree_swap, flags=flags, ramus_only=ramus_only,
-                        wholesale=wholesale)
+    if "swap" in flags and ramus_candidates is not None and swapped.any():
+        ramus_only = (
+            float((swapped & np.asarray(ramus_candidates, bool)).sum() / swapped.sum())
+            >= ramus_share
+        )
+    wholesale = bool([f for f in flags if not (f == "swap" and ramus_only)])
+    return Disagreement(
+        ignore=ignore,
+        ignore_fraction=float(ignore.sum() / nref),
+        ignore_within_10mm_of_carina=near,
+        ostium_distance_mm=ost,
+        lm_dice=lm_dice,
+        lad_lcx_swap=swap,
+        tree_swap=tree_swap,
+        flags=flags,
+        ramus_only=ramus_only,
+        wholesale=wholesale,
+    )
+
+
+def as_affine(spacing_or_affine) -> np.ndarray:
+    """A 4x4 affine as given; a 3-vector of spacings becomes the project's grid orientation, LAS
+    (all 1000 ImageCAS masks: voxel x runs toward patient left), i.e. diag(-sx, sy, sz). Left/right
+    decisions depend on it, so pass the NIfTI affine whenever it is at hand."""
+    a = np.asarray(spacing_or_affine, float)
+    if a.shape == (4, 4):
+        return a
+    if a.shape != (3,):
+        raise ValueError(f"expected a 4x4 affine or 3 spacings, got shape {a.shape}")
+    return np.diag([-a[0], a[1], a[2], 1.0])
+
+
+def disagreement(label, mask, spacing_or_affine, *, ramus: str = "LCx") -> dict:
+    """A4 QA of a proxy label (the contract `segtrain.proxy.qa_with_namer` calls).
+
+    Names `mask` with the rule namer and compares `label` (reference) against it. Returns a dict:
+      ignore     : bool array, voxels both call vessel but name differently (-> ignore label)
+      exclude    : wholesale disagreement after the ramus exemption (drop the case from training)
+      ramus_only : the only wholesale trigger was a LAD/LCx swap confined to a ramus-like branch
+      flags, reason, report (the full `Disagreement`), decisions (the namer's `Decisions`)
+    A 3-vector `spacing_or_affine` is read as an LAS grid (see `as_affine`).
+    """
+    A = as_affine(spacing_or_affine)
+    res = name_tree(np.asarray(mask) > 0, A, ramus=ramus)
+    rep = compare(label, res.labels, A, ramus_candidates=res.ramus_candidates)
+    ramus_only = rep.ramus_only and rep.flags == ["swap"]
+    reason = ",".join(rep.flags) + (" (ramus-only, exempt)" if rep.ramus_only else "")
+    return dict(
+        ignore=rep.ignore,
+        exclude=rep.wholesale,
+        ramus_only=ramus_only,
+        flags=list(rep.flags),
+        reason=reason,
+        report=rep,
+        decisions=res.decisions,
+    )
 
 
 def icx_to_four(icx_labels) -> np.ndarray:

@@ -29,18 +29,20 @@ from typing import Optional
 from .config import Config, TaskConfig, _read_yaml
 from .splits import SPLIT_TEST, build_splits, read_meta, select, validate_splits, write_splits_final
 
-# Keys a task YAML may carry beyond what TaskConfig models. Read here, by the module that acts on them, so the
-# 4-class R1 task (Dataset712_CoronaryBranches) can state its recipe in one file:
-#   planner              nnU-Net experiment planner class (e.g. ResEncUNetPlanner)
-#   gpu_memory_target_gb VRAM budget the planner sizes against (60 for the master's 256^3 patch)
-#   ct_window            [low, high] HU written over the fingerprint's foreground percentiles (fixed window)
-#   ct_norm              [mean, std] used with ct_window (z-scoring only rescales)
-#   patch_size           enforced after planning, [z, y, x]
-#   batch_size           enforced after planning
-#   ignore_label         True -> labels may carry value n_classes+1 = nnU-Net "ignore" (A4 / A11)
-#   sealed_list          path (repo-relative) of the A14 sealed-test JSON; those cases are never converted
-TASK_EXTRA_KEYS = ("planner", "gpu_memory_target_gb", "ct_window", "ct_norm", "patch_size", "batch_size",
-                   "ignore_label", "sealed_list")
+# Keys a task YAML may carry beyond what TaskConfig models. Read here, by the module that acts on
+# them, so the 4-class R1 task (Dataset712_CoronaryBranches) can state its recipe in one file:
+#   planner               nnU-Net experiment planner class (e.g. ResEncUNetPlanner)
+#   gpu_memory_target_gb  VRAM budget the planner sizes against (60 for the 256^3 patch)
+#   ct_window             [low, high] HU written over the fingerprint percentiles (fixed window)
+#   ct_norm               [mean, std] used with ct_window (z-scoring only rescales)
+#   patch_size            enforced after planning, [z, y, x]
+#   batch_size            enforced after planning
+#   ignore_label          true -> labels may carry n_classes+1 = nnU-Net "ignore" (A4 / A11)
+#   sealed_list           repo-relative path of the A14 sealed-test JSON; never converted
+TASK_EXTRA_KEYS = (
+    "planner", "gpu_memory_target_gb", "ct_window", "ct_norm", "patch_size", "batch_size",
+    "ignore_label", "sealed_list",
+)
 
 
 def task_extras(task: TaskConfig) -> dict:
@@ -54,11 +56,12 @@ def task_extras(task: TaskConfig) -> dict:
 def apply_ct_window(plans_file: Path, window, norm=(100.0, 400.0)) -> dict:
     """Write a fixed CT window over nnU-Net's fingerprint-derived one, in a plans file.
 
-    nnU-Net's ``CTNormalization`` clips to the 0.5/99.5 percentiles of *labelled* voxels. With coronary labels that
-    is ~[65, 688] HU on an expert lumen and ~[-164, 640] HU on the ImageCAS masks: it flattens epicardial fat and
-    maps calcified plaque onto the intensity of bright lumen (vault: "Atlas - nnU-Net's automatic CT window on lumen
-    labels flattens 38 percent of the heart box"). The master plan fixes [-300, 1300] HU. Returns the previous
-    values so the caller can log what was replaced. Must run before preprocessing."""
+    nnU-Net's ``CTNormalization`` clips to the 0.5/99.5 percentiles of *labelled* voxels. With
+    coronary labels that is ~[65, 688] HU on an expert lumen and ~[-164, 640] HU on the ImageCAS
+    masks: it flattens epicardial fat and maps calcified plaque onto the intensity of bright lumen
+    (vault: "Atlas - nnU-Net's automatic CT window on lumen labels flattens 38 percent of the heart
+    box"). The master plan fixes [-300, 1300] HU. Returns the previous values so the caller can
+    log what was replaced. Must run before preprocessing."""
     import json
 
     plans_file = Path(plans_file)
@@ -74,8 +77,10 @@ def apply_ct_window(plans_file: Path, window, norm=(100.0, 400.0)) -> dict:
 
 
 def enforce_patch(plans_file: Path, configuration: str, patch_size=None, batch_size=None) -> dict:
-    """Pin the patch and/or batch size of one configuration in a plans file (the master's cohort-wide 256^3 / 2,
-    which a planner run on a subset may not reproduce exactly). Returns the planner's own values."""
+    """Pin the patch and/or batch size of one configuration in a plans file.
+
+    Used for the master's cohort-wide 256^3 / batch 2, which a planner run on a subset may not
+    reproduce exactly. Returns the planner's own values."""
     import json
 
     plans_file = Path(plans_file)
@@ -184,8 +189,10 @@ def plan_experiment(
 
 
 def finalize_plans(plans_file: Path, task: TaskConfig) -> dict:
-    """Apply the task's post-planning recipe keys (fixed CT window, pinned patch/batch) and record what the planner
-    itself chose in ``<plans>.planner_output.json`` beside the plans file. Idempotent."""
+    """Apply the task's post-planning recipe keys (fixed CT window, pinned patch/batch).
+
+    Records what the planner itself chose in ``<plans>.planner_output.json`` beside the plans file.
+    Idempotent."""
     import json
 
     extras = task_extras(task)
@@ -197,34 +204,41 @@ def finalize_plans(plans_file: Path, task: TaskConfig) -> dict:
     if extras.get("patch_size") is not None or extras.get("batch_size") is not None:
         record["planned"] = enforce_patch(plans_file, task.configuration, extras.get("patch_size"),
                                           extras.get("batch_size"))
-        record["enforced"] = {"patch_size": extras.get("patch_size"), "batch_size": extras.get("batch_size")}
+        record["enforced"] = {"patch_size": extras.get("patch_size"),
+                              "batch_size": extras.get("batch_size")}
     if record:
         out = Path(plans_file).with_suffix(".planner_output.json")
-        if not out.exists():  # keep the first record: re-finalizing must not overwrite the planner's own values
+        # keep the first record: re-finalizing must not overwrite the planner's own values
+        if not out.exists():
             out.write_text(json.dumps(record, indent=1), encoding="utf-8")
     return record
 
 
 def write_explicit_splits(cfg: Config, task: TaskConfig, train: list, val: list,
                           sealed: Optional[set] = None) -> Path:
-    """Write a one-fold splits_final.json from explicit case lists (R1: ImageCAS-X train -> train, ImageCAS-X val ->
-    val). Refuses any sealed case (A14) and any overlap between train and val."""
+    """Write a one-fold splits_final.json from explicit case lists.
+
+    R1 uses ImageCAS-X train -> train and ImageCAS-X val -> val. Refuses any sealed case (A14) and
+    any overlap between train and val."""
     overlap = sorted(set(train) & set(val))
     if overlap:
         raise ValueError(f"{len(overlap)} case(s) in both train and val, e.g. {overlap[:3]}")
     if sealed:
         leaked = sorted((set(train) | set(val)) & set(sealed))
         if leaked:
-            raise ValueError(f"{len(leaked)} sealed case(s) in the split, e.g. {leaked[:3]}; refusing (A14)")
+            raise ValueError(f"{len(leaked)} sealed case(s) in the split, e.g. {leaked[:3]}; "
+                             "refusing (A14)")
     present = available_cases(cfg, task)
     if present:
         train = [c for c in train if c in present]
         val = [c for c in val if c in present]
     if not train or not val:
-        raise RuntimeError("explicit split has an empty train or val set after restricting to converted cases")
+        raise RuntimeError("explicit split has an empty train or val set after restricting to "
+                           "converted cases")
     out_dir = task.preprocessed_dir(cfg)
     out_dir.mkdir(parents=True, exist_ok=True)
-    return write_splits_final(out_dir / "splits_final.json", [{"train": sorted(train), "val": sorted(val)}])
+    return write_splits_final(out_dir / "splits_final.json",
+                              [{"train": sorted(train), "val": sorted(val)}])
 
 
 def available_cases(cfg: Config, task: TaskConfig) -> set:

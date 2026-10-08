@@ -272,8 +272,9 @@ def remap_multilabel(
     them would turn a whole structure into background and read as a model that
     simply never learned it.
 
-    ``ignore_value`` (tasks with ``ignore_label: true``) is the one exception: that value in the source is written
-    as nnU-Net's ignore index, ``n_classes + 1``. It marks voxels deliberately left unsupervised (A4: proxy and
+    ``ignore_value`` (tasks with ``ignore_label: true``) is the one exception: that value in the
+    source is written as nnU-Net's ignore index, ``n_classes + 1``. It marks voxels deliberately
+    left unsupervised (A4: proxy and
     rule namer disagree at the carina; A11: two reads name a voxel differently).
     """
     img = nib.load(str(label_path))
@@ -530,8 +531,9 @@ def convert_dataset(
     raw_dir = task.raw_dir(cfg)
     names = task.label_set.names
 
-    # Tasks may carry an A14 sealed list and an ignore label (see plans.TASK_EXTRA_KEYS). Sealed cases are never
-    # converted -- not into imagesTr, not into imagesTs -- so no later step can train or tune on them.
+    # Tasks may carry an A14 sealed list and an ignore label (see plans.TASK_EXTRA_KEYS). Sealed
+    # cases are never converted -- not into imagesTr, not into imagesTs -- so no later step can
+    # train or tune on them.
     from .plans import task_extras
 
     extras = task_extras(task)

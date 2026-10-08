@@ -1,7 +1,9 @@
-"""Fixed-CT-window check used by ``nnUNetTrainer_segtrain_coronary``; torch-free so it is testable without nnU-Net.
+"""Fixed-CT-window check used by ``nnUNetTrainer_segtrain_coronary``; torch-free so it is testable
+without nnU-Net.
 
-The master plan fixes the CT window at [-300, 1300] HU instead of nnU-Net's labelled-voxel percentiles (vault:
-"Atlas - nnU-Net's automatic CT window on lumen labels flattens 38 percent of the heart box").
+The master plan fixes the CT window at [-300, 1300] HU instead of nnU-Net's labelled-voxel
+percentiles (vault: "Atlas - nnU-Net's automatic CT window on lumen labels flattens 38 percent of
+the heart box").
 """
 
 from __future__ import annotations
@@ -37,7 +39,7 @@ def check_window(plans: dict, expected: tuple[float, float] | None) -> None:
     got = plans_window(plans)
     if got is None or abs(got[0] - expected[0]) > 1e-3 or abs(got[1] - expected[1]) > 1e-3:
         raise RuntimeError(
-            f"plans CT window is {got}, expected the fixed window {expected}. Run segtrain.plans.finalize_plans "
-            "(or plan with the task's ct_window) and re-preprocess; or set SEGTRAIN_CT_WINDOW=off for the window "
-            "ablation."
+            f"plans CT window is {got}, expected the fixed window {expected}. "
+            "Run segtrain.plans.finalize_plans (or plan with the task's ct_window) and "
+            "re-preprocess; or set SEGTRAIN_CT_WINDOW=off for the window ablation."
         )

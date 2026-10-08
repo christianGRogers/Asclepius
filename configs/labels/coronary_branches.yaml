@@ -1,0 +1,22 @@
+# The project's four branch classes (vault/Plans/Human decisions.md, D0/D1/D1b).
+#
+# What a label means is fixed by the human decisions, not by this file:
+#   - the voxels are the ORIGINAL ImageCAS mask (the Girder seed), split -- never re-drawn (D0, D4);
+#   - side branches take their parent's class: diagonals -> LAD, obtuse marginals and left PDA/PLV -> LCx,
+#     right PDA/PLV -> RCA (territory, D1);
+#   - the ramus intermedius is LCx, always (D1b).
+#
+# Order is the trained model's output-channel order and is frozen once a model exists.
+# Index 5 is NOT a structure: tasks that set `ignore_label: true` write nnU-Net's "ignore" there (A4 proxy QA,
+# A11 two-read name disagreements). It is added to dataset.json by convert.py, not declared here.
+#
+# `source_values` is absent on purpose: the proxy factory (segtrain.proxy) and SegQueue exports both write
+# 1..4 in this order.
+
+name: coronary_branches
+count: 4
+labels:
+  left_main: 1
+  left_anterior_descending: 2
+  left_circumflex: 3
+  right_coronary_artery: 4

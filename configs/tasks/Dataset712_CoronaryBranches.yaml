@@ -1,0 +1,50 @@
+# R1 of the master plan (vault/Plans/Master plan.md = Atlas v4 + amendments): the direct 4-class model.
+#
+# Source tree: written by segtrain.proxy.build_proxy_tree -- ImageCAS-X names projected onto the ORIGINAL ImageCAS
+# mask (territory, ramus -> LCx), nested layout <case>/ct.nii.gz + <case>/labels.nii.gz, case ids cNNNN. Once team
+# reads exist (D2), each read becomes its own training sample (A11; segtrain.reads), replacing the proxy per case.
+#
+#   (python) segtrain.proxy.build_proxy_tree(cases, icx_dir, $SCRATCH/proxy4, load_sealed())
+#   segtrain index   --root $SCRATCH/proxy4 --layout nested
+#   segtrain convert --task 712                       # sealed cases (A14) are never converted
+#   segtrain plan    --task 712                       # ResEnc planner, 60 GB, 0.5 mm; window + 256^3 applied after
+#   (python) segtrain.plans.write_explicit_splits(cfg, task, icx_train, icx_val, sealed)
+#   segtrain scinet submit --task 712 --fold 0
+#
+# Every recipe choice below is measured on this cohort; see the vault notes named next to each key.
+
+dataset_id: 712
+dataset_name: CoronaryBranches
+
+label_set: coronary_branches
+
+# 0.5 mm isotropic. z is natively 0.5 mm in all 1000 cases; only in-plane (0.29-0.47 mm) is resampled, and the CT
+# has no signal above 1 cycle/mm ("Atlas - Resampling to 0.5 mm isotropic loses nothing measurable, 0.7-0.8 mm
+# does"; "Atlas - On the thin convention a 0.5 mm round trip cuts no tree").
+spacing: [0.5, 0.5, 0.5]
+max_spacing_mm: 0.5
+
+configuration: 3d_fullres
+# Mirroring off (left/right identity), val softmax saved (A7/A13), fixed-window check.
+trainer: nnUNetTrainer_segtrain_coronary
+plans_name: segtrainPlans_coronary4_60G_iso05
+
+epochs: 1000
+folds: [0]
+
+# ---- extra recipe keys, read by segtrain.plans.task_extras -----------------------------------------------
+# ResEnc U-Net sized for 60 GB: the planner returns 256^3 / batch 2 at 0.5 mm on the real fingerprint
+# ("Atlas - Every case has 0.5 mm slices and nnU-Net's own planner fixes the patch menu"); peak ~54 GB predicted
+# ("Atlas - Without a GPU, nnU-Net's own loader and a saved-tensor count bound R0").
+planner: ResEncUNetPlanner
+gpu_memory_target_gb: 60
+patch_size: [256, 256, 256]
+batch_size: 2
+# Fixed CT window instead of nnU-Net's labelled-voxel percentiles
+# ("Atlas - nnU-Net's automatic CT window on lumen labels flattens 38 percent of the heart box").
+ct_window: [-300, 1300]
+ct_norm: [100, 400]
+# Label 5 = ignore (A4 proxy/namer carina disagreements; A11 two-read name disagreements).
+ignore_label: true
+# A14: never convert, train on, or tune on these.
+sealed_list: trillium/sealed_test.json

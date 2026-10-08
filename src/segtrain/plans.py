@@ -26,8 +26,68 @@ import os
 from pathlib import Path
 from typing import Optional
 
-from .config import Config, TaskConfig
+from .config import Config, TaskConfig, _read_yaml
 from .splits import SPLIT_TEST, build_splits, read_meta, select, validate_splits, write_splits_final
+
+# Keys a task YAML may carry beyond what TaskConfig models. Read here, by the module that acts on them, so the
+# 4-class R1 task (Dataset712_CoronaryBranches) can state its recipe in one file:
+#   planner              nnU-Net experiment planner class (e.g. ResEncUNetPlanner)
+#   gpu_memory_target_gb VRAM budget the planner sizes against (60 for the master's 256^3 patch)
+#   ct_window            [low, high] HU written over the fingerprint's foreground percentiles (fixed window)
+#   ct_norm              [mean, std] used with ct_window (z-scoring only rescales)
+#   patch_size           enforced after planning, [z, y, x]
+#   batch_size           enforced after planning
+#   ignore_label         True -> labels may carry value n_classes+1 = nnU-Net "ignore" (A4 / A11)
+#   sealed_list          path (repo-relative) of the A14 sealed-test JSON; those cases are never converted
+TASK_EXTRA_KEYS = ("planner", "gpu_memory_target_gb", "ct_window", "ct_norm", "patch_size", "batch_size",
+                   "ignore_label", "sealed_list")
+
+
+def task_extras(task: TaskConfig) -> dict:
+    """The task file's extra recipe keys (see TASK_EXTRA_KEYS); empty for tasks that set none."""
+    if task.source_path is None or not Path(task.source_path).is_file():
+        return {}
+    data = _read_yaml(Path(task.source_path))
+    return {k: data[k] for k in TASK_EXTRA_KEYS if data.get(k) is not None}
+
+
+def apply_ct_window(plans_file: Path, window, norm=(100.0, 400.0)) -> dict:
+    """Write a fixed CT window over nnU-Net's fingerprint-derived one, in a plans file.
+
+    nnU-Net's ``CTNormalization`` clips to the 0.5/99.5 percentiles of *labelled* voxels. With coronary labels that
+    is ~[65, 688] HU on an expert lumen and ~[-164, 640] HU on the ImageCAS masks: it flattens epicardial fat and
+    maps calcified plaque onto the intensity of bright lumen (vault: "Atlas - nnU-Net's automatic CT window on lumen
+    labels flattens 38 percent of the heart box"). The master plan fixes [-300, 1300] HU. Returns the previous
+    values so the caller can log what was replaced. Must run before preprocessing."""
+    import json
+
+    plans_file = Path(plans_file)
+    plans = json.loads(plans_file.read_text(encoding="utf-8"))
+    props = plans["foreground_intensity_properties_per_channel"]["0"]
+    before = {k: props.get(k) for k in ("percentile_00_5", "percentile_99_5", "mean", "std")}
+    lo, hi = (float(window[0]), float(window[1]))
+    if not lo < hi:
+        raise ValueError(f"ct_window must be [low, high] with low < high, got {window}")
+    props.update(percentile_00_5=lo, percentile_99_5=hi, mean=float(norm[0]), std=float(norm[1]))
+    plans_file.write_text(json.dumps(plans, indent=1), encoding="utf-8")
+    return before
+
+
+def enforce_patch(plans_file: Path, configuration: str, patch_size=None, batch_size=None) -> dict:
+    """Pin the patch and/or batch size of one configuration in a plans file (the master's cohort-wide 256^3 / 2,
+    which a planner run on a subset may not reproduce exactly). Returns the planner's own values."""
+    import json
+
+    plans_file = Path(plans_file)
+    plans = json.loads(plans_file.read_text(encoding="utf-8"))
+    conf = plans["configurations"][configuration]
+    before = {"patch_size": conf.get("patch_size"), "batch_size": conf.get("batch_size")}
+    if patch_size is not None:
+        conf["patch_size"] = [int(x) for x in patch_size]
+    if batch_size is not None:
+        conf["batch_size"] = int(batch_size)
+    plans_file.write_text(json.dumps(plans, indent=1), encoding="utf-8")
+    return before
 
 
 def configure_nnunet_env(cfg: Config) -> None:
@@ -81,6 +141,7 @@ def plan_experiment(
     cfg: Config,
     task: TaskConfig,
     gpu_memory_target_gb: Optional[float] = None,
+    planner: Optional[str] = None,
 ) -> Path:
     """Generate the plans file, forcing this task's target spacing.
 
@@ -93,10 +154,16 @@ def plan_experiment(
     configure_nnunet_env(cfg)
     from nnunetv2.experiment_planning.plan_and_preprocess_api import plan_experiments
 
+    extras = task_extras(task)
     kwargs = dict(
         dataset_ids=[task.dataset_id],
         overwrite_plans_name=task.plans_name,
     )
+    planner = planner or extras.get("planner")
+    if planner:
+        kwargs["experiment_planner_class_name"] = str(planner)
+    if gpu_memory_target_gb is None and extras.get("gpu_memory_target_gb") is not None:
+        gpu_memory_target_gb = float(extras["gpu_memory_target_gb"])
     # spacing None means native: leave nnU-Net's median-spacing rule alone. It
     # already computes the finest target the data supports, which is exactly what
     # a high-resolution task wants -- overriding it with a guess would resample
@@ -112,7 +179,52 @@ def plan_experiment(
     plans_file = task.preprocessed_dir(cfg) / f"{task.plans_name}.json"
     if not plans_file.is_file():
         raise RuntimeError(f"planning did not produce {plans_file}")
+    finalize_plans(plans_file, task)
     return plans_file
+
+
+def finalize_plans(plans_file: Path, task: TaskConfig) -> dict:
+    """Apply the task's post-planning recipe keys (fixed CT window, pinned patch/batch) and record what the planner
+    itself chose in ``<plans>.planner_output.json`` beside the plans file. Idempotent."""
+    import json
+
+    extras = task_extras(task)
+    record: dict = {}
+    if extras.get("ct_window") is not None:
+        record["window_before"] = apply_ct_window(plans_file, extras["ct_window"],
+                                                  extras.get("ct_norm", (100.0, 400.0)))
+        record["window_after"] = list(extras["ct_window"])
+    if extras.get("patch_size") is not None or extras.get("batch_size") is not None:
+        record["planned"] = enforce_patch(plans_file, task.configuration, extras.get("patch_size"),
+                                          extras.get("batch_size"))
+        record["enforced"] = {"patch_size": extras.get("patch_size"), "batch_size": extras.get("batch_size")}
+    if record:
+        out = Path(plans_file).with_suffix(".planner_output.json")
+        if not out.exists():  # keep the first record: re-finalizing must not overwrite the planner's own values
+            out.write_text(json.dumps(record, indent=1), encoding="utf-8")
+    return record
+
+
+def write_explicit_splits(cfg: Config, task: TaskConfig, train: list, val: list,
+                          sealed: Optional[set] = None) -> Path:
+    """Write a one-fold splits_final.json from explicit case lists (R1: ImageCAS-X train -> train, ImageCAS-X val ->
+    val). Refuses any sealed case (A14) and any overlap between train and val."""
+    overlap = sorted(set(train) & set(val))
+    if overlap:
+        raise ValueError(f"{len(overlap)} case(s) in both train and val, e.g. {overlap[:3]}")
+    if sealed:
+        leaked = sorted((set(train) | set(val)) & set(sealed))
+        if leaked:
+            raise ValueError(f"{len(leaked)} sealed case(s) in the split, e.g. {leaked[:3]}; refusing (A14)")
+    present = available_cases(cfg, task)
+    if present:
+        train = [c for c in train if c in present]
+        val = [c for c in val if c in present]
+    if not train or not val:
+        raise RuntimeError("explicit split has an empty train or val set after restricting to converted cases")
+    out_dir = task.preprocessed_dir(cfg)
+    out_dir.mkdir(parents=True, exist_ok=True)
+    return write_splits_final(out_dir / "splits_final.json", [{"train": sorted(train), "val": sorted(val)}])
 
 
 def available_cases(cfg: Config, task: TaskConfig) -> set:

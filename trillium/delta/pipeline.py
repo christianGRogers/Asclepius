@@ -34,7 +34,7 @@ SMOKE = os.environ.get('DELTA_SMOKE') == '1'
 NPROC = int(os.environ.get('DELTA_NPROC', '16'))
 DEVICE = os.environ.get('DELTA_DEVICE', 'cuda')
 JOB_END = float(os.environ.get('DELTA_JOB_END', '0')) or (time.time() + 24 * 3600)
-EVAL_RESERVE_H = float(os.environ.get('DELTA_EVAL_RESERVE_H', '5.0'))
+EVAL_RESERVE_H = float(os.environ.get('DELTA_EVAL_RESERVE_H', '8.0'))
 DID, DNAME = 760, 'Dataset760_DeltaThick'
 PLANS = 'DeltaResEncL_iso05'
 TR = 'nnUNetTrainerDelta'
@@ -220,7 +220,7 @@ def _score_case(npz_path):
         out['degenerate'] = True
         out['raw'] = dict(dice=D.macro_dice(ref, z['lab_raw']), fp_after=D.fp_components(ref, z['lab_raw'] > 0),
                           tf1_15=0.0, tf1_0=0.0, rooted_15=0.0, per_class_15={})
-        out['fp_gate_raw'] = out['raw']['fp_after']
+        out['fp_gate_raw'] = int(z['fp_full'])
         os.remove(npz_path)
         return out
     variants = {}
@@ -239,7 +239,8 @@ def _score_case(npz_path):
         if f'{src}+bridge3sup' in variants:
             lb = variants[f'{src}+bridge3sup'][0]
             variants[f'{src}+bridge3sup+repair'] = (D.relabel(lb > 0, lb, sp), variants[f'{src}+bridge3sup'][1])
-    out['fp_gate_raw'] = D.fp_components(ref, z['lab_raw'] > 0)
+    out['fp_gate_raw'] = int(z['fp_full'])  # full volume, raw prediction, before any repair
+    out['fp_gate_raw_crop'] = D.fp_components(ref, z['lab_raw'] > 0)
     for k, (lab, aud) in variants.items():
         sk = D.skeletonise(lab > 0) if (lab > 0).any() else None
         t15 = D.tree_f1(ref, lab, 1.5, sk=sk); t0 = D.tree_f1(ref, lab, 0.0, sk=sk)
@@ -297,20 +298,24 @@ def step_evaluate():
             return prob.transpose(0, 3, 2, 1)  # (C, x, y, z)
 
         win = np.ceil(patch_vox * 0.5 / sp).astype(int)  # gap window in native voxels
+        # one CPU crop per case: reference bbox + 25 mm (predicted pieces outside it are counted only
+        # by the full-volume FP gate below); the blood pool is computed once per case on it
+        idx = [np.nonzero((ref > 0).any(axis=tuple(j for j in range(3) if j != k)))[0] for k in range(3)]
+        mv = np.ceil(25.0 / sp).astype(int)
+        lo = np.maximum([a[0] for a in idx] - mv, 0); hi = np.minimum([a[-1] + 1 for a in idx] + mv, ref.shape)
+        sl = tuple(slice(lo[k], hi[k]) for k in range(3))
+        pool = D.blood_pool(ct[sl], sp, exclude=ref[sl] > 0)
+        d_pool = ndi.distance_transform_edt(~pool, sampling=sp) if pool.any() else None
+        import cc3d
         for base, step in (('s05', 0.5), ('s075', 0.75)):
             if (case, base) in done:
                 continue
             prob = predict(ct, step)
             lab = prob.argmax(0).astype(np.uint8)
             fg = D.remove_small(lab > 0); lab[~fg] = 0
-            # crop for the CPU side: union of reference and prediction, + 10 mm
-            u = (ref > 0) | fg
-            idx = [np.nonzero(u.any(axis=tuple(j for j in range(3) if j != k)))[0] for k in range(3)]
-            mv = np.ceil(10.0 / sp).astype(int)
-            lo = np.maximum([a[0] for a in idx] - mv, 0); hi = np.minimum([a[-1] + 1 for a in idx] + mv, ref.shape)
-            sl = tuple(slice(lo[k], hi[k]) for k in range(3))
-            pool = D.blood_pool(ct[sl], sp, exclude=(ref[sl] > 0) | fg[sl])
-            d_pool = ndi.distance_transform_edt(~pool, sampling=sp) if pool.any() else None
+            # full-volume raw FP gate: predicted components touching no reference voxel
+            pl = cc3d.connected_components(fg, connectivity=26)
+            fp_full = len(set(np.unique(pl[fg])) - set(np.unique(pl[fg & (ref > 0)])) - {0})
             sites = []
             prob_r = prob.copy(); second = np.zeros(ref.shape, bool)
             # anchors: components touching the blood pool, or the 2 largest if no pool was found
@@ -340,7 +345,7 @@ def step_evaluate():
             npz = os.path.join(tmp, f'{case}_{base}.npz')
             np.savez_compressed(npz, case=case, base=base, sp=sp, ref=ref[sl], ct=ct[sl].astype(np.int16),
                                 pool=pool, lab_raw=lab[sl], lab_regap=lab_r[sl], second=second[sl],
-                                n_sites=len(sites))
+                                n_sites=len(sites), fp_full=fp_full)
             futs.append(ex.submit(score_case, npz))
             del prob, prob_r
         log(f'eval GPU {i + 1}/{len(test)} {case}  ({(time.time() - t_start) / 60:.0f} min)')

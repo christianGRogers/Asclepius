@@ -6,7 +6,8 @@
     shrunk so that training -- including its poly learning-rate decay -- ends before the deadline,
     and the loop also stops before starting an epoch that would overrun it,
   * checkpoint every 10 epochs (resume with --c after a pre-emption),
-  * DELTA_SMOKE=1: 2 + 1 iterations per epoch (CPU smoke test only).
+  * DELTA_SMOKE=1: 2 + 1 iterations per epoch (CPU smoke test only),
+  * no final nnU-Net validation pass (the pipeline evaluates the test set itself).
 Installed by ./delta into the venv's nnunetv2/training/nnUNetTrainer/variants/ directory.
 """
 import os
@@ -60,3 +61,8 @@ class nnUNetTrainerDelta(nnUNetTrainerNoMirroring):
                     self.num_epochs = max(fit, epoch + 1)
                     self.lr_scheduler.max_steps = self.num_epochs
         self.on_train_end()
+
+    def perform_actual_validation(self, save_probabilities: bool = False):
+        """Skipped: the experiment's own evaluation (pipeline.py evaluate) scores the 160 held-out test
+        cases by tree-F1; nnU-Net's full-volume validation of 80 cases would only spend GPU time."""
+        self.print_to_log_file('DELTA: skipping nnU-Net final validation (evaluated by pipeline.py instead)')

@@ -58,14 +58,30 @@ Two things the master plan cannot settle without a GPU (Round 2 ruling §4, Atla
     decimals on all 6 pairs tested (c0415, c0753, c0782 at 0.8 and 1.0 mm; e.g. c0782 at 1.0 mm: 0.8552 vs 0.8552).
     Script: `trillium/atlas/lib/validate_tf1.py`.
 
-**Tested here on CPU:**
+**Tested here on CPU (2026-10-08):**
 
-- `shellcheck` clean;
-- dry run on a fake `<root>/cases` tree (79 cases, Girder layout) prints the job script;
-- layout detection on the ImageCAS layout, an unrecognised layout and a missing `cases/`;
-- proxy label on a real case (89 % of mask voxels named within 2 mm, 11 % geodesic, 0 unreached);
-- Stage A labels and plan on the fake tree (see Limits);
-- trainers import.
+- `shellcheck` and `bash -n` clean on `atlas` and `lib/job_body.sh`; every Python module compiles.
+- **Dry runs in both contract layouts:**
+  - Girder `<case>/ct.nii.gz` + `coronary_arteries.nii.gz`, 79 cases;
+  - ImageCAS `<n>.img.nii.gz` + `<n>.label.nii.gz`, 79 cases, ids mapped n → `c{n-1}`.
+
+  Both print the detected layout and the job script with `--account=def-aso22`.
+- **Failure paths:** an unrecognised layout and a missing `cases/` fail loudly, listing what was tried.
+- **`./atlas selftest`** builds a proxy label for a real val case (c0400: 75 % of mask voxels named within 2 mm,
+  25 % geodesic, 0 unreached).
+- **Stage A labels + plan** on the 42 ImageCAS-X train/val cases in the fake tree. On these real proxy labels nnU-Net's
+  planner returns **256³, batch 2, 0.5 mm**, the master's plan. The fingerprint window it would use is
+  **[−165, 658] HU**, matching the prediction of ≈ [−164, 640] in the window note.
+- **Trainers, run through `nnUNetv2_train -device cpu`** with a tiny test architecture and 2 iterations per epoch
+  (test-only env switches):
+  - the benchmark trainer writes its per-epoch JSON (loader wait vs step time);
+  - the R1 trainer stops cleanly before `ATLAS_DEADLINE` ("stopping at epoch 2 of 30") and writes
+    `checkpoint_final`;
+  - `--val` exports the val prediction NIfTI.
+
+  nnU-Net's discovery finds both trainer classes once they are copied into the package, as the launcher does.
+- **`report.py`** on mock benchmarks plus two predictions (one with an RCA slab cut out) gives the right table: the
+  cut case gets RCA tF1 0.80 against clDice ≈ 0.96 and is flagged as a cut tree. Output 16 kB.
 
 ## What result would change which decision
 
@@ -88,5 +104,8 @@ Two things the master plan cannot settle without a GPU (Round 2 ruling §4, Atla
 - **Ostium.** tF1 uses the `thick` ostium (A9: provisional). The FP gate and swap rate do not depend on it.
 - **No A4 QA filter.** The Bridge labeller's `ignore` / exclusion was left out to keep the job's dependencies small.
   It affects ~0.3 % of voxels and ~10 % of cases.
-- **Stage A on CPU was tested only through labels and plan.** Full preprocessing of one case at 0.5 mm exceeded
-  the sandbox's memory (15 GB); on Trillium a 1-GPU job has 188 GiB and preprocessing uses ≤ 10 workers.
+- **Not tested on CPU:**
+  - full-size network training, which the sandbox's 15 GB cannot hold (the activation estimate is ~55 GB);
+  - full preprocessing: 2 of 6 cases completed before the sandbox ran out of memory. On Trillium a 1-GPU job has
+    188 GiB and preprocessing uses ≤ 10 workers;
+  - module loading and the Alliance pip wheelhouse.

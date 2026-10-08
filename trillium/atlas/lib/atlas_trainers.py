@@ -15,11 +15,23 @@ import torch
 from nnunetv2.training.nnUNetTrainer.variants.data_augmentation.nnUNetTrainerNoMirroring import nnUNetTrainerNoMirroring
 
 
+def _sync():
+    if torch.cuda.is_available():
+        torch.cuda.synchronize()
+
+
+def _test_overrides(tr):
+    # CPU self-test only: tiny epochs. Never set on Trillium.
+    if os.environ.get('ATLAS_TEST_ITERS'):
+        tr.num_iterations_per_epoch = int(os.environ['ATLAS_TEST_ITERS']); tr.num_val_iterations_per_epoch = 1
+
+
 class nnUNetTrainerAtlasBench(nnUNetTrainerNoMirroring):
     def __init__(self, plans, configuration, fold, dataset_json, device=torch.device('cuda')):
         super().__init__(plans, configuration, fold, dataset_json, device)
         self.num_epochs = int(os.environ.get('ATLAS_BENCH_EPOCHS', 4))
         self.disable_checkpointing = True
+        _test_overrides(self)
 
     def save_checkpoint(self, filename):
         pass
@@ -29,15 +41,15 @@ class nnUNetTrainerAtlasBench(nnUNetTrainerNoMirroring):
 
     def run_training(self):
         self.on_train_start()
-        torch.cuda.reset_peak_memory_stats()
+        if torch.cuda.is_available(): torch.cuda.reset_peak_memory_stats()
         rec = dict(epochs=[], n_proc_DA=os.environ.get('nnUNet_n_proc_DA'), patch=list(self.configuration_manager.patch_size),
-                   batch_size=self.batch_size, gpu=torch.cuda.get_device_name(), torch=torch.__version__)
+                   batch_size=self.batch_size, gpu=torch.cuda.get_device_name() if torch.cuda.is_available() else 'cpu', torch=torch.__version__)
         for epoch in range(self.current_epoch, self.num_epochs):
             self.on_epoch_start(); self.on_train_epoch_start()
             t_epoch = time.time(); waits, steps, outs = [], [], []
             for _ in range(self.num_iterations_per_epoch):
                 t0 = time.time(); batch = next(self.dataloader_train); t1 = time.time()
-                outs.append(self.train_step(batch)); torch.cuda.synchronize(); t2 = time.time()
+                outs.append(self.train_step(batch)); _sync(); t2 = time.time()
                 waits.append(t1 - t0); steps.append(t2 - t1)
             self.on_train_epoch_end(outs)
             t_train = time.time() - t_epoch
@@ -49,8 +61,8 @@ class nnUNetTrainerAtlasBench(nnUNetTrainerNoMirroring):
             rec['epochs'].append(dict(epoch=epoch, epoch_s=time.time() - t_epoch, train_s=t_train,
                                       loader_wait_s=float(np.sum(waits)), gpu_step_s=float(np.sum(steps)),
                                       median_wait=float(np.median(waits)), median_step=float(np.median(steps)),
-                                      peak_alloc_gib=torch.cuda.max_memory_allocated() / 2**30,
-                                      peak_reserved_gib=torch.cuda.max_memory_reserved() / 2**30))
+                                      peak_alloc_gib=(torch.cuda.max_memory_allocated() / 2**30) if torch.cuda.is_available() else 0.0,
+                                      peak_reserved_gib=(torch.cuda.max_memory_reserved() / 2**30) if torch.cuda.is_available() else 0.0))
             with open(os.environ.get('ATLAS_BENCH_OUT', 'bench.json'), 'w') as f:
                 json.dump(rec, f, indent=1)
         self.on_train_end()
@@ -62,6 +74,12 @@ class nnUNetTrainerAtlas(nnUNetTrainerNoMirroring):
         self.num_epochs = int(os.environ.get('ATLAS_EPOCHS', 1000))
         self.save_every = 25
         self.deadline = float(os.environ.get('ATLAS_DEADLINE', 0)) or None
+        _test_overrides(self)
+
+    def perform_actual_validation(self, save_probabilities=False):
+        if os.environ.get('ATLAS_TEST_SKIP_FINAL_VAL'):  # CPU self-test only
+            return
+        super().perform_actual_validation(save_probabilities)
 
     def run_training(self):
         self.on_train_start()

@@ -53,6 +53,21 @@ bifurcation. Early diagonals overlap them in offset and position. The best geome
 (≤ 6 mm, ≥ 30 mm long, between LAD and LCx) catches 9 and mislabels 3 diagonals. A looser variant left
 held-out results unchanged (0.882), so the frozen rule stayed.
 
+**Ostium against an aorta-contact truth.** ImageCAS-X's left-centreline `start_points` are degree-1
+centreline vertices within 5 mm of a TotalSegmentator aorta, reviewed by their analysts. This truth is
+independent of the label projection. All 800 left centreline files were fetched (`fetch_left_cl.py`,
+`ostium_vs_start.py`).
+
+| Namer's left ostium vs the ImageCAS-X start point | all 172 | held-out 76 |
+|---|---|---|
+| ≤ 5 mm | 0.907 | 0.895 |
+| ≤ 10 mm | 0.971 | 0.961 |
+| median distance | 3.3 mm | — |
+
+The thick-mask endpoint sits a few mm from the thin centreline's start, so 5 mm is a tight test. The 5
+misses > 10 mm are c0325, c0800, c0519, c0211, c0479. The first four are the known wrong-ostium cases;
+c0479 has no ImageCAS-X LM.
+
 ## What it implies
 
 1. **Superseded number.** Round 1's "94.9 % fully right on 59 held-out cases" did not score the ramus.

@@ -132,3 +132,28 @@ Per case, tF1 @ 1.5 mm (all classes / ramus excluded):
   contact required for the sealed test. Both arms share both limits.
 - **6 of 19 cases overlap my Round-1 development cases.** That was on different masks: Girder, not these
   predictions.
+
+## Round 3 re-score under the binding ramus rule (D1b), all-classes figure
+
+Re-run with the namer's ramus switch set to LCx (A8 = D1b). The reference already maps IM → LCx.
+21 cases: the 19 above plus c0041 and c0907, now run. All classes are scored, nothing excluded.
+Scripts: `e2e.py` (`RAMUS_MODES=LCx`) and `ceiling.py`; output `e2e_LCx.jsonl`, `ceiling_test_LCx.jsonl`.
+
+| Arm | 21 cases tF1 @ 1.5 | 15 never-seen | tF1 @ 0 (21) | swaps (21) |
+|---|---|---|---|---|
+| oracle (perfect naming) | 0.920 | 0.926 | 0.843 | 0 |
+| **namer, ramus → LCx** | **0.911** | **0.915** | 0.833 | **0** |
+| namer, no bridging | 0.883 | 0.916 | 0.809 | 1 |
+| ceiling (namer on reference lumen) | 0.990 | 0.987 | 0.990 | 0 |
+
+- **Paired namer − oracle, all classes:** −0.010, 95 % CI [−0.016, −0.005] on 21 cases. On the 15
+  never-seen cases: −0.011, CI [−0.019, −0.005].
+- Only two cases lose more than 0.02: c0407 (−0.031, the wrong naming join) and c0615 (−0.055).
+- The −0.037 quoted in Round 2 came almost entirely from the ramus disagreement. Under the binding rule
+  it is gone.
+- **Thin-lumen naming ceiling, all 160 ImageCAS-X test cases** (Round 2 had 63), ramus → LCx, all classes:
+  - tF1 @ 1.5 mean **0.973**, median 0.991;
+  - ≥ 0.9 in 94.4 % of cases, < 0.8 in 3.1 %;
+  - 5 swaps, 0 failures;
+  - on the 142 never-seen cases: 0.970.
+  - On the 63 cases scored both ways, the switch moves the mean from 0.981 (inherit) to 0.986 (LCx).

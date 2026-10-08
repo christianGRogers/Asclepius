@@ -2,8 +2,8 @@
 tags: [plans, candidate, branch-labelling, double-reads, round-3]
 author: Bridge
 round: 3
-status: candidate (in progress — numbers marked PENDING are being computed)
-updated: 2026-10-05
+status: candidate
+updated: 2026-10-08
 ---
 
 # Bridge v3: the master, with naming decided at the level of decisions, not voxels, for training and double reads
@@ -124,12 +124,20 @@ In Round 1 IM was left unscored, which flattered the namer.
    - A dev-only ramus diagnostic: 14 ImageCAS-X ramus branches leaving the LAD side. Geometry does not
      separate a ramus from an early diagonal well (best rule 9 true / 3 false). A looser detector changed
      held-out results by < 0.001, so the rule was left as frozen.
-2. **End to end on real stage-1 output, ramus → LCx:** **PENDING** (`e2e_LCx.jsonl`, 21 cases incl.
-   c0041, c0907; nohup job running). This is a secondary cross-check: the stage-1 model is thin-convention
-   (ImageCAS-X).
-3. **Thin-lumen naming ceiling, all 160 ImageCAS-X test cases, ramus → LCx, all-classes figure:**
-   **PENDING** (`ceiling_test_LCx.jsonl`, nohup job running).
-4. **Ostium vs ImageCAS-X start points / aorta:** PENDING (left centreline files being fetched).
+2. **End to end on real stage-1 output, ramus → LCx, all classes**
+   ([[Bridge - On real stage-1 output, the two-stage namer is within 0.01-0.03 tree-F1 of perfect naming]], Round 3 section).
+   - 21 ImageCAS-X test cases, now including c0041 and c0907.
+   - tF1 @ 1.5: namer **0.911** vs oracle naming **0.920**. Paired −0.010, CI [−0.016, −0.005]. On the 15
+     never-seen cases: −0.011, CI [−0.019, −0.005].
+   - **0 swaps.** No-bridging variant: 0.883.
+   - This is a secondary cross-check: the stage-1 model is the released thin-convention one.
+3. **Thin-lumen naming ceiling, all 160 ImageCAS-X test cases, ramus → LCx, all classes:** tF1 @ 1.5 mean
+   **0.973**, median 0.991; ≥ 0.9 in 94.4 %; 5 swaps; 0 failures. On the 142 never-seen cases: 0.970.
+4. **Ostium vs ImageCAS-X start points** (aorta-contact truth, all 800 centreline files fetched):
+   - within 5 mm in 90.7 % of 172 cases (89.5 % held-out); within 10 mm in 97.1 %; median 3.3 mm.
+   - The aorta-*preferred* ostium (TotalSegmentator mask) is **not implemented**. It needs aorta masks this
+     environment cannot produce at scale. The master's A1 runs TotalSegmentator on Trillium anyway, and
+     the namer will read it there.
 5. Unchanged from v2: ostium learned from 5–10 cases; naming bridges needed on real cut trees.
 6. **Two-read stand-in (new):** [[Bridge - Naming disagreements between two namings of the same lumen sit in five discrete decisions]].
    - Two independent namings of the same thick lumen: ImageCAS-X names projected, against the rule namer;
@@ -139,6 +147,14 @@ In Round 1 IM was left unscored, which flattered the namer.
    - 21 % of cases carry a decision disagreement, most of them the ramus.
    - The §3 expectation holds on the stand-in. The first extractor version omitted two of the five
      decisions, and that is disclosed in the note.
+7. **GPU experiment, prepared, awaiting the lead's run**
+   ([[Bridge - PENDING Trillium run - does the namer or grammar decoding beat a direct model's own names]],
+   `trillium/bridge/`).
+   - A direct 4-class nnU-Net with the master recipe, trained ≤ 19.5 h on one H100 on the territory proxy
+     of the 560 ImageCAS-X train cases.
+   - D / R / H / O scored by tF1 on the master's 80 val cases, with the A7 adoption rule applied.
+   - This is the first real-direct-model test of the naming claim. The note pre-registers what each
+     outcome changes.
 
 ## 5. Risks
 
@@ -169,4 +185,10 @@ In Round 1 IM was left unscored, which flattered the namer.
 - Ramus → LCx.
 - All numbers re-quoted with IM scored. The held-out naming figure falls from 0.949 to 0.882, stated in §4.
 - New §2.2: two-read fusion at lumen and decision level.
-- Round-2 requests in progress: the 160-case ceiling, the with-ramus figure, c0041 and c0907, ostium.
+- Round-2 requests done:
+  - the 160-case ceiling (0.973);
+  - the all-classes with-ramus e2e figure (−0.010, 21 cases);
+  - c0041 and c0907;
+  - ostium against the aorta-contact truth (90.7 % ≤ 5 mm).
+- The aorta-preferred ostium is not implemented.
+- Trillium experiment prepared.

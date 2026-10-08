@@ -355,9 +355,14 @@ def macro_dice(ref, plab):
 
 def anchor_components(pred, d_struct, maxd=3.0, keep=2):
     """Deployable anchors (no reference): the `keep` largest predicted components with a voxel
-    within maxd mm of the anchor structure (contrast blood pool / aorta)."""
+    within maxd mm of the anchor structure (contrast blood pool / aorta). d_struct=None (no pool
+    found) falls back to the `keep` largest components."""
     cl = cc3d.connected_components(pred, connectivity=26)
-    ids = np.unique(cl[pred & (d_struct <= maxd)]); ids = ids[ids > 0]
+    if d_struct is None:
+        ids = np.unique(cl[pred])
+    else:
+        ids = np.unique(cl[pred & (d_struct <= maxd)])
+    ids = ids[ids > 0]
     if len(ids) == 0:
         return np.zeros_like(pred)
     sz = np.bincount(cl.ravel())

@@ -50,7 +50,7 @@ The FP gate is computed on the raw prediction.
 
 | Step | When | Blocks | Cost |
 |---|---|---|---|
-| **R0** (1-GPU `debugjob`, ≤ 120 min) | first GPU job | every other GPU job | 2 H100-h (§2.5) |
+| **R0 + short R1** (the prepared Trillium run, `trillium/atlas`) | first GPU job | every other GPU job | one 1-GPU job, ≤ 24 h (§2.5) |
 | CPU prep | now | R1 | Territory proxy for 640 ImageCAS-X train/val cases; A4 QA (Bridge's labeller, ramus → LCx) over all 800; TotalSegmentator aorta on all 1000; tF1 port to `src/segtrain/metrics.py` with the A1 ostium; bridge-audit wrapper; R/H wrappers; **read-fusion script** (§2.1) |
 | R1 | after R0 | ablations, post-processing judgement | ~45 H100-h |
 | Labelling (two reads per case) | from now; sealed test first | waves (§2.7) | team |
@@ -186,18 +186,28 @@ far uses that read, with the proxy-vs-read disagreement set to `ignore`.
 - **Activation memory.** A saved-tensor count of the exact 256³ × 2 network on PyTorch's meta device gives
   65.7 GiB fp32 (unique tensors; 98.6 GiB counting every save). Calibrated against the ResEnc L preset (its 0.5 mm
   analogue counts 27.1 GiB fp32 unique; the nnU-Net authors measured 22.7 GB actual), the master should peak near
-  **55 GB** (≈ 50–62 GB). That is under the 75 GB acceptance and the 80 GB card. The fallback should peak near 41 GB.
+  **≈ 54 GB** (≈ 50–62 GB). That is under the 75 GB acceptance and the 80 GB card. The fallback should peak near 41 GB.
   If R0 still exceeds 75 GB, the first lever is batch 1 or activation checkpointing, which keeps the 128 mm context,
   before the fallback patch.
-- **Loader.** LOADER_SUMMARY
+- **Loader.** nnU-Net's own data pipeline costs **10.3 CPU-s per batch** on 2 real preprocessed cases at 256³
+  (single process, contended VM). With 22 workers that is ≈ 0.47 s per batch, against a GPU step of 0.4–1.2 s. The
+  run is therefore near the loader/GPU boundary, which is why R0 times loader wait separately. Preprocessing needs
+  ~10 GB per worker, so cap it at 10 workers.
 
 **Compute forecast (unchanged):** 17.2 EFLOP per 1000 epochs, i.e. **27–85 H100-h**, central 45.
 
-**R0 protocol:**
+**R0 is prepared as the project's Trillium run** (`trillium/atlas/`, one 1-GPU 23:50 job;
+[[Atlas - Pending Trillium run, R0 benchmark and a short R1 scored by tree-F1]]). It does three things:
 
-1. `nnUNetTrainerBenchmark_5epochs`: peak VRAM, s/epoch.
-2. One epoch each at `nnUNet_n_proc_DA` = 12 / 20 / 22.
-3. Compare against the predictions above; R0's figures then replace every forecast.
+1. **Benchmark.** 4 epochs each at `nnUNet_n_proc_DA` = 12 and 22, timing loader wait separately from the CUDA step,
+   and recording peak allocated and reserved VRAM.
+2. **Short R1.** Trains on the 560 ImageCAS-X training cases (projected proxy, D0/D1/D1b convention) for as many
+   epochs as fit (~250–450), with a full poly-LR schedule over that length.
+3. **Score.** Predicts the 80 val cases at tile step 0.5 and scores them by tF1, FP gate, swap rate and cut-tree
+   count.
+
+R0's figures then replace every forecast in this section, and the val numbers are the first real 4-class evidence
+for P1/P1′/R.
 
 **Acceptance:** ≤ 306 s/epoch, peak ≤ 75 GB.
 
@@ -213,7 +223,7 @@ On failure, in order:
 
 | Run | H100-h |
 |---|---|
-| R0 | 2 |
+| R0 + short R1 (prepared Trillium run) | ≤ 24 |
 | R1, 1000 epochs | ~45 |
 | A0 control, 250 epochs | ~11 |
 | A1 native spacing (only if A5 triggers) | ~11 |
@@ -302,7 +312,7 @@ The v2 evidence table stands. New this round:
 | Claim | Evidence |
 |---|---|
 | Fallback 192 × 256 × 256: 93.5 % / 91.5 % / LM visible 85 % | [[Atlas - The fallback 192 × 256 × 256 patch at 0.5 mm, measured]] |
-| Activation memory ~55 GB predicted; loader throughput measured with nnU-Net's own pipeline | [[Atlas - Without a GPU, nnU-Net's own loader and a saved-tensor count bound R0]] |
+| Activation memory ≈ 54 GB predicted; nnU-Net loader 10.3 CPU-s per batch | [[Atlas - Without a GPU, nnU-Net's own loader and a saved-tensor count bound R0]] |
 | Two independent splits of the same mask disagree on 0.26 % of voxels, at the carina | [[Atlas - The rule labeller disagrees with the projected proxy on 0.3 percent of voxels, all at the carina]] |
 | Majority vote ≈ STAPLE when raters are few; STAPLE needs raters to weight | [[Fusing multiple annotations and learning from noisy labels]] (Karimi et al. 2020) |
 | Bridging alone +0.01, half its joins FP | [[Delta - Real bridging on 17 nnU-Net predictions gains little alone, half its 3 mm joins are false positives, and gap-centred re-inference makes it work]] |
@@ -316,7 +326,7 @@ The v2 evidence table stands. New this round:
 | Reads disagree on extent, not just names (larger `ignore`) | First-20: `ignore` > 2 % median, away from the carina | Re-examine fusion; run A5r on that wave; brief annotators |
 | Wholesale disagreement common | Adjudication rate > 15 % on the first 100 | Re-instruct; third reads budgeted |
 | Annotators draw thin despite D0 | Per-read thin flag; wave halt at 10 % | Exclude and redo |
-| Over-VRAM at 256³ | Memory model (~55 GB) vs R0 | Batch 1 or checkpointing before fallback |
+| Over-VRAM at 256³ | Memory model (≈ 54 GB) vs R0 | Batch 1 or checkpointing before fallback |
 | Loader-bound | Loader note vs R0 | Workers → GPU spatial transform → lower augmentation probabilities |
 | Repair hides FPs | Gate on raw output; audit | — |
 | Cut rate unknown (all vault predictions share one small-patch model) | R1 val | P1′ / R judged then |
@@ -365,4 +375,6 @@ the two automatic namers, ≈ 100 extra reads over 1000 cases. Also the per-wave
    - ramus switch;
    - A9.
 5. **Fallback measured** and demoted behind memory and loader levers.
-6. **R0 pre-measurements:** memory model and nnU-Net loader throughput.
+6. **R0 pre-measurements:** memory model (≈ 54 GB) and nnU-Net loader throughput (10.3 CPU-s per batch).
+7. **R0 + short R1 prepared as a Trillium run** (`trillium/atlas/`): tested on CPU in both case layouts; tF1 scorer
+   identical to Delta's on 6 pairs; results feed P1/P1′/R and replace the GPU-hour forecasts.

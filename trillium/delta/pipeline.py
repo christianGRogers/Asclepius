@@ -198,6 +198,14 @@ def step_train():
 
 # ------------------------------------------------------------------------------------- evaluate
 def score_case(npz_path):
+    try:
+        return _score_case(npz_path)
+    except Exception as e:  # noqa -- one bad case must not stop the evaluation
+        z = np.load(npz_path)
+        return dict(case=str(z['case']), base=str(z['base']), error=repr(e))
+
+
+def _score_case(npz_path):
     """CPU worker: all post-processing variants + metrics for one case and one base tile step."""
     import deltalib as D
     from scipy import ndimage as ndi
@@ -205,18 +213,27 @@ def score_case(npz_path):
     sp = z['sp']; ref = D.RefTree(z['ref'], sp, ct=z['ct'])
     d_pool = ndi.distance_transform_edt(~z['pool'], sampling=sp) if z['pool'].any() else None
     out = dict(case=str(z['case']), base=str(z['base']), n_sites=int(z['n_sites']), ostium_flags=ref.flags,
-               ref_trees=len(ref.roots))
+               ref_trees=len(ref.roots), pool_found=d_pool is not None)
+    nfg = int((z['lab_raw'] > 0).sum())
+    if nfg > 4 * max(int(ref.m.sum()), 1):
+        # degenerate prediction (e.g. an untrained model): skeletonising it would take tens of GB
+        out['degenerate'] = True
+        out['raw'] = dict(dice=D.macro_dice(ref, z['lab_raw']), fp_after=D.fp_components(ref, z['lab_raw'] > 0),
+                          tf1_15=0.0, tf1_0=0.0, rooted_15=0.0, per_class_15={})
+        out['fp_gate_raw'] = out['raw']['fp_after']
+        os.remove(npz_path)
+        return out
     variants = {}
     for src in ('raw', 'regap'):
         lab = z[f'lab_{src}'].astype(np.uint8)
         variants[src] = (lab, None)
-        if d_pool is not None:
-            anc = D.anchor_components(lab > 0, d_pool)
-            for name, elig in (('bridge3', None), ('bridge3sup', z['second'] if src == 'regap' else None)):
-                if name == 'bridge3sup' and src == 'raw':
-                    continue
-                lb, br = D.bridge(lab, anc, sp, max_gap_mm=3.0, min_vox=100, eligible=elig)
-                variants[f'{src}+{name}'] = (lb, D.audit(br, lab > 0, ref))
+        # anchors: components touching the blood pool, or the 2 largest if no pool was found
+        anc = D.anchor_components(lab > 0, d_pool)
+        for name, elig in (('bridge3', None), ('bridge3sup', z['second'] if src == 'regap' else None)):
+            if name == 'bridge3sup' and src == 'raw':
+                continue
+            lb, br = D.bridge(lab, anc, sp, max_gap_mm=3.0, min_vox=100, eligible=elig)
+            variants[f'{src}+{name}'] = (lb, D.audit(br, lab > 0, ref))
         rep = D.relabel(lab > 0, lab, sp)
         variants[f'{src}+repair'] = (rep, None)
         if f'{src}+bridge3sup' in variants:
@@ -296,21 +313,30 @@ def step_evaluate():
             d_pool = ndi.distance_transform_edt(~pool, sampling=sp) if pool.any() else None
             sites = []
             prob_r = prob.copy(); second = np.zeros(ref.shape, bool)
-            if d_pool is not None:
-                anc = D.anchor_components(fg[sl], d_pool)
-                sites = D.gap_sites(fg[sl], anc, sp)
-                for s in sites:   # gap-centred re-inference (P1'), max fusion on vessel probability
-                    c = np.array(s['mid']) + lo
-                    a = np.clip(c - win // 2, 0, np.maximum(np.array(ref.shape) - win, 0))
-                    b = np.minimum(a + win, ref.shape)
-                    wsl = tuple(slice(a[k], b[k]) for k in range(3))
-                    pw = predict(ct[wsl], 0.5)
-                    take = (1 - pw[0]) > (1 - prob_r[(slice(None),) + wsl][0])
-                    sub = prob_r[(slice(None),) + wsl]
-                    sub[:, take] = pw[:, take]
-                    second[wsl] |= (1 - pw[0]) >= 0.5
+            # anchors: components touching the blood pool, or the 2 largest if no pool was found
+            anc = D.anchor_components(fg[sl], d_pool)
+            sites = D.gap_sites(fg[sl], anc, sp)
+            for s in sites:   # gap-centred re-inference (P1'), max fusion on vessel probability
+                c = np.array(s['mid']) + lo
+                a = np.clip(c - win // 2, 0, np.maximum(np.array(ref.shape) - win, 0))
+                b = np.minimum(a + win, ref.shape)
+                wsl = tuple(slice(a[k], b[k]) for k in range(3))
+                pw = predict(ct[wsl], 0.5)
+                take = (1 - pw[0]) > (1 - prob_r[(slice(None),) + wsl][0])
+                sub = prob_r[(slice(None),) + wsl]
+                sub[:, take] = pw[:, take]
+                second[wsl] |= (1 - pw[0]) >= 0.5
             lab_r = prob_r.argmax(0).astype(np.uint8)
             fg_r = D.remove_small(lab_r > 0); lab_r[~fg_r] = 0
+            if SMOKE and base == 's075':
+                # smoke only: replace the (untrained) prediction by the reference with two 2 mm cuts,
+                # so the full scoring path (bridging, re-inference fields, repair, tF1) is exercised
+                lab = ref.copy(); pts = np.argwhere(ref > 0)
+                for q in pts[np.random.default_rng(0).choice(len(pts), 2, replace=False)]:
+                    b = D.ball(2.0, sp); r_ = np.array(b.shape) // 2
+                    a0 = np.maximum(q - r_, 0); a1 = np.minimum(q + r_ + 1, ref.shape)
+                    lab[a0[0]:a1[0], a0[1]:a1[1], a0[2]:a1[2]] = 0
+                lab_r = lab.copy(); second = lab > 0
             npz = os.path.join(tmp, f'{case}_{base}.npz')
             np.savez_compressed(npz, case=case, base=base, sp=sp, ref=ref[sl], ct=ct[sl].astype(np.int16),
                                 pool=pool, lab_raw=lab[sl], lab_regap=lab_r[sl], second=second[sl],
@@ -341,6 +367,8 @@ def boot_ci(d, n=10000, seed=0):
 
 def step_summarize():
     rows = [json.loads(l) for l in open(os.path.join(OUT, 'per_case.jsonl'))]
+    errors = [r for r in rows if 'error' in r]
+    rows = [r for r in rows if 'error' not in r]
     by = {}
     for r in rows:
         by.setdefault(r['base'], {})[r['case']] = r
@@ -378,7 +406,8 @@ def step_summarize():
         'C7 full stage (s05 regap+bridge3sup+repair) vs raw': paired(('s05', 'raw'), ('s05', 'regap+bridge3sup+repair')),
     }
     raw = [by['s05'][c]['raw'] for c in cases]
-    facts = dict(n_test_cases=len(cases),
+    facts = dict(n_test_cases=len(cases), n_errors=len(errors),
+                 n_degenerate=int(sum(by['s05'][c].get('degenerate', False) for c in cases)),
                  cut_cases_rooted15_lt_0_9=int(sum(x['rooted_15'] < 0.9 for x in raw)),
                  fp_gate_raw_mean=float(np.mean([by['s05'][c]['fp_gate_raw'] for c in cases])),
                  ostium_flagged_trees=int(sum(len(by['s05'][c]['ostium_flags']) for c in cases)),

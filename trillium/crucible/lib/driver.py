@@ -78,6 +78,9 @@ def prep_case(args):
     sp = np.array(mimg.header.get_zooms()[:3], float)
     u = np.argwhere(m); mg = np.ceil(MARGIN_MM / sp).astype(int)
     lo = np.maximum(u.min(0) - mg, 0); hi = np.minimum(u.max(0) + mg + 1, m.shape)
+    if SMOKE:  # CPU smoke test only: cap the crop so a 15 GB container survives nnU-Net preprocessing
+        cap = np.array([192, 192, 128]); ctr = (lo + hi) // 2
+        lo = np.maximum(lo, ctr - cap // 2); hi = np.minimum(hi, lo + cap)
     sl = tuple(slice(a, b) for a, b in zip(lo, hi))
     m, icx = m[sl], icx[sl]
     T, near14 = sim.truth(m, icx)
@@ -147,6 +150,8 @@ def stage_plan(st):
     plans['foreground_intensity_properties_per_channel'] = {'0': {
         'max': 1300.0, 'mean': 100.0, 'median': 100.0, 'min': -300.0, 'percentile_00_5': -300.0,
         'percentile_99_5': 1300.0, 'std': 400.0}}
+    if SMOKE:  # CPU smoke test only: tiny patch/batch so a 15 GB container survives training
+        plans['configurations']['3d_fullres'].update(patch_size=[48, 64, 64], batch_size=1)
     json.dump(plans, open(pf, 'w'), indent=1)
     for arm in ARMS:
         if DSID[arm] == src: continue
@@ -158,6 +163,10 @@ def stage_plan(st):
 
 def stage_preprocess(st):
     if st.get('preprocess'): return
+    for arm in ARMS:  # move_plans does not copy dataset.json, which nnUNetv2_preprocess reads from nnUNet_preprocessed
+        raw = glob.glob(os.path.join(os.environ['nnUNet_raw'], f'Dataset{DSID[arm]}_*'))[0]
+        pre = os.path.join(os.environ['nnUNet_preprocessed'], os.path.basename(raw))
+        shutil.copy(os.path.join(raw, 'dataset.json'), os.path.join(pre, 'dataset.json'))
     run(['nnUNetv2_preprocess', '-d'] + [DSID[a] for a in ARMS] + ['-c', '3d_fullres', '-np', max(1, NPROC - 2)])
     st.update(preprocess=True); save_state(st)
 

@@ -53,6 +53,10 @@ def score(ref, pred, sp, tol=1.5, min_comp=100):
     union = (ref > 0) | (pred > 0)
     if not (ref > 0).any():
         return dict(empty_reference=True)
+    if (pred > 0).sum() > 20 * (ref > 0).sum():  # degenerate prediction: skeletonising it would take hours
+        return dict(tf1=0.0, tf1_per_class={}, class_cldice=0.0, cldice_per_class={}, dice_per_class={}, macro_dice=0.0,
+                    fp_components=-1, pred_components=-1, ref_components=-1, swap_rate=1.0, n_roots=0,
+                    degenerate_prediction=True)
     idx = np.nonzero(union)
     m = np.ceil(4.0 / sp).astype(int)
     lo = np.maximum([i.min() for i in idx] - m, 0); hi = np.minimum([i.max() + 1 for i in idx] + m, ref.shape)

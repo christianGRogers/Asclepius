@@ -63,10 +63,12 @@ if preds:
     names = {1: 'LM', 2: 'LAD', 3: 'LCx', 4: 'RCA'}
     def m(key): return float(np.mean([p[key] for p in per]))
     def cls(key): return {names[c]: float(np.mean([p[key][c] for p in per if c in p[key]])) for c in names}
-    cut = [p['case'] for p in per if p['class_cldice'] - p['tf1'] > 0.10]
+    # a cut tree: some class whose centreline is found (clDice) but not reachable from the ostium (tF1)
+    cut = [p['case'] for p in per if any(p['cldice_per_class'][c] - p['tf1_per_class'][c] > 0.10 for c in p['tf1_per_class'])]
     res['val'] = dict(n=len(per), tf1_at_1p5=m('tf1'), tf1_at_0=m('tf1_tol0'), tf1_per_class=cls('tf1_per_class'),
                       class_cldice=m('class_cldice'), macro_dice=m('macro_dice'), dice_per_class=cls('dice_per_class'),
-                      fp_components_mean=m('fp_components'), swap_rate=m('swap_rate'),
+                      fp_components_mean=float(np.mean([p['fp_components'] for p in per if p['fp_components'] >= 0] or [float('nan')])),
+                      degenerate_predictions=sum(bool(p.get('degenerate_prediction')) for p in per), swap_rate=m('swap_rate'),
                       cases_with_cut_tree=len(cut), cut_cases=cut,
                       tf1_min=float(min(p['tf1'] for p in per)))
 json.dump(res, open(f'{OUT}/results.json', 'w'), indent=1)
@@ -92,7 +94,7 @@ lines += ['', f"1000-epoch forecast from the fastest setting: **{g(res, 'r0_fore
           f"| per-class clDice | {g(res, 'val', 'class_cldice')} |", f"| macro Dice | {g(res, 'val', 'macro_dice')} |",
           f"| FP components per case (raw, gate ≤ 1) | {g(res, 'val', 'fp_components_mean')} |",
           f"| branch-swap rate (gate < 5 %) | {g(res, 'val', 'swap_rate')} |",
-          f"| cases with a cut tree (clDice − tF1 > 0.10) | {g(res, 'val', 'cases_with_cut_tree')} |", '',
+          f"| cases with a cut tree (some class: clDice − tF1 > 0.10) | {g(res, 'val', 'cases_with_cut_tree')} |", '',
           'Reading: see `vault/Plans/Experiments/Atlas - Pending Trillium run, R0 benchmark and a short R1 scored by tree-F1.md`.']
 open(f'{OUT}/SUMMARY.md', 'w').write('\n'.join(lines) + '\n')
 print('\n'.join(lines))

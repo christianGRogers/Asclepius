@@ -48,3 +48,10 @@ class nnUNetTrainerCrucible(nnUNetTrainerNoMirroring):
                 self.print_to_log_file('CRUCIBLE: deadline reached, checkpoint saved, exiting for resume')
                 sys.exit(75)
         self.on_train_end()
+
+    def perform_actual_validation(self, save_probabilities: bool = False):
+        # fold 'all' validates on its own training cases, which costs ~1 h per arm on 200 cases and says nothing;
+        # the driver evaluates on the held-out test cases instead.
+        if os.environ.get('CRUCIBLE_FULL_VAL') == '1':
+            return super().perform_actual_validation(save_probabilities)
+        self.print_to_log_file('CRUCIBLE: skipping nnU-Net final validation (held-out evaluation is done by the driver)')

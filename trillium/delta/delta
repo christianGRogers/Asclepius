@@ -18,6 +18,7 @@ JOBNAME=delta_p1
 PY_MODULES="StdEnv/2023 python/3.11.5"
 GPU_MODULES="cuda/12.6"
 BUDGET_S=$((24 * 3600))
+USER="${USER:-$(id -un)}"
 
 die() { echo "delta: ERROR: $*" >&2; exit 1; }
 say() { echo "delta: $*"; }

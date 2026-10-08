@@ -34,10 +34,11 @@ fi
 # 24 h total budget across resubmissions: previous jobs' wall time is logged in $W/gpu_seconds
 USED=$(awk '{s+=$1} END {print s+0}' "$W/gpu_seconds" 2>/dev/null || echo 0)
 trap 'echo $(( $(date +%s) - JOB_START )) >> "$W/gpu_seconds"' EXIT
-export BRIDGE_TRAIN_DEADLINE=$(python -c "
+BRIDGE_TRAIN_DEADLINE=$(python -c "
 used=float('$USED'); h=float('$TRAIN_HOURS')
 left=24*3600-used-4.5*3600            # keep 4.5 h for val prediction + scoring inside the budget
 print(int($JOB_START + max(0.0, min(h*3600, left))))")
+export BRIDGE_TRAIN_DEADLINE
 echo "budget: previous jobs used $USED s; training deadline $(date -d @"$BRIDGE_TRAIN_DEADLINE" -Is 2>/dev/null || echo "$BRIDGE_TRAIN_DEADLINE")"
 
 # 1. proxy labels + nnU-Net raw dataset (CPU)

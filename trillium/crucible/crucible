@@ -2,7 +2,7 @@
 # Crucible GPU experiment for the plan tournament: how to train on TWO reads per case (decision D2).
 # Usage (contract): cd <root>/experiments/crucible && ./crucible
 # Optional: ./crucible status | ./crucible collect | ./crucible dryrun   (dryrun: everything except building the venv
-# and sbatch; prints the sbatch command). CASES=/path overrides case discovery; CRUCIBLE_ACCOUNT=<acct> forces --account.
+# and sbatch; prints the sbatch command). CASES=/path overrides case discovery; ACCOUNT=<acct> overrides the default --account=def-aso22.
 set -euo pipefail
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 CMD="${1:-run}"
@@ -37,7 +37,7 @@ esac
 # GPU jobs must be submitted from the GPU login node (Trillium quickstart); hop there if we are on a CPU login node.
 if [ "$CMD" = run ] && command -v sbatch >/dev/null && [[ "$(hostname -s)" != trig-* ]] && [ -z "${CRUCIBLE_NO_HOP:-}" ]; then
   say "not on the GPU login node ($(hostname -s)); re-running on trig-login01"
-  exec ssh trig-login01 "cd '$HERE' && CRUCIBLE_NO_HOP=1 CASES='${CASES:-}' CRUCIBLE_ACCOUNT='${CRUCIBLE_ACCOUNT:-}' ./crucible run"
+  exec ssh trig-login01 "cd '$HERE' && CRUCIBLE_NO_HOP=1 CASES='${CASES:-}' ACCOUNT='${ACCOUNT:-${CRUCIBLE_ACCOUNT:-}}' ./crucible run"
 fi
 
 mkdir -p "$WORK/logs"
@@ -80,16 +80,8 @@ $PY "$HERE/lib/discover.py" "$HERE" "$WORK/manifest.json" || die "case discovery
 $PY "$HERE/lib/fetch_icx.py" "$WORK/icx"
 
 # 3. submit (one job, 1 x H100, 23 h 55 min: the whole 24 h budget; re-running resumes unfinished stages)
-ACC=()
-if [ -n "${CRUCIBLE_ACCOUNT:-}" ]; then ACC=(--account="$CRUCIBLE_ACCOUNT")
-elif command -v sacctmgr >/dev/null; then
-  mapfile -t accts < <(sacctmgr -nP show assoc user="$USER" format=account 2>/dev/null | sort -u | grep -v '^$' || true)
-  if [ "${#accts[@]}" -gt 1 ]; then
-    pick="$(printf '%s\n' "${accts[@]}" | grep -E '^(rrg|rpp)-' | head -n1 || true)"
-    [ -z "$pick" ] && pick="$(printf '%s\n' "${accts[@]}" | grep -E '^def-' | head -n1 || true)"
-    [ -n "$pick" ] && ACC=(--account="$pick")
-  fi
-fi
+# Trillium account (project lead: def-aso22 is the only allocation). ACCOUNT= or CRUCIBLE_ACCOUNT= overrides.
+ACC=(--account="${ACCOUNT:-${CRUCIBLE_ACCOUNT:-def-aso22}}")
 # shellcheck disable=SC2054  # the comma list is sbatch's --export syntax, not an array separator
 SB=(sbatch --parsable "${ACC[@]}" --output="$WORK/logs/%x_%j.out" --chdir="$WORK"
     --export=ALL,CRUCIBLE_WORK="$WORK",CRUCIBLE_HERE="$HERE",CRUCIBLE_VENV="$VENV" "$HERE/lib/job.sh")

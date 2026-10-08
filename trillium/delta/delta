@@ -177,13 +177,9 @@ WALL=$(( LEFT < BUDGET_S ? LEFT : BUDGET_S ))
 WALL_HMS="$(printf '%02d:%02d:00' $((WALL / 3600)) $(((WALL % 3600) / 60)))"
 
 # ---------------------------------------------------------------- 7. account
-ACCOUNT="${SLURM_ACCOUNT:-${SBATCH_ACCOUNT:-}}"
-if [[ -z "$ACCOUNT" ]] && command -v sshare >/dev/null 2>&1; then
-  ACCOUNT="$(sshare -U -u "$USER" -h -o Account 2>/dev/null | awk '{print $1}' | grep -E '^(rrg|rpp)-' | head -1 || true)"
-  [[ -n "$ACCOUNT" ]] || ACCOUNT="$(sshare -U -u "$USER" -h -o Account 2>/dev/null | awk '{print $1}' | grep -E '^def-' | head -1 || true)"
-fi
-[[ -n "$ACCOUNT" || "$CMD" == dryrun ]] || die "could not determine a SLURM account; set SLURM_ACCOUNT=def-xxx"
-say "account: ${ACCOUNT:-<none, dryrun>}   walltime: $WALL_HMS (budget left $((LEFT / 60)) min)"
+# The project's only Trillium allocation (trillium/README.md). ACCOUNT=... overrides.
+ACCOUNT="${ACCOUNT:-def-aso22}"
+say "account: $ACCOUNT   walltime: $WALL_HMS (budget left $((LEFT / 60)) min)"
 
 # ---------------------------------------------------------------- 8. job script
 cp "$HERE"/pipeline.py "$HERE"/deltalib.py "$HERE"/layout.py "$WORK/code/"
@@ -195,7 +191,7 @@ cat > "$JOB" <<EOF
 #SBATCH --gpus-per-node=1
 #SBATCH --time=$WALL_HMS
 #SBATCH --output=$WORK/logs/%x_%j.out
-${ACCOUNT:+#SBATCH --account=$ACCOUNT}
+#SBATCH --account=$ACCOUNT
 set -euo pipefail
 module purge
 module load $PY_MODULES $GPU_MODULES

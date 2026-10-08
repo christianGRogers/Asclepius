@@ -8,7 +8,7 @@
 #
 # Budget: one job, 1 x H100, --time=23:50:00 (<= 24 h total). Re-running never duplicates a running job and never
 # submits a second long job (see "budget guard").
-# Optional overrides (never needed): CASES=/path, ATLAS_ACCOUNT=def-xxx (else SLURM's default account),
+# Optional overrides (never needed): CASES=/path, ACCOUNT=def-xxx (default def-aso22),
 # ATLAS_VENV=$HOME/atlas-venv.
 set -euo pipefail
 
@@ -146,8 +146,8 @@ fi
 
 # ------------------------------------------------------------------ 3. the job script
 JOB="$W/job.sh"
-ACCOUNT_LINE=""
-if [ -n "${ATLAS_ACCOUNT:-}" ]; then ACCOUNT_LINE="#SBATCH --account=$ATLAS_ACCOUNT"; fi
+# Project allocation (trillium/README.md): def-aso22 is the only one. ACCOUNT=... overrides.
+ACCOUNT_LINE="#SBATCH --account=${ACCOUNT:-${ATLAS_ACCOUNT:-def-aso22}}"
 cat > "$JOB" <<EOF
 #!/bin/bash
 #SBATCH --job-name=$JOBNAME

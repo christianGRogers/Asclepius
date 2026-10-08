@@ -1,0 +1,110 @@
+---
+tags: [plans, experiment, gpu, trillium, double-reads, noisy-labels, pending]
+author: Crucible
+round: 3
+updated: 2026-10-06
+status: pending (prepared; to be run by the project lead on Trillium)
+---
+
+# GPU experiment (pending): with two reads per case, which training target makes the best model?
+
+## Question
+
+Decision D2 means every case will be labelled twice. Nobody has measured how to train on the two reads. Five
+candidate targets, all expressible as plain nnU-Net datasets with no custom loss:
+
+| Arm | Training target per case |
+|---|---|
+| **single** | read A only (the single-read baseline) |
+| **both** | read A and read B as two separate training samples (same image twice) |
+| **agree** | voxels where A and B agree; disagreement → nnU-Net `ignore` label |
+| **union** | vessel if either read says vessel; LM/LAD/LCx/RCA conflict → `ignore` |
+| **oracle** | the truth the reads were simulated from (upper bound, not available in practice) |
+
+Two secondary questions:
+
+- How far below the truth does scoring against *one* annotator put a model?
+- Can a model trained on two reads exceed the inter-read agreement?
+
+## Method
+
+The code is at `trillium/crucible/`, under the README contract: entry point `./crucible`, one job of 1 × H100 for
+23 h 55 min, `--account=def-aso22`.
+
+1. **Login node.**
+   - Build the venv (`$HOME/.venvs/crucible`; torch from the Alliance wheelhouse, nnunetv2 2.8.1).
+   - Install the trainer `nnUNetTrainerCrucible`. It is nnU-Net's no-mirroring trainer with the epoch count taken
+     from the environment and a deadline guard that checkpoints and exits for resume.
+   - Discover `cases/` (ImageCAS or Girder layout).
+   - Fetch the ImageCAS-X labels with one ~13.5 MB HTTP range request.
+   - Submit the job.
+2. **Job, stage `prep`.** Uses the 200 ImageCAS-X *train* cases and 50 ImageCAS-X *val* cases. ImageCAS-X's
+   160-case test list is never touched, because it is the master's sealed-test pool.
+   - Truth T is the ImageCAS mask split into four classes by nearest ImageCAS-X name. This is D0 (thick), D1
+     (territory) and D1b (ramus → LCx).
+   - Two reads per case are simulated with the calibrated error model of
+     [[Crucible - Simulated double reads and what each fusion rule teaches]]:
+     - carina shift N(0, 2 mm);
+     - distal truncation at a local radius ~ U(0.6, 1.05) mm, keeping what stays connected to the ostium;
+     - ramus slip, p 0.3;
+     - D1/OM1 swap, p 0.15.
+   - Crop to the mask bounding box + 15 mm.
+3. **Stage `plan` / `preprocess`.**
+   - **One plan for all arms.** It is made on the oracle dataset, set to the master's fixed CT window [−300, 1300] HU,
+     and copied to the other datasets with `nnUNetv2_move_plans_between_datasets`. Normalisation and patch are
+     therefore identical across arms.
+   - Default 3d_fullres: patch 96 × 160 × 160 at 0.5 × 0.35 × 0.35 mm on the smoke run. That is not the master's
+     256³ ResEnc, which would not fit five arms into 24 h.
+4. **Stage `probe`.** Four epochs measure s/epoch. Epochs per arm are then set to
+   (remaining time − 1.5 h) / (5 × s/epoch), clamped to 20–300 and identical for every arm.
+   - **Fairness:** every arm gets the same number of gradient steps. `both` sees twice the cases in the same steps.
+5. **Stage `train`.** Arms run in order: single, both, agree, union, oracle. A deadline stop leaves later arms
+   unfinished and records them. Re-running `./crucible` resumes them.
+6. **Stage `predict` + `eval`.**
+   - Predict the 50 test crops, with no TTA because mirroring is off.
+   - Drop components < 100 voxels.
+   - Score tF1 @ 1.5 mm (D3), plus Dice, rooted recall and precision, each against T, read A and read B.
+   - Compute the inter-read ceiling (B scored against A).
+   - Report paired per-case differences against `single`, with a bootstrap 95 % CI.
+7. **Output.** `results/SUMMARY.md`, `results.json` and logs, in `$SCRATCH/crucible_2reads/results`. They are copied
+   to `experiments/crucible/results/` when writable, otherwise by `./crucible collect`.
+
+**Tested here on CPU** (no GPU available):
+
+- `shellcheck` is clean;
+- `./crucible dryrun` on a fake `<root>/cases/` (Girder layout, plus a junk directory) detects the layout, fetches
+  the 804 ImageCAS-X files and prints the sbatch command;
+- the ImageCAS layout is recognised by `discover.py`;
+- full driver smoke run (`CRUCIBLE_SMOKE=1`: 4 train / 2 test cases, 1 epoch × 2 iterations, CPU): see Status below.
+
+## Decision rule (pre-registered)
+
+Let Δ be the paired tF1-vs-truth difference of an arm against `single`, with its 95 % CI.
+
+| Result | Decision for the master plan |
+|---|---|
+| `both` has Δ > 0 with the CI excluding 0, and ≥ `agree` and `union` | **Train on both reads as separate samples** (the simplest). Fusion is not needed |
+| `agree` or `union` beats `both` (CI of their difference excludes 0) | Use that fusion with nnU-Net's ignore label (`ignore` = 5 in dataset.json) |
+| No arm beats `single` | The second read is worth more as an **evaluation and QA** resource (ceiling, arbitration) than as training signal. Train on one read per case, chosen as the one closer to the namer QA |
+| Any arm's tF1 *vs reads* < tF1 *vs truth* by > 0.03 | Evaluation must score against the **fused reference** of both reads (or report the mean over both reads together with the inter-read ceiling), never one read |
+
+## What would change which decision
+
+- The master (Atlas v3) currently says nothing about how two reads enter training; this experiment fills that gap.
+- If `agree`/`union` win, the master needs the ignore label in `src/segtrain` (dataset.json `ignore`) before R1
+  consumes team labels.
+- If no arm beats `single`, the extra annotation effort of D2 should be costed as evaluation, not training.
+
+## Limits
+
+- **Reads are simulated.** The ranking can only be as true as the error model. The model is calibrated to
+  ImageCAS-X's per-class inter-observer Dice (LM is under-agreed: 0.81 vs 0.92). The first ~50 real double-read
+  cases must be used to re-fit it (carina-shift SD, truncation radius, slip rates), and the conclusion re-checked
+  on the label-level simulation (CPU, minutes).
+- Default patch, not the master's 256³ ResEnc; 200 training cases; one seed.
+- tF1 is my re-implementation with the thickest-voxel ostium, so it is provisional under A9.
+
+## Status
+
+- Prepared. Not yet run on Trillium.
+- CPU smoke-test result: see the Round-3 plan ([[Crucible v4]]).

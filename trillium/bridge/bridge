@@ -17,7 +17,7 @@ die () { echo "ERROR: $*" >&2; exit 1; }
 if [ "$DRY" != 1 ] && [ "$CMD" = run ] && [[ "$(hostname -s)" != trig-login* ]]; then
   if [ -z "${BRIDGE_HOPPED:-}" ] && command -v ssh >/dev/null; then
     echo "Not on the GPU login node ($(hostname -s)); re-running on trig-login01 ..."
-    exec ssh -o BatchMode=yes trig-login01 "cd '$HERE' && BRIDGE_HOPPED=1 CASES='${CASES:-}' BRIDGE_ACCOUNT='${BRIDGE_ACCOUNT:-}' ./bridge run" \
+    exec ssh -o BatchMode=yes trig-login01 "cd '$HERE' && BRIDGE_HOPPED=1 CASES='${CASES:-}' ACCOUNT='${ACCOUNT:-${BRIDGE_ACCOUNT:-}}' ./bridge run" \
       || die "could not ssh to trig-login01; log in there and run ./bridge again"
   fi
   die "GPU jobs must be submitted from trig-login01 (current host $(hostname -s))"
@@ -93,7 +93,8 @@ if [ -f "$W/done.all" ]; then echo "already finished; results in $W/results — 
 USED=$(awk '{s+=$1} END {print s+0}' "$W/gpu_seconds" 2>/dev/null || echo 0)
 if [ "$DRY" = 1 ]; then
   echo "DRY RUN: running job.sh locally (CPU)"
-  W=$W HERE=$HERE VENV=$VENV BRIDGE_DRYRUN=1 bash "$HERE/job.sh" 2>&1 | tee "$W/logs/slurm-dryrun.out"
+  export W HERE VENV BRIDGE_DRYRUN=1
+  bash "$HERE/job.sh" 2>&1 | tee "$W/logs/slurm-dryrun.out"
   exit "${PIPESTATUS[0]}"
 fi
 if squeue -h -u "$USER" --name "$JOBNAME" | grep -q .; then
@@ -102,7 +103,7 @@ fi
 LEFT=$(( 86400 - ${USED%.*} ))
 [ "$LEFT" -gt 1800 ] || die "24 h GPU budget used up ($USED s); nothing submitted"
 HOURS=$(( LEFT / 3600 )); [ "$HOURS" -gt 24 ] && HOURS=24
-ACC=(); [ -n "${BRIDGE_ACCOUNT:-}" ] && ACC=(--account="$BRIDGE_ACCOUNT")
+ACC=(--account="${ACCOUNT:-${BRIDGE_ACCOUNT:-def-aso22}}")   # Trillium allocation (README); ACCOUNT= overrides
 cd "$W"   # Trillium: submit from $SCRATCH so SLURM output can be written
 JID=$(sbatch --parsable --job-name="$JOBNAME" --nodes=1 --gpus-per-node=1 --time="$(printf '%02d:00:00' "$HOURS")" \
       "${ACC[@]}" --output="$W/logs/slurm-%j.out" --export=ALL,W="$W",HERE="$HERE",VENV="$VENV" "$HERE/job.sh")

@@ -30,7 +30,7 @@ does three things.
    ([[Delta - Two references of the same vessels agree on centrelines, not on voxels]]). So cut trees
    should be rarer, the A5 calibre trigger stays off, and the size of every repair gain is an open
    question on the decided convention.
-3. **Prepares the one experiment that can settle all of it:** a real 4-class thick-convention model on
+3. **Prepares the one experiment that can settle all of it** (`trillium/delta/`, ready and CPU-tested): a real 4-class thick-convention model on
    Trillium (`trillium/delta/`, 1 × H100, ≤ 24 h). It tests P1′ against nnU-Net's default inference,
    bridging, the support rule and label repair, all by tF1 @ 1.5 mm with the binding audit and FP gate.
    Until that result is back, P1′ stays a candidate. The plan pre-commits to the decision table below.
@@ -45,16 +45,15 @@ and re-inference was then applied on top of it. All comparisons are tF1 @ 1.5 mm
 | c0675 | 0.829 | **0.834** | 0.867 | **0.902** |
 | c0526 | 0.850 | **0.858** | 0.851 | **0.850** |
 | c0407 | 0.756 | **0.761** | 0.938 | **0.938** |
-| c0113 | 0.523 | PENDING | 0.700 | PENDING |
+| c0113 | 0.523 | **0.521** | 0.700 | **0.698** |
 
-- nnU-Net's default overlap barely changes the first pass (+0.005, +0.008, +0.005). It does **not**
-  reproduce P1′'s gain.
-- P1′ on top of the default overlap still gains +0.068 on c0675 and **+0.177 on c0407**. It costs
-  −0.008 on c0526.
+- nnU-Net's default overlap barely changes the first pass: +0.003 on average, range −0.002 to
+  +0.008. It does **not** reproduce P1′'s gain.
+- P1′ on top of the default overlap gains **+0.103 on average** on the four cut cases: +0.177
+  (c0407), +0.177 (c0113), +0.068 (c0675) and −0.008 (c0526).
 - That c0526 result is the first case where P1′ made something **worse**, so the v2 claim "never worse"
   no longer holds.
-- c0113 is still re-running. Its step-0.5 runs were killed twice by out-of-memory events on the
-  shared machine.
+- Full note: [[Delta - The tile-step-0.5 control - nnU-Net's default overlap does not reproduce re-inference's repair, and the support rule fails]].
 
 **Support rule (ruling §4.2): it fails.** On the 6 cut and repaired cases (step 0.75, P1′ + 3 mm bridging):
 - it kept all 4 false-positive joins, because each FP orphan *was* predicted again in the second look;
@@ -65,9 +64,10 @@ and re-inference was then applied on top of it. All comparisons are tF1 @ 1.5 mm
 did not trace. This is the convention problem again: under the decided thick reference they may well
 be true joins. Trillium measures this directly.
 
-**Ostium, absent LM.** c0020 (LM absent, three trees, three true ostia): the rules applied **per tree
-component** find all three, within 1.4 mm, and agree. The per-component validation
-(`experiments/Delta/ostium_eval_cc.py`) on all 71 cases, including c0141 and c0196, is pending.
+**Ostium, absent LM.** In all three absent-LM cases in the cohort sample — c0020, c0141 and c0196,
+each with three trees and three true ostia — the two rules applied **per tree component**
+(`experiments/Delta/ostium_eval_cc.py`) find all nine ostia within 1.4 mm, and never disagree. The
+same per-component run on the other 68 cases is pending (CPU).
 TotalSegmentator on more cases is still blocked by memory here (it was OOM-killed twice); on Trillium
 it is the master's A1 rule anyway.
 
@@ -122,17 +122,17 @@ As in the master, with three additions:
 
 | Claim | Evidence |
 |---|---|
-| Default overlap does not reproduce P1′'s gain on the 3 cases done; P1′ hurt one case | `regap05.jsonl` / `regap_v3.jsonl` (this round; `experiments/Delta/regap.py`, `nnunet_infer.py` step 0.5); note pending completion of c0113 |
-| The support rule keeps FP joins and blocks true ones | same, `audit` fields |
+| Default overlap does not reproduce P1′'s gain (+0.003 vs +0.103 on 4 cut cases); P1′ hurt one case | [[Delta - The tile-step-0.5 control - nnU-Net's default overlap does not reproduce re-inference's repair, and the support rule fails]] |
+| The support rule keeps FP joins and blocks true ones | same note |
 | Bridging alone +0.01; half the joins are FP (thin reference) | [[Delta - Real bridging on 17 nnU-Net predictions gains little alone, half its 3 mm joins are false positives, and gap-centred re-inference makes it work]] |
-| Ostium rules 116/116 with cross-check; absent-LM case works per component | [[Delta - Two cheap ostium rules find 116 of 116 true ostia, and their disagreement flags every miss]] + c0020 result above |
+| Ostium rules 116/116 with cross-check; 9/9 ostia in the 3 absent-LM cases per component | [[Delta - Two cheap ostium rules find 116 of 116 true ostia, and their disagreement flags every miss]] + §2 above (`ostcc_lm.jsonl`, `ostcc_test.jsonl`) |
 | The pending decisive experiment | [[Delta - PENDING Trillium run - does gap-centred re-inference beat nnU-Net's default inference on a thick-convention 4-class model]] |
 
 ## 6. Risks
 
 | Risk | Status |
 |---|---|
-| P1′ is an artefact of my cheaper first pass | Largely answered: default overlap gives +0.005 to +0.008, and P1′ still adds +0.068 and +0.177. c0113 is pending, and Trillium answers it at scale. |
+| P1′ is an artefact of my cheaper first pass | Answered on the 4 cut cases: default overlap +0.003, P1′ +0.103. Trillium answers it at scale on the decided convention. |
 | The thick convention makes all of this moot (few cuts) | This is the most likely outcome given the calibre. Trillium reports the cut-tree rate. |
 | The Trillium run fails or over-runs | It is idempotent and resumable, keeps a walltime ledger, and has a deadline-aware trainer. The CPU smoke test passed end to end. |
 
@@ -145,7 +145,7 @@ As in the master, with three additions:
 
 - **Dropped:** the support rule (measured to fail) and the "never worse" claim (c0526).
 - **Added:**
-  - the tile-step control (3 of 4 cut cases done);
+  - the tile-step control, complete on the 4 cut cases;
   - per-component ostia for absent LM;
   - the Trillium experiment, with a pre-committed decision table;
   - topology-safe use of double reads;

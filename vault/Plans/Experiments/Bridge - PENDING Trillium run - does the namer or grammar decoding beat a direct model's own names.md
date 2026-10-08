@@ -56,6 +56,39 @@ and runs exactly that comparison, before R1.
   default planner at 2 mm on the CPU (result in §Dry run). `shellcheck` is clean. Layout detection was
   tested on both layouts.
 
+## A13 mode (added after the Round 3 ruling): inference/scoring only on the Atlas run
+
+The ruling found this run "largely redundant with Atlas's (same data, split, configuration and val
+set)" and recommended scoring D/R/H/O on Atlas's saved val softmax and checkpoint (A13). `./bridge` now
+decides by itself (`py/atlas_link.py`):
+
+- **Atlas outputs present**, i.e. its `manifest.json` (at `experiments/atlas/results/` or
+  `$SCRATCH/atlas/results/`) or its conventional `$SCRATCH/atlas` work dir:
+  - one ≤ 4 h job scores D/R/H/O on Atlas's own 80 val predictions, against Atlas's own proxy labels;
+  - if the softmax was not saved, the job first re-predicts the val cases from `checkpoint_final`
+    with `--save_probabilities`;
+  - **no training.**
+- **Atlas job queued:** the same job is submitted with `--dependency=afterany` on it.
+- **No Atlas run:** the full training run as originally prepared.
+
+Consequences:
+
+- The D in D/R/H/O is then **exactly the master-recipe model the ruling will judge**, not a second seed.
+- The GPU cost falls from ~24 H100-h to ≤ 4.
+- The A7 rule and the reading table below are unchanged.
+
+CPU dry runs of the A13 paths:
+
+- (a) softmax present → scoring only;
+- (b) softmax absent → re-predict, then score; the 1-epoch dev model's degenerate output is flagged as
+  unscored;
+- (c) Atlas's own fake run (0-byte checkpoint, 1 of 2 softmax files) → correctly refuses and falls back
+  to training;
+- (d) no Atlas → training fallback, in both case layouts.
+
+Orientation of the softmax was checked: argmax of the transposed npz equals nnU-Net's own
+segmentation on 100 % of voxels.
+
 ## What each result would change
 
 | Result | Reading | Decision it moves |

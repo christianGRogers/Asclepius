@@ -6,7 +6,18 @@ cd <root>/experiments/bridge && ./bridge          # prepare + submit (run from a
 ./bridge collect                                   # copy results/ back from $SCRATCH when done
 ```
 
-## What it does
+## Two modes, chosen by `./bridge` itself (A13)
+
+| Situation found by `py/atlas_link.py` | What `./bridge` does |
+|---|---|
+| **Atlas run finished.** Its `manifest.json` is at `<root>/experiments/atlas/results/` or `$SCRATCH/atlas/results/`, or failing that its conventional work dir is `$SCRATCH/atlas`. Its reference labels, val split and (val softmax **or** checkpoint + trainer) are present | **Inference/scoring only.** One short job, 1 × H100, ≤ 4 h (`job_atlas.sh`). If Atlas saved the val softmax, D/R/H/O are scored on Atlas's own val predictions against Atlas's own proxy labels (read-only; nothing of Atlas's is modified or deleted). Otherwise the job first re-predicts the val cases from Atlas's `checkpoint_final` with `--save_probabilities`. **No training** |
+| **Atlas job queued or running** (`squeue --name atlas-r0r1`) | The same short job is submitted with `--dependency=afterany:<atlas job>`. It checks again at start, and exits cleanly if Atlas left no usable outputs (then run `./bridge` again) |
+| **No Atlas run** | The full run below (Bridge trains its own model) |
+
+The decision and its reason are printed and saved in `$SCRATCH/bridge_r3/atlas_link.json` (also in
+`results/`).
+
+## What it does in the fallback (training) mode
 
 1. **Login node** (internet):
    - builds `$HOME/venvs/bridge_r3`: Alliance torch wheel, nnunetv2 2.8.1, kimimaro, cc3d;
@@ -43,6 +54,17 @@ One job of ≤ 24 h on one H100. A resubmission (after a node failure) only gets
 24 h; `$SCRATCH/bridge_r3/gpu_seconds` is the ledger. The scoring step runs on the job's 24 cores.
 
 ## Tested on CPU (no GPU, no SLURM)
+
+A13 mode was tested with fake manifests pointing at a CPU-trained model:
+
+- **(a) softmax present:** scoring only;
+- **(b) softmax absent:** `nnUNetv2_predict` re-prediction from the checkpoint, then scoring. The 1-epoch
+  model's degenerate output is correctly flagged as unscored;
+- **(c)** Atlas's own CPU fake run (0-byte checkpoint, 1 of 2 softmax files) → correctly falls back to
+  training;
+- **(d)** no Atlas → training fallback, in both layouts.
+
+The fallback (training) mode was tested as follows:
 
 ```sh
 BRIDGE_DRYRUN=1 BRIDGE_W=/tmp/w BRIDGE_VENV=/path/to/venv BRIDGE_MIN_TRAIN=5 BRIDGE_MIN_VAL=2 \

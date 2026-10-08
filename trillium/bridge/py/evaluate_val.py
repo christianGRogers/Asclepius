@@ -56,14 +56,14 @@ def one(args):
     ref = ref_full[sl]; D = D_full[sl]
     npz = os.path.join(vdir, case + '.npz')
     prob = None
-    if os.path.exists(npz):
+    junk = (D > 0).sum() > 10 * max((ref > 0).sum(), 1)   # a degenerate prediction would stall skeletonisation
+    if os.path.exists(npz) and not junk:
         p = np.load(npz)['probabilities']            # (c, z, y, x): NibabelIO transposes to SimpleITK order
         prob = p.transpose(0, 3, 2, 1)[(slice(None),) + sl].astype(np.float32)
         del p
     fg = D > 0
     arms = {}
     res = {}
-    junk = fg.sum() > 10 * max((ref > 0).sum(), 1)   # a degenerate prediction would stall skeletonisation
     if not junk:
         arms['D'] = D
         lab, res, _ = name_mask(fg, A, sp, lo, full, bridge=4.0)

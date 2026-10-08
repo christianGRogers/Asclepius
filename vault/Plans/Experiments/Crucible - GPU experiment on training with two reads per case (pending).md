@@ -2,7 +2,7 @@
 tags: [plans, experiment, gpu, trillium, double-reads, noisy-labels, pending]
 author: Crucible
 round: 3
-updated: 2026-10-06
+updated: 2026-10-08
 status: pending (prepared; to be run by the project lead on Trillium)
 ---
 
@@ -10,7 +10,7 @@ status: pending (prepared; to be run by the project lead on Trillium)
 
 ## Question
 
-Decision D2 means every case will be labelled twice. Nobody has measured how to train on the two reads. Five
+Decision D2 means every case will be labelled twice. Nobody has measured how to train on the two reads. Six
 candidate targets, all expressible as plain nnU-Net datasets with no custom loss:
 
 | Arm | Training target per case |
@@ -19,6 +19,7 @@ candidate targets, all expressible as plain nnU-Net datasets with no custom loss
 | **both** | read A and read B as two separate training samples (same image twice) |
 | **agree** | voxels where A and B agree; disagreement → nnU-Net `ignore` label |
 | **union** | vessel if either read says vessel; LM/LAD/LCx/RCA conflict → `ignore` |
+| **a11** (added round 4) | the judge's A11 default. Each read is a separate sample; voxels both reads call vessel but name differently → `ignore` in both samples; extent differences keep each read's own label |
 | **oracle** | the truth the reads were simulated from (upper bound, not available in practice) |
 
 Two secondary questions:
@@ -56,9 +57,9 @@ The code is at `trillium/crucible/`, under the README contract: entry point `./c
    - Default 3d_fullres: patch 96 × 160 × 160 at 0.5 × 0.35 × 0.35 mm on the smoke run. That is not the master's
      256³ ResEnc, which would not fit five arms into 24 h.
 4. **Stage `probe`.** Four epochs measure s/epoch. Epochs per arm are then set to
-   (remaining time − 1.5 h) / (5 × s/epoch), clamped to 20–300 and identical for every arm.
+   (remaining time − 1.5 h) / (6 × s/epoch), clamped to 20–300 and identical for every arm.
    - **Fairness:** every arm gets the same number of gradient steps. `both` sees twice the cases in the same steps.
-5. **Stage `train`.** Arms run in order: single, both, agree, union, oracle. A deadline stop leaves later arms
+5. **Stage `train`.** Arms run in order: single, both, a11, agree, union, oracle (oracle last, so a deadline cuts the arm that matters least). A deadline stop leaves later arms
    unfinished and records them. Re-running `./crucible` resumes them.
 6. **Stage `predict` + `eval`.**
    - Predict the 50 test crops, with no TTA because mirroring is off.
@@ -77,7 +78,7 @@ The code is at `trillium/crucible/`, under the README contract: entry point `./c
 - the ImageCAS layout is recognised by `discover.py`;
 - full driver smoke run on CPU (`CRUCIBLE_SMOKE=1`: 4 train / 2 test cases, crops capped at 192 × 192 × 128,
   patch 48 × 64 × 64, 1 epoch × 2 iterations) completed end to end: prep → one shared plan → preprocess 5 datasets
-  (including the `ignore` label) → 5 arms → predict → eval → `SUMMARY.md` / `results.json`. Its numbers are
+  (including the `ignore` label) → 6 arms → predict → eval → `SUMMARY.md` / `results.json`. Its numbers are
   meaningless by design.
 - Fixed during smoke testing:
   - `move_plans` does not copy `dataset.json`;
@@ -91,6 +92,7 @@ Let Δ be the paired tF1-vs-truth difference of an arm against `single`, with it
 
 | Result | Decision for the master plan |
 |---|---|
+| `a11` vs `both` (paired) | A prior for the master's pre-registered A11 test on real reads. If `a11` < `both` with the CI excluding 0, A11's name-conflict `ignore` costs carina supervision; otherwise A11 stands |
 | `both` has Δ > 0 with the CI excluding 0, and ≥ `agree` and `union` | **Train on both reads as separate samples** (the simplest). Fusion is not needed |
 | `agree` or `union` beats `both` (CI of their difference excludes 0) | Use that fusion with nnU-Net's ignore label (`ignore` = 5 in dataset.json) |
 | No arm beats `single` | The second read is worth more as an **evaluation and QA** resource (ceiling, arbitration) than as training signal. Train on one read per case, chosen as the one closer to the namer QA |

@@ -1,5 +1,7 @@
 # crucible — training on two reads per case (decision D2)
 
+Six equal-step arms: `single`, `both`, `a11` (Round-3 A11 hybrid), `agree`, `union`, `oracle`.
+
 ```sh
 cd <root>/experiments/crucible && ./crucible        # login node; builds venv, fetches ImageCAS-X labels, submits 1 job
 ./crucible status                                    # optional: queue state + stage markers
@@ -19,5 +21,5 @@ cd <root>/experiments/crucible && ./crucible        # login node; builds venv, f
 - **Results:** `results/SUMMARY.md`, `results.json`, `logs/` (< 1 MB, no weights).
 - **What it does and the decision rule:** `vault/Plans/Experiments/Crucible - GPU experiment on training with two reads per case (pending).md`.
 - **Tested on CPU** with `CRUCIBLE_SMOKE=1` (4 train / 2 test cases, tiny patch, 1 epoch): the driver ran end to end
-  (prep → plan → preprocess → 5 arms → predict → eval → SUMMARY). `./crucible dryrun` was run on fake `cases/` trees
+  (prep → plan → preprocess → 6 arms, including the judge's A11 hybrid → predict → eval → SUMMARY; also resumed correctly after an arm was killed mid-run). `./crucible dryrun` was run on fake `cases/` trees
   in both layouts.

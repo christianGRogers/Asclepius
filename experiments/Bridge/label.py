@@ -101,6 +101,9 @@ def endpoint_features(d, G, other_P=None):
 
 
 OSTIUM_W = None  # set by fit; dict of feature -> weight
+EP_HOOK = None    # optional callable(d, ef) adding per-endpoint image features (e.g. 'dpool', distance to a contrast pool)
+POOL_BONUS = 3.0  # logit bonus for an endpoint within POOL_MM of the pool
+POOL_MM = 3.0
 
 
 def ostium_score(f, method):
@@ -112,6 +115,8 @@ def ostium_score(f, method):
         return f['r6']
     if method == 'combo':
         return f['r6'] + 0.5 * f['h'] - 0.02 * f['dR']
+    if method == 'learned_pool':  # learned score + bonus for endpoints touching a large contrast pool (aorta stand-in)
+        return ostium_score(f, 'learned') + POOL_BONUS * (f.get('dpool', 1e9) <= POOL_MM)
     if method == 'learned':  # OSTIUM_W = dict(F=[...], mean=[...], scale=[...], coef=[...]) from ostium_learn.py
         x = (np.array([f[k] for k in OSTIUM_W['F']]) - OSTIUM_W['mean']) / OSTIUM_W['scale']
         return float(x @ OSTIUM_W['coef'])
@@ -286,8 +291,10 @@ def label_case(d, method='combo', lmin=LMIN):
         res['fail'] = 'single_tree'
     other = P[list(comps[right].nodes())] if right is not None else None
     ef = endpoint_features(d, comps[left], other)
+    if EP_HOOK is not None:
+        EP_HOOK(d, ef)
     if method.startswith('rerank'):
-        base = 'learned' if method == 'rerank_learned' else 'combo'
+        base = {'rerank_learned': 'learned', 'rerank_learned_pool': 'learned_pool'}.get(method, 'combo')
         cands = sorted([f for f in ef if not f['edge']], key=lambda f: -ostium_score(f, base))[:5]
         best = None
         for rank, f in enumerate(cands):

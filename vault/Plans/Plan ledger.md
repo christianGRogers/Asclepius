@@ -19,3 +19,8 @@ Every plan version ever submitted, and what happened to it.
 | 2 | [[Bridge v2]] | Bridge | Lost; rule renaming adopted as competitor (A7), ramus switch (A8) |
 | 2 | [[Crucible v2]] | Crucible | Lost; convention monitor, seed tagging, single-convention test adopted (A3) |
 | 2 | [[Delta v2]] | Delta | Lost; ostium cross-check (A1), raw-prediction FP gate and bridge audit (A2) adopted; re-inference P1′ a candidate |
+| 3 | [[Atlas v3]] | Atlas | **Master plan** (held), with A1–A13 ([[Round 3]]) |
+| 3 | [[Bridge v3]] | Bridge | Lost; namer accuracy re-quoted under ramus → LCx (A7); D/R/H/O Trillium run judged redundant with Atlas's (A13) |
+| 3 | [[Crucible v3]] | Crucible | Superseded within the round by Crucible v4 |
+| 3 | [[Crucible v4]] | Crucible | Lost (restart around two reads); scoring and acceptance rule adopted (A10), first-50 report (A12) |
+| 3 | [[Delta v3]] | Delta | Lost; per-component ostia (A1); its Trillium run must avoid the sealed 80 (A13) |

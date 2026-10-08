@@ -12,7 +12,8 @@ Training-label forms (labels 0..4, IGNORE = 5):
 
 Adjudication (case level, A11): a third read is needed if
   inter-read macro tF1 < 0.80, or ostium disagreement > 5 mm, or LM-end (carina) disagreement > 5 mm,
-  or LAD<->LCx swap > 5 % of LAD+LCx voxels both reads call vessel,
+  or LAD<->LCx swap > 5 % of LAD+LCx voxels both reads call vessel, or Bridge's decision extractor disagrees
+  (ostium or LM end > 5 mm, LAD/LCx side, tree identity; bridge_decisions()),
   EXCEPT a ramus-only disagreement (D1b resolves it, never a third read): the swap is the only trigger and the
   swapped voxels form one branch (one component, <= 25 % of LAD+LCx) that leaves within 10 mm of the carina. D1b then applies: that branch -> LCx in
   both reads. (Geometric heuristic: a branch leaving at the carina that the two reads assign to different trunks.)
@@ -74,6 +75,41 @@ def _match_mm(pa, pb, sp):
     return float(max(min(np.linalg.norm((a - b) * sp) for b in pb) for a in pa))
 
 
+# ------------------------------------------------------------------ Bridge's decision extractor (A11 trigger)
+def _decisions(L, sp):
+    """Bridge's definitions (experiments/Bridge/decisions.py::extract), on skeleton voxels in mm:
+    ostium = LM point farthest from any LAD/LCx point; LM end = LM point nearest to the LAD/LCx points."""
+    sk = tf1.skeletonize(L > 0)
+    P = np.argwhere(sk) * np.asarray(sp, float); lab = L[sk]
+    lm = np.where(lab == 1)[0]; ll = np.where((lab == 2) | (lab == 3))[0]
+    if not len(lm) or not len(ll):
+        return None
+    from scipy.spatial import cKDTree
+    d, _ = cKDTree(P[ll]).query(P[lm])
+    return dict(ostium=P[lm[np.argmax(d)]], lmend=P[lm[np.argmin(d)]])
+
+
+def bridge_decisions(A, B, sp, mm=5.0):
+    """Disagreement in any of Bridge's discrete naming decisions: ostium or LM end > mm, LAD/LCx side swapped
+    (majority of A's LAD is B's LCx, or vice versa), or tree identity (majority of A's RCA is not RCA in B, or
+    majority of A's left tree is RCA in B)."""
+    da, db = _decisions(A, sp), _decisions(B, sp)
+    out = dict(ostium=False, lmend=False, side=False, tree=False)
+    if (da is None) != (db is None):
+        out['ostium'] = out['lmend'] = True
+    elif da is not None:
+        out['ostium'] = bool(np.linalg.norm(da['ostium'] - db['ostium']) > mm)
+        out['lmend'] = bool(np.linalg.norm(da['lmend'] - db['lmend']) > mm)
+    both = (A > 0) & (B > 0)
+    def maj(sel, other):
+        n = (sel & both).sum()
+        return bool(n and ((sel & both & other).sum() > 0.5 * n))
+    out['side'] = maj(A == 2, B == 3) or maj(A == 3, B == 2)
+    out['tree'] = maj(A == 4, B != 4) or maj(np.isin(A, (1, 2, 3)), B == 4)
+    out['any'] = any(out.values())
+    return out
+
+
 # ------------------------------------------------------------------ inter-read agreement and adjudication
 def inter_read(A, B, sp, tol=1.5):
     """Symmetric inter-read tF1 (mean of B scored against A and A against B), per class and macro."""
@@ -107,9 +143,12 @@ def adjudication(A, B, sp, tf1_min=0.80, mm=5.0, swap_max=0.05, ramus_win_mm=10.
                 dmin = float(np.min(np.linalg.norm((pts - ca) * sp, axis=1)))
                 ramus_only = dmin <= ramus_win_mm
     # a ramus-only disagreement also drags inter-read tF1 down; it does not count against the case on its own
+    bd = bridge_decisions(A, B, sp, mm)
+    # Bridge's side decision fires on a wholesale LAD/LCx swap, never on a single ramus-sized branch (<= 25 %)
     needed = trig['ostium'] or trig['carina'] or (trig['swap'] and not ramus_only) or \
-        (trig['inter_read_tf1'] and not ramus_only)
+        (trig['inter_read_tf1'] and not ramus_only) or bd['ostium'] or bd['lmend'] or bd['side'] or bd['tree']
     return dict(needed=bool(needed), ramus_only=bool(ramus_only), triggers={k: bool(v) for k, v in trig.items()},
+                bridge_decisions=bd,
                 inter_read_tf1=ir['tf1'], inter_read_per_class=ir['tf1_per_class'], ostium_mm=ost, carina_mm=car,
                 ladlcx_swap=swap, swapped_voxels=int(swapped.sum()))
 

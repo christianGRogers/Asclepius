@@ -98,6 +98,17 @@ def sealed_split(test):
     return read(p), p
 
 
+def open_strata():
+    """A14: the non-sealed ImageCAS-X test cases split into 'clean' (never used in any advocate's
+    development; decisive) and 'dev' (declared development cases; scored and reported separately,
+    never used for a decision). From icx_open_strata.json next to this file."""
+    p = os.path.join(HERE, 'icx_open_strata.json')
+    if not os.path.exists(p):
+        return set(), set()
+    d = json.load(open(p))
+    return set(d['clean_open']), set(d['dev_open'])
+
+
 def icx_seg(case):
     return os.path.join(ICX, 'ImageCAS-X_dataset', 'segmentations', f'{int(case[1:]) + 1}.coronary.nii.gz')
 
@@ -437,7 +448,14 @@ def step_summarize():
     by = {}
     for r in rows:
         by.setdefault(r['base'], {})[r['case']] = r
-    cases = sorted(set(by.get('s05', {})) & set(by.get('s075', {})))
+    all_cases = sorted(set(by.get('s05', {})) & set(by.get('s075', {})))
+    clean, dev = open_strata()
+    strata = {'clean (decisive)': [c for c in all_cases if c in clean] if clean else all_cases,
+              'dev (reported only)': [c for c in all_cases if c in dev],
+              'all open': all_cases}
+    if SMOKE:  # smoke cases are not in the clean list; exercise the decisive path on them anyway
+        strata['clean (decisive)'] = all_cases
+    cases = strata['clean (decisive)']
     V = ['raw', 'raw+bridge3', 'raw+repair', 'regap', 'regap+bridge3', 'regap+bridge3sup',
          'regap+bridge3sup+repair', 'regap+repair']
     table = {}
@@ -456,20 +474,24 @@ def step_summarize():
                 table[f'{base}:{v}'].update(bridges=len(br), fp_joins=sum(not b['true_join'] for b in br),
                                             cross_tree=sum(b['cross_tree'] for b in br))
 
-    def paired(a, b):
+    def paired(a, b, cases=cases):
         d = [by[b[0]][c][b[1]]['tf1_15'] - by[a[0]][c][a[1]]['tf1_15'] for c in cases
              if a[1] in by[a[0]][c] and b[1] in by[b[0]][c]]
         return dict(mean=float(np.mean(d)) if d else None, ci95=boot_ci(d), n=len(d),
                     better=int(sum(x > 0.001 for x in d)), worse=int(sum(x < -0.001 for x in d)))
-    comps = {
-        'C1 tile 0.5 vs 0.75 (raw)': paired(('s075', 'raw'), ('s05', 'raw')),
-        "C2 P1' on default overlap: s05 regap+bridge3sup vs s05 raw": paired(('s05', 'raw'), ('s05', 'regap+bridge3sup')),
-        "C3 P1' on 0.75 vs default 0.5 raw": paired(('s05', 'raw'), ('s075', 'regap+bridge3sup')),
-        'C4 bridging alone (s05)': paired(('s05', 'raw'), ('s05', 'raw+bridge3')),
-        'C5 support rule: s05 regap+bridge3sup vs regap+bridge3': paired(('s05', 'regap+bridge3'), ('s05', 'regap+bridge3sup')),
-        'C6 label repair (s05 raw)': paired(('s05', 'raw'), ('s05', 'raw+repair')),
-        'C7 full stage (s05 regap+bridge3sup+repair) vs raw': paired(('s05', 'raw'), ('s05', 'regap+bridge3sup+repair')),
+    COMP_DEF = {
+        'C1 tile 0.5 vs 0.75 (raw)': (('s075', 'raw'), ('s05', 'raw')),
+        "C2 P1' on default overlap: s05 regap+bridge3sup vs s05 raw": (('s05', 'raw'), ('s05', 'regap+bridge3sup')),
+        "C3 P1' on 0.75 vs default 0.5 raw": (('s05', 'raw'), ('s075', 'regap+bridge3sup')),
+        'C4 bridging alone (s05)': (('s05', 'raw'), ('s05', 'raw+bridge3')),
+        'C5 support rule: s05 regap+bridge3sup vs regap+bridge3': (('s05', 'regap+bridge3'), ('s05', 'regap+bridge3sup')),
+        'C6 label repair (s05 raw)': (('s05', 'raw'), ('s05', 'raw+repair')),
+        'C7 full stage (s05 regap+bridge3sup+repair) vs raw': (('s05', 'raw'), ('s05', 'regap+bridge3sup+repair')),
     }
+    comps = {k: paired(*ab) for k, ab in COMP_DEF.items()}
+    comps_by_stratum = {}
+    for name, cs in strata.items():
+        comps_by_stratum[name] = {k: paired(*ab, cases=cs) for k, ab in COMP_DEF.items()}
     raw = [by['s05'][c]['raw'] for c in cases]
     facts = dict(n_test_cases=len(cases), n_errors=len(errors),
                  n_degenerate=int(sum(by['s05'][c].get('degenerate', False) for c in cases)),
@@ -481,7 +503,8 @@ def step_summarize():
                  per_class_tf1_s05_raw={k: float(np.mean([x['per_class_15'].get(k, np.nan) for x in raw
                                                           if k in x['per_class_15']])) for k in ('1', '2', '3', '4')})
     split = json.load(open(os.path.join(WORK, 'split.json')))
-    res = dict(table=table, comparisons=comps, facts=facts, split_sizes={k: len(split[k]) for k in ('train', 'val', 'test')},
+    res = dict(table=table, comparisons=comps, comparisons_by_stratum=comps_by_stratum,
+               strata_sizes={k: len(v) for k, v in strata.items()}, facts=facts, split_sizes={k: len(split[k]) for k in ('train', 'val', 'test')},
                layout=split['layout'], smoke=SMOKE, mode=MODE, model_dir=model_dir(),
                sealed_source=split.get('sealed_source'), n_sealed_excluded=split.get('n_sealed_excluded'))
     tl = glob.glob(os.path.join(model_dir(), 'fold_0', 'training_log_*.txt'))
@@ -503,11 +526,19 @@ def step_summarize():
     for k, t in table.items():
         L.append(f"| {k} | {t['tf1_15']:.3f} | {t['tf1_0']:.3f} | {t['rooted_15']:.3f} | {t['dice']:.3f} | "
                  f"{t['fp_after']:.2f} | {t.get('bridges', '')} ({t.get('fp_joins', '')}, {t.get('cross_tree', '')}) |")
-    L += ['', '## Paired comparisons (tF1@1.5, per-case difference, bootstrap 95 % CI)', '']
+    L += ['', f"Decisions use the **{len(strata['clean (decisive)'])} clean open cases** only (never used in any "
+          f"advocate's development, A14). The {len(strata['dev (reported only)'])} declared development cases are "
+          'reported below for transparency and never decide anything.', '',
+          '## Paired comparisons on the clean open cases (tF1@1.5, per-case difference, bootstrap 95 % CI)', '']
     for k, c in comps.items():
         L.append(f"- **{k}**: {c['mean']:+.4f} [{c['ci95'][0]:+.4f}, {c['ci95'][1]:+.4f}], n={c['n']}, "
                  f"better {c['better']}, worse {c['worse']}" if c['mean'] is not None else f'- {k}: n/a')
-    L += ['', '## Facts', '', '```', json.dumps(facts, indent=1), '```', '',
+    for name in ('dev (reported only)', 'all open'):
+        L += ['', f'## Same comparisons, {name} (n={len(strata[name])})', '']
+        for k, c in comps_by_stratum[name].items():
+            L.append(f"- {k}: {c['mean']:+.4f} [{c['ci95'][0]:+.4f}, {c['ci95'][1]:+.4f}], n={c['n']}, "
+                     f"worse {c['worse']}" if c['mean'] is not None else f'- {k}: n/a')
+    L += ['', '## Facts (clean open cases)', '', '```', json.dumps(facts, indent=1), '```', '',
           '## How to read it', '',
           "- C1 ~ 0 and C3 <= C2: tile overlap is not the issue; P1' stands or falls on C2.",
           "- C2 CI excluding 0 in favour: adopt P1' (gap-centred re-inference + support-gated bridging).",

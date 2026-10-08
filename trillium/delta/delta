@@ -235,10 +235,10 @@ ACCOUNT="${ACCOUNT:-def-aso22}"
 say "account: $ACCOUNT   walltime: $WALL_HMS (budget left $((LEFT / 60)) min)"
 
 # ---------------------------------------------------------------- 8. job script
-cp "$HERE"/pipeline.py "$HERE"/deltalib.py "$HERE"/layout.py "$HERE"/icx_test_split.json "$WORK/code/"
+cp "$HERE"/pipeline.py "$HERE"/deltalib.py "$HERE"/layout.py "$HERE"/icx_test_split.json "$HERE"/icx_open_strata.json "$WORK/code/"
 # A sealed list published by the master (Atlas) takes precedence over Delta's proposed split.
 SEALED_LIST=""
-for f in "$ATLAS_W/results/sealed_test.txt" "$ATLAS_W/results/sealed_test.json" "$ATLAS_HERE/sealed_test.txt" "$ATLAS_HERE/sealed_test.json"; do
+for f in "$ATLAS_HERE/sealed_test.json" "$(dirname "$HERE")/sealed_test.json" "$ATLAS_W/results/sealed_test.json" "$ATLAS_HERE/sealed_test.txt" "$ATLAS_W/results/sealed_test.txt"; do
   if [[ -f "$f" ]]; then SEALED_LIST="$f"; break; fi
 done
 say "sealed test list: ${SEALED_LIST:-$HERE/icx_test_split.json, the split Delta published, as no master list was found}"

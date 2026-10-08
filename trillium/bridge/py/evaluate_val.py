@@ -62,18 +62,22 @@ def one(args):
         del p
     fg = D > 0
     arms = {'D': D}
-    lab, res, _ = name_mask(fg, A, sp, lo, full, bridge=4.0)
-    arms['R'] = lab
-    if prob is not None:
-        arms['H'], hinfo = hybrid(fg, prob, A, sp, lo, full)
+    res = {}
+    junk = fg.sum() > 10 * max((ref > 0).sum(), 1)   # a degenerate prediction would stall skeletonisation
+    if not junk:
+        lab, res, _ = name_mask(fg, A, sp, lo, full, bridge=4.0)
+        arms['R'] = lab
+        if prob is not None:
+            arms['H'], hinfo = hybrid(fg, prob, A, sp, lo, full)
     # oracle: D's foreground, reference names (nearest reference voxel)
     o = np.zeros_like(D)
-    if fg.any() and (ref > 0).any():
+    if fg.any() and (ref > 0).any() and not junk:
         _, ind = ndi.distance_transform_edt(ref == 0, sampling=sp, return_indices=True)
         o[fg] = ref[tuple(ind)][fg]
-    arms['O'] = o
+    if not junk:
+        arms['O'] = o
     R = TF.Ref(ref, sp)
-    out = dict(case=case, sec=0.0, namer=dict(lm_len=res.get('L_lm_len'), fail=res.get('fail'), n_ramus=res.get('L_n_ramus')))
+    out = dict(case=case, sec=0.0, junk_prediction=bool(junk), namer=dict(lm_len=res.get('L_lm_len'), fail=res.get('fail'), n_ramus=res.get('L_n_ramus')))
     for a, L in arms.items():
         out[a] = TF.score(R, L, 1.5)
         out[a]['tf1_per_class'] = {str(k): v for k, v in out[a]['tf1_per_class'].items()}
@@ -85,6 +89,8 @@ def one(args):
     out['sec'] = round(time.time() - t0, 1)
     os.makedirs(os.path.dirname(dst), exist_ok=True)
     json.dump(out, open(dst + '.part', 'w')); os.replace(dst + '.part', dst)
+    if os.path.exists(npz) and os.environ.get('BRIDGE_KEEP_NPZ') != '1':
+        os.remove(npz)  # ~1.2 GB per case on $SCRATCH; the scored case is cached in cases/<case>.json
     return out
 
 

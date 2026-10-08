@@ -1,16 +1,18 @@
 """H (A7 candidate P3b): keep the direct model's own class evidence (softmax), but decode it on the
 predicted tree's skeleton under the anatomical grammar, so every class becomes a connected sub-tree:
   right tree (highest mean P(RCA))           -> RCA
-  left tree, rooted at the best ostium      -> LM is ONE path from the root; every subtree below it is
-                                               wholly LAD or wholly LCx (exact tree MAP)
+  left tree, rooted at the best ostium      -> LM is a connected region containing the root; every subtree
+                                               below it is wholly LAD or wholly LCx (exact tree MAP)
   other components                           -> the model's majority class over the component
-Unary per skeleton vertex = mean log-softmax over the mask voxels that vertex owns.
+Unary per skeleton vertex = log of the mean softmax over the mask voxels that vertex owns.
 """
 import networkx as nx
 import numpy as np
 
 import label as Lb
 from namer import skeleton_case
+
+LM_PRIOR = 0.5
 
 
 def decode(G, nodes, logp, roots):
@@ -25,9 +27,10 @@ def decode(G, nodes, logp, roots):
             kids = list(T.successors(n))
             for y in (2, 3):
                 c[y] = -logp[i, y - 1] + sum(cost[ch][y] for ch in kids)
-            base = sum(min(cost[ch][2], cost[ch][3]) for ch in kids)
-            gain = min([cost[ch][1] - min(cost[ch][2], cost[ch][3]) for ch in kids] + [0.0])
-            c[1] = -logp[i, 0] + base + gain
+            # LM may continue into any child (the ostial end of a thick mask skeletonises into spurs);
+            # once a vertex is LAD or LCx, its whole subtree is that class
+            # + LM_PRIOR nats per LM vertex: where the network gives no class any mass, LM must not win the tie
+            c[1] = -logp[i, 0] + LM_PRIOR + sum(min(cost[ch][1], cost[ch][2], cost[ch][3]) for ch in kids)
             cost[n] = c
         if best is None or cost[r][1] < best[0]:
             best = (cost[r][1], r, T, cost)
@@ -38,10 +41,8 @@ def decode(G, nodes, logp, roots):
         lab[n] = y
         kids = list(T.successors(n))
         if y == 1:
-            g = [cost[ch][1] - min(cost[ch][2], cost[ch][3]) for ch in kids]
-            cont = kids[int(np.argmin(g))] if kids and min(g) < 0 else None
             for ch in kids:
-                stack.append((ch, 1 if ch is cont else (2 if cost[ch][2] <= cost[ch][3] else 3)))
+                stack.append((ch, int(np.argmin(cost[ch][1:4])) + 1))
         else:
             for ch in kids:
                 stack.append((ch, y))
@@ -59,9 +60,10 @@ def hybrid(m, prob, A, z, lo, full_shape, K=8):
     cnt = np.zeros(nv)
     for k, (idx, j) in assign.items():
         pv = prob[:, idx[:, 0], idx[:, 1], idx[:, 2]].T  # (nvox, 5)
-        np.add.at(lp, j, np.log(np.clip(pv, 1e-6, 1)))
+        np.add.at(lp, j, pv)
         np.add.at(cnt, j, 1)
-    lp /= np.maximum(cnt, 1)[:, None]
+    # unary = log of the vertex's mean class probability (robust to a few boundary voxels near 0)
+    lp = np.log(lp / np.maximum(cnt, 1)[:, None] + 1e-2)
     Lb.BRIDGE = 4.0
     comps = Lb.components(d)
     comps = Lb.bridge(comps, d['P'], Lb.BRIDGE)

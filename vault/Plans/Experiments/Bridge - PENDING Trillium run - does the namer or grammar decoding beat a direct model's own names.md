@@ -2,8 +2,8 @@
 tags: [plans/experiment, trillium, gpu, pending, A7, naming]
 author: Bridge
 round: 3
-status: PENDING — prepared, CPU dry-run tested, awaiting the project lead's Trillium run
-updated: 2026-10-06
+status: PENDING — prepared and CPU dry-run tested (READY), awaiting the project lead's Trillium run
+updated: 2026-10-08
 ---
 
 # PENDING (Trillium): does rule naming or grammar decoding beat a direct 4-class model's own names?
@@ -41,7 +41,7 @@ and runs exactly that comparison, before R1.
   |---|---|
   | D | the model's own names |
   | R | frozen rule namer (`label.py` md5 06f53291…, ramus → LCx, 4 mm naming bridges) |
-  | H | per-vertex mean log-softmax of D, exact tree MAP: LM is one path from the ostium; each subtree below it is wholly LAD or wholly LCx; the tree with the highest P(RCA) is the RCA; root chosen jointly among the 8 best learned-ostium candidates |
+  | H | unary = log of D's mean softmax over the voxels each skeleton vertex owns; exact tree MAP in which the LM is a connected region containing the root (0.5-nat LM prior), every subtree below it is wholly LAD or wholly LCx, and the tree with the highest P(RCA) is the RCA; root chosen jointly among the 8 best learned-ostium candidates |
   | O | reference names on D's foreground: the naming headroom |
 - **Metric.** tF1 @ 1.5 mm (D3) against the proxy reference, plus:
   - per-class tF1, tF1 @ 0 mm, case-level swaps, centreline naming accuracy, macro Dice, FP components.
@@ -70,10 +70,20 @@ and runs exactly that comparison, before R1.
 
 PENDING (Trillium). `trillium/bridge/results/SUMMARY.md` will be returned by the lead.
 
-## Dry run (CPU, here)
+## Dry run (CPU, here): plumbing only, no result is read from it
 
-See [[Bridge v3]] §4. It proves the plumbing only: tiny model, 1 epoch, 2 iterations, 2 mm. No result is
-read from it.
+| Test | What ran | Outcome |
+|---|---|---|
+| Girder layout, full `./bridge` (`BRIDGE_DRYRUN=1`) | 13-case fake `cases/<case>/{ct,coronary_arteries}.nii.gz` tree; layout detection; ImageCAS-X fetch (skips present files); proxy for 10 train + 3 val; fingerprint + fixed window; nnU-Net default planner at 2 mm; preprocessing; `nnUNetTrainer_bridge` 1 epoch × 2 iterations on CPU; nnU-Net validation with `--npz` | all steps ran. Validation exported 2 of 3 cases; the third export worker was killed by memory pressure on this shared 15 GB box (other agents' runs), and nnU-Net's pool then waits forever. Not expected on a 188 GB Trillium quarter-node, but noted as a risk |
+| ImageCAS release layout | 8 cases as `<n>.img.nii.gz` + `<n>.label.nii.gz`, `BRIDGE_STOP_AFTER=prep` | layout detected, ids mapped c(n−1), proxy built, split 6/2 |
+| No `cases/` | `./bridge` in a tree without one | fails loudly, listing every directory it checked |
+| Scoring | `evaluate_val.py` on a fake nnU-Net validation folder: proxy with a direct-model-like naming error (first ~10 % of LCx named LAD at the carina, three LAD islands inside LCx); softmax saved as nnU-Net/NibabelIO does | all four arms, A7 verdict, SUMMARY.md, results.json written. **Two fixes made from this test:** (1) H's unary is log of mean probability, plus a 0.5-nat LM prior (it had let the LM swallow an ambiguous LCx stretch); (2) a degenerate prediction (> 10× the reference volume) skips R, H and O instead of stalling skeletonisation. R and H corrected the injected LAD/LCx error (LAD/LCx tF1 0.996–0.999 vs D 0.94–0.98). Both lost on the LM, whose few skeleton voxels make LM tF1 fragile |
+| `./bridge status`, `./bridge collect` | dry mode | ran; collect copies < 20 MB files only |
+| `shellcheck bridge job.sh` | | clean |
+
+Not testable here: `sbatch`/`squeue`, Trillium modules, the Alliance wheelhouse, the CUDA run and the 60 GB
+plan's real memory. The launcher fails loudly on each. If the 60 GB plan runs out of memory before the
+first checkpoint, the job falls back to a 40 GB plan.
 
 ## Limits
 

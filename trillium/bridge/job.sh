@@ -46,6 +46,7 @@ if [ ! -f "$W/done.prep" ]; then
   python "$HERE/py/prep.py" "$W/casemap.json" "$W/icx" "$nnUNet_raw/$DS_NAME" "$DS_NAME" "$NPREP" || { echo "PREP FAILED"; exit 2; }
   touch "$W/done.prep"
 fi
+[ "${BRIDGE_STOP_AFTER:-}" = prep ] && { echo "BRIDGE_STOP_AFTER=prep: stopping (test mode)"; exit 0; }
 
 # 2. fingerprint, fixed window, plan, preprocess (CPU)
 plan_and_preprocess () {

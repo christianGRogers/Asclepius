@@ -45,6 +45,15 @@ def ostia(T, sp):
     if r.any():
         idx = np.argwhere(r); top = idx[idx[:, 2] >= np.percentile(idx[:, 2], 90)]
         o.append(top[np.argmax(rad[tuple(top.T)])])
+    # every sizeable tree needs a root (absent LM / separate ostia, or a crop that cut the LM away):
+    # a component with no root gets its thickest voxel
+    lab, n = ndi.label(T > 0, S26)
+    have = {lab[tuple(r)] for r in o}
+    for k in range(1, n + 1):
+        if k in have: continue
+        sel = lab == k
+        if sel.sum() < 1000: continue
+        idx = np.argwhere(sel); o.append(idx[np.argmax(rad[sel])])
     return o
 
 

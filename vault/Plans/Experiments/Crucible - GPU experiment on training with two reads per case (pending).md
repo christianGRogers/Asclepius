@@ -75,7 +75,15 @@ The code is at `trillium/crucible/`, under the README contract: entry point `./c
 - `./crucible dryrun` on a fake `<root>/cases/` (Girder layout, plus a junk directory) detects the layout, fetches
   the 804 ImageCAS-X files and prints the sbatch command;
 - the ImageCAS layout is recognised by `discover.py`;
-- full driver smoke run (`CRUCIBLE_SMOKE=1`: 4 train / 2 test cases, 1 epoch × 2 iterations, CPU): see Status below.
+- full driver smoke run on CPU (`CRUCIBLE_SMOKE=1`: 4 train / 2 test cases, crops capped at 192 × 192 × 128,
+  patch 48 × 64 × 64, 1 epoch × 2 iterations) completed end to end: prep → one shared plan → preprocess 5 datasets
+  (including the `ignore` label) → 5 arms → predict → eval → `SUMMARY.md` / `results.json`. Its numbers are
+  meaningless by design.
+- Fixed during smoke testing:
+  - `move_plans` does not copy `dataset.json`;
+  - nnU-Net's own final validation on fold `all` re-predicts the training set. It is now skipped, saving about
+    1 GPU-h per arm;
+  - a tree with no root in the crop lost all its vessel in the reads; every tree now gets a root.
 
 ## Decision rule (pre-registered)
 
@@ -106,5 +114,7 @@ Let Δ be the paired tF1-vs-truth difference of an arm against `single`, with it
 
 ## Status
 
-- Prepared. Not yet run on Trillium.
-- CPU smoke-test result: see the Round-3 plan ([[Crucible v4]]).
+- **Prepared and smoke-tested; not yet run on Trillium.**
+- Expected GPU-time use: about 1.2 h of the 24 h is CPU-bound prep, fingerprinting and preprocessing inside the job;
+  the probe takes 4 epochs; the rest is 5 equal-step arms plus about 1.5 h for prediction and evaluation.
+- Plan: [[Crucible v4]].

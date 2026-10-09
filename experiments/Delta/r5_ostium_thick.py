@@ -15,6 +15,7 @@ reference tree component of the proxy:
 Each expert start point is matched to the tree containing it; distances in mm.
 Usage: python r5_ostium_thick.py <out.jsonl> case [case ...]"""
 import json
+import os
 import sys
 
 import nibabel as nib
@@ -65,11 +66,11 @@ def run(case):
             choice[k]['_pool_mm'] = float(dsk[v])
     S_ = []
     for side in ('left', 'right'):
-        p = f'{M.SCR}/work/Bridge/icx/centerlines/{icx_id}.coronary_{side}_centerline.vtk'
-        try:
-            S_ += [(side, s) for s in M.starts(p)]
-        except Exception:  # noqa
-            pass
+        for d in M.CL_DIRS:
+            p = f'{d}/{icx_id}.coronary_{side}_centerline.vtk'
+            if os.path.exists(p):
+                S_ += [(side, s) for s in M.starts(p)]
+                break
     _, inds = ndi.distance_transform_edt(comps == 0, return_indices=True)
     out = dict(case=case, pool_found=d_pool is not None, matches=[])
     for side, w in S_:

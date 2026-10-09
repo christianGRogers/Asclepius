@@ -14,6 +14,7 @@ Usage: python r5_cut_anatomy.py <out.jsonl> case [case ...]
 """
 import importlib.util
 import json
+import os
 import sys
 
 import nibabel as nib
@@ -23,6 +24,7 @@ from skimage.morphology import skeletonize
 
 REPO = '/home/user/Asclepius'
 SCR = '/tmp/claude-0/-home-user-Asclepius/1b43aea1-ed14-5dd0-84ee-25f776047e09/scratchpad'
+CL_DIRS = (SCR + '/work/Delta/r5/icx_cl2/ImageCAS-X_dataset/centerlines', SCR + '/work/Bridge/icx/centerlines')
 sys.path.insert(0, REPO + '/experiments/Delta')
 import treelib as T  # noqa: E402
 from ostium_eval import starts  # noqa: E402
@@ -61,11 +63,12 @@ def run(case):
     # expert ostia: ImageCAS-X centreline start points, world RAS -> crop voxel
     true = {}
     for side in ('left', 'right'):
-        p = f'{SCR}/work/Bridge/icx/centerlines/{icx_id}.coronary_{side}_centerline.vtk'
-        try:
-            P = np.array(starts(p))
-        except Exception:  # noqa
-            P = np.zeros((0, 3))
+        P = np.zeros((0, 3))
+        for d in CL_DIRS:
+            p = f'{d}/{icx_id}.coronary_{side}_centerline.vtk'
+            if os.path.exists(p):
+                P = np.array(starts(p))
+                break
         if len(P):
             true[side] = (np.linalg.inv(A) @ np.c_[P, np.ones(len(P))].T).T[:, :3] - lo
     d_ref = ndi.distance_transform_edt(~Rm, sampling=sp)
@@ -76,7 +79,7 @@ def run(case):
                true_to_ref_mm={s: [round(float(d_ref[tuple(np.clip(np.round(p).astype(int), 0,
                                                                       np.array(R.shape) - 1))]), 2) for p in P]
                                for s, P in true.items()},
-               atlas_roots=[], mine=[])
+               lo=[int(v) for v in lo], atlas_roots=[], mine=[])
 
     def judge(pt):
         pt = np.asarray(pt, float)

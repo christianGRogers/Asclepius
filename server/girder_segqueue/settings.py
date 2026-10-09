@@ -21,7 +21,8 @@ from segqueue.protocol import ProjectConfig, SegmentSpec
 from .constants import SETTING_POLICY, SETTING_PROJECT
 
 #: Shipped as the default so a fresh install is immediately usable against this
-#: repository's phase 1 task. The label values match configs/labels/coronary.yaml
+#: repository's four-class task (712). The label values match
+#: configs/labels/coronary_branches.yaml
 #: -- if they drift, `segtrain convert` will happily build a training set with
 #: the wrong structures under the right names, which is the worst possible
 #: outcome and the reason they are written down together.
@@ -29,18 +30,26 @@ DEFAULT_SEGMENTS = [
     {'name': 'left_main', 'label': 1, 'color': [0.95, 0.25, 0.20], 'required': True,
      'hint': 'Ostium to the LAD/LCx bifurcation.'},
     {'name': 'left_anterior_descending', 'label': 2, 'color': [0.20, 0.70, 0.30],
-     'required': True, 'hint': 'Follow the anterior interventricular groove.'},
+     'required': True, 'hint': 'Anterior interventricular groove, with its diagonals '
+                               'and every other branch it gives off.'},
     {'name': 'left_circumflex', 'label': 3, 'color': [0.25, 0.45, 0.90],
-     'required': True, 'hint': 'Left atrioventricular groove.'},
+     'required': True, 'hint': 'Left atrioventricular groove, with its obtuse marginals. '
+                               'A ramus intermedius is always LCx.'},
     {'name': 'right_coronary_artery', 'label': 4, 'color': [0.95, 0.75, 0.15],
-     'required': False, 'hint': 'May be small or absent in a left-dominant system.'},
+     'required': False, 'hint': 'With its PDA and PLV branches. May be small or absent '
+                                'in a left-dominant system.'},
 ]
 
+#: The project lead's decisions of 2026-10-05 (vault/Plans/Human decisions.md): the
+#: annotator splits the mask they are given into four classes and does not redraw its
+#: extent; side branches take their parent's class (territory rule); the ramus is LCx.
 DEFAULT_INSTRUCTIONS = (
-    'Segment the coronary lumen only -- not the vessel wall, not calcified '
-    'plaque. Work on the native grid; do not resample. Stop each branch where '
-    'the lumen is no longer confidently distinguishable from surrounding '
-    'tissue, and say so in the note rather than guessing.'
+    'Split the coronary mask you are given into four vessels. Do not redraw its '
+    'outline: keep every voxel of the mask and add none, even where it looks wider '
+    'than the contrast-filled lumen. Every side branch belongs to the vessel it '
+    'comes from (diagonals to the LAD, obtuse marginals to the LCx, PDA and PLV '
+    'to the RCA). A ramus intermedius is always LCx. If part of the mask is '
+    'clearly not coronary artery, leave it as it is and say so in the note.'
 )
 
 

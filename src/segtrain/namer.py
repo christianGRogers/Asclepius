@@ -170,6 +170,7 @@ class Disagreement:
     flags: list  # wholesale triggers that fired: 'ostium', 'lm', 'swap', 'tree'
     ramus_only: bool  # the swap is confined to a ramus-like branch (exempt: D1b, A11)
     wholesale: bool  # any flag after the ramus exemption -> review the case, don't mask
+    no_lm_reference: bool = False  # reference has no LM: 'ostium'/'lm' not checked, review
 
 
 # ---------------------------------------------------------------------------------- geometry
@@ -848,7 +849,9 @@ def compare(
                each read's extent).
     flags    : wholesale triggers (Atlas/A11 thresholds): 'ostium' (decisions > ostium_mm apart),
                'lm' (LM Dice < lm_dice_min), 'swap' (> swap_max of reference LAD+LCx voxels named
-               the other one), 'tree' (left and right trees exchanged).
+               the other one), 'tree' (left and right trees exchanged). With no LM in the
+               reference (absent left main), 'ostium' and 'lm' are not checked and
+               `no_lm_reference` is set.
     ramus_only : when `ramus_candidates` (NamingResult.ramus_candidates) is given and >= ramus_share
                of the swapped voxels lie in it, the 'swap' flag is a ramus-only disagreement:
                resolved by D1b, not by a third read (A11) -> exempt from `wholesale`.
@@ -878,9 +881,13 @@ def compare(
     left_lost = (left_ref & (nm == RCA)).sum() > 0.5 * max(int(left_ref.sum()), 1)
     tree_swap = bool(rca_lost or left_lost)
     flags = []
-    if ost is not None and ost > ostium_mm:
+    # a reference without a left main (separate LAD/LCx ostia, 1.4 % of ImageCAS-X) is an anatomy
+    # the rules cannot represent: their LM and ostium are not evidence against it (Round 5, c0133,
+    # c0956), so those two triggers are skipped and the case is marked for review instead
+    no_lm = bool((ref > 0).any() and not (ref == LM).any())
+    if not no_lm and ost is not None and ost > ostium_mm:
         flags.append("ostium")
-    if lm_dice is not None and lm_dice < lm_dice_min:
+    if not no_lm and lm_dice is not None and lm_dice < lm_dice_min:
         flags.append("lm")
     if swap > swap_max:
         flags.append("swap")
@@ -904,6 +911,7 @@ def compare(
         flags=flags,
         ramus_only=ramus_only,
         wholesale=wholesale,
+        no_lm_reference=no_lm,
     )
 
 
@@ -926,7 +934,8 @@ def disagreement(label, mask, spacing_or_affine, *, ramus: str = "LCx") -> dict:
       ignore     : bool array, voxels both call vessel but name differently (-> ignore label)
       exclude    : wholesale disagreement after the ramus exemption (drop the case from training)
       ramus_only : the only wholesale trigger was a LAD/LCx swap confined to a ramus-like branch
-      flags, reason, report (the full `Disagreement`), decisions (the namer's `Decisions`)
+      flags, reason, report (the full `Disagreement`), decisions (the namer's `Decisions`),
+      no_lm_reference (the label has no LM: absent-LM variant, not excluded on LM/ostium)
     A 3-vector `spacing_or_affine` is read as an LAS grid (see `as_affine`).
     """
     A = as_affine(spacing_or_affine)
@@ -934,12 +943,15 @@ def disagreement(label, mask, spacing_or_affine, *, ramus: str = "LCx") -> dict:
     rep = compare(label, res.labels, A, ramus_candidates=res.ramus_candidates)
     ramus_only = rep.ramus_only and rep.flags == ["swap"]
     reason = ",".join(rep.flags) + (" (ramus-only, exempt)" if rep.ramus_only else "")
+    if rep.no_lm_reference:
+        reason += " (no LM in the label: absent-LM variant, review)"
     return dict(
         ignore=rep.ignore,
         exclude=rep.wholesale,
         ramus_only=ramus_only,
         flags=list(rep.flags),
         reason=reason,
+        no_lm_reference=rep.no_lm_reference,
         report=rep,
         decisions=res.decisions,
     )

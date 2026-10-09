@@ -211,6 +211,16 @@ def test_compare_wholesale_triggers(named):
     assert "ostium" in rep.flags and rep.ostium_distance_mm > 5 and rep.wholesale
 
 
+def test_absent_left_main_reference_is_not_excluded(named):
+    # separate LAD/LCx ostia: the rules always find an LM, so LM/ostium disagreement is no evidence
+    ref = named.labels.copy()
+    ref[ref == LM] = LAD
+    rep = namer.compare(ref, named.labels, RAS)
+    assert rep.no_lm_reference and "lm" not in rep.flags and "ostium" not in rep.flags
+    assert not rep.wholesale and rep.ignore.any()
+    assert not namer.compare(named.labels, named.labels, RAS).no_lm_reference
+
+
 def test_ramus_only_swap_is_exempt():
     lab = _tree(ramus=True) > 0
     d1b = namer.name_tree(lab, RAS, ramus="LCx")

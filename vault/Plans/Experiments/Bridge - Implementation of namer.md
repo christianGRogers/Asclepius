@@ -11,7 +11,7 @@ updated: 2026-10-09
 
 - The source is `experiments/Bridge/label.py` (md5 06f53291…) plus the skeleton step from `extract.py`.
 - It needs only numpy and scipy.
-- Its tests are `tests/test_namer.py`: 18 tests on synthetic tubes, about 9 s, with no case data.
+- Its tests are `tests/test_namer.py`: 19 tests on synthetic tubes, about 9 s, with no case data.
 - On all 163 unsealed ImageCAS-X cases it reproduces the experiment's run, case for case (see Validation below).
 
 ## Public API
@@ -103,7 +103,12 @@ Same 163 unsealed cases, the same projection (nearest ImageCAS-X voxel within 2 
    - Under the exemption a swap is not wholesale. `disagreement()['ramus_only']` is set only when the swap was the *only* trigger, so a case with a ramus swap *and* an ostium error is still excluded.
 3. **The A12 "decision vs diffuse" split** is approximated by `ignore_within_10mm_of_carina`, together with the per-decision flags. A finer attribution, along the lines of the five-decision note, is not built.
 4. **A kept quirk.** In the frozen ostium score, the 'beyond' feature is about 1.0 for every endpoint except the tree's vertex 0, the lexicographically smallest skeleton vertex. That endpoint gets a sizeable bonus whenever it is an endpoint. The port keeps the same vertex order and the quirk, because the weights were fit with it. The test fixtures keep their smallest-x vertex mid-vessel so the quirk is not what they test.
-5. **The bridge guard and feature clipping** that the skimage attempt needed were removed. The bridges are exactly the frozen rule: an endpoint within 4 mm of any vertex of another component.
+5. **The absent-LM guard (added after Round 5).** When the reference label has no LM voxels (separate
+   LAD/LCx ostia, 11 of 800 ImageCAS-X cases), `compare` skips the `ostium` and `lm` triggers and
+   sets `no_lm_reference`. The rules always find an LM, so their disagreement there is no evidence
+   against the proxy. See [[Bridge - Trillium naming result on the master model]] (c0133, c0956).
+   This is the only rule change from the frozen namer; it touches QA, not naming.
+6. **The bridge guard and feature clipping** that the skimage attempt needed were removed. The bridges are exactly the frozen rule: an endpoint within 4 mm of any vertex of another component.
 
 ## Suggested CLI (for the orchestrator)
 

@@ -3,6 +3,8 @@
 The fixture is a left tree (a thick left main from a superior ostium, splitting into an anterior LAD
 and a posterior LCx) and a separate right tree (RCA), drawn as tubes in an 80^3 grid at 1 mm. The
 world frame is RAS: the left tree sits at more negative x, anterior is +y, superior is +z.
+The smallest-x skeleton vertex lies mid-vessel, as in real trees: the frozen ostium score's 'beyond'
+feature singles out whichever endpoint is vertex 0 (the experiment's quirk, kept by the port).
 """
 
 import numpy as np
@@ -26,13 +28,13 @@ def _tube(lab, a, b, r, k):
     lab[inside & (lab == 0)] = k
 
 
-def _tree(ramus=False, right=True):
+def _tree(ramus=False, right=True, ostium=OSTIUM):
     lab = np.zeros(SHAPE, np.uint8)
-    _tube(lab, OSTIUM, BIF, 3.0, LM)
-    _tube(lab, BIF, (15, 70, 15), 2.0, LAD)
-    _tube(lab, BIF, (15, 10, 20), 2.0, LCX)
+    _tube(lab, ostium, BIF, 3.0, LM)
+    _tube(lab, BIF, (23, 70, 15), 2.0, LAD)
+    _tube(lab, BIF, (23, 10, 20), 2.0, LCX)
     if ramus:  # between LAD and LCx in the anterior direction, leaving at the bifurcation
-        _tube(lab, BIF, (4, 42, 30), 1.8, LCX)
+        _tube(lab, BIF, (24, 43, 25), 1.8, LCX)
     if right:
         _tube(lab, (55, 40, 65), (65, 50, 10), 2.5, RCA)
     return lab
@@ -62,9 +64,10 @@ def test_names_the_four_classes(truth, named):
 def test_decisions_sit_at_the_ostium_and_the_carina(named):
     d = named.decisions
     assert d.failure is None and not d.fused_trees and d.n_ramus == 0
-    assert np.linalg.norm(np.subtract(d.ostium_vox, OSTIUM)) <= 3
+    # the ostium is where the LM ends on the surface: 3 mm (its radius) beyond the tube's axis end
+    assert np.linalg.norm(np.subtract(d.ostium_vox, OSTIUM)) <= 4
     assert np.linalg.norm(np.subtract(d.lm_end_vox, BIF)) <= 3
-    assert 5 < d.lm_length_mm < 15
+    assert 10 < d.lm_length_mm < 18
     assert d.left_component != d.right_component
 
 
@@ -104,6 +107,46 @@ def test_ramus_switch():
     assert not out["LCx"].ramus_candidates[lab == RCA].any()
     with pytest.raises(ValueError):
         namer.name_tree(lab > 0, RAS, ramus="ramus")
+
+
+def test_a_short_thick_left_main_is_not_pruned_as_a_spur():
+    # a skimage skeleton ends ~ one radius inside the ostium: a 4.5 mm LM leaves a stub shorter
+    # than the spur threshold at the bifurcation; pruning it would leave no bifurcation at all
+    lab = _tree(ostium=(21, 40, 59))
+    out = namer.name_tree(lab > 0, RAS)
+    assert out.decisions.failure is None
+    assert np.linalg.norm(np.subtract(out.decisions.lm_end_vox, BIF)) <= 3
+    for k in (LM, LAD, LCX):
+        assert _dice(lab, out.labels, k) > 0.85, namer.CLASS_NAMES[k]
+
+
+@pytest.mark.parametrize("ramus", [False, True])
+def test_skeleton_matches_kimimaro_teasar(ramus):
+    # the frozen experiment skeletonised with kimimaro (TEASAR); the port re-implements it in scipy
+    kimimaro = pytest.importorskip("kimimaro")
+    from scipy.spatial import cKDTree
+
+    mask = _tree(ramus=ramus) > 0
+    sp = np.array([0.4, 0.4, 0.5])
+    ours = namer._Skel(mask, sp)
+    comp, _ = ndimage.label(mask, structure=np.ones((3, 3, 3)))
+    ref = kimimaro.skeletonize(
+        comp.astype(np.uint32),
+        teasar_params={"scale": 1.5, "const": 2, "pdrf_scale": 100000, "pdrf_exponent": 4},
+        anisotropy=tuple(sp),
+        dust_threshold=100,
+        fix_branching=True,
+        progress=False,
+        parallel=1,
+    )
+    kv = np.concatenate([s.vertices for s in ref.values()])
+    kdeg = np.concatenate(
+        [np.bincount(s.edges.ravel(), minlength=len(s.vertices)) for s in ref.values()]
+    )
+    deg = np.array([len(ours.adj[i]) for i in range(len(ours.V))])
+    assert abs(len(ours.V) - len(kv)) <= 0.02 * len(kv)
+    assert (deg == 1).sum() == (kdeg == 1).sum() and (deg >= 3).sum() == (kdeg >= 3).sum()
+    assert np.percentile(cKDTree(kv).query(ours.P)[0], 95) <= 0.5
 
 
 def test_naming_bridge_carries_the_name_across_a_gap(truth, named):

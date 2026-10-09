@@ -57,9 +57,16 @@ master plan's two-reads machinery. This module is what processes the team's firs
 - **Inter-read tF1** is the mean of A-vs-B and B-vs-A per class (Atlas v3 §3), because tF1 is asymmetric.
 - **Calibre "nearer ImageCAS-X than the mask"** needs an ImageCAS-X lumen. Without one, only the Dice test runs.
   This matters for the ~200 quality-0 cases.
-- **"Bridge's decision-vs-diffuse attribution"** (A12) belongs to `segtrain.namer` (Bridge's module). The report
-  leaves room for it but does not call it, to avoid a cross-owner dependency. The orchestrator should add one line
-  when wiring the CLI.
+- **Bridge's decision-vs-diffuse attribution (A12), now wired** as `naming_attribution(read_a, read_b, affine)`.
+  - It uses `segtrain.namer.compare` for the name-conflict voxels and the wholesale flags, and
+    `namer.name_tree(union)` for the ramus candidates (the D1b exemption).
+  - A conflict voxel counts as a *decision* if it lies within 10 mm of either read's LM end, or in a conflict blob
+    of ≥ 20 mm³ (a whole branch named differently). Everything else is *diffuse*. The 20 mm³ cut is my choice: a
+    2 mm vessel about 6 mm long.
+  - The report adds a per-case `naming_attribution`, and a wave-level `naming_decision_share`, judged against
+    Bridge's ≥ 0.8.
+  - The namer's wholesale flags (ostium, LM, swap, tree; ramus-exempt) are OR-ed into the third-read trigger.
+  - `use_namer=False` skips the namer.
 - **The LM gate in A10.** `acceptance` reports per-class results and an all-classes `accepted`. The ruling allows the
   LM to be reported rather than gated if its CI is too wide at n = 100. That call is left to the caller, with
   `classes=`.
@@ -73,6 +80,6 @@ It calls `load_read_folder` → `first_reads_report(cases, scorer=default_scorer
 
 ## Status
 
-- `tests/test_reads.py`: 23 passed. ruff is clean on both files.
+- `tests/test_reads.py`: 26 passed (3 attribution tests added). ruff is clean on both files.
 - Full suite: 613 passed, 45 skipped, and 1 failure in `tests/test_plans_coronary.py`. That file belongs to Atlas
   (trainer, in progress) and is not touched by this module.

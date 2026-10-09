@@ -588,6 +588,68 @@ def truncation_radius(
     return float(np.median(rad[stop])) if stop.any() else None
 
 
+# ----------------------------------------------------------------------------- A12 attribution
+DECISION_BRANCH_MM3 = 20.0  # a disagreement blob this large is a whole branch named differently
+
+
+def naming_attribution(
+    read_a: np.ndarray,
+    read_b: np.ndarray,
+    affine,
+    *,
+    carina_band_mm: float = 10.0,
+    use_namer: bool = True,
+) -> dict:
+    """A12 (Bridge): is the naming disagreement between two reads a few *decisions* or diffuse?
+
+    Uses ``segtrain.namer.compare`` (read A as reference) for the name-conflict voxels and the
+    wholesale flags, and, with ``use_namer``, ``segtrain.namer.name_tree`` on the union of the
+    reads for the ramus candidates (D1b exemption). Each name-conflict voxel is attributed to
+    a decision if it lies within ``carina_band_mm`` of either read's LM end (the LM-end /
+    LAD-LCx split decision) or in a conflict blob of >= 20 mm^3 (a whole branch named
+    differently: a side-branch or tree decision); the rest is diffuse boundary jitter. The
+    pre-registered expectation (Bridge) is a decision share >= 0.8.
+    """
+    from . import namer
+
+    a = np.asarray(read_a)
+    b = np.asarray(read_b)
+    A = namer.as_affine(affine)
+    sp = np.sqrt((np.asarray(A, float)[:3, :3] ** 2).sum(0))
+    ramus = None
+    if use_namer and ((a > 0) | (b > 0)).any():
+        ramus = namer.name_tree((a > 0) | (b > 0), A).ramus_candidates
+    rep = namer.compare(a, b, A, ramus_candidates=ramus)
+    conflict = rep.ignore
+    n = int(conflict.sum())
+    out = {
+        "n_conflict_voxels": n,
+        "flags": list(rep.flags),
+        "wholesale": bool(rep.wholesale),
+        "ramus_only": bool(rep.ramus_only),
+        "tree_swap": bool(rep.tree_swap),
+        "decision_share": None,
+        "carina_share": None,
+        "branch_share": None,
+    }
+    if not n:
+        return out
+    near = np.zeros(conflict.shape, bool)
+    for r in (a, b):
+        _, end = lm_landmarks(r)
+        if end is not None:
+            pts = np.argwhere(conflict)
+            d = np.sqrt((((pts - end) * sp) ** 2).sum(1))
+            near[tuple(pts[d <= carina_band_mm].T)] = True
+    lab, k = ndimage.label(conflict, _S26)
+    vol = np.bincount(lab.ravel()) * float(np.prod(sp))
+    big = np.isin(lab, np.nonzero(vol >= DECISION_BRANCH_MM3)[0]) & (lab > 0)
+    out["carina_share"] = float((near & conflict).sum() / n)
+    out["branch_share"] = float((big & ~near).sum() / n)
+    out["decision_share"] = float(((near | big) & conflict).sum() / n)
+    return out
+
+
 # ----------------------------------------------------------------------------- A12 report
 @dataclass
 class CaseReads:
@@ -596,6 +658,7 @@ class CaseReads:
     spacing: tuple
     mask: Optional[np.ndarray] = None
     icx4: Optional[np.ndarray] = None
+    affine: Optional[np.ndarray] = None  # NIfTI affine of the reads (left/right for the namer)
 
 
 def load_read_folder(
@@ -619,11 +682,12 @@ def load_read_folder(
         files = sorted(f for f in os.listdir(cdir) if f.endswith((".nii.gz", ".nii")))
         if not files:
             continue
-        reads, spacing = {}, None
+        reads, spacing, affine = {}, None, None
         for f in files:
             img = nib.load(os.path.join(cdir, f))
             reads[f.split(".nii")[0]] = np.asarray(img.dataobj).astype(np.uint8)
             spacing = tuple(float(z) for z in img.header.get_zooms()[:3])
+            affine = np.asarray(img.affine, float)
         mask = icx = None
         if mask_dir:
             for cand in (
@@ -637,7 +701,7 @@ def load_read_folder(
             p = os.path.join(icx_dir, f"{int(case[1:]) + 1}.coronary.nii.gz")
             if os.path.exists(p):
                 icx = icx_to_territory(np.asarray(nib.load(p).dataobj))
-        out.append(CaseReads(case, reads, spacing, mask, icx))
+        out.append(CaseReads(case, reads, spacing, mask, icx, affine))
     return out
 
 
@@ -646,13 +710,16 @@ def first_reads_report(
     scorer: Optional[Scorer] = None,
     previous_bias_flag: bool = False,
     carina_band_mm: float = 10.0,
+    use_namer: bool = True,
 ) -> dict:
     """A12: the single wave-1 report on the first double-read cases.
 
     Per case (first two reads; a third read, if present, is only counted): A3 convention
     check per read; inter-read tF1 per class; A11 targets' ``ignore`` fraction and the
     share of it within ``carina_band_mm`` of the carina; components of A&B vs each read;
-    third-read triggers; LM-end distance between reads and truncation radius per read
+    third-read triggers (ours plus the namer's wholesale flags); naming-disagreement
+    attribution (decision vs diffuse, ``naming_attribution``); LM-end distance between reads
+    and truncation radius per read
     (the noise-model refit inputs); A12b anchor offset per read. Wave level: A3 halt,
     adjudication rate, noise-model refit summary, A12a habits (anchor offset and
     truncation radius per annotator), A12b team bias. Returns a JSON-able dict; render it
@@ -690,6 +757,17 @@ def first_reads_report(
                 names[1]: int(ndimage.label(b > 0, _S26)[1]),
             }
             tr = third_read_triggers(a, b, cr.spacing, scorer)
+            if use_namer:
+                att = naming_attribution(
+                    a,
+                    b,
+                    cr.affine if cr.affine is not None else cr.spacing,
+                    carina_band_mm=carina_band_mm,
+                )
+                row["naming_attribution"] = att
+                if att["wholesale"] and not tr.needed:  # Bridge's decision triggers (A11)
+                    tr.needed = True
+                    tr.reasons.append("namer: " + ",".join(att["flags"]))
             row["third_read"] = asdict(tr)
             if scorer is not None:
                 row["inter_read_tf1"] = inter_read_tf1(a, b, cr.spacing, scorer)
@@ -749,6 +827,9 @@ def first_reads_report(
             "truncation_radius_mm": _stats([t for v in per_annot_trunc.values() for t in v]),
             "lad_lcx_swap": _stats([r["third_read"]["lad_lcx_swap"] for r in pairs]),
         },
+        "naming_decision_share": _stats(
+            [r["naming_attribution"]["decision_share"] for r in pairs if "naming_attribution" in r]
+        ),
         "a12a_habits_carina": habit_test(per_annot_offset) if per_annot_offset else None,
         "a12a_habits_truncation": habit_test(per_annot_trunc, threshold=0.1)
         if per_annot_trunc
@@ -787,6 +868,8 @@ def report_markdown(report: Mapping) -> str:
         "",
         f"- ignore fraction of vessel voxels: {w['ignore_fraction']}",
         f"- share of ignore voxels within 10 mm of the carina: {w['ignore_within_carina_band']}",
+        "- naming disagreement attributable to decisions (Bridge; expect >= 0.8): "
+        f"{w.get('naming_decision_share')}",
         "",
         "## Noise-model refit inputs",
         "",

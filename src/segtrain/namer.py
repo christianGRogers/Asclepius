@@ -9,7 +9,8 @@ connectivity. The rules make those choices once for the whole tree, so every cla
 sub-tree by construction. Measured by the experiment copy (`experiments/Bridge/label.py`, TEASAR
 skeletons from kimimaro): 88.2 % of 76 held-out thick-mask cases fully right (all four classes Dice
 >= 0.8) against ImageCAS-X names under D1b; on real stage-1 output within 0.010 tree-F1 of perfect
-naming. This port uses scikit-image skeletons; it is re-validated against that run in the vault note
+naming. kimimaro is not a pipeline dependency, so TEASAR is re-implemented here with scipy
+(`_teasar`); the port is validated against the experiment's run in the vault note
 "Bridge - Implementation of namer".
 
 API
@@ -22,7 +23,7 @@ API
 
 Everything is in the input voxel grid. The affine supplies spacing and patient directions (nibabel
 RAS+: the left tree has the more negative world x, anterior is +y, superior is +z).
-Dependencies: numpy, scipy, scikit-image (skeletonisation, imported lazily).
+Dependencies: numpy, scipy.
 """
 
 from __future__ import annotations
@@ -34,7 +35,7 @@ from typing import Dict, List, Optional
 import numpy as np
 from scipy import ndimage
 from scipy.sparse import coo_matrix
-from scipy.sparse.csgraph import minimum_spanning_tree
+from scipy.sparse.csgraph import dijkstra
 from scipy.spatial import cKDTree
 
 LM, LAD, LCX, RCA = 1, 2, 3, 4
@@ -64,7 +65,8 @@ ICX_TO_4 = {
     14: 0,
 }
 
-# ---- frozen parameters (experiments/Bridge/label.py, md5 06f53291..., Round 3) ----------------
+# ---- frozen parameters (experiments/Bridge/label.py, md5 06f53291..., Round 3; skeleton parameters
+# from experiments/Bridge/extract.py) -------------------------------------------------------------
 MIN_COMPONENT_VOXELS = 100  # smaller components get no skeleton; they take the nearest named class
 TREE_MIN_MM = 30.0  # skeleton length for a component to count as a tree
 MAJOR_MIN_MM = 20.0  # downstream skeleton for a child to count as a major branch
@@ -73,15 +75,12 @@ RAMUS_WINDOW_MM = 6.0  # a ramus leaves the LAD/LCx within this distance of the 
 RAMUS_MIN_MM = 20.0
 RAMUS_CANDIDATE_WINDOW_MM = 10.0  # looser region used only for the A11 ramus exemption
 FUSED_TREE_MM = 800.0  # one tree this long = left and right trees fused (flag)
-SPUR_SCALE, SPUR_CONST_MM = (
-    1.5,
-    2.0,
-)  # spur pruning ~ TEASAR's invalidation sphere (scale 1.5, const 2 mm)
+TEASAR_SCALE, TEASAR_CONST_MM = 1.5, 2.0  # kimimaro invalidation ball: 1.5 r + 2 mm
+PDRF_SCALE, PDRF_EXPONENT = 1e5, 4
 N_RERANK = 5
 
 # learned ostium score (logistic regression on endpoint features, fit on 79 development cases;
-# vault note "Finding the left ostium is the crux of naming"). Standardised features are
-# clipped to +-5.
+# vault note "Finding the left ostium is the crux of naming"); weights from ostium_w_dev2.json.
 _OST_F = ["r6", "r3", "rmax6", "h", "sl", "beyond", "dR", "r6_rk", "r3_rk", "h_rk", "dR_rk"]
 _OST_MEAN = np.array(
     [
@@ -180,121 +179,221 @@ def _spacing(affine):
     return np.sqrt((np.asarray(affine, float)[:3, :3] ** 2).sum(0))
 
 
+_OFFSETS = np.array(
+    [
+        (1, 0, 0),
+        (0, 1, 0),
+        (0, 0, 1),
+        (1, 1, 0),
+        (1, -1, 0),
+        (1, 0, 1),
+        (1, 0, -1),
+        (0, 1, 1),
+        (0, 1, -1),
+        (1, 1, 1),
+        (1, 1, -1),
+        (1, -1, 1),
+        (1, -1, -1),
+    ]
+)  # half of the 26-neighbourhood
+
+
+def _voxel_graph(vox: np.ndarray, shape) -> tuple:
+    """26-neighbour pairs (a, b) between the given voxels (each pair once)"""
+    idx = -np.ones(shape, np.int64)
+    idx[tuple(vox.T)] = np.arange(len(vox))
+    rows, cols = [], []
+    for off in _OFFSETS:
+        q = vox + off
+        ok = np.all((q >= 0) & (q < np.array(shape)), axis=1)
+        j = np.full(len(vox), -1)
+        j[ok] = idx[tuple(q[ok].T)]
+        m = j >= 0
+        rows.append(np.nonzero(m)[0])
+        cols.append(j[m])
+    return np.concatenate(rows), np.concatenate(cols)
+
+
+def _border_targets(comp: np.ndarray, sp) -> Dict[int, list]:
+    """kimimaro's fix_borders: where a component meets a face of the volume, one target per 2-D
+    contact patch, at the patch's deepest point (2-D distance transform). Same insertion order as
+    kimimaro, so the set order (which picks the root) matches CPython's."""
+    sx, sy, sz = comp.shape
+    planes = (
+        (comp[:, :, 0], (0, 1), lambda x, y: (x, y, 0)),
+        (comp[:, :, -1], (0, 1), lambda x, y: (x, y, sz - 1)),
+        (comp[:, 0, :], (0, 2), lambda x, z: (x, 0, z)),
+        (comp[:, -1, :], (0, 2), lambda x, z: (x, sy - 1, z)),
+        (comp[0, :, :], (1, 2), lambda y, z: (0, y, z)),
+        (comp[-1, :, :], (1, 2), lambda y, z: (sx - 1, y, z)),
+    )
+    out: Dict[int, set] = {}
+    for plane, dims, fn in planes:
+        lab, n = ndimage.label(plane > 0, structure=np.ones((3, 3), bool))
+        if not n:
+            continue
+        dt = ndimage.distance_transform_edt(
+            np.pad(lab > 0, 1), sampling=(sp[dims[0]], sp[dims[1]])
+        )[1:-1, 1:-1]
+        for j, sl in enumerate(ndimage.find_objects(lab), start=1):
+            pts = np.argwhere(lab[sl] == j) + np.array([s.start for s in sl])
+            p = pts[int(np.argmax(dt[tuple(pts.T)]))]
+            out.setdefault(int(plane[tuple(p)]), set()).add(fn(int(p[0]), int(p[1])))
+    return {k: list(v) for k, v in out.items()}
+
+
+def _teasar(vox: np.ndarray, dbf: np.ndarray, shape, sp, border=()) -> tuple:
+    """TEASAR skeleton of one connected component, as kimimaro traces it for the experiment
+    (scale TEASAR_SCALE, const TEASAR_CONST_MM, pdrf_scale 1e5, pdrf_exponent 4, fix_branching).
+
+    vox: the component's voxels (n x 3), dbf: their distance to the boundary (mm).
+    Root: the voxel geodesically farthest from the first voxel in Fortran order. DAF: geodesic
+    distance from the root. PDRF = 1e5 (1 - DBF / max(DBF)^1.01)^4 + DAF / max(DAF). Each path runs
+    from the valid voxel of largest DAF along the cheapest PDRF route to the skeleton so far (the
+    "railroad": path voxels cost nothing), then every voxel within scale * DBF + const of a path
+    voxel is invalidated, until none is valid. Returns (vertex indices into vox, edges (m x 2)).
+    """
+
+    n = len(vox)
+    if n == 1:
+        return np.zeros(1, np.int64), np.zeros((0, 2), np.int64)
+    a, b = _voxel_graph(vox, shape)
+    w = np.linalg.norm((vox[a] - vox[b]) * sp, axis=1)
+    geo = coo_matrix((np.r_[w, w], (np.r_[a, b], np.r_[b, a])), shape=(n, n)).tocsr()
+    manual = list(border)  # vox indices of border targets (kimimaro fix_borders)
+    if manual:
+        root = manual.pop()
+    else:
+        first = int(np.lexsort((vox[:, 0], vox[:, 1], vox[:, 2]))[0])  # Fortran order
+        d0 = dijkstra(geo, indices=first)
+        root = int(np.argmax(np.where(np.isfinite(d0), d0, -1)))
+    daf = dijkstra(geo, indices=root)
+    daf = np.where(np.isfinite(daf), daf, 0.0)
+    pdrf = PDRF_SCALE * (1 - dbf / dbf.max() ** 1.01) ** PDRF_EXPONENT
+    if daf.max() > 0:
+        pdrf = pdrf + daf / daf.max()
+    # directed: entering voxel v costs pdrf[v]; rails are made free sinks as they are laid
+    src, dst = np.r_[a, b], np.r_[b, a]
+    order = np.lexsort((dst, src))
+    src, dst = src[order], dst[order]
+    cost = coo_matrix((pdrf[dst] + 1e-6, (src, dst)), shape=(n, n)).tocsr()
+    cost.sort_indices()
+    into = np.argsort(cost.indices, kind="stable")  # data positions grouped by destination
+    into_ptr = np.searchsorted(cost.indices[into], np.arange(n + 1))
+    rail = np.zeros(n, bool)
+
+    def lay(vs):
+        for v in vs:
+            rail[v] = True
+            cost.data[cost.indptr[v] : cost.indptr[v + 1]] = np.inf  # a rail is a sink
+            cost.data[into[into_ptr[v] : into_ptr[v + 1]]] = 1e-6  # and free to enter
+
+    lay([root])
+    valid = np.zeros(shape, bool)  # kimimaro's "labels": voxels not yet invalidated
+    valid[tuple(vox.T)] = True
+    by_daf = np.argsort(-daf, kind="stable")
+    ptr = 0
+    verts, edges = {root}, []
+    st = np.ones((3, 3, 3), bool)
+    shp = np.array(shape)
+    while True:
+        if manual:
+            target = manual.pop()
+            if rail[target]:
+                continue
+        else:
+            while ptr < n and not valid[tuple(vox[by_daf[ptr]])]:
+                ptr += 1
+            if ptr >= n:
+                break
+            target = int(by_daf[ptr])
+            if rail[target]:
+                valid[tuple(vox[target])] = False
+                continue
+        limit = max(float(pdrf[target]), 1.0) * 64
+        while True:  # Dijkstra with a growing horizon until a rail is reached
+            dist, pred = dijkstra(cost, indices=target, limit=limit, return_predecessors=True)
+            hit = np.nonzero(rail & np.isfinite(dist))[0]
+            if len(hit) or np.isfinite(dist).sum() == n:
+                break
+            limit *= 8
+        if not len(hit):
+            break
+        end = int(hit[np.argmin(dist[hit])])
+        path = [end]
+        while path[-1] != target:
+            path.append(int(pred[path[-1]]))
+        path = path[::-1]  # target -> rail
+        edges.extend(zip(path[:-1], path[1:]))
+        verts.update(path)
+        lay(path[:-1])
+        # invalidation, as kimimaro's roll_invalidation_ball_inside_component: from each path
+        # voxel that is still valid, the still-valid voxels 26-connected to it inside its ball
+        # (radius scale * DBF + const); all against the state before this path
+        before = valid.copy()
+        for v in path:
+            c = vox[v]
+            if not before[tuple(c)]:
+                continue
+            r = TEASAR_SCALE * dbf[v] + TEASAR_CONST_MM
+            h = np.floor(r / sp).astype(int)
+            lo, hi = np.maximum(c - h, 0), np.minimum(c + h + 1, shp)
+            box = tuple(slice(a, b) for a, b in zip(lo, hi))
+            g = np.ogrid[box]
+            ball = sum(((gi - ci) * si) ** 2 for gi, ci, si in zip(g, c, sp)) <= r * r
+            lab, _ = ndimage.label(before[box] & ball, structure=st)
+            valid[box][lab == lab[tuple(c - lo)]] = False
+    return np.array(sorted(verts), np.int64), np.array(edges, np.int64).reshape(-1, 2)
+
+
 class _Skel:
-    """Skeleton graph of a vessel mask: vertices (voxel coords), radius (mm), edges, per-vertex
-    component,
-    and for every mask voxel the vertex that owns it."""
+    """Skeleton graph of a vessel mask (TEASAR per connected component, `_teasar`): vertices
+    (voxel coords), radius (mm), tree adjacency, per-vertex component, and for every mask voxel
+    the vertex that owns it (nearest vertex of the same component)."""
 
     def __init__(self, mask: np.ndarray, sp: np.ndarray):
-        from skimage.morphology import skeletonize  # lazy: only the namer needs scikit-image
-
         self.sp = sp
-        st = np.ones((3, 3, 3), bool)
-        comp, n = ndimage.label(mask, structure=st)
+        comp, n = ndimage.label(mask, structure=np.ones((3, 3, 3), bool))
         sizes = np.bincount(comp.ravel(), minlength=n + 1)
         big = np.zeros(n + 1, bool)
-        big[1:] = sizes[1:] >= MIN_COMPONENT_VOXELS
-        keep = big[comp]
-        sk = skeletonize(keep.astype(np.uint8)).astype(bool) if keep.any() else np.zeros_like(keep)
-        # a component whose skeleton vanished (tiny blob) gets one vertex at its deepest voxel
+        big[1:] = sizes[1:] > MIN_COMPONENT_VOXELS  # kimimaro's dust threshold
         edt = ndimage.distance_transform_edt(mask, sampling=sp)
-        have = np.zeros(n + 1, bool)
-        have[np.unique(comp[sk])] = True
-        for k in np.nonzero(big & ~have)[0]:
-            cv = np.argwhere(comp == k)
-            sk[tuple(cv[np.argmax(edt[tuple(cv.T)])])] = True
-        V = np.argwhere(sk)
-        self.V = V
-        self.R = edt[tuple(V.T)] if len(V) else np.zeros(0)
-        self.P = V * sp
-        self.cid = comp[tuple(V.T)] if len(V) else np.zeros(0, int)
-        # 26-neighbour edges between skeleton voxels
-        idx = -np.ones(mask.shape, np.int64)
-        idx[tuple(V.T)] = np.arange(len(V))
-        rows, cols = [], []
-        for off in [
-            (1, 0, 0),
-            (0, 1, 0),
-            (0, 0, 1),
-            (1, 1, 0),
-            (1, -1, 0),
-            (1, 0, 1),
-            (1, 0, -1),
-            (0, 1, 1),
-            (0, 1, -1),
-            (1, 1, 1),
-            (1, 1, -1),
-            (1, -1, 1),
-            (1, -1, -1),
-        ]:
-            q = V + np.array(off)
-            ok = np.all((q >= 0) & (q < np.array(mask.shape)), axis=1)
-            j = np.full(len(V), -1)
-            j[ok] = idx[tuple(q[ok].T)]
-            m = j >= 0
-            rows.append(np.nonzero(m)[0])
-            cols.append(j[m])
-        r = np.concatenate(rows) if rows else np.zeros(0, int)
-        c = np.concatenate(cols) if cols else np.zeros(0, int)
-        w = np.linalg.norm(self.P[r] - self.P[c], axis=1) if len(r) else np.zeros(0)
-        self.adj = self._tree_adjacency(len(V), r, c, w)
-        self._prune_spurs()
-        # owners: every mask voxel -> nearest kept vertex of its own component
+        Vs, Es, cids, off = [], [], [], 0
+        objs = ndimage.find_objects(comp)
+        borders = _border_targets(comp, sp)
+        for k in np.nonzero(big)[0]:
+            sl = objs[k - 1]
+            lo = np.array([s.start for s in sl])
+            sub = comp[sl] == k
+            vox = np.argwhere(sub)
+            at = -np.ones(sub.shape, np.int64)
+            at[tuple(vox.T)] = np.arange(len(vox))
+            bt = [int(at[tuple(np.array(p) - lo)]) for p in borders.get(int(k), [])]
+            vi, e = _teasar(vox, edt[sl][sub], sub.shape, sp, bt)
+            remap = -np.ones(len(vox), np.int64)
+            remap[vi] = np.arange(len(vi)) + off
+            Vs.append(vox[vi] + lo)
+            Es.append(remap[e] if len(e) else np.zeros((0, 2), np.int64))
+            cids.append(np.full(len(vi), k))
+            off += len(vi)
+        self.V = np.concatenate(Vs) if Vs else np.zeros((0, 3), np.int64)
+        E = np.concatenate(Es) if Es else np.zeros((0, 2), np.int64)
+        self.cid = np.concatenate(cids) if cids else np.zeros(0, np.int64)
+        self.R = edt[tuple(self.V.T)] if len(self.V) else np.zeros(0)
+        self.P = self.V * sp
+        self.adj: Dict[int, Dict[int, float]] = {i: {} for i in range(len(self.V))}
+        for u, v in E.tolist():
+            x = float(np.linalg.norm(self.P[u] - self.P[v]))
+            self.adj[u][v] = x
+            self.adj[v][u] = x
         self.comp = comp
         self.owner = -np.ones(mask.shape, np.int64)
-        alive = np.array(sorted(self.adj), int)
-        for k in np.unique(self.cid[alive]) if len(alive) else []:
-            vs = alive[self.cid[alive] == k]
+        for k in np.unique(self.cid):
+            vs = np.nonzero(self.cid == k)[0]
             vox = np.argwhere(comp == k)
             _, j = cKDTree(self.P[vs]).query(vox * sp)
             self.owner[tuple(vox.T)] = vs[j]
-        self.orphans = [k for k in range(1, n + 1) if sizes[k] > 0 and not (big[k])]
-
-    @staticmethod
-    def _tree_adjacency(nv, r, c, w) -> Dict[int, Dict[int, float]]:
-        """minimum spanning forest of the 26-neighbour graph (skeletons have small cycles at
-        junction blobs)"""
-        adj: Dict[int, Dict[int, float]] = {i: {} for i in range(nv)}
-        if nv == 0 or len(r) == 0:
-            return adj
-        g = coo_matrix((w + 1e-9, (r, c)), shape=(nv, nv)).tocsr()
-        t = minimum_spanning_tree(g).tocoo()
-        for a, b, x in zip(t.row, t.col, t.data):
-            adj[int(a)][int(b)] = float(x)
-            adj[int(b)][int(a)] = float(x)
-        return adj
-
-    def _prune_spurs(self, passes: int = 2):
-        """drop terminal twigs that do not leave TEASAR's invalidation sphere at their junction
-        (radius 1.5 r + 2 mm): skimage boundary noise, which TEASAR (the experiment's skeletoniser)
-        never traces. A twig's reach is its length plus its tip radius, because a skimage skeleton
-        ends about one radius short of a vessel's cut end; on length alone a short left main
-        (whose cut end is the ostium) would be pruned away."""
-        adj = self.adj
-        for _ in range(passes):
-            removed = False
-            for e in [n for n, nb in adj.items() if len(nb) == 1]:
-                if e not in adj or len(adj[e]) != 1:
-                    continue
-                path, prev, cur, acc = [e], None, e, 0.0
-                while True:
-                    nxt = [x for x in adj[cur] if x != prev]
-                    if len(nxt) != 1:
-                        break
-                    acc += adj[cur][nxt[0]]
-                    prev, cur = cur, nxt[0]
-                    if len(adj[cur]) != 2:
-                        break
-                    path.append(cur)
-                reach = acc + self.R[e]
-                if len(adj.get(cur, {})) >= 3 and reach < SPUR_SCALE * self.R[cur] + SPUR_CONST_MM:
-                    for p in path:
-                        for q in list(adj[p]):
-                            adj[q].pop(p, None)
-                        adj.pop(p, None)
-                    removed = True
-            if not removed:
-                break
+        self.orphans = [k for k in range(1, n + 1) if sizes[k] > 0 and not big[k]]
 
     def components(self) -> Dict[int, List[int]]:
         out: Dict[int, List[int]] = {}
@@ -429,7 +528,7 @@ def _endpoint_features(sk: _Skel, nodes, shape, other_P=None):
 def _ostium_score(f) -> float:
     if f["edge"]:
         return -1e9
-    x = np.clip((np.array([f[k] for k in _OST_F]) - _OST_MEAN) / _OST_SCALE, -5, 5)
+    x = (np.array([f[k] for k in _OST_F]) - _OST_MEAN) / _OST_SCALE
     return float(x @ _OST_COEF)
 
 
@@ -442,9 +541,8 @@ def _label_left(sk: _Skel, nodes, root, A, ramus):
     R3 = A[:3, :3] / sp  # physical displacement -> RAS displacement
     lab = {n: LM for n in t.order}
     cur, best = root, None
-    while (
-        t.dist[cur] <= BIF_WINDOW_MM
-    ):  # 'apsplit': big second branch, one child anterior one posterior
+    # 'apsplit': big second branch, one child anterior one posterior
+    while t.dist[cur] <= BIF_WINDOW_MM:
         ch = sorted(t.children[cur], key=lambda c: -t.L[c])
         if not ch:
             break
@@ -459,7 +557,8 @@ def _label_left(sk: _Skel, nodes, root, A, ramus):
                 best = (sc, cur)
         cur = ch[0]
     bif = best[1] if best else None
-    info = dict(bif=bif, lm_len=float(t.dist[bif]) if bif is not None else None, ramus=[])
+    lm_len = float(t.dist[bif]) if bif is not None else None
+    info = dict(bif=bif, lm_len=lm_len, ramus=[])
     if bif is None:
         for n in t.order:
             lab[n] = LAD
@@ -546,11 +645,9 @@ def _plausibility_penalty(sk, inf, e, A):
 
 
 def _bridge(comps: Dict[int, List[int]], sk: _Skel, thr: float):
-    """naming bridges: join a component to its nearest neighbour when the gap at one of its
-    endpoints is <= thr mm (graph only -- no voxel is added or removed; the joins are returned for
-    the A2/A7 audit). The gap is measured surface to surface: a scikit-image skeleton ends about one
-    radius inside a cut vessel, whereas TEASAR's (the experiment's) reach the surface, so the
-    endpoint's radius is subtracted, and the target's too when the target is itself an endpoint."""
+    """naming bridges: join a component to its nearest neighbour when one of its endpoints lies
+    within thr mm of any vertex of it (graph only -- no voxel is added or removed; the joins are
+    returned for the A2/A7 audit)."""
     comps = {k: list(v) for k, v in comps.items()}
     joins = []
     changed = True
@@ -558,28 +655,23 @@ def _bridge(comps: Dict[int, List[int]], sk: _Skel, thr: float):
         changed = False
         for k in sorted(comps, key=lambda k: len(comps[k])):
             ends = [n for n in comps[k] if len(sk.adj[n]) <= 1]
-            if not ends:
-                continue
             others = [j for j in comps if j != k]
             on = np.concatenate([np.array(comps[j]) for j in others])
             oc = np.concatenate([np.full(len(comps[j]), j) for j in others])
             dd, jj = cKDTree(sk.P[on]).query(sk.P[ends])
-            tgt = on[jj]
-            tip = np.array([len(sk.adj[int(t)]) <= 1 for t in tgt])
-            gap = np.maximum(dd - sk.R[ends] - np.where(tip, sk.R[tgt], 0.0), 0.0)
-            i = int(np.argmin(gap))
-            if gap[i] <= thr:
-                a, b, j = ends[i], int(tgt[i]), int(oc[jj[i]])
-                sk.adj[a][b] = float(dd[i])
-                sk.adj[b][a] = float(dd[i])
+            i = int(np.argmin(dd))
+            if dd[i] <= thr:
+                a, b, j = ends[i], int(on[jj[i]]), int(oc[jj[i]])
+                w = float(np.linalg.norm(sk.P[a] - sk.P[b]))
+                sk.adj[a][b] = w
+                sk.adj[b][a] = w
                 comps[j] = comps[j] + comps[k]
                 del comps[k]
                 joins.append(
                     dict(
                         from_vox=tuple(int(x) for x in sk.V[a]),
                         to_vox=tuple(int(x) for x in sk.V[b]),
-                        gap_mm=float(gap[i]),
-                        centreline_mm=float(dd[i]),
+                        gap_mm=float(dd[i]),
                     )
                 )
                 changed = True

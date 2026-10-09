@@ -20,6 +20,8 @@ dependencies = [
     "nibabel>=4.0",
     "PyYAML>=6.0",
     "scipy>=1.7",
+    # tf1 skeletonises centrelines (segtrain.tf1, segtrain.reads).
+    "scikit-image>=0.19",
 ]
 
 [project.optional-dependencies]

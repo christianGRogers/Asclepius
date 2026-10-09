@@ -252,6 +252,7 @@ def test_first_reads_report_on_a_folder(tmp_path, tree):
     cases = R.load_read_folder(str(reads), mask_dir=str(masks), icx_dir=str(icx))
     assert [c.case for c in cases] == ["c0000", "c0001", "c0002"]
     rep = R.first_reads_report(cases, scorer=dice_scorer)
+    assert "naming_attribution" in rep["cases"][0]
     w = rep["wave"]
     assert w["n_cases"] == 3 and w["a3_reads_checked"] == 6 and not w["a3_halt"]
     assert w["adjudication_rate"] == 0.0
@@ -274,3 +275,33 @@ def test_default_scorer_uses_segtrain_tf1():
     cut[:, :30, 30:33] = 0  # cut LAD and LCx below the carina (the RCA, at y = 40, is untouched)
     res = R.score_vs_reads(cut, [tree, tree], sp)
     assert res["per_class"][R.LAD] < 0.9 and res["per_class"][R.RCA] == pytest.approx(1.0)
+
+
+# ----------------------------------------------------------------------------- A12 attribution
+def test_naming_attribution_carina_shift_is_a_decision(tree):
+    pytest.importorskip("segtrain.namer")
+    att = R.naming_attribution(tree, shift_carina(tree, 2.0), SP, use_namer=False)
+    assert att["n_conflict_voxels"] > 0
+    assert att["decision_share"] == pytest.approx(1.0)
+    assert not att["wholesale"]
+
+
+def test_naming_attribution_flags_a_swap(tree):
+    pytest.importorskip("segtrain.namer")
+    b = tree.copy()
+    b[tree == R.LAD], b[tree == R.LCX] = R.LCX, R.LAD
+    att = R.naming_attribution(tree, b, SP, use_namer=False)
+    assert att["wholesale"] and "swap" in att["flags"]
+    assert att["decision_share"] > 0.9
+
+
+def test_naming_attribution_scattered_jitter_is_diffuse(tree):
+    pytest.importorskip("segtrain.namer")
+    rng = np.random.default_rng(0)
+    b = tree.copy()
+    far = (tree == R.LAD) & (np.arange(tree.shape[2])[None, None, :] < 16)
+    idx = np.argwhere(far)
+    pick = idx[rng.choice(len(idx), 15, replace=False)]
+    b[tuple(pick.T)] = R.LCX  # isolated single-voxel name flips, far from the carina
+    att = R.naming_attribution(tree, b, SP, use_namer=False)
+    assert att["decision_share"] < 0.2

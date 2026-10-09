@@ -202,6 +202,15 @@ def cmd_splits(args) -> int:
     from .splits import load_splits, read_meta, summarize
 
     cfg, task = _load(args)
+    if args.explicit_icx:
+        # R1 (task 712): ImageCAS-X train -> train, val -> val, sealed cases refused (A14).
+        from .plans import write_explicit_splits
+        from .proxy import icx_split, load_sealed
+
+        lists = icx_split(args.explicit_icx)
+        path = write_explicit_splits(cfg, task, lists["train"], lists["val"], sealed=load_sealed())
+        print(f"train {len(lists['train'])}, val {len(lists['val'])}\nwrote {path}")
+        return 0
     cfg.validate(require_data=True)
     rows = read_meta(cfg.meta_csv)
     path = write_splits(cfg, task, scheme=args.scheme, n_folds=args.folds, seed=args.seed)
@@ -1082,6 +1091,118 @@ def cmd_evaluate(args) -> int:
     return 0
 
 
+# --------------------------------------------------------------------------- coronary tools
+#
+# Thin wrappers over the four-class pipeline modules (tf1, namer, proxy, reads). Each loads
+# NIfTI files with nibabel, calls one library function and prints or writes its result; the
+# reasoning lives in the modules and in vault/Plans/.
+
+
+def _nifti(path: Path):
+    import nibabel as nib
+    import numpy as np
+
+    img = nib.load(str(path))
+    return np.asarray(img.dataobj), img
+
+
+def _discover_cases(root: Path) -> dict[str, dict]:
+    """Cases under ``root`` in either supported layout, as ``{case: {"ct": .., "mask": ..}}``.
+
+    Girder export: ``<root>/c0042/ct.nii.gz`` + ``coronary_arteries.nii.gz``. ImageCAS release:
+    ``<root>/43.img.nii.gz`` + ``43.label.nii.gz``, which is tournament case ``c0042``."""
+    root = Path(root)
+    cases: dict[str, dict] = {}
+    for d in sorted(root.iterdir()):
+        ct, mask = d / "ct.nii.gz", d / "coronary_arteries.nii.gz"
+        if d.is_dir() and ct.is_file() and mask.is_file():
+            cases[d.name] = {"ct": ct, "mask": mask}
+    for img in sorted(root.glob("*.img.nii.gz")):
+        n = img.name.split(".", 1)[0]
+        label = root / f"{n}.label.nii.gz"
+        if n.isdigit() and label.is_file():
+            cases[f"c{int(n) - 1:04d}"] = {"ct": img, "mask": label}
+    return cases
+
+
+def cmd_tf1(args) -> int:
+    import json
+
+    from .tf1 import fp_components, tree_f1
+
+    ref, ref_img = _nifti(args.reference)
+    pred, _ = _nifti(args.prediction)
+    spacing = ref_img.header.get_zooms()[:3]
+    aorta = _nifti(args.aorta)[0] > 0 if args.aorta else None
+    ct = _nifti(args.ct)[0] if args.ct else None
+    result = tree_f1(ref, pred, spacing, tol_mm=args.tol, aorta=aorta, ct=ct)
+    row = result.as_row()
+    row["fp_components"] = fp_components(ref, pred)
+    print(json.dumps(row, indent=1, default=str))
+    return 0
+
+
+def cmd_name(args) -> int:
+    import json
+
+    import nibabel as nib
+    import numpy as np
+
+    from .namer import name_tree
+
+    mask, img = _nifti(args.mask)
+    result = name_tree(mask > 0, img.affine, ramus=args.ramus)
+    nib.save(nib.Nifti1Image(result.labels.astype(np.uint8), img.affine), str(args.out))
+    print(f"wrote {args.out}")
+    if args.json:
+        print(json.dumps(result.decisions.__dict__, indent=1, default=str))
+    return 0
+
+
+def cmd_name_qa(args) -> int:
+    import json
+
+    from .namer import disagreement
+
+    label, img = _nifti(args.label)
+    mask, _ = _nifti(args.mask)
+    d = disagreement(label, mask > 0, img.affine, ramus=args.ramus)
+    print(json.dumps({"exclude": bool(d["exclude"]), "ramus_only": bool(d["ramus_only"]),
+                      "ignore_voxels": int(d["ignore"].sum()), "flags": d["flags"],
+                      "reason": d["reason"]}, indent=1, default=str))
+    return 1 if d["exclude"] else 0
+
+
+def cmd_proxy(args) -> int:
+    from .proxy import build_proxy_tree, load_sealed
+
+    cases = _discover_cases(args.cases)
+    if not cases:
+        print(f"no cases found under {args.cases} (expected c0000/ct.nii.gz or 1.img.nii.gz)",
+              file=sys.stderr)
+        return 2
+    records = build_proxy_tree(cases, args.icx, args.root, load_sealed(args.sealed),
+                               subsets=args.subsets, workers=args.workers)
+    print(f"{len(records)} proxy cases written under {args.root} (see proxy_report.json)")
+    return 0
+
+
+def cmd_reads_report(args) -> int:
+    import json
+
+    from .reads import default_scorer, first_reads_report, load_read_folder, report_markdown
+
+    cases = load_read_folder(args.reads, mask_dir=args.masks, icx_dir=args.icx)
+    # Ostia from the cheap rules (provisional, A1); per-case aorta masks are not wired here.
+    scorer = default_scorer() if args.score else None
+    report = first_reads_report(cases, scorer=scorer, previous_bias_flag=args.previous_bias_flag)
+    args.out.mkdir(parents=True, exist_ok=True)
+    (args.out / "report.json").write_text(json.dumps(report, indent=1, default=str))
+    (args.out / "REPORT.md").write_text(report_markdown(report))
+    print(f"{len(cases)} cases; wrote {args.out / 'REPORT.md'} and report.json")
+    return 0
+
+
 # --------------------------------------------------------------------------- main
 
 
@@ -1172,6 +1293,8 @@ def build_parser() -> argparse.ArgumentParser:
 
     s = sub.add_parser("splits", parents=[common, task_opt, split_opt],
                        help="write splits_final.json from meta.csv")
+    s.add_argument("--explicit-icx", type=Path, metavar="ICX_DIR",
+                   help="write ImageCAS-X's own train/val split instead (task 712)")
     s.set_defaults(func=cmd_splits)
 
     s = sub.add_parser("plan", parents=[common, task_opt, split_opt],
@@ -1314,6 +1437,52 @@ def build_parser() -> argparse.ArgumentParser:
     s.add_argument("--nsd-tolerance", type=float, default=1.5)
     s.add_argument("--prefix", default="test")
     s.set_defaults(func=cmd_evaluate)
+
+    # Four-class coronary tools (vault/Plans/Master plan.md). No config needed.
+    s = sub.add_parser("tf1", help="tree-F1 of a 4-class prediction against a reference (A9)")
+    s.add_argument("reference", type=Path, help="4-class reference NIfTI")
+    s.add_argument("prediction", type=Path, help="4-class prediction NIfTI, same grid")
+    s.add_argument("--aorta", type=Path, help="aorta mask for the A1 ostium (else provisional)")
+    s.add_argument("--ct", type=Path, help="CT, for the blood-pool ostium rule")
+    s.add_argument("--tol", type=float, default=1.5, help="gap tolerance in mm (decided: 1.5)")
+    s.set_defaults(func=cmd_tf1)
+
+    s = sub.add_parser("name", help="name a binary coronary tree into LM/LAD/LCx/RCA")
+    s.add_argument("mask", type=Path, help="binary lumen mask NIfTI")
+    s.add_argument("out", type=Path, help="output 4-class NIfTI")
+    s.add_argument("--ramus", default="LCx", help="ramus intermedius class (decided: LCx)")
+    s.add_argument("--json", action="store_true", help="also print the naming decisions")
+    s.set_defaults(func=cmd_name)
+
+    s = sub.add_parser("name-qa", help="check a 4-class label against the rule namer (A4); "
+                                       "exit 1 if the case should be excluded")
+    s.add_argument("label", type=Path, help="4-class label NIfTI")
+    s.add_argument("mask", type=Path, help="the binary mask it was split from")
+    s.add_argument("--ramus", default="LCx")
+    s.set_defaults(func=cmd_name_qa)
+
+    s = sub.add_parser("proxy", help="build the R1 proxy labels (ImageCAS-X names on the "
+                                     "ImageCAS mask) for task 712")
+    s.add_argument("--cases", type=Path, required=True, help="case directory (either layout)")
+    s.add_argument("--icx", type=Path, required=True, help="ImageCAS-X dataset directory")
+    s.add_argument("--root", type=Path, required=True, help="output directory")
+    s.add_argument("--sealed", type=Path,
+                   help="sealed-test JSON (default trillium/sealed_test.json)")
+    s.add_argument("--subsets", nargs="+", default=["train", "val"])
+    s.add_argument("--workers", type=int, default=1)
+    s.set_defaults(func=cmd_proxy)
+
+    s = sub.add_parser("reads-report", help="A12 report on double reads: convention, "
+                                            "inter-read tF1, carina anchor, habits")
+    s.add_argument("reads", type=Path, help="folder of <case>/<annotator>.nii.gz reads")
+    s.add_argument("--masks", type=Path, help="ImageCAS masks (either case layout's mask files)")
+    s.add_argument("--icx", type=Path, help="ImageCAS-X dataset directory (carina anchor)")
+    s.add_argument("--no-score", dest="score", action="store_false",
+                   help="skip tF1 (fast; convention and anchor checks only)")
+    s.add_argument("--previous-bias-flag", action="store_true",
+                   help="the previous wave raised the carina bias flag (confirms it)")
+    s.add_argument("--out", type=Path, required=True, help="output directory")
+    s.set_defaults(func=cmd_reads_report)
 
     return p
 

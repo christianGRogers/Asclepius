@@ -1,0 +1,11 @@
+{
+ "mode": "A13 inference-only on the Atlas run",
+ "plans": "nnUNetResEncUNetPlans_60G_iso05",
+ "atlas_fold_dir": "/scratch/croger/atlas/nnunet_results/Dataset713_AtlasProxy/nnUNetTrainerAtlas__nnUNetResEncUNetPlans_60G_iso05__3d_fullres/fold_0",
+ "softmax": "Atlas validation --npz",
+ "n_val": 80,
+ "epochs_trained": "see Atlas results",
+ "train_hours": "see Atlas results",
+ "n_train": 560,
+ "patch": "see Atlas results"
+}

@@ -1232,10 +1232,13 @@ def cmd_reads_report(args) -> int:
 
     from .reads import default_scorer, first_reads_report, load_read_folder, report_markdown
 
-    cases = load_read_folder(args.reads, mask_dir=args.masks, icx_dir=args.icx)
-    # Ostia from the cheap rules (provisional, A1); per-case aorta masks are not wired here.
+    cases = load_read_folder(args.reads, mask_dir=args.masks, icx_dir=args.icx,
+                             aorta_dir=args.aorta_dir)
+    # With --aorta-dir each case is scored with its own aorta (the A1 ostium of record);
+    # cases without one, or a run without the option, stay provisional (A1a).
     scorer = default_scorer() if args.score else None
-    report = first_reads_report(cases, scorer=scorer, previous_bias_flag=args.previous_bias_flag)
+    report = first_reads_report(cases, scorer=scorer, previous_bias_flag=args.previous_bias_flag,
+                                per_case_tf1=bool(args.aorta_dir) and args.score)
     args.out.mkdir(parents=True, exist_ok=True)
     (args.out / "report.json").write_text(json.dumps(report, indent=1, default=str))
     (args.out / "REPORT.md").write_text(report_markdown(report))
@@ -1517,6 +1520,9 @@ def build_parser() -> argparse.ArgumentParser:
     s.add_argument("reads", type=Path, help="folder of <case>/<annotator>.nii.gz reads")
     s.add_argument("--masks", type=Path, help="ImageCAS masks (either case layout's mask files)")
     s.add_argument("--icx", type=Path, help="ImageCAS-X dataset directory (carina anchor)")
+    s.add_argument("--aorta-dir", type=Path,
+                   help="per-case aorta masks as written by segtrain.aorta (A1 ostium); "
+                        "without it tF1 is provisional")
     s.add_argument("--no-score", dest="score", action="store_false",
                    help="skip tF1 (fast; convention and anchor checks only)")
     s.add_argument("--previous-bias-flag", action="store_true",

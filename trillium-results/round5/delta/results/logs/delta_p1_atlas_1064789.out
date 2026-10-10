@@ -1,0 +1,142 @@
+The following modules were not unloaded:
+  (Use "module --force purge" to unload all):
+
+  1) gentoo/2023
+Fri Oct  9 19:25:56 2026       
++-----------------------------------------------------------------------------------------+
+| NVIDIA-SMI 580.178.04             Driver Version: 580.178.04     CUDA Version: 13.0     |
++-----------------------------------------+------------------------+----------------------+
+| GPU  Name                 Persistence-M | Bus-Id          Disp.A | Volatile Uncorr. ECC |
+| Fan  Temp   Perf          Pwr:Usage/Cap |           Memory-Usage | GPU-Util  Compute M. |
+|                                         |                        |               MIG M. |
+|=========================================+========================+======================|
+|   0  NVIDIA H100 80GB HBM3          On  |   00000000:06:00.0 Off |                    0 |
+| N/A   42C    P0             71W /  700W |       0MiB /  81559MiB |      0%      Default |
+|                                         |                        |             Disabled |
++-----------------------------------------+------------------------+----------------------+
+
++-----------------------------------------------------------------------------------------+
+| Processes:                                                                              |
+|  GPU   GI   CI              PID   Type   Process name                        GPU Memory |
+|        ID   ID                                                               Usage      |
+|=========================================================================================|
+|  No running processes found                                                             |
++-----------------------------------------------------------------------------------------+
+19:25:57 step prepare ...
+19:25:59 layout girder-export: 1000 cases
+19:25:59 sealed test excluded: 100 cases from /scratch/croger/asclepius/experiments/atlas/sealed_test.json; evaluating on 80 open test cases
+19:26:19 proxy labels: 63 ok, 17 unusable: [('c0877', 'error FileNotFoundError("No such file or no access: \'/scratch/croger/delta_icx/ImageCAS-X_dataset/segmentations/878.coronary.nii.gz\'")'), ('c0953', 'error FileNotFoundError("No such file or no access: \'/scratch/croger/delta_icx/ImageCAS-X_dataset/segmentations/954.coronary.nii.gz\'")'), ('c0908', 'error FileNotFoundError("No such file or no access: \'/scratch/croger/delta_icx/ImageCAS-X_dataset/segmentations/909.coronary.nii.gz\'")'), ('c0841', 'error FileNotFoundError("No such file or no access: \'/scratch/croger/delta_icx/ImageCAS-X_dataset/segmentations/842.coronary.nii.gz\'")'), ('c0984', 'error FileNotFoundError("No such file or no access: \'/scratch/croger/delta_icx/ImageCAS-X_dataset/segmentations/985.coronary.nii.gz\'")')]
+19:26:19 step plan ...
+19:26:19 inference-only mode: no planning
+19:26:19 step train ...
+19:26:19 inference-only mode: using Atlas checkpoint /scratch/croger/atlas/nnunet_results/Dataset713_AtlasProxy/nnUNetTrainerAtlas__nnUNetResEncUNetPlans_60G_iso05__3d_fullres checkpoint_final.pth
+19:26:19 step evaluate ...
+19:26:30 evaluating with checkpoint_final.pth
+/home/croger/venvs/delta/lib/python3.11/site-packages/torch/jit/_script.py:1643: FutureWarning: `torch.jit.interface` is deprecated. Please use `torch.compile` instead.
+  warnings.warn(
+19:29:24 eval GPU 1/63 c0447  (3 min)
+19:32:37 eval GPU 2/63 c0624  (6 min)
+19:34:26 eval GPU 3/63 c0579  (8 min)
+19:37:50 eval GPU 4/63 c0805  (11 min)
+19:40:18 eval GPU 5/63 c0508  (14 min)
+19:41:53 eval GPU 6/63 c0774  (15 min)
+19:44:36 eval GPU 7/63 c0675  (18 min)
+19:46:56 eval GPU 8/63 c0679  (20 min)
+19:49:56 eval GPU 9/63 c0789  (23 min)
+19:52:22 eval GPU 10/63 c0464  (26 min)
+19:54:46 eval GPU 11/63 c0041  (28 min)
+19:58:25 eval GPU 12/63 c0807  (32 min)
+20:01:37 eval GPU 13/63 c0726  (35 min)
+20:03:01 eval GPU 14/63 c0102  (36 min)
+20:06:19 eval GPU 15/63 c0323  (40 min)
+20:08:39 eval GPU 16/63 c0217  (42 min)
+20:11:07 eval GPU 17/63 c0416  (44 min)
+20:14:25 eval GPU 18/63 c0674  (48 min)
+20:16:41 eval GPU 19/63 c0543  (50 min)
+20:19:37 eval GPU 20/63 c0758  (53 min)
+20:21:49 eval GPU 21/63 c0340  (55 min)
+20:24:45 eval GPU 22/63 c0137  (58 min)
+20:27:41 eval GPU 23/63 c0435  (61 min)
+20:30:30 eval GPU 24/63 c0430  (64 min)
+20:33:18 eval GPU 25/63 c0250  (67 min)
+20:36:13 eval GPU 26/63 c0615  (70 min)
+20:38:26 eval GPU 27/63 c0827  (72 min)
+20:41:33 eval GPU 28/63 c0113  (75 min)
+20:43:37 eval GPU 29/63 c0243  (77 min)
+20:47:09 eval GPU 30/63 c0251  (80 min)
+20:49:25 eval GPU 31/63 c0470  (83 min)
+20:53:09 eval GPU 32/63 c0620  (86 min)
+20:56:06 eval GPU 33/63 c0172  (89 min)
+20:59:32 eval GPU 34/63 c0465  (93 min)
+21:01:51 eval GPU 35/63 c0362  (95 min)
+21:04:15 eval GPU 36/63 c0772  (98 min)
+21:06:28 eval GPU 37/63 c0068  (100 min)
+21:10:34 eval GPU 38/63 c0195  (104 min)
+21:12:53 eval GPU 39/63 c0553  (106 min)
+21:15:46 eval GPU 40/63 c0124  (109 min)
+21:17:47 eval GPU 41/63 c0150  (111 min)
+21:20:36 eval GPU 42/63 c0099  (114 min)
+21:22:36 eval GPU 43/63 c0264  (116 min)
+21:25:07 eval GPU 44/63 c0270  (118 min)
+21:28:25 eval GPU 45/63 c0545  (122 min)
+21:30:54 eval GPU 46/63 c0660  (124 min)
+21:34:10 eval GPU 47/63 c0111  (128 min)
+21:35:57 eval GPU 48/63 c0271  (129 min)
+21:38:53 eval GPU 49/63 c0407  (132 min)
+21:40:43 eval GPU 50/63 c0147  (134 min)
+21:43:10 eval GPU 51/63 c0327  (137 min)
+21:45:44 eval GPU 52/63 c0753  (139 min)
+21:48:07 eval GPU 53/63 c0341  (141 min)
+21:50:56 eval GPU 54/63 c0108  (144 min)
+21:52:52 eval GPU 55/63 c0644  (146 min)
+21:56:27 eval GPU 56/63 c0405  (150 min)
+21:59:20 eval GPU 57/63 c0526  (153 min)
+22:01:54 eval GPU 58/63 c0617  (155 min)
+22:04:36 eval GPU 59/63 c0592  (158 min)
+22:08:18 eval GPU 60/63 c0128  (162 min)
+22:11:17 eval GPU 61/63 c0824  (165 min)
+22:13:18 eval GPU 62/63 c0750  (167 min)
+22:15:36 eval GPU 63/63 c0658  (169 min)
+22:16:49 step summarize ...
+22:16:52 summary written to /scratch/croger/delta_exp_atlas/results
+DELTA DONE: results in /scratch/croger/delta_exp_atlas/results (run ./delta again on the login node to copy them back)
+
+scontrol show job 1064789
+JobId=1064789 JobName=delta_p1_atlas
+   UserId=croger(3164574) GroupId=croger(3164574) MCS_label=N/A
+   Priority=1107580 Nice=0 Account=def-aso22 QOS=normal
+   JobState=COMPLETING Reason=None Dependency=(null)
+   Requeue=0 Restarts=0 BatchFlag=1 Reboot=0 ExitCode=0:0
+   RunTime=02:51:04 TimeLimit=10:00:00 TimeMin=N/A
+   SubmitTime=2026-10-09T19:25:44 EligibleTime=2026-10-09T19:25:44
+   AccrueTime=2026-10-09T19:25:44
+   StartTime=2026-10-09T19:25:51 EndTime=2026-10-09T22:16:55 Deadline=N/A
+   SuspendTime=None SecsPreSuspend=0 LastSchedEval=2026-10-09T19:25:51 Scheduler=Backfill
+   Partition=compute AllocNode:Sid=trig-login01:3109186
+   ReqNodeList=(null) ExcNodeList=(null)
+   NodeList=trig0036
+   BatchHost=trig0036
+   NumNodes=1 NumCPUs=24 NumTasks=1 CPUs/Task=1 ReqB:S:C:T=0:0:*:*
+   ReqTRES=cpu=1,mem=187.50G,node=1,billing=1,gres/gpu=1
+   AllocTRES=cpu=24,mem=187.50G,node=1,billing=1,gres/gpu=1
+   Socks/Node=* NtasksPerN:B:S:C=0:0:*:* CoreSpec=*
+   MinCPUsNode=1 MinMemoryNode=187.50G MinTmpDiskNode=0
+   Features=(null) DelayBoot=00:00:00
+   OverSubscribe=OK Contiguous=0 Licenses=(null) LicensesAlloc=(null) Network=(null)
+   Command=/scratch/croger/delta_exp_atlas/job.sh
+   SubmitLine=SBATCH --comment /opt/slurm/bin/sbatch --export=NONE --get-user-env --parsable /scratch/croger/delta_exp_atlas/job.sh --export=NONE --get-user-env --parsable /scratch/croger/delta_exp_atlas/job.sh
+   WorkDir=/scratch/croger/delta_exp_atlas
+   Comment=/opt/slurm/bin/sbatch --export=NONE --get-user-env --parsable /scratch/croger/delta_exp_atlas/job.sh
+   StdErr=
+   StdIn=/dev/null
+   StdOut=/scratch/croger/delta_exp_atlas/logs/delta_p1_atlas_1064789.out
+   CpusPerTres=gpu:24
+   TresPerNode=gres/gpu:1
+
+sacct -j 1064789
+JobID           JobName    Account    Elapsed  MaxVMSize     MaxRSS  SystemCPU    UserCPU ExitCode 
+------------ ---------- ---------- ---------- ---------- ---------- ---------- ---------- -------- 
+1064789      delta_p1_+  def-aso22   02:51:04                         00:00:00   00:00:00      0:0 
+1064789.bat+      batch  def-aso22   02:51:04                         00:00:00   00:00:00      0:0 
+1064789.ext+     extern  def-aso22   02:51:04                         00:00:00   00:00:00      0:0 
+

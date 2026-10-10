@@ -377,7 +377,7 @@ def test_report_scores_per_case_with_its_aorta(tmp_path, tree, monkeypatch):
     (tmp_path / "aorta").mkdir()
     ao = np.zeros(tree.shape, np.uint8)
     ao[20:28, 16:24, 44:48] = 1
-    nib.save(nib.Nifti1Image(ao, aff), str(tmp_path / "aorta" / "c0000.nii.gz"))
+    nib.save(nib.Nifti1Image(ao, aff), str(tmp_path / "aorta" / "c0000_aorta.nii.gz"))
     cases = R.load_read_folder(str(tmp_path / "reads"), aorta_dir=str(tmp_path / "aorta"))
     assert cases[0].aorta is not None and cases[1].aorta is None
     seen = []

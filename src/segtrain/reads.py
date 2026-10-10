@@ -808,8 +808,9 @@ def load_read_folder(
     of its first read when no mask is given; axis flips/permutations are undone, any other
     mismatch raises. ``mask_dir`` holds ``<case>.nii.gz`` or ``<case>/coronary_arteries.nii.gz``;
     ``icx_dir`` holds ``<n>.coronary.nii.gz``, n = case number + 1. ``aorta_dir`` holds the
-    TotalSegmentator aorta per case as ``<case>.nii.gz`` or ``<case>/aorta.nii.gz`` (or
-    ``<case>/segmentations/aorta.nii.gz``); it is brought onto the same grid and makes the
+    TotalSegmentator aorta per case as ``<case>_aorta.nii.gz`` (``segtrain.aorta``),
+    ``<case>.nii.gz``, ``<case>/aorta.nii.gz`` or ``<case>/segmentations/aorta.nii.gz``;
+    it is brought onto the same grid and makes the
     report's tF1 use the A1 ostium of record (non-provisional). Sealed cases must not be
     passed here before a milestone (A14).
     """
@@ -866,6 +867,7 @@ def load_read_folder(
         aorta = None
         if aorta_dir:
             for cand in (
+                os.path.join(aorta_dir, f"{case}_aorta.nii.gz"),  # segtrain.aorta's output name
                 os.path.join(aorta_dir, f"{case}.nii.gz"),
                 os.path.join(aorta_dir, case, "aorta.nii.gz"),
                 os.path.join(aorta_dir, case, "segmentations", "aorta.nii.gz"),

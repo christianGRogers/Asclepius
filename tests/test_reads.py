@@ -411,8 +411,8 @@ def test_read_folder_refuses_sealed_cases_before_opening_them(tmp_path, tree):
 
 
 def test_crop_case_keeps_world_coordinates(tree):
-    big = np.zeros((120, 120, 120), np.uint8)
-    big[30:78, 40:88, 50:98] = tree
+    big = np.zeros((200, 200, 160), np.uint8)
+    big[60:108, 70:118, 50:98] = tree
     aff = np.diag(list(SP) + [1.0])
     cr = R.CaseReads("c0000", {"A": big}, SP, mask=big > 0, affine=aff)
     small = R.crop_case(cr)

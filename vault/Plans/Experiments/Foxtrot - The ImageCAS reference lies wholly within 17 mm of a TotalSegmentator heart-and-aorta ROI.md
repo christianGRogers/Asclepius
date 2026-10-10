@@ -2,7 +2,7 @@
 tags: [plans, experiment, fp-gate, post-processing, totalsegmentator, roi, round6]
 author: Foxtrot
 round: 6
-updated: 2026-10-10
+updated: 2026-10-10 (extended to 92 cases after the Round 6 ruling, A20)
 ---
 
 # The ImageCAS reference lies wholly within 17 mm of a TotalSegmentator heart-and-aorta ROI
@@ -75,9 +75,34 @@ vessel?
 3. **The ROI comes free with A1.** The A1 ostium already runs TotalSegmentator on every scored CT (aorta).
    Adding `heart` to `roi_subset` is the same model call.
 
+## Extension to all 92 cached non-sealed cases (Round 6 ruling, A20 condition 1)
+
+Same script and settings, resumed after the ruling. It covers every non-sealed case whose CT is cached in
+`$SCR/data/ct`: 92 cases, the 40 above plus c0450, c0464, c0475, c0500, c0507, c0525, c0526, c0550, c0553,
+c0560, c0575, c0579, c0586, c0600, c0606, c0613, c0615, c0625, c0650, c0675, c0679, c0695, c0700, c0717,
+c0725, c0738, c0744, c0750, c0771, c0774, c0775, c0789, c0800, c0802, c0825, c0846, c0848, c0850, c0875,
+c0900, c0904, c0906, c0907, c0919, c0925, c0927, c0950, c0951, c0956, c0959, c0974, c0975. None is sealed.
+No CT was downloaded, and no TotalSegmentator output was kept.
+
+| Quantity (92 cases) | Value |
+|---|---|
+| Farthest reference voxel per case | mean 11.4 mm, s.d. 2.0; median 11.1; p90 14.1; **max 16.5 (c0073)** |
+| Tail (cases whose farthest voxel exceeds …) | 15 mm: **4** (c0073 16.5, c0252 16.4, c0575 16.2, c0606 15.8); 18 mm: 0; **20 mm: 0** |
+| Next five | c0950 15.0, c0825 14.8, c0113 14.7, c0150 14.5, c0375 14.2 |
+| Pooled reference voxels > 10 / > 15 / > 20 mm | 1.0 % / 0.006 % / 0 |
+| Reference components the d = 25 mm rule would delete | **0** (at d = 5 mm: 11 components of 1–7 voxels in 9 cases; from d = 10 mm: 0) |
+| Heart mask < 5000 3-mm voxels (rule disabled) | 0 cases (smallest 11,818) |
+| Run time | median 51 s per case, 1 thread |
+
+**A20 condition 1 holds on 92 of 1000 cases.** Requirement: maximum ≤ d − 5 = 20 mm in every non-sealed
+case. The worst case here is 3.5 mm inside that bound. A normal extrapolation from mean 11.4 / s.d. 2.0 puts
+the expected maximum over 900 non-sealed cases at about 18 mm. That is a heuristic, since the tail may be
+heavier than normal. The remaining 908 cases (808 non-sealed + 100 sealed pass/fail) are proposed as a
+job in [[Foxtrot v2]].
+
 ## Limits
 
-- 40 cases, all with cached CTs. Extremes on 1000 cases may exceed 16.5 mm. The rule must be re-checked on
+- 92 cases (40 in the first pass), all with cached CTs. Extremes on 1000 cases may exceed 16.5 mm. The rule must be re-checked on
   each wave's read cases, and on the val/test reads before adoption.
 - The distance is quantised at 1 mm and derived from a 3 mm mask; the error is about ±2 mm. That is a further
   reason for the 25 mm margin.

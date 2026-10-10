@@ -142,7 +142,7 @@ def _icx_flat(work: Path) -> Path:
     return d
 
 
-def run(work: Path, export: Path | None = None, fast: bool = False) -> dict:
+def run(work: Path, export: Path | None = None, fast: bool = False, report_step: bool = True) -> dict:
     from segtrain.cli import main
     from segtrain.config import load_config, load_task
     from segtrain.reads import first_reads_report, load_read_folder
@@ -181,7 +181,9 @@ def run(work: Path, export: Path | None = None, fast: bool = False) -> dict:
         if not sealed_reason(d.name, sealed):
             os.symlink(d, view / d.name)
     masks = SCR / "data" / "masks"
-    if fast:
+    if not report_step:
+        report = {"cases": [], "wave": {}}
+    elif fast:
         cases = load_read_folder(str(view), mask_dir=str(masks), icx_dir=str(icx))
         report = first_reads_report(cases, scorer=None, use_namer=False)
         out.mkdir(parents=True, exist_ok=True)
@@ -200,7 +202,7 @@ def run(work: Path, export: Path | None = None, fast: bool = False) -> dict:
     trained = sorted(p.name[:-len("_0000.nii.gz")] for p in (raw / "imagesTr").glob("*_0000.nii.gz"))
     split = json.loads((task.preprocessed_dir(cfg) / "splits_final.json").read_text())[0]
     checks = {}
-    checks["commands_exit_0"] = all(v == 0 for k, v in rc.items() if k != "convert")
+    checks["commands_exit_0"] = all(v == 0 for v in rc.values())
     checks["sealed_and_unmappable_decoys_refused"] = (not any(t.startswith(("imagecas_0003", "scan_"))
                                                              for t in trained))
     if built:
@@ -220,12 +222,23 @@ def run(work: Path, export: Path | None = None, fast: bool = False) -> dict:
             set(split["val"]) == {"imagecas_0002", "imagecas_0002__r2"}
             and set(split["train"]) == {"imagecas_0005", "imagecas_0005__r2"})
     rows = {r["case"]: r for r in report["cases"]}
+    if not report_step:
+        result = dict(facts=facts, exit_codes=rc, trained=trained, split=split, checks=checks,
+                      ok=all(checks.values()))
+        (work / "dry_run.json").write_text(json.dumps(result, indent=1, default=str))
+        return result
     checks["report_cases_mapped"] = (sorted(rows) == sorted(CASES.values())) if built else bool(rows)
     checks["report_two_reads_each"] = all(r["n_reads"] >= 2 for r in rows.values())
     conv = [c for r in rows.values() for c in r.get("convention", {}).values()]
     checks["convention_ran_with_calibre"] = bool(conv) and all(c["calibre_icx"] is not None
                                                              for c in conv)
-    checks["no_read_flagged_thin"] = bool(conv) and not any(c["thin"] for c in conv)
+    # A3 controls: imagecas_0002 is the whole mask (Dice 1.0) and must pass; imagecas_0005 is a
+    # partial test submission (Dice 0.49 against c0004's mask) and must be flagged thin.
+    if built:
+        thin = {c: [v["thin"] for v in r.get("convention", {}).values()] for c, r in rows.items()}
+        checks["a3_passes_full_split"] = thin.get("c0001") == [False, False]
+        checks["a3_flags_partial_submission"] = thin.get("c0004") == [True, True]
+        checks["a3_wave_halts"] = report["wave"].get("a3_halt") is True
     checks["anchor_computed"] = all("anchor" in r for r in rows.values())
     result = dict(facts=facts, exit_codes=rc, trained=trained, split=split,
                   wave={k: report["wave"].get(k) for k in ("n_cases", "a3_thin_reads",
@@ -251,7 +264,8 @@ if __name__ == "__main__":
     ap.add_argument("work", type=Path)
     ap.add_argument("--export", type=Path)
     ap.add_argument("--fast", action="store_true")
+    ap.add_argument("--no-report", action="store_true")
     a = ap.parse_args()
-    r = run(a.work, a.export, a.fast)
+    r = run(a.work, a.export, a.fast, not a.no_report)
     print(json.dumps(r["checks"], indent=1))
     sys.exit(0 if r["ok"] else 1)

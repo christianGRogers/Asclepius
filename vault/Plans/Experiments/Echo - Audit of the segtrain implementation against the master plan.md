@@ -404,3 +404,80 @@ orientation is consistent. Each case took about 150–205 s on one core.
 - Nothing was run on a GPU or with nnU-Net training. The trainer was
   audited by reading it against nnU-Net 2.8.1's source.
 - The A4 probe covers only the 8 cases listed.
+
+## Follow-up: A21 dry run and independent re-verification
+
+Requested by A21 ([[Round 6]]): a dry run of a SegQueue export through index → convert → reads-report, a re-check of the 13 fixes, and a check of the four remaining suspicions. I still did not edit `src/`. After this round the suite stands at 711 passed, 45 skipped and 4 xfailed (strict), with the dry run deselected. The `tf1.py` hash is still `3c737cbc…9253`.
+
+### The dry run (A21)
+
+The script is `experiments/Echo/segqueue_dry_run.py`. Its test is `tests/test_audit_segqueue_dry_run.py`. The test needs the tournament cache and skips without it. The reads-report half runs only with `SEGTRAIN_DRY_RUN=1`.
+
+**Inputs.**
+
+- **The real submissions.** I used both real SegQueue test submissions, `imagecas_0002` (= c0001) and `imagecas_0005` (= c0004). Both are binary, LPS, with z running downwards: space directions `(0,0,−0.5)`.
+- **Read 1.** Each submission's own voxels, named by projecting ImageCAS-X names onto them (`proxy.project_names`).
+- **Read 2.** Read 1 with a synthetic annotator habit: LAD voxels within 3 mm of the LM relabelled LM, which moves the LM end distally.
+- **The export.** I wrote both reads back onto the submission's own grid with the real exporter's helpers (`splitLabels`, `_writeMask` from `server/girder_segqueue/export.py`) and the server's `DEFAULT_SEGMENTS`. The layout is the one `--replicas all` produces: `imagecas_NNNN/` and `imagecas_NNNN__r2/`, each holding `ct.nii.gz` and `segmentations/*.nii.gz`.
+- **Two A14 decoys.** I also added two decoys: an open case's data renamed `imagecas_0003` (= c0002, sealed), and a folder named `scan_xyz`. No sealed data was read.
+
+**Steps.** The script runs the CLI exactly as the runbook gives it: `segtrain index --layout nested --val-fraction 0 --test-fraction 0`, then `segtrain convert --task 712`, then `segtrain splits --task 712 --explicit-icx`. The report step calls `load_read_folder` and `first_reads_report` (namer and tF1 off; see Limits below).
+
+**Every check passed (13 of 13).**
+
+| Check | Result |
+|---|---|
+| All commands exit 0 | yes |
+| Sealed decoy (`imagecas_0003` → c0002) and unmappable `scan_xyz` refused by convert | yes ("sealed case c0002 (A14)"; "does not map to a case id") |
+| Both reads of both cases converted | `imagecas_0002`, `imagecas_0002__r2`, `imagecas_0005`, `imagecas_0005__r2` |
+| Labels on the CT grid voxel-identical to the reads (z reversal undone) | yes, 4 of 4 |
+| Export really is z-reversed (the hard case) | yes |
+| Both reads of one case in one split | val: both c0001 reads; train: both c0004 reads (ImageCAS-X lists) |
+| Report maps `imagecas_NNNN` → c0001, c0004; two reads each | yes |
+| A3 runs with the calibre trigger | calibre: read 0.018, ImageCAS-X 0.633 (c0001) |
+| A3 passes the full split | c0001: union Dice 1.000, not thin |
+| A3 flags the partial submission | c0004: `imagecas_0005` is a partial test submission (Dice 0.488 against the mask), both reads flagged thin; wave halts (2/4 > 10 %) |
+| Carina anchor computed and sees the habit | read-2 minus read-1 offset: +2.8 mm (c0001), +2.0 mm (c0004), for a 3 mm design shift |
+
+To use the first real approved export, run
+`python3 experiments/Echo/segqueue_dry_run.py <work> --export <export dir>`,
+which skips the build step. The checks that need ground truth (voxel identity, split membership, the A3 controls) then drop out.
+
+**What the dry run found** (new confirmed defects, `tests/test_audit_followup.py`, `xfail(strict=True)`):
+
+| ID | Severity | Defect | Owner |
+|---|---|---|---|
+| E1 | **medium-high** | `reads-report` has no A14 filter. A real `--replicas all` export holds all 1000 cases, the 100 sealed included (D2). `load_read_folder` loads the sealed decoy as c0002, opens c0002's mask (it then stops with a shape error, so a real sealed read would be reported per case). The dry run works around it by handing the report a filtered view. | Crucible (reads) |
+| E4 | medium | The wave report runs every distance transform on the full CT grid. One real case took **791 s and ~4.5 GB** on one core, with the namer and tF1 off. That is 15 full-volume EDTs at about 46 s each. Spread over a wave of up to 1000 cases, the monitor that "runs on every wave" costs about 9 CPU-days per wave. Cropping to the tree box, as `proxy` and `namer` already do, fixes it. | Crucible (reads) |
+| E2 | low | Two case-identity implementations disagree. `reads.case_id` maps only `imagecas_NNNN` and `__rK`, and maps `imagecas_1001` to a nonexistent c1000. `proxy.canonical_case`, which convert and A14 use, also maps `IMAGECAS_`, `imagecas-` and `_rX`, and refuses what it cannot map. | Crucible (reads), reuse `proxy.canonical_case` |
+
+A cosmetic slip: `segtrain splits --explicit-icx` prints "train 560, val 80" (the list sizes), when it actually wrote 2 + 2 identifiers. Its "638 listed case(s) … left out" note is printed, so this is not silent.
+
+### Re-verification of D1–D13 (beyond my own tests)
+
+All 17 original tests pass with their assertions unchanged. I also ran these extra probes:
+
+- **D2.** `canonical_case` / `sealed_reason` on 16 name forms: `IMAGECAS_0003`, `imagecas-0003`, `ImageCAS3`, `__r3`, `_rA`, `3.img`, `imagecas_00003`, padded spaces, `_attempt1`, `.nii`, `imagecas_1001`. Every one that maps to c0002 is refused, and every unmappable one is refused too (fail-closed). `index` hashes the canonical case, so the reads of one case share a split. `write_explicit_splits` refuses sealed or unmappable converted ids. **Fixed.**
+- **D3.** `align_to_reference` on flips of x, y and z, an x↔y permutation, and permutation plus flip: the result is voxel-identical every time. A one-voxel shift, a 0.05 mm shift, and a flip combined with a shift are all refused. A case with any dropped structure fails and is removed from `imagesTr`/`labelsTr`. **Fixed.**
+- **D1 / D13.** Task 712 sets `explicit_split` (every non-refused case → `imagesTr`). `plan` keeps a recorded explicit split, or writes it from `$SEGTRAIN_ICX_DIR`, or stops. The rendered prepare job passes `bash -n`. It expands `"$SEGTRAIN_ICX_DIR"` (double-quoted) and fails fast if the variable is unset. **Fixed.**
+  - Observation, not a defect: converted cases outside the ImageCAS-X lists are left out of the split with only the generic note. These are the open test, quality-0 and excluded cases, about 260 once team reads exist. Their exclusion is consistent with A17e's 160-case decision set, but the final recipe should state where they go.
+- **D4.** Scorer results now carry `provisional`/`flagged`. `acceptance` drops flagged cases and marks results with any provisional case as `decisive=False`. The default treats unknown as provisional (fail-safe). The third-read tF1 trigger ignores provisional and flagged tF1. **Fixed.** A1b is applied per case, not per tree, which is conservative.
+- **D5.** `a11_targets` returns the reads unchanged. The retired rule survives only behind `conflict_ignore=True`, for the A11 test arm. **Fixed.**
+- **D6 / D7 / D10.** Confirmed on real volumes by the dry run: the calibre trigger runs, the export layout and z-reversal are handled, and `ct.nii.gz` is not taken for a read. **Fixed.** E1 and E4 above are new.
+- **D8.** The CLI counts what was written and lists excluded, failed and missing cases. It exits 1 if anything failed or is missing. **Fixed.**
+- **D9 / D11 / D12.** The printout shows the window. The runbook passes `--zenodo-root`. `save_test_probabilities: true` is wired into `predict_test_set`. `segtrain tf1` aligns or refuses the prediction, the aorta and the CT. **Fixed.**
+
+### The four suspicions
+
+| Suspicion | Verdict | Evidence |
+|---|---|---|
+| A4 QA skipped silently when the namer fails to import | **Resolved** | With `segtrain.namer` made unimportable, `segtrain proxy` refuses ("A4 proxy QA unavailable … refusing to write proxies without it") and exits 1. Un-QA'd proxies need an explicit `apply_qa=False`. |
+| Patch pinning over a different planned architecture | **Resolved** | `enforce_patch` raises when the planned patch, batch or spacing differs from the recipe. Pinning needs `SEGTRAIN_ALLOW_PATCH_PIN=1`, and the record says so. Regression test added. |
+| LM in one read only | **Resolved by ruling** | Round 6 rules it a decision disagreement. `third_read_triggers` still raises "LM present in one read only". Regression test added. |
+| Silent skeleton class loss in tF1 | **Confirmed (E3, low on current evidence)** | The reference has an RCA plus a 2520-voxel LAD with an even-width cross-section, which skimage 0.26 skeletonizes to nothing. The prediction misses the LAD entirely, yet `segtrain tf1` reports **tF1 = 1.0** with no LAD entry and no flag. This is only shown on synthetic boxes; a real lumen is not a box. `tf1.py` is frozen (A1c), so the wrapper should detect "class in reference, no centreline" and flag it. Owner: Delta. |
+
+### Limits of the follow-up
+
+- The four-class reads are synthetic. They carry ImageCAS-X names on real submitted voxels, plus a designed habit. Real annotator labels, and Slicer's label values in an approved four-class submission, are untested until the first approved export exists.
+- The report step ran through the library call with the namer and tF1 off. That is the `--fast` mode, chosen because of E4's cost. The `segtrain reads-report` CLI wrapper, with the namer and tF1 on, was not timed on real volumes.
+- The dry run uses 2 cases.

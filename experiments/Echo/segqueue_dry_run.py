@@ -170,15 +170,25 @@ def run(work: Path, export: Path | None = None, fast: bool = False) -> dict:
                           "symlink", *roots])
     rc["splits"] = main(["splits", "--task", "712", "--explicit-icx", str(icx), *roots])
     out = work / "report"
+    # reads-report has no A14 filter (Echo E1): give it a view of the export without the decoys,
+    # so no sealed-named case reaches it (and no sealed mask is opened).
+    view = work / "reads_view"
+    shutil.rmtree(view, ignore_errors=True)
+    view.mkdir()
+    from segtrain.proxy import load_sealed, sealed_reason
+    sealed = load_sealed()
+    for d in sorted(p for p in export.iterdir() if p.is_dir()):
+        if not sealed_reason(d.name, sealed):
+            os.symlink(d, view / d.name)
     masks = SCR / "data" / "masks"
     if fast:
-        cases = load_read_folder(str(export), mask_dir=str(masks), icx_dir=str(icx))
+        cases = load_read_folder(str(view), mask_dir=str(masks), icx_dir=str(icx))
         report = first_reads_report(cases, scorer=None, use_namer=False)
         out.mkdir(parents=True, exist_ok=True)
         (out / "report.json").write_text(json.dumps(report, indent=1, default=str))
         rc["reads-report"] = 0
     else:
-        rc["reads-report"] = main(["reads-report", str(export), "--masks", str(masks),
+        rc["reads-report"] = main(["reads-report", str(view), "--masks", str(masks),
                                    "--icx", str(icx), "--out", str(out)])
         report = json.loads((out / "report.json").read_text())
 

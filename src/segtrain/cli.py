@@ -1227,6 +1227,28 @@ def cmd_proxy(args) -> int:
     return 1 if (failed or missing) else 0
 
 
+def cmd_aorta(args) -> int:
+    from .aorta import AortaBatchError, produce_aortas
+    from .proxy import load_sealed
+
+    found = _discover_cases(args.cases)
+    if not found:
+        print(f"no cases found under {args.cases} (expected c0000/ct.nii.gz or 1.img.nii.gz)",
+              file=sys.stderr)
+        return 2
+    cts = {c: v["ct"] for c, v in found.items()}
+    refs = {c: v["mask"] for c, v in found.items()} if args.crop else None
+    try:
+        report = produce_aortas(cts, args.out, device=args.device, references=refs,
+                                sealed=load_sealed(args.sealed), overwrite=args.overwrite)
+    except AortaBatchError as e:
+        print(f"aorta: {e}", file=sys.stderr)
+        return 1
+    print(f"aorta masks: {len(report.made)} made, {len(report.kept)} already present, "
+          f"in {args.out} (see aorta_report.json)")
+    return 0
+
+
 def cmd_reads_report(args) -> int:
     import json
 
@@ -1514,6 +1536,19 @@ def build_parser() -> argparse.ArgumentParser:
     s.add_argument("--subsets", nargs="+", default=["train", "val"])
     s.add_argument("--workers", type=int, default=1)
     s.set_defaults(func=cmd_proxy)
+
+    s = sub.add_parser("aorta", help="TotalSegmentator aorta masks for the A1 ostium "
+                                     "(needs the 'aorta' extra)")
+    s.add_argument("--cases", type=Path, required=True, help="case directory (either layout)")
+    s.add_argument("--out", type=Path, required=True, help="writes <case>_aorta.nii.gz here")
+    s.add_argument("--device", default="cpu", help="cpu, gpu or gpu:N")
+    s.add_argument("--no-crop", dest="crop", action="store_false",
+                   help="segment the whole CT instead of a crop around the coronary mask")
+    s.add_argument("--sealed", type=Path,
+                   help="sealed-test JSON (default trillium/sealed_test.json); "
+                        "sealed cases are refused")
+    s.add_argument("--overwrite", action="store_true")
+    s.set_defaults(func=cmd_aorta)
 
     s = sub.add_parser("reads-report", help="A12 report on double reads: convention, "
                                             "inter-read tF1, carina anchor, habits")

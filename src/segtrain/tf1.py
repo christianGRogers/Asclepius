@@ -31,8 +31,11 @@ The ostium (A1)
 ---------------
 Per reference tree component (so a heart with separate LAD and LCx ostia gets two left ostia):
 
-* ``aorta`` -- the reference centreline endpoints within 5 mm of a supplied aorta mask
-  (TotalSegmentator); the thickest of them is the ostium. This is the rule of record.
+* ``aorta`` -- the reference centreline voxel nearest a supplied aorta mask (TotalSegmentator),
+  if within 5 mm; per side when one component holds both trees. This is the rule of record.
+  Any centreline voxel, not only endpoints: on the thick (ImageCAS) mask the ostium is often a
+  pass-through point of the skeleton, and endpoint rules then land on distal tips (vault: *Delta -
+  On the thick reference the cheap ostium rules miss 1 in 8 ostia silently...*).
 * ``thick`` -- the thickest centreline endpoint (median radius over ~20 neighbouring centreline
   voxels), LM-labelled endpoints preferred.
 * ``pool_thick`` -- among the endpoints within 3 mm of the endpoint nearest the contrast blood pool
@@ -68,6 +71,9 @@ DISAGREEMENT_MM = 5.0
 MIN_COMPONENT_VOXELS = 100
 #: Reference components smaller than this are not trees and get no ostium.
 MIN_TREE_VOXELS = 1000
+#: With an aorta mask, a component is split into left/right ostia when each side has this many
+#: centreline voxels (a reference that joins the two trees still has two ostia).
+MIN_SIDE_CENTRELINE = 20
 CLASSES = (1, 2, 3, 4)
 CLASS_NAMES = {1: "left_main", 2: "left_anterior_descending", 3: "left_circumflex",
                4: "right_coronary_artery"}
@@ -87,11 +93,13 @@ class Ostium:
     candidates: dict = field(default_factory=dict)   # rule -> voxel index, every rule that ran
     disagreement_mm: float = 0.0  # largest pairwise distance between the rules' choices
     flagged: bool = False         # rules disagree by > DISAGREEMENT_MM: a human must look
+    side: str = "tree"            # "left"/"right" when one component holds both trees, else "tree"
 
     def as_row(self) -> dict:
         return {"tree": self.tree, "point": [int(v) for v in self.point], "rule": self.rule,
                 "candidates": {k: [int(v) for v in p] for k, p in self.candidates.items()},
-                "disagreement_mm": round(float(self.disagreement_mm), 2), "flagged": self.flagged}
+                "disagreement_mm": round(float(self.disagreement_mm), 2), "flagged": self.flagged,
+                "side": self.side}
 
 
 @dataclass
@@ -314,37 +322,50 @@ def find_ostia(reference: np.ndarray, spacing: Sequence[float], *,
     for k in range(1, n + 1):
         if sizes[k] < min_tree_voxels:
             continue
-        ends = np.nonzero((csk == k) & (cl.degree == 1))[0]
-        if len(ends) == 0:
-            continue
-        rmed = {int(v): cl.median_radius_near(int(v)) for v in ends}
-
-        def thickest(cand, rmed=rmed):
-            return max(cand, key=lambda u: rmed[int(u)])
-
-        lm = ends[lsk[ends] == 1]
-        cand = {"thick": int(thickest(lm if len(lm) else ends))}
-        if d_pool is not None:
-            dp = d_pool[tuple(cl.pts[ends].T)]
-            cand["pool_thick"] = int(thickest(ends[dp <= dp.min() + 3.0]))
-        rule = "thick"
+        on_k = csk == k
+        # With an aorta mask, one ostium per side present in the component: a reference can join
+        # the left and right trees (a mask artefact), and each still has its own ostium.
+        groups = [("tree", on_k)]
         if d_ao is not None:
-            de = d_ao[tuple(cl.pts[ends].T)]
-            near = ends[de <= aorta_contact_mm]
-            if len(near):
-                cand["aorta"] = int(thickest(near))
-                rule = "aorta"
-        pts_mm = {r: cl.pts[v] * sp for r, v in cand.items()}
-        names = list(pts_mm)
-        dis = max((float(np.linalg.norm(pts_mm[a] - pts_mm[b])) for i, a in enumerate(names)
-                   for b in names[i + 1:]), default=0.0)
-        # aorta mask given but no endpoint touches it: that is itself a disagreement worth a look
-        flagged = dis > disagreement_mm or (d_ao is not None and rule != "aorta")
-        ostia.append(Ostium(tree=k, point=tuple(int(x) for x in cl.pts[cand[rule]]),
-                            rule=rule,
-                            candidates={r: tuple(int(x) for x in cl.pts[v])
-                                        for r, v in cand.items()},
-                            disagreement_mm=dis, flagged=bool(flagged)))
+            by_side = [(s, on_k & sel) for s, sel in (("left", np.isin(lsk, (1, 2, 3))),
+                                                       ("right", lsk == 4))]
+            by_side = [(s, g) for s, g in by_side if g.sum() >= MIN_SIDE_CENTRELINE]
+            if len(by_side) > 1:
+                groups = by_side
+        for side, on in groups:
+            ends = np.nonzero(on & (cl.degree == 1))[0]
+            if len(ends) == 0:
+                continue
+            rmed = {int(v): cl.median_radius_near(int(v)) for v in ends}
+
+            def thickest(cand, rmed=rmed):
+                return max(cand, key=lambda u: rmed[int(u)])
+
+            lm = ends[lsk[ends] == 1]
+            cand = {"thick": int(thickest(lm if len(lm) else ends))}
+            if d_pool is not None:
+                dp = d_pool[tuple(cl.pts[ends].T)]
+                cand["pool_thick"] = int(thickest(ends[dp <= dp.min() + 3.0]))
+            rule = "thick"
+            if d_ao is not None:
+                # the centreline voxel nearest the aorta, of any degree: on the thick (ImageCAS)
+                # mask the ostium is often a pass-through point of the skeleton, not an endpoint
+                vox = np.nonzero(on)[0]
+                da = d_ao[tuple(cl.pts[vox].T)]
+                if da.min() <= aorta_contact_mm:
+                    cand["aorta"] = int(vox[int(np.argmin(da))])
+                    rule = "aorta"
+            pts_mm = {r: cl.pts[v] * sp for r, v in cand.items()}
+            names = list(pts_mm)
+            dis = max((float(np.linalg.norm(pts_mm[a] - pts_mm[b])) for i, a in enumerate(names)
+                       for b in names[i + 1:]), default=0.0)
+            # aorta mask given but the tree does not touch it: itself a disagreement worth a look
+            flagged = dis > disagreement_mm or (d_ao is not None and rule != "aorta")
+            ostia.append(Ostium(tree=k, point=tuple(int(x) for x in cl.pts[cand[rule]]),
+                                rule=rule,
+                                candidates={r: tuple(int(x) for x in cl.pts[v])
+                                            for r, v in cand.items()},
+                                disagreement_mm=dis, flagged=bool(flagged), side=side))
     return OstiumReport(ostia, provisional=aorta is None, rules=rules)
 
 

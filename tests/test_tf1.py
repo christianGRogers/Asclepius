@@ -201,6 +201,29 @@ def test_absent_left_main_gives_each_left_tree_its_own_ostium():
     assert r.recall[2] > 0.95 and r.recall[3] == 0.0
 
 
+def test_aorta_rule_finds_an_ostium_that_is_not_a_skeleton_endpoint(aorta):
+    # thick-mask habit: the vessel touches the aorta mid-segment (a conus-like branch leaves at the
+    # ostium), so every endpoint is > 5 mm from the aorta and endpoint rules pick a distal tip
+    apex = (X0 - 1, 54, 30)
+    lab = _tree([(4, (apex, (X0 + 70, 54, 30), 2.0, 2.0)),
+                 (4, (apex, (X0 + 20, 54, 46), 2.0, 2.0))])
+    rep = T.find_ostia(lab, SP, aorta=aorta)
+    (o,) = rep.ostia
+    assert o.rule == "aorta" and o.point[0] < X0 + 4 and abs(o.point[2] - 30) < 6
+    assert o.flagged                           # the endpoint rule disagrees: a human looks
+    assert T.find_ostia(lab, SP).ostia[0].point[0] > X0 + 10     # thick alone lands on a tip
+
+
+def test_joined_left_and_right_trees_still_get_two_aorta_ostia(ref, aorta):
+    joined = ref.copy()
+    joined[_tube(SHAPE, (X0 + 70, 46, 20), (X0 + 70, 54, 36), 1.5, 1.5)[0] & (ref == 0)] = 2
+    assert T.components(joined > 0)[1] == 1
+    rep = T.find_ostia(joined, SP, aorta=aorta)
+    assert sorted(o.side for o in rep.ostia) == ["left", "right"]
+    assert all(o.rule == "aorta" and o.point[0] < X0 + 6 for o in rep.ostia)
+    assert T.tree_f1(joined, joined, SP, aorta=aorta).tf1 == pytest.approx(1.0)
+
+
 # ------------------------------------------------------------------------------- bridge audit
 def test_bridge_audit_tells_true_fp_and_cross_tree_joins(ref):
     before = _cut(ref, 2, X0 + 40, 8)

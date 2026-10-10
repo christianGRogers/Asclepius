@@ -52,6 +52,7 @@ def run(case, aorta_dir):
             v = on[int(np.argmin(dv))]
             c['aorta_any'] = cl.pts[v]
             c['_ao_mm'] = float(dv.min())
+    new = S.find_ostia(R, sp, aorta=ao, _centreline=cl)  # segtrain.tf1 as revised in Round 5
     out = dict(case=case, aorta_vox=int(ao.sum()), matches=[])
     for side in ('left', 'right'):
         for d in M.CL_DIRS:
@@ -76,6 +77,11 @@ def run(case, aorta_dir):
                         c['_ao_side_mm'] = float(dv.min())
                 dd = {r: round(float(np.linalg.norm((q - v) * sp)), 2) for r, q in c.items() if r[0] != '_'}
                 dd['ao_side_mm'] = round(c.get('_ao_side_mm', float('nan')), 2)
+                mine = [o for o in new.ostia if o.tree == k and o.side in (side, 'tree')]
+                if mine:
+                    dd['new'] = round(float(np.linalg.norm((np.array(mine[0].point) - v) * sp)), 2)
+                    dd['new_rule'] = mine[0].rule
+                    dd['new_flag'] = mine[0].flagged
                 out['matches'].append(dict(side=side, tree=k, flagged=c['_flag'],
                                            ao_mm=round(c.get('_ao_mm', float('nan')), 2), **dd))
             break

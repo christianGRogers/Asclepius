@@ -2,12 +2,12 @@
 tags: [plans, implementation, metrics, tree-f1, ostium]
 author: Delta
 round: implementation
-updated: 2026-10-08
+updated: 2026-10-10
 ---
 
 # Implementation of tf1: one tree-F1 for the whole project (A9, A1, A2)
 
-`src/segtrain/tf1.py` holds the deciding metric. Its tests are in `tests/test_tf1.py`: 21 tests that take about 9 s on synthetic tubes, with no case data. Before this module, four copies existed: `experiments/Delta/perturb_metrics.py`, `trillium/delta/deltalib.py`, `trillium/atlas/lib/tf1.py` and `trillium/bridge/py/tf1.py`. They now count as experiment code only.
+`src/segtrain/tf1.py` holds the deciding metric. Its tests are in `tests/test_tf1.py`: 23 tests that take about 10 s on synthetic tubes, with no case data. Before this module, four copies existed: `experiments/Delta/perturb_metrics.py`, `trillium/delta/deltalib.py`, `trillium/atlas/lib/tf1.py` and `trillium/bridge/py/tf1.py`. They now count as experiment code only.
 
 ## Public API (stable; Crucible and Atlas import it)
 
@@ -36,7 +36,9 @@ Constants: `TOLERANCE_MM=1.5` (D3), `AORTA_CONTACT_MM=5`, `DISAGREEMENT_MM=5`, `
 
 1. **Libraries.** scipy `ndimage.label` replaces cc3d, and a small CSR graph with BFS replaces networkx. The results are identical on the fixtures. No new dependencies were added.
 2. **Ostium matching.** A component is rooted when any of its predicted voxels lies within max(tol, largest voxel side) of the ostium. This is Atlas's rule. deltalib and Bridge's copy required the ostium voxel itself to lie inside the grown prediction, which penalises a prediction that stops a voxel short of the ostium tip. The two rules agree whenever the prediction covers the ostium (regression tests). A test pins the tip case.
-3. **The aorta rule is the rule of record.** It picks the thickest endpoint within 5 mm of the aorta. If an aorta mask is given but no endpoint of a tree touches it, the tree falls back to `thick` and is **flagged**, never scored silently.
+3. **The aorta rule is the rule of record.** It picks the centreline voxel nearest the aorta, of any degree, if that voxel is within 5 mm. With an aorta mask, a component that holds both trees gets one ostium per side (`Ostium.side`). If a tree does not touch the aorta, it falls back to `thick` and is **flagged**, never scored silently.
+   - *Revised in Round 5.* The first version took the thickest endpoint within 5 mm. On the thick reference the ostium is often not an endpoint, so that version scored c0038 and c0560 wrong without flagging them. See [[Delta - On the thick reference the cheap ostium rules miss 1 in 8 ostia silently, which made 13 of the 17 cut trees]].
+   - Two tests pin the new behaviour: a pass-through ostium, and joined left and right trees.
 4. **Rule disagreement.** Every pair of rules is compared. Before, only thick and pool were compared.
 5. **No ostium given.** Without an aorta mask, the result is `provisional=True`. With neither an aorta mask nor a CT, there is no cross-check at all.
 6. **Small components.** `tree_f1` always drops predicted components under 100 voxels, as Atlas's copy does. deltalib left this to the caller.

@@ -107,3 +107,13 @@ is clean, and `tf1.py` is untouched (sha256 `3c737cbc…9253`).
 
 **Not mine and left alone:** D4–D7 and D10 belong to Crucible (reads). The SegQueue exporter's naming is the
 project lead's. Echo's suspicion that A4 QA could be skipped silently is now a CLI warning (`segtrain proxy`).
+
+## The wave fine-tune trainer (Round 6, A17a)
+
+| File | What it does |
+|---|---|
+| `src/segtrain/nnunet_ext/nnUNetTrainer_segtrain_finetune.py` | `nnUNetTrainer_segtrain_finetune` (peak 1e-2), `_lr1e3` (the pre-registered fallback arm, a separate class so result folders never collide) and `_5epochs`. They inherit the coronary trainer (window check, no mirroring, val softmax, A14). The source is `SEGTRAIN_FINETUNE_FROM` (never `-pretrained_weights`, which drops the heads), loaded in `initialize()`; a fresh fine-tune without a source refuses to start. LR per iteration: warm-up over `SEGTRAIN_WARMUP_ITERS` (default 2500), then poly; 250 epochs by default. A `finetune` event records the schedule and the source (sha256, epoch, tensor and head counts) |
+| `nnunet_ext/finetune_load.py` (torch only) | Exact-compatibility check (configuration plans, CT normalisation, transpose, output classes with `ignore` aside), strict load of every key, bitwise verification |
+| `nnunet_ext/finetune_schedule.py` (torch-free) | `warmup_poly_lr`, `WarmupPolyScheduler` |
+| `nnunet_ext/sealed_guard.py` (torch-free) | `refuse_sealed`, now called by the coronary trainer's `on_train_start` on every training and validation identifier (`do_split`), under every name form |
+| `tests/test_finetune.py` (14 tests, ~10 s) | Schedule values at iteration 0, mid-ramp and end of ramp, and the poly decay. A tiny PlainConvUNet: heads bitwise identical after the load, while nnU-Net's `load_pretrained_weights` leaves them random. Refusal of other classes, spacing, window or architecture. The trainer's per-iteration LR stepping. The **real trainer classes** on CPU: a coronary checkpoint is loaded completely by the fine-tune trainer, and a source with another window is refused |

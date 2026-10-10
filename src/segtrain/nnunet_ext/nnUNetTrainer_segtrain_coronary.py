@@ -14,6 +14,9 @@ hybrid decoding H) and post-processing candidates (P1') can be scored on this mo
 re-running the GPU. ``SEGTRAIN_SAVE_PROBABILITIES=0`` turns it off (it costs disk: up to ~1 GB
 per case).
 
+**No sealed case is ever trained on** (A14): ``on_train_start`` refuses if any training or
+validation identifier maps to a sealed case or to no case (``sealed_guard.refuse_sealed``).
+
 **The fixed CT window is checked, not assumed.** The window is written into the plans file at
 planning time (``segtrain.plans.apply_ct_window``); a plans file planned without it would
 silently train on nnU-Net's labelled-voxel window, which flattens fat and maps calcium onto
@@ -32,6 +35,7 @@ from segtrain.nnunet_ext.ct_window import CT_WINDOW, check_window, expected_wind
 
 # Absolute import: nnU-Net imports this file as a top-level module.
 from segtrain.nnunet_ext.nnUNetTrainer_segtrain import nnUNetTrainer_segtrain
+from segtrain.nnunet_ext.sealed_guard import refuse_sealed
 
 
 class nnUNetTrainer_segtrain_coronary(nnUNetTrainer_segtrain):
@@ -51,6 +55,12 @@ class nnUNetTrainer_segtrain_coronary(nnUNetTrainer_segtrain):
 
     def on_train_start(self) -> None:
         check_window(self.plans_manager.plans, self._expected_window)
+        # A14, last line of defence: nothing nnU-Net is about to read may be a sealed case, under
+        # any of its names. The split is what nnU-Net will use (splits_final.json, or its own).
+        tr_keys, val_keys = self.do_split()
+        n = refuse_sealed(list(tr_keys) + list(val_keys))
+        self.print_to_log_file(f"[segtrain] A14: {n} training/validation identifiers checked, "
+                               "none sealed")
         super().on_train_start()
 
     def perform_actual_validation(self, save_probabilities: bool = False):

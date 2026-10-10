@@ -90,7 +90,7 @@ The summary:
   inference** (ImageCAS-X `README.MD`, method table). TotalSegmentator's own coronary task uses a heart crop
   (vault). Four TopBrain teams used connected-component removal. Under A2/A15 a deletion step is not
   "raw", so this needs the evidence the judge asked for:
-  [[Foxtrot - The ImageCAS reference lies wholly within 15 mm of a TotalSegmentator heart-and-aorta ROI]].
+  [[Foxtrot - The ImageCAS reference lies wholly within 17 mm of a TotalSegmentator heart-and-aorta ROI]].
 
 ## What it implies
 

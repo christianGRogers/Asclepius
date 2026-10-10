@@ -80,7 +80,7 @@ Evidence: [[Foxtrot - Stock nnU-Net warm starts re-initialise the segmentation h
 
 Evidence:
 
-- [[Foxtrot - The ImageCAS reference lies wholly within 15 mm of a TotalSegmentator heart-and-aorta ROI]];
+- [[Foxtrot - The ImageCAS reference lies wholly within 17 mm of a TotalSegmentator heart-and-aorta ROI]];
 - literature in [[Foxtrot - Nothing published by October 2026 beats a well-configured nnU-Net on per-branch coronary or vessel labelling]] §4:
   - TopCoW: ROI localisation "reduce[s] false positives in the background";
   - ADE-HTL, best β err in ImageCAS-X, uses TotalSegmentator heart masks at inference;
@@ -91,13 +91,14 @@ Evidence:
 - Run TotalSegmentator `fast`, `roi_subset=['heart', 'aorta']` on the CT. The A1 rule already runs this model
   for the aorta, so the heart is free.
 - Delete every predicted connected component whose **minimum** distance to (heart ∪ aorta) exceeds
-  **d = 20 mm**, which is the measured reference maximum plus margin; see the note.
+  **d = 25 mm**. That is the measured reference maximum (16.5 mm over 40 non-sealed cases; 0 reference
+  voxels beyond 20 mm) plus an 8.5 mm margin; see the note.
 - The rule is disabled for a case whose heart mask is implausibly small (< 5000 voxels at 3 mm, a field-of-view
   or segmentation failure), and the case is reported.
 
 **Why it is safe by construction.**
 
-- On every one of the non-sealed cases measured, every ImageCAS reference voxel lies within d of the ROI.
+- On all 40 non-sealed cases measured, every ImageCAS reference voxel lies within 16.5 mm (< d) of the ROI.
 - So any predicted component that touches the reference has minimum distance ≤ d and is kept. The rule
   removes only components with zero reference overlap.
 - Per case, therefore, the FP count cannot rise, tF1 recall cannot change, and tF1 precision cannot fall.
@@ -170,7 +171,7 @@ substitute for the raw gate unless the judge rules so.
 | No method beats a well-configured nnU-Net on multi-class vessel or per-branch coronary labelling; the ImageCAS-X loss was against a default configuration | [[Foxtrot - Nothing published by October 2026 beats a well-configured nnU-Net on per-branch coronary or vessel labelling]] (TopCoW arXiv:2312.17670v5; TopBrain medRxiv 10.64898/2026.05.28.26354312; ImageCAS-X arXiv:2608.30404 + repo configs; NA-UNETR arXiv:2608.12274; CorSegRec arXiv:2504.01597) |
 | Pretraining gains and loader incompatibility | [[Foxtrot - Large-scale CT pretraining gains about one Dice point on organs, has no vessel evidence, and cannot be loaded into the master's network]] (MedNeXt-v2 arXiv:2512.17774 Table 4; SegBook arXiv:2411.14525 Table 4; MAE CVPR 2025 Tables 4, 9; nnU-Net 2.8.1 `load_pretrained_weights`; master plans file) |
 | Warm start resets heads, has no warm-up; cited paper prefers 1e-3 | [[Foxtrot - Stock nnU-Net warm starts re-initialise the segmentation heads and have no warm-up, and the MAE paper found 1e-3 better than 1e-2]] |
-| The reference lies within d of a TotalSegmentator heart ∪ aorta ROI | [[Foxtrot - The ImageCAS reference lies wholly within 15 mm of a TotalSegmentator heart-and-aorta ROI]] |
+| The reference lies within d of a TotalSegmentator heart ∪ aorta ROI | [[Foxtrot - The ImageCAS reference lies wholly within 17 mm of a TotalSegmentator heart-and-aorta ROI]] |
 
 ## 5. Risks and early detection
 

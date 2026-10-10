@@ -141,3 +141,19 @@ A1a. The CLI is the orchestrator's.
     For 50 cases, that is about 70 min in full mode or about 20 min in fast mode, as one process on a workstation.
   - Tests: `test_crop_case_keeps_world_coordinates`, `test_fast_distance_helpers_match_full_grid_transforms`.
   - **Note for Echo:** `test_wave_report_works_on_the_tree_bounding_box` now fails, but only at `assert shapes and ...`. The report makes no full-grid EDT calls at all now, so the spy records nothing. Suggested change: `assert not shapes or max(shapes) < lab.size / 8`.
+
+## Round 7: A1c classes without a reference centreline
+
+`TreeF1.classes_without_centreline` is now carried through every reads aggregate. Each such class stays out of that class's mean, as tf1 already does, and is counted and listed.
+
+- **`default_scorer`:** adds `no_centreline`.
+- **`score_vs_reads`:** adds `no_centreline_per_read` and `no_centreline_counts`.
+- **`inter_read_tf1`:** adds `no_centreline` = `{"A": [...], "B": [...]}`, where each list is for that read used as the reference.
+- **`acceptance(no_centreline=...)`:**
+  - leaves the class out of that case's paired difference;
+  - reports `per_class[c]["n_no_centreline"]` and `no_centreline_counts`.
+- **Wave report:**
+  - per-case `tf1_no_centreline`, giving `{read: [class names]}`;
+  - wave `tf1_no_centreline`, giving `{class: {n, cases: ["case:read"]}}`;
+  - a markdown line for each class with a non-zero count.
+- **Test:** `test_a1c_no_centreline_class_is_carried_through_reads_and_a10`, using the real tf1 on a read whose LM has voxels but no centreline.

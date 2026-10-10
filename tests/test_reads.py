@@ -436,3 +436,54 @@ def test_fast_distance_helpers_match_full_grid_transforms():
     pts = np.argwhere(m)
     ref = ndimage.distance_transform_edt(m, sampling=sp)[tuple(pts.T)]
     assert np.allclose(_dist_to_background(m, pts, sp), ref)
+
+
+# ----------------------------------------------------------------------------- A1c
+def _cap_lm(t):
+    """The LM relabelled LAD except one voxel at the ostium: LM voxels, no LM centreline."""
+    out = t.copy()
+    lm = t == R.LM
+    out[lm] = R.LAD
+    top = np.argwhere(lm)[:, 2].max()
+    out[lm & (np.indices(t.shape)[2] >= top)] = R.LM
+    return out
+
+
+def test_a1c_no_centreline_class_is_carried_through_reads_and_a10():
+    pytest.importorskip("segtrain.tf1")
+    tree = make_tree(radius=3.0)
+    capped = _cap_lm(tree)
+    sp = (1.0, 1.0, 1.0)
+    res = R.default_scorer()(capped, tree, sp)
+    assert res["no_centreline"] == [R.LM] and R.LM not in res["per_class"]
+
+    # A10 vs reads: per read, listed; out of that read's share of the LM mean; counted
+    sv = R.score_vs_reads(tree, [tree, capped], sp)
+    assert sv["no_centreline_per_read"] == [[], [R.LM]]
+    assert sv["no_centreline_counts"][R.LM] == 1 and sv["no_centreline_counts"][R.LAD] == 0
+    assert sv["per_class"][R.LM] == pytest.approx(1.0)  # only the read with an LM centreline
+
+    ir = R.inter_read_tf1(tree, capped, sp)  # A = tree, B = capped
+    assert ir["no_centreline"] == {"A": [], "B": [R.LM]}
+
+    # A10 summary: excluded from the LM difference, counted per class
+    model = [{R.LM: 0.9, R.LAD: 0.9}] * 3
+    inter = [{R.LM: 0.9, R.LAD: 0.9}] * 3
+    acc = R.acceptance(model, inter, n_boot=200, no_centreline=[[R.LM], [], []])
+    assert acc["per_class"][R.LM]["n"] == 2 and acc["per_class"][R.LM]["n_no_centreline"] == 1
+    assert acc["per_class"][R.LAD]["n"] == 3 and acc["no_centreline_counts"][R.LAD] == 0
+    with pytest.raises(ValueError):
+        R.acceptance(model, inter, no_centreline=[[]])
+
+    # wave report: listed per case and read, counted per class, shown in the markdown
+    rep = R.first_reads_report(
+        [R.CaseReads("c0000", {"ann1": tree, "ann2": capped}, sp)],
+        scorer=R.default_scorer(),
+        use_namer=False,
+    )
+    row = rep["cases"][0]
+    assert row["tf1_no_centreline"] == {"ann1": [], "ann2": ["left_main"]}
+    w = rep["wave"]
+    assert w["tf1_no_centreline"]["left_main"] == {"n": 1, "cases": ["c0000:ann2"]}
+    assert all(v["n"] == 0 for k, v in w["tf1_no_centreline"].items() if k != "left_main")
+    assert "no reference centreline in 1 read(s): c0000:ann2" in R.report_markdown(rep)

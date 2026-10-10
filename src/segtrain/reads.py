@@ -163,7 +163,7 @@ def default_scorer(**tf1_kwargs) -> Scorer:
     """The project's one tree-F1 (``segtrain.tf1.tree_f1``, A9) as ``scorer(ref, pred, spacing)``.
 
     ``tf1_kwargs`` are passed through (``aorta=`` for the A1 ostium of record, ``tol_mm=``).
-    Returns ``{"per_class": {c: tF1}, "provisional": bool, "flagged": bool}`` from
+    Returns ``{"per_class": {c: tF1}, "provisional", "flagged", "no_centreline"}`` from
     ``TreeF1``. Without an aorta mask the result is ``provisional`` (A1a: it decides
     nothing); ``flagged`` marks a tree whose ostium rules disagree (A1b: excluded from
     decisive aggregates until reviewed).
@@ -176,6 +176,8 @@ def default_scorer(**tf1_kwargs) -> Scorer:
             "per_class": {int(k): float(v) for k, v in res.per_class.items() if np.isfinite(v)},
             "provisional": bool(res.provisional),
             "flagged": bool(res.flagged),
+            # A1c: reference classes with voxels but no centreline (absent from per_class)
+            "no_centreline": sorted(int(c) for c in getattr(res, "classes_without_centreline", [])),
         }
 
     return scorer
@@ -194,6 +196,25 @@ def _unpack(res) -> tuple[dict, bool, bool]:
         per = {int(k): float(v) for k, v in res.per_class.items()}
         return per, bool(getattr(res, "provisional", True)), bool(getattr(res, "flagged", False))
     return {int(k): float(v) for k, v in dict(res).items()}, True, False
+
+
+def _no_centreline(res) -> list:
+    """A1c: the classes a scorer result reports as having no reference centreline."""
+    if isinstance(res, Mapping):
+        v = res.get("no_centreline", res.get("classes_without_centreline", []))
+    else:
+        v = getattr(res, "classes_without_centreline", [])
+    return sorted(int(c) for c in (v or []))
+
+
+def _count_no_centreline(lists) -> dict:
+    """{class: number of scorings without a reference centreline for that class} (A1c)."""
+    out = {c: 0 for c in CLASSES}
+    for lst in lists:
+        for c in lst:
+            if c in out:
+                out[c] += 1
+    return out
 
 
 # ----------------------------------------------------------------------------- A3
@@ -395,13 +416,18 @@ def score_vs_reads(
     Returns ``{"per_class", "macro", "per_read", "provisional", "flagged"}``: the result is
     ``provisional`` if any read was scored without the A1 ostium of record (A1a), and
     ``flagged`` if any read's tree carries a flagged ostium (A1b).
+    A1c: ``no_centreline_per_read[k]`` lists the classes read k has voxels for but no
+    centreline; such a class is left out of that read's contribution to the class mean, and
+    ``no_centreline_counts`` counts the reads per class.
     """
     scorer = scorer or default_scorer()
-    unpacked = [_unpack(scorer(np.asarray(r), np.asarray(prediction), spacing)) for r in reads]
+    raw = [scorer(np.asarray(r), np.asarray(prediction), spacing) for r in reads]
+    unpacked = [_unpack(x) for x in raw]
+    no_cl = [_no_centreline(x) for x in raw]
     per_read = [u[0] for u in unpacked]
     per = {}
     for c in CLASSES:
-        v = [p[c] for p in per_read if c in p and np.isfinite(p[c])]
+        v = [p[c] for p, nc in zip(per_read, no_cl) if c in p and c not in nc and np.isfinite(p[c])]
         if v:
             per[c] = float(np.mean(v))
     return {
@@ -410,6 +436,8 @@ def score_vs_reads(
         "per_read": per_read,
         "provisional": any(u[1] for u in unpacked),
         "flagged": any(u[2] for u in unpacked),
+        "no_centreline_per_read": no_cl,
+        "no_centreline_counts": _count_no_centreline(no_cl),
     }
 
 
@@ -421,14 +449,23 @@ def inter_read_tf1(
 ) -> dict:
     """Inter-read tF1: mean of A scored against B and B scored against A, per class.
 
-    Carries ``provisional`` / ``flagged`` (A1a / A1b) like :func:`score_vs_reads`.
+    Carries ``provisional`` / ``flagged`` (A1a / A1b) like :func:`score_vs_reads`. A1c:
+    ``no_centreline`` = ``{"A": [...], "B": [...]}``, the classes for which that read, used as
+    the reference, has no centreline; such a direction is left out of the class mean.
     """
     scorer = scorer or default_scorer()
-    ab, pab, fab = _unpack(scorer(np.asarray(read_b), np.asarray(read_a), spacing))
-    ba, pba, fba = _unpack(scorer(np.asarray(read_a), np.asarray(read_b), spacing))
+    rab = scorer(np.asarray(read_b), np.asarray(read_a), spacing)  # reference B
+    rba = scorer(np.asarray(read_a), np.asarray(read_b), spacing)  # reference A
+    ab, pab, fab = _unpack(rab)
+    ba, pba, fba = _unpack(rba)
+    ncb, nca = _no_centreline(rab), _no_centreline(rba)
     per = {}
     for c in CLASSES:
-        v = [d[c] for d in (ab, ba) if c in d and np.isfinite(d[c])]
+        v = [
+            d[c]
+            for d, nc in ((ab, ncb), (ba, nca))
+            if c in d and c not in nc and np.isfinite(d[c])
+        ]
         if v:
             per[c] = float(np.mean(v))
     return {
@@ -436,6 +473,7 @@ def inter_read_tf1(
         "macro": _macro(per),
         "provisional": pab or pba,
         "flagged": fab or fba,
+        "no_centreline": {"A": nca, "B": ncb},
     }
 
 
@@ -448,8 +486,14 @@ def acceptance(
     classes: Sequence[int] = CLASSES,
     provisional: Optional[Sequence[bool]] = None,
     flagged: Optional[Sequence[bool]] = None,
+    no_centreline: Optional[Sequence[Sequence[int]]] = None,
 ) -> dict:
     """A10 per-class non-inferiority on the same cases.
+
+    A1c: ``no_centreline[i]`` lists the classes of case i that had no reference centreline
+    (in any read). Such a class is left out of that case's paired difference, and the
+    summary reports how many cases per class this was: ``per_class[c]["n_no_centreline"]``
+    and ``no_centreline_counts`` (every class, tested or not).
 
     ``flagged[i]`` (A1b) drops case i from the test until a human has reviewed its ostium;
     ``provisional[i]`` (A1a) keeps it but marks the whole result ``decisive=False``: a tF1
@@ -468,17 +512,22 @@ def acceptance(
     n = len(model)
     flagged = list(flagged) if flagged is not None else [False] * n
     provisional = list(provisional) if provisional is not None else [True] * n
+    no_cl = [set(map(int, x)) for x in no_centreline] if no_centreline is not None else [set()] * n
+    if len(no_cl) != n:
+        raise ValueError("no_centreline must list the same cases")
     keep = [i for i in range(n) if not flagged[i]]
     model = [model[i] for i in keep]
     inter = [inter[i] for i in keep]
+    no_cl = [no_cl[i] for i in keep]
+    nc_counts = {c: int(sum(c in x for x in no_cl)) for c in classes}
     rng = np.random.default_rng(seed)
     out = {}
     for c in classes:
         d = np.array(
             [
                 m[c] - i[c]
-                for m, i in zip(model, inter)
-                if c in m and c in i and np.isfinite(m[c]) and np.isfinite(i[c])
+                for m, i, nc in zip(model, inter, no_cl)
+                if c in m and c in i and c not in nc and np.isfinite(m[c]) and np.isfinite(i[c])
             ]
         )
         if not len(d):
@@ -490,6 +539,7 @@ def acceptance(
             "mean_diff": float(d.mean()),
             "ci95": [float(lo), float(hi)],
             "pass": bool(lo > -margin),
+            "n_no_centreline": nc_counts[c],
         }
     decisive = not any(provisional[i] for i in keep)
     return {
@@ -498,6 +548,7 @@ def acceptance(
         "accepted": bool(out) and all(v["pass"] for v in out.values()),
         "decisive": decisive,
         "n_flagged_excluded": int(n - len(keep)),
+        "no_centreline_counts": nc_counts,
     }
 
 
@@ -940,6 +991,19 @@ def load_read_folder(
     return out
 
 
+def _no_centreline_summary(pairs) -> dict:
+    """A1c: {class name: {"n": count, "cases": ["case:read", ...]}} over the report's pairs."""
+    out = {CLASS_NAMES[c]: {"n": 0, "cases": []} for c in CLASSES}
+    for r in pairs:
+        nc = r.get("inter_read_tf1", {}).get("no_centreline", {})
+        for k, rn in zip("AB", r.get("annotators", ["A", "B"])):
+            for c in nc.get(k, []):
+                if c in CLASS_NAMES and CLASS_NAMES[c] in out:
+                    out[CLASS_NAMES[c]]["n"] += 1
+                    out[CLASS_NAMES[c]]["cases"].append(f"{r['case']}:{rn}")
+    return out
+
+
 CROP_MARGIN_MM = 12.0  # > the 10 mm carina band and the 5 mm aorta-contact rule (A1)
 
 
@@ -1092,6 +1156,12 @@ def first_reads_report(
         )
 
     pairs = [r for r in rows if "third_read" in r]
+    for r in pairs:
+        if "inter_read_tf1" in r:
+            nc = r["inter_read_tf1"].get("no_centreline", {})
+            r["tf1_no_centreline"] = {
+                rn: [CLASS_NAMES[c] for c in nc.get(k, [])] for k, rn in zip("AB", r["annotators"])
+            }
     inter = {}
     for c in CLASSES:
         v = [
@@ -1118,6 +1188,8 @@ def first_reads_report(
         "tf1_flagged_cases": [
             r["case"] for r in pairs if r.get("inter_read_tf1", {}).get("flagged", False)
         ],
+        # A1c: per class, the (case, read) pairs whose read had no reference centreline
+        "tf1_no_centreline": _no_centreline_summary(pairs),
         "name_conflict_fraction": _stats([r.get("name_conflict_fraction") for r in pairs]),
         "name_conflict_within_carina_band": _stats(
             [r.get("name_conflict_within_carina_band") for r in pairs]
@@ -1169,6 +1241,10 @@ def report_markdown(report: Mapping) -> str:
     ]
     for k, v in (w["inter_read_tf1"] or {}).items():
         lines.append(f"- {k}: median {v['median']:.3f} (p10 {v['p10']:.3f}, n={v['n']})")
+    for k, v in (w.get("tf1_no_centreline") or {}).items():
+        if v["n"]:  # A1c: kept out of that class's mean, listed here
+            lines.append(f"- {k}: no reference centreline in {v['n']} read(s): "
+                         + ", ".join(v["cases"]))
     lines += [
         "",
         "## Name conflicts between reads (A11': reported, not ignored)",

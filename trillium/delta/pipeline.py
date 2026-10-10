@@ -197,6 +197,10 @@ def step_prepare():
                    test=have(lists['test']), bad=bad, sealed_source=src, n_sealed_excluded=len(sealed), mode=MODE),
               open(os.path.join(WORK, 'split.json'), 'w'), indent=1)
     log(f'proxy labels: {sum(s in ("ok", "exists") for s in status.values())} ok, {len(bad)} unusable: {list(bad.items())[:5]}')
+    missing = [c for c, s in bad.items() if 'FileNotFoundError' in s]
+    if missing:  # a missing input is an environment fault, never a reason to shrink the test set
+        raise SystemExit(f'ImageCAS-X / mask files missing for {len(missing)} cases {missing[:8]}: '
+                         're-run fetch_icx.py; refusing to evaluate on a silently reduced test set')
 
 
 def run(cmd):

@@ -43,7 +43,9 @@ if [[ "$CMD" == smoke ]]; then
   export DELTA_ICX="${DELTA_ICX:-$DELTA_WORK/icx}"
   mkdir -p "$DELTA_WORK"
   python3 "$HERE/layout.py" "$CASES_DIR"
-  if [[ ! -f "$DELTA_ICX/ImageCAS-X_dataset/filelist/test.txt" ]]; then python3 "$HERE/fetch_icx.py" "$DELTA_ICX"; fi
+  # fetch_icx.py is idempotent and fails unless all 800 segmentations are present: always run it
+  # (a test.txt-only guard let an interrupted fetch through and silently dropped 17 cases, Round 5)
+  python3 "$HERE/fetch_icx.py" "$DELTA_ICX"
   python3 - <<EOF
 import os, nnunetv2, shutil
 d = os.path.join(os.path.dirname(nnunetv2.__file__), 'training', 'nnUNetTrainer', 'variants', 'delta')
@@ -216,8 +218,12 @@ EOF
 fi
 
 # ---------------------------------------------------------------- 5. ImageCAS-X names (internet: login node only)
-if [[ ! -f "$SCRATCH/delta_icx/ImageCAS-X_dataset/filelist/test.txt" ]]; then
-  if [[ "$CMD" == dryrun ]]; then say "(dryrun) would fetch ImageCAS-X into $SCRATCH/delta_icx"; else
+# Not guarded on test.txt: an interrupted fetch leaves the file lists but not all segmentations,
+# which silently dropped 17 of 80 open cases in Round 5. fetch_icx.py skips files already present
+# and exits non-zero unless all 800 segmentations are there.
+n_icx=$(find "$SCRATCH/delta_icx/ImageCAS-X_dataset/segmentations" -name "*.nii.gz" 2>/dev/null | wc -l)
+if (( n_icx < 800 )); then
+  if [[ "$CMD" == dryrun ]]; then say "(dryrun) would fetch ImageCAS-X into $SCRATCH/delta_icx ($n_icx/800 present)"; else
     "$VENV/bin/python" "$HERE/fetch_icx.py" "$SCRATCH/delta_icx"; fi
 fi
 

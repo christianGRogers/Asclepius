@@ -1,0 +1,224 @@
+#!/bin/bash
+# Atlas Trillium run 2 (Round 5, amendment A16): reuses run 1 ($SCRATCH/atlas, ./atlas) and
+#   Phase A  A1 re-score of run 1's 80 val predictions with the frozen segtrain.tf1 and TotalSegmentator aortas,
+#            the FP census (A15) and a global-threshold sweep; and run 1's predictions + softmax + aortas for the
+#            36 clean open test cases (for Bridge's out-of-sample test). No training.
+#   Phase B  the A2 window ablation: run 1 with nnU-Net's default CT window, 412 epochs, paired against run 1.
+#
+#   cd <root>/experiments/atlas2 && ./atlas2          # set up (login node), submit ONE 1-GPU job, or report status
+#   ./atlas2 status                                    # job state and progress
+#   ./atlas2 collect                                   # copy results from $SCRATCH into ./results/
+#   ATLAS_DRYRUN=1 ./atlas2                            # no modules, no pip, no sbatch: print what would happen
+#
+# Budget: one job, 1 x H100, --time=23:50:00 (<= 24 h). Never resubmits a job that already used >= 1 h.
+# Optional overrides (never needed): CASES=/path, ACCOUNT=def-xxx (default def-aso22), ATLAS2_VENV=$HOME/atlas2-venv,
+# ATLAS2_RUN1=$SCRATCH/atlas (run 1's workdir).
+set -euo pipefail
+
+HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+LIB="$HERE/lib"
+MODE="${1:-run}"
+DRY="${ATLAS_DRYRUN:-0}"
+JOBNAME="atlas2"
+WALLTIME="23:50:00"
+VENV="${ATLAS2_VENV:-$HOME/atlas2-venv}"
+NNUNET_VERSION="2.8.1"
+TOTALSEG_VERSION="2.18.0"
+# A1c: the decisive metric's frozen hash (vault/Plans/Master plan.md, Round 5). The job refuses any other version.
+FROZEN_SHA="3c737cbcc0ba24d38f923a52a28d479b34b579d6943f4c55a8cae48f66ad9253"
+
+say() { printf '[atlas2] %s\n' "$*"; }
+die() { printf '[atlas2] ERROR: %s\n' "$*" >&2; exit 1; }
+
+if [ "$DRY" = "1" ]; then
+    : "${SCRATCH:=${TMPDIR:-/tmp}/atlas2-dryrun-scratch}"
+    mkdir -p "$SCRATCH"
+fi
+[ -n "${SCRATCH:-}" ] || die "\$SCRATCH is not set (this must run on a Trillium login node)"
+W="$SCRATCH/atlas2"
+RUN1="${ATLAS2_RUN1:-$SCRATCH/atlas}"
+mkdir -p "$W/logs"
+
+# ------------------------------------------------------------------ the frozen metric (A1c)
+check_hash() {
+    local h
+    h="$(sha256sum "$LIB/segtrain_tf1.py" | cut -d' ' -f1)"
+    [ "$h" = "$FROZEN_SHA" ] || die "lib/segtrain_tf1.py has sha256 $h, not the frozen $FROZEN_SHA (A1c): refusing to run"
+    say "metric: segtrain.tf1 sha256 $h = frozen hash (A1c)"
+}
+
+# ------------------------------------------------------------------ python on the login node
+load_modules() {
+    if [ "$DRY" = "1" ]; then return 0; fi
+    command -v module >/dev/null 2>&1 || die "the 'module' command is missing; run this on a Trillium login node"
+    module purge >/dev/null 2>&1 || true
+    module load StdEnv/2023 python/3.11.5
+}
+
+setup_venv() {
+    if [ "$DRY" = "1" ]; then
+        say "dry run: would build venv $VENV (torch from the Alliance wheelhouse, nnunetv2==$NNUNET_VERSION, TotalSegmentator==$TOTALSEG_VERSION)"
+        PY=python3; return 0
+    fi
+    if [ ! -f "$VENV/.atlas2_ok" ]; then
+        say "building venv $VENV (one-off, a few minutes)"
+        virtualenv --no-download "$VENV"
+        # shellcheck disable=SC1091
+        source "$VENV/bin/activate"
+        pip install --no-index --upgrade pip
+        pip install --no-index torch            # Alliance wheel, CUDA-enabled
+        pip install "nnunetv2==$NNUNET_VERSION" "TotalSegmentator==$TOTALSEG_VERSION" remotezip scikit-image nibabel scipy
+        python -c "import nnunetv2, importlib.metadata as m; assert m.version('nnunetv2') == '$NNUNET_VERSION', m.version('nnunetv2')"
+        deactivate
+        touch "$VENV/.atlas2_ok"
+    fi
+    # shellcheck disable=SC1091
+    source "$VENV/bin/activate"
+    PY="$VENV/bin/python"
+    local tdir
+    tdir="$("$PY" -c 'import nnunetv2, os; print(os.path.join(os.path.dirname(nnunetv2.__file__), "training", "nnUNetTrainer", "variants", "atlas"))')"
+    mkdir -p "$tdir"; touch "$tdir/__init__.py"
+    cp "$LIB/atlas_trainers.py" "$tdir/atlas_trainers.py"
+    "$PY" -c "import torch, totalsegmentator; from nnunetv2.training.nnUNetTrainer.variants.atlas.atlas_trainers import nnUNetTrainerAtlas; print('[atlas2] venv ok: torch', torch.__version__)"
+}
+
+# TotalSegmentator weights: downloaded here (login node has internet), used offline on the compute node.
+setup_totalseg() {
+    export TOTALSEG_HOME_DIR="$W/totalseg"
+    if [ "$DRY" = "1" ]; then say "dry run: would download TotalSegmentator 'total_fast' weights into $TOTALSEG_HOME_DIR"; return 0; fi
+    if [ ! -e "$TOTALSEG_HOME_DIR/.weights_ok" ]; then
+        mkdir -p "$TOTALSEG_HOME_DIR"
+        totalseg_download_weights -t total_fast
+        "$PY" - "$TOTALSEG_HOME_DIR" <<'PYEOF'
+import json, os, sys
+from totalsegmentator.config import setup_totalseg, get_weights_dir
+setup_totalseg()
+p = os.path.join(sys.argv[1], 'config.json'); c = json.load(open(p)); c['send_usage_stats'] = False
+json.dump(c, open(p, 'w'))   # no network on the compute node: never try to send statistics
+w = get_weights_dir(); n = sum(len(f) for _, _, f in os.walk(w))
+assert n > 0, f'no TotalSegmentator weights in {w}'
+print(f'[atlas2] TotalSegmentator weights in {w} ({n} files); usage statistics off')
+PYEOF
+        touch "$TOTALSEG_HOME_DIR/.weights_ok"
+    fi
+}
+
+# ------------------------------------------------------------------ status helpers
+running_job() {
+    if [ "$DRY" = "1" ] || ! command -v squeue >/dev/null 2>&1; then return 1; fi
+    squeue -u "$USER" --name "$JOBNAME" -h -o '%i %T %M' | head -1
+}
+
+collect() {
+    if [ -d "$W/results" ]; then
+        if mkdir -p "$HERE/results" 2>/dev/null && [ -w "$HERE/results" ]; then
+            cp -r "$W/results/." "$HERE/results/"
+            cp "$W"/logs/slurm-*.out "$HERE/results/" 2>/dev/null || true
+            say "results copied to $HERE/results/ (SUMMARY.md, results.json, per-case tables, logs)"
+        else
+            say "results are in $W/results/ ($HERE is not writable)"
+        fi
+    else
+        say "no results yet in $W/results/"
+    fi
+    [ -f "$W/open36/manifest_open36.json" ] && say "open-36 predictions for Bridge: $W/open36/manifest_open36.json"
+    return 0
+}
+
+status() {
+    local rj
+    rj="$(running_job || true)"
+    if [ -n "$rj" ]; then say "job $rj"; fi
+    for m in .aorta_done .open36_done .b_plan_done .b_preprocess_done .b_train_done DONE; do
+        [ -e "$W/$m" ] && say "stage done: $m"
+    done
+    [ -f "$W/timings.json" ] && say "timings (h): $(tr -d '\n ' < "$W/timings.json")"
+    tail -n 5 "$W"/logs/slurm-*.out 2>/dev/null || true
+}
+
+case "$MODE" in
+    status)  status; exit 0 ;;
+    collect) collect; exit 0 ;;
+    run) ;;
+    *) die "unknown mode '$MODE' (use: ./atlas2 | ./atlas2 status | ./atlas2 collect)" ;;
+esac
+
+check_hash
+
+# ------------------------------------------------------------------ 1. finished? running?
+if [ -e "$W/DONE" ]; then say "experiment finished"; collect; exit 0; fi
+RJ="$(running_job || true)"
+if [ -n "$RJ" ]; then say "already queued/running: $RJ (not submitting again)"; status; exit 0; fi
+if [ -f "$W/submitted_jobs" ] && [ "$DRY" != "1" ] && command -v sacct >/dev/null 2>&1; then
+    while read -r jid; do
+        el="$(sacct -j "$jid" -X -n -o ElapsedRaw 2>/dev/null | head -1 | tr -d ' ')"
+        if [ -n "$el" ] && [ "$el" -ge 3600 ]; then
+            say "job $jid already used $((el / 60)) min of GPU time and did not finish; not resubmitting (24 h budget)."
+            say "partial results:"; collect; exit 0
+        fi
+    done < "$W/submitted_jobs"
+fi
+
+# ------------------------------------------------------------------ 2. environment, cases, run 1, labels
+load_modules
+setup_venv
+say "scratch workdir: $W; run 1 workdir: $RUN1"
+cp "$HERE/sealed_test.json" "$W/sealed_test.json"
+"$PY" "$LIB/layout.py" "$HERE" "$W/layout.json"   # walks up to <root>/cases (or $CASES); fails loudly
+"$PY" "$LIB/check_run1.py" "$RUN1" "$W" "$W/layout.json" "$W/sealed_test.json" > "$W/run1_check.txt" \
+    || { cat "$W/run1_check.txt"; die "run 1 outputs are needed (see above)"; }
+head -1 "$W/run1_check.txt"
+RUN1_VAL="$(sed -n 's/^RUN1_VAL=//p' "$W/run1_check.txt")"
+RUN1_REF="$(sed -n 's/^RUN1_REF=//p' "$W/run1_check.txt")"
+PLANS="$(sed -n 's/^PLANS=//p' "$W/run1_check.txt")"
+S_EPOCH="$("$PY" -c "import json,sys
+try:
+    b = json.load(open('$RUN1/results/results.json'))['r0_benchmark']; print(min(v['s_per_epoch'] for v in b.values()))
+except Exception:
+    print(175.0)")"
+say "run 1 measured $S_EPOCH s/epoch; phase B needs ~$("$PY" -c "print(round(412 * $S_EPOCH / 3600, 1))") h of training"
+
+if [ -s "$RUN1/icx/train.txt" ] && [ "$(find "$RUN1/icx/" -name '*.coronary.nii.gz' | wc -l)" -ge 800 ]; then
+    ICX="$RUN1/icx"; say "ImageCAS-X labels: reusing run 1's $ICX"
+elif [ "$DRY" = "1" ] && [ -n "${ATLAS_DRY_ICX:-}" ]; then
+    ICX="$ATLAS_DRY_ICX"; say "dry run: using local ImageCAS-X labels in $ICX"
+else
+    ICX="$W/icx"; "$PY" "$LIB/fetch_icx.py" "$ICX"
+fi
+CL="$W/centerlines"
+if [ "$DRY" = "1" ] && [ -n "${ATLAS_DRY_CL:-}" ]; then
+    CL="$ATLAS_DRY_CL"; say "dry run: using local ImageCAS-X centrelines in $CL"
+else
+    "$PY" "$LIB/fetch_cl.py" "$CL" "$W/cl_cases.txt"   # validation column only; failure is not fatal
+fi
+setup_totalseg
+
+# ------------------------------------------------------------------ 3. the job script
+JOB="$W/job.sh"
+ACCOUNT_LINE="#SBATCH --account=${ACCOUNT:-${ATLAS_ACCOUNT:-def-aso22}}"
+cat > "$JOB" <<EOF
+#!/bin/bash
+#SBATCH --job-name=$JOBNAME
+#SBATCH --nodes=1
+#SBATCH --gpus-per-node=1
+#SBATCH --time=$WALLTIME
+#SBATCH --output=$W/logs/slurm-%j.out
+$ACCOUNT_LINE
+# No --partition and no --mem: Trillium docs say not to set them. A 1-GPU job gets 24 cores and ~188 GiB.
+set -uo pipefail
+export W="$W" LIB="$LIB" RUN1="$RUN1" ICX="$ICX" CL="$CL" VENV="$VENV" PYTHONUNBUFFERED=1
+export TOTALSEG_HOME_DIR="$W/totalseg" FROZEN_SHA="$FROZEN_SHA" S_EPOCH="$S_EPOCH"
+export PLANS="$PLANS" RUN1_VAL="$RUN1_VAL" RUN1_REF="$RUN1_REF"
+bash "$LIB/job_body.sh"
+EOF
+chmod +x "$JOB"
+
+if [ "$DRY" = "1" ]; then
+    say "dry run: would submit (from $W):"; cat "$JOB"; exit 0
+fi
+cd "$W"
+JID="$(sbatch --parsable "$JOB")"
+echo "$JID" >> "$W/submitted_jobs"
+say "submitted job $JID ($JOBNAME, 1 x H100, $WALLTIME)."
+say "watch: ./atlas2 status    results when finished: ./atlas2   (or ./atlas2 collect)"
+say "results: $W/results/ (copied to $HERE/results/ by ./atlas2 collect); open-36 manifest: $W/open36/manifest_open36.json"

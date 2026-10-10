@@ -3,12 +3,12 @@ acceptance (A10). Pure numpy/scipy; the tree-F1 is trillium/atlas/lib/tf1.py (De
 identical to Delta's scorer).
 
 Training-label forms (labels 0..4, IGNORE = 5):
-  a11_samples(A, B)        DEFAULT (A11). Each read is its own sample; voxels both reads call vessel but name
-                           differently are IGNORE in both samples; extent differences keep each read's own label.
+  both_as_samples(A, B)    DEFAULT since Round 5 (A11'): each read is its own sample, unchanged (no IGNORE).
+  a11_samples(A, B)        the retired Round 3 A11 voxel rule: voxels both reads call vessel but name differently
+                           are IGNORE in both samples; extent differences keep each read's own label.
   agree_or_ignore(A, B)    Atlas v3 form: one label; any disagreement (names or extent) -> IGNORE.
-  both_as_samples(A, B)    pure: (A, B) unchanged.
-  The pre-registered A11 test compares the first two (and the third if budget allows) at the first wave with
-  >= 150 double-read cases.
+  training_samples(A, B, form=DEFAULT_FORM) dispatches by name. The A11 test (Round 5: only if the wave-1 habit test
+  A12a finds habits) compares A11' ('both') with 'agree', judged by tF1 against the reads.
 
 Adjudication (case level, A11): a third read is needed if
   inter-read macro tF1 < 0.80, or ostium disagreement > 5 mm, or LM-end (carina) disagreement > 5 mm,
@@ -47,6 +47,20 @@ def agree_or_ignore(A, B):
 
 def both_as_samples(A, B):
     return A.copy(), B.copy()
+
+
+DEFAULT_FORM = 'both'   # A11' (Round 5); 'a11' kept only as a switch
+
+
+def training_samples(A, B, form=DEFAULT_FORM):
+    """The training samples one double-read case contributes, by form name ('both', 'a11', 'agree')."""
+    if form == 'both':
+        return both_as_samples(A, B)
+    if form == 'a11':
+        return a11_samples(A, B)
+    if form == 'agree':
+        return (agree_or_ignore(A, B),)
+    raise ValueError(f'unknown training-label form {form!r}')
 
 
 # ------------------------------------------------------------------ geometry helpers

@@ -421,3 +421,18 @@ def test_crop_case_keeps_world_coordinates(tree):
     v = np.argwhere(small.reads["A"] > 0)[0]
     w_small = small.affine[:3, :3] @ v + small.affine[:3, 3]
     assert np.allclose(w_small, aff[:3, :3] @ (np.argwhere(big > 0)[0]) + aff[:3, 3])
+
+
+def test_fast_distance_helpers_match_full_grid_transforms():
+    """E4: the separable dilation and the KD-tree distances equal the full-grid versions."""
+    from scipy import ndimage
+
+    from segtrain.reads import _dilate26, _dist_to_background
+
+    rng = np.random.default_rng(3)
+    m = ndimage.binary_dilation(rng.random((30, 34, 26)) < 0.01, iterations=2)
+    assert (_dilate26(m) == ndimage.binary_dilation(m, np.ones((3, 3, 3), bool))).all()
+    sp = np.array([0.4, 0.4, 0.5])
+    pts = np.argwhere(m)
+    ref = ndimage.distance_transform_edt(m, sampling=sp)[tuple(pts.T)]
+    assert np.allclose(_dist_to_background(m, pts, sp), ref)

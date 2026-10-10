@@ -93,6 +93,45 @@ _ICX_TERRITORY[[3, 6, 7, 8, 12, 13]] = LCX
 _ICX_TERRITORY[[9, 10, 11]] = RCA
 _S26 = np.ones((3, 3, 3), bool)
 
+
+def _dilate26(m: np.ndarray) -> np.ndarray:
+    """One-voxel 26-neighbour dilation, done as three 1-D passes (the 3x3x3 cube is separable):
+    identical to ``binary_dilation(m, ones((3,3,3)))`` and ~30x faster on a tree box (E4)."""
+    out = np.array(m, bool)
+    for ax in range(3):
+        src = out.copy()
+        a = np.moveaxis(out, ax, 0)
+        b = np.moveaxis(src, ax, 0)
+        a[1:] |= b[:-1]
+        a[:-1] |= b[1:]
+    return out
+
+def _dist_to_background(mask: np.ndarray, pts: np.ndarray, sp: np.ndarray) -> np.ndarray:
+    """Distance (mm) from voxels ``pts`` to the nearest background voxel centre: what
+    ``distance_transform_edt(mask, sampling=sp)[pts]`` returns, computed only where needed.
+    Exact: the nearest background voxel of a mask point always lies in the one-voxel shell
+    around the mask (a step from it towards the point is closer, so must be foreground). As in
+    the EDT, outside the array is not background."""
+    from scipy.spatial import cKDTree
+
+    if not len(pts):
+        return np.zeros(0)
+    m = np.asarray(mask, bool)
+    shell = np.argwhere(_dilate26(m) & ~m)
+    if not len(shell):
+        return np.full(len(pts), np.inf)
+    return cKDTree(shell * sp).query(np.asarray(pts) * sp)[0]
+
+
+def _nearest_in(target: np.ndarray, pts: np.ndarray, sp: np.ndarray):
+    """(distance mm, index into argwhere(target)) of the nearest ``target`` voxel to each point."""
+    from scipy.spatial import cKDTree
+
+    tp = np.argwhere(target)
+    d, i = cKDTree(tp * sp).query(np.asarray(pts) * sp)
+    return d, tp[i]
+
+
 Scorer = Callable[[np.ndarray, np.ndarray, Sequence[float]], Mapping[int, float]]
 
 
@@ -114,8 +153,9 @@ def icx_to_territory(icx14: np.ndarray) -> np.ndarray:
     if other.any():
         src = np.isin(out, (LAD, LCX))
         if src.any():
-            _, ind = ndimage.distance_transform_edt(~src, return_indices=True)
-            out[other] = out[tuple(ind)][other]
+            op = np.argwhere(other)
+            _, near = _nearest_in(src, op, np.ones(3))
+            out[tuple(op.T)] = out[tuple(near.T)]
     return out
 
 
@@ -176,7 +216,7 @@ def calibre_fraction(
     sk = skeletonize(m)
     if not sk.any():
         return float("nan")
-    diam = 2 * ndimage.distance_transform_edt(m, sampling=sp)[sk] - inplane
+    diam = 2 * _dist_to_background(m, np.argwhere(sk), sp) - inplane
     return float(np.mean(diam < voxels * inplane))
 
 
@@ -266,12 +306,12 @@ def lm_landmarks(read: np.ndarray) -> tuple[Optional[np.ndarray], Optional[np.nd
     lr = np.isin(r, (LAD, LCX))
     end = None
     if lr.any():
-        j = lm & ndimage.binary_dilation(lr, _S26)
+        j = lm & _dilate26(lr)
         if j.any():
             end = np.argwhere(j).mean(0)
-        dist = ndimage.distance_transform_edt(~lr)
         pts = np.argwhere(lm)
-        ost = pts[np.argmax(dist[lm])].astype(float)
+        dist, _ = _nearest_in(lr, pts, np.ones(3))
+        ost = pts[np.argmax(dist)].astype(float)
     else:
         ost = np.argwhere(lm).mean(0)
     return ost, end
@@ -468,16 +508,16 @@ def _skeleton_graph(mask: np.ndarray, spacing: np.ndarray):
     sk = skeletonize(mask)
     pts = np.argwhere(sk)
     n = len(pts)
-    idx = -np.ones(sk.shape, np.int64)
-    idx[tuple(pts.T)] = np.arange(n)
+    lin = np.ravel_multi_index(tuple(pts.T), sk.shape)  # sorted (argwhere is C-ordered)
     rows, cols, w = [], [], []
     for o in np.argwhere(np.ones((3, 3, 3))) - 1:
         if not o.any():
             continue
         q = pts + o
         ok = np.all((q >= 0) & (q < sk.shape), 1)
-        j = idx[tuple(q[ok].T)]
-        good = j >= 0
+        ql = np.ravel_multi_index(tuple(q[ok].T), sk.shape)
+        j = np.minimum(np.searchsorted(lin, ql), max(n - 1, 0))
+        good = lin[j] == ql if n else np.zeros(0, bool)
         rows.append(np.nonzero(ok)[0][good])
         cols.append(j[good])
         w.append(np.full(int(good.sum()), float(np.linalg.norm(o * spacing))))
@@ -657,11 +697,13 @@ def truncation_radius(
     sk = skeletonize(m)
     if not sk.any():
         return None
-    rad = ndimage.distance_transform_edt(m, sampling=np.asarray(spacing, float))
     covered = sk & r
     uncovered = sk & ~r
-    stop = covered & ndimage.binary_dilation(uncovered, _S26)
-    return float(np.median(rad[stop])) if stop.any() else None
+    stop = covered & _dilate26(uncovered)
+    if not stop.any():
+        return None
+    rad = _dist_to_background(m, np.argwhere(stop), np.asarray(spacing, float))
+    return float(np.median(rad))
 
 
 # ----------------------------------------------------------------------------- A12 attribution

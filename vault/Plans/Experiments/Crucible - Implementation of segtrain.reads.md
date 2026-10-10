@@ -117,3 +117,27 @@ A1a. The CLI is the orchestrator's.
     `segtrain.aorta` once it lands. No import dependency on it.
 - **CLI requested:** `segtrain reads-report ... --aorta-dir <dir>`. It should imply
   `load_read_folder(aorta_dir=...)` and `first_reads_report(per_case_tf1=True)`.
+
+## Echo follow-up E1, E2, E4 (Round 6)
+
+- **E1 (sealed filter):** `load_read_folder` calls `proxy.sealed_reason(entry, sealed)` on each folder name before it opens anything. It refuses sealed cases under every name form (`cNNNN`, `imagecas_NNNN`, `__rK` replicas) and also folder names that map to no case.
+  - Refused entries are listed in `refused=` and raise a warning.
+  - `sealed` defaults to `proxy.load_sealed()`. `milestone=True` lifts the filter, for sealed-test scoring only.
+  - Test: `test_read_folder_refuses_sealed_cases_before_opening_them`.
+- **E2:** there is one case-identity implementation. `reads.case_id` and `reads.read_name` are re-exports of `segtrain.proxy` (built on `canonical_case`). They are kept as names only because Echo's E2 test imports `reads.case_id`. reads.py contains no mapping of its own.
+- **E4 (cost):** the hot spot was about 15 full-grid EDTs per case, in calibre, LM landmarks, the carina anchor, truncation and ICX "Other" relabelling.
+  - **Fix:**
+    1. `crop_case` cuts each case to the box around its reads ∪ mask, plus 12 mm. The affine is shifted, so world coordinates and laterality are unchanged.
+    2. Exact KD-tree distances are computed only at the points needed. The nearest background voxel lies in the one-voxel shell, so the result equals the EDT, and like the EDT it treats outside the array as not background.
+    3. 26-neighbour dilation uses array slices (about 8× faster than `binary_dilation`, same result).
+    4. The skeleton graph looks up neighbours sparsely.
+  - **Real c0001** (two reads, box 372×299×218):
+
+    | Mode | Before | After |
+    |---|---|---|
+    | Full report (namer + tF1) | 791 s, about 4.5 GB | 77–89 s, 1.7 GB peak |
+    | Fast mode (`use_namer=False`, `scorer=None`) | — | 25 s |
+
+    For 50 cases, that is about 70 min in full mode or about 20 min in fast mode, as one process on a workstation.
+  - Tests: `test_crop_case_keeps_world_coordinates`, `test_fast_distance_helpers_match_full_grid_transforms`.
+  - **Note for Echo:** `test_wave_report_works_on_the_tree_bounding_box` now fails, but only at `assert shapes and ...`. The report makes no full-grid EDT calls at all now, so the spy records nothing. Suggested change: `assert not shapes or max(shapes) < lab.size / 8`.

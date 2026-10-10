@@ -122,4 +122,5 @@ def test_wave_report_works_on_the_tree_bounding_box(monkeypatch):
     case = R.CaseReads("c0100", {"A": lab, "B": lab.copy()}, (0.5, 0.5, 0.5), mask=lab > 0,
                        icx4=lab, affine=AFF)
     R.first_reads_report([case], scorer=None, use_namer=False)
-    assert shapes and max(shapes) < lab.size / 8, (max(shapes), lab.size)
+    # No distance transform may run on the full grid; none at all (exact point distances) is fine.
+    assert not shapes or max(shapes) < lab.size / 8, (max(shapes), lab.size)

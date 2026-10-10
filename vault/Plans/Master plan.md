@@ -2,20 +2,19 @@
 aliases: [Master plan]
 tags: [plans, master]
 status: living
-round: 6
+round: 7
 updated: 2026-10-10
 ---
 
 # Master plan
 
-**In force: [[Atlas v7]], as amended by the judge in [[Round 6]].** Won round 1
-(as [[Atlas v1]]) and held the title in rounds 2–6; round 6 was against
-[[Bridge v6]], [[Crucible v8]], [[Delta v7]] and a new advocate, [[Foxtrot v1]]. All three challengers now keep the master's
+**In force: [[Atlas v8]], as amended by the judge in [[Round 7]].** Won round 1
+(as [[Atlas v1]]) and held the title in rounds 2–7. All three challengers now keep the master's
 model, data, schedule and deciding metric, and compete on additions to it.
 
 The plan text is the candidate file; the amendments below are binding and
 override it where they conflict. Full reasoning, scorecards and what would
-change the ruling: [[Round 6]] (earlier: [[Round 5]] … [[Round 1]]).
+change the ruling: [[Round 7]] (earlier: [[Round 6]] … [[Round 1]]).
 
 ## In one paragraph
 
@@ -125,6 +124,20 @@ judge accepts only the bounds 0.846–0.895 until the A1 re-score. The FP gate f
   wave 1; a batch aorta producer (TotalSegmentator) lives in `src/segtrain` before any
   decisive tF1 is computed outside a Trillium job (A1a); Echo's remaining suspicions go to
   their owners.
+
+## Round 7 changes (full wording in [[Round 7]])
+
+- **A1c change approved — report-only:** `segtrain.tf1` reports any reference class with
+  no centreline voxels (7 of 143 references: short wide LM ×6, LCx ×1) instead of skipping
+  it silently. No score changes, so atlas2's results under the old hash stay
+  decision-grade; the new hash will be recorded here when the change lands. Scoring such
+  a class as missed is **rejected** (a perfect prediction has no centreline there
+  either). A minimum-centreline fallback is approved in principle, to be validated before
+  wave 1 and before any A10 or sealed scoring.
+- A17a fine-tune trainer and A17b citation done; A20(i) ROI check passes on 92 cases, the
+  remaining 908 to run with the aorta producer after atlas2; A21 aorta producer built and
+  the SegQueue export dry run passed on test submissions — it must be repeated on the
+  first real four-class double-read export before wave 1.
 
 ## Open human decisions (Round 6)
 

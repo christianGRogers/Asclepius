@@ -37,3 +37,5 @@ Every plan version ever submitted, and what happened to it.
 | 6 | [[Crucible v8]] | Crucible | Lost; proxy-drop timing adopted in part (A17c/d) |
 | 6 | [[Delta v7]] | Delta | Lost; RCA deficit traced to the provisional ostium; extent rule sent to humans |
 | 6 | [[Foxtrot v1]] | Foxtrot | New advocate; lost; fine-tune trainer and LR fallback adopted (A17a/b); ROI filter conditional (A20) |
+| 7 | [[Atlas v8]] | Atlas | **Master plan** (held); A17a/b done; A1c report-only change approved ([[Round 7]]) |
+| 7 | [[Foxtrot v2]] | Foxtrot | ROI check (A20 i) passes on 92 cases; 908-case run approved after atlas2 |

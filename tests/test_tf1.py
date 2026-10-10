@@ -7,6 +7,7 @@ copies) on fixtures where every copy agrees on the ostium."""
 
 import importlib.util
 import math
+import sys
 from pathlib import Path
 
 import numpy as np
@@ -224,6 +225,58 @@ def test_joined_left_and_right_trees_still_get_two_aorta_ostia(ref, aorta):
     assert T.tree_f1(joined, joined, SP, aorta=aorta).tf1 == pytest.approx(1.0)
 
 
+# ------------------------------------------------------------------------------- A1c, Round 7
+def _stub(ref):
+    """Short-LM habit of the proxy: the trunk's LM voxels lie beside the skeleton, never on it
+    (c0848: nearest LM voxel 0.76 mm from the centreline), so the centreline carries no LM."""
+    _, d = _tube(SHAPE, *LM)
+    out = ref.copy()
+    out[(ref == 1) & (d <= 1.8)] = 2
+    return out
+
+
+def _frozen():
+    return _load("tf1_3c737cbc", "experiments/Delta/tf1_3c737cbc.py")
+
+
+def test_class_without_centreline_is_listed_and_scores_are_bit_identical(ref):
+    old = _frozen()
+    stub = _stub(ref)
+    for name, (r, p) in {"stub": (stub, stub), "stub_cut": (stub, _cut(stub, 2, X0 + 40, 8)),
+                         "stub_renamed": (stub, np.where(stub == 1, 2, stub)),
+                         "full": (ref, ref), "full_cut": (ref, _cut(ref, 2, X0 + 40, 8))}.items():
+        new, was = T.tree_f1(r, p, SP), old.tree_f1(r, p, SP)
+        assert new.per_class == was.per_class and new.tf1 == was.tf1, name
+        assert new.recall == was.recall and new.precision == was.precision, name
+        assert new.classes_without_centreline == ([1] if name.startswith("stub") else []), name
+        assert new.as_row()["classes_without_centreline"] == new.classes_without_centreline
+    assert 1 not in T.tree_f1(stub, stub, SP).per_class          # default: report only
+
+
+def test_fallback_centreline_scores_a_perfect_prediction_one(ref):
+    stub = _stub(ref)
+    r = T.tree_f1(stub, stub, SP, fallback_centreline=True)
+    assert r.centreline_fallback and r.classes_without_centreline == [1]
+    assert r.per_class == pytest.approx({1: 1.0, 2: 1.0, 3: 1.0, 4: 1.0})
+    assert r.tf1 == pytest.approx(1)
+
+
+def test_fallback_centreline_sees_an_lm_renamed_lad(ref):
+    stub = _stub(ref)
+    renamed = np.where(stub == 1, 2, stub)
+    fb = T.tree_f1(stub, renamed, SP, fallback_centreline=True)
+    dflt = T.tree_f1(stub, renamed, SP)
+    assert fb.per_class[1] == 0.0
+    assert fb.precision[2] < dflt.precision[2] == 1.0              # LAD precision falls
+
+
+def test_fallback_changes_nothing_where_every_class_has_a_centreline(ref):
+    for name, pred in _cases(ref).items():
+        a, b = T.tree_f1(ref, pred, SP), T.tree_f1(ref, pred, SP, fallback_centreline=True)
+        assert (a.per_class, a.recall, a.precision, a.tf1) == \
+            (b.per_class, b.recall, b.precision, b.tf1), name
+
+
 # ------------------------------------------------------------------------------- bridge audit
 def test_bridge_audit_tells_true_fp_and_cross_tree_joins(ref):
     before = _cut(ref, 2, X0 + 40, 8)
@@ -252,6 +305,7 @@ def test_bridge_audit_tells_true_fp_and_cross_tree_joins(ref):
 def _load(name, path):
     spec = importlib.util.spec_from_file_location(name, REPO / path)
     mod = importlib.util.module_from_spec(spec)
+    sys.modules.setdefault(name, mod)     # dataclasses look their module up there
     spec.loader.exec_module(mod)
     return mod
 

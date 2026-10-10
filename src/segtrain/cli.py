@@ -1129,7 +1129,7 @@ def cmd_tf1(args) -> int:
     import json
 
     from .convert import align_to_reference
-    from .tf1 import fp_components, tree_f1
+    from .tf1 import CLASS_NAMES, fp_components, tree_f1
 
     ref, ref_img = _nifti(args.reference)
     spacing = ref_img.header.get_zooms()[:3]
@@ -1154,6 +1154,9 @@ def cmd_tf1(args) -> int:
     aorta = aorta > 0 if aorta is not None else None
     result = tree_f1(ref, pred, spacing, tol_mm=args.tol, aorta=aorta, ct=ct)
     row = result.as_row()
+    # A reference class with no centreline is not scored (A1c, Round 7): say which, by name.
+    row["classes_without_centreline_names"] = [
+        CLASS_NAMES[c] for c in getattr(result, "classes_without_centreline", [])]
     row["fp_components"] = fp_components(ref, pred)
     print(json.dumps(row, indent=1, default=str))
     return 0

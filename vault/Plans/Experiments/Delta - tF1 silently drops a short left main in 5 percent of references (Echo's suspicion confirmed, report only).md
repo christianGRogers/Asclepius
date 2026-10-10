@@ -2,8 +2,8 @@
 tags: [plans, experiment, round6, tree-f1, a1c, audit, a21]
 author: Delta
 round: 6
-updated: 2026-10-10
-status: report only. `src/segtrain/tf1.py` is frozen (A1c, sha256 3c737cbc…9253); nothing changed
+updated: 2026-10-11
+status: Round 7 ruling applied. Variant 1 (report only) is the default; the variant 3 fallback is opt-in. tf1.py sha256 3c737cbc…9253 → 9bb77e24…0608
 ---
 
 # tF1 silently drops a short left main in 5 percent of references (Echo's suspicion confirmed, report only)
@@ -61,3 +61,56 @@ I recommend option 1 before wave 1. Option 2 should be decided only if the first
 
 - **Real check:** one real case (c0163, CPU, cropped around the tree): 96 s, peak about 5 GB, Dice 0.96 against the round-5 mask.
 - **Limit:** TotalSegmentator must be called under `if __name__ == "__main__":`. Without the guard its spawned workers die. The module then fails that case loudly, as designed.
+
+## Round 7: implemented under A1c (new sha256 `9bb77e24c5b8959d37752e260c78e4e589101687a7fe45f130b188670af90608`)
+
+### What changed
+
+**Variant 1, report only (the default).**
+- `TreeF1.classes_without_centreline` is a sorted list of class ids. It is also emitted as `as_row()["classes_without_centreline"]`. This is the field that `segtrain.reads` and the A10 aggregates must carry (Crucible).
+- No score changes: a centreline-less class stays out of `per_class` and the macro, exactly as before.
+
+**Variant 3, the fallback (opt-in, off by default).**
+- Called as `tree_f1(..., fallback_centreline=True)`. `TreeF1.centreline_fallback` records that it was used.
+- A centreline-less class is scored on a fallback centreline: its own skeleton, or its maximal-EDT voxels if that skeleton is empty.
+- Those points join the reference centreline with the class's label. They join the predicted centreline wherever the prediction covers them, with the predicted label.
+- Rooting uses the same rooted components.
+- `find_ostia` is unchanged (diffed against the frozen copy).
+
+The frozen copy is kept as `experiments/Delta/tf1_3c737cbc.py`. The tests compare against it.
+
+### Tests (`tests/test_tf1.py`, 27 tests, about 13 s; full suite 722 passed)
+
+| Ruling test | Result |
+|---|---|
+| 1. Short-LM-stub fixture | LM voxels beside, not on, the skeleton (the c0848 geometry). LM is listed in the new field. `per_class`, recall, precision and tF1 are **bit-identical to the frozen copy** for the stub, a cut stub, an LM renamed LAD, and the plain fixtures |
+| 2. Existing regressions | All unchanged: the Atlas, Bridge and Delta copies, the ostium tests, the gate and the audit |
+| 5. Perfect prediction under the fallback | Every class, LM included, scores 1.0 |
+| 6. LM renamed LAD under the fallback | LM tF1 is 0; LAD precision falls from 1.0 (default) to 0.67 |
+| 7. Fallback where every class has a centreline | Identical to the default on all regression predictions. The fallback branch is not entered |
+
+### Cohort identity check (ruling test 3), on the cached data: `experiments/Delta/r7_cohort_identity.py`
+
+**Inputs.** All 143 proxy references (Atlas val 80, Delta open 63), each with one CPU-built prediction. The prediction applies three errors at once: LM renamed LAD, a 4 mm cut through the LAD 40 % along its axis, and the distal third of the RCA removed. For the 7 listed cases the identity prediction was also run. Run 1's predictions stay on Trillium, so this half of test 3 is pending (see below).
+
+**Result.** The new and frozen code agree bit for bit on `per_class`, recall, precision and tF1 for **143 of 143** degraded predictions and for 7 of 7 identity predictions. The new field lists **exactly the 7 cases** of this note: c0613, c0848, c0772, c0805, c0807 and c0824 (LM), and c0108 (LCx).
+
+**Paired report for the fallback** (an initial look at ruling test 8, on CPU-built predictions). Macro tF1, default → fallback:
+
+| Case | Identity prediction | Degraded prediction |
+|---|---|---|
+| c0613 | 1.000 → 1.000 | 0.740 → 0.554 |
+| c0848 | 1.000 → 1.000 | 0.766 → 0.573 |
+| c0772 | 1.000 → 1.000 | 0.517 → 0.384 |
+| c0805 | 1.000 → 1.000 | 0.528 → 0.391 |
+| c0807 | 1.000 → 1.000 | 0.738 → 0.549 |
+| c0824 | 1.000 → 1.000 | 0.754 → 0.564 |
+| c0108 | 0.999 → 0.999 | 0.418 → 0.563 |
+
+- In the six LM cases, the fallback LM term of the degraded prediction is 0, as an LM renamed LAD should score.
+- In c0108 the missing class is the LCx, which that prediction gets right. The fallback raises its macro instead.
+- So the fallback moves these 7 cases by −0.19 to +0.15 when the prediction is wrong there, and by nothing when it is right.
+
+### Still to do before wave 1 (ruling test 8 and the run-1 half of test 3)
+
+Run 1's val predictions must be re-scored under both hashes, for the 7 cases and overall, reporting the macro and the LM. This is a CPU step wherever the segmentations live: atlas2 already pins the old hash, and the miss census will copy them off $SCRATCH. Per Round 7, every atlas2 report should also list its `classes_without_centreline` cases. The default stays report-only until the judge adopts variant 3.

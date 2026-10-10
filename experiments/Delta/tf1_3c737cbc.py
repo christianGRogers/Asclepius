@@ -128,13 +128,6 @@ class TreeF1:
     tol_mm: float
     ostia: OstiumReport
     n_reference_centreline: int = 0
-    #: Classes present in the reference voxels whose reference centreline has no voxel of that
-    #: class (a short, wide LM stub skeletonises away: 7 of 143 proxy references). Without the
-    #: fallback such a class is absent from ``per_class`` and the macro -- report these cases
-    #: separately, as A1b does for flagged ostia (A1c, Round 7).
-    classes_without_centreline: list = field(default_factory=list)
-    #: True when the opt-in fallback centreline scored those classes (off by default).
-    centreline_fallback: bool = False
 
     @property
     def provisional(self) -> bool:
@@ -148,8 +141,6 @@ class TreeF1:
         return {"tf1": self.tf1, "tol_mm": self.tol_mm, "rooted_fraction": self.rooted_fraction,
                 **{f"tf1_{CLASS_NAMES[c]}": v for c, v in self.per_class.items()},
                 "ostium_provisional": self.provisional, "ostium_flagged": self.flagged,
-                "classes_without_centreline": [int(c) for c in self.classes_without_centreline],
-                "centreline_fallback": self.centreline_fallback,
                 "ostia": [o.as_row() for o in self.ostia.ostia]}
 
 
@@ -382,29 +373,20 @@ def find_ostia(reference: np.ndarray, spacing: Sequence[float], *,
 def tree_f1(reference: np.ndarray, prediction: np.ndarray, spacing: Sequence[float], *,
             tol_mm: float = TOLERANCE_MM, ostia: Optional[OstiumReport] = None,
             aorta: Optional[np.ndarray] = None, ct: Optional[np.ndarray] = None,
-            min_component_voxels: int = MIN_COMPONENT_VOXELS,
-            fallback_centreline: bool = False) -> TreeF1:
+            min_component_voxels: int = MIN_COMPONENT_VOXELS) -> TreeF1:
     """Tree-F1 of a 4-class ``prediction`` against a 4-class ``reference`` (same grid).
 
     ``tol_mm`` is the gap tolerance (1.5 mm is the decided value; 0 gives the strict variant).
     Ostia come from ``ostia`` if given, else from :func:`find_ostia` with ``aorta`` / ``ct``.
     The prediction is cleaned of components < ``min_component_voxels`` first, as the raw
-    prediction always is. A binary prediction is accepted but then every voxel is 'class 1'.
-
-    A reference class with voxels but no centreline voxel is listed in
-    ``classes_without_centreline`` and, by default, left out of ``per_class`` exactly as before.
-    ``fallback_centreline=True`` (opt-in, approved in principle in Round 7; not the default) scores
-    it on a fallback centreline instead: the class's own skeleton, or its maximal-EDT voxels if that
-    is empty. Those points join the reference centreline with the class's label, and join the
-    predicted centreline wherever the prediction covers them, with the predicted label."""
+    prediction always is. A binary prediction is accepted but then every voxel is 'class 1'."""
     sp = np.asarray(spacing, float)
     ref = np.asarray(reference)
     pred = np.where(remove_small_components(np.asarray(prediction) > 0, min_component_voxels),
                     np.asarray(prediction), 0)
     if not (ref > 0).any():
         return TreeF1(float("nan"), {}, {}, {}, float("nan"), tol_mm,
-                      OstiumReport([], provisional=aorta is None, rules=()),
-                      centreline_fallback=fallback_centreline)
+                      OstiumReport([], provisional=aorta is None, rules=()))
     cl = _Centreline(ref > 0, sp)
     report = ostia if ostia is not None else find_ostia(ref, sp, aorta=aorta, ct=ct, _centreline=cl)
     pm = pred > 0
@@ -432,19 +414,6 @@ def tree_f1(reference: np.ndarray, prediction: np.ndarray, spacing: Sequence[flo
     psk = _skeletonise(pm)
     plab_sk = pred[psk]
     rlab_at_pred = ref[psk]
-    present = set(np.unique(ref).tolist()) & set(CLASSES)
-    missing = sorted(c for c in present if not (rlab == c).any())
-    rooted_fraction = float((rooted & (plab_at_ref > 0)).mean()) if len(rpts) else float("nan")
-    if fallback_centreline and missing:
-        extra = np.concatenate([_fallback_points(ref == c, sp) for c in missing])
-        rlab = np.concatenate([rlab, ref[tuple(extra.T)]])
-        plab_at_ref = np.concatenate([plab_at_ref, pred[tuple(extra.T)]])
-        ex_root = (np.isin(comp_of_pred[tuple(extra.T)], list(rooted_comps)) if rooted_comps
-                   else np.zeros(len(extra), dtype=bool))
-        rooted = np.concatenate([rooted, ex_root])
-        on_pred = (pred[tuple(extra.T)] > 0) & ~psk[tuple(extra.T)]
-        plab_sk = np.concatenate([plab_sk, pred[tuple(extra[on_pred].T)]])
-        rlab_at_pred = np.concatenate([rlab_at_pred, ref[tuple(extra[on_pred].T)]])
     per, rec_d, prec_d = {}, {}, {}
     for c in CLASSES:
         g = rlab == c
@@ -455,19 +424,10 @@ def tree_f1(reference: np.ndarray, prediction: np.ndarray, spacing: Sequence[flo
         prec = float((rlab_at_pred[pc] == c).mean()) if pc.any() else 0.0
         rec_d[c], prec_d[c] = rec, prec
         per[c] = 2 * rec * prec / (rec + prec) if rec + prec else 0.0
+    rooted_fraction = float((rooted & (plab_at_ref > 0)).mean()) if len(rpts) else float("nan")
     return TreeF1(tf1=float(np.mean(list(per.values()))) if per else float("nan"), per_class=per,
                   recall=rec_d, precision=prec_d, rooted_fraction=rooted_fraction,
-                  tol_mm=tol_mm, ostia=report, n_reference_centreline=int(len(rpts)),
-                  classes_without_centreline=missing, centreline_fallback=fallback_centreline)
-
-
-def _fallback_points(mask: np.ndarray, spacing: np.ndarray) -> np.ndarray:
-    """Fallback centreline of one class: its own skeleton, else its maximal-EDT voxels."""
-    pts = np.argwhere(_skeletonise(mask))
-    if len(pts):
-        return pts
-    edt = ndimage.distance_transform_edt(mask, sampling=spacing)
-    return np.argwhere(mask & (edt >= edt.max()))
+                  tol_mm=tol_mm, ostia=report, n_reference_centreline=int(len(rpts)))
 
 
 # --------------------------------------------------------------------------------- gates (A2)

@@ -130,7 +130,7 @@ judge accepts only the bounds 0.846–0.895 until the A1 re-score. The FP gate f
 - **A1c change approved — report-only:** `segtrain.tf1` reports any reference class with
   no centreline voxels (7 of 143 references: short wide LM ×6, LCx ×1) instead of skipping
   it silently. No score changes, so atlas2's results under the old hash stay
-  decision-grade; the new hash will be recorded here when the change lands. Scoring such
+  decision-grade. **New frozen hash (A1c):** `src/segtrain/tf1.py` sha256 `9bb77e24c5b8959d37752e260c78e4e589101687a7fe45f130b188670af90608`; field `TreeF1.classes_without_centreline`. atlas2 keeps the previous pin (`3c737cbc…`, copy at `experiments/Delta/tf1_3c737cbc.py`); scores are identical between the two. Scoring such
   a class as missed is **rejected** (a perfect prediction has no centreline there
   either). A minimum-centreline fallback is approved in principle, to be validated before
   wave 1 and before any A10 or sealed scoring.

@@ -51,12 +51,8 @@ def test_reads_and_convert_agree_on_case_identity():
 
 
 # ------------------------------------------------------------------------------- E3
-@pytest.mark.xfail(strict=True, reason=(
-    "ECHO-E3 (suspicion confirmed): a class present in the reference whose voxels carry no "
-    "centreline voxel is dropped from tree_f1's per_class and from the macro mean without any "
-    "flag (synthetic even-width cross-section; skimage 0.26 skeletonize returns nothing). "
-    "tf1.py is frozen (A1c); a fix can live in the `segtrain tf1` wrapper or follow A1c."))
 def test_tf1_reports_a_reference_class_with_no_centreline(tmp_path, capsys):
+    """ECHO-E3, fixed (Round 7, A1c report-only): the dropped class is reported by name."""
     pytest.importorskip("skimage")
     from segtrain.cli import main
 

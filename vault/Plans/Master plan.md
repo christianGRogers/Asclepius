@@ -2,20 +2,20 @@
 aliases: [Master plan]
 tags: [plans, master]
 status: living
-round: 4
-updated: 2026-10-08
+round: 5
+updated: 2026-10-10
 ---
 
 # Master plan
 
-**In force: [[Atlas v4]], as amended by the judge in [[Round 4]].** Won round 1
-(as [[Atlas v1]]) and held the title in rounds 2–4; round 4 was against
-[[Bridge v4]], [[Crucible v5]] and [[Delta v4]]. All three challengers now keep the master's
+**In force: [[Atlas v5]], as amended by the judge in [[Round 5]].** Won round 1
+(as [[Atlas v1]]) and held the title in rounds 2–5; round 5, the first judged on
+real GPU results, was against [[Bridge v5]], [[Crucible v7]] and [[Delta v5]]. All three challengers now keep the master's
 model, data, schedule and deciding metric, and compete on additions to it.
 
 The plan text is the candidate file; the amendments below are binding and
 override it where they conflict. Full reasoning, scorecards and what would
-change the ruling: [[Round 4]] (earlier: [[Round 3]], [[Round 2]], [[Round 1]]).
+change the ruling: [[Round 5]] (earlier: [[Round 4]], [[Round 3]], [[Round 2]], [[Round 1]]).
 
 ## In one paragraph
 
@@ -82,6 +82,29 @@ Round 1's A1–A6 as revised in Round 2, plus A7–A9. The full wording is in
 - **A1/A2 confirmed** on new evidence (0 silent ostium errors in 130; bridging still
   6/13 false-positive joins on the thick reference).
 - Atlas's decision-table row for the short R1 is now numeric (≤ 0.03 / > 0.10).
+
+## Round 5 changes (first GPU results; full wording in [[Round 5]] §1)
+
+Measured on Trillium: R0 passes (175 s/epoch, 55.6 GiB; 1000 epochs ≈ 48.6 h). A
+412-epoch R1 on the proxy scores macro tF1 0.846 under the provisional ostium; the
+judge accepts only the bounds 0.846–0.895 until the A1 re-score. The FP gate fails
+(1.49/case).
+
+- **A1 — ostium of record:** the reference centreline voxel nearest the
+  TotalSegmentator aorta, per tree component and side (). A tF1 without
+  an aorta mask decides nothing (A1a); flagged trees are reported separately (A1b).
+  **Metric frozen (A1c):**  sha256  at commit .
+- **A2:** bridging (P1) removed; P1′ survives only if Delta's stricter pre-registered
+  table passes (≤ ~0.004 to gain).
+- **A4:** absent-LM cases are never auto-excluded.
+- **A7:** rule renaming (R) and grammar decoding (H) retired; the namer stays QA only.
+- **A11′:** each read is a separate training sample with no name-conflict ;
+  the third-read trigger stays.
+- **A15:** the FP gate (≤ 1/case, raw) stays as an acceptance criterion for the final
+  model; no model has met it. The FP census chooses the lever.
+- **A16:** Atlas run 2 — Phase A (FP census + re-score with the A1 rule, no training)
+  and Phase B (window ablation, 412 epochs, paired against run 1). Full-length R1 waits
+  for run 2's winning window.
 
 ## Human decisions
 

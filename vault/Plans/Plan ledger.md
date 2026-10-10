@@ -28,3 +28,7 @@ Every plan version ever submitted, and what happened to it.
 | 4 | [[Bridge v4]] | Bridge | Lost; narrowed to measuring A7 on the master's model, inference-only on Atlas's run |
 | 4 | [[Crucible v5]] | Crucible | Lost; habit test and carina anchor added to A12 as diagnostics; A11 test made conditional |
 | 4 | [[Delta v4]] | Delta | Lost; A1/A2 confirmed; its hash split superseded by A14 |
+| 5 | [[Atlas v5]] | Atlas | **Master plan** (held), first round on GPU results; A1 revised, A11′, A15, A16 ([[Round 5]]) |
+| 5 | [[Bridge v5]] | Bridge | Lost; R and H retired by its own pre-registered rule (A7); absent-LM guard adopted (A4) |
+| 5 | [[Crucible v7]] | Crucible | Lost; both reads as samples adopted as A11′ |
+| 5 | [[Delta v5]] | Delta | Lost; its nearest-aorta ostium is the rule of record (A1); bridging removed (A2) |

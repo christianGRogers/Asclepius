@@ -2,20 +2,20 @@
 aliases: [Master plan]
 tags: [plans, master]
 status: living
-round: 5
+round: 6
 updated: 2026-10-10
 ---
 
 # Master plan
 
-**In force: [[Atlas v5]], as amended by the judge in [[Round 5]].** Won round 1
-(as [[Atlas v1]]) and held the title in rounds 2–5; round 5, the first judged on
-real GPU results, was against [[Bridge v5]], [[Crucible v7]] and [[Delta v5]]. All three challengers now keep the master's
+**In force: [[Atlas v7]], as amended by the judge in [[Round 6]].** Won round 1
+(as [[Atlas v1]]) and held the title in rounds 2–6; round 6 was against
+[[Bridge v6]], [[Crucible v8]], [[Delta v7]] and a new advocate, [[Foxtrot v1]]. All three challengers now keep the master's
 model, data, schedule and deciding metric, and compete on additions to it.
 
 The plan text is the candidate file; the amendments below are binding and
 override it where they conflict. Full reasoning, scorecards and what would
-change the ruling: [[Round 5]] (earlier: [[Round 4]], [[Round 3]], [[Round 2]], [[Round 1]]).
+change the ruling: [[Round 6]] (earlier: [[Round 5]] … [[Round 1]]).
 
 ## In one paragraph
 
@@ -105,6 +105,32 @@ judge accepts only the bounds 0.846–0.895 until the A1 re-score. The FP gate f
 - **A16:** Atlas run 2 — Phase A (FP census + re-score with the A1 rule, no training)
   and Phase B (window ablation, 412 epochs, paired against run 1). Full-length R1 waits
   for run 2's winning window.
+
+## Round 6 changes (CPU round while Atlas run 2 is on Trillium; full wording in [[Round 6]] §1)
+
+- **Closed:** P1′, P1 and P2 failed their own pre-registered tests and leave the recipe.
+- **A17 — fine-tuning as team reads arrive:** a dedicated fine-tune trainer comes first
+  (stock nnU-Net re-initialises the output heads and has no warm-up); LR 1e-2 with a
+  1e-3 fallback arm, and Atlas's citation corrected (the source prefers 1e-3); if the
+  proxy fails the wave-1 admission test, the proxy-drop test moves to wave 3. The final
+  model never trains on proxies.
+- **A18 — A10 suspended** until the clinical lead sets the acceptance margin (see below).
+- **A19 — evaluation discipline:** one decisive look at the sealed test; every decision
+  table states its minimum detectable effect; a stacked-recipe control replaces E6.
+- **A20 — heart+aorta ROI filter (Foxtrot F3):** allowed only after a check on all 1000
+  masks and an atlas2 census showing ≥ 25 % of FP components lie beyond 25 mm.
+- An Echo audit found 13 implementation defects (one critical sealed-case leak via
+  SegQueue case names); all are fixed with tests.
+
+## Open human decisions (Round 6)
+
+- **Acceptance margin (A18).** At n = 100, A10 as written ("within 0.02 of inter-read
+  tF1") rejects a model exactly as good as a second reader. The clinical lead chooses the
+  margin, per-class or macro, and the accepted power: e.g. 0.05 per class; 0.02 on macro
+  with a per-class floor; keep 0.02 (in effect a superiority test); or a larger sealed set.
+- **Reference extent.** Delta proposes a written rule for how much vessel a read should
+  contain. Under D0/D4 annotators do not redraw the mask, so any such rule redefines the
+  reference and is the project lead's decision.
 
 ## Human decisions
 

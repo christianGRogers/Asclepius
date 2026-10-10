@@ -32,3 +32,8 @@ Every plan version ever submitted, and what happened to it.
 | 5 | [[Bridge v5]] | Bridge | Lost; R and H retired by its own pre-registered rule (A7); absent-LM guard adopted (A4) |
 | 5 | [[Crucible v7]] | Crucible | Lost; both reads as samples adopted as A11′ |
 | 5 | [[Delta v5]] | Delta | Lost; its nearest-aorta ostium is the rule of record (A1); bridging removed (A2) |
+| 6 | [[Atlas v7]] | Atlas | **Master plan** (held), with A17–A20 ([[Round 6]]) |
+| 6 | [[Bridge v6]] | Bridge | Lost; its power analysis suspends A10 pending a human margin (A18) and sets A19 |
+| 6 | [[Crucible v8]] | Crucible | Lost; proxy-drop timing adopted in part (A17c/d) |
+| 6 | [[Delta v7]] | Delta | Lost; RCA deficit traced to the provisional ostium; extent rule sent to humans |
+| 6 | [[Foxtrot v1]] | Foxtrot | New advocate; lost; fine-tune trainer and LR fallback adopted (A17a/b); ROI filter conditional (A20) |

@@ -19,11 +19,6 @@ def _save(path, arr, affine=AFF):
 
 
 # ------------------------------------------------------------------------------- E1
-@pytest.mark.xfail(strict=True, reason=(
-    "ECHO-E1: reads-report has no A14 filter. A real `segqueue-export --replicas all` holds all "
-    "1000 cases, the 100 sealed ones included (D2: every case is read twice), and "
-    "load_read_folder / first_reads_report load and report them per case (inter-read tF1, "
-    "third-read triggers, anchor) -- and open the sealed case's mask -- before any milestone."))
 def test_reads_report_keeps_sealed_cases_out(tmp_path):
     from segtrain import reads as R
 
@@ -41,12 +36,6 @@ def test_reads_report_keeps_sealed_cases_out(tmp_path):
 
 
 # ------------------------------------------------------------------------------- E2
-@pytest.mark.xfail(strict=True, reason=(
-    "ECHO-E2: two implementations of case identity. reads.case_id maps only the exact "
-    "'imagecas_NNNN' and '__rK' forms; proxy.canonical_case (used by index/convert/splits/A14) "
-    "also maps IMAGECAS_NNNN, imagecas-NNNN and '_rX' read suffixes, and refuses unmappable "
-    "names. For those forms reads-report silently finds no mask/ImageCAS-X (no A3, no anchor) "
-    "and treats '<case>_rA' as a separate case; 'imagecas_1001' becomes the nonexistent c1000."))
 def test_reads_and_convert_agree_on_case_identity():
     from segtrain.proxy import canonical_case
     from segtrain.reads import case_id
@@ -110,12 +99,6 @@ def test_patch_pin_refuses_a_planner_mismatch(tmp_path):
 
 
 # ------------------------------------------------------------------------------- E4
-@pytest.mark.xfail(strict=True, reason=(
-    "ECHO-E4: first_reads_report runs every distance transform on the full CT grid. On one real "
-    "case (512x512x275, c0001) the report took 791 s and ~4.5 GB on one core with the namer and "
-    "tF1 OFF -- 15 full-volume EDTs at ~46 s each (calibre_fraction, lm_landmarks, "
-    "carina_offset, truncation_radius). The tree fills <1 % of the grid; cropping to its "
-    "bounding box (as proxy and namer already do) makes the A3 monitor affordable on every wave."))
 def test_wave_report_works_on_the_tree_bounding_box(monkeypatch):
     pytest.importorskip("skimage")
     from scipy import ndimage

@@ -263,7 +263,7 @@ def test_first_reads_report_on_a_folder(tmp_path, tree):
     icx.mkdir()
     reads = tmp_path / "reads"
     for k, (case, sa, sb) in enumerate(
-        [("c0000", 1.0, -1.0), ("c0001", 1.5, -0.5), ("c0002", 0.5, -1.5)]
+        [("c0000", 1.0, -1.0), ("c0001", 1.5, -0.5), ("c0003", 0.5, -1.5)]
     ):
         (reads / case).mkdir(parents=True)
         nib.save(nib.Nifti1Image(shift_carina(tree, sa), aff), str(reads / case / "annX.nii.gz"))
@@ -272,9 +272,9 @@ def test_first_reads_report_on_a_folder(tmp_path, tree):
         icx14 = np.select(
             [tree == R.LM, tree == R.LAD, tree == R.LCX, tree == R.RCA], [1, 2, 3, 9], 0
         ).astype(np.uint8)
-        nib.save(nib.Nifti1Image(icx14, aff), str(icx / f"{k + 1}.coronary.nii.gz"))
+        nib.save(nib.Nifti1Image(icx14, aff), str(icx / f"{int(case[1:]) + 1}.coronary.nii.gz"))
     cases = R.load_read_folder(str(reads), mask_dir=str(masks), icx_dir=str(icx))
-    assert [c.case for c in cases] == ["c0000", "c0001", "c0002"]
+    assert [c.case for c in cases] == ["c0000", "c0001", "c0003"]
     rep = R.first_reads_report(cases, scorer=dice_scorer)
     assert "naming_attribution" in rep["cases"][0]
     w = rep["wave"]
@@ -395,3 +395,34 @@ def test_report_scores_per_case_with_its_aorta(tmp_path, tree, monkeypatch):
     assert seen == [True, False]
     assert not rep["cases"][0]["inter_read_tf1"]["provisional"]
     assert rep["cases"][1]["inter_read_tf1"]["provisional"] and rep["wave"]["tf1_provisional"]
+
+
+def test_read_folder_refuses_sealed_cases_before_opening_them(tmp_path, tree):
+    nib = pytest.importorskip("nibabel")
+    aff = np.diag(list(SP) + [1.0])
+    for folder in ("imagecas_0003", "c0002__r2", "imagecas_0004", "notacase"):
+        (tmp_path / folder).mkdir()
+        nib.save(nib.Nifti1Image(tree, aff), str(tmp_path / folder / "annX.nii.gz"))
+    refused = []
+    with pytest.warns(UserWarning):
+        cases = R.load_read_folder(str(tmp_path), sealed={"c0002"}, refused=refused)
+    assert [c.case for c in cases] == ["c0003"]
+    assert len(refused) == 3  # both sealed name forms, and the unmappable name
+    lifted = R.load_read_folder(str(tmp_path), sealed={"c0002"}, milestone=True)
+    assert "c0002" in {c.case for c in lifted}
+
+
+def test_crop_case_keeps_world_coordinates(tree):
+    big = np.zeros((120, 120, 120), np.uint8)
+    big[30:78, 40:88, 50:98] = tree
+    aff = np.diag(list(SP) + [1.0])
+    cr = R.CaseReads("c0000", {"A": big}, SP, mask=big > 0, affine=aff)
+    small = R.crop_case(cr)
+    assert small.reads["A"].size < big.size / 4
+    assert (small.reads["A"] > 0).sum() == (big > 0).sum()
+    v = np.argwhere(small.reads["A"] > 0)[0]
+    w_small = small.affine[:3, :3] @ v + small.affine[:3, 3]
+    v_big = v + np.array(
+        [s.start for s in np.ma.notmasked_contiguous(np.zeros(1))][:0] or [0, 0, 0]
+    )
+    assert np.allclose(w_small, aff[:3, :3] @ (np.argwhere(big > 0)[0]) + aff[:3, 3])

@@ -18,7 +18,10 @@ CT's own grid.
   (the coronary mask or 4-class label on the same grid) the CT is cropped to the tree's bounding box
   plus ``margin_mm`` (40 mm holds the aortic root and both ostia) and the mask is pasted back.
   Validated this way on 84 cases (vault: *Delta - On the thick reference the cheap ostium rules miss
-  1 in 8 ostia silently...*), about 40 s per case on one CPU core.
+  1 in 8 ostia silently...*): 40-100 s per case on CPU, peak about 5 GB resident (cropped).
+* **Call it from a ``if __name__ == "__main__":`` block.** TotalSegmentator's preprocessing spawns
+  worker processes, which re-import the calling script; without the guard they die and the case
+  fails with "Background workers died" (it fails loudly, as every case does).
 
 TotalSegmentator is an optional dependency, imported only when a mask is actually computed
 (``pip install segtrain[aorta]``). On clusters whose wheelhouse lacks ``vtk`` (Compute Canada /

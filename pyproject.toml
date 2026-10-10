@@ -31,6 +31,11 @@ train = [
     "nnunetv2>=2.5,<3",
     "SimpleITK>=2.2",
 ]
+# The A1 ostium's aorta masks (segtrain.aorta). On clusters without vtk (Compute Canada/Trillium)
+# install TotalSegmentator with --no-deps instead; see the segtrain.aorta docstring.
+aorta = [
+    "TotalSegmentator>=2.4",
+]
 dev = [
     "pytest>=7",
     "pytest-cov",

@@ -116,6 +116,20 @@ def canonical_case(name) -> Optional[str]:
     return None
 
 
+def case_id(name) -> str:
+    """The case key for any name: :func:`canonical_case` when the name maps to a case, else the
+    name with its read suffix removed. Never invents a ``cNNNN`` for an unmappable name
+    (``imagecas_1001`` stays ``imagecas_1001``). The one implementation of case identity in
+    ``segtrain``; ``segtrain.reads`` re-exports it."""
+    return canonical_case(name) or split_read_suffix(name)[0]
+
+
+def read_name(name) -> str:
+    """The read a folder holds: ``__rK`` -> ``rK``, ``_rX`` -> ``rX``, no suffix -> ``r1``."""
+    suffix = split_read_suffix(name)[1]
+    return suffix.lstrip("_") if suffix else "r1"
+
+
 def sealed_reason(name, sealed: set) -> Optional[str]:
     """Why ``name`` may not enter training under a sealed list (A14), or None if it may.
 

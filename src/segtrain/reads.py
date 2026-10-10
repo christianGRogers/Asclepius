@@ -50,6 +50,13 @@ from scipy import ndimage
 from scipy.sparse import coo_matrix
 from scipy.sparse.csgraph import dijkstra
 
+from .proxy import (  # noqa: F401  (the one case-identity implementation)
+    case_id,
+    load_sealed,
+    read_name,
+    sealed_reason,
+)
+
 LM, LAD, LCX, RCA = 1, 2, 3, 4
 CLASSES = (LM, LAD, LCX, RCA)
 CLASS_NAMES = {
@@ -741,15 +748,6 @@ EXPORT_SEGMENTS = {
 _NOT_READS = ("ct", "image", "img", "mask", "coronary_arteries", "seed", "heart")
 
 
-def case_id(name: str) -> str:
-    """Tournament case id for a folder name: ``cNNNN`` as is; SegQueue's ``imagecas_NNNN``
-    (1-based ImageCAS id) -> ``c{NNNN-1:04d}``; a replica suffix ``__rK`` is dropped."""
-    base = name.split("__r")[0]
-    if base.startswith("imagecas_") and base[9:].isdigit():
-        return f"c{int(base[9:]) - 1:04d}"
-    return base
-
-
 def _to_grid(img, ref_affine, ref_shape, what: str) -> np.ndarray:
     """Data of ``img`` on the reference grid. Axis flips and permutations (same physical grid,
     different storage order: how SegQueue submissions are stored) are undone exactly; any
@@ -794,6 +792,10 @@ def load_read_folder(
     mask_dir: Optional[str] = None,
     icx_dir: Optional[str] = None,
     aorta_dir: Optional[str] = None,
+    *,
+    sealed: Optional[set] = None,
+    milestone: bool = False,
+    refused: Optional[list] = None,
 ) -> list[CaseReads]:
     """Load a wave of double reads. Two layouts are accepted:
 
@@ -809,24 +811,41 @@ def load_read_folder(
     mismatch raises. ``mask_dir`` holds ``<case>.nii.gz`` or ``<case>/coronary_arteries.nii.gz``;
     ``icx_dir`` holds ``<n>.coronary.nii.gz``, n = case number + 1. ``aorta_dir`` holds the
     TotalSegmentator aorta per case as ``<case>_aorta.nii.gz`` (``segtrain.aorta``),
-    ``<case>.nii.gz``, ``<case>/aorta.nii.gz`` or ``<case>/segmentations/aorta.nii.gz``;
+    ``<case>.nii.gz``, ``<case>/aorta.nii.gz`` or ``<case>/segmentations/aorta.nii.gz``.
+    **A14:** every folder whose name maps to a sealed case (any form: ``cNNNN``,
+    ``imagecas_NNNN``, ``__r2`` ...), or to no case at all, is skipped before anything of it
+    is opened and listed in ``refused``; ``milestone=True`` (sealed-test scoring only) lifts
+    the filter;
     it is brought onto the same grid and makes the
     report's tF1 use the A1 ostium of record (non-provisional). Sealed cases must not be
     passed here before a milestone (A14).
     """
+    import warnings
+
     import nibabel as nib
 
+    # A14: sealed reads are never inspected before a milestone. The filter runs on folder names,
+    # before any file of a refused case (or its mask) is opened; names that map to no case are
+    # refused too (proxy.sealed_reason). ``sealed`` defaults to trillium/sealed_test.json.
+    if not milestone:
+        sealed = load_sealed() if sealed is None else set(sealed)
     groups: dict = {}
     for entry in sorted(os.listdir(root)):
         cdir = os.path.join(root, entry)
         if not os.path.isdir(cdir):
             continue
+        if not milestone:
+            why = sealed_reason(entry, sealed)
+            if why:
+                if refused is not None:
+                    refused.append(why)
+                warnings.warn(f"reads: skipped {why}", stacklevel=2)
+                continue
         seg = os.path.join(cdir, "segmentations")
         if os.path.isdir(seg):
             lab, img = _read_from_segmentations(seg)
             if lab is not None:
-                k = int(entry.split("__r")[1]) if "__r" in entry else 1
-                groups.setdefault(case_id(entry), []).append((f"r{k}", lab, img))
+                groups.setdefault(case_id(entry), []).append((read_name(entry), lab, img))
             continue
         for f in sorted(os.listdir(cdir)):
             if not f.endswith((".nii.gz", ".nii")):
@@ -879,6 +898,48 @@ def load_read_folder(
     return out
 
 
+CROP_MARGIN_MM = 12.0  # > the 10 mm carina band and the 5 mm aorta-contact rule (A1)
+
+
+def crop_case(cr: CaseReads, margin_mm: float = CROP_MARGIN_MM) -> CaseReads:
+    """The case restricted to the bounding box of its reads and mask (+ ``margin_mm``).
+
+    Every distance transform in the report then runs on the tree box instead of the full CT
+    grid (Echo E4: one 512x512x275 case took 791 s and ~4.5 GB uncropped). The ImageCAS-X
+    labels and the aorta are cut to the same box; the affine is shifted so that world
+    coordinates (left/right for the namer) are unchanged.
+    """
+    arrays = [r for r in cr.reads.values()] + ([cr.mask] if cr.mask is not None else [])
+    occ = np.zeros(np.asarray(arrays[0]).shape, bool)
+    for a in arrays:
+        occ |= np.asarray(a) > 0
+    if not occ.any():
+        return cr
+    sp = np.asarray(cr.spacing, float)
+    mv = np.ceil(margin_mm / sp).astype(int)
+    idx = [np.nonzero(occ.any(axis=tuple(j for j in range(3) if j != k)))[0] for k in range(3)]
+    lo = np.maximum([i[0] for i in idx] - mv, 0)
+    hi = np.minimum([i[-1] + 1 for i in idx] + mv, occ.shape)
+    sl = tuple(slice(int(a), int(b)) for a, b in zip(lo, hi))
+
+    def cut(x):
+        return None if x is None else np.asarray(x)[sl]
+
+    aff = None
+    if cr.affine is not None:
+        aff = np.asarray(cr.affine, float).copy()
+        aff[:3, 3] = aff[:3, :3] @ lo + aff[:3, 3]
+    return CaseReads(
+        cr.case,
+        {k: cut(v) for k, v in cr.reads.items()},
+        cr.spacing,
+        cut(cr.mask),
+        cut(cr.icx4),
+        aff,
+        cut(cr.aorta),
+    )
+
+
 def first_reads_report(
     cases: Sequence[CaseReads],
     scorer: Optional[Scorer] = None,
@@ -908,6 +969,7 @@ def first_reads_report(
     per_annot_trunc: dict = {}
     offsets = []
     for cr in cases:
+        cr = crop_case(cr)  # E4: all distance transforms on the tree box, never the full grid
         names = list(cr.reads)
         row = {"case": cr.case, "annotators": names, "n_reads": len(names)}
         if cr.mask is not None:

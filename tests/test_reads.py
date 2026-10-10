@@ -262,9 +262,7 @@ def test_first_reads_report_on_a_folder(tmp_path, tree):
     icx = tmp_path / "icx"
     icx.mkdir()
     reads = tmp_path / "reads"
-    for k, (case, sa, sb) in enumerate(
-        [("c0000", 1.0, -1.0), ("c0001", 1.5, -0.5), ("c0003", 0.5, -1.5)]
-    ):
+    for case, sa, sb in [("c0000", 1.0, -1.0), ("c0001", 1.5, -0.5), ("c0003", 0.5, -1.5)]:
         (reads / case).mkdir(parents=True)
         nib.save(nib.Nifti1Image(shift_carina(tree, sa), aff), str(reads / case / "annX.nii.gz"))
         nib.save(nib.Nifti1Image(shift_carina(tree, sb), aff), str(reads / case / "annY.nii.gz"))
@@ -422,7 +420,4 @@ def test_crop_case_keeps_world_coordinates(tree):
     assert (small.reads["A"] > 0).sum() == (big > 0).sum()
     v = np.argwhere(small.reads["A"] > 0)[0]
     w_small = small.affine[:3, :3] @ v + small.affine[:3, 3]
-    v_big = v + np.array(
-        [s.start for s in np.ma.notmasked_contiguous(np.zeros(1))][:0] or [0, 0, 0]
-    )
     assert np.allclose(w_small, aff[:3, :3] @ (np.argwhere(big > 0)[0]) + aff[:3, 3])

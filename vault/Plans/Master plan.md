@@ -119,8 +119,12 @@ judge accepts only the bounds 0.846–0.895 until the A1 re-score. The FP gate f
   table states its minimum detectable effect; a stacked-recipe control replaces E6.
 - **A20 — heart+aorta ROI filter (Foxtrot F3):** allowed only after a check on all 1000
   masks and an atlas2 census showing ≥ 25 % of FP components lie beyond 25 mm.
-- An Echo audit found 13 implementation defects (one critical sealed-case leak via
-  SegQueue case names); all are fixed with tests.
+- **A21 — implementation (from Echo's audit):** 13 defects found, all fixed with tests
+  (one critical: a sealed-case leak via SegQueue case names). Binding: a dry run of one
+  real approved SegQueue export through index → convert → reads-report passes before
+  wave 1; a batch aorta producer (TotalSegmentator) lives in `src/segtrain` before any
+  decisive tF1 is computed outside a Trillium job (A1a); Echo's remaining suspicions go to
+  their owners.
 
 ## Open human decisions (Round 6)
 

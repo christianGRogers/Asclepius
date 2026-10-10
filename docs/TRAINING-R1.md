@@ -27,7 +27,8 @@ binary-lumen plan.
 | Spacing, patch | 0.5 mm isotropic, 256³, batch 2, ResEnc at a 60 GB budget | `segtrain plan` |
 | CT window | Fixed [−300, 1300] HU | the coronary trainer refuses any other |
 | Mirroring | Off | the coronary trainer |
-| Sealed test | 80 ImageCAS-X test + 20 quality-0 cases, never trained on | `segtrain proxy`, `convert`, `splits` all refuse them |
+| Sealed test | 80 ImageCAS-X test + 20 quality-0 cases, never trained on | `segtrain proxy`, `convert`, `splits` all refuse them, under every name a case travels under (`c0002`, `imagecas_0003`, `c0002__r2`); a name that maps to no case is refused too |
+| Split | ImageCAS-X train → train, val → val (one fold) | `convert` puts every non-sealed case in `imagesTr`; `plan` keeps the explicit split and never writes the hash split for task 712 |
 | Deciding metric | Tree-F1 at 1.5 mm, gated on false-positive components of the raw prediction | `segtrain tf1` |
 
 ## 1. Before anything else
@@ -65,27 +66,43 @@ ImageCAS-X's per-branch names are projected onto the ImageCAS mask under the
 territory rule, then checked against the rule namer (amendment A4): voxels the two
 name differently near the carina become `ignore`; cases with a wholesale disagreement
 are dropped and listed in `proxy_report.json` for human review (about 12 % of cases).
-Sealed cases are refused.
+Sealed cases are refused. The command prints how many cases were written, A4-excluded,
+failed, or requested but absent from `--cases`, and exits non-zero unless every
+requested case was written or A4-excluded. `--icx` may be the flat fetch above or the
+unzipped Zenodo tree (`segmentations/` subfolder).
 
 ## 4. Index and convert
 
 ```sh
-segtrain index --root $SCRATCH/asclepius/proxy --layout nested
-segtrain convert --task 712
+segtrain index --root $SCRATCH/asclepius/proxy --layout nested --val-fraction 0 --test-fraction 0
+segtrain convert --task 712 --zenodo-root $SCRATCH/asclepius/proxy --layout nested
 ```
 
-Expect a line saying how many sealed cases were excluded, and a `dataset.json`
-with `"ignore": 5`.
+`convert` reads `<zenodo-root>/meta.csv`, so `--zenodo-root` must point at the proxy
+tree (or set it in `dataset.local.yaml`). The index fractions are irrelevant for task 712
+(its split comes from ImageCAS-X's lists, and `convert` puts every non-sealed case in
+`imagesTr`), but 0/0 keeps `meta.csv` honest. Expect a line saying how many sealed or
+unmappable cases were excluded, and a `dataset.json` with `"ignore": 5`. A case whose
+label data cannot be used (geometry that does not match the CT even after reordering
+the axes) is reported as FAILED and is not converted: it never trains as background.
 
 ## 5. Plan, split, preprocess
 
 ```sh
-segtrain plan --task 712
-segtrain splits --task 712 --explicit-icx $SCRATCH/asclepius/icx
-segtrain preprocess --task 712
+segtrain splits --task 712 --explicit-icx $SCRATCH/asclepius/icx --zenodo-root $SCRATCH/asclepius/proxy
+segtrain plan --task 712 --zenodo-root $SCRATCH/asclepius/proxy
+segtrain preprocess --task 712 --zenodo-root $SCRATCH/asclepius/proxy
 ```
 
-Check the plan printout: 0.5 mm, 256³, batch 2, window [−300, 1300]. There is no
+The explicit split comes first: `plan` then keeps it (it prints "keeping the explicit
+split") instead of writing the hash split. Without an explicit split, `plan` writes it
+from `$SEGTRAIN_ICX_DIR` if set, and otherwise stops with a message after planning.
+`segtrain scinet prepare --task 712` does the same and needs `SEGTRAIN_ICX_DIR` exported.
+`splits` notes ImageCAS-X cases that are not converted (the A4-excluded proxies are
+expected there) and refuses if a listed case sits in `imagesTs`.
+
+Check the plan printout: 0.5 mm, 256³, batch 2, CT window [−300, 1300] HU, mean 100,
+sd 400. There is no
 patch-fraction gate any more, and `3d_lowres` is never trained. Preprocessing at
 0.5 mm needs about 10 GB of RAM per worker; keep to about 10 workers.
 
@@ -111,6 +128,9 @@ naming and post-processing alternatives can be scored later without retraining.
 segtrain tf1 <reference.nii.gz> <prediction.nii.gz> --ct <ct.nii.gz>
 ```
 
+The prediction, `--aorta` and `--ct` are put on the reference's voxel grid first
+(axis order and direction; no resampling); one that does not lie on the same grid is
+refused. Test-set inference (`segtrain evaluate --task 712`) saves softmax (A7).
 Tree-F1 at 1.5 mm decides; Dice and clDice are reported, not decisive. Read the
 false-positive component count on the **raw** prediction, before any bridging or
 repair. Pass `--aorta` for the A1 ostium; without it the ostium is provisional and
@@ -118,7 +138,12 @@ says so. Sealed cases are scored only at milestones, against team reads.
 
 ## 9. When the team's reads arrive
 
-Every case is read twice. Put the reads in `<reads>/<case>/<annotator>.nii.gz` and run:
+Every case is read twice. SegQueue names cases `imagecas_NNNN` and the second read
+`<case>__r2` (`segqueue-export --replicas all`); `index`, `convert` and `splits` map all
+of these to the case id, refuse sealed cases under any of them, and keep both reads of
+a case in the same split. Labels stored in another axis order (SegQueue writes LPS,
+z running downwards) are reoriented onto the CT grid. For the report, put the reads in
+`<reads>/<case>/<annotator>.nii.gz` and run:
 
 ```sh
 segtrain reads-report <reads> --masks $SCRATCH/asclepius/cases --icx $SCRATCH/asclepius/icx --out report/

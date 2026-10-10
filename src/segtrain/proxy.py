@@ -34,6 +34,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Iterable, Optional
@@ -77,6 +78,55 @@ def imagecas_id_to_case(n: int) -> str:
 
 def case_to_imagecas_id(case: str) -> int:
     return int(case[1:]) + 1
+
+
+# ------------------------------------------------------------------ case identity (A14, Echo D2)
+#: Suffixes that name one read of a case rather than a case: SegQueue's export writes the second
+#: read as ``<case>__r2`` (``--replicas all``); per-read training samples use ``<case>_rA``.
+_READ_SUFFIX = re.compile(r"(__r\d+|_r[A-Za-z0-9]+)$")
+
+
+def split_read_suffix(name: str) -> tuple[str, str]:
+    """``"c0002__r2" -> ("c0002", "__r2")``; ``"c0002" -> ("c0002", "")``."""
+    s = str(name).strip()
+    m = _READ_SUFFIX.search(s)
+    return (s[: m.start()], m.group(1)) if m else (s, "")
+
+
+def canonical_case(name) -> Optional[str]:
+    """The tournament case id (``cNNNN``) behind any name a case travels under, or None.
+
+    Every sealed-test check (A14) and every ImageCAS-X lookup keys on this, never on the raw
+    name. Accepted forms:
+
+    * ``c0002`` (tournament id);
+    * ``imagecas_0003`` (SegQueue's case name, 1-based ImageCAS id) -> ``c0002``;
+    * ``3``, ``3.img``, ``3.label`` (the ImageCAS release's flat file stems) -> ``c0002``;
+    * any of these with a read suffix (``__r2``, ``_rA``) -> the same case.
+    """
+    base, _ = split_read_suffix(name)
+    if re.fullmatch(r"c\d{4}", base):
+        return base
+    m = (re.fullmatch(r"(?i:imagecas)[_-]?(\d+)", base)
+         or re.fullmatch(r"(\d+)(?:\.(?:img|label))?", base))
+    if m:
+        n = int(m.group(1))
+        if 1 <= n <= 1000:
+            return imagecas_id_to_case(n)
+    return None
+
+
+def sealed_reason(name, sealed: set) -> Optional[str]:
+    """Why ``name`` may not enter training under a sealed list (A14), or None if it may.
+
+    A name that maps to a sealed case is refused; with a sealed list in force, so is a name that
+    maps to no case at all: an identity nobody can check is treated as sealed, never as open."""
+    case = canonical_case(name)
+    if case is None:
+        return f"{name}: name does not map to a case id (cNNNN / imagecas_NNNN); refused under A14"
+    if case in sealed:
+        return f"{name}: sealed case {case} (A14)"
+    return None
 
 
 # ------------------------------------------------------------------ sealed test (A14)
@@ -285,6 +335,15 @@ def icx_split(icx_dir: Path) -> dict[str, list[str]]:
     return out
 
 
+def icx_label_path(icx_dir: Path, case: str) -> Path:
+    """The ImageCAS-X label file of ``case``: flat (``<dir>/<id>.coronary.nii.gz``, the Trillium
+    fetch) or as unzipped from Zenodo (``<dir>/segmentations/<id>.coronary.nii.gz``)."""
+    name = f"{case_to_imagecas_id(case)}.coronary.nii.gz"
+    flat = Path(icx_dir) / name
+    nested = Path(icx_dir) / "segmentations" / name
+    return nested if not flat.exists() and nested.exists() else flat
+
+
 def build_proxy_tree(
     cases: dict[str, dict],
     icx_dir: Path,
@@ -304,6 +363,9 @@ def build_proxy_tree(
 
     split = icx_split(icx_dir)
     wanted = [c for s in subsets for c in split.get(s, [])]
+    # Key the available cases by their canonical id, so a Girder/SegQueue tree named imagecas_NNNN
+    # proxies the same cases as one named cNNNN (Echo D2).
+    cases = {canonical_case(k) or k: v for k, v in cases.items()}
     leaked = sorted(set(wanted) & sealed)
     if leaked:
         raise ValueError(
@@ -316,7 +378,7 @@ def build_proxy_tree(
             c,
             cases[c]["ct"],
             cases[c]["mask"],
-            Path(icx_dir) / f"{case_to_imagecas_id(c)}.coronary.nii.gz",
+            icx_label_path(icx_dir, c),
             out_root,
             apply_qa,
         )
@@ -334,6 +396,7 @@ def build_proxy_tree(
                 subsets=list(subsets),
                 n_requested=len(wanted),
                 n_present=len(jobs),
+                missing=sorted(set(wanted) - set(jobs)),
                 n_ok=sum(r.ok for r in recs),
                 n_excluded=sum(r.excluded for r in recs),
                 qa_applied=any(r.qa.get("applied") for r in recs),

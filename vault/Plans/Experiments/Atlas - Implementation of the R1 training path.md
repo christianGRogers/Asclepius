@@ -84,3 +84,26 @@ patch-fraction gate; the master plan replaces all of that for R1. Outline of the
 9. **Submit:** `segtrain scinet submit --task 712 --fold 0`. The trainer refuses a wrong window, has mirroring off,
    and saves val softmax (`--npz` is implied).
 10. **Evaluate:** with `segtrain.tf1` (A9) and `segtrain.reads` scoring (A10); the FP gate on the raw prediction.
+
+## Fixes after Echo's audit (Round 6)
+
+Echo's audit is [[Echo - Audit of the segtrain implementation against the master plan]]. Every defect below had
+an `xfail(strict=True)` test. The markers are removed, so the tests must now pass. New regression tests are in
+`tests/test_case_identity.py` (19 tests).
+
+**Suite:** 679 passed, 46 skipped, no xfail left in `test_audit_pipeline.py` or `test_audit_inference.py`. `ruff`
+is clean, and `tf1.py` is untouched (sha256 `3c737cbc…9253`).
+
+| ID | Fix |
+|---|---|
+| **D2** (critical) | `proxy.canonical_case` maps every name a case travels under to `cNNNN`: `imagecas_NNNN` (1-based id), ImageCAS flat stems (`3`, `3.img`), and read suffixes `__rK` / `_rX`. `proxy.sealed_reason` refuses any name that maps to a sealed case, and **with a sealed list in force, any name that maps to no case**. Applied in `convert_dataset`, `write_explicit_splits` (also on every converted identifier), `build_proxy_tree` (case keys canonicalised) and `index.assign_split`, which hashes the canonical id so both reads of a case and its SegQueue name share one split |
+| **D3** (high) | `convert.align_to_reference` reorders a label by whole-axis flips and permutations onto the CT's axis order (nibabel orientations, no resampling) before the corner-by-corner check. A z-reversed LPS SegQueue label is therefore kept. A case with **any** unusable label data now FAILS and is not written: stale image and label files are removed, and it never trains as background (all tasks) |
+| **D1** (high) | New task key `explicit_split: icx`. `convert` puts every non-sealed case of such a task in `imagesTr`, whatever the index's hash split says. `write_explicit_splits` refuses listed cases found in `imagesTs`, and **reports** listed cases that are not converted (A4-excluded proxies are expected), never dropping them silently. The runbook indexes with `--val-fraction 0 --test-fraction 0` |
+| **D13** | `plans.write_splits`, called by `segtrain plan`, keeps an explicit split (sidecar `splits_final.source.json`), writes it from `$SEGTRAIN_ICX_DIR`, or refuses: it never writes the hash split for task 712. `scinet prepare` requires `SEGTRAIN_ICX_DIR` and adds a `splits --explicit-icx` step after `plan` |
+| **D11** | Task key `save_test_probabilities: true` (task 712). `evaluate.predict_test_set` then saves softmax (A7). Other tasks are unchanged (hundreds of GB) |
+| **D8** | `segtrain proxy` counts only written cases. It lists A4-excluded, failed and requested-but-absent cases, warns if the A4 QA did not run, and exits 1 unless every requested case was written or A4-excluded. `--icx` also accepts the unzipped Zenodo tree (`segmentations/`) |
+| **D12** | `segtrain tf1` puts the prediction, `--aorta` and `--ct` on the reference grid with the same `align_to_reference`. It refuses (exit 2) anything not on the same physical grid. The z-reversed test case now scores 1.0 |
+| **D9** | Runbook (`docs/TRAINING-R1.md`): `--zenodo-root` on convert/plan/preprocess; `splits --explicit-icx` before `plan`; `describe_plans` prints the CT window |
+
+**Not mine and left alone:** D4–D7 and D10 belong to Crucible (reads). The SegQueue exporter's naming is the
+project lead's. Echo's suspicion that A4 QA could be skipped silently is now a CLI warning (`segtrain proxy`).

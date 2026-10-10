@@ -1128,13 +1128,30 @@ def _discover_cases(root: Path) -> dict[str, dict]:
 def cmd_tf1(args) -> int:
     import json
 
+    from .convert import align_to_reference
     from .tf1 import fp_components, tree_f1
 
     ref, ref_img = _nifti(args.reference)
-    pred, _ = _nifti(args.prediction)
     spacing = ref_img.header.get_zooms()[:3]
-    aorta = _nifti(args.aorta)[0] > 0 if args.aorta else None
-    ct = _nifti(args.ct)[0] if args.ct else None
+
+    # Every volume is put on the reference's voxel grid before anything is compared voxel by
+    # voxel: a prediction or aorta stored with an axis reversed (SegQueue / TotalSegmentator
+    # outputs) would otherwise score as a near-total miss (Echo D12). A real geometry mismatch
+    # is refused.
+    def on_ref_grid(path, what):
+        _, img = _nifti(path)
+        data, problem = align_to_reference(img, ref_img)
+        if data is None:
+            print(f"refusing: {what} {path} is not on the reference grid ({problem})",
+                  file=sys.stderr)
+        return data
+
+    pred = on_ref_grid(args.prediction, "prediction")
+    aorta = on_ref_grid(args.aorta, "aorta mask") if args.aorta else None
+    ct = on_ref_grid(args.ct, "CT") if args.ct else None
+    if pred is None or (args.aorta and aorta is None) or (args.ct and ct is None):
+        return 2
+    aorta = aorta > 0 if aorta is not None else None
     result = tree_f1(ref, pred, spacing, tol_mm=args.tol, aorta=aorta, ct=ct)
     row = result.as_row()
     row["fp_components"] = fp_components(ref, pred)
@@ -1183,8 +1200,31 @@ def cmd_proxy(args) -> int:
         return 2
     records = build_proxy_tree(cases, args.icx, args.root, load_sealed(args.sealed),
                                subsets=args.subsets, workers=args.workers)
-    print(f"{len(records)} proxy cases written under {args.root} (see proxy_report.json)")
-    return 0
+    # Count what was actually written; say what was not, and why (Echo D8).
+    written = [r for r in records if r.ok and not r.excluded]
+    excluded = [r for r in records if r.ok and r.excluded]
+    failed = [r for r in records if not r.ok]
+    import json
+
+    report = json.loads((Path(args.root) / "proxy_report.json").read_text(encoding="utf-8"))
+    missing = report.get("missing", [])
+    print(f"{len(written)} proxy cases written under {args.root} (see proxy_report.json)")
+    if excluded:
+        print(f"  {len(excluded)} excluded by the A4 namer QA (not written; human review), e.g. "
+              f"{', '.join(r.case for r in excluded[:5])}")
+    if failed:
+        print(f"  FAILED: {len(failed)} case(s), e.g. "
+              + "; ".join(f"{r.case}: {r.error}" for r in failed[:3]), file=sys.stderr)
+    if missing:
+        print(f"  MISSING: {len(missing)} requested ImageCAS-X case(s) are not under {args.cases}, "
+              f"e.g. {', '.join(missing[:5])}", file=sys.stderr)
+    if written and not report.get("qa_applied"):
+        print("  WARNING: the A4 namer QA did not run (segtrain.namer unavailable): the proxies "
+              "carry no carina ignore and no wholesale-disagreement exclusion", file=sys.stderr)
+    if not written:
+        print("no proxy case was written", file=sys.stderr)
+        return 1
+    return 1 if (failed or missing) else 0
 
 
 def cmd_reads_report(args) -> int:

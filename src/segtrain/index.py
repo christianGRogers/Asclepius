@@ -221,7 +221,13 @@ def assign_split(
     SHA-256 rather than ``hash()``: Python salts string hashing per process, so
     ``hash()`` would put a case in train today and test tomorrow.
     """
-    digest = hashlib.sha256(f"{seed}:{case_id}".encode()).digest()
+    # The case behind the name decides, so every read of one case (``<case>__r2``, ``<case>_rA``)
+    # and its SegQueue name (``imagecas_NNNN``) land in the same split: reads of one case in
+    # different splits would leak val into train (Echo D2).
+    from .proxy import canonical_case, split_read_suffix
+
+    key = canonical_case(case_id) or split_read_suffix(case_id)[0]
+    digest = hashlib.sha256(f"{seed}:{key}".encode()).digest()
     # 53 bits keeps the ratio exactly representable in a float.
     position = int.from_bytes(digest[:8], "big") / 2**64
 

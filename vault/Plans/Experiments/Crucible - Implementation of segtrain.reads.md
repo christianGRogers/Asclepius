@@ -83,3 +83,21 @@ It calls `load_read_folder` → `first_reads_report(cases, scorer=default_scorer
 - `tests/test_reads.py`: 26 passed (3 attribution tests added). ruff is clean on both files.
 - Full suite: 613 passed, 45 skipped, and 1 failure in `tests/test_plans_coronary.py`. That file belongs to Atlas
   (trainer, in progress) and is not touched by this module.
+
+## Fixes after Echo's audit (Round 6; `tests/test_audit_reads.py`, all xfail markers removed, all pass)
+
+| Echo | Fix |
+|---|---|
+| **D5.** `a11_targets` still wrote the name-conflict `ignore` that A11′ retired | `a11_targets` now returns each read unchanged, which is A11′. The retired rule is kept only behind `conflict_ignore=True`, for the conditional A11 test. New `name_conflict(a, b)` gives the conflict mask, which the wave report shows as `name_conflict_fraction`, reported and never ignored |
+| **D6.** The wave report ran A3 on Dice only | `first_reads_report` passes `icx_lumen = icx4 > 0` whenever ImageCAS-X is loaded, so both A3 triggers run |
+| **D7.** The ramus-only exemption was never applied in the report | The report computes the namer's ramus candidates once per case and passes them to `third_read_triggers(ramus_mask=…)` and to `naming_attribution(ramus_candidates=…)` |
+| **D4.** The scorer dropped `provisional` and `flagged` | `default_scorer` returns `{"per_class", "provisional", "flagged"}` from `TreeF1`; a plain `{class: tF1}` from a stand-in scorer is read as provisional. Effects: `score_vs_reads` and `inter_read_tf1` carry both flags; `acceptance(…, provisional=, flagged=)` drops flagged cases (A1b) and returns `decisive=False` if any included case is provisional (A1a); the third-read tF1 trigger ignores a provisional or flagged tF1; the wave report carries `tf1_provisional` and `tf1_flagged_cases`, and its Markdown says PROVISIONAL |
+| **D10.** The loader ignored affines and took `ct.nii.gz` for a read | Every read (and ImageCAS-X) is brought onto the mask's grid. Axis flips and permutations are undone exactly, as for z-reversed SegQueue submissions; any other mismatch raises. Files named like a CT, mask or seed are never reads. The SegQueue export layout `<case>[__rK]/segmentations/<vessel>.nii.gz` is read directly: replicas are merged into reads `r1`, `r2`, …, and `imagecas_NNNN` becomes `c{NNNN-1}` (`case_id`) |
+
+**Not fixed here: per-case aortas.** `segtrain reads-report` builds one `default_scorer()` for the whole wave. Until
+the CLI passes each case's TotalSegmentator aorta, its tF1 numbers are marked provisional, which is correct under
+A1a. The CLI is the orchestrator's.
+
+**Suite:** `tests/test_reads.py` and `tests/test_audit_reads.py`, 36 passed. The remaining full-suite failures are in
+`tests/test_audit_pipeline.py` and `tests/test_plans_coronary.py` (Atlas's modules) and do not involve
+`segtrain.reads`.

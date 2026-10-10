@@ -13,10 +13,6 @@ import pytest
 from segtrain.config import Config, load_task
 
 
-@pytest.mark.xfail(strict=True, reason=(
-    "ECHO-D11: A7 (Round 2) binds 'val and test inference save softmax'; the trainer saves the "
-    "val softmax, but segtrain.evaluate.predict_test_set (the only test-inference path) passes "
-    "save_probabilities=False."))
 def test_test_set_inference_saves_softmax(tmp_path, monkeypatch):
     pytest.importorskip("torch")
     pytest.importorskip("nnunetv2")
@@ -43,16 +39,12 @@ def test_test_set_inference_saves_softmax(tmp_path, monkeypatch):
     task = load_task(712)
     ts = task.raw_dir(cfg) / "imagesTs"
     ts.mkdir(parents=True)
-    nib.save(nib.Nifti1Image(np.zeros((4, 4, 4), np.int16), np.eye(4)), str(ts / "c0102_0000.nii.gz"))
+    nib.save(nib.Nifti1Image(np.zeros((4, 4, 4), np.int16), np.eye(4)),
+             str(ts / "c0102_0000.nii.gz"))
     predict_test_set(cfg, task, device="cpu")
     assert calls["predict"]["save_probabilities"] is True
 
 
-@pytest.mark.xfail(strict=True, reason=(
-    "ECHO-D12: `segtrain tf1` reads reference and prediction (and --aorta) with nibabel and "
-    "compares the arrays voxel-by-voxel without checking that their affines agree; a "
-    "prediction on the same physical grid stored z-reversed is scored as a near-total miss "
-    "instead of being reoriented or refused."))
 def test_tf1_cli_refuses_or_aligns_a_reoriented_prediction(tmp_path, capsys):
     pytest.importorskip("skimage")
     from segtrain.cli import main

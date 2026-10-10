@@ -11,7 +11,6 @@ from pathlib import Path
 
 import nibabel as nib
 import numpy as np
-import pytest
 
 from segtrain.config import Config, load_task
 from segtrain.convert import convert_dataset
@@ -74,11 +73,6 @@ def _nonsealed(n_test, n_train):
 
 
 # ------------------------------------------------------------------------------- D1
-@pytest.mark.xfail(strict=True, reason=(
-    "ECHO-D1: following docs/TRAINING-R1.md steps 4-5 literally, `segtrain index` hashes 15% of "
-    "the proxy cases into split 'test', `convert` puts them in imagesTs, and "
-    "write_explicit_splits silently drops them from the ImageCAS-X train/val split "
-    "(86 of the 640 R1 cases on the real ImageCAS-X filelists)."))
 def test_runbook_index_convert_split_keeps_every_icx_train_case(tmp_path):
     test_ids, train_ids = _nonsealed(n_test=2, n_train=3)
     root = tmp_path / "proxy"
@@ -108,10 +102,6 @@ def _export_case(root, name):
         _save(root / name / "segmentations" / f"{s}.nii.gz", (lab == i).astype(np.uint8))
 
 
-@pytest.mark.xfail(strict=True, reason=(
-    "ECHO-D2: the A14 sealed refusal in convert matches exact 'cNNNN' ids only. SegQueue names "
-    "cases imagecas_NNNN (1-based ImageCAS id; imagecas_0003 = c0002, sealed), and nothing in "
-    "src/segtrain maps the name, so a sealed case's team read is converted into imagesTr."))
 def test_sealed_case_under_its_segqueue_name_is_refused(tmp_path):
     assert "c0002" in load_sealed()
     root = tmp_path / "export"
@@ -126,10 +116,6 @@ def test_sealed_case_under_its_segqueue_name_is_refused(tmp_path):
     assert not any(n.startswith("imagecas_0003") for n in trained), trained
 
 
-@pytest.mark.xfail(strict=True, reason=(
-    "ECHO-D2: `segqueue-export --replicas all` (needed for D2's second read) writes the second "
-    "read as <case>__r2; convert's sealed refusal does not strip the suffix, so the second "
-    "read of a sealed case enters imagesTr."))
 def test_second_read_of_a_sealed_case_is_refused(tmp_path):
     root = tmp_path / "export"
     _export_case(root, "c0002")
@@ -142,10 +128,6 @@ def test_second_read_of_a_sealed_case_is_refused(tmp_path):
 
 
 # ------------------------------------------------------------------------------- D3
-@pytest.mark.xfail(strict=True, reason=(
-    "ECHO-D3: convert's geometry check compares voxel-index corners, so a label on the same "
-    "physical grid stored with z reversed (the form of both real SegQueue submissions: LPS, "
-    "space directions (0,0,-0.5)) is judged 137 mm off and DROPPED."))
 def test_physically_identical_z_reversed_label_is_kept(tmp_path):
     root = tmp_path / "export"
     name = "c0100"
@@ -162,10 +144,6 @@ def test_physically_identical_z_reversed_label_is_kept(tmp_path):
     assert (got > 0).sum() == (_label() > 0).sum()
 
 
-@pytest.mark.xfail(strict=True, reason=(
-    "ECHO-D3: a case whose label data convert DROPPED (geometry mismatch) is still written into "
-    "imagesTr/labelsTr with an all-background label and counted as converted (report.ok True): "
-    "the network is trained to call that case's vessels background."))
 def test_case_with_dropped_labels_does_not_enter_training(tmp_path):
     root = tmp_path / "export"
     name = "c0100"
@@ -181,11 +159,6 @@ def test_case_with_dropped_labels_does_not_enter_training(tmp_path):
 
 
 # ------------------------------------------------------------------------------- D8
-@pytest.mark.xfail(strict=True, reason=(
-    "ECHO-D8: `segtrain proxy` prints 'N proxy cases written' counting failed and A4-excluded "
-    "records, and exits 0 even when every case failed (e.g. --icx pointed at an unzipped "
-    "ImageCAS-X tree with a segmentations/ subfolder, the layout of the agents' own caches); "
-    "requested cases missing from --cases are dropped without a message."))
 def test_proxy_cli_fails_when_no_case_was_written(tmp_path, capsys):
     from segtrain.cli import main
 
@@ -203,9 +176,6 @@ def test_proxy_cli_fails_when_no_case_was_written(tmp_path, capsys):
 
 
 # ------------------------------------------------------------------------------- D9
-@pytest.mark.xfail(strict=True, reason=(
-    "ECHO-D9: docs/TRAINING-R1.md step 5 says to check the plan printout for window "
-    "[-300, 1300]; describe_plans never prints the CT window."))
 def test_plan_printout_shows_the_ct_window(tmp_path):
     from segtrain.plans import describe_plans, finalize_plans
 
@@ -224,11 +194,6 @@ def test_plan_printout_shows_the_ct_window(tmp_path):
     assert "-300" in text and "1300" in text, text
 
 
-@pytest.mark.xfail(strict=True, reason=(
-    "ECHO-D9: docs/TRAINING-R1.md step 4 runs `segtrain index --root $SCRATCH/asclepius/proxy` "
-    "then `segtrain convert --task 712` without --zenodo-root; convert reads "
-    "<zenodo_root>/meta.csv (default /data/coronary), not the proxy root, so the command as "
-    "written fails unless dataset.local.yaml happens to point at the proxy tree."))
 def test_runbook_convert_points_at_the_proxy_tree():
     text = (REPO / "docs" / "TRAINING-R1.md").read_text()
     step4 = text.split("## 4.")[1].split("## 5.")[0]
@@ -237,11 +202,6 @@ def test_runbook_convert_points_at_the_proxy_tree():
 
 
 # ------------------------------------------------------------------------------- D13
-@pytest.mark.xfail(strict=True, reason=(
-    "ECHO-D13: `segtrain plan` always rewrites splits_final.json from meta.csv's hash split, and "
-    "`segtrain scinet prepare --task 712` runs plan + preprocess with no explicit-ImageCAS-X "
-    "step, so a prepared (or re-planned) task 712 silently trains on the hash split instead of "
-    "ImageCAS-X train/val."))
 def test_prepare_job_for_712_keeps_the_icx_split(tmp_path):
     from segtrain.slurm import render_prepare_script
 

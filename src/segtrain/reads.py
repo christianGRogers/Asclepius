@@ -15,11 +15,12 @@ reads into training targets and into numbers, as the master plan specifies:
   non-inferior to the inter-read tF1 of the same cases within 0.02: the lower bound
   of the paired bootstrap 95 % CI of (model - inter-read) must exceed -0.02
   (:func:`acceptance`). No fused reference is ever built for scoring.
-- **A11, training targets.** Each read is its own training sample. Voxels that both
-  reads call vessel but name differently become ``ignore`` in both samples; extent
-  differences (one read vessel, the other background) keep each read's own label
-  (:func:`a11_targets`). Decision-level disagreements send the case to a third
-  reader (:func:`third_read_triggers`).
+- **A11', training targets (Round 5).** Each read is its own training sample and keeps
+  its own names and extent: no name-conflict ``ignore`` (:func:`a11_targets`; the old
+  A11 rule survives only behind ``conflict_ignore=True`` for the conditional A11 test).
+  Decision-level disagreements send the case to a third reader
+  (:func:`third_read_triggers`), except a disagreement confined to a ramus candidate
+  (D1b).
 - **A12, the first-50 report** (:func:`first_reads_report`, runnable on a folder of
   reads), including the A12a annotator-habit test and the A12b carina anchor
   against ImageCAS-X, with the measured convention floor: +0.7 mm offset subtracted,
@@ -114,18 +115,38 @@ def icx_to_territory(icx14: np.ndarray) -> np.ndarray:
 def default_scorer(**tf1_kwargs) -> Scorer:
     """The project's one tree-F1 (``segtrain.tf1.tree_f1``, A9) as ``scorer(ref, pred, spacing)``.
 
-    ``tf1_kwargs`` are passed through (e.g. ``aorta=`` for the A1 ostium, ``tol_mm=``).
-    Returns ``TreeF1.per_class``: tF1 per class present in the reference. Without an aorta
-    mask, tf1 scores with its provisional ``thick`` ostium rule; when a read is the
-    reference, that is the read's own thickest endpoint.
+    ``tf1_kwargs`` are passed through (``aorta=`` for the A1 ostium of record, ``tol_mm=``).
+    Returns ``{"per_class": {c: tF1}, "provisional": bool, "flagged": bool}`` from
+    ``TreeF1``. Without an aorta mask the result is ``provisional`` (A1a: it decides
+    nothing); ``flagged`` marks a tree whose ostium rules disagree (A1b: excluded from
+    decisive aggregates until reviewed).
     """
     from .tf1 import tree_f1  # lazy: tf1 is owned by another module
 
     def scorer(ref, pred, spacing):
         res = tree_f1(ref, pred, spacing, **tf1_kwargs)
-        return {int(k): float(v) for k, v in res.per_class.items() if np.isfinite(v)}
+        return {
+            "per_class": {int(k): float(v) for k, v in res.per_class.items() if np.isfinite(v)},
+            "provisional": bool(res.provisional),
+            "flagged": bool(res.flagged),
+        }
 
     return scorer
+
+
+def _unpack(res) -> tuple[dict, bool, bool]:
+    """A scorer result -> (per_class, provisional, flagged).
+
+    A plain ``{class: tF1}`` mapping (a stand-in scorer) carries no ostium information and
+    is therefore treated as provisional.
+    """
+    if isinstance(res, Mapping) and "per_class" in res:
+        per = {int(k): float(v) for k, v in dict(res["per_class"]).items()}
+        return per, bool(res.get("provisional", True)), bool(res.get("flagged", False))
+    if hasattr(res, "per_class"):
+        per = {int(k): float(v) for k, v in res.per_class.items()}
+        return per, bool(getattr(res, "provisional", True)), bool(getattr(res, "flagged", False))
+    return {int(k): float(v) for k, v in dict(res).items()}, True, False
 
 
 # ----------------------------------------------------------------------------- A3
@@ -193,19 +214,31 @@ def wave_halts(checks: Iterable[ConventionCheck], max_fraction: float = WAVE_HAL
 
 
 # ----------------------------------------------------------------------------- A11
-def a11_targets(
-    read_a: np.ndarray, read_b: np.ndarray, ignore_label: int = IGNORE
-) -> tuple[np.ndarray, np.ndarray]:
-    """A11: one training target per read.
+def name_conflict(read_a: np.ndarray, read_b: np.ndarray) -> np.ndarray:
+    """Voxels both reads call vessel but name differently (reported by A12; not ignored)."""
+    a, b = np.asarray(read_a), np.asarray(read_b)
+    if a.shape != b.shape:
+        raise ValueError(f"reads differ in shape: {a.shape} vs {b.shape}")
+    return (a > 0) & (b > 0) & (a != b)
 
-    Voxels both reads call vessel but name differently are ``ignore`` in both targets;
-    everything else, including extent differences, keeps that read's own label.
+
+def a11_targets(
+    read_a: np.ndarray,
+    read_b: np.ndarray,
+    ignore_label: int = IGNORE,
+    conflict_ignore: bool = False,
+) -> tuple[np.ndarray, np.ndarray]:
+    """A11' (Round 5): one training target per read, each keeping its own labels.
+
+    The default returns the two reads unchanged (as uint8): no name-conflict ``ignore``.
+    ``conflict_ignore=True`` reproduces the retired A11 rule (name conflicts -> ``ignore``
+    in both), kept only as the comparison arm of the conditional A11 test.
     """
     a = np.asarray(read_a).astype(np.uint8)
     b = np.asarray(read_b).astype(np.uint8)
-    if a.shape != b.shape:
-        raise ValueError(f"reads differ in shape: {a.shape} vs {b.shape}")
-    conflict = (a > 0) & (b > 0) & (a != b)
+    conflict = name_conflict(a, b)
+    if not conflict_ignore:
+        return a.copy(), b.copy()
     return (
         np.where(conflict, ignore_label, a).astype(np.uint8),
         np.where(conflict, ignore_label, b).astype(np.uint8),
@@ -287,8 +320,10 @@ def third_read_triggers(
         reasons.append(f"LM end {end:.1f} mm apart")
     tf = None
     if scorer is not None:
-        tf = inter_read_tf1(a, b, spacing, scorer)["macro"]
-        if tf < THIRD_READ_TF1:
+        ir = inter_read_tf1(a, b, spacing, scorer)
+        tf = ir["macro"]
+        # A1a: a provisional tF1 (no aorta) decides nothing, so it cannot trigger a third read
+        if tf < THIRD_READ_TF1 and not ir["provisional"] and not ir["flagged"]:
             reasons.append(f"inter-read tF1 {tf:.3f} < {THIRD_READ_TF1}")
     return ThirdRead(bool(reasons), tf, ost, end, swap, ramus_only, reasons)
 
@@ -308,16 +343,25 @@ def score_vs_reads(
     """A10: per-class tF1 of ``prediction`` against each read, averaged over the reads.
 
     A class enters the mean over reads for every read in which it is present.
-    Returns ``{"per_class": {c: tF1}, "macro": float, "per_read": [...]}``.
+    Returns ``{"per_class", "macro", "per_read", "provisional", "flagged"}``: the result is
+    ``provisional`` if any read was scored without the A1 ostium of record (A1a), and
+    ``flagged`` if any read's tree carries a flagged ostium (A1b).
     """
     scorer = scorer or default_scorer()
-    per_read = [dict(scorer(np.asarray(r), np.asarray(prediction), spacing)) for r in reads]
+    unpacked = [_unpack(scorer(np.asarray(r), np.asarray(prediction), spacing)) for r in reads]
+    per_read = [u[0] for u in unpacked]
     per = {}
     for c in CLASSES:
         v = [p[c] for p in per_read if c in p and np.isfinite(p[c])]
         if v:
             per[c] = float(np.mean(v))
-    return {"per_class": per, "macro": _macro(per), "per_read": per_read}
+    return {
+        "per_class": per,
+        "macro": _macro(per),
+        "per_read": per_read,
+        "provisional": any(u[1] for u in unpacked),
+        "flagged": any(u[2] for u in unpacked),
+    }
 
 
 def inter_read_tf1(
@@ -326,16 +370,24 @@ def inter_read_tf1(
     spacing: Sequence[float],
     scorer: Optional[Scorer] = None,
 ) -> dict:
-    """Inter-read tF1: mean of A scored against B and B scored against A, per class."""
+    """Inter-read tF1: mean of A scored against B and B scored against A, per class.
+
+    Carries ``provisional`` / ``flagged`` (A1a / A1b) like :func:`score_vs_reads`.
+    """
     scorer = scorer or default_scorer()
-    ab = dict(scorer(np.asarray(read_b), np.asarray(read_a), spacing))
-    ba = dict(scorer(np.asarray(read_a), np.asarray(read_b), spacing))
+    ab, pab, fab = _unpack(scorer(np.asarray(read_b), np.asarray(read_a), spacing))
+    ba, pba, fba = _unpack(scorer(np.asarray(read_a), np.asarray(read_b), spacing))
     per = {}
     for c in CLASSES:
         v = [d[c] for d in (ab, ba) if c in d and np.isfinite(d[c])]
         if v:
             per[c] = float(np.mean(v))
-    return {"per_class": per, "macro": _macro(per)}
+    return {
+        "per_class": per,
+        "macro": _macro(per),
+        "provisional": pab or pba,
+        "flagged": fab or fba,
+    }
 
 
 def acceptance(
@@ -345,8 +397,14 @@ def acceptance(
     n_boot: int = 5000,
     seed: int = 0,
     classes: Sequence[int] = CLASSES,
+    provisional: Optional[Sequence[bool]] = None,
+    flagged: Optional[Sequence[bool]] = None,
 ) -> dict:
     """A10 per-class non-inferiority on the same cases.
+
+    ``flagged[i]`` (A1b) drops case i from the test until a human has reviewed its ostium;
+    ``provisional[i]`` (A1a) keeps it but marks the whole result ``decisive=False``: a tF1
+    without the aorta-contact ostium decides nothing.
 
     ``model[i]`` and ``inter[i]`` are per-class tF1 dicts for case i (model vs reads, and
     inter-read). Per class, over the cases where both have the class: the paired
@@ -358,6 +416,12 @@ def acceptance(
     """
     if len(model) != len(inter):
         raise ValueError("model and inter must list the same cases")
+    n = len(model)
+    flagged = list(flagged) if flagged is not None else [False] * n
+    provisional = list(provisional) if provisional is not None else [True] * n
+    keep = [i for i in range(n) if not flagged[i]]
+    model = [model[i] for i in keep]
+    inter = [inter[i] for i in keep]
     rng = np.random.default_rng(seed)
     out = {}
     for c in classes:
@@ -378,10 +442,13 @@ def acceptance(
             "ci95": [float(lo), float(hi)],
             "pass": bool(lo > -margin),
         }
+    decisive = not any(provisional[i] for i in keep)
     return {
         "per_class": out,
         "margin": margin,
         "accepted": bool(out) and all(v["pass"] for v in out.values()),
+        "decisive": decisive,
+        "n_flagged_excluded": int(n - len(keep)),
     }
 
 
@@ -599,6 +666,7 @@ def naming_attribution(
     *,
     carina_band_mm: float = 10.0,
     use_namer: bool = True,
+    ramus_candidates: Optional[np.ndarray] = None,
 ) -> dict:
     """A12 (Bridge): is the naming disagreement between two reads a few *decisions* or diffuse?
 
@@ -616,8 +684,8 @@ def naming_attribution(
     b = np.asarray(read_b)
     A = namer.as_affine(affine)
     sp = np.sqrt((np.asarray(A, float)[:3, :3] ** 2).sum(0))
-    ramus = None
-    if use_namer and ((a > 0) | (b > 0)).any():
+    ramus = ramus_candidates
+    if ramus is None and use_namer and ((a > 0) | (b > 0)).any():
         ramus = namer.name_tree((a > 0) | (b > 0), A).ramus_candidates
     rep = namer.compare(a, b, A, ramus_candidates=ramus)
     conflict = rep.ignore
@@ -661,47 +729,132 @@ class CaseReads:
     affine: Optional[np.ndarray] = None  # NIfTI affine of the reads (left/right for the namer)
 
 
+EXPORT_SEGMENTS = {
+    "left_main": LM,
+    "left_anterior_descending": LAD,
+    "left_circumflex": LCX,
+    "right_coronary_artery": RCA,
+}
+_NOT_READS = ("ct", "image", "img", "mask", "coronary_arteries", "seed", "heart")
+
+
+def case_id(name: str) -> str:
+    """Tournament case id for a folder name: ``cNNNN`` as is; SegQueue's ``imagecas_NNNN``
+    (1-based ImageCAS id) -> ``c{NNNN-1:04d}``; a replica suffix ``__rK`` is dropped."""
+    base = name.split("__r")[0]
+    if base.startswith("imagecas_") and base[9:].isdigit():
+        return f"c{int(base[9:]) - 1:04d}"
+    return base
+
+
+def _to_grid(img, ref_affine, ref_shape, what: str) -> np.ndarray:
+    """Data of ``img`` on the reference grid. Axis flips and permutations (same physical grid,
+    different storage order: how SegQueue submissions are stored) are undone exactly; any
+    other mismatch raises, because voxel-by-voxel comparison would then be meaningless."""
+    import nibabel as nib
+
+    data = np.asarray(img.dataobj)
+    aff = np.asarray(img.affine, float)
+    if not (data.shape == tuple(ref_shape) and np.allclose(aff, ref_affine, atol=1e-3)):
+        o_src = nib.orientations.io_orientation(aff)
+        o_ref = nib.orientations.io_orientation(ref_affine)
+        t = nib.orientations.ornt_transform(o_src, o_ref)
+        data = nib.orientations.apply_orientation(data, t)
+        aff = aff @ nib.orientations.inv_ornt_aff(t, img.shape)
+        if not (data.shape == tuple(ref_shape) and np.allclose(aff, ref_affine, atol=1e-3)):
+            raise ValueError(
+                f"{what}: grid does not match the reference (shape {data.shape} "
+                f"vs {tuple(ref_shape)}); resample it before the report"
+            )
+    return data
+
+
+def _read_from_segmentations(seg_dir: str):
+    """SegQueue export: one binary NIfTI per vessel -> one 4-class read (and its image)."""
+    import nibabel as nib
+
+    lab, img0 = None, None
+    for f in sorted(os.listdir(seg_dir)):
+        name = f.split(".nii")[0]
+        if name not in EXPORT_SEGMENTS:
+            continue
+        img = nib.load(os.path.join(seg_dir, f))
+        v = np.asarray(img.dataobj) > 0.5
+        if lab is None:
+            lab, img0 = np.zeros(v.shape, np.uint8), img
+        lab[v & (lab == 0)] = EXPORT_SEGMENTS[name]
+    return lab, img0
+
+
 def load_read_folder(
     root: str, mask_dir: Optional[str] = None, icx_dir: Optional[str] = None
 ) -> list[CaseReads]:
-    """Load a folder of reads: ``<root>/<case>/<annotator>.nii.gz`` (one file per read).
+    """Load a wave of double reads. Two layouts are accepted:
 
-    ``mask_dir`` holds the ImageCAS masks as ``<case>.nii.gz`` or
-    ``<case>/coronary_arteries.nii.gz``; ``icx_dir`` holds ImageCAS-X segmentations as
-    ``<n>.coronary.nii.gz`` with n = case number + 1 (vault: "ImageCAS-X ... c(id-1)").
-    Both are optional; the report skips what it cannot compute. Sealed cases must not be
+    - ``<root>/<case>/<annotator>.nii.gz``: one 4-class file per read (files named like a CT,
+      mask or seed are never taken for a read);
+    - the SegQueue export (``segqueue-export --replicas all``):
+      ``<root>/<case>[__rK]/segmentations/<vessel>.nii.gz`` plus ``ct.nii.gz``; replica
+      folders of one case are merged, reads are named ``r1``, ``r2`` ...; ``imagecas_NNNN``
+      names become ``c{NNNN-1}``.
+
+    Every read (and the ImageCAS-X labels) is brought onto the grid of the case's mask, or
+    of its first read when no mask is given; axis flips/permutations are undone, any other
+    mismatch raises. ``mask_dir`` holds ``<case>.nii.gz`` or ``<case>/coronary_arteries.nii.gz``;
+    ``icx_dir`` holds ``<n>.coronary.nii.gz``, n = case number + 1. Sealed cases must not be
     passed here before a milestone (A14).
     """
     import nibabel as nib
 
-    out = []
-    for case in sorted(os.listdir(root)):
-        cdir = os.path.join(root, case)
+    groups: dict = {}
+    for entry in sorted(os.listdir(root)):
+        cdir = os.path.join(root, entry)
         if not os.path.isdir(cdir):
             continue
-        files = sorted(f for f in os.listdir(cdir) if f.endswith((".nii.gz", ".nii")))
-        if not files:
+        seg = os.path.join(cdir, "segmentations")
+        if os.path.isdir(seg):
+            lab, img = _read_from_segmentations(seg)
+            if lab is not None:
+                k = int(entry.split("__r")[1]) if "__r" in entry else 1
+                groups.setdefault(case_id(entry), []).append((f"r{k}", lab, img))
             continue
-        reads, spacing, affine = {}, None, None
-        for f in files:
+        for f in sorted(os.listdir(cdir)):
+            if not f.endswith((".nii.gz", ".nii")):
+                continue
+            name = f.split(".nii")[0]
+            if name.lower() in _NOT_READS:
+                continue
             img = nib.load(os.path.join(cdir, f))
-            reads[f.split(".nii")[0]] = np.asarray(img.dataobj).astype(np.uint8)
-            spacing = tuple(float(z) for z in img.header.get_zooms()[:3])
-            affine = np.asarray(img.affine, float)
-        mask = icx = None
+            groups.setdefault(case_id(entry), []).append((name, None, img))
+    out = []
+    for case in sorted(groups):
+        items = sorted(groups[case], key=lambda t: t[0])
+        mask_img = None
         if mask_dir:
             for cand in (
                 os.path.join(mask_dir, f"{case}.nii.gz"),
                 os.path.join(mask_dir, case, "coronary_arteries.nii.gz"),
             ):
                 if os.path.exists(cand):
-                    mask = np.asarray(nib.load(cand).dataobj) > 0.5
+                    mask_img = nib.load(cand)
                     break
+        ref = mask_img if mask_img is not None else items[0][2]
+        ref_aff, ref_shape = np.asarray(ref.affine, float), ref.shape[:3]
+        reads = {}
+        for name, lab, img in items:
+            if lab is not None:
+                img = nib.Nifti1Image(lab, img.affine)
+            reads[name] = _to_grid(img, ref_aff, ref_shape, f"{case}/{name}").astype(np.uint8)
+        mask = None
+        if mask_img is not None:
+            mask = np.asarray(mask_img.dataobj) > 0.5
+        icx = None
         if icx_dir and case[1:].isdigit():
-            p = os.path.join(icx_dir, f"{int(case[1:]) + 1}.coronary.nii.gz")
-            if os.path.exists(p):
-                icx = icx_to_territory(np.asarray(nib.load(p).dataobj))
-        out.append(CaseReads(case, reads, spacing, mask, icx, affine))
+            pth = os.path.join(icx_dir, f"{int(case[1:]) + 1}.coronary.nii.gz")
+            if os.path.exists(pth):
+                icx = icx_to_territory(_to_grid(nib.load(pth), ref_aff, ref_shape, f"{case}/icx"))
+        spacing = tuple(float(z) for z in ref.header.get_zooms()[:3])
+        out.append(CaseReads(case, reads, spacing, mask, icx, ref_aff))
     return out
 
 
@@ -715,7 +868,8 @@ def first_reads_report(
     """A12: the single wave-1 report on the first double-read cases.
 
     Per case (first two reads; a third read, if present, is only counted): A3 convention
-    check per read; inter-read tF1 per class; A11 targets' ``ignore`` fraction and the
+    check per read (both A3 triggers when ImageCAS-X is loaded); inter-read tF1 per class;
+    the name-conflict fraction (reported only: A11' trains on each read as it is) and the
     share of it within ``carina_band_mm`` of the carina; components of A&B vs each read;
     third-read triggers (ours plus the namer's wholesale flags); naming-disagreement
     attribution (decision vs diffuse, ``naming_attribution``); LM-end distance between reads
@@ -735,34 +889,42 @@ def first_reads_report(
         if cr.mask is not None:
             row["convention"] = {}
             for n in names:
-                cc = convention_check(cr.reads[n], cr.mask, cr.spacing)
+                cc = convention_check(
+                    cr.reads[n],
+                    cr.mask,
+                    cr.spacing,
+                    icx_lumen=(cr.icx4 > 0) if cr.icx4 is not None else None,
+                )
                 row["convention"][n] = asdict(cc)
                 checks.append(cc)
         if len(names) >= 2:
             a, b = cr.reads[names[0]], cr.reads[names[1]]
-            ta, _ = a11_targets(a, b)
-            ign = ta == IGNORE
+            ign = name_conflict(a, b)  # reported only: A11' trains on each read as it is
             vessel = (a > 0) | (b > 0)
-            row["ignore_fraction"] = float(ign.sum() / max(1, vessel.sum()))
+            row["name_conflict_fraction"] = float(ign.sum() / max(1, vessel.sum()))
             _, end_a = lm_landmarks(a)
             if ign.any() and end_a is not None:
                 sp = np.asarray(cr.spacing, float)
                 pts = np.argwhere(ign)
                 dist = np.sqrt((((pts - end_a) * sp) ** 2).sum(1))
-                row["ignore_within_carina_band"] = float(np.mean(dist <= carina_band_mm))
+                row["name_conflict_within_carina_band"] = float(np.mean(dist <= carina_band_mm))
             inter_c = ndimage.label((a > 0) & (b > 0), _S26)[1]
             row["components"] = {
                 "A_and_B": int(inter_c),
                 names[0]: int(ndimage.label(a > 0, _S26)[1]),
                 names[1]: int(ndimage.label(b > 0, _S26)[1]),
             }
-            tr = third_read_triggers(a, b, cr.spacing, scorer)
+            aff = cr.affine if cr.affine is not None else cr.spacing
+            ramus = None
+            if use_namer:
+                from . import namer
+
+                if vessel.any():
+                    ramus = namer.name_tree(vessel, namer.as_affine(aff)).ramus_candidates
+            tr = third_read_triggers(a, b, cr.spacing, scorer, ramus_mask=ramus)
             if use_namer:
                 att = naming_attribution(
-                    a,
-                    b,
-                    cr.affine if cr.affine is not None else cr.spacing,
-                    carina_band_mm=carina_band_mm,
+                    a, b, aff, carina_band_mm=carina_band_mm, ramus_candidates=ramus
                 )
                 row["naming_attribution"] = att
                 if att["wholesale"] and not tr.needed:  # Bridge's decision triggers (A11)
@@ -818,8 +980,17 @@ def first_reads_report(
             float(np.mean([r["third_read"]["needed"] for r in pairs])) if pairs else None
         ),
         "inter_read_tf1": inter,
-        "ignore_fraction": _stats([r.get("ignore_fraction") for r in pairs]),
-        "ignore_within_carina_band": _stats([r.get("ignore_within_carina_band") for r in pairs]),
+        # A1a / A1b: any provisional (no aorta) or flagged tF1 makes the tF1 numbers non-decisive
+        "tf1_provisional": any(
+            r["inter_read_tf1"].get("provisional", True) for r in pairs if "inter_read_tf1" in r
+        ),
+        "tf1_flagged_cases": [
+            r["case"] for r in pairs if r.get("inter_read_tf1", {}).get("flagged", False)
+        ],
+        "name_conflict_fraction": _stats([r.get("name_conflict_fraction") for r in pairs]),
+        "name_conflict_within_carina_band": _stats(
+            [r.get("name_conflict_within_carina_band") for r in pairs]
+        ),
         "refit": {
             # LM-end distance ~ |s_a - s_b|; independent shifts: SD(s) ~ RMS(diff)/sqrt(2)
             "lm_end_distance_mm": _stats(lm_d),
@@ -857,17 +1028,23 @@ def report_markdown(report: Mapping) -> str:
         f"flagged thin: {w['a3_thin_reads']} -> wave halt: **{w['a3_halt']}** (A3, > 10 %).",
         f"Adjudication (third-read) rate: {w['adjudication_rate']}.",
         "",
-        "## Inter-read tF1 per class (A10's reference level)",
+        "## Inter-read tF1 per class (A10's reference level)"
+        + (
+            " -- PROVISIONAL: no aorta ostium (A1a), decides nothing"
+            if w.get("tf1_provisional")
+            else ""
+        ),
         "",
     ]
     for k, v in (w["inter_read_tf1"] or {}).items():
         lines.append(f"- {k}: median {v['median']:.3f} (p10 {v['p10']:.3f}, n={v['n']})")
     lines += [
         "",
-        "## A11 targets",
+        "## Name conflicts between reads (A11': reported, not ignored)",
         "",
-        f"- ignore fraction of vessel voxels: {w['ignore_fraction']}",
-        f"- share of ignore voxels within 10 mm of the carina: {w['ignore_within_carina_band']}",
+        f"- name-conflict fraction of vessel voxels: {w['name_conflict_fraction']}",
+        "- share of name conflicts within 10 mm of the carina: "
+        f"{w['name_conflict_within_carina_band']}",
         "- naming disagreement attributable to decisions (Bridge; expect >= 0.8): "
         f"{w.get('naming_decision_share')}",
         "",

@@ -1,14 +1,16 @@
-# R1 of the master plan (vault/Plans/Master plan.md = Atlas v4 + amendments): the direct 4-class model.
+# R1 of the master plan (vault/Plans/Master plan.md): the direct 4-class model.
 #
-# Source tree: written by segtrain.proxy.build_proxy_tree -- ImageCAS-X names projected onto the ORIGINAL ImageCAS
-# mask (territory, ramus -> LCx), nested layout <case>/ct.nii.gz + <case>/labels.nii.gz, case ids cNNNN. Once team
-# reads exist (D2), each read becomes its own training sample (A11; segtrain.reads), replacing the proxy per case.
+# Source tree: written by `segtrain proxy` -- ImageCAS-X names projected onto the ORIGINAL ImageCAS mask
+# (territory, ramus -> LCx), nested layout <case>/ct.nii.gz + <case>/labels.nii.gz, case ids cNNNN. Once team
+# reads exist (D2), each read is its own training sample with its own labels (A11', Round 5; <case>__r2 for the
+# second read), replacing the proxy per case. Every name (cNNNN, imagecas_NNNN, <case>__rK) is mapped to its case
+# id before any sealed check (A14).
 #
-#   (python) segtrain.proxy.build_proxy_tree(cases, icx_dir, $SCRATCH/proxy4, load_sealed())
+#   segtrain proxy   --cases <cases> --icx <ImageCAS-X dir> --root $SCRATCH/proxy4
 #   segtrain index   --root $SCRATCH/proxy4 --layout nested
-#   segtrain convert --task 712                       # sealed cases (A14) are never converted
-#   segtrain plan    --task 712                       # ResEnc planner, 60 GB, 0.5 mm; window + 256^3 applied after
-#   (python) segtrain.plans.write_explicit_splits(cfg, task, icx_train, icx_val, sealed)
+#   segtrain convert --task 712 --zenodo-root $SCRATCH/proxy4  # sealed cases never converted; all others -> imagesTr
+#   segtrain plan    --task 712 --zenodo-root $SCRATCH/proxy4  # ResEnc, 60 GB, 0.5 mm; window + 256^3 applied after
+#   segtrain splits  --task 712 --explicit-icx <ImageCAS-X dir>
 #   segtrain scinet submit --task 712 --fold 0
 #
 # Every recipe choice below is measured on this cohort; see the vault notes named next to each key.
@@ -44,7 +46,13 @@ batch_size: 2
 # ("Atlas - nnU-Net's automatic CT window on lumen labels flattens 38 percent of the heart box").
 ct_window: [-300, 1300]
 ct_norm: [100, 400]
-# Label 5 = ignore (A4 proxy/namer carina disagreements; A11 two-read name disagreements).
+# Label 5 = ignore (A4 proxy/namer carina disagreements only; A11' read samples carry none).
 ignore_label: true
 # A14: never convert, train on, or tune on these.
 sealed_list: trillium/sealed_test.json
+# Split from explicit lists (ImageCAS-X train -> train, val -> val; `segtrain splits --explicit-icx`),
+# never from the index's hash split: convert puts every non-sealed case in imagesTr, and
+# `segtrain plan` keeps an explicit split instead of overwriting it (Echo D1, D13).
+explicit_split: icx
+# A7: val and test inference save softmax (the trainer saves val; `segtrain evaluate` reads this).
+save_test_probabilities: true

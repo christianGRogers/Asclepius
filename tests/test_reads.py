@@ -72,10 +72,18 @@ def tree():
 
 
 # ----------------------------------------------------------------------------- A11
-def test_a11_names_conflict_is_ignore_extent_is_kept():
+def test_a11_prime_keeps_each_reads_own_labels():
     a = np.array([0, 1, 2, 2, 3, 0, 4])
     b = np.array([0, 1, 3, 0, 3, 2, 4])
     ta, tb = R.a11_targets(a, b)
+    assert ta.tolist() == a.tolist() and tb.tolist() == b.tolist()
+    assert R.name_conflict(a, b).tolist() == [False, False, True, False, False, False, False]
+
+
+def test_retired_a11_rule_only_on_request():
+    a = np.array([0, 1, 2, 2, 3, 0, 4])
+    b = np.array([0, 1, 3, 0, 3, 2, 4])
+    ta, tb = R.a11_targets(a, b, conflict_ignore=True)
     assert ta.tolist() == [0, 1, R.IGNORE, 2, 3, 0, 4]
     assert tb.tolist() == [0, 1, R.IGNORE, 0, 3, 2, 4]
 
@@ -167,6 +175,15 @@ def test_acceptance_skips_absent_classes():
     res = R.acceptance(model, inter, n_boot=200)
     assert res["per_class"][R.LM]["n"] == 2 and res["per_class"][R.RCA]["n"] == 1
     assert R.LAD not in res["per_class"]
+    assert not res["decisive"]  # provisional by default (A1a)
+
+
+def test_acceptance_excludes_flagged_cases_and_reports_decisive():
+    model = [{R.LM: 0.95}, {R.LM: 0.10}]
+    inter = [{R.LM: 0.9}, {R.LM: 0.9}]
+    res = R.acceptance(model, inter, n_boot=200, provisional=[False, False], flagged=[False, True])
+    assert res["per_class"][R.LM]["n"] == 1 and res["n_flagged_excluded"] == 1
+    assert res["decisive"] and res["accepted"]
 
 
 # ----------------------------------------------------------------------------- A12b anchor
@@ -204,9 +221,14 @@ def test_team_bias_empty():
 
 def test_habit_test_finds_opposite_habits():
     rng = np.random.default_rng(0)
-    res = R.habit_test({"x": list(1.5 + rng.normal(0, 0.6, 25)),
-                        "y": list(-1.5 + rng.normal(0, 0.6, 25)),
-                        "z": list(1.5 + rng.normal(0, 0.6, 25))}, n_perm=500)
+    res = R.habit_test(
+        {
+            "x": list(1.5 + rng.normal(0, 0.6, 25)),
+            "y": list(-1.5 + rng.normal(0, 0.6, 25)),
+            "z": list(1.5 + rng.normal(0, 0.6, 25)),
+        },
+        n_perm=500,
+    )
     flags = {(p["a"], p["b"]): p["habit"] for p in res["pairs"]}
     assert flags[("x", "y")] and flags[("y", "z")] and not flags[("x", "z")]
     assert res["habits"]
@@ -240,14 +262,16 @@ def test_first_reads_report_on_a_folder(tmp_path, tree):
     icx = tmp_path / "icx"
     icx.mkdir()
     reads = tmp_path / "reads"
-    for k, (case, sa, sb) in enumerate([("c0000", 1.0, -1.0), ("c0001", 1.5, -0.5),
-                                         ("c0002", 0.5, -1.5)]):
+    for k, (case, sa, sb) in enumerate(
+        [("c0000", 1.0, -1.0), ("c0001", 1.5, -0.5), ("c0002", 0.5, -1.5)]
+    ):
         (reads / case).mkdir(parents=True)
         nib.save(nib.Nifti1Image(shift_carina(tree, sa), aff), str(reads / case / "annX.nii.gz"))
         nib.save(nib.Nifti1Image(shift_carina(tree, sb), aff), str(reads / case / "annY.nii.gz"))
         nib.save(nib.Nifti1Image((tree > 0).astype(np.uint8), aff), str(masks / f"{case}.nii.gz"))
-        icx14 = np.select([tree == R.LM, tree == R.LAD, tree == R.LCX, tree == R.RCA],
-                          [1, 2, 3, 9], 0).astype(np.uint8)
+        icx14 = np.select(
+            [tree == R.LM, tree == R.LAD, tree == R.LCX, tree == R.RCA], [1, 2, 3, 9], 0
+        ).astype(np.uint8)
         nib.save(nib.Nifti1Image(icx14, aff), str(icx / f"{k + 1}.coronary.nii.gz"))
     cases = R.load_read_folder(str(reads), mask_dir=str(masks), icx_dir=str(icx))
     assert [c.case for c in cases] == ["c0000", "c0001", "c0002"]
@@ -269,11 +293,14 @@ def test_default_scorer_uses_segtrain_tf1():
     tree = make_tree(radius=3.0)  # tf1 places an ostium only on trees of >= 1000 voxels
     sp = (1.0, 1.0, 1.0)
     scorer = R.default_scorer()
-    per = scorer(tree, tree, sp)
+    res = scorer(tree, tree, sp)
+    per = res["per_class"]
     assert set(per) == set(R.CLASSES) and all(v == pytest.approx(1.0) for v in per.values())
+    assert res["provisional"]  # no aorta mask: A1a
     cut = tree.copy()
     cut[:, :30, 30:33] = 0  # cut LAD and LCx below the carina (the RCA, at y = 40, is untouched)
     res = R.score_vs_reads(cut, [tree, tree], sp)
+    assert res["provisional"]
     assert res["per_class"][R.LAD] < 0.9 and res["per_class"][R.RCA] == pytest.approx(1.0)
 
 
@@ -305,3 +332,26 @@ def test_naming_attribution_scattered_jitter_is_diffuse(tree):
     b[tuple(pick.T)] = R.LCX  # isolated single-voxel name flips, far from the carina
     att = R.naming_attribution(tree, b, SP, use_namer=False)
     assert att["decision_share"] < 0.2
+
+
+def test_imagecas_names_map_to_case_ids():
+    assert R.case_id("imagecas_0002") == "c0001"
+    assert R.case_id("imagecas_0003__r2") == "c0002"
+    assert R.case_id("c0100") == "c0100"
+
+
+def test_read_folder_merges_export_replicas(tmp_path, tree):
+    nib = pytest.importorskip("nibabel")
+    aff = np.diag(list(SP) + [1.0])
+    for folder, lab in (("imagecas_0101", tree), ("imagecas_0101__r2", shift_carina(tree, 1.0))):
+        d = tmp_path / folder / "segmentations"
+        d.mkdir(parents=True)
+        nib.save(
+            nib.Nifti1Image(np.zeros(tree.shape, np.int16), aff),
+            str(tmp_path / folder / "ct.nii.gz"),
+        )
+        for name, c in R.EXPORT_SEGMENTS.items():
+            nib.save(nib.Nifti1Image((lab == c).astype(np.uint8), aff), str(d / f"{name}.nii.gz"))
+    (case,) = R.load_read_folder(str(tmp_path))
+    assert case.case == "c0100" and sorted(case.reads) == ["r1", "r2"]
+    assert np.array_equal(case.reads["r1"], tree)

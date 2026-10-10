@@ -152,6 +152,37 @@ def geometry_offset_mm(a: np.ndarray, b: np.ndarray, shape: Sequence[int]) -> fl
     return float(np.linalg.norm((a @ corners - b @ corners)[:3], axis=0).max())
 
 
+def align_to_reference(img: nib.Nifti1Image, reference: nib.Nifti1Image,
+                       tolerance_mm: Optional[float] = None) -> tuple[Optional[np.ndarray], str]:
+    """``img``'s voxel array on ``reference``'s voxel grid, or ``(None, reason)``.
+
+    Two images can describe the same physical voxels with the axes in a different order or
+    direction: SegQueue stores submissions LPS with z running downwards, so a perfectly aligned
+    label arrives z-reversed against the RAS CT (Echo D3). Comparing the affines at the same
+    voxel-index corners calls that 137 mm off. Here the label is first reordered by whole-axis
+    flips and permutations (no resampling, so no voxel value changes) onto the reference's axis
+    order, and only then compared corner by corner. Anything still off by more than
+    ``tolerance_mm`` is a real geometry mismatch."""
+    from nibabel.orientations import apply_orientation, inv_ornt_aff, io_orientation, ornt_transform
+
+    if tolerance_mm is None:
+        zooms = [float(z) for z in reference.header.get_zooms()[:3]]
+        tolerance_mm = GEOMETRY_TOLERANCE_VOXELS * min(zooms or [1.0])
+    data = np.asanyarray(img.dataobj)
+    affine = img.affine
+    if img.shape[:3] != reference.shape[:3] or \
+            geometry_offset_mm(affine, reference.affine, reference.shape) > tolerance_mm:
+        t = ornt_transform(io_orientation(affine), io_orientation(reference.affine))
+        data = apply_orientation(data, t)
+        affine = affine @ inv_ornt_aff(t, img.shape)
+    if data.shape[:3] != reference.shape[:3]:
+        return None, f"shape {img.shape} != {reference.shape}"
+    offset = geometry_offset_mm(affine, reference.affine, reference.shape)
+    if offset > tolerance_mm:
+        return None, f"geometry differs from CT by {offset:.3f} mm"
+    return data, ""
+
+
 def resolve_overlap(
     out: np.ndarray,
     mask: np.ndarray,
@@ -233,15 +264,12 @@ def merge_masks(
             continue
 
         img = nib.load(str(path))
-        if img.shape != shape:
-            mismatch.append(f"{name}: shape {img.shape} != {shape}")
-            continue
-        offset = geometry_offset_mm(img.affine, reference.affine, shape)
-        if offset > tolerance_mm:
-            mismatch.append(f"{name}: geometry differs from CT by {offset:.3f} mm")
+        data, problem = align_to_reference(img, reference, tolerance_mm)
+        if data is None:
+            mismatch.append(f"{name}: {problem}")
             continue
 
-        mask = np.asanyarray(img.dataobj) > 0
+        mask = data > 0
         count = int(mask.sum())
         if count == 0:
             continue
@@ -280,18 +308,9 @@ def remap_multilabel(
     img = nib.load(str(label_path))
     problems: list[str] = []
 
-    if img.shape != reference.shape:
-        return (np.zeros(reference.shape, dtype=np.uint8), [],
-                [f"labels shape {img.shape} != CT {reference.shape}"])
-
-    zooms = [float(z) for z in reference.header.get_zooms()[:3]]
-    tolerance_mm = GEOMETRY_TOLERANCE_VOXELS * min(zooms or [1.0])
-    offset = geometry_offset_mm(img.affine, reference.affine, reference.shape)
-    if offset > tolerance_mm:
-        return (np.zeros(reference.shape, dtype=np.uint8), [],
-                [f"labels geometry differs from CT by {offset:.3f} mm"])
-
-    source = np.asanyarray(img.dataobj)
+    source, problem = align_to_reference(img, reference)
+    if source is None:
+        return (np.zeros(reference.shape, dtype=np.uint8), [], [f"labels {problem}"])
     mapping = label_set.source_to_index()
 
     out = np.zeros(reference.shape, dtype=np.uint8)
@@ -374,6 +393,16 @@ def convert_case(
             labels, missing, mismatch = remap_multilabel(multilabel, label_set, ct, ignore_value)
             overlaps = 0
 
+        if mismatch:
+            # Some label data was unusable. Writing the case anyway would train its vessels as
+            # background (Echo D3), so the case fails and stays out of imagesTr / labelsTr.
+            for stale in (label_path, image_path):
+                if stale.exists() or stale.is_symlink():
+                    stale.unlink()
+            return CaseResult(case_id, False, geometry_mismatch=mismatch,
+                              error="unusable label data, case NOT converted: "
+                                    + "; ".join(mismatch))
+
         # Write via a temp name then rename, so an interrupted run never leaves a
         # truncated .nii.gz that a later run would happily skip as "done".
         label_path.parent.mkdir(parents=True, exist_ok=True)
@@ -443,6 +472,7 @@ class ConvertReport:
     n_test: int = 0
     n_skipped: int = 0
     n_excluded: int = 0
+    excluded: list[str] = field(default_factory=list)
     failures: list[CaseResult] = field(default_factory=list)
     with_missing: list[CaseResult] = field(default_factory=list)
     with_overlaps: list[CaseResult] = field(default_factory=list)
@@ -469,8 +499,11 @@ class ConvertReport:
         lines = [
             f"{self.task}: {self.n_train} training, {self.n_test} test cases converted"
             + (f" ({self.n_skipped} already present, skipped)" if self.n_skipped else "")
-            + (f"; {self.n_excluded} sealed case(s) excluded (A14)" if self.n_excluded else "")
+            + (f"; {self.n_excluded} sealed or unmappable case(s) excluded (A14)"
+               if self.n_excluded else "")
         ]
+        for why in self.excluded[:5]:
+            lines.append(f"  excluded: {why}")
         if self.with_missing:
             n = len(self.with_missing)
             ex = self.with_missing[0]
@@ -546,10 +579,28 @@ def convert_dataset(
             sealed_path = Path(__file__).resolve().parents[2] / sealed_path
         exclude = load_sealed(sealed_path)
     exclude = set(exclude or ())
+    # A14 keys on the case behind a name, never on the name: SegQueue exports imagecas_NNNN and
+    # second reads as <case>__r2 (Echo D2). With a sealed list in force, a name that maps to no
+    # case is refused too.
+    refused: dict[str, str] = {}
+    if exclude:
+        from .proxy import sealed_reason
 
-    train_ids = [r.case_id for r in rows if r.split != SPLIT_TEST and r.case_id not in exclude]
-    test_ids = ([r.case_id for r in rows if r.split == SPLIT_TEST and r.case_id not in exclude]
+        for r in rows:
+            why = sealed_reason(r.case_id, exclude)
+            if why:
+                refused[r.case_id] = why
+
+    train_ids = [r.case_id for r in rows if r.split != SPLIT_TEST and r.case_id not in refused]
+    test_ids = ([r.case_id for r in rows if r.split == SPLIT_TEST and r.case_id not in refused]
                 if include_test else [])
+    if extras.get("explicit_split"):
+        # The task's split comes from explicit lists (R1: ImageCAS-X train/val), not from the
+        # index's hash split, and its held-out test is the sealed list. A case the index happened
+        # to hash into 'test' is a training case here; putting it in imagesTs loses it from the
+        # explicit split (Echo D1: 86 of 640 R1 cases).
+        train_ids = [r.case_id for r in rows if r.case_id not in refused]
+        test_ids = []
     if limit:
         train_ids = train_ids[:limit]
         test_ids = test_ids[: max(1, limit // 8)] if test_ids else []
@@ -624,7 +675,8 @@ def convert_dataset(
         reader_writer=cfg.reader_writer,
         ignore_label=ignore_value is not None,
     )
-    report.n_excluded = len({r.case_id for r in rows} & exclude)
+    report.n_excluded = len(refused)
+    report.excluded = sorted(refused.values())
     return report
 
 

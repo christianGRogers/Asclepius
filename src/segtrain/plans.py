@@ -22,6 +22,7 @@ is left at nnU-Net's defaults on purpose.
 
 from __future__ import annotations
 
+import json
 import os
 from pathlib import Path
 from typing import Optional
@@ -41,8 +42,14 @@ from .splits import SPLIT_TEST, build_splits, read_meta, select, validate_splits
 #   sealed_list           repo-relative path of the A14 sealed-test JSON; never converted
 TASK_EXTRA_KEYS = (
     "planner", "gpu_memory_target_gb", "ct_window", "ct_norm", "patch_size", "batch_size",
-    "ignore_label", "sealed_list",
+    "ignore_label", "sealed_list", "explicit_split", "save_test_probabilities",
 )
+
+#: Sidecar beside splits_final.json recording that the split came from explicit lists (ImageCAS-X
+#: train/val), so a later ``segtrain plan`` never silently replaces it with the hash split (D13).
+EXPLICIT_SPLIT_RECORD = "splits_final.source.json"
+#: Where an explicit-split task finds the ImageCAS-X filelists when no directory is passed.
+ICX_DIR_ENV = "SEGTRAIN_ICX_DIR"
 
 
 def task_extras(task: TaskConfig) -> dict:
@@ -220,6 +227,10 @@ def write_explicit_splits(cfg: Config, task: TaskConfig, train: list, val: list,
 
     R1 uses ImageCAS-X train -> train and ImageCAS-X val -> val. Refuses any sealed case (A14) and
     any overlap between train and val."""
+    from .proxy import canonical_case, sealed_reason
+
+    train = [canonical_case(c) or c for c in train]
+    val = [canonical_case(c) or c for c in val]
     overlap = sorted(set(train) & set(val))
     if overlap:
         raise ValueError(f"{len(overlap)} case(s) in both train and val, e.g. {overlap[:3]}")
@@ -228,22 +239,48 @@ def write_explicit_splits(cfg: Config, task: TaskConfig, train: list, val: list,
         if leaked:
             raise ValueError(f"{len(leaked)} sealed case(s) in the split, e.g. {leaked[:3]}; "
                              "refusing (A14)")
+    # Every converted identifier joins the split of the case behind it, so both reads of a case
+    # (<case>__r2, A11') and SegQueue names (imagecas_NNNN) are trained, and kept together (D2).
     present = available_cases(cfg, task)
-    if present:
-        train = [c for c in train if c in present]
-        val = [c for c in val if c in present]
+    by_case: dict = {}
+    for ident in present:
+        by_case.setdefault(canonical_case(ident) or ident, []).append(ident)
+    if sealed:
+        bad = sorted(i for i in present if sealed_reason(i, set(sealed)))
+        if bad:
+            raise ValueError(f"{len(bad)} converted identifier(s) are sealed or unmappable, e.g. "
+                             f"{bad[:3]}; refusing (A14)")
+    in_test = available_cases(cfg, task, "imagesTs")
+    if present or in_test:
+        wrong = sorted(c for c in train + val if c not in by_case and c in
+                       {canonical_case(i) or i for i in in_test})
+        if wrong:
+            raise RuntimeError(
+                f"{len(wrong)} listed case(s) were converted into imagesTs, not imagesTr, e.g. "
+                f"{wrong[:3]}: the index gave them split 'test'. Re-index with --val-fraction 0 "
+                "--test-fraction 0 (or set explicit_split in the task file) and re-convert (D1)")
+        absent = sorted(c for c in train + val if c not in by_case)
+        if absent:
+            print(f"note: {len(absent)} listed case(s) are not converted and are left out, e.g. "
+                  f"{absent[:5]} (A4-excluded proxies are expected here: see proxy_report.json)")
+        train = [i for c in train for i in sorted(by_case.get(c, []))]
+        val = [i for c in val for i in sorted(by_case.get(c, []))]
     if not train or not val:
         raise RuntimeError("explicit split has an empty train or val set after restricting to "
                            "converted cases")
     out_dir = task.preprocessed_dir(cfg)
     out_dir.mkdir(parents=True, exist_ok=True)
-    return write_splits_final(out_dir / "splits_final.json",
+    path = write_splits_final(out_dir / "splits_final.json",
                               [{"train": sorted(train), "val": sorted(val)}])
+    (out_dir / EXPLICIT_SPLIT_RECORD).write_text(
+        json.dumps({"source": "explicit", "n_train": len(train), "n_val": len(val)}, indent=1),
+        encoding="utf-8")
+    return path
 
 
-def available_cases(cfg: Config, task: TaskConfig) -> set:
-    """Case ids actually converted into imagesTr."""
-    images = task.raw_dir(cfg) / "imagesTr"
+def available_cases(cfg: Config, task: TaskConfig, folder: str = "imagesTr") -> set:
+    """Case ids actually converted into ``folder`` (imagesTr by default)."""
+    images = task.raw_dir(cfg) / folder
     if not images.is_dir():
         return set()
     return {p.name[: -len("_0000.nii.gz")] for p in images.glob("*_0000.nii.gz")}
@@ -269,6 +306,26 @@ def write_splits(
     which is a confusing way to discover you converted a subset -- and running on
     a subset is normal during smoke tests and debugging.
     """
+    # An explicit-split task (R1: ImageCAS-X train/val) never gets the hash split over its explicit
+    # one (D13): re-planning keeps an existing explicit split, or writes it from $SEGTRAIN_ICX_DIR.
+    if task_extras(task).get("explicit_split"):
+        out_dir = task.preprocessed_dir(cfg)
+        recorded = (out_dir / EXPLICIT_SPLIT_RECORD).is_file()
+        if recorded and (out_dir / "splits_final.json").is_file():
+            print(f"note: keeping the explicit split in {out_dir / 'splits_final.json'} "
+                  f"({task.nnunet_name} uses explicit splits)")
+            return out_dir / "splits_final.json"
+        icx_dir = os.environ.get(ICX_DIR_ENV)
+        if icx_dir:
+            from .proxy import icx_split, load_sealed
+
+            lists = icx_split(Path(icx_dir))
+            return write_explicit_splits(cfg, task, lists["train"], lists["val"],
+                                         sealed=load_sealed())
+        raise RuntimeError(
+            f"{task.nnunet_name} uses an explicit ImageCAS-X split: run `segtrain splits --task "
+            f"{task.dataset_id} --explicit-icx <ImageCAS-X dir>` (or set {ICX_DIR_ENV}); "
+            "refusing to write the hash split")
     rows = read_meta(cfg.meta_csv)
     splits = build_splits(rows, scheme=scheme, n_folds=n_folds, seed=seed)
     validate_splits(splits, select(rows, SPLIT_TEST))
@@ -333,6 +390,14 @@ def preprocess(
     )
 
 
+def _window_text(plans: dict) -> str:
+    p = (plans.get("foreground_intensity_properties_per_channel") or {}).get("0") or {}
+    if "percentile_00_5" not in p:
+        return "n/a"
+    return (f"[{p['percentile_00_5']:g}, {p['percentile_99_5']:g}] HU, "
+            f"mean {p.get('mean', float('nan')):g}, sd {p.get('std', float('nan')):g}")
+
+
 def describe_plans(cfg: Config, task: TaskConfig) -> str:
     """Human-readable summary of what nnU-Net decided.
 
@@ -363,6 +428,7 @@ def describe_plans(cfg: Config, task: TaskConfig) -> str:
         f"  stages           {arch_kwargs.get('n_stages')}",
         f"  features         {arch_kwargs.get('features_per_stage')}",
         f"  normalization    {conf.get('normalization_schemes')}",
+        f"  CT window        {_window_text(plans)}",
         f"  preprocessed to  {task.preprocessed_dir(cfg)}",
     ]
     median = plans.get("original_median_spacing_after_transp")

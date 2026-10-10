@@ -120,7 +120,7 @@ if res.get('paired_b_minus_run1'):
     lines += ['## Window decision (A16, rule fixed before the run)', '',
               f"Paired B − run 1 on {p['n_cases']} cases: decisive tF1 {f(t['mean'], 4)} "
               f"[{f(t['ci'][0], 4) if t['ci'] else 'n/a'}, {f(t['ci'][1], 4) if t['ci'] else 'n/a'}] "
-              f"(better/worse {t.get('better')}/{t.get('worse')}); FP {f(q['mean'], 3)} "
+              f"(B better/worse in {t.get('n_pos')}/{t.get('n_neg')} cases); FP {f(q['mean'], 3)} "
               f"[{f(q['ci'][0], 3) if q['ci'] else 'n/a'}, {f(q['ci'][1], 3) if q['ci'] else 'n/a'}] per case.", '',
               f"**Winner: {res['window_decision']['winner']}** — {res['window_decision']['reason']}.", '']
     bt = res.get('b_training') or {}

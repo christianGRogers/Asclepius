@@ -91,7 +91,8 @@ The aortas, the open-36 softmax and B's weights stay on `$SCRATCH/atlas2`.
 - **Job body.** `lib/job_body.sh` ran end to end on CPU (`ATLAS2_LOCAL_TEST=1`) on 2 real val cases with
   synthetic predictions and softmax:
   - stub aortas;
-  - plans for the default window built from the fingerprint, without preprocessing;
+  - plans for the default window built from the fingerprint. `nnUNetv2_preprocess` was run separately on two
+    cropped real cases, and the intensities match the restored default window exactly;
   - the open-36 proxy label written, with prediction failing cleanly on the fake checkpoint;
   - run 1 scored;
   - the report written.

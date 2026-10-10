@@ -111,7 +111,7 @@ alongside.
   - the aortas were written;
   - the open-36 proxy label was written, and prediction failed cleanly on the fake checkpoint (the stage is retried
     on resubmission);
-  - Phase B plans with the default window were built from the fingerprint (preprocessing skipped on CPU);
+  - Phase B plans with the default window were built from the fingerprint;
   - run 1 was scored, and the report was written.
 - **Scoring on one real case** (c0038, Delta's TotalSegmentator aorta):
   - the A1 left ostium lies 2.8 mm from the ImageCAS-X start point;
@@ -120,6 +120,10 @@ alongside.
   - two planted blobs are classed `low_confidence` (p 0.6) and `confident_other` (p 1.0);
   - the threshold sweep removes the weak blob from t = 0.7.
   - Cost: 6 min and 3.9 GB on one CPU thread.
+- **Phase B preprocessing.** `prepare_b.py` was run with real `nnUNetv2_preprocess` on two cropped real cases.
+  - It caught one bug, now fixed: the preprocessor needs `dataset.json` in the preprocessed folder.
+  - The preprocessed intensities equal (clip(HU, −169, 719) − mean) / sd with the restored fingerprint values
+    (maximum 2.6265 = (659 − 262.4) / 151), so the default window is really applied.
 - **Start-point parser.** `lib/vtkcl.py` (binary and ASCII legacy VTK, no vtk package) matches
   `vtk.vtkPolyDataReader` on all 876 local centreline files.
 - **Lint.** `shellcheck` is clean on `atlas2` and `lib/job_body.sh`, and pyflakes is clean.

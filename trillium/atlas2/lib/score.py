@@ -301,7 +301,7 @@ def paired(per_a, per_b, n_boot=10000, seed=0):
             return dict(n=0, mean=None, ci=None)
         bs = rng.choice(d, (n_boot, len(d))).mean(axis=1)
         return dict(n=len(d), mean=float(d.mean()), ci=[float(np.percentile(bs, 2.5)), float(np.percentile(bs, 97.5))],
-                    better=int((d > 0).sum()), worse=int((d < 0).sum()))
+                    n_pos=int((d > 0).sum()), n_neg=int((d < 0).sum()))
     dt = []
     for c in cs:
         x, y = decisive_case_score(fl(a[c])), decisive_case_score(fl(b[c]))

@@ -26,6 +26,7 @@ if not os.path.exists(f'{W}/.b_plan_done'):
         if not os.path.lexists(f'{raw_b}/{d}'):
             os.symlink(f'{raw_a}/{d}', f'{raw_b}/{d}')
     shutil.copy(f'{raw_a}/dataset.json', f'{raw_b}/dataset.json')
+    shutil.copy(f'{raw_a}/dataset.json', f'{pp_b}/dataset.json')   # the preprocessor reads it here (planning copies it)
     shutil.copy(f'{pp_a}/dataset_fingerprint.json', f'{pp_b}/dataset_fingerprint.json')
     shutil.copy(f'{pp_a}/splits_final.json', f'{pp_b}/splits_final.json')
     fp = json.load(open(f'{pp_a}/dataset_fingerprint.json'))['foreground_intensity_properties_per_channel']

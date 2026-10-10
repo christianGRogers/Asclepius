@@ -66,9 +66,16 @@ setup_venv() {
         # shellcheck disable=SC1091
         source "$VENV/bin/activate"
         pip install --no-index --upgrade pip
-        pip install --no-index torch            # Alliance wheel, CUDA-enabled
-        pip install "nnunetv2==$NNUNET_VERSION" "TotalSegmentator==$TOTALSEG_VERSION" remotezip scikit-image nibabel scipy
+        pip install --no-index torch torchvision   # Alliance wheels, CUDA-enabled and built together
+        pip install "nnunetv2==$NNUNET_VERSION" remotezip scikit-image nibabel scipy
+        # TotalSegmentator without its preview stack: fury needs vtk, which the Alliance wheelhouse
+        # does not ship, so a plain install fails with ResolutionImpossible. fury, vtk, imgkit and
+        # xvfbwrapper are only imported when preview=True, which the aorta step never sets.
+        pip install --no-deps "TotalSegmentator==$TOTALSEG_VERSION"
+        pip install SimpleITK tqdm requests dicom2nifti pyarrow xmltodict blosc jinja2 Pillow \
+            matplotlib networkx pandas scikit-learn dipy
         python -c "import nnunetv2, importlib.metadata as m; assert m.version('nnunetv2') == '$NNUNET_VERSION', m.version('nnunetv2')"
+        python -c "from totalsegmentator.python_api import totalsegmentator; print('[atlas2] TotalSegmentator imports without its preview stack')"
         deactivate
         touch "$VENV/.atlas2_ok"
     fi

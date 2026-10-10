@@ -184,7 +184,7 @@ def test_plan_printout_shows_the_ct_window(tmp_path):
     pre.mkdir(parents=True)
     plans = {"foreground_intensity_properties_per_channel": {"0": {
         "percentile_00_5": -164.0, "percentile_99_5": 640.0, "mean": 200.0, "std": 150.0}},
-        "configurations": {"3d_fullres": {"spacing": [0.5, 0.5, 0.5], "patch_size": [192] * 3,
+        "configurations": {"3d_fullres": {"spacing": [0.5, 0.5, 0.5], "patch_size": [256] * 3,
                                           "batch_size": 2, "normalization_schemes":
                                           ["CTNormalization"], "architecture": {}}}}
     f = pre / f"{task.plans_name}.json"

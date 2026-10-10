@@ -355,3 +355,43 @@ def test_read_folder_merges_export_replicas(tmp_path, tree):
     (case,) = R.load_read_folder(str(tmp_path))
     assert case.case == "c0100" and sorted(case.reads) == ["r1", "r2"]
     assert np.array_equal(case.reads["r1"], tree)
+
+
+def test_lm_in_one_read_only_triggers_a_third_read(tree):
+    no_lm = tree.copy()
+    no_lm[tree == R.LM] = R.LAD
+    tr = R.third_read_triggers(tree, no_lm, SP)
+    assert tr.needed and "LM present in one read only" in tr.reasons  # Round 6 A21
+    both_absent = R.third_read_triggers(no_lm, no_lm.copy(), SP)
+    assert not both_absent.needed  # A4 absent-LM guard: agreed separate ostia
+
+
+def test_report_scores_per_case_with_its_aorta(tmp_path, tree, monkeypatch):
+    nib = pytest.importorskip("nibabel")
+    aff = np.diag(list(SP) + [1.0])
+    for case in ("c0000", "c0001"):
+        d = tmp_path / "reads" / case
+        d.mkdir(parents=True)
+        nib.save(nib.Nifti1Image(tree, aff), str(d / "annX.nii.gz"))
+        nib.save(nib.Nifti1Image(tree, aff), str(d / "annY.nii.gz"))
+    (tmp_path / "aorta").mkdir()
+    ao = np.zeros(tree.shape, np.uint8)
+    ao[20:28, 16:24, 44:48] = 1
+    nib.save(nib.Nifti1Image(ao, aff), str(tmp_path / "aorta" / "c0000.nii.gz"))
+    cases = R.load_read_folder(str(tmp_path / "reads"), aorta_dir=str(tmp_path / "aorta"))
+    assert cases[0].aorta is not None and cases[1].aorta is None
+    seen = []
+
+    def fake_default_scorer(**kw):
+        seen.append(kw.get("aorta") is not None)
+        return lambda ref, pred, sp: {
+            "per_class": dice_scorer(ref, pred, sp),
+            "provisional": "aorta" not in kw,
+            "flagged": False,
+        }
+
+    monkeypatch.setattr(R, "default_scorer", fake_default_scorer)
+    rep = R.first_reads_report(cases, per_case_tf1=True, use_namer=False)
+    assert seen == [True, False]
+    assert not rep["cases"][0]["inter_read_tf1"]["provisional"]
+    assert rep["cases"][1]["inter_read_tf1"]["provisional"] and rep["wave"]["tf1_provisional"]

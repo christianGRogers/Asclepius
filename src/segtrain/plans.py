@@ -83,17 +83,44 @@ def apply_ct_window(plans_file: Path, window, norm=(100.0, 400.0)) -> dict:
     return before
 
 
-def enforce_patch(plans_file: Path, configuration: str, patch_size=None, batch_size=None) -> dict:
-    """Pin the patch and/or batch size of one configuration in a plans file.
+#: Opt-in for smoke tests on a case subset, whose planner output may differ from the cohort's.
+ALLOW_PIN_ENV = "SEGTRAIN_ALLOW_PATCH_PIN"
 
-    Used for the master's cohort-wide 256^3 / batch 2, which a planner run on a subset may not
-    reproduce exactly. Returns the planner's own values."""
+
+def enforce_patch(plans_file: Path, configuration: str, patch_size=None, batch_size=None,
+                  spacing=None, allow_pin: Optional[bool] = None) -> dict:
+    """Check that the planner produced the recipe's patch, batch and spacing; refuse otherwise.
+
+    The architecture nnU-Net plans (stages, strides, pooling) is derived from the patch it chose.
+    Overwriting only ``patch_size`` would silently train a network planned for another patch, and
+    a re-plan on new data (another median shape, another fingerprint) could change all three
+    without anyone noticing (Round 6, A21b). So a mismatch **raises**, naming what the planner
+    returned. ``allow_pin=True`` (or ``SEGTRAIN_ALLOW_PATCH_PIN=1``) pins instead, for smoke tests
+    on a subset only, and the record says so. Returns the planner's own values."""
     import json
 
     plans_file = Path(plans_file)
     plans = json.loads(plans_file.read_text(encoding="utf-8"))
     conf = plans["configurations"][configuration]
-    before = {"patch_size": conf.get("patch_size"), "batch_size": conf.get("batch_size")}
+    before = {"patch_size": conf.get("patch_size"), "batch_size": conf.get("batch_size"),
+              "spacing": conf.get("spacing")}
+    wrong = []
+    planned_patch = list(conf.get("patch_size") or [])
+    if patch_size is not None and planned_patch != [int(x) for x in patch_size]:
+        wrong.append(f"patch {conf.get('patch_size')} (recipe {list(patch_size)})")
+    if batch_size is not None and conf.get("batch_size") != int(batch_size):
+        wrong.append(f"batch {conf.get('batch_size')} (recipe {batch_size})")
+    if spacing is not None and [float(x) for x in conf.get("spacing") or []] != \
+            [float(x) for x in spacing]:
+        wrong.append(f"spacing {conf.get('spacing')} (recipe {list(spacing)})")
+    if allow_pin is None:
+        allow_pin = os.environ.get(ALLOW_PIN_ENV) == "1"
+    if wrong and not allow_pin:
+        raise ValueError(f"the planner did not reproduce the recipe for {configuration}: "
+                         + "; ".join(wrong) + f". Refusing to pin over it ({plans_file}); the "
+                         f"architecture was planned for these values. Set {ALLOW_PIN_ENV}=1 only "
+                         "for a smoke test on a case subset.")
+    before["pinned_over_mismatch"] = bool(wrong)
     if patch_size is not None:
         conf["patch_size"] = [int(x) for x in patch_size]
     if batch_size is not None:
@@ -204,15 +231,16 @@ def finalize_plans(plans_file: Path, task: TaskConfig) -> dict:
 
     extras = task_extras(task)
     record: dict = {}
+    # The planner check comes first: a refused plan is left exactly as nnU-Net wrote it (A21b).
+    if extras.get("patch_size") is not None or extras.get("batch_size") is not None:
+        record["planned"] = enforce_patch(plans_file, task.configuration, extras.get("patch_size"),
+                                          extras.get("batch_size"), spacing=task.spacing)
+        record["enforced"] = {"patch_size": extras.get("patch_size"),
+                              "batch_size": extras.get("batch_size")}
     if extras.get("ct_window") is not None:
         record["window_before"] = apply_ct_window(plans_file, extras["ct_window"],
                                                   extras.get("ct_norm", (100.0, 400.0)))
         record["window_after"] = list(extras["ct_window"])
-    if extras.get("patch_size") is not None or extras.get("batch_size") is not None:
-        record["planned"] = enforce_patch(plans_file, task.configuration, extras.get("patch_size"),
-                                          extras.get("batch_size"))
-        record["enforced"] = {"patch_size": extras.get("patch_size"),
-                              "batch_size": extras.get("batch_size")}
     if record:
         out = Path(plans_file).with_suffix(".planner_output.json")
         # keep the first record: re-finalizing must not overwrite the planner's own values

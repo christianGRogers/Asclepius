@@ -25,8 +25,8 @@ def _plans_file(tmp_path):
                 },
                 "configurations": {
                     "3d_fullres": {
-                        "patch_size": [192, 256, 256],
-                        "batch_size": 3,
+                        "patch_size": [256, 256, 256],
+                        "batch_size": 2,
                         "spacing": [0.5, 0.5, 0.5],
                     }
                 },
@@ -51,12 +51,43 @@ def test_apply_ct_window_overwrites_the_fingerprint_window(tmp_path):
         plans.apply_ct_window(p, (1300, -300))
 
 
-def test_enforce_patch_pins_patch_and_batch(tmp_path):
+def test_enforce_patch_accepts_the_recipe(tmp_path):
     p = _plans_file(tmp_path)
+    before = plans.enforce_patch(p, "3d_fullres", [256, 256, 256], 2, spacing=(0.5, 0.5, 0.5))
+    assert before["patch_size"] == [256, 256, 256] and not before["pinned_over_mismatch"]
+
+
+@pytest.mark.parametrize("field,value", [("patch_size", [192, 256, 256]), ("batch_size", 3),
+                                         ("spacing", [0.7, 0.7, 0.7])])
+def test_a_replanned_recipe_is_refused_not_pinned(tmp_path, monkeypatch, field, value):
+    """A21b: nnU-Net planning on new data may return another patch/batch/spacing; the plan is
+    refused (and left untouched), never silently pinned over."""
+    monkeypatch.delenv(plans.ALLOW_PIN_ENV, raising=False)
+    p = _plans_file(tmp_path)
+    d = json.loads(p.read_text())
+    d["configurations"]["3d_fullres"][field] = value
+    p.write_text(json.dumps(d))
+    with pytest.raises(ValueError, match="did not reproduce the recipe"):
+        plans.enforce_patch(p, "3d_fullres", [256, 256, 256], 2, spacing=(0.5, 0.5, 0.5))
+    assert json.loads(p.read_text()) == d
+    task_file = tmp_path / "task.yaml"
+    task_file.write_text("ct_window: [-300, 1300]\npatch_size: [256, 256, 256]\nbatch_size: 2\n")
+    task = TaskConfig(712, "CoronaryBranches", LabelSet("b", {"x": 1}), (0.5, 0.5, 0.5),
+                      source_path=task_file)
+    with pytest.raises(ValueError):
+        plans.finalize_plans(p, task)
+    assert json.loads(p.read_text()) == d             # window not written either
+
+
+def test_pinning_over_a_mismatch_needs_the_explicit_opt_in(tmp_path, monkeypatch):
+    p = _plans_file(tmp_path)
+    d = json.loads(p.read_text())
+    d["configurations"]["3d_fullres"]["patch_size"] = [192, 256, 256]
+    p.write_text(json.dumps(d))
+    monkeypatch.setenv(plans.ALLOW_PIN_ENV, "1")
     before = plans.enforce_patch(p, "3d_fullres", [256, 256, 256], 2)
-    conf = json.loads(p.read_text())["configurations"]["3d_fullres"]
-    assert before == {"patch_size": [192, 256, 256], "batch_size": 3}
-    assert conf["patch_size"] == [256, 256, 256] and conf["batch_size"] == 2
+    assert before["pinned_over_mismatch"] and before["patch_size"] == [192, 256, 256]
+    assert json.loads(p.read_text())["configurations"]["3d_fullres"]["patch_size"] == [256] * 3
 
 
 def test_task_712_states_the_master_recipe():
@@ -83,7 +114,7 @@ def test_finalize_plans_applies_window_and_patch_and_records_the_planner(tmp_pat
         712, "CoronaryBranches", LabelSet("b", {"x": 1}), (0.5, 0.5, 0.5), source_path=task_file
     )
     rec = plans.finalize_plans(p, task)
-    assert rec["planned"]["patch_size"] == [192, 256, 256]
+    assert rec["planned"]["patch_size"] == [256, 256, 256]
     record = json.loads(p.with_suffix(".planner_output.json").read_text())
     assert record["window_before"]["percentile_99_5"] == 640.0
     plans.finalize_plans(p, task)  # idempotent; keeps the first (planner) record

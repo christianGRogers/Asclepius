@@ -73,12 +73,21 @@ def _no_namer(monkeypatch):
     monkeypatch.delattr(segtrain, "namer", raising=False)
 
 
-def test_qa_without_namer_leaves_labels_alone(monkeypatch):
+def test_qa_without_namer_fails_loudly(monkeypatch, tmp_path):
+    """A21a: a missing namer (or a dependency of it) never yields a silently un-QA'd proxy."""
     _no_namer(monkeypatch)
     mask, icx = _tree()
     lab, _ = proxy.project_names(mask, icx, SP)
-    out, qa = proxy.qa_with_namer(lab, mask, SP)
-    assert not qa.applied and (out == lab).all()
+    with pytest.raises(RuntimeError, match="A4 proxy QA unavailable"):
+        proxy.qa_with_namer(lab, mask, SP)
+    files, icx_dir = _case_files(tmp_path, "c0000", mask, icx)
+    (icx_dir / "train.txt").write_text("1\n")
+    with pytest.raises(RuntimeError, match="A4 proxy QA unavailable"):
+        proxy.build_proxy_tree({"c0000": files}, icx_dir, tmp_path / "out", sealed=set())
+    assert not (tmp_path / "out" / "c0000").exists()
+    rec = proxy.make_case("c0000", files["ct"], files["mask"], icx_dir / "1.coronary.nii.gz",
+                          tmp_path / "out")
+    assert not rec.ok and "A4" in rec.error
 
 
 def _fake_namer(monkeypatch, ignore=None, exclude=False, ramus_only=False):
@@ -156,13 +165,13 @@ def test_build_proxy_tree_writes_nested_cases_and_refuses_sealed(tmp_path, monke
     (icx_dir / "train.txt").write_text("1\n2\n")
     (icx_dir / "val.txt").write_text("3\n")
     out = tmp_path / "proxy"
-    recs = proxy.build_proxy_tree(cases, icx_dir, out, sealed={"c0999"})
+    recs = proxy.build_proxy_tree(cases, icx_dir, out, sealed={"c0999"}, apply_qa=False)
     assert sorted(r.case for r in recs if r.ok) == ["c0000", "c0001", "c0002"]
     assert (out / "c0001" / "ct.nii.gz").exists() and (out / "c0001" / "labels.nii.gz").exists()
     report = json.loads((out / "proxy_report.json").read_text())
     assert report["n_ok"] == 3 and report["qa_applied"] is False
     with pytest.raises(ValueError):
-        proxy.build_proxy_tree(cases, icx_dir, tmp_path / "p2", sealed={"c0001"})
+        proxy.build_proxy_tree(cases, icx_dir, tmp_path / "p2", sealed={"c0001"}, apply_qa=False)
 
 
 def test_excluded_case_is_not_written(tmp_path, monkeypatch):

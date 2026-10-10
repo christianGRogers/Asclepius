@@ -117,3 +117,24 @@ project lead's. Echo's suspicion that A4 QA could be skipped silently is now a C
 | `nnunet_ext/finetune_schedule.py` (torch-free) | `warmup_poly_lr`, `WarmupPolyScheduler` |
 | `nnunet_ext/sealed_guard.py` (torch-free) | `refuse_sealed`, now called by the coronary trainer's `on_train_start` on every training and validation identifier (`do_split`), under every name form |
 | `tests/test_finetune.py` (14 tests, ~10 s) | Schedule values at iteration 0, mid-ramp and end of ramp, and the poly decay. A tiny PlainConvUNet: heads bitwise identical after the load, while nnU-Net's `load_pretrained_weights` leaves them random. Refusal of other classes, spacing, window or architecture. The trainer's per-iteration LR stepping. The **real trainer classes** on CPU: a coronary checkpoint is loaded completely by the fine-tune trainer, and a source with another window is refused |
+
+## Round 6, A21 (Echo's two suspicions sent to Atlas)
+
+- **(a) A silent A4 skip: real, fixed.** `proxy.qa_with_namer` used to return the proxy unchanged
+  (`applied=False`) when `segtrain.namer` failed to import. It now raises (`namer_disagreement()`).
+  - `build_proxy_tree` checks the namer before writing any case.
+  - `make_case` records the failure per case.
+  - An un-QA'd tree needs an explicit `apply_qa=False`.
+  - Test: `test_proxy::test_qa_without_namer_fails_loudly`.
+- **(b) Patch pinning: real, fixed.** `enforce_patch` used to overwrite `patch_size` and `batch_size` whatever the
+  planner returned. A re-plan on new data could therefore have trained a network whose architecture was planned for
+  another patch, silently.
+  - `finalize_plans` now refuses, before touching the plans file, unless the planner itself returned the recipe's
+    patch, batch and spacing.
+  - `SEGTRAIN_ALLOW_PATCH_PIN=1` is the subset-smoke-test opt-in, recorded as `pinned_over_mismatch`.
+  - On the full cohort the planner did return 256³ / batch 2 / 0.5 mm (run 1's `planner_output.json`), so R1 is
+    unaffected.
+  - Plans are not re-planned per wave: nnU-Net never re-plans by itself, and the A17a fine-tune trainer refuses a
+    source with different plans.
+  - Tests: `test_plans_coronary::test_a_replanned_recipe_is_refused_not_pinned` (patch, batch, spacing) and
+    `::test_pinning_over_a_mismatch_needs_the_explicit_opt_in`.

@@ -228,21 +228,33 @@ class QAResult:
     reason: str = ""
 
 
+def namer_disagreement():
+    """Bridge's ``segtrain.namer.disagreement``, or RuntimeError saying why it is unavailable."""
+    try:
+        from segtrain import namer  # Bridge's module (A4/A7/A8)
+
+        return namer.disagreement
+    except (ImportError, AttributeError) as exc:
+        raise RuntimeError(
+            f"A4 proxy QA unavailable: segtrain.namer.disagreement cannot be imported ({exc!r}); "
+            "refusing to write proxies without it (pass apply_qa=False only to build an "
+            "explicitly un-QA'd tree)") from exc
+
+
 def qa_with_namer(label: np.ndarray, mask: np.ndarray, spacing) -> tuple[np.ndarray, QAResult]:
     """A4: compare the proxy with Bridge's rule namer on the same mask.
 
     Uses ``segtrain.namer.disagreement(label, mask, spacing)`` if the module exists. It is
     expected to return a mapping with ``ignore`` (bool array, voxels to mask), ``exclude`` (bool,
     wholesale disagreement) and ``ramus_only`` (bool). Under the ramus-only exemption, voxels are
-    NOT ignored: the proxy's name is the expert's (master plan v4 §2.1). Without the namer the
-    label is returned unchanged and ``applied`` is False.
-    """
-    try:
-        from segtrain import namer  # Bridge's module (A4/A7/A8); may not exist yet
+    NOT ignored: the proxy's name is the expert's (master plan v4 §2.1).
 
-        fn = namer.disagreement
-    except (ImportError, AttributeError):
-        return label, QAResult(applied=False, reason="segtrain.namer.disagreement not available")
+    If the namer cannot be imported (the module, or one of its dependencies such as scipy or
+    scikit-image in a fresh venv) this **raises**: a proxy written without A4 has no carina
+    ``ignore`` and no wholesale-disagreement exclusion, and must never pass for a QA'd one (Round 6,
+    A21a). Callers that want no QA say so with ``apply_qa=False``.
+    """
+    fn = namer_disagreement()
     rep = fn(label, mask, spacing)
     ramus_only = bool(rep.get("ramus_only", False))
     excluded = bool(rep.get("exclude", False)) and not ramus_only
@@ -361,6 +373,8 @@ def build_proxy_tree(
     reads, and quality-0 cases have no ImageCAS-X labels at all."""
     from concurrent.futures import ProcessPoolExecutor
 
+    if apply_qa:
+        namer_disagreement()          # fail before any case is written (A21a), never per case
     split = icx_split(icx_dir)
     wanted = [c for s in subsets for c in split.get(s, [])]
     # Key the available cases by their canonical id, so a Girder/SegQueue tree named imagecas_NNNN

@@ -291,8 +291,10 @@ def third_read_triggers(
     """A11 case level: does this pair need a third read?
 
     Triggers: inter-read macro tF1 < 0.80 (if a scorer is given); ostium or LM end more
-    than 5 mm apart; LAD<->LCx swap > 5 % of the voxels both reads call LAD or LCx. A
-    disagreement confined to ``ramus_mask`` (the ramus, resolved by D1b) never triggers.
+    than 5 mm apart; LAD<->LCx swap > 5 % of the voxels both reads call LAD or LCx; an LM in
+    one read only (Round 6 A21: a decision disagreement). Two reads that agree there is no LM
+    (separate ostia) trigger nothing on LM or ostium (A4 absent-LM guard). A disagreement
+    confined to ``ramus_mask`` (the ramus, resolved by D1b) never triggers.
     Bridge's decision extractor (``segtrain.namer``) adds its own triggers upstream.
     """
     a = np.asarray(read_a)
@@ -727,6 +729,7 @@ class CaseReads:
     mask: Optional[np.ndarray] = None
     icx4: Optional[np.ndarray] = None
     affine: Optional[np.ndarray] = None  # NIfTI affine of the reads (left/right for the namer)
+    aorta: Optional[np.ndarray] = None  # TotalSegmentator aorta on the same grid (A1 ostium)
 
 
 EXPORT_SEGMENTS = {
@@ -787,7 +790,10 @@ def _read_from_segmentations(seg_dir: str):
 
 
 def load_read_folder(
-    root: str, mask_dir: Optional[str] = None, icx_dir: Optional[str] = None
+    root: str,
+    mask_dir: Optional[str] = None,
+    icx_dir: Optional[str] = None,
+    aorta_dir: Optional[str] = None,
 ) -> list[CaseReads]:
     """Load a wave of double reads. Two layouts are accepted:
 
@@ -801,7 +807,10 @@ def load_read_folder(
     Every read (and the ImageCAS-X labels) is brought onto the grid of the case's mask, or
     of its first read when no mask is given; axis flips/permutations are undone, any other
     mismatch raises. ``mask_dir`` holds ``<case>.nii.gz`` or ``<case>/coronary_arteries.nii.gz``;
-    ``icx_dir`` holds ``<n>.coronary.nii.gz``, n = case number + 1. Sealed cases must not be
+    ``icx_dir`` holds ``<n>.coronary.nii.gz``, n = case number + 1. ``aorta_dir`` holds the
+    TotalSegmentator aorta per case as ``<case>.nii.gz`` or ``<case>/aorta.nii.gz`` (or
+    ``<case>/segmentations/aorta.nii.gz``); it is brought onto the same grid and makes the
+    report's tF1 use the A1 ostium of record (non-provisional). Sealed cases must not be
     passed here before a milestone (A14).
     """
     import nibabel as nib
@@ -854,7 +863,17 @@ def load_read_folder(
             if os.path.exists(pth):
                 icx = icx_to_territory(_to_grid(nib.load(pth), ref_aff, ref_shape, f"{case}/icx"))
         spacing = tuple(float(z) for z in ref.header.get_zooms()[:3])
-        out.append(CaseReads(case, reads, spacing, mask, icx, ref_aff))
+        aorta = None
+        if aorta_dir:
+            for cand in (
+                os.path.join(aorta_dir, f"{case}.nii.gz"),
+                os.path.join(aorta_dir, case, "aorta.nii.gz"),
+                os.path.join(aorta_dir, case, "segmentations", "aorta.nii.gz"),
+            ):
+                if os.path.exists(cand):
+                    aorta = _to_grid(nib.load(cand), ref_aff, ref_shape, f"{case}/aorta") > 0.5
+                    break
+        out.append(CaseReads(case, reads, spacing, mask, icx, ref_aff, aorta))
     return out
 
 
@@ -864,6 +883,7 @@ def first_reads_report(
     previous_bias_flag: bool = False,
     carina_band_mm: float = 10.0,
     use_namer: bool = True,
+    per_case_tf1: bool = False,
 ) -> dict:
     """A12: the single wave-1 report on the first double-read cases.
 
@@ -877,7 +897,9 @@ def first_reads_report(
     (the noise-model refit inputs); A12b anchor offset per read. Wave level: A3 halt,
     adjudication rate, noise-model refit summary, A12a habits (anchor offset and
     truncation radius per annotator), A12b team bias. Returns a JSON-able dict; render it
-    with :func:`report_markdown`.
+    with :func:`report_markdown`. ``per_case_tf1=True`` scores tF1 per case with that case's
+    aorta (``CaseReads.aorta``, from ``load_read_folder(aorta_dir=...)``), so cases with an
+    aorta are non-provisional (A1a); otherwise ``scorer`` (or none) is used for every case.
     """
     rows, checks = [], []
     per_annot_offset: dict = {}
@@ -921,7 +943,10 @@ def first_reads_report(
 
                 if vessel.any():
                     ramus = namer.name_tree(vessel, namer.as_affine(aff)).ramus_candidates
-            tr = third_read_triggers(a, b, cr.spacing, scorer, ramus_mask=ramus)
+            sc = scorer
+            if per_case_tf1:  # tF1 with this case's aorta (A1 ostium); provisional without one
+                sc = default_scorer(aorta=cr.aorta) if cr.aorta is not None else default_scorer()
+            tr = third_read_triggers(a, b, cr.spacing, sc, ramus_mask=ramus)
             if use_namer:
                 att = naming_attribution(
                     a, b, aff, carina_band_mm=carina_band_mm, ramus_candidates=ramus
@@ -931,8 +956,8 @@ def first_reads_report(
                     tr.needed = True
                     tr.reasons.append("namer: " + ",".join(att["flags"]))
             row["third_read"] = asdict(tr)
-            if scorer is not None:
-                row["inter_read_tf1"] = inter_read_tf1(a, b, cr.spacing, scorer)
+            if sc is not None:
+                row["inter_read_tf1"] = inter_read_tf1(a, b, cr.spacing, sc)
             row["lm_end_distance_mm"] = tr.lm_end_mm
         for n in names:
             if cr.mask is not None:

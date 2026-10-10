@@ -101,3 +101,19 @@ A1a. The CLI is the orchestrator's.
 **Suite:** `tests/test_reads.py` and `tests/test_audit_reads.py`, 36 passed. The remaining full-suite failures are in
 `tests/test_audit_pipeline.py` and `tests/test_plans_coronary.py` (Atlas's modules) and do not involve
 `segtrain.reads`.
+
+## Round 6 A21 and per-case aortas
+
+- **A21: an LM in one read only is a decision disagreement** and triggers a third read. The trigger already existed
+  and is now pinned by `test_lm_in_one_read_only_triggers_a_third_read`. Two reads that *agree* there is no LM
+  (separate ostia) trigger nothing on LM or ostium, per the A4 absent-LM guard.
+- **Per-case aortas.**
+  - `load_read_folder(..., aorta_dir=)` reads `<case>.nii.gz`, `<case>/aorta.nii.gz` or
+    `<case>/segmentations/aorta.nii.gz`, brought onto the case grid.
+  - `first_reads_report(..., per_case_tf1=True)` scores each case with `default_scorer(aorta=case.aorta)`. Cases with
+    an aorta are non-provisional (A1a); cases without one stay provisional, and the wave flag `tf1_provisional`
+    reports it.
+  - This works with any producer that writes TotalSegmentator aorta NIfTIs, including Delta's
+    `segtrain.aorta` once it lands. No import dependency on it.
+- **CLI requested:** `segtrain reads-report ... --aorta-dir <dir>`. It should imply
+  `load_read_folder(aorta_dir=...)` and `first_reads_report(per_case_tf1=True)`.

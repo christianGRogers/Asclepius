@@ -91,14 +91,14 @@ judge accepts only the bounds 0.846–0.895 until the A1 re-score. The FP gate f
 (1.49/case).
 
 - **A1 — ostium of record:** the reference centreline voxel nearest the
-  TotalSegmentator aorta, per tree component and side (). A tF1 without
+  TotalSegmentator aorta, per tree component and side (`segtrain.tf1`). A tF1 without
   an aorta mask decides nothing (A1a); flagged trees are reported separately (A1b).
-  **Metric frozen (A1c):**  sha256  at commit .
+  **Metric frozen (A1c):** `src/segtrain/tf1.py` sha256 `3c737cbcc0ba24d38f923a52a28d479b34b579d6943f4c55a8cae48f66ad9253`, last changed in commit `e2d9677`.
 - **A2:** bridging (P1) removed; P1′ survives only if Delta's stricter pre-registered
   table passes (≤ ~0.004 to gain).
 - **A4:** absent-LM cases are never auto-excluded.
 - **A7:** rule renaming (R) and grammar decoding (H) retired; the namer stays QA only.
-- **A11′:** each read is a separate training sample with no name-conflict ;
+- **A11′:** each read is a separate training sample with no name-conflict `ignore`;
   the third-read trigger stays.
 - **A15:** the FP gate (≤ 1/case, raw) stays as an acceptance criterion for the final
   model; no model has met it. The FP census chooses the lever.

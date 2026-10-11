@@ -2,7 +2,7 @@
 aliases: [Human decisions, D0]
 tags: [plans, decision-record, human]
 status: living
-updated: 2026-10-05
+updated: 2026-10-11
 ---
 
 # Human decisions
@@ -21,6 +21,8 @@ that contradicts one of them cannot win.
 | D4 | Starting labels shown to annotators | **No four-class starting labels.** Annotators start from the single-class ImageCAS segmentation (the original ImageCAS lumen mask, annotated by physicians) and split it into the four classes. | Decided |
 | D5 | Redoing Girder-seeded cases | **Moot: no labelling has happened yet**, so nothing needs redoing. | Decided |
 | D0 | Lumen convention | **The original ImageCAS mask** (the current Girder mask; "convention B / thick" in the tournament's terms), split into four classes, is the target, the seed and the reference. Confirmed after being told ~47 % of its voxels sit at 16–38 HU. ImageCAS-X is a secondary cross-check only. | Decided |
+| D6 | Acceptance margin (A18) | **0.05 per class.** The final model is accepted if, for each of LM, LAD, LCx and RCA, its tF1 against the team's reads is non-inferior to inter-read tF1 within 0.05. | Decided 2026-10-11 |
+| D7 | Redrawing the mask outline | **Keep the outline**, except where the original ImageCAS segmentation has a **major error**, which is expected to be rare. Such corrections are allowed and must be recorded in the case note. | Decided 2026-10-11 |
 
 ## What these change in the master plan
 
@@ -43,3 +45,11 @@ that contradicts one of them cannot win.
 - **D1b:** the A8 ramus switch is set to LCx.
 - **D3:** the tF1 tolerance is fixed at 1.5 mm; the one permitted change has been used to confirm it.
 - **D5:** no relabelling cost under any option.
+- **D6:** A10 is reinstated with a 0.05 per-class margin (A18 resolved). Bridge's power
+  analysis (Round 6) is the basis: at 0.05 a model as good as a second reader passes most
+  of the time on 100 sealed cases.
+- **D7:** the reference stays the ImageCAS mask's extent, split into four classes; a read
+  may depart from it only to correct a major error, and says so in its note. The A3
+  convention monitor must not halt a wave for noted corrections, but still flags reads
+  that redraw the outline without a note. Delta's proposed extent rule is therefore not
+  adopted as a general rule.

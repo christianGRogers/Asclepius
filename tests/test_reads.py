@@ -163,7 +163,7 @@ def test_acceptance_noninferiority():
     rng = np.random.default_rng(1)
     inter = [{c: 0.9 for c in R.CLASSES} for _ in range(100)]
     good = [{c: 0.9 + rng.normal(0, 0.02) for c in R.CLASSES} for _ in range(100)]
-    bad = [{c: 0.85 + rng.normal(0, 0.02) for c in R.CLASSES} for _ in range(100)]
+    bad = [{c: 0.83 + rng.normal(0, 0.02) for c in R.CLASSES} for _ in range(100)]
     assert R.acceptance(good, inter)["accepted"]
     res = R.acceptance(bad, inter)
     assert not res["accepted"] and all(not v["pass"] for v in res["per_class"].values())
@@ -487,3 +487,43 @@ def test_a1c_no_centreline_class_is_carried_through_reads_and_a10():
     assert w["tf1_no_centreline"]["left_main"] == {"n": 1, "cases": ["c0000:ann2"]}
     assert all(v["n"] == 0 for k, v in w["tf1_no_centreline"].items() if k != "left_main")
     assert "no reference centreline in 1 read(s): c0000:ann2" in R.report_markdown(rep)
+
+
+# ----------------------------------------------------------------------------- D6 / D7
+def test_d6_margin_is_005_per_class():
+    assert R.NONINFERIORITY_MARGIN == 0.05
+    rng = np.random.default_rng(2)
+    inter = [{c: 0.9 for c in R.CLASSES} for _ in range(100)]
+    model = [{c: 0.87 + rng.normal(0, 0.01) for c in R.CLASSES} for _ in range(100)]
+    model = [{**m, R.LM: 0.80 + rng.normal(0, 0.01)} for m in model]  # LM 0.10 worse
+    res = R.acceptance(model, inter, n_boot=500)
+    assert all(res["per_class"][c]["pass"] for c in (R.LAD, R.LCX, R.RCA))  # -0.03 passes
+    assert not res["per_class"][R.LM]["pass"] and not res["accepted"]  # per class, not macro
+    assert not R.acceptance(model, inter, margin=0.02, n_boot=500)["per_class"][R.LAD]["pass"]
+
+
+def test_d7_noted_correction_does_not_halt_but_unnoted_redraw_does(tree):
+    ok = R.convention_check(tree, tree > 0, SP)
+    redraw = R.convention_check(make_tree(radius=1.0), tree > 0, SP)
+    noted = R.convention_check(make_tree(radius=1.0), tree > 0, SP, corrected=True)
+    assert noted.thin and noted.corrected and not noted.counts_for_halt
+    assert not R.wave_halts([noted, noted] + [ok] * 9)
+    assert R.wave_halts([redraw, redraw] + [ok] * 9)
+
+    thin = make_tree(radius=1.0)
+    cases = [R.CaseReads(f"c000{i}", {"x": thin, "y": tree}, SP, mask=tree > 0) for i in range(3)]
+    rep = R.first_reads_report(cases, use_namer=False)
+    assert rep["wave"]["a3_halt"] and rep["wave"]["a3_unnoted_departures"] == 3
+    rep = R.first_reads_report(
+        cases, use_namer=False, corrections={"c0000": ["x"], "c0001": ["*"]}
+    )
+    w = rep["wave"]
+    assert w["a3_thin_reads"] == 3 and w["a3_noted_corrections"] == 2
+    assert w["a3_unnoted_departures"] == 1 and w["a3_halt"]  # 1 of 6 reads > 10 %
+    assert rep["cases"][0]["convention"]["x"]["corrected"]
+    cases = [R.CaseReads(c.case, c.reads, SP, mask=c.mask, corrected=frozenset({"x"}))
+             for c in cases]
+    rep = R.first_reads_report(cases, use_namer=False)
+    w = rep["wave"]
+    assert w["a3_unnoted_departures"] == 0 and not w["a3_halt"]
+    assert "noted corrections, D7: 3; un-noted: 0" in R.report_markdown(rep)

@@ -139,15 +139,12 @@ judge accepts only the bounds 0.846–0.895 until the A1 re-score. The FP gate f
   the SegQueue export dry run passed on test submissions — it must be repeated on the
   first real four-class double-read export before wave 1.
 
-## Open human decisions (Round 6)
+## Human decisions taken 2026-10-11
 
-- **Acceptance margin (A18).** At n = 100, A10 as written ("within 0.02 of inter-read
-  tF1") rejects a model exactly as good as a second reader. The clinical lead chooses the
-  margin, per-class or macro, and the accepted power: e.g. 0.05 per class; 0.02 on macro
-  with a per-class floor; keep 0.02 (in effect a superiority test); or a larger sealed set.
-- **Reference extent.** Delta proposes a written rule for how much vessel a read should
-  contain. Under D0/D4 annotators do not redraw the mask, so any such rule redefines the
-  reference and is the project lead's decision.
+- **D6 — acceptance margin:** 0.05 per class; A10 is reinstated with that margin (A18
+  resolved).
+- **D7 — mask outline:** keep it; redraw only to correct a major error in the original
+  segmentation (rare), recorded in the case note.
 
 ## Human decisions
 
@@ -155,4 +152,5 @@ Recorded in [[Human decisions]] (2026-10-05) and binding on every plan:
 the original ImageCAS mask (current Girder mask) is the lumen target, seed and
 reference; territory side-branch rule, ramus → LCx; every case labelled twice;
 no four-class starting labels; tF1 tolerance fixed at 1.5 mm; no relabelling
-cost. Nothing is open.
+cost; acceptance margin 0.05 per class (D6); the outline is redrawn only for a major
+error, noted (D7). Nothing is open.

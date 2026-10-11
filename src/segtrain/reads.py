@@ -9,11 +9,17 @@ reads into training targets and into numbers, as the master plan specifies:
   when the union of its classes has Dice < 0.9 against the mask, or when its calibre
   (share of centreline in lumen under 4 voxels across) sits nearer an ImageCAS-X
   lumen than the mask. :func:`wave_halts` stops a wave when more than 10 % of its
-  reads are flagged.
+  reads are flagged **without a noted correction**. D7 (2026-10-11): annotators keep the
+  outline except to correct a major error, recorded in the case note. This module does
+  not read notes; the caller passes the noted corrections explicitly
+  (``CaseReads.corrected``, or ``first_reads_report(corrections=...)``). A noted
+  correction is still flagged and listed, but does not count towards the halt; an
+  un-noted departure does.
 - **A10, scoring and acceptance.** A model is scored per case by the mean tree-F1
   against each read (:func:`score_vs_reads`). It is accepted per class if it is
-  non-inferior to the inter-read tF1 of the same cases within 0.02: the lower bound
-  of the paired bootstrap 95 % CI of (model - inter-read) must exceed -0.02
+  non-inferior to the inter-read tF1 of the same cases within 0.05 **per class**
+  (human decision D6, 2026-10-11; was 0.02): for each of LM, LAD, LCx and RCA the lower
+  bound of the paired bootstrap 95 % CI of (model - inter-read) must exceed -0.05
   (:func:`acceptance`). No fused reference is ever built for scoring.
 - **A11', training targets (Round 5).** Each read is its own training sample and keeps
   its own names and extent: no name-conflict ``ignore`` (:func:`a11_targets`; the old
@@ -72,7 +78,7 @@ THIN_DICE_THRESHOLD = 0.9
 WAVE_HALT_FRACTION = 0.10
 CALIBRE_VOXELS = 4
 # A10
-NONINFERIORITY_MARGIN = 0.02
+NONINFERIORITY_MARGIN = 0.05  # per class (D6, 2026-10-11)
 # A11 third-read triggers (Atlas v3 / Round 3 A11)
 THIRD_READ_TF1 = 0.80
 THIRD_READ_DISTANCE_MM = 5.0
@@ -249,6 +255,13 @@ class ConventionCheck:
     calibre_icx: Optional[float]
     thin: bool
     reasons: list = field(default_factory=list)
+    #: D7: the case note records this read's departure as a correction of a major error
+    corrected: bool = False
+
+    @property
+    def counts_for_halt(self) -> bool:
+        """A3/D7: a departure from the mask that is *not* a noted correction."""
+        return bool(self.thin and not self.corrected)
 
 
 def convention_check(
@@ -257,8 +270,13 @@ def convention_check(
     spacing: Sequence[float],
     icx_lumen: Optional[np.ndarray] = None,
     dice_threshold: float = THIN_DICE_THRESHOLD,
+    corrected: bool = False,
 ) -> ConventionCheck:
-    """A3: is this read a split of the ImageCAS mask (pass) or a thin re-drawing (flag)?"""
+    """A3: is this read a split of the ImageCAS mask (pass) or a thin re-drawing (flag)?
+
+    ``corrected=True`` (D7) marks a departure that the case note records as a correction of a
+    major error. The check still runs and still sets ``thin``; it is just not counted by
+    :func:`wave_halts`."""
     union = np.asarray(read) > 0
     m = np.asarray(mask) > 0
     d = _dice(union, m)
@@ -272,13 +290,16 @@ def convention_check(
         reasons.append(
             f"calibre {c_read:.2f} nearer ImageCAS-X ({c_icx:.2f}) than the mask ({c_mask:.2f})"
         )
-    return ConventionCheck(d, c_read, c_mask, c_icx, bool(reasons), reasons)
+    return ConventionCheck(d, c_read, c_mask, c_icx, bool(reasons), reasons, bool(corrected))
 
 
 def wave_halts(checks: Iterable[ConventionCheck], max_fraction: float = WAVE_HALT_FRACTION) -> bool:
-    """A3: halt the wave for re-instruction if more than ``max_fraction`` of reads are thin."""
+    """A3: halt the wave for re-instruction if more than ``max_fraction`` of reads are thin.
+
+    D7: reads whose departure is a noted correction (``corrected``) are not counted as thin
+    here (they stay in the denominator); un-noted redraws are."""
     checks = list(checks)
-    return bool(checks) and sum(c.thin for c in checks) / len(checks) > max_fraction
+    return bool(checks) and sum(c.counts_for_halt for c in checks) / len(checks) > max_fraction
 
 
 # ----------------------------------------------------------------------------- A11
@@ -830,6 +851,8 @@ class CaseReads:
     icx4: Optional[np.ndarray] = None
     affine: Optional[np.ndarray] = None  # NIfTI affine of the reads (left/right for the namer)
     aorta: Optional[np.ndarray] = None  # TotalSegmentator aorta on the same grid (A1 ostium)
+    #: D7: annotators whose read the case note records as a correction of a major mask error
+    corrected: frozenset = frozenset()
 
 
 EXPORT_SEGMENTS = {
@@ -1043,6 +1066,7 @@ def crop_case(cr: CaseReads, margin_mm: float = CROP_MARGIN_MM) -> CaseReads:
         cut(cr.icx4),
         aff,
         cut(cr.aorta),
+        frozenset(cr.corrected),
     )
 
 
@@ -1053,8 +1077,14 @@ def first_reads_report(
     carina_band_mm: float = 10.0,
     use_namer: bool = True,
     per_case_tf1: bool = False,
+    corrections: Optional[Mapping[str, Iterable[str]]] = None,
 ) -> dict:
     """A12: the single wave-1 report on the first double-read cases.
+
+    ``corrections`` (D7): ``{case: annotator names}`` whose case note records a correction
+    of a major mask error (``"*"`` = every read of the case), merged with
+    ``CaseReads.corrected``. Such reads are still checked and listed but do not count
+    towards the A3 halt; un-noted departures do.
 
     Per case (first two reads; a third read, if present, is only counted): A3 convention
     check per read (both A3 triggers when ImageCAS-X is loaded); inter-read tF1 per class;
@@ -1076,6 +1106,7 @@ def first_reads_report(
     offsets = []
     for cr in cases:
         cr = crop_case(cr)  # E4: all distance transforms on the tree box, never the full grid
+        noted = set(cr.corrected) | set((corrections or {}).get(cr.case, ()))
         names = list(cr.reads)
         row = {"case": cr.case, "annotators": names, "n_reads": len(names)}
         if cr.mask is not None:
@@ -1086,6 +1117,7 @@ def first_reads_report(
                     cr.mask,
                     cr.spacing,
                     icx_lumen=(cr.icx4 > 0) if cr.icx4 is not None else None,
+                    corrected=n in noted or "*" in noted,
                 )
                 row["convention"][n] = asdict(cc)
                 checks.append(cc)
@@ -1175,6 +1207,9 @@ def first_reads_report(
     wave = {
         "n_cases": len(rows),
         "a3_thin_reads": int(sum(c.thin for c in checks)),
+        # D7: noted corrections are listed but do not halt; un-noted departures do
+        "a3_noted_corrections": int(sum(c.thin and c.corrected for c in checks)),
+        "a3_unnoted_departures": int(sum(c.counts_for_halt for c in checks)),
         "a3_reads_checked": len(checks),
         "a3_halt": wave_halts(checks),
         "adjudication_rate": (
@@ -1228,7 +1263,9 @@ def report_markdown(report: Mapping) -> str:
         "# Wave-1 double-read report (A12)",
         "",
         f"Cases: {w['n_cases']}. Reads checked by the convention monitor: {w['a3_reads_checked']}, "
-        f"flagged thin: {w['a3_thin_reads']} -> wave halt: **{w['a3_halt']}** (A3, > 10 %).",
+        f"flagged thin: {w['a3_thin_reads']} (noted corrections, D7: "
+        f"{w.get('a3_noted_corrections', 0)}; un-noted: {w.get('a3_unnoted_departures', 0)}) "
+        f"-> wave halt: **{w['a3_halt']}** (A3, > 10 % un-noted).",
         f"Adjudication (third-read) rate: {w['adjudication_rate']}.",
         "",
         "## Inter-read tF1 per class (A10's reference level)"

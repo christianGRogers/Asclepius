@@ -42,14 +42,17 @@ DEFAULT_SEGMENTS = [
 
 #: The project lead's decisions of 2026-10-05 (vault/Plans/Human decisions.md): the
 #: annotator splits the mask they are given into four classes and does not redraw its
-#: extent; side branches take their parent's class (territory rule); the ramus is LCx.
+#: extent except to correct a major error, noted (D7, 2026-10-11); side branches take
+#: their parent's class (territory rule); the ramus is LCx.
 DEFAULT_INSTRUCTIONS = (
     'Split the coronary mask you are given into four vessels. Do not redraw its '
     'outline: keep every voxel of the mask and add none, even where it looks wider '
     'than the contrast-filled lumen. Every side branch belongs to the vessel it '
     'comes from (diagonals to the LAD, obtuse marginals to the LCx, PDA and PLV '
-    'to the RCA). A ramus intermedius is always LCx. If part of the mask is '
-    'clearly not coronary artery, leave it as it is and say so in the note.'
+    'to the RCA). A ramus intermedius is always LCx. Redraw the outline only to '
+    'correct a major error in the original segmentation (for example a vein or a '
+    'missing vessel segment), which should be rare, and describe the correction in '
+    'the note.'
 )
 
 

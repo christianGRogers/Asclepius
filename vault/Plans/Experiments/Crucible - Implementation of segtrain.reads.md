@@ -170,3 +170,12 @@ A1a. The CLI is the orchestrator's.
   - `wave_halts` counts only un-noted departures; noted corrections stay in the denominator.
   - The report gives `a3_noted_corrections` and `a3_unnoted_departures`, and the markdown line shows both.
 - **Test:** `test_d7_noted_correction_does_not_halt_but_unnoted_redraw_does`.
+
+## Round 8: A1c fallback is tf1's default
+
+tf1 now scores a class with no reference centreline on its fallback centreline by default. reads.py follows this:
+
+- **The class enters every mean and the A10 difference** exactly when the scorer scored it. It is no longer dropped on the basis of `no_centreline`.
+- **It is still listed and counted:** `no_centreline*`, `n_no_centreline`, `tf1_no_centreline`. The markdown labels it "fallback-scored".
+- **`default_scorer` also carries `centreline_fallback`.**
+- **The old behaviour remains available:** `default_scorer(fallback_centreline=False)` leaves the class out of `per_class`, and so out of the means.

@@ -454,24 +454,32 @@ def test_a1c_no_centreline_class_is_carried_through_reads_and_a10():
     tree = make_tree(radius=3.0)
     capped = _cap_lm(tree)
     sp = (1.0, 1.0, 1.0)
+    # Round 8 default: the class is scored on tf1's fallback centreline, and still listed
     res = R.default_scorer()(capped, tree, sp)
-    assert res["no_centreline"] == [R.LM] and R.LM not in res["per_class"]
+    assert res["no_centreline"] == [R.LM] and R.LM in res["per_class"]
+    assert res["centreline_fallback"]
+    off = R.default_scorer(fallback_centreline=False)(capped, tree, sp)
+    assert off["no_centreline"] == [R.LM] and R.LM not in off["per_class"]
 
-    # A10 vs reads: per read, listed; out of that read's share of the LM mean; counted
+    # A10 vs reads: listed per read, counted per class; in the mean iff the scorer scored it
     sv = R.score_vs_reads(tree, [tree, capped], sp)
     assert sv["no_centreline_per_read"] == [[], [R.LM]]
     assert sv["no_centreline_counts"][R.LM] == 1 and sv["no_centreline_counts"][R.LAD] == 0
-    assert sv["per_class"][R.LM] == pytest.approx(1.0)  # only the read with an LM centreline
+    lm_fb = res["per_class"][R.LM]
+    assert sv["per_class"][R.LM] == pytest.approx((1.0 + lm_fb) / 2)
+    sv_off = R.score_vs_reads(tree, [tree, capped], sp, R.default_scorer(fallback_centreline=False))
+    assert sv_off["per_class"][R.LM] == pytest.approx(1.0)
+    assert sv_off["no_centreline_counts"][R.LM] == 1
 
     ir = R.inter_read_tf1(tree, capped, sp)  # A = tree, B = capped
-    assert ir["no_centreline"] == {"A": [], "B": [R.LM]}
+    assert ir["no_centreline"] == {"A": [], "B": [R.LM]} and R.LM in ir["per_class"]
 
-    # A10 summary: excluded from the LM difference, counted per class
+    # A10 summary: fallback-scored values are decisive (kept), and counted per class
     model = [{R.LM: 0.9, R.LAD: 0.9}] * 3
     inter = [{R.LM: 0.9, R.LAD: 0.9}] * 3
     acc = R.acceptance(model, inter, n_boot=200, no_centreline=[[R.LM], [], []])
-    assert acc["per_class"][R.LM]["n"] == 2 and acc["per_class"][R.LM]["n_no_centreline"] == 1
-    assert acc["per_class"][R.LAD]["n"] == 3 and acc["no_centreline_counts"][R.LAD] == 0
+    assert acc["per_class"][R.LM]["n"] == 3 and acc["per_class"][R.LM]["n_no_centreline"] == 1
+    assert acc["no_centreline_counts"][R.LM] == 1 and acc["no_centreline_counts"][R.LAD] == 0
     with pytest.raises(ValueError):
         R.acceptance(model, inter, no_centreline=[[]])
 
@@ -483,10 +491,12 @@ def test_a1c_no_centreline_class_is_carried_through_reads_and_a10():
     )
     row = rep["cases"][0]
     assert row["tf1_no_centreline"] == {"ann1": [], "ann2": ["left_main"]}
+    assert "left_main" in rep["wave"]["inter_read_tf1"]  # scored via the fallback
     w = rep["wave"]
     assert w["tf1_no_centreline"]["left_main"] == {"n": 1, "cases": ["c0000:ann2"]}
     assert all(v["n"] == 0 for k, v in w["tf1_no_centreline"].items() if k != "left_main")
-    assert "no reference centreline in 1 read(s): c0000:ann2" in R.report_markdown(rep)
+    md = R.report_markdown(rep)
+    assert "no reference centreline (fallback-scored) in 1 read(s): c0000:ann2" in md
 
 
 # ----------------------------------------------------------------------------- D6 / D7

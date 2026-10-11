@@ -39,3 +39,8 @@ Every plan version ever submitted, and what happened to it.
 | 6 | [[Foxtrot v1]] | Foxtrot | New advocate; lost; fine-tune trainer and LR fallback adopted (A17a/b); ROI filter conditional (A20) |
 | 7 | [[Atlas v8]] | Atlas | **Master plan** (held); A17a/b done; A1c report-only change approved ([[Round 7]]) |
 | 7 | [[Foxtrot v2]] | Foxtrot | ROI check (A20 i) passes on 92 cases; 908-case run approved after atlas2 |
+| 8 | [[Atlas v9]] | Atlas | **Master plan** (held), on atlas2 results; window = default; run 3 approved (A24) ([[Round 8]]) |
+| 8 | [[Bridge v7]] | Bridge | Lost; seed rule adopted (A22); macro-primary A10 overridden by D6 |
+| 8 | [[Crucible v9]] | Crucible | Lost; pooled seeds keep A11′; conditional A11 test dropped |
+| 8 | [[Delta v8]] | Delta | Lost; falsifier passed; fallback centreline made default (A1c); extent diagnostic report-only (A23) |
+| 8 | [[Foxtrot v3]] | Foxtrot | Lost; withdrew F3 (A20) on its own evidence; FP triage approved as a report |

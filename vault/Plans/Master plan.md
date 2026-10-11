@@ -2,19 +2,19 @@
 aliases: [Master plan]
 tags: [plans, master]
 status: living
-round: 7
+round: 8
 updated: 2026-10-10
 ---
 
 # Master plan
 
-**In force: [[Atlas v8]], as amended by the judge in [[Round 7]].** Won round 1
-(as [[Atlas v1]]) and held the title in rounds 2–7. All three challengers now keep the master's
+**In force: [[Atlas v9]], as amended by the judge in [[Round 8]].** Won round 1
+(as [[Atlas v1]]) and held the title in rounds 2–8. All three challengers now keep the master's
 model, data, schedule and deciding metric, and compete on additions to it.
 
 The plan text is the candidate file; the amendments below are binding and
 override it where they conflict. Full reasoning, scorecards and what would
-change the ruling: [[Round 7]] (earlier: [[Round 6]] … [[Round 1]]).
+change the ruling: [[Round 8]] (earlier: [[Round 7]] … [[Round 1]]).
 
 ## In one paragraph
 
@@ -138,6 +138,31 @@ judge accepts only the bounds 0.846–0.895 until the A1 re-score. The FP gate f
   remaining 908 to run with the aorta producer after atlas2; A21 aorta producer built and
   the SegQueue export dry run passed on test submissions — it must be repeated on the
   first real four-class double-read export before wave 1.
+
+## Round 8 changes (atlas2 and Crucible seed 2; full wording in [[Round 8]])
+
+Measured: run 1 re-scored under the A1 ostium of record — decisive macro tF1 **0.896**
+(LM 0.966 / LAD 0.901 / LCx 0.846 / RCA 0.883), 44 of 316 trees flagged. Recall of
+expert-traced centreline 93–97 %. 79 % of FP components are confident and are mostly
+cardiac veins beside the tree; no threshold or ROI rule removes them.
+
+- **Window:** nnU-Net's default window, by the pre-registered tie-break; recorded as "not
+  shown better" (the FP difference is within noise). Atlas's two R1 guards (no worse than
+  run 1; an LCx check) bind.
+- **A24 — run 3 before R1:** an FP-aware loss pilot, two warm fine-tunes from B with the
+  same seed, data stream and epochs; adopt only if FP/case falls (CI excludes 0) and tF1 is
+  non-inferior at 0.01 with the seed term included; per-class recall reported separately
+  for expert-traced and low-contrast mask vessel. R1 (48.6 h) follows, plain unless the
+  term is adopted.
+- **A22 — seed rule:** σ_seed ≈ 0.013; any effect under 0.02 needs two seeds; paired arms
+  get equal epochs.
+- **A1c:** the fallback centreline becomes the decisive default under a new pinned hash
+  (Round 7 tests 5–7 must pass) before run 3 is scored.
+- **A23:** a report-only extent diagnostic (tF1 on contrast-supported reference) beside
+  every decisive tF1; Delta's extent rule is refused under D7.
+- **A11′ stands**; the seed-1 claim that A11 is worse is withdrawn; the conditional A11
+  test is dropped. **F3/A20 withdrawn** (the FPs sit on the heart); aorta masks remain
+  required. **A10** uses D6's 0.05 per class.
 
 ## Human decisions taken 2026-10-11
 

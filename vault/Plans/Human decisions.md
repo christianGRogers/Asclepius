@@ -23,6 +23,18 @@ that contradicts one of them cannot win.
 | D0 | Lumen convention | **The original ImageCAS mask** (the current Girder mask; "convention B / thick" in the tournament's terms), split into four classes, is the target, the seed and the reference. Confirmed after being told ~47 % of its voxels sit at 16–38 HU. ImageCAS-X is a secondary cross-check only. | Decided |
 | D6 | Acceptance margin (A18) | **0.05 per class.** The final model is accepted if, for each of LM, LAD, LCx and RCA, its tF1 against the team's reads is non-inferior to inter-read tF1 within 0.05. | Decided 2026-10-11 |
 | D7 | Redrawing the mask outline | **Keep the outline**, except where the original ImageCAS segmentation has a **major error**, which is expected to be rare. Such corrections are allowed and must be recorded in the case note. | Decided 2026-10-11 |
+| D8 | Lumen target (supersedes D0) | **ImageCAS-X exactly as drawn.** The original ImageCAS masks are no longer considered usable as labels. | Decided 2026-10-11 |
+| D9 | Class schema | **All 14 ImageCAS-X classes**, no grouping into four vessels: LM, LAD, LCx, D1, D2, OM1, OM2, IM, RCA, R-PDA, R-PLA, L-PDA, L-PLA, Other. Supersedes the four-class goal and D1/D1b's grouping. | Decided 2026-10-11 |
+| D10 | What annotators start from (supersedes D4) | **The 14-class model's prediction, on all 1000 cases**, including the 800 that already have ImageCAS-X labels. Annotators correct it in SegQueue, which must gain the 14 classes. | Decided 2026-10-11 |
+
+## The restructure of 2026-10-11 (D8–D10)
+
+The project lead found ImageCAS-X and restructured the project: one model is trained on
+ImageCAS-X's 14 classes as drawn (`trillium/icx14`), it predicts all 1000 cases, and the
+annotators correct those predictions in SegQueue. D0, D4 and the four-class grouping of
+D1/D1b are superseded; the tournament's master plan below is kept as history. D2 (two
+reads per case), D3, D6 and D7 are to be re-confirmed for the corrected-prelabel workflow.
+SegQueue's 14-class setup and its validation are deferred by the project lead.
 
 ## What these change in the master plan
 

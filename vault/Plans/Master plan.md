@@ -8,6 +8,11 @@ updated: 2026-10-10
 
 # Master plan
 
+> **Superseded on 2026-10-11 by the project lead's restructure** ([[Human decisions]] D8–D10):
+> train one 14-class model on ImageCAS-X as drawn (`trillium/icx14`, 1000 epochs), predict all
+> 1000 cases, and have annotators correct the predictions in SegQueue. The four-class plan below
+> is kept as the record of the tournament; run 3 (`trillium/atlas3`) is no longer needed.
+
 **In force: [[Atlas v9]], as amended by the judge in [[Round 8]].** Won round 1
 (as [[Atlas v1]]) and held the title in rounds 2–8. All three challengers now keep the master's
 model, data, schedule and deciding metric, and compete on additions to it.

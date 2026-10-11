@@ -1,5 +1,10 @@
 # Trillium experiments from the plan tournament
 
+> **Current run: `icx14/`** — the project lead's restructure of 2026-10-11 (14-class model on
+> ImageCAS-X as drawn, then prelabels for all 1000 cases). It is a job chain of ~55 GPU-hours,
+> approved by the project lead as an exception to rule 6 below. The tournament experiments
+> (atlas … atlas3, bridge, crucible, delta) are kept as history.
+
 Each advocate in the plan tournament (`vault/Plans/`) gets one GPU experiment
 on SciNet Trillium. This folder holds them, one sub-folder per advocate. The
 project lead copies them next to the case data, runs one command each, and

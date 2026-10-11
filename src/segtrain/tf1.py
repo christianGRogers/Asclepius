@@ -383,7 +383,8 @@ def tree_f1(reference: np.ndarray, prediction: np.ndarray, spacing: Sequence[flo
             tol_mm: float = TOLERANCE_MM, ostia: Optional[OstiumReport] = None,
             aorta: Optional[np.ndarray] = None, ct: Optional[np.ndarray] = None,
             min_component_voxels: int = MIN_COMPONENT_VOXELS,
-            fallback_centreline: bool = False) -> TreeF1:
+            fallback_centreline: bool = True,
+            _recall_keep: Optional[np.ndarray] = None) -> TreeF1:
     """Tree-F1 of a 4-class ``prediction`` against a 4-class ``reference`` (same grid).
 
     ``tol_mm`` is the gap tolerance (1.5 mm is the decided value; 0 gives the strict variant).
@@ -391,12 +392,17 @@ def tree_f1(reference: np.ndarray, prediction: np.ndarray, spacing: Sequence[flo
     The prediction is cleaned of components < ``min_component_voxels`` first, as the raw
     prediction always is. A binary prediction is accepted but then every voxel is 'class 1'.
 
-    A reference class with voxels but no centreline voxel is listed in
-    ``classes_without_centreline`` and, by default, left out of ``per_class`` exactly as before.
-    ``fallback_centreline=True`` (opt-in, approved in principle in Round 7; not the default) scores
-    it on a fallback centreline instead: the class's own skeleton, or its maximal-EDT voxels if that
-    is empty. Those points join the reference centreline with the class's label, and join the
-    predicted centreline wherever the prediction covers them, with the predicted label."""
+    A reference class with voxels but no centreline voxel (a short, wide LM stub; about 5 % of
+    references) is listed in ``classes_without_centreline`` and, by default
+    (``fallback_centreline=True``, the decisive default since Round 8, A1c), scored on a fallback
+    centreline: the class's own skeleton, or its maximal-EDT voxels if that is empty. Those points
+    join the reference centreline with the class's label, and join the predicted centreline wherever
+    the prediction covers them, with the predicted label. ``fallback_centreline=False`` reproduces
+    the earlier report-only behaviour (the class is left out of ``per_class``) for paired reports.
+    Wherever every class has a centreline the two are bit-identical.
+
+    ``_recall_keep`` (bool volume, private) drops reference centreline voxels where it is False
+    from *recall only*; it exists for :func:`contrast_supported_tf1` and is never decisive."""
     sp = np.asarray(spacing, float)
     ref = np.asarray(reference)
     pred = np.where(remove_small_components(np.asarray(prediction) > 0, min_component_voxels),
@@ -445,11 +451,20 @@ def tree_f1(reference: np.ndarray, prediction: np.ndarray, spacing: Sequence[flo
         on_pred = (pred[tuple(extra.T)] > 0) & ~psk[tuple(extra.T)]
         plab_sk = np.concatenate([plab_sk, pred[tuple(extra[on_pred].T)]])
         rlab_at_pred = np.concatenate([rlab_at_pred, ref[tuple(extra[on_pred].T)]])
+        all_pts = np.concatenate([rpts, extra])
+    else:
+        all_pts = rpts
+    keep = (np.asarray(_recall_keep, bool)[tuple(all_pts.T)] if _recall_keep is not None
+            else None)
     per, rec_d, prec_d = {}, {}, {}
     for c in CLASSES:
         g = rlab == c
         if not g.any():
             continue
+        if keep is not None:
+            g = g & keep
+            if not g.any():
+                continue
         rec = float(((plab_at_ref == c) & rooted & g).sum() / g.sum())
         pc = plab_sk == c
         prec = float((rlab_at_pred[pc] == c).mean()) if pc.any() else 0.0
@@ -468,6 +483,65 @@ def _fallback_points(mask: np.ndarray, spacing: np.ndarray) -> np.ndarray:
         return pts
     edt = ndimage.distance_transform_edt(mask, sampling=spacing)
     return np.argwhere(mask & (edt >= edt.max()))
+
+
+# --------------------------------------------------------------------------------- A23 diagnostic
+#: A23: reference centreline below this fraction of the median aortic HU is "not
+#: contrast-supported".
+CONTRAST_FRACTION = 0.3
+#: Smoothing before reading HU at centreline voxels (as in the Round 8 miss census).
+CONTRAST_SMOOTH_MM = 0.7
+
+
+@dataclass
+class ContrastSupportedTF1:
+    """Report-only extent diagnostic (A23). Never decisive: the decisive score is
+    :func:`tree_f1`."""
+    tf1: float
+    per_class: dict
+    recall: dict
+    precision: dict                 # unchanged from tree_f1
+    excluded_fraction: dict         # class -> share of its reference centreline below threshold
+    threshold_hu: float
+    aorta_hu: float
+
+    def as_row(self) -> dict:
+        return {"tf1_contrast_supported": self.tf1,
+                **{f"tf1_cs_{CLASS_NAMES[c]}": v for c, v in self.per_class.items()},
+                **{f"low_hu_share_{CLASS_NAMES[c]}": v for c, v in self.excluded_fraction.items()},
+                "contrast_threshold_hu": self.threshold_hu, "aorta_hu": self.aorta_hu}
+
+
+def contrast_supported_tf1(reference: np.ndarray, prediction: np.ndarray,
+                           spacing: Sequence[float], ct: np.ndarray, aorta: np.ndarray, *,
+                           ostia: Optional[OstiumReport] = None,
+                           tol_mm: float = TOLERANCE_MM, fraction: float = CONTRAST_FRACTION,
+                           smooth_mm: float = CONTRAST_SMOOTH_MM,
+                           fallback_centreline: bool = True) -> ContrastSupportedTF1:
+    """"tF1 on contrast-supported reference" (A23, report only): :func:`tree_f1` with reference
+    centreline voxels whose smoothed HU is below ``fraction`` x the median aortic HU left out of
+    recall. Precision, rooting and naming are as in :func:`tree_f1`; a class whose whole
+    centreline is below threshold is left out. Reported beside every decisive tF1; it decides
+    nothing."""
+    sp = np.asarray(spacing, float)
+    ao = np.asarray(aorta, bool)
+    if not ao.any():
+        raise ValueError("contrast_supported_tf1 needs a non-empty aorta mask")
+    hu = ndimage.gaussian_filter(np.asarray(ct, np.float32), sigma=smooth_mm / sp)
+    aorta_hu = float(np.median(hu[ao]))
+    thr = fraction * aorta_hu
+    keep = hu >= thr
+    rep = ostia if ostia is not None else find_ostia(reference, sp, aorta=ao, ct=ct)
+    r = tree_f1(reference, prediction, sp, tol_mm=tol_mm, ostia=rep,
+                fallback_centreline=fallback_centreline, _recall_keep=keep)
+    ref = np.asarray(reference)
+    skel = _skeletonise(ref > 0)
+    rl = ref[skel]
+    low = ~keep[skel]
+    excl = {c: float(low[rl == c].mean()) for c in CLASSES if (rl == c).any()}
+    return ContrastSupportedTF1(tf1=r.tf1, per_class=r.per_class, recall=r.recall,
+                                precision=r.precision, excluded_fraction=excl,
+                                threshold_hu=thr, aorta_hu=aorta_hu)
 
 
 # --------------------------------------------------------------------------------- gates (A2)

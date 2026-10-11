@@ -156,8 +156,10 @@ cardiac veins beside the tree; no threshold or ROI rule removes them.
   term is adopted.
 - **A22 — seed rule:** σ_seed ≈ 0.013; any effect under 0.02 needs two seeds; paired arms
   get equal epochs.
-- **A1c:** the fallback centreline becomes the decisive default under a new pinned hash
-  (Round 7 tests 5–7 must pass) before run 3 is scored.
+- **A1c:** the fallback centreline becomes the decisive default. **Pinned hash:**
+  `src/segtrain/tf1.py` sha256 `24441cf8df0f000bd956c7dd9d8ae1daac866cfb14df1d174441d00e54f05254` (Round 7 tests 5–7 pass). Paired on run 1's
+  116 predictions: val decisive macro unchanged (0.8958); two real LM errors on the open
+  set are now counted. Run 3 is scored at this hash.
 - **A23:** a report-only extent diagnostic (tF1 on contrast-supported reference) beside
   every decisive tF1; Delta's extent rule is refused under D7.
 - **A11′ stands**; the seed-1 claim that A11 is worse is withdrawn; the conditional A11

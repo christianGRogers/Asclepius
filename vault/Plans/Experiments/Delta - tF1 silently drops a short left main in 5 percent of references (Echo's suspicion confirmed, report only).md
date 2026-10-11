@@ -2,8 +2,8 @@
 tags: [plans, experiment, round6, tree-f1, a1c, audit, a21]
 author: Delta
 round: 6
-updated: 2026-10-11
-status: Round 7 ruling applied. Variant 1 (report only) is the default; the variant 3 fallback is opt-in. tf1.py sha256 3c737cbc…9253 → 9bb77e24…0608
+updated: 2026-10-12
+status: Round 8 ruling applied. The fallback centreline is the decisive default. tf1.py sha256 3c737cbc…9253 → 9bb77e24…0608 (Round 7, report-only) → 24441cf8…5254 (Round 8)
 ---
 
 # tF1 silently drops a short left main in 5 percent of references (Echo's suspicion confirmed, report only)
@@ -114,3 +114,66 @@ The frozen copy is kept as `experiments/Delta/tf1_3c737cbc.py`. The tests compar
 ### Still to do before wave 1 (ruling test 8 and the run-1 half of test 3)
 
 Run 1's val predictions must be re-scored under both hashes, for the 7 cases and overall, reporting the macro and the LM. This is a CPU step wherever the segmentations live: atlas2 already pins the old hash, and the miss census will copy them off $SCRATCH. Per Round 7, every atlas2 report should also list its `classes_without_centreline` cases. The default stays report-only until the judge adopts variant 3.
+
+## Round 8: the fallback becomes the decisive default (new sha256 `24441cf8df0f000bd956c7dd9d8ae1daac866cfb14df1d174441d00e54f05254`)
+
+### Change
+
+- `tree_f1(..., fallback_centreline=True)` is now the default.
+- `fallback_centreline=False` reproduces the 9bb77e24 and 3c737cbc behaviour, for the paired reports Round 8 requires.
+- **Code changes.** Only two things changed in the scoring path:
+  - the default flag;
+  - a private, report-only `_recall_keep` mask (`None` by default, so the arithmetic is untouched) that feeds the A23 diagnostic.
+
+  The fallback code itself is the one tested in Round 7.
+
+### Tests (`tests/test_tf1.py`, 30 tests)
+
+| Round 7 test | What is checked | Result |
+|---|---|---|
+| 5 | Perfect prediction on the short-LM stub, now with the default arguments | 1.0 in every class |
+| 6 | LM renamed LAD | LM 0; LAD precision below the report-only value of 1.0 |
+| 7 | New default vs the frozen 3c737cbc copy, wherever every class has a centreline | Bit-identical on the full fixtures (identity and cut), plus every Atlas, Bridge and Delta regression |
+| — | Report-only path (`fallback_centreline=False`) | Still bit-identical to the frozen copy on the stub fixtures |
+
+### Paired report on the 116 run-1 predictions (old default = report-only; new default = fallback)
+
+**Source.** The Round 8 census run (`work/Delta/r6/census.jsonl`, val 80, with atlas2's flags) and `open36_id.jsonl` (open 36). The fallback values there were produced by the same fallback code. Cases without a centreline-less class are bit-identical by test 7 and by the Round 8 cohort check (116 of 116).
+
+| Set | Decisive macro (A1b flags out) | All-trees macro | LM, n and mean |
+|---|---|---|---|
+| val 80 | 0.8958 → **0.8958** | 0.8837 → 0.8837 | 76 → 78; 0.964 → 0.962 |
+| open 36 | — (no atlas2 class flags) | 0.8740 → 0.8670 | 31 → 35; 0.940 → 0.903 |
+
+Per case (macro, old → new; LM under the new default):
+
+| Case | Macro | LM |
+|---|---|---|
+| c0613 | 0.916 → 0.893 | 0.82 |
+| c0848 | 0.893 → 0.909 | 0.96 |
+| c0772 | 0.802 → 0.669 | **0.29** |
+| c0805 | 0.885 → 0.900 | 0.95 |
+| c0807 | 0.821 → 0.681 | **0.29** |
+| c0824 | 0.926 → 0.932 | 0.95 |
+
+All six carry a flagged left ostium, so no decisive val aggregate moves. On the open set, the all-trees mean falls by 0.007 because two real LM errors are now counted.
+
+### A23: report-only extent diagnostic (same hash)
+
+`contrast_supported_tf1(reference, prediction, spacing, ct, aorta, ...)` returns a `ContrastSupportedTF1`:
+
+| Field | Meaning |
+|---|---|
+| `tf1`, `per_class`, `recall` | recall recomputed with reference centreline below 0.3 × the median aortic HU left out; HU smoothed at 0.7 mm, as in the miss census |
+| `precision` | unchanged from `tree_f1` |
+| `excluded_fraction` | per class, the low-HU share of the reference centreline |
+| `threshold_hu`, `aorta_hu` | the threshold used and the median aortic HU |
+
+`as_row()` gives `tf1_contrast_supported`, `tf1_cs_<class>` and `low_hu_share_<class>`.
+
+- It calls `tree_f1` and never changes its result. A test asserts that the decisive score is untouched.
+- Tests: it equals `tree_f1` when all of the reference has contrast; and a no-contrast distal LAD that the model leaves out is excluded from recall (recall rises to 1.0, precision is unchanged).
+
+### Known consequence for another owner
+
+`tests/test_reads.py::test_a1c_no_centreline_class_is_carried_through_reads_and_a10` (Crucible's file) asserts the old report-only default (`R.LM not in res["per_class"]`), so it now fails by design. The `no_centreline` listing it checks still works. Crucible needs to update the assertion to the adopted default, or pass `fallback_centreline=False` where it wants the report-only path. I did not edit another owner's file.

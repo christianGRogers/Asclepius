@@ -245,12 +245,24 @@ def test_class_without_centreline_is_listed_and_scores_are_bit_identical(ref):
     for name, (r, p) in {"stub": (stub, stub), "stub_cut": (stub, _cut(stub, 2, X0 + 40, 8)),
                          "stub_renamed": (stub, np.where(stub == 1, 2, stub)),
                          "full": (ref, ref), "full_cut": (ref, _cut(ref, 2, X0 + 40, 8))}.items():
-        new, was = T.tree_f1(r, p, SP), old.tree_f1(r, p, SP)
+        # report-only path (fallback off) is the old hash's behaviour everywhere; the default
+        # (fallback on) equals it wherever every class has a centreline
+        new, was = T.tree_f1(r, p, SP, fallback_centreline=False), old.tree_f1(r, p, SP)
         assert new.per_class == was.per_class and new.tf1 == was.tf1, name
+        if name.startswith("full"):
+            dflt = T.tree_f1(r, p, SP)
+            assert (dflt.per_class, dflt.recall, dflt.precision, dflt.tf1) == \
+                (was.per_class, was.recall, was.precision, was.tf1), name
         assert new.recall == was.recall and new.precision == was.precision, name
         assert new.classes_without_centreline == ([1] if name.startswith("stub") else []), name
         assert new.as_row()["classes_without_centreline"] == new.classes_without_centreline
-    assert 1 not in T.tree_f1(stub, stub, SP).per_class          # default: report only
+    assert 1 not in T.tree_f1(stub, stub, SP, fallback_centreline=False).per_class
+
+
+def test_fallback_is_the_decisive_default(ref):
+    stub = _stub(ref)
+    r = T.tree_f1(stub, stub, SP)
+    assert r.centreline_fallback and r.per_class[1] == pytest.approx(1.0)
 
 
 def test_fallback_centreline_scores_a_perfect_prediction_one(ref):
@@ -265,16 +277,49 @@ def test_fallback_centreline_sees_an_lm_renamed_lad(ref):
     stub = _stub(ref)
     renamed = np.where(stub == 1, 2, stub)
     fb = T.tree_f1(stub, renamed, SP, fallback_centreline=True)
-    dflt = T.tree_f1(stub, renamed, SP)
+    dflt = T.tree_f1(stub, renamed, SP, fallback_centreline=False)
     assert fb.per_class[1] == 0.0
     assert fb.precision[2] < dflt.precision[2] == 1.0              # LAD precision falls
 
 
 def test_fallback_changes_nothing_where_every_class_has_a_centreline(ref):
     for name, pred in _cases(ref).items():
-        a, b = T.tree_f1(ref, pred, SP), T.tree_f1(ref, pred, SP, fallback_centreline=True)
+        a = T.tree_f1(ref, pred, SP, fallback_centreline=False)
+        b = T.tree_f1(ref, pred, SP)
         assert (a.per_class, a.recall, a.precision, a.tf1) == \
             (b.per_class, b.recall, b.precision, b.tf1), name
+
+
+# ------------------------------------------------------------------------------- A23 diagnostic
+def _contrast_ct(ref, aorta, low=None):
+    c = np.zeros(SHAPE, np.float32)
+    c[aorta] = 400.0
+    c[ref > 0] = 400.0
+    if low is not None:
+        c[low] = 50.0                          # a mask vessel stretch without contrast
+    return c
+
+
+def test_contrast_supported_tf1_equals_tree_f1_when_all_reference_has_contrast(ref, aorta):
+    pred = _cut(ref, 2, X0 + 40, 8)
+    d = T.tree_f1(ref, pred, SP, aorta=aorta)
+    cs = T.contrast_supported_tf1(ref, pred, SP, _contrast_ct(ref, aorta), aorta)
+    assert cs.tf1 == d.tf1 and cs.per_class == d.per_class
+    assert all(v == 0.0 for v in cs.excluded_fraction.values())
+
+
+def test_contrast_supported_tf1_drops_low_hu_reference_from_recall_only(ref, aorta):
+    low = np.zeros(SHAPE, bool)
+    low[X0 + 50:] = ref[X0 + 50:] == 2         # distal LAD has no contrast
+    pred = np.where(low, 0, ref)               # and the model leaves it out
+    ct = _contrast_ct(ref, aorta, low)
+    d = T.tree_f1(ref, pred, SP, aorta=aorta)
+    cs = T.contrast_supported_tf1(ref, pred, SP, ct, aorta)
+    assert d.recall[2] < 0.8 and cs.recall[2] == pytest.approx(1.0)
+    assert cs.precision == d.precision
+    assert 0.1 < cs.excluded_fraction[2] < 0.5 and cs.excluded_fraction[4] == 0.0
+    assert T.tree_f1(ref, pred, SP, aorta=aorta).tf1 == d.tf1   # the decisive score is untouched
+    assert cs.as_row()["tf1_contrast_supported"] == cs.tf1
 
 
 # ------------------------------------------------------------------------------- bridge audit

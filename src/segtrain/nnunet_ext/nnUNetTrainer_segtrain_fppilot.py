@@ -16,9 +16,9 @@ GPU kernels (cuDNN) stay non-deterministic; that is the residual difference betw
 one arm, and it is far below the seed-to-seed variation A22 accounts for.
 
 ``nnUNetTrainer_segtrain_fppilot_F0``  plain loss (nnU-Net DiceCE with deep supervision).
-``nnUNetTrainer_segtrain_fppilot_F1``  plus the FP-aware term (:mod:`fp_aware_loss`):
-                                       lambda ``SEGTRAIN_FP_LAMBDA`` (1), gamma ``SEGTRAIN_FP_GAMMA``
-                                       (2), band ``SEGTRAIN_FP_BAND_MM`` (1.5 mm).
+``nnUNetTrainer_segtrain_fppilot_F1``  plus the FP-aware term (:mod:`fp_aware_loss`): lambda
+    ``SEGTRAIN_FP_LAMBDA`` (1), gamma ``SEGTRAIN_FP_GAMMA`` (2),
+    band ``SEGTRAIN_FP_BAND_MM`` (1.5 mm).
 Separate classes, so the two result folders never collide.
 """
 

@@ -30,7 +30,7 @@ def test_band_is_1p5_mm_at_half_millimetre_spacing():
     assert band_voxels(1.5, (0.5, 0.5, 0.5)) == [3, 3, 3]
     far = far_background(_target(), [3, 3, 3])
     assert not far[0, 12, 12, 10]                      # labelled
-    assert not far[0, 12, 16, 10]                      # 3 voxels (1.5 mm) from the label: in the band
+    assert not far[0, 12, 16, 10]                      # 3 voxels (1.5 mm) away: in the band
     assert far[0, 12, 18, 10]                          # 5 voxels away: far background
     t = _target()
     t[0, 0, 2, 2, 2] = 5                               # an ignore voxel also protects its band
@@ -71,7 +71,8 @@ def test_loss_wraps_deep_supervision_and_lambda_zero_is_the_base():
     out = [_logits([(12, 20, 10)], 8.0), torch.zeros(1, 5, 12, 12, 12)]
     tgt = [_target(), torch.zeros(1, 1, 12, 12, 12, dtype=torch.long)]
     base = Base()(out, tgt)
-    assert FPAwareLoss(Base(), (0.5, 0.5, 0.5), lam=0.0)(out, tgt).item() == pytest.approx(base.item())
+    zero = FPAwareLoss(Base(), (0.5, 0.5, 0.5), lam=0.0)(out, tgt)
+    assert zero.item() == pytest.approx(base.item())
     f = FPAwareLoss(Base(), (0.5, 0.5, 0.5), lam=1.0, gamma=2.0)
     total = f(out, tgt)
     assert total.item() == pytest.approx(base.item() + f.last_term) and f.last_term > 0
@@ -112,8 +113,9 @@ def _tiny_dataset(tmp_path):
     (pre / f"{plans['plans_name']}.json").write_text(json.dumps(plans))
     (pre / "dataset.json").write_text(json.dumps(dj))
     (pre / "splits_final.json").write_text(json.dumps([{"train": ["c0001"], "val": ["c0003"]}]))
-    env = dict(os.environ, nnUNet_raw=str(tmp_path / "raw"), nnUNet_preprocessed=str(tmp_path / "pre"),
-               nnUNet_results=str(tmp_path / "res"), OMP_NUM_THREADS="1")
+    env = dict(os.environ, nnUNet_raw=str(tmp_path / "raw"),
+               nnUNet_preprocessed=str(tmp_path / "pre"), nnUNet_results=str(tmp_path / "res"),
+               OMP_NUM_THREADS="1")
     did = int(name[7:10])
     r = subprocess.run(["nnUNetv2_preprocess", "-d", str(did), "-plans_name", plans["plans_name"],
                         "-c", "3d_fullres", "-np", "1"], env=env, capture_output=True, text=True)
@@ -132,6 +134,8 @@ def test_the_two_arms_see_the_same_batches_and_differ_only_in_the_loss(tmp_path,
     monkeypatch.setenv("SEGTRAIN_SEED", "7")
     from segtrain.nnunet_ext.nnUNetTrainer_segtrain_fppilot import (
         nnUNetTrainer_segtrain_fppilot_F0 as F0,
+    )
+    from segtrain.nnunet_ext.nnUNetTrainer_segtrain_fppilot import (
         nnUNetTrainer_segtrain_fppilot_F1 as F1,
     )
 

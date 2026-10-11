@@ -182,8 +182,10 @@ def default_scorer(**tf1_kwargs) -> Scorer:
             "per_class": {int(k): float(v) for k, v in res.per_class.items() if np.isfinite(v)},
             "provisional": bool(res.provisional),
             "flagged": bool(res.flagged),
-            # A1c: reference classes with voxels but no centreline (absent from per_class)
+            # A1c: reference classes with voxels but no centreline. Since Round 8 tf1 scores them on
+            # a fallback centreline by default (they are in per_class); listed either way
             "no_centreline": sorted(int(c) for c in getattr(res, "classes_without_centreline", [])),
+            "centreline_fallback": bool(getattr(res, "centreline_fallback", False)),
         }
 
     return scorer
@@ -438,8 +440,9 @@ def score_vs_reads(
     ``provisional`` if any read was scored without the A1 ostium of record (A1a), and
     ``flagged`` if any read's tree carries a flagged ostium (A1b).
     A1c: ``no_centreline_per_read[k]`` lists the classes read k has voxels for but no
-    centreline; such a class is left out of that read's contribution to the class mean, and
-    ``no_centreline_counts`` counts the reads per class.
+    centreline, and ``no_centreline_counts`` counts the reads per class. Such a class enters
+    the mean exactly when the scorer scored it: on tf1's fallback centreline (the decisive
+    default since Round 8), or not at all with ``fallback_centreline=False``.
     """
     scorer = scorer or default_scorer()
     raw = [scorer(np.asarray(r), np.asarray(prediction), spacing) for r in reads]
@@ -448,7 +451,7 @@ def score_vs_reads(
     per_read = [u[0] for u in unpacked]
     per = {}
     for c in CLASSES:
-        v = [p[c] for p, nc in zip(per_read, no_cl) if c in p and c not in nc and np.isfinite(p[c])]
+        v = [p[c] for p in per_read if c in p and np.isfinite(p[c])]
         if v:
             per[c] = float(np.mean(v))
     return {
@@ -472,7 +475,7 @@ def inter_read_tf1(
 
     Carries ``provisional`` / ``flagged`` (A1a / A1b) like :func:`score_vs_reads`. A1c:
     ``no_centreline`` = ``{"A": [...], "B": [...]}``, the classes for which that read, used as
-    the reference, has no centreline; such a direction is left out of the class mean.
+    the reference, has no centreline (scored on the fallback by default, so still in the mean).
     """
     scorer = scorer or default_scorer()
     rab = scorer(np.asarray(read_b), np.asarray(read_a), spacing)  # reference B
@@ -482,11 +485,7 @@ def inter_read_tf1(
     ncb, nca = _no_centreline(rab), _no_centreline(rba)
     per = {}
     for c in CLASSES:
-        v = [
-            d[c]
-            for d, nc in ((ab, ncb), (ba, nca))
-            if c in d and c not in nc and np.isfinite(d[c])
-        ]
+        v = [d[c] for d in (ab, ba) if c in d and np.isfinite(d[c])]
         if v:
             per[c] = float(np.mean(v))
     return {
@@ -512,9 +511,10 @@ def acceptance(
     """A10 per-class non-inferiority on the same cases.
 
     A1c: ``no_centreline[i]`` lists the classes of case i that had no reference centreline
-    (in any read). Such a class is left out of that case's paired difference, and the
-    summary reports how many cases per class this was: ``per_class[c]["n_no_centreline"]``
-    and ``no_centreline_counts`` (every class, tested or not).
+    (in any read). They are counted, not dropped: since Round 8 tf1 scores them on a
+    fallback centreline by default, so their values are decisive; a scorer run without the
+    fallback simply leaves them out of ``model``/``inter``. The summary reports
+    ``per_class[c]["n_no_centreline"]`` and ``no_centreline_counts`` (every class).
 
     ``flagged[i]`` (A1b) drops case i from the test until a human has reviewed its ostium;
     ``provisional[i]`` (A1a) keeps it but marks the whole result ``decisive=False``: a tF1
@@ -547,8 +547,8 @@ def acceptance(
         d = np.array(
             [
                 m[c] - i[c]
-                for m, i, nc in zip(model, inter, no_cl)
-                if c in m and c in i and c not in nc and np.isfinite(m[c]) and np.isfinite(i[c])
+                for m, i in zip(model, inter)
+                if c in m and c in i and np.isfinite(m[c]) and np.isfinite(i[c])
             ]
         )
         if not len(d):
@@ -1279,8 +1279,8 @@ def report_markdown(report: Mapping) -> str:
     for k, v in (w["inter_read_tf1"] or {}).items():
         lines.append(f"- {k}: median {v['median']:.3f} (p10 {v['p10']:.3f}, n={v['n']})")
     for k, v in (w.get("tf1_no_centreline") or {}).items():
-        if v["n"]:  # A1c: kept out of that class's mean, listed here
-            lines.append(f"- {k}: no reference centreline in {v['n']} read(s): "
+        if v["n"]:  # A1c: scored on tf1's fallback centreline by default; listed here
+            lines.append(f"- {k}: no reference centreline (fallback-scored) in {v['n']} read(s): "
                          + ", ".join(v["cases"]))
     lines += [
         "",

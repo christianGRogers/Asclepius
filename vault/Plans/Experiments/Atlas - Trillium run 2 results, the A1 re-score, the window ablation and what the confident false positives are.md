@@ -186,7 +186,9 @@ any labelled (or `ignore`) voxel.
   (Kofler et al., *blob loss*, arXiv 2205.08209).
 - It needs no instance labels and no connected components per iteration.
 - **Risk.** If some of these structures are real unannotated branches, the term teaches the model to suppress them.
-  Under D0 and D7 the mask is the reference, so that is the intended behaviour.
+  ~~Under D0 and D7 the mask is the reference, so that is the intended behaviour.~~ **Corrected (Round 8,
+  A24.4):** D7 lets readers add a missing vessel segment (and remove a vein) as a noted major error, so a few real
+  branches may enter team reads; the term is re-checked on team reads before the waves rely on it.
 
 **Run 3 (proposed): `atlas3`, the FP-loss pilot.**
 - Same contract as before; ≤ 21 h on one H100.

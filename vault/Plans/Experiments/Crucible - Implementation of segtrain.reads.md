@@ -157,3 +157,16 @@ A1a. The CLI is the orchestrator's.
   - wave `tf1_no_centreline`, giving `{class: {n, cases: ["case:read"]}}`;
   - a markdown line for each class with a non-zero count.
 - **Test:** `test_a1c_no_centreline_class_is_carried_through_reads_and_a10`, using the real tf1 on a read whose LM has voxels but no centreline.
+
+## Human decisions D6 and D7 (2026-10-11)
+
+- **D6:** `NONINFERIORITY_MARGIN = 0.05`, applied per class. The module docstring is updated. Test: `test_d6_margin_is_005_per_class`. It checks that a −0.03 class passes, that LM at −0.10 fails the acceptance on its own, and that −0.03 fails at the old 0.02.
+- **D7:** reads.py cannot read case notes, so the noted corrections are an explicit input. Either:
+  - `CaseReads.corrected`, a frozenset of the annotator names whose read the case note records as a correction of a major error; or
+  - `first_reads_report(corrections={case: [annotators] | ["*"]})`.
+- **Effect:**
+  - `convention_check(..., corrected=)` still runs and still sets `thin`.
+  - `ConventionCheck.counts_for_halt` is `thin and not corrected`.
+  - `wave_halts` counts only un-noted departures; noted corrections stay in the denominator.
+  - The report gives `a3_noted_corrections` and `a3_unnoted_departures`, and the markdown line shows both.
+- **Test:** `test_d7_noted_correction_does_not_halt_but_unnoted_redraw_does`.

@@ -37,53 +37,52 @@ def run(case, out):
     if not fp:
         return
     tree = np.isin(lab, list(touched))                      # predicted pieces that touch the reference
-    # crop everything to the bbox of mask | prediction + 30 mm
-    u = M | (P > 0); idx = np.nonzero(u); mg = np.ceil(30 / sp).astype(int)
-    lo = np.maximum([i.min() for i in idx] - mg, 0); hi = np.minimum([i.max() + 1 for i in idx] + mg, M.shape)
-    sl = tuple(slice(a, b) for a, b in zip(lo, hi))
-    Mc, Ac, labc, treec = M[sl], A[sl], lab[sl], tree[sl]
-    d_mask = ndi.distance_transform_edt(~Mc, sampling=sp)
-    d_tree = ndi.distance_transform_edt(~treec, sampling=sp) if treec.any() else None
-    d_ao = ndi.distance_transform_edt(~Ac, sampling=sp) if Ac.any() else None
-    msk = skeletonize(Mc); ends = np.argwhere(endpoints(msk))
-    rad = ndi.distance_transform_edt(Mc, sampling=sp)
-    lumen_hu = float(np.median(CT[sl][Mc])) if CT is not None else None
-    core_hu = float(np.median(CT[sl][rad > 1.0])) if CT is not None and (rad > 1.0).any() else None
-    # census rows of this case, matched by centroid
     rows = [r for r in cat.get(case, [])]
+    mg = np.ceil(25 / sp).astype(int)
+    objs = ndi.find_objects(lab)
     for k in fp:
-        m = labc == k
+        o = objs[k - 1]
+        lo = np.maximum([s.start for s in o] - mg, 0); hi = np.minimum([s.stop for s in o] + mg, M.shape)
+        sl = tuple(slice(a, b) for a, b in zip(lo, hi))
+        m = lab[sl] == k
+        Mc, Ac, treec = M[sl], A[sl], tree[sl]
         pts = np.argwhere(m)
         rec = dict(case=case, voxels=int(m.sum()), mm3=float(m.sum() * sp.prod()))
         c = pts.mean(0) + lo
         best = min(rows, key=lambda r: np.linalg.norm(np.array(r['centroid']) - c)) if rows else None
-        rec['category'] = best['category'] if best is not None and np.linalg.norm(np.array(best['centroid']) - c) < 3 else None
-        rec['p90'] = best.get('p90') if best else None
-        rec['dist_mask_mm'] = float(d_mask[m].min())
-        rec['dist_tree_mm'] = float(d_tree[m].min()) if d_tree is not None else None
-        rec['dist_aorta_mm'] = float(d_ao[m].min()) if d_ao is not None else None
-        # nearest mask skeleton tip: is the component beyond the end of the annotated tree?
-        if len(ends):
-            P_mm = pts * sp; E_mm = ends * sp
-            dd = np.sqrt(((P_mm[:, None, :] - E_mm[None, :, :]) ** 2).sum(-1)) if len(pts) * len(ends) < 4e6 else None
-            rec['dist_mask_tip_mm'] = float(dd.min()) if dd is not None else None
-        # shape: PCA elongation and skeleton length
+        ok = best is not None and np.linalg.norm(np.array(best['centroid']) - c) < 3
+        rec['category'] = best['category'] if ok else None
+        rec['p90'] = best.get('p90') if ok else None
+        rec['cls'] = best.get('cls') if ok else None
+        rec['dist_mask_mm'] = float(ndi.distance_transform_edt(~Mc, sampling=sp)[m].min()) if Mc.any() else None
+        rec['dist_tree_mm'] = float(ndi.distance_transform_edt(~treec, sampling=sp)[m].min()) if treec.any() else None
+        rec['dist_aorta_mm'] = float(ndi.distance_transform_edt(~Ac, sampling=sp)[m].min()) if Ac.any() else None
+        if Mc.any():
+            ends = np.argwhere(endpoints(skeletonize(Mc)))
+            if len(ends):
+                P_mm = pts[:: max(1, len(pts) // 400)] * sp
+                E_mm = ends * sp
+                rec['dist_mask_tip_mm'] = float(np.sqrt(((P_mm[:, None, :] - E_mm[None]) ** 2).sum(-1)).min())
+            rad = ndi.distance_transform_edt(Mc, sampling=sp)
+            near = Mc & (ndi.distance_transform_edt(~m, sampling=sp) <= 10)
+            rec['mask_radius_nearby_mm'] = float(rad[near].max()) if near.any() else None
         X = (pts - pts.mean(0)) * sp
         ev = np.sort(np.linalg.eigvalsh(np.cov(X.T)))[::-1] if len(pts) > 3 else np.array([0, 0, 0])
         rec['elongation'] = float(np.sqrt(ev[0] / max(ev[1], 1e-6)))
         rec['length_mm'] = float(4 * np.sqrt(ev[0]))
-        sub = m[tuple(slice(p.min(), p.max() + 1) for p in pts.T)]
-        rec['skeleton_vox'] = int(skeletonize(sub).sum())
-        rec['radius_mm'] = float(ndi.distance_transform_edt(np.pad(sub, 1), sampling=sp).max())
+        rec['radius_mm'] = float(ndi.distance_transform_edt(np.pad(m, 1), sampling=sp).max())
         if CT is not None:
             ct = CT[sl]
+            dm = ndi.distance_transform_edt(m, sampling=sp)
             rec['hu_median'] = float(np.median(ct[m]))
-            rec['hu_core'] = float(np.median(ct[m & (ndi.distance_transform_edt(m, sampling=sp) > 0.6)])) if (ndi.distance_transform_edt(m, sampling=sp) > 0.6).any() else None
-            rec['case_lumen_hu'] = lumen_hu; rec['case_core_hu'] = core_hu
+            rec['hu_core'] = float(np.median(ct[m & (dm >= dm.max() * 0.5)]))
             ring = ndi.binary_dilation(m, iterations=4) & ~ndi.binary_dilation(m, iterations=1)
             rec['hu_ring'] = float(np.median(ct[ring]))
+            mr = ndi.distance_transform_edt(Mc, sampling=sp)
+            rec['local_lumen_core_hu'] = float(np.median(ct[mr >= 1.0])) if (mr >= 1.0).any() else None
         rec['centroid_vox'] = [int(x) for x in c]
-        out.write(json.dumps(rec) + '\n'); out.flush()
+        out.write(json.dumps(rec) + '\n')
+        out.flush()
 
 
 if __name__ == '__main__':

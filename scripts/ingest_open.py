@@ -4,7 +4,10 @@ streamed one case at a time into Girder CCTA-Pool through ccta_ingest.Pool.
     ingest_open.py <source> --dry-run [--case ID] [--stage DIR]   # stage ONE case locally, print shape/spacing/HU
     ingest_open.py <source> [--case ID ...] [--limit N]           # upload mode (needs GIRDER_TOKEN_FILE)
 
-Sources: imagechd, imagealcapa, hocm, cadrs (Kaggle younesselbrag), vmr, figshare15, mendeley.
+Sources: imagechd, imagealcapa, hocm, cadrs (Kaggle younesselbrag), vmr, figshare15, mendeley, heartsr;
+round 2: slicer (3D Slicer / SlicerHeart sample data), epifat (figshare 17039813), figshare-ren (figshare
+23057000), zvag (Zenodo 21855641), stopstorm (Zenodo 22127731), sdn-perfusion (Mendeley cy54ttk3fj) and
+sdn-cases [--record ID] (Mendeley 7x9kb53262, 37nnfyh3x9, 4643nn2z44, spb25zt2c4).
 Nothing is ever held locally beyond the case being converted (plus, for the two split-zip Kaggle sets, the
 last archive part, 0.1-0.4 GB, which holds the central directory). Dry-run never touches Girder.
 
@@ -25,9 +28,17 @@ Source quirks handled here (see the sourcing agent reports for how they were fou
 - figshare 1379059: RAR archives (extracted with bsdtar) of MetaImage volumes, normalised (not HU) floats.
 - Mendeley 9wv3fkxstx: GE/Philips DICOM with series descriptions stripped; the gated cardiac series are
   picked by acquisition mode (CINE) and slice count.
+- Round 2: Slicer .seq.nrrd sequences carry the frame axis first ('list' kind) and are split one case per
+  frame; NRRD space directions (LPS or RAS) are converted to a RAS NIfTI affine. The SDN Mendeley case records
+  are whole studies (scouts, calcium scores, derived MPRs, SEG/SR, MR): DICOM headers are read by one small
+  range request per zip member, series are grouped and split by cardiac phase (nominal %, Siemens
+  ImageComments '.. 70 % ..', or consecutive instance blocks when de-identification removed the tags), and only
+  ORIGINAL thin-slice contrast reconstructions are stored, one per phase (see sdn_pick). 4643nn2z44 has a
+  different study time on every slice, so dcm2niix splits it and SimpleITK stacks it instead. Dates, names
+  and folder paths that encode exam dates are never stored.
 Each dataset folder gets licence, tier, source_url and citation; each case gets source ids in `source_ids`.
 """
-import argparse, csv, glob, io, json, mmap, os, re, shutil, struct, subprocess, sys, tempfile, time, urllib.error
+import argparse, csv, glob, http.client, io, json, mmap, os, re, shutil, struct, subprocess, sys, tempfile, time, urllib.error
 import urllib.parse, urllib.request, zipfile, zlib
 import numpy as np, nibabel as nib
 
@@ -943,9 +954,562 @@ def run_heartsr(args):
             break
 
 
+# ====================================================================== round 2: shared helpers
+def _range(hf, a, b, tries=8):
+    """Bytes a..b of an HTTPFile's URL in one request (thread-safe: no block cache), re-signing on expiry."""
+    for attempt in range(tries):
+        try:
+            with _open(hf.url, {'Range': f'bytes={a}-{b}'}) as r:
+                d = r.read()
+            if len(d) == b - a + 1:
+                return d
+        except urllib.error.HTTPError as e:
+            if e.code in (400, 401, 403):
+                try:
+                    hf._resolve()
+                except OSError:
+                    pass
+            elif e.code < 500:
+                raise
+        except (OSError, http.client.HTTPException):
+            pass
+        time.sleep(min(60, 2 ** attempt))
+    raise IOError(f'range {a}-{b} of {hf.src} failed')
+
+
+HEAD_KEYS = ('Modality', 'SeriesInstanceUID', 'SeriesNumber', 'SeriesDescription', 'ImageType', 'Rows', 'Columns',
+             'ImagePositionPatient', 'ImageOrientationPatient', 'PixelSpacing', 'SliceThickness', 'InstanceNumber',
+             'AcquisitionNumber', 'NominalPercentageOfCardiacPhase', 'TriggerTime', 'ImageComments',
+             'SOPClassUID', 'NumberOfFrames')
+
+
+def zip_dicom_heads(hf, infos, nbytes=48 << 10, workers=4):
+    """DICOM header fields (HEAD_KEYS) of zip members, one small range request each: pixel data is never
+    fetched. Members that are not DICOM come back as None."""
+    import pydicom
+    from concurrent.futures import ThreadPoolExecutor
+
+    def one(i):
+        for n in (nbytes, 8 * nbytes):
+            a = i.header_offset
+            raw = _range(hf, a, min(hf.size - 1, a + 30 + 1024 + len(i.filename.encode()) + n))
+            nl, el = struct.unpack('<HH', raw[26:30])
+            d = raw[30 + nl + el:]
+            d = d[:i.compress_size]
+            if i.compress_type == 8:
+                d = zlib.decompressobj(-15).decompress(d)
+            try:
+                ds = pydicom.dcmread(io.BytesIO(d), stop_before_pixels=True, force=True,
+                                     specific_tags=list(HEAD_KEYS))
+                if 'SOPClassUID' not in ds and 'Modality' not in ds:
+                    return None
+                return {k: (list(map(float, v)) if k in ('ImagePositionPatient', 'ImageOrientationPatient',
+                                                          'PixelSpacing') else
+                            list(map(str, v)) if k == 'ImageType' else str(v))
+                        for k in HEAD_KEYS for v in [ds.get(k)] if v not in (None, '')}
+            except Exception:
+                if i.compress_size <= n:
+                    return None
+        return None
+
+    with ThreadPoolExecutor(workers) as ex:
+        return list(ex.map(one, infos))
+
+
+def dicom_volumes(z, infos, heads, min_slices=60):
+    """Group DICOM members into 3D volumes: one per SeriesInstanceUID, split further by cardiac phase (nominal
+    percentage, else trigger time) when a series holds several phases at the same slice positions. Only
+    axial-ish CT image storage with >= min_slices slices. Returns a list of dicts sorted by series number."""
+    groups = {}
+    for i, h in zip(infos, heads):
+        if not h or h.get('Modality') != 'CT' or 'ImagePositionPatient' not in h:
+            continue
+        if h.get('SOPClassUID') not in (None, '1.2.840.10008.5.1.4.1.1.2'):
+            continue   # enhanced CT / secondary capture / SEG / reports
+        groups.setdefault(h.get('SeriesInstanceUID'), []).append((i, h))
+    vols = []
+    for uid, mem in groups.items():
+        pos = [tuple(round(x, 2) for x in h['ImagePositionPatient']) for _, h in mem]
+        split = len(set(pos)) < len(pos)
+        sub = {}
+        for i, h in mem:
+            sie = re.search(r'(\d+(?:\.\d+)?) ?%', h.get('ImageComments', ''))   # Siemens: '68 bpm, 0 %, 66 ms'
+            ph = (h.get('NominalPercentageOfCardiacPhase') or (sie.group(1) if sie else None) or
+                  h.get('TriggerTime')) if split else None
+            sub.setdefault((ph, None), []).append((i, h))
+        npos_all = len(set(pos))
+        if split and list(sub) == [(None, None)] and len(mem) % npos_all == 0:
+            # de-identified multi-phase series without phase tags: phases are consecutive runs of instance numbers
+            mem = sorted(mem, key=lambda ih: int(ih[1].get('InstanceNumber') or 0))
+            blocks = [mem[k:k + npos_all] for k in range(0, len(mem), npos_all)]
+            if all(len({tuple(h['ImagePositionPatient']) for _, h in b}) == npos_all for b in blocks):
+                sub = {(None, k): b for k, b in enumerate(blocks)}
+        for (ph, frame), m in sub.items():
+            iop = m[0][1].get('ImageOrientationPatient') or [1, 0, 0, 0, 1, 0]
+            normal = np.cross(iop[:3], iop[3:])
+            if abs(normal[2]) < 0.8 or len(m) < min_slices:
+                continue
+            npos = len({tuple(round(x, 2) for x in h['ImagePositionPatient']) for _, h in m})
+            h0 = m[0][1]
+            vols.append(dict(uid=uid, phase=ph, frame=frame, n_frames=len(sub) if frame is not None else None,
+                             members=[i for i, _ in m], n=len(m), n_positions=npos,
+                             series_number=h0.get('SeriesNumber'), desc=h0.get('SeriesDescription', ''),
+                             image_type=h0.get('ImageType'), rows=h0.get('Rows'), cols=h0.get('Columns'),
+                             pixel_spacing=h0.get('PixelSpacing'), slice_thickness=h0.get('SliceThickness'),
+                             nominal_phase=h0.get('NominalPercentageOfCardiacPhase'),
+                             acquisition=h0.get('AcquisitionNumber'), phase_split=split))
+    return sorted(vols, key=lambda v: (int(v['series_number'] or 0), str(v['phase']), v['frame'] or 0))
+
+
+def nrrd_frames(path):
+    """A 3D or 4D (Slicer sequence: one 'list' axis) NRRD as (frame index or None, array, RAS affine).
+    NRRD space directions are in the file's 'space' (LPS or RAS); NIfTI affines are RAS."""
+    import nrrd
+    a, h = nrrd.read(path, index_order='F')
+    space = h.get('space', 'left-posterior-superior')
+    flip = np.diag([-1.0, -1.0, 1.0]) if space.startswith('left-posterior') else np.eye(3)
+    dirs = [d for d in h['space directions'] if d is not None and not (isinstance(d, str) or np.isnan(d).any())]
+    kinds = h.get('kinds', ['domain'] * a.ndim)
+    lst = [k for k, kind in enumerate(kinds) if kind not in ('domain', 'space')]
+    aff = np.eye(4)
+    aff[:3, :3] = flip @ np.array(dirs, dtype=float).T
+    aff[:3, 3] = flip @ np.array(h.get('space origin', [0, 0, 0]), dtype=float)
+    if not lst:
+        yield None, a, aff
+        return
+    ax = lst[0]
+    for k in range(a.shape[ax]):
+        yield k, np.take(a, k, axis=ax), aff
+
+
+def save_nifti(a, aff, dst):
+    """Array + RAS affine -> NIfTI (int16 when the values fit)."""
+    if a.dtype.kind in 'iu' and a.dtype.itemsize > 2 and a.min() >= -32768 and a.max() <= 32767:
+        a = a.astype(np.int16)
+    out = nib.Nifti1Image(np.ascontiguousarray(a), aff)
+    out.header.set_qform(aff, 1)
+    out.header.set_sform(aff, 1)
+    out.header.set_xyzt_units('mm')
+    nib.save(out, dst)
+    return dst
+
+
+def blood_pool_hu(nii):
+    """Median HU of the 250-700 HU voxels (contrast blood pool and some bone): a quick contrast note."""
+    a = np.asarray(nib.load(nii).dataobj)[::2, ::2, ::2]
+    m = (a > 250) & (a < 700)
+    return round(float(np.median(a[m])), 1) if m.any() else None
+
+
+# ====================================================================== 9. 3D Slicer / SlicerHeart sample data
+SLICER_LICENCE = ('3D Slicer / SlicerHeart sample data (BSD-style repository licence; no separate data licence '
+                  'stated)')
+SLICER = [  # case, url, frames, what
+    ('TruncalValve_4DCT', 'https://github.com/SlicerHeart/SlicerHeart/releases/download/TestingData/'
+     'TruncalValve_4DCT.seq.nrrd', 21, 'SlicerHeart: 4D ECG-gated cardiac CT of an adolescent with truncus '
+     'arteriosus s/p repair, 21 phases, 0.6x0.6x0.7 mm'),
+    ('CTACardio', 'https://github.com/Slicer/SlicerTestingData/releases/download/SHA256/'
+     '3b0d4eb1a7d8ebb0c5a89cc0504640f76a030b4e869e33ff34c564c3d3b88ad2', None,
+     '3D Slicer SampleData CTA-cardio.nrrd: contrast thoracic CTA with the heart, 0.93x0.93x1.25 mm, origin '
+     'undocumented'),
+    ('PDA_CT', 'https://github.com/SlicerHeart/SlicerHeart/releases/download/TestingData/PDA_CT.nrrd', None,
+     'SlicerHeart: infant cardiac CTA (patent ductus arteriosus), 0.3x0.3x0.5 mm'),
+    ('CTCardioSeq', 'https://github.com/Slicer/SlicerDataStore/releases/download/SHA256/'
+     'd1a1119969acead6c39c7c3ec69223fa2957edc561bc5bf384a203e2284dbc93', 10,
+     '3D Slicer SampleData CT-cardio.seq.nrrd: 10-phase gated cardiac CT, downsampled to 1.15x1.15x2 mm'),
+]
+
+
+def run_slicer(args):
+    sink = Sink(args, 'Slicer-SampleData', SLICER_LICENCE, 'T1/T2',
+                'https://github.com/Slicer/Slicer/blob/main/Modules/Scripted/SampleData/SampleData.py',
+                'Cardiac CT sample volumes shipped with 3D Slicer (SampleData module: CTACardio, CTCardioSeq) and '
+                'the SlicerHeart extension (ValveAnnulusAnalysis sample data: TruncalValve_4DCT, PDA_CT). Multi-phase '
+                'sequences are stored one case per phase (<name>_fNN, frame index of the sequence). Source '
+                'institutions undocumented (SlicerHeart: CHOP / PerkLab). TruncalValve_4DCT is T1 (gated, full '
+                'resolution); CTCardioSeq is gated but downsampled; CTACardio and PDA_CT are T2.',
+                'Fedorov A. et al., 3D Slicer as an image computing platform for the Quantitative Imaging Network, '
+                'Magn Reson Imaging 2012; SlicerHeart: Lasso A. et al., SlicerHeart: an open-source computing '
+                'platform for cardiac image analysis and modeling, Front Cardiovasc Med 2022. Sample data from '
+                'https://github.com/Slicer/Slicer and https://github.com/SlicerHeart/SlicerHeart.')
+    for name, url, frames, what in SLICER:
+        cases = [f'{name}_f{k:02d}' for k in range(frames)] if frames else [name]
+        todo = [c for c in cases if selected(args, c) or selected(args, name)]
+        if not todo or all(sink.done(c) for c in todo):
+            continue
+        work = tmpdir(args)
+        try:
+            src = download(url, os.path.join(work, 'src.nrrd'))
+            for k, a, aff in nrrd_frames(src):
+                case = name if k is None else f'{name}_f{k:02d}'
+                if case not in todo or sink.done(case):
+                    continue
+                nii = save_nifti(a, aff, os.path.join(work, 'ct.nii.gz'))
+                extra = dict(source_ids={'sample': name, 'url': url, **({'frame': k, 'n_frames': frames}
+                                                                         if k is not None else {})},
+                             patient_id=name, description=what, hu_calibrated=True,
+                             blood_pool_median_hu=blood_pool_hu(nii), orientation_check=anatomy_check(nii))
+                sink.put(case, nii, extra)
+                if sink.full():
+                    return
+        finally:
+            shutil.rmtree(work, ignore_errors=True)
+
+
+# ====================================================================== 10. figshare 17039813 (epicardial fat, Thailand)
+def run_epifat(args):
+    art, fid = 17039813, 31584917
+    sink = Sink(args, 'Figshare-EpicardialFat-CE', 'CC BY 4.0', 'T2', f'https://doi.org/10.6084/m9.figshare.{art}.v3',
+                'figshare 17039813 (Siriapisith, Kusakunniran, Haddawy 2021; Mahidol University / Siriraj, Thailand): '
+                'epicardial fat segmentation in non-contrast and post-contrast cardiac CT. Only the 40 post-contrast '
+                '(CE) volumes are stored (non-contrast skipped): HU int32 NRRD, heart-centred FOV, 512x512x~64, '
+                '~0.4x0.4x2.5 mm, ECG gating not stated. label.nii.gz = the released epicardial fat mask (1 = fat).',
+                'Siriapisith T., Kusakunniran W., Haddawy P. (2021). A 3D deep learning approach to epicardial fat '
+                'segmentation in non-contrast and post-contrast cardiac CT images. figshare. Dataset. '
+                'https://doi.org/10.6084/m9.figshare.17039813.v3 (CC BY 4.0); paper: PeerJ Comput Sci 7:e806 (2021).')
+    z = zipfile.ZipFile(HTTPFile(f'https://ndownloader.figshare.com/files/{fid}'))
+    names = {i.filename: i for i in z.infolist()}
+    for m in sorted(n for n in names if re.search(r'Epicardial_(train|test)_CE/CE\d+_CE\.nrrd$', n)):
+        case = os.path.basename(m)[:-len('_CE.nrrd')]
+        if not selected(args, case) or sink.done(case):
+            continue
+        work = tmpdir(args)
+        try:
+            src = copy_member(z.open(names[m]), os.path.join(work, 'ct.nrrd'))
+            _, a, aff = next(nrrd_frames(src))
+            ct = save_nifti(a, aff, os.path.join(work, 'ct.nii.gz'))
+            files, lm = {}, m.replace('_CE.nrrd', '_gt-label.nrrd')
+            if lm in names:
+                lsrc = copy_member(z.open(names[lm]), os.path.join(work, 'label.nrrd'))
+                _, la, laff = next(nrrd_frames(lsrc))
+                if la.shape == a.shape and np.allclose(laff, aff, atol=1e-3):
+                    files['label.nii.gz'] = save_nifti(la.astype(np.uint8), aff, os.path.join(work, 'label.nii.gz'))
+                else:
+                    log(f'{case}: label grid differs from the image ({la.shape} vs {a.shape}); label not attached')
+            extra = dict(source_ids={'figshare_article': art, 'figshare_file_id': fid, 'archive': 'dataset.zip',
+                                     'member': m, **({'label_member': lm} if files else {})},
+                         split='train' if '_train_' in m else 'test', phase='post-contrast (CE)', hu_calibrated=True,
+                         blood_pool_median_hu=blood_pool_hu(ct), orientation_check=anatomy_check(ct),
+                         labels={'label.nii.gz': {'1': 'epicardial fat'}} if files else {})
+            sink.put(case, ct, extra, files)
+        finally:
+            shutil.rmtree(work, ignore_errors=True)
+        if sink.full():
+            break
+
+
+# ====================================================================== 11. figshare 23057000 ("Test Data.rar")
+def run_figshare_ren(args):
+    art, fid = 23057000, 40794539   # 40795820 is a byte-identical duplicate upload of the same RAR
+    sink = Sink(args, 'Figshare-23057000', 'CC BY 4.0', 'T1', f'https://doi.org/10.6084/m9.figshare.{art}.v1',
+                'figshare 23057000 "Test Data.rar" (Pengling Ren, 2023): "Two CCTA data". Released as NIfTI '
+                '(dcm2niix-style), 512x512x256, ~0.42 mm in-plane, 0.625 mm slices. Provenance not stated (not '
+                'ImageCAS by geometry). The duplicate upload (file 40795820) is skipped.',
+                'Ren, Pengling (2023). Test Data.rar. figshare. Dataset. '
+                'https://doi.org/10.6084/m9.figshare.23057000.v1 (CC BY 4.0)')
+    work = tmpdir(args)
+    try:
+        rar = download(f'https://ndownloader.figshare.com/files/{fid}', os.path.join(work, 'data.rar'))
+        x = os.path.join(work, 'x')
+        os.makedirs(x)
+        subprocess.run(['bsdtar', '-xf', rar, '-C', x], check=True)
+        os.remove(rar)
+        vols = sorted(p for p in glob.glob(os.path.join(x, '**', '*'), recursive=True)
+                      if re.search(r'\.(nii(\.gz)?|nrrd|mha|mhd)$', p, re.I))
+        dcm_dirs = sorted({os.path.dirname(p) for p in glob.glob(os.path.join(x, '**', '*'), recursive=True)
+                           if os.path.isfile(p) and re.search(r'(\.dcm|^[^.]+)$', os.path.basename(p), re.I)
+                           and not vols})
+        log(f'{len(vols)} volumes, {len(dcm_dirs)} DICOM dirs: {[os.path.relpath(p, x) for p in vols or dcm_dirs]}')
+        for p in vols or dcm_dirs:
+            rel = os.path.relpath(p, x)
+            case = re.sub(r'[^A-Za-z0-9_-]', '_', re.sub(r'\.(nii(\.gz)?|nrrd|mha|mhd)$', '', os.path.basename(p)))
+            if not selected(args, case) or sink.done(case):
+                continue
+            if p.lower().endswith('.nii'):
+                im = nib.load(p)
+                p2 = os.path.join(work, 'ct.nii.gz')
+                nib.save(nib.Nifti1Image(np.asanyarray(im.dataobj), im.affine, im.header), p2)
+                p = p2
+            extra = dict(source_ids={'figshare_article': art, 'figshare_file_id': fid, 'archive': 'Test Data.rar',
+                                     'member': rel}, hu_calibrated=True, provenance_stated=False)
+            if p.endswith('.nii.gz'):
+                extra.update(blood_pool_median_hu=blood_pool_hu(p), orientation_check=anatomy_check(p))
+            sink.put(case, p, extra)
+            if sink.full():
+                break
+    finally:
+        shutil.rmtree(work, ignore_errors=True)
+
+
+# ====================================================================== 12. Zenodo 21855641 (atrial fibre mapping)
+def run_zvag(args):
+    rec = 21855641
+    sink = Sink(args, 'Zenodo-21855641-AtrialFibre', 'CC BY 4.0', 'T1/T2', f'https://doi.org/10.5281/zenodo.{rec}',
+                'Zenodo 21855641 "CT mesh datasets for Patient-specific atrial fiber mapping pipeline" (Sinitsyna et '
+                'al., 2026): of the six patients only "Zvag" ships the CT volume (Zvag/CT_Volume.nrrd, contrast cardiac '
+                'CTA, 0.396x0.396x0.625 mm, HU, gating not stated); the others ship segmentations and meshes only.',
+                'Sinitsyna A.P., Syrovnev V.A., Sergeeva O.A., Rzaev F.G., Biganov R.M., Kushnerev E.M., Kalemberg A.A., '
+                'Slotvitsky M.M., Tsvelaya V.A. (2026). CT mesh datasets for Patient-specific atrial fiber mapping '
+                'pipeline. Zenodo. https://doi.org/10.5281/zenodo.21855641 (CC BY 4.0)')
+    case, member = 'Zvag', 'Zvag/CT_Volume.nrrd'
+    if not selected(args, case) or sink.done(case):
+        return
+    work = tmpdir(args)
+    try:
+        z = zipfile.ZipFile(HTTPFile(f'https://zenodo.org/api/records/{rec}/files/Zvag.zip/content'))
+        src = copy_member(z.open(member), os.path.join(work, 'ct.nrrd'))
+        _, a, aff = next(nrrd_frames(src))
+        ct = save_nifti(a, aff, os.path.join(work, 'ct.nii.gz'))
+        extra = dict(source_ids={'zenodo_record': rec, 'archive': 'Zvag.zip', 'member': member}, patient_id=case,
+                     hu_calibrated=True, blood_pool_median_hu=blood_pool_hu(ct), orientation_check=anatomy_check(ct))
+        sink.put(case, ct, extra)
+    finally:
+        shutil.rmtree(work, ignore_errors=True)
+
+
+# ====================================================================== 13. Zenodo 22127731 (STOPSTORM benchmark)
+def run_stopstorm(args):
+    rec, arc = 22127731, 'STOPSTORM_Contouring_Benchmark_Data_06032024.zip'
+    sink = Sink(args, 'Zenodo-STOPSTORM', 'CC BY 4.0', 'T2', f'https://doi.org/10.5281/zenodo.{rec}',
+                'STOPSTORM.eu contouring benchmark (Zenodo 22127731): 3 VT-radioablation patients; the "Deformed '
+                'Cardiac CT" series (a contrast cardiac CT deformably registered and resampled onto the radiotherapy '
+                'planning-CT grid, 0.94-1.56 mm in-plane, 1.5-2 mm slices) is stored. LOW QUALITY: resampled, '
+                'moderate blood-pool contrast (median ~200-300 HU), coronaries blurred. Planning CTs and MR skipped.',
+                'STOPSTORM consortium (2026). STOPSTORM Benchmark Data. Zenodo. https://doi.org/10.5281/zenodo.22127731 '
+                '(CC BY 4.0)')
+    z = zipfile.ZipFile(HTTPFile(f'https://zenodo.org/api/records/{rec}/files/{arc}/content'))
+    by_case = {}
+    for i in z.infolist():
+        m = re.search(r'Imaging_Data_Case(\d+)/.*/Deformed Cardiac CT/[^/]+$', i.filename)
+        if m and not i.is_dir():
+            by_case.setdefault(f'Case{m.group(1)}', []).append(i)
+    log(f'{len(by_case)} deformed cardiac CT series: ' + ', '.join(f'{k}:{len(v)}' for k, v in sorted(by_case.items())))
+    for case, members in sorted(by_case.items()):
+        if not selected(args, case) or sink.done(case):
+            continue
+        work = tmpdir(args)
+        try:
+            dcm = os.path.join(work, 'dcm')
+            os.makedirs(dcm)
+            for i in members:
+                with z.open(i) as src:
+                    copy_member(src, os.path.join(dcm, re.sub(r'[^A-Za-z0-9._-]', '_', os.path.basename(i.filename))))
+            extra = dict(source_ids={'zenodo_record': rec, 'archive': arc,
+                                     'series_path': os.path.dirname(members[0].filename).split('/', 1)[1]},
+                         patient_id=case, series='Deformed Cardiac CT (registered + resampled to planning CT grid)',
+                         low_quality=True, hu_calibrated=True, n_dicom_files=len(members), **dicom_extra(dcm))
+            sink.put(case, dcm, extra)
+        finally:
+            shutil.rmtree(work, ignore_errors=True)
+        if sink.full():
+            break
+
+
+# ====================================================================== 14-15. Mendeley, IRCCS SDN Naples
+def mendeley_record(did):
+    with _open(f'https://data.mendeley.com/public-api/datasets/{did}') as r:
+        return json.load(r)
+
+
+def sitk_stack(dcm, dst):
+    """One DICOM series dir -> NIfTI via SimpleITK (slices sorted by position, rescale applied)."""
+    import SimpleITK as sitk
+    r = sitk.ImageSeriesReader()
+    r.SetFileNames(r.GetGDCMSeriesFileNames(dcm))
+    sitk.WriteImage(r.Execute(), dst, useCompression=True)
+    return dst
+
+
+def convert_checked(path, work):
+    """DICOM dir / volume -> NIfTI in work, plus contrast and orientation notes for `extra`. Some de-identified
+    exports carry a different study time on every slice, which makes dcm2niix write one file per slice; such
+    series are stacked with SimpleITK instead."""
+    notes = {}
+    n = len(os.listdir(path)) if os.path.isdir(path) else 0
+    try:
+        nii = ccta_ingest.to_nifti(path, work)
+        ok = not n or nib.load(nii).shape[2] >= 0.9 * n
+    except subprocess.CalledProcessError:
+        ok = False
+    if not ok:
+        for f in glob.glob(os.path.join(work, '*.nii*')):
+            os.remove(f)
+        nii = sitk_stack(path, os.path.join(work, 'ct.nii.gz'))
+        notes['converter'] = 'SimpleITK (dcm2niix split the series)'
+    return nii, dict(notes, blood_pool_median_hu=blood_pool_hu(nii), orientation_check=anatomy_check(nii))
+
+
+SDN_DESC = ('IRCCS SDN (Synlab SDN), Naples, Italy; Mendeley Data owner account "Direzione Scientifica SDN". '
+            'Complete anonymised DICOM studies released with the case reports / studies below. ')
+
+
+def run_sdn_perfusion(args):
+    did = 'cy54ttk3fj'
+    sink = Sink(args, f'Mendeley-SDN-{did}', 'CC BY 4.0', 'T1', f'https://data.mendeley.com/datasets/{did}/1',
+                SDN_DESC + 'Record cy54ttk3fj: 40 patients with normal rest myocardial perfusion, retrospectively '
+                'ECG-gated CCTA on a 3rd-generation dual-source CT (Siemens SOMATOM Force, CCT_Retro_FC, 0.6-0.75 mm '
+                'slices). Each patient has a best-diastolic (Diast.zip) and a best-systolic (Sist.zip) reconstruction, '
+                'stored as two cases P<NN>_diast / P<NN>_syst; group them by `patient_id`.',
+                'Punzo B. et al. (2020). Raw data - Normal patterns of left ventricle rest myocardial perfusion assessed '
+                'by third-generation cardiac computed tomography. Mendeley Data, V1. '
+                'https://doi.org/10.17632/cy54ttk3fj.1 (CC BY 4.0)')
+    rec = {f['filename']: f for f in mendeley_record(did)['files']}
+    zips = {}
+    for phase, name in (('diast', 'Diast.zip'), ('syst', 'Sist.zip')):
+        z = zipfile.ZipFile(HTTPFile(rec[name]['content_details']['download_url']))
+        by_pat = {}
+        for i in z.infolist():
+            m = re.match(r'(?:Diast|Sist)/(\d+)/DICOM/.+/[^/]+$', i.filename)
+            if m and not i.is_dir():
+                by_pat.setdefault(int(m.group(1)), []).append(i)
+        zips[phase] = (name, z, by_pat)
+        log(f'{name}: {len(by_pat)} patients, {sum(map(len, by_pat.values()))} files')
+    for pid in sorted(set().union(*(bp for _, _, bp in zips.values()))):
+        for phase, (name, z, by_pat) in zips.items():
+            case = f'P{pid:02d}_{phase}'
+            if pid not in by_pat or not (selected(args, case) or selected(args, f'P{pid:02d}')) or sink.done(case):
+                continue
+            work = tmpdir(args)
+            try:
+                dcm, seen = os.path.join(work, 'dcm'), set()
+                os.makedirs(dcm)
+                for i in by_pat[pid]:
+                    if (i.CRC, i.file_size) in seen:   # some series were exported twice into two folders
+                        continue
+                    seen.add((i.CRC, i.file_size))
+                    with z.open(i) as s:
+                        copy_member(s, os.path.join(dcm, f'{len(seen):05d}.dcm'))
+                meta = dicom_extra(dcm)
+                nii, notes = convert_checked(dcm, work)
+                shutil.rmtree(dcm)
+                extra = dict(source_ids={'mendeley_dataset': did, 'version': 1, 'file': name,
+                                         'patient_folder': f'{name[:-4]}/{pid}'},
+                             patient_id=f'P{pid:02d}', reconstruction='best diastolic' if phase == 'diast' else
+                             'best systolic', ecg_gated=True, hu_calibrated=True, n_dicom_files=len(seen),
+                             n_duplicate_files_skipped=len(by_pat[pid]) - len(seen), **meta, **notes)
+                sink.put(case, nii, extra)
+            finally:
+                shutil.rmtree(work, ignore_errors=True)
+            if sink.full():
+                return
+
+
+SDN_ZIP = 'https://data.mendeley.com/public-api/zip/{}/download/1'   # whole-record zip (S3, signed redirect)
+SDN_CASES = {   # record: (zip url or None = the record's single file, member prefix, tier, title, first author, year)
+    '7x9kb53262': (SDN_ZIP, 'Raw data - Case report of coronary artery fistula Added value of multimodal advanced '
+                   'imaging with cardiac computed tomography and cardiac magnetic resonance/1191272_TC/', 'T1',
+                   'Raw data - Case report of coronary artery fistula: Added value of multimodal advanced imaging '
+                   'with cardiac computed tomography and cardiac magnetic resonance', 'Punzo B.', 2020),
+    '37nnfyh3x9': (SDN_ZIP, '', 'T1', 'Raw data-A case report of right coronary artery agenesis diagnosed by '
+                   'computed tomography coronary angiography', 'Cavaliere C.', 2021),
+    '4643nn2z44': (None, '', 'T1', 'Raw data-A case of coronary arterio-venous fistula. The role of cardiac '
+                   'computed tomography', 'Forte E.', 2019),
+    'spb25zt2c4': (SDN_ZIP, 'Multimodality imaging of a cardiac paraganglioma A case report/Imaging/TC/', 'T1',
+                   'Multimodality imaging of a cardiac paraganglioma: A case report', 'Punzo B.', 2024),
+}
+NOT_CCTA = re.compile(r'scout|topo|basale|prep|smart|bolus|monitor|test|cas?c?sc|calcium|score|senza', re.I)
+
+
+def sdn_pick(vols):
+    """Which volumes of a multi-series SDN study become cases: ORIGINAL axial CT only (motion-corrected /
+    MPR / screen-capture derivatives skipped), no scout / non-contrast / bolus-tracking series, and one volume
+    per cardiac phase of each acquisition: PRIMARY reconstructions first, a SECONDARY one only for a phase not
+    yet covered.
+    Phases of an untagged (de-identified) multi-phase series are kept as frames f00, f01, ...
+    Returns [(vol, None)] picks and [(vol, reason)] skips."""
+    keep, skip, seen, recon = [], [], set(), {}
+    order = sorted(vols, key=lambda v: ((v['image_type'] or ['', ''])[1:2] != ['PRIMARY'],
+                                        int(v['series_number'] or 0), str(v['phase'])))
+    for v in order:
+        it = v['image_type'] or []
+        ph = v['phase'] or v['nominal_phase']
+        why = ('derived image' if not it or it[0] != 'ORIGINAL' else
+               'not a contrast CCTA series' if NOT_CCTA.search(v['desc']) else
+               'thick-slice (>= 2.5 mm) overview / calcium-score series' if float(v['slice_thickness'] or 0) >= 2.5 else
+               'repeated slice positions' if v['n_positions'] != v['n'] else
+               f'phase {ph}% already covered' if ph is not None and (v['acquisition'], float(ph)) in seen else
+               None)
+        # Siemens iterative-strength variants of one reconstruction ('... Bv36 3 BestDiast' / '... Bv36 4 ...')
+        key = (re.sub(r'\s+', ' ', re.sub(r'\b\d\b|^Coro\b', '', v['desc'])).strip(), v['slice_thickness'])
+        if not why and ph is None and v['desc'] and key in recon:
+            why = f'iterative-strength variant of s{recon[key]}'
+        if why:
+            skip.append((v, why))
+            continue
+        recon.setdefault(key, v['series_number'])
+        if ph is not None:
+            seen.add((v['acquisition'], float(ph)))
+        keep.append((v, None))
+    return keep, skip
+
+
+def run_sdn_cases(args):
+    for did, (zurl, prefix, tier, title, author, year) in SDN_CASES.items():
+        if args.record and did not in args.record:
+            continue
+        sink = Sink(args, f'Mendeley-SDN-{did}', 'CC BY 4.0', tier, f'https://data.mendeley.com/datasets/{did}/1',
+                    SDN_DESC + f'Record {did}: "{title}" (one patient). Every ORIGINAL axial CT reconstruction of the '
+                    'gated cardiac CTA is stored, one case per cardiac phase (s<series>[_p<phase %>]); derived '
+                    '(motion-corrected, MPR, screen captures), scout, non-contrast and bolus-tracking series and '
+                    'any MR are skipped. All cases share patient_id.',
+                    f'{author} et al. ({year}). {title}. Mendeley Data, V1. https://doi.org/10.17632/{did}.1 '
+                    '(CC BY 4.0)')
+        rec = mendeley_record(did)
+        url = zurl.format(did) if zurl else rec['files'][0]['content_details']['download_url']
+        hf = HTTPFile(url)
+        z = zipfile.ZipFile(hf)
+        infos = [i for i in z.infolist() if not i.is_dir() and i.filename.startswith(prefix)]
+        cache = os.path.join(args.work or tempfile.gettempdir(), f'dicom_heads_{did}.json')
+        if os.path.exists(cache):
+            got = dict(json.load(open(cache)))
+            heads = [got.get(i.filename) for i in infos]
+        else:
+            log(f'{did}: reading {len(infos)} DICOM headers by range request ...')
+            heads = zip_dicom_heads(hf, infos)
+            json.dump([[i.filename, h] for i, h in zip(infos, heads)], open(cache, 'w'))
+        keep, skip = sdn_pick(dicom_volumes(z, infos, heads))
+        for v, why in skip:
+            log(f'  skip s{v["series_number"]} p{v["phase"]} "{v["desc"]}" ({v["n"]} slices): {why}')
+        log(f'{did}: {len(keep)} volumes to store')
+        for v, _ in keep:
+            ph = v['phase']
+            case = f's{int(v["series_number"]):03d}' + (f'_p{float(ph):g}' if ph is not None else
+                                                         f'_f{v["frame"]:02d}' if v['frame'] is not None else '')
+            if not selected(args, case) or sink.done(case):
+                continue
+            work = tmpdir(args)
+            try:
+                dcm = os.path.join(work, 'dcm')
+                os.makedirs(dcm)
+                for k, i in enumerate(sorted(v['members'], key=lambda i: i.header_offset)):
+                    with z.open(i) as src:
+                        copy_member(src, os.path.join(dcm, f'{k:05d}.dcm'))
+                meta = dicom_extra(dcm)
+                nii, notes = convert_checked(dcm, work)
+                shutil.rmtree(dcm)
+                extra = dict(source_ids={'mendeley_dataset': did, 'version': 1, 'series_number': v['series_number'],
+                                         **({'cardiac_phase_pct': ph} if ph is not None else {})},
+                             patient_id=f'SDN-{did}', cardiac_phase_pct=ph or v['nominal_phase'],
+                             acquisition_number=v['acquisition'],
+                             multi_phase_series=v['phase_split'], n_dicom_files=v['n'], hu_calibrated=True,
+                             **({'frame': v['frame'], 'n_frames': v['n_frames'], 'frame_note':
+                                 'phase tags removed by de-identification; frame = k-th consecutive block of '
+                                 'instance numbers (phase order as exported, presumably 0-95 %)'}
+                                if v['frame'] is not None else {}),
+                             **meta, **notes)
+                sink.put(case, nii, extra)
+            finally:
+                shutil.rmtree(work, ignore_errors=True)
+            if sink.full():
+                break
+
+
 # ====================================================================== CLI
 RUN = {'imagechd': run_imagechd, 'imagealcapa': run_imagealcapa, 'hocm': run_hocm, 'cadrs': run_cadrs,
-       'vmr': run_vmr, 'figshare15': run_figshare15, 'mendeley': run_mendeley, 'heartsr': run_heartsr}
+       'vmr': run_vmr, 'figshare15': run_figshare15, 'mendeley': run_mendeley, 'heartsr': run_heartsr,
+       'slicer': run_slicer, 'epifat': run_epifat, 'figshare-ren': run_figshare_ren, 'zvag': run_zvag,
+       'stopstorm': run_stopstorm, 'sdn-perfusion': run_sdn_perfusion,
+       'sdn-cases': run_sdn_cases}
 
 if __name__ == '__main__':
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
@@ -955,6 +1519,7 @@ if __name__ == '__main__':
     ap.add_argument('--work', default=None, help='scratch dir for downloads (default: system temp)')
     ap.add_argument('--case', action='append', help='only this case id (repeatable)')
     ap.add_argument('--limit', type=int, default=0, help='upload at most N cases')
+    ap.add_argument('--record', action='append', help='sdn-cases: only this Mendeley record id (repeatable)')
     a = ap.parse_args()
     if a.work:
         os.makedirs(a.work, exist_ok=True)

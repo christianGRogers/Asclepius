@@ -1,0 +1,398 @@
+[
+ {
+  "name": "3D Slicer SampleData 'CTACardio' (CTA-cardio.nrrd)",
+  "url": "https://github.com/Slicer/Slicer/blob/main/Modules/Scripted/SampleData/SampleData.py",
+  "tier": "T2",
+  "n_scans": {
+   "number": 1,
+   "unit": "scan"
+  },
+  "est_size_gb": 0.064,
+  "format": "NRRD (int16, HU), 512x512x321, 0.934x0.934x1.25 mm",
+  "labels": "none",
+  "license": "Distributed with 3D Slicer; maintainers state Slicer sample data is covered by the Slicer licence (BSD-style) allowing general reuse (discourse.slicer.org/t/33260). Source institution undocumented.",
+  "access": "open-download",
+  "steps_to_access": "curl -L -o CTA-cardio.nrrd https://github.com/Slicer/SlicerTestingData/releases/download/SHA256/3b0d4eb1a7d8ebb0c5a89cc0504640f76a030b4e869e33ff34c564c3d3b88ad2 (SHA256 in URL). Enumerate: the sourceArguments tuple in Modules/Scripted/SampleData/SampleData.py (GitHub release listing pages are blocked from this sandbox).",
+  "provenance": "Origin not documented in Slicer source (a 2023 forum question about its citation got no source). Not in any round-1 list.",
+  "verified": "Downloaded 2026-10-12 (64.0 MB). Contrast chest CT, heart and aorta enhanced (axial/coronal render checked); largest 200-700 HU component median ~374 HU. Looks like non-gated or prospectively gated thoracic CTA with heart in FOV; ECG gating not confirmable (NRRD has no DICOM tags). Deleted.",
+  "notes": "Single case; good quick test volume."
+ },
+ {
+  "name": "3D Slicer SampleData 'CTCardioSeq' (CT-cardio.seq.nrrd, 10-phase 4D cardiac CT)",
+  "url": "https://github.com/Slicer/Slicer/blob/main/Modules/Scripted/SampleData/SampleData.py",
+  "tier": "T1",
+  "n_scans": {
+   "number": 1,
+   "unit": "patient (10 cardiac phases)"
+  },
+  "est_size_gb": 0.013,
+  "format": "4D NRRD sequence, 10 x 128x104x72, 1.15x1.15x2.0 mm (downsampled)",
+  "labels": "none",
+  "license": "As for CTACardio (Slicer licence per maintainers); source undocumented.",
+  "access": "open-download",
+  "steps_to_access": "curl -L -o CT-cardio.seq.nrrd https://github.com/Slicer/SlicerDataStore/releases/download/SHA256/d1a1119969acead6c39c7c3ec69223fa2957edc561bc5bf384a203e2284dbc93",
+  "provenance": "Undocumented; multi-phase (retrospectively ECG-gated) cardiac CT, heavily downsampled.",
+  "verified": "Downloaded (13.1 MB), frame 0 rendered: LV/aorta enhanced, blood-pool component median ~438 HU. Deleted.",
+  "notes": "Low resolution (1.15 x 2 mm): coronaries at best proximally visible. Low value."
+ },
+ {
+  "name": "3D Slicer SampleData 'CTPCardioSeq' (CT perfusion cardiac sequence)",
+  "url": "https://github.com/Slicer/Slicer/blob/main/Modules/Scripted/SampleData/SampleData.py",
+  "tier": "T2",
+  "n_scans": {
+   "number": 1,
+   "unit": "patient (26 dynamic frames)"
+  },
+  "est_size_gb": 0.02,
+  "format": "4D NRRD, 26 x 102x102x61, 1.95 mm isotropic",
+  "labels": "none",
+  "license": "As above.",
+  "access": "open-download",
+  "steps_to_access": "curl -L -o CTP-cardio.seq.nrrd https://github.com/Slicer/SlicerDataStore/releases/download/SHA256/7fbb6ad0aed9c00820d66e143c2f037568025ed63db0a8db05ae7f26affeb1c2",
+  "provenance": "Undocumented.",
+  "verified": "Downloaded (20.5 MB), frame 12 rendered: contrast in LV, ~400 HU. Deleted.",
+  "notes": "2 mm dynamic perfusion; coronaries essentially not resolvable. Very low value; listed for completeness."
+ },
+ {
+  "name": "3D Slicer SampleData 'CTChest' (CT-chest.nrrd)",
+  "url": "https://github.com/Slicer/Slicer/blob/main/Modules/Scripted/SampleData/SampleData.py",
+  "tier": "excluded",
+  "n_scans": {
+   "number": 1,
+   "unit": "scan"
+  },
+  "est_size_gb": 0.042,
+  "format": "NRRD int32, 512x512x139, 2.5 mm",
+  "labels": "none",
+  "license": "As above.",
+  "access": "open-download",
+  "steps_to_access": "curl -L https://github.com/Slicer/SlicerTestingData/releases/download/SHA256/4507b664690840abb6cb9af2d919377ffc4ef75b167cb6fd0f747befdb12e38e",
+  "provenance": "Undocumented.",
+  "verified": "Downloaded and rendered: NON-contrast (blood pool same as muscle). Deleted.",
+  "notes": "Exclude (non-contrast). CTAAbdomenPanoramix is the OsiriX PANORAMIX abdominal CTA, not cardiac; CTLiver is MSD liver_100."
+ },
+ {
+  "name": "SlicerHeart sample 'PDA' (PDA_CT.nrrd, infant cardiac CTA)",
+  "url": "https://github.com/SlicerHeart/SlicerHeart/blob/master/ValveAnnulusAnalysis/ValveAnnulusAnalysis.py",
+  "tier": "T2",
+  "n_scans": {
+   "number": 1,
+   "unit": "scan"
+  },
+  "est_size_gb": 0.055,
+  "format": "NRRD (HU), 512x512x173, 0.297x0.297x0.5 mm",
+  "labels": "PDA_vasculature.seg.nrrd (vasculature segmentation) also offered",
+  "license": "SlicerHeart repo is BSD-3-Clause; no separate data licence stated (unverified that BSD covers the image).",
+  "access": "open-download",
+  "steps_to_access": "curl -L -o PDA_CT.nrrd https://github.com/SlicerHeart/SlicerHeart/releases/download/TestingData/PDA_CT.nrrd ; labels: https://github.com/SlicerHeart/SlicerHeart/releases/download/TestingData/PDA_vasculature.seg.nrrd. Enumerate: registerSampleData() in ValveAnnulusAnalysis.py.",
+  "provenance": "SlicerHeart (CHOP / PerkLab). Paediatric congenital case (patent ductus arteriosus).",
+  "verified": "Downloaded (54.7 MB), rendered: neonatal/infant chest CTA, heart chambers and great vessels enhanced, blood-pool component median ~462 HU. Deleted.",
+  "notes": "Paediatric congenital anatomy; coronaries tiny. Similar population to ImageCHD."
+ },
+ {
+  "name": "SlicerHeart sample 'Truncal Valve' (TruncalValve_4DCT.seq.nrrd, 4D gated CT)",
+  "url": "https://github.com/SlicerHeart/SlicerHeart/blob/master/ValveAnnulusAnalysis/ValveAnnulusAnalysis.py",
+  "tier": "T1",
+  "n_scans": {
+   "number": 1,
+   "unit": "patient (21 cardiac phases)"
+  },
+  "est_size_gb": 1.27,
+  "format": "4D NRRD (HU), 21 x 512x391x218, 0.6x0.6x0.7 mm",
+  "labels": "none",
+  "license": "SlicerHeart repo BSD-3-Clause; no separate data licence (unverified).",
+  "access": "open-download",
+  "steps_to_access": "curl -L -o TruncalValve_4DCT.seq.nrrd https://github.com/SlicerHeart/SlicerHeart/releases/download/TestingData/TruncalValve_4DCT.seq.nrrd (SHA256 7573f1bc...cfb). Split frames with SimpleITK (4D image, last index = frame).",
+  "provenance": "Code comment: '4D gated CT of adolescent with truncus arteriosus s/p repair' (SlicerHeart/CHOP).",
+  "verified": "Downloaded (1.27 GB; slightly over the 1 GB guideline, deleted immediately), frame 0 rendered: ECG-gated cardiac CTA, ascending aorta/LV enhanced, blood-pool component median ~527 HU. 21 frames = retrospective gating.",
+  "notes": "Best single case in this territory: full-res multiphase gated cardiac CT. Post-surgical congenital anatomy (truncus repair)."
+ },
+ {
+  "name": "TotalSegmentator v2 dataset, cardiac-protocol subset (Zenodo 10047292)",
+  "url": "https://zenodo.org/records/10047292",
+  "tier": "T1/T2 (but resampled to 1.5 mm)",
+  "n_scans": {
+   "number": 127,
+   "unit": "contrast cardiac-protocol scans (46 'ct heart-thorakale aorta', 34 'ct aortic valve', 34 'ct heart', 13 'ct left artrium'); excludes the 3 'ct coronary arteries' (calcium scans). ~31 more thoracic/whole-body CTAs are T3"
+  },
+  "est_size_gb": 23.6,
+  "format": "NIfTI, resampled to 1.5 mm isotropic (dataset-wide), inside one 23.6 GB zip",
+  "labels": "117-structure TotalSegmentator labels (heart chambers, aorta, etc.; no coronary label)",
+  "license": "CC BY 4.0",
+  "access": "open-download",
+  "steps_to_access": "Whole zip: https://zenodo.org/records/10047292/files/Totalsegmentator_dataset_v201.zip?download=1. Single cases without the full download: HTTP range-read the zip central directory and extract sXXXX/ct.nii.gz (script round2/scripts_Catalogues/rzip.py; tested). Case list with study_type: meta.csv inside the zip (extracted, 1,228 rows, ';'-separated).",
+  "provenance": "University Hospital Basel (Siemens scanners). Round 1 (Repos.json) listed TotalSegmentator/TAVRP-PL as T3 'record read only'; this entry adds the study_type breakdown and image tests.",
+  "verified": "meta.csv extracted by range read; 6 cases extracted and rendered (then deleted): s0738 'ct heart' = tight-FOV CCTA, blood pool ~540 HU (T1-like); s0270 'ct heart' = contrast cardiac CT (T1/T2); s0671 'ct left artrium' = contrast cardiac CT (T2); s0189 'ct aortic valve' = TAVI-type arterial CTA chest-abdomen-pelvis (T2/T3); s0230 'ct heart-thorakale aorta' = contrast chest CTA (T2/T3); s0085 'ct coronary arteries' = NON-contrast (calcium score).",
+  "notes": "Largest open, CC BY cardiac-contrast pool found in this round (~127 scans) but every volume is resampled to 1.5 mm isotropic, so distal coronaries are lost; proximal/mid vessels visible on the CCTA-type 'ct heart' cases. Within-'ct heart' some may be calcium scans (1 of 2 sampled was CCTA, the other contrast cardiac); filter by HU of aortic root. Pick by meta.csv study_type; ~0.5-2 GB per 20 cases."
+ },
+ {
+  "name": "AortaSeg-60 (Zenodo 18147026) - tested",
+  "url": "https://zenodo.org/records/18147026",
+  "tier": "T3",
+  "n_scans": {
+   "number": 50,
+   "unit": "contrast scans (40 arterial: Young/Old/Anev/Dissec x10; 10 venous) + 10 non-contrast"
+  },
+  "est_size_gb": 15.9,
+  "format": "NIfTI .nii.gz per case inside 6 category zips (2.5-2.8 GB each)",
+  "labels": "TotalSegmentator automatic aorta masks",
+  "license": "CC0 1.0",
+  "access": "open-download",
+  "steps_to_access": "https://zenodo.org/records/18147026/files/{Young,Old,Anev,Dissec,Ven,Nat}.zip?download=1 ; member path <Cat>_<NN>/nifti/<Cat>_<NN>_image.nii.gz (10 per zip). Single cases via HTTP range read (rzip.py, tested).",
+  "provenance": "Already listed in round-1 Repos.json (T3, 'record and file list read only'); fahrni catalogue entry. Single institution (not stated in record).",
+  "verified": "Extracted Young_01 via range read (291 MB): whole-aorta CTA, 1148 slices 0.51x0.51x0.6 mm, chest-abdomen-pelvis-legs; arterial phase, aorta/heart enhanced (blood-pool component median ~356 HU). Deleted.",
+  "notes": "High-resolution arterial CTA with heart in FOV; non-gated so coronaries blurred but proximal segments often visible. Skip Nat.zip (non-contrast)."
+ },
+ {
+  "name": "ChestPathCT5-S100 (Zenodo 18256797)",
+  "url": "https://zenodo.org/records/18256797",
+  "tier": "T3",
+  "n_scans": {
+   "number": 20,
+   "unit": "CTPA (PE category); other 67 cases mixed contrast/non-contrast, not counted"
+  },
+  "est_size_gb": 9.4,
+  "format": "NIfTI .nii.gz inside 5 category zips (PE zip 1.36 GB)",
+  "labels": "category label only (RF/Fluid/Mass/PE/Pneumothorax)",
+  "license": "CC0 1.0",
+  "access": "open-download",
+  "steps_to_access": "https://zenodo.org/records/18256797/files/Med3DVlM_PE.zip?download=1 ; members Med3DVlM_PE/Med3DVLM_PE_NNN/nifti/Med3DVLM_PE_NNN.nii.gz (20 cases, IDs non-consecutive). Other zips: Med3DVlM_{RF,Fluid,Mass,Pneumothorax}.zip.",
+  "provenance": "Single (unnamed) institution, 2026. New vs round 1 (in fahrni catalogue).",
+  "verified": "Extracted PE_001 via range read (72 MB): CTPA, 512x512x269, 0.63x0.63x1.25 mm, HU-calibrated; pulmonary arteries bright, aorta/LV moderately enhanced. Deleted.",
+  "notes": "Small; PE-protocol timing so aorta/coronaries only moderately enhanced. Low priority."
+ },
+ {
+  "name": "Medical Segmentation Decathlon Task06_Lung (AWS s3://msd-for-monai)",
+  "url": "https://registry.opendata.aws/msd/",
+  "tier": "T3",
+  "n_scans": {
+   "number": 96,
+   "unit": "chest CT (63 train + 32 test approx.; contrast phase varies)"
+  },
+  "est_size_gb": 9.2,
+  "format": "NIfTI in an uncompressed tar",
+  "labels": "lung tumour masks (train)",
+  "license": "CC BY-SA 4.0",
+  "access": "open-download",
+  "steps_to_access": "https://msd-for-monai.s3-us-west-2.amazonaws.com/Task06_Lung.tar (anonymous). Uncompressed tar: single cases can be range-read (rtar.py, tested). dataset.json lists cases.",
+  "provenance": "TCIA lung-cancer CTs (MSD paper; likely overlaps IDC/TCIA NSCLC collections already covered by the IDC agent - overlap unverified).",
+  "verified": "Range-read lung_053 and lung_041: both contrast-enhanced chest CT in venous/late phase (modest aortic enhancement), 0.8-0.94 mm x 1.25 mm. Deleted.",
+  "notes": "Weak T3: venous phase, coronaries poorly opacified. Probably duplicates TCIA. Other MSD tasks: Task02 heart is MRI; Task08 hepatic vessel/Task03 liver are abdominal."
+ },
+ {
+  "name": "OneMedNet CCTA free samples on AWS Data Exchange (2 listings)",
+  "url": "https://aws.amazon.com/marketplace/pp/prodview-tsjnviqmaw3ie",
+  "tier": "T1",
+  "n_scans": {
+   "number": null,
+   "unit": "free sample of unstated size; listings describe 117 studies (CAD-RADS/Agatston) and 130 patients / 260 studies (CCTA + invasive FFR/iFR/IVUS)"
+  },
+  "est_size_gb": null,
+  "format": "unknown (S3 via AWS Data Exchange; presumably DICOM)",
+  "labels": "reports: CAD-RADS, Agatston, CT-FFR, stenosis grade/location, plaque type (per listing)",
+  "license": "Vendor EULA (not read; requires subscribing). Free; one-month subscription.",
+  "access": "free account + subscription (AWS account required)",
+  "steps_to_access": "Project lead: sign in to an AWS account, open https://aws.amazon.com/marketplace/pp/prodview-tsjnviqmaw3ie and https://aws.amazon.com/marketplace/pp/prodview-tmre53jcrzttg, 'Continue to subscribe' (price $0), accept EULA, then export the ADX data set to own S3. Whether the subscription is auto-approved or needs vendor verification is NOT known.",
+  "provenance": "OneMedNet Corporation (US commercial RWD broker; multi-vendor GE/Philips/Toshiba/Siemens per listing).",
+  "verified": "Listing pages read 2026-10-12 (product free of charge, 'We are providing a free sample'). Not subscribed, no data seen.",
+  "notes": "Possibly the largest immediate T1 source in this territory, but sample size and EULA terms (commercial-data licence; likely no redistribution) unknown. Not a no-signature source: EULA click-through + AWS account."
+ },
+ {
+  "name": "OsiriX/Pixmeo DICOM Image Library cardiac sets (AGECANONIX, CARDIX, FOURDIX, GOUDURIX, MAGIX, TOUTATIX, FIVIX, TRAGICOMIX, OBELIX)",
+  "url": "https://www.osirix-viewer.com/resources/dicom-image-library/",
+  "tier": "T1/T2 (T3: TRAGICOMIX, OBELIX)",
+  "n_scans": {
+   "number": 9,
+   "unit": "studies (cardiac/coronary CT: AGECANONIX 16-slice coronary + 10-phase, CARDIX gated, FOURDIX 10-phase, GOUDURIX 16-slice CCTA, MAGIX 4D, TOUTATIX anomalous coronary from PA, FIVIX gated PET-CT)"
+  },
+  "est_size_gb": 0.8,
+  "format": "DICOM JPEG2000",
+  "labels": "none",
+  "license": "Research/teaching only; no redistribution, no commercial use.",
+  "access": "paid membership",
+  "steps_to_access": "Page now states 'Access to these images requires a valid Premium Membership'; download links go to pixmeo.pixmeo.com/login/download-premium.php (connection reset from sandbox).",
+  "provenance": "Round 1 covered DIASTOLIX via a Kaggle copy only. No public mirrors of the other cardiac sets found (Kaggle/HF/Zenodo/GitHub searched).",
+  "verified": "Library page read; download not attempted beyond one unauthenticated request (blocked).",
+  "notes": "Not immediate (paid). TOUTATIX (ALCAPA-type) and GOUDURIX/AGECANONIX would be nice single cases if the lead has an OsiriX MD licence."
+ },
+ {
+  "name": "DICOM Library 'DICOM Samples' CT study",
+  "url": "https://www.dicomlibrary.com/",
+  "tier": "T3",
+  "n_scans": {
+   "number": 1,
+   "unit": "study (two-phase oncology body CT)"
+  },
+  "est_size_gb": 0.52,
+  "format": "DICOM (GE LightSpeed Pro 16), 5 series incl. '+C' 501 slices 2.5 mm",
+  "labels": "none",
+  "license": "User-uploaded to a sharing service; no licence; ToS 'educational and scientific purposes'.",
+  "access": "open-download",
+  "steps_to_access": "Homepage 'DICOM Samples' > CT > Manage; the page carries a 5-minute tokenised WADO zip link (https://www.dicomlibrary.com?requestType=WADO&studyUID=...&manage=...&token=...).",
+  "provenance": "Lithuanian hospital body oncology protocol ('KUNAS ONKOLOGIJA (dvi fazes)'), 62Y M, 2015; contrast Ultravist 370 in ContrastBolusAgent.",
+  "verified": "Downloaded (517 MB) and read DICOM headers; contrast series present. Deleted.",
+  "notes": "Low value: body oncology CT, 2.5 mm. Note: the public 'Manage' panel also exposes a Delete button; do not use."
+ },
+ {
+  "name": "Orthanc public demo (orthanc.uclouvain.be/demo)",
+  "url": "https://orthanc.uclouvain.be/demo/",
+  "tier": "excluded",
+  "n_scans": {
+   "number": 0,
+   "unit": "cardiac CT"
+  },
+  "est_size_gb": 0,
+  "format": "DICOM via REST",
+  "labels": "n/a",
+  "license": "demo",
+  "access": "open-download",
+  "steps_to_access": "GET https://orthanc.uclouvain.be/demo/studies?expand",
+  "provenance": "8 studies, OsiriX-library samples (BRAINIX, KNIX, PHENIX, INCISIX, ASSURANCETOURIX PET-CT, COMUNIX, VIX, HN RT).",
+  "verified": "Study list read.",
+  "notes": "No cardiac or chest CTA."
+ },
+ {
+  "name": "OHIF demo DICOMweb (d14fa38qiwhyfd.cloudfront.net/dicomweb)",
+  "url": "https://viewer.ohif.org/",
+  "tier": "excluded/duplicate",
+  "n_scans": {
+   "number": 83,
+   "unit": "studies (all modalities)"
+  },
+  "est_size_gb": null,
+  "format": "DICOMweb",
+  "labels": "n/a",
+  "license": "mostly TCIA-derived",
+  "access": "open-download",
+  "steps_to_access": "GET https://d14fa38qiwhyfd.cloudfront.net/dicomweb/studies?limit=500 (gzip JSON)",
+  "provenance": "Contrast chest CTs present are TCIA cases (COVID-19-NY-SBU 'CT CHEST WITH IV CONT', LIDC-style 'CT CHEST W/ CONT', NSCLC AMC-001, PD-1-Lung), i.e. IDC territory.",
+  "verified": "Study list read.",
+  "notes": "No cardiac CT; T3 ones duplicate IDC/TCIA."
+ },
+ {
+  "name": "STOIC2021 training (AWS s3://stoic2021-training)",
+  "url": "https://registry.opendata.aws/stoic2021-training/",
+  "tier": "excluded",
+  "n_scans": {
+   "number": 2000,
+   "unit": "chest CT"
+  },
+  "est_size_gb": 240,
+  "format": "MHA",
+  "labels": "COVID labels",
+  "license": "CC BY-NC 4.0",
+  "access": "open-download",
+  "steps_to_access": "https://stoic2021-training.s3.us-west-2.amazonaws.com/data/mha/<id>.mha (list with ?list-type=2)",
+  "provenance": "French multicentre COVID cohort.",
+  "verified": "Downloaded 2 random cases (1002, 10010): both non-contrast. Deleted.",
+  "notes": "COVID protocol is unenhanced; contrast fraction unknown but small. Exclude."
+ },
+ {
+  "name": "CTRG-Chest-548K volumes (HF Trusure/CTRG-Chest-548K_volume)",
+  "url": "https://huggingface.co/datasets/Trusure/CTRG-Chest-548K_volume",
+  "tier": "excluded",
+  "n_scans": {
+   "number": 1804,
+   "unit": "chest CT"
+  },
+  "est_size_gb": 110,
+  "format": "NIfTI uint8 (0-255), resampled 1 mm",
+  "labels": "reports (in original dataset)",
+  "license": "HF tag apache-2.0 (uploader)",
+  "access": "open-download",
+  "steps_to_access": "https://huggingface.co/datasets/Trusure/CTRG-Chest-548K_volume/resolve/main/<n>.nii.gz",
+  "provenance": "Re-upload of CTRG-Chest-548K.",
+  "verified": "3 volumes downloaded: uint8, not HU. Deleted.",
+  "notes": "Lossy, not HU; contrast status unassessable. Exclude."
+ },
+ {
+  "name": "ImageVessel (Kaggle xiaoweixumedicalai/mytest)",
+  "url": "https://www.kaggle.com/datasets/xiaoweixumedicalai/mytest",
+  "tier": "excluded",
+  "n_scans": {
+   "number": 95,
+   "unit": "cases"
+  },
+  "est_size_gb": 19.7,
+  "format": "NIfTI float64, cropped",
+  "labels": "pulmonary artery/vein",
+  "license": "CC BY-NC 4.0",
+  "access": "open-download",
+  "steps_to_access": "https://www.kaggle.com/api/v1/datasets/download/xiaoweixumedicalai/mytest/<id>_image.nii",
+  "provenance": "Round-1 Asia.json (untested). Guangdong.",
+  "verified": "Downloaded 62_image.nii: 154x187x190 at 1 mm, cropped to one lung (heart out of FOV), offset intensities (0-2649). Deleted.",
+  "notes": "Heart not in FOV: exclude."
+ },
+ {
+  "name": "3D CAS Images (Kaggle ahanafabidsazid/3d-cat-images)",
+  "url": "https://www.kaggle.com/datasets/ahanafabidsazid/3d-cat-images",
+  "tier": "duplicate",
+  "n_scans": {
+   "number": 200,
+   "unit": "cases"
+  },
+  "est_size_gb": 135,
+  "format": "NIfTI",
+  "labels": "coronary",
+  "license": "Apache 2.0 (uploader)",
+  "access": "open-download",
+  "steps_to_access": "n/a",
+  "provenance": "File names 1.img.nii/1.label.nii etc. = ImageCAS naming; 1.img.nii is 144,179,552 B = 512x512x275 int16, label float64. Presumed ImageCAS cases 1-200 (not opened).",
+  "verified": "File list read.",
+  "notes": "ImageCAS derivative; excluded by brief."
+ },
+ {
+  "name": "Other software sample data / demo servers checked (no usable cardiac or chest contrast CT)",
+  "url": "see notes",
+  "tier": "excluded",
+  "n_scans": {
+   "number": 0,
+   "unit": ""
+  },
+  "est_size_gb": 0,
+  "format": "",
+  "labels": "",
+  "license": "",
+  "access": "",
+  "steps_to_access": "",
+  "provenance": "",
+  "verified": "Each checked 2026-10-12",
+  "notes": "SimpleITK-Notebooks data manifest (POPI 4D lung CT = non-contrast; RIRE head); vmtk-test-data aorta.mha (34-slice crop, not HU); Kitware VolView samples (CTA head-neck, cardiac MRI only; hosted on data.kitware.com Girder, not touched); Rubo Medical samples (XA/US only); RadiAnt (no sample data); NEMA multiframe CT samples (404, removed); Medical Connections public PACS dicomserver.co.uk (non-443 ports blocked here; user-uploaded junk anyway); MedDream/Softneta demo (viewer only); Embodi3D (403 to scripts; downloads need a free account per site convention - unverified); Radiopaedia (only 8-bit JPEG/PNG stacks, CC BY-NC-SA, no DICOM/HU export - exclude); MorphoSource (animal/specimen microCT; 'heart CT' hits are reptiles; most restricted_download); Grand Challenge public archives (10 archives: LUNA16, LOLA11, STOIC sample, coronacases, KiTS21... none cardiac; downloads need login); AWS Open Data Registry (13 'computed tomography' datasets: only RSNA PE (known), MSD, STOIC, RATIC abdominal trauma (no redistribution, MIRA controlled), UCSF renal mass, InRad COVID; nothing cardiac); Google Cloud public datasets (only IDC, covered); Hugging Face dataset search (coronary/cardiac/CCTA/CTA/aorta/chest-ct/ctpa: only known ImageCAS-derived AI-CVM, TotalSegmentator mirrors, RadGenome/CT-RATE family, tiny JSON sets); Papers with Code (site retired into HF); awesome lists (sfikas, adalca, openmedlab Awesome-Medical-Dataset, linhandev, beamandrew: nothing beyond the brief's exclusion list); Siemens/GE/Canon/Philips: no public DICOM downloads found (only conformance statements/training videos)."
+ },
+ {
+  "name": "gfahrni open-cardiovasc-imaging-datasets catalogue: mapping of all 23 CT entries",
+  "url": "https://github.com/gfahrni/open-cardiovasc-imaging-datasets",
+  "tier": "n/a",
+  "n_scans": {
+   "number": 0,
+   "unit": ""
+  },
+  "est_size_gb": 0,
+  "format": "CSV in Zenodo 18996676 snapshot (datasets-table.csv, 50 rows)",
+  "labels": "",
+  "license": "",
+  "access": "",
+  "steps_to_access": "",
+  "provenance": "",
+  "verified": "README and Zenodo snapshot CSV read.",
+  "notes": "ImageCAS, ImageALCAPA, ImageCHD, CHD68, HOCMvalvesSeg, ImageTBAD, ImageTAAD, AVT, 3C, RSPECT, INSPECT, AortaSeg24, MultiD4CAD, COCA (non-contrast+DUA), Radfusion (Stanford DUA) = in brief exclusion list or round 1; 3D CAS = ImageCAS dup; AortaSeg-60, FUMPE, ImageVessel, TotalSegmentator = round-1 entries, now tested here (except FUMPE); ChestPathCT5-S100 = NEW (above); KiPA22 = kidney CTA, excluded; MSD = Task06 lung T3 (above)."
+ },
+ {
+  "name": "Figshare private link caa70792c43ac01d8175 ('de-identified cardiac CT volume, DICOM, with aorta/SVC/pulmonary vein/atria/ventricle annotations')",
+  "url": "https://figshare.com/s/caa70792c43ac01d8175",
+  "tier": "T2 (unverified)",
+  "n_scans": {
+   "number": null,
+   "unit": "unknown"
+  },
+  "est_size_gb": null,
+  "format": "DICOM (per search snippet)",
+  "labels": "cardiac structures",
+  "license": "unknown",
+  "access": "unverified",
+  "steps_to_access": "Open the private link in a browser; Figshare bot wall (HTTP 202 challenge) blocked scripted access here.",
+  "provenance": "Found via web search snippet only.",
+  "verified": "NOT verified.",
+  "notes": "Likely a peer-review private link; may be ImageCHD/other known data. Worth one manual click by the lead."
+ }
+]

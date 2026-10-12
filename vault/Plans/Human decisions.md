@@ -33,6 +33,8 @@ that contradicts one of them cannot win.
 | D15 | Prelabel refresh | **Yes, once**: after ~300 corrected cases, fine-tune and regenerate prelabels for the cases not yet done. | Decided 2026-10-12 |
 | D16 | Held-out test | **The 160 ImageCAS-X test cases are annotated last** and kept out of the D15 refresh, so they stay a fair test of the model. | Decided 2026-10-12 |
 | D17 | More data and parallel build | **Top priority: source as many CCTA scans as possible, unlabelled included**, so annotator time is never idle. Everything new (14-class SegQueue, new data) is built **in parallel with the live system** and replaces nothing until the project lead validates it. | Decided 2026-10-12 |
+| D18 | SegQueue14 defaults | **Accepted as built:** review if mean Dice vs ImageCAS-X < 0.60, or LAD/LCx/RCA < 0.70, or a read pair agrees < 0.60 (adjustable in the `segqueue14.reference` setting); new datasets queue after the 200 unlabelled ImageCAS cases and before the 160 test cases; each annotator's first five reads are always reviewed; deploy by merging into main and installing from there, after validation. | Decided 2026-10-12 |
+| D19 | Extra data sources | **HeartSR included** (no licence stated; flagged, not to be redistributed until clarified). The project lead handles the access emails and sign-ups (vault: CCTA sourcing 2026-10 / Access request emails). Girder upload minimum chunk size lowered to 1 MB so large CT can be uploaded through nginx. | Decided 2026-10-12 |
 
 ## The restructure of 2026-10-11 (D8–D10)
 

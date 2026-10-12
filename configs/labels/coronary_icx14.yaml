@@ -1,0 +1,32 @@
+# The 14 ImageCAS-X classes, as drawn (vault/Plans/Human decisions.md D8, D9).
+#
+# Label values are ImageCAS-X's own (Suppl. Table 4), which are also the values the
+# 14-class model writes into its prelabels (trillium/icx14) and the values SegQueue14
+# submissions carry -- so an ImageCAS-X reference, a prelabel, a corrected read and a
+# training label all mean the same structure by the same integer, and `source_values`
+# is absent on purpose.
+#
+# Names match src/segqueue14/labels.py, which the SegQueue14 plugin serves as its
+# segment list and its export uses as per-class file names
+# (`<case>/segmentations/<name>.nii.gz`). tests/test_segqueue14_labels.py pins the two
+# together; change neither alone.
+#
+# Order is the trained model's output-channel order and is frozen once a model exists.
+
+name: coronary_icx14
+count: 14
+labels:
+  LM: 1
+  LAD: 2
+  LCx: 3
+  D1: 4
+  D2: 5
+  OM1: 6
+  OM2: 7
+  IM: 8
+  RCA: 9
+  R-PDA: 10
+  R-PLA: 11
+  L-PDA: 12
+  L-PLA: 13
+  Other: 14

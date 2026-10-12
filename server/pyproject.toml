@@ -57,7 +57,11 @@ segqueue-score = "girder_segqueue.scoring:main"
 segqueue-export = "girder_segqueue.export:main"
 
 [tool.setuptools.packages.find]
-include = ["girder_segqueue*"]
+# Exact names, not "girder_segqueue*": that glob also matches girder_segqueue14,
+# the separately packaged SegQueue14 plugin in server/girder_segqueue14, which this
+# distribution must never ship (two distributions owning one package's files is
+# how an uninstall of one deletes the other).
+include = ["girder_segqueue", "girder_segqueue.*"]
 
 [tool.ruff]
 line-length = 100

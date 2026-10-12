@@ -47,8 +47,18 @@ def log(*a):
 
 
 # ====================================================================== HTTP
-def _open(url, headers=None, timeout=300):
-    return urllib.request.urlopen(urllib.request.Request(url, headers=dict(UA, **(headers or {}))), timeout=timeout)
+def _open(url, headers=None, timeout=300, tries=6):
+    # retry dropped connections (servers reset long range-read sessions now and then)
+    for attempt in range(tries):
+        try:
+            return urllib.request.urlopen(urllib.request.Request(url, headers=dict(UA, **(headers or {}))),
+                                          timeout=timeout)
+        except urllib.error.HTTPError:
+            raise
+        except (urllib.error.URLError, ConnectionError, TimeoutError):
+            if attempt == tries - 1:
+                raise
+            time.sleep(5 * 2 ** attempt)
 
 
 def download(url, path, tries=5):

@@ -1,0 +1,7 @@
+{
+ "epochs": 200,
+ "s_epoch_b": 175.85,
+ "f1_cost_factor": 1.1,
+ "train_budget_s": 77398.1514968872,
+ "warmup_iters": 2500
+}

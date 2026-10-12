@@ -127,8 +127,8 @@ def world(girder_db, tmp_path):
     from girder.models.item import Item
     from girder.models.setting import Setting
     from girder.models.user import User
-    from girder_segqueue14.models import (
-        Assignment14, Case14, Note14, Review14, Submission14)
+    from girder_segqueue14 import settings  # noqa: F401  (registers segqueue14.*)
+    from girder_segqueue14.models import Assignment14, Case14, Note14, Review14, Submission14
 
     for model in (Case14, Assignment14, Submission14, Review14, Note14):
         model().collection.delete_many({})
@@ -696,3 +696,54 @@ def test_both_plugins_load_side_by_side(world):
     names = {g["name"] for g in Group().find({})}
     assert {"segqueue-annotators", "segqueue-reviewers", "segqueue14-annotators",
             "segqueue14-reviewers"} <= names
+
+
+def test_the_command_lines_dry_run_and_change_nothing(world, capsys):
+    from girder_segqueue14 import populate, prelabels
+    from girder_segqueue14.models import Case14
+
+    before = _liveSnapshot(world)
+    assert populate.main(["--dry-run"]) == 0
+    assert Case14().collection.count_documents({}) == 0
+    out = capsys.readouterr().out
+    assert "would create 12" in out and "icx-test" in out
+    assert populate.main([]) == 0
+    directory = _predictions(world, "v1")
+    assert prelabels.main(["attach", "--dir", str(directory), "--model-version", "v1",
+                           "--dry-run"]) == 0
+    assert Case14().collection.count_documents({"prelabelVersion": "v1"}) == 0
+    assert prelabels.main(["attach", "--dir", str(directory), "--model-version", "v1"]) == 0
+    assert Case14().collection.count_documents({"prelabelVersion": "v1"}) == 12
+    assert prelabels.main(["status"]) == 0
+    assert "v1: 12 case(s)" in capsys.readouterr().out
+    with pytest.raises(SystemExit):
+        prelabels.main(["attach", "--dir", str(directory), "--model-version", "../x"])
+    assert _liveSnapshot(world) == before
+
+
+def test_a_broken_or_disabled_segqueue14_never_stops_girder(world, monkeypatch):
+    import girder_segqueue14
+    from girder_segqueue14 import SegQueue14Plugin
+
+    class Root:
+        pass
+
+    def fresh():
+        plugin = object.__new__(SegQueue14Plugin)
+        plugin._name = "segqueue14"
+        return plugin
+
+    monkeypatch.setenv("SEGQUEUE14_DISABLE", "1")
+    root = Root()
+    fresh().load({"apiRoot": root})
+    assert not hasattr(root, "segqueue14")
+
+    monkeypatch.delenv("SEGQUEUE14_DISABLE")
+    monkeypatch.setattr(girder_segqueue14, "mount",
+                        lambda info: (_ for _ in ()).throw(RuntimeError("boom")))
+    root = Root()
+    fresh().load({"apiRoot": root})       # logged, not raised
+    assert not hasattr(root, "segqueue14")
+    monkeypatch.setenv("SEGQUEUE14_STRICT", "1")
+    with pytest.raises(RuntimeError):
+        fresh().load({"apiRoot": root})

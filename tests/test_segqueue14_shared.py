@@ -19,9 +19,13 @@ if str(_SRC) not in sys.path:
     sys.path.append(str(_SRC))
 
 from segqueue import protocol as live_protocol  # noqa: E402
-from segqueue14 import PROTOCOL_VERSION, labels, nifti  # noqa: E402
+from segqueue14 import (  # noqa: E402
+    PROTOCOL_VERSION,
+    labels,
+    nifti,
+    protocol,  # noqa: E402
+)
 from segqueue14 import plan as sqplan  # noqa: E402
-from segqueue14 import protocol  # noqa: E402
 from segqueue14 import scoring as sq  # noqa: E402
 
 # ------------------------------------------------------------------ classes

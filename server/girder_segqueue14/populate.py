@@ -67,10 +67,13 @@ def liveCases():
         'geometryFixed': 1, 'retired': 1}))
 
 
-def icxFolder():
-    """``SegQueue/imagecas-x``, or None."""
+def icxFolder(folderId=None):
+    """``SegQueue/imagecas-x`` (or the folder ``--icx-folder`` names), or None."""
     from girder.models.collection import Collection
     from girder.models.folder import Folder
+
+    if folderId:
+        return Folder().load(folderId, force=True)
 
     collection = Collection().findOne({'name': LIVE_COLLECTION_NAME})
     if collection is None:
@@ -252,11 +255,11 @@ def applyPlan(plan, serveOrder, source, user, referenceFileId=None, dryRun=False
 
 def populateImagecas(user, splitsDir=None, duplicateFraction=sqplan.DEFAULT_DUPLICATE_FRACTION,
                      priorities=None, dryRun=False, update=False, allowNoSplits=False,
-                     out=print):
+                     icxFolderId=None, out=print):
     """The ImageCAS half. Returns a summary dict."""
     from girder.models.file import File
 
-    folder = icxFolder()
+    folder = icxFolder(icxFolderId)
     refs, metaSplits, refProblems = references(folder)
     splits, source = resolveSplits(folder, splitsDir, metaSplits)
     out(f'ImageCAS-X references: {len(refs)}; splits: '
@@ -352,6 +355,9 @@ def buildParser():
     parser.add_argument('--splits-dir', default=None,
                         help='Local directory with ImageCAS-X train.txt / val.txt / '
                              'test.txt / exclude.txt. Default: look in SegQueue/imagecas-x.')
+    parser.add_argument('--icx-folder', default=None,
+                        help='Girder folder id of the ImageCAS-X folder, if it is not '
+                             'SegQueue/imagecas-x.')
     parser.add_argument('--duplicate-fraction', type=float,
                         default=sqplan.DEFAULT_DUPLICATE_FRACTION,
                         help='Fraction of ImageCAS-X cases (per split) given a second, '
@@ -404,7 +410,7 @@ def main(argv=None):
         summary = populateImagecas(
             user, splitsDir=args.splits_dir, duplicateFraction=args.duplicate_fraction,
             priorities=priorities, dryRun=args.dry_run, update=args.update,
-            allowNoSplits=args.allow_no_splits)
+            allowNoSplits=args.allow_no_splits, icxFolderId=args.icx_folder)
         verb = 'would create' if args.dry_run else 'created'
         print(f"\n{verb} {summary['create']}, updated {summary['update']}, unchanged "
               f"{summary['same']}, differing {summary['differs']}, conflicts "

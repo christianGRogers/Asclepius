@@ -895,9 +895,47 @@ def run_mendeley(args):
         shutil.rmtree(work, ignore_errors=True)
 
 
+# ====================================================================== 8. HeartSR (Kaggle victorsix)
+def run_heartsr(args):
+    """HeartSR: 10 Italian 0.6 mm ECG-gated CCTA (Siemens Force, 2025). Only the HR series is ingested; LR is a
+    degraded copy of the same scan made for super-resolution research. No licence is stated on the page; the
+    project lead approved including it (2026-10-12), flagged licence_stated=false."""
+    ref = 'victorsix/cardiac-ct-lr-hr'
+    sink = Sink(args, 'Kaggle-HeartSR', 'none stated on the Kaggle page (included with the project lead\'s approval)',
+                'T1', f'https://www.kaggle.com/datasets/{ref}',
+                'HeartSR (Kaggle victorsix, "cardiac-ct-lr-hr"): 10 patients, ECG-gated 0.6 mm CCTA, Siemens Force, '
+                'Italy, 2025. Only the high-resolution (HR) series is stored. No licence stated: do not redistribute '
+                'until clarified with the uploader.',
+                f'victorsix, "HeartSR: cardiac CT LR-HR", Kaggle, https://www.kaggle.com/datasets/{ref}')
+    z = kaggle_bundle(ref)
+    by_case = {}
+    for i in z.infolist():
+        m = re.match(r'HeartSR/(P\d+)/HR/', i.filename)
+        if m and not i.is_dir():
+            by_case.setdefault(m.group(1), []).append(i)
+    log(f'{len(by_case)} HR series: ' + ', '.join(f'{k}:{len(v)}' for k, v in sorted(by_case.items())))
+    for case, members in sorted(by_case.items()):
+        if not selected(args, case) or sink.done(case):
+            continue
+        work = tmpdir(args)
+        try:
+            dcm = os.path.join(work, 'dcm')
+            os.makedirs(dcm)
+            for i in members:
+                with z.open(i) as src:
+                    copy_member(src, os.path.join(dcm, re.sub(r'[^A-Za-z0-9._-]', '_', os.path.basename(i.filename))))
+            extra = dict(source_ids={'kaggle': ref, 'series_path': f'HeartSR/{case}/HR'}, licence_stated=False,
+                         n_dicom_files=len(members), hu_calibrated=True, **dicom_extra(dcm))
+            sink.put(case, dcm, extra)
+        finally:
+            shutil.rmtree(work, ignore_errors=True)
+        if sink.full():
+            break
+
+
 # ====================================================================== CLI
 RUN = {'imagechd': run_imagechd, 'imagealcapa': run_imagealcapa, 'hocm': run_hocm, 'cadrs': run_cadrs,
-       'vmr': run_vmr, 'figshare15': run_figshare15, 'mendeley': run_mendeley}
+       'vmr': run_vmr, 'figshare15': run_figshare15, 'mendeley': run_mendeley, 'heartsr': run_heartsr}
 
 if __name__ == '__main__':
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)

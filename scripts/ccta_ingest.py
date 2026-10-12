@@ -70,11 +70,13 @@ class Pool:
                                                              'reuseExisting': 'true', 'description': desc})
         return self._folders[key]
 
-    def dataset(self, name, licence, tier, source_url, description=''):
+    def dataset(self, name, licence, tier, source_url, description='', **meta):
+        """Create/update the dataset folder. Extra keyword metadata (e.g. citation=...) is stored on the folder."""
         f = self._folder(self.coll['_id'], 'collection', name, description or f'{name}: {source_url}')
         self.req('PUT', f'folder/{f["_id"]}/metadata', body=json.dumps(
-            {'dataset': name, 'licence': licence, 'tier': tier, 'source_url': source_url}).encode(),
+            dict(meta, dataset=name, licence=licence, tier=tier, source_url=source_url)).encode(),
             ctype='application/json')
+        f['meta'] = dict(meta, dataset=name, licence=licence, tier=tier, source_url=source_url)
         return f
 
     def known_hashes(self):
@@ -114,8 +116,9 @@ class Pool:
         return doc
 
     # ------------------------------------------------------------------ ingest
-    def ingest(self, dataset, case, path, extra=None):
+    def ingest(self, dataset, case, path, extra=None, files=None):
         """Convert ``path`` (a volume file or a DICOM directory) and upload it as <dataset>/<case>/ct.nii.gz.
+        ``files`` ({name: local path}, e.g. {'label.nii.gz': ...}) are uploaded beside it unchanged.
         Returns 'uploaded', 'exists' or 'duplicate'."""
         if self.case_done(dataset, case):
             return 'exists'
@@ -129,10 +132,14 @@ class Pool:
                         ingested=datetime.date.today().isoformat(), **(extra or {}))
             ds = self._folder(self.coll['_id'], 'collection', dataset)
             ds_meta = ds.get('meta') or self.req('GET', f'folder/{ds["_id"]}').get('meta') or {}
-            for k in ('licence', 'tier', 'source_url'):
-                meta.setdefault(k, ds_meta.get(k))
+            for k in ('licence', 'tier', 'source_url', 'citation'):
+                if ds_meta.get(k) is not None:
+                    meta.setdefault(k, ds_meta.get(k))
             cf = self._folder(ds['_id'], 'folder', case)
             self.upload(cf['_id'], nii, 'ct.nii.gz', meta)
+            for name, fp in (files or {}).items():
+                self.upload(cf['_id'], fp, name, {'dataset': dataset, 'source_case': case, 'image': 'ct.nii.gz',
+                                                  'sha256': sha256(fp)})
             self.known_hashes().add(sha)
             return 'uploaded'
         finally:

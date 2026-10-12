@@ -26,6 +26,13 @@ that contradicts one of them cannot win.
 | D8 | Lumen target (supersedes D0) | **ImageCAS-X exactly as drawn.** The original ImageCAS masks are no longer considered usable as labels. | Decided 2026-10-11 |
 | D9 | Class schema | **All 14 ImageCAS-X classes**, no grouping into four vessels: LM, LAD, LCx, D1, D2, OM1, OM2, IM, RCA, R-PDA, R-PLA, L-PDA, L-PLA, Other. Supersedes the four-class goal and D1/D1b's grouping. | Decided 2026-10-11 |
 | D10 | What annotators start from (supersedes D4) | **The 14-class model's prediction, on all 1000 cases**, including the 800 that already have ImageCAS-X labels. Annotators correct it in SegQueue, which must gain the 14 classes. | Decided 2026-10-11 |
+| D11 | Reads per case (supersedes D2) | **One corrected read on the 800 ImageCAS-X cases** (ImageCAS-X is the second, expert read) plus ~10 % blind duplicates there; **two reads on the 200 cases ImageCAS-X does not cover.** | Decided 2026-10-12 |
+| D12 | Outline (supersedes D7) | **Annotators may freely redraw the outline to the contrast-filled lumen**, consistent with D8. | Decided 2026-10-12 |
+| D13 | Required classes | **LAD, LCx and RCA must be non-empty to submit**; the other 11 classes are optional. | Decided 2026-10-12 |
+| D14 | Case order | **ImageCAS-X cases first** (scored automatically against ImageCAS-X), then the 200 unlabelled ones. | Decided 2026-10-12 |
+| D15 | Prelabel refresh | **Yes, once**: after ~300 corrected cases, fine-tune and regenerate prelabels for the cases not yet done. | Decided 2026-10-12 |
+| D16 | Held-out test | **The 160 ImageCAS-X test cases are annotated last** and kept out of the D15 refresh, so they stay a fair test of the model. | Decided 2026-10-12 |
+| D17 | More data and parallel build | **Top priority: source as many CCTA scans as possible, unlabelled included**, so annotator time is never idle. Everything new (14-class SegQueue, new data) is built **in parallel with the live system** and replaces nothing until the project lead validates it. | Decided 2026-10-12 |
 
 ## The restructure of 2026-10-11 (D8–D10)
 

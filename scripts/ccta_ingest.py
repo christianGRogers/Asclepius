@@ -17,7 +17,7 @@ import argparse, datetime, glob, hashlib, json, os, shutil, subprocess, sys, tem
 
 API = os.environ.get('GIRDER_API', 'https://janus.bradensbay.com/api/v1')
 COLLECTION = 'CCTA-Pool'
-CHUNK = 32 << 20
+CHUNK = 1 << 20   # janus's nginx rejects request bodies above a few MB (5 MB fails, 1 MB works)
 
 
 def _token():
@@ -103,10 +103,8 @@ class Pool:
     def upload(self, folder_id, path, name, meta):
         size = os.path.getsize(path)
         with open(path, 'rb') as fh:
-            first = fh.read(CHUNK)
-            doc = self.req('POST', 'file', {'parentType': 'folder', 'parentId': folder_id, 'name': name, 'size': size},
-                           body=first, ctype='application/octet-stream')
-            off = len(first)
+            doc = self.req('POST', 'file', {'parentType': 'folder', 'parentId': folder_id, 'name': name, 'size': size})
+            off = 0
             while off < size:
                 data = fh.read(CHUNK)
                 doc = self.req('POST', 'file/chunk', {'uploadId': doc['_id'], 'offset': off}, body=data,

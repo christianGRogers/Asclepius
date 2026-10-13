@@ -25,6 +25,20 @@ class nnUNetTrainerICX14(nnUNetTrainerNoMirroring):
         if os.environ.get('ICX14_TEST_ITERS'):  # CPU self-test only; never set on Trillium
             self.num_iterations_per_epoch = int(os.environ['ICX14_TEST_ITERS']); self.num_val_iterations_per_epoch = 1
 
+    def _build_loss(self):
+        """Optional class-weighted cross-entropy, switched on mid-run by a file, so a later chunk of the chain
+        can push the side branches (which a first 446-epoch chunk never predicted) without restarting.
+        $W/ce_class_weights.json: a list of 15 weights (background + 14 classes). Absent -> stock nnU-Net loss."""
+        loss = super()._build_loss()
+        path = os.path.join(os.environ.get('W', ''), 'ce_class_weights.json')
+        if os.environ.get('W') and os.path.isfile(path):
+            import json
+            w = torch.tensor(json.load(open(path)), dtype=torch.float32, device=self.device)
+            inner = loss.loss if hasattr(loss, 'loss') else loss       # DeepSupervisionWrapper -> DC_and_CE_loss
+            inner.ce.weight = w
+            self.print_to_log_file(f'ICX14: class-weighted CE from {path}: {w.tolist()}')
+        return loss
+
     def perform_actual_validation(self, save_probabilities=False):
         if self.stopped_early or os.environ.get('ICX14_SKIP_FINAL_VAL'):
             self.print_to_log_file('ICX14: final validation skipped (training not finished in this chunk)')

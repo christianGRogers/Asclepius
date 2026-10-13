@@ -1,0 +1,93 @@
+# source_key<TAB>agent<TAB>status(searching|ingesting|done|skipped)<TAB>note
+https://grand-challenge.org	Challenges3	searching	all challenges via API + archives
+https://www.kaggle.com	Kaggle	searching	territory: Kaggle datasets/competitions/notebooks sweep
+https://zenodo.org	Repos3	searching	territory sweep via API (round 3)
+https://figshare.com	Repos3	searching	territory sweep via API (round 3)
+https://data.mendeley.com	Repos3	searching	territory sweep via API (round 3)
+https://datadryad.org	Repos3	searching	territory sweep via API (round 3)
+europepmc-fulltext-das-sweep	Journals	searching	EPMC full-text data-availability links for cardiac CT papers
+datacite-cardiac-ct-dois	Journals	searching	dataset DOIs linked to cardiac CT papers
+https://github.com	CodeRepos	searching	territory: code hosting (GitHub/GitLab/Bitbucket/Gitee/SourceForge/Codeberg) repos bundling CT
+teaching-files-dicom-samples-software-demo-data	Teaching	searching	territory: teaching files, DICOM sample libraries, viewer/vendor demo data, tutorials
+imaging.datacommons.cancer.gov (idc v25+ re-search)	OpenData	searching	territory
+cancerimagingarchive.net (2025-2026 collections)	OpenData	searching	territory
+registry.opendata.aws (re-check)	OpenData	searching	territory
+data.gov	OpenData	searching	territory
+data.europa.eu	OpenData	searching	territory
+academictorrents.com (re-check)	OpenData	searching	territory
+source.coop	OpenData	searching	territory
+azure open datasets	OpenData	searching	territory
+biodatacatalyst.nhlbi.nih.gov	OpenData	searching	territory
+https://data.dmc.nycu.edu.tw/dataset/d10-ct	Global	skipped	Taipei VGH 1000 AF PV-CT, application required, no licence
+https://simtk.org	Modelling	searching	territory: modelling/simulation/3D-print communities
+https://3d.nih.gov	Modelling	searching	territory: modelling/simulation/3D-print communities
+https://www.cardiacatlas.org	Modelling	searching	territory: modelling/simulation/3D-print communities
+https://models.physiomeproject.org	Modelling	searching	territory: modelling/simulation/3D-print communities
+https://www.morphosource.org	Modelling	searching	territory: modelling/simulation/3D-print communities
+https://crimson.software	Modelling	searching	territory: modelling/simulation/3D-print communities
+https://sparc.science	Modelling	searching	territory: modelling/simulation/3D-print communities
+https://www.openanatomy.org	Modelling	searching	territory: modelling/simulation/3D-print communities
+https://www.codabench.org/competitions/15662	Challenges3	searching	MVAA 2026 mitral valve CT (1067+30, CC BY-NC, gdrive)
+https://www.codabench.org/competitions/15662	Challenges3	ingesting	MVAA2026-MitralCT, cropped mitral ROI
+idc:rider_lung_pet_ct:rider-1563443119	OpenData	ingesting	new gated cine contrast chest/cardiac CT missed in round 1
+https://huggingface.co	HuggingFace	searching	territory: HF datasets/spaces/models + medical uploaders
+https://figshare.com/s/2a5de3a2b89a3fb87932	Modelling	ingesting	SLAWT 2016 CT set (10 gated CCTA, CC BY 4.0, figshare private link via doc.ic.ac.uk/~rkarim)
+https://demo.kheops.online	Teaching	done	OsiriX CARDIX+MAGIX via public demo token; OsiriX no-redistribution terms -> needs decision
+https://www.aliza-dicom-viewer.com/download/datasets	Teaching	done	4D Cardio anim3.nii.gz contrast 9-phase cardiac CT, no licence -> needs decision
+https://zenodo.org/records/22688904	Repos3	searching	TotalSegmentator v3 (1939 CT): new non-v2 cases of cardiac study types
+https://www.kaggle.com/datasets/mrdurch/weakly-supervised-3d-cardiac-image-segmentation	Kaggle	ingesting	5 CCTA, CC0
+https://www.doc.ic.ac.uk/~rkarim/la_lv_framework/wall	Challenges3	searching	SLAWT 2016 LA wall CT n=10 (figshare private links)
+https://www.doc.ic.ac.uk/~rkarim/la_lv_framework/wall	Challenges3	skipped	same as figshare.com/s/2a5de3a2b89a3fb87932 claimed by Modelling
+https://zenodo.org/records/22688904	Repos3	skipped	v3 meta.csv: all 130 cardiac-type cases are v2 ids (116 ingested + 14 non-contrast); new cases are non-cardiac
+https://huggingface.co/datasets/medhk23/cca	HuggingFace	searching	20 coronary CTA 0.5mm GPL-3.0
+https://researchdata.edu.au/computed-tomography-images-cardiovascular-disease/3609	OpenData	searching	Curtin 50-patient cardiac CT
+https://huggingface.co/datasets/medhk23/cca	HuggingFace	ingesting	CCA200-HF, 20 CCTA + coronary labels
+https://figshare.com/s/caa70792c43ac01d8175	Modelling	ingesting	DCM3_Pulmonary_35 private figshare (round-2 unverified lead; WAF passed with headless browser), CC BY 4.0
+idc:rider_lung_pet_ct:rider-1563443119	OpenData	done	5 vols uploaded to IDC-rider_lung_pet_ct
+imaging.datacommons.cancer.gov (idc v25+ re-search)	OpenData	done	v25 is newest; ScanOptions/pitch/kernel/FOV re-search: 1 new patient
+cancerimagingarchive.net (2025-2026 collections)	OpenData	done	no cardiac collection 2025-26
+registry.opendata.aws (re-check)	OpenData	done	1238 yaml entries; no new cardiac CT
+data.gov	OpenData	done	dead end
+data.europa.eu	OpenData	done	dead end
+academictorrents.com (re-check)	OpenData	done	full database.xml: no cardiac CT
+source.coop	OpenData	done	geospatial; dead end
+azure open datasets	OpenData	done	no medical imaging
+biodatacatalyst.nhlbi.nih.gov	OpenData	done	imaging all dbGaP-controlled
+https://researchdata.edu.au/computed-tomography-images-cardiovascular-disease/3609	OpenData	done	record deleted; contact-only (needs request)
+https://github.com/bloomingstone/generate_4d_heart	CodeRepos	skipped	Google Drive test_data: 2 CCTA nii.gz, no licence -> needs decision
+https://www.kaggle.com/datasets/mrdurch/weakly-supervised-3d-cardiac-image-segmentation	Kaggle	done	5 cases uploaded
+https://github.com/lzvv123456/deep-reinforced-tree-traversal	CodeRepos	skipped	Drive example_data.zip: 1 CCTA toy volume, no licence -> needs decision
+modelscope.cn+scidb.cn+openxlab+dataverse-installations	Global	done	no open cardiac CT
+https://doi.org/10.6084/m9.figshare.3452651	Journals	ingesting	PLOS One 2016 stenotic coronary hemodynamics S1-S15 RAR JPEG CCTA stacks
+https://figshare.com/articles/dataset/cardiac_data_1/1375504	Repos3	searching	Xuesong Lu cardiac data 1-15 (15 figshare articles 1375504..1378609), DSCT 21-phase
+https://kcl.figshare.com/articles/dataset/16473828	Repos3	searching	KCL de Vecchi 7 TMVR patients CT zips (69 GB)
+https://figshare.com/articles/dataset/cardiac_data_1/1375504	Repos3	skipped	byte-identical duplicates of figshare 1379059 (already ingested)
+https://kcl.figshare.com/articles/dataset/16473828	Repos3	skipped	CFD pressure/velocity fields only, no CT images
+ieee-dataport.org/documents/ccta-dataset	Global	skipped	subscription; 2D curved MPR
+teaching-files-dicom-samples-software-demo-data	Teaching	done	territory exhausted; 0 ingested; Kheops OsiriX CARDIX/MAGIX + Aliza 4D cardio need decision
+https://figshare.com/s/2a5de3a2b89a3fb87932	Modelling	done	SLAWT2016-CT: 9 uploaded (CT_6 is a byte-identical duplicate of CT_5), LA labels attached
+https://figshare.com/s/caa70792c43ac01d8175	Modelling	done	Figshare-DCM3-Pulmonary35: 1 gated CCTA + 16-class label
+https://3d.nih.gov/collections/heart-library	Modelling	searching	NIH 3D Heart Library entries that ship source DICOM zips (CM####, ALM####)
+https://data.kitware.com	Modelling	searching	public Girder (TubeTK/VolView/Slicer data): heart/CTA items
+https://3d.nih.gov/collections/heart-library	Modelling	skipped	only 3 entries hold source DICOM (2 MRI), all makeRawDataAvailable=false, S3 403
+https://data.kitware.com	Modelling	skipped	VolView CTA-Chest.mha = non-gated chest CTA (T3), no licence; heart.nii.gz = ex vivo MRI
+https://simtk.org	Modelling	skipped	downloads need login; image cases = VMR
+https://3d.nih.gov	Modelling	skipped	see heart-library line
+https://www.cardiacatlas.org	Modelling	done	MRI only; STACOM 2016 SLAWT CT ingested via doc.ic.ac.uk
+https://models.physiomeproject.org	Modelling	skipped	no images
+https://www.morphosource.org	Modelling	skipped	no clinical human CT
+https://crimson.software	Modelling	skipped	workshop files: idealised geometry only
+https://sparc.science	Modelling	skipped	scaffolds/animal
+https://www.openanatomy.org	Modelling	skipped	thorax atlas CT = venous chest CT 1.3 mm (T3)
+https://github.com/zhennongchen/cardiac4dct_synth_diffusion	CodeRepos	skipped	example_data: 2 pts x 20-frame cardiac 4DCT, 1.5 mm crops, no licence -> needs decision
+https://huggingface.co/datasets/medhk23/cca	HuggingFace	done	CCA200-HF 20 cases + labels (mirror L10LYL/CCA identical)
+https://huggingface.co	HuggingFace	done	territory exhausted; only new source MedHK23/CCA
+https://github.com	CodeRepos	done	territory exhausted: 0 ingested (all real CCTA hits unlicensed -> needs decision: generate_4d_heart, DRTT, Cardiac4DCT_Synth_Diffusion)
+https://doi.org/10.1186/s12938-017-0413-0	Journals	ingesting	BMC Biomed Eng Online 2017 Additional files 1-2 (figshare 5589196/5589220) CCTA DICOM 1 pt
+https://doi.org/10.6084/m9.figshare.3452651	Journals	done	17 cases uploaded (PLOS-Peng2016-CCTA-JPEG), 8-bit JPEG, spacing estimated
+https://doi.org/10.1186/s12938-017-0413-0	Journals	done	2 phases of 1 pt uploaded (BMC-BEO2017-SerialStenosis-CCTA)
+https://www.kaggle.com	Kaggle	done	saturated: 809 queries, 4647 file-list probes; 1 new source ingested (mrdurch, 5 CCTA)
+https://zenodo.org	Repos3	done	API sweep exhausted: no new open human cardiac contrast CT (see Repos3.md)
+https://figshare.com	Repos3	done	API sweep exhausted: no new open human cardiac contrast CT (see Repos3.md)
+https://data.mendeley.com	Repos3	done	API sweep exhausted: no new open human cardiac contrast CT (see Repos3.md)
+https://datadryad.org	Repos3	done	API sweep exhausted: no new open human cardiac contrast CT (see Repos3.md)

@@ -45,7 +45,9 @@ if [ ! -e "$W/.train_done" ]; then
         # the previous job was killed after its last periodic save: resume from that, not the older final
         mv "$FOLD/checkpoint_final.pth" "$FOLD/checkpoint_final.older.pth"
     fi
-    ls "$FOLD"/checkpoint_{latest,final}.pth >/dev/null 2>&1 && CONT="--c"
+    # either file means there is something to resume. (nnU-Net deletes checkpoint_latest.pth when it writes
+    # checkpoint_final.pth, so after a clean deadline stop only the final exists; requiring both restarted job 2.)
+    { [ -e "$FOLD/checkpoint_latest.pth" ] || [ -e "$FOLD/checkpoint_final.pth" ]; } && CONT="--c"
     echo "[job] training ${CONT:-from scratch} (1000 epochs in total, chunked)"
     ICX14_DEADLINE=$((DEADLINE - 900)) ICX14_COMPLETE_MARKER="$W/.train_done" nnUNet_n_proc_DA=$((NPROC - 2)) \
         nnUNetv2_train 714 3d_fullres 0 -tr "$TR" -p "$PLANS" -device "$DEV" $CONT >> "$W/logs/train.log" 2>&1 \

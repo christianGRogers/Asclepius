@@ -1,0 +1,52 @@
+=== icx14 job 1078871 on trig0003 at 2026-10-13T18:46:36-04:00; cores 24 ===
+The following modules were not unloaded:
+  (Use "module --force purge" to unload all):
+
+  1) gentoo/2023
+name, memory.total [MiB]
+NVIDIA H100 80GB HBM3, 81559 MiB
+[job] training from scratch (1000 epochs in total, chunked)
+2026-10-14 18:01:52.252837: Epoch time: 208.14 s
+2026-10-14 18:01:53.608067: ICX14: stopping after epoch 455 of 1000 before the deadline
+2026-10-14 18:01:56.285215: ICX14: final validation skipped (training not finished in this chunk)
+=== icx14 job finished 2026-10-14T18:01:59-04:00 after 1395 min ===
+
+scontrol show job 1078871
+JobId=1078871 JobName=icx14
+   UserId=croger(3164574) GroupId=croger(3164574) MCS_label=N/A
+   Priority=528581 Nice=0 Account=def-aso22 QOS=normal
+   JobState=COMPLETING Reason=None Dependency=(null)
+   Requeue=0 Restarts=0 BatchFlag=1 Reboot=0 ExitCode=0:0
+   RunTime=23:15:27 TimeLimit=23:50:00 TimeMin=N/A
+   SubmitTime=2026-10-11T18:11:44 EligibleTime=2026-10-12T17:26:25
+   AccrueTime=2026-10-12T17:26:25
+   StartTime=2026-10-13T18:46:32 EndTime=2026-10-14T18:01:59 Deadline=N/A
+   SuspendTime=None SecsPreSuspend=0 LastSchedEval=2026-10-13T18:46:32 Scheduler=Backfill
+   Partition=compute AllocNode:Sid=trig-login01:1915380
+   ReqNodeList=(null) ExcNodeList=(null)
+   NodeList=trig0003
+   BatchHost=trig0003
+   NumNodes=1 NumCPUs=24 NumTasks=1 CPUs/Task=1 ReqB:S:C:T=0:0:*:*
+   ReqTRES=cpu=1,mem=187.50G,node=1,billing=1,gres/gpu=1
+   AllocTRES=cpu=24,mem=187.50G,node=1,billing=1,gres/gpu=1
+   Socks/Node=* NtasksPerN:B:S:C=0:0:*:* CoreSpec=*
+   MinCPUsNode=1 MinMemoryNode=187.50G MinTmpDiskNode=0
+   Features=(null) DelayBoot=00:00:00
+   OverSubscribe=OK Contiguous=0 Licenses=(null) LicensesAlloc=(null) Network=(null)
+   Command=/scratch/croger/icx14/job.sh
+   SubmitLine=SBATCH --comment /opt/slurm/bin/sbatch --export=NONE --get-user-env --parsable --dependency=afterany:1078870 /scratch/croger/icx14/job.sh --export=NONE --get-user-env --parsable --dependency=afterany:1078870 /scratch/croger/icx14/job.sh
+   WorkDir=/scratch/croger/icx14
+   Comment=/opt/slurm/bin/sbatch --export=NONE --get-user-env --parsable --dependency=afterany:1078870 /scratch/croger/icx14/job.sh
+   StdErr=
+   StdIn=/dev/null
+   StdOut=/scratch/croger/icx14/logs/slurm-1078871.out
+   CpusPerTres=gpu:24
+   TresPerNode=gres/gpu:1
+
+sacct -j 1078871
+JobID           JobName    Account    Elapsed  MaxVMSize     MaxRSS  SystemCPU    UserCPU ExitCode 
+------------ ---------- ---------- ---------- ---------- ---------- ---------- ---------- -------- 
+1078871           icx14  def-aso22   23:15:27                         00:00:00   00:00:00      0:0 
+1078871.bat+      batch  def-aso22   23:15:27                         00:00:00   00:00:00      0:0 
+1078871.ext+     extern  def-aso22   23:15:27                         00:00:00   00:00:00      0:0 
+

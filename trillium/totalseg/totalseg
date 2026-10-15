@@ -88,13 +88,19 @@ if [ ! -f "$VENV/.totalseg_ok" ]; then
     source "$VENV/bin/activate"
     pip install --no-index --upgrade pip
     pip install --no-index torch            # Alliance wheel, CUDA-enabled
-    pip install "TotalSegmentator==$TS_VERSION"
+    # TotalSegmentator's declared dependencies include fury -> vtk (preview images only), which has no wheel on
+    # Alliance. Install the libraries the segmentation path imports, then TotalSegmentator itself without deps.
+    pip install "nnunetv2==2.8.1" nibabel SimpleITK requests tqdm dicom2nifti xmltodict blosc scipy joblib \
+        scikit-image matplotlib pandas scikit-learn
+    pip install --no-deps "TotalSegmentator==$TS_VERSION"
     deactivate
     touch "$VENV/.totalseg_ok"
 fi
 # shellcheck disable=SC1091
 source "$VENV/bin/activate"
-python -c "import totalsegmentator, torch; print('[totalseg] venv ok: torch', torch.__version__)"
+python -c "import torch, totalsegmentator.python_api, totalsegmentator.nnunet; print('[totalseg] venv ok: torch', torch.__version__)" \
+    || { rm -f "$VENV/.totalseg_ok"; die "TotalSegmentator does not import; venv marked for rebuild"; }
+TotalSegmentator --help >/dev/null || die "TotalSegmentator command not working"
 if ! grep -q '"license_number"' "$HOME/.totalsegmentator/config.json" 2>/dev/null; then
     [ -n "${TOTALSEG_LICENSE:-}" ] || die "no TotalSegmentator licence stored; run once as TOTALSEG_LICENSE=aca_... ./totalseg"
     totalseg_set_license -l "$TOTALSEG_LICENSE"

@@ -1,0 +1,140 @@
+#!/bin/bash
+# TotalSegmentator `coronary_arteries` (binary coronary mask) on the SegQueue volumes, as a seed for annotation
+# while icx14 trains. Login node, one command:
+#   TOTALSEG_LICENSE=aca_... ./totalseg      # first run (the key is stored in ~/.totalsegmentator/config.json)
+#   ./totalseg                               # re-run: resumes the download / resubmits the unfinished rest
+#   ./totalseg status | ./totalseg collect
+# Steps: hold the next pending icx14 job, build ~/totalseg-venv, download the weights (needs the licence),
+# fetch the inputs.json volumes from Girder into $SCRATCH/totalseg/in (asks for a Girder login once; ~54 GB,
+# resumable), submit one 1-GPU job (12 h), then make the held icx14 job wait for it (afterany) and release it.
+# If anything fails before the submit, the icx14 job is released again unchanged.
+# Never writes to Girder; the masks come back via ./totalseg collect (a tarball to send to the project lead).
+set -euo pipefail
+
+HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+LIB="$HERE/lib"
+MODE="${1:-run}"
+JOBNAME="totalseg"
+WALLTIME="12:00:00"
+VENV="${TOTALSEG_VENV:-$HOME/totalseg-venv}"
+TS_VERSION="2.18.0"
+
+say() { printf '[totalseg] %s\n' "$*"; }
+die() { printf '[totalseg] ERROR: %s\n' "$*" >&2; exit 1; }
+
+[ -n "${SCRATCH:-}" ] || die "\$SCRATCH is not set (this must run on a Trillium login node)"
+W="$SCRATCH/totalseg"
+mkdir -p "$W/logs" "$W/in" "$W/results"
+
+running_job() { squeue -u "$USER" --name "$JOBNAME" -h -o '%i %T %M %r' | tr '\n' ';'; }
+
+collect() {
+    mkdir -p "$HERE/results"
+    cp -r "$W/results/." "$HERE/results/" 2>/dev/null || true
+    cp "$W"/logs/slurm-*.out "$HERE/results/" 2>/dev/null || true
+    local n
+    n="$(find "$W/out" -name '*__totalseg-coronary.nii.gz' 2>/dev/null | wc -l)"
+    if [ "$n" -gt 0 ]; then
+        tar czf "$W/totalseg_masks.tgz" -C "$W" out check results
+        say "$n masks + results -> $W/totalseg_masks.tgz ($(du -h "$W/totalseg_masks.tgz" | cut -f1)); send that file"
+    else
+        say "no masks yet"
+    fi
+}
+
+status() {
+    local rj; rj="$(running_job || true)"
+    [ -n "$rj" ] && say "job: $rj"
+    say "inputs on scratch: $(find "$W/in" -name '*.nii.gz' ! -name '*.part' | wc -l) of $(grep -c '"item_id"' "$HERE/inputs.json")"
+    say "masks: $(find "$W/out" -name '*__totalseg-coronary.nii.gz' 2>/dev/null | wc -l)"
+    [ -e "$W/DONE" ] && say "DONE"
+    tail -n 4 "$W"/logs/slurm-*.out 2>/dev/null || true
+}
+
+case "$MODE" in
+    status)  status; exit 0 ;;
+    collect) collect; exit 0 ;;
+    run) ;;
+    *) die "unknown mode '$MODE' (use: ./totalseg | ./totalseg status | ./totalseg collect)" ;;
+esac
+
+if [ -e "$W/DONE" ]; then say "finished"; collect; exit 0; fi
+RJ="$(running_job || true)"
+if [ -n "$RJ" ]; then say "already queued/running: $RJ (not submitting again)"; exit 0; fi
+
+# ---- 0. keep icx14 from starting first -------------------------------------------------------------------
+NEXT="$(squeue -u "$USER" --name icx14 -h -t PENDING -o '%i' | sort -n | head -n 1)"
+REORDERED=0
+release_on_exit() {
+    if [ -n "$NEXT" ] && [ "$REORDERED" = "0" ]; then
+        scontrol release "$NEXT" >/dev/null 2>&1 && say "released icx14 job $NEXT unchanged (TotalSegmentator job not submitted)"
+    fi
+}
+if [ -n "$NEXT" ]; then
+    scontrol hold "$NEXT" && say "holding icx14 job $NEXT while this sets up"
+    trap release_on_exit EXIT
+    trap 'exit 130' HUP INT TERM
+else
+    say "no pending icx14 job to reorder$(squeue -u "$USER" --name icx14 -h -t RUNNING -o ' (icx14 job %i is running)')"
+fi
+
+# ---- 1. venv, licence, weights ---------------------------------------------------------------------------
+module purge >/dev/null 2>&1 || true
+module load StdEnv/2023 python/3.11.5
+if [ ! -f "$VENV/.totalseg_ok" ]; then
+    say "building venv $VENV (one-off, a few minutes)"
+    virtualenv --no-download "$VENV"
+    # shellcheck disable=SC1091
+    source "$VENV/bin/activate"
+    pip install --no-index --upgrade pip
+    pip install --no-index torch            # Alliance wheel, CUDA-enabled
+    pip install "TotalSegmentator==$TS_VERSION"
+    deactivate
+    touch "$VENV/.totalseg_ok"
+fi
+# shellcheck disable=SC1091
+source "$VENV/bin/activate"
+python -c "import totalsegmentator, torch; print('[totalseg] venv ok: torch', torch.__version__)"
+if ! grep -q '"license_number"' "$HOME/.totalsegmentator/config.json" 2>/dev/null; then
+    [ -n "${TOTALSEG_LICENSE:-}" ] || die "no TotalSegmentator licence stored; run once as TOTALSEG_LICENSE=aca_... ./totalseg"
+    totalseg_set_license -l "$TOTALSEG_LICENSE"
+fi
+for t in coronary_arteries total_fast; do       # total_fast holds the 6 mm model used to crop to the heart
+    totalseg_download_weights -t "$t" | tail -n 1
+done
+
+# ---- 2. inputs from Girder -------------------------------------------------------------------------------
+python "$LIB/fetch.py" "$HERE/inputs.json" "$W/in"
+
+# ---- 3. submit, then put the icx14 job behind it ---------------------------------------------------------
+JOB="$W/job.sh"
+cat > "$JOB" <<EOF
+#!/bin/bash
+#SBATCH --job-name=$JOBNAME
+#SBATCH --nodes=1
+#SBATCH --gpus-per-node=1
+#SBATCH --time=$WALLTIME
+#SBATCH --output=$W/logs/slurm-%j.out
+#SBATCH --account=${ACCOUNT:-def-aso22}
+set -uo pipefail
+echo "=== totalseg job \${SLURM_JOB_ID} on \$(hostname) at \$(date -Is) ==="
+module purge; module load StdEnv/2023 python/3.11.5 cuda/12.6
+source "$VENV/bin/activate"
+nvidia-smi --query-gpu=name,memory.total --format=csv || true
+export PYTHONUNBUFFERED=1 TS_DEADLINE=\$(( \$(date +%s) + 11 * 3600 + 30 * 60 ))
+python "$LIB/run.py" "$W" "$HERE/inputs.json"
+echo "=== totalseg job finished \$(date -Is) ==="
+EOF
+chmod +x "$JOB"
+cd "$W"
+TSJ="$(sbatch --parsable "$JOB")"
+echo "$TSJ" >> "$W/submitted_jobs"
+say "submitted TotalSegmentator job $TSJ"
+if [ -n "$NEXT" ]; then
+    scontrol update JobId="$NEXT" Dependency="afterany:$TSJ"
+    REORDERED=1
+    scontrol release "$NEXT"
+    say "icx14 job $NEXT now waits for $TSJ (afterany) and is released"
+fi
+squeue -u "$USER" -o '%.10i %.9P %.10j %.2t %.10M %.10l %R'
+say "watch: ./totalseg status    when finished: ./totalseg collect"

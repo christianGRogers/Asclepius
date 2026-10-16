@@ -26,6 +26,11 @@ INCOMING_FOLDER = "incoming"
 LIVE_COLLECTION_NAME = "SegQueue"
 ICX_FOLDER = "imagecas-x"
 ICX_SEGMENTATIONS_FOLDER = "segmentations"
+#: The pooled new datasets (D22, D23): ``SegQueue/cases`` holds one CT item per
+#: volume (``<Source>__<Case>.nii.gz``), ``SegQueue/seeds-totalseg`` one binary
+#: vessel seed per CT (``<Source>__<Case>__totalseg-coronary.nii.gz``). Read only.
+POOL_FOLDER = "cases"
+SEEDS_FOLDER = "seeds-totalseg"
 
 #: The live plugin's Mongo collection of cases. Read, never written, by
 #: ``segqueue14-populate``.

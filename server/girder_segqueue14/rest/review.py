@@ -673,7 +673,7 @@ class ReviewResource14(Resource):
     @autoDescribeRoute(
         Description('Download a helper mask that ships with any case.')
         .param('caseId', 'The case.', paramType='path')
-        .param('kind', 'region, prelabel or reference (ImageCAS-X).',
+        .param('kind', 'region, prelabel, seed or reference (ImageCAS-X).',
                paramType='path', enum=list(protocol.REVIEW_ASSET_KINDS))
     )
     def downloadCaseAsset(self, caseId, kind):
@@ -686,6 +686,7 @@ class ReviewResource14(Resource):
                    status=400)
         fileId = case.get({protocol.ASSET_REGION: 'regionFileId',
                            protocol.ASSET_PRELABEL: 'prelabelFileId',
+                           protocol.ASSET_SEED: 'seedFileId',
                            protocol.ASSET_REFERENCE: 'referenceFileId'}[kind])
         if not fileId:
             # Most cases ship neither, and the client asks for both on every one,

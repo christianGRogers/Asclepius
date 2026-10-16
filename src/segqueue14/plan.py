@@ -353,6 +353,62 @@ def new_case_name(dataset: str, item_name: str) -> str:
     return f"{dataset}_{stem}"
 
 
+# ----------------------------------------------------- the pooled new data
+
+#: Suffix the seed masks carry next to their CT's name (D23):
+#: ``<CT name without extension>__totalseg-coronary.nii.gz``.
+SEED_SUFFIX = "__totalseg-coronary"
+#: What a pooled case's seed is, recorded on the case.
+SEED_SOURCE_TOTALSEG = "TotalSegmentator 2.18.0 coronary_arteries (binary)"
+
+
+def read_include_list(text: str) -> list:
+    """Volume names from a pool list, in order: one per line, ``#`` comments and
+    blank lines ignored, duplicates dropped (first kept)."""
+    names, seen = [], set()
+    for line in text.splitlines():
+        name = line.split("#", 1)[0].strip()
+        if name and name not in seen:
+            seen.add(name)
+            names.append(name)
+    return names
+
+
+def pool_case_name(item_name: str) -> str:
+    """A pooled volume's case name: its item name without the extension.
+
+    The pool's item names are already ``<Source>__<Case>[__<Part>]`` (D22), so
+    they are kept as they are, made safe for a folder name in an export.
+    """
+    stem = strip_volume_suffix(item_name)
+    return re.sub(r"[^A-Za-z0-9_.-]+", "_", stem).strip("._-") or "case"
+
+
+def pool_dataset(item_name: str, meta: Optional[dict] = None) -> str:
+    """The dataset tag of a pooled volume: its ``source`` metadata, else the part
+    of its name before the first ``__``."""
+    source = str((meta or {}).get("source") or "").strip()
+    if not source:
+        stem = strip_volume_suffix(item_name)
+        source = stem.split("__", 1)[0] if "__" in stem else ""
+    tag = re.sub(r"[^A-Za-z0-9_.-]+", "-", source).strip("._-")
+    return tag or "pool"
+
+
+def seed_name_for(item_name: str) -> str:
+    """The seed mask item name that belongs to a pooled CT item name."""
+    return strip_volume_suffix(item_name) + SEED_SUFFIX + ".nii.gz"
+
+
+def plan_pool_case(item_name: str, meta: Optional[dict] = None,
+                   priority: Optional[int] = None,
+                   replicas: Optional[int] = None) -> CasePlan:
+    """A volume from the pooled new datasets (D23): no reference, so two reads
+    (D11, as for every unlabelled case); its dataset from its own name."""
+    return plan_new_dataset_case(pool_case_name(item_name), pool_dataset(item_name, meta),
+                                 priority=priority, replicas=replicas)
+
+
 # ---------------------------------------------------------- prelabel rules
 
 ATTACH = "attach"

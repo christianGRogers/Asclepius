@@ -206,10 +206,15 @@ def test_the_prelabel_goes_into_the_project_segments_by_label_value():
     assert "values == int(spec.label)" in body
 
 
-def test_there_is_no_seed_left():
+def test_the_vessel_seed_is_a_helper_and_never_a_class():
+    # D23: the binary seed is shown beside the classes, as the heart region is,
+    # so exportLabelmap (the project's own segments only) can never submit it.
     source = _source()
-    assert "ASSET_SEED" not in source and "SEED_SEGMENT_NAME" not in source
-    assert "seedSegmentId" not in source
+    loader = ast.get_source_segment(source, _method("SegQueue14Logic", "_loadHelpers"))
+    assert "protocol.ASSET_SEED" in loader and "protocol.SEED_SEGMENT_NAME" in loader
+    assert "_fetchHelper" in loader and "importLabelsIntoProject" not in loader
+    helpers = ast.get_source_segment(source, _method("SegQueue14Logic", "helperIds"))
+    assert "seedSegmentId" in helpers and "regionSegmentId" in helpers
 
 
 @pytest.mark.parametrize("method", ["submit", "reviseSubmission"])

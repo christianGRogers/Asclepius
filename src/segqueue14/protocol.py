@@ -10,8 +10,12 @@ having a separate contract:
   every write. There are no legacy SegQueue14 clients to protect, so unlike the
   live check a *missing* version is refused too: a client that does not say what
   it speaks is not one that was written for this server.
-* **A ``prelabel`` asset** instead of the binary coronary ``seed`` (D8, D10):
+* **A ``prelabel`` asset** instead of the live binary coronary ``seed`` (D8, D10):
   the 14-class model's prediction, loaded straight into the project segments.
+* **A ``seed`` asset of its own** (D23): for the pooled new datasets, an
+  automatic *binary* vessel mask (TotalSegmentator ``coronary_arteries``) that the
+  annotator divides into the 14 classes. It is a helper segment, like the heart
+  region, and is structurally unable to reach a submission.
 * **``missing_required``** -- D13's submit rule, refused by name.
 
 Stdlib only, Python 3.9, like the rest of the shared code.
@@ -106,16 +110,22 @@ ASSET_REGION = "region"
 #: into the project's own segments, edited, and submitted -- unlike every other
 #: asset it *is* the work, once corrected.
 ASSET_PRELABEL = "prelabel"
+#: A binary (0/1) vessel mask on the CT grid -- an automatic segmentation of the
+#: coronary tree with no classes (D23). Shown beside the project segments as a
+#: guide to divide into the 14 classes; never submitted.
+ASSET_SEED = "seed"
 #: What an annotator may fetch. The ImageCAS-X reference is deliberately absent:
 #: an annotator who could download it could copy it.
-ASSET_KINDS = (ASSET_REGION, ASSET_PRELABEL)
+ASSET_KINDS = (ASSET_REGION, ASSET_PRELABEL, ASSET_SEED)
 #: Reviewers may additionally fetch the ImageCAS-X reference for a case, to see
 #: what a low reference score is measured against.
 ASSET_REFERENCE = "reference"
-REVIEW_ASSET_KINDS = (ASSET_REGION, ASSET_PRELABEL, ASSET_REFERENCE)
+REVIEW_ASSET_KINDS = (ASSET_REGION, ASSET_PRELABEL, ASSET_SEED, ASSET_REFERENCE)
 
 #: The heart helper's segment name; prefixed so it cannot collide with a class.
 REGION_SEGMENT_NAME = "~ heart region (not submitted)"
+#: The binary vessel seed's segment name (D23); prefixed like the region's.
+SEED_SEGMENT_NAME = "~ vessel seed (not submitted)"
 REFERENCE_SEGMENT_PREFIX = "~ ImageCAS-X "
 
 
@@ -126,7 +136,8 @@ REFERENCE_SEGMENT_PREFIX = "~ ImageCAS-X "
 class AssignmentInfo14(AssignmentInfo):
     """The live ``AssignmentInfo`` plus the prelabel the case ships.
 
-    ``has_seed`` is always False here (D8: the binary seed is not shipped).
+    ``has_seed`` says the case ships a binary vessel seed (D23) -- never the live
+    project's ImageCAS seed (D8), which SegQueue14 does not reference.
     ``prelabel_version`` is shown to the annotator only as provenance; it says
     nothing about whether the case is scored or duplicated -- blind stays blind.
     """

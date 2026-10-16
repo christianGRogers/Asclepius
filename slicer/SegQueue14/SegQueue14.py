@@ -108,6 +108,11 @@ REVIEW_DECIDED_STATES = frozenset({"approved", "released"})
 #: Opacity of the 14 classes in the 3D view when a case opens: solid enough to
 #: read which branch is which, the question a correction starts from.
 PRELABEL_3D_OPACITY = 0.85
+#: The binary vessel seed (D23): yellow, a light fill in 2D, faint in 3D, so the
+#: classes painted over it stand out against it.
+SEED_COLOR = (0.95, 0.85, 0.20)
+SEED_FILL = 0.25
+SEED_3D_OPACITY = 0.30
 
 #: Settings keys: SegQueue14's own, so the two modules can point at different
 #: servers or caches without either overwriting the other's.
@@ -151,6 +156,8 @@ class SegQueue14Logic(ScriptedLoadableModuleLogic):
         self._sessionStart = None
         #: Segment id of the heart helper, when the case ships one.
         self.regionSegmentId = None
+        #: Segment id of the binary vessel seed (D23), when the case ships one.
+        self.seedSegmentId = None
         #: Whether this case opened from an autosaved draft rather than fresh.
         self.resumedDraft = False
         #: How many of the 14 classes the prelabel filled on this open.
@@ -272,18 +279,26 @@ class SegQueue14Logic(ScriptedLoadableModuleLogic):
     # ------------------------------------------------------- helper masks
 
     def _loadHelpers(self, assignment):
-        """Bring the case's heart mask into the scene, as a helper segment.
+        """Bring the case's heart mask and vessel seed into the scene, as helpers.
 
         Scaffolding only: ``exportLabelmap`` copies the project's own segments,
-        so the helper is structurally unable to reach the server. There is no
-        coronary seed in SegQueue14 (D8) -- the prelabel replaces it, and goes
-        into the project's segments rather than beside them.
+        so a helper is structurally unable to reach the server. The live
+        project's ImageCAS seed is never shipped (D8); a pooled new-dataset case
+        may ship its own binary vessel seed (D23) -- an automatic outline of the
+        whole tree, with no classes, for the annotator to divide into the 14
+        (Segment Editor: Islands to pick a branch, Logical operators to add it to
+        a class).
         """
         self.regionSegmentId = self._helperId(protocol.REGION_SEGMENT_NAME)
         if assignment.has_region and self.regionSegmentId is None:
             self.regionSegmentId = self._fetchHelper(
                 assignment, protocol.ASSET_REGION,
                 protocol.REGION_SEGMENT_NAME, (0.85, 0.55, 0.55), fill=0.08)
+        self.seedSegmentId = self._helperId(protocol.SEED_SEGMENT_NAME)
+        if assignment.has_seed and self.seedSegmentId is None:
+            self.seedSegmentId = self._fetchHelper(
+                assignment, protocol.ASSET_SEED,
+                protocol.SEED_SEGMENT_NAME, SEED_COLOR, fill=SEED_FILL)
 
     # ------------------------------------------------------------ prelabel
 
@@ -440,7 +455,7 @@ class SegQueue14Logic(ScriptedLoadableModuleLogic):
         return segmentId
 
     def helperIds(self):
-        return [s for s in (self.regionSegmentId,) if s]
+        return [s for s in (self.regionSegmentId, self.seedSegmentId) if s]
 
     def showPrelabelIn3d(self, on=True):
         """Show the 14 classes in the 3D view and keep the heart helper out of it.
@@ -461,6 +476,10 @@ class SegQueue14Logic(ScriptedLoadableModuleLogic):
         segmentation = self.segmentationNode.GetSegmentation()
         for i in range(segmentation.GetNumberOfSegments()):
             segmentId = segmentation.GetNthSegmentID(i)
+            if segmentId == self.seedSegmentId:
+                # The seed's shape is the whole point of it: faint, but in 3D.
+                display.SetSegmentOpacity3D(segmentId, SEED_3D_OPACITY if on else 0.0)
+                continue
             visible = bool(on) and segmentId not in helpers
             display.SetSegmentOpacity3D(segmentId, PRELABEL_3D_OPACITY if visible else 0.0)
             shown += int(visible)
@@ -2236,6 +2255,17 @@ class SegQueue14Widget(ScriptedLoadableModuleWidget):
             self.logic.segmentationNode.SetReferenceImageGeometryParameterFromVolumeNode(
                 self.logic.volumeNode)
 
+        self.logic.seedSegmentId = None
+        path = os.path.join(directory, "case_seed.nii.gz")
+        try:
+            got = self.logic.client.downloadCaseAsset(
+                case["caseId"], protocol.ASSET_SEED, path)
+        except SegQueueError:
+            got = None
+        if got:
+            self.logic.seedSegmentId = self.logic._importHelper(
+                path, protocol.SEED_SEGMENT_NAME, SEED_COLOR, SEED_FILL)
+
         self.logic.regionSegmentId = None
         path = os.path.join(directory, "case_region.nii.gz")
         try:
@@ -2323,6 +2353,8 @@ class SegQueue14Widget(ScriptedLoadableModuleWidget):
                 _escape(project.instructions), "".join(rows)))
 
     def _prelabelText(self, assignment):
+        if not assignment.has_prelabel and assignment.has_seed:
+            return " · <i>vessel seed: divide it into the classes</i>"
         if not assignment.has_prelabel:
             return " · <i>no prelabel: draw from scratch</i>"
         filled = self.logic.prelabelClasses if self.logic else 0

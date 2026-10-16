@@ -254,7 +254,10 @@ def test_population_references_the_live_files_and_orders_by_imagecas_x(world):
         assert cases[name]["regionFileId"] == live["regionFileId"]
         assert cases[name]["sourceCaseId"] == liveId
         assert cases[name]["checksum"] == live["checksum"]
-        assert "seedFileId" not in cases[name], "D8: no binary seed"
+        # D8: the live ImageCAS seed is never referenced (a pool case's own
+        # TotalSegmentator seed is a different thing, D23).
+        assert cases[name].get("seedFileId") is None, "D8: no binary seed"
+        assert cases[name]["seedFileId"] != live["seedFileId"]
     assert cases["imagecas_0001"]["referenceFileId"] == world.references["imagecas_0001"]
     assert cases["imagecas_0010"]["referenceFileId"] is None
 
@@ -550,7 +553,8 @@ def test_a_read_missing_a_required_class_is_refused_and_a_good_one_is_scored(wor
     assert not info["hasSeed"] and info["hasRegion"]
     queue.downloadCase(caseId=info["caseId"])
     queue.downloadAsset(caseId=info["caseId"], kind="prelabel")
-    assert _refusal(queue.downloadAsset, caseId=info["caseId"], kind="seed").code == 400
+    # A seed is a real asset kind now (D23), but ImageCAS cases never ship one.
+    assert _refusal(queue.downloadAsset, caseId=info["caseId"], kind="seed").code == 404
     assert _refusal(queue.downloadAsset, caseId=info["caseId"], kind="reference").code == 400
 
     truth = _tree(np)
@@ -747,3 +751,78 @@ def test_a_broken_or_disabled_segqueue14_never_stops_girder(world, monkeypatch):
     monkeypatch.setenv("SEGQUEUE14_STRICT", "1")
     with pytest.raises(RuntimeError):
         fresh().load({"apiRoot": root})
+
+
+# ------------------------------------------------------------- the pool (D23)
+# Last in the file: pool cases are priority 200, above the held-out test cases,
+# so they must not exist while the serve-order tests run.
+
+
+def test_the_pool_creates_listed_cases_with_their_seeds_and_attaches_late_seeds(world):
+    import numpy as np
+    from girder.models.collection import Collection
+    from girder.models.folder import Folder
+    from girder.models.item import Item
+    from girder_segqueue14 import populate
+    from girder_segqueue14.models import Case14
+    from girder_segqueue14.rest.queue import assignmentInfo
+
+    before = _liveSnapshot(world)
+    coll = Collection().createCollection("PoolTest", creator=world.admin, public=False)
+    cases = Folder().createFolder(coll, "cases", parentType="collection", creator=world.admin)
+    seeds = Folder().createFolder(coll, "seeds", parentType="collection", creator=world.admin)
+    names = ["SetA__p1.nii.gz", "SetA__p2.nii.gz", "SetB__x9.nii.gz"]
+    for name in names + ["SetC__unlisted.nii.gz"]:
+        ct = _upload(_nifti(world.data / name, np.full((8, 8, 8), 300, np.int16)), cases,
+                     world.admin)
+        Item().setMetadata(Item().load(ct["itemId"], force=True), {"source": name.split("__")[0]})
+    seedArray = np.zeros((8, 8, 8), np.uint8)
+    seedArray[2:5, 2:5, 2:5] = 1
+    for name in names[:2]:
+        seedName = name.replace(".nii.gz", "__totalseg-coronary.nii.gz")
+        _upload(_nifti(world.data / seedName, seedArray), seeds, world.admin)
+
+    lines = []
+    kwargs = dict(poolFolderId=cases["_id"], seedFolderId=seeds["_id"], startOrder=1000,
+                  out=lines.append)
+    dry = populate.populatePool(world.admin, names + ["SetZ__missing.nii.gz"], dryRun=True,
+                                **kwargs)
+    assert dry["create"] == 3 and dry["missing"] == 1 and Case14().findOne(
+        {"name": "SetA__p1"}) is None
+    held = populate.populatePool(world.admin, names, requireSeed=True, **kwargs)
+    assert held["create"] == 2 and held["noSeed"] == 1
+    assert Case14().findOne({"name": "SetB__x9"}) is None
+
+    summary = populate.populatePool(world.admin, names, **kwargs)
+    assert summary["create"] == 1 and summary["same"] == 2
+    # Serve order is the list position, whichever run created the case.
+    assert [Case14().findOne({"name": n[:-7]})["serveOrder"] for n in names] == [1000, 1001, 1002]
+    p1 = Case14().findOne({"name": "SetA__p1"})
+    assert p1["dataset"] == "SetA" and p1["tier"] == "new-dataset"
+    assert p1["replicasWanted"] == 2 and p1["referenceFileId"] is None
+    assert p1["seedFileId"] and "TotalSegmentator" in p1["seedSource"]
+    assert len(p1["checksum"]) == 64
+    assert Case14().findOne({"name": "SetC__unlisted"}) is None
+    x9 = Case14().findOne({"name": "SetB__x9"})
+    assert x9["seedFileId"] is None
+
+    # The seed for x9 arrives later: a plain re-run attaches it, nothing else changes.
+    _upload(_nifti(world.data / "SetB__x9__totalseg-coronary.nii.gz", seedArray), seeds,
+            world.admin)
+    again = populate.populatePool(world.admin, names, **kwargs)
+    assert again["seed"] == 1 and again["same"] == 2 and again["create"] == 0
+    x9 = Case14().findOne({"name": "SetB__x9"})
+    assert x9["seedFileId"]
+
+    # The annotator is told there is a seed, and a reviewer can fetch it.
+    info = assignmentInfo({"_id": x9["_id"], "caseId": x9["_id"], "state": "assigned"})
+    assert info.has_seed and not info.has_prelabel
+    api = _resource()
+    _as(world.people["revy"])
+    api.downloadCaseAsset(caseId=str(x9["_id"]), kind="seed")
+
+    # Nothing of the live project changed; the pool cases are retired again so
+    # the run leaves the queue as the tests above expect it.
+    assert _liveSnapshot(world) == before
+    Case14().collection.update_many({"dataset": {"$in": ["SetA", "SetB"]}},
+                                    {"$set": {"retired": True}})

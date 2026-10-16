@@ -58,6 +58,7 @@ class Case14(AccessControlledModel):
         self.exposeFields(level=AccessType.SITE_ADMIN, fields={
             'tier', 'split', 'blindDuplicate', 'referenceFileId', 'prelabelFileId',
             'prelabelHistory', 'sourceCaseId', 'fileId', 'regionFileId',
+            'seedFileId', 'seedSource',
         })
 
     def validate(self, doc):
@@ -80,6 +81,8 @@ class Case14(AccessControlledModel):
         doc.setdefault('target', 'coronary-14')
         doc.setdefault('checksum', '')
         doc.setdefault('regionFileId', None)
+        doc.setdefault('seedFileId', None)
+        doc.setdefault('seedSource', '')
         doc.setdefault('referenceFileId', None)
         doc.setdefault('prelabelFileId', None)
         doc.setdefault('prelabelVersion', '')
@@ -96,13 +99,15 @@ class Case14(AccessControlledModel):
                    priority=0, serveOrder=0, replicasWanted=1, tier='', dataset='',
                    split=None, blindDuplicate=False, referenceFileId=None,
                    regionFileId=None, sourceCaseId=None, geometryFixed=False,
-                   target='coronary-14'):
+                   target='coronary-14', seedFileId=None, seedSource=''):
         now = _now()
         return self.save({
             'name': name,
             'fileId': fileId,
             'sourceCaseId': sourceCaseId,
             'regionFileId': regionFileId,
+            'seedFileId': seedFileId,
+            'seedSource': seedSource or '',
             'referenceFileId': referenceFileId,
             'prelabelFileId': None,
             'prelabelVersion': '',

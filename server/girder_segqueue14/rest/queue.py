@@ -6,8 +6,10 @@ Adapted from ``girder_segqueue.rest.queue``. The differences:
 * ``/next`` serves strictly in the order the population tool wrote (priority,
   then serveOrder): no gold injection and no random duplicates, because both are
   data here (D11, D14, D16).
-* the ``prelabel`` asset replaces the binary ``seed`` (D8, D10), and serving it
-  records which model version the read starts from;
+* the ``prelabel`` asset replaces the live binary ``seed`` (D8, D10), and serving
+  it records which model version the read starts from; pooled new-dataset cases
+  ship their own binary vessel ``seed`` instead (D23), a guide that is never
+  submitted;
 * ``/submit`` refuses a read whose LAD, LCx or RCA is empty (D13);
 * every write -- and ``/project``, which the module calls at login -- checks the
   SegQueue14 protocol version, so an out-of-date module is told to update before
@@ -72,7 +74,7 @@ def assignmentInfo(assignment):
         deadline=deadline.timestamp() if deadline else None,
         reviewer_comment=assignment.get('reviewerComment', ''),
         has_region=bool(case.get('regionFileId')),
-        has_seed=False,
+        has_seed=bool(case.get('seedFileId')),
         has_prelabel=bool(case.get('prelabelFileId')),
         prelabel_version=case.get('prelabelVersion') or '',
     )
@@ -202,12 +204,13 @@ class QueueResource14(Resource):
 
     @access.user
     @autoDescribeRoute(
-        Description('Download a case\'s prelabel or heart-region mask.')
+        Description('Download a case\'s prelabel, vessel seed or heart-region mask.')
         .notes('``prelabel`` is the 14-class model prediction the annotator '
-               'corrects; ``region`` is the heart mask that frames the view. A 404 '
-               'means the case has none of that kind.')
+               'corrects; ``seed`` is a binary vessel mask to divide into the 14 '
+               'classes (D23); ``region`` is the heart mask that frames the view. '
+               'A 404 means the case has none of that kind.')
         .modelParam('caseId', 'The case.', model=Case14, force=True, destName='case')
-        .param('kind', 'prelabel or region.', paramType='path')
+        .param('kind', 'prelabel, seed or region.', paramType='path')
         .errorResponse('That case is not assigned to you.', 403)
         .errorResponse('This case has no asset of that kind.', 404)
     )
@@ -216,8 +219,9 @@ class QueueResource14(Resource):
         if kind not in protocol.ASSET_KINDS:
             refuse(protocol.ERR_NO_ASSET, f'Unknown asset kind {kind!r}.', status=400)
         assignment = self._requireOpenAssignment(case, user)
-        fileId = case.get('prelabelFileId' if kind == protocol.ASSET_PRELABEL
-                          else 'regionFileId')
+        fileId = case.get({protocol.ASSET_PRELABEL: 'prelabelFileId',
+                           protocol.ASSET_SEED: 'seedFileId',
+                           protocol.ASSET_REGION: 'regionFileId'}[kind])
         if not fileId:
             refuse(protocol.ERR_NO_ASSET, f'This case has no {kind}.', status=404)
         file = File().load(fileId, force=True)

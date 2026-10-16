@@ -16,11 +16,11 @@ SegQueue, on the same database, and shares nothing writable with it:
 | Worker | `segqueue-score` | `segqueue14-score` |
 | Slicer module | SegQueue | SegQueue14 |
 
-What SegQueue14 **reads** from the live project, and never writes, moves or
-deletes: the `segqueue_case` documents (once, when populating), and the files in the
-`SegQueue` collection -- the CT volumes and heart masks the live cases point at, and
-the ImageCAS-X items in `SegQueue/imagecas-x`. SegQueue14 cases store those file ids;
-the ~110 GB of CT is not copied.
+What SegQueue14 **reads**, and never writes, moves or deletes: the files in the
+`SegQueue` collection -- the pooled CT volumes in `SegQueue/cases` and their seeds in
+`SegQueue/seeds-totalseg` (D22, D23). SegQueue14 cases store those file ids; no CT is
+copied. (The ImageCAS mode of `segqueue14-populate` would also read the live
+`segqueue_case` documents; the D23 plan does not use it.)
 
 A SegQueue14 load failure is logged, not raised, so a broken SegQueue14 install cannot
 stop Girder (and with it SegQueue) from starting.
@@ -31,6 +31,25 @@ The commands below are for janus.bradensbay.com, which runs natively
 that owns the checkout.
 
 ---
+
+## Quick path: `deploy/segqueue14-deploy.sh`
+
+Steps 0, 1, 3 and 5 below as one script, run on the server from any directory:
+
+```sh
+git clone -q --branch claude/segqueue14 "$(git -C ~/Asclepius remote get-url origin)" ~/Asclepius-sq14
+D=~/Asclepius-sq14/deploy/segqueue14-deploy.sh
+bash $D install            # backup, install, restart Girder, check both plugins
+bash $D populate           # dry run of the pool
+bash $D populate --apply   # create the pool cases that have a seed
+bash $D worker             # SegQueue14 scoring worker
+bash $D status             # counts; `off` is the rollback switch
+```
+
+It never checks a branch out in `~/Asclepius` and never reinstalls the live plugin: the
+branch is cloned into `~/Asclepius-sq14`, and only the repository root (the shared
+`segqueue`/`segqueue14` packages, `--no-deps`) and `girder-segqueue14` are installed
+into the live venv. The steps below are what it does, for doing it by hand.
 
 ## 0. Before anything: a backup
 
@@ -43,17 +62,15 @@ this is the one moment where a restore point costs nothing.
 
 ## 1. Install the code
 
-The code is on the branch `claude/segqueue14`. It only adds files, plus one line in
-`server/pyproject.toml` that makes the live distribution's package list exact (so it
-cannot sweep up `girder_segqueue14`; the live wheel's contents are unchanged). Merge
-it into `main` after review, then:
+From a separate clone of the branch, so the live checkout and the live plugin stay as
+they are (the branch also carries default-text edits to the live plugin; reinstalling
+`./server` from it would apply them):
 
 ```sh
-cd ~/Asclepius && git fetch origin && git checkout main && git pull
-.venv/bin/python -m pip install .                                   # segqueue + segqueue14 (src/)
-.venv/bin/python -m pip install "./server[scoring]"                 # the live plugin, as before
-.venv/bin/python -m pip install "./server/girder_segqueue14[scoring]" # the new plugin
-.venv/bin/python -c "import girder_segqueue14, segqueue14; print('segqueue14 protocol', segqueue14.PROTOCOL_VERSION)"
+git clone --branch claude/segqueue14 "$(git -C ~/Asclepius remote get-url origin)" ~/Asclepius-sq14
+~/Asclepius/.venv/bin/python -m pip install --no-deps ~/Asclepius-sq14                       # segqueue + segqueue14 (src/)
+~/Asclepius/.venv/bin/python -m pip install "$HOME/Asclepius-sq14/server/girder_segqueue14[scoring]" # the new plugin
+~/Asclepius/.venv/bin/python -c "import girder_segqueue14, segqueue14; print('segqueue14 protocol', segqueue14.PROTOCOL_VERSION)"
 ```
 
 Girder 5 loads every installed plugin; there is no enable step. To install now but
@@ -85,67 +102,55 @@ it does). Check in the Girder web UI under **Groups**: `segqueue14-annotators`,
   optional `reviewer`, `quota`), which creates the user and adds them to the group.
 * Start with **one test account** in both groups for VALIDATION.md, nobody else.
 
-## 3. Populate the cases
+## 3. Populate the cases: the 675 pooled volumes (D23)
+
+The queue is **only** the 2026-10 pool: the 675 new volumes in `SegQueue/cases` listed
+in `configs/segqueue14/pool-2026-10.txt` (QC "annotatable" first, then "limited", then
+the three sets with suspect header spacing). None of the ImageCAS cases are queued --
+the 800 ImageCAS-X cases are already labelled and live in their own `ImageCAS-X`
+collection (D22). Each case ships its binary TotalSegmentator vessel mask from
+`SegQueue/seeds-totalseg` as a guide the annotator divides into the 14 classes; it is
+a helper segment and is never submitted. Two reads per case (D11, unlabelled).
 
 ```sh
 export GIRDER_MONGO_URI=mongodb://127.0.0.1:27017/girder
 cd ~/Asclepius
-.venv/bin/segqueue14-populate --dry-run
+.venv/bin/segqueue14-populate --pool-list ~/Asclepius-sq14/configs/segqueue14/pool-2026-10.txt --require-seed --dry-run
 ```
 
-Read the summary before going on. It should say about:
-
-```
-ImageCAS-X references: 800; splits: 1000 ids from <source>
-would create 1000, ... blind duplicates 80.
-  icx-trainval           p400  640 cases, 704 reads
-  imagecas-unlabelled    p300  200 cases, 400 reads
-  icx-test               p100  160 cases, 176 reads
-```
-
-* `splits: none found` -> the ImageCAS-X file lists are not in Girder in a form the
-  tool recognises (file-list items `train.txt`/`val.txt`/`test.txt`/`exclude.txt`
-  anywhere under `SegQueue/imagecas-x`, `splits` metadata on that folder, or a `split`
-  key on each segmentation item). Point it at a local copy instead:
-  `--splits-dir /path/to/ImageCAS-X/filelist`. It refuses to populate without splits,
-  because the test cases would not then be last (D16).
-* `- imagecas_NNNN: ...skipped` lines name every case left out and why (no reference
-  for a listed case, a reference without a split, retired in the live SegQueue).
-* Options: `--duplicate-fraction 0.10` (D11), `--priority-trainval 400`,
-  `--priority-unlabelled 300`, `--priority-new 200`, `--priority-test 100`,
-  `--icx-folder <id>` if ImageCAS-X is not at `SegQueue/imagecas-x`.
-
-Then for real (idempotent; a re-run creates only what is missing):
+It should say `pool: 675 listed, ... items in cases, N seeds in seeds-totalseg`, then
+`would create N` with `not found 0` and one line per dataset. `--require-seed` leaves
+out the volumes whose seed is not uploaded yet (the CPU batch is still producing them,
+in the same order as the list), so nobody is served a case without one. Then for real
+(it hashes each CT once, so it takes a while):
 
 ```sh
-.venv/bin/segqueue14-populate
+.venv/bin/segqueue14-populate --pool-list ~/Asclepius-sq14/configs/segqueue14/pool-2026-10.txt --require-seed
 ```
 
-## 4. Attach the prelabels
+**Re-run the same command** whenever more seeds have landed (e.g. daily until the batch
+is done): it adds the newly seeded volumes in their list positions and changes nothing
+else. Without `--require-seed` every volume is created at once and a seed that appears
+later is attached by the next run.
 
-Copy the 14-class model's predictions to the server (`trillium/icx14`: they are
-`$SCRATCH/icx14/predictions/c0000.nii.gz ... c0999.nii.gz`, uint8 on each CT's grid),
-e.g. into `~/segqueue-data/prelabels/icx14-v1/`. `cNNNN` names map to `imagecas_{N+1}`
-automatically; files named `imagecas_NNNN.nii.gz` work too.
+Options: `--pool-replicas 1` (one read instead of two; `--update` applies it to existing
+cases), `--priority-new 200`, `--pool-folder <id>` / `--seed-folder <id>` if the
+folders are not `SegQueue/cases` and `SegQueue/seeds-totalseg`, `--no-hash`.
+
+## 4. Prelabels (later, optional)
+
+Not needed to start: the pool cases begin from the seed. When a 14-class model
+(icx14) has predicted the pool volumes, attach its predictions as prelabels -- files
+named `<Source>__<Case>.nii.gz`, uint8 on each CT's grid:
 
 ```sh
 .venv/bin/segqueue14-prelabels attach --dir ~/segqueue-data/prelabels/icx14-v1 \
     --model-version icx14-v1 --verify-grid --dry-run
-.venv/bin/segqueue14-prelabels attach --dir ~/segqueue-data/prelabels/icx14-v1 \
-    --model-version icx14-v1 --verify-grid
-.venv/bin/segqueue14-prelabels status
 ```
 
-`--verify-grid` compares each prelabel's header with its CT's (a few KB read per CT).
-Files go to `SegQueue14/prelabels/icx14-v1/<case>.prelabel.nii.gz`; the version is
-recorded on the case and copied onto each assignment and submission. A single case
-can also be attached over REST (`POST /api/v1/segqueue14/prelabels/attach`, admin).
-
-**The D15 refresh, later** (after ~300 corrected cases and a fine-tune): the same
-command with the new directory and a new `--model-version`. It refreshes only cases
-nobody has submitted or has open in Slicer, and never the 160 ImageCAS-X test cases
-(D16) unless `--include-test` is given. Run it with `--dry-run` first; every case it
-leaves alone is listed with the reason. Old prelabels are kept (`prelabelHistory`).
+A case with a prelabel opens with it in the 14 classes and the seed still shown beside
+it. Only cases nobody has submitted or has open are given one (see the rules in
+`segqueue14-prelabels --help`).
 
 ## 5. Start the SegQueue14 worker
 
@@ -159,9 +164,9 @@ Without systemd: `setsid nohup .venv/bin/segqueue14-score --poll 30 --sweep 3600
 ~/segqueue-data/logs/worker14.log 2>&1 < /dev/null &`. (`segqueue.sh`'s
 `pkill -f segqueue-score` does not match `segqueue14-score`, and vice versa.)
 
-The worker scores every read of an ImageCAS-X case against ImageCAS-X (Dice, HD95 and
-presence for each of the 14 classes) and every two-read pair against each other, and
-sends a read to review when it falls below `segqueue14.reference`:
+The worker scores every two-read pair against each other (Dice, HD95 and presence for
+each of the 14 classes) -- pool cases have no ImageCAS-X reference -- and sends a read
+to review when it falls below `segqueue14.reference`:
 
 ```json
 {"mean_dice_flag": 0.60, "required_dice_flag": 0.70, "class_dice_flags": {}, "duplicate_mean_dice_flag": 0.60}

@@ -49,6 +49,8 @@ from .constants import (
     ICX_SEGMENTATIONS_FOLDER,
     LIVE_CASE_COLLECTION,
     LIVE_COLLECTION_NAME,
+    POOL_FOLDER,
+    SEEDS_FOLDER,
 )
 
 VOLUME_SUFFIXES = ('.nii.gz', '.nii', '.nrrd', '.nhdr', '.mha', '.mhd')
@@ -211,8 +213,13 @@ def resolveSplits(folder, splitsDir=None, metaSplits=None):
 
 
 def applyPlan(plan, serveOrder, source, user, referenceFileId=None, dryRun=False,
-              update=False):
-    """Create (or with ``update``, re-plan) one case. Returns ``(verb, detail)``."""
+              update=False, seed=None):
+    """Create (or with ``update``, re-plan) one case. Returns ``(verb, detail)``.
+
+    ``seed`` is ``(fileId, source)`` for a binary vessel seed (D23). A seed is
+    attached to an existing case whenever it is new or different -- it only adds
+    a guide, so it needs no ``--update`` -- and reported as ``seed``.
+    """
     from .models import Case14
 
     existing = Case14().findOne({'name': plan.name})
@@ -231,13 +238,23 @@ def applyPlan(plan, serveOrder, source, user, referenceFileId=None, dryRun=False
                 blindDuplicate=plan.blind_duplicate, referenceFileId=referenceFileId,
                 regionFileId=source.get('regionFileId'),
                 sourceCaseId=source.get('_id'),
-                geometryFixed=bool(source.get('geometryFixed', False)))
-        return 'create', ''
+                geometryFixed=bool(source.get('geometryFixed', False)),
+                seedFileId=seed[0] if seed else None,
+                seedSource=seed[1] if seed else '')
+        return 'create', ' with seed' if seed else ''
 
     if existing.get('fileId') != source['fileId']:
         return 'conflict', ('exists with a different CT file id; left alone -- '
                             'check which volume this case should serve')
     changed = {k: v for k, v in wanted.items() if existing.get(k) != v}
+    if seed and existing.get('seedFileId') != seed[0]:
+        if not dryRun:
+            Case14().collection.update_one(
+                {'_id': existing['_id']},
+                {'$set': {'seedFileId': seed[0], 'seedSource': seed[1]}})
+        if not changed or not update:
+            return 'seed', 'seed attached' + (
+                '; ' + ', '.join(sorted(changed)) + ' differ (use --update)' if changed else '')
     if not changed:
         return 'same', ''
     if not update:
@@ -347,6 +364,103 @@ def populateExtra(user, folderId, dataset, priority=None, replicas=None, startOr
     return summary
 
 
+def _namedFolder(collectionName, folderName):
+    from girder.models.collection import Collection
+    from girder.models.folder import Folder
+
+    collection = Collection().findOne({'name': collectionName})
+    if collection is None:
+        return None
+    return Folder().findOne({'parentId': collection['_id'], 'parentCollection': 'collection',
+                             'name': folderName})
+
+
+def _loadFolder(folderId, default, what):
+    from girder.models.folder import Folder
+
+    folder = (Folder().load(folderId, force=True) if folderId
+              else _namedFolder(LIVE_COLLECTION_NAME, default))
+    if folder is None:
+        raise SystemExit(f'{what}: no folder ' + (folderId or f'{LIVE_COLLECTION_NAME}/{default}'))
+    return folder
+
+
+def populatePool(user, names, poolFolderId=None, seedFolderId=None, priority=None,
+                 replicas=None, startOrder=0, dryRun=False, update=False, hashFiles=True,
+                 requireSeed=False, out=print):
+    """The pooled new datasets (D23): one case per listed volume, in list order.
+
+    ``names`` are item names in the pool folder (default ``SegQueue/cases``, the
+    CT-only folder of D22). Each becomes a case named after the item (its name is
+    already ``<Source>__<Case>``), dataset = the item's ``source`` metadata, two
+    reads, its CT referenced in place. Its binary vessel seed, when the seed
+    folder (default ``SegQueue/seeds-totalseg``) has
+    ``<name>__totalseg-coronary.nii.gz``, is attached; a seed that appears later is
+    attached by simply running this again. ``requireSeed`` leaves seedless volumes
+    out instead (they are listed), so they can be added once their seed exists.
+    """
+    from girder.models.folder import Folder
+
+    from .models import Case14
+    from .utils import hashStoredFile
+
+    pool = _loadFolder(poolFolderId, POOL_FOLDER, '--pool-folder')
+    seedsFolder = None
+    try:
+        seedsFolder = _loadFolder(seedFolderId, SEEDS_FOLDER, '--seed-folder')
+    except SystemExit:
+        if seedFolderId:
+            raise
+    items = {item['name']: item for item in Folder().childItems(pool)}
+    seeds = ({item['name']: item for item in Folder().childItems(seedsFolder)}
+             if seedsFolder is not None else {})
+    out(f"pool: {len(names)} listed, {len(items)} items in {pool['name']}, "
+        f"{len(seeds)} seeds in {seedsFolder['name'] if seedsFolder else '(no seed folder)'}")
+
+    summary = {'create': 0, 'same': 0, 'update': 0, 'differs': 0, 'conflict': 0, 'seed': 0,
+               'missing': 0, 'noSeed': 0, 'withSeed': 0, 'byDataset': {}}
+    # Serve order is the volume's place in the list, so a volume left out now
+    # (no seed yet) gets the same place when a later run adds it.
+    for index, name in enumerate(names):
+        order = startOrder + index
+        item = items.get(name)
+        fileDoc = _firstFile(item) if item is not None else None
+        if fileDoc is None:
+            summary['missing'] += 1
+            out(f'  ! {name}: not in the pool folder (or has no file); skipped')
+            continue
+        seed = None
+        seedItem = seeds.get(sqplan.seed_name_for(name))
+        seedFile = _firstFile(seedItem) if seedItem is not None else None
+        if seedFile is not None:
+            seed = (seedFile['_id'], sqplan.SEED_SOURCE_TOTALSEG)
+            summary['withSeed'] += 1
+        else:
+            summary['noSeed'] += 1
+            if requireSeed:
+                out(f'  - {name}: no seed yet; left out (--require-seed)')
+                continue
+        plan = sqplan.plan_pool_case(name, item.get('meta'), priority=priority,
+                                     replicas=replicas)
+        source = {'fileId': fileDoc['_id'], 'sizeBytes': fileDoc.get('size', 0),
+                  'checksum': '', '_id': None}
+        if Case14().findOne({'name': plan.name}) is None and hashFiles and not dryRun:
+            source['checksum'] = hashStoredFile(fileDoc)
+        verb, detail = applyPlan(plan, order, source, user, None, dryRun=dryRun,
+                                 update=update, seed=seed)
+        summary[verb] += 1
+        row = summary['byDataset'].setdefault(plan.dataset, {'cases': 0, 'seeds': 0})
+        row['cases'] += 1
+        row['seeds'] += int(seed is not None)
+        if verb != 'same':
+            mark = {'create': '+', 'update': '~', 'differs': '=', 'conflict': '!',
+                    'seed': 's'}[verb]
+            out(f'  {mark} {plan.name}  p{plan.priority} x{plan.replicas}'
+                f'{"  " + detail if detail else ""}')
+    summary['nextServeOrder'] = startOrder + len(names)
+    return summary
+
+
 def buildParser():
     parser = argparse.ArgumentParser(
         prog='segqueue14-populate',
@@ -382,6 +496,20 @@ def buildParser():
     parser.add_argument('--no-hash', action='store_true',
                         help='Do not compute checksums for --extra-folder volumes '
                              '(clients then verify size only).')
+    parser.add_argument('--pool-list', default=None,
+                        help='The pooled new datasets (D23): a text file of volume item '
+                             'names, one per line, in serve order (e.g. '
+                             'configs/segqueue14/pool-2026-10.txt). Implies --skip-imagecas.')
+    parser.add_argument('--pool-folder', default=None,
+                        help='Girder folder id holding the pooled volumes. Default '
+                             'SegQueue/cases.')
+    parser.add_argument('--seed-folder', default=None,
+                        help='Girder folder id of the binary vessel seeds. Default '
+                             'SegQueue/seeds-totalseg.')
+    parser.add_argument('--pool-replicas', type=int, default=None,
+                        help='Reads per pooled case. Default 2 (D11: unlabelled).')
+    parser.add_argument('--require-seed', action='store_true',
+                        help='Leave out pooled volumes whose seed does not exist yet.')
     parser.add_argument('--allow-no-splits', action='store_true')
     parser.add_argument('--update', action='store_true',
                         help='Rewrite order and reads of existing SegQueue14 cases.')
@@ -406,6 +534,8 @@ def main(argv=None):
                   for tier in sqplan.DEFAULT_PRIORITIES}
 
     nextOrder = 0
+    if args.pool_list:
+        args.skip_imagecas = True
     if not args.skip_imagecas:
         summary = populateImagecas(
             user, splitsDir=args.splits_dir, duplicateFraction=args.duplicate_fraction,
@@ -421,6 +551,22 @@ def main(argv=None):
             print(f"  {tier:22s} p{priorities.get(tier)}  {row['cases']} cases, "
                   f"{row['reads']} reads")
         nextOrder = summary['nextServeOrder']
+    if args.pool_list:
+        with open(args.pool_list, encoding='utf-8') as handle:
+            names = sqplan.read_include_list(handle.read())
+        pool = populatePool(
+            user, names, poolFolderId=args.pool_folder, seedFolderId=args.seed_folder,
+            priority=priorities[sqplan.TIER_NEW_DATASET], replicas=args.pool_replicas,
+            startOrder=nextOrder, dryRun=args.dry_run, update=args.update,
+            hashFiles=not args.no_hash, requireSeed=args.require_seed)
+        verb = 'would create' if args.dry_run else 'created'
+        print(f"\npool: {verb} {pool['create']}, seeds attached to existing "
+              f"{pool['seed']}, updated {pool['update']}, unchanged {pool['same']}, "
+              f"differing {pool['differs']}, conflicts {pool['conflict']}, not found "
+              f"{pool['missing']}; with seed {pool['withSeed']}, without {pool['noSeed']}.")
+        for dataset, row in sorted(pool['byDataset'].items()):
+            print(f"  {dataset:36s} {row['cases']:4d} cases, {row['seeds']:4d} with seed")
+        nextOrder = pool['nextServeOrder']
     for folderId in args.extra_folder:
         extra = populateExtra(
             user, folderId, args.dataset, priority=priorities[sqplan.TIER_NEW_DATASET],

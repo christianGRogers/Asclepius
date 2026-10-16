@@ -106,8 +106,10 @@ def test_routes_live_under_their_own_prefix():
     assert protocol.PROTOCOL_HEADER != live_protocol.PROTOCOL_HEADER
 
 
-def test_the_seed_is_not_an_asset_and_the_reference_is_reviewer_only():
-    assert "seed" not in protocol.ASSET_KINDS
+def test_the_reference_is_reviewer_only():
+    # "seed" is an asset again, but it is the pool's own TotalSegmentator mask
+    # (D23); the live ImageCAS seed is still never shipped (D8, server tests).
+    assert protocol.ASSET_SEED == "seed"
     assert protocol.ASSET_PRELABEL in protocol.ASSET_KINDS
     assert protocol.ASSET_REFERENCE not in protocol.ASSET_KINDS
     assert protocol.ASSET_REFERENCE in protocol.REVIEW_ASSET_KINDS
@@ -487,3 +489,52 @@ def test_duplicate_and_error_flags():
     assert not sq.duplicate_flags({"mean_dice": 0.7}, {"duplicate_mean_dice_flag": 0.6})
     assert "geometry" in sq.reference_flags({"error": "geometry_mismatch"}, {})[0]
     assert sq.reference_flags({"mean_dice": float("nan")}, {"mean_dice_flag": 0.6}) == []
+
+
+# ------------------------------------------------------------- the pool (D23)
+
+
+def test_pool_names_datasets_and_seed_names():
+    from segqueue14 import plan
+
+    name = "IDC-rider_lung_pet_ct__RIDER-2019259100__SS-Segment-30-75-BPM-0-625mm_659902_p06.nii.gz"
+    case = plan.plan_pool_case(name, {"source": "IDC-rider_lung_pet_ct"})
+    assert case.name == name[:-7] and case.dataset == "IDC-rider_lung_pet_ct"
+    assert case.tier == plan.TIER_NEW_DATASET and case.replicas == 2
+    assert not case.has_reference and case.split is None
+    # No metadata: the part before the first "__" is the dataset.
+    assert plan.pool_dataset("Kaggle-HeartSR__P06.nii.gz") == "Kaggle-HeartSR"
+    assert plan.pool_dataset("odd name.nii.gz") == "pool"
+    assert plan.pool_case_name("Set A__p 1.nii.gz") == "Set_A__p_1"
+    assert (plan.seed_name_for("Figshare-23057000__PA0.nii.gz")
+            == "Figshare-23057000__PA0__totalseg-coronary.nii.gz")
+
+
+def test_pool_list_keeps_order_and_drops_comments_and_repeats():
+    from segqueue14 import plan
+
+    text = "# header\n\nb.nii.gz\na.nii.gz  # note\nb.nii.gz\n   \n"
+    assert plan.read_include_list(text) == ["b.nii.gz", "a.nii.gz"]
+
+
+def test_the_shipped_pool_list_is_the_675_volumes():
+    from pathlib import Path
+
+    from segqueue14 import plan
+
+    path = Path(__file__).resolve().parents[1] / "configs" / "segqueue14" / "pool-2026-10.txt"
+    names = plan.read_include_list(path.read_text())
+    assert len(names) == 675 and len(set(names)) == 675
+    assert all(n.endswith(".nii.gz") and "__" in n for n in names)
+    assert not any(n.startswith(("ImageCAS", "PLOS-")) for n in names)
+
+
+def test_the_seed_is_an_asset_annotators_and_reviewers_may_fetch():
+    from segqueue14 import protocol
+
+    assert protocol.ASSET_SEED in protocol.ASSET_KINDS
+    assert protocol.ASSET_SEED in protocol.REVIEW_ASSET_KINDS
+    assert protocol.ASSET_REFERENCE not in protocol.ASSET_KINDS
+    assert protocol.SEED_SEGMENT_NAME.startswith("~")
+    info = protocol.AssignmentInfo14(assignment_id="a", has_seed=True)
+    assert protocol.AssignmentInfo14.from_dict(info.to_dict()).has_seed

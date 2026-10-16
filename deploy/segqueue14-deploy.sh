@@ -40,7 +40,25 @@ fetch_branch() {
 }
 
 plugins_loaded() {
-    journalctl -u segqueue-girder --since "-3min" --no-pager 2>/dev/null | grep -o 'Loaded plugin "[a-z0-9]*"' | sort -u
+    # Never fails: an empty or unreadable journal must not abort the script (set -e).
+    { sudo journalctl -u segqueue-girder --since "-3min" --no-pager 2>/dev/null \
+        | grep -oE 'Loaded plugin "[a-z0-9]*"|SegQueue14[^"]*' | sort -u; } || true
+}
+
+why_not_loaded() {
+    say "why SegQueue14 did not load (Girder's log, last 3 minutes):"
+    { sudo journalctl -u segqueue-girder --since "-3min" --no-pager 2>/dev/null \
+        | grep -iE -A25 'segqueue14|Traceback' | tail -60; } || true
+    say "and the plugin loaded by hand, with errors raised:"
+    SEGQUEUE14_STRICT=1 "$PY" -c "
+import girder_segqueue14 as p
+class Root: pass
+p.mount({'apiRoot': Root()})
+print('[sq14] mount() by hand: OK -- so Girder did not call it (plugin not registered?)')
+" 2>&1 | tail -30 || true
+    "$PY" -c "
+from importlib.metadata import entry_points
+print('[sq14] girder.plugin entry points:', sorted(e.name for e in entry_points(group='girder.plugin')))"
 }
 
 install() {
@@ -100,7 +118,10 @@ PYEOF
     say "live /segqueue/project -> $live (want 401); /segqueue14/project -> $new (want 401)"
     plugins_loaded | sed 's/^/[sq14]   /'
     [ "$live" = "401" ] || die "the LIVE SegQueue is not answering as before -- run: bash $0 off"
-    [ "$new" = "401" ] || die "SegQueue14 did not load (live is fine); see journalctl -u segqueue-girder"
+    if [ "$new" != "401" ]; then
+        why_not_loaded
+        die "SegQueue14 did not load (the live SegQueue is fine). Send the lines above."
+    fi
     say "installed. Next: bash $0 populate"
 }
 
@@ -154,6 +175,7 @@ off() {
 
 case "${1:-}" in
     install) install ;;
+    diagnose) why_not_loaded ;;
     populate) shift; populate "$@" ;;
     worker) worker ;;
     status) status ;;

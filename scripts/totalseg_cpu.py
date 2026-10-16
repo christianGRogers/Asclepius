@@ -49,7 +49,14 @@ def items(fid):
 
 def segment(item_id, tmp):
     src, out = os.path.join(tmp, 'ct.nii.gz'), os.path.join(tmp, 'seg.nii.gz')
-    open(src, 'wb').write(p.req('GET', f'item/{item_id}/download', raw=True))
+    for attempt in range(4):              # Girder sometimes cuts a large download short (IncompleteRead)
+        try:
+            open(src, 'wb').write(p.req('GET', f'item/{item_id}/download', raw=True))
+            break
+        except Exception:  # noqa: BLE001
+            if attempt == 3:
+                raise
+            time.sleep(10 * (attempt + 1))
     t0 = time.time()
     r = subprocess.run(TS + ['-i', src, '-o', out], capture_output=True, text=True, timeout=3 * 3600)
     if r.returncode != 0 or not os.path.exists(out):

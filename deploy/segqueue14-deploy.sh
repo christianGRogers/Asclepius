@@ -47,8 +47,42 @@ install() {
     mkdir -p "$HOME/segqueue-data"
     local backup
     backup="$HOME/segqueue-data/pre-sq14-$(date +%Y%m%d-%H%M).archive.gz"
-    say "backup -> $backup"
-    mongodump --uri "$GIRDER_MONGO_URI" --archive="$backup" --gzip --quiet || die "mongodump failed; nothing installed"
+    if command -v mongodump >/dev/null 2>&1; then
+        say "backup -> $backup"
+        mongodump --uri "$GIRDER_MONGO_URI" --archive="$backup" --gzip --quiet || die "mongodump failed; nothing installed"
+    else
+        # No MongoDB database tools here: dump with the venv's pymongo instead, in
+        # mongodump's directory layout (girder/<collection>.bson + .metadata.json),
+        # which `mongorestore --dir <dir>` restores. Only metadata lives in Mongo;
+        # the files themselves are in the assetstore on disk and are not touched.
+        backup="${backup%.archive.gz}"
+        say "backup (pymongo, mongodump layout) -> $backup.tar.gz"
+        "$PY" - "$backup" <<'PYEOF' || die "backup failed; nothing installed"
+import json, os, sys
+from bson import encode
+from bson.json_util import dumps
+from pymongo import MongoClient
+out = sys.argv[1]
+client = MongoClient(os.environ['GIRDER_MONGO_URI'])
+db = client.get_default_database()
+target = os.path.join(out, db.name)
+os.makedirs(target, exist_ok=True)
+total = 0
+for name in sorted(db.list_collection_names()):
+    n = 0
+    with open(os.path.join(target, name + '.bson'), 'wb') as handle:
+        for doc in db[name].find({}):
+            handle.write(encode(doc)); n += 1
+    indexes = [dict(v, key=dict(v['key']), name=k) for k, v in db[name].index_information().items()]
+    with open(os.path.join(target, name + '.metadata.json'), 'w') as handle:
+        handle.write(dumps({'indexes': indexes, 'collectionName': name}))
+    total += n
+print(f'[sq14] dumped {total} documents from {len(db.list_collection_names())} collections of {db.name}')
+PYEOF
+        tar czf "$backup.tar.gz" -C "$(dirname "$backup")" "$(basename "$backup")" && rm -rf "$backup" \
+            || die "could not pack the backup; nothing installed"
+        say "restore, if ever needed: tar xzf $backup.tar.gz && mongorestore --drop --dir $(basename "$backup")"
+    fi
     fetch_branch
     say "installing the shared package (repository root, --no-deps) and girder-segqueue14"
     "$PY" -m pip install -q --no-deps "$SRC"

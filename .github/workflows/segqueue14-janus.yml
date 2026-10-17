@@ -1,0 +1,130 @@
+# Run one step of the SegQueue14 deploy (deploy/segqueue14-deploy.sh) on janus.
+#
+# Triggered by a push to claude/segqueue14 that changes deploy/janus/command.txt --
+# that file names the step, so every run is a reviewed commit saying what it does --
+# or by hand (workflow_dispatch, once this file is on the default branch).
+#
+#   diagnose | status                      read-only
+#   install                                backup, install the plugin, restart Girder
+#   populate | populate --apply            dry run / create the pooled cases
+#   worker | off                           start the SegQueue14 worker / rollback switch
+#
+# The script never touches the live checkout, the live plugin or live data; see its
+# header. Secrets: SSH_HOST, SSH_PORT, SSH_USERNAME, SSH_PASSWORD (as server-ssh.yml),
+# SSH_KNOWN_HOSTS optional.
+
+name: SegQueue14 on janus
+
+on:
+  push:
+    branches: [claude/segqueue14]
+    paths: [deploy/janus/command.txt]
+  workflow_dispatch:
+    inputs:
+      command:
+        description: "deploy step"
+        type: choice
+        default: diagnose
+        options: [diagnose, status, install, populate, "populate --apply", worker, off]
+
+concurrency:
+  group: server-ssh
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  run:
+    name: segqueue14 ${{ inputs.command || 'from command.txt' }}
+    runs-on: ubuntu-latest
+    environment: production
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Which step
+        id: cmd
+        env:
+          INPUT: ${{ inputs.command }}
+        run: |
+          set -euo pipefail
+          cmd="${INPUT:-$(grep -v '^#' deploy/janus/command.txt | sed '/^\s*$/d' | head -1 | xargs)}"
+          case "$cmd" in
+            diagnose|status|install|populate|"populate --apply"|worker|off) ;;
+            *) echo "::error::unknown step '$cmd'"; exit 1 ;;
+          esac
+          echo "cmd=$cmd" >> "$GITHUB_OUTPUT"
+          echo "### segqueue14-deploy.sh \`$cmd\`" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Check the secrets are set
+        env:
+          HOST: ${{ secrets.SSH_HOST }}
+          USERNAME: ${{ secrets.SSH_USERNAME }}
+          PASSWORD: ${{ secrets.SSH_PASSWORD }}
+        run: |
+          set -euo pipefail
+          missing=()
+          [ -n "$HOST" ]     || missing+=(SSH_HOST)
+          [ -n "$USERNAME" ] || missing+=(SSH_USERNAME)
+          [ -n "$PASSWORD" ] || missing+=(SSH_PASSWORD)
+          if [ ${#missing[@]} -gt 0 ]; then echo "::error::not set: ${missing[*]}"; exit 1; fi
+
+      - name: Install sshpass
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq --no-install-recommends sshpass
+
+      - name: Trust the host key
+        env:
+          HOST: ${{ secrets.SSH_HOST }}
+          PORT: ${{ secrets.SSH_PORT }}
+          KNOWN: ${{ secrets.SSH_KNOWN_HOSTS }}
+        run: |
+          set -euo pipefail
+          mkdir -p ~/.ssh && chmod 700 ~/.ssh
+          if [ -n "$KNOWN" ]; then
+            printf '%s\n' "$KNOWN" > ~/.ssh/known_hosts
+          else
+            ssh-keyscan -p "${PORT:-22}" -H "$HOST" > ~/.ssh/known_hosts 2>/dev/null
+            echo ":warning: no SSH_KNOWN_HOSTS secret; accepted the host key offered." >> "$GITHUB_STEP_SUMMARY"
+          fi
+          chmod 600 ~/.ssh/known_hosts && test -s ~/.ssh/known_hosts
+
+      # As in server-ssh.yml: the password goes through the environment (sshpass -e)
+      # and, for sudo, through stdin -- never on a command line. The remote script
+      # arrives base64-encoded in argv; it holds nothing secret.
+      - name: Run the step on janus
+        env:
+          SSHPASS: ${{ secrets.SSH_PASSWORD }}
+          HOST: ${{ secrets.SSH_HOST }}
+          PORT: ${{ secrets.SSH_PORT }}
+          USERNAME: ${{ secrets.SSH_USERNAME }}
+          CMD: ${{ steps.cmd.outputs.cmd }}
+        run: |
+          set -euo pipefail
+          cat > remote.sh <<EOF
+          set -uo pipefail
+          SQ14_USER='${USERNAME}'
+          home=\$(getent passwd "\$SQ14_USER" | cut -d: -f6)
+          src="\$home/Asclepius-sq14"
+          # Bring the server's clone of this branch up to date (as the deploy user,
+          # with their GitHub credentials); fall back to the copy already there.
+          if [ -d "\$src/.git" ]; then
+            runuser -u "\$SQ14_USER" -- env HOME="\$home" git -C "\$src" fetch -q origin claude/segqueue14 \
+              && runuser -u "\$SQ14_USER" -- env HOME="\$home" git -C "\$src" checkout -q -B claude/segqueue14 origin/claude/segqueue14 \
+              || echo "[sq14] could not update \$src; using what is there"
+          fi
+          script="\$src/deploy/segqueue14-deploy.sh"
+          [ -f "\$script" ] || { echo "[sq14] no \$script on the server"; exit 1; }
+          echo "[sq14] running \$(runuser -u "\$SQ14_USER" -- env HOME="\$home" git -C "\$src" log -1 --format='%h %s' | cut -c1-60): ${CMD}"
+          cd "\$home" && SQ14_USER="\$SQ14_USER" bash "\$script" ${CMD}
+          EOF
+          b64=$(base64 -w0 < remote.sh)
+          set +e
+          printf '%s\n' "$SSHPASS" | sshpass -e ssh -o BatchMode=no -o ConnectTimeout=20 \
+            -o UserKnownHostsFile="$HOME/.ssh/known_hosts" -o StrictHostKeyChecking=yes \
+            -p "${PORT:-22}" "${USERNAME}@${HOST}" \
+            "sudo -S -p '' bash -c 'echo $b64 | base64 -d | bash'" 2>&1 | tee out.txt
+          code=${PIPESTATUS[1]}
+          set -e
+          { echo '```'; tail -n 200 out.txt; echo '```'; echo "exit $code"; } >> "$GITHUB_STEP_SUMMARY"
+          exit "$code"

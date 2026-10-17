@@ -181,11 +181,13 @@ Change it as an admin with
 ## 6. The Slicer module
 
 ```sh
-python slicer/build-extension14.py      # -> dist/SegQueue14-0.1.0-Slicer-5.8.zip
+python slicer/build-extension14.py      # -> dist/SegQueue-0.14.0-Slicer-5.8.zip
 ```
 
-Give the zip to the test account only. Slicer -> Extensions Manager -> Install from
-file -> restart; the module is **Segmentation -> SegQueue14**, beside SegQueue.
+From 0.14.0 the module is published as the SegQueue release (D24): SegQueue 0.13's
+*Check for updates* -> **Update and restart** installs it, or Extensions Manager ->
+Install from file -> restart. The module is **Segmentation -> SegQueue14**; opening
+"SegQueue" forwards there.
 
 Now follow `VALIDATION.md`. Nobody else is added to `segqueue14-annotators` until it
 passes.

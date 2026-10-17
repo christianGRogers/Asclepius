@@ -13,6 +13,14 @@
 # * **A broken build never becomes a release.** The shared package's tests and a
 #   structural check of the archive both run first. An annotator pressing
 #   "Update and restart" is trusting this file.
+# * **Versions only go up.** A version not newer than every published
+#   `segqueue-v` tag fails the run instead of publishing out of sequence.
+#
+# From 0.14.0 the module released here is **SegQueue14** (project lead,
+# 2026-10-17), built by slicer/build-extension14.py into the same
+# `SegQueue-<v>-Slicer-<x.y>.zip` under the same `segqueue-v<v>` tags, so
+# SegQueue 0.13's update button installs it over the 4-class module.
+# slicer/SegQueue (the 4-class module, 0.13.0) is no longer released.
 
 name: SegQueue release
 
@@ -22,7 +30,19 @@ on:
     paths:
       - "slicer/**"
       - "src/segqueue/**"
+      - "src/segqueue14/**"
       - "tests/test_segqueue_*.py"
+      - "tests/test_segqueue14_*.py"
+      - ".github/workflows/segqueue-release.yml"
+  # A pull request builds and tests and keeps the archive on the run; only main
+  # publishes.
+  pull_request:
+    paths:
+      - "slicer/**"
+      - "src/segqueue/**"
+      - "src/segqueue14/**"
+      - "tests/test_segqueue_*.py"
+      - "tests/test_segqueue14_*.py"
       - ".github/workflows/segqueue-release.yml"
   workflow_dispatch:
 
@@ -32,7 +52,7 @@ permissions:
 
 # Two pushes in quick succession must not race to create the same tag.
 concurrency:
-  group: segqueue-release
+  group: segqueue-release-${{ github.ref }}
   cancel-in-progress: false
 
 jobs:
@@ -77,19 +97,46 @@ jobs:
             tests/test_segqueue_policy.py \
             tests/test_segqueue_checksum.py \
             tests/test_segqueue_dataset.py \
-            tests/test_segqueue_client.py
+            tests/test_segqueue_client.py \
+            tests/test_segqueue14_shared.py \
+            tests/test_segqueue14_client.py \
+            tests/test_segqueue14_convert.py \
+            tests/test_segqueue14_module.py \
+            tests/test_segqueue14_release_line.py
 
       - name: Read the module version
         id: version
         run: |
-          VERSION=$(python slicer/build-extension.py --print-version)
+          VERSION=$(python slicer/build-extension14.py --print-version)
           test -n "$VERSION" || { echo "could not read __version__"; exit 1; }
           echo "version=$VERSION"          >> "$GITHUB_OUTPUT"
           echo "tag=segqueue-v$VERSION"    >> "$GITHUB_OUTPUT"
           echo "SegQueue \`$VERSION\`"     >> "$GITHUB_STEP_SUMMARY"
 
+      - name: Is it the next version?
+        # Sequential numbering: never below a published SegQueue release.
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          git ls-remote --tags origin 'refs/tags/segqueue-v*' | sed 's|.*refs/tags/||; s|\^{}$||' | sort -u > tags.txt
+          python - <<'PY'
+          import os, sys
+          sys.path.insert(0, "src")
+          from segqueue.release import is_newer, parse_version
+          version = os.environ["VERSION"]
+          tags = [t.strip() for t in open("tags.txt") if t.strip()]
+          if "segqueue-v" + version in tags:
+              print("segqueue-v%s is already published" % version)
+              raise SystemExit(0)
+          newest = max((t for t in tags if parse_version(t)), key=lambda t: parse_version(t)[0], default=None)
+          if newest and not is_newer(version, newest):
+              raise SystemExit("version %s is not newer than %s; bump __version__ in "
+                               "slicer/SegQueue14/SegQueue14.py" % (version, newest))
+          print("%s follows %s" % (version, newest))
+          PY
+
       - name: Build the extension archive
-        run: python slicer/build-extension.py --out dist
+        run: python slicer/build-extension14.py --out dist
 
       - name: Check the archive is installable
         # The same shape check the updater runs on an annotator's machine before
@@ -120,10 +167,12 @@ jobs:
 
           members = archive_members(names, slicer_version)
           required = [
-              "SegQueue.py",
-              "SegQueueLib/updater.py",
+              "SegQueue14.py",
+              "SegQueue.py",               # the stub that retires the 4-class module
+              "SegQueue14Lib/updater.py",
               "segqueue/release.py",
-              "Resources/Icons/SegQueue.png",
+              "segqueue14/protocol.py",
+              "Resources/Icons/SegQueue14.png",
               "Resources/Icons/wordmark-light.png",
               "Resources/Icons/wordmark-dark.png",
           ]
@@ -134,6 +183,16 @@ jobs:
           if "SegQueue/share/Slicer-%s/SegQueue.s4ext" % slicer_version not in names:
               raise SystemExit("archive has no .s4ext; the Extension Manager will refuse it")
           print("%s: %d module files, descriptor present" % (name, len(members)))
+
+          # What both update buttons will run on an annotator's laptop: SegQueue
+          # 0.13's (it must accept this archive) and SegQueue14's own.
+          for lib in ("slicer/SegQueue", "slicer/SegQueue14"):
+              sys.path.insert(0, lib)
+          from SegQueueLib import updater as old
+          from SegQueue14Lib import updater as new
+          old.inspectArchive(path, slicer_version)
+          new.inspectArchive(path, slicer_version)
+          print("accepted by the SegQueue 0.13 and SegQueue14 updaters")
           PY
 
       - name: Keep the archive on the run
@@ -156,7 +215,7 @@ jobs:
           fi
 
       - name: Publish the release
-        if: steps.tag.outputs.exists == 'false'
+        if: steps.tag.outputs.exists == 'false' && github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
         env:
           GH_TOKEN: ${{ github.token }}
           TAG: ${{ steps.version.outputs.tag }}
@@ -165,9 +224,16 @@ jobs:
           cat > notes.md <<'MD'
           ## Install
 
+          This release is **SegQueue14**, the 14-class module. It replaces the
+          4-class SegQueue module: after updating, open **Segmentation ->
+          SegQueue14** (opening "SegQueue" takes you there).
+
           **Already running SegQueue?** Open the module in Slicer. It checks for
           updates on its own and offers **Update and restart** - one press, no
           download to find, no Extensions Manager.
+
+          **Installed the separate SegQueue14 0.1.0 extension?** Uninstall it in
+          the Extensions Manager first; this release contains it.
 
           **First install:** download the `.zip` below, then in Slicer go to
           **Extensions Manager -> Install from file**, pick it, and restart.
@@ -178,7 +244,7 @@ jobs:
           ---
           MD
           gh release create "$TAG" dist/*.zip \
-            --title "SegQueue $VERSION" \
+            --title "SegQueue14 $VERSION" \
             --notes-file notes.md \
             --generate-notes \
             --target "$GITHUB_SHA"

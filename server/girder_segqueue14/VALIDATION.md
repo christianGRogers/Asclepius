@@ -34,8 +34,9 @@ The queue is the 675 pooled volumes only (D23): no ImageCAS case of any kind.
 
 ## C. The module (test account, Slicer 5.8)
 
-- [ ] SegQueue14 installs from the zip next to SegQueue; both appear under
-      Segmentation and both open.
+- [ ] From SegQueue 0.13, *Check for updates* offers 0.14.0 and **Update and
+      restart** installs it; after the restart *Segmentation -> SegQueue14* opens,
+      and opening "SegQueue" forwards to it.
 - [ ] Log in. The panel shows the instructions text and the 14 classes with colours
       and hints; LAD, LCx and RCA are marked required.
 - [ ] **Get next case** gives the first volume of the pool list

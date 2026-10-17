@@ -172,7 +172,7 @@ number as the deployment switch it is.
 
 1. Merge to `main` through a pull request as usual.
 2. If the change should reach annotators, bump `__version__` in
-   `slicer/SegQueue/SegQueue.py` **in that same pull request**.
+   `slicer/SegQueue14/SegQueue14.py` (see *SegQueue14* below) **in that same pull request**.
 3. On the push to `main`, `.github/workflows/segqueue-release.yml` runs the
    shared-package tests, builds the `.zip`, checks it has the shape the updater
    expects, and — only if the tag `segqueue-v<version>` does not already exist —
@@ -188,20 +188,27 @@ to each other across the change. If the release needs a server that is not
 deployed yet, deploy the server first — the extension updates itself and the
 server does not.
 
-### SegQueue14
+### SegQueue14 is the module released (0.14.0 on, D24)
 
-The same switch for the 14-class module: bump `__version__` in
-`slicer/SegQueue14/SegQueue14.py` in the pull request, and on the push to `main`
-`.github/workflows/segqueue14-release.yml` tests, builds and checks the archive and
-publishes `segqueue14-v<version>` if that tag does not exist. Pull requests that
-touch SegQueue14 build it too and leave the `.zip` on the run, for a hand test.
+Since 0.14.0 the module this section releases is **SegQueue14**: bump
+`__version__` in `slicer/SegQueue14/SegQueue14.py`. `segqueue-release.yml` builds
+it with `slicer/build-extension14.py` into the same `SegQueue-<v>-Slicer-<x.y>.zip`
+under the same `segqueue-v<v>` tags, so SegQueue 0.13's update button installs it
+over the 4-class module (the archive's `SegQueue.py` is a stub that forwards to
+SegQueue14), and SegQueue14's own button keeps it current after that.
 
-Two differences: SegQueue14 **does not update itself** (the server tells an
-out-of-date module to update at login, and the annotator installs the new zip),
-and its releases are never marked *latest*, so they can never be offered to
-SegQueue annotators — the live updater only answers to `segqueue-v` tags and
-`SegQueue-` archives. The server side is deployed from `main` with
-*Actions -> SegQueue14 on janus* (`server/girder_segqueue14/DEPLOY.md`).
+* **Versions are sequential.** The workflow fails if `__version__` is not newer
+  than every published `segqueue-v` tag; the next release after 0.14.0 is 0.14.1
+  or 0.15.0.
+* The archive is checked with **both** updaters before it is published
+  (`tests/test_segqueue14_release_line.py` runs the 0.13 one end to end).
+* Pull requests that touch the module build it and leave the `.zip` on the run,
+  for a hand test; only `main` publishes.
+* `slicer/SegQueue` (the 4-class module) is no longer released; changing its
+  `__version__` publishes nothing.
+
+The server side is deployed from `main` with *Actions -> SegQueue14 on janus*
+(`server/girder_segqueue14/DEPLOY.md`).
 
 ---
 

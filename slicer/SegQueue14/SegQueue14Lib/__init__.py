@@ -9,10 +9,12 @@ client against the wrong server routes.
 
 from .cache import CacheError, CaseCache, defaultRoot
 from .client import SegQueue14Client, SegQueue14Error
+from .updater import UpdateError
 
 __all__ = [
     "CaseCache",
     "CacheError",
+    "UpdateError",
     "SegQueue14Client",
     "SegQueue14Error",
     "defaultRoot",

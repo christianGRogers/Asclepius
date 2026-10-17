@@ -154,18 +154,25 @@ def test_it_uses_its_own_library_and_never_the_live_one():
     source = _source()
     assert "from SegQueue14Lib import" in source
     assert not re.search(r"^\s*(from|import) SegQueueLib\b", source, re.M)
-    assert "updater" not in re.findall(r"from SegQueue14Lib import \(?([^)]*)\)?", source)[0]
 
 
-def test_it_has_no_self_updater_that_could_install_segqueue_over_it():
+def test_its_updater_is_its_own_and_only_installs_segqueue14():
+    # 0.14.0 on, SegQueue14 is the SegQueue release line and updates itself --
+    # with SegQueue14Lib.updater, which refuses an archive without SegQueue14.py,
+    # never with the live module's (that would accept a pre-0.14 SegQueue zip).
     source = _source()
-    for name in ("checkForUpdate", "installArchive", "onUpdateNow", "segqueue import release"):
-        assert name not in source
+    assert "updater" in re.findall(r"from SegQueue14Lib import \(?([^)]*)\)?", source)[0]
+    for name in ("checkForUpdate", "installArchive", "onUpdateNow"):
+        assert name in source
+    lib = (REPO / "slicer" / "SegQueue14" / "SegQueue14Lib" / "updater.py").read_text()
+    assert '"/SegQueue14.py"' in lib and '"/SegQueue.py"' not in lib
 
 
 def test_every_settings_key_is_its_own():
-    keys = re.findall(r'_SETTING_\w+ = "([^"]+)"', _source())
+    keys = re.findall(r'^_SETTING_\w+ = "([^"]+)"', _source(), re.M)
     assert keys and all(k.startswith("SegQueue14/") for k in keys), keys
+    # The retired module's server URL is read as a default, never written.
+    assert "setValue(_LIVE_SETTING_SERVER" not in _source()
 
 
 def test_its_classes_are_named_so_slicer_registers_a_second_module():
@@ -231,7 +238,7 @@ def test_the_instructions_are_shown():
 # ------------------------------------------------------------ packaging
 
 
-def test_the_archive_installs_beside_segqueue_and_is_self_sufficient(tmp_path):
+def test_the_archive_is_the_segqueue_extension_and_is_self_sufficient(tmp_path):
     import importlib.util
     import subprocess
     import sys
@@ -242,15 +249,16 @@ def test_the_archive_installs_beside_segqueue_and_is_self_sufficient(tmp_path):
     build14 = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(build14)
     archive, version, _ = build14.build(str(tmp_path))
-    assert Path(archive).name == f"SegQueue14-{version}-Slicer-5.8.zip"
+    # Named and rooted as SegQueue (tests/test_segqueue14_release_line.py says why).
+    assert Path(archive).name == f"SegQueue-{version}-Slicer-5.8.zip"
     names = zipfile.ZipFile(archive).namelist()
-    assert {n.split("/")[0] for n in names} == {"SegQueue14"}
-    scripted = "SegQueue14/lib/Slicer-5.8/qt-scripted-modules/"
+    assert {n.split("/")[0] for n in names} == {"SegQueue"}
+    scripted = "SegQueue/lib/Slicer-5.8/qt-scripted-modules/"
     assert scripted + "SegQueue14.py" in names
     assert scripted + "segqueue14/protocol.py" in names
     assert scripted + "segqueue/protocol.py" in names
     assert not any("SegQueueLib/" in n for n in names)
-    assert "SegQueue14/share/Slicer-5.8/SegQueue14.s4ext" in names
+    assert "SegQueue/share/Slicer-5.8/SegQueue.s4ext" in names
 
     # The vendored shared packages import with nothing from the repository on
     # the path.

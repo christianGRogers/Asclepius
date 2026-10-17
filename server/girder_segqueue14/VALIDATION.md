@@ -37,9 +37,8 @@ The queue is the 675 pooled volumes only (D23): no ImageCAS case of any kind.
 - [ ] From SegQueue 0.13, *Check for updates* offers 0.14.0 and **Update and
       restart** installs it; after the restart *Segmentation -> SegQueue14* opens,
       and opening "SegQueue" forwards to it.
-- [ ] Log in. The panel shows the instructions text and the four classes (LM, LAD, LCx,
-      RCA) with colours
-      and hints; LAD, LCx and RCA are marked required.
+- [ ] Log in. The panel has no instructions section; *Help & Acknowledgement* at the
+      top of the module links to the GitHub repository.
 - [ ] **Get next case** gives the first volume of the pool list
       (`Figshare-23057000__PA0` unless it was left out).
 - [ ] The case opens with the yellow `~ vessel seed (not submitted)` segment over the

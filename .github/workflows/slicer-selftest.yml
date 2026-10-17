@@ -108,6 +108,17 @@ jobs:
             --python-script tests/slicer_selftest.py --exit-after-startup
           echo "status $?"
 
+      - name: SegQueue14 inside Slicer (seed prefill, overlap check)
+        if: always()
+        env:
+          SEGQUEUE_SELFTEST_OUT: ${{ github.workspace }}/selftest14.txt
+        run: |
+          xvfb-run -a "$SLICER" --no-splash --no-main-window \
+            --python-script tests/slicer_selftest14.py
+          cat selftest14.txt
+          { echo '### SegQueue14'; echo '```'; cat selftest14.txt; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+          tail -n 1 selftest14.txt | grep -q "RESULT PASS"
+
       - name: The report
         if: always()
         run: |

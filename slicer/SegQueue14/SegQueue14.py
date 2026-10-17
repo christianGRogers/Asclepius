@@ -20,7 +20,6 @@ What an annotator sees:
 * The heart mask still ships, as a helper segment that is never submitted.
 * **Submit** refuses a case whose LAD, LCx or RCA is empty (D13), naming them,
   before anything is uploaded; the server checks again.
-* The panel shows the project's instructions and a one-line hint per class.
 
 The server owns the protocol, local data is a lease, nothing the client says is
 trusted: those three decisions are the live module's and are kept unchanged.
@@ -99,7 +98,10 @@ from SegQueue14Lib import SegQueue14Error as SegQueueError
 
 #: Continues SegQueue's numbering (0.13.0 was the last 4-class release). The
 #: release tag is ``segqueue-v`` + this; bump it to publish.
-__version__ = "0.16.0"
+__version__ = "0.16.1"
+
+#: Where the module's help points.
+HELP_URL = "https://github.com/christianGRogers/Asclepius"
 
 #: How often the startup update check may ask GitHub, as in the live module.
 UPDATE_CHECK_HOURS = 6
@@ -153,7 +155,9 @@ class SegQueue14(ScriptedLoadableModule):
         self.parent.categories = ["Segmentation"]
         self.parent.dependencies = []
         self.parent.contributors = ["Christian Rogers"]
-        self.parent.helpText = __doc__
+        # How to annotate lives in the repository, not in the panel.
+        self.parent.helpText = (
+            'Documentation: <a href="{0}">{0}</a>'.format(HELP_URL))
         self.parent.acknowledgementText = ""
         _icon = os.path.join(_RESOURCES, "Icons", "SegQueue14.png")
         if os.path.isfile(_icon):
@@ -1862,20 +1866,6 @@ class SegQueue14Widget(ScriptedLoadableModuleWidget):
         self.reworkLabel.setVisible(False)
         layout.addWidget(self.reworkLabel)
 
-        # The instructions (D12) and the classes with a one-line hint each.
-        # Collapsible and collapsed once read: the text is the same on every
-        # case, and the notes below are what differ between cases.
-        self.instructionsBox = ctk.ctkCollapsibleGroupBox()
-        self.instructionsBox.setTitle("Instructions and classes")
-        instructionsLayout = qt.QVBoxLayout(self.instructionsBox)
-        instructionsLayout.setContentsMargins(8, 6, 8, 6)
-        self.instructionsBrowser = qt.QTextBrowser()
-        self.instructionsBrowser.setMaximumHeight(220)
-        self.instructionsBrowser.setFrameShape(qt.QFrame.NoFrame)
-        instructionsLayout.addWidget(self.instructionsBrowser)
-        layout.addWidget(self.instructionsBox)
-        self._renderInstructions(None)
-
         self.notesBox = qt.QGroupBox("Case notes")
         notesLayout = qt.QVBoxLayout(self.notesBox)
         notesLayout.setContentsMargins(8, 6, 8, 6)
@@ -2702,26 +2692,6 @@ class SegQueue14Widget(ScriptedLoadableModuleWidget):
         self.reviewStatusLabel.setText(
             "ImageCAS-X reference loaded as its own segmentation (outlines only).")
 
-    def _renderInstructions(self, project):
-        """The project's instructions and the class legend, from the server."""
-        if project is None:
-            self.instructionsBrowser.setHtml(
-                "<span style='color:{}'>Log in to see the instructions.</span>".format(
-                    _themeColours()["muted"]))
-            return
-        rows = []
-        for spec in project.segments:
-            r, g, b = (int(round(255 * c)) for c in spec.color)
-            rows.append(
-                "<tr><td><span style='color:rgb({},{},{})'>&#9632;</span> <b>{}</b>{}</td>"
-                "<td>{}</td></tr>".format(
-                    r, g, b, _escape(spec.name), " *" if spec.required else "",
-                    _escape(spec.hint)))
-        self.instructionsBrowser.setHtml(
-            "<p>{}</p><table cellspacing='2'>{}</table>"
-            "<p style='color:#8a8a8a'>* required: must not be empty to submit.</p>".format(
-                _escape(project.instructions), "".join(rows)))
-
     def _prelabelText(self, assignment):
         if not assignment.has_prelabel and assignment.has_seed:
             if self.logic is not None and self.logic.resumedDraft:
@@ -2906,7 +2876,6 @@ class SegQueue14Widget(ScriptedLoadableModuleWidget):
                 else ". {} case(s) left in your quota.".format(
                     project.quota_remaining)))
         self.loginBox.collapsed = True
-        self._renderInstructions(project)
 
         self.reviewBox.setVisible(self.logic.isReviewer())
         self._updateEnabled()
@@ -2921,7 +2890,6 @@ class SegQueue14Widget(ScriptedLoadableModuleWidget):
         with _busy():
             self.logic.disconnect()
         self.statusLabel.setText("Not logged in.")
-        self._renderInstructions(None)
         self.caseLabel.setText("No case open.")
         self._clearNotes()
         self.reworkLabel.setVisible(False)

@@ -252,8 +252,16 @@ def test_required_classes_are_checked_before_anything_is_uploaded(method):
     assert check < body.index("uploadFile"), "the D13 check must come before the upload"
 
 
-def test_the_instructions_are_shown():
-    assert "_renderInstructions(project)" in _source()
+def test_there_is_no_instructions_panel_and_help_is_a_link():
+    # Project lead, 2026-10-17: no instructions section in the UI; the module
+    # help is a link to the repository.
+    source = _source()
+    assert "instructionsBox" not in source and "_renderInstructions" not in source
+    module = next(c for c in _classes() if c.name == "SegQueue14")
+    init = ast.get_source_segment(source, next(
+        n for n in module.body if isinstance(n, ast.FunctionDef) and n.name == "__init__"))
+    assert "helpText" in init and "HELP_URL" in init and "__doc__" not in init
+    assert 'HELP_URL = "https://github.com/christianGRogers/Asclepius"' in source
 
 
 # ------------------------------------------------------------ packaging

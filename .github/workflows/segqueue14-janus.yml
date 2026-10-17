@@ -1,8 +1,8 @@
 # Run one step of the SegQueue14 deploy (deploy/segqueue14-deploy.sh) on janus.
 #
-# Triggered by a push to claude/segqueue14 that changes deploy/janus/command.txt --
-# that file names the step, so every run is a reviewed commit saying what it does --
-# or by hand (workflow_dispatch, once this file is on the default branch).
+# Run by hand from the Actions tab (workflow_dispatch), choosing the step. It always
+# deploys what is on `main` -- the released code (CONTRIBUTING.md §4) -- by updating the
+# server's clone ~/Asclepius-sq14 to origin/main before running the step.
 #
 #   diagnose | status                      read-only
 #   install                                backup, install the plugin, restart Girder
@@ -16,9 +16,6 @@
 name: SegQueue14 on janus
 
 on:
-  push:
-    branches: [claude/segqueue14]
-    paths: [deploy/janus/command.txt]
   workflow_dispatch:
     inputs:
       command:
@@ -36,7 +33,7 @@ permissions:
 
 jobs:
   run:
-    name: segqueue14 ${{ inputs.command || 'from command.txt' }}
+    name: segqueue14 ${{ inputs.command }}
     runs-on: ubuntu-latest
     environment: production
     timeout-minutes: 120
@@ -49,7 +46,7 @@ jobs:
           INPUT: ${{ inputs.command }}
         run: |
           set -euo pipefail
-          cmd="${INPUT:-$(grep -v '^#' deploy/janus/command.txt | sed '/^\s*$/d' | head -1 | xargs)}"
+          cmd="$INPUT"
           case "$cmd" in
             diagnose|status|install|populate|"populate --apply"|worker|off) ;;
             *) echo "::error::unknown step '$cmd'"; exit 1 ;;
@@ -109,8 +106,8 @@ jobs:
           # Bring the server's clone of this branch up to date (as the deploy user,
           # with their GitHub credentials); fall back to the copy already there.
           if [ -d "\$src/.git" ]; then
-            runuser -u "\$SQ14_USER" -- env HOME="\$home" git -C "\$src" fetch -q origin claude/segqueue14 \
-              && runuser -u "\$SQ14_USER" -- env HOME="\$home" git -C "\$src" checkout -q -B claude/segqueue14 origin/claude/segqueue14 \
+            runuser -u "\$SQ14_USER" -- env HOME="\$home" git -C "\$src" fetch -q origin main \
+              && runuser -u "\$SQ14_USER" -- env HOME="\$home" git -C "\$src" checkout -q -B main origin/main \
               || echo "[sq14] could not update \$src; using what is there"
           fi
           script="\$src/deploy/segqueue14-deploy.sh"

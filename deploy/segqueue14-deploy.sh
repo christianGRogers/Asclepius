@@ -13,7 +13,7 @@
 #   bash segqueue14-deploy.sh off         # rollback switch: /segqueue14 off, live untouched
 #
 # What it never does: check out a branch in ~/Asclepius, reinstall the live plugin
-# (server/), or write to the live SegQueue's data. The branch is cloned separately into
+# (server/), or write to the live SegQueue's data. `main` is cloned separately into
 # ~/Asclepius-sq14, and only the shared package (repository root, --no-deps) and the
 # girder-segqueue14 plugin are installed into the live venv.
 #
@@ -44,7 +44,7 @@ LIVE="${LIVE:-$USER_HOME/Asclepius}"
 SRC="${SRC:-$USER_HOME/Asclepius-sq14}"
 DATA="${DATA:-$USER_HOME/segqueue-data}"
 LAUNCHER="$DATA/segqueue.sh"
-BRANCH="${BRANCH:-claude/segqueue14}"
+BRANCH="${BRANCH:-main}"   # deploy the released code (CONTRIBUTING.md §4)
 # The live checkout's own remote, so the server's existing GitHub credentials apply.
 REPO_URL="${REPO_URL:-$(as_user git -C "$LIVE" remote get-url origin 2>/dev/null || echo https://github.com/christianGRogers/Asclepius.git)}"
 PY="$LIVE/.venv/bin/python"

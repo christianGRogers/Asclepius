@@ -34,10 +34,13 @@ that owns the checkout.
 
 ## Quick path: `deploy/segqueue14-deploy.sh`
 
-Steps 0, 1, 3 and 5 below as one script, run on the server from any directory:
+Steps 0, 1, 3 and 5 below as one script. **From GitHub:** Actions -> *SegQueue14 on
+janus* -> *Run workflow*, pick the step; it SSHes in with the `SSH_*` secrets, updates
+`~/Asclepius-sq14` to `main` and runs the step as root for the deploy user (output in
+the run summary). **On the server by hand**, from any directory:
 
 ```sh
-git clone -q --branch claude/segqueue14 "$(git -C ~/Asclepius remote get-url origin)" ~/Asclepius-sq14
+git clone -q --branch main "$(git -C ~/Asclepius remote get-url origin)" ~/Asclepius-sq14
 D=~/Asclepius-sq14/deploy/segqueue14-deploy.sh
 bash $D install            # backup, install, restart Girder, check both plugins
 bash $D populate           # dry run of the pool
@@ -46,8 +49,8 @@ bash $D worker             # SegQueue14 scoring worker
 bash $D status             # counts; `off` is the rollback switch
 ```
 
-It never checks a branch out in `~/Asclepius` and never reinstalls the live plugin: the
-branch is cloned into `~/Asclepius-sq14`, and only the repository root (the shared
+It never checks anything out in `~/Asclepius` and never reinstalls the live plugin:
+`main` is cloned into `~/Asclepius-sq14`, and only the repository root (the shared
 `segqueue`/`segqueue14` packages, `--no-deps`) and `girder-segqueue14` are installed
 into the live venv. The steps below are what it does, for doing it by hand.
 
@@ -62,12 +65,11 @@ this is the one moment where a restore point costs nothing.
 
 ## 1. Install the code
 
-From a separate clone of the branch, so the live checkout and the live plugin stay as
-they are (the branch also carries default-text edits to the live plugin; reinstalling
-`./server` from it would apply them):
+From a separate clone of `main`, so the live checkout and the live plugin stay as they
+are (reinstalling `./server` is the live plugin's own release step, not this one's):
 
 ```sh
-git clone --branch claude/segqueue14 "$(git -C ~/Asclepius remote get-url origin)" ~/Asclepius-sq14
+git clone --branch main "$(git -C ~/Asclepius remote get-url origin)" ~/Asclepius-sq14
 ~/Asclepius/.venv/bin/python -m pip install --no-deps ~/Asclepius-sq14                       # segqueue + segqueue14 (src/)
 ~/Asclepius/.venv/bin/python -m pip install "$HOME/Asclepius-sq14/server/girder_segqueue14[scoring]" # the new plugin
 ~/Asclepius/.venv/bin/python -c "import girder_segqueue14, segqueue14; print('segqueue14 protocol', segqueue14.PROTOCOL_VERSION)"
@@ -251,10 +253,17 @@ submissions from the assetstore; nothing else.
 
 ## Things to know
 
+* **janus runs Girder from `~/segqueue-data/segqueue.sh`, not systemd** (2026-10-17).
+  `segqueue-girder.service` / `segqueue-mongod.service` are installed but must stay
+  stopped: started beside the launcher they crash-loop on the occupied port and
+  dbpath (one did for ~20 min on 2026-10-16). The deploy script detects which one
+  serves and restarts that way. The launcher does not start `segqueue14-score`;
+  after a reboot run the `worker` step.
+
 * If a live CT is ever deleted or re-ingested under a new file id, the SegQueue14 case
   that points at it fails to download (`case_file_missing`). Re-run
   `segqueue14-populate --update` after a live re-ingest.
 * Packaged (Docker) deployments: the stock image installs only `./server[scoring]`.
   Going live there means adding `&& pip install "./server/girder_segqueue14[scoring]"`
   to `deploy/Dockerfile` and a `worker14` service running `segqueue14-score`; neither
-  is done on this branch, so the live image is unchanged.
+  is done yet, so the live image is unchanged.

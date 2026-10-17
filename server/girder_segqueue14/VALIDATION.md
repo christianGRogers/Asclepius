@@ -43,13 +43,15 @@ The queue is the 675 pooled volumes only (D23): no ImageCAS case of any kind.
 - [ ] **Get next case** gives the first volume of the pool list
       (`Figshare-23057000__PA0` unless it was left out).
 - [ ] The case opens with the yellow `~ vessel seed (not submitted)` segment over the
-      vessels (faint in 3D) and the four class segments empty; the case line says
-      `vessel seed: divide it into the classes`.
-- [ ] Divide part of it: Segment Editor -> *Islands* -> *Keep selected island* on a copy,
-      or *Logical operators* -> *Add* the seed into a class and erase what is not
-      that class. It is quick enough to be the way annotators work (if not, say so
-      before go-live).
-- [ ] *Save draft*, close Slicer, reopen and log in: the draft and the seed come back.
+      vessels (faint in 3D) and the four class segments each a full copy of the seed,
+      hidden (D26); the case line says each class starts as the whole seed.
+- [ ] Press **Submit case** before trimming anything: refused before upload, naming the
+      classes that share voxels.
+- [ ] Cut the classes down: show one class (its eye), erase what is not that vessel
+      (*Scissors* / *Erase*, or *Islands* -> *Remove selected island*), hide it, next.
+      It is quick enough to be the way annotators work (if not, say so before go-live).
+- [ ] *Save draft*, close Slicer, reopen and log in: the draft (your trimmed classes,
+      not fresh copies) and the seed come back.
 - [ ] Erase all of LCx and press **Submit case**: refused before upload, naming LCx.
       Undo, submit: accepted, local copy deleted.
 - [ ] Old module: with a SegQueue14 zip built from an older protocol (or by running

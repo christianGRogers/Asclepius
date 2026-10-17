@@ -15,6 +15,9 @@ Decisions (vault/Plans/Human decisions.md):
   to the contrast-filled lumen.
 * D13 -- LAD, LCx and RCA must be non-empty to submit; LM is optional (some
   patients have separate LAD and LCx ostia and no left main).
+* D26 -- on a seeded case every class starts as a full copy of the vessel seed,
+  hidden; the annotator shows one class at a time and cuts it down to that
+  vessel. A case is refused while any voxel is in two classes.
 """
 
 from __future__ import annotations
@@ -50,14 +53,16 @@ REQUIRED: List[str] = [row[1] for row in _TABLE if row[3]]
 #: What annotators are told (D10, D12). Shown in the SegQueue14 panel and served
 #: as the default ``segqueue14.project`` instructions.
 INSTRUCTIONS = (
-    "The case opens with a yellow vessel seed: an automatic, uncorrected mask of "
-    "the coronary tree in one colour. Divide it into the four classes -- LM, LAD, "
-    "LCx, RCA -- and correct it: add vessel it missed, delete anything that is not "
-    "a coronary artery (veins, other structures), and trim or extend the outline "
-    "to the contrast-filled lumen. Every side branch takes the class of the "
-    "vessel it comes off: diagonals are LAD, obtuse marginals are LCx, a PDA or "
-    "posterolateral branch is the class of the artery it arises from. A ramus "
-    "intermedius is always LCx. Note anything unusual."
+    "Each of the four classes -- LM, LAD, LCx, RCA -- starts as a full copy of the "
+    "vessel seed (an automatic, uncorrected mask of the whole coronary tree) and is "
+    "hidden. Show one class at a time (the eye in the segment list) and cut it down "
+    "to that vessel: erase everything that belongs to another class. Every side "
+    "branch takes the class of the vessel it comes off: diagonals are LAD, obtuse "
+    "marginals are LCx, a PDA or posterolateral branch is the class of the artery "
+    "it arises from. A ramus intermedius is always LCx. Also add vessel the seed "
+    "missed, delete anything that is not a coronary artery, and trim or extend the "
+    "outline to the contrast-filled lumen. A case cannot be submitted while any "
+    "voxel is in two classes. Note anything unusual."
 )
 
 #: Project name served by default.
@@ -127,3 +132,18 @@ def missing_required_message(missing: Iterable[str]) -> str:
             "before the case can be submitted. If one is genuinely absent or not "
             "visible in this scan, give the case back and say why in the case "
             "note.".format(listed, "is" if len(names) == 1 else "are"))
+
+
+def overlap_message(pairs: Iterable) -> str:
+    """The annotator-facing refusal for classes that share voxels (D26).
+
+    ``pairs`` is ``[(name, name, voxels), ...]``.
+    """
+    rows = [(str(a), str(b), int(n)) for a, b, n in pairs]
+    if not rows:
+        return ""
+    listed = "; ".join(f"{a} and {b} share {n} voxels" for a, b, n in rows)
+    return (f"{listed}. Every vessel voxel must be in exactly one class. Each class starts "
+            "as a full copy of the seed: show one class at a time and erase from it "
+            "what belongs to another class. A class you have not cut down yet still "
+            "holds the whole tree.")

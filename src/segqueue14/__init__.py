@@ -23,5 +23,7 @@ __version__ = "0.1.0"
 #: before a breaking change, is refused with a message telling the annotator to
 #: update the SegQueue14 module, instead of writing a submission in the wrong
 #: classes. 15 (D25): four classes; a 14-class module (protocol 14, SegQueue
-#: 0.14.0) is refused.
-PROTOCOL_VERSION = 15
+#: 0.14.0) is refused. 16 (D26): seeded cases open with the seed in every class,
+#: and overlapping classes are refused; a 0.15.0 module, which opens them empty,
+#: is told to update.
+PROTOCOL_VERSION = 16

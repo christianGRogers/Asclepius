@@ -216,6 +216,11 @@ install() {
         why_not_loaded
         die "SegQueue14 did not load (the live SegQueue is fine). See the lines above."
     fi
+    # A running worker still has the old code (labels, protocol) in memory.
+    if pgrep -f segqueue14-score >/dev/null; then
+        say "restarting the SegQueue14 worker so it runs the new code"
+        worker
+    fi
     say "installed. Next: bash $0 populate"
 }
 
@@ -232,13 +237,20 @@ populate() {
     fi
 }
 
+stop_worker() {
+    $SUDO systemctl stop segqueue14-worker 2>/dev/null || true
+    pkill -f segqueue14-score 2>/dev/null || true
+    for _ in 1 2 3 4 5; do pgrep -f segqueue14-score >/dev/null || return 0; sleep 1; done
+    pkill -9 -f segqueue14-score 2>/dev/null || true
+}
+
 worker() {
+    # (Re)start: a worker left over from an older install keeps the old code.
+    stop_worker
     if under_systemd; then
         $SUDO cp "$SRC/server/girder_segqueue14/segqueue14-worker.service" /etc/systemd/system/
         $SUDO systemctl daemon-reload
         $SUDO systemctl enable --now segqueue14-worker
-    elif pgrep -f segqueue14-score >/dev/null; then
-        say "segqueue14-score already running"
     elif [ "$(id -u)" = 0 ] && command -v systemd-run >/dev/null; then
         # Launcher-run box, from CI: a transient unit, fully detached from this SSH
         # session (a nohup'd child keeps the session open) and restarted if it dies.

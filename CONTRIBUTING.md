@@ -188,6 +188,21 @@ to each other across the change. If the release needs a server that is not
 deployed yet, deploy the server first — the extension updates itself and the
 server does not.
 
+### SegQueue14
+
+The same switch for the 14-class module: bump `__version__` in
+`slicer/SegQueue14/SegQueue14.py` in the pull request, and on the push to `main`
+`.github/workflows/segqueue14-release.yml` tests, builds and checks the archive and
+publishes `segqueue14-v<version>` if that tag does not exist. Pull requests that
+touch SegQueue14 build it too and leave the `.zip` on the run, for a hand test.
+
+Two differences: SegQueue14 **does not update itself** (the server tells an
+out-of-date module to update at login, and the annotator installs the new zip),
+and its releases are never marked *latest*, so they can never be offered to
+SegQueue annotators — the live updater only answers to `segqueue-v` tags and
+`SegQueue-` archives. The server side is deployed from `main` with
+*Actions -> SegQueue14 on janus* (`server/girder_segqueue14/DEPLOY.md`).
+
 ---
 
 ## 7. Review

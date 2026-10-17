@@ -1,0 +1,380 @@
+[
+ {
+  "name": "ASOCA (Automated Segmentation Of Coronary Arteries, MICCAI 2020) - training set via UK Data Service ReShare 855916",
+  "url": "https://reshare.ukdataservice.ac.uk/855916/ ; https://asoca.grand-challenge.org/",
+  "tier": "T1",
+  "n_scans": {
+   "number": 40,
+   "unit": "patients (1 CCTA each): 20 normal + 20 diseased"
+  },
+  "est_size_gb": 4.0,
+  "format": "NRRD (per the zip contents listed by the Kaggle mirror: Diseased/Annotations/*.nrrd); UKDS zips are 2 GB each",
+  "labels": "Voxel-wise coronary lumen segmentation (majority vote of 3 experts), centrelines, calcium scores, lumen meshes",
+  "license": "UK Data Service End User Licence (files). Documentation is CC BY-SA 4.0. Redistribution is not allowed. Commercial use and sharing derived labels must be checked with the DAC ([contact removed]).",
+  "access": "DUA/application",
+  "steps_to_access": "1) The project lead registers with the UK Data Service (https://beta.ukdataservice.ac.uk/myaccount). 2) Email [contact removed] (ASOCA DAC) with the project purpose and request permission for SN 855916. The UNSW record says evidence of ethics approval or a waiver may be required. 3) After the owner approves, contact the UKDS Access Helpdesk to release ASOCA_Normal.zip and ASOCA_Diseased.zip. Fallback: the temporary MS Form linked from https://asoca.grand-challenge.org/ (https://forms.office.com/r/HK38BahFiM). Expected wait: days to weeks (not stated).",
+  "provenance": "Coronary Atlas project, Auckland City Hospital (NZ), 2017-2020. The same 20 diseased cases are also listed as Zenodo 4531428 (restricted) and UNSWorks doi:10.26190/ntyk-bm92 (metadata only). The 20 normal cases have a matching UNSWorks record. Independent of ImageCAS.",
+  "verified": "Read the UKDS page (2 x 2 GB zips, closed access, UKDS EUL), the grand-challenge home and access pages, Zenodo API record 4531428 (restricted, no files) and UNSWorks DSpace metadata. Nothing downloaded (gated).",
+  "notes": "Highest-value T1 source in this territory. The 20-case ASOCA test set (10 normal, 10 diseased) is not in the UKDS deposit; the paper says the test images were released without ground truth. Ask the DAC for those images too. Two unofficial Kaggle mirrors exist (kaggle.com/datasets/ayuuushsri/asoca-dataset, 'Apache 2.0'; kaggle.com/datasets/ayushsri2004/asoca-data; both 4.12 GB, same file list). They appear to be unauthorised redistributions of a UKDS-EUL dataset. Do NOT use them for shared annotations; use the official route."
+ },
+ {
+  "name": "Coronary Atlas (UNSW/Auckland) - parent collection of ASOCA",
+  "url": "https://www.coronaryatlas.org/ (unreachable from this sandbox) ; https://www.unsw.edu.au/research/svmg/resources/asoca-dataset",
+  "tier": "T1",
+  "n_scans": {
+   "number": ">500 (unverified, from a NZ Geo feature article)",
+   "unit": "CTCA scans"
+  },
+  "est_size_gb": null,
+  "format": "unknown",
+  "labels": "Coronary tree reconstructions (unverified)",
+  "license": "unknown - private research collection",
+  "access": "restricted/national",
+  "steps_to_access": "Collaboration request to Assoc. Prof. Susann Beier ([contact removed]), UNSW Sydney. No public access route exists.",
+  "provenance": "ASOCA's 40 (+20 test) cases are a subset.",
+  "verified": "coronaryatlas.org was blocked by the proxy (CONNECT 502). The >500 count comes from a web-search summary of a NZ Geo article, not from a primary page.",
+  "notes": "Collaboration lead only. Possibly the largest CCTA pool in this territory, if the group will share."
+ },
+ {
+  "name": "orCaScore (MICCAI 2014 coronary calcium scoring challenge) - paired CSCT + CCTA",
+  "url": "https://orcascore.grand-challenge.org/Data/",
+  "tier": "T1",
+  "n_scans": {
+   "number": 72,
+   "unit": "patients, each with 1 non-contrast calcium-score CT (excluded) + 1 contrast-enhanced CCTA: 32 train + 40 test"
+  },
+  "est_size_gb": null,
+  "format": "MHD/RAW (unverified)",
+  "labels": "Calcium lesion labels (LAD/LCX/RCA) on the non-contrast scans only. The CCTAs are unlabelled.",
+  "license": "Challenge terms (not public). Redistribution is not allowed (unverified).",
+  "access": "unavailable",
+  "steps_to_access": "The challenge has been closed to new registrations since August 2025 (stated on the page). The project lead should email the organiser, Jelmer Wolterink ([contact removed]), to request the 72 CCTA volumes for research.",
+  "provenance": "4 scanners from 4 vendors in 4 hospitals (UMC Utrecht and others). Independent of ImageCAS.",
+  "verified": "Read the Home and Data pages on grand-challenge. The data files were not visible (login and registration closed).",
+  "notes": "Exclude the non-contrast half. The CCTA half is genuine T1, worth one email."
+ },
+ {
+  "name": "CAT08 - Rotterdam Coronary Artery Algorithm Evaluation Framework (MICCAI 2008 coronary centerline extraction)",
+  "url": "http://coronary.bigr.nl/centerlines/ (dead: DNS does not resolve) ; whole-heart labels only: https://zmiclab.github.io/zxh/0/mmwhs/2008_cct32.zip",
+  "tier": "T1",
+  "n_scans": {
+   "number": 32,
+   "unit": "CCTA patients (8 train + 24 test)"
+  },
+  "est_size_gb": null,
+  "format": "MHD/RAW (original)",
+  "labels": "Reference centrelines for 4 vessels. ZMIC publishes WHS labels (2008_cct32.zip, 2.4 MB, 32 label maps) but not the images.",
+  "license": "Original challenge terms; images no longer distributed.",
+  "access": "unavailable",
+  "steps_to_access": "The website is offline. Request from Erasmus MC Biomedical Imaging Group Rotterdam (Theo van Walsum, [contact removed]) as a personal research request.",
+  "provenance": "Erasmus MC, Siemens Sensation 64 / Definition DSCT. May partly overlap with the Rotterdam 2012 stenosis set (same centre).",
+  "verified": "coronary.bigr.nl fails to resolve. Downloaded and listed 2008_cct32.zip from ZMIC: labels only (dataset08..39/*_segby_all29.nii.gz). Then deleted it. A PyTorch forum thread reports that the authors did not answer data requests.",
+  "notes": "Effectively lost. Only worth an email."
+ },
+ {
+  "name": "Rotterdam Coronary Artery Stenosis Detection & Lumen Segmentation challenge (MICCAI 2012 / CLS12)",
+  "url": "http://coronary.bigr.nl/stenoses/ (dead) ; WHS labels: https://zmiclab.github.io/zxh/0/mmwhs/2013_cct48.zip",
+  "tier": "T1",
+  "n_scans": {
+   "number": 48,
+   "unit": "CCTA patients (18 train + 30 test), 3 centres"
+  },
+  "est_size_gb": null,
+  "format": "MHD/RAW (original)",
+  "labels": "Stenosis grades and lumen contours (original). ZMIC zip = whole-heart multi-atlas labels for 48 cases only.",
+  "license": "Original challenge terms",
+  "access": "unavailable",
+  "steps_to_access": "Same as CAT08: ask Erasmus MC (Theo van Walsum).",
+  "provenance": "Erasmus MC, UMC Utrecht and LUMC. May overlap with CAT08 patients.",
+  "verified": "Site dead. Listed 2013_cct48.zip (34.8 MB): result_mas/image00..47_mas.nii.gz labels only. Then deleted it.",
+  "notes": "Effectively unavailable."
+ },
+ {
+  "name": "MM-WHS 2017 (Multi-Modality Whole Heart Segmentation) - CT part",
+  "url": "https://zmiclab.github.io/zxh/0/mmwhs/ ; data description https://zmiclab.github.io/zxh/0/mmwhs/data.html",
+  "tier": "T2",
+  "n_scans": {
+   "number": 60,
+   "unit": "patients, cardiac CT/CTA: 20 train (labelled) + 40 test (images)"
+  },
+  "est_size_gb": null,
+  "format": "NIfTI",
+  "labels": "7 whole-heart substructures (LV, RV, LA, RA, Myo, AO, PA) for the 20 training CTs",
+  "license": "Data Access Agreement: 'Recipient(s) commit to not disseminate the Data to any third party'. Research use only, citation required. Commercial use not addressed (assume no).",
+  "access": "DUA/application",
+  "steps_to_access": "1) The project lead signs https://zmiclab.github.io/zxh/0/mmwhs/res/Data_Access_Agreement_for_Participants.pdf and emails it to [contact removed]. 2) Download from the MEGA folder linked on the page (https://mega.nz/folder/UNMF2YYI#1cqJVzo4p_wESv9P_pc8uA), e.g. with megatools/megadl. The page notes that maintenance has ended.",
+  "provenance": "Routine cardiac CTA from Shanghai hospitals (Philips 64-slice; ~0.78 mm in-plane, 1.6 mm slices). Probably the same images as CARE-WHS 'Center A' (unverified). Independent of ImageCAS.",
+  "verified": "Read the main and data pages. The MEGA link is visible, but I did not download (agreement must be signed first).",
+  "notes": "Coronaries are visible (routine cardiac CTA), but ECG-gating is not stated."
+ },
+ {
+  "name": "CARE 2024/2025/2026 - CARE-WHS / CARE-Whole Heart track (successor of MM-WHS), CT part",
+  "url": "https://www.zmic.org.cn/care_2026/track_wholeheart/ ; https://zmic.org.cn/care_2025/track3/",
+  "tier": "T2",
+  "n_scans": {
+   "number": 144,
+   "unit": "CT patients: train A20+B20+G20, val A20+B10, test A20+B14+H20 (5 CT centres; 246 total incl. MRI)"
+  },
+  "est_size_gb": null,
+  "format": "NIfTI (CaseXXXX_image.nii.gz)",
+  "labels": "7 whole-heart substructures for training cases",
+  "license": "Challenge registration agreement. The sister LA track states CC BY-NC-ND. ND (no derivatives) would block sharing new annotations, so get written permission.",
+  "access": "DUA/application",
+  "steps_to_access": "Registration for CARE 2026 is closed. Post-challenge requests: email [contact removed] (named on the CARE 2025 page for post-challenge data) or [contact removed] / [contact removed]. Expect to sign the registration form (Agreement_(Track)_<user>.pdf).",
+  "provenance": "Likely includes the MM-WHS CT (Center A, unverified) plus new centres (scanners listed: Philips 64-slice, Siemens Force, GE Revolution, Toshiba Aquilion ONE). Center B/G/H identities not disclosed.",
+  "verified": "Read the CARE 2025 track3 and CARE 2026 whole-heart pages (counts, scanners, folder layout). No data access.",
+  "notes": "Likely about 84 new CT on top of MM-WHS, if Center A = MM-WHS."
+ },
+ {
+  "name": "CARE 2026 - CARE-Left Atrium track, Task 3 (LA multi-structure segmentation, CT)",
+  "url": "https://www.zmic.org.cn/care_2026/track_leftatrium/",
+  "tier": "T2",
+  "n_scans": {
+   "number": 300,
+   "unit": "cardiac CT (enhanced) patients: 150 train + 20 val + 130 test, single centre"
+  },
+  "est_size_gb": null,
+  "format": "NIfTI (enhanced.nii.gz + cardiacSegImgMO.nii.gz)",
+  "labels": "LA, pulmonary veins and LA appendage (training set)",
+  "license": "CC BY-NC-ND (stated on page: 'please follow the data usage agreement, i.e., CC BY NC ND'). ND conflicts with sharing derived coronary labels, so ask the organisers for an exception.",
+  "access": "DUA/application",
+  "steps_to_access": "Registration is closed. Email [contact removed] / [contact removed] (or [contact removed]) for post-challenge access. Expect a signed agreement.",
+  "provenance": "Fuzhou University Affiliated Provincial Hospital, Siemens SOMATOM Force, 0.30-0.80 mm in-plane x 0.5 mm. Pre-ablation LA CTA (ECG-gating and coronary coverage not stated, but the field of view covers the whole heart). Independent of ImageCAS.",
+  "verified": "Read the track page (counts, scanner, resolution, licence). No data access.",
+  "notes": "Largest new contrast cardiac-CT pool found in this territory. High-resolution Force scans, very likely with visible coronaries. Worth an email."
+ },
+ {
+  "name": "ImageCHD (MICCAI 2020) - congenital heart disease CT",
+  "url": "https://www.kaggle.com/datasets/xiaoweixumedicalai/imagechd ; https://github.com/XiaoweiXu/ImageCHD-A-3D-Computed-Tomography-Image-Dataset-for-Classification-of-Congenital-Heart-Disease",
+  "tier": "T2",
+  "n_scans": {
+   "number": 110,
+   "unit": "patients (1 cardiac CTA each), mostly children"
+  },
+  "est_size_gb": 8.94,
+  "format": "NIfTI (.nii.gz) in a 13-part split zip (ImageCHD_dataset.change2zip + .z01-.z12)",
+  "labels": "7 heart and great-vessel classes (LV, RV, LA, RA, Myo, AO, PA). Per-case CHD diagnosis xlsx (16 types). Image-info xlsx with birth date, acquisition date, pixel spacing (~0.24-0.42 mm), z 0.75 mm, scanner.",
+  "license": "CC BY-NC 4.0 (Kaggle). Non-commercial only. Derivative labels are allowed with attribution, and must stay NC.",
+  "access": "open-download",
+  "steps_to_access": "No login needed (tested 2026-10-12): the Kaggle API download endpoint works anonymously and redirects to a signed GCS URL. Per file: curl -L -o <name> 'https://www.kaggle.com/api/v1/datasets/download/xiaoweixumedicalai/imagechd/<name>' for each of ImageCHD_dataset.change2zip, ImageCHD_dataset.z01..z12. Some files come back wrapped in a one-entry zip; if `unzip -l` shows only the same filename inside, unwrap it first. Rename *.change2zip to *.zip and extract the multi-part archive with `7z x <name>.zip` (all .z01..zNN parts in the same folder). Whole dataset in one go: curl -L -o imagechd.zip 'https://www.kaggle.com/api/v1/datasets/download/xiaoweixumedicalai/imagechd'. Kaggle's terms still apply; the lead may prefer to accept them with a free Kaggle account.",
+  "provenance": "Guangdong Provincial People's Hospital, Siemens SOMATOM Definition Flash, 2017-2018. CHD68 (MICCAI 2019) is very likely a subset of it. NIfTI headers have pixdim=1,1,1, so the true voxel spacing is not stored. Intensities are stored without rescale and look like HU+1024 (soft-tissue peak ~900-1100, contrast lumen ~1300-1600). Convert with HU = value - 1024 and verify per scan. Same group and hospital as ImageCAS (Guangdong Provincial People's Hospital), but a different disease cohort: no patient-level overlap is known, but it cannot be ruled out.",
+  "verified": "Downloaded the final split part (129 MB). Parsed the zip64 central directory: 223 entries = 110 images + 110 labels + 2 xlsx. Extracted ct_1178_image.nii.gz: 512x512x315 int16, histogram peak 900-1000 (soft tissue) with a tail to 1500+ (contrast ~+300-500 HU). Read both xlsx (SOMATOM Definition Flash, 0.75 mm). All files deleted.",
+  "notes": "Paediatric CHD hearts with small coronaries. Some cases (e.g. CA = coronary anomaly column) are relevant. Spacing must be restored from the xlsx."
+ },
+ {
+  "name": "CHD68 / Whole-heart and great vessel segmentation of CHD (MICCAI 2019)",
+  "url": "https://www.kaggle.com/datasets/xiaoweixumedicalai/chd68-segmentation-dataset-miccai19 ; https://github.com/XiaoweiXu/Whole-heart-and-great-vessel-segmentation-of-chd_segmentation",
+  "tier": "T2",
+  "n_scans": {
+   "number": 68,
+   "unit": "patients"
+  },
+  "est_size_gb": 5.42,
+  "format": "NIfTI in a split zip",
+  "labels": "Same 7 classes as ImageCHD",
+  "license": "CC BY-NC 4.0 (Kaggle)",
+  "access": "open-download",
+  "steps_to_access": "No login needed (tested 2026-10-12): the Kaggle API download endpoint works anonymously and redirects to a signed GCS URL. Per file: curl -L -o <name> 'https://www.kaggle.com/api/v1/datasets/download/xiaoweixumedicalai/chd68-segmentation-dataset-miccai19/<name>' for each of CHD68_segmentation_dataset_miccai19.change2zip + .z01... Some files come back wrapped in a one-entry zip; if `unzip -l` shows only the same filename inside, unwrap it first. Rename *.change2zip to *.zip and extract the multi-part archive with `7z x <name>.zip` (all .z01..zNN parts in the same folder). Whole dataset in one go: curl -L -o chd68-segmentation-dataset-miccai19.zip 'https://www.kaggle.com/api/v1/datasets/download/xiaoweixumedicalai/chd68-segmentation-dataset-miccai19'. Kaggle's terms still apply; the lead may prefer to accept them with a free Kaggle account. (Also on notredame.box.com; the password comes from [contact removed].)",
+  "provenance": "Same authors, hospital and label scheme as ImageCHD; very likely a subset of ImageCHD's 110 (unverified). Count as 0 new if ImageCHD is taken.",
+  "verified": "Read the Kaggle metadata and file list via the API. Not downloaded (presumed duplicate).",
+  "notes": "Duplicate candidate."
+ },
+ {
+  "name": "ImageALCAPA (BIBM 2022) - anomalous left coronary artery from the pulmonary artery, CTA",
+  "url": "https://www.kaggle.com/datasets/xiaoweixumedicalai/imagealcapa",
+  "tier": "T2",
+  "n_scans": {
+   "number": 30,
+   "unit": "patients (pre-operative ALCAPA CTA), mostly paediatric"
+  },
+  "est_size_gb": 2.63,
+  "format": "NIfTI (.nii.gz) in a 4-part split zip (ImageALCAPA_BIBM_Publish.change2zip + .z01-.z03)",
+  "labels": "7 classes incl. LCA and RCA (coronary arteries!), Myo, LV, RV, PA, Ao",
+  "license": "CC BY-NC 4.0 (Kaggle)",
+  "access": "open-download",
+  "steps_to_access": "No login needed (tested 2026-10-12): the Kaggle API download endpoint works anonymously and redirects to a signed GCS URL. Per file: curl -L -o <name> 'https://www.kaggle.com/api/v1/datasets/download/xiaoweixumedicalai/imagealcapa/<name>' for each of ImageALCAPA_BIBM_Publish.change2zip, .z01, .z02, .z03. Some files come back wrapped in a one-entry zip; if `unzip -l` shows only the same filename inside, unwrap it first. Rename *.change2zip to *.zip and extract the multi-part archive with `7z x <name>.zip` (all .z01..zNN parts in the same folder). Whole dataset in one go: curl -L -o imagealcapa.zip 'https://www.kaggle.com/api/v1/datasets/download/xiaoweixumedicalai/imagealcapa'. Kaggle's terms still apply; the lead may prefer to accept them with a free Kaggle account.",
+  "provenance": "Guangdong Provincial People's Hospital, SOMATOM Definition Flash, 2016-2021. NIfTI headers have pixdim=1,1,1, so the true voxel spacing is not stored. Intensities are stored without rescale and look like HU+1024 (soft-tissue peak ~900-1100, contrast lumen ~1300-1600). Convert with HU = value - 1024 and verify per scan. Same group and hospital as ImageCAS (Guangdong Provincial People's Hospital), but a different disease cohort: no patient-level overlap is known, but it cannot be ruled out.",
+  "verified": "Downloaded the final part (424 MB, Kaggle-wrapped). Parsed the central directory: 121 entries = 30 images + 30 labels (+ macOS ._ files). Extracted 25_image.nii.gz: 512x512x206 int16, pixdim 1, histogram peak at 1500-1600 (= ~+500 HU contrast lumen if offset 1024). All files deleted.",
+  "notes": "Small but has coronary labels. Anomalous coronary anatomy."
+ },
+ {
+  "name": "HOCMvalvesSeg (MIDL 2024, PMLR v222) - hypertrophic obstructive cardiomyopathy cardiac CT",
+  "url": "https://www.kaggle.com/datasets/xiaoweixumedicalai/hocmvalvesseg",
+  "tier": "T2",
+  "n_scans": {
+   "number": 27,
+   "unit": "adult patients (38-76 y)"
+  },
+  "est_size_gb": 1.15,
+  "format": "NIfTI (.nii, uncompressed, individual files <id>_image.nii / <id>_label.nii)",
+  "labels": "AV, MV, AO, LA, LV, myocardium, excised myocardium",
+  "license": "CC BY-NC 4.0 (Kaggle)",
+  "access": "open-download",
+  "steps_to_access": "curl -L -o 10_image.nii 'https://www.kaggle.com/api/v1/datasets/download/xiaoweixumedicalai/hocmvalvesseg/10_image.nii' (repeat per file; 54 files; list via https://www.kaggle.com/api/v1/datasets/list/xiaoweixumedicalai/hocmvalvesseg, paginated).",
+  "provenance": "Same Guangdong group, SOMATOM Definition Flash, 0.25x0.25x0.5 mm (stated).",
+  "verified": "Downloaded 10_image.nii (133 MB, served raw). 512x512x509, but the values are uint8-like 0-255 (intensity-windowed) with pixdim 1,1,1, so it is not HU. About 4% of voxels are saturated at 255 (bright contrast blood pool). Deleted.",
+  "notes": "Lossy 8-bit windowed export (no HU, no spacing), so lower value for model inference. Probably ECG-gated surgical-planning CTA with coronaries in the FOV (not verified visually)."
+ },
+ {
+  "name": "ImageTAAD (Medical Image Analysis 2025) - type-A aortic dissection CTA",
+  "url": "https://www.kaggle.com/datasets/xiaoweixumedicalai/imagetaad",
+  "tier": "T3",
+  "n_scans": {
+   "number": 120,
+   "unit": "patients"
+  },
+  "est_size_gb": 26.9,
+  "format": "NIfTI, nnU-Net layout (Task068_TAAD/imagesTr, imagesTs, labelsTr, labelsTs) in a 7-part split zip",
+  "labels": "35 foreground classes (TL, FL, tear, branches...; whether coronary classes are included is unverified, because dataset.json sits in the first part)",
+  "license": "CC BY-NC 4.0 (Kaggle)",
+  "access": "open-download",
+  "steps_to_access": "No login needed (tested 2026-10-12): the Kaggle API download endpoint works anonymously and redirects to a signed GCS URL. Per file: curl -L -o <name> 'https://www.kaggle.com/api/v1/datasets/download/xiaoweixumedicalai/imagetaad/<name>' for each of imageTAAD.change2zip, imageTAAD.z01..z06 (4.3 GB each). Some files come back wrapped in a one-entry zip; if `unzip -l` shows only the same filename inside, unwrap it first. Rename *.change2zip to *.zip and extract the multi-part archive with `7z x <name>.zip` (all .z01..zNN parts in the same folder). Whole dataset in one go: curl -L -o imagetaad.zip 'https://www.kaggle.com/api/v1/datasets/download/xiaoweixumedicalai/imagetaad'. Kaggle's terms still apply; the lead may prefer to accept them with a free Kaggle account.",
+  "provenance": "Same Guangdong group. NIfTI headers have pixdim=1,1,1, so the true voxel spacing is not stored. Intensities are stored without rescale and look like HU+1024 (soft-tissue peak ~900-1100, contrast lumen ~1300-1600). Convert with HU = value - 1024 and verify per scan. Same group and hospital as ImageCAS (Guangdong Provincial People's Hospital), but a different disease cohort: no patient-level overlap is known, but it cannot be ruled out.",
+  "verified": "Downloaded the final part (659 MB, served raw). Parsed the zip64 directory (247 entries). Extracted imagesTs/TAAD_93_0000.nii.gz: 512x512x914 int16, pixdim 1 (whole-aorta coverage). Deleted.",
+  "notes": "Aortic CTA covering the heart. TAAD CTA is often ECG-gated, so it could be T2 if gated (unverified)."
+ },
+ {
+  "name": "ImageTBAD (Frontiers Physiol 2021) - type-B aortic dissection CTA",
+  "url": "https://www.kaggle.com/datasets/xiaoweixumedicalai/imagetbad ; coronary ostia annotations: https://www.synapse.org/#!Synapse:syn35789568",
+  "tier": "T3",
+  "n_scans": {
+   "number": 100,
+   "unit": "patients"
+  },
+  "est_size_gb": 13.38,
+  "format": "NIfTI split zip",
+  "labels": "TL, FL, FL thrombus. A separate Synapse project adds coronary ostia point labels for ImageTBAD.",
+  "license": "CC BY-NC 4.0",
+  "access": "open-download",
+  "steps_to_access": "No login needed (tested 2026-10-12): the Kaggle API download endpoint works anonymously and redirects to a signed GCS URL. Per file: curl -L -o <name> 'https://www.kaggle.com/api/v1/datasets/download/xiaoweixumedicalai/imagetbad/<name>' for each of imageTBAD.change2zip + .z01... Some files come back wrapped in a one-entry zip; if `unzip -l` shows only the same filename inside, unwrap it first. Rename *.change2zip to *.zip and extract the multi-part archive with `7z x <name>.zip` (all .z01..zNN parts in the same folder). Whole dataset in one go: curl -L -o imagetbad.zip 'https://www.kaggle.com/api/v1/datasets/download/xiaoweixumedicalai/imagetbad'. Kaggle's terms still apply; the lead may prefer to accept them with a free Kaggle account.",
+  "provenance": "Guangdong Provincial People's Hospital, 2013-2019, GE/Siemens/Philips, neck to femoral.",
+  "verified": "Read Kaggle metadata and the file list. Found the Synapse project syn35789568 via the Synapse search API. Not downloaded.",
+  "notes": "Aortic CTA (non-gated likely). The coronary-ostia project implies the coronary origins are visible in the field of view."
+ },
+ {
+  "name": "AortaSeg24 (MICCAI 2024) - aortic branches and zones CTA",
+  "url": "https://aortaseg24.grand-challenge.org/dataset/",
+  "tier": "T3",
+  "n_scans": {
+   "number": 50,
+   "unit": "CTA patients released (training); test set hidden"
+  },
+  "est_size_gb": null,
+  "format": "MHA, 1 mm isotropic, 578-801 slices",
+  "labels": "23 aortic branch/zone classes",
+  "license": "Data use agreement via DocuSign (terms not public)",
+  "access": "DUA/application",
+  "steps_to_access": "The project lead signs the DocuSign PowerForm linked at https://aortaseg24.grand-challenge.org/dataset/ (organiser [contact removed]).",
+  "provenance": "Univ. of Florida (per organisers). Independent.",
+  "verified": "Read the dataset and access pages.",
+  "notes": "Whole-aorta CTA, coronaries only partly visible."
+ },
+ {
+  "name": "AVT - Aortic Vessel Tree CTA collection (used by SEG.A / MultiCenterAorta MICCAI 2023)",
+  "url": "https://figshare.com/articles/dataset/14806362 ; https://multicenteraorta.grand-challenge.org/",
+  "tier": "T3",
+  "n_scans": {
+   "number": 56,
+   "unit": "CTA scans: KiTS 20 + RIDER 18 + Dongyang 18"
+  },
+  "est_size_gb": 6.3,
+  "format": "NRRD (in zips)",
+  "labels": "Aortic vessel tree binary masks",
+  "license": "CC BY 4.0",
+  "access": "open-download",
+  "steps_to_access": "curl -L -o Dongyang.zip https://ndownloader.figshare.com/files/30950971 (875 MB); KiTS.zip files/30950821 (1.5 GB); Rider.zip files/30950914 (3.9 GB)",
+  "provenance": "KiTS subset = TCIA C4KC-KiTS (abdominal; duplicate of TCIA/IDC). RIDER subset = TCIA RIDER (duplicate). Only Dongyang (18, China) is new. SEG.A 2023 uses this data.",
+  "verified": "Read the figshare API record (files, sizes, CC BY 4.0). Not downloaded (T3).",
+  "notes": "At most 18 new scans, and of low value."
+ },
+ {
+  "name": "SegTHOR (ISBI 2019) - thoracic organs at risk",
+  "url": "https://competitions.codalab.org/competitions/21145",
+  "tier": "T3",
+  "n_scans": {
+   "number": 60,
+   "unit": "patients (40 train + 20 test)"
+  },
+  "est_size_gb": null,
+  "format": "NIfTI",
+  "labels": "Heart, aorta, trachea, esophagus",
+  "license": "Challenge terms (CodaLab registration)",
+  "access": "free-registration",
+  "steps_to_access": "Create a CodaLab account and register for competition 21145; the data link appears after the organisers approve.",
+  "provenance": "Henri Becquerel Center, Rouen; RT planning CT 2016-2017.",
+  "verified": "Read the arXiv paper 1912.05950: '60 thoracic CT scans, acquired with or without intravenous contrast'; 2-3.7 mm slices. CodaLab page is JS-only.",
+  "notes": "Mixed contrast and non-gated, so very low value."
+ },
+ {
+  "name": "TCIA - gated contrast cardiac CTA series found inside oncology collections",
+  "url": "https://www.cancerimagingarchive.net/collection/varepop-apollo/ ; https://www.cancerimagingarchive.net/collection/nsclc-radiogenomics/",
+  "tier": "T2",
+  "n_scans": {
+   "number": 3,
+   "unit": "patients: VAREPOP-APOLLO AP-26JK (TAVR protocol 'CARDIAC CTA', BestDiast/BestSyst), NSCLC Radiogenomics AMC-015 (GATED_CHEST_CTA), AMC-027 (GATED_CHEST_CTA, Isovue 370)"
+  },
+  "est_size_gb": 0.6,
+  "format": "DICOM",
+  "labels": "none",
+  "license": "CC BY 4.0 (TCIA, both collections public)",
+  "access": "open-download",
+  "steps_to_access": "curl -o s.zip 'https://services.cancerimagingarchive.net/nbia-api/services/v1/getImage?SeriesInstanceUID=1.3.6.1.4.1.14519.5.2.1.48195529360461873970186987705752020141' (AP-26JK BestDiast 59%, 150 MB). Other series UIDs: AP-26JK BestSyst ...305592206580970735498393578197444028276; AMC-015 BestDiast 1.3.6.1.4.1.14519.5.2.1.4334.1501.253298261882254993527951068007; AMC-027 BestDiast 1.3.6.1.4.1.14519.5.2.1.4334.1501.226290841276881230606366131024.",
+  "provenance": "Also mirrored in IDC (likely already in IDC.json).",
+  "verified": "Scanned all 156 public NBIA collections (excluding NLST and 4D-Lung) with the getSeries API and regex on SeriesDescription/ProtocolName/BodyPart. Downloaded the AP-26JK series (459 x 0.6 mm, SOMATOM Definition Flash, BodyPart HEART, protocol TAVR, study 'CARDIAC CTA'): 16% of central voxels are 200-700 HU, so contrast is confirmed. Sampled 10 slices each of AMC-015/AMC-027 (study 'CT ANGIO THORAX' / 'GATED_CHEST_CTA'; contrast 'APPLIED' / 'Isovue 370'; p99 ~510 HU). All deleted.",
+  "notes": "TCIA has no cardiac/coronary collection: the browse table (230 collections) has no Heart location, and 'Limited' collections are mostly H&N/brain. Other cardiac-named series are non-contrast or PET-AC (VAREPOP-APOLLO AP-2BGM 'AC FB Rest/Stress Cardiac', RIDER Lung PET-CT 'Calcium Score CT' / 'RG CARDIAC ECG MOD'), so excluded. T3 chest CTA/CTPA series exist in small numbers (COVID-19-NY-SBU ~31 pts 'CTA', CMB-LCA ~13 pts, CMB-BRCA, CPTAC-LUAD/PDA, MIDRC-RICORD-1A/1B, TCGA-UCEC). New 2026 'Healthy-Total-Body-CTs' is low-dose non-contrast, so excluded."
+ },
+ {
+  "name": "LASC'13 (Left Atrial Segmentation Challenge 2013, STACOM) - CT part",
+  "url": "https://figshare.com/articles/dataset/1492978 (MRI only) ; WHS labels for the 30 CT: https://zmiclab.github.io/zxh/0/mmwhs/2013_left_atrium_seg_challenge_ct30.zip",
+  "tier": "T2",
+  "n_scans": {
+   "number": 30,
+   "unit": "cardiac CTA patients"
+  },
+  "est_size_gb": null,
+  "format": "unknown",
+  "labels": "LA (original). ZMIC zip has WHS labels only (gc2013_cta_*_whs.nii.gz).",
+  "license": "unknown",
+  "access": "unavailable",
+  "steps_to_access": "The CT images are not on figshare (only MRI training, testing and results are) and the cardiacatlas.org challenge page returns 404. Ask Catalina Tobon-Gomez / Cardiac Atlas Project.",
+  "provenance": "Philips (per paper).",
+  "verified": "figshare API search: only 3 MRI records. Listed the ZMIC ct30 zip (31 label files, no images), then deleted it. The cardiacatlas challenge URL returns 404.",
+  "notes": "Lost unless the authors respond."
+ },
+ {
+  "name": "Synapse.org search",
+  "url": "https://www.synapse.org",
+  "tier": "Exclude",
+  "n_scans": {
+   "number": 0,
+   "unit": "no CCTA image collections found"
+  },
+  "est_size_gb": 0,
+  "format": "n/a",
+  "labels": "n/a",
+  "license": "n/a",
+  "access": "unavailable",
+  "steps_to_access": "n/a",
+  "provenance": "Only hit: syn35789568 (coronary ostia points for ImageTBAD; labels only). syn60940384 'Redhorse Kundaje Coronary Artery Dominance Data Share' is private, with no wiki; it is probably genetics/angiography (unverified).",
+  "verified": "Synapse REST search for 'coronary CT', 'cardiac CT', 'CCTA', 'coronary artery'. Read entity and wiki metadata of the candidates.",
+  "notes": "Synapse cardiac challenges are MRI (CMRxRecon, MBAS) or echo/TEE (MVSeg2023)."
+ },
+ {
+  "name": "Excluded / non-qualifying challenge datasets checked",
+  "url": "https://grand-challenge.org/api/v1/challenges/ (264 hosted challenges scanned) ; MICCAI 2023-2026 challenge lists",
+  "tier": "Exclude",
+  "n_scans": {
+   "number": 0,
+   "unit": "n/a"
+  },
+  "est_size_gb": 0,
+  "format": "n/a",
+  "labels": "n/a",
+  "license": "n/a",
+  "access": "unavailable",
+  "steps_to_access": "n/a",
+  "provenance": "n/a",
+  "verified": "Fetched every grand-challenge challenge via API plus the MICCAI 2023/2024/2025/2026 challenge pages, and grepped for cardiac/coronary/aorta/CTA.",
+  "notes": "ARCADE 2023 and CoronARe (X-ray angiography); CMRxRecon, MBAS 2024, CARE-MyoPS/LA-MRI, MVAA 2026, EchoRisk (MRI/echo); orCaScore non-contrast half; STOIC/ATM22 (non-contrast chest); LDCT/NLST (low-dose). The DTU 'public cardiac CT dataset featuring the LAA' (arXiv 2510.06090, STACOM 2025) is new labels on ImageCAS, so a DUPLICATE with no new scans. T3 chest-CTA challenge data not chased: Parse2022 (CTPA), LNQ2023 (contrast chest CT = TCIA Mediastinal-Lymph-Node-SEG), StructSeg2019, AAPM LCTSC (TCIA), RSNA STR-PE (Kaggle, ~7k CTPA). No 2023-2026 MICCAI or ISBI challenge released CCTA images."
+ }
+]

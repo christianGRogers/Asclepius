@@ -1,0 +1,331 @@
+{
+ "agent": "Sweep",
+ "round": 2,
+ "date": "2026-10-12",
+ "sources": [
+  {
+   "name": "IRCCS SDN Naples: 'Normal patterns of left ventricle rest myocardial perfusion assessed by third-generation dual-source CT' (Mendeley cy54ttk3fj)",
+   "url": "https://data.mendeley.com/datasets/cy54ttk3fj/1",
+   "tier": "T1",
+   "n_scans": {
+    "number": 40,
+    "unit": "patients (each with a diastolic and a systolic ECG-gated CCTA reconstruction, i.e. 80 series)"
+   },
+   "est_size_gb": 9.07,
+   "format": "DICOM (no extension) inside Diast.zip (4.86 GB) and Sist.zip (4.21 GB); folders Diast/<1..40>/DICOM/..., Sist/<1..40>/DICOM/...",
+   "labels": "none",
+   "license": "CC BY 4.0 (data_licence field of the Mendeley record)",
+   "access": "open download, no login",
+   "steps_to_access": "File list: GET https://data.mendeley.com/public-api/datasets/<id> (send any User-Agent, e.g. 'curl/8'; python-urllib UA gets 403) -> .files[].content_details.download_url (pattern https://data.mendeley.com/public-files/datasets/<id>/files/<file-uuid>/file_downloaded). Supports HTTP Range, so single members of large zips can be pulled without downloading the zip. Two zips; zip central directory read remotely: 14,822 entries in Diast.zip, 13,011 in Sist.zip, 40 patient folders each.",
+   "provenance": "IRCCS SDN (Synlab SDN), Naples, Italy; owner account 'Direzione Scientifica SDN'; published 2021. Siemens SOMATOM Force. Not in any round-1 list; unrelated to Guangdong/ImageCAS.",
+   "verified": "Yes (2026-10-12): pulled 2 slices of Diast/1 by HTTP range: Modality CT, SIEMENS SOMATOM Force, StudyDescription 'Cardiac^CCT_Retro_FC (Adult)', SeriesDescription 'ibhc 0.75 Bv36 3 BestDiast -180 ms', ContrastBolusAgent Iopamiro, 110 kVp, 0.75 mm slices, 0.26 mm pixels, slice p99.5 = 474-483 HU (enhanced blood pool + bone). Deleted.",
+   "notes": "Best T1 find of this sweep: 40 genuinely new ECG-gated retrospective CCTA patients, high resolution, permissive licence. Patients were selected as 'normal' perfusion, so mostly non-obstructive coronaries. Systolic and diastolic phases are the same patients (count 40 scans for annotation, 80 volumes)."
+  },
+  {
+   "name": "IRCCS SDN Naples: 'Case report of coronary artery fistula: multimodal advanced imaging' (Mendeley 7x9kb53262)",
+   "url": "https://data.mendeley.com/datasets/7x9kb53262/1",
+   "tier": "T1",
+   "n_scans": {
+    "number": 1,
+    "unit": "patient (multi-phase retrospective CCTA, several reconstructions; plus other series)"
+   },
+   "est_size_gb": 2.97,
+   "format": "DICOM (.IMA and extensionless), 6,662 files",
+   "labels": "none",
+   "license": "CC BY 4.0",
+   "access": "open download, no login",
+   "steps_to_access": "File list: GET https://data.mendeley.com/public-api/datasets/<id> (send any User-Agent, e.g. 'curl/8'; python-urllib UA gets 403) -> .files[].content_details.download_url (pattern https://data.mendeley.com/public-files/datasets/<id>/files/<file-uuid>/file_downloaded). Supports HTTP Range, so single members of large zips can be pulled without downloading the zip.",
+   "provenance": "IRCCS SDN Naples, 2018 exam, Siemens SOMATOM Force.",
+   "verified": "Yes: 2 files downloaded: CT, SOMATOM Force, 'Cardiac^CCT_Retro_FC', series 'DS_CorCTA 1.5 Qr32 4 0-95%' and 'BestDiast -253 ms', Iopamiro, 70 kVp, p99.5 530-596 HU. Deleted.",
+   "notes": "Single case with coronary fistula (anomaly). Retrospective 0-95% series gives multiple phases of the same patient."
+  },
+  {
+   "name": "IRCCS SDN Naples: 'Case report of right coronary artery agenesis diagnosed by CTCA' (Mendeley 37nnfyh3x9)",
+   "url": "https://data.mendeley.com/datasets/37nnfyh3x9/1",
+   "tier": "T1",
+   "n_scans": {
+    "number": 1,
+    "unit": "patient (multi-phase cardiac CTA)"
+   },
+   "est_size_gb": 1.27,
+   "format": "DICOM (extensionless), 5,218 files",
+   "labels": "none",
+   "license": "CC BY 4.0",
+   "access": "open download, no login",
+   "steps_to_access": "File list: GET https://data.mendeley.com/public-api/datasets/<id> (send any User-Agent, e.g. 'curl/8'; python-urllib UA gets 403) -> .files[].content_details.download_url (pattern https://data.mendeley.com/public-files/datasets/<id>/files/<file-uuid>/file_downloaded). Supports HTTP Range, so single members of large zips can be pulled without downloading the zip.",
+   "provenance": "IRCCS SDN dataset; images from Casa di Cura Montevergine (Avellino), GE Revolution GSI, 2019.",
+   "verified": "Yes: 2 files: CT, GE Revolution GSI, StudyDescription 'CARDIO TC', series 'Temporal 50% :SSEG HiRes' / 'SSEG HiRes VS40', protocol '5.10 CARDIO RETRO HiRes', 0.625 mm, 0.49 mm px, p99.5 733-757 HU. Deleted.",
+   "notes": "Coronary anomaly (single coronary / RCA agenesis)."
+  },
+  {
+   "name": "IRCCS SDN Naples: 'A case of coronary arterio-venous fistula: the role of cardiac CT' (Mendeley 4643nn2z44)",
+   "url": "https://data.mendeley.com/datasets/4643nn2z44/1",
+   "tier": "T1",
+   "n_scans": {
+    "number": 1,
+    "unit": "patient (about 10 retrospective-phase series of ~500 slices + a SEG object)"
+   },
+   "est_size_gb": 1.13,
+   "format": "one zip (3138916_Dicom.zip) with DICOM, 4,509 files in 12 folders",
+   "labels": "one Siemens syngo.via SEG object (derived)",
+   "license": "CC BY 4.0",
+   "access": "open download, no login",
+   "steps_to_access": "File list: GET https://data.mendeley.com/public-api/datasets/<id> (send any User-Agent, e.g. 'curl/8'; python-urllib UA gets 403) -> .files[].content_details.download_url (pattern https://data.mendeley.com/public-files/datasets/<id>/files/<file-uuid>/file_downloaded). Supports HTTP Range, so single members of large zips can be pulled without downloading the zip.",
+   "provenance": "IRCCS SDN, Siemens SOMATOM Force, 2019.",
+   "verified": "Yes: zip listed remotely; 2 CT slices pulled by range: SOMATOM Force, 110 kVp, 0.75 mm / 0.32 mm px series (p99.5 380 HU on a mid slice) and 1.5 mm series (p99.5 475 HU). Tags are de-identified ('DeIdentified'), so gating is inferred from the 10 x 500-slice phase series, not from the protocol name.",
+   "notes": "Mark as T1 (likely), gating not confirmed in the tags."
+  },
+  {
+   "name": "IRCCS SDN Naples: 'Multimodality imaging of a cardiac paraganglioma: a case report' (Mendeley spb25zt2c4)",
+   "url": "https://data.mendeley.com/datasets/spb25zt2c4/1",
+   "tier": "T1",
+   "n_scans": {
+    "number": 1,
+    "unit": "patient (gated multi-phase chest/cardiac CTA + cardiac MRI in the same record)"
+   },
+   "est_size_gb": 3.82,
+   "format": "DICOM (extensionless), 16,049 files in 36 folders (CT and MR mixed)",
+   "labels": "none",
+   "license": "CC BY 4.0",
+   "access": "open download, no login",
+   "steps_to_access": "File list: GET https://data.mendeley.com/public-api/datasets/<id> (send any User-Agent, e.g. 'curl/8'; python-urllib UA gets 403) -> .files[].content_details.download_url (pattern https://data.mendeley.com/public-files/datasets/<id>/files/<file-uuid>/file_downloaded). Supports HTTP Range, so single members of large zips can be pulled without downloading the zip. Filter on Modality=CT after download (record also contains Philips cardiac MR cine).",
+   "provenance": "IRCCS SDN, 2020, Siemens SOMATOM Force + Philips Achieva MR.",
+   "verified": "Yes: 6 random files: 4 CT ('TC DEL TORACE CON E SENZA CONTRASTO - ANGIO TC', protocol CCT_Retro_FC, series 'DS_CorCTA 1.5 Bv40 BestDiast -308 ms' and 'DS_CorCTA 1.0 Qr32 0-95%', 70 kVp, p99.5 478-910 HU), 2 MR cine. Deleted.",
+   "notes": "Cardiac mass case; coronaries visible on gated CTA. Only part of the 3.8 GB is CT."
+  },
+  {
+   "name": "Taiwan AI CUP cardiac CT cohort (aortic-valve / cardiac-muscle segmentation): HU NIfTI on Hugging Face benchang1110/cardiac_segmentation; 8-bit PNG copies on Kaggle f74096386/aicup-aortic-valve and HF ChiWei085/ML2025_HW_Cardiac_Muscle",
+   "url": "https://huggingface.co/datasets/benchang1110/cardiac_segmentation",
+   "tier": "T2",
+   "n_scans": {
+    "number": 100,
+    "unit": "patients (patient0001-0050 train with labels, patient0051-0100 test without labels)"
+   },
+   "est_size_gb": 10.57,
+   "format": "HF: NIfTI .nii.gz int16 in HU, 0.42 x 0.42 x 0.5 mm, ~340 slices; Kaggle: 512x512 8-bit windowed PNG stacks (3.7 GB, 36,341 files)",
+   "labels": "train cases have *_gt.nii.gz with labels 1-3 (large structure ~ myocardium/heart, small structure, tiny bright structure ~ calcification; exact class names unverified)",
+   "license": "UNCLEAR: HF repo has no licence; Kaggle mirror claims Apache 2.0. Underlying data come from Taiwan's Ministry of Education AI CUP competition ('Cardiac CT image segmentation / aortic valve object detection'), whose terms normally restrict use to the competition. Treat as redistribution of competition data with unknown permission.",
+   "access": "open download, no login (HF not gated; Kaggle per-file API works anonymously)",
+   "steps_to_access": "HF list: GET https://huggingface.co/api/datasets/benchang1110/cardiac_segmentation/tree/main/train_image (and /test_image). Download: https://huggingface.co/datasets/benchang1110/cardiac_segmentation/resolve/main/train_image/patient0001.nii.gz. Kaggle PNG list: /api/v1/datasets/list/f74096386/aicup-aortic-valve (folders 42_training_image/training_image/patientNNNN, 42_testing_image/...).",
+   "provenance": "Taiwanese hospital (unverified which; AI CUP competition data, 2023-2026 editions). HF PNG copy and Kaggle copy show the identical patient0001 slice, so all three are one cohort. Not related to ImageCAS.",
+   "verified": "Yes: downloaded HF patient0001.nii.gz (109 MB) + gt: 341x512x512, 0.416/0.5 mm, HU range -1024..2116, connected bright vessel components mean 330-404 HU (descending aorta/LV pool), axial view shows contrast-filled LV/LA, aorta and visible coronary branches; Kaggle PNG slice of same patient is the same image. Deleted.",
+   "notes": "Good quality cardiac CTA (likely ECG-gated: 0.5 mm slices, cardiac FOV) but gating not confirmed (no DICOM tags). 100 new patients; licence is the blocker. Additional Kaggle uploads of the same competition likely exist (jackyyu5858/aicup-yolo etc., not opened)."
+  },
+  {
+   "name": "Figshare 17039813 'A 3D deep learning approach to epicardial fat segmentation in non-contrast and post-contrast cardiac CT images' (Siriapisith, Kusakunniran, Haddawy)",
+   "url": "https://figshare.com/articles/dataset/17039813",
+   "tier": "T2",
+   "n_scans": {
+    "number": 40,
+    "unit": "post-contrast cardiac CT volumes (20 train + 20 test 'CE'), plus non-contrast volumes"
+   },
+   "est_size_gb": 4.95,
+   "format": "NRRD (gzip), heart-cropped FOV (~180 mm), 0.35 mm pixels, 2.5 mm slices, ~64 slices; one dataset.zip",
+   "labels": "epicardial fat ground truth (gt-label.nrrd) for every volume",
+   "license": "CC BY 4.0",
+   "access": "open download, no login",
+   "steps_to_access": "https://ndownloader.figshare.com/files/31584917 (single 4.95 GB zip; supports Range, so members such as dataset/Epicardial_test_CE/CE021_CE.nrrd can be pulled alone). Folders: Epicardial_train_CE, Epicardial_test_CE, Epicardial_train_NC, Epicardial_test_NC.",
+   "provenance": "Thai group (Mahidol University; hospital unverified), PeerJ CS 2021.",
+   "verified": "Yes: CE021_CE.nrrd (18.5 MB) pulled by range: 64x512x512, int32 HU, axial slice shows dense LA/aortic root/LV contrast (p99 656 HU). Deleted.",
+   "notes": "Contrast cardiac CT (likely CCTA protocol) but 2.5 mm slice thickness and cropped z-range: coronaries visible but thick. CE and NC are probably the same patients."
+  },
+  {
+   "name": "Figshare+ 30398977 'A spatially and temporally aligned contrast-non-contrast cardiac CT dataset of pigs' (Nordb\u00f8 et al., Norway)",
+   "url": "https://doi.org/10.25452/figshare.plus.30398977",
+   "tier": "T2",
+   "n_scans": {
+    "number": 60,
+    "unit": "contrast 4D cardiac scans (10 pigs x 6 growth rounds, approx.; each 10-11 cardiac phases) - ANIMAL"
+   },
+   "est_size_gb": 154.1,
+   "format": "NIfTI per phase (IM00001_ct.nii.gz...), six .tar files of 22-35 GB (AHFP-Round-1..6), folders <animal>/Heart_with_contrast_<position>",
+   "labels": "whole-heart and LV masks for phases 1 and 5",
+   "license": "CC BY 4.0",
+   "access": "open download, no login",
+   "steps_to_access": "Tar file URLs: https://ndownloader.figshare.com/files/{66226196 (Round-1), 59113601 (R2), 59117399 (R3), 66229397 (R4), 59124065 (R5), 59132822 (R6)}. Uncompressed tar: walk 512-byte headers with HTTP Range to list members and pull single phases.",
+   "provenance": "Norwegian pig study (Norsvin / NTNU); Canon Aquilion One Genesis and Alphenix 4D CT.",
+   "verified": "Yes: Round-1 tar headers read remotely; pulled Control_1_7569/Heart_with_contrast_back/IM00001_ct.nii.gz (117 MB): 512x512x560, 0.25-0.61 mm, orthogonal views show dense contrast in cardiac chambers and aorta. Deleted.",
+   "notes": "Pig hearts, not human; coronary anatomy differs. Useful only if the lead accepts animal data. 154 GB total."
+  },
+  {
+   "name": "Mendeley 'Test dataset for: A Dual-Functional System for Classification and Diameter Measurement of Aortic Dissections Using CTA Volumes' (3 records: 2yxbmchmgg Normal, 5b3wx7mkk6 Type I+II, 4yfcyv5xsk Type III)",
+   "url": "https://data.mendeley.com/datasets/5b3wx7mkk6/1",
+   "tier": "T3",
+   "n_scans": {
+    "number": 137,
+    "unit": "aortic CTA patients (45 normal, 34 type I, 7 type II, 51 type III)"
+   },
+   "est_size_gb": 33.4,
+   "format": "DICOM in zips (normal.zip 6.9 GB, I.zip + II.zip 9.4 GB, III.zip 10.1 GB), one folder per patient (00000...), median 650-1080 slices",
+   "labels": "dissection type per folder (no masks)",
+   "license": "CC BY 4.0",
+   "access": "open download, no login",
+   "steps_to_access": "File list: GET https://data.mendeley.com/public-api/datasets/<id> (send any User-Agent, e.g. 'curl/8'; python-urllib UA gets 403) -> .files[].content_details.download_url (pattern https://data.mendeley.com/public-files/datasets/<id>/files/<file-uuid>/file_downloaded). Supports HTTP Range, so single members of large zips can be pulled without downloading the zip. Patients = top-level folders inside each zip (listed remotely).",
+   "provenance": "Tongji Hospital (Wuhan, China), UIH uCT 780 and Canon scanners, 2018-2020; published 2023-11-23.",
+   "verified": "Yes: 2 DICOM from 5b3wx7mkk6: CT, UIH uCT 780, StudyDescription 'Aor-Cta', SeriesDescription 'Aorta CTA', ContrastBolusAgent 'CE', 100 kVp, 1.5 mm, slice p99.5 414-818 HU. Deleted.",
+   "notes": "Non-gated aortic CTA (chest-abdomen-pelvis); coronary origins partly visible at best. Largest open T3 set found this round."
+  },
+  {
+   "name": "TotalSegmentator task 'pleural_pericard_effusion' training data (Zenodo 20272295, Univ. Hospital Basel)",
+   "url": "https://zenodo.org/records/20272295",
+   "tier": "T3",
+   "n_scans": {
+    "number": 600,
+    "unit": "thorax CT (mixed contrast / non-contrast)"
+   },
+   "est_size_gb": 8.99,
+   "format": "nnU-Net v2 NIfTI, resampled to 1.5 mm isotropic",
+   "labels": "lung, pleural effusion, pericardial effusion",
+   "license": "CC BY 4.0 (Zenodo); dataset.json says Apache 2.0",
+   "access": "open download",
+   "steps_to_access": "https://zenodo.org/records/20272295/files/Dataset315_pleural_pericard_effusion.zip?download=1 (Range works; imagesTr/<id>_0000.nii.gz).",
+   "provenance": "Basel (TotalSegmentator group). May overlap with TotalSegmentator main dataset and with Zenodo 6384747/8328230.",
+   "verified": "Yes: 3 of 600 volumes pulled: 1.5 mm isotropic; 1 of 3 clearly contrast-enhanced (CTPA-like), 2 non-contrast/weak. Deleted.",
+   "notes": "Low value: 1.5 mm resampling makes coronaries barely visible; only a fraction is contrast."
+  },
+  {
+   "name": "Basel pericardial effusion chest CT (Zenodo 6384747 train + 8328230 test)",
+   "url": "https://zenodo.org/records/6384747",
+   "tier": "T3",
+   "n_scans": {
+    "number": 500,
+    "unit": "chest CT (~300 train + ~200 test, approx. from file counts), downsampled"
+   },
+   "est_size_gb": 4.5,
+   "format": "NIfTI 2 mm isotropic (periDown_*)",
+   "labels": "pericardial effusion masks",
+   "license": "CC BY 4.0",
+   "access": "open download",
+   "steps_to_access": "https://zenodo.org/records/6384747/files/PericardialEffusion_USB.zip?download=1 ; https://zenodo.org/records/8328230/files/PericardEffusion_down_test.zip?download=1",
+   "provenance": "University Hospital Basel; likely overlaps Zenodo 20272295.",
+   "verified": "Partly: one volume pulled: 155x199x199 at 2 mm, p99 426 HU (some enhancement). Contrast fraction unknown. Deleted.",
+   "notes": "Very low value (2 mm). Listed for completeness."
+  },
+  {
+   "name": "TotalSegmentator dataset v3.0.0 (Zenodo 22688904, 1,939 CT)",
+   "url": "https://zenodo.org/records/22688904",
+   "tier": "T3",
+   "n_scans": {
+    "number": 1939,
+    "unit": "CT of all body regions (subset is contrast chest)"
+   },
+   "est_size_gb": 37.4,
+   "format": "NIfTI",
+   "labels": "117 structures incl. heart chambers, aorta",
+   "license": "CC BY 4.0",
+   "access": "open download",
+   "steps_to_access": "https://zenodo.org/records/22688904/files/Totalsegmentator_dataset_v300.zip?download=1",
+   "provenance": "Update (2026-09-10) of the TotalSegmentator dataset that round 1 listed as v2 (Zenodo 10047292); 711 more images incl. 291 paediatric.",
+   "verified": "Record metadata only (not sampled; same family as round-1 entry).",
+   "notes": "Duplicate family; mention only because v3 adds ~700 new CTs."
+  },
+  {
+   "name": "ChestPathCT5-S100 (Zenodo 18256797)",
+   "url": "https://zenodo.org/records/18256797",
+   "tier": "T3",
+   "n_scans": {
+    "number": 20,
+    "unit": "PE cases (CTPA presumed) + 67 other chest CT, mixed contrast"
+   },
+   "est_size_gb": 9.42,
+   "format": "NIfTI in per-category zips (Med3DVlM_PE.zip 1.36 GB)",
+   "labels": "category only",
+   "license": "CC0",
+   "access": "open download",
+   "steps_to_access": "https://zenodo.org/records/18256797/files/Med3DVlM_PE.zip?download=1",
+   "provenance": "Single institution (unnamed in record), 2026.",
+   "verified": "Record only; download attempt hit proxy TLS errors; contents not checked.",
+   "notes": "Small T3."
+  },
+  {
+   "name": "Pediatric chest lymphoma with segmentation (Zenodo 7075320)",
+   "url": "https://zenodo.org/records/7075320",
+   "tier": "T3",
+   "n_scans": {
+    "number": 30,
+    "unit": "paediatric chest CT (contrast presumed, unverified)"
+   },
+   "est_size_gb": 3.24,
+   "format": "zip (format not checked)",
+   "labels": "thoracic lymph nodes",
+   "license": "CC BY 4.0",
+   "access": "open download",
+   "steps_to_access": "https://zenodo.org/records/7075320/files/Lymphoma.zip?download=1",
+   "provenance": "Poland, 2013-2020, ages 2-17.",
+   "verified": "Record only.",
+   "notes": "Marginal: children, venous-phase staging CT likely; coronaries barely."
+  },
+  {
+   "name": "IRCCS SDN: 'Cinematic rendering ... for acute aortic dissection' (Mendeley vmjfr7jrvy)",
+   "url": "https://data.mendeley.com/datasets/vmjfr7jrvy/1",
+   "tier": "T3",
+   "n_scans": {
+    "number": 1,
+    "unit": "case(s), ~19 series (number of patients unverified, probably 1-3)"
+   },
+   "est_size_gb": 2.04,
+   "format": "DICOM",
+   "labels": "none",
+   "license": "CC BY 4.0",
+   "access": "open download",
+   "steps_to_access": "File list: GET https://data.mendeley.com/public-api/datasets/<id> (send any User-Agent, e.g. 'curl/8'; python-urllib UA gets 403) -> .files[].content_details.download_url (pattern https://data.mendeley.com/public-files/datasets/<id>/files/<file-uuid>/file_downloaded). Supports HTTP Range, so single members of large zips can be pulled without downloading the zip.",
+   "provenance": "Images from Azienda Ospedaliera Padova (Siemens Definition), 2017.",
+   "verified": "Yes: 1 file: 'Thorax^TORACE' series 'VENOSA', contrast applied, 3 mm, p99.5 578 HU.",
+   "notes": "Aortic dissection, non-gated chest CT."
+  },
+  {
+   "name": "Kaggle abbymorgan/heart-ct (one PCIR 'CTA AORTA' series; duplicate falahgatea/heart-ct-images)",
+   "url": "https://www.kaggle.com/datasets/abbymorgan/heart-ct",
+   "tier": "T3",
+   "n_scans": {
+    "number": 1,
+    "unit": "series, 107 slices"
+   },
+   "est_size_gb": 0.06,
+   "format": "DICOM",
+   "labels": "none",
+   "license": "CC0 (Patient Contributed Image Repository, public domain)",
+   "access": "open (Kaggle per-file API)",
+   "steps_to_access": "https://www.kaggle.com/api/v1/datasets/download/abbymorgan/heart-ct/Heart_CT%2F<n>",
+   "provenance": "PCIR (pcir.org, now offline), GE LightSpeed Ultra, 2001.",
+   "verified": "Yes: 1 slice: StudyDescription 'CTA AORTA', 2.5 mm, p99.5 341 HU.",
+   "notes": "Token single case; old 4-slice-era CTA."
+  },
+  {
+   "name": "UNVERIFIED LEAD: IEEE DataPort 'CCTA Dataset with DSA-based annotation' (Xiyue Han, DOI 10.21227/8b1q-7q94)",
+   "url": "https://doi.org/10.21227/8b1q-7q94",
+   "tier": "T1 (claimed)",
+   "n_scans": {
+    "number": null,
+    "unit": "unknown"
+   },
+   "est_size_gb": null,
+   "format": "unknown",
+   "labels": "DSA-based (claimed)",
+   "license": "CC BY (per OpenAlex metadata)",
+   "access": "IEEE DataPort 'Open Access' listing; IEEE DataPort downloads need a free IEEE account (click-through, no approval) - not created",
+   "steps_to_access": "Project lead creates a free IEEE account and downloads from the DataPort page.",
+   "provenance": "Published 2025-09-03; institution not confirmed.",
+   "verified": "No: ieee-dataport.org does not resolve from this sandbox; only search-engine snippets and OpenAlex record seen.",
+   "notes": "Outside my territory but found in passing; worth a 2-minute check by someone with a browser."
+  },
+  {
+   "name": "EXCLUDED / checked, not usable (for dedupe)",
+   "url": "see notes",
+   "tier": "Exclude",
+   "n_scans": {
+    "number": 0,
+    "unit": "-"
+   },
+   "est_size_gb": null,
+   "format": "-",
+   "labels": "-",
+   "license": "-",
+   "access": "-",
+   "steps_to_access": "-",
+   "provenance": "-",
+   "verified": "Each item opened (file list and/or a sample) unless stated.",
+   "notes": "Kaggle oussmd/data-ct-thorax-moroccan-3d-mrb (25 Slicer .mrb scenes, MIT): sampled E3 = portal-venous thoraco-abdominal CT, aorta not opacified, heart only at the base -> exclude/marginal. Kaggle varsha1dewangan/small-3d-cta-data, devkumarbiswas/* (k-fold-cta-data 150 GB, cmha, topanu), shymaaelbana/cta-imagestr-vessel, matsrobben/dennisfong/thanhjash RSNA-2025: all RSNA Intracranial Aneurysm head/neck CTA derivatives. Kaggle kiuyha/ct-heart-dip-multires (44 GB h5) = TotalSegmentator heart derivative. Kaggle cse505/ce-laa* = Mayo STRIP-AI pathology (CE/LAA stroke classes), not CT. Kaggle damianhan NTM chest CT (non-contrast mycobacterial), forestzhang001/ct-1-test (MosMed COVID), priyangshusarkar (LIDC), augustosarquisserpa (head CT), zyh1104/shoybhasan (CAMUS echo), ImageBR (MRI), aorta-segmentation PNG sets (enhancedmachinen, licethyaneth, miniredtrout; 2D), mohammadsabbirahamed/heart-ct-image (2D jpg), andrewmvd/lung-vessel-segmentation (VESSEL12, 20 chest CT, contrast mixed/unverified, T3 at most). Figshare 28303637 mouse micro-CT; 30688691 CCTA-XCA registration (gifs/labels). Mendeley wkyscp88k7 (SDN 'Raw data', 22 rar) = MR-PET oncology (opened one archive); vkzx8pfp37 Lanyu pigs MRI+CT (anatomical, contrast unverified); czmn5ypdz5 'Heart Dataset' = chest X-ray. Zenodo 19351401/15603195/4590294/21855641 = heart meshes only; 5801938 aortic dissection CFD (no images); 4638863/4638864 UNSW CTCA (restricted, = Coronary Atlas/ASOCA family); 8338079 CMR; 16601454 non-contrast. HF gevaertlab/conflux-chest-ct (synthetic), LiangRenjie/ORCA-3DCT (CT-RATE derived), Trusure/CTRG-Chest-548K_volume (CTRG chest CT, report-generation set, contrast not checked), zhouwugen/CTAdata (MM-WHS ct_train_* names = duplicate), introvoyz041/AortaSeg24 & PENet (code only), MedOtter/* (re-hosts of known sets: SegA/AVT, Aortic-Dissection-Graz, TotalSegmentator, MSD, 4D-Lung). data.world: community site closed ('/community/goodbye'), API needs token -> dead. Dryad: no human contrast cardiac CT. OSF: only protocols/reviews. GitHub: no repo found shipping CCTA volumes (API restricted to repo search; READMEs checked for the 10 largest cardiac-CT repos)."
+  }
+ ]
+}

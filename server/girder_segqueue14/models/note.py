@@ -64,6 +64,26 @@ class Note14(AccessControlledModel):
             'created': datetime.datetime.now(datetime.timezone.utc),
         })
 
+    def namedNote(self, caseId, author, text):
+        """A note from an automatic process with its own name, e.g. the
+        ``auto screener`` that reads every vessel seed before annotation.
+
+        No Girder account behind it (``authorId`` None), and rendered as a
+        system note, so nobody mistakes it for a person's judgement.
+        """
+        return self.save({
+            'caseId': caseId,
+            'authorId': None,
+            'author': author,
+            'text': text,
+            'system': True,
+            'created': datetime.datetime.now(datetime.timezone.utc),
+        })
+
+    def hasNoteBy(self, caseId, author):
+        return self.collection.count_documents(
+            {'caseId': caseId, 'author': author, 'authorId': None}, limit=1) > 0
+
     def systemNote(self, caseId, text):
         """A note the server wrote. Never fails a request that triggered it.
 

@@ -25,6 +25,7 @@ from ..constants import ANNOTATOR_GROUP, QUOTA_FIELD, REVIEWER_GROUP
 from ..maintenance import sweep as sweepStranded
 from ..models import Assignment14 as Assignment
 from ..models import Case14 as Case
+from ..models import Note14 as Note
 from ..models import Review14 as Review
 from ..models import Submission14 as Submission
 from ..models.review import APPROVE, REJECT
@@ -45,6 +46,7 @@ class AdminResource14(Resource):
         parent.route('POST', ('sweep',), self.sweep)
         parent.route('POST', ('prelabels', 'attach'), self.attachPrelabel)
         parent.route('GET', ('prelabels', 'status'), self.prelabelStatus)
+        parent.route('POST', ('notes', 'auto'), self.addAutoNote)
         return self
 
     # --------------------------------------------------------------- stats
@@ -362,6 +364,33 @@ class AdminResource14(Resource):
                    status=409)
         result['prelabelVersion'] = updated.get('prelabelVersion')
         return result
+
+    @access.admin
+    @autoDescribeRoute(
+        Description('Add a note to a case from a named automatic process.')
+        .notes('For machine screening of the cases before annotation (the '
+               '"auto screener" reads each vessel seed). The note has no Girder '
+               'account behind it and shows as a system note under ``author``. '
+               'With ``once`` (default) a case that already has a note by that '
+               'author is skipped, so a rerun adds nothing twice.')
+        .param('caseName', 'The SegQueue14 case name, e.g. ImageCHD__1001.nii.gz.')
+        .param('text', 'The note.')
+        .param('author', 'Name shown as the author.', required=False,
+               default='auto screener')
+        .param('once', 'Skip a case that already has a note by this author.',
+               dataType='boolean', required=False, default=True)
+    )
+    def addAutoNote(self, caseName, text, author, once):
+        author = (author or '').strip()
+        if not author:
+            refuse('bad_author', 'An automatic note needs an author name.', status=400)
+        case = Case().findOne({'name': caseName})
+        if case is None:
+            refuse('no_such_case', f'No SegQueue14 case named {caseName!r}.', status=404)
+        if once and Note().hasNoteBy(case['_id'], author):
+            return {'case': caseName, 'created': False, 'reason': 'already has one'}
+        note = Note().namedNote(case['_id'], author, text)
+        return {'case': caseName, 'created': True, 'noteId': str(note['_id'])}
 
     @access.admin
     @autoDescribeRoute(

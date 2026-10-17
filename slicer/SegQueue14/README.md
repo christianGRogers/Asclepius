@@ -11,14 +11,17 @@ and continues its version numbers (D24): same server, its own routes
 1. **Segmentation → SegQueue**, log in with your usual account (you must be in the
    `segqueue14-annotators` group).
 2. **Get next case.** The CT arrives with a yellow **vessel seed** (an automatic,
-   uncorrected one-colour mask of the coronary tree, D23) and four empty segments:
+   uncorrected one-colour mask of the coronary tree, D23), and each of the four
+   class segments starts as a **full copy of the seed, hidden** (D26):
 
    | 1 LM | 2 LAD\* | 3 LCx\* | 4 RCA\* |
    |---|---|---|---|
 
    \* required: the case cannot be submitted while LAD, LCx or RCA is empty. LM is
    optional (some patients have separate LAD and LCx ostia).
-3. **Divide the seed into the four classes and correct it** in the Segment Editor.
+3. **Cut each class down** in the Segment Editor: show one class at a time (the eye
+   in the segment list) and erase everything that is not that vessel. A case cannot
+   be submitted while any voxel is in two classes, so an untrimmed copy is caught.
    Every side branch takes the class of the vessel it comes off (D1): diagonals and
    septals are LAD; obtuse marginals are LCx; a PDA or posterolateral branch is the
    class of the artery it arises from. A ramus intermedius is always LCx (D1b). Add

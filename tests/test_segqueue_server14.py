@@ -503,24 +503,24 @@ def _submit(world, queue, user, info, array, counts=None):
             "extensionVersion": "test"}
     _as(user)
     return queue.submit(assignmentId=info["assignmentId"], fileId=str(fileDoc["_id"]),
-                        meta=json.dumps(meta), clientProtocol=15)
+                        meta=json.dumps(meta), clientProtocol=16)
 
 
 def test_the_protocol_is_checked_at_login_next_and_submit(world):
     _readyProject(world)
     queue = _resource()
     _as(world.people["anna"])
-    for bad in (None, 1, 14):
+    for bad in (None, 1, 14, 15):
         sent = {} if bad is None else {"clientProtocol": bad}
         err = _refusal(queue.getProject, **sent)
         assert err.code == 426 and err.extra["segqueueError"] == "client_too_old"
         assert "Update the SegQueue14 module" in err.extra["message"]
         assert _refusal(queue.nextCase, **sent).code == 426
-    project = queue.getProject(clientProtocol=15)
+    project = queue.getProject(clientProtocol=16)
     assert [s["name"] for s in project["segments"]][:3] == ["LM", "LAD", "LCx"]
     assert [s["name"] for s in project["segments"]] == ["LM", "LAD", "LCx", "RCA"]
-    assert project["protocolVersion"] == 15
-    assert "Divide it into the four classes" in project["instructions"]
+    assert project["protocolVersion"] == 16
+    assert "starts as a full copy of the vessel seed" in project["instructions"]
 
 
 def test_next_serves_trainval_first_and_test_last(world):
@@ -534,7 +534,7 @@ def test_next_serves_trainval_first_and_test_last(world):
         for login in ("anna", "bobby", "cathy"):
             _as(world.people[login])
             try:
-                info = queue.nextCase(clientProtocol=15)
+                info = queue.nextCase(clientProtocol=16)
             except Exception:
                 continue
             served.append(info["caseName"])
@@ -556,7 +556,7 @@ def test_a_read_missing_a_required_class_is_refused_and_a_good_one_is_scored(wor
     before = _liveSnapshot(world)
     queue = _resource()
     _as(world.people["anna"])
-    info = queue.nextCase(clientProtocol=15)
+    info = queue.nextCase(clientProtocol=16)
     assert info["hasPrelabel"] and info["prelabelVersion"] == "v1"
     assert not info["hasSeed"] and info["hasRegion"]
     queue.downloadCase(caseId=info["caseId"])
@@ -597,7 +597,7 @@ def test_a_poor_read_goes_to_review_with_per_class_reasons(world):
     _readyProject(world)
     queue = _resource()
     _as(world.people["bobby"])
-    info = queue.nextCase(clientProtocol=15)
+    info = queue.nextCase(clientProtocol=16)
     read = _tree(np)
     read[read == 4] = 3             # the RCA called LCx ...
     read[0, 0, 0] = 4               # ... and one stray voxel of "RCA" elsewhere
@@ -628,9 +628,9 @@ def test_a_two_read_case_is_decided_when_both_reads_are_in(world):
     Case14().collection.update_many({"tier": {"$ne": "imagecas-unlabelled"}},
                                     {"$set": {"retired": True}})
     _as(world.people["anna"])
-    first = queue.nextCase(clientProtocol=15)
+    first = queue.nextCase(clientProtocol=16)
     _as(world.people["bobby"])
-    second = queue.nextCase(clientProtocol=15)
+    second = queue.nextCase(clientProtocol=16)
     assert first["caseId"] == second["caseId"], "both slots of the first two-read case"
 
     a = _submit(world, queue, world.people["anna"], first, _tree(np))
@@ -651,7 +651,7 @@ def test_export_writes_four_masks_per_approved_read(world, tmp_path):
     _readyProject(world)
     queue = _resource()
     _as(world.people["cathy"])
-    info = queue.nextCase(clientProtocol=15)
+    info = queue.nextCase(clientProtocol=16)
     _submit(world, queue, world.people["cathy"], info, _tree(np))
     scoring.runOnce()
     out = tmp_path / "export"

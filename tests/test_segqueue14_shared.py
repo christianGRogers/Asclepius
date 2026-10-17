@@ -94,10 +94,21 @@ def test_label_config_matches_the_segment_table():
 
 def test_the_instructions_are_the_project_leads_text():
     text = labels.INSTRUCTIONS
-    assert "Divide it into the four classes" in text
-    for phrase in ("contrast-filled lumen", "takes the class of the vessel it comes off",
-                   "A ramus intermedius is always LCx", "Note anything unusual."):
+    for phrase in ("starts as a full copy of the vessel seed", "and is hidden",
+                   "cut it down", "contrast-filled lumen",
+                   "takes the class of the vessel it comes off",
+                   "A ramus intermedius is always LCx",
+                   "cannot be submitted while any voxel is in two classes",
+                   "Note anything unusual."):
         assert phrase in text
+
+
+def test_the_overlap_refusal_names_every_pair():
+    # D26.
+    assert labels.overlap_message([]) == ""
+    text = labels.overlap_message([("LM", "LAD", 10), ("LAD", "LCx", 5)])
+    assert text.startswith("LM and LAD share 10 voxels; LAD and LCx share 5 voxels.")
+    assert "exactly one class" in text
 
 
 @pytest.mark.parametrize("counts, missing", [

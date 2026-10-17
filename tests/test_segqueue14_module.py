@@ -224,6 +224,27 @@ def test_the_vessel_seed_is_a_helper_and_never_a_class():
     assert "seedSegmentId" in helpers and "regionSegmentId" in helpers
 
 
+def test_a_seeded_case_starts_with_the_seed_in_every_class_hidden():
+    # D26: each class is a copy of the seed for the annotator to cut down; the
+    # copies are hidden so they do not hide each other. A draft is never refilled.
+    open_case = ast.get_source_segment(_source(), _method("SegQueue14Logic", "openCase"))
+    assert "elif not self.resumedDraft and assignment.has_seed" in open_case
+    assert "_prefillClassesFromSeed" in open_case
+    assert open_case.index("applyViewPreset") < open_case.index("setClassesVisible(False)")
+    copy = ast.get_source_segment(_source(), _method("SegQueue14Logic",
+                                                     "copySegmentIntoEveryClass"))
+    # Per-class array writes: one import into several targets fills only the first.
+    assert "updateSegmentBinaryLabelmapFromArray" in copy
+    assert "ImportLabelmapToSegmentationNode" not in copy
+
+
+@pytest.mark.parametrize("method", ["submit", "reviseSubmission"])
+def test_overlapping_classes_are_refused_before_the_export(method):
+    body = ast.get_source_segment(_source(), _method("SegQueue14Logic", method))
+    assert body.index("classOverlaps()") < body.index("exportLabelmap")
+    assert "labels.overlap_message" in body
+
+
 @pytest.mark.parametrize("method", ["submit", "reviseSubmission"])
 def test_required_classes_are_checked_before_anything_is_uploaded(method):
     body = ast.get_source_segment(_source(), _method("SegQueue14Logic", method))
@@ -272,4 +293,4 @@ def test_the_archive_is_the_segqueue_extension_and_is_self_sufficient(tmp_path):
             "print(segqueue14.PROTOCOL_VERSION)")
     out = subprocess.run([sys.executable, "-I", "-c", code], capture_output=True, text=True)
     assert out.returncode == 0, out.stderr
-    assert out.stdout.strip() == "15"
+    assert out.stdout.strip() == "16"

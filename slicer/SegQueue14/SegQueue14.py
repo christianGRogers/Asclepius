@@ -99,7 +99,7 @@ from SegQueue14Lib import SegQueue14Error as SegQueueError
 
 #: Continues SegQueue's numbering (0.13.0 was the last 4-class release). The
 #: release tag is ``segqueue-v`` + this; bump it to publish.
-__version__ = "0.15.0"
+__version__ = "0.16.0"
 
 #: How often the startup update check may ask GitHub, as in the live module.
 UPDATE_CHECK_HOURS = 6
@@ -186,6 +186,8 @@ class SegQueue14Logic(ScriptedLoadableModuleLogic):
         self.resumedDraft = False
         #: How many of the classes the prelabel filled on this open.
         self.prelabelClasses = 0
+        #: How many classes were filled with a copy of the seed on this open (D26).
+        self.seedPrefilled = 0
 
     # ------------------------------------------------------------ session
 
@@ -293,10 +295,19 @@ class SegQueue14Logic(ScriptedLoadableModuleLogic):
         # A fresh case starts from the model's prediction; a reopened draft is
         # the annotator's own correction and is left alone.
         self.prelabelClasses = 0
+        self.seedPrefilled = 0
         if not self.resumedDraft and assignment.has_prelabel:
             self.prelabelClasses = self._loadPrelabel(assignment)
+        elif not self.resumedDraft and assignment.has_seed:
+            # D26: every class starts as the whole seed, for the annotator to cut
+            # down to that class.
+            self.seedPrefilled = self._prefillClassesFromSeed(assignment)
         slicer.util.setSliceViewerLayers(background=self.volumeNode, fit=True)
         self.applyViewPreset()
+        if assignment.has_seed and not assignment.has_prelabel:
+            # Four identical copies on screen at once would hide each other; the
+            # annotator shows one class at a time and trims it (D26).
+            self.setClassesVisible(False)
         self._sessionStart = time.time()
         return manifest
 
@@ -404,6 +415,112 @@ class SegQueue14Logic(ScriptedLoadableModuleLogic):
                 if node is not None:
                     slicer.mrmlScene.RemoveNode(node)
         return filled
+
+    def _prefillClassesFromSeed(self, assignment):
+        """Fill every project class with a copy of the case's vessel seed (D26).
+
+        The annotator then cuts each class down to its own vessel, instead of
+        building it up from nothing. Copied from the seed helper segment
+        ``_loadHelpers`` just added, which is already on the CT's grid. Returns
+        how many classes were filled; never raises -- a case whose seed cannot be
+        copied still opens, with empty classes and the seed shown as a guide.
+        """
+        try:
+            return self.copySegmentIntoEveryClass(self.seedSegmentId)
+        except Exception:
+            return 0
+
+    def copySegmentIntoEveryClass(self, sourceSegmentId):
+        """Put a full copy of one segment's voxels into every project segment.
+
+        Written per class with ``updateSegmentBinaryLabelmapFromArray`` against
+        the CT, which keeps the copies as overlapping segments in separate
+        labelmap layers; trimming one leaves the others whole. (Importing one
+        label volume into several target segments does not: only the first gets
+        the voxels -- checked in Slicer 5.8.) ``submit`` refuses the case until
+        no voxel is left in two classes. Returns how many classes have voxels.
+        """
+        if (not sourceSegmentId or self.segmentationNode is None
+                or self.volumeNode is None or self.project is None):
+            return 0
+        mask = slicer.util.arrayFromSegmentBinaryLabelmap(
+            self.segmentationNode, sourceSegmentId, self.volumeNode)
+        if mask is None or not mask.size or not mask.any():
+            return 0
+        mask = (mask > 0).astype("uint8")
+        filled = 0
+        for spec in sorted(self.project.segments, key=lambda spec: int(spec.label)):
+            segmentId = self.segmentIdFor(spec.name)
+            if segmentId is None:
+                segmentId = self.segmentationNode.GetSegmentation().AddEmptySegment(
+                    spec.name, spec.name, list(spec.color))
+            slicer.util.updateSegmentBinaryLabelmapFromArray(
+                mask, self.segmentationNode, segmentId, self.volumeNode)
+            if _segmentHasContent(self.segmentationNode, spec.name):
+                filled += 1
+        return filled
+
+    def setClassesVisible(self, visible):
+        """Show or hide the project's class segments, leaving the helpers alone.
+
+        Returns how many segments changed. The per-segment eye in the Segment
+        Editor turns each one back on.
+        """
+        if self.segmentationNode is None or self.project is None:
+            return 0
+        display = self.segmentationNode.GetDisplayNode()
+        if display is None:
+            return 0
+        changed = 0
+        for spec in self.project.segments:
+            segmentId = self.segmentIdFor(spec.name)
+            if segmentId:
+                display.SetSegmentVisibility(segmentId, bool(visible))
+                changed += 1
+        return changed
+
+    def classOverlaps(self):
+        """``[(name, name, voxels), ...]``: every pair of classes sharing voxels.
+
+        On the source grid, one class at a time: each voxel carries a bit per class
+        it is in, so memory stays at one mask plus one bit volume however large
+        the CT is. A seed-prefilled class that has not been cut down yet overlaps
+        every other one, which is how an untouched copy is caught before upload
+        (D26).
+        """
+        import numpy as np
+
+        if self.segmentationNode is None or self.volumeNode is None or self.project is None:
+            return []
+        specs = sorted(self.project.segments, key=lambda spec: int(spec.label))
+        dtype = np.uint8 if len(specs) <= 8 else np.uint32
+        bits = None
+        seen = []          # (bit index, name) of classes already folded in
+        pairs = []
+        for index, spec in enumerate(specs):
+            segmentId = self.segmentIdFor(spec.name)
+            if not segmentId:
+                continue
+            try:
+                mask = slicer.util.arrayFromSegmentBinaryLabelmap(
+                    self.segmentationNode, segmentId, self.volumeNode)
+            except Exception:
+                continue
+            if mask is None or not mask.size:
+                continue
+            mask = mask > 0
+            if bits is None:
+                bits = np.zeros(mask.shape, dtype)
+            if mask.shape != bits.shape:
+                continue
+            here = bits[mask]
+            for other, name in seen:
+                shared = int(((here >> other) & 1).sum())
+                if shared:
+                    pairs.append((name, spec.name, shared))
+            bits[mask] |= dtype(1 << index)
+            seen.append((index, spec.name))
+        return pairs
 
     def _helperId(self, name):
         """Segment id for a helper already in the scene -- e.g. from a draft."""
@@ -993,6 +1110,12 @@ class SegQueue14Logic(ScriptedLoadableModuleLogic):
         self.bankTime()
         path = os.path.join(self.cache.caseDir(assignment.assignment_id),
                             "submission.seg.nrrd")
+        # D26: no voxel in two classes -- in particular, no class left as an
+        # untrimmed copy of the seed. Checked before the export, which would
+        # otherwise quietly give each shared voxel to one of the classes.
+        overlaps = self.classOverlaps()
+        if overlaps:
+            raise SegQueueError(labels.overlap_message(overlaps))
         counts, sourceGeom, segGeom = self.exportLabelmap(path)
 
         # D13: LAD, LCx and RCA must each have something in them. Checked here,
@@ -1060,6 +1183,9 @@ class SegQueue14Logic(ScriptedLoadableModuleLogic):
             pass
         path = os.path.join(directory, "revision.seg.nrrd")
 
+        overlaps = self.classOverlaps()
+        if overlaps:
+            raise SegQueueError(labels.overlap_message(overlaps))
         counts, sourceGeom, segGeom = self.exportLabelmap(path)
         missing = labels.missing_required(counts)
         if missing:
@@ -2598,7 +2724,10 @@ class SegQueue14Widget(ScriptedLoadableModuleWidget):
 
     def _prelabelText(self, assignment):
         if not assignment.has_prelabel and assignment.has_seed:
-            return " · <i>vessel seed: divide it into the classes</i>"
+            if self.logic is not None and self.logic.resumedDraft:
+                return " · your draft"
+            return (" · <i>each class starts as the whole seed (hidden): show one "
+                    "at a time and cut it down</i>")
         if not assignment.has_prelabel:
             return " · <i>no prelabel: draw from scratch</i>"
         filled = self.logic.prelabelClasses if self.logic else 0

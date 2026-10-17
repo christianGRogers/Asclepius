@@ -239,9 +239,20 @@ worker() {
         $SUDO systemctl enable --now segqueue14-worker
     elif pgrep -f segqueue14-score >/dev/null; then
         say "segqueue14-score already running"
+    elif [ "$(id -u)" = 0 ] && command -v systemd-run >/dev/null; then
+        # Launcher-run box, from CI: a transient unit, fully detached from this SSH
+        # session (a nohup'd child keeps the session open) and restarted if it dies.
+        # Like the launcher's own processes it does not survive a reboot: after one,
+        # run the `worker` step again.
+        as_user mkdir -p "$DATA/logs"
+        systemctl reset-failed segqueue14-worker 2>/dev/null || true
+        systemd-run --unit segqueue14-worker --uid "$SQ14_USER" --gid "$(id -gn "$SQ14_USER")" \
+            --working-directory "$LIVE" -p Restart=always -p RestartSec=10 \
+            -E GIRDER_MONGO_URI="$GIRDER_MONGO_URI" -E GIRDER_SERVER_MODE=production \
+            -p StandardOutput="append:$DATA/logs/worker14.log" -p StandardError="append:$DATA/logs/worker14.log" \
+            "$LIVE/.venv/bin/segqueue14-score" --poll 30 --sweep 3600
     else
-        # Launcher-run box: start it the way the launcher starts the live worker.
-        # (The launcher does not know it: after a reboot, run `bash $0 worker` again.)
+        # By hand, as the deploy user: the way the launcher starts the live worker.
         as_user mkdir -p "$DATA/logs"
         as_user bash -c "cd '$LIVE' && setsid nohup '$LIVE/.venv/bin/segqueue14-score' --poll 30 --sweep 3600 >> '$DATA/logs/worker14.log' 2>&1 < /dev/null &"
     fi

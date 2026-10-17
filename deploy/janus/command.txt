@@ -1,3 +1,3 @@
 # The deploy step the "SegQueue14 on janus" workflow runs when this file changes.
 # One of: diagnose, status, install, populate, populate --apply, worker, off
-populate --apply
+worker

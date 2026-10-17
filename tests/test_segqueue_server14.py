@@ -91,13 +91,21 @@ def _nifti(path, array, spacing=(0.5, 0.5, 0.5)):
 
 
 def _tree(np, shape=(24, 24, 24), shift=0):
-    """Every one of the 14 classes as a small block."""
+    """Every one of the project's four classes (D25) as a small block."""
     vol = np.zeros(shape, dtype=np.uint8)
-    for k in range(1, 15):
+    for k in range(1, 5):
         z = 1 + (k - 1) % 7 * 3
         y = 2 + ((k - 1) // 7) * 10 + shift
         vol[z:z + 2, y:y + 4, 6:14] = k
     return vol
+
+
+def _icx(np, tree):
+    """``tree`` in ImageCAS-X's 14 label values, as a stored reference speaks them:
+    RCA is 9 there. Scoring must collapse it back to the four (labels.ICX14_TO_4)."""
+    out = tree.copy()
+    out[tree == 4] = 9
+    return out
 
 
 def _upload(path, folder, user, name=None):
@@ -171,7 +179,7 @@ def world(girder_db, tmp_path):
             "replicasWanted": 1, "activeCount": 0, "approvedCount": 0,
             "assignedUserIds": [], "priority": 0}).inserted_id
         if n in split:
-            ref = _nifti(data / f"{n}.coronary.nii.gz", _tree(np))
+            ref = _nifti(data / f"{n}.coronary.nii.gz", _icx(np, _tree(np)))
             refFile = _upload(ref, segs, admin)
             item = Item().load(refFile["itemId"], force=True)
             Item().setMetadata(item, {"segqueue_case": name})
@@ -495,24 +503,24 @@ def _submit(world, queue, user, info, array, counts=None):
             "extensionVersion": "test"}
     _as(user)
     return queue.submit(assignmentId=info["assignmentId"], fileId=str(fileDoc["_id"]),
-                        meta=json.dumps(meta), clientProtocol=14)
+                        meta=json.dumps(meta), clientProtocol=15)
 
 
 def test_the_protocol_is_checked_at_login_next_and_submit(world):
     _readyProject(world)
     queue = _resource()
     _as(world.people["anna"])
-    for bad in (None, 1, 13):
+    for bad in (None, 1, 14):
         sent = {} if bad is None else {"clientProtocol": bad}
         err = _refusal(queue.getProject, **sent)
         assert err.code == 426 and err.extra["segqueueError"] == "client_too_old"
         assert "Update the SegQueue14 module" in err.extra["message"]
         assert _refusal(queue.nextCase, **sent).code == 426
-    project = queue.getProject(clientProtocol=14)
+    project = queue.getProject(clientProtocol=15)
     assert [s["name"] for s in project["segments"]][:3] == ["LM", "LAD", "LCx"]
-    assert len(project["segments"]) == 14
-    assert project["protocolVersion"] == 14
-    assert project["instructions"].startswith("You are given a prediction")
+    assert [s["name"] for s in project["segments"]] == ["LM", "LAD", "LCx", "RCA"]
+    assert project["protocolVersion"] == 15
+    assert "Divide it into the four classes" in project["instructions"]
 
 
 def test_next_serves_trainval_first_and_test_last(world):
@@ -526,7 +534,7 @@ def test_next_serves_trainval_first_and_test_last(world):
         for login in ("anna", "bobby", "cathy"):
             _as(world.people[login])
             try:
-                info = queue.nextCase(clientProtocol=14)
+                info = queue.nextCase(clientProtocol=15)
             except Exception:
                 continue
             served.append(info["caseName"])
@@ -548,7 +556,7 @@ def test_a_read_missing_a_required_class_is_refused_and_a_good_one_is_scored(wor
     before = _liveSnapshot(world)
     queue = _resource()
     _as(world.people["anna"])
-    info = queue.nextCase(clientProtocol=14)
+    info = queue.nextCase(clientProtocol=15)
     assert info["hasPrelabel"] and info["prelabelVersion"] == "v1"
     assert not info["hasSeed"] and info["hasRegion"]
     queue.downloadCase(caseId=info["caseId"])
@@ -589,10 +597,10 @@ def test_a_poor_read_goes_to_review_with_per_class_reasons(world):
     _readyProject(world)
     queue = _resource()
     _as(world.people["bobby"])
-    info = queue.nextCase(clientProtocol=14)
+    info = queue.nextCase(clientProtocol=15)
     read = _tree(np)
-    read[read == 9] = 10            # the RCA trunk called R-PDA ...
-    read[0, 0, 0] = 9               # ... and one stray voxel of "RCA" elsewhere
+    read[read == 4] = 3             # the RCA called LCx ...
+    read[0, 0, 0] = 4               # ... and one stray voxel of "RCA" elsewhere
     response = _submit(world, queue, world.people["bobby"], info, read)
     scoring.runOnce()
     submission = Submission14().load(response["submissionId"], force=True)
@@ -620,9 +628,9 @@ def test_a_two_read_case_is_decided_when_both_reads_are_in(world):
     Case14().collection.update_many({"tier": {"$ne": "imagecas-unlabelled"}},
                                     {"$set": {"retired": True}})
     _as(world.people["anna"])
-    first = queue.nextCase(clientProtocol=14)
+    first = queue.nextCase(clientProtocol=15)
     _as(world.people["bobby"])
-    second = queue.nextCase(clientProtocol=14)
+    second = queue.nextCase(clientProtocol=15)
     assert first["caseId"] == second["caseId"], "both slots of the first two-read case"
 
     a = _submit(world, queue, world.people["anna"], first, _tree(np))
@@ -636,22 +644,22 @@ def test_a_two_read_case_is_decided_when_both_reads_are_in(world):
     assert case["approvedCount"] == 2 and case["activeCount"] == 0
 
 
-def test_export_writes_fourteen_masks_per_approved_read(world, tmp_path):
+def test_export_writes_four_masks_per_approved_read(world, tmp_path):
     import numpy as np
     from girder_segqueue14 import export, scoring
 
     _readyProject(world)
     queue = _resource()
     _as(world.people["cathy"])
-    info = queue.nextCase(clientProtocol=14)
+    info = queue.nextCase(clientProtocol=15)
     _submit(world, queue, world.people["cathy"], info, _tree(np))
     scoring.runOnce()
     out = tmp_path / "export"
     assert export.main(["--out", str(out)]) == 0
     masks = sorted(p.name for p in (out / info["caseName"] / "segmentations").iterdir())
-    assert len(masks) == 14 and "R-PDA.nii.gz" in masks
+    assert masks == ["LAD.nii.gz", "LCx.nii.gz", "LM.nii.gz", "RCA.nii.gz"]
     manifest = json.loads((out / "manifest.json").read_text())
-    assert manifest["source"]["label_set"] == "coronary_icx14"
+    assert manifest["source"]["label_set"] == "coronary_icx4"
     assert manifest["source"]["prelabel_versions"][info["caseName"]] == "v1"
 
 

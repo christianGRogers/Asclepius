@@ -1,18 +1,20 @@
-"""The 14 ImageCAS-X classes, as SegQueue14 segments.
+"""The four coronary classes, as SegQueue14 segments.
 
 One table, imported by the Girder plugin (the default ``segqueue14.project``
 setting), the Slicer module (the prelabel import and the submit check) and the
-tests that pin ``configs/labels/coronary_icx14.yaml`` to it. Label values are
-ImageCAS-X's own (Suppl. Table 4), which are also the values the 14-class model
-writes into its predictions (``trillium/icx14/README.md``), so a prelabel, a
-submission, an ImageCAS-X reference and a training label all mean the same thing
-by the same integer.
+tests that pin ``configs/labels/coronary_icx4.yaml`` to it. A prelabel, a
+submission and a training label all mean the same thing by the same integer.
 
 Decisions (vault/Plans/Human decisions.md):
 
-* D9  -- all 14 ImageCAS-X classes, no grouping into four vessels.
-* D12 -- annotators may freely redraw the outline to the contrast-filled lumen.
-* D13 -- LAD, LCx and RCA must be non-empty to submit; the other 11 are optional.
+* D25 -- four classes again (reverses D9): LM, LAD, LCx, RCA, side branches by
+  territory (D1: a branch takes its parent's class) and the ramus intermedius
+  always LCx (D1b). ImageCAS-X's 14 classes collapse to these by
+  ``ICX14_TO_4``.
+* D8, D12 -- the lumen is ImageCAS-X's; annotators may freely redraw the outline
+  to the contrast-filled lumen.
+* D13 -- LAD, LCx and RCA must be non-empty to submit; LM is optional (some
+  patients have separate LAD and LCx ostia and no left main).
 """
 
 from __future__ import annotations
@@ -24,33 +26,13 @@ from typing import Dict, Iterable, List, Mapping
 #: (``segmentations/<name>.nii.gz``) and the keys of the label config.
 _TABLE = (
     (1, "LM", (0.95, 0.25, 0.20), False,
-     "Left main: ostium to the LAD/LCx (or trifurcation) split."),
+     "Left main, ostium to the LAD/LCx split; empty if separate ostia."),
     (2, "LAD", (0.20, 0.70, 0.30), True,
-     "LAD trunk in the anterior interventricular groove, to the apex."),
+     "LAD and all its branches: every diagonal and septal."),
     (3, "LCx", (0.25, 0.45, 0.90), True,
-     "LCx trunk in the left atrioventricular groove."),
-    (4, "D1", (0.60, 0.90, 0.30), False,
-     "First diagonal branch of the LAD."),
-    (5, "D2", (0.10, 0.45, 0.20), False,
-     "Second diagonal branch of the LAD."),
-    (6, "OM1", (0.45, 0.75, 1.00), False,
-     "First obtuse marginal branch of the LCx."),
-    (7, "OM2", (0.15, 0.20, 0.60), False,
-     "Second obtuse marginal branch of the LCx."),
-    (8, "IM", (0.65, 0.35, 0.85), False,
-     "Ramus intermedius, between the LAD and the LCx."),
-    (9, "RCA", (0.95, 0.75, 0.15), True,
-     "RCA trunk in the right atrioventricular groove."),
-    (10, "R-PDA", (0.95, 0.50, 0.10), False,
-     "Posterior descending artery arising from the RCA."),
-    (11, "R-PLA", (0.70, 0.45, 0.15), False,
-     "Posterolateral branch arising from the RCA."),
-    (12, "L-PDA", (0.10, 0.75, 0.75), False,
-     "Posterior descending artery arising from the LCx."),
-    (13, "L-PLA", (0.95, 0.45, 0.70), False,
-     "Posterolateral branch arising from the LCx."),
-    (14, "Other", (0.65, 0.65, 0.65), False,
-     "Later diagonals and marginals: D3/D4, OM3/OM4."),
+     "LCx, all marginals, the ramus intermedius, and a left-sided PDA/PLA."),
+    (4, "RCA", (0.95, 0.75, 0.15), True,
+     "RCA and all its branches, including a right-sided PDA/PLA."),
 )
 
 #: Number of foreground classes.
@@ -68,20 +50,33 @@ REQUIRED: List[str] = [row[1] for row in _TABLE if row[3]]
 #: What annotators are told (D10, D12). Shown in the SegQueue14 panel and served
 #: as the default ``segqueue14.project`` instructions.
 INSTRUCTIONS = (
-    "You are given a prediction of the coronary tree in 14 classes. Correct it: "
-    "fix wrong names, add vessel the model missed, delete anything that is not a "
-    "coronary artery (veins, other structures), and trim or extend the outline to "
-    "the contrast-filled lumen. D1/D2 are the first and second diagonals and "
-    "OM1/OM2 the first and second obtuse marginals; later diagonals and marginals "
-    "(D3/D4, OM3/OM4) go in Other. A ramus intermedius is IM. PDA and PLA take the "
-    "side they arise from (R- or L-). Note anything unusual."
+    "The case opens with a yellow vessel seed: an automatic, uncorrected mask of "
+    "the coronary tree in one colour. Divide it into the four classes -- LM, LAD, "
+    "LCx, RCA -- and correct it: add vessel it missed, delete anything that is not "
+    "a coronary artery (veins, other structures), and trim or extend the outline "
+    "to the contrast-filled lumen. Every side branch takes the class of the "
+    "vessel it comes off: diagonals are LAD, obtuse marginals are LCx, a PDA or "
+    "posterolateral branch is the class of the artery it arises from. A ramus "
+    "intermedius is always LCx. Note anything unusual."
 )
 
 #: Project name served by default.
-PROJECT_NAME = "Coronary segmentation, 14 classes (prelabel correction)"
+PROJECT_NAME = "Coronary segmentation, 4 classes"
 
 #: Name of the label config this table must match (configs/labels/<name>.yaml).
-LABEL_SET_NAME = "coronary_icx14"
+LABEL_SET_NAME = "coronary_icx4"
+
+
+#: ImageCAS-X's 14 label values -> these four (D1 territory, D1b ramus -> LCx).
+#: ImageCAS-X "Other" (14: D3/D4, OM3/OM4) has no fixed parent and maps to 0
+#: here; ``segtrain.reads.icx_to_territory`` gives it the nearest LAD/LCx class,
+#: which is what training labels use.
+ICX14_TO_4: Dict[int, int] = {
+    1: 1,                                   # LM
+    2: 2, 4: 2, 5: 2,                       # LAD, D1, D2
+    3: 3, 6: 3, 7: 3, 8: 3, 12: 3, 13: 3,   # LCx, OM1, OM2, IM, L-PDA, L-PLA
+    9: 4, 10: 4, 11: 4,                     # RCA, R-PDA, R-PLA
+}
 
 
 def segment_dicts() -> List[dict]:

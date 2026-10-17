@@ -130,18 +130,20 @@ def test_segqueue_013s_own_updater_installs_it_and_retires_the_old_module(built,
 
 
 def test_segqueue14_updates_itself_from_the_next_release(built, installed_013, tmp_path):
-    archive, _version = built
+    archive, version = built
     old_updater.installArchive(str(archive), str(installed_013), SLICER)
     # A later release, same shape.
-    later = tmp_path / "SegQueue-0.15.0-Slicer-5.8.zip"
+    later = tmp_path / "SegQueue-99.0.0-Slicer-5.8.zip"
     with zipfile.ZipFile(archive) as src, zipfile.ZipFile(later, "w") as dst:
         for item in src.infolist():
             data = src.read(item)
             if item.filename == SCRIPTED + "SegQueue14.py":
-                data = data.replace(b'__version__ = "0.14.0"', b'__version__ = "0.15.0"')
+                old = '__version__ = "{}"'.format(version).encode()
+                assert old in data
+                data = data.replace(old, b'__version__ = "99.0.0"')
             dst.writestr(item, data)
     new_updater.installArchive(str(later), str(installed_013), SLICER)
-    assert '__version__ = "0.15.0"' in (installed_013 / "SegQueue14.py").read_text()
+    assert '__version__ = "99.0.0"' in (installed_013 / "SegQueue14.py").read_text()
 
 
 def test_segqueue14_refuses_to_put_the_old_module_back(installed_013, tmp_path):

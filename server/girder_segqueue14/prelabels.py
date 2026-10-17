@@ -1,4 +1,4 @@
-"""``segqueue14-prelabels`` -- attach the 14-class model's predictions to cases,
+"""``segqueue14-prelabels`` -- attach a model's predictions (in the project's classes) to cases,
 and swap them for a newer model's (D15) where that is still allowed.
 
 Runs on the server, against the database directly, like ``segqueue-ingest``::
@@ -225,7 +225,7 @@ def runStatus(out=print):
 def buildParser():
     parser = argparse.ArgumentParser(
         prog='segqueue14-prelabels',
-        description='Attach 14-class model predictions to SegQueue14 cases, or '
+        description='Attach model predictions (the project\'s classes) to SegQueue14 cases, or '
                     'refresh them with a newer model (D15). Touches only SegQueue14 '
                     'data; the CT files are never modified.')
     sub = parser.add_subparsers(dest='command', required=True)

@@ -1,21 +1,23 @@
-"""SegQueue14 -- correct the 14-class model's prediction of one case, send it back,
-and keep nothing.
+"""SegQueue14 -- divide one case's coronary tree into LM, LAD, LCx and RCA, send it
+back, and keep nothing.
 
-The 14-class, prelabel-correction counterpart of the SegQueue module, installed
-**beside** it and changing nothing about it (vault/Plans/Human decisions.md,
-D8-D17). It talks only to ``/api/v1/segqueue14`` on the same server, keeps its
-own settings (``SegQueue14/...``) and its own cache (``~/.segqueue14``), and its
-library is ``SegQueue14Lib`` so the two modules cannot shadow each other's code.
+Shown in Slicer as **SegQueue**; the module name SegQueue14 is historical (it was
+built for 14 ImageCAS-X classes, D9, reversed by D25). Decisions:
+vault/Plans/Human decisions.md, D8-D25. It talks only to ``/api/v1/segqueue14`` on
+the same server, keeps its own settings (``SegQueue14/...``) and its own cache
+(``~/.segqueue14``), and its library is ``SegQueue14Lib`` so the two modules
+cannot shadow each other's code.
 
 What an annotator sees:
 
-* **Get next case** downloads the CT and the 14-class model's prediction for it
-  (the *prelabel*, D10). The prediction is loaded straight into the project's 14
-  segments -- LM, LAD, LCx, D1, D2, OM1, OM2, IM, RCA, R-PDA, R-PLA, L-PDA, L-PLA,
-  Other -- with ImageCAS-X's label values, names and colours. Those segments are
-  the work: correct them in the Segment Editor, and they are what is submitted.
-* The heart mask still ships, as a helper segment that is never submitted. The
-  old binary coronary seed does not (D8).
+* **Get next case** downloads the CT and its yellow *vessel seed* (D23: an
+  automatic, uncorrected one-colour mask of the coronary tree), shown beside the
+  four empty project segments LM, LAD, LCx and RCA. The annotator divides the seed
+  into them -- every side branch takes its parent's class (D1), a ramus
+  intermedius is LCx (D1b) -- and corrects the outline (D12). The four segments
+  are what is submitted; the seed never is. A case with a model *prelabel*
+  instead has it loaded straight into the four segments.
+* The heart mask still ships, as a helper segment that is never submitted.
 * **Submit** refuses a case whose LAD, LCx or RCA is empty (D13), naming them,
   before anything is uploaded; the server checks again.
 * The panel shows the project's instructions and a one-line hint per class.
@@ -97,7 +99,7 @@ from SegQueue14Lib import SegQueue14Error as SegQueueError
 
 #: Continues SegQueue's numbering (0.13.0 was the last 4-class release). The
 #: release tag is ``segqueue-v`` + this; bump it to publish.
-__version__ = "0.14.0"
+__version__ = "0.15.0"
 
 #: How often the startup update check may ask GitHub, as in the live module.
 UPDATE_CHECK_HOURS = 6
@@ -123,7 +125,7 @@ REVIEW_FILTERS = (
 )
 REVIEW_DECIDED_STATES = frozenset({"approved", "released"})
 
-#: Opacity of the 14 classes in the 3D view when a case opens: solid enough to
+#: Opacity of the classes in the 3D view when a case opens: solid enough to
 #: read which branch is which, the question a correction starts from.
 PRELABEL_3D_OPACITY = 0.85
 #: The binary vessel seed (D23): yellow, a light fill in 2D, faint in 3D, so the
@@ -147,7 +149,7 @@ _LIVE_SETTING_SERVER = "SegQueue/serverUrl"
 class SegQueue14(ScriptedLoadableModule):
     def __init__(self, parent):
         ScriptedLoadableModule.__init__(self, parent)
-        self.parent.title = "SegQueue14"
+        self.parent.title = "SegQueue"
         self.parent.categories = ["Segmentation"]
         self.parent.dependencies = []
         self.parent.contributors = ["Christian Rogers"]
@@ -182,7 +184,7 @@ class SegQueue14Logic(ScriptedLoadableModuleLogic):
         self.seedSegmentId = None
         #: Whether this case opened from an autosaved draft rather than fresh.
         self.resumedDraft = False
-        #: How many of the 14 classes the prelabel filled on this open.
+        #: How many of the classes the prelabel filled on this open.
         self.prelabelClasses = 0
 
     # ------------------------------------------------------------ session
@@ -325,7 +327,7 @@ class SegQueue14Logic(ScriptedLoadableModuleLogic):
     # ------------------------------------------------------------ prelabel
 
     def _loadPrelabel(self, assignment):
-        """Download the case's 14-class prediction and fill the project segments.
+        """Download the case's prediction and fill the project segments.
 
         Returns how many classes it filled. Never raises: a case whose prelabel
         cannot be fetched or read is still a case the annotator can draw from
@@ -480,7 +482,7 @@ class SegQueue14Logic(ScriptedLoadableModuleLogic):
         return [s for s in (self.regionSegmentId, self.seedSegmentId) if s]
 
     def showPrelabelIn3d(self, on=True):
-        """Show the 14 classes in the 3D view and keep the heart helper out of it.
+        """Show the classes in the 3D view and keep the heart helper out of it.
 
         Which branch is which is a question about the *shape* of the tree, and the
         3D view is where a wrong name is obvious at a glance. Returns how many
@@ -1411,7 +1413,7 @@ class SegQueue14Widget(ScriptedLoadableModuleWidget):
         self._recordCheck(release)
         if release is None:
             slicer.util.infoDisplay(
-                "SegQueue14 {} is the newest published version.".format(__version__))
+                "SegQueue {} is the newest published version.".format(__version__))
             return
         self._showUpdate(release)
 
@@ -1424,7 +1426,7 @@ class SegQueue14Widget(ScriptedLoadableModuleWidget):
         self._pendingUpdate = release
         ok, reason = updater.canInstall(_MODULE_DIR)
         self.updateLabel.setText(
-            "<b>SegQueue14 {} is available.</b> You are running {}.{}".format(
+            "<b>SegQueue {} is available.</b> You are running {}.{}".format(
                 rel.describe(release), __version__,
                 "" if ok else "<br><span style='color:#b26500'>{}</span>".format(reason)))
         self.updateButton.setEnabled(ok)
@@ -1461,7 +1463,7 @@ class SegQueue14Widget(ScriptedLoadableModuleWidget):
 
         openCase = self.logic.assignment is not None if self.logic else False
         if not slicer.util.confirmYesNoDisplay(
-                "Install SegQueue14 {} and restart Slicer?\n\n{}".format(
+                "Install SegQueue {} and restart Slicer?\n\n{}".format(
                     rel.describe(release),
                     "Your draft is saved first, and the case you are on is still "
                     "yours when Slicer comes back."
@@ -1508,7 +1510,7 @@ class SegQueue14Widget(ScriptedLoadableModuleWidget):
         self.updateBanner.setVisible(False)
 
         if slicer.util.confirmOkCancelDisplay(
-                "SegQueue14 {} is installed.\n\nSlicer needs to restart to load "
+                "SegQueue {} is installed.\n\nSlicer needs to restart to load "
                 "it. The previous version was backed up to:\n{}".format(
                     rel.describe(release), backup)):
             self._restartSlicer()
@@ -1734,7 +1736,7 @@ class SegQueue14Widget(ScriptedLoadableModuleWidget):
         self.reworkLabel.setVisible(False)
         layout.addWidget(self.reworkLabel)
 
-        # The instructions (D12) and the 14 classes with a one-line hint each.
+        # The instructions (D12) and the classes with a one-line hint each.
         # Collapsible and collapsed once read: the text is the same on every
         # case, and the notes below are what differ between cases.
         self.instructionsBox = ctk.ctkCollapsibleGroupBox()
@@ -2484,7 +2486,7 @@ class SegQueue14Widget(ScriptedLoadableModuleWidget):
         self.onRefreshReview()
 
     def _loadCaseHelpers(self, case, directory):
-        """Bring in the case's heart mask and its 14-class prelabel, if it has them.
+        """Bring in the case's heart mask and its prelabel, if it has them.
 
         For a reviewer opening a case nobody has submitted: the prelabel is what
         whoever gets the case will start from, which is most of what decides how
@@ -2888,7 +2890,7 @@ class SegQueue14Widget(ScriptedLoadableModuleWidget):
 
         slicer.app.layoutManager().setLayout(
             slicer.vtkMRMLLayoutNode.SlicerLayoutFourUpView)
-        # The 14 classes go into the 3D view as the case opens: a wrong name is
+        # The classes go into the 3D view as the case opens: a wrong name is
         # obvious in the tree's shape long before it is in a slice.
         self.logic.showPrelabelIn3d(True)
         self.logic.centre3d()

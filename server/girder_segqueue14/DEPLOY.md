@@ -111,7 +111,7 @@ in `configs/segqueue14/pool-2026-10.txt` (QC "annotatable" first, then "limited"
 the three sets with suspect header spacing). None of the ImageCAS cases are queued --
 the 800 ImageCAS-X cases are already labelled and live in their own `ImageCAS-X`
 collection (D22). Each case ships its binary TotalSegmentator vessel mask from
-`SegQueue/seeds-totalseg` as a guide the annotator divides into the 14 classes; it is
+`SegQueue/seeds-totalseg` as a guide the annotator divides into the four classes (D25); it is
 a helper segment and is never submitted. Two reads per case (D11, unlabelled).
 
 ```sh
@@ -141,16 +141,16 @@ folders are not `SegQueue/cases` and `SegQueue/seeds-totalseg`, `--no-hash`.
 
 ## 4. Prelabels (later, optional)
 
-Not needed to start: the pool cases begin from the seed. When a 14-class model
-(icx14) has predicted the pool volumes, attach its predictions as prelabels -- files
-named `<Source>__<Case>.nii.gz`, uint8 on each CT's grid:
+Not needed to start: the pool cases begin from the seed. When the 4-class model
+(`trillium/icx4`) has predicted the pool volumes, attach its predictions as prelabels --
+files named `<Source>__<Case>.nii.gz`, uint8 (0-4) on each CT's grid:
 
 ```sh
-.venv/bin/segqueue14-prelabels attach --dir ~/segqueue-data/prelabels/icx14-v1 \
-    --model-version icx14-v1 --verify-grid --dry-run
+.venv/bin/segqueue14-prelabels attach --dir ~/segqueue-data/prelabels/icx4-v1 \
+    --model-version icx4-v1 --verify-grid --dry-run
 ```
 
-A case with a prelabel opens with it in the 14 classes and the seed still shown beside
+A case with a prelabel opens with it in the four classes and the seed still shown beside
 it. Only cases nobody has submitted or has open are given one (see the rules in
 `segqueue14-prelabels --help`).
 
@@ -167,7 +167,7 @@ Without systemd: `setsid nohup .venv/bin/segqueue14-score --poll 30 --sweep 3600
 `pkill -f segqueue-score` does not match `segqueue14-score`, and vice versa.)
 
 The worker scores every two-read pair against each other (Dice, HD95 and presence for
-each of the 14 classes) -- pool cases have no ImageCAS-X reference -- and sends a read
+each of the four classes) -- pool cases have no ImageCAS-X reference -- and sends a read
 to review when it falls below `segqueue14.reference`:
 
 ```json

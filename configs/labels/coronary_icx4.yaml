@@ -1,0 +1,22 @@
+# The four coronary classes on ImageCAS-X's lumen (vault/Plans/Human decisions.md D25, D8).
+#
+# What a label means:
+#   - the voxels are ImageCAS-X's (D8), or a team read drawn to the contrast-filled lumen (D12);
+#   - side branches take their parent's class (territory, D1): diagonals -> LAD, obtuse marginals and left
+#     PDA/PLA -> LCx, right PDA/PLA -> RCA; ImageCAS-X "Other" (D3/D4, OM3/OM4) -> the nearest LAD/LCx;
+#   - the ramus intermedius is LCx, always (D1b).
+#
+# Names match src/segqueue14/labels.py, which the SegQueue14 plugin serves as its segment list and its export
+# uses as per-class file names (`<case>/segmentations/<name>.nii.gz`). tests/test_segqueue14_shared.py pins the
+# two together; change neither alone. Same values and order as coronary_branches (the D0-era, original-mask
+# set), so a model of either writes 1..4 in the same order.
+#
+# Order is the trained model's output-channel order and is frozen once a model exists.
+
+name: coronary_icx4
+count: 4
+labels:
+  LM: 1
+  LAD: 2
+  LCx: 3
+  RCA: 4

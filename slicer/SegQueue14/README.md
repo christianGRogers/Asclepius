@@ -1,32 +1,31 @@
 # SegQueue14
 
-The 3D Slicer module for the **14-class prelabel-correction** project. From
-**0.14.0 it replaces the 4-class SegQueue module** and continues its version
-numbers (D24): same server, its own routes (`/api/v1/segqueue14`), its own
-settings, its own cache (`~/.segqueue14`).
+The 3D Slicer module for coronary annotation in **four classes** (D25), shown in Slicer
+as **SegQueue**. The name SegQueue14 is historical: it was built for 14 ImageCAS-X
+classes (D9), which D25 reversed. From **0.14.0 it replaces the old SegQueue module**
+and continues its version numbers (D24): same server, its own routes
+(`/api/v1/segqueue14`), its own settings, its own cache (`~/.segqueue14`).
 
 ## What you do
 
-1. **Segmentation → SegQueue14**, log in with your usual account (you must be in the
+1. **Segmentation → SegQueue**, log in with your usual account (you must be in the
    `segqueue14-annotators` group).
-2. **Get next case.** The CT arrives with the 14-class model's prediction already
-   loaded into the project's 14 segments:
+2. **Get next case.** The CT arrives with a yellow **vessel seed** (an automatic,
+   uncorrected one-colour mask of the coronary tree, D23) and four empty segments:
 
-   | | | | |
+   | 1 LM | 2 LAD\* | 3 LCx\* | 4 RCA\* |
    |---|---|---|---|
-   | 1 LM | 2 LAD\* | 3 LCx\* | 4 D1 |
-   | 5 D2 | 6 OM1 | 7 OM2 | 8 IM |
-   | 9 RCA\* | 10 R-PDA | 11 R-PLA | 12 L-PDA |
-   | 13 L-PLA | 14 Other (D3/D4, OM3/OM4) | | |
 
-   \* required: the case cannot be submitted while LAD, LCx or RCA is empty.
-3. **Correct it** in the Segment Editor (the panel shows the instructions and a
-   one-line hint per class): fix wrong names, add vessel the model missed, delete
-   anything that is not a coronary artery, and trim or extend the outline to the
-   contrast-filled lumen.
-4. **Submit case.** What is in the 14 segments is what is submitted. The heart
-   mask (`~ heart region (not submitted)`) is a helper and never leaves your
-   machine.
+   \* required: the case cannot be submitted while LAD, LCx or RCA is empty. LM is
+   optional (some patients have separate LAD and LCx ostia).
+3. **Divide the seed into the four classes and correct it** in the Segment Editor.
+   Every side branch takes the class of the vessel it comes off (D1): diagonals and
+   septals are LAD; obtuse marginals are LCx; a PDA or posterolateral branch is the
+   class of the artery it arises from. A ramus intermedius is always LCx (D1b). Add
+   vessel the seed missed, delete anything that is not a coronary artery, and trim or
+   extend the outline to the contrast-filled lumen.
+4. **Submit case.** What is in the four segments is what is submitted. The seed and
+   the heart mask are helpers and never leave your machine.
 
 ## Install
 

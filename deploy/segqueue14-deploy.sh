@@ -271,7 +271,11 @@ c = db['segqueue14_case']
 print('[sq14] cases', c.count_documents({}), '| with seed', c.count_documents({'seedFileId': {'$ne': None}}),
       '| imagecas', c.count_documents({'name': {'$regex': '^imagecas_'}}),
       '| assignments', db['segqueue14_assignment'].count_documents({}),
+      '| submissions', db['segqueue14_submission'].count_documents({}),
       '| live cases (unchanged)', db['segqueue_case'].count_documents({}))
+stored = db['setting'].find_one({'key': 'segqueue14.project'})
+print('[sq14] project setting:', 'stored (' + str(len((stored.get('value') or {}).get('segments') or [])) + ' segments)'
+      if stored else 'default (from the code)')
 PYEOF
 }
 

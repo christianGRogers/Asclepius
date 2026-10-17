@@ -688,6 +688,28 @@ def test_admin_prelabel_route_and_stats(world):
     assert stats["tiers"]["imagecas-unlabelled"]["readsWanted"] == 6
 
 
+def test_an_auto_screener_note_is_added_once_and_shown_as_system(world):
+    from girder_segqueue14.models import Case14, Note14
+
+    _populate(world)
+    queue = _resource()
+    _as(world.admin)
+    first = queue.addAutoNote(caseName="imagecas_0001", text="Seed looks complete.",
+                              author="auto screener", once=True)
+    assert first["created"] is True
+    again = queue.addAutoNote(caseName="imagecas_0001", text="Second opinion.",
+                              author="auto screener", once=True)
+    assert again["created"] is False
+    case = Case14().findOne({"name": "imagecas_0001"})
+    thread = Note14().forCase(case["_id"])
+    assert [(n["author"], n["system"], n["authorId"]) for n in thread] == [
+        ("auto screener", True, None)]
+    assert thread[0]["text"] == "Seed looks complete."
+    missing = _refusal(queue.addAutoNote, caseName="no_such_case", text="x",
+                       author="auto screener", once=True)
+    assert missing.code == 404
+
+
 def test_both_plugins_load_side_by_side(world):
     from girder.models.group import Group
     from girder_segqueue import SegQueuePlugin

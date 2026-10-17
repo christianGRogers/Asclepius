@@ -19,50 +19,34 @@ behind the model lives in the Obsidian vault at [`vault/`](vault/README.md).
 
 ## The model
 
-Multiclass coronary artery segmentation from CCTA. **nnU-Net v2, `3d_fullres`,
-at native spacing, with no downsampling anywhere in the path** — no cascade, no
-coarsened resampling, no heart crop. The full plan, with the reasoning and the
-evidence, is [`vault/Training method/Training plan.md`](vault/Training%20method/Training%20plan.md) in the
-repository's Obsidian vault; the retired previous plan is on the `plan-v1`
-branch.
+A four-class coronary segmentation model — **left main, LAD, LCx and RCA** — from
+CCTA. The method was decided by a plan tournament: competing candidate plans,
+backed by experiments on the real case data, ruled on by a judge. The plan in
+force is [`vault/Plans/Master plan.md`](vault/Plans/Master%20plan.md); the
+decisions the project lead made are in
+[`vault/Plans/Human decisions.md`](vault/Plans/Human%20decisions.md).
+
+In short:
+
+- **One nnU-Net v2 ResEnc model**, trained directly on four classes at **0.5 mm
+  isotropic** with a **256³ patch**, which holds the whole coronary tree in about
+  98 % of cases. Fixed CT window; no mirroring, because it swaps left for right.
+- **Labels:** the original ImageCAS lumen mask, split into four classes under the
+  territory rule (ramus → LCx). Until the team's labels arrive, training uses proxy
+  labels — ImageCAS-X's per-branch names projected onto that mask, checked by a
+  rule-based namer. **Every case is labelled twice** by the team.
+- **Deciding metric:** tree-F1 at 1.5 mm — centreline F1 that only credits vessel
+  still connected to its ostium — gated on false-positive components. Dice is
+  reported, not decisive, because it cannot see a cut tree.
+- **Sealed test:** 80 ImageCAS-X test and 20 quality-0 cases, chosen by a fixed hash
+  rule after excluding every case used in development
+  ([`vault/Plans/Sealed test.md`](vault/Plans/Sealed%20test.md)).
+
+The runbook is [`docs/TRAINING-R1.md`](docs/TRAINING-R1.md). The first GPU
+experiments are in [`trillium/`](trillium/README.md), runnable with one command.
 
 Training runs on [SciNet](https://www.scinet.utoronto.ca/)'s Trillium
 supercomputer, one H100 80 GB per job.
-
-## The method
-
-A distal coronary branch is 1.5–2 mm across a few voxels at the ~0.35 mm the
-scans are acquired at. Anything that downsamples destroys exactly the structures
-being labelled, so the model reads the data at acquired resolution end to end:
-
-- **`spacing: native`** — nnU-Net's median-spacing rule, on a near-isotropic
-  cohort, keeps the acquired grid.
-- **No `3d_cascade_fullres`.** Its low-resolution first stage resamples distal
-  branches below their own diameter.
-- **No heart crop.** The H100 sets the patch size, not the crop: the budget buys a
-  ~256³ patch, ~23–31 % of a whole volume against the **25 %** threshold at which
-  nnU-Net would plan a cascade, and large enough to hold the coronary tree with
-  the aortic root and both ostia in one view. There is no cropper to silently
-  clip a low-running RCA.
-
-Sequence: a **binary lumen model first**, in two separate tasks, because proving
-the chain and producing annotator seeds are not the same job —
-`710_CoronaryLumen` on the original 1000 masks and ImageCAS's official split is
-the chain test and the only place the published 82.96 % means anything;
-`711_CoronaryLumenX` on the ImageCAS-X re-annotated lumen is the model we keep,
-because its predictions become the seeds and the original masks disagree with
-re-annotation at 41.8 % Dice. The **multiclass model** trains on the same
-configuration. One paired **ResEnc** run afterwards decides the encoder.
-
-Per-branch labels for 800 of the 1000 cases already exist, under CC BY 4.0, so
-what the annotation programme is *for* is an open question — see
-[the review summary](vault/Review/Review%20summary.md).
-
-Ruled out, deliberately: tree/graph-structured models as the primary segmenter
-(unrecoverable when the pre-segmentation misses a vessel), nnU-Net's
-largest-component post-processing (the coronary tree is naturally several
-disconnected components; the rule deletes real vessels), and mirroring
-augmentation (it swaps the left coronary tree for the right).
 
 ## Acknowledgement and licence
 

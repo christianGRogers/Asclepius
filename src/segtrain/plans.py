@@ -22,12 +22,111 @@ is left at nnU-Net's defaults on purpose.
 
 from __future__ import annotations
 
+import json
 import os
 from pathlib import Path
 from typing import Optional
 
-from .config import Config, TaskConfig
+from .config import Config, TaskConfig, _read_yaml
 from .splits import SPLIT_TEST, build_splits, read_meta, select, validate_splits, write_splits_final
+
+# Keys a task YAML may carry beyond what TaskConfig models. Read here, by the module that acts on
+# them, so the 4-class R1 task (Dataset712_CoronaryBranches) can state its recipe in one file:
+#   planner               nnU-Net experiment planner class (e.g. ResEncUNetPlanner)
+#   gpu_memory_target_gb  VRAM budget the planner sizes against (60 for the 256^3 patch)
+#   ct_window             [low, high] HU written over the fingerprint percentiles (fixed window)
+#   ct_norm               [mean, std] used with ct_window (z-scoring only rescales)
+#   patch_size            enforced after planning, [z, y, x]
+#   batch_size            enforced after planning
+#   ignore_label          true -> labels may carry n_classes+1 = nnU-Net "ignore" (A4 / A11)
+#   sealed_list           repo-relative path of the A14 sealed-test JSON; never converted
+TASK_EXTRA_KEYS = (
+    "planner", "gpu_memory_target_gb", "ct_window", "ct_norm", "patch_size", "batch_size",
+    "ignore_label", "sealed_list", "explicit_split", "save_test_probabilities",
+)
+
+#: Sidecar beside splits_final.json recording that the split came from explicit lists (ImageCAS-X
+#: train/val), so a later ``segtrain plan`` never silently replaces it with the hash split (D13).
+EXPLICIT_SPLIT_RECORD = "splits_final.source.json"
+#: Where an explicit-split task finds the ImageCAS-X filelists when no directory is passed.
+ICX_DIR_ENV = "SEGTRAIN_ICX_DIR"
+
+
+def task_extras(task: TaskConfig) -> dict:
+    """The task file's extra recipe keys (see TASK_EXTRA_KEYS); empty for tasks that set none."""
+    if task.source_path is None or not Path(task.source_path).is_file():
+        return {}
+    data = _read_yaml(Path(task.source_path))
+    return {k: data[k] for k in TASK_EXTRA_KEYS if data.get(k) is not None}
+
+
+def apply_ct_window(plans_file: Path, window, norm=(100.0, 400.0)) -> dict:
+    """Write a fixed CT window over nnU-Net's fingerprint-derived one, in a plans file.
+
+    nnU-Net's ``CTNormalization`` clips to the 0.5/99.5 percentiles of *labelled* voxels. With
+    coronary labels that is ~[65, 688] HU on an expert lumen and ~[-164, 640] HU on the ImageCAS
+    masks: it flattens epicardial fat and maps calcified plaque onto the intensity of bright lumen
+    (vault: "Atlas - nnU-Net's automatic CT window on lumen labels flattens 38 percent of the heart
+    box"). The master plan fixes [-300, 1300] HU. Returns the previous values so the caller can
+    log what was replaced. Must run before preprocessing."""
+    import json
+
+    plans_file = Path(plans_file)
+    plans = json.loads(plans_file.read_text(encoding="utf-8"))
+    props = plans["foreground_intensity_properties_per_channel"]["0"]
+    before = {k: props.get(k) for k in ("percentile_00_5", "percentile_99_5", "mean", "std")}
+    lo, hi = (float(window[0]), float(window[1]))
+    if not lo < hi:
+        raise ValueError(f"ct_window must be [low, high] with low < high, got {window}")
+    props.update(percentile_00_5=lo, percentile_99_5=hi, mean=float(norm[0]), std=float(norm[1]))
+    plans_file.write_text(json.dumps(plans, indent=1), encoding="utf-8")
+    return before
+
+
+#: Opt-in for smoke tests on a case subset, whose planner output may differ from the cohort's.
+ALLOW_PIN_ENV = "SEGTRAIN_ALLOW_PATCH_PIN"
+
+
+def enforce_patch(plans_file: Path, configuration: str, patch_size=None, batch_size=None,
+                  spacing=None, allow_pin: Optional[bool] = None) -> dict:
+    """Check that the planner produced the recipe's patch, batch and spacing; refuse otherwise.
+
+    The architecture nnU-Net plans (stages, strides, pooling) is derived from the patch it chose.
+    Overwriting only ``patch_size`` would silently train a network planned for another patch, and
+    a re-plan on new data (another median shape, another fingerprint) could change all three
+    without anyone noticing (Round 6, A21b). So a mismatch **raises**, naming what the planner
+    returned. ``allow_pin=True`` (or ``SEGTRAIN_ALLOW_PATCH_PIN=1``) pins instead, for smoke tests
+    on a subset only, and the record says so. Returns the planner's own values."""
+    import json
+
+    plans_file = Path(plans_file)
+    plans = json.loads(plans_file.read_text(encoding="utf-8"))
+    conf = plans["configurations"][configuration]
+    before = {"patch_size": conf.get("patch_size"), "batch_size": conf.get("batch_size"),
+              "spacing": conf.get("spacing")}
+    wrong = []
+    planned_patch = list(conf.get("patch_size") or [])
+    if patch_size is not None and planned_patch != [int(x) for x in patch_size]:
+        wrong.append(f"patch {conf.get('patch_size')} (recipe {list(patch_size)})")
+    if batch_size is not None and conf.get("batch_size") != int(batch_size):
+        wrong.append(f"batch {conf.get('batch_size')} (recipe {batch_size})")
+    if spacing is not None and [float(x) for x in conf.get("spacing") or []] != \
+            [float(x) for x in spacing]:
+        wrong.append(f"spacing {conf.get('spacing')} (recipe {list(spacing)})")
+    if allow_pin is None:
+        allow_pin = os.environ.get(ALLOW_PIN_ENV) == "1"
+    if wrong and not allow_pin:
+        raise ValueError(f"the planner did not reproduce the recipe for {configuration}: "
+                         + "; ".join(wrong) + f". Refusing to pin over it ({plans_file}); the "
+                         f"architecture was planned for these values. Set {ALLOW_PIN_ENV}=1 only "
+                         "for a smoke test on a case subset.")
+    before["pinned_over_mismatch"] = bool(wrong)
+    if patch_size is not None:
+        conf["patch_size"] = [int(x) for x in patch_size]
+    if batch_size is not None:
+        conf["batch_size"] = int(batch_size)
+    plans_file.write_text(json.dumps(plans, indent=1), encoding="utf-8")
+    return before
 
 
 def configure_nnunet_env(cfg: Config) -> None:
@@ -81,6 +180,7 @@ def plan_experiment(
     cfg: Config,
     task: TaskConfig,
     gpu_memory_target_gb: Optional[float] = None,
+    planner: Optional[str] = None,
 ) -> Path:
     """Generate the plans file, forcing this task's target spacing.
 
@@ -93,10 +193,16 @@ def plan_experiment(
     configure_nnunet_env(cfg)
     from nnunetv2.experiment_planning.plan_and_preprocess_api import plan_experiments
 
+    extras = task_extras(task)
     kwargs = dict(
         dataset_ids=[task.dataset_id],
         overwrite_plans_name=task.plans_name,
     )
+    planner = planner or extras.get("planner")
+    if planner:
+        kwargs["experiment_planner_class_name"] = str(planner)
+    if gpu_memory_target_gb is None and extras.get("gpu_memory_target_gb") is not None:
+        gpu_memory_target_gb = float(extras["gpu_memory_target_gb"])
     # spacing None means native: leave nnU-Net's median-spacing rule alone. It
     # already computes the finest target the data supports, which is exactly what
     # a high-resolution task wants -- overriding it with a guess would resample
@@ -112,12 +218,97 @@ def plan_experiment(
     plans_file = task.preprocessed_dir(cfg) / f"{task.plans_name}.json"
     if not plans_file.is_file():
         raise RuntimeError(f"planning did not produce {plans_file}")
+    finalize_plans(plans_file, task)
     return plans_file
 
 
-def available_cases(cfg: Config, task: TaskConfig) -> set:
-    """Case ids actually converted into imagesTr."""
-    images = task.raw_dir(cfg) / "imagesTr"
+def finalize_plans(plans_file: Path, task: TaskConfig) -> dict:
+    """Apply the task's post-planning recipe keys (fixed CT window, pinned patch/batch).
+
+    Records what the planner itself chose in ``<plans>.planner_output.json`` beside the plans file.
+    Idempotent."""
+    import json
+
+    extras = task_extras(task)
+    record: dict = {}
+    # The planner check comes first: a refused plan is left exactly as nnU-Net wrote it (A21b).
+    if extras.get("patch_size") is not None or extras.get("batch_size") is not None:
+        record["planned"] = enforce_patch(plans_file, task.configuration, extras.get("patch_size"),
+                                          extras.get("batch_size"), spacing=task.spacing)
+        record["enforced"] = {"patch_size": extras.get("patch_size"),
+                              "batch_size": extras.get("batch_size")}
+    if extras.get("ct_window") is not None:
+        record["window_before"] = apply_ct_window(plans_file, extras["ct_window"],
+                                                  extras.get("ct_norm", (100.0, 400.0)))
+        record["window_after"] = list(extras["ct_window"])
+    if record:
+        out = Path(plans_file).with_suffix(".planner_output.json")
+        # keep the first record: re-finalizing must not overwrite the planner's own values
+        if not out.exists():
+            out.write_text(json.dumps(record, indent=1), encoding="utf-8")
+    return record
+
+
+def write_explicit_splits(cfg: Config, task: TaskConfig, train: list, val: list,
+                          sealed: Optional[set] = None) -> Path:
+    """Write a one-fold splits_final.json from explicit case lists.
+
+    R1 uses ImageCAS-X train -> train and ImageCAS-X val -> val. Refuses any sealed case (A14) and
+    any overlap between train and val."""
+    from .proxy import canonical_case, sealed_reason
+
+    train = [canonical_case(c) or c for c in train]
+    val = [canonical_case(c) or c for c in val]
+    overlap = sorted(set(train) & set(val))
+    if overlap:
+        raise ValueError(f"{len(overlap)} case(s) in both train and val, e.g. {overlap[:3]}")
+    if sealed:
+        leaked = sorted((set(train) | set(val)) & set(sealed))
+        if leaked:
+            raise ValueError(f"{len(leaked)} sealed case(s) in the split, e.g. {leaked[:3]}; "
+                             "refusing (A14)")
+    # Every converted identifier joins the split of the case behind it, so both reads of a case
+    # (<case>__r2, A11') and SegQueue names (imagecas_NNNN) are trained, and kept together (D2).
+    present = available_cases(cfg, task)
+    by_case: dict = {}
+    for ident in present:
+        by_case.setdefault(canonical_case(ident) or ident, []).append(ident)
+    if sealed:
+        bad = sorted(i for i in present if sealed_reason(i, set(sealed)))
+        if bad:
+            raise ValueError(f"{len(bad)} converted identifier(s) are sealed or unmappable, e.g. "
+                             f"{bad[:3]}; refusing (A14)")
+    in_test = available_cases(cfg, task, "imagesTs")
+    if present or in_test:
+        wrong = sorted(c for c in train + val if c not in by_case and c in
+                       {canonical_case(i) or i for i in in_test})
+        if wrong:
+            raise RuntimeError(
+                f"{len(wrong)} listed case(s) were converted into imagesTs, not imagesTr, e.g. "
+                f"{wrong[:3]}: the index gave them split 'test'. Re-index with --val-fraction 0 "
+                "--test-fraction 0 (or set explicit_split in the task file) and re-convert (D1)")
+        absent = sorted(c for c in train + val if c not in by_case)
+        if absent:
+            print(f"note: {len(absent)} listed case(s) are not converted and are left out, e.g. "
+                  f"{absent[:5]} (A4-excluded proxies are expected here: see proxy_report.json)")
+        train = [i for c in train for i in sorted(by_case.get(c, []))]
+        val = [i for c in val for i in sorted(by_case.get(c, []))]
+    if not train or not val:
+        raise RuntimeError("explicit split has an empty train or val set after restricting to "
+                           "converted cases")
+    out_dir = task.preprocessed_dir(cfg)
+    out_dir.mkdir(parents=True, exist_ok=True)
+    path = write_splits_final(out_dir / "splits_final.json",
+                              [{"train": sorted(train), "val": sorted(val)}])
+    (out_dir / EXPLICIT_SPLIT_RECORD).write_text(
+        json.dumps({"source": "explicit", "n_train": len(train), "n_val": len(val)}, indent=1),
+        encoding="utf-8")
+    return path
+
+
+def available_cases(cfg: Config, task: TaskConfig, folder: str = "imagesTr") -> set:
+    """Case ids actually converted into ``folder`` (imagesTr by default)."""
+    images = task.raw_dir(cfg) / folder
     if not images.is_dir():
         return set()
     return {p.name[: -len("_0000.nii.gz")] for p in images.glob("*_0000.nii.gz")}
@@ -143,6 +334,26 @@ def write_splits(
     which is a confusing way to discover you converted a subset -- and running on
     a subset is normal during smoke tests and debugging.
     """
+    # An explicit-split task (R1: ImageCAS-X train/val) never gets the hash split over its explicit
+    # one (D13): re-planning keeps an existing explicit split, or writes it from $SEGTRAIN_ICX_DIR.
+    if task_extras(task).get("explicit_split"):
+        out_dir = task.preprocessed_dir(cfg)
+        recorded = (out_dir / EXPLICIT_SPLIT_RECORD).is_file()
+        if recorded and (out_dir / "splits_final.json").is_file():
+            print(f"note: keeping the explicit split in {out_dir / 'splits_final.json'} "
+                  f"({task.nnunet_name} uses explicit splits)")
+            return out_dir / "splits_final.json"
+        icx_dir = os.environ.get(ICX_DIR_ENV)
+        if icx_dir:
+            from .proxy import icx_split, load_sealed
+
+            lists = icx_split(Path(icx_dir))
+            return write_explicit_splits(cfg, task, lists["train"], lists["val"],
+                                         sealed=load_sealed())
+        raise RuntimeError(
+            f"{task.nnunet_name} uses an explicit ImageCAS-X split: run `segtrain splits --task "
+            f"{task.dataset_id} --explicit-icx <ImageCAS-X dir>` (or set {ICX_DIR_ENV}); "
+            "refusing to write the hash split")
     rows = read_meta(cfg.meta_csv)
     splits = build_splits(rows, scheme=scheme, n_folds=n_folds, seed=seed)
     validate_splits(splits, select(rows, SPLIT_TEST))
@@ -207,6 +418,14 @@ def preprocess(
     )
 
 
+def _window_text(plans: dict) -> str:
+    p = (plans.get("foreground_intensity_properties_per_channel") or {}).get("0") or {}
+    if "percentile_00_5" not in p:
+        return "n/a"
+    return (f"[{p['percentile_00_5']:g}, {p['percentile_99_5']:g}] HU, "
+            f"mean {p.get('mean', float('nan')):g}, sd {p.get('std', float('nan')):g}")
+
+
 def describe_plans(cfg: Config, task: TaskConfig) -> str:
     """Human-readable summary of what nnU-Net decided.
 
@@ -237,6 +456,7 @@ def describe_plans(cfg: Config, task: TaskConfig) -> str:
         f"  stages           {arch_kwargs.get('n_stages')}",
         f"  features         {arch_kwargs.get('features_per_stage')}",
         f"  normalization    {conf.get('normalization_schemes')}",
+        f"  CT window        {_window_text(plans)}",
         f"  preprocessed to  {task.preprocessed_dir(cfg)}",
     ]
     median = plans.get("original_median_spacing_after_transp")

@@ -152,6 +152,37 @@ def geometry_offset_mm(a: np.ndarray, b: np.ndarray, shape: Sequence[int]) -> fl
     return float(np.linalg.norm((a @ corners - b @ corners)[:3], axis=0).max())
 
 
+def align_to_reference(img: nib.Nifti1Image, reference: nib.Nifti1Image,
+                       tolerance_mm: Optional[float] = None) -> tuple[Optional[np.ndarray], str]:
+    """``img``'s voxel array on ``reference``'s voxel grid, or ``(None, reason)``.
+
+    Two images can describe the same physical voxels with the axes in a different order or
+    direction: SegQueue stores submissions LPS with z running downwards, so a perfectly aligned
+    label arrives z-reversed against the RAS CT (Echo D3). Comparing the affines at the same
+    voxel-index corners calls that 137 mm off. Here the label is first reordered by whole-axis
+    flips and permutations (no resampling, so no voxel value changes) onto the reference's axis
+    order, and only then compared corner by corner. Anything still off by more than
+    ``tolerance_mm`` is a real geometry mismatch."""
+    from nibabel.orientations import apply_orientation, inv_ornt_aff, io_orientation, ornt_transform
+
+    if tolerance_mm is None:
+        zooms = [float(z) for z in reference.header.get_zooms()[:3]]
+        tolerance_mm = GEOMETRY_TOLERANCE_VOXELS * min(zooms or [1.0])
+    data = np.asanyarray(img.dataobj)
+    affine = img.affine
+    if img.shape[:3] != reference.shape[:3] or \
+            geometry_offset_mm(affine, reference.affine, reference.shape) > tolerance_mm:
+        t = ornt_transform(io_orientation(affine), io_orientation(reference.affine))
+        data = apply_orientation(data, t)
+        affine = affine @ inv_ornt_aff(t, img.shape)
+    if data.shape[:3] != reference.shape[:3]:
+        return None, f"shape {img.shape} != {reference.shape}"
+    offset = geometry_offset_mm(affine, reference.affine, reference.shape)
+    if offset > tolerance_mm:
+        return None, f"geometry differs from CT by {offset:.3f} mm"
+    return data, ""
+
+
 def resolve_overlap(
     out: np.ndarray,
     mask: np.ndarray,
@@ -233,15 +264,12 @@ def merge_masks(
             continue
 
         img = nib.load(str(path))
-        if img.shape != shape:
-            mismatch.append(f"{name}: shape {img.shape} != {shape}")
-            continue
-        offset = geometry_offset_mm(img.affine, reference.affine, shape)
-        if offset > tolerance_mm:
-            mismatch.append(f"{name}: geometry differs from CT by {offset:.3f} mm")
+        data, problem = align_to_reference(img, reference, tolerance_mm)
+        if data is None:
+            mismatch.append(f"{name}: {problem}")
             continue
 
-        mask = np.asanyarray(img.dataobj) > 0
+        mask = data > 0
         count = int(mask.sum())
         if count == 0:
             continue
@@ -256,6 +284,7 @@ def remap_multilabel(
     label_path: Path,
     label_set,
     reference: nib.Nifti1Image,
+    ignore_value: Optional[int] = None,
 ) -> tuple[np.ndarray, list[str], list[str]]:
     """Read a single integer label volume and remap it onto our indices.
 
@@ -270,22 +299,18 @@ def remap_multilabel(
     through would put a foreign index into the training labels; silently zeroing
     them would turn a whole structure into background and read as a model that
     simply never learned it.
+
+    ``ignore_value`` (tasks with ``ignore_label: true``) is the one exception: that value in the
+    source is written as nnU-Net's ignore index, ``n_classes + 1``. It marks voxels deliberately
+    left unsupervised (A4: proxy and
+    rule namer disagree at the carina; A11: two reads name a voxel differently).
     """
     img = nib.load(str(label_path))
     problems: list[str] = []
 
-    if img.shape != reference.shape:
-        return (np.zeros(reference.shape, dtype=np.uint8), [],
-                [f"labels shape {img.shape} != CT {reference.shape}"])
-
-    zooms = [float(z) for z in reference.header.get_zooms()[:3]]
-    tolerance_mm = GEOMETRY_TOLERANCE_VOXELS * min(zooms or [1.0])
-    offset = geometry_offset_mm(img.affine, reference.affine, reference.shape)
-    if offset > tolerance_mm:
-        return (np.zeros(reference.shape, dtype=np.uint8), [],
-                [f"labels geometry differs from CT by {offset:.3f} mm"])
-
-    source = np.asanyarray(img.dataobj)
+    source, problem = align_to_reference(img, reference)
+    if source is None:
+        return (np.zeros(reference.shape, dtype=np.uint8), [], [f"labels {problem}"])
     mapping = label_set.source_to_index()
 
     out = np.zeros(reference.shape, dtype=np.uint8)
@@ -293,6 +318,9 @@ def remap_multilabel(
     for value in np.unique(source):
         value = int(value)
         if value == 0:
+            continue
+        if ignore_value is not None and value == ignore_value:
+            out[source == value] = label_set.n_classes + 1
             continue
         target = mapping.get(value)
         if target is None:
@@ -318,6 +346,7 @@ def convert_case(
     link_mode: str,
     overwrite: bool,
     overlap_policy: str = OVERLAP_SMALLER_WINS,
+    ignore_value: Optional[int] = None,
 ) -> CaseResult:
     """Convert one subject. Runs in a worker process; must not raise.
 
@@ -361,8 +390,18 @@ def convert_case(
                 seg_dir, names, ct, overlap_policy=overlap_policy
             )
         else:
-            labels, missing, mismatch = remap_multilabel(multilabel, label_set, ct)
+            labels, missing, mismatch = remap_multilabel(multilabel, label_set, ct, ignore_value)
             overlaps = 0
+
+        if mismatch:
+            # Some label data was unusable. Writing the case anyway would train its vessels as
+            # background (Echo D3), so the case fails and stays out of imagesTr / labelsTr.
+            for stale in (label_path, image_path):
+                if stale.exists() or stale.is_symlink():
+                    stale.unlink()
+            return CaseResult(case_id, False, geometry_mismatch=mismatch,
+                              error="unusable label data, case NOT converted: "
+                                    + "; ".join(mismatch))
 
         # Write via a temp name then rename, so an interrupted run never leaves a
         # truncated .nii.gz that a later run would happily skip as "done".
@@ -378,7 +417,7 @@ def convert_case(
         return CaseResult(
             case_id,
             True,
-            n_labels_written=int(labels.max()),
+            n_labels_written=int(labels[labels <= label_set.n_classes].max(initial=0)),
             missing=missing,
             overlaps=overlaps,
             geometry_mismatch=mismatch,
@@ -393,11 +432,16 @@ def write_dataset_json(
     n_training: int,
     n_test: int = 0,
     reader_writer: str = DEFAULT_READER_WRITER,
+    ignore_label: bool = False,
 ) -> Path:
-    """Write nnU-Net v2 dataset.json."""
+    """Write nnU-Net v2 dataset.json. ``ignore_label`` adds nnU-Net's ``"ignore"`` entry as index
+    ``n_classes + 1`` (nnU-Net requires it to be the highest label)."""
+    labels = task.label_set.to_nnunet_labels()
+    if ignore_label:
+        labels["ignore"] = task.label_set.n_classes + 1
     payload = {
         "channel_names": {"0": "CT"},
-        "labels": task.label_set.to_nnunet_labels(),
+        "labels": labels,
         "numTraining": n_training,
         "file_ending": ".nii.gz",
         # Load-bearing. See DEFAULT_READER_WRITER: without this, nnU-Net's
@@ -427,6 +471,8 @@ class ConvertReport:
     n_train: int = 0
     n_test: int = 0
     n_skipped: int = 0
+    n_excluded: int = 0
+    excluded: list[str] = field(default_factory=list)
     failures: list[CaseResult] = field(default_factory=list)
     with_missing: list[CaseResult] = field(default_factory=list)
     with_overlaps: list[CaseResult] = field(default_factory=list)
@@ -453,7 +499,11 @@ class ConvertReport:
         lines = [
             f"{self.task}: {self.n_train} training, {self.n_test} test cases converted"
             + (f" ({self.n_skipped} already present, skipped)" if self.n_skipped else "")
+            + (f"; {self.n_excluded} sealed or unmappable case(s) excluded (A14)"
+               if self.n_excluded else "")
         ]
+        for why in self.excluded[:5]:
+            lines.append(f"  excluded: {why}")
         if self.with_missing:
             n = len(self.with_missing)
             ex = self.with_missing[0]
@@ -502,6 +552,7 @@ def convert_dataset(
     dry_run: bool = False,
     progress: Optional[callable] = None,
     layout: str = "auto",
+    exclude: Optional[set] = None,
 ) -> ConvertReport:
     """Convert every case for one task.
 
@@ -513,8 +564,43 @@ def convert_dataset(
     raw_dir = task.raw_dir(cfg)
     names = task.label_set.names
 
-    train_ids = [r.case_id for r in rows if r.split != SPLIT_TEST]
-    test_ids = [r.case_id for r in rows if r.split == SPLIT_TEST] if include_test else []
+    # Tasks may carry an A14 sealed list and an ignore label (see plans.TASK_EXTRA_KEYS). Sealed
+    # cases are never converted -- not into imagesTr, not into imagesTs -- so no later step can
+    # train or tune on them.
+    from .plans import task_extras
+
+    extras = task_extras(task)
+    ignore_value = (task.label_set.n_classes + 1) if extras.get("ignore_label") else None
+    if exclude is None and extras.get("sealed_list"):
+        from .proxy import load_sealed
+
+        sealed_path = Path(extras["sealed_list"])
+        if not sealed_path.is_absolute():
+            sealed_path = Path(__file__).resolve().parents[2] / sealed_path
+        exclude = load_sealed(sealed_path)
+    exclude = set(exclude or ())
+    # A14 keys on the case behind a name, never on the name: SegQueue exports imagecas_NNNN and
+    # second reads as <case>__r2 (Echo D2). With a sealed list in force, a name that maps to no
+    # case is refused too.
+    refused: dict[str, str] = {}
+    if exclude:
+        from .proxy import sealed_reason
+
+        for r in rows:
+            why = sealed_reason(r.case_id, exclude)
+            if why:
+                refused[r.case_id] = why
+
+    train_ids = [r.case_id for r in rows if r.split != SPLIT_TEST and r.case_id not in refused]
+    test_ids = ([r.case_id for r in rows if r.split == SPLIT_TEST and r.case_id not in refused]
+                if include_test else [])
+    if extras.get("explicit_split"):
+        # The task's split comes from explicit lists (R1: ImageCAS-X train/val), not from the
+        # index's hash split, and its held-out test is the sealed list. A case the index happened
+        # to hash into 'test' is a training case here; putting it in imagesTs loses it from the
+        # explicit split (Echo D1: 86 of 640 R1 cases).
+        train_ids = [r.case_id for r in rows if r.case_id not in refused]
+        test_ids = []
     if limit:
         train_ids = train_ids[:limit]
         test_ids = test_ids[: max(1, limit // 8)] if test_ids else []
@@ -571,6 +657,7 @@ def convert_dataset(
                 cfg.link_mode,
                 overwrite,
                 cfg.overlap_policy,
+                ignore_value,
             ): is_test
             for case, img_dir, lbl_dir, is_test in jobs
         }
@@ -586,7 +673,10 @@ def convert_dataset(
         n_training=report.n_train,
         n_test=report.n_test,
         reader_writer=cfg.reader_writer,
+        ignore_label=ignore_value is not None,
     )
+    report.n_excluded = len(refused)
+    report.excluded = sorted(refused.values())
     return report
 
 

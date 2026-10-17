@@ -1,0 +1,181 @@
+#!/bin/bash
+# Atlas Trillium run 3 (Round 8, amendment A24): the FP-aware loss pilot, before R1.
+#   Two warm fine-tunes from run 2's arm B (default window) with the A17a trainer, same seed, same data and
+#   augmentation stream, equal epochs: F0 plain, F1 + the FP-aware term (lambda 1, gamma 2, band 1.5 mm).
+#   Scored with segtrain.tf1 at the pinned A1c hash (fallback centreline default), reusing run 2's aortas.
+#
+#   cd <root>/experiments/atlas3 && ./atlas3          # set up (login node), submit ONE 1-GPU job, or report status
+#   ./atlas3 status | ./atlas3 collect
+#   ATLAS_DRYRUN=1 ./atlas3                            # no modules, no pip, no sbatch: print what would happen
+#
+# Budget: one job, 1 x H100, --time=23:50:00. Never resubmits a job that already used >= 1 h.
+# Optional overrides (never needed): CASES=/path, ACCOUNT=def-xxx (default def-aso22), ATLAS3_VENV,
+# ATLAS3_RUN1=$SCRATCH/atlas, ATLAS3_RUN2=$SCRATCH/atlas2, ATLAS3_SEED=12345.
+set -euo pipefail
+
+HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+LIB="$HERE/lib"
+MODE="${1:-run}"
+DRY="${ATLAS_DRYRUN:-0}"
+JOBNAME="atlas3"
+WALLTIME="23:50:00"
+VENV="${ATLAS3_VENV:-$HOME/atlas3-venv}"
+NNUNET_VERSION="2.8.1"
+PLANS="nnUNetResEncUNetPlans_60G_iso05"
+SEED="${ATLAS3_SEED:-12345}"
+# A1c: the decisive metric's pinned hash (vault/Plans/Master plan.md, Round 8: fallback centreline default).
+FROZEN_SHA="24441cf8df0f000bd956c7dd9d8ae1daac866cfb14df1d174441d00e54f05254"
+
+say() { printf '[atlas3] %s\n' "$*"; }
+die() { printf '[atlas3] ERROR: %s\n' "$*" >&2; exit 1; }
+
+if [ "$DRY" = "1" ]; then
+    : "${SCRATCH:=${TMPDIR:-/tmp}/atlas3-dryrun-scratch}"
+    mkdir -p "$SCRATCH"
+fi
+[ -n "${SCRATCH:-}" ] || die "\$SCRATCH is not set (this must run on a Trillium login node)"
+W="$SCRATCH/atlas3"
+RUN1="${ATLAS3_RUN1:-$SCRATCH/atlas}"
+RUN2="${ATLAS3_RUN2:-$SCRATCH/atlas2}"
+mkdir -p "$W/logs"
+
+check_hash() {
+    local h
+    h="$(sha256sum "$LIB/vendor/segtrain/tf1.py" | cut -d' ' -f1)"
+    [ "$h" = "$FROZEN_SHA" ] || die "lib/vendor/segtrain/tf1.py has sha256 $h, not the pinned $FROZEN_SHA (A1c): refusing to run"
+    say "metric: segtrain.tf1 sha256 $h = pinned hash (A1c)"
+}
+
+load_modules() {
+    if [ "$DRY" = "1" ]; then return 0; fi
+    command -v module >/dev/null 2>&1 || die "the 'module' command is missing; run this on a Trillium login node"
+    module purge >/dev/null 2>&1 || true
+    module load StdEnv/2023 python/3.11.5
+}
+
+setup_venv() {
+    if [ "$DRY" = "1" ]; then
+        say "dry run: would build venv $VENV (torch from the Alliance wheelhouse, nnunetv2==$NNUNET_VERSION)"
+        PY=python3; return 0
+    fi
+    if [ ! -f "$VENV/.atlas3_ok" ]; then
+        say "building venv $VENV (one-off, a few minutes)"
+        virtualenv --no-download "$VENV"
+        # shellcheck disable=SC1091
+        source "$VENV/bin/activate"
+        pip install --no-index --upgrade pip
+        pip install --no-index torch            # Alliance wheel, CUDA-enabled
+        pip install "nnunetv2==$NNUNET_VERSION" scikit-image nibabel scipy
+        deactivate
+        touch "$VENV/.atlas3_ok"
+    fi
+    # shellcheck disable=SC1091
+    source "$VENV/bin/activate"
+    PY="$VENV/bin/python"
+    # nnU-Net finds trainers by name inside its own package: a two-line shim there imports the vendored
+    # segtrain trainers (lib/vendor is on PYTHONPATH in the job)
+    local tdir
+    tdir="$("$PY" -c 'import nnunetv2, os; print(os.path.join(os.path.dirname(nnunetv2.__file__), "training", "nnUNetTrainer", "variants", "atlas3"))')"
+    mkdir -p "$tdir"; touch "$tdir/__init__.py"
+    printf '%s\n' "# installed by trillium/atlas3: the run-3 arms, from the vendored segtrain package" \
+        "from segtrain.nnunet_ext.nnUNetTrainer_segtrain_fppilot import nnUNetTrainer_segtrain_fppilot_F0, nnUNetTrainer_segtrain_fppilot_F1  # noqa: F401" \
+        > "$tdir/atlas3_trainers.py"
+    PYTHONPATH="$LIB/vendor" "$PY" -c "import torch; from nnunetv2.training.nnUNetTrainer.variants.atlas3.atlas3_trainers import nnUNetTrainer_segtrain_fppilot_F1; print('[atlas3] venv ok: torch', torch.__version__)"
+}
+
+running_job() {
+    if [ "$DRY" = "1" ] || ! command -v squeue >/dev/null 2>&1; then return 1; fi
+    squeue -u "$USER" --name "$JOBNAME" -h -o '%i %T %M' | head -1
+}
+
+collect() {
+    if [ -d "$W/results" ]; then
+        if mkdir -p "$HERE/results" 2>/dev/null && [ -w "$HERE/results" ]; then
+            cp -r "$W/results/." "$HERE/results/"
+            cp "$W"/logs/slurm-*.out "$HERE/results/" 2>/dev/null || true
+            say "results copied to $HERE/results/ (SUMMARY.md, results.json, per-case tables, logs)"
+        else
+            say "results are in $W/results/ ($HERE is not writable)"
+        fi
+    else
+        say "no results yet in $W/results/"
+    fi
+    return 0
+}
+
+status() {
+    local rj
+    rj="$(running_job || true)"
+    if [ -n "$rj" ]; then say "job $rj"; fi
+    for m in .train_F0_done .train_F1_done DONE; do [ -e "$W/$m" ] && say "stage done: $m"; done
+    [ -f "$W/timings.json" ] && say "timings (h): $(tr -d '\n ' < "$W/timings.json")"
+    tail -n 5 "$W"/logs/slurm-*.out 2>/dev/null || true
+}
+
+case "$MODE" in
+    status)  status; exit 0 ;;
+    collect) collect; exit 0 ;;
+    run) ;;
+    *) die "unknown mode '$MODE' (use: ./atlas3 | ./atlas3 status | ./atlas3 collect)" ;;
+esac
+
+check_hash
+
+if [ -e "$W/DONE" ]; then say "experiment finished"; collect; exit 0; fi
+RJ="$(running_job || true)"
+if [ -n "$RJ" ]; then say "already queued/running: $RJ (not submitting again)"; status; exit 0; fi
+if [ -f "$W/submitted_jobs" ] && [ "$DRY" != "1" ] && command -v sacct >/dev/null 2>&1; then
+    while read -r jid; do
+        el="$(sacct -j "$jid" -X -n -o ElapsedRaw 2>/dev/null | head -1 | tr -d ' ')"
+        if [ -n "$el" ] && [ "$el" -ge 3600 ]; then
+            say "job $jid already used $((el / 60)) min of GPU time and did not finish; not resubmitting (24 h budget)."
+            say "partial results:"; collect; exit 0
+        fi
+    done < "$W/submitted_jobs"
+fi
+
+load_modules
+setup_venv
+say "scratch workdir: $W; run 1: $RUN1; run 2: $RUN2"
+cp "$HERE/sealed_test.json" "$W/sealed_test.json"
+"$PY" "$LIB/layout.py" "$HERE" "$W/layout.json"   # walks up to <root>/cases (or $CASES); fails loudly
+"$PY" "$LIB/check_run2.py" "$RUN1" "$RUN2" "$W" "$W/layout.json" "$W/sealed_test.json" > "$W/run2_check.txt" \
+    || { cat "$W/run2_check.txt"; die "run 1 and run 2 outputs are needed (see above)"; }
+head -1 "$W/run2_check.txt"
+val() { sed -n "s/^$1=//p" "$W/run2_check.txt"; }
+SOURCE="$(val SOURCE)"; DATASET="$(val DATASET)"; WINDOW="$(val WINDOW)"; S_EPOCH="$(val S_EPOCH)"; REF="$(val REF)"
+if [ -s "$RUN1/icx/train.txt" ] && [ "$(find "$RUN1/icx/" -name '*.coronary.nii.gz' | wc -l)" -ge 800 ]; then
+    ICX="$RUN1/icx"
+elif [ "$DRY" = "1" ] && [ -n "${ATLAS_DRY_ICX:-}" ]; then
+    ICX="$ATLAS_DRY_ICX"
+else
+    die "ImageCAS-X labels not found in $RUN1/icx (run 1 fetched them)"
+fi
+CL="$RUN2/centerlines"
+say "ImageCAS-X: $ICX; centrelines (validation column): $CL"
+
+JOB="$W/job.sh"
+ACCOUNT_LINE="#SBATCH --account=${ACCOUNT:-${ATLAS_ACCOUNT:-def-aso22}}"
+cat > "$JOB" <<EOF
+#!/bin/bash
+#SBATCH --job-name=$JOBNAME
+#SBATCH --nodes=1
+#SBATCH --gpus-per-node=1
+#SBATCH --time=$WALLTIME
+#SBATCH --output=$W/logs/slurm-%j.out
+$ACCOUNT_LINE
+# No --partition and no --mem: Trillium docs say not to set them. A 1-GPU job gets 24 cores and ~188 GiB.
+set -uo pipefail
+export W="$W" LIB="$LIB" VENV="$VENV" R2="$RUN2" ICX="$ICX" CL="$CL" PYTHONUNBUFFERED=1
+export FROZEN_SHA="$FROZEN_SHA" SOURCE="$SOURCE" DATASET="$DATASET" WINDOW="$WINDOW" S_EPOCH="$S_EPOCH"
+export REF="$REF" PLANS="$PLANS" SEED="$SEED"
+bash "$LIB/job_body.sh"
+EOF
+chmod +x "$JOB"
+
+if [ "$DRY" = "1" ]; then say "dry run: would submit (from $W):"; cat "$JOB"; exit 0; fi
+cd "$W"
+JID="$(sbatch --parsable "$JOB")"
+echo "$JID" >> "$W/submitted_jobs"
+say "submitted job $JID ($JOBNAME, 1 x H100, $WALLTIME)."
+say "watch: ./atlas3 status    results when finished: ./atlas3   (or ./atlas3 collect)"

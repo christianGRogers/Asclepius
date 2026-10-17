@@ -471,6 +471,14 @@ def render_prepare_script(
         steps.append(["convert", "--task", str(task.dataset_id),
                       "--layout", layout, *roots])
     steps.append(["plan", "--task", str(task.dataset_id), "--scheme", scheme, *roots])
+    from .plans import ICX_DIR_ENV, task_extras
+
+    explicit = bool(task_extras(task).get("explicit_split"))
+    if explicit:
+        # R1's split is ImageCAS-X train/val, never the hash split (Echo D13). `plan` writes it from
+        # $SEGTRAIN_ICX_DIR (exported below); this step re-asserts it before preprocessing.
+        steps.append(["splits", "--task", str(task.dataset_id), "--explicit-icx",
+                      f"${ICX_DIR_ENV}", *roots])
     pre = ["preprocess", "--task", str(task.dataset_id), *roots]
     if workers:
         pre += ["--workers", str(workers)]
@@ -496,8 +504,13 @@ def render_prepare_script(
         *_env_exports(_nnunet_env(cfg, sc)),
         "",
     ]
+    if explicit:
+        body += [f': "${{{ICX_DIR_ENV}:?set {ICX_DIR_ENV} to the ImageCAS-X filelist directory '
+                 f'(train.txt, val.txt) before submitting}}"',
+                 f"export {ICX_DIR_ENV}", ""]
     for step in steps:
-        body.append(f"segtrain {' '.join(shlex.quote(a) for a in step)}")
+        body.append("segtrain " + " ".join(
+            f'"{a}"' if a == f"${ICX_DIR_ENV}" else shlex.quote(a) for a in step))
     body += ["", 'echo "prepare finished at $(date -Is)"']
     return "\n".join(body) + "\n"
 

@@ -1,0 +1,6077 @@
+[
+{
+"name": "Figshare-23057000__PA0.nii.gz",
+"item_id": "6acf26a78b4d3a662c97914e",
+"size": 81563428,
+"dataset": "Figshare-23057000",
+"priority": 1,
+"annotatable": "yes",
+"spacing_suspect": false
+},
+{
+"name": "Figshare-23057000__PA1.nii.gz",
+"item_id": "6acf26a98b4d3a662c979150",
+"size": 80813297,
+"dataset": "Figshare-23057000",
+"priority": 1,
+"annotatable": "yes",
+"spacing_suspect": false
+},
+{
+"name": "Figshare-CardiacCT15__pat11_tp0.nii.gz",
+"item_id": "6acf26ac8b4d3a662c979154",
+"size": 79790991,
+"dataset": "Figshare-CardiacCT15",
+"priority": 1,
+"annotatable": "yes",
+"spacing_suspect": false
+},
+{
+"name": "Figshare-CardiacCT15__pat12_tp0.nii.gz",
+"item_id": "6acf26ae8b4d3a662c979156",
+"size": 72019159,
+"dataset": "Figshare-CardiacCT15",
+"priority": 1,
+"annotatable": "yes",
+"spacing_suspect": false
+},
+{
+"name": "Figshare-CardiacCT15__pat13_tp0.nii.gz",
+"item_id": "6acf26af8b4d3a662c979158",
+"size": 83952747,
+"dataset": "Figshare-CardiacCT15",
+"priority": 1,
+"annotatable": "yes",
+"spacing_suspect": false
+},
+{
+"name": "Figshare-CardiacCT15__pat14_tp0.nii.gz",
+"item_id": "6acf26b18b4d3a662c97915a",
+"size": 42691537,
+"dataset": "Figshare-CardiacCT15",
+"priority": 1,
+"annotatable": "yes",
+"spacing_suspect": false
+},
+{
+"name": "Figshare-CardiacCT15__pat15_tp0.nii.gz",
+"item_id": "6acf26b38b4d3a662c97915c",
+"size": 61999041,
+"dataset": "Figshare-CardiacCT15",
+"priority": 1,
+"annotatable": "yes",
+"spacing_suspect": false
+},
+{
+"name": "Figshare-CardiacCT15__pat1_tp0.nii.gz",
+"item_id": "6acf26b48b4d3a662c97915e",
+"size": 85182021,
+"dataset": "Figshare-CardiacCT15",
+"priority": 1,
+"annotatable": "yes",
+"spacing_suspect": false
+},
+{
+"name": "Figshare-CardiacCT15__pat3_tp0.nii.gz",
+"item_id": "6acf26b88b4d3a662c979162",
+"size": 64926935,
+"dataset": "Figshare-CardiacCT15",
+"priority": 1,
+"annotatable": "yes",
+"spacing_suspect": false
+},
+{
+"name": "Figshare-CardiacCT15__pat4_tp0.nii.gz",
+"item_id": "6acf26b98b4d3a662c979164",
+"size": 90075060,
+"dataset": "Figshare-CardiacCT15",
+"priority": 1,
+"annotatable": "yes",
+"spacing_suspect": false
+},
+{
+"name": "Figshare-CardiacCT15__pat7_tp0.nii.gz",
+"item_id": "6acf26be8b4d3a662c97916a",
+"size": 66497504,
+"dataset": "Figshare-CardiacCT15",
+"priority": 1,
+"annotatable": "yes",
+"spacing_suspect": false
+},
+{
+"name": "Figshare-CardiacCT15__pat9_tp0.nii.gz",
+"item_id": "6acf26c18b4d3a662c97916e",
+"size": 72048902,
+"dataset": "Figshare-CardiacCT15",
+"priority": 1,
+"annotatable": "yes",
+"spacing_suspect": false
+},
+{
+"name": "Figshare-DCM3-Pulmonary35__DCM3_Pulmonary_35.nii.gz",
+"item_id": "6acf26c38b4d3a662c979170",
+"size": 98068122,
+"dataset": "Figshare-DCM3-Pulmonary35",
+"priority": 1,
+"annotatable": "yes",
+"spacing_suspect": false
+},
+{
+"name": "IDC-rider_lung_pet_ct__RIDER-2522924559__SS-Segment-30-75-BPM-0-625mm_875399_p06.nii.gz",
+"item_id": "6acf277b8b4d3a662c979258",
+"size": 59078122,
+"dataset": "IDC-rider_lung_pet_ct",
+"priority": 1,
+"annotatable": "yes",
+"spacing_suspect": false
+},
+{
+"name": "IDC-rider_lung_pet_ct__RIDER-2522924559__SS-Segment-30-75-BPM-0-625mm_875399_p07.nii.gz",
+"item_id": "6acf277d8b4d3a662c97925a",
+"size": 58593861,
+"dataset": "IDC-rider_lung_pet_ct",
+"priority": 1,
+"annotatable": "yes",
+"spacing_suspect": false
+},
+{
+"name": "IDC-rider_lung_pet_ct__RIDER-2522924559__SS-Segment-30-75-BPM-0-625mm_875399_p09.nii.gz",
+"item_id": "6acf27808b4d3a662c97925e",
+"size": 59516991,
+"dataset": "IDC-rider_lung_pet_ct",
+"priority": 1,
+"annotatable": "yes",
+"spacing_suspect": false
+},
+{
+"name": "ImageCHD__1103.nii.gz",
+"item_id": "6acf28738b4d3a662c979396",
+"size": 66822120,
+"dataset": "ImageCHD",
+"priority": 1,
+"annotatable": "yes",
+"spacing_suspect": false
+},
+{
+"name": "Kaggle-CAD-RandomSamples__case56.nii.gz",
+"item_id": "6acf28b38b4d3a662c9793e4",
+"size": 79105154,
+"dataset": "Kaggle-CAD-RandomSamples",
+"priority": 1,
+"annotatable": "yes",
+"spacing_suspect": false
+},
+{
+"name": "Kaggle-CAD-RandomSamples__case57.nii.gz",
+"item_id": "6acf28b58b4d3a662c9793e6",
+"size": 159788187,
+"dataset": "Kaggle-CAD-RandomSamples",
+"priority": 1,
+"annotatable": "yes",
+"spacing_suspect": false
+},
+{
+"name": "Kaggle-CAD-RandomSamples__case58.nii.gz",
+"item_id": "6acf28b68b4d3a662c9793e8",
+"size": 73458657,
+"dataset": "Kaggle-CAD-RandomSamples",
+"priority": 1,
+"annotatable": "yes",
+"spacing_suspect": false
+},
+{
+"name": "Kaggle-CAD-RandomSamples__case59.nii.gz",
+"item_id": "6acf28b88b4d3a662c9793ea",
+"size": 92647661,
+"dataset": "Kaggle-CAD-RandomSamples",
+"priority": 1,
+"annotatable": "yes",
+"spacing_suspect": false
+},
+{
+"name": "Kaggle-CAD-RandomSamples__case60.nii.gz",
+"item_id": "6acf28b98b4d3a662c9793ec",
+"size": 90976893,
+"dataset": "Kaggle-CAD-RandomSamples",
+"priority": 1,
+"annotatable": "yes",
+"spacing_suspect": false
+},
+{
+"name": "Kaggle-CAD-RandomSamples__case61.nii.gz",
+"item_id": "6acf28bb8b4d3a662c9793ee",
+"size": 108481157,
+"dataset": "Kaggle-CAD-RandomSamples",
+"priority": 1,
+"annotatable": "yes",
+"spacing_suspect": false
+},
+{
+"name": "Kaggle-CAD-RandomSamples__case64.nii.gz",
+"item_id": "6acf28c08b4d3a662c9793f4",
+"size": 94508203,
+"dataset": "Kaggle-CAD-RandomSamples",
+"priority": 1,
+"annotatable": "yes",
+"spacing_suspect": false
+},
+{
+"name": "Kaggle-CAD-RandomSamples__case65.nii.gz",
+"item_id": "6acf28c18b4d3a662c9793f6",
+"size": 88485572,
+"dataset": "Kaggle-CAD-RandomSamples",
+"priority": 1,
+"annotatable": "yes",
+"spacing_suspect": false
+},
+{
+"name": "Kaggle-CAD-RandomSamples__case66.nii.gz",
+"item_id": "6acf28c38b4d3a662c9793f8",
+"size": 119733589,
+"dataset": "Kaggle-CAD-RandomSamples",
+"priority": 1,
+"annotatable": "yes",
+"spacing_suspect": false
+},
+{
+"name": "Kaggle-CAD-RandomSamples__case67.nii.gz",
+"item_id": "6acf28c48b4d3a662c9793fa",
+"size": 142338821,
+"dataset": "Kaggle-CAD-RandomSamples",
+"priority": 1,
+"annotatable": "yes",
+"spacing_suspect": false
+},
+{
+"name": "Kaggle-CAD-RandomSamples__case68.nii.gz",
+"item_id": "6acf28c68b4d3a662c9793fc",
+"size": 96851633,
+"dataset": "Kaggle-CAD-RandomSamples",
+"priority": 1,
+"annotatable": "yes",
+"spacing_suspect": false
+},
+{
+"name": "Kaggle-CAD-RandomSamples__case70.nii.gz",
+"item_id": "6acf28c98b4d3a662c979400",
+"size": 92235999,
+"dataset": "Kaggle-CAD-RandomSamples",
+"priority": 1,
+"annotatable": "yes",
+"spacing_suspect": false
+},
+{
+"name": "Kaggle-CAD-RandomSamples__case71.nii.gz",
+"item_id": "6acf28cb8b4d3a662c979402",
+"size": 81426580,
+"dataset": "Kaggle-CAD-RandomSamples",
+"priority": 1,
+"annotatable": "yes",
+"spacing_suspect": false
+},
+{
+"name": "Kaggle-CAD-RandomSamples__case72.nii.gz",
+"item_id": "6acf28cc8b4d3a662c979404",
+"size": 82876569,
+"dataset": "Kaggle-CAD-RandomSamples",
+"priority": 1,
+"annotatable": "yes",
+"spacing_suspect": false
+},
+{
+"name": "Kaggle-CAD-RandomSamples__case73.nii.gz",
+"item_id": "6acf28ce8b4d3a662c979406",
+"size": 124056344,
+"dataset": "Kaggle-CAD-RandomSamples",
+"priority": 1,
+"annotatable": "yes",
+"spacing_suspect": false
+},
+{
+"name": "Kaggle-CAD-RandomSamples__case74.nii.gz",
+"item_id": "6acf28d08b4d3a662c979408",
+"size": 87959877,
+"dataset": "Kaggle-CAD-RandomSamples",
+"priority": 1,
+"annotatable": "yes",
+"spacing_suspect": false
+},
+{
+"name": "Kaggle-CAD-RandomSamples__case76.nii.gz",
+"item_id": "6acf28d38b4d3a662c97940c",
+"size": 88691185,
+"dataset": "Kaggle-CAD-RandomSamples",
+"priority": 1,
+"annotatable": "yes",
+"spacing_suspect": false
+},
+{
+"name": "Kaggle-CAD-RandomSamples__case77.nii.gz",
+"item_id": "6acf28d58b4d3a662c97940e",
+"size": 121964648,
+"dataset": "Kaggle-CAD-RandomSamples",
+"priority": 1,
+"annotatable": "yes",
+"spacing_suspect": false
+},
+{
+"name": "Kaggle-CAD-RandomSamples__case78.nii.gz",
+"item_id": "6acf28d68b4d3a662c979410",
+"size": 114011759,
+"dataset": "Kaggle-CAD-RandomSamples",
+"priority": 1,
+"annotatable": "yes",
+"spacing_suspect": false
+},
+{
+"name": "Kaggle-CAD-RandomSamples__case79.nii.gz",
+"item_id": "6acf28d88b4d3a662c979412",
+"size": 113226992,
+"dataset": "Kaggle-CAD-RandomSamples",
+"priority": 1,
+"annotatable": "yes",
+"spacing_suspect": false
+},
+{
+"name": "Kaggle-CAD-RandomSamples__case81.nii.gz",
+"item_id": "6acf28db8b4d3a662c979416",
+"size": 106734231,
+"dataset": "Kaggle-CAD-RandomSamples",
+"priority": 1,
+"annotatable": "yes",
+"spacing_suspect": false
+},
+{
+"name": "Kaggle-CAD-RandomSamples__case82.nii.gz",
+"item_id": "6acf28dd8b4d3a662c979418",
+"size": 103553529,
+"dataset": "Kaggle-CAD-RandomSamples",
+"priority": 1,
+"annotatable": "yes",
+"spacing_suspect": false
+},
+{
+"name": "Kaggle-CAD-RandomSamples__case83.nii.gz",
+"item_id": "6acf28df8b4d3a662c97941a",
+"size": 104128277,
+"dataset": "Kaggle-CAD-RandomSamples",
+"priority": 1,
+"annotatable": "yes",
+"spacing_suspect": false
+},
+{
+"name": "Kaggle-HeartSR__P01.nii.gz",
+"item_id": "6acf28e08b4d3a662c97941c",
+"size": 153033345,
+"dataset": "Kaggle-HeartSR",
+"priority": 1,
+"annotatable": "yes",
+"spacing_suspect": false
+},
+{
+"name": "Kaggle-HeartSR__P02.nii.gz",
+"item_id": "6acf28e28b4d3a662c97941e",
+"size": 148643832,
+"dataset": "Kaggle-HeartSR",
+"priority": 1,
+"annotatable": "yes",
+"spacing_suspect": false
+},
+{
+"name": "Kaggle-HeartSR__P03.nii.gz",
+"item_id": "6acf28e48b4d3a662c979420",
+"size": 148054094,
+"dataset": "Kaggle-HeartSR",
+"priority": 1,
+"annotatable": "yes",
+"spacing_suspect": false
+},
+{
+"name": "Kaggle-HeartSR__P04.nii.gz",
+"item_id": "6acf28e68b4d3a662c979422",
+"size": 155400157,
+"dataset": "Kaggle-HeartSR",
+"priority": 1,
+"annotatable": "yes",
+"spacing_suspect": false
+},
+{
+"name": "Kaggle-HeartSR__P05.nii.gz",
+"item_id": "6acf28e78b4d3a662c979424",
+"size": 133988721,
+"dataset": "Kaggle-HeartSR",
+"priority": 1,
+"annotatable": "yes",
+"spacing_suspect": false
+},
+{
+"name": "Kaggle-HeartSR__P06.nii.gz",
+"item_id": "6acf28e98b4d3a662c979426",
+"size": 131983247,
+"dataset": "Kaggle-HeartSR",
+"priority": 1,
+"annotatable": "yes",
+"spacing_suspect": false
+},
+{
+"name": "Kaggle-HeartSR__P07.nii.gz",
+"item_id": "6acf28ea8b4d3a662c979428",
+"size": 188341619,
+"dataset": "Kaggle-HeartSR",
+"priority": 1,
+"annotatable": "yes",
+"spacing_suspect": false
+},
+{
+"name": "Kaggle-HeartSR__P10.nii.gz",
+"item_id": "6acf28ef8b4d3a662c97942e",
+"size": 126258846,
+"dataset": "Kaggle-HeartSR",
+"priority": 1,
+"annotatable": "yes",
+"spacing_suspect": false
+},
+{
+"name": "Mendeley-9wv3fkxstx__P00001_s403.nii.gz",
+"item_id": "6acf28f18b4d3a662c979430",
+"size": 62078268,
+"dataset": "Mendeley-9wv3fkxstx",
+"priority": 1,
+"annotatable": "yes",
+"spacing_suspect": false
+},
+{
+"name": "Mendeley-SDN-37nnfyh3x9__s003.nii.gz",
+"item_id": "6acf28f58b4d3a662c979434",
+"size": 79702413,
+"dataset": "Mendeley-SDN-37nnfyh3x9",
+"priority": 1,
+"annotatable": "yes",
+"spacing_suspect": false
+},
+{
+"name": "Mendeley-SDN-37nnfyh3x9__s004_p60.nii.gz",
+"item_id": "6acf28f98b4d3a662c97943a",
+"size": 75825322,
+"dataset": "Mendeley-SDN-37nnfyh3x9",
+"priority": 1,
+"annotatable": "yes",
+"spacing_suspect": false
+},
+{
+"name": "Mendeley-SDN-37nnfyh3x9__s004_p80.nii.gz",
+"item_id": "6acf28fc8b4d3a662c97943e",
+"size": 75644352,
+"dataset": "Mendeley-SDN-37nnfyh3x9",
+"priority": 1,
+"annotatable": "yes",
+"spacing_suspect": false
+},
+{
+"name": "Mendeley-SDN-37nnfyh3x9__s302_p58.nii.gz",
+"item_id": "6acf29018b4d3a662c979444",
+"size": 80823378,
+"dataset": "Mendeley-SDN-37nnfyh3x9",
+"priority": 1,
+"annotatable": "yes",
+"spacing_suspect": false
+},
+{
+"name": "Mendeley-SDN-4643nn2z44__s008.nii.gz",
+"item_id": "6acf29088b4d3a662c97944e",
+"size": 109729591,
+"dataset": "Mendeley-SDN-4643nn2z44",
+"priority": 1,
+"annotatable": "yes",
+"spacing_suspect": false
+},
+{
+"name": "Mendeley-SDN-4643nn2z44__s009.nii.gz",
+"item_id": "6acf290a8b4d3a662c979450",
+"size": 110158893,
+"dataset": "Mendeley-SDN-4643nn2z44",
+"priority": 1,
+"annotatable": "yes",
+"spacing_suspect": false
+},
+{
+"name": "Mendeley-SDN-4643nn2z44__s012.nii.gz",
+"item_id": "6acf292a8b4d3a662c97947a",
+"size": 109317398,
+"dataset": "Mendeley-SDN-4643nn2z44",
+"priority": 1,
+"annotatable": "yes",
+"spacing_suspect": false
+},
+{
+"name": "Mendeley-SDN-7x9kb53262__s010_p35.nii.gz",
+"item_id": "6acf293a8b4d3a662c97948e",
+"size": 47542433,
+"dataset": "Mendeley-SDN-7x9kb53262",
+"priority": 1,
+"annotatable": "yes",
+"spacing_suspect": false
+},
+{
+"name": "Mendeley-SDN-cy54ttk3fj__P01_diast.nii.gz",
+"item_id": "6acf294f8b4d3a662c9794aa",
+"size": 101569998,
+"dataset": "Mendeley-SDN-cy54ttk3fj",
+"priority": 1,
+"annotatable": "yes",
+"spacing_suspect": false
+},
+{
+"name": "Mendeley-SDN-cy54ttk3fj__P01_syst.nii.gz",
+"item_id": "6acf29518b4d3a662c9794ac",
+"size": 102147104,
+"dataset": "Mendeley-SDN-cy54ttk3fj",
+"priority": 1,
+"annotatable": "yes",
+"spacing_suspect": false
+},
+{
+"name": "Mendeley-SDN-cy54ttk3fj__P02_diast.nii.gz",
+"item_id": "6acf29528b4d3a662c9794ae",
+"size": 110134306,
+"dataset": "Mendeley-SDN-cy54ttk3fj",
+"priority": 1,
+"annotatable": "yes",
+"spacing_suspect": false
+},
+{
+"name": "Mendeley-SDN-cy54ttk3fj__P02_syst.nii.gz",
+"item_id": "6acf29548b4d3a662c9794b0",
+"size": 110134106,
+"dataset": "Mendeley-SDN-cy54ttk3fj",
+"priority": 1,
+"annotatable": "yes",
+"spacing_suspect": false
+},
+{
+"name": "Mendeley-SDN-cy54ttk3fj__P03_diast.nii.gz",
+"item_id": "6acf29558b4d3a662c9794b2",
+"size": 83018157,
+"dataset": "Mendeley-SDN-cy54ttk3fj",
+"priority": 1,
+"annotatable": "yes",
+"spacing_suspect": false
+},
+{
+"name": "Mendeley-SDN-cy54ttk3fj__P03_syst.nii.gz",
+"item_id": "6acf29578b4d3a662c9794b4",
+"size": 82987596,
+"dataset": "Mendeley-SDN-cy54ttk3fj",
+"priority": 1,
+"annotatable": "yes",
+"spacing_suspect": false
+},
+{
+"name": "Mendeley-SDN-cy54ttk3fj__P04_diast.nii.gz",
+"item_id": "6acf29598b4d3a662c9794b6",
+"size": 103204141,
+"dataset": "Mendeley-SDN-cy54ttk3fj",
+"priority": 1,
+"annotatable": "yes",
+"spacing_suspect": false
+},
+{
+"name": "Mendeley-SDN-cy54ttk3fj__P04_syst.nii.gz",
+"item_id": "6acf295a8b4d3a662c9794b8",
+"size": 102678149,
+"dataset": "Mendeley-SDN-cy54ttk3fj",
+"priority": 1,
+"annotatable": "yes",
+"spacing_suspect": false
+},
+{
+"name": "Mendeley-SDN-cy54ttk3fj__P05_diast.nii.gz",
+"item_id": "6acf295c8b4d3a662c9794ba",
+"size": 98453385,
+"dataset": "Mendeley-SDN-cy54ttk3fj",
+"priority": 1,
+"annotatable": "yes",
+"spacing_suspect": false
+},
+{
+"name": "Mendeley-SDN-cy54ttk3fj__P05_syst.nii.gz",
+"item_id": "6acf295e8b4d3a662c9794bc",
+"size": 97852984,
+"dataset": "Mendeley-SDN-cy54ttk3fj",
+"priority": 1,
+"annotatable": "yes",
+"spacing_suspect": false
+},
+{
+"name": "Mendeley-SDN-cy54ttk3fj__P06_diast.nii.gz",
+"item_id": "6acf295f8b4d3a662c9794be",
+"size": 115770156,
+"dataset": "Mendeley-SDN-cy54ttk3fj",
+"priority": 1,
+"annotatable": "yes",
+"spacing_suspect": false
+},
+{
+"name": "Mendeley-SDN-cy54ttk3fj__P06_syst.nii.gz",
+"item_id": "6acf29618b4d3a662c9794c0",
+"size": 115057504,
+"dataset": "Mendeley-SDN-cy54ttk3fj",
+"priority": 1,
+"annotatable": "yes",
+"spacing_suspect": false
+},
+{
+"name": "Mendeley-SDN-cy54ttk3fj__P08_diast.nii.gz",
+"item_id": "6acf29658b4d3a662c9794c6",
+"size": 109994025,
+"dataset": "Mendeley-SDN-cy54ttk3fj",
+"priority": 1,
+"annotatable": "yes",
+"spacing_suspect": false
+},
+{
+"name": "Mendeley-SDN-cy54ttk3fj__P08_syst.nii.gz",
+"item_id": "6acf29678b4d3a662c9794c8",
+"size": 109297873,
+"dataset": "Mendeley-SDN-cy54ttk3fj",
+"priority": 1,
+"annotatable": "yes",
+"spacing_suspect": false
+},
+{
+"name": "Mendeley-SDN-cy54ttk3fj__P09_diast.nii.gz",
+"item_id": "6acf29688b4d3a662c9794ca",
+"size": 98153876,
+"dataset": "Mendeley-SDN-cy54ttk3fj",
+"priority": 1,
+"annotatable": "yes",
+"spacing_suspect": false
+},
+{
+"name": "Mendeley-SDN-cy54ttk3fj__P09_syst.nii.gz",
+"item_id": "6acf296a8b4d3a662c9794cc",
+"size": 96974052,
+"dataset": "Mendeley-SDN-cy54ttk3fj",
+"priority": 1,
+"annotatable": "yes",
+"spacing_suspect": false
+},
+{
+"name": "Mendeley-SDN-cy54ttk3fj__P10_diast.nii.gz",
+"item_id": "6acf296c8b4d3a662c9794ce",
+"size": 111087926,
+"dataset": "Mendeley-SDN-cy54ttk3fj",
+"priority": 1,
+"annotatable": "yes",
+"spacing_suspect": false
+},
+{
+"name": "Mendeley-SDN-cy54ttk3fj__P10_syst.nii.gz",
+"item_id": "6acf296d8b4d3a662c9794d0",
+"size": 110630740,
+"dataset": "Mendeley-SDN-cy54ttk3fj",
+"priority": 1,
+"annotatable": "yes",
+"spacing_suspect": false
+},
+{
+"name": "Mendeley-SDN-cy54ttk3fj__P11_syst.nii.gz",
+"item_id": "6acf29708b4d3a662c9794d4",
+"size": 108377218,
+"dataset": "Mendeley-SDN-cy54ttk3fj",
+"priority": 1,
+"annotatable": "yes",
+"spacing_suspect": false
+},
+{
+"name": "Mendeley-SDN-cy54ttk3fj__P12_diast.nii.gz",
+"item_id": "6acf29728b4d3a662c9794d6",
+"size": 103964667,
+"dataset": "Mendeley-SDN-cy54ttk3fj",
+"priority": 1,
+"annotatable": "yes",
+"spacing_suspect": false
+},
+{
+"name": "Mendeley-SDN-cy54ttk3fj__P12_syst.nii.gz",
+"item_id": "6acf29738b4d3a662c9794d8",
+"size": 103555742,
+"dataset": "Mendeley-SDN-cy54ttk3fj",
+"priority": 1,
+"annotatable": "yes",
+"spacing_suspect": false
+},
+{
+"name": "Mendeley-SDN-cy54ttk3fj__P13_diast.nii.gz",
+"item_id": "6acf29758b4d3a662c9794da",
+"size": 107521180,
+"dataset": "Mendeley-SDN-cy54ttk3fj",
+"priority": 1,
+"annotatable": "yes",
+"spacing_suspect": false
+},
+{
+"name": "Mendeley-SDN-cy54ttk3fj__P13_syst.nii.gz",
+"item_id": "6acf29778b4d3a662c9794dc",
+"size": 106575884,
+"dataset": "Mendeley-SDN-cy54ttk3fj",
+"priority": 1,
+"annotatable": "yes",
+"spacing_suspect": false
+},
+{
+"name": "Mendeley-SDN-cy54ttk3fj__P14_diast.nii.gz",
+"item_id": "6acf29788b4d3a662c9794de",
+"size": 103515784,
+"dataset": "Mendeley-SDN-cy54ttk3fj",
+"priority": 1,
+"annotatable": "yes",
+"spacing_suspect": false
+},
+{
+"name": "Mendeley-SDN-cy54ttk3fj__P14_syst.nii.gz",
+"item_id": "6acf297a8b4d3a662c9794e0",
+"size": 103380992,
+"dataset": "Mendeley-SDN-cy54ttk3fj",
+"priority": 1,
+"annotatable": "yes",
+"spacing_suspect": false
+},
+{
+"name": "Mendeley-SDN-cy54ttk3fj__P15_syst.nii.gz",
+"item_id": "6acf297d8b4d3a662c9794e4",
+"size": 103184325,
+"dataset": "Mendeley-SDN-cy54ttk3fj",
+"priority": 1,
+"annotatable": "yes",
+"spacing_suspect": false
+},
+{
+"name": "Mendeley-SDN-cy54ttk3fj__P16_diast.nii.gz",
+"item_id": "6acf297e8b4d3a662c9794e6",
+"size": 103479181,
+"dataset": "Mendeley-SDN-cy54ttk3fj",
+"priority": 1,
+"annotatable": "yes",
+"spacing_suspect": false
+},
+{
+"name": "Mendeley-SDN-cy54ttk3fj__P17_diast.nii.gz",
+"item_id": "6acf29818b4d3a662c9794ea",
+"size": 114256435,
+"dataset": "Mendeley-SDN-cy54ttk3fj",
+"priority": 1,
+"annotatable": "yes",
+"spacing_suspect": false
+},
+{
+"name": "Mendeley-SDN-cy54ttk3fj__P17_syst.nii.gz",
+"item_id": "6acf29838b4d3a662c9794ec",
+"size": 113358811,
+"dataset": "Mendeley-SDN-cy54ttk3fj",
+"priority": 1,
+"annotatable": "yes",
+"spacing_suspect": false
+},
+{
+"name": "Mendeley-SDN-cy54ttk3fj__P18_diast.nii.gz",
+"item_id": "6acf29848b4d3a662c9794ee",
+"size": 111493076,
+"dataset": "Mendeley-SDN-cy54ttk3fj",
+"priority": 1,
+"annotatable": "yes",
+"spacing_suspect": false
+},
+{
+"name": "Mendeley-SDN-cy54ttk3fj__P20_diast.nii.gz",
+"item_id": "6acf298a8b4d3a662c9794f6",
+"size": 92423121,
+"dataset": "Mendeley-SDN-cy54ttk3fj",
+"priority": 1,
+"annotatable": "yes",
+"spacing_suspect": false
+},
+{
+"name": "Mendeley-SDN-cy54ttk3fj__P20_syst.nii.gz",
+"item_id": "6acf298c8b4d3a662c9794f8",
+"size": 91874583,
+"dataset": "Mendeley-SDN-cy54ttk3fj",
+"priority": 1,
+"annotatable": "yes",
+"spacing_suspect": false
+},
+{
+"name": "Mendeley-SDN-cy54ttk3fj__P21_diast.nii.gz",
+"item_id": "6acf298d8b4d3a662c9794fa",
+"size": 86636830,
+"dataset": "Mendeley-SDN-cy54ttk3fj",
+"priority": 1,
+"annotatable": "yes",
+"spacing_suspect": false
+},
+{
+"name": "Mendeley-SDN-cy54ttk3fj__P21_syst.nii.gz",
+"item_id": "6acf298f8b4d3a662c9794fc",
+"size": 86210554,
+"dataset": "Mendeley-SDN-cy54ttk3fj",
+"priority": 1,
+"annotatable": "yes",
+"spacing_suspect": false
+},
+{
+"name": "Mendeley-SDN-cy54ttk3fj__P22_diast.nii.gz",
+"item_id": "6acf29908b4d3a662c9794fe",
+"size": 110354437,
+"dataset": "Mendeley-SDN-cy54ttk3fj",
+"priority": 1,
+"annotatable": "yes",
+"spacing_suspect": false
+},
+{
+"name": "Mendeley-SDN-cy54ttk3fj__P22_syst.nii.gz",
+"item_id": "6acf29928b4d3a662c979500",
+"size": 109875518,
+"dataset": "Mendeley-SDN-cy54ttk3fj",
+"priority": 1,
+"annotatable": "yes",
+"spacing_suspect": false
+},
+{
+"name": "Mendeley-SDN-cy54ttk3fj__P23_diast.nii.gz",
+"item_id": "6acf29948b4d3a662c979502",
+"size": 89636177,
+"dataset": "Mendeley-SDN-cy54ttk3fj",
+"priority": 1,
+"annotatable": "yes",
+"spacing_suspect": false
+},
+{
+"name": "Mendeley-SDN-cy54ttk3fj__P23_syst.nii.gz",
+"item_id": "6acf29958b4d3a662c979504",
+"size": 89614262,
+"dataset": "Mendeley-SDN-cy54ttk3fj",
+"priority": 1,
+"annotatable": "yes",
+"spacing_suspect": false
+},
+{
+"name": "Mendeley-SDN-cy54ttk3fj__P24_diast.nii.gz",
+"item_id": "6acf29968b4d3a662c979506",
+"size": 123726958,
+"dataset": "Mendeley-SDN-cy54ttk3fj",
+"priority": 1,
+"annotatable": "yes",
+"spacing_suspect": false
+},
+{
+"name": "Mendeley-SDN-cy54ttk3fj__P24_syst.nii.gz",
+"item_id": "6acf29988b4d3a662c979508",
+"size": 123813139,
+"dataset": "Mendeley-SDN-cy54ttk3fj",
+"priority": 1,
+"annotatable": "yes",
+"spacing_suspect": false
+},
+{
+"name": "Mendeley-SDN-cy54ttk3fj__P25_diast.nii.gz",
+"item_id": "6acf299a8b4d3a662c97950a",
+"size": 103894364,
+"dataset": "Mendeley-SDN-cy54ttk3fj",
+"priority": 1,
+"annotatable": "yes",
+"spacing_suspect": false
+},
+{
+"name": "Mendeley-SDN-cy54ttk3fj__P25_syst.nii.gz",
+"item_id": "6acf299b8b4d3a662c97950c",
+"size": 103975769,
+"dataset": "Mendeley-SDN-cy54ttk3fj",
+"priority": 1,
+"annotatable": "yes",
+"spacing_suspect": false
+},
+{
+"name": "Mendeley-SDN-cy54ttk3fj__P26_diast.nii.gz",
+"item_id": "6acf299d8b4d3a662c97950e",
+"size": 102542100,
+"dataset": "Mendeley-SDN-cy54ttk3fj",
+"priority": 1,
+"annotatable": "yes",
+"spacing_suspect": false
+},
+{
+"name": "Mendeley-SDN-cy54ttk3fj__P26_syst.nii.gz",
+"item_id": "6acf299e8b4d3a662c979510",
+"size": 102176502,
+"dataset": "Mendeley-SDN-cy54ttk3fj",
+"priority": 1,
+"annotatable": "yes",
+"spacing_suspect": false
+},
+{
+"name": "Mendeley-SDN-cy54ttk3fj__P27_diast.nii.gz",
+"item_id": "6acf29a08b4d3a662c979512",
+"size": 88032478,
+"dataset": "Mendeley-SDN-cy54ttk3fj",
+"priority": 1,
+"annotatable": "yes",
+"spacing_suspect": false
+},
+{
+"name": "Mendeley-SDN-cy54ttk3fj__P27_syst.nii.gz",
+"item_id": "6acf29a28b4d3a662c979514",
+"size": 87470528,
+"dataset": "Mendeley-SDN-cy54ttk3fj",
+"priority": 1,
+"annotatable": "yes",
+"spacing_suspect": false
+},
+{
+"name": "Mendeley-SDN-cy54ttk3fj__P28_diast.nii.gz",
+"item_id": "6acf29a38b4d3a662c979516",
+"size": 129822007,
+"dataset": "Mendeley-SDN-cy54ttk3fj",
+"priority": 1,
+"annotatable": "yes",
+"spacing_suspect": false
+},
+{
+"name": "Mendeley-SDN-cy54ttk3fj__P28_syst.nii.gz",
+"item_id": "6acf29a58b4d3a662c979518",
+"size": 129664288,
+"dataset": "Mendeley-SDN-cy54ttk3fj",
+"priority": 1,
+"annotatable": "yes",
+"spacing_suspect": false
+},
+{
+"name": "Mendeley-SDN-cy54ttk3fj__P29_diast.nii.gz",
+"item_id": "6acf29a78b4d3a662c97951a",
+"size": 190486451,
+"dataset": "Mendeley-SDN-cy54ttk3fj",
+"priority": 1,
+"annotatable": "yes",
+"spacing_suspect": false
+},
+{
+"name": "Mendeley-SDN-cy54ttk3fj__P30_diast.nii.gz",
+"item_id": "6acf29aa8b4d3a662c97951e",
+"size": 113315914,
+"dataset": "Mendeley-SDN-cy54ttk3fj",
+"priority": 1,
+"annotatable": "yes",
+"spacing_suspect": false
+},
+{
+"name": "Mendeley-SDN-cy54ttk3fj__P30_syst.nii.gz",
+"item_id": "6acf29ac8b4d3a662c979520",
+"size": 113513412,
+"dataset": "Mendeley-SDN-cy54ttk3fj",
+"priority": 1,
+"annotatable": "yes",
+"spacing_suspect": false
+},
+{
+"name": "Mendeley-SDN-cy54ttk3fj__P31_diast.nii.gz",
+"item_id": "6acf29ae8b4d3a662c979522",
+"size": 93231149,
+"dataset": "Mendeley-SDN-cy54ttk3fj",
+"priority": 1,
+"annotatable": "yes",
+"spacing_suspect": false
+},
+{
+"name": "Mendeley-SDN-cy54ttk3fj__P31_syst.nii.gz",
+"item_id": "6acf29af8b4d3a662c979524",
+"size": 92576583,
+"dataset": "Mendeley-SDN-cy54ttk3fj",
+"priority": 1,
+"annotatable": "yes",
+"spacing_suspect": false
+},
+{
+"name": "Mendeley-SDN-cy54ttk3fj__P32_diast.nii.gz",
+"item_id": "6acf29b18b4d3a662c979526",
+"size": 104947979,
+"dataset": "Mendeley-SDN-cy54ttk3fj",
+"priority": 1,
+"annotatable": "yes",
+"spacing_suspect": false
+},
+{
+"name": "Mendeley-SDN-cy54ttk3fj__P32_syst.nii.gz",
+"item_id": "6acf29b28b4d3a662c979528",
+"size": 104493429,
+"dataset": "Mendeley-SDN-cy54ttk3fj",
+"priority": 1,
+"annotatable": "yes",
+"spacing_suspect": false
+},
+{
+"name": "Mendeley-SDN-cy54ttk3fj__P33_diast.nii.gz",
+"item_id": "6acf29b48b4d3a662c97952a",
+"size": 95879224,
+"dataset": "Mendeley-SDN-cy54ttk3fj",
+"priority": 1,
+"annotatable": "yes",
+"spacing_suspect": false
+},
+{
+"name": "Mendeley-SDN-cy54ttk3fj__P33_syst.nii.gz",
+"item_id": "6acf29b58b4d3a662c97952c",
+"size": 95418712,
+"dataset": "Mendeley-SDN-cy54ttk3fj",
+"priority": 1,
+"annotatable": "yes",
+"spacing_suspect": false
+},
+{
+"name": "Mendeley-SDN-cy54ttk3fj__P34_diast.nii.gz",
+"item_id": "6acf29b78b4d3a662c97952e",
+"size": 99632374,
+"dataset": "Mendeley-SDN-cy54ttk3fj",
+"priority": 1,
+"annotatable": "yes",
+"spacing_suspect": false
+},
+{
+"name": "Mendeley-SDN-cy54ttk3fj__P34_syst.nii.gz",
+"item_id": "6acf29b98b4d3a662c979530",
+"size": 99118397,
+"dataset": "Mendeley-SDN-cy54ttk3fj",
+"priority": 1,
+"annotatable": "yes",
+"spacing_suspect": false
+},
+{
+"name": "Mendeley-SDN-cy54ttk3fj__P35_diast.nii.gz",
+"item_id": "6acf29ba8b4d3a662c979532",
+"size": 116591962,
+"dataset": "Mendeley-SDN-cy54ttk3fj",
+"priority": 1,
+"annotatable": "yes",
+"spacing_suspect": false
+},
+{
+"name": "Mendeley-SDN-cy54ttk3fj__P35_syst.nii.gz",
+"item_id": "6acf29bc8b4d3a662c979534",
+"size": 115785587,
+"dataset": "Mendeley-SDN-cy54ttk3fj",
+"priority": 1,
+"annotatable": "yes",
+"spacing_suspect": false
+},
+{
+"name": "Mendeley-SDN-cy54ttk3fj__P36_diast.nii.gz",
+"item_id": "6acf29be8b4d3a662c979536",
+"size": 92809207,
+"dataset": "Mendeley-SDN-cy54ttk3fj",
+"priority": 1,
+"annotatable": "yes",
+"spacing_suspect": false
+},
+{
+"name": "Mendeley-SDN-cy54ttk3fj__P37_diast.nii.gz",
+"item_id": "6acf29c28b4d3a662c97953a",
+"size": 109710393,
+"dataset": "Mendeley-SDN-cy54ttk3fj",
+"priority": 1,
+"annotatable": "yes",
+"spacing_suspect": false
+},
+{
+"name": "Mendeley-SDN-cy54ttk3fj__P37_syst.nii.gz",
+"item_id": "6acf29c38b4d3a662c97953c",
+"size": 109533498,
+"dataset": "Mendeley-SDN-cy54ttk3fj",
+"priority": 1,
+"annotatable": "yes",
+"spacing_suspect": false
+},
+{
+"name": "Mendeley-SDN-cy54ttk3fj__P38_diast.nii.gz",
+"item_id": "6acf29c58b4d3a662c97953e",
+"size": 111030577,
+"dataset": "Mendeley-SDN-cy54ttk3fj",
+"priority": 1,
+"annotatable": "yes",
+"spacing_suspect": false
+},
+{
+"name": "Mendeley-SDN-cy54ttk3fj__P38_syst.nii.gz",
+"item_id": "6acf29c68b4d3a662c979540",
+"size": 110761696,
+"dataset": "Mendeley-SDN-cy54ttk3fj",
+"priority": 1,
+"annotatable": "yes",
+"spacing_suspect": false
+},
+{
+"name": "Mendeley-SDN-cy54ttk3fj__P39_diast.nii.gz",
+"item_id": "6acf29c88b4d3a662c979542",
+"size": 88693866,
+"dataset": "Mendeley-SDN-cy54ttk3fj",
+"priority": 1,
+"annotatable": "yes",
+"spacing_suspect": false
+},
+{
+"name": "Mendeley-SDN-cy54ttk3fj__P39_syst.nii.gz",
+"item_id": "6acf29c98b4d3a662c979544",
+"size": 88183006,
+"dataset": "Mendeley-SDN-cy54ttk3fj",
+"priority": 1,
+"annotatable": "yes",
+"spacing_suspect": false
+},
+{
+"name": "Mendeley-SDN-cy54ttk3fj__P40_diast.nii.gz",
+"item_id": "6acf29cb8b4d3a662c979546",
+"size": 95933321,
+"dataset": "Mendeley-SDN-cy54ttk3fj",
+"priority": 1,
+"annotatable": "yes",
+"spacing_suspect": false
+},
+{
+"name": "Mendeley-SDN-cy54ttk3fj__P40_syst.nii.gz",
+"item_id": "6acf29cc8b4d3a662c979548",
+"size": 95502407,
+"dataset": "Mendeley-SDN-cy54ttk3fj",
+"priority": 1,
+"annotatable": "yes",
+"spacing_suspect": false
+},
+{
+"name": "Mendeley-SDN-spb25zt2c4__s012.nii.gz",
+"item_id": "6acf29d18b4d3a662c97954e",
+"size": 160694131,
+"dataset": "Mendeley-SDN-spb25zt2c4",
+"priority": 1,
+"annotatable": "yes",
+"spacing_suspect": false
+},
+{
+"name": "Mendeley-SDN-spb25zt2c4__s013.nii.gz",
+"item_id": "6acf29d38b4d3a662c979550",
+"size": 160455630,
+"dataset": "Mendeley-SDN-spb25zt2c4",
+"priority": 1,
+"annotatable": "yes",
+"spacing_suspect": false
+},
+{
+"name": "Mendeley-SDN-spb25zt2c4__s014_p60.nii.gz",
+"item_id": "6acf29e88b4d3a662c97956a",
+"size": 21887217,
+"dataset": "Mendeley-SDN-spb25zt2c4",
+"priority": 1,
+"annotatable": "yes",
+"spacing_suspect": false
+},
+{
+"name": "Mendeley-SDN-spb25zt2c4__s014_p65.nii.gz",
+"item_id": "6acf29e98b4d3a662c97956c",
+"size": 21892614,
+"dataset": "Mendeley-SDN-spb25zt2c4",
+"priority": 1,
+"annotatable": "yes",
+"spacing_suspect": false
+},
+{
+"name": "SLAWT2016-CT__CT_1.nii.gz",
+"item_id": "6acf2a368b4d3a662c9795ca",
+"size": 98342451,
+"dataset": "SLAWT2016-CT",
+"priority": 1,
+"annotatable": "yes",
+"spacing_suspect": false
+},
+{
+"name": "SLAWT2016-CT__CT_3.nii.gz",
+"item_id": "6acf2a3b8b4d3a662c9795d0",
+"size": 130274353,
+"dataset": "SLAWT2016-CT",
+"priority": 1,
+"annotatable": "yes",
+"spacing_suspect": false
+},
+{
+"name": "SLAWT2016-CT__CT_4.nii.gz",
+"item_id": "6acf2a3d8b4d3a662c9795d2",
+"size": 103931874,
+"dataset": "SLAWT2016-CT",
+"priority": 1,
+"annotatable": "yes",
+"spacing_suspect": false
+},
+{
+"name": "SLAWT2016-CT__CT_7.nii.gz",
+"item_id": "6acf2a408b4d3a662c9795d6",
+"size": 75958052,
+"dataset": "SLAWT2016-CT",
+"priority": 1,
+"annotatable": "yes",
+"spacing_suspect": false
+},
+{
+"name": "SLAWT2016-CT__CT_8.nii.gz",
+"item_id": "6acf2a428b4d3a662c9795d8",
+"size": 78149906,
+"dataset": "SLAWT2016-CT",
+"priority": 1,
+"annotatable": "yes",
+"spacing_suspect": false
+},
+{
+"name": "SLAWT2016-CT__CT_9.nii.gz",
+"item_id": "6acf2a438b4d3a662c9795da",
+"size": 81501696,
+"dataset": "SLAWT2016-CT",
+"priority": 1,
+"annotatable": "yes",
+"spacing_suspect": false
+},
+{
+"name": "Taiwan-AICUP-CardiacCT__patient0001.nii.gz",
+"item_id": "6acf2a788b4d3a662c97961c",
+"size": 109201052,
+"dataset": "Taiwan-AICUP-CardiacCT",
+"priority": 1,
+"annotatable": "yes",
+"spacing_suspect": false
+},
+{
+"name": "Taiwan-AICUP-CardiacCT__patient0002.nii.gz",
+"item_id": "6acf2a7a8b4d3a662c97961e",
+"size": 121660725,
+"dataset": "Taiwan-AICUP-CardiacCT",
+"priority": 1,
+"annotatable": "yes",
+"spacing_suspect": false
+},
+{
+"name": "Taiwan-AICUP-CardiacCT__patient0003.nii.gz",
+"item_id": "6acf2a7b8b4d3a662c979620",
+"size": 105459659,
+"dataset": "Taiwan-AICUP-CardiacCT",
+"priority": 1,
+"annotatable": "yes",
+"spacing_suspect": false
+},
+{
+"name": "Taiwan-AICUP-CardiacCT__patient0004.nii.gz",
+"item_id": "6acf2a7d8b4d3a662c979622",
+"size": 114361782,
+"dataset": "Taiwan-AICUP-CardiacCT",
+"priority": 1,
+"annotatable": "yes",
+"spacing_suspect": false
+},
+{
+"name": "Taiwan-AICUP-CardiacCT__patient0005.nii.gz",
+"item_id": "6acf2a7e8b4d3a662c979624",
+"size": 92669710,
+"dataset": "Taiwan-AICUP-CardiacCT",
+"priority": 1,
+"annotatable": "yes",
+"spacing_suspect": false
+},
+{
+"name": "Taiwan-AICUP-CardiacCT__patient0006.nii.gz",
+"item_id": "6acf2a808b4d3a662c979626",
+"size": 88267708,
+"dataset": "Taiwan-AICUP-CardiacCT",
+"priority": 1,
+"annotatable": "yes",
+"spacing_suspect": false
+},
+{
+"name": "Taiwan-AICUP-CardiacCT__patient0007.nii.gz",
+"item_id": "6acf2a818b4d3a662c979628",
+"size": 121062556,
+"dataset": "Taiwan-AICUP-CardiacCT",
+"priority": 1,
+"annotatable": "yes",
+"spacing_suspect": false
+},
+{
+"name": "Taiwan-AICUP-CardiacCT__patient0008.nii.gz",
+"item_id": "6acf2a838b4d3a662c97962a",
+"size": 91676332,
+"dataset": "Taiwan-AICUP-CardiacCT",
+"priority": 1,
+"annotatable": "yes",
+"spacing_suspect": false
+},
+{
+"name": "Taiwan-AICUP-CardiacCT__patient0009.nii.gz",
+"item_id": "6acf2a858b4d3a662c97962c",
+"size": 91691471,
+"dataset": "Taiwan-AICUP-CardiacCT",
+"priority": 1,
+"annotatable": "yes",
+"spacing_suspect": false
+},
+{
+"name": "Taiwan-AICUP-CardiacCT__patient0010.nii.gz",
+"item_id": "6acf2a868b4d3a662c97962e",
+"size": 88254718,
+"dataset": "Taiwan-AICUP-CardiacCT",
+"priority": 1,
+"annotatable": "yes",
+"spacing_suspect": false
+},
+{
+"name": "Taiwan-AICUP-CardiacCT__patient0011.nii.gz",
+"item_id": "6acf2a888b4d3a662c979630",
+"size": 88059342,
+"dataset": "Taiwan-AICUP-CardiacCT",
+"priority": 1,
+"annotatable": "yes",
+"spacing_suspect": false
+},
+{
+"name": "Taiwan-AICUP-CardiacCT__patient0012.nii.gz",
+"item_id": "6acf2a898b4d3a662c979632",
+"size": 116176544,
+"dataset": "Taiwan-AICUP-CardiacCT",
+"priority": 1,
+"annotatable": "yes",
+"spacing_suspect": false
+},
+{
+"name": "Taiwan-AICUP-CardiacCT__patient0013.nii.gz",
+"item_id": "6acf2a8b8b4d3a662c979634",
+"size": 105490502,
+"dataset": "Taiwan-AICUP-CardiacCT",
+"priority": 1,
+"annotatable": "yes",
+"spacing_suspect": false
+},
+{
+"name": "Taiwan-AICUP-CardiacCT__patient0014.nii.gz",
+"item_id": "6acf2a8d8b4d3a662c979636",
+"size": 88512904,
+"dataset": "Taiwan-AICUP-CardiacCT",
+"priority": 1,
+"annotatable": "yes",
+"spacing_suspect": false
+},
+{
+"name": "Taiwan-AICUP-CardiacCT__patient0015.nii.gz",
+"item_id": "6acf2a8e8b4d3a662c979638",
+"size": 103160620,
+"dataset": "Taiwan-AICUP-CardiacCT",
+"priority": 1,
+"annotatable": "yes",
+"spacing_suspect": false
+},
+{
+"name": "Taiwan-AICUP-CardiacCT__patient0016.nii.gz",
+"item_id": "6acf2a908b4d3a662c97963a",
+"size": 133803995,
+"dataset": "Taiwan-AICUP-CardiacCT",
+"priority": 1,
+"annotatable": "yes",
+"spacing_suspect": false
+},
+{
+"name": "Taiwan-AICUP-CardiacCT__patient0017.nii.gz",
+"item_id": "6acf2a928b4d3a662c97963c",
+"size": 107566127,
+"dataset": "Taiwan-AICUP-CardiacCT",
+"priority": 1,
+"annotatable": "yes",
+"spacing_suspect": false
+},
+{
+"name": "Taiwan-AICUP-CardiacCT__patient0018.nii.gz",
+"item_id": "6acf2a938b4d3a662c97963e",
+"size": 93724856,
+"dataset": "Taiwan-AICUP-CardiacCT",
+"priority": 1,
+"annotatable": "yes",
+"spacing_suspect": false
+},
+{
+"name": "Taiwan-AICUP-CardiacCT__patient0019.nii.gz",
+"item_id": "6acf2a958b4d3a662c979640",
+"size": 121427892,
+"dataset": "Taiwan-AICUP-CardiacCT",
+"priority": 1,
+"annotatable": "yes",
+"spacing_suspect": false
+},
+{
+"name": "Taiwan-AICUP-CardiacCT__patient0020.nii.gz",
+"item_id": "6acf2a968b4d3a662c979642",
+"size": 85061559,
+"dataset": "Taiwan-AICUP-CardiacCT",
+"priority": 1,
+"annotatable": "yes",
+"spacing_suspect": false
+},
+{
+"name": "Taiwan-AICUP-CardiacCT__patient0021.nii.gz",
+"item_id": "6acf2a988b4d3a662c979644",
+"size": 112098461,
+"dataset": "Taiwan-AICUP-CardiacCT",
+"priority": 1,
+"annotatable": "yes",
+"spacing_suspect": false
+},
+{
+"name": "Taiwan-AICUP-CardiacCT__patient0022.nii.gz",
+"item_id": "6acf2a998b4d3a662c979646",
+"size": 91973990,
+"dataset": "Taiwan-AICUP-CardiacCT",
+"priority": 1,
+"annotatable": "yes",
+"spacing_suspect": false
+},
+{
+"name": "Taiwan-AICUP-CardiacCT__patient0023.nii.gz",
+"item_id": "6acf2a9b8b4d3a662c979648",
+"size": 96721341,
+"dataset": "Taiwan-AICUP-CardiacCT",
+"priority": 1,
+"annotatable": "yes",
+"spacing_suspect": false
+},
+{
+"name": "Taiwan-AICUP-CardiacCT__patient0024.nii.gz",
+"item_id": "6acf2a9d8b4d3a662c97964a",
+"size": 115360756,
+"dataset": "Taiwan-AICUP-CardiacCT",
+"priority": 1,
+"annotatable": "yes",
+"spacing_suspect": false
+},
+{
+"name": "Taiwan-AICUP-CardiacCT__patient0025.nii.gz",
+"item_id": "6acf2a9e8b4d3a662c97964c",
+"size": 118000854,
+"dataset": "Taiwan-AICUP-CardiacCT",
+"priority": 1,
+"annotatable": "yes",
+"spacing_suspect": false
+},
+{
+"name": "Taiwan-AICUP-CardiacCT__patient0026.nii.gz",
+"item_id": "6acf2aa08b4d3a662c97964e",
+"size": 90806614,
+"dataset": "Taiwan-AICUP-CardiacCT",
+"priority": 1,
+"annotatable": "yes",
+"spacing_suspect": false
+},
+{
+"name": "Taiwan-AICUP-CardiacCT__patient0027.nii.gz",
+"item_id": "6acf2aa28b4d3a662c979650",
+"size": 97506178,
+"dataset": "Taiwan-AICUP-CardiacCT",
+"priority": 1,
+"annotatable": "yes",
+"spacing_suspect": false
+},
+{
+"name": "Taiwan-AICUP-CardiacCT__patient0028.nii.gz",
+"item_id": "6acf2aa48b4d3a662c979652",
+"size": 101964437,
+"dataset": "Taiwan-AICUP-CardiacCT",
+"priority": 1,
+"annotatable": "yes",
+"spacing_suspect": false
+},
+{
+"name": "Taiwan-AICUP-CardiacCT__patient0029.nii.gz",
+"item_id": "6acf2aa58b4d3a662c979654",
+"size": 118538905,
+"dataset": "Taiwan-AICUP-CardiacCT",
+"priority": 1,
+"annotatable": "yes",
+"spacing_suspect": false
+},
+{
+"name": "Taiwan-AICUP-CardiacCT__patient0030.nii.gz",
+"item_id": "6acf2aa78b4d3a662c979656",
+"size": 123321612,
+"dataset": "Taiwan-AICUP-CardiacCT",
+"priority": 1,
+"annotatable": "yes",
+"spacing_suspect": false
+},
+{
+"name": "Taiwan-AICUP-CardiacCT__patient0031.nii.gz",
+"item_id": "6acf2aa88b4d3a662c979658",
+"size": 77236307,
+"dataset": "Taiwan-AICUP-CardiacCT",
+"priority": 1,
+"annotatable": "yes",
+"spacing_suspect": false
+},
+{
+"name": "Taiwan-AICUP-CardiacCT__patient0032.nii.gz",
+"item_id": "6acf2aaa8b4d3a662c97965a",
+"size": 88505641,
+"dataset": "Taiwan-AICUP-CardiacCT",
+"priority": 1,
+"annotatable": "yes",
+"spacing_suspect": false
+},
+{
+"name": "Taiwan-AICUP-CardiacCT__patient0034.nii.gz",
+"item_id": "6acf2aae8b4d3a662c97965e",
+"size": 117441601,
+"dataset": "Taiwan-AICUP-CardiacCT",
+"priority": 1,
+"annotatable": "yes",
+"spacing_suspect": false
+},
+{
+"name": "Taiwan-AICUP-CardiacCT__patient0035.nii.gz",
+"item_id": "6acf2aaf8b4d3a662c979660",
+"size": 99603263,
+"dataset": "Taiwan-AICUP-CardiacCT",
+"priority": 1,
+"annotatable": "yes",
+"spacing_suspect": false
+},
+{
+"name": "Taiwan-AICUP-CardiacCT__patient0036.nii.gz",
+"item_id": "6acf2ab18b4d3a662c979662",
+"size": 93233588,
+"dataset": "Taiwan-AICUP-CardiacCT",
+"priority": 1,
+"annotatable": "yes",
+"spacing_suspect": false
+},
+{
+"name": "Taiwan-AICUP-CardiacCT__patient0037.nii.gz",
+"item_id": "6acf2ab28b4d3a662c979664",
+"size": 118422758,
+"dataset": "Taiwan-AICUP-CardiacCT",
+"priority": 1,
+"annotatable": "yes",
+"spacing_suspect": false
+},
+{
+"name": "Taiwan-AICUP-CardiacCT__patient0038.nii.gz",
+"item_id": "6acf2ab48b4d3a662c979666",
+"size": 123215549,
+"dataset": "Taiwan-AICUP-CardiacCT",
+"priority": 1,
+"annotatable": "yes",
+"spacing_suspect": false
+},
+{
+"name": "Taiwan-AICUP-CardiacCT__patient0039.nii.gz",
+"item_id": "6acf2ab58b4d3a662c979668",
+"size": 89794622,
+"dataset": "Taiwan-AICUP-CardiacCT",
+"priority": 1,
+"annotatable": "yes",
+"spacing_suspect": false
+},
+{
+"name": "Taiwan-AICUP-CardiacCT__patient0040.nii.gz",
+"item_id": "6acf2ab78b4d3a662c97966a",
+"size": 117826031,
+"dataset": "Taiwan-AICUP-CardiacCT",
+"priority": 1,
+"annotatable": "yes",
+"spacing_suspect": false
+},
+{
+"name": "Taiwan-AICUP-CardiacCT__patient0041.nii.gz",
+"item_id": "6acf2ab98b4d3a662c97966c",
+"size": 112202980,
+"dataset": "Taiwan-AICUP-CardiacCT",
+"priority": 1,
+"annotatable": "yes",
+"spacing_suspect": false
+},
+{
+"name": "Taiwan-AICUP-CardiacCT__patient0042.nii.gz",
+"item_id": "6acf2aba8b4d3a662c97966e",
+"size": 121962258,
+"dataset": "Taiwan-AICUP-CardiacCT",
+"priority": 1,
+"annotatable": "yes",
+"spacing_suspect": false
+},
+{
+"name": "Taiwan-AICUP-CardiacCT__patient0043.nii.gz",
+"item_id": "6acf2abc8b4d3a662c979670",
+"size": 118860159,
+"dataset": "Taiwan-AICUP-CardiacCT",
+"priority": 1,
+"annotatable": "yes",
+"spacing_suspect": false
+},
+{
+"name": "Taiwan-AICUP-CardiacCT__patient0044.nii.gz",
+"item_id": "6acf2abe8b4d3a662c979672",
+"size": 117443679,
+"dataset": "Taiwan-AICUP-CardiacCT",
+"priority": 1,
+"annotatable": "yes",
+"spacing_suspect": false
+},
+{
+"name": "Taiwan-AICUP-CardiacCT__patient0045.nii.gz",
+"item_id": "6acf2abf8b4d3a662c979674",
+"size": 119036197,
+"dataset": "Taiwan-AICUP-CardiacCT",
+"priority": 1,
+"annotatable": "yes",
+"spacing_suspect": false
+},
+{
+"name": "Taiwan-AICUP-CardiacCT__patient0049.nii.gz",
+"item_id": "6acf2ac58b4d3a662c97967c",
+"size": 97493334,
+"dataset": "Taiwan-AICUP-CardiacCT",
+"priority": 1,
+"annotatable": "yes",
+"spacing_suspect": false
+},
+{
+"name": "Taiwan-AICUP-CardiacCT__patient0050.nii.gz",
+"item_id": "6acf2ac78b4d3a662c97967e",
+"size": 120832105,
+"dataset": "Taiwan-AICUP-CardiacCT",
+"priority": 1,
+"annotatable": "yes",
+"spacing_suspect": false
+},
+{
+"name": "Taiwan-AICUP-CardiacCT__patient0051.nii.gz",
+"item_id": "6acf2ac98b4d3a662c979680",
+"size": 118880184,
+"dataset": "Taiwan-AICUP-CardiacCT",
+"priority": 1,
+"annotatable": "yes",
+"spacing_suspect": false
+},
+{
+"name": "Taiwan-AICUP-CardiacCT__patient0052.nii.gz",
+"item_id": "6acf2acb8b4d3a662c979682",
+"size": 102658731,
+"dataset": "Taiwan-AICUP-CardiacCT",
+"priority": 1,
+"annotatable": "yes",
+"spacing_suspect": false
+},
+{
+"name": "Taiwan-AICUP-CardiacCT__patient0053.nii.gz",
+"item_id": "6acf2acc8b4d3a662c979684",
+"size": 109379706,
+"dataset": "Taiwan-AICUP-CardiacCT",
+"priority": 1,
+"annotatable": "yes",
+"spacing_suspect": false
+},
+{
+"name": "Taiwan-AICUP-CardiacCT__patient0054.nii.gz",
+"item_id": "6acf2ace8b4d3a662c979686",
+"size": 122264835,
+"dataset": "Taiwan-AICUP-CardiacCT",
+"priority": 1,
+"annotatable": "yes",
+"spacing_suspect": false
+},
+{
+"name": "Taiwan-AICUP-CardiacCT__patient0055.nii.gz",
+"item_id": "6acf2ad08b4d3a662c979688",
+"size": 101047737,
+"dataset": "Taiwan-AICUP-CardiacCT",
+"priority": 1,
+"annotatable": "yes",
+"spacing_suspect": false
+},
+{
+"name": "Taiwan-AICUP-CardiacCT__patient0056.nii.gz",
+"item_id": "6acf2ad28b4d3a662c97968a",
+"size": 77406284,
+"dataset": "Taiwan-AICUP-CardiacCT",
+"priority": 1,
+"annotatable": "yes",
+"spacing_suspect": false
+},
+{
+"name": "Taiwan-AICUP-CardiacCT__patient0057.nii.gz",
+"item_id": "6acf2ad38b4d3a662c97968c",
+"size": 122262886,
+"dataset": "Taiwan-AICUP-CardiacCT",
+"priority": 1,
+"annotatable": "yes",
+"spacing_suspect": false
+},
+{
+"name": "Taiwan-AICUP-CardiacCT__patient0058.nii.gz",
+"item_id": "6acf2ad58b4d3a662c97968e",
+"size": 93879621,
+"dataset": "Taiwan-AICUP-CardiacCT",
+"priority": 1,
+"annotatable": "yes",
+"spacing_suspect": false
+},
+{
+"name": "Taiwan-AICUP-CardiacCT__patient0059.nii.gz",
+"item_id": "6acf2ad78b4d3a662c979690",
+"size": 88106198,
+"dataset": "Taiwan-AICUP-CardiacCT",
+"priority": 1,
+"annotatable": "yes",
+"spacing_suspect": false
+},
+{
+"name": "Taiwan-AICUP-CardiacCT__patient0060.nii.gz",
+"item_id": "6acf2ad88b4d3a662c979692",
+"size": 140210432,
+"dataset": "Taiwan-AICUP-CardiacCT",
+"priority": 1,
+"annotatable": "yes",
+"spacing_suspect": false
+},
+{
+"name": "Taiwan-AICUP-CardiacCT__patient0061.nii.gz",
+"item_id": "6acf2ad98b4d3a662c979694",
+"size": 89996232,
+"dataset": "Taiwan-AICUP-CardiacCT",
+"priority": 1,
+"annotatable": "yes",
+"spacing_suspect": false
+},
+{
+"name": "Taiwan-AICUP-CardiacCT__patient0062.nii.gz",
+"item_id": "6acf2adb8b4d3a662c979696",
+"size": 103062987,
+"dataset": "Taiwan-AICUP-CardiacCT",
+"priority": 1,
+"annotatable": "yes",
+"spacing_suspect": false
+},
+{
+"name": "Taiwan-AICUP-CardiacCT__patient0063.nii.gz",
+"item_id": "6acf2add8b4d3a662c979698",
+"size": 111318974,
+"dataset": "Taiwan-AICUP-CardiacCT",
+"priority": 1,
+"annotatable": "yes",
+"spacing_suspect": false
+},
+{
+"name": "Taiwan-AICUP-CardiacCT__patient0064.nii.gz",
+"item_id": "6acf2ae08b4d3a662c97969a",
+"size": 117514455,
+"dataset": "Taiwan-AICUP-CardiacCT",
+"priority": 1,
+"annotatable": "yes",
+"spacing_suspect": false
+},
+{
+"name": "Taiwan-AICUP-CardiacCT__patient0065.nii.gz",
+"item_id": "6acf2ae28b4d3a662c97969c",
+"size": 93239951,
+"dataset": "Taiwan-AICUP-CardiacCT",
+"priority": 1,
+"annotatable": "yes",
+"spacing_suspect": false
+},
+{
+"name": "Taiwan-AICUP-CardiacCT__patient0067.nii.gz",
+"item_id": "6acf2ae58b4d3a662c9796a0",
+"size": 87348286,
+"dataset": "Taiwan-AICUP-CardiacCT",
+"priority": 1,
+"annotatable": "yes",
+"spacing_suspect": false
+},
+{
+"name": "Taiwan-AICUP-CardiacCT__patient0069.nii.gz",
+"item_id": "6acf2ae88b4d3a662c9796a4",
+"size": 88239886,
+"dataset": "Taiwan-AICUP-CardiacCT",
+"priority": 1,
+"annotatable": "yes",
+"spacing_suspect": false
+},
+{
+"name": "Taiwan-AICUP-CardiacCT__patient0070.nii.gz",
+"item_id": "6acf2aea8b4d3a662c9796a6",
+"size": 113320863,
+"dataset": "Taiwan-AICUP-CardiacCT",
+"priority": 1,
+"annotatable": "yes",
+"spacing_suspect": false
+},
+{
+"name": "Taiwan-AICUP-CardiacCT__patient0071.nii.gz",
+"item_id": "6acf2aeb8b4d3a662c9796a8",
+"size": 105030992,
+"dataset": "Taiwan-AICUP-CardiacCT",
+"priority": 1,
+"annotatable": "yes",
+"spacing_suspect": false
+},
+{
+"name": "Taiwan-AICUP-CardiacCT__patient0072.nii.gz",
+"item_id": "6acf2aed8b4d3a662c9796aa",
+"size": 105994520,
+"dataset": "Taiwan-AICUP-CardiacCT",
+"priority": 1,
+"annotatable": "yes",
+"spacing_suspect": false
+},
+{
+"name": "Taiwan-AICUP-CardiacCT__patient0073.nii.gz",
+"item_id": "6acf2aef8b4d3a662c9796ac",
+"size": 95598190,
+"dataset": "Taiwan-AICUP-CardiacCT",
+"priority": 1,
+"annotatable": "yes",
+"spacing_suspect": false
+},
+{
+"name": "Taiwan-AICUP-CardiacCT__patient0074.nii.gz",
+"item_id": "6acf2af08b4d3a662c9796ae",
+"size": 88125217,
+"dataset": "Taiwan-AICUP-CardiacCT",
+"priority": 1,
+"annotatable": "yes",
+"spacing_suspect": false
+},
+{
+"name": "Taiwan-AICUP-CardiacCT__patient0075.nii.gz",
+"item_id": "6acf2af28b4d3a662c9796b0",
+"size": 107155885,
+"dataset": "Taiwan-AICUP-CardiacCT",
+"priority": 1,
+"annotatable": "yes",
+"spacing_suspect": false
+},
+{
+"name": "Taiwan-AICUP-CardiacCT__patient0076.nii.gz",
+"item_id": "6acf2af38b4d3a662c9796b2",
+"size": 111488589,
+"dataset": "Taiwan-AICUP-CardiacCT",
+"priority": 1,
+"annotatable": "yes",
+"spacing_suspect": false
+},
+{
+"name": "Taiwan-AICUP-CardiacCT__patient0077.nii.gz",
+"item_id": "6acf2af58b4d3a662c9796b4",
+"size": 94353071,
+"dataset": "Taiwan-AICUP-CardiacCT",
+"priority": 1,
+"annotatable": "yes",
+"spacing_suspect": false
+},
+{
+"name": "Taiwan-AICUP-CardiacCT__patient0078.nii.gz",
+"item_id": "6acf2af68b4d3a662c9796b6",
+"size": 104387403,
+"dataset": "Taiwan-AICUP-CardiacCT",
+"priority": 1,
+"annotatable": "yes",
+"spacing_suspect": false
+},
+{
+"name": "Taiwan-AICUP-CardiacCT__patient0079.nii.gz",
+"item_id": "6acf2af88b4d3a662c9796b8",
+"size": 107760011,
+"dataset": "Taiwan-AICUP-CardiacCT",
+"priority": 1,
+"annotatable": "yes",
+"spacing_suspect": false
+},
+{
+"name": "Taiwan-AICUP-CardiacCT__patient0080.nii.gz",
+"item_id": "6acf2afa8b4d3a662c9796ba",
+"size": 86735360,
+"dataset": "Taiwan-AICUP-CardiacCT",
+"priority": 1,
+"annotatable": "yes",
+"spacing_suspect": false
+},
+{
+"name": "Taiwan-AICUP-CardiacCT__patient0081.nii.gz",
+"item_id": "6acf2afb8b4d3a662c9796bc",
+"size": 110251134,
+"dataset": "Taiwan-AICUP-CardiacCT",
+"priority": 1,
+"annotatable": "yes",
+"spacing_suspect": false
+},
+{
+"name": "Taiwan-AICUP-CardiacCT__patient0082.nii.gz",
+"item_id": "6acf2afd8b4d3a662c9796be",
+"size": 117204971,
+"dataset": "Taiwan-AICUP-CardiacCT",
+"priority": 1,
+"annotatable": "yes",
+"spacing_suspect": false
+},
+{
+"name": "Taiwan-AICUP-CardiacCT__patient0083.nii.gz",
+"item_id": "6acf2afe8b4d3a662c9796c0",
+"size": 131107765,
+"dataset": "Taiwan-AICUP-CardiacCT",
+"priority": 1,
+"annotatable": "yes",
+"spacing_suspect": false
+},
+{
+"name": "Taiwan-AICUP-CardiacCT__patient0084.nii.gz",
+"item_id": "6acf2b008b4d3a662c9796c2",
+"size": 88825298,
+"dataset": "Taiwan-AICUP-CardiacCT",
+"priority": 1,
+"annotatable": "yes",
+"spacing_suspect": false
+},
+{
+"name": "Taiwan-AICUP-CardiacCT__patient0085.nii.gz",
+"item_id": "6acf2b028b4d3a662c9796c4",
+"size": 122929088,
+"dataset": "Taiwan-AICUP-CardiacCT",
+"priority": 1,
+"annotatable": "yes",
+"spacing_suspect": false
+},
+{
+"name": "Taiwan-AICUP-CardiacCT__patient0086.nii.gz",
+"item_id": "6acf2b038b4d3a662c9796c6",
+"size": 105896206,
+"dataset": "Taiwan-AICUP-CardiacCT",
+"priority": 1,
+"annotatable": "yes",
+"spacing_suspect": false
+},
+{
+"name": "Taiwan-AICUP-CardiacCT__patient0087.nii.gz",
+"item_id": "6acf2b058b4d3a662c9796c8",
+"size": 90839972,
+"dataset": "Taiwan-AICUP-CardiacCT",
+"priority": 1,
+"annotatable": "yes",
+"spacing_suspect": false
+},
+{
+"name": "Taiwan-AICUP-CardiacCT__patient0088.nii.gz",
+"item_id": "6acf2b078b4d3a662c9796ca",
+"size": 94413991,
+"dataset": "Taiwan-AICUP-CardiacCT",
+"priority": 1,
+"annotatable": "yes",
+"spacing_suspect": false
+},
+{
+"name": "Taiwan-AICUP-CardiacCT__patient0089.nii.gz",
+"item_id": "6acf2b098b4d3a662c9796cc",
+"size": 104017564,
+"dataset": "Taiwan-AICUP-CardiacCT",
+"priority": 1,
+"annotatable": "yes",
+"spacing_suspect": false
+},
+{
+"name": "Taiwan-AICUP-CardiacCT__patient0092.nii.gz",
+"item_id": "6acf2b0d8b4d3a662c9796d2",
+"size": 100927539,
+"dataset": "Taiwan-AICUP-CardiacCT",
+"priority": 1,
+"annotatable": "yes",
+"spacing_suspect": false
+},
+{
+"name": "Taiwan-AICUP-CardiacCT__patient0094.nii.gz",
+"item_id": "6acf2b118b4d3a662c9796d6",
+"size": 94895479,
+"dataset": "Taiwan-AICUP-CardiacCT",
+"priority": 1,
+"annotatable": "yes",
+"spacing_suspect": false
+},
+{
+"name": "Taiwan-AICUP-CardiacCT__patient0095.nii.gz",
+"item_id": "6acf2b128b4d3a662c9796d8",
+"size": 111179360,
+"dataset": "Taiwan-AICUP-CardiacCT",
+"priority": 1,
+"annotatable": "yes",
+"spacing_suspect": false
+},
+{
+"name": "Taiwan-AICUP-CardiacCT__patient0096.nii.gz",
+"item_id": "6acf2b148b4d3a662c9796da",
+"size": 119122937,
+"dataset": "Taiwan-AICUP-CardiacCT",
+"priority": 1,
+"annotatable": "yes",
+"spacing_suspect": false
+},
+{
+"name": "Taiwan-AICUP-CardiacCT__patient0097.nii.gz",
+"item_id": "6acf2b158b4d3a662c9796dc",
+"size": 99227120,
+"dataset": "Taiwan-AICUP-CardiacCT",
+"priority": 1,
+"annotatable": "yes",
+"spacing_suspect": false
+},
+{
+"name": "Taiwan-AICUP-CardiacCT__patient0099.nii.gz",
+"item_id": "6acf2b188b4d3a662c9796e0",
+"size": 118499502,
+"dataset": "Taiwan-AICUP-CardiacCT",
+"priority": 1,
+"annotatable": "yes",
+"spacing_suspect": false
+},
+{
+"name": "Taiwan-AICUP-CardiacCT__patient0100.nii.gz",
+"item_id": "6acf2b1a8b4d3a662c9796e2",
+"size": 109356605,
+"dataset": "Taiwan-AICUP-CardiacCT",
+"priority": 1,
+"annotatable": "yes",
+"spacing_suspect": false
+},
+{
+"name": "VMR-Coronary__0066_H_CORO_H.nii.gz",
+"item_id": "6acf2bee8b4d3a662c9797e8",
+"size": 95002446,
+"dataset": "VMR-Coronary",
+"priority": 1,
+"annotatable": "yes",
+"spacing_suspect": false
+},
+{
+"name": "VMR-Coronary__0068_H_CORO_KD.nii.gz",
+"item_id": "6acf2bf18b4d3a662c9797ec",
+"size": 82041312,
+"dataset": "VMR-Coronary",
+"priority": 1,
+"annotatable": "yes",
+"spacing_suspect": false
+},
+{
+"name": "VMR-Coronary__0070_H_CORO_KD.nii.gz",
+"item_id": "6acf2bf58b4d3a662c9797f0",
+"size": 95717628,
+"dataset": "VMR-Coronary",
+"priority": 1,
+"annotatable": "yes",
+"spacing_suspect": false
+},
+{
+"name": "VMR-Coronary__0071_H_CORO_KD.nii.gz",
+"item_id": "6acf2bf78b4d3a662c9797f2",
+"size": 100030606,
+"dataset": "VMR-Coronary",
+"priority": 1,
+"annotatable": "yes",
+"spacing_suspect": false
+},
+{
+"name": "VMR-Coronary__0073_H_CORO_H.nii.gz",
+"item_id": "6acf2bfa8b4d3a662c9797f6",
+"size": 65157851,
+"dataset": "VMR-Coronary",
+"priority": 1,
+"annotatable": "yes",
+"spacing_suspect": false
+},
+{
+"name": "VMR-Coronary__0074_H_CORO_KD.nii.gz",
+"item_id": "6acf2bfc8b4d3a662c9797f8",
+"size": 67615437,
+"dataset": "VMR-Coronary",
+"priority": 1,
+"annotatable": "yes",
+"spacing_suspect": false
+},
+{
+"name": "VMR-Coronary__0075_H_CORO_CAD.nii.gz",
+"item_id": "6acf2bfd8b4d3a662c9797fa",
+"size": 111781051,
+"dataset": "VMR-Coronary",
+"priority": 1,
+"annotatable": "yes",
+"spacing_suspect": false
+},
+{
+"name": "VMR-Coronary__0147_H_CORO_SVGD.nii.gz",
+"item_id": "6acf2c028b4d3a662c979800",
+"size": 136056022,
+"dataset": "VMR-Coronary",
+"priority": 1,
+"annotatable": "yes",
+"spacing_suspect": false
+},
+{
+"name": "VMR-Coronary__0150_H_CORO_SVGD.nii.gz",
+"item_id": "6acf2c088b4d3a662c979806",
+"size": 101945646,
+"dataset": "VMR-Coronary",
+"priority": 1,
+"annotatable": "yes",
+"spacing_suspect": false
+},
+{
+"name": "VMR-Coronary__0153_H_CORO_SVGD.nii.gz",
+"item_id": "6acf2c0d8b4d3a662c97980c",
+"size": 135249675,
+"dataset": "VMR-Coronary",
+"priority": 1,
+"annotatable": "yes",
+"spacing_suspect": false
+},
+{
+"name": "VMR-Coronary__0154_H_CORO_SVGD.nii.gz",
+"item_id": "6acf2c0e8b4d3a662c97980e",
+"size": 136718673,
+"dataset": "VMR-Coronary",
+"priority": 1,
+"annotatable": "yes",
+"spacing_suspect": false
+},
+{
+"name": "VMR-Coronary__0156_H_CORO_SVGD.nii.gz",
+"item_id": "6acf2c128b4d3a662c979812",
+"size": 104237936,
+"dataset": "VMR-Coronary",
+"priority": 1,
+"annotatable": "yes",
+"spacing_suspect": false
+},
+{
+"name": "VMR-Coronary__0174_H_CORO_KD.nii.gz",
+"item_id": "6acf2c208b4d3a662c979822",
+"size": 122573935,
+"dataset": "VMR-Coronary",
+"priority": 1,
+"annotatable": "yes",
+"spacing_suspect": false
+},
+{
+"name": "VMR-Coronary__0175_H_CORO_KD.nii.gz",
+"item_id": "6acf2c228b4d3a662c979824",
+"size": 96478102,
+"dataset": "VMR-Coronary",
+"priority": 1,
+"annotatable": "yes",
+"spacing_suspect": false
+},
+{
+"name": "Zenodo-21855641-AtrialFibre__Zvag.nii.gz",
+"item_id": "6acf2c278b4d3a662c97982a",
+"size": 67603066,
+"dataset": "Zenodo-21855641-AtrialFibre",
+"priority": 1,
+"annotatable": "yes",
+"spacing_suspect": false
+},
+{
+"name": "BMC-BEO2017-SerialStenosis-CCTA__P1_s5.nii.gz",
+"item_id": "6acf26848b4d3a662c979122",
+"size": 37940524,
+"dataset": "BMC-BEO2017-SerialStenosis-CCTA",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "Figshare-CardiacCT15__pat10_tp0.nii.gz",
+"item_id": "6acf26ab8b4d3a662c979152",
+"size": 69946145,
+"dataset": "Figshare-CardiacCT15",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "Figshare-CardiacCT15__pat2_tp0.nii.gz",
+"item_id": "6acf26b68b4d3a662c979160",
+"size": 73663711,
+"dataset": "Figshare-CardiacCT15",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "Figshare-CardiacCT15__pat5_tp0.nii.gz",
+"item_id": "6acf26bb8b4d3a662c979166",
+"size": 64252385,
+"dataset": "Figshare-CardiacCT15",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "Figshare-CardiacCT15__pat6_tp0.nii.gz",
+"item_id": "6acf26bc8b4d3a662c979168",
+"size": 64509823,
+"dataset": "Figshare-CardiacCT15",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "Figshare-CardiacCT15__pat8_tp0.nii.gz",
+"item_id": "6acf26bf8b4d3a662c97916c",
+"size": 40708293,
+"dataset": "Figshare-CardiacCT15",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "Figshare-EpicardialFat-CE__CE001.nii.gz",
+"item_id": "6acf26c58b4d3a662c979172",
+"size": 17955505,
+"dataset": "Figshare-EpicardialFat-CE",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "Figshare-EpicardialFat-CE__CE002.nii.gz",
+"item_id": "6acf26c78b4d3a662c979174",
+"size": 16795854,
+"dataset": "Figshare-EpicardialFat-CE",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "Figshare-EpicardialFat-CE__CE004.nii.gz",
+"item_id": "6acf26ca8b4d3a662c979178",
+"size": 17020801,
+"dataset": "Figshare-EpicardialFat-CE",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "Figshare-EpicardialFat-CE__CE005.nii.gz",
+"item_id": "6acf26cb8b4d3a662c97917a",
+"size": 17387790,
+"dataset": "Figshare-EpicardialFat-CE",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "Figshare-EpicardialFat-CE__CE006.nii.gz",
+"item_id": "6acf26cd8b4d3a662c97917c",
+"size": 17343963,
+"dataset": "Figshare-EpicardialFat-CE",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "Figshare-EpicardialFat-CE__CE007.nii.gz",
+"item_id": "6acf26ce8b4d3a662c97917e",
+"size": 17434911,
+"dataset": "Figshare-EpicardialFat-CE",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "Figshare-EpicardialFat-CE__CE009.nii.gz",
+"item_id": "6acf26d18b4d3a662c979182",
+"size": 17734220,
+"dataset": "Figshare-EpicardialFat-CE",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "Figshare-EpicardialFat-CE__CE010.nii.gz",
+"item_id": "6acf26d38b4d3a662c979184",
+"size": 17591800,
+"dataset": "Figshare-EpicardialFat-CE",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "Figshare-EpicardialFat-CE__CE011.nii.gz",
+"item_id": "6acf26d58b4d3a662c979186",
+"size": 17651109,
+"dataset": "Figshare-EpicardialFat-CE",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "Figshare-EpicardialFat-CE__CE012.nii.gz",
+"item_id": "6acf26d68b4d3a662c979188",
+"size": 17967149,
+"dataset": "Figshare-EpicardialFat-CE",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "Figshare-EpicardialFat-CE__CE013.nii.gz",
+"item_id": "6acf26d88b4d3a662c97918a",
+"size": 17893391,
+"dataset": "Figshare-EpicardialFat-CE",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "Figshare-EpicardialFat-CE__CE014.nii.gz",
+"item_id": "6acf26da8b4d3a662c97918c",
+"size": 17351925,
+"dataset": "Figshare-EpicardialFat-CE",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "Figshare-EpicardialFat-CE__CE016.nii.gz",
+"item_id": "6acf26dd8b4d3a662c979190",
+"size": 17518154,
+"dataset": "Figshare-EpicardialFat-CE",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "Figshare-EpicardialFat-CE__CE017.nii.gz",
+"item_id": "6acf26de8b4d3a662c979192",
+"size": 16871970,
+"dataset": "Figshare-EpicardialFat-CE",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "Figshare-EpicardialFat-CE__CE018.nii.gz",
+"item_id": "6acf26e08b4d3a662c979194",
+"size": 17480725,
+"dataset": "Figshare-EpicardialFat-CE",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "Figshare-EpicardialFat-CE__CE020.nii.gz",
+"item_id": "6acf26e38b4d3a662c979198",
+"size": 17887470,
+"dataset": "Figshare-EpicardialFat-CE",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "Figshare-EpicardialFat-CE__CE021.nii.gz",
+"item_id": "6acf26e48b4d3a662c97919a",
+"size": 17477715,
+"dataset": "Figshare-EpicardialFat-CE",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "Figshare-EpicardialFat-CE__CE022.nii.gz",
+"item_id": "6acf26e68b4d3a662c97919c",
+"size": 17796298,
+"dataset": "Figshare-EpicardialFat-CE",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "Figshare-EpicardialFat-CE__CE023.nii.gz",
+"item_id": "6acf26e88b4d3a662c97919e",
+"size": 17543696,
+"dataset": "Figshare-EpicardialFat-CE",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "Figshare-EpicardialFat-CE__CE024.nii.gz",
+"item_id": "6acf26e98b4d3a662c9791a0",
+"size": 17847856,
+"dataset": "Figshare-EpicardialFat-CE",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "Figshare-EpicardialFat-CE__CE025.nii.gz",
+"item_id": "6acf26eb8b4d3a662c9791a2",
+"size": 17278207,
+"dataset": "Figshare-EpicardialFat-CE",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "Figshare-EpicardialFat-CE__CE026.nii.gz",
+"item_id": "6acf26ec8b4d3a662c9791a4",
+"size": 17976451,
+"dataset": "Figshare-EpicardialFat-CE",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "Figshare-EpicardialFat-CE__CE027.nii.gz",
+"item_id": "6acf26ee8b4d3a662c9791a6",
+"size": 17261270,
+"dataset": "Figshare-EpicardialFat-CE",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "Figshare-EpicardialFat-CE__CE028.nii.gz",
+"item_id": "6acf26f08b4d3a662c9791a8",
+"size": 17153612,
+"dataset": "Figshare-EpicardialFat-CE",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "Figshare-EpicardialFat-CE__CE029.nii.gz",
+"item_id": "6acf26f18b4d3a662c9791aa",
+"size": 17390162,
+"dataset": "Figshare-EpicardialFat-CE",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "Figshare-EpicardialFat-CE__CE030.nii.gz",
+"item_id": "6acf26f38b4d3a662c9791ac",
+"size": 17529051,
+"dataset": "Figshare-EpicardialFat-CE",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "Figshare-EpicardialFat-CE__CE031.nii.gz",
+"item_id": "6acf26f58b4d3a662c9791ae",
+"size": 16167494,
+"dataset": "Figshare-EpicardialFat-CE",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "Figshare-EpicardialFat-CE__CE032.nii.gz",
+"item_id": "6acf26f68b4d3a662c9791b0",
+"size": 17445023,
+"dataset": "Figshare-EpicardialFat-CE",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "Figshare-EpicardialFat-CE__CE033.nii.gz",
+"item_id": "6acf26f88b4d3a662c9791b2",
+"size": 17487931,
+"dataset": "Figshare-EpicardialFat-CE",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "Figshare-EpicardialFat-CE__CE034.nii.gz",
+"item_id": "6acf26f98b4d3a662c9791b4",
+"size": 17531652,
+"dataset": "Figshare-EpicardialFat-CE",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "Figshare-EpicardialFat-CE__CE035.nii.gz",
+"item_id": "6acf26fb8b4d3a662c9791b6",
+"size": 17833208,
+"dataset": "Figshare-EpicardialFat-CE",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "Figshare-EpicardialFat-CE__CE036.nii.gz",
+"item_id": "6acf26fc8b4d3a662c9791b8",
+"size": 17228802,
+"dataset": "Figshare-EpicardialFat-CE",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "Figshare-EpicardialFat-CE__CE037.nii.gz",
+"item_id": "6acf26fe8b4d3a662c9791ba",
+"size": 17519500,
+"dataset": "Figshare-EpicardialFat-CE",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "Figshare-EpicardialFat-CE__CE039.nii.gz",
+"item_id": "6acf27018b4d3a662c9791be",
+"size": 17706538,
+"dataset": "Figshare-EpicardialFat-CE",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "IDC-nsclc_radiogenomics__AMC-015__Gated-Chest-1-0-B25f-BestSyst-40_824828.nii.gz",
+"item_id": "6acf27318b4d3a662c9791fa",
+"size": 124127717,
+"dataset": "IDC-nsclc_radiogenomics",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "IDC-nsclc_radiogenomics__AMC-027__BEST-DIASTOLIC-69_131024.nii.gz",
+"item_id": "6acf27338b4d3a662c9791fc",
+"size": 110856490,
+"dataset": "IDC-nsclc_radiogenomics",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "IDC-nsclc_radiogenomics__AMC-027__BEST-SYSTOLIC-38_499619.nii.gz",
+"item_id": "6acf27358b4d3a662c9791fe",
+"size": 110910058,
+"dataset": "IDC-nsclc_radiogenomics",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "IDC-rider_lung_pet_ct__RIDER-1563443119__CINE-0-625_496669_p01.nii.gz",
+"item_id": "6acf27388b4d3a662c979202",
+"size": 105743720,
+"dataset": "IDC-rider_lung_pet_ct",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "IDC-rider_lung_pet_ct__RIDER-1563443119__CINE-0-625_496669_p02.nii.gz",
+"item_id": "6acf27398b4d3a662c979204",
+"size": 105780741,
+"dataset": "IDC-rider_lung_pet_ct",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "IDC-rider_lung_pet_ct__RIDER-1563443119__CINE-0-625_508860.nii.gz",
+"item_id": "6acf273b8b4d3a662c979206",
+"size": 94510716,
+"dataset": "IDC-rider_lung_pet_ct",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "IDC-rider_lung_pet_ct__RIDER-1822442188__SS-Segment-30-75-BPM-0-625mm_287812_p00.nii.gz",
+"item_id": "6acf273e8b4d3a662c97920a",
+"size": 105739796,
+"dataset": "IDC-rider_lung_pet_ct",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "IDC-rider_lung_pet_ct__RIDER-1822442188__SS-Segment-30-75-BPM-0-625mm_287812_p01.nii.gz",
+"item_id": "6acf27408b4d3a662c97920c",
+"size": 103769212,
+"dataset": "IDC-rider_lung_pet_ct",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "IDC-rider_lung_pet_ct__RIDER-1822442188__SS-Segment-30-75-BPM-0-625mm_287812_p02.nii.gz",
+"item_id": "6acf27418b4d3a662c97920e",
+"size": 103601610,
+"dataset": "IDC-rider_lung_pet_ct",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "IDC-rider_lung_pet_ct__RIDER-1822442188__SS-Segment-30-75-BPM-0-625mm_287812_p03.nii.gz",
+"item_id": "6acf27438b4d3a662c979210",
+"size": 103417284,
+"dataset": "IDC-rider_lung_pet_ct",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "IDC-rider_lung_pet_ct__RIDER-1822442188__SS-Segment-30-75-BPM-0-625mm_287812_p04.nii.gz",
+"item_id": "6acf27448b4d3a662c979212",
+"size": 103509775,
+"dataset": "IDC-rider_lung_pet_ct",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "IDC-rider_lung_pet_ct__RIDER-1822442188__SS-Segment-30-75-BPM-0-625mm_287812_p05.nii.gz",
+"item_id": "6acf27468b4d3a662c979214",
+"size": 103427836,
+"dataset": "IDC-rider_lung_pet_ct",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "IDC-rider_lung_pet_ct__RIDER-1822442188__SS-Segment-30-75-BPM-0-625mm_287812_p06.nii.gz",
+"item_id": "6acf27478b4d3a662c979216",
+"size": 105175795,
+"dataset": "IDC-rider_lung_pet_ct",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "IDC-rider_lung_pet_ct__RIDER-2019259100__SS-Segment-30-75-BPM-0-625mm_659902_p00.nii.gz",
+"item_id": "6acf27498b4d3a662c979218",
+"size": 16056226,
+"dataset": "IDC-rider_lung_pet_ct",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "IDC-rider_lung_pet_ct__RIDER-2019259100__SS-Segment-30-75-BPM-0-625mm_659902_p02.nii.gz",
+"item_id": "6acf274d8b4d3a662c97921c",
+"size": 16264105,
+"dataset": "IDC-rider_lung_pet_ct",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "IDC-rider_lung_pet_ct__RIDER-2019259100__SS-Segment-30-75-BPM-0-625mm_659902_p05.nii.gz",
+"item_id": "6acf27518b4d3a662c979222",
+"size": 15808663,
+"dataset": "IDC-rider_lung_pet_ct",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "IDC-rider_lung_pet_ct__RIDER-2019259100__SS-Segment-30-75-BPM-0-625mm_659902_p06.nii.gz",
+"item_id": "6acf27538b4d3a662c979224",
+"size": 15449059,
+"dataset": "IDC-rider_lung_pet_ct",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "IDC-rider_lung_pet_ct__RIDER-2019259100__SS-Segment-30-75-BPM-0-625mm_659902_p08.nii.gz",
+"item_id": "6acf27568b4d3a662c979228",
+"size": 15751772,
+"dataset": "IDC-rider_lung_pet_ct",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "IDC-rider_lung_pet_ct__RIDER-2019259100__SS-Segment-30-75-BPM-0-625mm_659902_p09.nii.gz",
+"item_id": "6acf27588b4d3a662c97922a",
+"size": 15864100,
+"dataset": "IDC-rider_lung_pet_ct",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "IDC-rider_lung_pet_ct__RIDER-2061910848__SS-Cine-30-65-BPM_305709.nii.gz",
+"item_id": "6acf27598b4d3a662c97922c",
+"size": 108922436,
+"dataset": "IDC-rider_lung_pet_ct",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "IDC-rider_lung_pet_ct__RIDER-2109273429__SS-Cine-30-65-BPM_466197_p00.nii.gz",
+"item_id": "6acf275b8b4d3a662c97922e",
+"size": 119372707,
+"dataset": "IDC-rider_lung_pet_ct",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "IDC-rider_lung_pet_ct__RIDER-2109273429__SS-Cine-30-65-BPM_466197_p01.nii.gz",
+"item_id": "6acf275c8b4d3a662c979230",
+"size": 124908580,
+"dataset": "IDC-rider_lung_pet_ct",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "IDC-rider_lung_pet_ct__RIDER-2267469717__SS-Cine-30-65-BPM_622812.nii.gz",
+"item_id": "6acf275e8b4d3a662c979232",
+"size": 127287966,
+"dataset": "IDC-rider_lung_pet_ct",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "IDC-rider_lung_pet_ct__RIDER-2416820556__SS-Segment-30-75-BPM-0-625mm_805170_p00.nii.gz",
+"item_id": "6acf27608b4d3a662c979234",
+"size": 116944594,
+"dataset": "IDC-rider_lung_pet_ct",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "IDC-rider_lung_pet_ct__RIDER-2416820556__SS-Segment-30-75-BPM-0-625mm_805170_p01.nii.gz",
+"item_id": "6acf27618b4d3a662c979236",
+"size": 117442303,
+"dataset": "IDC-rider_lung_pet_ct",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "IDC-rider_lung_pet_ct__RIDER-2416820556__SS-Segment-30-75-BPM-0-625mm_805170_p02.nii.gz",
+"item_id": "6acf27638b4d3a662c979238",
+"size": 117285608,
+"dataset": "IDC-rider_lung_pet_ct",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "IDC-rider_lung_pet_ct__RIDER-2416820556__SS-Segment-30-75-BPM-0-625mm_805170_p03.nii.gz",
+"item_id": "6acf27648b4d3a662c97923a",
+"size": 117140100,
+"dataset": "IDC-rider_lung_pet_ct",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "IDC-rider_lung_pet_ct__RIDER-2416820556__SS-Segment-30-75-BPM-0-625mm_805170_p04.nii.gz",
+"item_id": "6acf27668b4d3a662c97923c",
+"size": 116797783,
+"dataset": "IDC-rider_lung_pet_ct",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "IDC-rider_lung_pet_ct__RIDER-2416820556__SS-Segment-30-75-BPM-0-625mm_805170_p05.nii.gz",
+"item_id": "6acf27678b4d3a662c97923e",
+"size": 115627715,
+"dataset": "IDC-rider_lung_pet_ct",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "IDC-rider_lung_pet_ct__RIDER-2416820556__SS-Segment-30-75-BPM-0-625mm_805170_p06.nii.gz",
+"item_id": "6acf27698b4d3a662c979240",
+"size": 114620139,
+"dataset": "IDC-rider_lung_pet_ct",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "IDC-rider_lung_pet_ct__RIDER-2416820556__SS-Segment-30-75-BPM-0-625mm_805170_p07.nii.gz",
+"item_id": "6acf276a8b4d3a662c979242",
+"size": 114577755,
+"dataset": "IDC-rider_lung_pet_ct",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "IDC-rider_lung_pet_ct__RIDER-2522924559__SS-Cine-30-65-BPM_802911.nii.gz",
+"item_id": "6acf276c8b4d3a662c979244",
+"size": 62320874,
+"dataset": "IDC-rider_lung_pet_ct",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "IDC-rider_lung_pet_ct__RIDER-2522924559__SS-Segment-30-75-BPM-0-625mm_196361.nii.gz",
+"item_id": "6acf276d8b4d3a662c979246",
+"size": 94464225,
+"dataset": "IDC-rider_lung_pet_ct",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "IDC-rider_lung_pet_ct__RIDER-2522924559__SS-Segment-30-75-BPM-0-625mm_499728_p00.nii.gz",
+"item_id": "6acf276f8b4d3a662c979248",
+"size": 22304613,
+"dataset": "IDC-rider_lung_pet_ct",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "IDC-rider_lung_pet_ct__RIDER-2522924559__SS-Segment-30-75-BPM-0-625mm_875399_p00.nii.gz",
+"item_id": "6acf27728b4d3a662c97924c",
+"size": 60900095,
+"dataset": "IDC-rider_lung_pet_ct",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "IDC-rider_lung_pet_ct__RIDER-2522924559__SS-Segment-30-75-BPM-0-625mm_875399_p01.nii.gz",
+"item_id": "6acf27738b4d3a662c97924e",
+"size": 61566193,
+"dataset": "IDC-rider_lung_pet_ct",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "IDC-rider_lung_pet_ct__RIDER-2522924559__SS-Segment-30-75-BPM-0-625mm_875399_p02.nii.gz",
+"item_id": "6acf27758b4d3a662c979250",
+"size": 59541639,
+"dataset": "IDC-rider_lung_pet_ct",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "IDC-rider_lung_pet_ct__RIDER-2522924559__SS-Segment-30-75-BPM-0-625mm_875399_p03.nii.gz",
+"item_id": "6acf27768b4d3a662c979252",
+"size": 59639235,
+"dataset": "IDC-rider_lung_pet_ct",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "IDC-rider_lung_pet_ct__RIDER-2522924559__SS-Segment-30-75-BPM-0-625mm_875399_p04.nii.gz",
+"item_id": "6acf27788b4d3a662c979254",
+"size": 58013979,
+"dataset": "IDC-rider_lung_pet_ct",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "IDC-rider_lung_pet_ct__RIDER-2522924559__SS-Segment-30-75-BPM-0-625mm_875399_p05.nii.gz",
+"item_id": "6acf277a8b4d3a662c979256",
+"size": 58518926,
+"dataset": "IDC-rider_lung_pet_ct",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "IDC-rider_lung_pet_ct__RIDER-2522924559__SS-Segment-30-75-BPM-0-625mm_875399_p08.nii.gz",
+"item_id": "6acf277e8b4d3a662c97925c",
+"size": 57660975,
+"dataset": "IDC-rider_lung_pet_ct",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "IDC-rider_lung_pet_ct__RIDER-2551730224__SS-Cine-30-65-BPM-100CC-240_865880.nii.gz",
+"item_id": "6acf27828b4d3a662c979260",
+"size": 143263906,
+"dataset": "IDC-rider_lung_pet_ct",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "IDC-rider_lung_pet_ct__RIDER-2857227961__SS-Segment-30-75-BPM-0-625mm_173076_p04.nii.gz",
+"item_id": "6acf27898b4d3a662c97926a",
+"size": 51048444,
+"dataset": "IDC-rider_lung_pet_ct",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "IDC-rider_lung_pet_ct__RIDER-2857227961__SS-Segment-30-75-BPM-0-625mm_173076_p06.nii.gz",
+"item_id": "6acf278c8b4d3a662c97926e",
+"size": 50656261,
+"dataset": "IDC-rider_lung_pet_ct",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "IDC-rider_lung_pet_ct__RIDER-2857227961__SS-Segment-30-75-BPM-0-625mm_173076_p07.nii.gz",
+"item_id": "6acf278e8b4d3a662c979270",
+"size": 50612593,
+"dataset": "IDC-rider_lung_pet_ct",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "IDC-rider_lung_pet_ct__RIDER-2991299498__SS-Segment-30-75-BPM-0-625mm_730348_p00.nii.gz",
+"item_id": "6acf27928b4d3a662c979276",
+"size": 59473083,
+"dataset": "IDC-rider_lung_pet_ct",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "IDC-rider_lung_pet_ct__RIDER-2991299498__SS-Segment-30-75-BPM-0-625mm_730348_p01.nii.gz",
+"item_id": "6acf27948b4d3a662c979278",
+"size": 60353097,
+"dataset": "IDC-rider_lung_pet_ct",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "IDC-rider_lung_pet_ct__RIDER-2991299498__SS-Segment-30-75-BPM-0-625mm_730348_p02.nii.gz",
+"item_id": "6acf27958b4d3a662c97927a",
+"size": 60145630,
+"dataset": "IDC-rider_lung_pet_ct",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "IDC-rider_lung_pet_ct__RIDER-2991299498__SS-Segment-30-75-BPM-0-625mm_730348_p03.nii.gz",
+"item_id": "6acf27978b4d3a662c97927c",
+"size": 59808488,
+"dataset": "IDC-rider_lung_pet_ct",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "IDC-rider_lung_pet_ct__RIDER-2991299498__SS-Segment-30-75-BPM-0-625mm_730348_p04.nii.gz",
+"item_id": "6acf27988b4d3a662c97927e",
+"size": 59674127,
+"dataset": "IDC-rider_lung_pet_ct",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "IDC-rider_lung_pet_ct__RIDER-2991299498__SS-Segment-30-75-BPM-0-625mm_730348_p05.nii.gz",
+"item_id": "6acf279a8b4d3a662c979280",
+"size": 56880651,
+"dataset": "IDC-rider_lung_pet_ct",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "IDC-rider_lung_pet_ct__RIDER-2991299498__SS-Segment-30-75-BPM-0-625mm_730348_p06.nii.gz",
+"item_id": "6acf279b8b4d3a662c979282",
+"size": 58639296,
+"dataset": "IDC-rider_lung_pet_ct",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "IDC-rider_lung_pet_ct__RIDER-2991299498__SS-Segment-30-75-BPM-0-625mm_730348_p07.nii.gz",
+"item_id": "6acf279d8b4d3a662c979284",
+"size": 57974072,
+"dataset": "IDC-rider_lung_pet_ct",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "IDC-rider_lung_pet_ct__RIDER-2991299498__SS-Segment-30-75-BPM-0-625mm_730348_p08.nii.gz",
+"item_id": "6acf279f8b4d3a662c979286",
+"size": 58476912,
+"dataset": "IDC-rider_lung_pet_ct",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "IDC-rider_lung_pet_ct__RIDER-2991299498__SS-Segment-30-75-BPM-0-625mm_730348_p09.nii.gz",
+"item_id": "6acf27a08b4d3a662c979288",
+"size": 57520293,
+"dataset": "IDC-rider_lung_pet_ct",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "IDC-rider_lung_pet_ct__RIDER-3114425590__SS-Segment-30-75-BPM-0-625mm_038185.nii.gz",
+"item_id": "6acf27a28b4d3a662c97928a",
+"size": 18033312,
+"dataset": "IDC-rider_lung_pet_ct",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "IDC-rider_lung_pet_ct__RIDER-4767464492__SS-Segment-30-75-BPM-0-625mm_356284_p01.nii.gz",
+"item_id": "6acf27a58b4d3a662c97928e",
+"size": 43897611,
+"dataset": "IDC-rider_lung_pet_ct",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "IDC-rider_lung_pet_ct__RIDER-4767464492__SS-Segment-30-75-BPM-0-625mm_356284_p04.nii.gz",
+"item_id": "6acf27aa8b4d3a662c979294",
+"size": 43547724,
+"dataset": "IDC-rider_lung_pet_ct",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "IDC-rider_lung_pet_ct__RIDER-4767464492__SS-Segment-30-75-BPM-0-625mm_356284_p05.nii.gz",
+"item_id": "6acf27ab8b4d3a662c979296",
+"size": 43492930,
+"dataset": "IDC-rider_lung_pet_ct",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "IDC-rider_lung_pet_ct__RIDER-4767464492__SS-Segment-30-75-BPM-0-625mm_356284_p07.nii.gz",
+"item_id": "6acf27ae8b4d3a662c97929a",
+"size": 42413169,
+"dataset": "IDC-rider_lung_pet_ct",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "IDC-rider_lung_pet_ct__RIDER-4767464492__SS-Segment-30-75-BPM-0-625mm_356284_p09.nii.gz",
+"item_id": "6acf27b18b4d3a662c97929e",
+"size": 43152856,
+"dataset": "IDC-rider_lung_pet_ct",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "IDC-rider_lung_pet_ct__RIDER-7701645091__SS-Segment-30-75-BPM-0-625mm_238415_p00.nii.gz",
+"item_id": "6acf27b38b4d3a662c9792a0",
+"size": 83268786,
+"dataset": "IDC-rider_lung_pet_ct",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "IDC-rider_lung_pet_ct__RIDER-7701645091__SS-Segment-30-75-BPM-0-625mm_238415_p01.nii.gz",
+"item_id": "6acf27b58b4d3a662c9792a2",
+"size": 84831849,
+"dataset": "IDC-rider_lung_pet_ct",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "IDC-rider_lung_pet_ct__RIDER-7701645091__SS-Segment-30-75-BPM-0-625mm_238415_p02.nii.gz",
+"item_id": "6acf27b68b4d3a662c9792a4",
+"size": 85310795,
+"dataset": "IDC-rider_lung_pet_ct",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "IDC-rider_lung_pet_ct__RIDER-7701645091__SS-Segment-30-75-BPM-0-625mm_238415_p05.nii.gz",
+"item_id": "6acf27bb8b4d3a662c9792aa",
+"size": 82655974,
+"dataset": "IDC-rider_lung_pet_ct",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "IDC-rider_lung_pet_ct__RIDER-7701645091__SS-Segment-30-75-BPM-0-625mm_238415_p06.nii.gz",
+"item_id": "6acf27bd8b4d3a662c9792ac",
+"size": 77213110,
+"dataset": "IDC-rider_lung_pet_ct",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "IDC-rider_lung_pet_ct__RIDER-7701645091__SS-Segment-30-75-BPM-0-625mm_238415_p07.nii.gz",
+"item_id": "6acf27be8b4d3a662c9792ae",
+"size": 73692793,
+"dataset": "IDC-rider_lung_pet_ct",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "IDC-rider_lung_pet_ct__RIDER-7701645091__SS-Segment-30-75-BPM-0-625mm_238415_p08.nii.gz",
+"item_id": "6acf27c08b4d3a662c9792b0",
+"size": 80722422,
+"dataset": "IDC-rider_lung_pet_ct",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "IDC-rider_lung_pet_ct__RIDER-7701645091__SS-Segment-30-75-BPM-0-625mm_238415_p09.nii.gz",
+"item_id": "6acf27c18b4d3a662c9792b2",
+"size": 81644657,
+"dataset": "IDC-rider_lung_pet_ct",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "IDC-varepop_apollo__AP-26JK__Carina-to-Apex-0-6-B26f-0-100-Matrix-256_682144_p01.nii.gz",
+"item_id": "6acf27c58b4d3a662c9792b6",
+"size": 23120688,
+"dataset": "IDC-varepop_apollo",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "IDC-varepop_apollo__AP-26JK__Carina-to-Apex-0-6-B26f-0-100-Matrix-256_682144_p02.nii.gz",
+"item_id": "6acf27c68b4d3a662c9792b8",
+"size": 22926865,
+"dataset": "IDC-varepop_apollo",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "IDC-varepop_apollo__AP-26JK__Carina-to-Apex-0-6-B26f-0-100-Matrix-256_682144_p03.nii.gz",
+"item_id": "6acf27c88b4d3a662c9792ba",
+"size": 22751479,
+"dataset": "IDC-varepop_apollo",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "IDC-varepop_apollo__AP-26JK__Carina-to-Apex-0-6-B26f-0-100-Matrix-256_682144_p04.nii.gz",
+"item_id": "6acf27ca8b4d3a662c9792bc",
+"size": 23106638,
+"dataset": "IDC-varepop_apollo",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "IDC-varepop_apollo__AP-26JK__Carina-to-Apex-0-6-B26f-0-100-Matrix-256_682144_p06.nii.gz",
+"item_id": "6acf27cd8b4d3a662c9792c0",
+"size": 22795519,
+"dataset": "IDC-varepop_apollo",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "IDC-varepop_apollo__AP-26JK__Carina-to-Apex-0-6-B26f-0-100-Matrix-256_682144_p07.nii.gz",
+"item_id": "6acf27ce8b4d3a662c9792c2",
+"size": 23520906,
+"dataset": "IDC-varepop_apollo",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "IDC-varepop_apollo__AP-26JK__Carina-to-Apex-0-6-B26f-0-100-Matrix-256_682144_p08.nii.gz",
+"item_id": "6acf27d08b4d3a662c9792c4",
+"size": 22766079,
+"dataset": "IDC-varepop_apollo",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "IDC-varepop_apollo__AP-26JK__Carina-to-Apex-0-6-B26f-0-100-Matrix-256_682144_p09.nii.gz",
+"item_id": "6acf27d18b4d3a662c9792c6",
+"size": 22952156,
+"dataset": "IDC-varepop_apollo",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "IDC-varepop_apollo__AP-26JK__Carina-to-Apex-0-6-B26f-BestDiast-59_020141.nii.gz",
+"item_id": "6acf27d38b4d3a662c9792c8",
+"size": 148012261,
+"dataset": "IDC-varepop_apollo",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "ImageCHD__1001.nii.gz",
+"item_id": "6acf28058b4d3a662c979308",
+"size": 74210198,
+"dataset": "ImageCHD",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "ImageCHD__1004.nii.gz",
+"item_id": "6acf280a8b4d3a662c97930e",
+"size": 119216168,
+"dataset": "ImageCHD",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "ImageCHD__1005.nii.gz",
+"item_id": "6acf280b8b4d3a662c979310",
+"size": 93209815,
+"dataset": "ImageCHD",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "ImageCHD__1008.nii.gz",
+"item_id": "6acf280e8b4d3a662c979314",
+"size": 66442914,
+"dataset": "ImageCHD",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "ImageCHD__1010.nii.gz",
+"item_id": "6acf28108b4d3a662c979316",
+"size": 91442725,
+"dataset": "ImageCHD",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "ImageCHD__1011.nii.gz",
+"item_id": "6acf28118b4d3a662c979318",
+"size": 66874599,
+"dataset": "ImageCHD",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "ImageCHD__1012.nii.gz",
+"item_id": "6acf28138b4d3a662c97931a",
+"size": 65355792,
+"dataset": "ImageCHD",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "ImageCHD__1014.nii.gz",
+"item_id": "6acf28168b4d3a662c97931e",
+"size": 66799109,
+"dataset": "ImageCHD",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "ImageCHD__1015.nii.gz",
+"item_id": "6acf28178b4d3a662c979320",
+"size": 127312850,
+"dataset": "ImageCHD",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "ImageCHD__1016.nii.gz",
+"item_id": "6acf28198b4d3a662c979322",
+"size": 90239818,
+"dataset": "ImageCHD",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "ImageCHD__1017.nii.gz",
+"item_id": "6acf281a8b4d3a662c979324",
+"size": 64719684,
+"dataset": "ImageCHD",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "ImageCHD__1018.nii.gz",
+"item_id": "6acf281b8b4d3a662c979326",
+"size": 86121125,
+"dataset": "ImageCHD",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "ImageCHD__1019.nii.gz",
+"item_id": "6acf281d8b4d3a662c979328",
+"size": 89573080,
+"dataset": "ImageCHD",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "ImageCHD__1021.nii.gz",
+"item_id": "6acf28208b4d3a662c97932c",
+"size": 57340042,
+"dataset": "ImageCHD",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "ImageCHD__1022.nii.gz",
+"item_id": "6acf28218b4d3a662c97932e",
+"size": 40417688,
+"dataset": "ImageCHD",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "ImageCHD__1023.nii.gz",
+"item_id": "6acf28238b4d3a662c979330",
+"size": 91986549,
+"dataset": "ImageCHD",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "ImageCHD__1024.nii.gz",
+"item_id": "6acf28258b4d3a662c979332",
+"size": 110375587,
+"dataset": "ImageCHD",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "ImageCHD__1025.nii.gz",
+"item_id": "6acf28268b4d3a662c979334",
+"size": 89206955,
+"dataset": "ImageCHD",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "ImageCHD__1029.nii.gz",
+"item_id": "6acf282a8b4d3a662c979338",
+"size": 66668241,
+"dataset": "ImageCHD",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "ImageCHD__1030.nii.gz",
+"item_id": "6acf282b8b4d3a662c97933a",
+"size": 65670422,
+"dataset": "ImageCHD",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "ImageCHD__1033.nii.gz",
+"item_id": "6acf282e8b4d3a662c97933e",
+"size": 87657582,
+"dataset": "ImageCHD",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "ImageCHD__1035.nii.gz",
+"item_id": "6acf28308b4d3a662c979340",
+"size": 92782754,
+"dataset": "ImageCHD",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "ImageCHD__1036.nii.gz",
+"item_id": "6acf28318b4d3a662c979342",
+"size": 57179209,
+"dataset": "ImageCHD",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "ImageCHD__1037.nii.gz",
+"item_id": "6acf28338b4d3a662c979344",
+"size": 124931123,
+"dataset": "ImageCHD",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "ImageCHD__1041.nii.gz",
+"item_id": "6acf28368b4d3a662c979348",
+"size": 90879113,
+"dataset": "ImageCHD",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "ImageCHD__1042.nii.gz",
+"item_id": "6acf28378b4d3a662c97934a",
+"size": 87308961,
+"dataset": "ImageCHD",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "ImageCHD__1043.nii.gz",
+"item_id": "6acf28398b4d3a662c97934c",
+"size": 66996391,
+"dataset": "ImageCHD",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "ImageCHD__1044.nii.gz",
+"item_id": "6acf283a8b4d3a662c97934e",
+"size": 87239024,
+"dataset": "ImageCHD",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "ImageCHD__1046.nii.gz",
+"item_id": "6acf283c8b4d3a662c979350",
+"size": 69176339,
+"dataset": "ImageCHD",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "ImageCHD__1047.nii.gz",
+"item_id": "6acf283e8b4d3a662c979352",
+"size": 66274330,
+"dataset": "ImageCHD",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "ImageCHD__1048.nii.gz",
+"item_id": "6acf283f8b4d3a662c979354",
+"size": 68565613,
+"dataset": "ImageCHD",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "ImageCHD__1050.nii.gz",
+"item_id": "6acf28418b4d3a662c979356",
+"size": 87702994,
+"dataset": "ImageCHD",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "ImageCHD__1051.nii.gz",
+"item_id": "6acf28438b4d3a662c979358",
+"size": 66927701,
+"dataset": "ImageCHD",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "ImageCHD__1052.nii.gz",
+"item_id": "6acf28448b4d3a662c97935a",
+"size": 87312440,
+"dataset": "ImageCHD",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "ImageCHD__1054.nii.gz",
+"item_id": "6acf28478b4d3a662c97935e",
+"size": 52121450,
+"dataset": "ImageCHD",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "ImageCHD__1056.nii.gz",
+"item_id": "6acf28498b4d3a662c979360",
+"size": 116842437,
+"dataset": "ImageCHD",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "ImageCHD__1061.nii.gz",
+"item_id": "6acf284d8b4d3a662c979366",
+"size": 68910940,
+"dataset": "ImageCHD",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "ImageCHD__1062.nii.gz",
+"item_id": "6acf284f8b4d3a662c979368",
+"size": 65176481,
+"dataset": "ImageCHD",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "ImageCHD__1064.nii.gz",
+"item_id": "6acf28528b4d3a662c97936c",
+"size": 68806538,
+"dataset": "ImageCHD",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "ImageCHD__1066.nii.gz",
+"item_id": "6acf28548b4d3a662c97936e",
+"size": 66572419,
+"dataset": "ImageCHD",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "ImageCHD__1067.nii.gz",
+"item_id": "6acf28558b4d3a662c979370",
+"size": 85579997,
+"dataset": "ImageCHD",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "ImageCHD__1070.nii.gz",
+"item_id": "6acf28578b4d3a662c979372",
+"size": 86687216,
+"dataset": "ImageCHD",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "ImageCHD__1072.nii.gz",
+"item_id": "6acf28588b4d3a662c979374",
+"size": 125104704,
+"dataset": "ImageCHD",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "ImageCHD__1074.nii.gz",
+"item_id": "6acf285a8b4d3a662c979376",
+"size": 67070109,
+"dataset": "ImageCHD",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "ImageCHD__1075.nii.gz",
+"item_id": "6acf285b8b4d3a662c979378",
+"size": 84686343,
+"dataset": "ImageCHD",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "ImageCHD__1078.nii.gz",
+"item_id": "6acf285f8b4d3a662c97937c",
+"size": 88061832,
+"dataset": "ImageCHD",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "ImageCHD__1079.nii.gz",
+"item_id": "6acf28618b4d3a662c97937e",
+"size": 89047166,
+"dataset": "ImageCHD",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "ImageCHD__1080.nii.gz",
+"item_id": "6acf28628b4d3a662c979380",
+"size": 69760730,
+"dataset": "ImageCHD",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "ImageCHD__1081.nii.gz",
+"item_id": "6acf28648b4d3a662c979382",
+"size": 10772011,
+"dataset": "ImageCHD",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "ImageCHD__1085.nii.gz",
+"item_id": "6acf28678b4d3a662c979386",
+"size": 64569448,
+"dataset": "ImageCHD",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "ImageCHD__1088.nii.gz",
+"item_id": "6acf28688b4d3a662c979388",
+"size": 65035743,
+"dataset": "ImageCHD",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "ImageCHD__1091.nii.gz",
+"item_id": "6acf286a8b4d3a662c97938a",
+"size": 111955975,
+"dataset": "ImageCHD",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "ImageCHD__1092.nii.gz",
+"item_id": "6acf286b8b4d3a662c97938c",
+"size": 92424481,
+"dataset": "ImageCHD",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "ImageCHD__1099.nii.gz",
+"item_id": "6acf286e8b4d3a662c979390",
+"size": 87827942,
+"dataset": "ImageCHD",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "ImageCHD__1101.nii.gz",
+"item_id": "6acf28708b4d3a662c979392",
+"size": 101519369,
+"dataset": "ImageCHD",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "ImageCHD__1102.nii.gz",
+"item_id": "6acf28728b4d3a662c979394",
+"size": 66909861,
+"dataset": "ImageCHD",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "ImageCHD__1105.nii.gz",
+"item_id": "6acf28758b4d3a662c979398",
+"size": 107803545,
+"dataset": "ImageCHD",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "ImageCHD__1106.nii.gz",
+"item_id": "6acf28778b4d3a662c97939a",
+"size": 65431712,
+"dataset": "ImageCHD",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "ImageCHD__1109.nii.gz",
+"item_id": "6acf28788b4d3a662c97939c",
+"size": 85160725,
+"dataset": "ImageCHD",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "ImageCHD__1110.nii.gz",
+"item_id": "6acf287a8b4d3a662c97939e",
+"size": 95887081,
+"dataset": "ImageCHD",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "ImageCHD__1111.nii.gz",
+"item_id": "6acf287c8b4d3a662c9793a0",
+"size": 107319814,
+"dataset": "ImageCHD",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "ImageCHD__1114.nii.gz",
+"item_id": "6acf28818b4d3a662c9793a6",
+"size": 117212785,
+"dataset": "ImageCHD",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "ImageCHD__1120.nii.gz",
+"item_id": "6acf28878b4d3a662c9793ae",
+"size": 88215862,
+"dataset": "ImageCHD",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "ImageCHD__1121.nii.gz",
+"item_id": "6acf28898b4d3a662c9793b0",
+"size": 146080355,
+"dataset": "ImageCHD",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "ImageCHD__1122.nii.gz",
+"item_id": "6acf288a8b4d3a662c9793b2",
+"size": 55615901,
+"dataset": "ImageCHD",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "ImageCHD__1125.nii.gz",
+"item_id": "6acf288d8b4d3a662c9793b6",
+"size": 43641143,
+"dataset": "ImageCHD",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "ImageCHD__1127.nii.gz",
+"item_id": "6acf28908b4d3a662c9793ba",
+"size": 88077821,
+"dataset": "ImageCHD",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "ImageCHD__1128.nii.gz",
+"item_id": "6acf28928b4d3a662c9793bc",
+"size": 94793255,
+"dataset": "ImageCHD",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "ImageCHD__1129.nii.gz",
+"item_id": "6acf28948b4d3a662c9793be",
+"size": 127502187,
+"dataset": "ImageCHD",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "ImageCHD__1132.nii.gz",
+"item_id": "6acf28958b4d3a662c9793c0",
+"size": 113312232,
+"dataset": "ImageCHD",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "ImageCHD__1133.nii.gz",
+"item_id": "6acf28978b4d3a662c9793c2",
+"size": 83305511,
+"dataset": "ImageCHD",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "ImageCHD__1135.nii.gz",
+"item_id": "6acf28988b4d3a662c9793c4",
+"size": 102314627,
+"dataset": "ImageCHD",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "ImageCHD__1138.nii.gz",
+"item_id": "6acf289a8b4d3a662c9793c6",
+"size": 55394008,
+"dataset": "ImageCHD",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "ImageCHD__1139.nii.gz",
+"item_id": "6acf289c8b4d3a662c9793c8",
+"size": 85490408,
+"dataset": "ImageCHD",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "ImageCHD__1141.nii.gz",
+"item_id": "6acf289f8b4d3a662c9793cc",
+"size": 116469408,
+"dataset": "ImageCHD",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "ImageCHD__1145.nii.gz",
+"item_id": "6acf28a48b4d3a662c9793d2",
+"size": 68121185,
+"dataset": "ImageCHD",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "ImageCHD__1146.nii.gz",
+"item_id": "6acf28a58b4d3a662c9793d4",
+"size": 89063240,
+"dataset": "ImageCHD",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "ImageCHD__1147.nii.gz",
+"item_id": "6acf28a78b4d3a662c9793d6",
+"size": 68156115,
+"dataset": "ImageCHD",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "ImageCHD__1148.nii.gz",
+"item_id": "6acf28a98b4d3a662c9793d8",
+"size": 65458441,
+"dataset": "ImageCHD",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "ImageCHD__1150.nii.gz",
+"item_id": "6acf28ab8b4d3a662c9793da",
+"size": 106523389,
+"dataset": "ImageCHD",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "ImageCHD__1158.nii.gz",
+"item_id": "6acf28ac8b4d3a662c9793dc",
+"size": 96137693,
+"dataset": "ImageCHD",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "ImageCHD__1170.nii.gz",
+"item_id": "6acf28b08b4d3a662c9793e0",
+"size": 83544797,
+"dataset": "ImageCHD",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "Kaggle-CAD-RandomSamples__case62.nii.gz",
+"item_id": "6acf28bd8b4d3a662c9793f0",
+"size": 78944316,
+"dataset": "Kaggle-CAD-RandomSamples",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "Kaggle-CAD-RandomSamples__case63.nii.gz",
+"item_id": "6acf28be8b4d3a662c9793f2",
+"size": 82632212,
+"dataset": "Kaggle-CAD-RandomSamples",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "Kaggle-CAD-RandomSamples__case69.nii.gz",
+"item_id": "6acf28c88b4d3a662c9793fe",
+"size": 87793807,
+"dataset": "Kaggle-CAD-RandomSamples",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "Kaggle-CAD-RandomSamples__case75.nii.gz",
+"item_id": "6acf28d28b4d3a662c97940a",
+"size": 66224209,
+"dataset": "Kaggle-CAD-RandomSamples",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "Kaggle-CAD-RandomSamples__case80.nii.gz",
+"item_id": "6acf28da8b4d3a662c979414",
+"size": 104069995,
+"dataset": "Kaggle-CAD-RandomSamples",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "Kaggle-HeartSR__P08.nii.gz",
+"item_id": "6acf28ec8b4d3a662c97942a",
+"size": 144739513,
+"dataset": "Kaggle-HeartSR",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "Kaggle-HeartSR__P09.nii.gz",
+"item_id": "6acf28ee8b4d3a662c97942c",
+"size": 134479124,
+"dataset": "Kaggle-HeartSR",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "Mendeley-9wv3fkxstx__P00001_s404.nii.gz",
+"item_id": "6acf28f38b4d3a662c979432",
+"size": 62529734,
+"dataset": "Mendeley-9wv3fkxstx",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "Mendeley-SDN-37nnfyh3x9__s004_p40.nii.gz",
+"item_id": "6acf28f68b4d3a662c979436",
+"size": 77612815,
+"dataset": "Mendeley-SDN-37nnfyh3x9",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "Mendeley-SDN-37nnfyh3x9__s004_p50.nii.gz",
+"item_id": "6acf28f88b4d3a662c979438",
+"size": 76727583,
+"dataset": "Mendeley-SDN-37nnfyh3x9",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "Mendeley-SDN-37nnfyh3x9__s004_p70.nii.gz",
+"item_id": "6acf28fb8b4d3a662c97943c",
+"size": 75696129,
+"dataset": "Mendeley-SDN-37nnfyh3x9",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "Mendeley-SDN-37nnfyh3x9__s301_p63.nii.gz",
+"item_id": "6acf28fe8b4d3a662c979440",
+"size": 80515457,
+"dataset": "Mendeley-SDN-37nnfyh3x9",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "Mendeley-SDN-37nnfyh3x9__s301_p87.nii.gz",
+"item_id": "6acf28ff8b4d3a662c979442",
+"size": 80561741,
+"dataset": "Mendeley-SDN-37nnfyh3x9",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "Mendeley-SDN-37nnfyh3x9__s302_p82.nii.gz",
+"item_id": "6acf29028b4d3a662c979446",
+"size": 80484668,
+"dataset": "Mendeley-SDN-37nnfyh3x9",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "Mendeley-SDN-37nnfyh3x9__s303_p38.nii.gz",
+"item_id": "6acf29048b4d3a662c979448",
+"size": 82492262,
+"dataset": "Mendeley-SDN-37nnfyh3x9",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "Mendeley-SDN-37nnfyh3x9__s303_p62.nii.gz",
+"item_id": "6acf29058b4d3a662c97944a",
+"size": 80553555,
+"dataset": "Mendeley-SDN-37nnfyh3x9",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "Mendeley-SDN-4643nn2z44__s010_f00.nii.gz",
+"item_id": "6acf290b8b4d3a662c979452",
+"size": 9546332,
+"dataset": "Mendeley-SDN-4643nn2z44",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "Mendeley-SDN-4643nn2z44__s010_f01.nii.gz",
+"item_id": "6acf290d8b4d3a662c979454",
+"size": 9703451,
+"dataset": "Mendeley-SDN-4643nn2z44",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "Mendeley-SDN-4643nn2z44__s010_f02.nii.gz",
+"item_id": "6acf290e8b4d3a662c979456",
+"size": 9657234,
+"dataset": "Mendeley-SDN-4643nn2z44",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "Mendeley-SDN-4643nn2z44__s010_f03.nii.gz",
+"item_id": "6acf29108b4d3a662c979458",
+"size": 9615208,
+"dataset": "Mendeley-SDN-4643nn2z44",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "Mendeley-SDN-4643nn2z44__s010_f04.nii.gz",
+"item_id": "6acf29118b4d3a662c97945a",
+"size": 9491586,
+"dataset": "Mendeley-SDN-4643nn2z44",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "Mendeley-SDN-4643nn2z44__s010_f05.nii.gz",
+"item_id": "6acf29138b4d3a662c97945c",
+"size": 9436954,
+"dataset": "Mendeley-SDN-4643nn2z44",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "Mendeley-SDN-4643nn2z44__s010_f06.nii.gz",
+"item_id": "6acf29148b4d3a662c97945e",
+"size": 9415170,
+"dataset": "Mendeley-SDN-4643nn2z44",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "Mendeley-SDN-4643nn2z44__s010_f07.nii.gz",
+"item_id": "6acf29168b4d3a662c979460",
+"size": 9433972,
+"dataset": "Mendeley-SDN-4643nn2z44",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "Mendeley-SDN-4643nn2z44__s010_f08.nii.gz",
+"item_id": "6acf29178b4d3a662c979462",
+"size": 9435171,
+"dataset": "Mendeley-SDN-4643nn2z44",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "Mendeley-SDN-4643nn2z44__s010_f09.nii.gz",
+"item_id": "6acf29198b4d3a662c979464",
+"size": 9427784,
+"dataset": "Mendeley-SDN-4643nn2z44",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "Mendeley-SDN-4643nn2z44__s010_f10.nii.gz",
+"item_id": "6acf291a8b4d3a662c979466",
+"size": 9444370,
+"dataset": "Mendeley-SDN-4643nn2z44",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "Mendeley-SDN-4643nn2z44__s010_f11.nii.gz",
+"item_id": "6acf291c8b4d3a662c979468",
+"size": 9451883,
+"dataset": "Mendeley-SDN-4643nn2z44",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "Mendeley-SDN-4643nn2z44__s010_f12.nii.gz",
+"item_id": "6acf291d8b4d3a662c97946a",
+"size": 9443781,
+"dataset": "Mendeley-SDN-4643nn2z44",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "Mendeley-SDN-4643nn2z44__s010_f13.nii.gz",
+"item_id": "6acf291f8b4d3a662c97946c",
+"size": 9430042,
+"dataset": "Mendeley-SDN-4643nn2z44",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "Mendeley-SDN-4643nn2z44__s010_f14.nii.gz",
+"item_id": "6acf29208b4d3a662c97946e",
+"size": 9419217,
+"dataset": "Mendeley-SDN-4643nn2z44",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "Mendeley-SDN-4643nn2z44__s010_f15.nii.gz",
+"item_id": "6acf29228b4d3a662c979470",
+"size": 9420169,
+"dataset": "Mendeley-SDN-4643nn2z44",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "Mendeley-SDN-4643nn2z44__s010_f16.nii.gz",
+"item_id": "6acf29238b4d3a662c979472",
+"size": 9424028,
+"dataset": "Mendeley-SDN-4643nn2z44",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "Mendeley-SDN-4643nn2z44__s010_f17.nii.gz",
+"item_id": "6acf29258b4d3a662c979474",
+"size": 9415094,
+"dataset": "Mendeley-SDN-4643nn2z44",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "Mendeley-SDN-4643nn2z44__s010_f18.nii.gz",
+"item_id": "6acf29268b4d3a662c979476",
+"size": 9444599,
+"dataset": "Mendeley-SDN-4643nn2z44",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "Mendeley-SDN-4643nn2z44__s010_f19.nii.gz",
+"item_id": "6acf29288b4d3a662c979478",
+"size": 9511204,
+"dataset": "Mendeley-SDN-4643nn2z44",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "Mendeley-SDN-7x9kb53262__s007.nii.gz",
+"item_id": "6acf292b8b4d3a662c97947c",
+"size": 47630279,
+"dataset": "Mendeley-SDN-7x9kb53262",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "Mendeley-SDN-7x9kb53262__s008.nii.gz",
+"item_id": "6acf292d8b4d3a662c97947e",
+"size": 125635479,
+"dataset": "Mendeley-SDN-7x9kb53262",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "Mendeley-SDN-7x9kb53262__s009.nii.gz",
+"item_id": "6acf292f8b4d3a662c979480",
+"size": 125160293,
+"dataset": "Mendeley-SDN-7x9kb53262",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "Mendeley-SDN-7x9kb53262__s010_p0.nii.gz",
+"item_id": "6acf29308b4d3a662c979482",
+"size": 47831350,
+"dataset": "Mendeley-SDN-7x9kb53262",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "Mendeley-SDN-7x9kb53262__s010_p10.nii.gz",
+"item_id": "6acf29328b4d3a662c979484",
+"size": 47877527,
+"dataset": "Mendeley-SDN-7x9kb53262",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "Mendeley-SDN-7x9kb53262__s010_p15.nii.gz",
+"item_id": "6acf29348b4d3a662c979486",
+"size": 47877812,
+"dataset": "Mendeley-SDN-7x9kb53262",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "Mendeley-SDN-7x9kb53262__s010_p20.nii.gz",
+"item_id": "6acf29358b4d3a662c979488",
+"size": 47708812,
+"dataset": "Mendeley-SDN-7x9kb53262",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "Mendeley-SDN-7x9kb53262__s010_p25.nii.gz",
+"item_id": "6acf29378b4d3a662c97948a",
+"size": 47684666,
+"dataset": "Mendeley-SDN-7x9kb53262",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "Mendeley-SDN-7x9kb53262__s010_p30.nii.gz",
+"item_id": "6acf29388b4d3a662c97948c",
+"size": 47572245,
+"dataset": "Mendeley-SDN-7x9kb53262",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "Mendeley-SDN-7x9kb53262__s010_p40.nii.gz",
+"item_id": "6acf293b8b4d3a662c979490",
+"size": 47618594,
+"dataset": "Mendeley-SDN-7x9kb53262",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "Mendeley-SDN-7x9kb53262__s010_p45.nii.gz",
+"item_id": "6acf293d8b4d3a662c979492",
+"size": 47598261,
+"dataset": "Mendeley-SDN-7x9kb53262",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "Mendeley-SDN-7x9kb53262__s010_p5.nii.gz",
+"item_id": "6acf293f8b4d3a662c979494",
+"size": 47735203,
+"dataset": "Mendeley-SDN-7x9kb53262",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "Mendeley-SDN-7x9kb53262__s010_p50.nii.gz",
+"item_id": "6acf29408b4d3a662c979496",
+"size": 47599619,
+"dataset": "Mendeley-SDN-7x9kb53262",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "Mendeley-SDN-7x9kb53262__s010_p55.nii.gz",
+"item_id": "6acf29428b4d3a662c979498",
+"size": 47644828,
+"dataset": "Mendeley-SDN-7x9kb53262",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "Mendeley-SDN-7x9kb53262__s010_p60.nii.gz",
+"item_id": "6acf29438b4d3a662c97949a",
+"size": 47651891,
+"dataset": "Mendeley-SDN-7x9kb53262",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "Mendeley-SDN-7x9kb53262__s010_p65.nii.gz",
+"item_id": "6acf29458b4d3a662c97949c",
+"size": 47588236,
+"dataset": "Mendeley-SDN-7x9kb53262",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "Mendeley-SDN-7x9kb53262__s010_p70.nii.gz",
+"item_id": "6acf29468b4d3a662c97949e",
+"size": 47616413,
+"dataset": "Mendeley-SDN-7x9kb53262",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "Mendeley-SDN-7x9kb53262__s010_p75.nii.gz",
+"item_id": "6acf29488b4d3a662c9794a0",
+"size": 47605650,
+"dataset": "Mendeley-SDN-7x9kb53262",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "Mendeley-SDN-7x9kb53262__s010_p80.nii.gz",
+"item_id": "6acf29498b4d3a662c9794a2",
+"size": 47635443,
+"dataset": "Mendeley-SDN-7x9kb53262",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "Mendeley-SDN-7x9kb53262__s010_p85.nii.gz",
+"item_id": "6acf294b8b4d3a662c9794a4",
+"size": 47806509,
+"dataset": "Mendeley-SDN-7x9kb53262",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "Mendeley-SDN-7x9kb53262__s010_p90.nii.gz",
+"item_id": "6acf294c8b4d3a662c9794a6",
+"size": 47802997,
+"dataset": "Mendeley-SDN-7x9kb53262",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "Mendeley-SDN-7x9kb53262__s010_p95.nii.gz",
+"item_id": "6acf294e8b4d3a662c9794a8",
+"size": 47700576,
+"dataset": "Mendeley-SDN-7x9kb53262",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "Mendeley-SDN-cy54ttk3fj__P07_diast.nii.gz",
+"item_id": "6acf29628b4d3a662c9794c2",
+"size": 81564991,
+"dataset": "Mendeley-SDN-cy54ttk3fj",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "Mendeley-SDN-cy54ttk3fj__P07_syst.nii.gz",
+"item_id": "6acf29648b4d3a662c9794c4",
+"size": 81221753,
+"dataset": "Mendeley-SDN-cy54ttk3fj",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "Mendeley-SDN-cy54ttk3fj__P11_diast.nii.gz",
+"item_id": "6acf296f8b4d3a662c9794d2",
+"size": 109216744,
+"dataset": "Mendeley-SDN-cy54ttk3fj",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "Mendeley-SDN-cy54ttk3fj__P15_diast.nii.gz",
+"item_id": "6acf297b8b4d3a662c9794e2",
+"size": 106516957,
+"dataset": "Mendeley-SDN-cy54ttk3fj",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "Mendeley-SDN-cy54ttk3fj__P16_syst.nii.gz",
+"item_id": "6acf29808b4d3a662c9794e8",
+"size": 102518923,
+"dataset": "Mendeley-SDN-cy54ttk3fj",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "Mendeley-SDN-cy54ttk3fj__P18_syst.nii.gz",
+"item_id": "6acf29868b4d3a662c9794f0",
+"size": 111156342,
+"dataset": "Mendeley-SDN-cy54ttk3fj",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "Mendeley-SDN-cy54ttk3fj__P19_diast.nii.gz",
+"item_id": "6acf29878b4d3a662c9794f2",
+"size": 99735248,
+"dataset": "Mendeley-SDN-cy54ttk3fj",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "Mendeley-SDN-cy54ttk3fj__P19_syst.nii.gz",
+"item_id": "6acf29898b4d3a662c9794f4",
+"size": 99656500,
+"dataset": "Mendeley-SDN-cy54ttk3fj",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "Mendeley-SDN-cy54ttk3fj__P29_syst.nii.gz",
+"item_id": "6acf29a88b4d3a662c97951c",
+"size": 190170257,
+"dataset": "Mendeley-SDN-cy54ttk3fj",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "Mendeley-SDN-cy54ttk3fj__P36_syst.nii.gz",
+"item_id": "6acf29c08b4d3a662c979538",
+"size": 92717182,
+"dataset": "Mendeley-SDN-cy54ttk3fj",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "Mendeley-SDN-spb25zt2c4__s009.nii.gz",
+"item_id": "6acf29ce8b4d3a662c97954a",
+"size": 60961662,
+"dataset": "Mendeley-SDN-spb25zt2c4",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "Mendeley-SDN-spb25zt2c4__s014_p0.nii.gz",
+"item_id": "6acf29d48b4d3a662c979552",
+"size": 23274061,
+"dataset": "Mendeley-SDN-spb25zt2c4",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "Mendeley-SDN-spb25zt2c4__s014_p15.nii.gz",
+"item_id": "6acf29d88b4d3a662c979556",
+"size": 22475496,
+"dataset": "Mendeley-SDN-spb25zt2c4",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "Mendeley-SDN-spb25zt2c4__s014_p20.nii.gz",
+"item_id": "6acf29d98b4d3a662c979558",
+"size": 21952405,
+"dataset": "Mendeley-SDN-spb25zt2c4",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "Mendeley-SDN-spb25zt2c4__s014_p25.nii.gz",
+"item_id": "6acf29db8b4d3a662c97955a",
+"size": 21859878,
+"dataset": "Mendeley-SDN-spb25zt2c4",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "Mendeley-SDN-spb25zt2c4__s014_p30.nii.gz",
+"item_id": "6acf29dc8b4d3a662c97955c",
+"size": 21813809,
+"dataset": "Mendeley-SDN-spb25zt2c4",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "Mendeley-SDN-spb25zt2c4__s014_p35.nii.gz",
+"item_id": "6acf29de8b4d3a662c97955e",
+"size": 21835930,
+"dataset": "Mendeley-SDN-spb25zt2c4",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "Mendeley-SDN-spb25zt2c4__s014_p40.nii.gz",
+"item_id": "6acf29df8b4d3a662c979560",
+"size": 21841715,
+"dataset": "Mendeley-SDN-spb25zt2c4",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "Mendeley-SDN-spb25zt2c4__s014_p45.nii.gz",
+"item_id": "6acf29e18b4d3a662c979562",
+"size": 21871267,
+"dataset": "Mendeley-SDN-spb25zt2c4",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "Mendeley-SDN-spb25zt2c4__s014_p50.nii.gz",
+"item_id": "6acf29e48b4d3a662c979566",
+"size": 21920817,
+"dataset": "Mendeley-SDN-spb25zt2c4",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "Mendeley-SDN-spb25zt2c4__s014_p55.nii.gz",
+"item_id": "6acf29e58b4d3a662c979568",
+"size": 21904094,
+"dataset": "Mendeley-SDN-spb25zt2c4",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "Mendeley-SDN-spb25zt2c4__s014_p70.nii.gz",
+"item_id": "6acf29eb8b4d3a662c97956e",
+"size": 21881842,
+"dataset": "Mendeley-SDN-spb25zt2c4",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "Mendeley-SDN-spb25zt2c4__s014_p75.nii.gz",
+"item_id": "6acf29ec8b4d3a662c979570",
+"size": 21906403,
+"dataset": "Mendeley-SDN-spb25zt2c4",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "Mendeley-SDN-spb25zt2c4__s014_p80.nii.gz",
+"item_id": "6acf29ee8b4d3a662c979572",
+"size": 21965639,
+"dataset": "Mendeley-SDN-spb25zt2c4",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "Mendeley-SDN-spb25zt2c4__s014_p85.nii.gz",
+"item_id": "6acf29ef8b4d3a662c979574",
+"size": 22140586,
+"dataset": "Mendeley-SDN-spb25zt2c4",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "Mendeley-SDN-spb25zt2c4__s014_p90.nii.gz",
+"item_id": "6acf29f18b4d3a662c979576",
+"size": 22520765,
+"dataset": "Mendeley-SDN-spb25zt2c4",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "Mendeley-SDN-spb25zt2c4__s014_p95.nii.gz",
+"item_id": "6acf29f28b4d3a662c979578",
+"size": 23042685,
+"dataset": "Mendeley-SDN-spb25zt2c4",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "Mendeley-SDN-spb25zt2c4__s016.nii.gz",
+"item_id": "6acf29f58b4d3a662c97957c",
+"size": 155473991,
+"dataset": "Mendeley-SDN-spb25zt2c4",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "Mendeley-SDN-spb25zt2c4__s017.nii.gz",
+"item_id": "6acf29f78b4d3a662c97957e",
+"size": 222263216,
+"dataset": "Mendeley-SDN-spb25zt2c4",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "Mendeley-SDN-spb25zt2c4__s018_p20.nii.gz",
+"item_id": "6acf29fd8b4d3a662c979586",
+"size": 19808020,
+"dataset": "Mendeley-SDN-spb25zt2c4",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "Mendeley-SDN-spb25zt2c4__s018_p25.nii.gz",
+"item_id": "6acf29ff8b4d3a662c979588",
+"size": 19776607,
+"dataset": "Mendeley-SDN-spb25zt2c4",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "Mendeley-SDN-spb25zt2c4__s018_p30.nii.gz",
+"item_id": "6acf2a008b4d3a662c97958a",
+"size": 19772401,
+"dataset": "Mendeley-SDN-spb25zt2c4",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "Mendeley-SDN-spb25zt2c4__s018_p40.nii.gz",
+"item_id": "6acf2a048b4d3a662c97958e",
+"size": 19761724,
+"dataset": "Mendeley-SDN-spb25zt2c4",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "Mendeley-SDN-spb25zt2c4__s018_p45.nii.gz",
+"item_id": "6acf2a068b4d3a662c979590",
+"size": 19767881,
+"dataset": "Mendeley-SDN-spb25zt2c4",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "Mendeley-SDN-spb25zt2c4__s018_p50.nii.gz",
+"item_id": "6acf2a098b4d3a662c979594",
+"size": 19773814,
+"dataset": "Mendeley-SDN-spb25zt2c4",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "Mendeley-SDN-spb25zt2c4__s018_p55.nii.gz",
+"item_id": "6acf2a0b8b4d3a662c979596",
+"size": 19753079,
+"dataset": "Mendeley-SDN-spb25zt2c4",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "Mendeley-SDN-spb25zt2c4__s018_p65.nii.gz",
+"item_id": "6acf2a0e8b4d3a662c97959a",
+"size": 19738473,
+"dataset": "Mendeley-SDN-spb25zt2c4",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "Mendeley-SDN-spb25zt2c4__s018_p70.nii.gz",
+"item_id": "6acf2a108b4d3a662c97959c",
+"size": 19746723,
+"dataset": "Mendeley-SDN-spb25zt2c4",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "Mendeley-SDN-spb25zt2c4__s018_p75.nii.gz",
+"item_id": "6acf2a118b4d3a662c97959e",
+"size": 19748790,
+"dataset": "Mendeley-SDN-spb25zt2c4",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "Mendeley-SDN-spb25zt2c4__s018_p80.nii.gz",
+"item_id": "6acf2a138b4d3a662c9795a0",
+"size": 19752280,
+"dataset": "Mendeley-SDN-spb25zt2c4",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "SLAWT2016-CT__CT_10.nii.gz",
+"item_id": "6acf2a388b4d3a662c9795cc",
+"size": 109313284,
+"dataset": "SLAWT2016-CT",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "SLAWT2016-CT__CT_2.nii.gz",
+"item_id": "6acf2a398b4d3a662c9795ce",
+"size": 122768952,
+"dataset": "SLAWT2016-CT",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "SLAWT2016-CT__CT_5.nii.gz",
+"item_id": "6acf2a3f8b4d3a662c9795d4",
+"size": 176888321,
+"dataset": "SLAWT2016-CT",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "Slicer-SampleData__CTACardio.nii.gz",
+"item_id": "6acf2a458b4d3a662c9795dc",
+"size": 67701554,
+"dataset": "Slicer-SampleData",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "Slicer-SampleData__CTCardioSeq_f01.nii.gz",
+"item_id": "6acf2a498b4d3a662c9795e0",
+"size": 1366395,
+"dataset": "Slicer-SampleData",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "Slicer-SampleData__CTCardioSeq_f08.nii.gz",
+"item_id": "6acf2a548b4d3a662c9795ee",
+"size": 1358163,
+"dataset": "Slicer-SampleData",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "Slicer-SampleData__TruncalValve_4DCT_f00.nii.gz",
+"item_id": "6acf2a598b4d3a662c9795f4",
+"size": 62760768,
+"dataset": "Slicer-SampleData",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "Slicer-SampleData__TruncalValve_4DCT_f01.nii.gz",
+"item_id": "6acf2a5a8b4d3a662c9795f6",
+"size": 62770397,
+"dataset": "Slicer-SampleData",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "Slicer-SampleData__TruncalValve_4DCT_f04.nii.gz",
+"item_id": "6acf2a5f8b4d3a662c9795fc",
+"size": 62121283,
+"dataset": "Slicer-SampleData",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "Slicer-SampleData__TruncalValve_4DCT_f05.nii.gz",
+"item_id": "6acf2a608b4d3a662c9795fe",
+"size": 61105513,
+"dataset": "Slicer-SampleData",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "Slicer-SampleData__TruncalValve_4DCT_f07.nii.gz",
+"item_id": "6acf2a648b4d3a662c979602",
+"size": 60916013,
+"dataset": "Slicer-SampleData",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "Slicer-SampleData__TruncalValve_4DCT_f08.nii.gz",
+"item_id": "6acf2a658b4d3a662c979604",
+"size": 60968572,
+"dataset": "Slicer-SampleData",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "Slicer-SampleData__TruncalValve_4DCT_f09.nii.gz",
+"item_id": "6acf2a678b4d3a662c979606",
+"size": 60977393,
+"dataset": "Slicer-SampleData",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "Slicer-SampleData__TruncalValve_4DCT_f13.nii.gz",
+"item_id": "6acf2a6d8b4d3a662c97960e",
+"size": 62734552,
+"dataset": "Slicer-SampleData",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "Slicer-SampleData__TruncalValve_4DCT_f14.nii.gz",
+"item_id": "6acf2a6f8b4d3a662c979610",
+"size": 62746231,
+"dataset": "Slicer-SampleData",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "Slicer-SampleData__TruncalValve_4DCT_f15.nii.gz",
+"item_id": "6acf2a708b4d3a662c979612",
+"size": 62767605,
+"dataset": "Slicer-SampleData",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "Slicer-SampleData__TruncalValve_4DCT_f16.nii.gz",
+"item_id": "6acf2a728b4d3a662c979614",
+"size": 62784037,
+"dataset": "Slicer-SampleData",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "Slicer-SampleData__TruncalValve_4DCT_f17.nii.gz",
+"item_id": "6acf2a738b4d3a662c979616",
+"size": 62767763,
+"dataset": "Slicer-SampleData",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "Slicer-SampleData__TruncalValve_4DCT_f19.nii.gz",
+"item_id": "6acf2a768b4d3a662c97961a",
+"size": 62767723,
+"dataset": "Slicer-SampleData",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "Taiwan-AICUP-CardiacCT__patient0033.nii.gz",
+"item_id": "6acf2aac8b4d3a662c97965c",
+"size": 87118275,
+"dataset": "Taiwan-AICUP-CardiacCT",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "Taiwan-AICUP-CardiacCT__patient0046.nii.gz",
+"item_id": "6acf2ac18b4d3a662c979676",
+"size": 123737963,
+"dataset": "Taiwan-AICUP-CardiacCT",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "Taiwan-AICUP-CardiacCT__patient0047.nii.gz",
+"item_id": "6acf2ac28b4d3a662c979678",
+"size": 107989039,
+"dataset": "Taiwan-AICUP-CardiacCT",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "Taiwan-AICUP-CardiacCT__patient0048.nii.gz",
+"item_id": "6acf2ac48b4d3a662c97967a",
+"size": 119094391,
+"dataset": "Taiwan-AICUP-CardiacCT",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "Taiwan-AICUP-CardiacCT__patient0066.nii.gz",
+"item_id": "6acf2ae38b4d3a662c97969e",
+"size": 101016142,
+"dataset": "Taiwan-AICUP-CardiacCT",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "Taiwan-AICUP-CardiacCT__patient0068.nii.gz",
+"item_id": "6acf2ae78b4d3a662c9796a2",
+"size": 91000154,
+"dataset": "Taiwan-AICUP-CardiacCT",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "Taiwan-AICUP-CardiacCT__patient0090.nii.gz",
+"item_id": "6acf2b0a8b4d3a662c9796ce",
+"size": 94037887,
+"dataset": "Taiwan-AICUP-CardiacCT",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "Taiwan-AICUP-CardiacCT__patient0091.nii.gz",
+"item_id": "6acf2b0c8b4d3a662c9796d0",
+"size": 132281487,
+"dataset": "Taiwan-AICUP-CardiacCT",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "Taiwan-AICUP-CardiacCT__patient0093.nii.gz",
+"item_id": "6acf2b0f8b4d3a662c9796d4",
+"size": 105994624,
+"dataset": "Taiwan-AICUP-CardiacCT",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "Taiwan-AICUP-CardiacCT__patient0098.nii.gz",
+"item_id": "6acf2b178b4d3a662c9796de",
+"size": 110654289,
+"dataset": "Taiwan-AICUP-CardiacCT",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "TotalSegmentator-cardiac__s0356.nii.gz",
+"item_id": "6acf2b348b4d3a662c979702",
+"size": 1808162,
+"dataset": "TotalSegmentator-cardiac",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "TotalSegmentator-cardiac__s0368.nii.gz",
+"item_id": "6acf2b368b4d3a662c979704",
+"size": 1519407,
+"dataset": "TotalSegmentator-cardiac",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "TotalSegmentator-cardiac__s0465.nii.gz",
+"item_id": "6acf2b4d8b4d3a662c979722",
+"size": 3044195,
+"dataset": "TotalSegmentator-cardiac",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "TotalSegmentator-cardiac__s0655.nii.gz",
+"item_id": "6acf2b618b4d3a662c97973a",
+"size": 1493530,
+"dataset": "TotalSegmentator-cardiac",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "TotalSegmentator-cardiac__s0738.nii.gz",
+"item_id": "6acf2b738b4d3a662c979750",
+"size": 3451348,
+"dataset": "TotalSegmentator-cardiac",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "TotalSegmentator-cardiac__s0839.nii.gz",
+"item_id": "6acf2b888b4d3a662c97976a",
+"size": 1362554,
+"dataset": "TotalSegmentator-cardiac",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "TotalSegmentator-cardiac__s0846.nii.gz",
+"item_id": "6acf2b8a8b4d3a662c97976c",
+"size": 1388659,
+"dataset": "TotalSegmentator-cardiac",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "TotalSegmentator-cardiac__s0871.nii.gz",
+"item_id": "6acf2b8d8b4d3a662c979770",
+"size": 11174605,
+"dataset": "TotalSegmentator-cardiac",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "TotalSegmentator-cardiac__s0879.nii.gz",
+"item_id": "6acf2b908b4d3a662c979774",
+"size": 3737534,
+"dataset": "TotalSegmentator-cardiac",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "TotalSegmentator-cardiac__s0936.nii.gz",
+"item_id": "6acf2b9e8b4d3a662c979786",
+"size": 4931442,
+"dataset": "TotalSegmentator-cardiac",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "TotalSegmentator-cardiac__s0972.nii.gz",
+"item_id": "6acf2ba58b4d3a662c97978e",
+"size": 4638919,
+"dataset": "TotalSegmentator-cardiac",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "TotalSegmentator-cardiac__s0980.nii.gz",
+"item_id": "6acf2ba98b4d3a662c979794",
+"size": 2475720,
+"dataset": "TotalSegmentator-cardiac",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "TotalSegmentator-cardiac__s1002.nii.gz",
+"item_id": "6acf2bac8b4d3a662c979798",
+"size": 4368093,
+"dataset": "TotalSegmentator-cardiac",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "TotalSegmentator-cardiac__s1097.nii.gz",
+"item_id": "6acf2bbd8b4d3a662c9797ac",
+"size": 2786451,
+"dataset": "TotalSegmentator-cardiac",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "TotalSegmentator-cardiac__s1106.nii.gz",
+"item_id": "6acf2bc08b4d3a662c9797b0",
+"size": 1958205,
+"dataset": "TotalSegmentator-cardiac",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "TotalSegmentator-cardiac__s1345.nii.gz",
+"item_id": "6acf2bec8b4d3a662c9797e6",
+"size": 2620437,
+"dataset": "TotalSegmentator-cardiac",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "VMR-Coronary__0067_H_CORO_KD.nii.gz",
+"item_id": "6acf2bef8b4d3a662c9797ea",
+"size": 73269769,
+"dataset": "VMR-Coronary",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "VMR-Coronary__0069_H_CORO_KD.nii.gz",
+"item_id": "6acf2bf38b4d3a662c9797ee",
+"size": 50798401,
+"dataset": "VMR-Coronary",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "VMR-Coronary__0072_H_CORO_KD.nii.gz",
+"item_id": "6acf2bf88b4d3a662c9797f4",
+"size": 104373425,
+"dataset": "VMR-Coronary",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "VMR-Coronary__0076_H_CORO_CAD.nii.gz",
+"item_id": "6acf2bff8b4d3a662c9797fc",
+"size": 98979624,
+"dataset": "VMR-Coronary",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "VMR-Coronary__0146_H_CORO_SVGD.nii.gz",
+"item_id": "6acf2c018b4d3a662c9797fe",
+"size": 115087216,
+"dataset": "VMR-Coronary",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "VMR-Coronary__0148_H_CORO_SVGD.nii.gz",
+"item_id": "6acf2c048b4d3a662c979802",
+"size": 57268998,
+"dataset": "VMR-Coronary",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "VMR-Coronary__0149_H_CORO_SVGD_0.nii.gz",
+"item_id": "6acf2c068b4d3a662c979804",
+"size": 75489969,
+"dataset": "VMR-Coronary",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "VMR-Coronary__0151_H_CORO_SVGD.nii.gz",
+"item_id": "6acf2c0a8b4d3a662c979808",
+"size": 141935477,
+"dataset": "VMR-Coronary",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "VMR-Coronary__0152_H_CORO_SVGD.nii.gz",
+"item_id": "6acf2c0b8b4d3a662c97980a",
+"size": 124905138,
+"dataset": "VMR-Coronary",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "VMR-Coronary__0155_H_CORO_SVGD.nii.gz",
+"item_id": "6acf2c118b4d3a662c979810",
+"size": 141661406,
+"dataset": "VMR-Coronary",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "VMR-Coronary__0157_H_CORO_SVGD_0.nii.gz",
+"item_id": "6acf2c148b4d3a662c979814",
+"size": 64328540,
+"dataset": "VMR-Coronary",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "VMR-Coronary__0158_H_CORO_SVGD.nii.gz",
+"item_id": "6acf2c198b4d3a662c97981a",
+"size": 53061284,
+"dataset": "VMR-Coronary",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "VMR-Coronary__0169_H_CORO_KD.nii.gz",
+"item_id": "6acf2c1b8b4d3a662c97981c",
+"size": 73785906,
+"dataset": "VMR-Coronary",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "VMR-Coronary__0170_H_CORO_KD.nii.gz",
+"item_id": "6acf2c1d8b4d3a662c97981e",
+"size": 81042546,
+"dataset": "VMR-Coronary",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "VMR-Coronary__0173_H_CORO_KD.nii.gz",
+"item_id": "6acf2c1e8b4d3a662c979820",
+"size": 89097790,
+"dataset": "VMR-Coronary",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "VMR-Coronary__0176_H_CORO_KD.nii.gz",
+"item_id": "6acf2c238b4d3a662c979826",
+"size": 83110743,
+"dataset": "VMR-Coronary",
+"priority": 2,
+"annotatable": "limited",
+"spacing_suspect": false
+},
+{
+"name": "CCA200-HF__CCA_00.nii.gz",
+"item_id": "6acf26878b4d3a662c979126",
+"size": 118176275,
+"dataset": "CCA200-HF",
+"priority": 3,
+"annotatable": "yes",
+"spacing_suspect": true
+},
+{
+"name": "CCA200-HF__CCA_01.nii.gz",
+"item_id": "6acf268a8b4d3a662c979128",
+"size": 114746610,
+"dataset": "CCA200-HF",
+"priority": 3,
+"annotatable": "yes",
+"spacing_suspect": true
+},
+{
+"name": "CCA200-HF__CCA_02.nii.gz",
+"item_id": "6acf268b8b4d3a662c97912a",
+"size": 135142795,
+"dataset": "CCA200-HF",
+"priority": 3,
+"annotatable": "yes",
+"spacing_suspect": true
+},
+{
+"name": "CCA200-HF__CCA_03.nii.gz",
+"item_id": "6acf268d8b4d3a662c97912c",
+"size": 136740194,
+"dataset": "CCA200-HF",
+"priority": 3,
+"annotatable": "yes",
+"spacing_suspect": true
+},
+{
+"name": "CCA200-HF__CCA_04.nii.gz",
+"item_id": "6acf268e8b4d3a662c97912e",
+"size": 105707461,
+"dataset": "CCA200-HF",
+"priority": 3,
+"annotatable": "yes",
+"spacing_suspect": true
+},
+{
+"name": "CCA200-HF__CCA_05.nii.gz",
+"item_id": "6acf26908b4d3a662c979130",
+"size": 152081865,
+"dataset": "CCA200-HF",
+"priority": 3,
+"annotatable": "yes",
+"spacing_suspect": true
+},
+{
+"name": "CCA200-HF__CCA_06.nii.gz",
+"item_id": "6acf26918b4d3a662c979132",
+"size": 150094778,
+"dataset": "CCA200-HF",
+"priority": 3,
+"annotatable": "limited",
+"spacing_suspect": true
+},
+{
+"name": "CCA200-HF__CCA_07.nii.gz",
+"item_id": "6acf26938b4d3a662c979134",
+"size": 133457189,
+"dataset": "CCA200-HF",
+"priority": 3,
+"annotatable": "yes",
+"spacing_suspect": true
+},
+{
+"name": "CCA200-HF__CCA_08.nii.gz",
+"item_id": "6acf26958b4d3a662c979136",
+"size": 147558115,
+"dataset": "CCA200-HF",
+"priority": 3,
+"annotatable": "yes",
+"spacing_suspect": true
+},
+{
+"name": "CCA200-HF__CCA_09.nii.gz",
+"item_id": "6acf26968b4d3a662c979138",
+"size": 134619367,
+"dataset": "CCA200-HF",
+"priority": 3,
+"annotatable": "yes",
+"spacing_suspect": true
+},
+{
+"name": "CCA200-HF__CCA_10.nii.gz",
+"item_id": "6acf26988b4d3a662c97913a",
+"size": 129380896,
+"dataset": "CCA200-HF",
+"priority": 3,
+"annotatable": "yes",
+"spacing_suspect": true
+},
+{
+"name": "CCA200-HF__CCA_11.nii.gz",
+"item_id": "6acf26998b4d3a662c97913c",
+"size": 134786330,
+"dataset": "CCA200-HF",
+"priority": 3,
+"annotatable": "yes",
+"spacing_suspect": true
+},
+{
+"name": "CCA200-HF__CCA_12.nii.gz",
+"item_id": "6acf269b8b4d3a662c97913e",
+"size": 118590483,
+"dataset": "CCA200-HF",
+"priority": 3,
+"annotatable": "yes",
+"spacing_suspect": true
+},
+{
+"name": "CCA200-HF__CCA_13.nii.gz",
+"item_id": "6acf269d8b4d3a662c979140",
+"size": 139291712,
+"dataset": "CCA200-HF",
+"priority": 3,
+"annotatable": "yes",
+"spacing_suspect": true
+},
+{
+"name": "CCA200-HF__CCA_14.nii.gz",
+"item_id": "6acf269e8b4d3a662c979142",
+"size": 129077856,
+"dataset": "CCA200-HF",
+"priority": 3,
+"annotatable": "yes",
+"spacing_suspect": true
+},
+{
+"name": "CCA200-HF__CCA_15.nii.gz",
+"item_id": "6acf26a08b4d3a662c979144",
+"size": 146469553,
+"dataset": "CCA200-HF",
+"priority": 3,
+"annotatable": "yes",
+"spacing_suspect": true
+},
+{
+"name": "CCA200-HF__CCA_16.nii.gz",
+"item_id": "6acf26a18b4d3a662c979146",
+"size": 139881807,
+"dataset": "CCA200-HF",
+"priority": 3,
+"annotatable": "yes",
+"spacing_suspect": true
+},
+{
+"name": "CCA200-HF__CCA_17.nii.gz",
+"item_id": "6acf26a38b4d3a662c979148",
+"size": 132179643,
+"dataset": "CCA200-HF",
+"priority": 3,
+"annotatable": "limited",
+"spacing_suspect": true
+},
+{
+"name": "CCA200-HF__CCA_18.nii.gz",
+"item_id": "6acf26a48b4d3a662c97914a",
+"size": 124465778,
+"dataset": "CCA200-HF",
+"priority": 3,
+"annotatable": "yes",
+"spacing_suspect": true
+},
+{
+"name": "CCA200-HF__CCA_19.nii.gz",
+"item_id": "6acf26a68b4d3a662c97914c",
+"size": 135452862,
+"dataset": "CCA200-HF",
+"priority": 3,
+"annotatable": "yes",
+"spacing_suspect": true
+},
+{
+"name": "HOCMvalvesSeg__11.nii.gz",
+"item_id": "6acf27068b4d3a662c9791c4",
+"size": 49920776,
+"dataset": "HOCMvalvesSeg",
+"priority": 3,
+"annotatable": "limited",
+"spacing_suspect": true
+},
+{
+"name": "HOCMvalvesSeg__12.nii.gz",
+"item_id": "6acf27088b4d3a662c9791c6",
+"size": 63083816,
+"dataset": "HOCMvalvesSeg",
+"priority": 3,
+"annotatable": "limited",
+"spacing_suspect": true
+},
+{
+"name": "HOCMvalvesSeg__13.nii.gz",
+"item_id": "6acf27098b4d3a662c9791c8",
+"size": 70900612,
+"dataset": "HOCMvalvesSeg",
+"priority": 3,
+"annotatable": "limited",
+"spacing_suspect": true
+},
+{
+"name": "HOCMvalvesSeg__15.nii.gz",
+"item_id": "6acf270b8b4d3a662c9791ca",
+"size": 56215818,
+"dataset": "HOCMvalvesSeg",
+"priority": 3,
+"annotatable": "limited",
+"spacing_suspect": true
+},
+{
+"name": "HOCMvalvesSeg__16.nii.gz",
+"item_id": "6acf270c8b4d3a662c9791cc",
+"size": 36865335,
+"dataset": "HOCMvalvesSeg",
+"priority": 3,
+"annotatable": "limited",
+"spacing_suspect": true
+},
+{
+"name": "HOCMvalvesSeg__17.nii.gz",
+"item_id": "6acf270e8b4d3a662c9791ce",
+"size": 49947282,
+"dataset": "HOCMvalvesSeg",
+"priority": 3,
+"annotatable": "limited",
+"spacing_suspect": true
+},
+{
+"name": "HOCMvalvesSeg__18.nii.gz",
+"item_id": "6acf270f8b4d3a662c9791d0",
+"size": 58840835,
+"dataset": "HOCMvalvesSeg",
+"priority": 3,
+"annotatable": "limited",
+"spacing_suspect": true
+},
+{
+"name": "HOCMvalvesSeg__22.nii.gz",
+"item_id": "6acf27118b4d3a662c9791d2",
+"size": 48745819,
+"dataset": "HOCMvalvesSeg",
+"priority": 3,
+"annotatable": "limited",
+"spacing_suspect": true
+},
+{
+"name": "HOCMvalvesSeg__23.nii.gz",
+"item_id": "6acf27128b4d3a662c9791d4",
+"size": 49807983,
+"dataset": "HOCMvalvesSeg",
+"priority": 3,
+"annotatable": "limited",
+"spacing_suspect": true
+},
+{
+"name": "HOCMvalvesSeg__24.nii.gz",
+"item_id": "6acf27148b4d3a662c9791d6",
+"size": 66783921,
+"dataset": "HOCMvalvesSeg",
+"priority": 3,
+"annotatable": "limited",
+"spacing_suspect": true
+},
+{
+"name": "HOCMvalvesSeg__3.nii.gz",
+"item_id": "6acf27168b4d3a662c9791d8",
+"size": 56126095,
+"dataset": "HOCMvalvesSeg",
+"priority": 3,
+"annotatable": "limited",
+"spacing_suspect": true
+},
+{
+"name": "HOCMvalvesSeg__31.nii.gz",
+"item_id": "6acf27188b4d3a662c9791da",
+"size": 40303854,
+"dataset": "HOCMvalvesSeg",
+"priority": 3,
+"annotatable": "limited",
+"spacing_suspect": true
+},
+{
+"name": "HOCMvalvesSeg__33.nii.gz",
+"item_id": "6acf27198b4d3a662c9791dc",
+"size": 85747270,
+"dataset": "HOCMvalvesSeg",
+"priority": 3,
+"annotatable": "limited",
+"spacing_suspect": true
+},
+{
+"name": "HOCMvalvesSeg__34.nii.gz",
+"item_id": "6acf271b8b4d3a662c9791de",
+"size": 64726268,
+"dataset": "HOCMvalvesSeg",
+"priority": 3,
+"annotatable": "yes",
+"spacing_suspect": true
+},
+{
+"name": "HOCMvalvesSeg__35.nii.gz",
+"item_id": "6acf271c8b4d3a662c9791e0",
+"size": 56799134,
+"dataset": "HOCMvalvesSeg",
+"priority": 3,
+"annotatable": "limited",
+"spacing_suspect": true
+},
+{
+"name": "HOCMvalvesSeg__37.nii.gz",
+"item_id": "6acf271e8b4d3a662c9791e2",
+"size": 47826776,
+"dataset": "HOCMvalvesSeg",
+"priority": 3,
+"annotatable": "limited",
+"spacing_suspect": true
+},
+{
+"name": "HOCMvalvesSeg__39.nii.gz",
+"item_id": "6acf27208b4d3a662c9791e4",
+"size": 61198944,
+"dataset": "HOCMvalvesSeg",
+"priority": 3,
+"annotatable": "limited",
+"spacing_suspect": true
+},
+{
+"name": "HOCMvalvesSeg__40.nii.gz",
+"item_id": "6acf27218b4d3a662c9791e6",
+"size": 44797571,
+"dataset": "HOCMvalvesSeg",
+"priority": 3,
+"annotatable": "limited",
+"spacing_suspect": true
+},
+{
+"name": "HOCMvalvesSeg__42.nii.gz",
+"item_id": "6acf27238b4d3a662c9791e8",
+"size": 48501616,
+"dataset": "HOCMvalvesSeg",
+"priority": 3,
+"annotatable": "limited",
+"spacing_suspect": true
+},
+{
+"name": "HOCMvalvesSeg__46.nii.gz",
+"item_id": "6acf27268b4d3a662c9791ec",
+"size": 63549508,
+"dataset": "HOCMvalvesSeg",
+"priority": 3,
+"annotatable": "limited",
+"spacing_suspect": true
+},
+{
+"name": "HOCMvalvesSeg__47.nii.gz",
+"item_id": "6acf27288b4d3a662c9791ee",
+"size": 52089268,
+"dataset": "HOCMvalvesSeg",
+"priority": 3,
+"annotatable": "limited",
+"spacing_suspect": true
+},
+{
+"name": "HOCMvalvesSeg__48.nii.gz",
+"item_id": "6acf27298b4d3a662c9791f0",
+"size": 46440464,
+"dataset": "HOCMvalvesSeg",
+"priority": 3,
+"annotatable": "limited",
+"spacing_suspect": true
+},
+{
+"name": "HOCMvalvesSeg__5.nii.gz",
+"item_id": "6acf272b8b4d3a662c9791f2",
+"size": 48775702,
+"dataset": "HOCMvalvesSeg",
+"priority": 3,
+"annotatable": "limited",
+"spacing_suspect": true
+},
+{
+"name": "HOCMvalvesSeg__7.nii.gz",
+"item_id": "6acf272c8b4d3a662c9791f4",
+"size": 57089970,
+"dataset": "HOCMvalvesSeg",
+"priority": 3,
+"annotatable": "limited",
+"spacing_suspect": true
+},
+{
+"name": "ImageALCAPA__1.nii.gz",
+"item_id": "6acf27d68b4d3a662c9792cc",
+"size": 65130856,
+"dataset": "ImageALCAPA",
+"priority": 3,
+"annotatable": "limited",
+"spacing_suspect": true
+},
+{
+"name": "ImageALCAPA__10.nii.gz",
+"item_id": "6acf27d78b4d3a662c9792ce",
+"size": 91964386,
+"dataset": "ImageALCAPA",
+"priority": 3,
+"annotatable": "limited",
+"spacing_suspect": true
+},
+{
+"name": "ImageALCAPA__11.nii.gz",
+"item_id": "6acf27d98b4d3a662c9792d0",
+"size": 87486355,
+"dataset": "ImageALCAPA",
+"priority": 3,
+"annotatable": "limited",
+"spacing_suspect": true
+},
+{
+"name": "ImageALCAPA__12.nii.gz",
+"item_id": "6acf27db8b4d3a662c9792d2",
+"size": 67699549,
+"dataset": "ImageALCAPA",
+"priority": 3,
+"annotatable": "limited",
+"spacing_suspect": true
+},
+{
+"name": "ImageALCAPA__13.nii.gz",
+"item_id": "6acf27dc8b4d3a662c9792d4",
+"size": 90361521,
+"dataset": "ImageALCAPA",
+"priority": 3,
+"annotatable": "limited",
+"spacing_suspect": true
+},
+{
+"name": "ImageALCAPA__14.nii.gz",
+"item_id": "6acf27de8b4d3a662c9792d6",
+"size": 86185821,
+"dataset": "ImageALCAPA",
+"priority": 3,
+"annotatable": "limited",
+"spacing_suspect": true
+},
+{
+"name": "ImageALCAPA__15.nii.gz",
+"item_id": "6acf27df8b4d3a662c9792d8",
+"size": 67480428,
+"dataset": "ImageALCAPA",
+"priority": 3,
+"annotatable": "limited",
+"spacing_suspect": true
+},
+{
+"name": "ImageALCAPA__16.nii.gz",
+"item_id": "6acf27e18b4d3a662c9792da",
+"size": 149438302,
+"dataset": "ImageALCAPA",
+"priority": 3,
+"annotatable": "limited",
+"spacing_suspect": true
+},
+{
+"name": "ImageALCAPA__17.nii.gz",
+"item_id": "6acf27e28b4d3a662c9792dc",
+"size": 65374724,
+"dataset": "ImageALCAPA",
+"priority": 3,
+"annotatable": "limited",
+"spacing_suspect": true
+},
+{
+"name": "ImageALCAPA__18.nii.gz",
+"item_id": "6acf27e48b4d3a662c9792de",
+"size": 72092055,
+"dataset": "ImageALCAPA",
+"priority": 3,
+"annotatable": "limited",
+"spacing_suspect": true
+},
+{
+"name": "ImageALCAPA__19.nii.gz",
+"item_id": "6acf27e58b4d3a662c9792e0",
+"size": 65801833,
+"dataset": "ImageALCAPA",
+"priority": 3,
+"annotatable": "limited",
+"spacing_suspect": true
+},
+{
+"name": "ImageALCAPA__2.nii.gz",
+"item_id": "6acf27e78b4d3a662c9792e2",
+"size": 124709694,
+"dataset": "ImageALCAPA",
+"priority": 3,
+"annotatable": "limited",
+"spacing_suspect": true
+},
+{
+"name": "ImageALCAPA__20.nii.gz",
+"item_id": "6acf27e88b4d3a662c9792e4",
+"size": 81151061,
+"dataset": "ImageALCAPA",
+"priority": 3,
+"annotatable": "limited",
+"spacing_suspect": true
+},
+{
+"name": "ImageALCAPA__21.nii.gz",
+"item_id": "6acf27ea8b4d3a662c9792e6",
+"size": 171022740,
+"dataset": "ImageALCAPA",
+"priority": 3,
+"annotatable": "limited",
+"spacing_suspect": true
+},
+{
+"name": "ImageALCAPA__22.nii.gz",
+"item_id": "6acf27eb8b4d3a662c9792e8",
+"size": 104736538,
+"dataset": "ImageALCAPA",
+"priority": 3,
+"annotatable": "limited",
+"spacing_suspect": true
+},
+{
+"name": "ImageALCAPA__23.nii.gz",
+"item_id": "6acf27ed8b4d3a662c9792ea",
+"size": 129560081,
+"dataset": "ImageALCAPA",
+"priority": 3,
+"annotatable": "limited",
+"spacing_suspect": true
+},
+{
+"name": "ImageALCAPA__24.nii.gz",
+"item_id": "6acf27ef8b4d3a662c9792ec",
+"size": 86930476,
+"dataset": "ImageALCAPA",
+"priority": 3,
+"annotatable": "limited",
+"spacing_suspect": true
+},
+{
+"name": "ImageALCAPA__25.nii.gz",
+"item_id": "6acf27f08b4d3a662c9792ee",
+"size": 64156454,
+"dataset": "ImageALCAPA",
+"priority": 3,
+"annotatable": "limited",
+"spacing_suspect": true
+},
+{
+"name": "ImageALCAPA__26.nii.gz",
+"item_id": "6acf27f28b4d3a662c9792f0",
+"size": 116033920,
+"dataset": "ImageALCAPA",
+"priority": 3,
+"annotatable": "limited",
+"spacing_suspect": true
+},
+{
+"name": "ImageALCAPA__27.nii.gz",
+"item_id": "6acf27f38b4d3a662c9792f2",
+"size": 62634738,
+"dataset": "ImageALCAPA",
+"priority": 3,
+"annotatable": "limited",
+"spacing_suspect": true
+},
+{
+"name": "ImageALCAPA__28.nii.gz",
+"item_id": "6acf27f58b4d3a662c9792f4",
+"size": 102885049,
+"dataset": "ImageALCAPA",
+"priority": 3,
+"annotatable": "limited",
+"spacing_suspect": true
+},
+{
+"name": "ImageALCAPA__29.nii.gz",
+"item_id": "6acf27f68b4d3a662c9792f6",
+"size": 64582873,
+"dataset": "ImageALCAPA",
+"priority": 3,
+"annotatable": "limited",
+"spacing_suspect": true
+},
+{
+"name": "ImageALCAPA__3.nii.gz",
+"item_id": "6acf27f88b4d3a662c9792f8",
+"size": 84534366,
+"dataset": "ImageALCAPA",
+"priority": 3,
+"annotatable": "limited",
+"spacing_suspect": true
+},
+{
+"name": "ImageALCAPA__30.nii.gz",
+"item_id": "6acf27fa8b4d3a662c9792fa",
+"size": 111372672,
+"dataset": "ImageALCAPA",
+"priority": 3,
+"annotatable": "limited",
+"spacing_suspect": true
+},
+{
+"name": "ImageALCAPA__4.nii.gz",
+"item_id": "6acf27fb8b4d3a662c9792fc",
+"size": 89917453,
+"dataset": "ImageALCAPA",
+"priority": 3,
+"annotatable": "limited",
+"spacing_suspect": true
+},
+{
+"name": "ImageALCAPA__5.nii.gz",
+"item_id": "6acf27fd8b4d3a662c9792fe",
+"size": 67125159,
+"dataset": "ImageALCAPA",
+"priority": 3,
+"annotatable": "limited",
+"spacing_suspect": true
+},
+{
+"name": "ImageALCAPA__6.nii.gz",
+"item_id": "6acf27fe8b4d3a662c979300",
+"size": 69822311,
+"dataset": "ImageALCAPA",
+"priority": 3,
+"annotatable": "limited",
+"spacing_suspect": true
+},
+{
+"name": "ImageALCAPA__7.nii.gz",
+"item_id": "6acf28008b4d3a662c979302",
+"size": 82138834,
+"dataset": "ImageALCAPA",
+"priority": 3,
+"annotatable": "limited",
+"spacing_suspect": true
+},
+{
+"name": "ImageALCAPA__8.nii.gz",
+"item_id": "6acf28028b4d3a662c979304",
+"size": 67858861,
+"dataset": "ImageALCAPA",
+"priority": 3,
+"annotatable": "limited",
+"spacing_suspect": true
+},
+{
+"name": "ImageALCAPA__9.nii.gz",
+"item_id": "6acf28038b4d3a662c979306",
+"size": 86100201,
+"dataset": "ImageALCAPA",
+"priority": 3,
+"annotatable": "limited",
+"spacing_suspect": true
+}
+]

@@ -24,6 +24,12 @@ from .config import Config, TaskConfig
 from .metrics import DEFAULT_NSD_TOLERANCE_MM, ClassScore, aggregate, nanmean, score_case
 
 
+def _save_test_probabilities(task: TaskConfig) -> bool:
+    from .plans import task_extras
+
+    return bool(task_extras(task).get("save_test_probabilities"))
+
+
 def predict_test_set(
     cfg: Config,
     task: TaskConfig,
@@ -73,9 +79,11 @@ def predict_test_set(
         [[str(f)] for f in files],
         [str(out / f.name.replace("_0000.nii.gz", "")) for f in files],
         # Probability maps are float16 per class per voxel -- hundreds of GB
-        # across a group model's test set, and only needed for cross-fold
-        # ensembling, which single-fold evaluation does not do.
-        save_probabilities=False,
+        # across a group model's test set, so they are off by default. A task
+        # may require them (task file `save_test_probabilities: true`): the
+        # coronary task does, because A7 binds "val and test inference save
+        # softmax" (Echo D11).
+        save_probabilities=_save_test_probabilities(task),
         overwrite=True,
         num_processes_preprocessing=2,
         num_processes_segmentation_export=2,

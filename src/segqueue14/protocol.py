@@ -11,10 +11,11 @@ having a separate contract:
   live check a *missing* version is refused too: a client that does not say what
   it speaks is not one that was written for this server.
 * **A ``prelabel`` asset** instead of the live binary coronary ``seed`` (D8, D10):
-  the 14-class model's prediction, loaded straight into the project segments.
+  a model's prediction in the project's classes, loaded straight into the
+  project segments.
 * **A ``seed`` asset of its own** (D23): for the pooled new datasets, an
   automatic *binary* vessel mask (TotalSegmentator ``coronary_arteries``) that the
-  annotator divides into the 14 classes. It is a helper segment, like the heart
+  annotator divides into the four classes (D25). It is a helper segment, like the heart
   region, and is structurally unable to reach a submission.
 * **``missing_required``** -- D13's submit rule, refused by name.
 
@@ -106,13 +107,13 @@ ERR_MISSING_REQUIRED = "missing_required"
 #: The whole-heart mask from the source dataset, as in the live project. Still
 #: shipped: it frames the view and never reaches a submission.
 ASSET_REGION = "region"
-#: The 14-class model's prediction (uint8, values 0..14, on the CT grid). Loaded
+#: A model's prediction (uint8, values 0..4, on the CT grid). Loaded
 #: into the project's own segments, edited, and submitted -- unlike every other
 #: asset it *is* the work, once corrected.
 ASSET_PRELABEL = "prelabel"
 #: A binary (0/1) vessel mask on the CT grid -- an automatic segmentation of the
 #: coronary tree with no classes (D23). Shown beside the project segments as a
-#: guide to divide into the 14 classes; never submitted.
+#: guide to divide into the four classes; never submitted.
 ASSET_SEED = "seed"
 #: What an annotator may fetch. The ImageCAS-X reference is deliberately absent:
 #: an annotator who could download it could copy it.

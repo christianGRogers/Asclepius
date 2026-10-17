@@ -1,6 +1,6 @@
-"""SegQueue14 export -> ``segtrain convert`` with ``coronary_icx14``, end to end.
+"""SegQueue14 export -> ``segtrain convert`` with ``coronary_icx4``, end to end.
 
-A 14-class read goes out of SegQueue14 as one binary mask per class
+A read in the project's four classes (D25) goes out of SegQueue14 as one binary mask per class
 (``segmentations/<name>.nii.gz``) and must come back from ``segtrain convert`` as
 the same integers on the same voxels. Run both ways a training set can arrive:
 per-class masks (the export) and a single label volume (an ImageCAS-X file or a
@@ -45,10 +45,10 @@ def _label_set():
 
 
 def _read(seed=0, shape=(24, 20, 18)):
-    """A 14-class volume with every class present and a few touching."""
+    """A volume with every project class present and a few touching."""
     rng = np.random.default_rng(seed)
     vol = np.zeros(shape, dtype=np.uint8)
-    for k in range(1, 15):
+    for k in range(1, labels.N_CLASSES + 1):
         z = rng.integers(0, shape[0] - 3)
         y = rng.integers(0, shape[1] - 3)
         x = rng.integers(0, shape[2] - 3)
@@ -112,7 +112,7 @@ def test_the_export_writes_one_mask_per_class_and_convert_restores_the_labels(tm
         assert f'"{name}"' in dataset
 
 
-def test_an_integer_volume_with_imagecas_x_values_converts_unchanged(tmp_path):
+def test_an_integer_volume_in_the_project_values_converts_unchanged(tmp_path):
     root = tmp_path / "icx"
     truth = _read(seed=5)
     folder = root / "imagecas_0010"
@@ -126,15 +126,14 @@ def test_an_integer_volume_with_imagecas_x_values_converts_unchanged(tmp_path):
     assert report.ok, report.render()
     got = np.asarray(nib.load(str(raw / "labelsTr" / "imagecas_0010.nii.gz")).dataobj)
     assert np.array_equal(got, truth)
-    assert set(np.unique(got)) == set(range(15))
+    assert set(np.unique(got)) == set(range(labels.N_CLASSES + 1))
 
 
 def test_absent_optional_classes_are_reported_missing_not_dropped(tmp_path):
-    """A case with no IM or L-PDA (common) still converts; those are absent, not lost."""
+    """A case with no LM (separate LAD and LCx ostia) still converts; LM is absent, not lost."""
     root = tmp_path / "icx"
     truth = _read(seed=3)
-    truth[truth == labels.LABEL_VALUES["IM"]] = 0
-    truth[truth == labels.LABEL_VALUES["L-PDA"]] = 0
+    truth[truth == labels.LABEL_VALUES["LM"]] = 0
     folder = root / "imagecas_0011"
     folder.mkdir(parents=True)
     nib.save(nib.Nifti1Image(np.zeros(truth.shape, dtype=np.int16), np.eye(4)),

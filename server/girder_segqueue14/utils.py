@@ -75,7 +75,7 @@ def rootCollection(creator=None):
             COLLECTION_NAME,
             creator=creator or _anyAdmin(),
             description='Prelabels, submissions and scratch uploads for the '
-                        'SegQueue14 (14-class prelabel correction) project. The CT '
+                        'SegQueue14 (4-class coronary) project. The CT '
                         'volumes are not here: cases reference the SegQueue '
                         "collection's files by id.",
             public=False,
@@ -129,8 +129,8 @@ def ensureGroups(creator=None):
         return []
     made = []
     for name, description in (
-        (ANNOTATOR_GROUP, 'May be assigned SegQueue14 (14-class) cases to correct.'),
-        (REVIEWER_GROUP, 'May review SegQueue14 (14-class) submissions.'),
+        (ANNOTATOR_GROUP, 'May be assigned SegQueue14 cases to annotate.'),
+        (REVIEWER_GROUP, 'May review SegQueue14 submissions.'),
     ):
         if Group().findOne({'name': name}) is None:
             Group().createGroup(name, creator=owner, description=description,

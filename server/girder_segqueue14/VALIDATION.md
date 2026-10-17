@@ -37,12 +37,13 @@ The queue is the 675 pooled volumes only (D23): no ImageCAS case of any kind.
 - [ ] From SegQueue 0.13, *Check for updates* offers 0.14.0 and **Update and
       restart** installs it; after the restart *Segmentation -> SegQueue14* opens,
       and opening "SegQueue" forwards to it.
-- [ ] Log in. The panel shows the instructions text and the 14 classes with colours
+- [ ] Log in. The panel shows the instructions text and the four classes (LM, LAD, LCx,
+      RCA) with colours
       and hints; LAD, LCx and RCA are marked required.
 - [ ] **Get next case** gives the first volume of the pool list
       (`Figshare-23057000__PA0` unless it was left out).
 - [ ] The case opens with the yellow `~ vessel seed (not submitted)` segment over the
-      vessels (faint in 3D) and the 14 class segments empty; the case line says
+      vessels (faint in 3D) and the four class segments empty; the case line says
       `vessel seed: divide it into the classes`.
 - [ ] Divide part of it: Segment Editor -> *Islands* -> *Keep selected island* on a copy,
       or *Logical operators* -> *Add* the seed into a class and erase what is not
@@ -62,7 +63,7 @@ The queue is the 675 pooled volumes only (D23): no ImageCAS case of any kind.
 - [ ] Within a minute of the submit, the worker log shows it scored; as a reviewer in
       the SegQueue14 panel the case's history row has a Dice, and its tooltip lists
       the 14 per-class Dice values and the prelabel version.
-- [ ] The seed segment is not in the submission (the reviewer sees 14 classes only).
+- [ ] The seed segment is not in the submission (the reviewer sees the four classes only).
 - [ ] Two test accounts each take the same (two-read) case: the first read waits, and
       is decided with the second; both carry a pair Dice. There is no ImageCAS-X
       reference score on pool cases -- the pair Dice and review are the check.
@@ -73,12 +74,11 @@ The queue is the 675 pooled volumes only (D23): no ImageCAS case of any kind.
 ## E. Export round trip
 
 - [ ] `segqueue14-export --out /tmp/sq14-export` writes, per approved case,
-      `ct.nii.gz` and 14 masks named `LM.nii.gz ... Other.nii.gz`, and a manifest;
+      `ct.nii.gz` and four masks `LM.nii.gz`, `LAD.nii.gz`, `LCx.nii.gz`, `RCA.nii.gz`, and a manifest;
       each case folder is named after its `<Source>__<Case>`.
-- [ ] `segtrain convert` with the `coronary_icx14` label set converts it, and the
-      label volume has values 0-14 where the read had them
-      (`tests/test_segqueue14_convert.py` does exactly this on synthetic reads; a
-      14-class *training task* config is a training decision and not on this branch).
+- [ ] `segtrain convert` with the `coronary_icx4` label set converts it, and the
+      label volume has values 0-4 where the read had them
+      (`tests/test_segqueue14_convert.py` does exactly this on synthetic reads).
 
 ## F. Rollback rehearsal (optional, recommended)
 

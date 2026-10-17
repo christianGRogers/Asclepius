@@ -12,13 +12,13 @@ Status: finished (territory exhausted). Total new: 10 contrast cardiac CTs (all 
   in-plane, 0.39-0.45 mm slice spacing (0.8-1 mm thickness), blood pool 300-515 HU. label.nii.gz = released LA
   chamber approximation (SLAWT_CT_la_chamber supplement; Deflate64 zip, needs `unzip`). Preview checked (CT_1);
   CT_9 auto spine check was a false alarm (tight FOV), checked visually and flagged in metadata.
-  Paper: Karim et al., Med Image Anal 50:36-53 (2018). Adapter: scripts/round3/modelling_slawt.py.
+  Paper: Karim et al., Med Image Anal 50:36-53 (2018). Adapter: tools/ccta/round3/modelling_slawt.py.
   The SLAWT **MRI** set (figshare /s/2904b1ee61c3240f9291) and the MRI wall labels are on the same page: not ingested (MRI).
 - **Figshare-DCM3-Pulmonary35**: one ECG-gated cardiac CTA ("CTA CARDIAC MORPHOLOGY", series "PULMONARY VEIN, 35%",
   iDose 3), Philips iCT 256, 120 kV, 512x512x354, 0.383x0.383x0.4 mm, blood pool ~404 HU. 16-class label
   (aorta asc/desc, SVC, IVC, PA + branches, PVs, LA, LAA, RA, LV, RV, **left main, RCA, PDA**) converted from the
   CVAT colour PNGs. Figshare file names are swapped (the "annotations" zip holds the DICOM). Depositor not named.
-  Adapter: scripts/round3/modelling_dcm3.py.
+  Adapter: tools/ccta/round3/modelling_dcm3.py.
 - How the figshare private pages were opened: they sit behind an AWS WAF JavaScript challenge (HTTP 202). A
   headless Chromium (playwright in a scratch venv, proxy CA added to an NSS db) renders them, which gives the
   ndownloader file ids; `https://ndownloader.figshare.com/files/<id>?private_link=<key>` then downloads with
@@ -69,7 +69,7 @@ Status: finished (territory exhausted). Total new: 10 contrast cardiac CTs (all 
   CTA); already known from round 1 (summary: "+40 aorta, +30 pulmonary"), not re-reported.
 
 ## Reusable tool
-scripts/round3/modelling_figshare_private.py renders figshare private-link pages past the AWS WAF challenge
+tools/ccta/round3/modelling_figshare_private.py renders figshare private-link pages past the AWS WAF challenge
 (headless Chromium via playwright; setup in its docstring). The scratch venv and browser I installed were
 deleted afterwards to free disk; the proxy CA was added to ~/.pki/nssdb so Chromium trusts the proxy.
 

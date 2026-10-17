@@ -15,7 +15,7 @@ files (nii/dcm/nrrd/mhd/mha/vti/IMA/extensionless DICOM/npz/h5/mrb); every cardi
 (DICOM tags or volume + preview PNG). All datasets of every uploader who posted cardiac CT were listed
 (xiaoweixumedicalai, younesselbrag, victorsix, grantmcnatt, apette, abbymorgan, f74096386, ahanafabidsazid,
 ayuuushsri, ayushsri2004, christopheronyiuke, mohammadmohaisen, manar18, kiuyha, arioobarzan, saurabhshahane,
-mrdurch, hasanbarimani). Scripts: /home/user/ccta/scripts/round3/kaggle_*.py.
+mrdurch, hasanbarimani). Scripts: /home/user/ccta/tools/ccta/round3/kaggle_*.py.
 
 ## Ingested
 - **Kaggle-mrdurch-WS3D-Cardiac** (T1, 5 CCTA of 512x512x280-320 voxels, about 0.8 GB as released (uncompressed int16), CC0 stated, provenance_verified=false): https://www.kaggle.com/datasets/mrdurch/weakly-supervised-3d-cardiac-image-segmentation . 0.43x0.43x0.5 mm HU, Chinese hospital (undocumented). Source file names are patient names: NOT stored (cases numbered 1-5, name hash only). label.nii.gz = label_GT (1 LV myo, 2 LV blood, 3 "RV" per README but looks like LA on case1; 255 ignore). Lead should decide whether to keep it given the leaked-name provenance.

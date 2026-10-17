@@ -31,10 +31,10 @@ Before you work on a source, check it is not listed, then append one line
 when done (append a new line; last line wins).
 
 ## Ingesting (upload to Girder)
-- Use the existing library: /home/user/ccta/scripts/ccta_ingest.py (Pool) and helpers in
-  /home/user/ccta/scripts/ingest_open.py (HTTPFile range reader, kaggle helpers, dicom_extra,
+- Use the existing library: /home/user/ccta/tools/ccta/ccta_ingest.py (Pool) and helpers in
+  /home/user/ccta/tools/ccta/ingest_open.py (HTTPFile range reader, kaggle helpers, dicom_extra,
   anatomy_check, retrying _open, Sink). Read them first. Write YOUR adapter code ONLY in
-  /home/user/ccta/scripts/round3/<yourname>_<source>.py (import from ../ via sys.path). Never edit other
+  /home/user/ccta/tools/ccta/round3/<yourname>_<source>.py (import from ../ via sys.path). Never edit other
   files. Never run git.
 - Token: `export GIRDER_TOKEN_FILE=/tmp/claude-0/-home-user-Asclepius/1b43aea1-ed14-5dd0-84ee-25f776047e09/scratchpad/secrets/.girder_token`
   — never print it or copy it anywhere.

@@ -5,7 +5,7 @@ Status: in progress.
 ## Ingested
 - **MVAA2026-MitralCT** (CCTA-Pool). MVAA 2026 challenge (MICCAI 2026 MWM workshop, Codabench 15662), Task 1 cardiac CT.
   1,040 unlabeled + 27 labeled training + 30 validation = 1,097 volumes, ~6.4 GB. Licence CC BY-NC (stated on the
-  challenge page). Public Google Drive zip, no account. Adapter: `scripts/round3/challenges3_mvaa.py`.
+  challenge page). Public Google Drive zip, no account. Adapter: `tools/ccta/round3/challenges3_mvaa.py`.
   - Flags: **cropped mitral-valve ROI** (most ~5 cm cube, 0.32-0.36 mm in-plane, 0.5 mm slices; a few larger 1 mm
     crops); coronaries mostly outside the ROI; HU; Guangdong hospitals incl. GDPH (possible ImageCAS patient overlap).
   - 27 labeled cases carry label.nii.gz (mitral valve mask).

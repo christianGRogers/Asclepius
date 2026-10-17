@@ -19,7 +19,7 @@ Status: **done (2026-10-13). The territory is exhausted. Nothing new could be in
 - **Related identifiers.** DataCite `relatedIdentifier` queries for every known cardiac CT dataset DOI and for the
   key papers (ImageCAS, MM-WHS, TotalSegmentator, CAT08, Baskaran).
 - **Web search** for figshare private links and for Zenodo and Mendeley cardiac CT deposits.
-- Scripts are in /home/user/ccta/scripts/round3/repos3_*.py. Harvest metadata is in round3/work_Repos3/ (no images).
+- Scripts are in /home/user/ccta/tools/ccta/round3/repos3_*.py. Harvest metadata is in round3/work_Repos3/ (no images).
 
 ## Ingested
 None. Every open human cardiac contrast CT in these four repositories is either already in CCTA-Pool, already in

@@ -10,7 +10,7 @@ My territory has very little left. I found **one new open patient** and ingested
   - **Contrast:** whole-chest coverage with contrast; the aortic root and LV look bright on the preview. hu_p99 is about 350, and the median of voxels between 150 and 800 HU is about 240, so contrast is moderate. I have graded it T2: gating is likely but not proven, and DICOM cardiac-phase tags are absent.
   - **Possible repeats:** the 5 volumes may be repeat reconstructions or phases of one acquisition. All have distinct sha256.
   - **Duplicates:** this patient does not match any known RIDER duplicate pair by slice count or size.
-- **Code:** `scripts/round3/opendata_idc_search.py` (search), `opendata_hu_probe.py` (preview and HU check), `opendata_idc_rider_extra.csv` (fed to the existing `ingest_idc.py`, unmodified).
+- **Code:** `tools/ccta/round3/opendata_idc_search.py` (search), `opendata_hu_probe.py` (preview and HU check), `opendata_idc_rider_extra.csv` (fed to the existing `ingest_idc.py`, unmodified).
 
 ## IDC re-search (idc-index 0.13 / data v25, which is still the newest release; no v26 found)
 I joined all 270,830 CT series with `ct_index` and `contrast_index`, then searched:

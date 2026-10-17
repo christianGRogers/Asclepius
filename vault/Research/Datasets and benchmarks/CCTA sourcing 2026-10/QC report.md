@@ -7,7 +7,7 @@ updated: 2026-10-14
 
 # QC of the 904 volumes added to SegQueue/cases
 
-Ten agents rendered every volume with `scripts/qc_render.py` (3 axial, coronal, sagittal, coronal MIP), looked at each picture and wrote one report line. Nothing was deleted or changed. Per-volume lines: `QC volume reports.csv` (name, Girder item id, anatomy, contrast, coronary visibility, resolution, quality, artefacts, orientation, annotatable, note).
+Ten agents rendered every volume with `tools/ccta/qc_render.py` (3 axial, coronal, sagittal, coronal MIP), looked at each picture and wrote one report line. Nothing was deleted or changed. Per-volume lines: `QC volume reports.csv` (name, Girder item id, anatomy, contrast, coronary visibility, resolution, quality, artefacts, orientation, annotatable, note).
 
 **Totals:** quality good 195 / fair 480 / poor 229; annotatable yes 262 / limited 430 / no 212; orientation ok 895, unclear 7, rotated 2.
 

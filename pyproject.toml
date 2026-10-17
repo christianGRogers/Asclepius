@@ -65,6 +65,13 @@ markers = [
 line-length = 100
 # Slicer 5.8 bundles Python 3.9, and the monitor module runs inside it.
 target-version = "py39"
+# Research and data-collection code is not linted: `experiments/` and `trillium/`
+# are one-off analyses and cluster jobs (and `trillium-results/` their copied
+# outputs), judged by the results they write into the
+# vault; `tools/ccta/` fetches and ingests public datasets once. None of it is
+# imported by the pipeline or shipped to annotators. Lint guards what is: src/,
+# server/, slicer/, scripts/, tests/.
+extend-exclude = ["experiments", "trillium", "trillium-results", "tools/ccta"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B"]

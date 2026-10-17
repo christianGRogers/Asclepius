@@ -66,7 +66,19 @@ fetch_branch() {
 
 # ------------------------------------------------------------ how Girder runs here
 
-under_systemd() { systemctl is-active --quiet segqueue-girder 2>/dev/null; }
+# Which Girder is serving: systemd's (its MainPID is a `girder serve`) or one the
+# launcher started (a `girder serve` that is not systemd's MainPID). "active" alone
+# is not enough -- a unit crash-looping on an occupied port reports active too.
+systemd_pid() { systemctl show -p MainPID --value segqueue-girder 2>/dev/null || echo 0; }
+launcher_girder() {
+    local main pid
+    main=$(systemd_pid)
+    for pid in $(pgrep -f 'girder serve' || true); do
+        [ "$pid" != "$main" ] && { echo "$pid"; return 0; }
+    done
+    return 1
+}
+under_systemd() { ! launcher_girder >/dev/null && systemctl is-active --quiet segqueue-girder 2>/dev/null; }
 
 girder_log() {   # recent Girder output, wherever it goes
     if under_systemd; then
@@ -76,7 +88,28 @@ girder_log() {   # recent Girder output, wherever it goes
 }
 
 restart_girder() {
-    if under_systemd; then
+    if launcher_girder >/dev/null && [ -f "$LAUNCHER" ]; then
+        # The launcher runs this box. A systemd Girder or mongod beside it can only
+        # crash-loop on the occupied port / locked dbpath -- and a mongod unit that
+        # retries every 5 s could grab the dbpath while the launcher restarts its own.
+        # Stop such units first, but only if they are not what is serving.
+        local unit main
+        for unit in segqueue-girder segqueue-mongod; do
+            main=$(systemctl show -p MainPID --value "$unit" 2>/dev/null || echo 0)
+            if [ "${main:-0}" != 0 ] && kill -0 "$main" 2>/dev/null; then
+                if [ "$unit" = segqueue-mongod ] || [ "$main" = "$(launcher_girder)" ]; then
+                    die "$unit (pid $main) is running alongside the launcher; not touching either -- run 'diagnose' and sort this out by hand"
+                fi
+            fi
+            if [ "$(systemctl show -p ActiveState --value "$unit" 2>/dev/null)" != inactive ] \
+                    && [ "$(systemctl show -p LoadState --value "$unit" 2>/dev/null)" = loaded ]; then
+                say "stopping $unit.service (crash-looping beside the launcher's process)"
+                $SUDO systemctl stop "$unit"
+            fi
+        done
+        say "restarting Girder: $LAUNCHER restart (mongod, Girder and the live worker; ~10 s)"
+        as_user bash "$LAUNCHER" restart
+    elif under_systemd; then
         say "restarting Girder: systemctl restart segqueue-girder"
         $SUDO systemctl restart segqueue-girder
     elif [ -f "$LAUNCHER" ]; then
@@ -103,7 +136,7 @@ plugins_loaded() {
 why_not_loaded() {
     say "processes:"
     { pgrep -af 'girder serve|segqueue-score|segqueue14-score' | cut -c1-160; } || true
-    say "segqueue-girder service: $(systemctl is-active segqueue-girder 2>/dev/null || true); launcher: $([ -f "$LAUNCHER" ] && echo "$LAUNCHER" || echo none)"
+    say "segqueue-girder service: $(systemctl is-active segqueue-girder 2>/dev/null || true) (MainPID $(systemd_pid)); segqueue-mongod service: $(systemctl is-active segqueue-mongod 2>/dev/null || true); launcher: $([ -f "$LAUNCHER" ] && echo "$LAUNCHER" || echo none); launcher's girder: $(launcher_girder || echo none)"
     for p in $(pgrep -f 'girder serve' || true); do
         say "girder pid $p started $(ps -o lstart= -p "$p" 2>/dev/null | xargs) by $(ps -o user= -p "$p" | xargs); SEGQUEUE14_DISABLE set: $(tr '\0' '\n' < /proc/"$p"/environ 2>/dev/null | grep -c '^SEGQUEUE14_DISABLE=' || true)"
     done

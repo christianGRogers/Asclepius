@@ -120,7 +120,7 @@ class QueueResource14(Resource):
 
     @access.user
     @autoDescribeRoute(
-        Description('Fetch the 14-class protocol and this user\'s limits.')
+        Description('Fetch the SegQueue14 protocol and this user\'s limits.')
         .notes('Called at login. Refuses an out-of-date SegQueue14 module (426), '
                'so the annotator is told to update before opening a case.')
         .param('clientProtocol', 'SegQueue14 protocol version the client speaks.',
@@ -205,9 +205,9 @@ class QueueResource14(Resource):
     @access.user
     @autoDescribeRoute(
         Description('Download a case\'s prelabel, vessel seed or heart-region mask.')
-        .notes('``prelabel`` is the 14-class model prediction the annotator '
-               'corrects; ``seed`` is a binary vessel mask to divide into the 14 '
-               'classes (D23); ``region`` is the heart mask that frames the view. '
+        .notes('``prelabel`` is a model prediction the annotator corrects; '
+               '``seed`` is a binary vessel mask to divide into the four classes '
+               '(D23, D25); ``region`` is the heart mask that frames the view. '
                'A 404 means the case has none of that kind.')
         .modelParam('caseId', 'The case.', model=Case14, force=True, destName='case')
         .param('kind', 'prelabel, seed or region.', paramType='path')
@@ -246,7 +246,7 @@ class QueueResource14(Resource):
 
     @access.user
     @autoDescribeRoute(
-        Description('Submit a corrected 14-class segmentation for one of my cases.')
+        Description('Submit a corrected segmentation for one of my cases.')
         .notes('Upload the label volume through Girder\'s chunked upload API into '
                'the SegQueue14 incoming folder first, then call this with its file '
                'id. LAD, LCx and RCA must be non-empty (D13).')

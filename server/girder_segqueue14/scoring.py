@@ -6,7 +6,8 @@ scored against:
 
 * **a reference** -- the case has an ImageCAS-X segmentation
   (``SegQueue/imagecas-x/segmentations/<id>.coronary.nii.gz``): per-class Dice,
-  HD95 and presence against it, for all 14 classes;
+  HD95 and presence against it, per class; a 14-class ImageCAS-X reference is
+  first collapsed to the project's four (``labels.ICX14_TO_4``, D25);
 * **a second read** -- the case wants two reads (the 200 unlabelled cases, a new
   dataset, or an ImageCAS-X blind duplicate): the same numbers between the two.
 
@@ -101,6 +102,14 @@ def scoreAgainst(readFile, referenceFile):
     read = readImage(readFile)
     readArr = onGrid(read, reference)
     refArr = np.asarray(sitk.GetArrayFromImage(reference)).astype(np.uint8, copy=False)
+    if refArr.size and int(refArr.max()) > labels.N_CLASSES:
+        # An ImageCAS-X reference speaks its 14 label values; reads speak the
+        # project's four. Collapse by territory (D1, D1b) so like is scored with
+        # like. "Other" (14) has no fixed parent here and drops out.
+        lut = np.zeros(256, np.uint8)
+        for k, v in labels.ICX14_TO_4.items():
+            lut[k] = v
+        refArr = lut[refArr]
     if np.count_nonzero(readArr) == 0 and np.count_nonzero(sitk.GetArrayViewFromImage(read)):
         # Labels in the file, none after resampling: the two do not overlap in
         # physical space, so every number would be a meaningless zero.

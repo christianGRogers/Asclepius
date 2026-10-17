@@ -48,11 +48,10 @@ DEFAULT_SLICER_VERSION = "5.8"
 HOMEPAGE = "https://github.com/christianGRogers/Asclepius"
 
 DESCRIPTION = (
-    "14-class coronary prelabel correction for the SegQueue platform. Fetches one "
-    "assigned case with the 14-class model prediction loaded into the project "
-    "segments (LM, LAD, LCx, D1, D2, OM1, OM2, IM, RCA, R-PDA, R-PLA, L-PDA, L-PLA, "
-    "Other), checks LAD, LCx and RCA are present, and uploads the correction. "
-    "Replaces the 4-class SegQueue module from version 0.14.0."
+    "4-class coronary annotation for the SegQueue platform (LM, LAD, LCx, RCA; side "
+    "branches take their parent's class). Fetches one assigned case with a vessel "
+    "seed to divide into the four classes, checks LAD, LCx and RCA are present, and "
+    "uploads the result. The module is SegQueue14, shown as SegQueue."
 )
 
 S4EXT_TEMPLATE = """#

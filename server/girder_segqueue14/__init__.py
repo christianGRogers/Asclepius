@@ -1,4 +1,4 @@
-"""SegQueue14: the 14-class, prelabel-correction SegQueue, as a Girder 5 plugin.
+"""SegQueue14: the pooled-volume, 4-class SegQueue (D23, D25), as a Girder 5 plugin.
 
 Loads **beside** the live ``segqueue`` plugin in the same Girder and shares
 nothing writable with it:

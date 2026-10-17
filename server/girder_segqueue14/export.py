@@ -1,11 +1,11 @@
 """``segqueue14-export`` -- approved SegQueue14 reads, in the training layout.
 
 Adapted from ``girder_segqueue.export``: the same layout and the same manifest,
-over SegQueue14's models and its 14 segments, so ``segtrain convert`` with the
-``coronary_icx14`` label set reads the result directly::
+over SegQueue14's models and its four segments (D25), so ``segtrain convert``
+with the ``coronary_icx4`` label set reads the result directly::
 
     <out>/<case>/ct.nii.gz
-    <out>/<case>/segmentations/{LM,LAD,LCx,D1,...,Other}.nii.gz
+    <out>/<case>/segmentations/{LM,LAD,LCx,RCA}.nii.gz
 
 The manifest additionally records each case's prelabel model version, the
 provenance a D15 refresh makes necessary. Original notes follow.
@@ -52,6 +52,7 @@ import sys
 import tempfile
 
 from segqueue import states as st
+from segqueue14 import labels as project_labels
 
 #: Written beside the CT, as ``segtrain convert`` expects.
 SEGMENTATIONS_DIR = 'segmentations'
@@ -266,7 +267,7 @@ def _writeManifest(out, cases, segments, args, since):
 
     manifest = build(out, cases=sorted(cases), progress=progress, source={
         'kind': 'segqueue14-export',
-        'label_set': 'coronary_icx14',
+        'label_set': project_labels.LABEL_SET_NAME,
         'prelabel_versions': getattr(args, 'prelabelVersions', {}),
         'host': socket.gethostname(),
         'segments': [s.name for s in segments],

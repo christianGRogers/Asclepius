@@ -177,7 +177,7 @@ class SegQueue14Client:
     # --------------------------------------------------------------- queue
 
     def project(self):
-        """The 14-class protocol. Refused (426) for an out-of-date module."""
+        """The project protocol. Refused (426) for an out-of-date module."""
         return protocol.ProjectConfig.from_dict(
             self._json('GET', protocol.path(protocol.PROJECT),
                        params={'clientProtocol': PROTOCOL_VERSION}))

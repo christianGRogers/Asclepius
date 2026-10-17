@@ -13,7 +13,7 @@ against the ImageCAS-X labels (> 0) as binary Dice / precision / recall; logged,
 Resumable: volumes whose mask is already in the seeds folder are skipped; one JSON line per volume goes to
 <work>/log.jsonl. One volume at a time (the container has 4 cores; TotalSegmentator uses them all).
 Usage: GIRDER_TOKEN_FILE=... TOTALSEG_HOME_DIR=... totalseg_cpu.py <inputs.json> <work dir> [--check N]"""
-import json, os, shutil, subprocess, sys, tempfile, time
+import json, os, shutil, signal, subprocess, sys, tempfile, time
 import numpy as np, nibabel as nib
 from scipy import ndimage
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -22,6 +22,14 @@ import ccta_ingest
 INPUTS, WORK = sys.argv[1], sys.argv[2]
 N_CHECK = int(sys.argv[sys.argv.index('--check') + 1]) if '--check' in sys.argv else 5
 TS = ['TotalSegmentator', '-ta', 'coronary_arteries', '--ml', '-d', 'cpu', '-nr', '4', '-ns', '4', '-q']
+# Retry after a failure (in practice an out-of-memory kill on the 0.5 mm, 832x832x576 CCA200-HF volumes):
+# one worker each and TotalSegmentator's three-chunk split, slower but within the container's 16 GB.
+TS_LOWMEM = ['TotalSegmentator', '-ta', 'coronary_arteries', '--ml', '-d', 'cpu', '-nr', '1', '-ns', '1',
+             '--force_split', '-q']
+# Volumes larger than this (the 832x832x576, 0.5 mm CCA200-HF scans: ~13 GB even with --force_split, over the
+# container's 16 GB with the batch itself) are segmented on a LOWRES_MM copy and the mask mapped back.
+LARGE_VOXELS = 200e6
+LOWRES_MM = 0.8
 os.makedirs(WORK, exist_ok=True)
 p = ccta_ingest.Pool()
 log = lambda *a: print(time.strftime('%H:%M:%S'), *a, flush=True)
@@ -58,14 +66,69 @@ def segment(item_id, tmp):
                 raise
             time.sleep(10 * (attempt + 1))
     t0 = time.time()
-    r = subprocess.run(TS + ['-i', src, '-o', out], capture_output=True, text=True, timeout=3 * 3600)
-    if r.returncode != 0 or not os.path.exists(out):
-        raise RuntimeError(((r.stderr or '') + (r.stdout or '')).strip()[-400:])
+    orig = nib.load(src)
+    run_src = src
+    if np.prod(orig.shape[:3]) > LARGE_VOXELS:
+        run_src = downsample(orig, os.path.join(tmp, 'ct_lo.nii.gz'))
+    err = ''
+    for cmd in (TS, TS_LOWMEM):
+        code, err = run_ts(cmd + ['-i', run_src, '-o', out], tmp)
+        if code == 0 and os.path.exists(out):
+            break
+        log(f'  TotalSegmentator exit {code}; ' + ('retrying with one worker and --force_split' if cmd is TS else 'giving up'))
+    else:
+        raise RuntimeError(err)
     im = nib.load(out)
     m = (np.asarray(im.dataobj) > 0).astype(np.uint8)
+    if run_src != src:                    # back onto the CT's own grid, nearest neighbour
+        m = upsample_mask(m, orig.shape[:3])
+        im = orig
     hdr = im.header.copy(); hdr.set_data_dtype(np.uint8)
+    hdr.set_slope_inter(1, 0)
     nib.save(nib.Nifti1Image(m, im.affine, hdr), out)
     return out, m, float(np.prod(im.header.get_zooms()[:3])), time.time() - t0
+
+
+def downsample(img, path):
+    """A copy at LOWRES_MM (never finer than the original), affine adjusted so the copy covers the same space."""
+    zooms = np.array(img.header.get_zooms()[:3], float)
+    factor = np.minimum(zooms / LOWRES_MM, 1.0)
+    data = ndimage.zoom(np.asarray(img.dataobj, dtype=np.float32), factor, order=1)
+    scale = np.array(img.shape[:3], float) / np.array(data.shape, float)    # original voxels per new voxel
+    aff = img.affine.copy()
+    aff[:3, :3] = img.affine[:3, :3] * scale
+    aff[:3, 3] = img.affine[:3, :3] @ (0.5 * scale - 0.5) + img.affine[:3, 3]
+    nib.save(nib.Nifti1Image(np.round(data).astype(np.int16), aff), path)
+    return path
+
+
+def upsample_mask(m, shape):
+    up = ndimage.zoom(m, np.array(shape, float) / np.array(m.shape, float), order=0)
+    out = np.zeros(shape, np.uint8)
+    sl = tuple(slice(0, min(a, b)) for a, b in zip(shape, up.shape))
+    out[sl] = up[sl]
+    return out
+
+
+def run_ts(cmd, tmp):
+    """Run TotalSegmentator in its own process group, output to a file (not a pipe), and kill the whole group
+    afterwards. An OOM-killed TotalSegmentator leaves joblib/loky workers behind; with pipes they held the
+    output open and the batch waited forever (2026-10-17)."""
+    logpath = os.path.join(tmp, 'ts.log')
+    with open(logpath, 'w') as fh:
+        proc = subprocess.Popen(cmd, stdout=fh, stderr=subprocess.STDOUT, stdin=subprocess.DEVNULL,
+                                start_new_session=True)
+        try:
+            code = proc.wait(timeout=3 * 3600)
+        except subprocess.TimeoutExpired:
+            code = 'timeout'
+        finally:
+            try:
+                os.killpg(proc.pid, signal.SIGKILL)
+            except OSError:
+                pass
+            proc.wait()
+    return code, open(logpath, errors='replace').read().strip()[-400:]
 
 
 def stats(m, vox):
@@ -125,6 +188,8 @@ if N_CHECK and len(check) < N_CHECK:
 
 # ---- 2. the batch -------------------------------------------------------------------------------------------
 todo = json.load(open(INPUTS))
+big = {i['name'] for i in todo if i['dataset'] == 'CCA200-HF'}   # 832x832x576 at 0.5 mm: last, so they cannot hold up the rest
+todo = [i for i in todo if i['name'] not in big] + [i for i in todo if i['name'] in big]
 have = {it['name'] for it in items(seeds['_id'])}
 log(f'batch: {len(todo)} volumes, {sum(1 for i in todo if i["name"][:-7] + "__totalseg-coronary.nii.gz" in have)} already done')
 logf = open(os.path.join(WORK, 'log.jsonl'), 'a')

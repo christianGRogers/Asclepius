@@ -26,6 +26,10 @@ class SegQueue(ScriptedLoadableModule):
         self.parent.contributors = ["Christian Rogers"]
         self.parent.helpText = __doc__
         self.parent.acknowledgementText = ""
+        # Hidden: SegQueue14 is itself titled "SegQueue" from 0.15.0, so the menu
+        # needs only one entry. A favourite or saved layout naming this module
+        # still lands here and is forwarded.
+        self.parent.hidden = True
 
 
 class SegQueueWidget(ScriptedLoadableModuleWidget):
@@ -34,7 +38,7 @@ class SegQueueWidget(ScriptedLoadableModuleWidget):
         label = qt.QLabel(
             "<b>SegQueue has been replaced by SegQueue14.</b><br><br>"
             "Annotation now happens in the SegQueue14 module "
-            "(Segmentation -> SegQueue14), on the same server.")
+            "(listed as Segmentation -> SegQueue), on the same server.")
         label.setWordWrap(True)
         self.layout.addWidget(label)
         button = qt.QPushButton("Open SegQueue14")

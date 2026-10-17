@@ -31,10 +31,35 @@ from segqueue14 import scoring as sq  # noqa: E402
 # ------------------------------------------------------------------ classes
 
 
-def test_fourteen_classes_with_imagecas_x_values_in_order():
-    assert labels.NAMES == ["LM", "LAD", "LCx", "D1", "D2", "OM1", "OM2", "IM", "RCA",
-                            "R-PDA", "R-PLA", "L-PDA", "L-PLA", "Other"]
-    assert [labels.LABEL_VALUES[n] for n in labels.NAMES] == list(range(1, 15))
+def test_four_classes_in_order():
+    # D25: LM, LAD, LCx, RCA as 1..4, the coronary_branches order.
+    assert labels.NAMES == ["LM", "LAD", "LCx", "RCA"]
+    assert [labels.LABEL_VALUES[n] for n in labels.NAMES] == [1, 2, 3, 4]
+    assert labels.N_CLASSES == 4
+
+
+def test_imagecas_x_collapses_by_territory():
+    # D1: a branch takes its parent's class; D1b: the ramus is LCx. "Other" (14)
+    # has no fixed parent and is left out of the table.
+    icx = {"LM": 1, "LAD": 2, "LCx": 3, "D1": 4, "D2": 5, "OM1": 6, "OM2": 7, "IM": 8,
+           "RCA": 9, "R-PDA": 10, "R-PLA": 11, "L-PDA": 12, "L-PLA": 13}
+    parent = {"LM": "LM", "LAD": "LAD", "D1": "LAD", "D2": "LAD",
+              "LCx": "LCx", "OM1": "LCx", "OM2": "LCx", "IM": "LCx",
+              "L-PDA": "LCx", "L-PLA": "LCx",
+              "RCA": "RCA", "R-PDA": "RCA", "R-PLA": "RCA"}
+    for name, value in icx.items():
+        assert labels.ICX14_TO_4[value] == labels.LABEL_VALUES[parent[name]], name
+    assert 14 not in labels.ICX14_TO_4
+
+
+def test_the_collapse_agrees_with_the_training_conversion():
+    np = pytest.importorskip("numpy")
+    pytest.importorskip("scipy")
+    from segtrain.reads import icx_to_territory
+
+    values = np.arange(0, 14, dtype=np.uint8).reshape(1, 1, -1)
+    expected = np.array([0] + [labels.ICX14_TO_4[v] for v in range(1, 14)], np.uint8)
+    assert np.array_equal(icx_to_territory(values).ravel(), expected)
 
 
 def test_only_lad_lcx_and_rca_are_required():
@@ -46,7 +71,7 @@ def test_only_lad_lcx_and_rca_are_required():
 
 def test_colours_are_distinct_and_every_segment_has_a_one_line_hint():
     colours = [tuple(s["color"]) for s in labels.segment_dicts()]
-    assert len(set(colours)) == 14
+    assert len(set(colours)) == labels.N_CLASSES
     for spec in labels.segment_dicts():
         assert spec["hint"] and "\n" not in spec["hint"] and len(spec["hint"]) < 80
         assert all(0.0 <= c <= 1.0 for c in spec["color"])
@@ -69,9 +94,9 @@ def test_label_config_matches_the_segment_table():
 
 def test_the_instructions_are_the_project_leads_text():
     text = labels.INSTRUCTIONS
-    assert text.startswith("You are given a prediction of the coronary tree in 14 classes.")
-    for phrase in ("contrast-filled lumen", "(D3/D4, OM3/OM4) go in Other",
-                   "A ramus intermedius is IM", "(R- or L-)", "Note anything unusual."):
+    assert "Divide it into the four classes" in text
+    for phrase in ("contrast-filled lumen", "takes the class of the vessel it comes off",
+                   "A ramus intermedius is always LCx", "Note anything unusual."):
         assert phrase in text
 
 
@@ -407,9 +432,9 @@ def test_a_real_nibabel_file_reads_the_same(tmp_path):
 
 
 def _tree(np):
-    """A small 14-class volume: a block per class, side by side."""
+    """A small volume in the project's classes: a block per class, side by side."""
     vol = np.zeros((40, 20, 20), dtype=np.uint8)
-    for k in range(1, 15):
+    for k in range(1, labels.N_CLASSES + 1):
         vol[2 * k:2 * k + 2, 5:12, 5:12] = k
     return vol
 
@@ -434,17 +459,17 @@ def test_a_wrongly_named_vessel_is_flagged_by_class_and_presence():
     pytest.importorskip("scipy")
     ref = _tree(np)
     read = ref.copy()
-    read[read == 3] = 6          # the LCx labelled OM1
-    read[read == 12] = 0         # the L-PDA missed
+    read[read == 3] = 2          # the LCx labelled LAD
+    read[read == 1] = 0          # the LM missed
     result = sq.score_labels(read, ref, (0.5, 0.5, 0.5))
     assert result["per_structure"]["LCx"]["dice"] == 0.0
-    assert result["per_structure"]["L-PDA"]["present_read"] is False
-    assert result["per_structure"]["L-PDA"]["presence_agrees"] is False
-    assert result["presence_agreement"] == pytest.approx(12 / 14, abs=1e-4)
+    assert result["per_structure"]["LM"]["present_read"] is False
+    assert result["per_structure"]["LM"]["presence_agrees"] is False
+    assert result["presence_agreement"] == pytest.approx(2 / 4, abs=1e-4)
     assert result["required_min_dice"] == 0.0
     reasons = sq.reference_flags(result, {"mean_dice_flag": 0.6, "required_dice_flag": 0.7})
     assert any("LCx Dice 0.00" in r for r in reasons)
-    assert sq.reference_flags(result, {"class_dice_flags": {"OM1": 0.9}})[0].startswith("OM1")
+    assert sq.reference_flags(result, {"class_dice_flags": {"LAD": 0.9}})[0].startswith("LAD")
 
 
 def test_cropping_changes_no_number():
@@ -454,7 +479,7 @@ def test_cropping_changes_no_number():
 
     ref = np.zeros((60, 50, 50), dtype=np.uint8)
     ref[10:30, 10:20, 30:40] = 2
-    ref[12:15, 22:30, 31:33] = 9
+    ref[12:15, 22:30, 31:33] = 4
     read = np.roll(ref, 1, axis=0)
     full = agreement(read, ref, labels.NAMES, (0.5, 0.4, 0.4))
     cropped = sq.score_labels(read, ref, (0.5, 0.4, 0.4))
@@ -476,7 +501,7 @@ def test_empty_volumes_score_as_nothing_rather_than_nan():
 def test_voxel_counts_and_headline():
     np = pytest.importorskip("numpy")
     counts = sq.voxel_counts(_tree(np))
-    assert counts["LM"] == 2 * 7 * 7 and counts["Other"] == 2 * 7 * 7
+    assert counts["LM"] == 2 * 7 * 7 and counts["RCA"] == 2 * 7 * 7
     assert set(counts) == set(labels.NAMES)
     assert sq.headline_dice({"reference": {"mean_dice": 0.8},
                              "duplicate": {"mean_dice": 0.5}}) == 0.8

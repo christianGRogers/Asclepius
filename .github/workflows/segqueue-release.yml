@@ -224,9 +224,9 @@ jobs:
           cat > notes.md <<'MD'
           ## Install
 
-          This release is **SegQueue14**, the 14-class module. It replaces the
-          4-class SegQueue module: after updating, open **Segmentation ->
-          SegQueue14** (opening "SegQueue" takes you there).
+          Annotate in **four classes** (LM, LAD, LCx, RCA): every side branch
+          takes the class of the vessel it comes off, and a ramus intermedius is
+          LCx. The module is under **Segmentation -> SegQueue**.
 
           **Already running SegQueue?** Open the module in Slicer. It checks for
           updates on its own and offers **Update and restart** - one press, no
@@ -244,7 +244,7 @@ jobs:
           ---
           MD
           gh release create "$TAG" dist/*.zip \
-            --title "SegQueue14 $VERSION" \
+            --title "SegQueue $VERSION" \
             --notes-file notes.md \
             --generate-notes \
             --target "$GITHUB_SHA"

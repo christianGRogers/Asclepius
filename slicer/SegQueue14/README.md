@@ -1,8 +1,9 @@
 # SegQueue14
 
-The 3D Slicer module for the **14-class prelabel-correction** project. It installs
-**beside** the SegQueue module and changes nothing about it: same server, its own
-routes (`/api/v1/segqueue14`), its own settings, its own cache (`~/.segqueue14`).
+The 3D Slicer module for the **14-class prelabel-correction** project. From
+**0.14.0 it replaces the 4-class SegQueue module** and continues its version
+numbers (D24): same server, its own routes (`/api/v1/segqueue14`), its own
+settings, its own cache (`~/.segqueue14`).
 
 ## What you do
 
@@ -29,14 +30,21 @@ routes (`/api/v1/segqueue14`), its own settings, its own cache (`~/.segqueue14`)
 
 ## Install
 
-From a build: `python slicer/build-extension14.py` writes
-`dist/SegQueue14-<version>-Slicer-5.8.zip`; **Extensions Manager → Install from
-file** → restart. From a checkout: add `slicer/SegQueue14` to *Additional module
-paths* (the module finds `src/segqueue14` and `src/segqueue` itself).
+**Running SegQueue 0.13 or older:** open SegQueue and press *Check for updates* →
+**Update and restart**. It installs SegQueue14 over it; afterwards open
+**Segmentation → SegQueue14** (opening "SegQueue" takes you there). Your server
+address carries over. If you installed the separate SegQueue14 0.1.0 extension,
+uninstall it first.
 
-There is no self-updater (the SegQueue one installs SegQueue releases). If the
-server's SegQueue14 protocol has moved on, login is refused with
-*"Update the SegQueue14 module"*: install the newer zip from the project lead.
+**First install:** download `SegQueue-<version>-Slicer-5.8.zip` from the newest
+`segqueue-v…` release (or build it: `python slicer/build-extension14.py`), then
+**Extensions Manager → Install from file** → restart. From a checkout: add
+`slicer/SegQueue14` to *Additional module paths*.
+
+**Updating:** the module checks for a newer release when opened and offers
+**Update and restart** (`SegQueue14Lib/updater.py`, which only installs archives
+that carry SegQueue14). If the server's protocol has moved on, login is refused
+with *"Update the SegQueue14 module"*.
 
 ## For developers
 

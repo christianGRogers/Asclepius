@@ -22,14 +22,21 @@ What an annotator sees:
 
 The server owns the protocol, local data is a lease, nothing the client says is
 trusted: those three decisions are the live module's and are kept unchanged.
-The self-updater is not: it installs *SegQueue* releases, and running it here
-would replace this module with the live one. A SegQueue14 module that is out of
-date is instead refused by the server at login with a message saying to update
-it (SegQueue14 protocol version, ``segqueue14.PROTOCOL_VERSION``).
+
+From 0.14.0 SegQueue14 *is* the SegQueue release line (project lead, 2026-10-17):
+it is published as ``SegQueue-<v>-Slicer-<x.y>.zip`` under ``segqueue-v<v>``,
+continuing SegQueue's version numbers, so the update button of SegQueue 0.13
+installs it, and the archive's ``SegQueue.py`` is a stub that retires the old
+module. Its own update button (``SegQueue14Lib.updater``) only accepts archives
+that carry SegQueue14. The server still refuses a module whose protocol is out
+of date (``segqueue14.PROTOCOL_VERSION``).
 """
 
+import json
 import os
+import shutil
 import sys
+import tempfile
 import time
 import traceback
 
@@ -66,12 +73,14 @@ try:
     from segqueue.checksum import sha256_file, verify_file
     from segqueue.dataset import sniff_suffix, suffix_for
     from segqueue.segcheck import Geometry
+    from segqueue import release as rel
     from segqueue14 import labels
     from segqueue14 import protocol
     from segqueue14.protocol import SubmissionMeta
     _IMPORT_ERROR = None
 except ImportError as exc:  # pragma: no cover - surfaced in the UI instead
     st = None
+    rel = None
     protocol = None
     labels = None
     _IMPORT_ERROR = str(exc)
@@ -79,12 +88,21 @@ except ImportError as exc:  # pragma: no cover - surfaced in the UI instead
 from SegQueue14Lib import (
     CacheError,
     CaseCache,
+    UpdateError,
     defaultRoot,
+    updater,
 )
 from SegQueue14Lib import SegQueue14Client as SegQueueClient
 from SegQueue14Lib import SegQueue14Error as SegQueueError
 
-__version__ = "0.1.0"
+#: Continues SegQueue's numbering (0.13.0 was the last 4-class release). The
+#: release tag is ``segqueue-v`` + this; bump it to publish.
+__version__ = "0.14.0"
+
+#: How often the startup update check may ask GitHub, as in the live module.
+UPDATE_CHECK_HOURS = 6
+#: Delay before that check, so the panel is on screen first.
+UPDATE_CHECK_DELAY_MS = 1200
 
 AUTOSAVE_SECONDS = 120
 NOTES_REFRESH_SECONDS = 90
@@ -120,6 +138,10 @@ _SETTING_SERVER = "SegQueue14/serverUrl"
 _SETTING_CACHE = "SegQueue14/cacheRoot"
 #: Kept solely so that, as in the live module, a remembered username is cleared.
 _SETTING_LEGACY_USER = "SegQueue14/lastUser"
+_SETTING_UPDATE = "SegQueue14/updateCheck"
+#: The retired module's server setting, read (never written) so an annotator who
+#: updated from SegQueue 0.13 finds their server already filled in.
+_LIVE_SETTING_SERVER = "SegQueue/serverUrl"
 
 
 class SegQueue14(ScriptedLoadableModule):
@@ -1176,6 +1198,7 @@ class SegQueue14Widget(ScriptedLoadableModuleWidget):
         # it. Harmless when the key is already absent.
         qt.QSettings().remove(_SETTING_LEGACY_USER)
 
+        self._buildUpdateBanner()
         self._buildLoginSection()
         self._buildCaseSection()
         self._buildEditorSection()
@@ -1185,8 +1208,6 @@ class SegQueue14Widget(ScriptedLoadableModuleWidget):
 
         self._startTimers()
         self._updateEnabled()
-
-    # ----------------------------------------------------------------- update
 
 
 
@@ -1296,13 +1317,226 @@ class SegQueue14Widget(ScriptedLoadableModuleWidget):
             except Exception:
                 pass
 
+    # ----------------------------------------------------------------- update
+
+    def _buildUpdateBanner(self):
+        """A strip that stays hidden until there is something to install.
+
+        Hidden rather than showing "you are up to date", because the panel's job
+        is to get an annotator into a case and every permanent widget is a small
+        tax on that. It appears when it has something to say and not before.
+        """
+        frame = qt.QFrame()
+        frame.setFrameShape(qt.QFrame.StyledPanel)
+        frame.setVisible(False)
+        self.updateBanner = frame
+
+        layout = qt.QVBoxLayout(frame)
+        layout.setContentsMargins(8, 6, 8, 6)
+
+        self.updateLabel = qt.QLabel()
+        self.updateLabel.setWordWrap(True)
+        layout.addWidget(self.updateLabel)
+
+        row = qt.QHBoxLayout()
+        self.updateButton = qt.QPushButton("Update and restart")
+        self.updateButton.setToolTip(
+            "Downloads the new version, installs it over this one and restarts "
+            "Slicer. Your draft is saved first and the case you are on is "
+            "waiting when Slicer comes back.")
+        self.updateButton.clicked.connect(self.onUpdateNow)
+        row.addWidget(self.updateButton)
+
+        self.updateNotesButton = qt.QPushButton("What changed")
+        self.updateNotesButton.setToolTip("Opens the release notes in a browser.")
+        self.updateNotesButton.clicked.connect(self.onOpenReleaseNotes)
+        row.addWidget(self.updateNotesButton)
+
+        self.updateLaterButton = qt.QPushButton("Not now")
+        self.updateLaterButton.setToolTip(
+            "Hides this until the next time you open the module.")
+        self.updateLaterButton.clicked.connect(
+            lambda: self.updateBanner.setVisible(False))
+        row.addWidget(self.updateLaterButton)
+        layout.addLayout(row)
+
+        self.updateProgress = qt.QProgressBar()
+        self.updateProgress.setVisible(False)
+        layout.addWidget(self.updateProgress)
+
+        self.layout.addWidget(frame)
+
+    def _slicerMinorVersion(self):
+        """``"5.8"`` -- the version extensions are packaged against."""
+        try:
+            return "{}.{}".format(int(slicer.app.majorVersion),
+                                  int(slicer.app.minorVersion))
+        except Exception:
+            pass
+        try:
+            parts = str(slicer.app.applicationVersion).split(".")
+            return "{}.{}".format(int(parts[0]), int(parts[1]))
+        except Exception:
+            return ""
+
+    def _checkForUpdateQuietly(self):
+        """The startup check. Silent about everything except a real update.
+
+        Every failure here -- offline, proxied, rate-limited, GitHub down -- is
+        treated as "no update". None of them is the annotator's problem, and a
+        dialogue box about one is worse than not knowing.
+        """
+        cached = updater.readCache(slicer.util.settingsValue(_SETTING_UPDATE, ""))
+        if updater.cacheIsFresh(cached, UPDATE_CHECK_HOURS * 3600):
+            return
+        try:
+            release = updater.checkForUpdate(__version__, self._slicerMinorVersion())
+        except UpdateError:
+            return
+        except Exception:
+            return
+        self._recordCheck(release)
+        if release is not None:
+            self._showUpdate(release)
+
+    def onCheckForUpdates(self):
+        """The manual check. Ignores the cache and always says what it found."""
+        with _busy():
+            try:
+                release = updater.checkForUpdate(
+                    __version__, self._slicerMinorVersion())
+            except UpdateError as exc:
+                slicer.util.errorDisplay(str(exc))
+                return
+        self._recordCheck(release)
+        if release is None:
+            slicer.util.infoDisplay(
+                "SegQueue14 {} is the newest published version.".format(__version__))
+            return
+        self._showUpdate(release)
+
+    def _recordCheck(self, release):
+        tag = str((release or {}).get("tag_name") or "")
+        qt.QSettings().setValue(_SETTING_UPDATE, json.dumps({
+            "checkedAt": time.time(), "tag": tag}))
+
+    def _showUpdate(self, release):
+        self._pendingUpdate = release
+        ok, reason = updater.canInstall(_MODULE_DIR)
+        self.updateLabel.setText(
+            "<b>SegQueue14 {} is available.</b> You are running {}.{}".format(
+                rel.describe(release), __version__,
+                "" if ok else "<br><span style='color:#b26500'>{}</span>".format(reason)))
+        self.updateButton.setEnabled(ok)
+        self.updateNotesButton.setEnabled(bool(release.get("html_url")))
+        self.updateBanner.setVisible(True)
+
+    def onOpenReleaseNotes(self):
+        url = str((self._pendingUpdate or {}).get("html_url") or "")
+        if url:
+            qt.QDesktopServices.openUrl(qt.QUrl(url))
+
+    def onUpdateNow(self):
+        """Download, install, restart. One press, and reversible until the last.
+
+        The order matters. The draft is saved before anything is touched, so the
+        worst case -- a failed swap on a machine that then has to be reinstalled
+        by hand -- still leaves the annotator's work on disk and their case
+        assigned to them.
+        """
+        release = self._pendingUpdate
+        if not release:
+            return
+        ok, reason = updater.canInstall(_MODULE_DIR)
+        if not ok:
+            slicer.util.errorDisplay(reason)
+            return
+
+        asset = rel.asset_for(release, self._slicerMinorVersion())
+        if asset is None:
+            slicer.util.errorDisplay(
+                "That release has no archive for Slicer {}.".format(
+                    self._slicerMinorVersion()))
+            return
+
+        openCase = self.logic.assignment is not None if self.logic else False
+        if not slicer.util.confirmYesNoDisplay(
+                "Install SegQueue14 {} and restart Slicer?\n\n{}".format(
+                    rel.describe(release),
+                    "Your draft is saved first, and the case you are on is still "
+                    "yours when Slicer comes back."
+                    if openCase else
+                    "Slicer will restart when the update is installed.")):
+            return
+
+        if self.logic is not None:
+            self.logic.autosave()
+
+        self.updateProgress.setVisible(True)
+        self.updateProgress.setValue(0)
+        self.updateButton.setEnabled(False)
+
+        def progress(done, total):
+            self.updateProgress.setMaximum(max(1, total))
+            self.updateProgress.setValue(done)
+            slicer.app.processEvents()
+
+        staging = tempfile.mkdtemp(prefix="segqueue14-download-")
+        try:
+            with _busy():
+                archive = os.path.join(staging, str(asset.get("name") or "SegQueue-update.zip"))
+                updater.downloadAsset(asset, archive, progress=progress)
+                backup = updater.installArchive(
+                    archive, _MODULE_DIR, self._slicerMinorVersion())
+        except UpdateError as exc:
+            slicer.util.errorDisplay(str(exc))
+            return
+        except Exception:
+            slicer.util.errorDisplay(
+                "The update failed:\n\n" + traceback.format_exc()
+                + "\n\nNothing has been lost -- your draft is saved and the "
+                  "previous version is still installed.")
+            return
+        finally:
+            self.updateProgress.setVisible(False)
+            self.updateButton.setEnabled(True)
+            shutil.rmtree(staging, ignore_errors=True)
+
+        # The check cache is cleared rather than refreshed: the version this
+        # answer was computed for is about to stop being the running version.
+        qt.QSettings().remove(_SETTING_UPDATE)
+        self.updateBanner.setVisible(False)
+
+        if slicer.util.confirmOkCancelDisplay(
+                "SegQueue14 {} is installed.\n\nSlicer needs to restart to load "
+                "it. The previous version was backed up to:\n{}".format(
+                    rel.describe(release), backup)):
+            self._restartSlicer()
+
+    def _restartSlicer(self):
+        for restart in (getattr(slicer.util, "restart", None),
+                        getattr(slicer.app, "restart", None)):
+            if restart is None:
+                continue
+            try:
+                restart()
+                return
+            except Exception:
+                continue
+        slicer.util.infoDisplay(
+            "Please close and reopen Slicer to finish the update.")
+
     # --------------------------------------------------------------- branding
 
     def enter(self):
-        """The module became visible: put our name above the panel."""
+        """The module became visible: put our name above the panel, and see
+        whether a newer release is out."""
         if self.logic is None:
             return
         self._applyPanelBranding()
+        # Deferred so the panel is on screen first: an annotator must never wait
+        # on GitHub to see the Get next case button.
+        qt.QTimer.singleShot(UPDATE_CHECK_DELAY_MS, self._checkForUpdateQuietly)
 
     def _logoLabel(self):
         """Slicer's logo label above the module panel, or None."""
@@ -1407,7 +1641,10 @@ class SegQueue14Widget(ScriptedLoadableModuleWidget):
         self.loginBox = box
 
         self.serverEdit = qt.QLineEdit(
-            slicer.util.settingsValue(_SETTING_SERVER, "https://segqueue.example.edu"))
+            slicer.util.settingsValue(
+                _SETTING_SERVER,
+                slicer.util.settingsValue(_LIVE_SETTING_SERVER,
+                                          "https://segqueue.example.edu")))
         self.serverEdit.setToolTip(
             "Base URL of the server (the same one as SegQueue). /api/v1 is added "
             "automatically; SegQueue14 uses its own /segqueue14 routes on it.")
@@ -1451,9 +1688,14 @@ class SegQueue14Widget(ScriptedLoadableModuleWidget):
         # instead, with the long form in the tooltip.
         self.statusLabel = qt.QLabel("Not logged in.")
         statusRow.addWidget(self.statusLabel, 1)
-        # No "Check for updates": the live module's updater installs SegQueue
-        # releases, which would replace this module. An out-of-date SegQueue14 is
-        # told to update by the server at login instead.
+        # As in the live module: beside the status line, because "am I on the
+        # current version?" is asked when there is no update banner.
+        self.checkUpdateButton = _link(qt.QPushButton("Check for updates"))
+        self.checkUpdateButton.setToolTip(
+            "Asks GitHub whether a newer SegQueue14 has been published. Runs "
+            "automatically when you open the module, at most a few times a day.")
+        self.checkUpdateButton.clicked.connect(self.onCheckForUpdates)
+        statusRow.addWidget(self.checkUpdateButton)
         form.addRow(statusRow)
 
     def _buildCaseSection(self):

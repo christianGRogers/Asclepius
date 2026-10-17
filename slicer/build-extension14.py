@@ -1,25 +1,27 @@
-"""Package SegQueue14 as an archive the Slicer Extension Manager will install.
+"""Package SegQueue14 as the SegQueue extension, for the Extension Manager and
+for SegQueue's update button.
 
     python slicer/build-extension14.py
 
-Produces ``dist/SegQueue14-<version>-Slicer-<x.y>.zip``, installed through
-**Extensions Manager -> Install from file**, *beside* SegQueue: the archive's top
-directory, the module, its library and the descriptor are all named SegQueue14,
-so neither extension overwrites the other. Same layout as
-``build-extension.py`` builds for the live module::
+Produces ``dist/SegQueue-<version>-Slicer-<x.y>.zip``. From 0.14.0 SegQueue14 is
+the SegQueue release line (project lead, 2026-10-17): the archive is named,
+rooted and tagged (``segqueue-v<version>``) exactly as SegQueue's always were, so
+the update button of SegQueue 0.13 and older offers it as the next version and
+installs it over the old module::
 
-    SegQueue14/
+    SegQueue/
       lib/Slicer-5.8/qt-scripted-modules/SegQueue14.py
-      lib/Slicer-5.8/qt-scripted-modules/SegQueue14Lib/...
-      lib/Slicer-5.8/qt-scripted-modules/segqueue14/...   <- vendored
-      lib/Slicer-5.8/qt-scripted-modules/segqueue/...     <- vendored
+      lib/Slicer-5.8/qt-scripted-modules/SegQueue.py        <- stub retiring the old module
+      lib/Slicer-5.8/qt-scripted-modules/SegQueue14Lib/...  <- incl. updater.py
+      lib/Slicer-5.8/qt-scripted-modules/segqueue14/...     <- vendored
+      lib/Slicer-5.8/qt-scripted-modules/segqueue/...       <- vendored
       lib/Slicer-5.8/qt-scripted-modules/Resources/...
-      share/Slicer-5.8/SegQueue14.s4ext
+      share/Slicer-5.8/SegQueue.s4ext
 
-Two shared packages are vendored. ``segqueue14`` exists only here. ``segqueue``
-is the live package, of which SegQueue14 uses only names every released copy has
--- in a Slicer with both extensions installed, whichever ``segqueue`` is first on
-``sys.path`` serves both modules, and that must not matter.
+The old updater copies files over and deletes none, so the stub
+(``slicer/SegQueue14/legacy/SegQueue.py``) has to overwrite the 4-class
+``SegQueue.py``; it sends anyone who opens "SegQueue" to SegQueue14. The old
+``SegQueueLib`` is left on disk and nothing imports it.
 
 Rebuild after any change to ``src/segqueue14``: the server refuses a module whose
 protocol version is older than its own, with a message saying to update.
@@ -34,8 +36,12 @@ import zipfile
 
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
-EXTENSION_NAME = "SegQueue14"
-MODULE_DIR = os.path.join(REPO, "slicer", EXTENSION_NAME)
+#: The extension (archive, top directory, descriptor) keeps the name SegQueue;
+#: the module inside it is SegQueue14.
+EXTENSION_NAME = "SegQueue"
+MODULE_NAME = "SegQueue14"
+MODULE_DIR = os.path.join(REPO, "slicer", MODULE_NAME)
+LEGACY_STUB = os.path.join(MODULE_DIR, "legacy", "SegQueue.py")
 SHARED_PACKAGES = (os.path.join(REPO, "src", "segqueue14"),
                    os.path.join(REPO, "src", "segqueue"))
 DEFAULT_SLICER_VERSION = "5.8"
@@ -46,11 +52,11 @@ DESCRIPTION = (
     "assigned case with the 14-class model prediction loaded into the project "
     "segments (LM, LAD, LCx, D1, D2, OM1, OM2, IM, RCA, R-PDA, R-PLA, L-PDA, L-PLA, "
     "Other), checks LAD, LCx and RCA are present, and uploads the correction. "
-    "Installs beside SegQueue."
+    "Replaces the 4-class SegQueue module from version 0.14.0."
 )
 
 S4EXT_TEMPLATE = """#
-# SegQueue14 extension description, read by Slicer's Extension Manager.
+# SegQueue extension description (the SegQueue14 module), read by Slicer's Extension Manager.
 #
 scm git
 scmurl {homepage}
@@ -69,7 +75,7 @@ enabled 1
 
 
 def moduleVersion():
-    with open(os.path.join(MODULE_DIR, EXTENSION_NAME + ".py"), encoding="utf-8") as handle:
+    with open(os.path.join(MODULE_DIR, MODULE_NAME + ".py"), encoding="utf-8") as handle:
         for line in handle:
             if line.startswith("__version__"):
                 return line.split("=", 1)[1].strip().strip("\"'")
@@ -99,9 +105,10 @@ def build(outDir, slicerVersion=DEFAULT_SLICER_VERSION, keepStaging=False):
     os.makedirs(scripted)
     os.makedirs(share)
 
-    shutil.copy(os.path.join(MODULE_DIR, EXTENSION_NAME + ".py"), scripted)
-    shutil.copytree(os.path.join(MODULE_DIR, EXTENSION_NAME + "Lib"),
-                    os.path.join(scripted, EXTENSION_NAME + "Lib"), ignore=_ignore)
+    shutil.copy(os.path.join(MODULE_DIR, MODULE_NAME + ".py"), scripted)
+    shutil.copy(LEGACY_STUB, os.path.join(scripted, "SegQueue.py"))
+    shutil.copytree(os.path.join(MODULE_DIR, MODULE_NAME + "Lib"),
+                    os.path.join(scripted, MODULE_NAME + "Lib"), ignore=_ignore)
     for extra in ("README.md", "Resources"):
         path = os.path.join(MODULE_DIR, extra)
         if os.path.isdir(path):
@@ -132,7 +139,7 @@ def build(outDir, slicerVersion=DEFAULT_SLICER_VERSION, keepStaging=False):
 
 def main(argv=None):
     parser = argparse.ArgumentParser(prog="build-extension14.py",
-                                     description="Package SegQueue14 for Slicer.")
+                                     description="Package SegQueue14 as the SegQueue extension.")
     parser.add_argument("--out", default=os.path.join(REPO, "dist"))
     parser.add_argument("--slicer-version", default=DEFAULT_SLICER_VERSION)
     parser.add_argument("--keep-staging", action="store_true")
@@ -143,10 +150,11 @@ def main(argv=None):
         return 0
     os.makedirs(args.out, exist_ok=True)
     archive, version, revision = build(args.out, args.slicer_version, args.keep_staging)
-    print(f"{EXTENSION_NAME} {version} ({revision}) for Slicer {args.slicer_version}")
+    print(f"{MODULE_NAME} {version} ({revision}) for Slicer {args.slicer_version}")
     print(f"  {archive}  [{os.path.getsize(archive) / 1024:.0f} KB]")
-    print("\nInstall beside SegQueue: Slicer -> Extensions Manager -> Install from file "
-          "-> pick that zip -> restart. The module is under Segmentation -> SegQueue14.")
+    print("\nSegQueue 0.13 offers this as an update. First install: Slicer -> Extensions "
+          "Manager -> Install from file -> pick that zip -> restart. The module is under "
+          "Segmentation -> SegQueue14.")
     return 0
 
 

@@ -1,0 +1,14 @@
+{
+ "source_checkpoint": "/scratch/croger/atlas2/nnunet_results/Dataset714_AtlasProxyDefaultWindow/nnUNetTrainerAtlas__nnUNetResEncUNetPlans_60G_iso05__3d_fullres/fold_0/checkpoint_final.pth",
+ "fold_b": "/scratch/croger/atlas2/nnunet_results/Dataset714_AtlasProxyDefaultWindow/nnUNetTrainerAtlas__nnUNetResEncUNetPlans_60G_iso05__3d_fullres/fold_0",
+ "dataset": "Dataset714_AtlasProxyDefaultWindow",
+ "window": [
+  -169.0,
+  719.0
+ ],
+ "s_per_epoch_b": 175.85,
+ "reference_labels_dir": "/scratch/croger/atlas/nnunet_raw/Dataset713_AtlasProxy/labelsTr",
+ "aorta_dir": "/scratch/croger/atlas2/aorta",
+ "nnUNet_raw": "/scratch/croger/atlas2/nnunet_raw",
+ "nnUNet_preprocessed": "/scratch/croger/atlas2/nnunet_preprocessed"
+}

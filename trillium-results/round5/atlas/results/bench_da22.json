@@ -1,0 +1,57 @@
+{
+ "epochs": [
+  {
+   "epoch": 0,
+   "epoch_s": 634.2967703342438,
+   "train_s": 622.4007587432861,
+   "loader_wait_s": 298.78883051872253,
+   "gpu_step_s": 323.60838508605957,
+   "median_wait": 0.00040435791015625,
+   "median_step": 0.9832254648208618,
+   "peak_alloc_gib": 42.517287254333496,
+   "peak_reserved_gib": 55.65234375
+  },
+  {
+   "epoch": 1,
+   "epoch_s": 175.00767827033997,
+   "train_s": 162.99821829795837,
+   "loader_wait_s": 0.02478170394897461,
+   "gpu_step_s": 162.97078037261963,
+   "median_wait": 9.393692016601562e-05,
+   "median_step": 0.6517322063446045,
+   "peak_alloc_gib": 42.517287254333496,
+   "peak_reserved_gib": 55.65234375
+  },
+  {
+   "epoch": 2,
+   "epoch_s": 175.26995468139648,
+   "train_s": 163.2592101097107,
+   "loader_wait_s": 0.02429986000061035,
+   "gpu_step_s": 163.2333481311798,
+   "median_wait": 9.09566879272461e-05,
+   "median_step": 0.6528090238571167,
+   "peak_alloc_gib": 42.517287254333496,
+   "peak_reserved_gib": 55.65234375
+  },
+  {
+   "epoch": 3,
+   "epoch_s": 175.39579486846924,
+   "train_s": 163.38029718399048,
+   "loader_wait_s": 0.025357723236083984,
+   "gpu_step_s": 163.35329461097717,
+   "median_wait": 9.47713851928711e-05,
+   "median_step": 0.653375506401062,
+   "peak_alloc_gib": 42.517287254333496,
+   "peak_reserved_gib": 55.65234375
+  }
+ ],
+ "n_proc_DA": "22",
+ "patch": [
+  256,
+  256,
+  256
+ ],
+ "batch_size": 2,
+ "gpu": "NVIDIA H100 80GB HBM3",
+ "torch": "2.14.1"
+}

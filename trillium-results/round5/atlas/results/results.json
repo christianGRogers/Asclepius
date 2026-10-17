@@ -1,0 +1,130 @@
+{
+ "generated": "2026-10-09 09:12:22",
+ "workdir": "/scratch/croger/atlas",
+ "layout": "girder",
+ "cases_found": 1000,
+ "planner_output": {
+  "patch": [
+   256,
+   256,
+   256
+  ],
+  "batch": 2,
+  "spacing": [
+   0.5,
+   0.5,
+   0.5
+  ],
+  "fingerprint_window": [
+   -169.0,
+   719.0
+  ]
+ },
+ "schedule": {
+  "s_per_epoch_bench": 174.91222667694092,
+  "n_proc_DA": "12",
+  "epochs": 412,
+  "train_budget_s": 74403.099411726
+ },
+ "proxy": {
+  "n": 640,
+  "near_frac_median": 0.8472584576372404,
+  "unreached_frac_median": 0.0
+ },
+ "r0_benchmark": {
+  "da12": {
+   "n_proc_DA": "12",
+   "gpu": "NVIDIA H100 80GB HBM3",
+   "torch": "2.14.1",
+   "patch": [
+    256,
+    256,
+    256
+   ],
+   "batch": 2,
+   "epochs_measured": 3,
+   "s_per_epoch": 174.91222667694092,
+   "loader_wait_frac": 0.00019062999095303664,
+   "gpu_step_s_median": 0.6515108346939087,
+   "peak_alloc_gib": 42.52150630950928,
+   "peak_reserved_gib": 55.640625
+  },
+  "da22": {
+   "n_proc_DA": "22",
+   "gpu": "NVIDIA H100 80GB HBM3",
+   "torch": "2.14.1",
+   "patch": [
+    256,
+    256,
+    256
+   ],
+   "batch": 2,
+   "epochs_measured": 3,
+   "s_per_epoch": 175.26995468139648,
+   "loader_wait_frac": 0.00015203665541714092,
+   "gpu_step_s_median": 0.6528090238571167,
+   "peak_alloc_gib": 42.517287254333496,
+   "peak_reserved_gib": 55.65234375
+  }
+ },
+ "r0_forecast_1000_epochs_h": 48.58672963248359,
+ "r0_acceptance": {
+  "s_per_epoch_le_306": true,
+  "peak_reserved_le_75GB": true
+ },
+ "training": {
+  "epochs_completed": 412,
+  "s_per_epoch_median": 174.98,
+  "last_pseudo_dice": [
+   0.9048,
+   0.8404,
+   0.7758,
+   0.8278
+  ],
+  "stopped_early": false
+ },
+ "val": {
+  "n": 80,
+  "tf1_at_1p5": 0.8461326530683415,
+  "tf1_at_0": 0.8333409264787619,
+  "tf1_per_class": {
+   "LM": 0.9641021140953437,
+   "LAD": 0.868703523460808,
+   "LCx": 0.8120163865060797,
+   "RCA": 0.7705474962119114
+  },
+  "class_cldice": 0.9003256225835667,
+  "macro_dice": 0.83838200211105,
+  "dice_per_class": {
+   "LM": 0.9042490382370425,
+   "LAD": 0.8437783467654507,
+   "LCx": 0.7712045592539722,
+   "RCA": 0.8399570642880179
+  },
+  "fp_components_mean": 1.4875,
+  "degenerate_predictions": 0,
+  "swap_rate": 0.008662433415459626,
+  "cases_with_cut_tree": 17,
+  "cut_cases": [
+   "c0038",
+   "c0095",
+   "c0133",
+   "c0163",
+   "c0186",
+   "c0252",
+   "c0288",
+   "c0368",
+   "c0560",
+   "c0606",
+   "c0613",
+   "c0717",
+   "c0744",
+   "c0826",
+   "c0848",
+   "c0878",
+   "c0956"
+  ],
+  "tf1_min": 0.18062837544841723
+ },
+ "manifest": "manifest.json"
+}

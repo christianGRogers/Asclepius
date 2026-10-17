@@ -1,0 +1,169 @@
+#!/bin/bash
+# icx14: train one 14-class nnU-Net on ImageCAS-X exactly as drawn (1000 epochs, ~50 h of GPU), then predict all
+# 1000 cases for the SegQueue hand-off and score the held-out ImageCAS-X test split.
+#
+#   cd <root>/experiments/icx14 && ./icx14     # set up (login node), submit the job chain, or report status
+#   ./icx14 status                              # job state and progress
+#   ./icx14 collect                             # copy the small results from $SCRATCH into ./results/
+#   ICX14_DRYRUN=1 ./icx14                      # no modules, no pip, no sbatch: print what would happen
+#
+# Budget: 1 x H100. 1000 epochs do not fit one 23:50 job, so the launcher submits a chain of CHAIN (default 4) jobs,
+# each starting when the previous one ends (afterany). Each job resumes from the last checkpoint; once everything is
+# done the remaining jobs exit within a minute. Expected use: ~3 jobs, ~55 h of GPU in total.
+# Optional overrides (never needed): CASES=/path, ACCOUNT=def-xxx (default def-aso22), ICX14_VENV, CHAIN=n.
+set -euo pipefail
+
+HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+LIB="$HERE/lib"
+MODE="${1:-run}"
+DRY="${ICX14_DRYRUN:-0}"
+JOBNAME="icx14"
+WALLTIME="23:50:00"
+CHAIN="${CHAIN:-4}"
+VENV="${ICX14_VENV:-$HOME/icx14-venv}"
+NNUNET_VERSION="2.8.1"
+
+say() { printf '[icx14] %s\n' "$*"; }
+die() { printf '[icx14] ERROR: %s\n' "$*" >&2; exit 1; }
+
+if [ "$DRY" = "1" ]; then
+    : "${SCRATCH:=${TMPDIR:-/tmp}/icx14-dryrun-scratch}"
+    mkdir -p "$SCRATCH"
+fi
+[ -n "${SCRATCH:-}" ] || die "\$SCRATCH is not set (this must run on a Trillium login node)"
+W="$SCRATCH/icx14"
+mkdir -p "$W/logs"
+
+load_modules() {
+    if [ "$DRY" = "1" ]; then return 0; fi
+    command -v module >/dev/null 2>&1 || die "the 'module' command is missing; run this on a Trillium login node"
+    module purge >/dev/null 2>&1 || true
+    module load StdEnv/2023 python/3.11.5
+}
+
+setup_venv() {
+    if [ "$DRY" = "1" ]; then
+        say "dry run: would build venv $VENV (torch from the Alliance wheelhouse, nnunetv2==$NNUNET_VERSION)"
+        PY=python3; return 0
+    fi
+    if [ ! -f "$VENV/.icx14_ok" ]; then
+        say "building venv $VENV (one-off, a few minutes)"
+        virtualenv --no-download "$VENV"
+        # shellcheck disable=SC1091
+        source "$VENV/bin/activate"
+        pip install --no-index --upgrade pip
+        pip install --no-index torch            # Alliance wheel, CUDA-enabled
+        pip install "nnunetv2==$NNUNET_VERSION" remotezip nibabel scipy
+        deactivate
+        touch "$VENV/.icx14_ok"
+    fi
+    # shellcheck disable=SC1091
+    source "$VENV/bin/activate"
+    PY="$VENV/bin/python"
+    local tdir
+    tdir="$("$PY" -c 'import nnunetv2, os; print(os.path.join(os.path.dirname(nnunetv2.__file__), "training", "nnUNetTrainer", "variants", "icx14"))')"
+    mkdir -p "$tdir"; touch "$tdir/__init__.py"
+    cp "$LIB/icx14_trainers.py" "$tdir/icx14_trainers.py"
+    "$PY" -c "import torch; from nnunetv2.training.nnUNetTrainer.variants.icx14.icx14_trainers import nnUNetTrainerICX14; print('[icx14] venv ok: torch', torch.__version__)"
+}
+
+running_job() {
+    if [ "$DRY" = "1" ] || ! command -v squeue >/dev/null 2>&1; then return 1; fi
+    squeue -u "$USER" --name "$JOBNAME" -h -o '%i %T %M %r' | head -4 | tr '\n' ';'
+}
+
+collect() {
+    if [ -d "$W/results" ]; then
+        mkdir -p "$HERE/results"
+        cp -r "$W/results/." "$HERE/results/"
+        cp "$W"/logs/slurm-*.out "$HERE/results/" 2>/dev/null || true
+        say "results copied to $HERE/results/ (SUMMARY.md, results.json, logs)"
+    else
+        say "no results yet in $W/results/"
+    fi
+    if [ -d "$W/predictions" ]; then
+        say "predictions: $(find "$W/predictions" -name 'c*.nii.gz' | wc -l) cases in $W/predictions/ (not copied; large)"
+    fi
+}
+
+status() {
+    local rj
+    rj="$(running_job || true)"
+    [ -n "$rj" ] && say "jobs: $rj"
+    for m in .labels_done .preprocess_done .train_done .predict_done DONE; do
+        [ -e "$W/$m" ] && say "stage done: $m"
+    done
+    grep -h "Epoch [0-9]" "$W/logs/train.log" 2>/dev/null | tail -n 1 | sed 's/^/[icx14] training: /' || true
+    [ -f "$W/timings.json" ] && say "hours per stage, per job: $(tr -d '\n ' < "$W/timings.json")"
+    tail -n 3 "$W"/logs/slurm-*.out 2>/dev/null || true
+}
+
+case "$MODE" in
+    status)  status; exit 0 ;;
+    collect) collect; exit 0 ;;
+    run) ;;
+    *) die "unknown mode '$MODE' (use: ./icx14 | ./icx14 status | ./icx14 collect)" ;;
+esac
+
+if [ -e "$W/DONE" ]; then say "experiment finished"; collect; exit 0; fi
+RJ="$(running_job || true)"
+if [ -n "$RJ" ]; then say "already queued/running: $RJ (not submitting again)"; status; exit 0; fi
+
+load_modules
+setup_venv
+say "scratch workdir: $W"
+"$PY" "$LIB/layout.py" "$HERE" "$W/layout.json"   # walks up to <root>/cases (or $CASES); fails loudly
+
+# ImageCAS-X labels (login node has internet). Reuse run 1's copy if it is complete.
+ICX="$W/icx"
+if [ ! -s "$ICX/train.txt" ] && [ -s "$SCRATCH/atlas/icx/train.txt" ] && \
+        [ "$(find "$SCRATCH/atlas/icx/" -name '*.coronary.nii.gz' | wc -l)" -ge 800 ]; then
+    mkdir -p "$ICX" && cp -n "$SCRATCH/atlas/icx/"* "$ICX/"
+    say "ImageCAS-X labels copied from run 1 ($SCRATCH/atlas/icx)"
+fi
+if [ "$DRY" = "1" ] && [ -n "${ICX14_DRY_ICX:-}" ]; then
+    ICX="$ICX14_DRY_ICX"; say "dry run: using local ImageCAS-X labels in $ICX"
+else
+    "$PY" "$LIB/fetch_icx.py" "$ICX"   # idempotent; ~65 MB from Zenodo
+fi
+"$PY" - "$W/layout.json" "$ICX" <<'PY'
+import json, sys
+L = json.load(open(sys.argv[1]))['cases']
+for s in ('train', 'val', 'test'):
+    ids = ['c%04d' % (int(x) - 1) for x in open(f'{sys.argv[2]}/{s}.txt').read().split()]
+    print(f'[icx14] ImageCAS-X {s}: {len(ids)} listed, {sum(c in L for c in ids)} present in cases/')
+print(f'[icx14] all cases to predict: {len(L)}')
+PY
+
+JOB="$W/job.sh"
+ACCOUNT_LINE="#SBATCH --account=${ACCOUNT:-def-aso22}"
+cat > "$JOB" <<EOF
+#!/bin/bash
+#SBATCH --job-name=$JOBNAME
+#SBATCH --nodes=1
+#SBATCH --gpus-per-node=1
+#SBATCH --time=$WALLTIME
+#SBATCH --output=$W/logs/slurm-%j.out
+$ACCOUNT_LINE
+# No --partition and no --mem: Trillium docs say not to set them. A 1-GPU job gets 24 cores and ~188 GiB.
+set -uo pipefail
+export W="$W" LIB="$LIB" ICX="$ICX" VENV="$VENV" PYTHONUNBUFFERED=1
+bash "$LIB/job_body.sh"
+EOF
+chmod +x "$JOB"
+
+if [ "$DRY" = "1" ]; then
+    say "dry run: would submit a chain of $CHAIN jobs (from $W):"; cat "$JOB"; exit 0
+fi
+cd "$W"   # Trillium: submit from $SCRATCH so SLURM output lands on a writable file system
+PREV=""
+for i in $(seq 1 "$CHAIN"); do
+    if [ -z "$PREV" ]; then JID="$(sbatch --parsable "$JOB")"
+    else JID="$(sbatch --parsable --dependency=afterany:"$PREV" "$JOB")"; fi
+    echo "$JID" >> "$W/submitted_jobs"
+    say "submitted job $i/$CHAIN: $JID"
+    PREV="$JID"
+done
+say "chain submitted ($JOBNAME, 1 x H100, $WALLTIME each; later jobs wait for the one before)."
+say "watch: ./icx14 status    results when finished: ./icx14 collect"
+say "predictions for all cases will be in $W/predictions/"

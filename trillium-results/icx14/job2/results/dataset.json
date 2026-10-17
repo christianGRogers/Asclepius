@@ -1,0 +1,24 @@
+{
+ "channel_names": {
+  "0": "CT"
+ },
+ "labels": {
+  "background": 0,
+  "LM": 1,
+  "LAD": 2,
+  "LCx": 3,
+  "D1": 4,
+  "D2": 5,
+  "OM1": 6,
+  "OM2": 7,
+  "IM": 8,
+  "RCA": 9,
+  "R-PDA": 10,
+  "R-PLA": 11,
+  "L-PDA": 12,
+  "L-PLA": 13,
+  "Other": 14
+ },
+ "numTraining": 640,
+ "file_ending": ".nii.gz"
+}

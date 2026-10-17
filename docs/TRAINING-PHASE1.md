@@ -1,5 +1,9 @@
 # Phase 1 on Trillium: the binary lumen model
 
+> **Superseded.** The plan tournament replaced this binary-lumen plan with a
+> four-class model. The current runbook is [`TRAINING-R1.md`](TRAINING-R1.md);
+> this file is kept for the record.
+
 Everything needed to get a coronary lumen model training on SciNet, from a
 fresh account to a running job chain. Start to finish this is an afternoon of
 attention plus however long the queue takes.

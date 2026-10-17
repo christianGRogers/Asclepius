@@ -1,0 +1,182 @@
+[
+ {
+  "name": "TotalSegmentator CT dataset v2.0.1 (University Hospital Basel): cardiac / thoracic-aorta / TAVI / LA / CT-angiography-thorax subset",
+  "url": "https://zenodo.org/records/10047292 ; per-case mirror https://huggingface.co/datasets/MedOtter/totalsegmentator-cardiac",
+  "tier": "T2 (mostly; many are probably ECG-gated cardiac CTA/TAVI-planning scans, so T1-like originally, but every image was resampled to 1.5 mm isotropic, which degrades the coronaries)",
+  "n_scans": {
+   "number": 130,
+   "unit": "contrast-enhanced studies (verified by HU in the aorta or left atrium >=120 HU, 124 of them >=250 HU) out of 144 studies labelled heart / heart-thorakale aorta / aortic valve / left artrium / coronary arteries / angiography thorax. Plus T3: 67 'ct angiography' whole-body/TAP studies (mostly arterial) and an estimated ~230 more contrast torso CTs (mostly venous; extrapolated from 83 checked)"
+  },
+  "est_size_gb": 1.7,
+  "format": "NIfTI (.nii.gz), int16 HU, 1.5 mm isotropic, often cropped to the heart (FOV ~130-330 mm), plus 117 TotalSegmentator masks per case",
+  "labels": "117 structures (manually refined TotalSegmentator labels): heart, aorta, pulmonary artery/vein, atrial appendage, etc. (v2 has no coronary label)",
+  "license": "CC BY 4.0 (Zenodo record). The HF mirror (MedOtter) also says CC BY 4.0. Redistribution is allowed with attribution.",
+  "access": "open, no login (Zenodo). The HF mirror is also open, no login.",
+  "steps_to_access": "Fast route (tested, ~8 MB/s): for each id in the list below, GET https://huggingface.co/datasets/MedOtter/totalsegmentator-cardiac/resolve/main/<id>/ct.nii.gz . List every case with https://huggingface.co/api/datasets/MedOtter/totalsegmentator-cardiac (siblings). Official route: Totalsegmentator_dataset_v201.zip (23.6 GB, one file) at https://zenodo.org/api/records/10047292/files/Totalsegmentator_dataset_v201.zip/content . It supports HTTP range requests, so python remotezip can pull only meta.csv and <id>/ct.nii.gz (tested, but Zenodo is slow, ~0.3 MB/s on ranges, and drops TLS now and then). Selection: meta.csv (semicolon-separated) column study_type in {'ct heart','ct heart-thorakale aorta','ct aortic valve','ct left artrium','ct angiography thorax'}. Drop the 14 non-contrast ones (ids in notes). 'ct coronary arteries' (3) are all non-contrast calcium scans.",
+  "provenance": "University Hospital Basel, Siemens scanners (Definition Flash/Edge/AS+/Force), years not verified. Independent of ImageCAS, Guangdong, and TCIA. Duplicates of it: HF MedOtter/totalsegmentator-cardiac, HajihajihaJimmy/TotalSegmentator_v2, YongchengYAO/TotalSegmentator-CT-Lite; Zenodo 16274177 TAVRP-PL (578 TS scans with TAVR pseudo-labels, CC BY 4.0, 14 GB). Academic Torrents has v1. Not part of CADS.",
+  "verified": "YES. meta.csv downloaded. All 144 cardiac-labelled cases were downloaded one at a time (from the HF mirror; s0671 etc. also from the Zenodo zip, with identical HU), the median HU in the aorta mask and the LA mask was measured, and each file was deleted. Median aorta HU over the 130 contrast cases is ~400. Case s0738 ('ct heart') was viewed: a cropped cardiac CTA with dense left-heart contrast, aortic root and proximal coronaries visible. Spacing is 1.5 mm isotropic for every case checked, i.e. resampled. The original thin-slice data is NOT public.",
+  "notes": "Per study_type (contrast/total): heart-thorakale aorta 41/46, aortic valve 33/34 (TAVI CTA), heart 28/34, angiography thorax 14/14, left artrium 13/13 (pre-ablation LA CTA), coronary arteries 0/3. The 1.5 mm resampling means the coronaries are only usable at the level of proximal/mid segments. Treat this as T2 (low-res). Files are about 1.5-66 MB per case (median ~13 MB). Contrast ids (130): s0019 s0032 s0076 s0095 s0111 s0115 s0138 s0184 s0189 s0230 s0270 s0271 s0338 s0343 s0349 s0356 s0368 s0374 s0380 s0391 s0398 s0403 s0405 s0414 s0424 s0435 s0439 s0444 s0452 s0457 s0463 s0465 s0488 s0508 s0528 s0531 s0557 s0585 s0594 s0597 s0624 s0653 s0654 s0655 s0659 s0665 s0671 s0684 s0695 s0698 s0702 s0710 s0717 s0729 s0738 s0767 s0773 s0781 s0784 s0787 s0813 s0822 s0825 s0826 s0832 s0834 s0838 s0839 s0846 s0848 s0871 s0877 s0879 s0881 s0883 s0891 s0892 s0901 s0911 s0919 s0935 s0936 s0946 s0954 s0956 s0972 s0977 s0978 s0980 s0987 s1002 s1007 s1018 s1021 s1022 s1033 s1049 s1052 s1073 s1083 s1097 s1105 s1106 s1122 s1133 s1134 s1172 s1179 s1190 s1201 s1225 s1230 s1237 s1239 s1243 s1248 s1250 s1258 s1262 s1269 s1272 s1277 s1280 s1305 s1310 s1326 s1327 s1330 s1332 s1345. Non-contrast ids to skip: s0049 s0083 s0084 s0085 s0335 s0532 s0681 s0782 s0876 s0958 s1084 s1254 s1259 s1333. T3 extras in the same corpus: 'ct angiography neck-thx-abd-pelvis-leg' (50), 'ct angiography thorax-abdomen-pelvis' (17), mostly arterial phase (6 of 9 checked >=250 HU, 3 at 120-250). Partial check of 83 of the ~440 other thorax-covering studies (thorax, thorax-chest, thorax-neck, TAP, NTAP, thorax-abdomen, polytrauma): 40% venous (120-250 HU), 20% non-contrast, 27% cropped so the heart is absent or partial, 13% arterial (>=250). Extrapolated: roughly 175 venous and 55 arterial T3 studies, about 230 contrast thorax studies in all (estimate). MRI part (TotalSegmentator MRI) excluded."
+ },
+ {
+  "name": "autoPET / FDG-PET-CT-Lesions (TCIA, University Hospital Tuebingen): contrast-enhanced diagnostic CT part",
+  "url": "https://www.cancerimagingarchive.net/collection/fdg-pet-ct-lesions/ (DOI 10.7937/gkr0-xv29)",
+  "tier": "T3 (portal-venous whole-body CT, 3 mm. Coronaries only faintly visible)",
+  "n_scans": {
+   "number": 952,
+   "unit": "CT series with SeriesDescription containing 'p.v.' (portal venous), 854 patients. 61 more are 'nativ' (non-contrast)"
+  },
+  "est_size_gb": 283,
+  "format": "DICOM (CT plus PET and SEG)",
+  "labels": "PET lesion masks (not cardiac)",
+  "license": "CC BY 4.0 (NBIA LicenseName)",
+  "access": "open, no login (NBIA REST API)",
+  "steps_to_access": "Enumerate: GET https://services.cancerimagingarchive.net/nbia-api/services/v1/getSeries?Collection=FDG-PET-CT-Lesions&Modality=CT (1014 series). Keep SeriesDescription containing 'p.v.' (StudyDesc 'PET-CT (Ganzkoerper primaer mit KM)'). Download a series: GET https://services.cancerimagingarchive.net/nbia-api/services/v1/getImage?SeriesInstanceUID=<uid> (a zip of DICOM files).",
+  "provenance": "Tuebingen, Siemens Biograph mCT/128. Also in IDC (the round-1 IDC agent's 'any contrast chest CT ~3,600 patients, venous' bucket likely includes it). The autoPET challenge copies (NIfTI) are the same data.",
+  "verified": "YES. Series 1.3.6.1.4.1.14519.5.2.1.161819988214546892561045969026625957886 downloaded (88 MB zip, 340 slices, 3 mm, 0.83 mm pixels). Mediastinal blood ~150-200 HU (venous). Deleted.",
+  "notes": "Low value for coronaries: venous phase, 3 mm slices, ungated. List it only if the lead wants T3 volume."
+ },
+ {
+  "name": "Medical Segmentation Decathlon Task06_Lung",
+  "url": "http://medicaldecathlon.com/ ; https://msd-for-monai.s3-us-west-2.amazonaws.com/Task06_Lung.tar",
+  "tier": "T3",
+  "n_scans": {
+   "number": 96,
+   "unit": "chest CTs (64 train + 32 test). Contrast mixed: 2 of 3 sampled clearly contrast-enhanced, 1 weak/venous"
+  },
+  "est_size_gb": 9.2,
+  "format": "NIfTI, HU, 0.6-1.25 mm slices",
+  "labels": "lung tumour",
+  "license": "CC BY-SA 4.0",
+  "access": "open, no login",
+  "steps_to_access": "One tar (9.16 GB). It can be streamed: curl URL | tar -x --wildcards '*/imagesTr/lung_0*' (tested). There is no per-case index other than the tar listing.",
+  "provenance": "Derived from TCIA NSCLC-Radiogenomics (Stanford/Palo Alto VA), so it overlaps with the round-1 IDC report. Not new patients.",
+  "verified": "YES. lung_022, lung_041 and lung_053 were streamed and viewed. lung_022 has a bright aorta and heart (contrast, CTA-like), lung_053 is weak venous. Deleted.",
+  "notes": "Duplicate of TCIA NSCLC-Radiogenomics. Only worth it as a convenient NIfTI copy."
+ },
+ {
+  "name": "FUMPE (Ferdowsi Univ. Mashhad PE CTPA)",
+  "url": "https://figshare.com/collections/_/4107803 (Sci Data 2018, doi:10.1038/sdata.2018.180)",
+  "tier": "T3 (CTPA)",
+  "n_scans": {
+   "number": 35,
+   "unit": "CTPA patients"
+  },
+  "est_size_gb": 1.6,
+  "format": "DICOM in a .rar per patient (bsdtar extracts it)",
+  "labels": "PE masks (Ground Truth article)",
+  "license": "CC BY 4.0",
+  "access": "open, no login",
+  "steps_to_access": "List: GET https://api.figshare.com/v2/collections/4107803/articles?page_size=50 (35 PatientNN articles + Ground Truth). Each article: GET https://api.figshare.com/v2/articles/<id> gives files[].download_url, e.g. https://ndownloader.figshare.com/files/11449568 (PAT001.rar, 45 MB).",
+  "provenance": "Iran, NeuViz 16 scanner. Independent.",
+  "verified": "YES. PAT001: 201 slices, 1 mm, 0.62 mm pixels, ContrastBolusAgent 'C+'. Contrast voxel median ~250 HU (vessels enhanced). Deleted.",
+  "notes": "Small. CTPA timing gives the right heart and pulmonary arteries more contrast than the coronaries."
+ },
+ {
+  "name": "ChestPathCT5-S100 (Zenodo 18256797, 2026)",
+  "url": "https://zenodo.org/records/18256797",
+  "tier": "T3",
+  "n_scans": {
+   "number": 87,
+   "unit": "chest CTs (20 PE = CTPA; others mixed contrast/non-contrast)"
+  },
+  "est_size_gb": 9.4,
+  "format": "NIfTI, zipped by category",
+  "labels": "category only",
+  "license": "CC0",
+  "access": "open, no login",
+  "steps_to_access": "Files Med3DVlM_{PE,RF,Fluid,Mass,Pneumothorax}.zip via https://zenodo.org/api/records/18256797/files/<name>/content. Range requests work (listed with remotezip).",
+  "provenance": "Single European institution (not named in the record). New.",
+  "verified": "PARTIAL. Record and zip listing were checked. No image was opened (fewer than 50 contrast scans, so not required).",
+  "notes": "About 20-40 contrast scans. Low priority."
+ },
+ {
+  "name": "AortaSeg-60 (Zenodo 18147026, Jan 2026)",
+  "url": "https://zenodo.org/records/18147026",
+  "tier": "T3 (thoraco-abdominal aortic CTA)",
+  "n_scans": {
+   "number": 50,
+   "unit": "contrast CT (40 arterial-phase CTA: young/old/aneurysm/dissection, 10 venous) + 10 non-contrast"
+  },
+  "est_size_gb": 15.9,
+  "format": "NIfTI + TotalSegmentator aorta mask",
+  "labels": "automatic aorta mask (stated to be unreliable)",
+  "license": "CC0",
+  "access": "open, no login",
+  "steps_to_access": "6 zips (Young, Old, Anev, Dissec, Ven, Nat; ~2.5 GB each) at https://zenodo.org/api/records/18147026/files/<Cat>.zip/content. Folders are <Cat>_NN/nifti/<Cat>_NN_image.nii.gz.",
+  "provenance": "Not stated in the README (institution unknown). Distinct from AortaSeg24 and AVT, as far as the README shows.",
+  "verified": "PARTIAL. README read. The image download failed (Zenodo TLS errors), so it is untested. 50 contrast scans, at the brief's threshold.",
+  "notes": "Outside my 'general corpus' brief, but new and open. Pass to whoever owns the aortic leads."
+ },
+ {
+  "name": "Kidney abnormality segmentation in thorax-abdomen CT (Radboudumc, Zenodo 8014290)",
+  "url": "https://zenodo.org/records/8014290",
+  "tier": "T3-low (portal-venous thorax-abdomen)",
+  "n_scans": {
+   "number": 215,
+   "unit": "thorax-abdomen CTs"
+  },
+  "est_size_gb": 38.3,
+  "format": "MHA in 4 zips",
+  "labels": "kidney + kidney abnormality masks",
+  "license": "CC BY 4.0",
+  "access": "open, no login",
+  "steps_to_access": "images1-4.zip at https://zenodo.org/api/records/8014290/files/images<N>.zip/content. Members images<N>/<id>.mha (range-extractable with remotezip, tested).",
+  "provenance": "Radboudumc (NL). Independent.",
+  "verified": "YES. images4/184.mha (512x512x396, 1.5 mm) downloaded and viewed: portal-venous phase (enhanced liver vessels and kidneys), long z-range covering the thorax. Deleted.",
+  "notes": "Venous phase. The heart is in the FOV, but coronary visibility is poor."
+ },
+ {
+  "name": "CADS dataset (Univ. Zurich 2025, HF mrmrx/CADS-dataset)",
+  "url": "https://huggingface.co/datasets/mrmrx/CADS-dataset ; arXiv 2507.22953",
+  "tier": "none new (re-hosts other public sets)",
+  "n_scans": {
+   "number": 0,
+   "unit": "new cardiac scans. 22,022 CTs in total, all from 28 public sources (NLST 7172, STOIC 2000, LIDC 997, AbdomenCT-1K, KiTS, CAD-PE 40, RibFrac, VerSe, TCIA sets...)"
+  },
+  "est_size_gb": 0,
+  "format": "NIfTI + 167-class pseudo-labels",
+  "labels": "167 structures (incl. heart chambers, aorta, coronary? not checked)",
+  "license": "per-source licences, 'cadsdataset' licence",
+  "access": "HF gated 'auto' = free HF account + click-through (no human approval). Not downloaded (no accounts created).",
+  "steps_to_access": "HF login, accept terms, then per-source folders <NNNN_source>/images/*.nii.gz.",
+  "provenance": "Duplicates of public sets. CAD-PE (40 CTPA) is the only contrast-chest subset; the original is on IEEE DataPort (login).",
+  "verified": "File listing verified via the HF API. Images not downloaded (gated).",
+  "notes": "Dead end for new cardiac scans. Possibly useful later for pseudo-labels of the same scans."
+ },
+ {
+  "name": "AbdomenAtlas 1.1 / 3.0 (JHU, HF AbdomenAtlas/*)",
+  "url": "https://huggingface.co/datasets/AbdomenAtlas/AbdomenAtlas3.0Mini",
+  "tier": "none/T3-marginal",
+  "n_scans": {
+   "number": 403,
+   "unit": "'Arterial' phase scans out of 9,262 (metadata column 'contrast'); 8,046 have no phase recorded. Coverage is abdominal; the heart is at most partly in FOV"
+  },
+  "est_size_gb": 0,
+  "format": "NIfTI",
+  "labels": "abdominal organs/tumours",
+  "license": "CC BY-NC-SA 4.0",
+  "access": "3.0Mini open. 1.1Mini HF 'auto' gated.",
+  "steps_to_access": "AbdomenAtlas3.0MiniWithMeta.csv (columns spacing, shape, contrast) at https://huggingface.co/datasets/AbdomenAtlas/AbdomenAtlas3.0Mini/resolve/main/AbdomenAtlas3.0MiniWithMeta.csv",
+  "provenance": "Aggregates FLARE, KiTS, LiTS, AbdomenCT-1K, MSD, etc. (same images as AbdomenCT-1K/FLARE).",
+  "verified": "Metadata downloaded and counted (Venous 580, Arterial 403, Plain 191, Delay 42, blank 8046). No image opened.",
+  "notes": "Confirmed abdomen-only. Not worth pursuing."
+ },
+ {
+  "name": "Other general corpora checked: dead ends / duplicates",
+  "url": "various",
+  "tier": "none",
+  "n_scans": {
+   "number": 0,
+   "unit": "new open contrast cardiac scans"
+  },
+  "est_size_gb": 0,
+  "format": "-",
+  "labels": "-",
+  "license": "-",
+  "access": "-",
+  "steps_to_access": "-",
+  "provenance": "-",
+  "verified": "Mixed (see notes)",
+  "notes": "SAROS (TCIA, 900 CT from 28 TCIA collections; labels only, images must be fetched from the source collections, which are covered by the round-1 IDC report). AMOS (Zenodo 7262581, abdominal CT/MRI, CC BY 4.0): abdomen. AbdomenCT-1K, FLARE22-25, KiTS, WORD, BTCV: abdomen (KiTS/AbdomenCT-1K are in CADS). CT-ORG (TCIA, 140 CT, mostly LiTS abdomen; unverified chest share). HECKTOR: head-neck PET/CT. LIDC/LUNA16: mostly non-contrast (IDC agent: 25 LIDC CTPA). CTRG-Chest-548K volumes (HF Trusure/CTRG-Chest-548K_volume, 1,804 chest CTs, Apache-2.0): tested 0.nii.gz = uint8 windowed, 1 mm dummy spacing, NOT HU, contrast unknown. Rejected. M3D-Cap (HF GoodBaiBai88, Radiopaedia-derived 2D PNG slice stacks, 2 TB): file download returned 401 (needs HF login), images are 8-bit windowed. Rejected. BIMCV-R (HF cyd0806, 8,069 CT, gated auto) / BIMCV-COVID19+ (IEEE DataPort login): account needed, CTPA count unknown. CAD-PE (91 CTPA, IEEE DataPort 10.21227/9bw7-6823, CC BY 4.0): needs a free IEEE account (not created). RadGenome-ChestCT = CT-RATE (already covered). TotalSegmentator MRI excluded."
+ }
+]

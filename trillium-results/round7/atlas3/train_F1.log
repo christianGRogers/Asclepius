@@ -1,0 +1,1822 @@
+/home/croger/atlas3-venv/lib/python3.11/site-packages/torch/jit/_script.py:1643: FutureWarning: `torch.jit.interface` is deprecated. Please use `torch.compile` instead.
+  warnings.warn(
+Using device: cuda:0
+
+#######################################################################
+Please cite the following paper when using nnU-Net:
+Isensee, F., Jaeger, P. F., Kohl, S. A., Petersen, J., & Maier-Hein, K. H. (2021). nnU-Net: a self-configuring method for deep learning-based biomedical image segmentation. Nature methods, 18(2), 203-211.
+#######################################################################
+
+2026-10-11 22:33:36.807797: [segtrain] FP-aware loss: {'lambda': 1.0, 'gamma': 2.0, 'band_mm': 1.5, 'band_voxels': [3, 3, 3]}
+2026-10-11 22:33:40.013142: [segtrain] fine-tune source loaded in full: {'n_tensors': 1160, 'n_head_tensors': 12, 'heads_loaded': True, 'source': '/scratch/croger/atlas2/nnunet_results/Dataset714_AtlasProxyDefaultWindow/nnUNetTrainerAtlas__nnUNetResEncUNetPlans_60G_iso05__3d_fullres/fold_0/checkpoint_final.pth', 'source_sha256': '3ab611fa01261c616d547d50da5bdf72206100469128c1cb6ab0eccf1d96bd03', 'source_trainer': 'nnUNetTrainerAtlas', 'source_epoch': 368}
+2026-10-11 22:33:40.016022: Using splits from existing split file: /scratch/croger/atlas2/nnunet_preprocessed/Dataset714_AtlasProxyDefaultWindow/splits_final.json
+2026-10-11 22:33:40.017276: The split file contains 1 splits.
+2026-10-11 22:33:40.018146: Desired fold for training: 0
+2026-10-11 22:33:40.018962: This split has 560 training and 80 validation cases.
+2026-10-11 22:33:40.025708: [segtrain] A14: 640 training/validation identifiers checked, none sealed
+2026-10-11 22:33:40.044402: do_dummy_2d_data_aug: False
+2026-10-11 22:33:40.046385: Using splits from existing split file: /scratch/croger/atlas2/nnunet_preprocessed/Dataset714_AtlasProxyDefaultWindow/splits_final.json
+2026-10-11 22:33:40.047518: The split file contains 1 splits.
+2026-10-11 22:33:40.048368: Desired fold for training: 0
+2026-10-11 22:33:40.049260: This split has 560 training and 80 validation cases.
+using pin_memory on device 0
+using pin_memory on device 0
+2026-10-11 22:33:52.333994: [segtrain] deterministic data stream: seed 12345, 12 workers
+
+This is the configuration used by this training:
+Configuration name: 3d_fullres
+ {'data_identifier': 'nnUNetPlans_3d_fullres', 'preprocessor_name': 'DefaultPreprocessor', 'batch_size': 2, 'patch_size': [256, 256, 256], 'median_image_size_in_voxels': [275.0, 358.0, 358.0], 'spacing': [0.5, 0.5, 0.5], 'normalization_schemes': ['CTNormalization'], 'use_mask_for_norm': [False], 'resampling_fn_data': 'resample_data_or_seg_to_shape', 'resampling_fn_seg': 'resample_data_or_seg_to_shape', 'resampling_fn_data_kwargs': {'is_seg': False, 'order': 3, 'order_z': 0, 'force_separate_z': None}, 'resampling_fn_seg_kwargs': {'is_seg': True, 'order': 1, 'order_z': 0, 'force_separate_z': None}, 'resampling_fn_probabilities': 'resample_data_or_seg_to_shape', 'resampling_fn_probabilities_kwargs': {'is_seg': False, 'order': 1, 'order_z': 0, 'force_separate_z': None}, 'architecture': {'network_class_name': 'dynamic_network_architectures.architectures.unet.ResidualEncoderUNet', 'arch_kwargs': {'n_stages': 7, 'features_per_stage': [32, 64, 128, 256, 320, 320, 320], 'conv_op': 'torch.nn.modules.conv.Conv3d', 'kernel_sizes': [[3, 3, 3], [3, 3, 3], [3, 3, 3], [3, 3, 3], [3, 3, 3], [3, 3, 3], [3, 3, 3]], 'strides': [[1, 1, 1], [2, 2, 2], [2, 2, 2], [2, 2, 2], [2, 2, 2], [2, 2, 2], [2, 2, 2]], 'n_blocks_per_stage': [1, 3, 4, 6, 6, 6, 6], 'n_conv_per_stage_decoder': [1, 1, 1, 1, 1, 1], 'conv_bias': True, 'norm_op': 'torch.nn.modules.instancenorm.InstanceNorm3d', 'norm_op_kwargs': {'eps': 1e-05, 'affine': True}, 'dropout_op': None, 'dropout_op_kwargs': None, 'nonlin': 'torch.nn.LeakyReLU', 'nonlin_kwargs': {'inplace': True}}, '_kw_requires_import': ['conv_op', 'norm_op', 'dropout_op', 'nonlin']}, 'batch_dice': False} 
+
+These are the global plan.json settings:
+ {'dataset_name': 'Dataset714_AtlasProxyDefaultWindow', 'plans_name': 'nnUNetResEncUNetPlans_60G_iso05', 'original_median_spacing_after_transp': [0.5, 0.349609375, 0.349609375], 'original_median_shape_after_transp': [275, 512, 512], 'image_reader_writer': 'SimpleITKIO', 'transpose_forward': [0, 1, 2], 'transpose_backward': [0, 1, 2], 'experiment_planner_used': 'ResEncUNetPlanner', 'label_manager': 'LabelManager', 'foreground_intensity_properties_per_channel': {'0': {'max': 3069.0, 'mean': 147.47325134277344, 'median': 107.0, 'min': -1003.0, 'percentile_00_5': -169.0, 'percentile_99_5': 719.0, 'std': 180.4252471923828}}} 
+
+2026-10-11 22:33:52.365299: Unable to plot network architecture:
+2026-10-11 22:33:52.366508: No module named 'hiddenlayer'
+2026-10-11 22:33:52.440404: [segtrain] LR schedule: {'peak_lr': 0.01, 'warmup_iters': 2500, 'total_iters': 50000, 'poly_exponent': 0.9, 'lr_first': 4e-06, 'lr_end_of_warmup': 0.01, 'lr_last': 6.179818943972918e-07}
+2026-10-11 22:33:52.445267: 
+2026-10-11 22:33:52.446904: Epoch 0
+2026-10-11 22:33:52.469337: Current learning rate: 4e-06 (iteration 0)
+2026-10-11 22:37:35.276825: [segtrain] FP term (epoch mean): 0.00007
+2026-10-11 22:37:47.286310: train_loss -0.884
+2026-10-11 22:37:47.288347: val_loss -0.8085
+2026-10-11 22:37:47.289882: Pseudo dice [np.float32(0.9014), np.float32(0.8389), np.float32(0.7692), np.float32(0.8162)]
+2026-10-11 22:37:47.291054: Epoch time: 234.84 s
+2026-10-11 22:37:47.292215: Yayy! New best EMA pseudo Dice: 0.8313999772071838
+2026-10-11 22:37:48.861813: 
+2026-10-11 22:37:48.867752: Epoch 1
+2026-10-11 22:37:48.869029: Current learning rate: 0.001004 (iteration 250)
+2026-10-11 22:40:40.153678: [segtrain] FP term (epoch mean): 0.00009
+2026-10-11 22:40:52.157083: train_loss -0.8851
+2026-10-11 22:40:52.160768: val_loss -0.813
+2026-10-11 22:40:52.161938: Pseudo dice [np.float32(0.9096), np.float32(0.8384), np.float32(0.774), np.float32(0.8397)]
+2026-10-11 22:40:52.163139: Epoch time: 183.3 s
+2026-10-11 22:40:52.164212: Yayy! New best EMA pseudo Dice: 0.8323000073432922
+2026-10-11 22:40:53.500171: 
+2026-10-11 22:40:53.501928: Epoch 2
+2026-10-11 22:40:53.503350: Current learning rate: 0.002004 (iteration 500)
+2026-10-11 22:43:53.621234: [segtrain] FP term (epoch mean): 0.00010
+2026-10-11 22:44:05.695140: train_loss -0.8821
+2026-10-11 22:44:05.697607: val_loss -0.8173
+2026-10-11 22:44:05.698818: Pseudo dice [np.float32(0.9088), np.float32(0.8347), np.float32(0.7797), np.float32(0.8393)]
+2026-10-11 22:44:05.699958: Epoch time: 192.2 s
+2026-10-11 22:44:05.701223: Yayy! New best EMA pseudo Dice: 0.8331999778747559
+2026-10-11 22:44:07.588297: 
+2026-10-11 22:44:07.589607: Epoch 3
+2026-10-11 22:44:07.590678: Current learning rate: 0.003004 (iteration 750)
+2026-10-11 22:46:58.969743: [segtrain] FP term (epoch mean): 0.00013
+2026-10-11 22:47:10.963828: train_loss -0.8802
+2026-10-11 22:47:10.966058: val_loss -0.8056
+2026-10-11 22:47:10.967009: Pseudo dice [np.float32(0.8987), np.float32(0.8323), np.float32(0.7643), np.float32(0.8501)]
+2026-10-11 22:47:10.967915: Epoch time: 183.38 s
+2026-10-11 22:47:10.968860: Yayy! New best EMA pseudo Dice: 0.8335000276565552
+2026-10-11 22:47:12.314896: 
+2026-10-11 22:47:12.315973: Epoch 4
+2026-10-11 22:47:12.316836: Current learning rate: 0.004004 (iteration 1000)
+2026-10-11 22:50:06.102608: [segtrain] FP term (epoch mean): 0.00014
+2026-10-11 22:50:18.091371: train_loss -0.8725
+2026-10-11 22:50:18.093417: val_loss -0.8013
+2026-10-11 22:50:18.094367: Pseudo dice [np.float32(0.9088), np.float32(0.8312), np.float32(0.7497), np.float32(0.8249)]
+2026-10-11 22:50:18.095644: Epoch time: 185.78 s
+2026-10-11 22:50:18.719538: 
+2026-10-11 22:50:18.720701: Epoch 5
+2026-10-11 22:50:18.721559: Current learning rate: 0.005004 (iteration 1250)
+2026-10-11 22:53:10.365571: [segtrain] FP term (epoch mean): 0.00020
+2026-10-11 22:53:22.373857: train_loss -0.8515
+2026-10-11 22:53:22.377356: val_loss -0.8058
+2026-10-11 22:53:22.378508: Pseudo dice [np.float32(0.9101), np.float32(0.8281), np.float32(0.7578), np.float32(0.8094)]
+2026-10-11 22:53:22.379631: Epoch time: 183.66 s
+2026-10-11 22:53:23.186949: 
+2026-10-11 22:53:23.188497: Epoch 6
+2026-10-11 22:53:23.189666: Current learning rate: 0.006004 (iteration 1500)
+2026-10-11 22:56:14.619979: [segtrain] FP term (epoch mean): 0.00023
+2026-10-11 22:56:26.640387: train_loss -0.8518
+2026-10-11 22:56:26.642734: val_loss -0.8042
+2026-10-11 22:56:26.643946: Pseudo dice [np.float32(0.9016), np.float32(0.8318), np.float32(0.7544), np.float32(0.8434)]
+2026-10-11 22:56:26.645158: Epoch time: 183.46 s
+2026-10-11 22:56:27.263121: 
+2026-10-11 22:56:27.264434: Epoch 7
+2026-10-11 22:56:27.265486: Current learning rate: 0.007004 (iteration 1750)
+2026-10-11 22:59:18.563020: [segtrain] FP term (epoch mean): 0.00029
+2026-10-11 22:59:30.558375: train_loss -0.8414
+2026-10-11 22:59:30.561965: val_loss -0.8179
+2026-10-11 22:59:30.564115: Pseudo dice [np.float32(0.9046), np.float32(0.8395), np.float32(0.7922), np.float32(0.8321)]
+2026-10-11 22:59:30.565316: Epoch time: 183.3 s
+2026-10-11 22:59:31.503127: 
+2026-10-11 22:59:31.504583: Epoch 8
+2026-10-11 22:59:31.505650: Current learning rate: 0.008004 (iteration 2000)
+2026-10-11 23:02:22.988731: [segtrain] FP term (epoch mean): 0.00034
+2026-10-11 23:02:35.004120: train_loss -0.8302
+2026-10-11 23:02:35.006709: val_loss -0.7889
+2026-10-11 23:02:35.007942: Pseudo dice [np.float32(0.8946), np.float32(0.8204), np.float32(0.7455), np.float32(0.8146)]
+2026-10-11 23:02:35.009065: Epoch time: 183.5 s
+2026-10-11 23:02:35.639788: 
+2026-10-11 23:02:35.641385: Epoch 9
+2026-10-11 23:02:35.642961: Current learning rate: 0.009004 (iteration 2250)
+2026-10-11 23:05:27.131859: [segtrain] FP term (epoch mean): 0.00043
+2026-10-11 23:05:39.126667: train_loss -0.8158
+2026-10-11 23:05:39.129314: val_loss -0.7985
+2026-10-11 23:05:39.130332: Pseudo dice [np.float32(0.8934), np.float32(0.8314), np.float32(0.7701), np.float32(0.8145)]
+2026-10-11 23:05:39.131832: Epoch time: 183.49 s
+2026-10-11 23:05:39.738427: 
+2026-10-11 23:05:39.739805: Epoch 10
+2026-10-11 23:05:39.740737: Current learning rate: 0.01 (iteration 2500)
+2026-10-11 23:08:31.128878: [segtrain] FP term (epoch mean): 0.00044
+2026-10-11 23:08:43.122181: train_loss -0.8103
+2026-10-11 23:08:43.124114: val_loss -0.7943
+2026-10-11 23:08:43.125231: Pseudo dice [np.float32(0.8935), np.float32(0.8273), np.float32(0.7571), np.float32(0.8071)]
+2026-10-11 23:08:43.126167: Epoch time: 183.39 s
+2026-10-11 23:08:43.745880: 
+2026-10-11 23:08:43.747139: Epoch 11
+2026-10-11 23:08:43.748045: Current learning rate: 0.00995262 (iteration 2750)
+2026-10-11 23:11:39.913911: [segtrain] FP term (epoch mean): 0.00045
+2026-10-11 23:11:51.899394: train_loss -0.8106
+2026-10-11 23:11:51.901943: val_loss -0.7874
+2026-10-11 23:11:51.902984: Pseudo dice [np.float32(0.8995), np.float32(0.8209), np.float32(0.7664), np.float32(0.7984)]
+2026-10-11 23:11:51.903900: Epoch time: 188.16 s
+2026-10-11 23:11:52.514136: 
+2026-10-11 23:11:52.515310: Epoch 12
+2026-10-11 23:11:52.516185: Current learning rate: 0.00990521 (iteration 3000)
+2026-10-11 23:14:43.836039: [segtrain] FP term (epoch mean): 0.00047
+2026-10-11 23:14:55.814173: train_loss -0.8157
+2026-10-11 23:14:55.816054: val_loss -0.8055
+2026-10-11 23:14:55.817143: Pseudo dice [np.float32(0.8988), np.float32(0.8438), np.float32(0.7601), np.float32(0.8357)]
+2026-10-11 23:14:55.818064: Epoch time: 183.3 s
+2026-10-11 23:14:56.421198: 
+2026-10-11 23:14:56.422400: Epoch 13
+2026-10-11 23:14:56.423378: Current learning rate: 0.00985778 (iteration 3250)
+2026-10-11 23:18:15.615036: [segtrain] FP term (epoch mean): 0.00044
+2026-10-11 23:18:27.593983: train_loss -0.8183
+2026-10-11 23:18:27.596246: val_loss -0.7916
+2026-10-11 23:18:27.597388: Pseudo dice [np.float32(0.8882), np.float32(0.8229), np.float32(0.7578), np.float32(0.8331)]
+2026-10-11 23:18:27.598458: Epoch time: 211.18 s
+2026-10-11 23:18:28.197989: 
+2026-10-11 23:18:28.199394: Epoch 14
+2026-10-11 23:18:28.200505: Current learning rate: 0.00981033 (iteration 3500)
+2026-10-11 23:21:19.520666: [segtrain] FP term (epoch mean): 0.00034
+2026-10-11 23:21:31.505842: train_loss -0.825
+2026-10-11 23:21:31.507707: val_loss -0.8034
+2026-10-11 23:21:31.508676: Pseudo dice [np.float32(0.8986), np.float32(0.8398), np.float32(0.7514), np.float32(0.825)]
+2026-10-11 23:21:31.509601: Epoch time: 183.31 s
+2026-10-11 23:21:32.119426: 
+2026-10-11 23:21:32.120571: Epoch 15
+2026-10-11 23:21:32.121476: Current learning rate: 0.00976284 (iteration 3750)
+2026-10-11 23:24:23.392299: [segtrain] FP term (epoch mean): 0.00035
+2026-10-11 23:24:35.368258: train_loss -0.8282
+2026-10-11 23:24:35.369915: val_loss -0.8087
+2026-10-11 23:24:35.371287: Pseudo dice [np.float32(0.9036), np.float32(0.8318), np.float32(0.773), np.float32(0.8259)]
+2026-10-11 23:24:35.372222: Epoch time: 183.25 s
+2026-10-11 23:24:36.218803: 
+2026-10-11 23:24:36.220387: Epoch 16
+2026-10-11 23:24:36.221244: Current learning rate: 0.00971534 (iteration 4000)
+2026-10-11 23:27:33.924662: [segtrain] FP term (epoch mean): 0.00042
+2026-10-11 23:27:45.910288: train_loss -0.8212
+2026-10-11 23:27:45.912420: val_loss -0.7971
+2026-10-11 23:27:45.913539: Pseudo dice [np.float32(0.8995), np.float32(0.8303), np.float32(0.7393), np.float32(0.8247)]
+2026-10-11 23:27:45.914663: Epoch time: 189.69 s
+2026-10-11 23:27:46.528512: 
+2026-10-11 23:27:46.530056: Epoch 17
+2026-10-11 23:27:46.531296: Current learning rate: 0.0096678 (iteration 4250)
+2026-10-11 23:30:37.958533: [segtrain] FP term (epoch mean): 0.00038
+2026-10-11 23:30:49.935212: train_loss -0.8257
+2026-10-11 23:30:49.936657: val_loss -0.7907
+2026-10-11 23:30:49.937567: Pseudo dice [np.float32(0.8898), np.float32(0.8153), np.float32(0.7615), np.float32(0.8338)]
+2026-10-11 23:30:49.938454: Epoch time: 183.41 s
+2026-10-11 23:30:50.537344: 
+2026-10-11 23:30:50.538597: Epoch 18
+2026-10-11 23:30:50.539451: Current learning rate: 0.00962024 (iteration 4500)
+2026-10-11 23:33:41.909475: [segtrain] FP term (epoch mean): 0.00032
+2026-10-11 23:33:53.890702: train_loss -0.8279
+2026-10-11 23:33:53.892497: val_loss -0.7888
+2026-10-11 23:33:53.893432: Pseudo dice [np.float32(0.8922), np.float32(0.8271), np.float32(0.7743), np.float32(0.8261)]
+2026-10-11 23:33:53.894392: Epoch time: 183.36 s
+2026-10-11 23:33:54.513704: 
+2026-10-11 23:33:54.514828: Epoch 19
+2026-10-11 23:33:54.516351: Current learning rate: 0.00957266 (iteration 4750)
+2026-10-11 23:36:45.868510: [segtrain] FP term (epoch mean): 0.00035
+2026-10-11 23:36:57.848475: train_loss -0.8277
+2026-10-11 23:36:57.850483: val_loss -0.7678
+2026-10-11 23:36:57.851665: Pseudo dice [np.float32(0.8832), np.float32(0.8232), np.float32(0.7487), np.float32(0.7974)]
+2026-10-11 23:36:57.852817: Epoch time: 183.34 s
+2026-10-11 23:36:58.456201: 
+2026-10-11 23:36:58.457651: Epoch 20
+2026-10-11 23:36:58.459227: Current learning rate: 0.00952504 (iteration 5000)
+2026-10-11 23:39:49.786693: [segtrain] FP term (epoch mean): 0.00037
+2026-10-11 23:40:01.768675: train_loss -0.8253
+2026-10-11 23:40:01.770914: val_loss -0.7931
+2026-10-11 23:40:01.772556: Pseudo dice [np.float32(0.8971), np.float32(0.82), np.float32(0.7694), np.float32(0.8213)]
+2026-10-11 23:40:01.773914: Epoch time: 183.31 s
+2026-10-11 23:40:02.402068: 
+2026-10-11 23:40:02.404170: Epoch 21
+2026-10-11 23:40:02.405765: Current learning rate: 0.00947741 (iteration 5250)
+2026-10-11 23:42:56.727077: [segtrain] FP term (epoch mean): 0.00036
+2026-10-11 23:43:08.776029: train_loss -0.828
+2026-10-11 23:43:08.777942: val_loss -0.7963
+2026-10-11 23:43:08.778903: Pseudo dice [np.float32(0.8971), np.float32(0.8337), np.float32(0.721), np.float32(0.8157)]
+2026-10-11 23:43:08.780076: Epoch time: 186.38 s
+2026-10-11 23:43:09.382157: 
+2026-10-11 23:43:09.383646: Epoch 22
+2026-10-11 23:43:09.384803: Current learning rate: 0.00942974 (iteration 5500)
+2026-10-11 23:46:00.754443: [segtrain] FP term (epoch mean): 0.00037
+2026-10-11 23:46:12.744142: train_loss -0.8314
+2026-10-11 23:46:12.746080: val_loss -0.8021
+2026-10-11 23:46:12.747208: Pseudo dice [np.float32(0.8897), np.float32(0.8238), np.float32(0.7567), np.float32(0.8226)]
+2026-10-11 23:46:12.748291: Epoch time: 183.36 s
+2026-10-11 23:46:13.351525: 
+2026-10-11 23:46:13.353164: Epoch 23
+2026-10-11 23:46:13.354614: Current learning rate: 0.00938205 (iteration 5750)
+2026-10-11 23:49:04.650424: [segtrain] FP term (epoch mean): 0.00028
+2026-10-11 23:49:16.639011: train_loss -0.8417
+2026-10-11 23:49:16.641848: val_loss -0.7858
+2026-10-11 23:49:16.643065: Pseudo dice [np.float32(0.886), np.float32(0.8265), np.float32(0.7539), np.float32(0.8307)]
+2026-10-11 23:49:16.644307: Epoch time: 183.29 s
+2026-10-11 23:49:17.500932: 
+2026-10-11 23:49:17.502297: Epoch 24
+2026-10-11 23:49:17.503357: Current learning rate: 0.00933433 (iteration 6000)
+2026-10-11 23:52:08.885510: [segtrain] FP term (epoch mean): 0.00030
+2026-10-11 23:52:20.892851: train_loss -0.8416
+2026-10-11 23:52:20.895114: val_loss -0.7935
+2026-10-11 23:52:20.896443: Pseudo dice [np.float32(0.8808), np.float32(0.8178), np.float32(0.7378), np.float32(0.8278)]
+2026-10-11 23:52:20.897670: Epoch time: 183.39 s
+2026-10-11 23:52:21.546241: 
+2026-10-11 23:52:21.547767: Epoch 25
+2026-10-11 23:52:21.548964: Current learning rate: 0.00928658 (iteration 6250)
+2026-10-11 23:55:12.893317: [segtrain] FP term (epoch mean): 0.00030
+2026-10-11 23:55:24.875918: train_loss -0.8352
+2026-10-11 23:55:24.877652: val_loss -0.8187
+2026-10-11 23:55:24.878556: Pseudo dice [np.float32(0.9059), np.float32(0.8441), np.float32(0.7875), np.float32(0.8324)]
+2026-10-11 23:55:24.879550: Epoch time: 183.33 s
+2026-10-11 23:55:25.484410: 
+2026-10-11 23:55:25.485537: Epoch 26
+2026-10-11 23:55:25.486468: Current learning rate: 0.00923881 (iteration 6500)
+2026-10-11 23:58:16.859534: [segtrain] FP term (epoch mean): 0.00025
+2026-10-11 23:58:28.846274: train_loss -0.8464
+2026-10-11 23:58:28.848290: val_loss -0.8097
+2026-10-11 23:58:28.849391: Pseudo dice [np.float32(0.9039), np.float32(0.8505), np.float32(0.7852), np.float32(0.8304)]
+2026-10-11 23:58:28.850654: Epoch time: 183.36 s
+2026-10-11 23:58:29.468256: 
+2026-10-11 23:58:29.469733: Epoch 27
+2026-10-11 23:58:29.471107: Current learning rate: 0.00919101 (iteration 6750)
+2026-10-12 00:01:21.332208: [segtrain] FP term (epoch mean): 0.00029
+2026-10-12 00:01:33.323969: train_loss -0.8403
+2026-10-12 00:01:33.325785: val_loss -0.7954
+2026-10-12 00:01:33.326761: Pseudo dice [np.float32(0.8836), np.float32(0.8414), np.float32(0.7702), np.float32(0.8375)]
+2026-10-12 00:01:33.327673: Epoch time: 183.86 s
+2026-10-12 00:01:33.940511: 
+2026-10-12 00:01:33.941690: Epoch 28
+2026-10-12 00:01:33.943019: Current learning rate: 0.00914318 (iteration 7000)
+2026-10-12 00:04:25.327229: [segtrain] FP term (epoch mean): 0.00028
+2026-10-12 00:04:37.309702: train_loss -0.8403
+2026-10-12 00:04:37.311460: val_loss -0.801
+2026-10-12 00:04:37.312438: Pseudo dice [np.float32(0.8777), np.float32(0.8442), np.float32(0.7664), np.float32(0.8347)]
+2026-10-12 00:04:37.313380: Epoch time: 183.37 s
+2026-10-12 00:04:37.936335: 
+2026-10-12 00:04:37.937504: Epoch 29
+2026-10-12 00:04:37.938415: Current learning rate: 0.00909533 (iteration 7250)
+2026-10-12 00:07:29.317099: [segtrain] FP term (epoch mean): 0.00028
+2026-10-12 00:07:41.302076: train_loss -0.8405
+2026-10-12 00:07:41.304523: val_loss -0.8098
+2026-10-12 00:07:41.306336: Pseudo dice [np.float32(0.8952), np.float32(0.8435), np.float32(0.7801), np.float32(0.8222)]
+2026-10-12 00:07:41.307953: Epoch time: 183.37 s
+2026-10-12 00:07:41.915189: 
+2026-10-12 00:07:41.916645: Epoch 30
+2026-10-12 00:07:41.917890: Current learning rate: 0.00904744 (iteration 7500)
+2026-10-12 00:10:33.250754: [segtrain] FP term (epoch mean): 0.00023
+2026-10-12 00:10:45.236705: train_loss -0.8464
+2026-10-12 00:10:45.238542: val_loss -0.7966
+2026-10-12 00:10:45.239480: Pseudo dice [np.float32(0.889), np.float32(0.8402), np.float32(0.7583), np.float32(0.8253)]
+2026-10-12 00:10:45.240347: Epoch time: 183.32 s
+2026-10-12 00:10:45.855613: 
+2026-10-12 00:10:45.857383: Epoch 31
+2026-10-12 00:10:45.858486: Current learning rate: 0.00899953 (iteration 7750)
+2026-10-12 00:13:37.190724: [segtrain] FP term (epoch mean): 0.00022
+2026-10-12 00:13:49.165199: train_loss -0.8474
+2026-10-12 00:13:49.166856: val_loss -0.7813
+2026-10-12 00:13:49.168250: Pseudo dice [np.float32(0.901), np.float32(0.8141), np.float32(0.7493), np.float32(0.8258)]
+2026-10-12 00:13:49.169221: Epoch time: 183.31 s
+2026-10-12 00:13:50.046351: 
+2026-10-12 00:13:50.047539: Epoch 32
+2026-10-12 00:13:50.048441: Current learning rate: 0.00895159 (iteration 8000)
+2026-10-12 00:16:41.446683: [segtrain] FP term (epoch mean): 0.00026
+2026-10-12 00:16:53.424300: train_loss -0.8478
+2026-10-12 00:16:53.426072: val_loss -0.7999
+2026-10-12 00:16:53.427115: Pseudo dice [np.float32(0.897), np.float32(0.8209), np.float32(0.7669), np.float32(0.8284)]
+2026-10-12 00:16:53.428208: Epoch time: 183.38 s
+2026-10-12 00:16:54.047713: 
+2026-10-12 00:16:54.048759: Epoch 33
+2026-10-12 00:16:54.049634: Current learning rate: 0.00890362 (iteration 8250)
+2026-10-12 00:19:45.473699: [segtrain] FP term (epoch mean): 0.00023
+2026-10-12 00:19:57.453471: train_loss -0.8491
+2026-10-12 00:19:57.455357: val_loss -0.8068
+2026-10-12 00:19:57.457060: Pseudo dice [np.float32(0.9033), np.float32(0.831), np.float32(0.7615), np.float32(0.8266)]
+2026-10-12 00:19:57.458064: Epoch time: 183.41 s
+2026-10-12 00:19:58.075296: 
+2026-10-12 00:19:58.076315: Epoch 34
+2026-10-12 00:19:58.077184: Current learning rate: 0.00885562 (iteration 8500)
+2026-10-12 00:22:49.481114: [segtrain] FP term (epoch mean): 0.00028
+2026-10-12 00:23:01.463213: train_loss -0.8449
+2026-10-12 00:23:01.465139: val_loss -0.7941
+2026-10-12 00:23:01.466242: Pseudo dice [np.float32(0.8907), np.float32(0.8267), np.float32(0.7746), np.float32(0.8178)]
+2026-10-12 00:23:01.467284: Epoch time: 183.39 s
+2026-10-12 00:23:02.068611: 
+2026-10-12 00:23:02.070035: Epoch 35
+2026-10-12 00:23:02.071424: Current learning rate: 0.00880759 (iteration 8750)
+2026-10-12 00:25:53.510957: [segtrain] FP term (epoch mean): 0.00026
+2026-10-12 00:26:05.494178: train_loss -0.8473
+2026-10-12 00:26:05.496229: val_loss -0.8127
+2026-10-12 00:26:05.497407: Pseudo dice [np.float32(0.8988), np.float32(0.8447), np.float32(0.7692), np.float32(0.8288)]
+2026-10-12 00:26:05.498619: Epoch time: 183.43 s
+2026-10-12 00:26:06.328434: 
+2026-10-12 00:26:06.329866: Epoch 36
+2026-10-12 00:26:06.331184: Current learning rate: 0.00875954 (iteration 9000)
+2026-10-12 00:28:57.838200: [segtrain] FP term (epoch mean): 0.00031
+2026-10-12 00:29:09.837155: train_loss -0.8395
+2026-10-12 00:29:09.839019: val_loss -0.7827
+2026-10-12 00:29:09.839998: Pseudo dice [np.float32(0.896), np.float32(0.8386), np.float32(0.7511), np.float32(0.7971)]
+2026-10-12 00:29:09.841086: Epoch time: 183.51 s
+2026-10-12 00:29:10.497052: 
+2026-10-12 00:29:10.498258: Epoch 37
+2026-10-12 00:29:10.499157: Current learning rate: 0.00871145 (iteration 9250)
+2026-10-12 00:32:01.926186: [segtrain] FP term (epoch mean): 0.00028
+2026-10-12 00:32:13.924571: train_loss -0.8322
+2026-10-12 00:32:13.926256: val_loss -0.7955
+2026-10-12 00:32:13.927373: Pseudo dice [np.float32(0.8959), np.float32(0.8347), np.float32(0.7606), np.float32(0.8385)]
+2026-10-12 00:32:13.928248: Epoch time: 183.43 s
+2026-10-12 00:32:14.558542: 
+2026-10-12 00:32:14.559750: Epoch 38
+2026-10-12 00:32:14.560653: Current learning rate: 0.00866334 (iteration 9500)
+2026-10-12 00:35:05.942414: [segtrain] FP term (epoch mean): 0.00033
+2026-10-12 00:35:17.938670: train_loss -0.8407
+2026-10-12 00:35:17.942860: val_loss -0.7969
+2026-10-12 00:35:17.944539: Pseudo dice [np.float32(0.8964), np.float32(0.8222), np.float32(0.7573), np.float32(0.8202)]
+2026-10-12 00:35:17.946190: Epoch time: 183.38 s
+2026-10-12 00:35:18.568928: 
+2026-10-12 00:35:18.570077: Epoch 39
+2026-10-12 00:35:18.571167: Current learning rate: 0.00861519 (iteration 9750)
+2026-10-12 00:38:10.048881: [segtrain] FP term (epoch mean): 0.00029
+2026-10-12 00:38:22.041581: train_loss -0.843
+2026-10-12 00:38:22.043684: val_loss -0.8099
+2026-10-12 00:38:22.044894: Pseudo dice [np.float32(0.898), np.float32(0.8413), np.float32(0.7858), np.float32(0.8343)]
+2026-10-12 00:38:22.045946: Epoch time: 183.48 s
+2026-10-12 00:38:22.940823: 
+2026-10-12 00:38:22.941964: Epoch 40
+2026-10-12 00:38:22.943245: Current learning rate: 0.00856702 (iteration 10000)
+2026-10-12 00:41:16.158237: [segtrain] FP term (epoch mean): 0.00028
+2026-10-12 00:41:28.139424: train_loss -0.8417
+2026-10-12 00:41:28.141346: val_loss -0.8163
+2026-10-12 00:41:28.142491: Pseudo dice [np.float32(0.8994), np.float32(0.8459), np.float32(0.7861), np.float32(0.8448)]
+2026-10-12 00:41:28.143678: Epoch time: 185.2 s
+2026-10-12 00:41:28.785308: 
+2026-10-12 00:41:28.786341: Epoch 41
+2026-10-12 00:41:28.787214: Current learning rate: 0.00851881 (iteration 10250)
+2026-10-12 00:44:20.322529: [segtrain] FP term (epoch mean): 0.00027
+2026-10-12 00:44:32.310576: train_loss -0.844
+2026-10-12 00:44:32.312644: val_loss -0.8054
+2026-10-12 00:44:32.313668: Pseudo dice [np.float32(0.8945), np.float32(0.8452), np.float32(0.7578), np.float32(0.8325)]
+2026-10-12 00:44:32.314601: Epoch time: 183.53 s
+2026-10-12 00:44:32.940308: 
+2026-10-12 00:44:32.941459: Epoch 42
+2026-10-12 00:44:32.942344: Current learning rate: 0.00847058 (iteration 10500)
+2026-10-12 00:47:24.279549: [segtrain] FP term (epoch mean): 0.00026
+2026-10-12 00:47:36.259147: train_loss -0.8493
+2026-10-12 00:47:36.260920: val_loss -0.7975
+2026-10-12 00:47:36.261930: Pseudo dice [np.float32(0.9059), np.float32(0.84), np.float32(0.7679), np.float32(0.8341)]
+2026-10-12 00:47:36.262856: Epoch time: 183.32 s
+2026-10-12 00:47:36.879387: 
+2026-10-12 00:47:36.880557: Epoch 43
+2026-10-12 00:47:36.881778: Current learning rate: 0.00842231 (iteration 10750)
+2026-10-12 00:50:28.128669: [segtrain] FP term (epoch mean): 0.00020
+2026-10-12 00:50:40.114816: train_loss -0.8538
+2026-10-12 00:50:40.116900: val_loss -0.806
+2026-10-12 00:50:40.118207: Pseudo dice [np.float32(0.8938), np.float32(0.845), np.float32(0.7804), np.float32(0.8244)]
+2026-10-12 00:50:40.119866: Epoch time: 183.24 s
+2026-10-12 00:50:40.731521: 
+2026-10-12 00:50:40.732990: Epoch 44
+2026-10-12 00:50:40.734285: Current learning rate: 0.00837402 (iteration 11000)
+2026-10-12 00:53:32.149192: [segtrain] FP term (epoch mean): 0.00024
+2026-10-12 00:53:44.134817: train_loss -0.849
+2026-10-12 00:53:44.136646: val_loss -0.8071
+2026-10-12 00:53:44.137944: Pseudo dice [np.float32(0.8973), np.float32(0.8362), np.float32(0.7608), np.float32(0.8237)]
+2026-10-12 00:53:44.139669: Epoch time: 183.41 s
+2026-10-12 00:53:44.764962: 
+2026-10-12 00:53:44.766218: Epoch 45
+2026-10-12 00:53:44.767137: Current learning rate: 0.00832569 (iteration 11250)
+2026-10-12 00:56:36.145452: [segtrain] FP term (epoch mean): 0.00023
+2026-10-12 00:56:48.179288: train_loss -0.849
+2026-10-12 00:56:48.181296: val_loss -0.8012
+2026-10-12 00:56:48.182227: Pseudo dice [np.float32(0.9015), np.float32(0.8329), np.float32(0.7479), np.float32(0.8303)]
+2026-10-12 00:56:48.183109: Epoch time: 183.42 s
+2026-10-12 00:56:48.801037: 
+2026-10-12 00:56:48.802128: Epoch 46
+2026-10-12 00:56:48.803104: Current learning rate: 0.00827733 (iteration 11500)
+2026-10-12 00:59:47.034870: [segtrain] FP term (epoch mean): 0.00020
+2026-10-12 00:59:59.031706: train_loss -0.8519
+2026-10-12 00:59:59.033390: val_loss -0.8115
+2026-10-12 00:59:59.034271: Pseudo dice [np.float32(0.9067), np.float32(0.8409), np.float32(0.7692), np.float32(0.8253)]
+2026-10-12 00:59:59.035216: Epoch time: 190.23 s
+2026-10-12 00:59:59.649020: 
+2026-10-12 00:59:59.651349: Epoch 47
+2026-10-12 00:59:59.652395: Current learning rate: 0.00822894 (iteration 11750)
+2026-10-12 01:02:54.403952: [segtrain] FP term (epoch mean): 0.00020
+2026-10-12 01:03:06.384916: train_loss -0.8526
+2026-10-12 01:03:06.386872: val_loss -0.7756
+2026-10-12 01:03:06.387920: Pseudo dice [np.float32(0.8855), np.float32(0.8296), np.float32(0.7544), np.float32(0.8312)]
+2026-10-12 01:03:06.388847: Epoch time: 186.74 s
+2026-10-12 01:03:07.009322: 
+2026-10-12 01:03:07.010833: Epoch 48
+2026-10-12 01:03:07.012018: Current learning rate: 0.00818052 (iteration 12000)
+2026-10-12 01:05:58.375167: [segtrain] FP term (epoch mean): 0.00021
+2026-10-12 01:06:10.360887: train_loss -0.8533
+2026-10-12 01:06:10.362924: val_loss -0.8098
+2026-10-12 01:06:10.364300: Pseudo dice [np.float32(0.9026), np.float32(0.8444), np.float32(0.7687), np.float32(0.8319)]
+2026-10-12 01:06:10.365688: Epoch time: 183.35 s
+2026-10-12 01:06:10.990155: 
+2026-10-12 01:06:10.991765: Epoch 49
+2026-10-12 01:06:10.993495: Current learning rate: 0.00813207 (iteration 12250)
+2026-10-12 01:09:02.280516: [segtrain] FP term (epoch mean): 0.00018
+2026-10-12 01:09:14.272540: train_loss -0.857
+2026-10-12 01:09:14.274650: val_loss -0.806
+2026-10-12 01:09:14.275584: Pseudo dice [np.float32(0.8945), np.float32(0.8406), np.float32(0.773), np.float32(0.8309)]
+2026-10-12 01:09:14.276582: Epoch time: 183.28 s
+2026-10-12 01:09:15.608816: 
+2026-10-12 01:09:15.609967: Epoch 50
+2026-10-12 01:09:15.610900: Current learning rate: 0.00808358 (iteration 12500)
+2026-10-12 01:12:06.906952: [segtrain] FP term (epoch mean): 0.00018
+2026-10-12 01:12:18.887647: train_loss -0.8516
+2026-10-12 01:12:18.889508: val_loss -0.8143
+2026-10-12 01:12:18.890580: Pseudo dice [np.float32(0.8982), np.float32(0.848), np.float32(0.7826), np.float32(0.8298)]
+2026-10-12 01:12:18.891571: Epoch time: 183.28 s
+2026-10-12 01:12:19.513947: 
+2026-10-12 01:12:19.515094: Epoch 51
+2026-10-12 01:12:19.515974: Current learning rate: 0.00803507 (iteration 12750)
+2026-10-12 01:15:11.136523: [segtrain] FP term (epoch mean): 0.00017
+2026-10-12 01:15:23.125295: train_loss -0.855
+2026-10-12 01:15:23.127591: val_loss -0.8054
+2026-10-12 01:15:23.128580: Pseudo dice [np.float32(0.8962), np.float32(0.8476), np.float32(0.7743), np.float32(0.8284)]
+2026-10-12 01:15:23.129591: Epoch time: 183.61 s
+2026-10-12 01:15:23.754572: 
+2026-10-12 01:15:23.755847: Epoch 52
+2026-10-12 01:15:23.756861: Current learning rate: 0.00798651 (iteration 13000)
+2026-10-12 01:18:15.106522: [segtrain] FP term (epoch mean): 0.00020
+2026-10-12 01:18:27.084456: train_loss -0.8556
+2026-10-12 01:18:27.087900: val_loss -0.7932
+2026-10-12 01:18:27.089475: Pseudo dice [np.float32(0.9018), np.float32(0.8261), np.float32(0.7471), np.float32(0.8062)]
+2026-10-12 01:18:27.090940: Epoch time: 183.33 s
+2026-10-12 01:18:27.702711: 
+2026-10-12 01:18:27.703824: Epoch 53
+2026-10-12 01:18:27.704750: Current learning rate: 0.00793793 (iteration 13250)
+2026-10-12 01:21:19.078899: [segtrain] FP term (epoch mean): 0.00017
+2026-10-12 01:21:31.060641: train_loss -0.8586
+2026-10-12 01:21:31.063306: val_loss -0.8166
+2026-10-12 01:21:31.064640: Pseudo dice [np.float32(0.9091), np.float32(0.8404), np.float32(0.7651), np.float32(0.8378)]
+2026-10-12 01:21:31.066072: Epoch time: 183.36 s
+2026-10-12 01:21:31.695010: 
+2026-10-12 01:21:31.696697: Epoch 54
+2026-10-12 01:21:31.698444: Current learning rate: 0.00788932 (iteration 13500)
+2026-10-12 01:24:23.063186: [segtrain] FP term (epoch mean): 0.00016
+2026-10-12 01:24:35.061960: train_loss -0.8591
+2026-10-12 01:24:35.064309: val_loss -0.8122
+2026-10-12 01:24:35.065533: Pseudo dice [np.float32(0.9084), np.float32(0.8458), np.float32(0.7866), np.float32(0.8352)]
+2026-10-12 01:24:35.066821: Epoch time: 183.37 s
+2026-10-12 01:24:35.068139: Yayy! New best EMA pseudo Dice: 0.8337000012397766
+2026-10-12 01:24:36.716882: 
+2026-10-12 01:24:36.718244: Epoch 55
+2026-10-12 01:24:36.719379: Current learning rate: 0.00784067 (iteration 13750)
+2026-10-12 01:27:28.031590: [segtrain] FP term (epoch mean): 0.00021
+2026-10-12 01:27:40.023607: train_loss -0.8574
+2026-10-12 01:27:40.025810: val_loss -0.8228
+2026-10-12 01:27:40.027422: Pseudo dice [np.float32(0.9), np.float32(0.8329), np.float32(0.7839), np.float32(0.8476)]
+2026-10-12 01:27:40.028813: Epoch time: 183.31 s
+2026-10-12 01:27:40.030031: Yayy! New best EMA pseudo Dice: 0.8343999981880188
+2026-10-12 01:27:42.095739: 
+2026-10-12 01:27:42.097548: Epoch 56
+2026-10-12 01:27:42.102301: Current learning rate: 0.00779198 (iteration 14000)
+2026-10-12 01:30:33.457171: [segtrain] FP term (epoch mean): 0.00019
+2026-10-12 01:30:45.450636: train_loss -0.8551
+2026-10-12 01:30:45.452554: val_loss -0.8206
+2026-10-12 01:30:45.453526: Pseudo dice [np.float32(0.9047), np.float32(0.8533), np.float32(0.7911), np.float32(0.8367)]
+2026-10-12 01:30:45.454556: Epoch time: 183.36 s
+2026-10-12 01:30:45.455506: Yayy! New best EMA pseudo Dice: 0.8356000185012817
+2026-10-12 01:30:46.772554: 
+2026-10-12 01:30:46.773643: Epoch 57
+2026-10-12 01:30:46.774539: Current learning rate: 0.00774327 (iteration 14250)
+2026-10-12 01:33:38.126065: [segtrain] FP term (epoch mean): 0.00017
+2026-10-12 01:33:50.112601: train_loss -0.867
+2026-10-12 01:33:50.114883: val_loss -0.8094
+2026-10-12 01:33:50.116097: Pseudo dice [np.float32(0.9009), np.float32(0.8313), np.float32(0.7744), np.float32(0.8232)]
+2026-10-12 01:33:50.117296: Epoch time: 183.34 s
+2026-10-12 01:33:50.732311: 
+2026-10-12 01:33:50.733759: Epoch 58
+2026-10-12 01:33:50.734764: Current learning rate: 0.00769452 (iteration 14500)
+2026-10-12 01:36:42.048045: [segtrain] FP term (epoch mean): 0.00017
+2026-10-12 01:36:54.026694: train_loss -0.8626
+2026-10-12 01:36:54.028791: val_loss -0.8149
+2026-10-12 01:36:54.029721: Pseudo dice [np.float32(0.8988), np.float32(0.8392), np.float32(0.7756), np.float32(0.8137)]
+2026-10-12 01:36:54.030618: Epoch time: 183.3 s
+2026-10-12 01:36:54.645992: 
+2026-10-12 01:36:54.647194: Epoch 59
+2026-10-12 01:36:54.648059: Current learning rate: 0.00764573 (iteration 14750)
+2026-10-12 01:39:46.025217: [segtrain] FP term (epoch mean): 0.00017
+2026-10-12 01:39:58.008687: train_loss -0.8601
+2026-10-12 01:39:58.010513: val_loss -0.8053
+2026-10-12 01:39:58.011634: Pseudo dice [np.float32(0.905), np.float32(0.8262), np.float32(0.7585), np.float32(0.8339)]
+2026-10-12 01:39:58.012750: Epoch time: 183.37 s
+2026-10-12 01:39:58.639768: 
+2026-10-12 01:39:58.641083: Epoch 60
+2026-10-12 01:39:58.642175: Current learning rate: 0.00759691 (iteration 15000)
+2026-10-12 01:42:50.021104: [segtrain] FP term (epoch mean): 0.00021
+2026-10-12 01:43:01.999963: train_loss -0.8576
+2026-10-12 01:43:02.002393: val_loss -0.8072
+2026-10-12 01:43:02.003561: Pseudo dice [np.float32(0.8957), np.float32(0.8341), np.float32(0.7719), np.float32(0.8383)]
+2026-10-12 01:43:02.004774: Epoch time: 183.36 s
+2026-10-12 01:43:02.629538: 
+2026-10-12 01:43:02.631123: Epoch 61
+2026-10-12 01:43:02.632236: Current learning rate: 0.00754806 (iteration 15250)
+2026-10-12 01:45:54.032802: [segtrain] FP term (epoch mean): 0.00015
+2026-10-12 01:46:06.013101: train_loss -0.8607
+2026-10-12 01:46:06.015071: val_loss -0.8035
+2026-10-12 01:46:06.016201: Pseudo dice [np.float32(0.9066), np.float32(0.8322), np.float32(0.7875), np.float32(0.8304)]
+2026-10-12 01:46:06.017711: Epoch time: 183.39 s
+2026-10-12 01:46:06.642865: 
+2026-10-12 01:46:06.644353: Epoch 62
+2026-10-12 01:46:06.645542: Current learning rate: 0.00749917 (iteration 15500)
+2026-10-12 01:48:58.153759: [segtrain] FP term (epoch mean): 0.00018
+2026-10-12 01:49:10.138483: train_loss -0.8643
+2026-10-12 01:49:10.141412: val_loss -0.8119
+2026-10-12 01:49:10.142905: Pseudo dice [np.float32(0.9042), np.float32(0.8423), np.float32(0.7598), np.float32(0.8386)]
+2026-10-12 01:49:10.144126: Epoch time: 183.5 s
+2026-10-12 01:49:10.770511: 
+2026-10-12 01:49:10.772216: Epoch 63
+2026-10-12 01:49:10.773407: Current learning rate: 0.00745024 (iteration 15750)
+2026-10-12 01:52:02.339393: [segtrain] FP term (epoch mean): 0.00022
+2026-10-12 01:52:14.326463: train_loss -0.8533
+2026-10-12 01:52:14.329923: val_loss -0.8115
+2026-10-12 01:52:14.332243: Pseudo dice [np.float32(0.9025), np.float32(0.8394), np.float32(0.7741), np.float32(0.8276)]
+2026-10-12 01:52:14.334379: Epoch time: 183.56 s
+2026-10-12 01:52:15.227051: 
+2026-10-12 01:52:15.229150: Epoch 64
+2026-10-12 01:52:15.235322: Current learning rate: 0.00740128 (iteration 16000)
+2026-10-12 01:55:06.726922: [segtrain] FP term (epoch mean): 0.00021
+2026-10-12 01:55:18.730937: train_loss -0.8625
+2026-10-12 01:55:18.732998: val_loss -0.8105
+2026-10-12 01:55:18.734700: Pseudo dice [np.float32(0.8958), np.float32(0.8386), np.float32(0.7812), np.float32(0.8329)]
+2026-10-12 01:55:18.735901: Epoch time: 183.51 s
+2026-10-12 01:55:19.371299: 
+2026-10-12 01:55:19.372488: Epoch 65
+2026-10-12 01:55:19.374838: Current learning rate: 0.00735228 (iteration 16250)
+2026-10-12 01:58:10.794223: [segtrain] FP term (epoch mean): 0.00020
+2026-10-12 01:58:22.789065: train_loss -0.855
+2026-10-12 01:58:22.790971: val_loss -0.8184
+2026-10-12 01:58:22.792186: Pseudo dice [np.float32(0.9086), np.float32(0.8398), np.float32(0.7806), np.float32(0.8345)]
+2026-10-12 01:58:22.793313: Epoch time: 183.42 s
+2026-10-12 01:58:22.794375: Yayy! New best EMA pseudo Dice: 0.8360000252723694
+2026-10-12 01:58:24.168706: 
+2026-10-12 01:58:24.170061: Epoch 66
+2026-10-12 01:58:24.171257: Current learning rate: 0.00730325 (iteration 16500)
+2026-10-12 02:01:15.574149: [segtrain] FP term (epoch mean): 0.00018
+2026-10-12 02:01:27.552480: train_loss -0.8589
+2026-10-12 02:01:27.554551: val_loss -0.8134
+2026-10-12 02:01:27.556204: Pseudo dice [np.float32(0.9002), np.float32(0.8363), np.float32(0.781), np.float32(0.8267)]
+2026-10-12 02:01:27.557334: Epoch time: 183.39 s
+2026-10-12 02:01:27.558947: Yayy! New best EMA pseudo Dice: 0.8360000252723694
+2026-10-12 02:01:29.282479: 
+2026-10-12 02:01:29.284064: Epoch 67
+2026-10-12 02:01:29.285111: Current learning rate: 0.00725418 (iteration 16750)
+2026-10-12 02:04:20.683739: [segtrain] FP term (epoch mean): 0.00017
+2026-10-12 02:04:32.659242: train_loss -0.857
+2026-10-12 02:04:32.662891: val_loss -0.8091
+2026-10-12 02:04:32.665019: Pseudo dice [np.float32(0.8926), np.float32(0.8457), np.float32(0.7587), np.float32(0.8461)]
+2026-10-12 02:04:32.666088: Epoch time: 183.38 s
+2026-10-12 02:04:33.291225: 
+2026-10-12 02:04:33.292689: Epoch 68
+2026-10-12 02:04:33.293878: Current learning rate: 0.00720507 (iteration 17000)
+2026-10-12 02:07:29.624735: [segtrain] FP term (epoch mean): 0.00017
+2026-10-12 02:07:41.672538: train_loss -0.8587
+2026-10-12 02:07:41.675238: val_loss -0.8088
+2026-10-12 02:07:41.676912: Pseudo dice [np.float32(0.8922), np.float32(0.8378), np.float32(0.7738), np.float32(0.8367)]
+2026-10-12 02:07:41.679005: Epoch time: 188.38 s
+2026-10-12 02:07:42.323568: 
+2026-10-12 02:07:42.325247: Epoch 69
+2026-10-12 02:07:42.326549: Current learning rate: 0.00715593 (iteration 17250)
+2026-10-12 02:10:33.811752: [segtrain] FP term (epoch mean): 0.00019
+2026-10-12 02:10:45.795955: train_loss -0.8547
+2026-10-12 02:10:45.797678: val_loss -0.8161
+2026-10-12 02:10:45.798769: Pseudo dice [np.float32(0.8947), np.float32(0.8325), np.float32(0.7614), np.float32(0.8416)]
+2026-10-12 02:10:45.800401: Epoch time: 183.47 s
+2026-10-12 02:10:46.443708: 
+2026-10-12 02:10:46.445105: Epoch 70
+2026-10-12 02:10:46.446005: Current learning rate: 0.00710675 (iteration 17500)
+2026-10-12 02:13:37.868190: [segtrain] FP term (epoch mean): 0.00016
+2026-10-12 02:13:49.867188: train_loss -0.8562
+2026-10-12 02:13:49.869391: val_loss -0.7962
+2026-10-12 02:13:49.870446: Pseudo dice [np.float32(0.8746), np.float32(0.8215), np.float32(0.7768), np.float32(0.8041)]
+2026-10-12 02:13:49.872567: Epoch time: 183.43 s
+2026-10-12 02:13:50.739055: 
+2026-10-12 02:13:50.741643: Epoch 71
+2026-10-12 02:13:50.743846: Current learning rate: 0.00705753 (iteration 17750)
+2026-10-12 02:16:49.337172: [segtrain] FP term (epoch mean): 0.00022
+2026-10-12 02:17:01.330130: train_loss -0.8554
+2026-10-12 02:17:01.331898: val_loss -0.8147
+2026-10-12 02:17:01.332855: Pseudo dice [np.float32(0.907), np.float32(0.8391), np.float32(0.7684), np.float32(0.8311)]
+2026-10-12 02:17:01.333798: Epoch time: 190.59 s
+2026-10-12 02:17:01.995301: 
+2026-10-12 02:17:01.997154: Epoch 72
+2026-10-12 02:17:01.998152: Current learning rate: 0.00700827 (iteration 18000)
+2026-10-12 02:19:53.324963: [segtrain] FP term (epoch mean): 0.00019
+2026-10-12 02:20:05.307145: train_loss -0.8579
+2026-10-12 02:20:05.308969: val_loss -0.806
+2026-10-12 02:20:05.309889: Pseudo dice [np.float32(0.9002), np.float32(0.8273), np.float32(0.7648), np.float32(0.8336)]
+2026-10-12 02:20:05.310810: Epoch time: 183.31 s
+2026-10-12 02:20:05.947865: 
+2026-10-12 02:20:05.948943: Epoch 73
+2026-10-12 02:20:05.949917: Current learning rate: 0.00695897 (iteration 18250)
+2026-10-12 02:22:57.391795: [segtrain] FP term (epoch mean): 0.00021
+2026-10-12 02:23:09.384341: train_loss -0.8619
+2026-10-12 02:23:09.386990: val_loss -0.8132
+2026-10-12 02:23:09.388405: Pseudo dice [np.float32(0.9069), np.float32(0.8449), np.float32(0.7737), np.float32(0.8342)]
+2026-10-12 02:23:09.389763: Epoch time: 183.44 s
+2026-10-12 02:23:10.026878: 
+2026-10-12 02:23:10.028377: Epoch 74
+2026-10-12 02:23:10.029629: Current learning rate: 0.00690964 (iteration 18500)
+2026-10-12 02:26:01.359648: [segtrain] FP term (epoch mean): 0.00015
+2026-10-12 02:26:13.344515: train_loss -0.8599
+2026-10-12 02:26:13.346391: val_loss -0.7959
+2026-10-12 02:26:13.347518: Pseudo dice [np.float32(0.8999), np.float32(0.8456), np.float32(0.7545), np.float32(0.8367)]
+2026-10-12 02:26:13.348633: Epoch time: 183.32 s
+2026-10-12 02:26:13.980581: 
+2026-10-12 02:26:13.982034: Epoch 75
+2026-10-12 02:26:13.983093: Current learning rate: 0.00686026 (iteration 18750)
+2026-10-12 02:29:05.385637: [segtrain] FP term (epoch mean): 0.00016
+2026-10-12 02:29:17.372733: train_loss -0.8635
+2026-10-12 02:29:17.374639: val_loss -0.8077
+2026-10-12 02:29:17.375927: Pseudo dice [np.float32(0.8961), np.float32(0.845), np.float32(0.761), np.float32(0.8279)]
+2026-10-12 02:29:17.376903: Epoch time: 183.39 s
+2026-10-12 02:29:18.010792: 
+2026-10-12 02:29:18.012130: Epoch 76
+2026-10-12 02:29:18.013055: Current learning rate: 0.00681085 (iteration 19000)
+2026-10-12 02:32:09.367245: [segtrain] FP term (epoch mean): 0.00019
+2026-10-12 02:32:21.350736: train_loss -0.8629
+2026-10-12 02:32:21.352875: val_loss -0.8195
+2026-10-12 02:32:21.354036: Pseudo dice [np.float32(0.9033), np.float32(0.834), np.float32(0.7816), np.float32(0.834)]
+2026-10-12 02:32:21.355234: Epoch time: 183.34 s
+2026-10-12 02:32:21.989065: 
+2026-10-12 02:32:21.990383: Epoch 77
+2026-10-12 02:32:21.991609: Current learning rate: 0.0067614 (iteration 19250)
+2026-10-12 02:35:13.412607: [segtrain] FP term (epoch mean): 0.00015
+2026-10-12 02:35:25.395601: train_loss -0.8602
+2026-10-12 02:35:25.397932: val_loss -0.8019
+2026-10-12 02:35:25.399128: Pseudo dice [np.float32(0.8972), np.float32(0.8381), np.float32(0.7791), np.float32(0.8373)]
+2026-10-12 02:35:25.400279: Epoch time: 183.41 s
+2026-10-12 02:35:26.597760: 
+2026-10-12 02:35:26.599172: Epoch 78
+2026-10-12 02:35:26.600696: Current learning rate: 0.0067119 (iteration 19500)
+2026-10-12 02:38:18.028119: [segtrain] FP term (epoch mean): 0.00016
+2026-10-12 02:38:30.023660: train_loss -0.8622
+2026-10-12 02:38:30.026537: val_loss -0.8145
+2026-10-12 02:38:30.027671: Pseudo dice [np.float32(0.8983), np.float32(0.8431), np.float32(0.7796), np.float32(0.8393)]
+2026-10-12 02:38:30.028970: Epoch time: 183.43 s
+2026-10-12 02:38:30.920639: 
+2026-10-12 02:38:30.922196: Epoch 79
+2026-10-12 02:38:30.923449: Current learning rate: 0.00666237 (iteration 19750)
+2026-10-12 02:41:22.291398: [segtrain] FP term (epoch mean): 0.00013
+2026-10-12 02:41:34.278157: train_loss -0.8639
+2026-10-12 02:41:34.280001: val_loss -0.81
+2026-10-12 02:41:34.281124: Pseudo dice [np.float32(0.8992), np.float32(0.8431), np.float32(0.7639), np.float32(0.8369)]
+2026-10-12 02:41:34.282270: Epoch time: 183.36 s
+2026-10-12 02:41:34.927120: 
+2026-10-12 02:41:34.928939: Epoch 80
+2026-10-12 02:41:34.929945: Current learning rate: 0.00661279 (iteration 20000)
+2026-10-12 02:44:26.475409: [segtrain] FP term (epoch mean): 0.00018
+2026-10-12 02:44:38.476768: train_loss -0.864
+2026-10-12 02:44:38.478481: val_loss -0.8139
+2026-10-12 02:44:38.479480: Pseudo dice [np.float32(0.9113), np.float32(0.8465), np.float32(0.773), np.float32(0.8307)]
+2026-10-12 02:44:38.480542: Epoch time: 183.55 s
+2026-10-12 02:44:38.481467: Yayy! New best EMA pseudo Dice: 0.8360000252723694
+2026-10-12 02:44:39.851838: 
+2026-10-12 02:44:39.853012: Epoch 81
+2026-10-12 02:44:39.853913: Current learning rate: 0.00656318 (iteration 20250)
+2026-10-12 02:47:36.095297: [segtrain] FP term (epoch mean): 0.00018
+2026-10-12 02:47:48.090076: train_loss -0.8563
+2026-10-12 02:47:48.092121: val_loss -0.8014
+2026-10-12 02:47:48.093243: Pseudo dice [np.float32(0.8942), np.float32(0.8338), np.float32(0.7619), np.float32(0.8253)]
+2026-10-12 02:47:48.094360: Epoch time: 188.24 s
+2026-10-12 02:47:48.736928: 
+2026-10-12 02:47:48.738265: Epoch 82
+2026-10-12 02:47:48.739248: Current learning rate: 0.00651352 (iteration 20500)
+2026-10-12 02:50:40.126353: [segtrain] FP term (epoch mean): 0.00014
+2026-10-12 02:50:52.108341: train_loss -0.862
+2026-10-12 02:50:52.110355: val_loss -0.816
+2026-10-12 02:50:52.112664: Pseudo dice [np.float32(0.9027), np.float32(0.841), np.float32(0.7546), np.float32(0.8326)]
+2026-10-12 02:50:52.114361: Epoch time: 183.37 s
+2026-10-12 02:50:52.737878: 
+2026-10-12 02:50:52.739202: Epoch 83
+2026-10-12 02:50:52.740936: Current learning rate: 0.00646382 (iteration 20750)
+2026-10-12 02:53:44.138754: [segtrain] FP term (epoch mean): 0.00015
+2026-10-12 02:53:56.126671: train_loss -0.865
+2026-10-12 02:53:56.128477: val_loss -0.7968
+2026-10-12 02:53:56.129816: Pseudo dice [np.float32(0.8925), np.float32(0.841), np.float32(0.7581), np.float32(0.8152)]
+2026-10-12 02:53:56.130790: Epoch time: 183.39 s
+2026-10-12 02:53:56.759261: 
+2026-10-12 02:53:56.760972: Epoch 84
+2026-10-12 02:53:56.761894: Current learning rate: 0.00641407 (iteration 21000)
+2026-10-12 02:56:48.221301: [segtrain] FP term (epoch mean): 0.00020
+2026-10-12 02:57:00.206962: train_loss -0.8549
+2026-10-12 02:57:00.208859: val_loss -0.805
+2026-10-12 02:57:00.209850: Pseudo dice [np.float32(0.8987), np.float32(0.8369), np.float32(0.7734), np.float32(0.8406)]
+2026-10-12 02:57:00.210802: Epoch time: 183.45 s
+2026-10-12 02:57:00.830219: 
+2026-10-12 02:57:00.831617: Epoch 85
+2026-10-12 02:57:00.832582: Current learning rate: 0.00636429 (iteration 21250)
+2026-10-12 03:00:00.745474: [segtrain] FP term (epoch mean): 0.00017
+2026-10-12 03:00:12.750340: train_loss -0.8634
+2026-10-12 03:00:12.752434: val_loss -0.8103
+2026-10-12 03:00:12.753785: Pseudo dice [np.float32(0.8985), np.float32(0.8365), np.float32(0.7821), np.float32(0.8126)]
+2026-10-12 03:00:12.755062: Epoch time: 191.92 s
+2026-10-12 03:00:13.648667: 
+2026-10-12 03:00:13.650211: Epoch 86
+2026-10-12 03:00:13.651291: Current learning rate: 0.00631446 (iteration 21500)
+2026-10-12 03:03:05.157649: [segtrain] FP term (epoch mean): 0.00019
+2026-10-12 03:03:17.146190: train_loss -0.856
+2026-10-12 03:03:17.148013: val_loss -0.8028
+2026-10-12 03:03:17.148978: Pseudo dice [np.float32(0.9047), np.float32(0.8264), np.float32(0.7438), np.float32(0.8349)]
+2026-10-12 03:03:17.149940: Epoch time: 183.5 s
+2026-10-12 03:03:17.779112: 
+2026-10-12 03:03:17.780480: Epoch 87
+2026-10-12 03:03:17.782120: Current learning rate: 0.00626459 (iteration 21750)
+2026-10-12 03:06:09.276159: [segtrain] FP term (epoch mean): 0.00015
+2026-10-12 03:06:21.263444: train_loss -0.8548
+2026-10-12 03:06:21.266129: val_loss -0.8166
+2026-10-12 03:06:21.268166: Pseudo dice [np.float32(0.9037), np.float32(0.8453), np.float32(0.7678), np.float32(0.8308)]
+2026-10-12 03:06:21.271089: Epoch time: 183.49 s
+2026-10-12 03:06:21.884472: 
+2026-10-12 03:06:21.885813: Epoch 88
+2026-10-12 03:06:21.886902: Current learning rate: 0.00621467 (iteration 22000)
+2026-10-12 03:09:13.381723: [segtrain] FP term (epoch mean): 0.00016
+2026-10-12 03:09:25.373085: train_loss -0.8597
+2026-10-12 03:09:25.376245: val_loss -0.8053
+2026-10-12 03:09:25.377768: Pseudo dice [np.float32(0.9069), np.float32(0.8192), np.float32(0.776), np.float32(0.8214)]
+2026-10-12 03:09:25.380429: Epoch time: 183.49 s
+2026-10-12 03:09:26.019032: 
+2026-10-12 03:09:26.020444: Epoch 89
+2026-10-12 03:09:26.021805: Current learning rate: 0.00616471 (iteration 22250)
+2026-10-12 03:12:17.445067: [segtrain] FP term (epoch mean): 0.00018
+2026-10-12 03:12:29.423876: train_loss -0.8623
+2026-10-12 03:12:29.425921: val_loss -0.8121
+2026-10-12 03:12:29.427010: Pseudo dice [np.float32(0.9024), np.float32(0.8448), np.float32(0.7882), np.float32(0.8343)]
+2026-10-12 03:12:29.428159: Epoch time: 183.41 s
+2026-10-12 03:12:30.051870: 
+2026-10-12 03:12:30.052956: Epoch 90
+2026-10-12 03:12:30.053810: Current learning rate: 0.0061147 (iteration 22500)
+2026-10-12 03:15:21.491723: [segtrain] FP term (epoch mean): 0.00014
+2026-10-12 03:15:33.474883: train_loss -0.8632
+2026-10-12 03:15:33.477067: val_loss -0.7982
+2026-10-12 03:15:33.478482: Pseudo dice [np.float32(0.8909), np.float32(0.8322), np.float32(0.7581), np.float32(0.8232)]
+2026-10-12 03:15:33.480074: Epoch time: 183.43 s
+2026-10-12 03:15:34.112958: 
+2026-10-12 03:15:34.114172: Epoch 91
+2026-10-12 03:15:34.115049: Current learning rate: 0.00606465 (iteration 22750)
+2026-10-12 03:18:32.634198: [segtrain] FP term (epoch mean): 0.00016
+2026-10-12 03:18:44.623551: train_loss -0.8684
+2026-10-12 03:18:44.625953: val_loss -0.8041
+2026-10-12 03:18:44.627570: Pseudo dice [np.float32(0.9046), np.float32(0.8415), np.float32(0.7596), np.float32(0.8134)]
+2026-10-12 03:18:44.629112: Epoch time: 190.51 s
+2026-10-12 03:18:45.476082: 
+2026-10-12 03:18:45.477657: Epoch 92
+2026-10-12 03:18:45.479373: Current learning rate: 0.00601455 (iteration 23000)
+2026-10-12 03:21:36.880890: [segtrain] FP term (epoch mean): 0.00015
+2026-10-12 03:21:48.874426: train_loss -0.8675
+2026-10-12 03:21:48.877447: val_loss -0.8052
+2026-10-12 03:21:48.878763: Pseudo dice [np.float32(0.9056), np.float32(0.8431), np.float32(0.7718), np.float32(0.837)]
+2026-10-12 03:21:48.879965: Epoch time: 183.4 s
+2026-10-12 03:21:49.504948: 
+2026-10-12 03:21:49.506526: Epoch 93
+2026-10-12 03:21:49.507818: Current learning rate: 0.00596441 (iteration 23250)
+2026-10-12 03:24:40.927533: [segtrain] FP term (epoch mean): 0.00013
+2026-10-12 03:24:52.929545: train_loss -0.8701
+2026-10-12 03:24:52.931439: val_loss -0.8247
+2026-10-12 03:24:52.932378: Pseudo dice [np.float32(0.9068), np.float32(0.8453), np.float32(0.7816), np.float32(0.8479)]
+2026-10-12 03:24:52.933297: Epoch time: 183.43 s
+2026-10-12 03:24:53.567014: 
+2026-10-12 03:24:53.569310: Epoch 94
+2026-10-12 03:24:53.570840: Current learning rate: 0.00591421 (iteration 23500)
+2026-10-12 03:27:45.086512: [segtrain] FP term (epoch mean): 0.00013
+2026-10-12 03:27:57.067379: train_loss -0.8709
+2026-10-12 03:27:57.069345: val_loss -0.8075
+2026-10-12 03:27:57.070420: Pseudo dice [np.float32(0.8959), np.float32(0.8419), np.float32(0.7739), np.float32(0.8423)]
+2026-10-12 03:27:57.071383: Epoch time: 183.5 s
+2026-10-12 03:27:57.693018: 
+2026-10-12 03:27:57.695646: Epoch 95
+2026-10-12 03:27:57.696742: Current learning rate: 0.00586398 (iteration 23750)
+2026-10-12 03:30:49.082884: [segtrain] FP term (epoch mean): 0.00014
+2026-10-12 03:31:01.067300: train_loss -0.8709
+2026-10-12 03:31:01.070826: val_loss -0.8235
+2026-10-12 03:31:01.072513: Pseudo dice [np.float32(0.9133), np.float32(0.8508), np.float32(0.7888), np.float32(0.8442)]
+2026-10-12 03:31:01.073701: Epoch time: 183.38 s
+2026-10-12 03:31:01.075634: Yayy! New best EMA pseudo Dice: 0.8367999792098999
+2026-10-12 03:31:02.433782: 
+2026-10-12 03:31:02.436148: Epoch 96
+2026-10-12 03:31:02.437118: Current learning rate: 0.00581369 (iteration 24000)
+2026-10-12 03:33:54.242593: [segtrain] FP term (epoch mean): 0.00014
+2026-10-12 03:34:06.223747: train_loss -0.8669
+2026-10-12 03:34:06.225431: val_loss -0.801
+2026-10-12 03:34:06.226551: Pseudo dice [np.float32(0.9016), np.float32(0.8392), np.float32(0.7599), np.float32(0.8154)]
+2026-10-12 03:34:06.227685: Epoch time: 183.79 s
+2026-10-12 03:34:06.867406: 
+2026-10-12 03:34:06.868482: Epoch 97
+2026-10-12 03:34:06.869379: Current learning rate: 0.00576335 (iteration 24250)
+2026-10-12 03:36:58.268858: [segtrain] FP term (epoch mean): 0.00014
+2026-10-12 03:37:10.253580: train_loss -0.874
+2026-10-12 03:37:10.256074: val_loss -0.8076
+2026-10-12 03:37:10.258002: Pseudo dice [np.float32(0.9025), np.float32(0.8333), np.float32(0.762), np.float32(0.8357)]
+2026-10-12 03:37:10.259080: Epoch time: 183.39 s
+2026-10-12 03:37:10.885233: 
+2026-10-12 03:37:10.886342: Epoch 98
+2026-10-12 03:37:10.887439: Current learning rate: 0.00571297 (iteration 24500)
+2026-10-12 03:40:02.257480: [segtrain] FP term (epoch mean): 0.00016
+2026-10-12 03:40:14.239849: train_loss -0.8668
+2026-10-12 03:40:14.241855: val_loss -0.8098
+2026-10-12 03:40:14.242990: Pseudo dice [np.float32(0.9022), np.float32(0.834), np.float32(0.7735), np.float32(0.8353)]
+2026-10-12 03:40:14.244086: Epoch time: 183.36 s
+2026-10-12 03:40:14.870678: 
+2026-10-12 03:40:14.872505: Epoch 99
+2026-10-12 03:40:14.873656: Current learning rate: 0.00566254 (iteration 24750)
+2026-10-12 03:43:06.356495: [segtrain] FP term (epoch mean): 0.00015
+2026-10-12 03:43:18.342669: train_loss -0.8656
+2026-10-12 03:43:18.344503: val_loss -0.8215
+2026-10-12 03:43:18.345463: Pseudo dice [np.float32(0.9104), np.float32(0.8454), np.float32(0.7908), np.float32(0.8453)]
+2026-10-12 03:43:18.346379: Epoch time: 183.47 s
+2026-10-12 03:43:19.079351: Yayy! New best EMA pseudo Dice: 0.8370000123977661
+2026-10-12 03:43:20.409805: 
+2026-10-12 03:43:20.411017: Epoch 100
+2026-10-12 03:43:20.412108: Current learning rate: 0.00561205 (iteration 25000)
+2026-10-12 03:46:19.222132: [segtrain] FP term (epoch mean): 0.00014
+2026-10-12 03:46:31.221038: train_loss -0.8712
+2026-10-12 03:46:31.222886: val_loss -0.8093
+2026-10-12 03:46:31.223881: Pseudo dice [np.float32(0.9045), np.float32(0.8418), np.float32(0.7607), np.float32(0.8455)]
+2026-10-12 03:46:31.224978: Epoch time: 190.81 s
+2026-10-12 03:46:31.226043: Yayy! New best EMA pseudo Dice: 0.8371000289916992
+2026-10-12 03:46:32.581814: 
+2026-10-12 03:46:32.582936: Epoch 101
+2026-10-12 03:46:32.583867: Current learning rate: 0.00556152 (iteration 25250)
+2026-10-12 03:49:25.829370: [segtrain] FP term (epoch mean): 0.00013
+2026-10-12 03:49:37.811607: train_loss -0.8697
+2026-10-12 03:49:37.813457: val_loss -0.8064
+2026-10-12 03:49:37.814845: Pseudo dice [np.float32(0.9016), np.float32(0.8315), np.float32(0.767), np.float32(0.8392)]
+2026-10-12 03:49:37.816033: Epoch time: 185.23 s
+2026-10-12 03:49:38.742590: 
+2026-10-12 03:49:38.744013: Epoch 102
+2026-10-12 03:49:38.744971: Current learning rate: 0.00551093 (iteration 25500)
+2026-10-12 03:52:30.129501: [segtrain] FP term (epoch mean): 0.00011
+2026-10-12 03:52:42.105730: train_loss -0.8768
+2026-10-12 03:52:42.107952: val_loss -0.821
+2026-10-12 03:52:42.109219: Pseudo dice [np.float32(0.9037), np.float32(0.8551), np.float32(0.7844), np.float32(0.83)]
+2026-10-12 03:52:42.110443: Epoch time: 183.37 s
+2026-10-12 03:52:42.111641: Yayy! New best EMA pseudo Dice: 0.8374999761581421
+2026-10-12 03:52:43.460068: 
+2026-10-12 03:52:43.461081: Epoch 103
+2026-10-12 03:52:43.461927: Current learning rate: 0.0054603 (iteration 25750)
+2026-10-12 03:55:34.877197: [segtrain] FP term (epoch mean): 0.00013
+2026-10-12 03:55:46.861395: train_loss -0.8678
+2026-10-12 03:55:46.863599: val_loss -0.8081
+2026-10-12 03:55:46.864820: Pseudo dice [np.float32(0.901), np.float32(0.8463), np.float32(0.7653), np.float32(0.8213)]
+2026-10-12 03:55:46.866003: Epoch time: 183.4 s
+2026-10-12 03:55:47.506048: 
+2026-10-12 03:55:47.507438: Epoch 104
+2026-10-12 03:55:47.508583: Current learning rate: 0.00540961 (iteration 26000)
+2026-10-12 03:58:38.958952: [segtrain] FP term (epoch mean): 0.00013
+2026-10-12 03:58:50.932810: train_loss -0.8672
+2026-10-12 03:58:50.935825: val_loss -0.8058
+2026-10-12 03:58:50.936995: Pseudo dice [np.float32(0.8972), np.float32(0.8342), np.float32(0.7573), np.float32(0.8365)]
+2026-10-12 03:58:50.938222: Epoch time: 183.43 s
+2026-10-12 03:58:51.569302: 
+2026-10-12 03:58:51.570764: Epoch 105
+2026-10-12 03:58:51.571851: Current learning rate: 0.00535887 (iteration 26250)
+2026-10-12 04:01:43.055513: [segtrain] FP term (epoch mean): 0.00014
+2026-10-12 04:01:55.033237: train_loss -0.8737
+2026-10-12 04:01:55.035593: val_loss -0.82
+2026-10-12 04:01:55.036801: Pseudo dice [np.float32(0.911), np.float32(0.8456), np.float32(0.7782), np.float32(0.8386)]
+2026-10-12 04:01:55.038012: Epoch time: 183.47 s
+2026-10-12 04:01:55.675750: 
+2026-10-12 04:01:55.677543: Epoch 106
+2026-10-12 04:01:55.679499: Current learning rate: 0.00530807 (iteration 26500)
+2026-10-12 04:04:47.216129: [segtrain] FP term (epoch mean): 0.00011
+2026-10-12 04:04:59.200759: train_loss -0.8717
+2026-10-12 04:04:59.202621: val_loss -0.8224
+2026-10-12 04:04:59.203745: Pseudo dice [np.float32(0.9094), np.float32(0.8523), np.float32(0.7806), np.float32(0.8361)]
+2026-10-12 04:04:59.204704: Epoch time: 183.53 s
+2026-10-12 04:04:59.205704: Yayy! New best EMA pseudo Dice: 0.8379999995231628
+2026-10-12 04:05:00.949749: 
+2026-10-12 04:05:00.950859: Epoch 107
+2026-10-12 04:05:00.951764: Current learning rate: 0.00525722 (iteration 26750)
+2026-10-12 04:07:52.542458: [segtrain] FP term (epoch mean): 0.00012
+2026-10-12 04:08:04.570908: train_loss -0.8725
+2026-10-12 04:08:04.572798: val_loss -0.8165
+2026-10-12 04:08:04.573904: Pseudo dice [np.float32(0.9061), np.float32(0.8382), np.float32(0.7576), np.float32(0.8394)]
+2026-10-12 04:08:04.574886: Epoch time: 183.62 s
+2026-10-12 04:08:05.217752: 
+2026-10-12 04:08:05.219635: Epoch 108
+2026-10-12 04:08:05.220944: Current learning rate: 0.00520632 (iteration 27000)
+2026-10-12 04:10:56.544795: [segtrain] FP term (epoch mean): 0.00017
+2026-10-12 04:11:08.538492: train_loss -0.8633
+2026-10-12 04:11:08.541092: val_loss -0.8283
+2026-10-12 04:11:08.542175: Pseudo dice [np.float32(0.9132), np.float32(0.8582), np.float32(0.798), np.float32(0.8393)]
+2026-10-12 04:11:08.543185: Epoch time: 183.32 s
+2026-10-12 04:11:08.544464: Yayy! New best EMA pseudo Dice: 0.8391000032424927
+2026-10-12 04:11:10.238992: 
+2026-10-12 04:11:10.240252: Epoch 109
+2026-10-12 04:11:10.241191: Current learning rate: 0.00515536 (iteration 27250)
+2026-10-12 04:14:01.668207: [segtrain] FP term (epoch mean): 0.00014
+2026-10-12 04:14:13.657896: train_loss -0.8587
+2026-10-12 04:14:13.659909: val_loss -0.8188
+2026-10-12 04:14:13.660893: Pseudo dice [np.float32(0.9063), np.float32(0.8394), np.float32(0.786), np.float32(0.8427)]
+2026-10-12 04:14:13.661848: Epoch time: 183.42 s
+2026-10-12 04:14:13.663175: Yayy! New best EMA pseudo Dice: 0.8396000266075134
+2026-10-12 04:14:15.017711: 
+2026-10-12 04:14:15.019361: Epoch 110
+2026-10-12 04:14:15.020273: Current learning rate: 0.00510434 (iteration 27500)
+2026-10-12 04:17:07.903995: [segtrain] FP term (epoch mean): 0.00016
+2026-10-12 04:17:19.900673: train_loss -0.8617
+2026-10-12 04:17:19.902902: val_loss -0.8133
+2026-10-12 04:17:19.904326: Pseudo dice [np.float32(0.9011), np.float32(0.8338), np.float32(0.7758), np.float32(0.8395)]
+2026-10-12 04:17:19.905619: Epoch time: 184.89 s
+2026-10-12 04:17:20.553765: 
+2026-10-12 04:17:20.555031: Epoch 111
+2026-10-12 04:17:20.556034: Current learning rate: 0.00505327 (iteration 27750)
+2026-10-12 04:20:11.979398: [segtrain] FP term (epoch mean): 0.00019
+2026-10-12 04:20:23.971492: train_loss -0.8652
+2026-10-12 04:20:23.974023: val_loss -0.8049
+2026-10-12 04:20:23.975072: Pseudo dice [np.float32(0.9013), np.float32(0.8398), np.float32(0.7657), np.float32(0.8207)]
+2026-10-12 04:20:23.976134: Epoch time: 183.42 s
+2026-10-12 04:20:24.608433: 
+2026-10-12 04:20:24.609640: Epoch 112
+2026-10-12 04:20:24.610540: Current learning rate: 0.00500214 (iteration 28000)
+2026-10-12 04:23:16.125907: [segtrain] FP term (epoch mean): 0.00023
+2026-10-12 04:23:28.116583: train_loss -0.8583
+2026-10-12 04:23:28.119523: val_loss -0.8015
+2026-10-12 04:23:28.121651: Pseudo dice [np.float32(0.8973), np.float32(0.8402), np.float32(0.7696), np.float32(0.8261)]
+2026-10-12 04:23:28.123287: Epoch time: 183.51 s
+2026-10-12 04:23:28.759312: 
+2026-10-12 04:23:28.761838: Epoch 113
+2026-10-12 04:23:28.763649: Current learning rate: 0.00495096 (iteration 28250)
+2026-10-12 04:26:20.162519: [segtrain] FP term (epoch mean): 0.00018
+2026-10-12 04:26:32.144634: train_loss -0.8617
+2026-10-12 04:26:32.146569: val_loss -0.8177
+2026-10-12 04:26:32.147529: Pseudo dice [np.float32(0.9105), np.float32(0.8442), np.float32(0.7737), np.float32(0.8277)]
+2026-10-12 04:26:32.148469: Epoch time: 183.39 s
+2026-10-12 04:26:32.785041: 
+2026-10-12 04:26:32.786167: Epoch 114
+2026-10-12 04:26:32.787258: Current learning rate: 0.00489971 (iteration 28500)
+2026-10-12 04:29:24.210495: [segtrain] FP term (epoch mean): 0.00018
+2026-10-12 04:29:36.194602: train_loss -0.864
+2026-10-12 04:29:36.196683: val_loss -0.8079
+2026-10-12 04:29:36.197674: Pseudo dice [np.float32(0.891), np.float32(0.8438), np.float32(0.7959), np.float32(0.8203)]
+2026-10-12 04:29:36.198612: Epoch time: 183.41 s
+2026-10-12 04:29:36.831224: 
+2026-10-12 04:29:36.832910: Epoch 115
+2026-10-12 04:29:36.833813: Current learning rate: 0.0048484 (iteration 28750)
+2026-10-12 04:32:28.275934: [segtrain] FP term (epoch mean): 0.00013
+2026-10-12 04:32:40.276707: train_loss -0.8697
+2026-10-12 04:32:40.278951: val_loss -0.8061
+2026-10-12 04:32:40.279917: Pseudo dice [np.float32(0.8968), np.float32(0.8277), np.float32(0.7587), np.float32(0.8216)]
+2026-10-12 04:32:40.280864: Epoch time: 183.45 s
+2026-10-12 04:32:40.937061: 
+2026-10-12 04:32:40.938211: Epoch 116
+2026-10-12 04:32:40.939107: Current learning rate: 0.00479704 (iteration 29000)
+2026-10-12 04:35:33.128206: [segtrain] FP term (epoch mean): 0.00014
+2026-10-12 04:35:45.105394: train_loss -0.87
+2026-10-12 04:35:45.107383: val_loss -0.814
+2026-10-12 04:35:45.108389: Pseudo dice [np.float32(0.9051), np.float32(0.8401), np.float32(0.7718), np.float32(0.8417)]
+2026-10-12 04:35:45.109280: Epoch time: 184.17 s
+2026-10-12 04:35:46.020897: 
+2026-10-12 04:35:46.022259: Epoch 117
+2026-10-12 04:35:46.023238: Current learning rate: 0.00474561 (iteration 29250)
+2026-10-12 04:38:56.455199: [segtrain] FP term (epoch mean): 0.00012
+2026-10-12 04:39:08.485049: train_loss -0.8688
+2026-10-12 04:39:08.486727: val_loss -0.7996
+2026-10-12 04:39:08.487671: Pseudo dice [np.float32(0.9065), np.float32(0.8354), np.float32(0.7716), np.float32(0.8264)]
+2026-10-12 04:39:08.488711: Epoch time: 202.47 s
+2026-10-12 04:39:09.133732: 
+2026-10-12 04:39:09.134914: Epoch 118
+2026-10-12 04:39:09.135786: Current learning rate: 0.00469412 (iteration 29500)
+2026-10-12 04:42:06.439088: [segtrain] FP term (epoch mean): 0.00014
+2026-10-12 04:42:18.438531: train_loss -0.8688
+2026-10-12 04:42:18.440459: val_loss -0.8178
+2026-10-12 04:42:18.441514: Pseudo dice [np.float32(0.9037), np.float32(0.8487), np.float32(0.7626), np.float32(0.8315)]
+2026-10-12 04:42:18.442493: Epoch time: 189.31 s
+2026-10-12 04:42:19.101897: 
+2026-10-12 04:42:19.103104: Epoch 119
+2026-10-12 04:42:19.104123: Current learning rate: 0.00464257 (iteration 29750)
+2026-10-12 04:45:10.625278: [segtrain] FP term (epoch mean): 0.00012
+2026-10-12 04:45:22.609222: train_loss -0.8695
+2026-10-12 04:45:22.611185: val_loss -0.81
+2026-10-12 04:45:22.612180: Pseudo dice [np.float32(0.9094), np.float32(0.8486), np.float32(0.777), np.float32(0.8401)]
+2026-10-12 04:45:22.613289: Epoch time: 183.51 s
+2026-10-12 04:45:23.261078: 
+2026-10-12 04:45:23.264515: Epoch 120
+2026-10-12 04:45:23.266286: Current learning rate: 0.00459095 (iteration 30000)
+2026-10-12 04:48:14.651907: [segtrain] FP term (epoch mean): 0.00015
+2026-10-12 04:48:26.633014: train_loss -0.8715
+2026-10-12 04:48:26.635270: val_loss -0.8049
+2026-10-12 04:48:26.636329: Pseudo dice [np.float32(0.9031), np.float32(0.84), np.float32(0.7847), np.float32(0.8477)]
+2026-10-12 04:48:26.637285: Epoch time: 183.37 s
+2026-10-12 04:48:27.275001: 
+2026-10-12 04:48:27.276402: Epoch 121
+2026-10-12 04:48:27.277445: Current learning rate: 0.00453927 (iteration 30250)
+2026-10-12 04:51:18.707371: [segtrain] FP term (epoch mean): 0.00011
+2026-10-12 04:51:30.700830: train_loss -0.8694
+2026-10-12 04:51:30.703099: val_loss -0.8158
+2026-10-12 04:51:30.704188: Pseudo dice [np.float32(0.8925), np.float32(0.8503), np.float32(0.7835), np.float32(0.8403)]
+2026-10-12 04:51:30.705369: Epoch time: 183.43 s
+2026-10-12 04:51:31.522423: 
+2026-10-12 04:51:31.524007: Epoch 122
+2026-10-12 04:51:31.525030: Current learning rate: 0.00448753 (iteration 30500)
+2026-10-12 04:54:23.015453: [segtrain] FP term (epoch mean): 0.00012
+2026-10-12 04:54:34.997932: train_loss -0.875
+2026-10-12 04:54:34.999879: val_loss -0.8238
+2026-10-12 04:54:35.000999: Pseudo dice [np.float32(0.9094), np.float32(0.841), np.float32(0.7864), np.float32(0.8435)]
+2026-10-12 04:54:35.002014: Epoch time: 183.48 s
+2026-10-12 04:54:35.910400: 
+2026-10-12 04:54:35.911620: Epoch 123
+2026-10-12 04:54:35.912542: Current learning rate: 0.00443571 (iteration 30750)
+2026-10-12 04:57:34.328420: [segtrain] FP term (epoch mean): 0.00011
+2026-10-12 04:57:46.343847: train_loss -0.8715
+2026-10-12 04:57:46.345946: val_loss -0.8104
+2026-10-12 04:57:46.346963: Pseudo dice [np.float32(0.9056), np.float32(0.841), np.float32(0.7733), np.float32(0.8335)]
+2026-10-12 04:57:46.347938: Epoch time: 190.44 s
+2026-10-12 04:57:46.999189: 
+2026-10-12 04:57:47.000672: Epoch 124
+2026-10-12 04:57:47.001625: Current learning rate: 0.00438383 (iteration 31000)
+2026-10-12 05:00:38.433983: [segtrain] FP term (epoch mean): 0.00009
+2026-10-12 05:00:50.418949: train_loss -0.874
+2026-10-12 05:00:50.420667: val_loss -0.8179
+2026-10-12 05:00:50.421599: Pseudo dice [np.float32(0.9062), np.float32(0.8508), np.float32(0.7776), np.float32(0.8537)]
+2026-10-12 05:00:50.422497: Epoch time: 183.42 s
+2026-10-12 05:00:50.423400: Yayy! New best EMA pseudo Dice: 0.8399999737739563
+2026-10-12 05:00:52.072870: 
+2026-10-12 05:00:52.074351: Epoch 125
+2026-10-12 05:00:52.075188: Current learning rate: 0.00433188 (iteration 31250)
+2026-10-12 05:03:43.677503: [segtrain] FP term (epoch mean): 0.00011
+2026-10-12 05:03:55.660877: train_loss -0.8749
+2026-10-12 05:03:55.663081: val_loss -0.8025
+2026-10-12 05:03:55.664527: Pseudo dice [np.float32(0.9086), np.float32(0.8184), np.float32(0.7696), np.float32(0.8252)]
+2026-10-12 05:03:55.665796: Epoch time: 183.59 s
+2026-10-12 05:03:56.305164: 
+2026-10-12 05:03:56.307411: Epoch 126
+2026-10-12 05:03:56.308729: Current learning rate: 0.00427987 (iteration 31500)
+2026-10-12 05:06:47.825212: [segtrain] FP term (epoch mean): 0.00011
+2026-10-12 05:06:59.819103: train_loss -0.8722
+2026-10-12 05:06:59.821086: val_loss -0.8274
+2026-10-12 05:06:59.822078: Pseudo dice [np.float32(0.9035), np.float32(0.8541), np.float32(0.7936), np.float32(0.8405)]
+2026-10-12 05:06:59.822969: Epoch time: 183.52 s
+2026-10-12 05:07:00.468884: 
+2026-10-12 05:07:00.469903: Epoch 127
+2026-10-12 05:07:00.470803: Current learning rate: 0.00422778 (iteration 31750)
+2026-10-12 05:09:51.982211: [segtrain] FP term (epoch mean): 0.00010
+2026-10-12 05:10:03.966346: train_loss -0.8757
+2026-10-12 05:10:03.968318: val_loss -0.8205
+2026-10-12 05:10:03.969244: Pseudo dice [np.float32(0.9001), np.float32(0.8535), np.float32(0.7789), np.float32(0.8318)]
+2026-10-12 05:10:03.970197: Epoch time: 183.5 s
+2026-10-12 05:10:03.971076: Yayy! New best EMA pseudo Dice: 0.8399999737739563
+2026-10-12 05:10:05.345530: 
+2026-10-12 05:10:05.346875: Epoch 128
+2026-10-12 05:10:05.348054: Current learning rate: 0.00417562 (iteration 32000)
+2026-10-12 05:12:56.828460: [segtrain] FP term (epoch mean): 0.00012
+2026-10-12 05:13:08.811716: train_loss -0.8754
+2026-10-12 05:13:08.814478: val_loss -0.8327
+2026-10-12 05:13:08.815726: Pseudo dice [np.float32(0.9177), np.float32(0.8461), np.float32(0.7903), np.float32(0.8552)]
+2026-10-12 05:13:08.816963: Epoch time: 183.47 s
+2026-10-12 05:13:08.817974: Yayy! New best EMA pseudo Dice: 0.8411999940872192
+2026-10-12 05:13:10.177144: 
+2026-10-12 05:13:10.178431: Epoch 129
+2026-10-12 05:13:10.179431: Current learning rate: 0.00412339 (iteration 32250)
+2026-10-12 05:16:01.563125: [segtrain] FP term (epoch mean): 0.00012
+2026-10-12 05:16:13.547320: train_loss -0.8755
+2026-10-12 05:16:13.549529: val_loss -0.7913
+2026-10-12 05:16:13.550519: Pseudo dice [np.float32(0.8961), np.float32(0.8377), np.float32(0.7443), np.float32(0.819)]
+2026-10-12 05:16:13.551473: Epoch time: 183.37 s
+2026-10-12 05:16:14.198509: 
+2026-10-12 05:16:14.199839: Epoch 130
+2026-10-12 05:16:14.200802: Current learning rate: 0.00407108 (iteration 32500)
+2026-10-12 05:19:05.604061: [segtrain] FP term (epoch mean): 0.00011
+2026-10-12 05:19:17.593633: train_loss -0.8802
+2026-10-12 05:19:17.595747: val_loss -0.8219
+2026-10-12 05:19:17.596682: Pseudo dice [np.float32(0.8909), np.float32(0.8415), np.float32(0.7994), np.float32(0.8403)]
+2026-10-12 05:19:17.597634: Epoch time: 183.4 s
+2026-10-12 05:19:18.239149: 
+2026-10-12 05:19:18.240422: Epoch 131
+2026-10-12 05:19:18.241385: Current learning rate: 0.0040187 (iteration 32750)
+2026-10-12 05:22:09.660863: [segtrain] FP term (epoch mean): 0.00011
+2026-10-12 05:22:21.649818: train_loss -0.8777
+2026-10-12 05:22:21.652382: val_loss -0.803
+2026-10-12 05:22:21.653743: Pseudo dice [np.float32(0.9016), np.float32(0.8337), np.float32(0.7668), np.float32(0.825)]
+2026-10-12 05:22:21.655315: Epoch time: 183.41 s
+2026-10-12 05:22:22.304360: 
+2026-10-12 05:22:22.305979: Epoch 132
+2026-10-12 05:22:22.307223: Current learning rate: 0.00396625 (iteration 33000)
+2026-10-12 05:25:13.684038: [segtrain] FP term (epoch mean): 0.00011
+2026-10-12 05:25:25.722549: train_loss -0.8694
+2026-10-12 05:25:25.726033: val_loss -0.8088
+2026-10-12 05:25:25.727352: Pseudo dice [np.float32(0.9098), np.float32(0.8421), np.float32(0.7667), np.float32(0.8301)]
+2026-10-12 05:25:25.728557: Epoch time: 183.42 s
+2026-10-12 05:25:26.382434: 
+2026-10-12 05:25:26.383827: Epoch 133
+2026-10-12 05:25:26.384897: Current learning rate: 0.00391371 (iteration 33250)
+2026-10-12 05:28:17.860217: [segtrain] FP term (epoch mean): 0.00012
+2026-10-12 05:28:29.892874: train_loss -0.8762
+2026-10-12 05:28:29.895559: val_loss -0.815
+2026-10-12 05:28:29.896727: Pseudo dice [np.float32(0.896), np.float32(0.8398), np.float32(0.7766), np.float32(0.8264)]
+2026-10-12 05:28:29.897977: Epoch time: 183.51 s
+2026-10-12 05:28:30.541242: 
+2026-10-12 05:28:30.543004: Epoch 134
+2026-10-12 05:28:30.544920: Current learning rate: 0.0038611 (iteration 33500)
+2026-10-12 05:31:22.065069: [segtrain] FP term (epoch mean): 0.00013
+2026-10-12 05:31:34.055046: train_loss -0.8709
+2026-10-12 05:31:34.057210: val_loss -0.8103
+2026-10-12 05:31:34.058512: Pseudo dice [np.float32(0.8964), np.float32(0.8379), np.float32(0.7636), np.float32(0.8342)]
+2026-10-12 05:31:34.059673: Epoch time: 183.52 s
+2026-10-12 05:31:34.713429: 
+2026-10-12 05:31:34.715019: Epoch 135
+2026-10-12 05:31:34.716215: Current learning rate: 0.00380841 (iteration 33750)
+2026-10-12 05:34:26.206281: [segtrain] FP term (epoch mean): 0.00012
+2026-10-12 05:34:38.185840: train_loss -0.8699
+2026-10-12 05:34:38.188365: val_loss -0.8202
+2026-10-12 05:34:38.189425: Pseudo dice [np.float32(0.9089), np.float32(0.8501), np.float32(0.7769), np.float32(0.8483)]
+2026-10-12 05:34:38.190609: Epoch time: 183.47 s
+2026-10-12 05:34:38.833864: 
+2026-10-12 05:34:38.837902: Epoch 136
+2026-10-12 05:34:38.839173: Current learning rate: 0.00375564 (iteration 34000)
+2026-10-12 05:37:31.012021: [segtrain] FP term (epoch mean): 0.00011
+2026-10-12 05:37:43.040941: train_loss -0.8765
+2026-10-12 05:37:43.043174: val_loss -0.8292
+2026-10-12 05:37:43.044524: Pseudo dice [np.float32(0.9103), np.float32(0.8501), np.float32(0.7953), np.float32(0.8629)]
+2026-10-12 05:37:43.045776: Epoch time: 184.21 s
+2026-10-12 05:37:43.923144: 
+2026-10-12 05:37:43.924646: Epoch 137
+2026-10-12 05:37:43.925893: Current learning rate: 0.00370278 (iteration 34250)
+2026-10-12 05:40:35.352180: [segtrain] FP term (epoch mean): 0.00009
+2026-10-12 05:40:47.336280: train_loss -0.8753
+2026-10-12 05:40:47.338149: val_loss -0.8112
+2026-10-12 05:40:47.339315: Pseudo dice [np.float32(0.9099), np.float32(0.839), np.float32(0.7845), np.float32(0.8316)]
+2026-10-12 05:40:47.340427: Epoch time: 183.42 s
+2026-10-12 05:40:47.980249: 
+2026-10-12 05:40:47.981798: Epoch 138
+2026-10-12 05:40:47.983053: Current learning rate: 0.00364984 (iteration 34500)
+2026-10-12 05:43:39.503365: [segtrain] FP term (epoch mean): 0.00010
+2026-10-12 05:43:51.485594: train_loss -0.8748
+2026-10-12 05:43:51.487782: val_loss -0.825
+2026-10-12 05:43:51.488939: Pseudo dice [np.float32(0.9029), np.float32(0.8554), np.float32(0.7682), np.float32(0.8457)]
+2026-10-12 05:43:51.490088: Epoch time: 183.51 s
+2026-10-12 05:43:52.139860: 
+2026-10-12 05:43:52.141051: Epoch 139
+2026-10-12 05:43:52.142347: Current learning rate: 0.00359682 (iteration 34750)
+2026-10-12 05:46:43.609077: [segtrain] FP term (epoch mean): 0.00012
+2026-10-12 05:46:55.589228: train_loss -0.8741
+2026-10-12 05:46:55.591121: val_loss -0.8146
+2026-10-12 05:46:55.592397: Pseudo dice [np.float32(0.908), np.float32(0.8489), np.float32(0.7593), np.float32(0.8171)]
+2026-10-12 05:46:55.593334: Epoch time: 183.45 s
+2026-10-12 05:46:56.243614: 
+2026-10-12 05:46:56.246584: Epoch 140
+2026-10-12 05:46:56.249053: Current learning rate: 0.00354371 (iteration 35000)
+2026-10-12 05:49:52.295754: [segtrain] FP term (epoch mean): 0.00009
+2026-10-12 05:50:04.293226: train_loss -0.877
+2026-10-12 05:50:04.295084: val_loss -0.7967
+2026-10-12 05:50:04.296158: Pseudo dice [np.float32(0.9021), np.float32(0.8509), np.float32(0.7615), np.float32(0.8448)]
+2026-10-12 05:50:04.297268: Epoch time: 188.05 s
+2026-10-12 05:50:04.940104: 
+2026-10-12 05:50:04.941328: Epoch 141
+2026-10-12 05:50:04.942226: Current learning rate: 0.00349051 (iteration 35250)
+2026-10-12 05:52:56.377499: [segtrain] FP term (epoch mean): 0.00008
+2026-10-12 05:53:08.362940: train_loss -0.8807
+2026-10-12 05:53:08.366511: val_loss -0.8138
+2026-10-12 05:53:08.367541: Pseudo dice [np.float32(0.9096), np.float32(0.8459), np.float32(0.7531), np.float32(0.832)]
+2026-10-12 05:53:08.368510: Epoch time: 183.43 s
+2026-10-12 05:53:09.008701: 
+2026-10-12 05:53:09.009894: Epoch 142
+2026-10-12 05:53:09.010774: Current learning rate: 0.00343722 (iteration 35500)
+2026-10-12 05:56:01.290796: [segtrain] FP term (epoch mean): 0.00010
+2026-10-12 05:56:13.461722: train_loss -0.8713
+2026-10-12 05:56:13.464030: val_loss -0.8114
+2026-10-12 05:56:13.465305: Pseudo dice [np.float32(0.9025), np.float32(0.8365), np.float32(0.7739), np.float32(0.8323)]
+2026-10-12 05:56:13.466437: Epoch time: 184.46 s
+2026-10-12 05:56:14.112637: 
+2026-10-12 05:56:14.114926: Epoch 143
+2026-10-12 05:56:14.117234: Current learning rate: 0.00338383 (iteration 35750)
+2026-10-12 05:59:07.356510: [segtrain] FP term (epoch mean): 0.00012
+2026-10-12 05:59:19.347641: train_loss -0.8807
+2026-10-12 05:59:19.349761: val_loss -0.812
+2026-10-12 05:59:19.350976: Pseudo dice [np.float32(0.9122), np.float32(0.8379), np.float32(0.7587), np.float32(0.8509)]
+2026-10-12 05:59:19.352197: Epoch time: 185.24 s
+2026-10-12 05:59:19.993179: 
+2026-10-12 05:59:19.994674: Epoch 144
+2026-10-12 05:59:19.995855: Current learning rate: 0.00333036 (iteration 36000)
+2026-10-12 06:02:11.358850: [segtrain] FP term (epoch mean): 0.00010
+2026-10-12 06:02:23.343495: train_loss -0.8762
+2026-10-12 06:02:23.345547: val_loss -0.7981
+2026-10-12 06:02:23.346751: Pseudo dice [np.float32(0.912), np.float32(0.8342), np.float32(0.7593), np.float32(0.8325)]
+2026-10-12 06:02:23.347971: Epoch time: 183.35 s
+2026-10-12 06:02:23.982352: 
+2026-10-12 06:02:23.983721: Epoch 145
+2026-10-12 06:02:23.984839: Current learning rate: 0.00327679 (iteration 36250)
+2026-10-12 06:05:15.359081: [segtrain] FP term (epoch mean): 0.00011
+2026-10-12 06:05:27.346196: train_loss -0.8763
+2026-10-12 06:05:27.348220: val_loss -0.8159
+2026-10-12 06:05:27.349518: Pseudo dice [np.float32(0.9056), np.float32(0.8489), np.float32(0.7757), np.float32(0.8392)]
+2026-10-12 06:05:27.350662: Epoch time: 183.37 s
+2026-10-12 06:05:27.992913: 
+2026-10-12 06:05:27.994244: Epoch 146
+2026-10-12 06:05:27.995430: Current learning rate: 0.00322312 (iteration 36500)
+2026-10-12 06:08:19.400973: [segtrain] FP term (epoch mean): 0.00011
+2026-10-12 06:08:31.385122: train_loss -0.8753
+2026-10-12 06:08:31.387105: val_loss -0.8177
+2026-10-12 06:08:31.388226: Pseudo dice [np.float32(0.9053), np.float32(0.8365), np.float32(0.7618), np.float32(0.8425)]
+2026-10-12 06:08:31.389335: Epoch time: 183.39 s
+2026-10-12 06:08:32.032046: 
+2026-10-12 06:08:32.033255: Epoch 147
+2026-10-12 06:08:32.034273: Current learning rate: 0.00316935 (iteration 36750)
+2026-10-12 06:11:23.443536: [segtrain] FP term (epoch mean): 0.00012
+2026-10-12 06:11:35.428108: train_loss -0.8759
+2026-10-12 06:11:35.430311: val_loss -0.8065
+2026-10-12 06:11:35.431686: Pseudo dice [np.float32(0.8995), np.float32(0.8499), np.float32(0.7827), np.float32(0.8406)]
+2026-10-12 06:11:35.432994: Epoch time: 183.4 s
+2026-10-12 06:11:36.074210: 
+2026-10-12 06:11:36.075783: Epoch 148
+2026-10-12 06:11:36.076945: Current learning rate: 0.00311548 (iteration 37000)
+2026-10-12 06:14:27.502398: [segtrain] FP term (epoch mean): 0.00013
+2026-10-12 06:14:39.486377: train_loss -0.8733
+2026-10-12 06:14:39.488889: val_loss -0.7952
+2026-10-12 06:14:39.490287: Pseudo dice [np.float32(0.9012), np.float32(0.839), np.float32(0.7767), np.float32(0.8259)]
+2026-10-12 06:14:39.491610: Epoch time: 183.41 s
+2026-10-12 06:14:40.128999: 
+2026-10-12 06:14:40.130668: Epoch 149
+2026-10-12 06:14:40.132086: Current learning rate: 0.0030615 (iteration 37250)
+2026-10-12 06:17:31.574707: [segtrain] FP term (epoch mean): 0.00011
+2026-10-12 06:17:43.564934: train_loss -0.8782
+2026-10-12 06:17:43.567229: val_loss -0.8053
+2026-10-12 06:17:43.568449: Pseudo dice [np.float32(0.9035), np.float32(0.8367), np.float32(0.7623), np.float32(0.8357)]
+2026-10-12 06:17:43.569642: Epoch time: 183.44 s
+2026-10-12 06:17:44.941251: 
+2026-10-12 06:17:44.943128: Epoch 150
+2026-10-12 06:17:44.944468: Current learning rate: 0.00300742 (iteration 37500)
+2026-10-12 06:20:36.373670: [segtrain] FP term (epoch mean): 0.00009
+2026-10-12 06:20:48.357673: train_loss -0.8711
+2026-10-12 06:20:48.360888: val_loss -0.8158
+2026-10-12 06:20:48.362796: Pseudo dice [np.float32(0.9001), np.float32(0.8404), np.float32(0.7861), np.float32(0.839)]
+2026-10-12 06:20:48.364150: Epoch time: 183.42 s
+2026-10-12 06:20:49.276743: 
+2026-10-12 06:20:49.278256: Epoch 151
+2026-10-12 06:20:49.279444: Current learning rate: 0.00295324 (iteration 37750)
+2026-10-12 06:23:40.672225: [segtrain] FP term (epoch mean): 0.00009
+2026-10-12 06:23:52.657962: train_loss -0.8806
+2026-10-12 06:23:52.660042: val_loss -0.8164
+2026-10-12 06:23:52.661451: Pseudo dice [np.float32(0.904), np.float32(0.8481), np.float32(0.7882), np.float32(0.8284)]
+2026-10-12 06:23:52.662675: Epoch time: 183.39 s
+2026-10-12 06:23:53.305914: 
+2026-10-12 06:23:53.308717: Epoch 152
+2026-10-12 06:23:53.312621: Current learning rate: 0.00289894 (iteration 38000)
+2026-10-12 06:26:46.938752: [segtrain] FP term (epoch mean): 0.00009
+2026-10-12 06:26:58.941475: train_loss -0.8757
+2026-10-12 06:26:58.944369: val_loss -0.8001
+2026-10-12 06:26:58.945870: Pseudo dice [np.float32(0.9081), np.float32(0.8488), np.float32(0.7827), np.float32(0.8347)]
+2026-10-12 06:26:58.947168: Epoch time: 185.64 s
+2026-10-12 06:26:59.597922: 
+2026-10-12 06:26:59.599346: Epoch 153
+2026-10-12 06:26:59.601198: Current learning rate: 0.00284453 (iteration 38250)
+2026-10-12 06:29:57.726726: [segtrain] FP term (epoch mean): 0.00010
+2026-10-12 06:30:09.710078: train_loss -0.8794
+2026-10-12 06:30:09.712111: val_loss -0.8198
+2026-10-12 06:30:09.713106: Pseudo dice [np.float32(0.9034), np.float32(0.8499), np.float32(0.7731), np.float32(0.8491)]
+2026-10-12 06:30:09.714155: Epoch time: 190.11 s
+2026-10-12 06:30:10.364820: 
+2026-10-12 06:30:10.366185: Epoch 154
+2026-10-12 06:30:10.367243: Current learning rate: 0.00279 (iteration 38500)
+2026-10-12 06:33:01.689249: [segtrain] FP term (epoch mean): 0.00008
+2026-10-12 06:33:13.674162: train_loss -0.882
+2026-10-12 06:33:13.676111: val_loss -0.8185
+2026-10-12 06:33:13.677193: Pseudo dice [np.float32(0.903), np.float32(0.846), np.float32(0.778), np.float32(0.8405)]
+2026-10-12 06:33:13.678244: Epoch time: 183.31 s
+2026-10-12 06:33:14.620827: 
+2026-10-12 06:33:14.622298: Epoch 155
+2026-10-12 06:33:14.623290: Current learning rate: 0.00273535 (iteration 38750)
+2026-10-12 06:36:05.982014: [segtrain] FP term (epoch mean): 0.00008
+2026-10-12 06:36:17.964524: train_loss -0.8806
+2026-10-12 06:36:17.967174: val_loss -0.8031
+2026-10-12 06:36:17.968924: Pseudo dice [np.float32(0.8949), np.float32(0.8389), np.float32(0.773), np.float32(0.8273)]
+2026-10-12 06:36:17.970236: Epoch time: 183.35 s
+2026-10-12 06:36:18.614275: 
+2026-10-12 06:36:18.616023: Epoch 156
+2026-10-12 06:36:18.617272: Current learning rate: 0.00268058 (iteration 39000)
+2026-10-12 06:39:20.861572: [segtrain] FP term (epoch mean): 0.00010
+2026-10-12 06:39:32.838857: train_loss -0.8778
+2026-10-12 06:39:32.841876: val_loss -0.8063
+2026-10-12 06:39:32.843903: Pseudo dice [np.float32(0.9027), np.float32(0.8364), np.float32(0.7815), np.float32(0.8273)]
+2026-10-12 06:39:32.845962: Epoch time: 194.23 s
+2026-10-12 06:39:33.508384: 
+2026-10-12 06:39:33.510528: Epoch 157
+2026-10-12 06:39:33.512226: Current learning rate: 0.00262569 (iteration 39250)
+2026-10-12 06:42:25.091402: [segtrain] FP term (epoch mean): 0.00009
+2026-10-12 06:42:37.077469: train_loss -0.8774
+2026-10-12 06:42:37.079537: val_loss -0.8103
+2026-10-12 06:42:37.080889: Pseudo dice [np.float32(0.8994), np.float32(0.8425), np.float32(0.763), np.float32(0.8301)]
+2026-10-12 06:42:37.082138: Epoch time: 183.57 s
+2026-10-12 06:42:37.737962: 
+2026-10-12 06:42:37.739408: Epoch 158
+2026-10-12 06:42:37.740740: Current learning rate: 0.00257067 (iteration 39500)
+2026-10-12 06:45:39.869323: [segtrain] FP term (epoch mean): 0.00011
+2026-10-12 06:45:51.852496: train_loss -0.8787
+2026-10-12 06:45:51.854211: val_loss -0.8101
+2026-10-12 06:45:51.855242: Pseudo dice [np.float32(0.9101), np.float32(0.844), np.float32(0.7644), np.float32(0.8219)]
+2026-10-12 06:45:51.856230: Epoch time: 194.12 s
+2026-10-12 06:45:52.512553: 
+2026-10-12 06:45:52.513991: Epoch 159
+2026-10-12 06:45:52.515098: Current learning rate: 0.00251552 (iteration 39750)
+2026-10-12 06:48:46.812581: [segtrain] FP term (epoch mean): 0.00008
+2026-10-12 06:48:58.808954: train_loss -0.882
+2026-10-12 06:48:58.811033: val_loss -0.8081
+2026-10-12 06:48:58.813738: Pseudo dice [np.float32(0.9046), np.float32(0.8406), np.float32(0.7786), np.float32(0.8225)]
+2026-10-12 06:48:58.815644: Epoch time: 186.3 s
+2026-10-12 06:48:59.460722: 
+2026-10-12 06:48:59.462265: Epoch 160
+2026-10-12 06:48:59.463652: Current learning rate: 0.00246023 (iteration 40000)
+2026-10-12 06:51:50.760073: [segtrain] FP term (epoch mean): 0.00009
+2026-10-12 06:52:02.756949: train_loss -0.8854
+2026-10-12 06:52:02.759052: val_loss -0.8027
+2026-10-12 06:52:02.760250: Pseudo dice [np.float32(0.8872), np.float32(0.84), np.float32(0.7633), np.float32(0.8241)]
+2026-10-12 06:52:02.761415: Epoch time: 183.3 s
+2026-10-12 06:52:03.412396: 
+2026-10-12 06:52:03.413896: Epoch 161
+2026-10-12 06:52:03.415123: Current learning rate: 0.00240481 (iteration 40250)
+2026-10-12 06:55:01.439528: [segtrain] FP term (epoch mean): 0.00011
+2026-10-12 06:55:13.423650: train_loss -0.8764
+2026-10-12 06:55:13.426242: val_loss -0.8217
+2026-10-12 06:55:13.432175: Pseudo dice [np.float32(0.9034), np.float32(0.8353), np.float32(0.7818), np.float32(0.8345)]
+2026-10-12 06:55:13.434060: Epoch time: 190.01 s
+2026-10-12 06:55:14.083899: 
+2026-10-12 06:55:14.086232: Epoch 162
+2026-10-12 06:55:14.087875: Current learning rate: 0.00234924 (iteration 40500)
+2026-10-12 06:58:05.506056: [segtrain] FP term (epoch mean): 0.00005
+2026-10-12 06:58:17.480959: train_loss -0.8804
+2026-10-12 06:58:17.484064: val_loss -0.822
+2026-10-12 06:58:17.485712: Pseudo dice [np.float32(0.9012), np.float32(0.8574), np.float32(0.7793), np.float32(0.8389)]
+2026-10-12 06:58:17.487169: Epoch time: 183.4 s
+2026-10-12 06:58:18.398461: 
+2026-10-12 06:58:18.399974: Epoch 163
+2026-10-12 06:58:18.401599: Current learning rate: 0.00229352 (iteration 40750)
+2026-10-12 07:01:10.293016: [segtrain] FP term (epoch mean): 0.00009
+2026-10-12 07:01:22.275397: train_loss -0.8826
+2026-10-12 07:01:22.277420: val_loss -0.814
+2026-10-12 07:01:22.278873: Pseudo dice [np.float32(0.9013), np.float32(0.8396), np.float32(0.7793), np.float32(0.8482)]
+2026-10-12 07:01:22.280205: Epoch time: 183.88 s
+2026-10-12 07:01:22.929231: 
+2026-10-12 07:01:22.930748: Epoch 164
+2026-10-12 07:01:22.931930: Current learning rate: 0.00223766 (iteration 41000)
+2026-10-12 07:04:14.469246: [segtrain] FP term (epoch mean): 0.00008
+2026-10-12 07:04:26.484301: train_loss -0.8786
+2026-10-12 07:04:26.486731: val_loss -0.8056
+2026-10-12 07:04:26.488030: Pseudo dice [np.float32(0.9047), np.float32(0.8485), np.float32(0.7685), np.float32(0.8354)]
+2026-10-12 07:04:26.489357: Epoch time: 183.56 s
+2026-10-12 07:04:27.245113: 
+2026-10-12 07:04:27.246694: Epoch 165
+2026-10-12 07:04:27.247924: Current learning rate: 0.00218164 (iteration 41250)
+2026-10-12 07:07:26.494856: [segtrain] FP term (epoch mean): 0.00007
+2026-10-12 07:07:38.474662: train_loss -0.8815
+2026-10-12 07:07:38.476677: val_loss -0.8103
+2026-10-12 07:07:38.478045: Pseudo dice [np.float32(0.9068), np.float32(0.8409), np.float32(0.7734), np.float32(0.8257)]
+2026-10-12 07:07:38.479331: Epoch time: 191.23 s
+2026-10-12 07:07:39.126861: 
+2026-10-12 07:07:39.128295: Epoch 166
+2026-10-12 07:07:39.129601: Current learning rate: 0.00212546 (iteration 41500)
+2026-10-12 07:10:30.571634: [segtrain] FP term (epoch mean): 0.00009
+2026-10-12 07:10:42.549060: train_loss -0.8804
+2026-10-12 07:10:42.551014: val_loss -0.8047
+2026-10-12 07:10:42.552221: Pseudo dice [np.float32(0.9045), np.float32(0.8392), np.float32(0.7567), np.float32(0.8435)]
+2026-10-12 07:10:42.553309: Epoch time: 183.42 s
+2026-10-12 07:10:43.197441: 
+2026-10-12 07:10:43.198870: Epoch 167
+2026-10-12 07:10:43.199838: Current learning rate: 0.00206911 (iteration 41750)
+2026-10-12 07:13:37.569941: [segtrain] FP term (epoch mean): 0.00006
+2026-10-12 07:13:49.550555: train_loss -0.8842
+2026-10-12 07:13:49.552680: val_loss -0.8077
+2026-10-12 07:13:49.554042: Pseudo dice [np.float32(0.8991), np.float32(0.8385), np.float32(0.7735), np.float32(0.8177)]
+2026-10-12 07:13:49.555313: Epoch time: 186.36 s
+2026-10-12 07:13:50.196583: 
+2026-10-12 07:13:50.197944: Epoch 168
+2026-10-12 07:13:50.199167: Current learning rate: 0.0020126 (iteration 42000)
+2026-10-12 07:16:41.538794: [segtrain] FP term (epoch mean): 0.00007
+2026-10-12 07:16:53.513094: train_loss -0.8871
+2026-10-12 07:16:53.517082: val_loss -0.8247
+2026-10-12 07:16:53.518761: Pseudo dice [np.float32(0.9049), np.float32(0.8413), np.float32(0.771), np.float32(0.8428)]
+2026-10-12 07:16:53.521438: Epoch time: 183.32 s
+2026-10-12 07:16:54.235587: 
+2026-10-12 07:16:54.237276: Epoch 169
+2026-10-12 07:16:54.238487: Current learning rate: 0.0019559 (iteration 42250)
+2026-10-12 07:19:45.552690: [segtrain] FP term (epoch mean): 0.00007
+2026-10-12 07:19:57.551173: train_loss -0.8865
+2026-10-12 07:19:57.554068: val_loss -0.8125
+2026-10-12 07:19:57.555455: Pseudo dice [np.float32(0.9079), np.float32(0.842), np.float32(0.782), np.float32(0.8384)]
+2026-10-12 07:19:57.557169: Epoch time: 183.32 s
+2026-10-12 07:19:58.216467: 
+2026-10-12 07:19:58.217939: Epoch 170
+2026-10-12 07:19:58.219096: Current learning rate: 0.00189903 (iteration 42500)
+2026-10-12 07:22:49.712897: [segtrain] FP term (epoch mean): 0.00006
+2026-10-12 07:23:01.706213: train_loss -0.8822
+2026-10-12 07:23:01.708722: val_loss -0.8132
+2026-10-12 07:23:01.710264: Pseudo dice [np.float32(0.9091), np.float32(0.8401), np.float32(0.7676), np.float32(0.8373)]
+2026-10-12 07:23:01.711865: Epoch time: 183.49 s
+2026-10-12 07:23:02.366126: 
+2026-10-12 07:23:02.367715: Epoch 171
+2026-10-12 07:23:02.369037: Current learning rate: 0.00184196 (iteration 42750)
+2026-10-12 07:25:53.781159: [segtrain] FP term (epoch mean): 0.00009
+2026-10-12 07:26:05.757368: train_loss -0.8817
+2026-10-12 07:26:05.759192: val_loss -0.818
+2026-10-12 07:26:05.760186: Pseudo dice [np.float32(0.8979), np.float32(0.8453), np.float32(0.7827), np.float32(0.8425)]
+2026-10-12 07:26:05.761309: Epoch time: 183.39 s
+2026-10-12 07:26:06.405519: 
+2026-10-12 07:26:06.406734: Epoch 172
+2026-10-12 07:26:06.407997: Current learning rate: 0.00178469 (iteration 43000)
+2026-10-12 07:28:57.743907: [segtrain] FP term (epoch mean): 0.00006
+2026-10-12 07:29:09.718368: train_loss -0.8843
+2026-10-12 07:29:09.722689: val_loss -0.8127
+2026-10-12 07:29:09.726366: Pseudo dice [np.float32(0.9083), np.float32(0.8417), np.float32(0.7706), np.float32(0.8353)]
+2026-10-12 07:29:09.729399: Epoch time: 183.32 s
+2026-10-12 07:29:10.375343: 
+2026-10-12 07:29:10.376937: Epoch 173
+2026-10-12 07:29:10.378154: Current learning rate: 0.00172723 (iteration 43250)
+2026-10-12 07:32:01.727701: [segtrain] FP term (epoch mean): 0.00007
+2026-10-12 07:32:13.709303: train_loss -0.8857
+2026-10-12 07:32:13.711609: val_loss -0.8093
+2026-10-12 07:32:13.712860: Pseudo dice [np.float32(0.9019), np.float32(0.8459), np.float32(0.7702), np.float32(0.8172)]
+2026-10-12 07:32:13.714303: Epoch time: 183.34 s
+2026-10-12 07:32:14.362853: 
+2026-10-12 07:32:14.364452: Epoch 174
+2026-10-12 07:32:14.365755: Current learning rate: 0.00166954 (iteration 43500)
+2026-10-12 07:35:09.729143: [segtrain] FP term (epoch mean): 0.00006
+2026-10-12 07:35:21.712783: train_loss -0.8903
+2026-10-12 07:35:21.715263: val_loss -0.8118
+2026-10-12 07:35:21.716616: Pseudo dice [np.float32(0.9115), np.float32(0.8422), np.float32(0.7867), np.float32(0.8294)]
+2026-10-12 07:35:21.718439: Epoch time: 187.35 s
+2026-10-12 07:35:22.617210: 
+2026-10-12 07:35:22.618609: Epoch 175
+2026-10-12 07:35:22.619790: Current learning rate: 0.00161164 (iteration 43750)
+2026-10-12 07:38:14.021102: [segtrain] FP term (epoch mean): 0.00006
+2026-10-12 07:38:26.041506: train_loss -0.8831
+2026-10-12 07:38:26.043634: val_loss -0.8175
+2026-10-12 07:38:26.044816: Pseudo dice [np.float32(0.9072), np.float32(0.8315), np.float32(0.7835), np.float32(0.8478)]
+2026-10-12 07:38:26.045962: Epoch time: 183.43 s
+2026-10-12 07:38:26.697566: 
+2026-10-12 07:38:26.699306: Epoch 176
+2026-10-12 07:38:26.700614: Current learning rate: 0.0015535 (iteration 44000)
+2026-10-12 07:41:18.197796: [segtrain] FP term (epoch mean): 0.00008
+2026-10-12 07:41:30.179744: train_loss -0.8852
+2026-10-12 07:41:30.182115: val_loss -0.8122
+2026-10-12 07:41:30.183906: Pseudo dice [np.float32(0.9109), np.float32(0.8431), np.float32(0.7782), np.float32(0.8289)]
+2026-10-12 07:41:30.185220: Epoch time: 183.48 s
+2026-10-12 07:41:30.835464: 
+2026-10-12 07:41:30.837939: Epoch 177
+2026-10-12 07:41:30.839349: Current learning rate: 0.00149512 (iteration 44250)
+2026-10-12 07:44:22.285599: [segtrain] FP term (epoch mean): 0.00007
+2026-10-12 07:44:34.260819: train_loss -0.8847
+2026-10-12 07:44:34.262826: val_loss -0.8165
+2026-10-12 07:44:34.264068: Pseudo dice [np.float32(0.9118), np.float32(0.8533), np.float32(0.7823), np.float32(0.8305)]
+2026-10-12 07:44:34.265374: Epoch time: 183.43 s
+2026-10-12 07:44:34.909798: 
+2026-10-12 07:44:34.912521: Epoch 178
+2026-10-12 07:44:34.914500: Current learning rate: 0.00143649 (iteration 44500)
+2026-10-12 07:47:26.324295: [segtrain] FP term (epoch mean): 0.00007
+2026-10-12 07:47:38.303662: train_loss -0.885
+2026-10-12 07:47:38.305690: val_loss -0.8178
+2026-10-12 07:47:38.306864: Pseudo dice [np.float32(0.8976), np.float32(0.8463), np.float32(0.7899), np.float32(0.8279)]
+2026-10-12 07:47:38.308426: Epoch time: 183.4 s
+2026-10-12 07:47:38.951684: 
+2026-10-12 07:47:38.953309: Epoch 179
+2026-10-12 07:47:38.954648: Current learning rate: 0.00137759 (iteration 44750)
+2026-10-12 07:50:30.558698: [segtrain] FP term (epoch mean): 0.00009
+2026-10-12 07:50:42.544221: train_loss -0.8858
+2026-10-12 07:50:42.546320: val_loss -0.7987
+2026-10-12 07:50:42.548107: Pseudo dice [np.float32(0.8993), np.float32(0.8289), np.float32(0.7753), np.float32(0.8335)]
+2026-10-12 07:50:42.549258: Epoch time: 183.59 s
+2026-10-12 07:50:43.199035: 
+2026-10-12 07:50:43.200603: Epoch 180
+2026-10-12 07:50:43.201981: Current learning rate: 0.0013184 (iteration 45000)
+2026-10-12 07:53:34.738040: [segtrain] FP term (epoch mean): 0.00005
+2026-10-12 07:53:46.722323: train_loss -0.8836
+2026-10-12 07:53:46.724578: val_loss -0.8112
+2026-10-12 07:53:46.725828: Pseudo dice [np.float32(0.902), np.float32(0.847), np.float32(0.7734), np.float32(0.8414)]
+2026-10-12 07:53:46.727194: Epoch time: 183.53 s
+2026-10-12 07:53:47.379291: 
+2026-10-12 07:53:47.381092: Epoch 181
+2026-10-12 07:53:47.382352: Current learning rate: 0.00125893 (iteration 45250)
+2026-10-12 07:56:38.841736: [segtrain] FP term (epoch mean): 0.00005
+2026-10-12 07:56:50.821995: train_loss -0.8919
+2026-10-12 07:56:50.824054: val_loss -0.821
+2026-10-12 07:56:50.825196: Pseudo dice [np.float32(0.9005), np.float32(0.8497), np.float32(0.7783), np.float32(0.8347)]
+2026-10-12 07:56:50.826234: Epoch time: 183.45 s
+2026-10-12 07:56:51.475712: 
+2026-10-12 07:56:51.476921: Epoch 182
+2026-10-12 07:56:51.477943: Current learning rate: 0.00119913 (iteration 45500)
+2026-10-12 07:59:42.896487: [segtrain] FP term (epoch mean): 0.00006
+2026-10-12 07:59:54.880264: train_loss -0.8849
+2026-10-12 07:59:54.882911: val_loss -0.8116
+2026-10-12 07:59:54.884232: Pseudo dice [np.float32(0.9051), np.float32(0.8411), np.float32(0.7775), np.float32(0.8325)]
+2026-10-12 07:59:54.885615: Epoch time: 183.41 s
+2026-10-12 07:59:55.758067: 
+2026-10-12 07:59:55.759875: Epoch 183
+2026-10-12 07:59:55.761200: Current learning rate: 0.00113901 (iteration 45750)
+2026-10-12 08:02:47.161263: [segtrain] FP term (epoch mean): 0.00005
+2026-10-12 08:02:59.148758: train_loss -0.8864
+2026-10-12 08:02:59.151209: val_loss -0.8132
+2026-10-12 08:02:59.152351: Pseudo dice [np.float32(0.9052), np.float32(0.8488), np.float32(0.7835), np.float32(0.8305)]
+2026-10-12 08:02:59.153526: Epoch time: 183.39 s
+2026-10-12 08:02:59.796711: 
+2026-10-12 08:02:59.798139: Epoch 184
+2026-10-12 08:02:59.801450: Current learning rate: 0.00107852 (iteration 46000)
+2026-10-12 08:05:51.175664: [segtrain] FP term (epoch mean): 0.00007
+2026-10-12 08:06:03.168063: train_loss -0.8879
+2026-10-12 08:06:03.170556: val_loss -0.8059
+2026-10-12 08:06:03.172590: Pseudo dice [np.float32(0.9097), np.float32(0.8341), np.float32(0.7682), np.float32(0.8253)]
+2026-10-12 08:06:03.173939: Epoch time: 183.37 s
+2026-10-12 08:06:03.829483: 
+2026-10-12 08:06:03.830772: Epoch 185
+2026-10-12 08:06:03.831916: Current learning rate: 0.00101766 (iteration 46250)
+2026-10-12 08:08:55.193968: [segtrain] FP term (epoch mean): 0.00006
+2026-10-12 08:09:07.200081: train_loss -0.8872
+2026-10-12 08:09:07.203092: val_loss -0.8156
+2026-10-12 08:09:07.205779: Pseudo dice [np.float32(0.9127), np.float32(0.8371), np.float32(0.7765), np.float32(0.8361)]
+2026-10-12 08:09:07.208130: Epoch time: 183.37 s
+2026-10-12 08:09:07.859420: 
+2026-10-12 08:09:07.861273: Epoch 186
+2026-10-12 08:09:07.862620: Current learning rate: 0.000956394 (iteration 46500)
+2026-10-12 08:11:59.171637: [segtrain] FP term (epoch mean): 0.00006
+2026-10-12 08:12:11.146116: train_loss -0.8905
+2026-10-12 08:12:11.147810: val_loss -0.8101
+2026-10-12 08:12:11.148841: Pseudo dice [np.float32(0.9043), np.float32(0.8408), np.float32(0.7765), np.float32(0.8403)]
+2026-10-12 08:12:11.149800: Epoch time: 183.29 s
+2026-10-12 08:12:12.057541: 
+2026-10-12 08:12:12.058811: Epoch 187
+2026-10-12 08:12:12.060672: Current learning rate: 0.000894686 (iteration 46750)
+2026-10-12 08:15:03.423589: [segtrain] FP term (epoch mean): 0.00005
+2026-10-12 08:15:15.408234: train_loss -0.8876
+2026-10-12 08:15:15.410751: val_loss -0.815
+2026-10-12 08:15:15.412148: Pseudo dice [np.float32(0.9091), np.float32(0.8345), np.float32(0.7804), np.float32(0.8379)]
+2026-10-12 08:15:15.413533: Epoch time: 183.35 s
+2026-10-12 08:15:16.068889: 
+2026-10-12 08:15:16.070778: Epoch 188
+2026-10-12 08:15:16.072647: Current learning rate: 0.000832501 (iteration 47000)
+2026-10-12 08:18:07.439564: [segtrain] FP term (epoch mean): 0.00006
+2026-10-12 08:18:19.434332: train_loss -0.8896
+2026-10-12 08:18:19.436614: val_loss -0.8138
+2026-10-12 08:18:19.438014: Pseudo dice [np.float32(0.91), np.float32(0.843), np.float32(0.7755), np.float32(0.8386)]
+2026-10-12 08:18:19.439380: Epoch time: 183.37 s
+2026-10-12 08:18:20.086278: 
+2026-10-12 08:18:20.087980: Epoch 189
+2026-10-12 08:18:20.089473: Current learning rate: 0.000769795 (iteration 47250)
+2026-10-12 08:21:11.517086: [segtrain] FP term (epoch mean): 0.00005
+2026-10-12 08:21:23.508697: train_loss -0.8897
+2026-10-12 08:21:23.512056: val_loss -0.8155
+2026-10-12 08:21:23.514429: Pseudo dice [np.float32(0.9052), np.float32(0.8359), np.float32(0.7783), np.float32(0.8305)]
+2026-10-12 08:21:23.517434: Epoch time: 183.42 s
+2026-10-12 08:21:24.382033: 
+2026-10-12 08:21:24.383699: Epoch 190
+2026-10-12 08:21:24.385181: Current learning rate: 0.000706516 (iteration 47500)
+2026-10-12 08:24:31.430000: [segtrain] FP term (epoch mean): 0.00007
+2026-10-12 08:24:43.409996: train_loss -0.8848
+2026-10-12 08:24:43.412117: val_loss -0.7993
+2026-10-12 08:24:43.413524: Pseudo dice [np.float32(0.898), np.float32(0.8398), np.float32(0.7691), np.float32(0.8283)]
+2026-10-12 08:24:43.414913: Epoch time: 199.03 s
+2026-10-12 08:24:44.064489: 
+2026-10-12 08:24:44.066864: Epoch 191
+2026-10-12 08:24:44.068869: Current learning rate: 0.000642599 (iteration 47750)
+2026-10-12 08:27:35.430415: [segtrain] FP term (epoch mean): 0.00005
+2026-10-12 08:27:47.411660: train_loss -0.8869
+2026-10-12 08:27:47.416045: val_loss -0.8104
+2026-10-12 08:27:47.417940: Pseudo dice [np.float32(0.8976), np.float32(0.8394), np.float32(0.7794), np.float32(0.8327)]
+2026-10-12 08:27:47.420303: Epoch time: 183.35 s
+2026-10-12 08:27:48.071667: 
+2026-10-12 08:27:48.073634: Epoch 192
+2026-10-12 08:27:48.075368: Current learning rate: 0.000577967 (iteration 48000)
+2026-10-12 08:30:39.662119: [segtrain] FP term (epoch mean): 0.00005
+2026-10-12 08:30:52.607402: train_loss -0.8897
+2026-10-12 08:30:52.609440: val_loss -0.8097
+2026-10-12 08:30:52.610816: Pseudo dice [np.float32(0.9053), np.float32(0.8588), np.float32(0.7904), np.float32(0.84)]
+2026-10-12 08:30:52.612111: Epoch time: 184.54 s
+2026-10-12 08:30:53.267673: 
+2026-10-12 08:30:53.269491: Epoch 193
+2026-10-12 08:30:53.271272: Current learning rate: 0.000512519 (iteration 48250)
+2026-10-12 08:33:44.686812: [segtrain] FP term (epoch mean): 0.00006
+2026-10-12 08:33:56.672735: train_loss -0.8914
+2026-10-12 08:33:56.675338: val_loss -0.8115
+2026-10-12 08:33:56.677490: Pseudo dice [np.float32(0.9046), np.float32(0.8466), np.float32(0.7675), np.float32(0.824)]
+2026-10-12 08:33:56.679275: Epoch time: 183.41 s
+2026-10-12 08:33:57.599391: 
+2026-10-12 08:33:57.601365: Epoch 194
+2026-10-12 08:33:57.602778: Current learning rate: 0.000446126 (iteration 48500)
+2026-10-12 08:36:49.005384: [segtrain] FP term (epoch mean): 0.00005
+2026-10-12 08:37:01.007071: train_loss -0.8893
+2026-10-12 08:37:01.009109: val_loss -0.8116
+2026-10-12 08:37:01.010254: Pseudo dice [np.float32(0.9121), np.float32(0.838), np.float32(0.7845), np.float32(0.8474)]
+2026-10-12 08:37:01.011441: Epoch time: 183.41 s
+2026-10-12 08:37:01.670359: 
+2026-10-12 08:37:01.671841: Epoch 195
+2026-10-12 08:37:01.673011: Current learning rate: 0.000378612 (iteration 48750)
+2026-10-12 08:39:53.141047: [segtrain] FP term (epoch mean): 0.00006
+2026-10-12 08:40:05.145599: train_loss -0.8885
+2026-10-12 08:40:05.147621: val_loss -0.8145
+2026-10-12 08:40:05.148998: Pseudo dice [np.float32(0.9076), np.float32(0.8366), np.float32(0.7846), np.float32(0.8267)]
+2026-10-12 08:40:05.150321: Epoch time: 183.48 s
+2026-10-12 08:40:05.813294: 
+2026-10-12 08:40:05.814815: Epoch 196
+2026-10-12 08:40:05.816177: Current learning rate: 0.000309725 (iteration 49000)
+2026-10-12 08:42:57.230707: [segtrain] FP term (epoch mean): 0.00006
+2026-10-12 08:43:09.227870: train_loss -0.89
+2026-10-12 08:43:09.230935: val_loss -0.8238
+2026-10-12 08:43:09.232343: Pseudo dice [np.float32(0.9039), np.float32(0.8494), np.float32(0.7878), np.float32(0.8524)]
+2026-10-12 08:43:09.233604: Epoch time: 183.42 s
+2026-10-12 08:43:09.890945: 
+2026-10-12 08:43:09.892308: Epoch 197
+2026-10-12 08:43:09.893573: Current learning rate: 0.000239073 (iteration 49250)
+2026-10-12 08:46:01.372591: [segtrain] FP term (epoch mean): 0.00007
+2026-10-12 08:46:13.359153: train_loss -0.8872
+2026-10-12 08:46:13.361228: val_loss -0.8091
+2026-10-12 08:46:13.362329: Pseudo dice [np.float32(0.9075), np.float32(0.8449), np.float32(0.7634), np.float32(0.8504)]
+2026-10-12 08:46:13.363415: Epoch time: 183.47 s
+2026-10-12 08:46:14.023900: 
+2026-10-12 08:46:14.025186: Epoch 198
+2026-10-12 08:46:14.026238: Current learning rate: 0.000165977 (iteration 49500)
+2026-10-12 08:49:05.476375: [segtrain] FP term (epoch mean): 0.00005
+2026-10-12 08:49:17.455254: train_loss -0.8892
+2026-10-12 08:49:17.457533: val_loss -0.8088
+2026-10-12 08:49:17.458763: Pseudo dice [np.float32(0.9143), np.float32(0.8331), np.float32(0.7775), np.float32(0.8372)]
+2026-10-12 08:49:17.460167: Epoch time: 183.43 s
+2026-10-12 08:49:18.117128: 
+2026-10-12 08:49:18.119100: Epoch 199
+2026-10-12 08:49:18.121170: Current learning rate: 8.8945e-05 (iteration 49750)
+2026-10-12 08:52:12.661303: [segtrain] FP term (epoch mean): 0.00005
+2026-10-12 08:52:24.657556: train_loss -0.8895
+2026-10-12 08:52:24.659744: val_loss -0.8229
+2026-10-12 08:52:24.661222: Pseudo dice [np.float32(0.9073), np.float32(0.8531), np.float32(0.7701), np.float32(0.8363)]
+2026-10-12 08:52:24.662601: Epoch time: 186.54 s
+2026-10-12 08:52:36.041456: Training done.
+2026-10-12 08:52:36.156416: Using splits from existing split file: /scratch/croger/atlas2/nnunet_preprocessed/Dataset714_AtlasProxyDefaultWindow/splits_final.json
+2026-10-12 08:52:36.158006: The split file contains 1 splits.
+2026-10-12 08:52:36.159258: Desired fold for training: 0
+2026-10-12 08:52:36.160495: This split has 560 training and 80 validation cases.
+2026-10-12 08:52:36.163031: predicting c0001
+2026-10-12 08:52:36.229726: c0001, shape torch.Size([1, 275, 380, 380]), rank 0
+2026-10-12 08:52:53.285017: predicting c0021
+2026-10-12 08:52:53.346887: c0021, shape torch.Size([1, 275, 350, 350]), rank 0
+2026-10-12 08:52:54.680316: predicting c0024
+2026-10-12 08:52:54.874226: c0024, shape torch.Size([1, 245, 424, 424]), rank 0
+2026-10-12 08:52:56.486633: predicting c0038
+2026-10-12 08:52:56.626186: c0038, shape torch.Size([1, 241, 388, 388]), rank 0
+2026-10-12 08:52:58.182052: predicting c0039
+2026-10-12 08:52:58.375047: c0039, shape torch.Size([1, 245, 386, 386]), rank 0
+2026-10-12 08:52:59.932227: predicting c0093
+2026-10-12 08:53:00.119607: c0093, shape torch.Size([1, 249, 370, 370]), rank 0
+2026-10-12 08:53:01.295034: predicting c0095
+2026-10-12 08:53:01.920994: c0095, shape torch.Size([1, 247, 326, 326]), rank 0
+2026-10-12 08:53:03.185496: predicting c0097
+2026-10-12 08:53:03.569031: c0097, shape torch.Size([1, 263, 346, 346]), rank 0
+2026-10-12 08:53:05.504179: predicting c0106
+2026-10-12 08:53:06.520511: c0106, shape torch.Size([1, 275, 362, 362]), rank 0
+2026-10-12 08:53:09.114926: predicting c0110
+2026-10-12 08:53:11.172194: c0110, shape torch.Size([1, 275, 340, 340]), rank 0
+2026-10-12 08:54:12.549181: predicting c0121
+2026-10-12 08:54:12.761089: c0121, shape torch.Size([1, 275, 382, 382]), rank 0
+2026-10-12 08:54:14.346353: predicting c0133
+2026-10-12 08:54:14.563694: c0133, shape torch.Size([1, 206, 326, 326]), rank 0
+2026-10-12 08:54:15.378843: predicting c0135
+2026-10-12 08:54:15.540117: c0135, shape torch.Size([1, 249, 326, 326]), rank 0
+2026-10-12 08:54:16.361860: predicting c0145
+2026-10-12 08:54:16.574521: c0145, shape torch.Size([1, 275, 362, 362]), rank 0
+2026-10-12 08:54:17.927402: predicting c0152
+2026-10-12 08:54:18.236845: c0152, shape torch.Size([1, 275, 386, 386]), rank 0
+2026-10-12 08:54:20.942930: predicting c0163
+2026-10-12 08:54:21.094296: c0163, shape torch.Size([1, 239, 350, 350]), rank 0
+2026-10-12 08:54:21.958184: predicting c0165
+2026-10-12 08:54:22.198910: c0165, shape torch.Size([1, 259, 406, 406]), rank 0
+2026-10-12 08:54:24.905660: predicting c0178
+2026-10-12 08:54:25.775672: c0178, shape torch.Size([1, 275, 382, 382]), rank 0
+2026-10-12 08:55:09.020423: predicting c0181
+2026-10-12 08:55:09.262216: c0181, shape torch.Size([1, 275, 376, 376]), rank 0
+2026-10-12 08:55:14.144434: predicting c0182
+2026-10-12 08:55:14.369072: c0182, shape torch.Size([1, 275, 392, 392]), rank 0
+2026-10-12 08:55:17.186578: predicting c0186
+2026-10-12 08:55:17.359464: c0186, shape torch.Size([1, 275, 338, 338]), rank 0
+2026-10-12 08:55:18.720268: predicting c0189
+2026-10-12 08:55:18.903824: c0189, shape torch.Size([1, 275, 326, 326]), rank 0
+2026-10-12 08:55:20.229878: predicting c0223
+2026-10-12 08:55:20.439902: c0223, shape torch.Size([1, 275, 358, 358]), rank 0
+2026-10-12 08:55:22.284693: predicting c0224
+2026-10-12 08:55:22.498053: c0224, shape torch.Size([1, 275, 354, 354]), rank 0
+2026-10-12 08:55:23.846016: predicting c0225
+2026-10-12 08:55:24.117795: c0225, shape torch.Size([1, 255, 374, 374]), rank 0
+2026-10-12 08:55:29.184622: predicting c0226
+2026-10-12 08:55:29.369774: c0226, shape torch.Size([1, 275, 344, 344]), rank 0
+2026-10-12 08:56:07.433684: predicting c0252
+2026-10-12 08:56:07.630177: c0252, shape torch.Size([1, 229, 352, 352]), rank 0
+2026-10-12 08:56:15.306719: predicting c0288
+2026-10-12 08:56:15.439279: c0288, shape torch.Size([1, 206, 326, 326]), rank 0
+2026-10-12 08:56:16.601395: predicting c0297
+2026-10-12 08:56:17.012728: c0297, shape torch.Size([1, 275, 476, 476]), rank 0
+2026-10-12 08:56:20.024431: predicting c0311
+2026-10-12 08:56:20.216419: c0311, shape torch.Size([1, 257, 390, 390]), rank 0
+2026-10-12 08:56:22.913584: predicting c0364
+2026-10-12 08:56:23.060201: c0364, shape torch.Size([1, 239, 326, 326]), rank 0
+2026-10-12 08:56:23.890279: predicting c0368
+2026-10-12 08:56:24.122000: c0368, shape torch.Size([1, 275, 394, 394]), rank 0
+2026-10-12 08:56:26.995500: predicting c0378
+2026-10-12 08:56:27.074451: c0378, shape torch.Size([1, 275, 326, 326]), rank 0
+2026-10-12 08:56:28.382272: predicting c0398
+2026-10-12 08:56:28.592558: c0398, shape torch.Size([1, 249, 364, 364]), rank 0
+2026-10-12 08:57:00.431244: predicting c0400
+2026-10-12 08:57:00.624651: c0400, shape torch.Size([1, 275, 354, 354]), rank 0
+2026-10-12 08:57:02.061202: predicting c0401
+2026-10-12 08:57:02.252636: c0401, shape torch.Size([1, 275, 360, 360]), rank 0
+2026-10-12 08:57:07.794860: predicting c0424
+2026-10-12 08:57:07.998240: c0424, shape torch.Size([1, 275, 374, 374]), rank 0
+2026-10-12 08:57:13.649600: predicting c0456
+2026-10-12 08:57:13.869446: c0456, shape torch.Size([1, 275, 386, 386]), rank 0
+2026-10-12 08:57:16.583303: predicting c0483
+2026-10-12 08:57:16.761228: c0483, shape torch.Size([1, 275, 364, 364]), rank 0
+2026-10-12 08:57:18.160641: predicting c0514
+2026-10-12 08:57:18.374197: c0514, shape torch.Size([1, 275, 384, 384]), rank 0
+2026-10-12 08:57:24.049568: predicting c0558
+2026-10-12 08:57:24.234236: c0558, shape torch.Size([1, 275, 368, 368]), rank 0
+2026-10-12 08:57:27.511032: predicting c0560
+2026-10-12 08:57:27.725943: c0560, shape torch.Size([1, 275, 410, 410]), rank 0
+2026-10-12 08:57:53.288383: predicting c0564
+2026-10-12 08:57:53.385965: c0564, shape torch.Size([1, 206, 326, 326]), rank 0
+2026-10-12 08:57:57.025067: predicting c0566
+2026-10-12 08:57:57.231152: c0566, shape torch.Size([1, 275, 336, 336]), rank 0
+2026-10-12 08:58:04.837438: predicting c0572
+2026-10-12 08:58:05.043368: c0572, shape torch.Size([1, 275, 378, 378]), rank 0
+2026-10-12 08:58:09.972480: predicting c0578
+2026-10-12 08:58:10.235776: c0578, shape torch.Size([1, 275, 344, 344]), rank 0
+2026-10-12 08:58:11.601597: predicting c0581
+2026-10-12 08:58:11.992191: c0581, shape torch.Size([1, 247, 326, 326]), rank 0
+2026-10-12 08:58:15.101655: predicting c0582
+2026-10-12 08:58:15.305196: c0582, shape torch.Size([1, 275, 366, 366]), rank 0
+2026-10-12 08:58:21.646538: predicting c0591
+2026-10-12 08:58:21.771766: c0591, shape torch.Size([1, 206, 348, 348]), rank 0
+2026-10-12 08:58:25.724945: predicting c0593
+2026-10-12 08:58:25.884870: c0593, shape torch.Size([1, 275, 332, 332]), rank 0
+2026-10-12 08:58:48.759067: predicting c0606
+2026-10-12 08:58:49.025591: c0606, shape torch.Size([1, 275, 428, 428]), rank 0
+2026-10-12 08:58:51.878449: predicting c0613
+2026-10-12 08:58:52.052747: c0613, shape torch.Size([1, 275, 378, 378]), rank 0
+2026-10-12 08:58:55.232968: predicting c0643
+2026-10-12 08:58:55.439397: c0643, shape torch.Size([1, 275, 382, 382]), rank 0
+2026-10-12 08:59:06.450502: predicting c0646
+2026-10-12 08:59:06.663775: c0646, shape torch.Size([1, 275, 370, 370]), rank 0
+2026-10-12 08:59:08.325275: predicting c0669
+2026-10-12 08:59:08.489856: c0669, shape torch.Size([1, 275, 338, 338]), rank 0
+2026-10-12 08:59:11.911033: predicting c0708
+2026-10-12 08:59:12.118350: c0708, shape torch.Size([1, 275, 382, 382]), rank 0
+2026-10-12 08:59:13.595243: predicting c0717
+2026-10-12 08:59:14.042662: c0717, shape torch.Size([1, 245, 358, 358]), rank 0
+2026-10-12 08:59:23.206285: predicting c0733
+2026-10-12 08:59:23.534060: c0733, shape torch.Size([1, 275, 444, 444]), rank 0
+2026-10-12 08:59:32.608067: predicting c0741
+2026-10-12 08:59:32.879936: c0741, shape torch.Size([1, 229, 326, 326]), rank 0
+2026-10-12 08:59:48.762151: predicting c0744
+2026-10-12 08:59:49.090553: c0744, shape torch.Size([1, 275, 410, 410]), rank 0
+2026-10-12 08:59:55.211521: predicting c0776
+2026-10-12 08:59:55.432211: c0776, shape torch.Size([1, 275, 364, 364]), rank 0
+2026-10-12 09:00:09.363047: predicting c0792
+2026-10-12 09:00:09.528377: c0792, shape torch.Size([1, 206, 348, 348]), rank 0
+2026-10-12 09:00:11.557231: predicting c0815
+2026-10-12 09:00:11.694157: c0815, shape torch.Size([1, 206, 326, 326]), rank 0
+2026-10-12 09:00:13.301060: predicting c0826
+2026-10-12 09:00:13.476286: c0826, shape torch.Size([1, 275, 344, 344]), rank 0
+2026-10-12 09:00:14.865191: predicting c0833
+2026-10-12 09:00:15.116239: c0833, shape torch.Size([1, 267, 402, 402]), rank 0
+2026-10-12 09:00:21.227889: predicting c0848
+2026-10-12 09:00:21.410251: c0848, shape torch.Size([1, 275, 346, 346]), rank 0
+2026-10-12 09:00:24.870832: predicting c0866
+2026-10-12 09:00:25.336621: c0866, shape torch.Size([1, 275, 370, 370]), rank 0
+2026-10-12 09:00:43.329397: predicting c0878
+2026-10-12 09:00:43.601503: c0878, shape torch.Size([1, 275, 386, 386]), rank 0
+2026-10-12 09:00:47.903420: predicting c0899
+2026-10-12 09:00:48.085643: c0899, shape torch.Size([1, 206, 326, 326]), rank 0
+2026-10-12 09:01:03.278506: predicting c0924
+2026-10-12 09:01:03.496512: c0924, shape torch.Size([1, 275, 378, 378]), rank 0
+2026-10-12 09:01:05.586058: predicting c0928
+2026-10-12 09:01:05.779346: c0928, shape torch.Size([1, 231, 360, 360]), rank 0
+2026-10-12 09:01:12.172140: predicting c0935
+2026-10-12 09:01:12.426791: c0935, shape torch.Size([1, 221, 370, 370]), rank 0
+2026-10-12 09:01:15.241173: predicting c0938
+2026-10-12 09:01:15.452178: c0938, shape torch.Size([1, 275, 384, 384]), rank 0
+2026-10-12 09:01:24.029644: predicting c0950
+2026-10-12 09:01:24.242931: c0950, shape torch.Size([1, 275, 352, 352]), rank 0
+2026-10-12 09:01:25.682441: predicting c0956
+2026-10-12 09:01:25.815356: c0956, shape torch.Size([1, 231, 350, 350]), rank 0
+2026-10-12 09:01:40.500392: predicting c0960
+2026-10-12 09:01:40.682322: c0960, shape torch.Size([1, 206, 366, 366]), rank 0
+2026-10-12 09:01:45.258982: predicting c0964
+2026-10-12 09:01:45.584738: c0964, shape torch.Size([1, 275, 396, 396]), rank 0
+2026-10-12 09:01:48.283143: predicting c0965
+2026-10-12 09:01:48.456559: c0965, shape torch.Size([1, 275, 338, 338]), rank 0
+2026-10-12 09:02:00.835532: predicting c0973
+2026-10-12 09:02:01.064643: c0973, shape torch.Size([1, 275, 378, 378]), rank 0
+2026-10-12 09:02:04.442139: predicting c0988
+2026-10-12 09:02:04.624286: c0988, shape torch.Size([1, 275, 326, 326]), rank 0
+2026-10-12 09:03:54.636348: Validation complete
+2026-10-12 09:03:54.638091: Mean Validation Dice:  0.8330255177524204

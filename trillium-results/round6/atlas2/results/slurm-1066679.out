@@ -1,0 +1,53 @@
+=== atlas2 job 1066679 on trig0043 at 2026-10-10T00:25:15-04:00; cores 24 ===
+The following modules were not unloaded:
+  (Use "module --force purge" to unload all):
+
+  1) gentoo/2023
+name, memory.total [MiB]
+NVIDIA H100 80GB HBM3, 81559 MiB
+[job] segtrain.tf1 sha256 3c737cbcc0ba24d38f923a52a28d479b34b579d6943f4c55a8cae48f66ad9253 frozen 3c737cbcc0ba24d38f923a52a28d479b34b579d6943f4c55a8cae48f66ad9253
+[aorta] 116 masks present, 0 failed, in /scratch/croger/atlas2/aorta
+[open36] predicted 36/36; manifest /scratch/croger/atlas2/open36/manifest_open36.json
+[job] WARNING: 70762 s left, 79625 s needed for 412 epochs: training stops at the deadline (unpaired)
+[job] phase B: 412 epochs, default window
+=== atlas2 job finished 2026-10-10T22:54:47-04:00 after 1349 min ===
+
+scontrol show job 1066679
+JobId=1066679 JobName=atlas2
+   UserId=croger(3164574) GroupId=croger(3164574) MCS_label=N/A
+   Priority=1099033 Nice=0 Account=def-aso22 QOS=normal
+   JobState=COMPLETING Reason=None Dependency=(null)
+   Requeue=0 Restarts=0 BatchFlag=1 Reboot=0 ExitCode=0:0
+   RunTime=22:29:37 TimeLimit=23:50:00 TimeMin=N/A
+   SubmitTime=2026-10-10T00:25:00 EligibleTime=2026-10-10T00:25:00
+   AccrueTime=2026-10-10T00:25:00
+   StartTime=2026-10-10T00:25:10 EndTime=2026-10-10T22:54:47 Deadline=N/A
+   SuspendTime=None SecsPreSuspend=0 LastSchedEval=2026-10-10T00:25:10 Scheduler=Backfill
+   Partition=compute AllocNode:Sid=trig-login01:2133248
+   ReqNodeList=(null) ExcNodeList=(null)
+   NodeList=trig0043
+   BatchHost=trig0043
+   NumNodes=1 NumCPUs=24 NumTasks=1 CPUs/Task=1 ReqB:S:C:T=0:0:*:*
+   ReqTRES=cpu=1,mem=187.50G,node=1,billing=1,gres/gpu=1
+   AllocTRES=cpu=24,mem=187.50G,node=1,billing=1,gres/gpu=1
+   Socks/Node=* NtasksPerN:B:S:C=0:0:*:* CoreSpec=*
+   MinCPUsNode=1 MinMemoryNode=187.50G MinTmpDiskNode=0
+   Features=(null) DelayBoot=00:00:00
+   OverSubscribe=OK Contiguous=0 Licenses=(null) LicensesAlloc=(null) Network=(null)
+   Command=/scratch/croger/atlas2/job.sh
+   SubmitLine=SBATCH --comment /opt/slurm/bin/sbatch --export=NONE --get-user-env --parsable /scratch/croger/atlas2/job.sh --export=NONE --get-user-env --parsable /scratch/croger/atlas2/job.sh
+   WorkDir=/scratch/croger/atlas2
+   Comment=/opt/slurm/bin/sbatch --export=NONE --get-user-env --parsable /scratch/croger/atlas2/job.sh
+   StdErr=
+   StdIn=/dev/null
+   StdOut=/scratch/croger/atlas2/logs/slurm-1066679.out
+   CpusPerTres=gpu:24
+   TresPerNode=gres/gpu:1
+
+sacct -j 1066679
+JobID           JobName    Account    Elapsed  MaxVMSize     MaxRSS  SystemCPU    UserCPU ExitCode 
+------------ ---------- ---------- ---------- ---------- ---------- ---------- ---------- -------- 
+1066679          atlas2  def-aso22   22:29:37                         00:00:00   00:00:00      0:0 
+1066679.bat+      batch  def-aso22   22:29:37                         00:00:00   00:00:00      0:0 
+1066679.ext+     extern  def-aso22   22:29:37                         00:00:00   00:00:00      0:0 
+

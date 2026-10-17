@@ -1,0 +1,46 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "girder-segqueue14"
+version = "0.1.0"
+description = "SegQueue14: 14-class prelabel correction for the SegQueue annotation platform, as a Girder 5 plugin that runs beside the live one"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+authors = [{ name = "Christian Rogers" }]
+# Like girder-segqueue, `segqueue` and `segqueue14` are NOT declared: they ship in
+# the repository root's `segtrain` distribution (src/), and `segtrain` on PyPI is
+# an unrelated project. Install the repository root first. See DEPLOY.md.
+dependencies = [
+    "girder>=5,<6",
+]
+
+[project.optional-dependencies]
+scoring = [
+    "numpy>=1.21",
+    "scipy>=1.7",
+    "SimpleITK>=2.2",
+    "nibabel>=4.0",
+]
+
+# Its own plugin name, so Girder loads it as a second plugin rather than in
+# place of `segqueue`.
+[project.entry-points."girder.plugin"]
+segqueue14 = "girder_segqueue14:SegQueue14Plugin"
+
+[project.scripts]
+segqueue14-populate = "girder_segqueue14.populate:main"
+segqueue14-prelabels = "girder_segqueue14.prelabels:main"
+segqueue14-score = "girder_segqueue14.scoring:main"
+segqueue14-export = "girder_segqueue14.export:main"
+
+# This file sits inside the package directory, so the package is mapped onto
+# "." rather than discovered. That keeps it a separate distribution from
+# server/pyproject.toml (girder-segqueue), which must never ship this package.
+[tool.setuptools]
+package-dir = { "girder_segqueue14" = "." }
+packages = ["girder_segqueue14", "girder_segqueue14.models", "girder_segqueue14.rest"]
+
+[tool.setuptools.package-data]
+girder_segqueue14 = ["*.md"]

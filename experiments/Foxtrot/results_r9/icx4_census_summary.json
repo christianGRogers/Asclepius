@@ -1,0 +1,140 @@
+{
+ "n_cases": 640,
+ "presence": {
+  "LM": 630,
+  "LAD": 640,
+  "LCx": 640,
+  "D1": 631,
+  "D2": 380,
+  "OM1": 558,
+  "OM2": 243,
+  "IM": 147,
+  "RCA": 640,
+  "R-PDA": 594,
+  "R-PLA": 589,
+  "L-PDA": 38,
+  "L-PLA": 59,
+  "Other": 76
+ },
+ "median_mm3": {
+  "LM": 100.0,
+  "LAD": 428.0,
+  "LCx": 278.1,
+  "D1": 82.1,
+  "D2": 67.8,
+  "OM1": 80.8,
+  "OM2": 91.8,
+  "IM": 68.6,
+  "RCA": 612.0,
+  "R-PDA": 96.8,
+  "R-PLA": 110.3,
+  "L-PDA": 79.3,
+  "L-PLA": 34.9,
+  "Other": 68.3
+ },
+ "mean_mm3": {
+  "LM": 109.9,
+  "LAD": 462.3,
+  "LCx": 310.3,
+  "D1": 100.8,
+  "D2": 47.9,
+  "OM1": 93.5,
+  "OM2": 39.1,
+  "IM": 21.8,
+  "RCA": 670.4,
+  "R-PDA": 99.1,
+  "R-PLA": 133.0,
+  "L-PDA": 5.3,
+  "L-PLA": 6.0,
+  "Other": 9.7
+ },
+ "four": {
+  "LM": {
+   "present": 630,
+   "mean_mm3": 109.9,
+   "share_of_tree": 0.0521
+  },
+  "LAD": {
+   "present": 640,
+   "mean_mm3": 616.4,
+   "share_of_tree": 0.2923
+  },
+  "LCx": {
+   "present": 640,
+   "mean_mm3": 480.1,
+   "share_of_tree": 0.2277
+  },
+  "RCA": {
+   "present": 640,
+   "mean_mm3": 902.5,
+   "share_of_tree": 0.4279
+  }
+ },
+ "other_cases": 76,
+ "other_to_LAD_mm3_total": 3495.6,
+ "other_to_LCx_mm3_total": 2705.1,
+ "four_class_interobserver_estimate": {
+  "LM": {
+   "members": [
+    "LM"
+   ],
+   "weights": {
+    "LM": 1.0
+   },
+   "parent_only_dsc": 91.9,
+   "territory_dsc_floor_estimate": 91.9
+  },
+  "LAD": {
+   "members": [
+    "LAD",
+    "D1",
+    "D2",
+    "Other"
+   ],
+   "weights": {
+    "LAD": 0.75,
+    "D1": 0.164,
+    "D2": 0.078,
+    "Other": 0.009
+   },
+   "parent_only_dsc": 92.3,
+   "territory_dsc_floor_estimate": 89.4
+  },
+  "LCx": {
+   "members": [
+    "LCx",
+    "OM1",
+    "OM2",
+    "IM",
+    "L-PDA",
+    "L-PLA",
+    "Other"
+   ],
+   "weights": {
+    "LCx": 0.646,
+    "OM1": 0.195,
+    "OM2": 0.081,
+    "IM": 0.045,
+    "L-PDA": 0.011,
+    "L-PLA": 0.012,
+    "Other": 0.009
+   },
+   "parent_only_dsc": 84.8,
+   "territory_dsc_floor_estimate": 81.6
+  },
+  "RCA": {
+   "members": [
+    "RCA",
+    "R-PDA",
+    "R-PLA"
+   ],
+   "weights": {
+    "RCA": 0.743,
+    "R-PDA": 0.11,
+    "R-PLA": 0.147
+   },
+   "parent_only_dsc": 95.3,
+   "territory_dsc_floor_estimate": 92.2
+  }
+ }
+}

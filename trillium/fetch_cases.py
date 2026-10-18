@@ -13,12 +13,18 @@ ImageCAS ids 1-1000, each once.
 
 Read-only on Girder. Authenticates with GIRDER_TOKEN, or GIRDER_USER + GIRDER_PASSWORD, or prompts
 once. Resumable: a file already present at the right size is skipped, and downloads go to a .part
-file renamed when complete, so an interrupted run can simply be started again. Standard library only.
+file (<file>.part.<pid>) renamed when complete, so an interrupted run can simply be started again. One
+fetch at a time per cases/: an exclusive lock on cases/.fetch.lock refuses a second run (#82). Ends with a verdict
+("1000 of 1000 CTs complete", or what is missing or partial and how to resume) and exits non-zero
+unless every file is complete (#82). Standard library only.
 """
 import argparse
 import base64
 import concurrent.futures as cf
+import errno
+import fcntl
 import getpass
+import glob
 import json
 import os
 import re
@@ -114,10 +120,40 @@ def list_cases(token, masks=False):
     return cases
 
 
+LOCK_NAME = '.fetch.lock'
+
+
+def lock(out):
+    """Hold an exclusive lock on out/.fetch.lock for the life of the process, or refuse (#82)."""
+    path = os.path.join(out, LOCK_NAME)
+    f = open(path, 'a+')
+    try:
+        fcntl.flock(f, fcntl.LOCK_EX | fcntl.LOCK_NB)
+    except BlockingIOError:
+        f.seek(0)
+        holder = f.read().strip() or '?'
+        f.close()
+        raise SystemExit(f'another fetch_cases.py (pid {holder}) is already filling {out} (it holds {path}); '
+                         'refusing to race it. Wait for it, or stop it, then re-run to resume.') from None
+    except OSError as e:
+        if e.errno not in (errno.ENOSYS, errno.EOPNOTSUPP, errno.ENOLCK):
+            raise
+        print(f'WARNING: this file system does not support locks ({path}: {e}); '
+              'make sure no other fetch_cases.py is filling this cases/', file=sys.stderr, flush=True)
+    f.seek(0)
+    f.truncate()
+    f.write(f'{os.getpid()}\n')
+    f.flush()
+    return f   # the caller keeps it open: closing it (or exiting) releases the lock
+
+
 def fetch(token, item, dest):
     if os.path.exists(dest) and os.path.getsize(dest) == item['size']:
         return 0
-    tmp = dest + '.part'
+    tmp = f'{dest}.part.{os.getpid()}'   # per process, so no other writer can rename or delete ours (#82)
+    for stale in glob.glob(glob.escape(dest) + '.part*'):
+        if stale != tmp:   # left by an interrupted run; we hold the lock, so nobody else is writing it
+            os.remove(stale)
     for attempt in range(5):
         try:
             req = urllib.request.Request(f'{API}/item/{item["_id"]}/download')
@@ -152,6 +188,23 @@ def plan(cases, out, masks=False):
     return jobs, rows
 
 
+def verdict(jobs, out, n_cases):
+    """Print the completeness verdict from what is on disk; True only if every file is complete (#82)."""
+    bad = [d for i, d in jobs if not (os.path.exists(d) and os.path.getsize(d) == i['size'])]
+    partial = [d for d in bad if glob.glob(glob.escape(d) + '.part*')]
+    cts = [d for i, d in jobs if d.endswith('ct.nii.gz')]
+    ok_cts = len(cts) - sum(d.endswith('ct.nii.gz') for d in bad)
+    if not bad:
+        print(f'{ok_cts} of {n_cases} CTs complete', flush=True)
+        return True
+    eg = sorted(os.path.relpath(d, out) for d in bad)[:5]
+    print(f'INCOMPLETE: {ok_cts} of {n_cases} CTs complete; {len(bad) - len(partial)} missing / '
+          f'{len(partial)} partial (.part), e.g. {eg}', flush=True)
+    print(f're-run to resume: python3 {os.path.abspath(__file__)} {"--masks " if len(jobs) > len(cts) else ""}'
+          f'{out}', flush=True)
+    return False
+
+
 def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__.split('\n')[0])
     ap.add_argument('dest', nargs='?', default='cases', help='the cases/ directory to fill')
@@ -162,22 +215,36 @@ def main(argv=None):
     token = login()
     cases = list_cases(token, a.masks)
     jobs, rows = plan(cases, out, a.masks)
-    for _, d in jobs:
-        os.makedirs(os.path.dirname(d), exist_ok=True)
-    with open(os.path.join(out, 'cases.json'), 'w') as f:
-        json.dump(rows, f, indent=0)
-    total = sum(i['size'] for i, _ in jobs)
-    print(f'{len(cases)} ImageCAS cases ({"CT + mask" if a.masks else "CT only"}), {total / 1e9:.1f} GB -> {out}',
-          flush=True)
-    done, t0 = 0, time.time()
-    with cf.ThreadPoolExecutor(THREADS) as ex:
+    os.makedirs(out, exist_ok=True)
+    with lock(out):   # released when the run ends, however it ends
+        for _, d in jobs:
+            os.makedirs(os.path.dirname(d), exist_ok=True)
+        with open(os.path.join(out, 'cases.json'), 'w') as f:
+            json.dump(rows, f, indent=0)
+        total = sum(i['size'] for i, _ in jobs)
+        print(f'{len(cases)} ImageCAS cases ({"CT + mask" if a.masks else "CT only"}), {total / 1e9:.1f} GB -> {out}',
+              flush=True)
+        done, t0 = 0, time.time()
+        ex = cf.ThreadPoolExecutor(THREADS)
         futs = [ex.submit(fetch, token, i, d) for i, d in jobs]
-        for k, f in enumerate(cf.as_completed(futs), 1):
-            done += f.result()
-            if k % 50 == 0 or k == len(futs):
-                rate = done / max(time.time() - t0, 1) / 1e6
-                print(f'  {k}/{len(futs)} files, {done / 1e9:.1f} GB new, {rate:.0f} MB/s', flush=True)
-    print('cases complete', flush=True)
+        try:
+            for k, f in enumerate(cf.as_completed(futs), 1):
+                try:
+                    done += f.result()
+                except (Exception, SystemExit) as e:  # noqa: BLE001 - one file failing must not hide the rest
+                    print(e, file=sys.stderr, flush=True)
+                if k % 50 == 0 or k == len(futs):
+                    rate = done / max(time.time() - t0, 1) / 1e6
+                    print(f'  {k}/{len(futs)} files, {done / 1e9:.1f} GB new, {rate:.0f} MB/s', flush=True)
+        except KeyboardInterrupt:
+            ex.shutdown(wait=False, cancel_futures=True)
+            print('interrupted', flush=True)
+            verdict(jobs, out, len(cases))
+            sys.stderr.flush()
+            os._exit(130)  # do not wait for the downloads still running; their .part files are resumed next time
+        ex.shutdown()
+        if not verdict(jobs, out, len(cases)):
+            raise SystemExit(1)
 
 
 if __name__ == '__main__':

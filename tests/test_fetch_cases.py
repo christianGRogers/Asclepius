@@ -10,6 +10,7 @@ import base64
 import importlib.util
 import json
 import os
+import subprocess
 import sys
 import threading
 import urllib.parse
@@ -218,6 +219,94 @@ def test_logs_in_with_user_and_password(girder, tmp_path, monkeypatch):
     monkeypatch.setenv("GIRDER_PASSWORD", "pw")
     assert fc.login() == TOKEN
     assert g.requests[0][1] == "user/authentication"
+
+
+# ------------------------------------------------------------------- the completeness verdict (#82)
+def test_a_complete_run_says_1000_of_1000(girder, tmp_path, capsys):
+    girder()
+    fc.main([str(tmp_path / "cases")])
+    assert "1000 of 1000 CTs complete" in capsys.readouterr().out
+
+
+def test_an_interrupted_fetch_exits_nonzero_with_the_resume_hint(
+    girder, tmp_path, monkeypatch, capsys
+):
+    girder()
+    out = tmp_path / "cases"
+    real = fc.fetch
+    cut = {f"c{i:04d}" for i in range(0, 1000, 3)}  # 334 transfers drop; some leave a .part
+
+    def flaky(token, item, dest):
+        case = os.path.basename(os.path.dirname(dest))
+        if case in cut:
+            if int(case[1:]) % 2:
+                with open(f"{dest}.part.{os.getpid()}", "wb") as f:
+                    f.write(b"half")
+            raise SystemExit(f"failed to download {dest}")
+        return real(token, item, dest)
+
+    monkeypatch.setattr(fc, "fetch", flaky)
+    with pytest.raises(SystemExit) as e:
+        fc.main([str(out)])
+    assert e.value.code == 1
+    log = capsys.readouterr().out
+    assert "INCOMPLETE: 666 of 1000 CTs complete; 167 missing / 167 partial (.part)" in log
+    assert f"re-run to resume: python3 {REPO / 'trillium' / 'fetch_cases.py'} {out}" in log
+    assert "1000 of 1000" not in log
+    # the folders exist, but icx4 sees them as incomplete, not as cases
+    assert len(layout.scan(str(out))[1]) == 666 and len(layout.incomplete(str(out))) == 334
+
+    monkeypatch.setattr(fc, "fetch", real)  # the re-run resumes and finishes
+    fc.main([str(out)])
+    assert "1000 of 1000 CTs complete" in capsys.readouterr().out
+
+
+# ---------------------------------------------------- one fetch per cases/, own .part files (#82)
+HOLD = """
+import fcntl, sys, time
+f = open(sys.argv[1], "a+")
+fcntl.flock(f, fcntl.LOCK_EX)
+f.seek(0); f.truncate(); f.write("4242\\n"); f.flush()
+print("locked", flush=True)
+time.sleep(60)
+"""
+
+
+def test_a_second_fetch_on_the_same_cases_dir_is_refused(girder, tmp_path):
+    g = girder()
+    out = tmp_path / "cases"
+    out.mkdir()
+    other = subprocess.Popen(
+        [sys.executable, "-c", HOLD, str(out / ".fetch.lock")], stdout=subprocess.PIPE, text=True
+    )
+    try:
+        assert other.stdout.readline().strip() == "locked"
+        held = r"another fetch_cases.py \(pid 4242\) is already filling"
+        with pytest.raises(SystemExit, match=held):
+            fc.main([str(out)])
+        assert not g.downloads() and not (out / "cases.json").exists()
+    finally:
+        other.kill()
+        other.wait()
+    fc.main([str(out)])  # the other run is gone: this one takes the lock and finishes
+    assert len(g.downloads()) == 1000
+    assert (out / ".fetch.lock").read_text().strip() == str(os.getpid())
+
+
+def test_part_files_are_per_process_and_stale_ones_are_cleared(girder, tmp_path, monkeypatch):
+    g = girder()
+    out = tmp_path / "cases"
+    d = out / "c0011"
+    d.mkdir(parents=True)
+    (d / "ct.nii.gz.part").write_bytes(b"old-style leftover")
+    (d / "ct.nii.gz.part.99999").write_bytes(b"from a dead run")
+    renamed = []
+    real = os.replace
+    monkeypatch.setattr(fc.os, "replace", lambda a, b: (renamed.append(a), real(a, b))[1])
+    fc.main([str(out)])
+    assert renamed and all(r.endswith(f".part.{os.getpid()}") for r in renamed)
+    assert sorted(os.listdir(d)) == ["ct.nii.gz"]
+    assert (d / "ct.nii.gz").read_bytes() == _blob(g, "ImageCAS__0012.nii.gz")
 
 
 # ------------------------------------------------------------------------------------- refusals

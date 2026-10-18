@@ -2,7 +2,7 @@
 aliases: [Plan ledger]
 tags: [plans, changelog]
 status: living
-updated: 2026-10-04
+updated: 2026-10-18
 ---
 
 # Plan ledger
@@ -44,3 +44,10 @@ Every plan version ever submitted, and what happened to it.
 | 8 | [[Crucible v9]] | Crucible | Lost; pooled seeds keep A11′; conditional A11 test dropped |
 | 8 | [[Delta v8]] | Delta | Lost; falsifier passed; fallback centreline made default (A1c); extent diagnostic report-only (A23) |
 | 8 | [[Foxtrot v3]] | Foxtrot | Lost; withdrew F3 (A20) on its own evidence; FP triage approved as a report |
+| 8 | [[Atlas v10]] | Atlas | Not judged: Atlas's response to Round 8 (run 3 under A24), written 2026-10-11 and overtaken the same day by D8–D10; kept as the record |
+| 8 | [[Foxtrot v4]] | Foxtrot | Not judged: the FP triage report Round 8 asked for, delivered after the ruling; its D0-mask findings lapsed with D8 |
+| 9 | [[Atlas v11]] | Atlas | **Master plan** (held), first four-class plan on Fir (D25, D8); A25–A32 ([[Round 9]]) |
+| 9 | [[Bridge v8]] | Bridge | Lost; its evaluation design adopted: the reading table (A27), the pool seal list frozen as the candidate A10 set (A30), f/k re-powering (A31) |
+| 9 | [[Crucible v10]] | Crucible | Lost; seed-vs-read measurement adopted (A31.2); val-80 tF1 folded into A26; P3/P4 recipe deferred to Round 10 |
+| 9 | [[Delta v9]] | Delta | Lost; Dice decides nothing (A28); start-point ostia (P2) conditional on a CPU test (A29); its 60-patient seal refused as under-powered |
+| 9 | [[Foxtrot v5]] | Foxtrot | Lost; Fir loader budget adopted (A25); human-floor readings (F7) and the external pool test (F8) adopted as reports only (A28, A31.3) |

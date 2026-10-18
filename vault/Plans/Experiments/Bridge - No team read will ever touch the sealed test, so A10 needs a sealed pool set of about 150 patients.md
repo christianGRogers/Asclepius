@@ -31,6 +31,19 @@ So A10, which needs two reads per case, has no cases. What remains scoreable is 
 80 sealed ImageCAS-X test cases. That is a model-vs-expert benchmark; it has no inter-read baseline, so it
 cannot apply D6.
 
+**ImageCAS-X's own second read is not public.** ImageCAS-X had a second analyst re-annotate all 160 of its
+test cases, blinded and without lead review (arXiv:2608.30404, Table 1: per-segment inter-observer Dice LM
+91.9 ± 13.7, LAD 92.3 ± 6.7, LCx 84.8 ± 19.8, RCA 95.3 ± 5.0; see
+[[How well two annotators agree on per-branch coronary labels]]). Those reads would give a ready-made A10 on
+the sealed 80. But I listed the Zenodo archive (record 10.5281/zenodo.21887809, `ImageCAS-X_dataset.zip`,
+central directory read by HTTP range on 2026-10-18). It holds 3210 entries: 800 segmentations, 1600
+centrelines, 800 surfaces, the split lists and `Descriptors.xlsx`. That is **one segmentation per case. The
+second analyst's 160 test annotations are not released.** Asking the authors for them is a question for the
+lead (§ What it changes).
+
+Their spread is also a hint for the inter-read scenario: the LCx inter-observer SD (19.8 Dice points) is far
+wider than the other classes. So k > 1 is plausible for the LCx (Dice, not tF1, and another convention).
+
 **Consequence.** A10 needs a new sealed set, drawn from the pool, before any pool read is inspected. Echo's
 audit (#49, item 3) found a related problem: icx4's `score.py` would open the old seal by scoring all 160
 ImageCAS-X test cases. The two fixes are complementary:
@@ -134,6 +147,10 @@ Figshare-23057000's `PA0` and `PA1` are kept as two patients.
 - The **20 sealed quality-0 cases** have no reads and no ImageCAS-X labels, so no score can use them. They
   are retired (proposal for the judge).
 - icx4's **Dice-only scorer decides nothing** under A1/A1c. The decisive stage is issue #54.
+- **Question for the lead:** ask the ImageCAS-X authors for their unreleased second-analyst annotations of
+  the 160 test cases. With them, A10 can also be scored on the sealed ImageCAS-X 80, against expert double
+  reads, at no annotator cost. The two A10 sets would then cross-check each other: in-domain experts, and
+  out-of-domain team reads.
 
 ## Caveats
 

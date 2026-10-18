@@ -119,7 +119,7 @@ The lead has chosen **Fir** (relayed by the PM, 2026-10-18). Sources: [F], [J], 
 | Per-GPU share | Bundle **12 cores / 288 GB**, recommended **12 cores / 280 GB**; "no more than 12 CPU cores" per GPU. Each NUMA domain is 12 cores beside one GPU; the docs suggest `--cpus-per-task=12` per GPU task (or 6, one CCD) | [B][G][F] |
 | GPU request | `--gpus=h100:1` (one), `--gpus-per-node=h100:N` (several). About half the GPU nodes are MIG (1g.10gb, 2g.20gb, 3g.40gb); an untyped request may get one | [F] |
 | Walltime | **7 days (168 h) max**; at least 1 h (5 min for tests). Partitions are picked by walltime (≤ 3 h, 12 h, 24 h, 72 h, 7 d), nested, so shorter jobs have more nodes; separate by-node and by-core partitions; no `-p` needed | [F][J] |
-| Job and GPU limits for `def-` | **Not stated for Fir.** The 1000-job limit is documented for Nibi, Narval and Rorqual only; no per-account GPU cap is documented. Priority is fairshare with a one-week half-life. *(lead to confirm with `sacctmgr`, below)* | [J][A] |
+| Job and GPU limits for `def-` | Not stated in the docs. **The lead's `sacctmgr` output (2026-10-18) shows no MaxJobs, MaxSubmit, MaxTRES or GrpTRES on `def-aso22_cpu` / `def-aso22_gpu`**, so no per-account cap is set. Priority is fairshare with a one-week half-life | [J][A], lead |
 | Multi-GPU | 4 GPUs per node with NVLink, so a 1-node DDP run of up to 4 H100s is possible; it costs 4× the fairshare | [F] |
 | HOME | 50 GB, 500 K files, backed up | [S] |
 | SCRATCH | **20 TB, 1 M files, not backed up; purged when ctime and atime are both > 60 days** (checked month end; warnings on the 1st and 12th; deletion on the 15th; list in `/scratch/to_delete/`) | [S][P] |
@@ -155,11 +155,19 @@ sacctmgr -n show assoc where user=$USER format=account%20,maxjobs,maxsubmit,maxt
 - HPSS is not worth setting up now. If the project later wants an off-cluster copy of finished models and
   predictions, the lead can ask SciNet for the 2 TB starter quota.
 
-## Account-specific facts *(to be filled in from the lead's output on #46)*
+## Account-specific facts *(Fir from the lead's output, 2026-10-18; others still to come)*
+
+**Fir, what the output means for icx4:**
+- **Account:** jobs keep `--account=def-aso22`. On Fir, Slurm charges a GPU job to `def-aso22_gpu` and a CPU job to
+  `def-aso22_cpu` *(the usual Alliance mapping; the first `sbatch` confirms it)*.
+- **Partition:** a 23:50 one-GPU job lands in `gpubase_bygpu_b3` (24 h).
+- **Priority:** nothing has been used on Fir yet, so priority is as high as it gets.
+- **Still missing:** the output of `partition-stats`, the module load and `avail_wheels`. The paste ended at
+  `sinfo`'s 40-line `head`. The PROJECT space is also absent from `diskusage_report`.
 
 | Cluster | Can log in? | `sshare` accounts | Scratch used / quota | H100 partitions (from `sinfo`) | Modules load? | `cases/` size |
 |---|---|---|---|---|---|---|
 | Trillium | yes | def-aso22 (LevelFS: ?) | ? | — | yes | ? |
 | Nibi | ? | ? | ? | ? | ? | — |
-| Fir | ? | ? | ? | ? | ? | — |
+| Fir | **yes** (`login3.int.fir.alliancecan.ca`, `CC_CLUSTER=fir`, so `./icx4` picks the Fir profile itself; `SCRATCH=/scratch/croger`) | **`def-aso22_cpu` and `def-aso22_gpu`**: RawUsage 0, FairShare 0.98, LevelFS inf (top priority); no limits set | HOME 36 KiB / 48 GiB; SCRATCH 20 KiB / 19 TiB; **PROJECT not listed** *(ask)* | `gpubase_bygpu_b1` 3 h, `_b2` 12 h, `_b3` 24 h, `_b4` 3 d (`_b5` 7 d cut off by `head`), plus `gpubackfill` 24 h; ~80 full-H100 nodes and ~43 MIG nodes per partition, ~13 drained | *not shown (output cut off)* | — |
 | Killarney / Vulcan / tamIA | ? | aip-? | ? | ? | ? | — |

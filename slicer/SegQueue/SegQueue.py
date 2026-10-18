@@ -666,24 +666,6 @@ class SegQueueLogic(ScriptedLoadableModuleLogic):
                 return segmentId
         return None
 
-    def segmentHasContent(self, name):
-        """Whether a segment has any voxels, cheaply.
-
-        Reads the internal labelmap, which Slicer keeps cropped to the segment's
-        own extent -- for a coronary branch that is a few hundred kilobytes, so
-        this is affordable on a timer in a way re-exporting the whole volume
-        would not be.
-        """
-        segmentId = self.segmentIdFor(name)
-        if not segmentId:
-            return False
-        try:
-            array = slicer.util.arrayFromSegmentBinaryLabelmap(
-                self.segmentationNode, segmentId)
-        except Exception:
-            return False
-        return array is not None and array.size > 0 and bool(array.any())
-
     def correctSuffix(self, path):
         """Rename a volume to match what its bytes actually are.
 
@@ -1802,7 +1784,6 @@ class SegQueueWidget(ScriptedLoadableModuleWidget):
         box.text = "Submit"
         self.layout.addWidget(box)
         layout = qt.QVBoxLayout(box)
-        self.submitBox = box
 
         layout.setSpacing(8)
 

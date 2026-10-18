@@ -16,6 +16,7 @@ import shutil
 import tempfile
 import time
 import zipfile
+from typing import Any, Callable, Dict, List, Optional, Tuple
 
 import requests
 
@@ -53,8 +54,9 @@ class UpdateError(RuntimeError):
 
 # ---------------------------------------------------------------- discovery
 
-def checkForUpdate(currentVersion, slicerVersion, session=None,
-                   allowPrerelease=False, timeout=CHECK_TIMEOUT):
+def checkForUpdate(currentVersion: str, slicerVersion: str, session: Any = None,
+                   allowPrerelease: bool = False,
+                   timeout: Tuple[float, float] = CHECK_TIMEOUT) -> Optional[Dict[str, Any]]:
     """The release to offer, or ``None``. Raises ``UpdateError`` on a bad reply.
 
     Callers treat any failure as "no update": an annotator on a train, or behind
@@ -95,8 +97,9 @@ def checkForUpdate(currentVersion, slicerVersion, session=None,
 
 # ----------------------------------------------------------------- download
 
-def downloadAsset(asset, destPath, session=None, progress=None,
-                  timeout=DOWNLOAD_TIMEOUT):
+def downloadAsset(asset: Dict[str, Any], destPath: str, session: Any = None,
+                  progress: Optional[Callable[[int, int], None]] = None,
+                  timeout: Tuple[float, float] = DOWNLOAD_TIMEOUT) -> int:
     """Stream a release asset to ``destPath``. Returns the byte count.
 
     Written to ``.part`` and renamed only on success, so an interrupted download
@@ -148,7 +151,7 @@ def downloadAsset(asset, destPath, session=None, progress=None,
 
 # ------------------------------------------------------------------ install
 
-def moduleRoots(moduleDir):
+def moduleRoots(moduleDir: str) -> Tuple[str, Optional[str]]:
     """``(scriptedModulesDir, extensionRoot)`` for an installed extension.
 
     ``extensionRoot`` is the directory named after the extension, the one the
@@ -165,7 +168,7 @@ def moduleRoots(moduleDir):
     return scripted, root
 
 
-def isCheckout(moduleDir):
+def isCheckout(moduleDir: str) -> bool:
     """Whether this module is being run out of a git working tree.
 
     Checked by walking up for a ``.git``. A developer's uncommitted work is not
@@ -180,7 +183,7 @@ def isCheckout(moduleDir):
     return False
 
 
-def canInstall(moduleDir):
+def canInstall(moduleDir: str) -> Tuple[bool, str]:
     """``(ok, reason)``. ``reason`` is annotator-facing text when ``ok`` is False."""
     if isCheckout(moduleDir):
         return False, ("This module is running from a source checkout, so it "
@@ -199,7 +202,7 @@ def canInstall(moduleDir):
     return True, ""
 
 
-def inspectArchive(zipPath, slicerVersion):
+def inspectArchive(zipPath: str, slicerVersion: str) -> List[str]:
     """Validate a downloaded archive. Returns its member list.
 
     Raises ``UpdateError`` describing what is wrong, in terms of what the
@@ -235,7 +238,8 @@ def inspectArchive(zipPath, slicerVersion):
     return members
 
 
-def installArchive(zipPath, moduleDir, slicerVersion, backupRoot=None):
+def installArchive(zipPath: str, moduleDir: str, slicerVersion: str,
+                   backupRoot: Optional[str] = None) -> str:
     """Replace the installed module with the contents of ``zipPath``.
 
     Returns the path of the backup that was taken. Raises ``UpdateError`` with
@@ -306,7 +310,7 @@ def _quietUnlink(path):
 
 # -------------------------------------------------------------------- cache
 
-def readCache(text):
+def readCache(text: Optional[str]) -> Dict[str, Any]:
     """Parse a cached check result. ``{}`` when it is missing or unreadable."""
     if not text:
         return {}
@@ -317,7 +321,8 @@ def readCache(text):
     return data if isinstance(data, dict) else {}
 
 
-def cacheIsFresh(cache, maxAgeSeconds, now=None):
+def cacheIsFresh(cache: Dict[str, Any], maxAgeSeconds: float,
+                 now: Optional[float] = None) -> bool:
     """Whether a cached check is recent enough to skip asking GitHub again.
 
     Rate limiting is the reason this exists: sixty unauthenticated requests an

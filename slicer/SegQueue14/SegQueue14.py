@@ -135,6 +135,9 @@ PRELABEL_3D_OPACITY = 0.85
 SEED_COLOR = (0.95, 0.85, 0.20)
 SEED_FILL = 0.25
 SEED_3D_OPACITY = 0.30
+#: The heart-region helper: a muted red with a barely-there fill, context only.
+REGION_COLOR = (0.85, 0.55, 0.55)
+REGION_FILL = 0.08
 
 #: Settings keys: SegQueue14's own, so the two modules can point at different
 #: servers or caches without either overwriting the other's.
@@ -324,7 +327,7 @@ class SegQueue14Logic(ScriptedLoadableModuleLogic):
         so a helper is structurally unable to reach the server. The live
         project's ImageCAS seed is never shipped (D8); a pooled new-dataset case
         may ship its own binary vessel seed (D23) -- an automatic outline of the
-        whole tree, with no classes, for the annotator to divide into the 14
+        whole tree, with no classes, for the annotator to divide into the project's classes
         (Segment Editor: Islands to pick a branch, Logical operators to add it to
         a class).
         """
@@ -332,7 +335,7 @@ class SegQueue14Logic(ScriptedLoadableModuleLogic):
         if assignment.has_region and self.regionSegmentId is None:
             self.regionSegmentId = self._fetchHelper(
                 assignment, protocol.ASSET_REGION,
-                protocol.REGION_SEGMENT_NAME, (0.85, 0.55, 0.55), fill=0.08)
+                protocol.REGION_SEGMENT_NAME, REGION_COLOR, fill=REGION_FILL)
         self.seedSegmentId = self._helperId(protocol.SEED_SEGMENT_NAME)
         if assignment.has_seed and self.seedSegmentId is None:
             self.seedSegmentId = self._fetchHelper(
@@ -365,9 +368,11 @@ class SegQueue14Logic(ScriptedLoadableModuleLogic):
         """Load an integer label volume into the project's segments, by value.
 
         A voxel of value 3 goes into the segment whose label is 3 (LCx), and so
-        on for all 14: the prediction, the submission and ImageCAS-X share their
-        label values, so the value *is* the class. Values the project does not
-        know are dropped rather than becoming segments nobody asked for.
+        on for each of the project's four classes (D25): the prelabel and the
+        submission use the project's label values, so the value *is* the class.
+        Values the project does not know are dropped rather than becoming
+        segments nobody asked for. Nothing is remapped here, so a volume in
+        ImageCAS-X's own 14 values would land in the wrong segments (#68).
 
         One class at a time, as a 0/1 mask imported into exactly one named
         segment. Slicer's import resamples into the segmentation's geometry when
@@ -806,32 +811,10 @@ class SegQueue14Logic(ScriptedLoadableModuleLogic):
         return moved
 
     def segmentIdFor(self, name):
+        """The id of the open case's segment called ``name``, or None."""
         if self.segmentationNode is None:
             return None
-        segmentation = self.segmentationNode.GetSegmentation()
-        for i in range(segmentation.GetNumberOfSegments()):
-            segmentId = segmentation.GetNthSegmentID(i)
-            if segmentation.GetSegment(segmentId).GetName() == name:
-                return segmentId
-        return None
-
-    def segmentHasContent(self, name):
-        """Whether a segment has any voxels, cheaply.
-
-        Reads the internal labelmap, which Slicer keeps cropped to the segment's
-        own extent -- for a coronary branch that is a few hundred kilobytes, so
-        this is affordable on a timer in a way re-exporting the whole volume
-        would not be.
-        """
-        segmentId = self.segmentIdFor(name)
-        if not segmentId:
-            return False
-        try:
-            array = slicer.util.arrayFromSegmentBinaryLabelmap(
-                self.segmentationNode, segmentId)
-        except Exception:
-            return False
-        return array is not None and array.size > 0 and bool(array.any())
+        return _segmentIdIn(self.segmentationNode, name)
 
     def correctSuffix(self, path):
         """Rename a volume to match what its bytes actually are.
@@ -1114,24 +1097,7 @@ class SegQueue14Logic(ScriptedLoadableModuleLogic):
         self.bankTime()
         path = os.path.join(self.cache.caseDir(assignment.assignment_id),
                             "submission.seg.nrrd")
-        # D26: no voxel in two classes -- in particular, no class left as an
-        # untrimmed copy of the seed. Checked before the export, which would
-        # otherwise quietly give each shared voxel to one of the classes.
-        overlaps = self.classOverlaps()
-        if overlaps:
-            raise SegQueueError(labels.overlap_message(overlaps))
-        counts, sourceGeom, segGeom = self.exportLabelmap(path)
-
-        # D13: LAD, LCx and RCA must each have something in them. Checked here,
-        # on the exported volume the server will receive, so the annotator hears
-        # it before an upload rather than after; the server checks again.
-        missing = labels.missing_required(counts)
-        if missing:
-            raise SegQueueError(labels.missing_required_message(missing))
-        if not os.path.isfile(path):
-            raise SegQueueError(
-                "There is nothing to submit -- none of the segments has any "
-                "voxels in it.")
+        counts, sourceGeom, segGeom = self._exportChecked(path, "submit")
 
         meta = SubmissionMeta(
             checksum=sha256_file(path),
@@ -1180,24 +1146,8 @@ class SegQueue14Logic(ScriptedLoadableModuleLogic):
         if self.client is None or self.project is None:
             raise SegQueueError("You are not logged in.")
 
-        directory = os.path.join(self.cache.root, "review")
-        try:
-            os.makedirs(directory)
-        except OSError:
-            pass
-        path = os.path.join(directory, "revision.seg.nrrd")
-
-        overlaps = self.classOverlaps()
-        if overlaps:
-            raise SegQueueError(labels.overlap_message(overlaps))
-        counts, sourceGeom, segGeom = self.exportLabelmap(path)
-        missing = labels.missing_required(counts)
-        if missing:
-            raise SegQueueError(labels.missing_required_message(missing))
-        if not os.path.isfile(path):
-            raise SegQueueError(
-                "There is nothing to save -- none of the segments has any "
-                "voxels in it.")
+        path = os.path.join(self.reviewDir(), "revision.seg.nrrd")
+        counts, sourceGeom, segGeom = self._exportChecked(path, "save")
 
         meta = SubmissionMeta(
             checksum=sha256_file(path),
@@ -1215,6 +1165,43 @@ class SegQueue14Logic(ScriptedLoadableModuleLogic):
             name="revision_{}.seg.nrrd".format(submissionId),
             progress=progress)
         return self.client.reviseSubmission(submissionId, meta, uploaded["_id"])
+
+    def _exportChecked(self, path, action):
+        """Export the project segments to ``path``, refusing what the server would.
+
+        Returns ``(counts, sourceGeometry, segmentationGeometry)`` as
+        ``exportLabelmap`` does. The same checks guard an annotator's submission
+        and a reviewer's revision; ``action`` ("submit", "save") only words the
+        refusal for an empty scene.
+        """
+        # D26: no voxel in two classes -- in particular, no class left as an
+        # untrimmed copy of the seed. Checked before the export, which would
+        # otherwise quietly give each shared voxel to one of the classes.
+        overlaps = self.classOverlaps()
+        if overlaps:
+            raise SegQueueError(labels.overlap_message(overlaps))
+        counts, sourceGeom, segGeom = self.exportLabelmap(path)
+
+        # D13: LAD, LCx and RCA must each have something in them. Checked here,
+        # on the exported volume the server will receive, so the annotator hears
+        # it before an upload rather than after; the server checks again.
+        missing = labels.missing_required(counts)
+        if missing:
+            raise SegQueueError(labels.missing_required_message(missing))
+        if not os.path.isfile(path):
+            raise SegQueueError(
+                "There is nothing to {} -- none of the segments has any "
+                "voxels in it.".format(action))
+        return counts, sourceGeom, segGeom
+
+    def reviewDir(self):
+        """The scratch directory under the cache root that review work goes to."""
+        directory = os.path.join(self.cache.root, "review")
+        try:
+            os.makedirs(directory)
+        except OSError:
+            pass
+        return directory
 
     def release(self, reason=""):
         """Give a case back to the pool and purge it locally."""
@@ -1246,6 +1233,7 @@ def _labelValueOf(segment, segmentId):
 
 
 def _segmentIdIn(segmentationNode, name):
+    """The id of the segment called ``name`` in any segmentation node, or None."""
     segmentation = segmentationNode.GetSegmentation()
     for i in range(segmentation.GetNumberOfSegments()):
         segmentId = segmentation.GetNthSegmentID(i)
@@ -1255,6 +1243,12 @@ def _segmentIdIn(segmentationNode, name):
 
 
 def _segmentHasContent(segmentationNode, name):
+    """Whether a segment has any voxels, cheaply.
+
+    Reads the internal labelmap, which Slicer keeps cropped to the segment's own
+    extent -- for a coronary branch that is a few hundred kilobytes, far cheaper
+    than re-exporting the whole volume.
+    """
     segmentId = _segmentIdIn(segmentationNode, name)
     if not segmentId:
         return False
@@ -1608,10 +1602,7 @@ class SegQueue14Widget(ScriptedLoadableModuleWidget):
         self.updateProgress.setValue(0)
         self.updateButton.setEnabled(False)
 
-        def progress(done, total):
-            self.updateProgress.setMaximum(max(1, total))
-            self.updateProgress.setValue(done)
-            slicer.app.processEvents()
+        progress = _progressInto(self.updateProgress)
 
         staging = tempfile.mkdtemp(prefix="segqueue14-download-")
         try:
@@ -1933,7 +1924,6 @@ class SegQueue14Widget(ScriptedLoadableModuleWidget):
         box.text = "Submit"
         self.layout.addWidget(box)
         layout = qt.QVBoxLayout(box)
-        self.submitBox = box
 
         layout.setSpacing(8)
 
@@ -2332,13 +2322,9 @@ class SegQueue14Widget(ScriptedLoadableModuleWidget):
         they download, verify and then fail to open with a message that never
         mentions the name -- which is precisely what "the review does not load"
         was. The server sends the real names; where it is too old to, the bytes
-        get sniffed after the download, the same fallback ``_correctSuffix`` is.
+        get sniffed after the download (``SegQueue14Logic.correctSuffix``).
         """
-        directory = os.path.join(self.logic.cache.root, "review")
-        try:
-            os.makedirs(directory)
-        except OSError:
-            pass
+        directory = self.logic.reviewDir()
         return (os.path.join(directory, _safeName(entry.get("volumeName"),
                                                   "volume.nrrd")),
                 os.path.join(directory, _safeName(entry.get("submissionName"),
@@ -2485,11 +2471,7 @@ class SegQueue14Widget(ScriptedLoadableModuleWidget):
                 "first -- opening a case clears the scene.")
             return
 
-        directory = os.path.join(self.logic.cache.root, "review")
-        try:
-            os.makedirs(directory)
-        except OSError:
-            pass
+        directory = self.logic.reviewDir()
         volumePath = os.path.join(
             directory, _safeName(case.get("volumeName"), "case.nrrd"))
 
@@ -2635,7 +2617,7 @@ class SegQueue14Widget(ScriptedLoadableModuleWidget):
             got = None
         if got:
             self.logic.regionSegmentId = self.logic._importHelper(
-                path, protocol.REGION_SEGMENT_NAME, (0.85, 0.55, 0.55), 0.08)
+                path, protocol.REGION_SEGMENT_NAME, REGION_COLOR, REGION_FILL)
 
         path = os.path.join(directory, "case_prelabel.nii.gz")
         try:
@@ -2661,11 +2643,7 @@ class SegQueue14Widget(ScriptedLoadableModuleWidget):
         if case is None or self.logic.volumeNode is None:
             slicer.util.errorDisplay("Open a case or a submission first.")
             return
-        directory = os.path.join(self.logic.cache.root, "review")
-        try:
-            os.makedirs(directory)
-        except OSError:
-            pass
+        directory = self.logic.reviewDir()
         path = os.path.join(directory, "case_reference.nii.gz")
         with _busy():
             try:
@@ -2951,10 +2929,7 @@ class SegQueue14Widget(ScriptedLoadableModuleWidget):
         self.progressBar.setVisible(True)
         self.progressBar.setValue(0)
 
-        def progress(done, total):
-            self.progressBar.setMaximum(max(1, total))
-            self.progressBar.setValue(done)
-            slicer.app.processEvents()
+        progress = _progressInto(self.progressBar)
 
         with _busy():
             try:
@@ -3083,10 +3058,7 @@ class SegQueue14Widget(ScriptedLoadableModuleWidget):
 
         self.progressBar.setVisible(True)
 
-        def progress(done, total):
-            self.progressBar.setMaximum(max(1, total))
-            self.progressBar.setValue(done)
-            slicer.app.processEvents()
+        progress = _progressInto(self.progressBar)
 
         with _busy():
             try:
@@ -3152,6 +3124,15 @@ class SegQueue14Widget(ScriptedLoadableModuleWidget):
             button.setEnabled(hasCase)
         self.editorBox.setEnabled(hasCase or reviewing)
         self.notesBox.setEnabled(hasCase)
+
+
+def _progressInto(bar):
+    """A ``progress(done, total)`` callback that drives ``bar`` and keeps the UI live."""
+    def progress(done, total):
+        bar.setMaximum(max(1, total))
+        bar.setValue(done)
+        slicer.app.processEvents()
+    return progress
 
 
 def _deadlineText(deadline):

@@ -17,10 +17,9 @@ from segqueue import states as st
 
 from ..constants import ANNOTATOR_GROUP, REVIEWER_GROUP
 from ..maintenance import sweep as sweepStranded
-from ..models import Assignment, Case, Review, Submission
-from ..models.review import APPROVE, REJECT
+from ..models import Assignment, Case, Submission
 from ..settings import getPolicy
-from ..utils import ensureGroups, refuse
+from ..utils import ensureGroups, fullName, refuse
 
 
 class AdminResource(Resource):
@@ -110,7 +109,7 @@ class AdminResource(Resource):
         return {
             'userId': str(userId),
             'login': user.get('login', ''),
-            'name': f"{user.get('firstName', '')} {user.get('lastName', '')}".strip(),
+            'name': fullName(user),
             'approved': record.approved,
             'rejected': record.rejected,
             'rejectionRate': (record.rejected / record.submitted) if record.submitted else 0.0,
@@ -312,8 +311,3 @@ def _median(values):
         return ordered[mid]
     return (ordered[mid - 1] + ordered[mid]) / 2.0
 
-
-#: Verdict names re-exported so the dashboard JS has one source for them.
-VERDICTS = (APPROVE, REJECT)
-
-__all__ = ['AdminResource', 'Review', 'VERDICTS']

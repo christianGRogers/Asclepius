@@ -617,6 +617,96 @@ def test_a_poor_read_goes_to_review_with_per_class_reasons(world):
     queue.downloadCaseAsset(caseId=info["caseId"], kind="reference")
 
 
+def _scoreFiles(world, read, reference):
+    """``scoring.scoreAgainst`` on two stored files, ``reference`` an ImageCAS-X one."""
+    from girder.models.folder import Folder
+    from girder_segqueue14 import scoring
+
+    folder = Folder().createFolder(world.admin, f"scratch-{uuid.uuid4().hex[:6]}",
+                                   parentType="user", creator=world.admin)
+    # ImageCAS-like voxel size, so "nearest" is measured in mm (array axes are x, y, z).
+    spacing = (0.35, 0.35, 0.5)
+    readFile = _upload(_nifti(world.data / "scratch_read.nii.gz", read, spacing),
+                       folder, world.admin)
+    refFile = _upload(_nifti(world.data / "scratch_ref.nii.gz", reference, spacing),
+                      folder, world.admin)
+    result, _ = scoring.scoreAgainst(readFile, refFile, icx14=True)
+    return result
+
+
+def test_imagecas_x_other_beside_an_lad_is_scored_as_lad(world):
+    """#57, D25: "Other" (14: D3/D4, OM3/OM4) takes the class of the nearest LAD/LCx in
+    mm, as the icx4 training labels do -- a read that draws that D3 as LAD is right."""
+    import numpy as np
+
+    tree = _tree(np)
+    reference = _icx(np, tree)
+    read = tree.copy()
+    lad = np.argwhere(tree == 2)
+    x0, x1, y = lad[:, 0].min(), lad[:, 0].max() + 1, lad[:, 1].max() + 1
+    assert not tree[x0:x1, y:y + 2].any()
+    reference[x0:x1, y:y + 2, 6:14] = 14        # a D3 alongside the LAD block
+    read[x0:x1, y:y + 2, 6:14] = 2
+    result = _scoreFiles(world, read, reference)
+    assert result["per_structure"]["LAD"]["dice"] == 1.0
+    assert result["mean_dice"] == 1.0
+
+
+def test_imagecas_x_reference_with_nothing_above_four_is_still_collapsed(world):
+    """#57: which labels a reference speaks is decided by what it is, not by its
+    highest value. LM, LAD, LCx and a D1 (4) -- no RCA: the 4 is LAD, not RCA."""
+    import numpy as np
+
+    tree = _tree(np)
+    reference = tree.copy()                      # 1 LM, 2 LAD, 3 LCx, 4 = D1
+    read = tree.copy()
+    read[tree == 4] = 2                          # the D1, drawn as LAD
+    result = _scoreFiles(world, read, reference)
+    assert result["per_structure"]["LAD"]["dice"] == 1.0
+    assert result["per_structure"]["RCA"]["voxels_ref"] == 0
+
+
+def test_a_reviewer_sees_who_sent_what_and_under_which_filenames(world):
+    import numpy as np
+    from bson import ObjectId
+    from girder_segqueue14 import scoring
+
+    _readyProject(world)
+    queue = _resource()
+    _as(world.people["bobby"])
+    info = queue.nextCase(clientProtocol=16)
+    read = _tree(np)
+    read[read == 4] = 3             # poor enough to need a reviewer,
+    read[0, 0, 0] = 4               # but with every required class present
+    response = _submit(world, queue, world.people["bobby"], info, read)
+    scoring.runOnce()
+
+    _as(world.people["revy"])
+    row = queue.getSubmission(submissionId=response["submissionId"])
+    bobby = world.people["bobby"]
+    assert row["annotator"] == {"id": str(bobby["_id"]), "login": "bobby",
+                                "name": "bobby X"}
+    # The filenames Slicer picks its reader from travel with the row.
+    assert row["volumeName"] == f"{info['caseName']}.nii.gz"
+    assert row["submissionName"].endswith(".seg.nrrd")
+    assert isinstance(row["submittedAt"], str) and row["history"] == []
+
+    [history] = queue.caseSubmissions(caseId=info["caseId"])
+    assert history["submissionId"] == response["submissionId"]
+    assert history["revisionOf"] is None and isinstance(history["created"], str)
+
+    listed = {r["caseId"]: r for r in queue.listCases(state="submitted")}
+    [lease] = listed[info["caseId"]]["assignments"]
+    assert lease["annotator"] == "bobby" and lease["submissionCount"] == 1
+
+    missing = str(ObjectId())
+    for call in (queue.caseSubmissions, queue.downloadCaseVolume):
+        err = _refusal(call, caseId=missing)
+        assert err.code == 404 and err.extra["segqueueError"] == "no_such_case"
+    err = _refusal(queue.assignCase, caseId=missing, userId=str(bobby["_id"]))
+    assert err.extra["segqueueError"] == "no_such_case"
+
+
 def test_a_two_read_case_is_decided_when_both_reads_are_in(world):
     import numpy as np
     from girder_segqueue14 import scoring

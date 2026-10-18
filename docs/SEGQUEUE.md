@@ -2,6 +2,16 @@
 
 Moved out of the README, which now covers the training method only.
 
+> **Two modules, one release line.** This page describes the platform as first
+> built: the 4-class `segqueue` plugin and the `slicer/SegQueue` module. Since
+> 0.14.0 the module annotators install is **SegQueue14** (`slicer/SegQueue14/`),
+> talking to the `segqueue14` plugin that runs beside the live one in the same
+> Girder (`server/girder_segqueue14/`, deployed per its
+> [DEPLOY.md](../server/girder_segqueue14/DEPLOY.md)). The 4-class module is no
+> longer released. How a release is cut: [CONTRIBUTING.md §6](../CONTRIBUTING.md).
+> The architecture below -- shared protocol, leases, sampled review -- is common
+> to both.
+
 The bottleneck for Phase 1 is not the model, it is **per-segment coronary labels
 that do not exist publicly**. SegQueue is the platform for producing them with a
 class of undergraduate annotators: a self-hosted server that owns the case pool,
@@ -16,7 +26,7 @@ Slicer + SegQueue extension  ──TLS──▶  Caddy ──▶  Girder 5 + Seg
 ```
 
 An annotator's whole workflow is: log in, press **Get next case**, segment, press
-**Validate & submit**. They never choose a case, never name a file, never see a
+**Submit case**. They never choose a case, never name a file, never see a
 server path, and never accumulate data — the local copy is deleted the moment the
 server confirms the submission.
 
@@ -47,8 +57,8 @@ Helper masks are structurally incapable of being submitted: the export copies
 only the project's own segments, and refuses outright if any other label value
 appears in the exported volume.
 
-**Oblique volumes are corrected at ingest.** The README's conversion-trap notes explain that notes that 11% of
-TotalSegmentator is obliquely acquired and ITK rejects it. Training reads those
+**Oblique volumes are corrected at ingest.** The README's conversion-trap notes
+explain that 11% of TotalSegmentator is obliquely acquired and ITK rejects it. Training reads those
 with nibabel; an annotator cannot, because Slicer *is* ITK. Ingest
 orthonormalises the direction cosines — voxels, spacing and origin untouched,
 axes moved by 0.007° — so the case opens, and the same corrected file is what
@@ -97,6 +107,7 @@ resumable uploads, which is the one part you cannot afford to get subtly wrong.
 | `server/girder_segqueue/` | The Girder 5 plugin: models, REST, ingest CLI, QA worker |
 | `slicer/SegQueue/` | The annotator's extension. `SegQueueLib/` is Slicer-free, so the network layer and the cache are unit-tested without Slicer |
 | `slicer/build-extension.py` | Packages it for the Extension Manager. Plain Python, no CMake |
+| `src/segqueue14/`, `server/girder_segqueue14/`, `slicer/SegQueue14/`, `slicer/build-extension14.py` | The same four pieces for SegQueue14, the released line (see the note at the top) |
 | `deploy/` | Compose stack, Caddyfile, backup script. See [deploy/README.md](../deploy/README.md) |
 | `docs/` | [Server runbook](SERVER-SETUP.md) and the [setup &amp; testing guide](SegQueue-Setup-Guide.pdf) |
 
@@ -151,10 +162,9 @@ Install it from the Extensions Manager on each annotator machine. The package
 declares it, but a local *Install from file* does not resolve dependencies, so
 the panel also checks at startup and says so if it is missing.
 
-Two other routes work for development: add `slicer/SegQueue` to **Additional
-module paths** (Edit → Application Settings → Modules), or paste
-`exec(open(r"…/slicer/install-segqueue.py").read())` into the Python Console.
-Both run the module straight out of the checkout, so a `git pull` updates it.
+For development, add `slicer/SegQueue` (or `slicer/SegQueue14`) to **Additional
+module paths** (Edit → Application Settings → Modules). That runs the module
+straight out of the checkout, so a `git pull` updates it.
 
 **Rebuild the package after any change to `src/segqueue`** — the copy inside the
 archive is what annotators run, and a stale one speaks an old wire protocol to a
@@ -194,8 +204,7 @@ all three into the scene, and releases with a purge.
 Not yet exercised: a human segmenting a case through to Submit, gold and
 duplicate scoring on real label volumes, and anything at 5,000-case scale.
 
-Not yet built: an export from approved submissions into the
-case layout (README, “Data”) `segtrain convert` reads. Approved work sits
-in the assetstore as label volumes on the source grid — the right *contents*, one
-directory rename away from the right *shape* — but the step is manual today.
+Approved work is exported into the case layout `segtrain convert` reads
+(README, “Data”) by `segqueue-export` (`server/girder_segqueue/export.py`;
+`segqueue14-export` for SegQueue14): the stored CT plus one binary mask per vessel.
 ---

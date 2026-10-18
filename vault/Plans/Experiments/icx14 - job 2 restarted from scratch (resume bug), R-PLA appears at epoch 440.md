@@ -1,11 +1,17 @@
 ---
 aliases: [icx14 job 2]
 tags: [plans, experiment, trillium, icx14, bug]
-status: in progress
+status: historical (icx14 cancelled, D25)
 updated: 2026-10-15
 ---
 
 # icx14 job 2: restarted from scratch (resume bug); R-PLA appears at ~epoch 440
+
+> **Historical.** D25 (2026-10-17) reversed the 14-class schema; the icx14 run was cancelled and
+> `trillium/icx4` trains the 4-class model with the same recipe. These numbers are the record. icx14's
+> LM/LAD/LCx/RCA Dice are 14-class *trunk* scores (side branches are separate classes), so they are
+> not directly comparable with icx4's territory classes, which include the side branches.
+> The resume fix below is carried into `trillium/icx4/lib/job_body.sh`.
 
 Results: `trillium-results/icx14/job2/results/` (both training logs, slurm logs, progress.png).
 Follows [[icx14 - interim check after job 1 (446 epochs), side branches not yet learned]].

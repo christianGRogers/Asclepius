@@ -326,6 +326,19 @@ def test_new_dataset_cases_want_two_reads_and_a_tag():
         sqplan.plan_new_dataset_case("x", "bad tag!")
 
 
+def test_volume_suffixes_strip_whole_and_names_stay_folder_safe():
+    strip = sqplan.strip_volume_suffix
+    assert strip("cases/c0001.seg.nrrd") == "c0001"
+    assert strip("c0001.PRELABEL.NII.GZ") == "c0001"
+    assert strip("c0001.nii") == "c0001"
+    assert strip("notes.txt") == "notes.txt"
+    # Nothing usable left: a placeholder rather than an empty folder name.
+    assert sqplan.new_case_name("asoca", "???.nii.gz") == "asoca_case"
+    assert sqplan.pool_case_name("..nii.gz") == "case"
+    assert sqplan.new_case_name("asoca", "-a b-.mha") == "asoca_a_b"
+    assert sqplan.pool_case_name("A__B c.nhdr") == "A__B_c"
+
+
 # ---------------------------------------------------------- prelabel rules
 
 
@@ -525,6 +538,36 @@ def test_duplicate_and_error_flags():
     assert not sq.duplicate_flags({"mean_dice": 0.7}, {"duplicate_mean_dice_flag": 0.6})
     assert "geometry" in sq.reference_flags({"error": "geometry_mismatch"}, {})[0]
     assert sq.reference_flags({"mean_dice": float("nan")}, {"mean_dice_flag": 0.6}) == []
+
+
+def test_flags_and_headline_skip_anything_that_is_not_a_finite_number():
+    """The scorer's guard is ``segqueue.policy.usable_score``: NaN, inf, None, a
+    bool or a string never trips a flag and is never shown as the headline."""
+    nan, inf = float("nan"), float("inf")
+    assert sq.duplicate_flags(None, {"duplicate_mean_dice_flag": 0.6}) == []
+    assert "other read" in sq.duplicate_flags({"error": "shape"}, {})[0]
+    assert sq.duplicate_flags({"mean_dice": nan}, {"duplicate_mean_dice_flag": 0.6}) == []
+    assert sq.duplicate_flags({"mean_dice": 0.4}, {"duplicate_mean_dice_flag": nan}) == []
+    assert sq.reference_flags(None, {"mean_dice_flag": 0.6}) == []
+    assert sq.reference_flags({"mean_dice": 0.1}, {"mean_dice_flag": "0.6"}) == []
+    assert sq.reference_flags({"mean_dice": True}, {"mean_dice_flag": 2}) == []
+    per = {"per_structure": {"LAD": {"dice": inf}}}
+    assert sq.reference_flags(per, {"class_dice_flags": {"LAD": 0.9}}) == []
+    per = {"per_structure": {"LAD": {"dice": 0.5}}}
+    assert sq.reference_flags(per, {"class_dice_flags": {"LAD": nan}}) == []
+    assert sq.headline_dice({"reference": {"mean_dice": nan},
+                             "duplicate": {"mean_dice": 0.5}}) == 0.5
+    assert sq.headline_dice({"reference": {"mean_dice": None},
+                             "duplicate": {"mean_dice": inf}}) is None
+    assert sq.headline_dice({}) is None
+
+
+def test_required_min_dice_ignores_classes_with_no_dice():
+    result = {"per_structure": {"LAD": {"dice": 0.9}, "LCx": {"dice": None},
+                                "RCA": {"dice": 0.7}}}
+    assert sq.required_min_dice(result) == 0.7
+    assert sq.required_min_dice(result, required=["LCx"]) is None
+    assert sq.required_min_dice({}) is None
 
 
 # ------------------------------------------------------------- the pool (D23)

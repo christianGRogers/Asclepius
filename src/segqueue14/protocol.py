@@ -1,7 +1,7 @@
 """The wire contract between the SegQueue14 Slicer module and its Girder plugin.
 
 The same shapes as ``segqueue.protocol`` -- and most of the dataclasses are
-reused from there unchanged -- with four differences that are the point of
+reused from there unchanged -- with these differences, which are the point of
 having a separate contract:
 
 * **A separate prefix.** Every route is ``/api/v1/segqueue14/...``, so the two
@@ -10,7 +10,7 @@ having a separate contract:
   every write. There are no legacy SegQueue14 clients to protect, so unlike the
   live check a *missing* version is refused too: a client that does not say what
   it speaks is not one that was written for this server.
-* **A ``prelabel`` asset** instead of the live binary coronary ``seed`` (D8, D10):
+* **A ``prelabel`` asset** instead of the live binary coronary ``seed`` (D8, D25):
   a model's prediction in the project's classes, loaded straight into the
   project segments.
 * **A ``seed`` asset of its own** (D23): for the pooled new datasets, an
@@ -166,6 +166,7 @@ class AssignmentInfo14(AssignmentInfo):
 
 
 def too_old_message(sent: Optional[int]) -> str:
+    """The 426 refusal text: what the server speaks, what the module sent, what to do."""
     shown = "nothing" if sent is None else str(sent)
     return ("This SegQueue14 module is too old for the server: the server speaks "
             f"SegQueue14 protocol {PROTOCOL_VERSION} and the module sent {shown}. "

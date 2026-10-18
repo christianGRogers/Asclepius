@@ -6,7 +6,7 @@ Adapted from ``girder_segqueue.rest.queue``. The differences:
 * ``/next`` serves strictly in the order the population tool wrote (priority,
   then serveOrder): no gold injection and no random duplicates, because both are
   data here (D11, D14, D16).
-* the ``prelabel`` asset replaces the live binary ``seed`` (D8, D10), and serving
+* the ``prelabel`` asset replaces the live binary ``seed`` (D8, D25), and serving
   it records which model version the read starts from; pooled new-dataset cases
   ship their own binary vessel ``seed`` instead (D23), a guide that is never
   submitted;

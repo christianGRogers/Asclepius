@@ -211,6 +211,27 @@ def test_the_prelabel_goes_into_the_project_segments_by_label_value():
     # One class at a time into one named segment, so a class absent from the
     # prediction cannot shift the rest into the wrong segments.
     assert "values == int(spec.label)" in body
+    # Changing a segment's label value after the import empties every class but the
+    # first (Slicer 5.12; tests/slicer_selftest14.py checks the real thing).
+    assert ".SetLabelValue(" not in body
+
+
+def test_only_the_imagecas_x_reference_is_collapsed_from_14_classes():
+    # #68: the reviewer's reference is ImageCAS-X's 14 values and is collapsed to
+    # the four (labels.icx14_to_four, D25) because it is the reference -- not by
+    # its values. Prelabels and submissions are imported strictly by value.
+    body = ast.get_source_segment(_source(), _method("SegQueue14Logic",
+                                                     "importLabelsIntoProject"))
+    assert "labels.icx14_to_four(" in body and "if icx14:" in body
+    calls = [node for node in ast.walk(ast.parse(_source()))
+             if isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute)
+             and node.func.attr == "importLabelsIntoProject"]
+    collapsing = [any(k.arg == "icx14" and getattr(k.value, "value", None) is True
+                      for k in call.keywords) for call in calls]
+    assert collapsing.count(True) == 1, collapsing
+    reference = ast.get_source_segment(_source(), _method("SegQueue14Widget",
+                                                          "onShowReference"))
+    assert "icx14=True" in reference and "protocol.ASSET_REFERENCE" in reference
 
 
 def test_the_vessel_seed_is_a_helper_and_never_a_class():
@@ -238,17 +259,28 @@ def test_a_seeded_case_starts_with_the_seed_in_every_class_hidden():
     assert "ImportLabelmapToSegmentationNode" not in copy
 
 
+def _checkedExport():
+    # Both upload paths export through this one method, so the checks are
+    # asserted once here and each path is asserted to go through it.
+    return ast.get_source_segment(_source(), _method("SegQueue14Logic", "_exportChecked"))
+
+
 @pytest.mark.parametrize("method", ["submit", "reviseSubmission"])
 def test_overlapping_classes_are_refused_before_the_export(method):
+    checked = _checkedExport()
+    assert checked.index("classOverlaps()") < checked.index("self.exportLabelmap(")
+    assert "labels.overlap_message" in checked
     body = ast.get_source_segment(_source(), _method("SegQueue14Logic", method))
-    assert body.index("classOverlaps()") < body.index("exportLabelmap")
-    assert "labels.overlap_message" in body
+    assert "self._exportChecked(" in body and "self.exportLabelmap(" not in body
 
 
 @pytest.mark.parametrize("method", ["submit", "reviseSubmission"])
 def test_required_classes_are_checked_before_anything_is_uploaded(method):
+    checked = _checkedExport()
+    assert checked.index("self.exportLabelmap(") < checked.index("missing_required")
+    assert "labels.missing_required_message" in checked
     body = ast.get_source_segment(_source(), _method("SegQueue14Logic", method))
-    check = body.index("missing_required")
+    check = body.index("self._exportChecked(")
     assert check < body.index("uploadFile"), "the D13 check must come before the upload"
 
 
@@ -302,3 +334,18 @@ def test_the_archive_is_the_segqueue_extension_and_is_self_sufficient(tmp_path):
     out = subprocess.run([sys.executable, "-I", "-c", code], capture_output=True, text=True)
     assert out.returncode == 0, out.stderr
     assert out.stdout.strip() == "16"
+
+
+def test_a_half_downloaded_helper_is_never_a_cache_hit(tmp_path):
+    # #64: a ``.part`` left by a download Slicer never finished must not be
+    # reused as the helper; only a completed file counts.
+    import os
+    namespace = {"os": os}
+    exec(compile(ast.Module(body=[_method("SegQueue14Logic", "_cachedHelper")],
+                            type_ignores=[]), str(MODULE), "exec"), namespace)
+    cachedHelper = namespace["_cachedHelper"]
+    stem = str(tmp_path / "prelabel")
+    (tmp_path / "prelabel.nii.gz.part").write_bytes(b"\x1f\x8bhalf")
+    assert cachedHelper(None, stem) is None
+    (tmp_path / "prelabel.nii.gz").write_bytes(b"\x1f\x8bwhole")
+    assert cachedHelper(None, stem) == stem + ".nii.gz"

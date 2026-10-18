@@ -24,13 +24,13 @@ from __future__ import annotations
 import hashlib
 import re
 from dataclasses import dataclass, field
-from typing import Dict, Iterable, List, Mapping, Optional, Sequence, Tuple
+from typing import Any, Dict, Iterable, List, Mapping, Optional, Sequence, Tuple
 
 # ----------------------------------------------------------- case identity
 
 #: The live SegQueue names its ImageCAS cases ``imagecas_NNNN`` with NNNN the
-#: ImageCAS id (1..1000). The tournament and the 14-class model use ``cNNNN`` with
-#: NNNN = id - 1 (trillium/icx14/lib/layout.py); ImageCAS-X names its files
+#: ImageCAS id (1..1000). The tournament and the 4-class model use ``cNNNN`` with
+#: NNNN = id - 1 (trillium/icx4/lib/layout.py); ImageCAS-X names its files
 #: ``<id>.coronary.nii.gz``.
 _CASE_RE = re.compile(r"^imagecas_(\d{1,4})$")
 _TOURNAMENT_RE = re.compile(r"^c(\d{4})$")
@@ -39,6 +39,8 @@ _ICX_FILE_RE = re.compile(r"^(\d{1,4})\.coronary\.nii(?:\.gz)?$")
 #: Suffixes stripped when a prediction file is mapped back to a case name.
 _VOLUME_SUFFIXES = (".prelabel.nii.gz", ".nii.gz", ".nii", ".nrrd", ".seg.nrrd",
                     ".mha", ".nhdr")
+#: The same, longest first, so ``.seg.nrrd`` is stripped whole before ``.nrrd``.
+_SUFFIXES_LONGEST_FIRST = tuple(sorted(_VOLUME_SUFFIXES, key=len, reverse=True))
 
 
 def imagecas_id(case_name: str) -> Optional[int]:
@@ -51,13 +53,19 @@ def imagecas_id(case_name: str) -> Optional[int]:
 
 
 def case_name_for_imagecas_id(n: int) -> str:
+    """2 -> ``imagecas_0002``; the inverse of ``imagecas_id``."""
     return f"imagecas_{int(n):04d}"
 
 
 def strip_volume_suffix(filename: str) -> str:
+    """The file's name without its directory or a known volume extension.
+
+    ``cases/c0001.seg.nrrd`` -> ``c0001``. Matched case-insensitively; an unknown
+    extension is left on.
+    """
     base = filename.rsplit("/", 1)[-1]
     lower = base.lower()
-    for suffix in sorted(_VOLUME_SUFFIXES, key=len, reverse=True):
+    for suffix in _SUFFIXES_LONGEST_FIRST:
         if lower.endswith(suffix):
             return base[: -len(suffix)]
     return base
@@ -111,7 +119,8 @@ _SPLIT_ALIASES = {
 }
 
 
-def normalise_split(value) -> Optional[str]:
+def normalise_split(value: Any) -> Optional[str]:
+    """Any spelling in ``_SPLIT_ALIASES`` -> its split constant; None otherwise."""
     if value is None:
         return None
     return _SPLIT_ALIASES.get(str(value).strip().lower())
@@ -218,6 +227,7 @@ KIND_NORMAL = "normal"
 
 
 def tier_for_split(split: Optional[str]) -> str:
+    """The serve tier of an ImageCAS case, from its ImageCAS-X split (D14, D16)."""
     if split in (TRAIN, VAL):
         return TIER_ICX_TRAINVAL
     if split == TEST:
@@ -346,8 +356,7 @@ def plan_new_dataset_case(name: str, dataset: str, priority: Optional[int] = Non
 
 def new_case_name(dataset: str, item_name: str) -> str:
     """``<dataset>_<stem>``, safe for a folder name in an export."""
-    stem = strip_volume_suffix(item_name)
-    stem = re.sub(r"[^A-Za-z0-9_.-]+", "_", stem).strip("._-") or "case"
+    stem = _folder_safe(strip_volume_suffix(item_name))
     if stem.startswith(dataset + "_"):
         return stem
     return f"{dataset}_{stem}"
@@ -362,7 +371,7 @@ SEED_SUFFIX = "__totalseg-coronary"
 SEED_SOURCE_TOTALSEG = "TotalSegmentator 2.18.0 coronary_arteries (binary)"
 
 
-def read_include_list(text: str) -> list:
+def read_include_list(text: str) -> List[str]:
     """Volume names from a pool list, in order: one per line, ``#`` comments and
     blank lines ignored, duplicates dropped (first kept)."""
     names, seen = [], set()
@@ -380,7 +389,11 @@ def pool_case_name(item_name: str) -> str:
     The pool's item names are already ``<Source>__<Case>[__<Part>]`` (D22), so
     they are kept as they are, made safe for a folder name in an export.
     """
-    stem = strip_volume_suffix(item_name)
+    return _folder_safe(strip_volume_suffix(item_name))
+
+
+def _folder_safe(stem: str) -> str:
+    """``stem`` with every run of unsafe characters as ``_``, trimmed; else ``case``."""
     return re.sub(r"[^A-Za-z0-9_.-]+", "_", stem).strip("._-") or "case"
 
 
@@ -418,6 +431,8 @@ SKIP = "skip"
 
 @dataclass(frozen=True)
 class PrelabelDecision:
+    """What ``prelabel_decision`` says to do (``ATTACH``/``REFRESH``/``SKIP``), and why."""
+
     action: str
     reason: str = ""
 

@@ -1,11 +1,16 @@
 ---
 aliases: [icx14 interim]
 tags: [plans, experiment, trillium, icx14]
-status: in progress
+status: historical (icx14 cancelled, D25)
 updated: 2026-10-13
 ---
 
 # icx14 interim check after job 1 (446 of 1000 epochs)
+
+> **Historical.** D25 (2026-10-17) reversed the 14-class schema; the icx14 run was cancelled and
+> `trillium/icx4` trains the 4-class model with the same recipe. These numbers are the record. icx14's
+> LM/LAD/LCx/RCA Dice are 14-class *trunk* scores (side branches are separate classes), so they are
+> not directly comparable with icx4's territory classes, which include the side branches.
 
 Results: `trillium-results/icx14/results/` (training log, plans, label census). Job 1 ran 23.2 h, 181 s/epoch,
 stopped cleanly at epoch 446 before its walltime as designed; jobs 2–4 of the chain continue it (`--c`).

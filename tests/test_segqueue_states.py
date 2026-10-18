@@ -103,6 +103,21 @@ def test_transition_error_lists_what_was_allowed():
     assert "approve" in message
 
 
+def test_transition_error_message_is_exact():
+    """Pinned: the server shows this text to people, so a refactor must not move it."""
+    with pytest.raises(st.TransitionError) as excinfo:
+        st.apply_event(st.ASSIGNED, st.SUBMIT)
+    assert str(excinfo.value) == (
+        "cannot submit an assignment in state 'assigned'; "
+        "allowed here: download, expire, release")
+    assert (excinfo.value.state, excinfo.value.event) == (st.ASSIGNED, st.SUBMIT)
+
+    with pytest.raises(st.TransitionError) as excinfo:
+        st.apply_event(st.APPROVED, st.RELEASE)
+    assert str(excinfo.value) == (
+        "cannot release an assignment in state 'approved'; allowed here: none (terminal)")
+
+
 def test_a_submitted_case_frees_the_annotator_but_not_the_replica_slot():
     """The bug this separation exists to prevent: a rejected case going out to a
     second annotator while the first is still on the hook to fix it."""

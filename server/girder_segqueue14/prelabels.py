@@ -3,10 +3,10 @@ and swap them for a newer model's (D15) where that is still allowed.
 
 Runs on the server, against the database directly, like ``segqueue-ingest``::
 
-    segqueue14-prelabels attach --dir /incoming/prelabels/icx14-v1 \\
-        --model-version icx14-v1 --dry-run
-    segqueue14-prelabels attach --dir /incoming/prelabels/icx14-v1 \\
-        --model-version icx14-v1 --verify-grid
+    segqueue14-prelabels attach --dir /incoming/prelabels/icx4-v1 \\
+        --model-version icx4-v1 --dry-run
+    segqueue14-prelabels attach --dir /incoming/prelabels/icx4-v1 \\
+        --model-version icx4-v1 --verify-grid
     segqueue14-prelabels status
 
 ``--dir`` holds one uint8 NIfTI per case, named by case (``imagecas_0002.nii.gz``)
@@ -105,8 +105,9 @@ def checkLocalFile(path, ctHeader=None):
     """Problems with a prelabel file on disk, or [] if it can be attached.
 
     Header checks always run (stdlib only). The value range is checked when
-    numpy and nibabel are installed (the ``[scoring]`` extra): a value above 14 is
-    not one of the project's classes and would land in no segment.
+    numpy and nibabel are installed (the ``[scoring]`` extra): a value above
+    ``labels.N_CLASSES`` (4) is not one of the project's classes and would land in
+    no segment.
     """
     problems = []
     try:
@@ -233,7 +234,7 @@ def buildParser():
     attach.add_argument('--dir', required=True,
                         help='Directory of <case>.nii.gz or cNNNN.nii.gz predictions.')
     attach.add_argument('--model-version', required=True,
-                        help='Version of the model that produced them, e.g. icx14-v1. '
+                        help='Version of the model that produced them, e.g. icx4-v1. '
                              'Becomes the folder name under SegQueue14/prelabels/.')
     attach.add_argument('--include-test', action='store_true',
                         help='Also refresh held-out ImageCAS-X test cases (D16 says '

@@ -2,7 +2,7 @@
 aliases: [Plan tournament, Plans]
 tags: [plans, decision-record, tournament]
 status: living
-updated: 2026-10-04
+updated: 2026-10-18
 ---
 
 # Plan tournament
@@ -35,6 +35,22 @@ background: `left_main` (1), `left_anterior_descending` (2), `left_circumflex`
   along the anterior interventricular groove; LCx along the left AV groove; RCA
   optional (may be small/absent in left-dominant systems); stop where the lumen
   is no longer confidently distinguishable.
+
+> **As of 2026-10-18 ([[Human decisions]], binding; they override the three bullets above,
+> which are the Round 1 brief kept for the record):**
+> - **Classes (D25, reverses D9):** the four above. Side branches take their parent's class
+>   (D1): diagonals → LAD; obtuse marginals, the ramus intermedius (D1b) and a left-sided PDA/PLA
+>   → LCx; a right-sided PDA/PLA → RCA; ImageCAS-X "Other" → the nearest LAD/LCx.
+>   `trillium/icx4/lib/territory.py` (= `src/segqueue14/labels.py` `ICX14_TO_4`) is the collapse.
+> - **Lumen and labels (D8, D12):** ImageCAS-X's lumen as drawn, for its 800 cases; the original
+>   ImageCAS masks are no longer labels. Team reads may redraw the outline to the contrast-filled lumen.
+> - **Required classes (D13):** LAD, LCx and RCA must be non-empty; **LM** is the optional one.
+> - **What the team labels (D22, D23):** the 675 new pooled CCTA-Pool volumes in SegQueue14, two
+>   reads each, starting from TotalSegmentator seeds (D23, D26). The 800 ImageCAS-X cases are not
+>   re-annotated (D22), and SegQueue14 serves no ImageCAS case.
+> - **Protocol:** the four classes are the ones in `src/segqueue14/labels.py`
+>   (`configs/labels/coronary_icx4.yaml`), served by SegQueue14 from protocol 15; same values 1–4.
+> - **Compute:** whatever the round's issue names. Round 9 (#48) plans for **Fir** (Alliance, SFU).
 
 ## Layout
 

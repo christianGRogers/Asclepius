@@ -26,6 +26,7 @@ from ..models.review import APPROVE
 from ..settings import getPolicy
 from ..utils import (
     fileForCase,
+    fullName,
     hashStoredFile,
     isAnnotator,
     refuse,
@@ -36,6 +37,14 @@ from ..utils import (
 
 def _iso(value):
     return value.isoformat() if value is not None else None
+
+
+def _fileName(fileId):
+    """A stored file's name, or '' when there is no id or no such file."""
+    if not fileId:
+        return ''
+    file = File().load(fileId, force=True)
+    return (file or {}).get('name', '') or ''
 
 
 class ReviewResource(Resource):
@@ -95,14 +104,14 @@ class ReviewResource(Resource):
     def getSubmission(self, submissionId):
         requireReviewer(self.getCurrentUser())
         submission = self._loadSubmission(submissionId)
-        assignment = Assignment().load(submission['assignmentId'], force=True)
+        assignment = self._assignmentFor(submission)
         row = self._row(assignment, submission)
         row['history'] = [
             {
                 'verdict': r['verdict'],
                 'comment': r['comment'],
                 'reviewerId': str(r['reviewerId']),
-                'created': r['created'].isoformat() if r.get('created') else None,
+                'created': _iso(r.get('created')),
             }
             for r in Review().forSubmission(submission['_id'])
         ]
@@ -134,9 +143,7 @@ class ReviewResource(Resource):
     def downloadVolume(self, submissionId):
         requireReviewer(self.getCurrentUser())
         submission = self._loadSubmission(submissionId)
-        case = Case().load(submission['caseId'], force=True)
-        if case is None:
-            refuse('no_such_case', 'That case no longer exists.', status=404)
+        case = self._loadCase(submission['caseId'])
         return File().download(fileForCase(case))
 
     # ---------------------------------------------------------- claim/free
@@ -150,7 +157,7 @@ class ReviewResource(Resource):
     def claim(self, submissionId):
         user = requireReviewer(self.getCurrentUser())
         submission = self._loadSubmission(submissionId)
-        assignment = Assignment().load(submission['assignmentId'], force=True)
+        assignment = self._assignmentFor(submission)
         try:
             assignment = Assignment().transition(
                 assignment, st.CLAIM_REVIEW, reviewerId=user['_id'])
@@ -170,7 +177,7 @@ class ReviewResource(Resource):
     def releaseClaim(self, submissionId):
         requireReviewer(self.getCurrentUser())
         submission = self._loadSubmission(submissionId)
-        assignment = Assignment().load(submission['assignmentId'], force=True)
+        assignment = self._assignmentFor(submission)
         try:
             assignment = Assignment().transition(assignment, st.ABANDON_REVIEW)
         except st.TransitionError:
@@ -209,7 +216,7 @@ class ReviewResource(Resource):
     def verdict(self, submissionId, verdict, comment, rubric, secondsSpent):
         user = requireReviewer(self.getCurrentUser())
         submission = self._loadSubmission(submissionId)
-        assignment = Assignment().load(submission['assignmentId'], force=True)
+        assignment = self._assignmentFor(submission)
 
         if verdict != APPROVE:
             # An old client asking to reject. Say where the verb went rather
@@ -390,15 +397,11 @@ class ReviewResource(Resource):
         learned that in 0.2.0 and the review path never did -- which is why
         opening a submission did nothing at all before 0.9.0.
         """
-        file = File().load(case.get('fileId'), force=True) if case.get('fileId') else None
-        return (file or {}).get('name', '') or ''
+        return _fileName(case.get('fileId'))
 
     def _submissionName(self, submission):
         """The stored segmentation's own filename, for the same reason."""
-        if not submission.get('fileId'):
-            return ''
-        file = File().load(submission['fileId'], force=True)
-        return (file or {}).get('name', '') or ''
+        return _fileName(submission.get('fileId'))
 
     @access.user
     @autoDescribeRoute(
@@ -411,13 +414,11 @@ class ReviewResource(Resource):
     )
     def caseSubmissions(self, caseId):
         requireReviewer(self.getCurrentUser())
-        case = Case().load(caseId, force=True)
-        if case is None:
-            refuse('no_such_case', 'That case no longer exists.', status=404)
+        case = self._loadCase(caseId)
 
         rows = []
         for submission in Submission().forCase(case['_id']):
-            assignment = Assignment().load(submission['assignmentId'], force=True)
+            assignment = self._assignmentFor(submission)
             if assignment is None:
                 continue
             row = self._row(assignment, submission)
@@ -447,7 +448,7 @@ class ReviewResource(Resource):
     def revise(self, submissionId, fileId, meta):
         user = requireReviewer(self.getCurrentUser())
         original = self._loadSubmission(submissionId)
-        assignment = Assignment().load(original['assignmentId'], force=True)
+        assignment = self._assignmentFor(original)
 
         if not st.can(assignment['state'], st.APPROVE):
             refuse(protocol.ERR_BAD_STATE,
@@ -520,7 +521,7 @@ class ReviewResource(Resource):
     def returnToPool(self, submissionId, reason):
         user = requireReviewer(self.getCurrentUser())
         submission = self._loadSubmission(submissionId)
-        assignment = Assignment().load(submission['assignmentId'], force=True)
+        assignment = self._assignmentFor(submission)
 
         try:
             assignment = Assignment().transition(
@@ -572,8 +573,7 @@ class ReviewResource(Resource):
             rows.append({
                 'userId': str(user['_id']),
                 'login': user.get('login', ''),
-                'name': f"{user.get('firstName', '')} "
-                        f"{user.get('lastName', '')}".strip(),
+                'name': fullName(user),
                 'openCases': Assignment().countOpenForUser(user['_id']),
                 'quota': user.get('segqueueQuota'),
                 'disabled': user.get('status') == 'disabled',
@@ -596,9 +596,7 @@ class ReviewResource(Resource):
     )
     def assignCase(self, caseId, userId):
         requireReviewer(self.getCurrentUser())
-        case = Case().load(caseId, force=True)
-        if case is None:
-            refuse('no_such_case', 'That case no longer exists.', status=404)
+        case = self._loadCase(caseId)
         user = User().load(userId, force=True)
         if user is None:
             refuse('no_such_user', 'No such user.', status=404)
@@ -646,9 +644,7 @@ class ReviewResource(Resource):
     )
     def downloadCaseVolume(self, caseId):
         requireReviewer(self.getCurrentUser())
-        case = Case().load(caseId, force=True)
-        if case is None:
-            refuse('no_such_case', 'That case no longer exists.', status=404)
+        case = self._loadCase(caseId)
         return File().download(fileForCase(case))
 
     @access.user
@@ -660,9 +656,7 @@ class ReviewResource(Resource):
     )
     def downloadCaseAsset(self, caseId, kind):
         requireReviewer(self.getCurrentUser())
-        case = Case().load(caseId, force=True)
-        if case is None:
-            refuse('no_such_case', 'That case no longer exists.', status=404)
+        case = self._loadCase(caseId)
         if kind not in protocol.ASSET_KINDS:
             refuse(protocol.ERR_NO_ASSET, f'Unknown asset kind {kind!r}.',
                    status=400)
@@ -689,6 +683,16 @@ class ReviewResource(Resource):
             refuse('no_such_submission', 'No such submission.', status=404)
         return submission
 
+    def _loadCase(self, caseId):
+        case = Case().load(caseId, force=True)
+        if case is None:
+            refuse('no_such_case', 'That case no longer exists.', status=404)
+        return case
+
+    def _assignmentFor(self, submission):
+        """The assignment a submission was made on (``None`` if it is gone)."""
+        return Assignment().load(submission['assignmentId'], force=True)
+
     def _row(self, assignment, submission):
         """One review-queue entry: enough to triage without opening Slicer."""
         case = Case().load(submission['caseId'], force=True) or {}
@@ -712,15 +716,13 @@ class ReviewResource(Resource):
             'annotator': {
                 'id': str(annotator.get('_id', '')),
                 'login': annotator.get('login', ''),
-                'name': f"{annotator.get('firstName', '')} "
-                        f"{annotator.get('lastName', '')}".strip(),
+                'name': fullName(annotator),
             },
             'annotationSeconds': submission.get('annotationSeconds'),
             'voxelCounts': submission.get('voxelCounts', {}),
             'annotatorNote': submission.get('annotatorNote', ''),
             'warnings': submission.get('warnings', []),
-            'submittedAt': (assignment.get('submittedAt').isoformat()
-                            if assignment.get('submittedAt') else None),
+            'submittedAt': _iso(assignment.get('submittedAt')),
             # Reviewers do see the flavour: knowing a case is a gold seed is
             # exactly what lets them read the automatic score as evidence.
             'kind': kind,

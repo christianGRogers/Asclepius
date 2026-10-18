@@ -251,9 +251,6 @@ class CaseCache:
         """
         return [m for m in self.entries() if not m.get("submitted")]
 
-    def totalBytes(self):
-        return _dirSize(self.root)
-
     def freeBytes(self):
         """Free space on the volume holding the cache, or None if unknowable."""
         target = self.root

@@ -1,7 +1,10 @@
 #!/bin/bash
 # icx4: train one 4-class nnU-Net (LM, LAD, LCx, RCA; D25) on ImageCAS-X's lumen collapsed by territory (1000 epochs,
 # ~50 h of GPU), then predict all
-# 1000 cases for the SegQueue hand-off and score the held-out ImageCAS-X test split.
+# 1000 cases for the SegQueue hand-off and score the OPEN ImageCAS-X test cases: open-36 and dev-44, apart. The 80
+# sealed test cases (A14, ./sealed_test.json) are predicted but never scored; without that file nothing starts.
+# The decisive score (#54): TotalSegmentator aortas (GPU) for the open cases, then tree-F1 @ 1.5 mm with the frozen
+# segtrain.tf1 (A1c; lib/segtrain_tf1.py, hash-checked here and in the job). Dice is a secondary column.
 #
 #   cd <root>/experiments/icx4 && ./icx4     # set up (login node), submit the job chain, or report status
 #   ./icx4 status                              # job state and progress
@@ -11,7 +14,11 @@
 # Budget: 1 x H100. 1000 epochs do not fit one 23:50 job, so the launcher submits a chain of CHAIN (default 4) jobs,
 # each starting when the previous one ends (afterany). Each job resumes from the last checkpoint; once everything is
 # done the remaining jobs exit within a minute. Expected use: ~3 jobs, ~55 h of GPU in total.
-# Optional overrides (never needed): CASES=/path, ACCOUNT=def-xxx (default def-aso22), ICX4_VENV, CHAIN=n.
+# Optional overrides (never needed): CASES=/path, ACCOUNT=def-xxx (default def-aso22), ICX4_VENV, CHAIN=n,
+# ICX4_CLUSTER=trillium|fir|nibi|rorqual (default: $CC_CLUSTER, else the login host's name, else trillium),
+# ICX4_TSEG_VENV (TotalSegmentator venv, default $HOME/icx4-tseg-venv),
+# ICX4_WORK=/path (workdir, default $SCRATCH/icx4): a second, independent run (a seed replicate) beside the first.
+#   Its jobs are named icx4-<basename> and its results go to ./results-<basename>/.
 set -euo pipefail
 
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -24,6 +31,10 @@ CHAIN="${CHAIN:-4}"
 # The icx14 run's venv: same torch and nnU-Net; only the trainer file differs, and setup_venv installs that.
 VENV="${ICX4_VENV:-$HOME/icx14-venv}"
 NNUNET_VERSION="2.8.1"
+TOTALSEG_VERSION="2.18.0"
+TSEG_VENV="${ICX4_TSEG_VENV:-$HOME/icx4-tseg-venv}"
+# A1c (Round 8): the only tF1 that may decide. lib/tf1_score.py and the job carry the same hash.
+FROZEN_SHA="24441cf8df0f000bd956c7dd9d8ae1daac866cfb14df1d174441d00e54f05254"
 
 say() { printf '[icx4] %s\n' "$*"; }
 die() { printf '[icx4] ERROR: %s\n' "$*" >&2; exit 1; }
@@ -32,13 +43,24 @@ if [ "$DRY" = "1" ]; then
     : "${SCRATCH:=${TMPDIR:-/tmp}/icx4-dryrun-scratch}"
     mkdir -p "$SCRATCH"
 fi
-[ -n "${SCRATCH:-}" ] || die "\$SCRATCH is not set (this must run on a Trillium login node)"
-W="$SCRATCH/icx4"
+[ -n "${SCRATCH:-}" ] || die "\$SCRATCH is not set (run this on a cluster login node: Trillium, Fir, Nibi or Rorqual)"
+W="${ICX4_WORK:-$SCRATCH/icx4}"
+RESULTS="$HERE/results"
+if [ -n "${ICX4_WORK:-}" ] && [ "$W" != "$SCRATCH/icx4" ]; then   # an independent run: its own jobs and results
+    JOBNAME="icx4-$(basename "$W")"; RESULTS="$HERE/results-$(basename "$W")"
+fi
 mkdir -p "$W/logs"
+
+check_hash() {
+    local h
+    h="$(sha256sum "$LIB/segtrain_tf1.py" | cut -d' ' -f1)"
+    [ "$h" = "$FROZEN_SHA" ] || die "lib/segtrain_tf1.py has sha256 $h, not the frozen $FROZEN_SHA (A1c): refusing to run"
+    say "metric: segtrain.tf1 sha256 $h = frozen hash (A1c)"
+}
 
 load_modules() {
     if [ "$DRY" = "1" ]; then return 0; fi
-    command -v module >/dev/null 2>&1 || die "the 'module' command is missing; run this on a Trillium login node"
+    command -v module >/dev/null 2>&1 || die "the 'module' command is missing; run this on a cluster login node"
     module purge >/dev/null 2>&1 || true
     module load StdEnv/2023 python/3.11.5
 }
@@ -66,7 +88,53 @@ setup_venv() {
     tdir="$("$PY" -c 'import nnunetv2, os; print(os.path.join(os.path.dirname(nnunetv2.__file__), "training", "nnUNetTrainer", "variants", "icx4"))')"
     mkdir -p "$tdir"; touch "$tdir/__init__.py"
     cp "$LIB/icx4_trainers.py" "$tdir/icx4_trainers.py"
-    "$PY" -c "import torch; from nnunetv2.training.nnUNetTrainer.variants.icx4.icx4_trainers import nnUNetTrainerICX4; print('[icx4] venv ok: torch', torch.__version__)"
+    "$PY" -c "import torch, skimage, scipy, nibabel; from nnunetv2.training.nnUNetTrainer.variants.icx4.icx4_trainers import nnUNetTrainerICX4; print('[icx4] venv ok: torch', torch.__version__)"
+}
+
+# TotalSegmentator in its own venv (atlas2's recipe), so the training venv is never changed.
+setup_tseg_venv() {
+    if [ "$DRY" = "1" ]; then
+        say "dry run: would build TotalSegmentator venv $TSEG_VENV (torch + torchvision from the wheelhouse, nnunetv2==$NNUNET_VERSION, TotalSegmentator==$TOTALSEG_VERSION --no-deps)"
+        return 0
+    fi
+    if [ ! -f "$TSEG_VENV/.icx4_tseg_ok" ]; then
+        say "building TotalSegmentator venv $TSEG_VENV (one-off, a few minutes)"
+        virtualenv --no-download "$TSEG_VENV"
+        (
+            # shellcheck disable=SC1091
+            source "$TSEG_VENV/bin/activate"
+            pip install --no-index --upgrade pip
+            pip install --no-index torch torchvision   # Alliance wheels, CUDA-enabled and built together
+            pip install "nnunetv2==$NNUNET_VERSION" scikit-image nibabel scipy
+            # Without its preview stack (fury needs vtk, which the Alliance wheelhouse lacks); preview is never used.
+            pip install --no-deps "TotalSegmentator==$TOTALSEG_VERSION"
+            pip install tqdm requests dicom2nifti xmltodict blosc   # not pyarrow (a dummy wheel on the Alliance)
+            python -c "from totalsegmentator.python_api import totalsegmentator; print('[icx4] TotalSegmentator imports')"
+        ) || die "could not build $TSEG_VENV"
+        touch "$TSEG_VENV/.icx4_tseg_ok"
+    fi
+    "$TSEG_VENV/bin/python" -c "import totalsegmentator, nibabel; print('[icx4] TotalSegmentator venv ok:', '$TSEG_VENV')"
+}
+
+# TotalSegmentator weights: downloaded here (login node has internet), used offline on the compute node.
+setup_totalseg() {
+    export TOTALSEG_HOME_DIR="$W/totalseg"
+    if [ "$DRY" = "1" ]; then say "dry run: would download TotalSegmentator 'total_fast' weights into $TOTALSEG_HOME_DIR"; return 0; fi
+    if [ ! -e "$TOTALSEG_HOME_DIR/.weights_ok" ]; then
+        mkdir -p "$TOTALSEG_HOME_DIR"
+        "$TSEG_VENV/bin/totalseg_download_weights" -t total_fast
+        "$TSEG_VENV/bin/python" - "$TOTALSEG_HOME_DIR" <<'PYEOF'
+import json, os, sys
+from totalsegmentator.config import setup_totalseg, get_weights_dir
+setup_totalseg()
+p = os.path.join(sys.argv[1], 'config.json'); c = json.load(open(p)); c['send_usage_stats'] = False
+json.dump(c, open(p, 'w'))   # no network on the compute node: never try to send statistics
+w = get_weights_dir(); n = sum(len(f) for _, _, f in os.walk(w))
+assert n > 0, f'no TotalSegmentator weights in {w}'
+print(f'[icx4] TotalSegmentator weights in {w} ({n} files); usage statistics off')
+PYEOF
+        touch "$TOTALSEG_HOME_DIR/.weights_ok"
+    fi
 }
 
 running_job() {
@@ -76,10 +144,10 @@ running_job() {
 
 collect() {
     if [ -d "$W/results" ]; then
-        mkdir -p "$HERE/results"
-        cp -r "$W/results/." "$HERE/results/"
-        cp "$W"/logs/slurm-*.out "$HERE/results/" 2>/dev/null || true
-        say "results copied to $HERE/results/ (SUMMARY.md, results.json, logs)"
+        mkdir -p "$RESULTS"
+        cp -r "$W/results/." "$RESULTS/"
+        cp "$W"/logs/slurm-*.out "$RESULTS/" 2>/dev/null || true
+        say "results copied to $RESULTS/ (SUMMARY.md, results.json, logs)"
     else
         say "no results yet in $W/results/"
     fi
@@ -92,7 +160,7 @@ status() {
     local rj
     rj="$(running_job || true)"
     [ -n "$rj" ] && say "jobs: $rj"
-    for m in .labels_done .preprocess_done .train_done .predict_done DONE; do
+    for m in .labels_done .preprocess_done .train_done .predict_done .aorta_done .tf1_done DONE; do
         [ -e "$W/$m" ] && say "stage done: $m"
     done
     grep -h "Epoch [0-9]" "$W/logs/train.log" 2>/dev/null | tail -n 1 | sed 's/^/[icx4] training: /' || true
@@ -107,12 +175,17 @@ case "$MODE" in
     *) die "unknown mode '$MODE' (use: ./icx4 | ./icx4 status | ./icx4 collect)" ;;
 esac
 
+check_hash
 if [ -e "$W/DONE" ]; then say "experiment finished"; collect; exit 0; fi
 RJ="$(running_job || true)"
 if [ -n "$RJ" ]; then say "already queued/running: $RJ (not submitting again)"; status; exit 0; fi
 
 load_modules
+# A14 (#55): the sealed list must be here and valid before anything else happens; never "score everything".
+python3 "$LIB/sealed.py" check "$HERE/sealed_test.json" || die "$HERE/sealed_test.json is missing or invalid (A14): refusing to start"
+cmp -s "$HERE/sealed_test.json" "$W/sealed_test.json" 2>/dev/null || cp "$HERE/sealed_test.json" "$W/sealed_test.json"
 setup_venv
+setup_tseg_venv
 say "scratch workdir: $W"
 "$PY" "$LIB/layout.py" "$HERE" "$W/layout.json"   # walks up to <root>/cases (or $CASES); fails loudly
 
@@ -136,20 +209,51 @@ for s in ('train', 'val', 'test'):
     print(f'[icx4] ImageCAS-X {s}: {len(ids)} listed, {sum(c in L for c in ids)} present in cases/')
 print(f'[icx4] all cases to predict: {len(L)}')
 PY
+# the scored case list, from the one filter every stage uses (A14): exactly open-36 + dev-44, never a sealed case
+"$PY" "$LIB/sealed.py" check "$W/sealed_test.json" "$ICX" "$W/layout.json" \
+    || die "the sealed filter refused (see above): not submitting"
+setup_totalseg
+say "stages after prediction: Dice (open-36, dev-44) -> TotalSegmentator aortas (GPU, the same open cases only)"
+say "  -> tree-F1 @ 1.5 mm with the frozen segtrain.tf1 (CPU) -> SUMMARY.md (decisive tF1 per group; Dice secondary)"
 
 JOB="$W/job.sh"
 ACCOUNT_LINE="#SBATCH --account=${ACCOUNT:-def-aso22}"
+# Job shape per cluster (vault/Plans/Experiments: "Compute inventory ..."). Trillium is the default and unchanged.
+# On the general-purpose clusters an untyped GPU request may land on a MIG slice (max 40 GB; the plan needs ~60 GB)
+# and a job without --cpus-per-task/--mem gets 1 core and 256 MB per core, so name a full H100 and the per-GPU bundle.
+CLUSTER_NAME="${ICX4_CLUSTER:-}"   # explicit override: must be one of the names below
+if [ -z "$CLUSTER_NAME" ]; then    # auto: $CC_CLUSTER, then the host name; anything unrecognised stays Trillium
+    case "${CC_CLUSTER:-} $(hostname -f 2>/dev/null || hostname)" in
+        *trillium*) CLUSTER_NAME=trillium ;; *fir*) CLUSTER_NAME=fir ;; *nibi*) CLUSTER_NAME=nibi ;;
+        *rorqual*) CLUSTER_NAME=rorqual ;; *) CLUSTER_NAME=trillium ;;
+    esac
+fi
+case "$CLUSTER_NAME" in
+    trillium) GPU_LINES="#SBATCH --gpus-per-node=1
+# No --partition and no --mem: Trillium docs say not to set them. A 1-GPU job gets 24 cores and ~188 GiB." ;;
+    fir)      GPU_LINES="#SBATCH --gpus-per-node=h100:1
+#SBATCH --cpus-per-task=12
+#SBATCH --mem=280G" ;;
+    nibi)     GPU_LINES="#SBATCH --gpus-per-node=h100:1
+#SBATCH --cpus-per-task=14
+#SBATCH --mem=250G" ;;
+    rorqual)  GPU_LINES="#SBATCH --gpus-per-node=h100:1
+#SBATCH --cpus-per-task=16
+#SBATCH --mem=124G" ;;
+    *) die "unknown cluster '$CLUSTER_NAME' (ICX4_CLUSTER=trillium|fir|nibi|rorqual)" ;;
+esac
+say "cluster: $CLUSTER_NAME"
 cat > "$JOB" <<EOF
 #!/bin/bash
 #SBATCH --job-name=$JOBNAME
 #SBATCH --nodes=1
-#SBATCH --gpus-per-node=1
+$GPU_LINES
 #SBATCH --time=$WALLTIME
 #SBATCH --output=$W/logs/slurm-%j.out
 $ACCOUNT_LINE
-# No --partition and no --mem: Trillium docs say not to set them. A 1-GPU job gets 24 cores and ~188 GiB.
 set -uo pipefail
 export W="$W" LIB="$LIB" ICX="$ICX" VENV="$VENV" PYTHONUNBUFFERED=1
+export TSEG_VENV="$TSEG_VENV" TOTALSEG_HOME_DIR="$W/totalseg" FROZEN_SHA="$FROZEN_SHA"
 bash "$LIB/job_body.sh"
 EOF
 chmod +x "$JOB"
@@ -166,6 +270,6 @@ for i in $(seq 1 "$CHAIN"); do
     say "submitted job $i/$CHAIN: $JID"
     PREV="$JID"
 done
-say "chain submitted ($JOBNAME, 1 x H100, $WALLTIME each; later jobs wait for the one before)."
+say "chain submitted ($JOBNAME on $CLUSTER_NAME, 1 x H100, $WALLTIME each; later jobs wait for the one before)."
 say "watch: ./icx4 status    results when finished: ./icx4 collect"
 say "predictions for all cases will be in $W/predictions/"

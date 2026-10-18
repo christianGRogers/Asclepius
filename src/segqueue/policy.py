@@ -25,7 +25,7 @@ assignment, so months later you can still say why a given case was reviewed.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Optional
+from typing import Any, Optional
 
 # ------------------------------------------------------------------ injection
 
@@ -128,13 +128,14 @@ class AnnotatorRecord:
 
     @property
     def submitted(self) -> int:
+        """Every submission that got a verdict, either way."""
         return self.approved + self.rejected
 
 
 # ------------------------------------------------------------ automatic scores
 
 
-def usable_score(value) -> bool:
+def usable_score(value: Any) -> bool:
     """Whether a stored automatic score is a number you can compare or average.
 
     Every consumer of ``autoScore.mean_dice`` needs this same question answered,
@@ -245,6 +246,7 @@ def lease_deadline(assigned_at: float, policy: SamplingPolicy) -> float:
 
 
 def lease_expired(assigned_at: float, now: float, policy: SamplingPolicy) -> bool:
+    """Whether ``now`` is at or past the lease deadline of an assignment."""
     return now >= lease_deadline(assigned_at, policy)
 
 

@@ -28,7 +28,7 @@ from ..models import Case14 as Case
 from ..models import Note14 as Note
 from ..models import Submission14 as Submission
 from ..settings import getPolicy
-from ..utils import ensureGroups, refuse
+from ..utils import ensureGroups, fullName, refuse
 
 
 class AdminResource14(Resource):
@@ -123,7 +123,7 @@ class AdminResource14(Resource):
         return {
             'userId': str(userId),
             'login': user.get('login', ''),
-            'name': f"{user.get('firstName', '')} {user.get('lastName', '')}".strip(),
+            'name': fullName(user),
             'approved': record.approved,
             'rejected': record.rejected,
             'rejectionRate': (record.rejected / record.submitted) if record.submitted else 0.0,

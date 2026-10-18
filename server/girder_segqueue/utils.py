@@ -55,6 +55,11 @@ def isAnnotator(user):
     return bool(user and (user.get('admin') or isInGroup(user, ANNOTATOR_GROUP)))
 
 
+def fullName(user):
+    """``First Last`` from a Girder user, '' when it has neither."""
+    return f"{user.get('firstName', '')} {user.get('lastName', '')}".strip()
+
+
 def requireAnnotator(user):
     if not isAnnotator(user):
         refuse('not_an_annotator',

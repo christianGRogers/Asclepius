@@ -647,3 +647,150 @@ def test_unreviewed_work_is_exported_only_when_asked_for(girder_db):
     from girder_segqueue.export import selectable
 
     assert set(selectable(includeUnreviewed=True)) == {st.APPROVED, st.SUBMITTED}
+
+
+# ---------------------------------------------------- the reviewer endpoints
+
+
+@pytest.fixture
+def reviewing(models):
+    """A clean project, an admin reviewing it, and the reviewer resource.
+
+    The handlers are called directly, as Girder would after routing: the
+    decorators read the current user, so it is set first.
+    """
+    from girder.api.rest import setCurrentUser
+    from girder_segqueue.models import Note, Review, Submission
+    from girder_segqueue.rest import AdminResource, QueueResource, ReviewResource
+
+    for model in (Submission(), Review(), Note()):
+        model.collection.delete_many({})
+    admin = _adminUser()
+    setCurrentUser(admin)
+    queue = QueueResource()
+    review = ReviewResource().attachTo(queue)
+    adminApi = AdminResource().attachTo(queue)
+    yield models, admin, review, adminApi
+    setCurrentUser(None)
+
+
+def _annotator(login, first="Ada", last="Lovelace"):
+    """A real Girder user in the annotator group."""
+    from girder.models.group import Group
+    from girder.models.user import User
+    from girder_segqueue.constants import ANNOTATOR_GROUP
+    from girder_segqueue.utils import ensureGroups
+
+    user = User().findOne({"login": login}) or User().createUser(
+        login=login, password=f"{login}-password", email=f"{login}@example.edu",
+        firstName=first, lastName=last)
+    ensureGroups(_adminUser())
+    Group().addUser(Group().findOne({"name": ANNOTATOR_GROUP}), user)
+    return User().load(user["_id"], force=True)
+
+
+def _submitted(models, annotator, name):
+    """A case that ``annotator`` has submitted, with the submission on record."""
+    from girder_segqueue.models import Submission
+
+    from segqueue.protocol import SubmissionMeta
+
+    caseModel, assignmentModel = models
+    case = caseModel.claim(_case(caseModel, name)["_id"], annotator["_id"])
+    assignment = assignmentModel.createAssignment(case, annotator)
+    assignment = assignmentModel.transition(assignment, st.DOWNLOAD)
+    meta = SubmissionMeta.from_dict({"checksum": "a" * 64, "sizeBytes": 10,
+                                     "annotationSeconds": 300.0})
+    submission = Submission().createSubmission(assignment, meta, None, needsReview=True)
+    assignment = assignmentModel.transition(
+        assignment, st.SUBMIT, submissionId=submission["_id"], needsReview=True)
+    return case, assignment, submission
+
+
+def test_a_reviewer_asking_for_a_case_that_is_gone_is_told_so_by_name(reviewing):
+    from bson import ObjectId
+    from girder.exceptions import RestException
+
+    _, _, review, _ = reviewing
+    missing = str(ObjectId())
+    for call in (lambda: review.caseSubmissions(caseId=missing),
+                 lambda: review.assignCase(caseId=missing, userId=missing),
+                 lambda: review.downloadCaseVolume(caseId=missing),
+                 lambda: review.downloadCaseAsset(caseId=missing, kind="seed")):
+        with pytest.raises(RestException) as info:
+            call()
+        assert info.value.code == 404
+        assert info.value.extra["segqueueError"] == "no_such_case"
+
+
+def test_a_submission_row_names_the_annotator_and_dates_the_work(reviewing):
+    models, _, review, _ = reviewing
+    annotator = _annotator("adal")
+    _, _, submission = _submitted(models, annotator, "row-case")
+
+    row = review.getSubmission(submissionId=str(submission["_id"]))
+
+    assert row["annotator"] == {"id": str(annotator["_id"]), "login": "adal",
+                                "name": "Ada Lovelace"}
+    assert row["caseName"] == "row-case"
+    # No stored file behind this case: a name the client can fall back from,
+    # not an error.
+    assert row["volumeName"] == "" and row["submissionName"] == ""
+    assert isinstance(row["submittedAt"], str) and "T" in row["submittedAt"]
+    assert row["history"] == []
+
+
+def test_an_approval_lands_in_the_history_with_its_date(reviewing):
+    models, _, review, _ = reviewing
+    caseModel, _ = models
+    _, _, submission = _submitted(models, _annotator("adal"), "approve-case")
+
+    result = review.verdict(submissionId=str(submission["_id"]), verdict="approve",
+                            comment="clean")
+    row = review.getSubmission(submissionId=str(submission["_id"]))
+
+    assert result["state"] == st.APPROVED
+    assert [h["verdict"] for h in row["history"]] == ["approve"]
+    assert isinstance(row["history"][0]["created"], str)
+    assert caseModel.load(submission["caseId"], force=True)["approvedCount"] == 1
+
+
+def test_the_case_viewer_lists_every_lease_on_a_case(reviewing):
+    models, _, review, _ = reviewing
+    annotator = _annotator("adal")
+    case, assignment, submission = _submitted(models, annotator, "viewer-case")
+    _case(models[0], "untouched-case")
+
+    rows = review.listCases()
+    byName = {r["caseName"]: r for r in rows}
+
+    assert byName["untouched-case"]["assignments"] == []
+    [lease] = byName["viewer-case"]["assignments"]
+    assert lease["assignmentId"] == str(assignment["_id"])
+    assert lease["annotator"] == "adal"
+    assert lease["submissionId"] == str(submission["_id"])
+    assert lease["submissionCount"] == 1
+    assert isinstance(lease["assignedAt"], str)
+    # The single-row path, outside listCases' batch, says the same thing.
+    [row] = review.caseSubmissions(caseId=str(case["_id"]))
+    assert row["annotator"]["login"] == "adal" and row["revisionOf"] is None
+
+
+def test_annotators_are_listed_by_their_full_names(reviewing):
+    _, _, review, adminApi = reviewing
+    _annotator("grace", first="Grace", last="Hopper")
+
+    listed = {r["login"]: r for r in review.listAnnotators()}
+    stats = {r["login"]: r for r in adminApi.annotatorStats()}
+
+    assert listed["grace"]["name"] == "Grace Hopper"
+    assert stats["grace"]["name"] == "Grace Hopper"
+
+
+def test_a_full_name_never_carries_stray_spaces(girder_db):
+    from girder_segqueue.utils import fullName
+
+    assert fullName({"firstName": "Ada", "lastName": "Lovelace"}) == "Ada Lovelace"
+    assert fullName({"firstName": "Ada"}) == "Ada"
+    assert fullName({"lastName": "Lovelace"}) == "Lovelace"
+    assert fullName({}) == ""

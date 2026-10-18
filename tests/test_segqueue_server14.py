@@ -617,6 +617,47 @@ def test_a_poor_read_goes_to_review_with_per_class_reasons(world):
     queue.downloadCaseAsset(caseId=info["caseId"], kind="reference")
 
 
+def test_a_reviewer_sees_who_sent_what_and_under_which_filenames(world):
+    import numpy as np
+    from bson import ObjectId
+    from girder_segqueue14 import scoring
+
+    _readyProject(world)
+    queue = _resource()
+    _as(world.people["bobby"])
+    info = queue.nextCase(clientProtocol=16)
+    read = _tree(np)
+    read[read == 4] = 3             # poor enough to need a reviewer,
+    read[0, 0, 0] = 4               # but with every required class present
+    response = _submit(world, queue, world.people["bobby"], info, read)
+    scoring.runOnce()
+
+    _as(world.people["revy"])
+    row = queue.getSubmission(submissionId=response["submissionId"])
+    bobby = world.people["bobby"]
+    assert row["annotator"] == {"id": str(bobby["_id"]), "login": "bobby",
+                                "name": "bobby X"}
+    # The filenames Slicer picks its reader from travel with the row.
+    assert row["volumeName"] == f"{info['caseName']}.nii.gz"
+    assert row["submissionName"].endswith(".seg.nrrd")
+    assert isinstance(row["submittedAt"], str) and row["history"] == []
+
+    [history] = queue.caseSubmissions(caseId=info["caseId"])
+    assert history["submissionId"] == response["submissionId"]
+    assert history["revisionOf"] is None and isinstance(history["created"], str)
+
+    listed = {r["caseId"]: r for r in queue.listCases(state="submitted")}
+    [lease] = listed[info["caseId"]]["assignments"]
+    assert lease["annotator"] == "bobby" and lease["submissionCount"] == 1
+
+    missing = str(ObjectId())
+    for call in (queue.caseSubmissions, queue.downloadCaseVolume):
+        err = _refusal(call, caseId=missing)
+        assert err.code == 404 and err.extra["segqueueError"] == "no_such_case"
+    err = _refusal(queue.assignCase, caseId=missing, userId=str(bobby["_id"]))
+    assert err.extra["segqueueError"] == "no_such_case"
+
+
 def test_a_two_read_case_is_decided_when_both_reads_are_in(world):
     import numpy as np
     from girder_segqueue14 import scoring

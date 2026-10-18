@@ -62,14 +62,8 @@ class QueueResource(Resource):
     )
     def getProject(self):
         user = requireAnnotator(self.getCurrentUser())
-        quota = user.get('segqueueQuota')
-        remaining = None
-        if quota is not None:
-            done = Assignment().collection.count_documents({
-                'userId': user['_id'], 'state': st.APPROVED})
-            remaining = max(0, int(quota) - done)
         return getProject(
-            quotaRemaining=remaining,
+            quotaRemaining=self._quotaRemaining(user),
             uploadFolderId=str(incomingFolder(user)['_id']),
         ).to_dict()
 

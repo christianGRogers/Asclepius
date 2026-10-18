@@ -47,7 +47,8 @@ The launcher accepts this CT-only layout (`layout: girder-ct`) and prints `aorta
 open 36: 36, dev 44: 44), sealed 0`; the val-80 aortas are made in the job, so nothing comes from Trillium.
 
 `fetch_cases.py` ends with `1000 of 1000 CTs complete`, or with what is missing or still `.part` and the command to
-resume, and exits non-zero (#82). The launcher, and the job again before preprocessing, refuse unless all 1000 CTs
+resume, and exits non-zero (#82). Only one fetch runs per `cases/`: a second one is refused while the first holds
+`cases/.fetch.lock`, and each run writes its own `<file>.part.<pid>`. The launcher, and the job again before preprocessing, refuse unless all 1000 CTs
 and every ImageCAS-X train (560), val (80) and test (160) case are in `cases/`; they print the first missing ids and
 the resume command. `ICX4_ALLOW_PARTIAL=1` lets a deliberate partial run through; the default refuses.
 

@@ -8,14 +8,14 @@ Accepted layouts (README contract):
             'mask' is None
 A directory holding more than one of these (e.g. some case folders with a mask and some without) is refused.
 Prints what it found and fails loudly if nothing matches. A case folder without a finished ct.nii.gz (missing, or
-still ct.nii.gz.part from an interrupted fetch) is listed as incomplete (#82), never silently dropped.
+still ct.nii.gz.part[.<pid>] from an interrupted fetch) is listed as incomplete (#82), never silently dropped.
 
     python layout.py <start> [layout.json]          # find cases/, print the layout, write layout.json
     python layout.py check <layout.json> <icx dir>  # refuse unless all 1000 cases and every ImageCAS-X
                                                     # train/val/test case are present (#82)
 ICX4_ALLOW_PARTIAL=1 turns the check's refusal into a warning, for a deliberate partial run only.
 """
-import os, re, sys, json
+import glob, os, re, sys, json
 
 def find_cases_dir(start, override=None):
     if override:
@@ -54,7 +54,8 @@ def incomplete(cases_dir):
         p = os.path.join(cases_dir, f)
         cid = _cid_from_name(f)
         if cid and os.path.isdir(p) and not os.path.exists(os.path.join(p, 'ct.nii.gz')):
-            out[cid] = 'partial' if os.path.exists(os.path.join(p, 'ct.nii.gz.part')) else 'missing'
+            part = glob.glob(os.path.join(glob.escape(p), 'ct.nii.gz.part*'))   # .part or .part.<pid>
+            out[cid] = 'partial' if part else 'missing'
     return out
 
 

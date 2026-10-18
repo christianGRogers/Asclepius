@@ -238,17 +238,28 @@ def test_a_seeded_case_starts_with_the_seed_in_every_class_hidden():
     assert "ImportLabelmapToSegmentationNode" not in copy
 
 
+def _checkedExport():
+    # Both upload paths export through this one method, so the checks are
+    # asserted once here and each path is asserted to go through it.
+    return ast.get_source_segment(_source(), _method("SegQueue14Logic", "_exportChecked"))
+
+
 @pytest.mark.parametrize("method", ["submit", "reviseSubmission"])
 def test_overlapping_classes_are_refused_before_the_export(method):
+    checked = _checkedExport()
+    assert checked.index("classOverlaps()") < checked.index("self.exportLabelmap(")
+    assert "labels.overlap_message" in checked
     body = ast.get_source_segment(_source(), _method("SegQueue14Logic", method))
-    assert body.index("classOverlaps()") < body.index("exportLabelmap")
-    assert "labels.overlap_message" in body
+    assert "self._exportChecked(" in body and "self.exportLabelmap(" not in body
 
 
 @pytest.mark.parametrize("method", ["submit", "reviseSubmission"])
 def test_required_classes_are_checked_before_anything_is_uploaded(method):
+    checked = _checkedExport()
+    assert checked.index("self.exportLabelmap(") < checked.index("missing_required")
+    assert "labels.missing_required_message" in checked
     body = ast.get_source_segment(_source(), _method("SegQueue14Logic", method))
-    check = body.index("missing_required")
+    check = body.index("self._exportChecked(")
     assert check < body.index("uploadFile"), "the D13 check must come before the upload"
 
 

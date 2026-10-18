@@ -1095,24 +1095,7 @@ class SegQueue14Logic(ScriptedLoadableModuleLogic):
         self.bankTime()
         path = os.path.join(self.cache.caseDir(assignment.assignment_id),
                             "submission.seg.nrrd")
-        # D26: no voxel in two classes -- in particular, no class left as an
-        # untrimmed copy of the seed. Checked before the export, which would
-        # otherwise quietly give each shared voxel to one of the classes.
-        overlaps = self.classOverlaps()
-        if overlaps:
-            raise SegQueueError(labels.overlap_message(overlaps))
-        counts, sourceGeom, segGeom = self.exportLabelmap(path)
-
-        # D13: LAD, LCx and RCA must each have something in them. Checked here,
-        # on the exported volume the server will receive, so the annotator hears
-        # it before an upload rather than after; the server checks again.
-        missing = labels.missing_required(counts)
-        if missing:
-            raise SegQueueError(labels.missing_required_message(missing))
-        if not os.path.isfile(path):
-            raise SegQueueError(
-                "There is nothing to submit -- none of the segments has any "
-                "voxels in it.")
+        counts, sourceGeom, segGeom = self._exportChecked(path, "submit")
 
         meta = SubmissionMeta(
             checksum=sha256_file(path),
@@ -1161,24 +1144,8 @@ class SegQueue14Logic(ScriptedLoadableModuleLogic):
         if self.client is None or self.project is None:
             raise SegQueueError("You are not logged in.")
 
-        directory = os.path.join(self.cache.root, "review")
-        try:
-            os.makedirs(directory)
-        except OSError:
-            pass
-        path = os.path.join(directory, "revision.seg.nrrd")
-
-        overlaps = self.classOverlaps()
-        if overlaps:
-            raise SegQueueError(labels.overlap_message(overlaps))
-        counts, sourceGeom, segGeom = self.exportLabelmap(path)
-        missing = labels.missing_required(counts)
-        if missing:
-            raise SegQueueError(labels.missing_required_message(missing))
-        if not os.path.isfile(path):
-            raise SegQueueError(
-                "There is nothing to save -- none of the segments has any "
-                "voxels in it.")
+        path = os.path.join(self.reviewDir(), "revision.seg.nrrd")
+        counts, sourceGeom, segGeom = self._exportChecked(path, "save")
 
         meta = SubmissionMeta(
             checksum=sha256_file(path),
@@ -1196,6 +1163,43 @@ class SegQueue14Logic(ScriptedLoadableModuleLogic):
             name="revision_{}.seg.nrrd".format(submissionId),
             progress=progress)
         return self.client.reviseSubmission(submissionId, meta, uploaded["_id"])
+
+    def _exportChecked(self, path, action):
+        """Export the project segments to ``path``, refusing what the server would.
+
+        Returns ``(counts, sourceGeometry, segmentationGeometry)`` as
+        ``exportLabelmap`` does. The same checks guard an annotator's submission
+        and a reviewer's revision; ``action`` ("submit", "save") only words the
+        refusal for an empty scene.
+        """
+        # D26: no voxel in two classes -- in particular, no class left as an
+        # untrimmed copy of the seed. Checked before the export, which would
+        # otherwise quietly give each shared voxel to one of the classes.
+        overlaps = self.classOverlaps()
+        if overlaps:
+            raise SegQueueError(labels.overlap_message(overlaps))
+        counts, sourceGeom, segGeom = self.exportLabelmap(path)
+
+        # D13: LAD, LCx and RCA must each have something in them. Checked here,
+        # on the exported volume the server will receive, so the annotator hears
+        # it before an upload rather than after; the server checks again.
+        missing = labels.missing_required(counts)
+        if missing:
+            raise SegQueueError(labels.missing_required_message(missing))
+        if not os.path.isfile(path):
+            raise SegQueueError(
+                "There is nothing to {} -- none of the segments has any "
+                "voxels in it.".format(action))
+        return counts, sourceGeom, segGeom
+
+    def reviewDir(self):
+        """The scratch directory under the cache root that review work goes to."""
+        directory = os.path.join(self.cache.root, "review")
+        try:
+            os.makedirs(directory)
+        except OSError:
+            pass
+        return directory
 
     def release(self, reason=""):
         """Give a case back to the pool and purge it locally."""
@@ -2308,15 +2312,6 @@ class SegQueue14Widget(ScriptedLoadableModuleWidget):
         self.reviseButton.setEnabled(
             bool(self._claimedSubmission) and hasSubmission and not decided)
 
-    def _reviewDir(self):
-        """The scratch directory under the cache root that reviewer downloads go to."""
-        directory = os.path.join(self.logic.cache.root, "review")
-        try:
-            os.makedirs(directory)
-        except OSError:
-            pass
-        return directory
-
     def _reviewPaths(self, entry):
         """``(volumePath, segPath)`` named after what the files actually are.
 
@@ -2327,7 +2322,7 @@ class SegQueue14Widget(ScriptedLoadableModuleWidget):
         was. The server sends the real names; where it is too old to, the bytes
         get sniffed after the download (``SegQueue14Logic.correctSuffix``).
         """
-        directory = self._reviewDir()
+        directory = self.logic.reviewDir()
         return (os.path.join(directory, _safeName(entry.get("volumeName"),
                                                   "volume.nrrd")),
                 os.path.join(directory, _safeName(entry.get("submissionName"),
@@ -2474,7 +2469,7 @@ class SegQueue14Widget(ScriptedLoadableModuleWidget):
                 "first -- opening a case clears the scene.")
             return
 
-        directory = self._reviewDir()
+        directory = self.logic.reviewDir()
         volumePath = os.path.join(
             directory, _safeName(case.get("volumeName"), "case.nrrd"))
 
@@ -2646,7 +2641,7 @@ class SegQueue14Widget(ScriptedLoadableModuleWidget):
         if case is None or self.logic.volumeNode is None:
             slicer.util.errorDisplay("Open a case or a submission first.")
             return
-        directory = self._reviewDir()
+        directory = self.logic.reviewDir()
         path = os.path.join(directory, "case_reference.nii.gz")
         with _busy():
             try:

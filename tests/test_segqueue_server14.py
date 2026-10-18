@@ -617,6 +617,55 @@ def test_a_poor_read_goes_to_review_with_per_class_reasons(world):
     queue.downloadCaseAsset(caseId=info["caseId"], kind="reference")
 
 
+def _scoreFiles(world, read, reference):
+    """``scoring.scoreAgainst`` on two stored files, ``reference`` an ImageCAS-X one."""
+    from girder.models.folder import Folder
+    from girder_segqueue14 import scoring
+
+    folder = Folder().createFolder(world.admin, f"scratch-{uuid.uuid4().hex[:6]}",
+                                   parentType="user", creator=world.admin)
+    # ImageCAS-like voxel size, so "nearest" is measured in mm (array axes are x, y, z).
+    spacing = (0.35, 0.35, 0.5)
+    readFile = _upload(_nifti(world.data / "scratch_read.nii.gz", read, spacing),
+                       folder, world.admin)
+    refFile = _upload(_nifti(world.data / "scratch_ref.nii.gz", reference, spacing),
+                      folder, world.admin)
+    result, _ = scoring.scoreAgainst(readFile, refFile, icx14=True)
+    return result
+
+
+def test_imagecas_x_other_beside_an_lad_is_scored_as_lad(world):
+    """#57, D25: "Other" (14: D3/D4, OM3/OM4) takes the class of the nearest LAD/LCx in
+    mm, as the icx4 training labels do -- a read that draws that D3 as LAD is right."""
+    import numpy as np
+
+    tree = _tree(np)
+    reference = _icx(np, tree)
+    read = tree.copy()
+    lad = np.argwhere(tree == 2)
+    x0, x1, y = lad[:, 0].min(), lad[:, 0].max() + 1, lad[:, 1].max() + 1
+    assert not tree[x0:x1, y:y + 2].any()
+    reference[x0:x1, y:y + 2, 6:14] = 14        # a D3 alongside the LAD block
+    read[x0:x1, y:y + 2, 6:14] = 2
+    result = _scoreFiles(world, read, reference)
+    assert result["per_structure"]["LAD"]["dice"] == 1.0
+    assert result["mean_dice"] == 1.0
+
+
+def test_imagecas_x_reference_with_nothing_above_four_is_still_collapsed(world):
+    """#57: which labels a reference speaks is decided by what it is, not by its
+    highest value. LM, LAD, LCx and a D1 (4) -- no RCA: the 4 is LAD, not RCA."""
+    import numpy as np
+
+    tree = _tree(np)
+    reference = tree.copy()                      # 1 LM, 2 LAD, 3 LCx, 4 = D1
+    read = tree.copy()
+    read[tree == 4] = 2                          # the D1, drawn as LAD
+    result = _scoreFiles(world, read, reference)
+    assert result["per_structure"]["LAD"]["dice"] == 1.0
+    assert result["per_structure"]["RCA"]["voxels_ref"] == 0
+
+
 def test_a_reviewer_sees_who_sent_what_and_under_which_filenames(world):
     import numpy as np
     from bson import ObjectId

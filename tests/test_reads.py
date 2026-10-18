@@ -253,6 +253,14 @@ def test_icx_to_territory():
     assert R.icx_to_territory(icx).tolist() == [0, 1, 2, 2, 2, 3, 3, 3, 3, 3, 3, 4, 4, 4]
 
 
+def test_icx_to_territory_resolves_other_in_mm():
+    """Other is 3 voxels (1.5 mm) from an LAD and 4 voxels (1.4 mm) from an LCx."""
+    icx = np.zeros((6, 1, 5), np.int64)
+    icx[0, 0, 0], icx[0, 0, 3], icx[4, 0, 0] = 14, 2, 3
+    assert R.icx_to_territory(icx)[0, 0, 0] == R.LAD
+    assert R.icx_to_territory(icx, (0.35, 0.35, 0.5))[0, 0, 0] == R.LCX
+
+
 # ----------------------------------------------------------------------------- A12 report
 def test_first_reads_report_on_a_folder(tmp_path, tree):
     nib = pytest.importorskip("nibabel")

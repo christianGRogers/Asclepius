@@ -147,11 +147,15 @@ def _dice(a: np.ndarray, b: np.ndarray) -> float:
     return float(2 * np.logical_and(a, b).sum() / s) if s else float("nan")
 
 
-def icx_to_territory(icx14: np.ndarray) -> np.ndarray:
+def icx_to_territory(icx14: np.ndarray, spacing: Optional[Sequence[float]] = None) -> np.ndarray:
     """ImageCAS-X 14-class labels -> 4 classes under D1 (territory) and D1b (ramus -> LCx).
 
     ImageCAS-X's "Other" (D3/D4/OM3/OM4) does not say which parent it hangs from; it
-    takes the class of the nearest LAD or LCx voxel.
+    takes the class of the nearest LAD or LCx voxel, measured in mm with ``spacing``
+    (voxel size in array-axis order, e.g. ``img.header.get_zooms()[:3]``), as
+    ``trillium/icx4/lib/territory.py`` does for the icx4 training labels (D25).
+    ImageCAS is anisotropic, so pass the spacing whenever the volume may hold Other;
+    ``None`` measures in voxel indices (only correct on an isotropic grid).
     """
     icx14 = np.asarray(icx14).astype(np.int64)
     out = _ICX_TERRITORY[np.clip(icx14, 0, 14)].copy()
@@ -160,7 +164,8 @@ def icx_to_territory(icx14: np.ndarray) -> np.ndarray:
         src = np.isin(out, (LAD, LCX))
         if src.any():
             op = np.argwhere(other)
-            _, near = _nearest_in(src, op, np.ones(3))
+            sp = np.ones(3) if spacing is None else np.asarray(spacing, float)[:3]
+            _, near = _nearest_in(src, op, sp)
             out[tuple(op.T)] = out[tuple(near.T)]
     return out
 
@@ -994,11 +999,12 @@ def load_read_folder(
         if mask_img is not None:
             mask = np.asarray(mask_img.dataobj) > 0.5
         icx = None
+        spacing = tuple(float(z) for z in ref.header.get_zooms()[:3])
         if icx_dir and case[1:].isdigit():
             pth = os.path.join(icx_dir, f"{int(case[1:]) + 1}.coronary.nii.gz")
             if os.path.exists(pth):
-                icx = icx_to_territory(_to_grid(nib.load(pth), ref_aff, ref_shape, f"{case}/icx"))
-        spacing = tuple(float(z) for z in ref.header.get_zooms()[:3])
+                icx14 = _to_grid(nib.load(pth), ref_aff, ref_shape, f"{case}/icx")
+                icx = icx_to_territory(icx14, spacing)
         aorta = None
         if aorta_dir:
             for cand in (

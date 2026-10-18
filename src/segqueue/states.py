@@ -153,7 +153,7 @@ class TransitionError(RuntimeError):
     def __init__(self, state: str, event: str) -> None:
         self.state = state
         self.event = event
-        allowed = sorted(e for (s, e) in TRANSITIONS if s == state)
+        allowed = allowed_events(state)
         detail = ", ".join(allowed) if allowed else "none (terminal)"
         super().__init__(
             f"cannot {event} an assignment in state {state!r}; allowed here: {detail}"

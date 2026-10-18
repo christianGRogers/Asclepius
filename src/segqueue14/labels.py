@@ -22,7 +22,7 @@ Decisions (vault/Plans/Human decisions.md):
 
 from __future__ import annotations
 
-from typing import Dict, Iterable, List, Mapping
+from typing import Dict, Iterable, List, Mapping, Optional
 
 #: ``(label, name, colour, required, hint)`` in label order. Names are the short
 #: ImageCAS-X names; they are also the per-class file names in a training export
@@ -50,7 +50,7 @@ LABEL_VALUES: Dict[str, int] = {row[1]: row[0] for row in _TABLE}
 #: The classes that must be non-empty to submit (D13).
 REQUIRED: List[str] = [row[1] for row in _TABLE if row[3]]
 
-#: What annotators are told (D10, D12). Shown in the SegQueue14 panel and served
+#: What annotators are told (D25, D26, D12). Shown in the SegQueue14 panel and served
 #: as the default ``segqueue14.project`` instructions.
 INSTRUCTIONS = (
     "Each of the four classes -- LM, LAD, LCx, RCA -- starts as a full copy of the "
@@ -93,7 +93,7 @@ def segment_dicts() -> List[dict]:
     ]
 
 
-def segment_specs():
+def segment_specs() -> list:
     """The table as ``segqueue.protocol.SegmentSpec`` objects."""
     from segqueue.protocol import SegmentSpec
 
@@ -101,7 +101,7 @@ def segment_specs():
 
 
 def missing_required(voxel_counts: Mapping[str, int],
-                     required: Iterable[str] = None) -> List[str]:
+                     required: Optional[Iterable[str]] = None) -> List[str]:
     """The required classes with no voxels, in label order.
 
     ``voxel_counts`` is ``{segment name: voxels}``; a name absent from it counts

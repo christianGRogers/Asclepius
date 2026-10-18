@@ -44,14 +44,13 @@ SEGMENTATIONS_DIR = "segmentations"
 MASK_SUFFIXES = (".nii.gz", ".nii", ".nrrd", ".nhdr", ".mha", ".mhd")
 
 #: Every extension a volume or mask can arrive as, longest first so that
-#: ``.nii.gz`` is recognised before ``.gz`` would be. Medical imaging is full of
+#: ``.nii.gz`` is recognised before ``.nii`` would be. Medical imaging is full of
 #: two-part extensions and ``os.path.splitext`` handles exactly one of them.
-VOLUME_SUFFIXES = tuple(sorted(
-    set(MASK_SUFFIXES) | {".nii.gz", ".nrrd", ".mhd", ".mha", ".nhdr", ".nii"},
-    key=len, reverse=True))
+#: (The same set as ``MASK_SUFFIXES``; only the order differs.)
+VOLUME_SUFFIXES = tuple(sorted(set(MASK_SUFFIXES), key=len, reverse=True))
 
 
-def suffix_for(name, default=""):
+def suffix_for(name: Optional[str], default: str = "") -> str:
     """The recognised extension of a filename, e.g. ``s0004.nii.gz`` -> ``.nii.gz``.
 
     This exists because Slicer chooses its reader from the extension, not from
@@ -66,20 +65,20 @@ def suffix_for(name, default=""):
     return default
 
 
-#: File signatures. NIfTI puts its magic 344 bytes in, after the header
-#: struct, which is why this cannot be a simple prefix test.
+#: File signatures, for ``sniff_suffix``. NIfTI puts its magic 344 bytes in,
+#: after the header struct, which is why this cannot be a simple prefix test.
 GZIP_MAGIC = b"\x1f\x8b"
 NRRD_MAGIC = b"NRRD"
 NIFTI_MAGIC_OFFSET = 344
 NIFTI_MAGICS = (b"n+1\x00", b"ni1\x00")
 
 
-#: Magic numbers, checked against the file's own first bytes. Used only as a
-#: fallback: the server normally names the file, but a client talking to a
-#: server older than that field would otherwise write a NIfTI as ``.nrrd`` and
-#: hand Slicer something it cannot open.
-def sniff_suffix(path):
+def sniff_suffix(path) -> Optional[str]:
     """Guess a volume's format from its contents, or None.
+
+    Used only as a fallback: the server normally names the file, but a client
+    talking to a server older than that field would otherwise write a NIfTI as
+    ``.nrrd`` and hand Slicer something it cannot open.
 
     Content beats convention here for one specific reason: the checksum already
     proved the bytes are right, so the only thing that can still be wrong is the
@@ -166,6 +165,7 @@ def _find_one(directory: str, stems) -> Optional[str]:
 
 
 def find_volume(caseDir: str) -> Optional[str]:
+    """The case's CT, by the first of ``IMAGE_NAMES`` present, or None."""
     for name in IMAGE_NAMES:
         candidate = os.path.join(caseDir, name)
         if os.path.isfile(candidate):
@@ -192,11 +192,7 @@ def find_gold(name: str, goldRoot: Optional[str]) -> Optional[str]:
     """
     if not goldRoot:
         return None
-    for suffix in MASK_SUFFIXES:
-        candidate = os.path.join(goldRoot, name + suffix)
-        if os.path.isfile(candidate):
-            return candidate
-    return None
+    return _find_one(goldRoot, (name,))
 
 
 def case_dirs(root: str) -> Iterator[str]:

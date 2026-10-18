@@ -114,10 +114,12 @@ class Manifest:
     # -- views ------------------------------------------------------------
 
     def files(self) -> Iterator[FileEntry]:
+        """Every file entry, case by case, in manifest order."""
         for case in self.cases:
             yield from case.files
 
     def by_path(self) -> Dict[str, FileEntry]:
+        """Relative path -> its entry."""
         return {entry.path: entry for entry in self.files()}
 
     def case_of(self) -> Dict[str, str]:
@@ -130,6 +132,7 @@ class Manifest:
 
     @property
     def totals(self) -> Dict[str, int]:
+        """Case, file and byte counts -- derived, so they cannot disagree with ``cases``."""
         entries = list(self.files())
         return {"cases": len(self.cases), "files": len(entries),
                 "bytes": sum(e.size for e in entries)}
@@ -191,6 +194,7 @@ class Manifest:
 
     @classmethod
     def read(cls, root) -> Manifest:
+        """Load ``manifest.json`` from the root of a tree; ``ManifestError`` if absent."""
         path = os.path.join(str(root), MANIFEST_NAME)
         if not os.path.exists(path):
             raise ManifestError(
@@ -257,14 +261,8 @@ def build(root, cases: Optional[Sequence[str]] = None, source: Optional[Dict[str
 
 
 def _walk_files(directory: str) -> Iterator[str]:
-    """Every file under ``directory``, as a path relative to it, sorted."""
-    found = []
-    for current, subdirectories, filenames in os.walk(directory):
-        subdirectories.sort()
-        for name in sorted(filenames):
-            absolute = os.path.join(current, name)
-            found.append(os.path.relpath(absolute, directory))
-    return iter(sorted(_posix(p) for p in found))
+    """Every file under ``directory``, as a POSIX path relative to it, sorted."""
+    return iter(sorted(_tree_files(directory)))
 
 
 def _posix(path: str) -> str:
@@ -396,6 +394,7 @@ def verify(root, manifest: Manifest, mode: str = FULL, check_extra: bool = True,
 
 
 def _tree_files(root: str) -> Iterator[str]:
+    """Every file under ``root``, as a POSIX path relative to it, in walk order."""
     for current, subdirectories, filenames in os.walk(root):
         subdirectories.sort()
         for name in sorted(filenames):

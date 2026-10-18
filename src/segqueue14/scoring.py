@@ -6,20 +6,22 @@ which never calls them.
 
 The metric is ``segtrain.metrics.agreement`` -- the same Dice and HD95 the live
 SegQueue scores gold and duplicate cases with, and the training pipeline reports
--- applied to the 14 ImageCAS-X classes, with two additions:
+-- applied to the project's classes (``labels.NAMES``), with two additions:
 
 * **presence** per class: is the vessel there in the read, in the reference, and
   do they agree. A missed L-PDA is a Dice of 0 *and* a presence disagreement; the
   second is the one a reviewer can act on at a glance.
 * **cropping** to the union of both labellings before scoring. Dice and HD95 are
   unchanged by it (the margin keeps every surface voxel's neighbourhood), and it
-  turns fourteen distance transforms over a whole chest CT into fourteen over the
-  heart.
+  turns one distance transform per class over a whole chest CT into one per class
+  over the heart.
 """
 
 from __future__ import annotations
 
 from typing import Dict, List, Mapping, Optional, Sequence
+
+from segqueue.policy import usable_score as _usable
 
 from . import labels
 
@@ -46,8 +48,11 @@ def crop_to_union(a, b, margin: int = CROP_MARGIN):
     return a[window], b[window]
 
 
-def voxel_counts(volume, names: Sequence[str] = None) -> Dict[str, int]:
-    """``{class name: voxels}`` for a label volume with ImageCAS-X values."""
+def voxel_counts(volume, names: Optional[Sequence[str]] = None) -> Dict[str, int]:
+    """``{class name: voxels}`` for a label volume in the project's label values.
+
+    ``names[i]`` is the class written as label ``i + 1``.
+    """
     import numpy as np
 
     names = list(labels.NAMES if names is None else names)
@@ -58,7 +63,7 @@ def voxel_counts(volume, names: Sequence[str] = None) -> Dict[str, int]:
 
 
 def score_labels(read, reference, spacing: Sequence[float],
-                 names: Sequence[str] = None) -> dict:
+                 names: Optional[Sequence[str]] = None) -> dict:
     """Score a read against a reference on the same grid.
 
     ``read`` and ``reference`` are integer arrays in the same index order with the
@@ -88,7 +93,8 @@ def score_labels(read, reference, spacing: Sequence[float],
     return result
 
 
-def required_min_dice(result: Mapping, required: Sequence[str] = None) -> Optional[float]:
+def required_min_dice(result: Mapping,
+                      required: Optional[Sequence[str]] = None) -> Optional[float]:
     """Lowest Dice among the required classes that are in either volume."""
     values = []
     for name in (labels.REQUIRED if required is None else required):
@@ -96,12 +102,6 @@ def required_min_dice(result: Mapping, required: Sequence[str] = None) -> Option
         if dice is not None:
             values.append(float(dice))
     return min(values) if values else None
-
-
-def _usable(value) -> bool:
-    if isinstance(value, bool) or not isinstance(value, (int, float)):
-        return False
-    return value == value and value not in (float("inf"), float("-inf"))
 
 
 def reference_flags(result: Optional[Mapping], thresholds: Mapping) -> List[str]:

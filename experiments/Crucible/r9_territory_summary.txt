@@ -1,0 +1,15 @@
+cases 720 Counter({'train': 560, 'test': 80, 'val': 80})
+LM: present 709/720; share of tree voxels 0.052; median volume 99 mm3; side-branch share median 0.000 mean 0.000 p90 0.000; cases with >1 component(>=10 vox) 0; median 2nd comp 0 vox
+LAD: present 720/720; share of tree voxels 0.293; median volume 573 mm3; side-branch share median 0.245 mean 0.247 p90 0.373; cases with >1 component(>=10 vox) 2; median 2nd comp 248.0 vox
+LCx: present 720/720; share of tree voxels 0.229; median volume 424 mm3; side-branch share median 0.352 mean 0.337 p90 0.572; cases with >1 component(>=10 vox) 6; median 2nd comp 1074.5 vox
+RCA: present 720/720; share of tree voxels 0.425; median volume 805 mm3; side-branch share median 0.248 mean 0.238 p90 0.355; cases with >1 component(>=10 vox) 0; median 2nd comp 0 vox
+tree components >=10 vox: [(2, 708), (3, 12)]
+LM-RCA cases with contact 0 median voxels when >0 0
+LAD-RCA cases with contact 4 median voxels when >0 9.5
+LCx-RCA cases with contact 3 median voxels when >0 9
+Other present 85 cases; by split Counter({'train': 65, 'val': 11, 'test': 9}) ; share of all tree voxels 0.0044
+Other pieces 90 voxels 107643
+touching a named vessel: agree 82 107176 vox; disagree 7 8 vox; isolated 1 459 vox; split across classes 2 3416
+disagreements (assigned->touches): [(('LAD', 'RCA'), 4), (('LCx', 'RCA'), 3)]
+isolated pieces assigned: Counter({'LAD': 1})
+cases with a disagreeing Other piece 7 ['c0032', 'c0346', 'c0035', 'c0045', 'c0746', 'c0748', 'c0802']

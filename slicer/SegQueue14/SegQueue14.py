@@ -806,32 +806,10 @@ class SegQueue14Logic(ScriptedLoadableModuleLogic):
         return moved
 
     def segmentIdFor(self, name):
+        """The id of the open case's segment called ``name``, or None."""
         if self.segmentationNode is None:
             return None
-        segmentation = self.segmentationNode.GetSegmentation()
-        for i in range(segmentation.GetNumberOfSegments()):
-            segmentId = segmentation.GetNthSegmentID(i)
-            if segmentation.GetSegment(segmentId).GetName() == name:
-                return segmentId
-        return None
-
-    def segmentHasContent(self, name):
-        """Whether a segment has any voxels, cheaply.
-
-        Reads the internal labelmap, which Slicer keeps cropped to the segment's
-        own extent -- for a coronary branch that is a few hundred kilobytes, so
-        this is affordable on a timer in a way re-exporting the whole volume
-        would not be.
-        """
-        segmentId = self.segmentIdFor(name)
-        if not segmentId:
-            return False
-        try:
-            array = slicer.util.arrayFromSegmentBinaryLabelmap(
-                self.segmentationNode, segmentId)
-        except Exception:
-            return False
-        return array is not None and array.size > 0 and bool(array.any())
+        return _segmentIdIn(self.segmentationNode, name)
 
     def correctSuffix(self, path):
         """Rename a volume to match what its bytes actually are.
@@ -1246,6 +1224,7 @@ def _labelValueOf(segment, segmentId):
 
 
 def _segmentIdIn(segmentationNode, name):
+    """The id of the segment called ``name`` in any segmentation node, or None."""
     segmentation = segmentationNode.GetSegmentation()
     for i in range(segmentation.GetNumberOfSegments()):
         segmentId = segmentation.GetNthSegmentID(i)
@@ -1255,6 +1234,12 @@ def _segmentIdIn(segmentationNode, name):
 
 
 def _segmentHasContent(segmentationNode, name):
+    """Whether a segment has any voxels, cheaply.
+
+    Reads the internal labelmap, which Slicer keeps cropped to the segment's own
+    extent -- for a coronary branch that is a few hundred kilobytes, far cheaper
+    than re-exporting the whole volume.
+    """
     segmentId = _segmentIdIn(segmentationNode, name)
     if not segmentId:
         return False
@@ -1933,7 +1918,6 @@ class SegQueue14Widget(ScriptedLoadableModuleWidget):
         box.text = "Submit"
         self.layout.addWidget(box)
         layout = qt.QVBoxLayout(box)
-        self.submitBox = box
 
         layout.setSpacing(8)
 

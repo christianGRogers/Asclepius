@@ -97,13 +97,20 @@ Fir GPU nodes have 1 × AMD EPYC 9454 (Zen 4, 48 cores, 2.75 GHz), 1125 GB and 4
 The question is whether 10 augmentation workers (icx4's `NPROC − 2`) keep an H100 fed with 256³ batches.
 Measured here: [[Foxtrot - On Fir's 12 cores per H100 the icx4 loader may set the pace, so budget four chained jobs]].
 
-{THROUGHPUT_SUMMARY}
+- **Measured:** nnU-Net 2.8.1's own loader and augmentation, run on the icx4 plan (256³ patch, batch 2,
+  411³ pre-rotation crop) on one CPU thread, costs **7.9 CPU-s per batch** alone (95 % CI 6.6–9.2) and
+  **9.4** with three workers contending.
+- **The GPU's pace** on Trillium (icx14, same plan): 182.0 s per epoch with no spread, i.e. ≈ 0.69 s per
+  training step. To keep up, the loader must supply ≈ 1.46 batches/s.
+- **On Fir**, 10 workers supply ≈ 1.06–1.39 batches/s. This assumes Zen 4 is 1.0–1.3× this sandbox's
+  Emerald Rapids per core, which I did not measure. The expected epoch is **≈ 190–245 s**, i.e. 5–35 %
+  slower than Trillium, and 1000 epochs take ≈ 53–68 h.
 
 **Plan:**
 - Keep icx4's Fir profile as is: `--gpus-per-node=h100:1 --cpus-per-task=12 --mem=280G`, `def-aso22`,
   23:50 walltime, `CHAIN=4`.
 - Keep the 1000 epochs. The poly schedule must complete (A22), and the chain resumes across jobs.
-- **Budget: {BUDGET}.** Four chained jobs give 95 h of walltime, which covers the slow end. Fir allows
+- **Budget: ≈ 57–73 H100-hours (training 53–68 h, preparation ≈ 1 h, predicting 1000 cases plus aortas and tF1 ≈ 3–4 h), in 3 chained jobs at the fast end and 4 at the slow end.** Four chained jobs give 95 h of walltime, which covers the slow end. Fir allows
   7-day jobs, but the 24 h chain is the tested path (the icx14 resume bug cost 23 GPU-h), so keep it.
 - **Not proposed:** asking for 24 cores. At 0.98 cores per RGU, 24 cores cost about 24.5 RGU, twice the
   H100's 12.2. That roughly doubles the fairshare charged for a gain of at most ~25 % in wall time, and
@@ -215,7 +222,7 @@ list it so the lead knows it exists.
 
 | Observation | Threshold | Change |
 |---|---|---|
-| s/epoch in the first Fir job | > 290 s after epoch 20 (1000 epochs would exceed the 4-job chain) | the lead adds a 5th chained job (`CHAIN=5`). No recipe change; the schedule stays at 1000 epochs |
+| s/epoch in the first Fir job | > 300 s after epoch 20 (4 jobs no longer cover 1000 epochs plus prediction) | the lead submits one more job after the chain (`CHAIN=1 ./icx4`; it resumes). No recipe change; the schedule stays at 1000 epochs. If Fir's queue is long, Nibi (14 cores) instead |
 | Whole-tree Dice, open-80 | < 88.3 | §7.1: check collapse, window and preprocessing before predictions are used |
 | Any class's Dice vs the four-class ceiling | > 8 points below | that class goes first in a miss census (CPU) |
 | LCx decisive tF1 | lowest class, as every source predicts | expected; not an alarm by itself |
@@ -255,7 +262,7 @@ squeue -u $USER --name icx4                 # 4 jobs, the later ones (Dependency
 
 - **Resources:** 1 × H100 80 GB, 12 cores, 280 GB, 23:50 per job, account `def-aso22`, 4 jobs chained
   (`afterany`).
-- **Expected GPU-hours:** {BUDGET_SHORT}.
+- **Expected GPU-hours:** ≈ 57–73 H100-hours over 3–4 jobs (training 53–68 h; Trillium would be ≈ 55 h).
 - **Send back:**
   - `./icx4 status` after the first job: the s/epoch line;
   - `./icx4 collect` at the end, then `results/` (SUMMARY.md, results.json, logs; < 50 MB).

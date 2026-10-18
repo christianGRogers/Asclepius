@@ -1,7 +1,7 @@
 ---
 aliases: [Compute inventory, Compute inventory 2026-10]
 tags: [plans, experiment, compute, trillium, icx4]
-status: waiting on the lead (account facts)
+status: Fir chosen by the lead; waiting on the lead (account facts)
 updated: 2026-10-18
 issue: christianGRogers/Asclepius#46
 ---
@@ -84,7 +84,7 @@ standard Alliance software stack", but no page states the StdEnv version for Kil
 | Walltime 23:50 + 4-job chain, deadline stop at 23:35 | Trillium max 24 h | Allowed (24 h partition). A single 72 h job would also fit, but the chain is tested, so keep it | Unchanged |
 | Login node does all internet (Zenodo, pip) | Required | Works; compute nodes also have internet on Fir/Nibi | Unchanged |
 | Writes `$SCRATCH` only; venv in `$HOME/icx14-venv` | Required | `$SCRATCH` is set on every Alliance cluster. The venv does not exist yet, so the first run builds it (a few GB of the 50 GB HOME) | Unchanged |
-| Data path: walks up to `<root>/cases/` | Lead's copy on Trillium | **`cases/` must be copied** to the new cluster's scratch (Globus `alliancecan#trillium` → `alliancecan#nibi` / `#fir`) | Lead action |
+| Data path: walks up to `<root>/cases/` | Lead's copy on Trillium | **`cases/` must be copied** to the new cluster's scratch (Globus `alliancecan#trillium` → `alliancecan#nibi` / `alliancecan#fir-globus`) | Lead action |
 | ResEnc 60 GB plan, 256³ patch, batch 2 | 80 GB H100 | Same GPU, so the same plan and the same model | Unchanged |
 | Data loading: 22 augmentation workers | 24 cores | 10 (Fir), 12 (Nibi), 14 (Rorqual) workers | **Risk, see below** |
 | Error and help text naming Trillium | — | Cosmetic | Reworded |
@@ -108,6 +108,43 @@ The CPU estimate is uncertain by about 2× (it was measured on a loaded 4-core m
 on Nibi or Fir instead of ~50, i.e. 3 jobs of the 4-job chain, possibly all 4. `./icx4 status` shows s/epoch
 after the first hours. If it is above ~250 s, the extra jobs are chained anyway.
 
+## Fir: facts a training plan needs
+
+The lead has chosen **Fir** (relayed by the PM, 2026-10-18). Sources: [F], [J], [S], [P], [B], [G] and the wheel list
+[WH] https://docs.alliancecan.ca/wiki/Available_Python_wheels, all read 2026-10-18.
+
+| Topic | Fact | Source |
+|---|---|---|
+| GPU nodes | 160 nodes, each **4 × H100 SXM5 80 GB** (NVLink), 1 × EPYC 9454 (48 cores), 1125 G RAM, **7.84 TB local NVMe** | [F] |
+| Per-GPU share | Bundle **12 cores / 288 GB**, recommended **12 cores / 280 GB**; "no more than 12 CPU cores" per GPU. Each NUMA domain is 12 cores beside one GPU; the docs suggest `--cpus-per-task=12` per GPU task (or 6, one CCD) | [B][G][F] |
+| GPU request | `--gpus=h100:1` (one), `--gpus-per-node=h100:N` (several). About half the GPU nodes are MIG (1g.10gb, 2g.20gb, 3g.40gb); an untyped request may get one | [F] |
+| Walltime | **7 days (168 h) max**; at least 1 h (5 min for tests). Partitions are picked by walltime (≤ 3 h, 12 h, 24 h, 72 h, 7 d), nested, so shorter jobs have more nodes; separate by-node and by-core partitions; no `-p` needed | [F][J] |
+| Job and GPU limits for `def-` | Not stated in the docs. **The lead's `sacctmgr` output (2026-10-18) shows no MaxJobs, MaxSubmit, MaxTRES or GrpTRES on `def-aso22_cpu` / `def-aso22_gpu`**, so no per-account cap is set. Priority is fairshare with a one-week half-life | [J][A], lead |
+| Multi-GPU | 4 GPUs per node with NVLink, so a 1-node DDP run of up to 4 H100s is possible; it costs 4× the fairshare | [F] |
+| HOME | 50 GB, 500 K files, backed up | [S] |
+| SCRATCH | **20 TB, 1 M files, not backed up; purged when ctime and atime are both > 60 days** (checked month end; warnings on the 1st and 12th; deletion on the 15th; list in `/scratch/to_delete/`) | [S][P] |
+| PROJECT | 1 TB, 500 K files per group, backed up; can be raised to 40 TB through RAS. Writable from compute nodes (unlike Trillium) | [S] |
+| NEARLINE | 2 TB, 5000 files per group (tape) | [S] |
+| Compute internet | Full access from compute nodes | [F] |
+| Staging `cases/` | Globus `alliancecan#trillium` → **`alliancecan#fir-globus`**; for rsync/scp use the login node `fir.alliancecan.ca` (no separate transfer node yet) | [F] |
+| Local disk | `$SLURM_TMPDIR` on the 7.84 TB NVMe, shared by the jobs on a node, wiped at job end | [F][S] |
+| Software | CVMFS `StdEnv/2023`; wheelhouse `torch` **2.10.0–2.14.1**; wheelhouse `nnunetv2` **2.5.1 and 2.1 only**. icx4 pins **2.8.1 from PyPI**, which works because Fir has internet. Apptainer via `module load apptainer` | [WH][SW][AT] |
+| Access | Opt in once at CCDB → Resources → Access Systems → Fir (up to 1 h) | [F] |
+
+What this means for a plan:
+- **Keep a durable copy of `cases/` in PROJECT if it fits under 1 TB**, and work from SCRATCH. A copy left untouched
+  for 60 days in SCRATCH is purged.
+- A 1-GPU job gets 12 cores, half of Trillium's 24. That leaves ~10 augmentation workers, so expect 50–70 GPU-hours
+  for 1000 epochs (see the throughput risk above).
+- One 7-day job could replace the 4-job chain. The chain still fits the 24 h partition, which has more nodes, so it
+  is likely to start sooner.
+
+To confirm the limits, the lead runs on `fir.alliancecan.ca`:
+
+```sh
+sacctmgr -n show assoc where user=$USER format=account%20,maxjobs,maxsubmit,maxtres%40,grptres%40
+```
+
 ## What it changes
 
 - icx4 can run this week on **Nibi** (recommended) or **Fir** with the same account, GPU and recipe. The model is
@@ -118,11 +155,36 @@ after the first hours. If it is above ~250 s, the extra jobs are chained anyway.
 - HPSS is not worth setting up now. If the project later wants an off-cluster copy of finished models and
   predictions, the lead can ask SciNet for the 2 TB starter quota.
 
-## Account-specific facts *(to be filled in from the lead's output on #46)*
+## Account-specific facts *(Fir from the lead's output, 2026-10-18; others still to come)*
+
+**Fir, what the output means for icx4:**
+- **Account:** jobs keep `--account=def-aso22`. On Fir, Slurm charges a GPU job to `def-aso22_gpu` and a CPU job to
+  `def-aso22_cpu` *(the usual Alliance mapping; the first `sbatch` confirms it)*.
+- **Partition:** a 23:50 one-GPU job lands in `gpubase_bygpu_b3` (24 h).
+- **Priority:** nothing has been used on Fir yet, so priority is as high as it gets.
+- **Software:** the modules icx4 loads are present, and the wheelhouse torch matches Python 3.11. The venv build
+  on the login node should work as on Trillium.
+- **Queue:** `partition-stats` at 2026-10-18 ~06:00 UTC showed **no idle GPU nodes**. A one-GPU job counts as a
+  "by core" GPU job:
+
+  | Max walltime | Queued | Running | Nodes |
+  |---|---|---|---|
+  | 3 h | 1496 | 51 | 90 |
+  | 12 h | 316 | 113 | 90 |
+  | **24 h** | **309** | **216** | **90** |
+  | 72 h | 118 | 230 | 60 |
+  | 168 h | 28 | 195 | 30 |
+
+  Expect a wait before the first job starts. The account's top priority (no usage yet) should put it near the front
+  of the 24 h queue. **Keep icx4's 23:50 chain:** the 24 h partition has 90 nodes, against 60 for 72 h and 30 for
+  7 d, so short jobs have more nodes to start on.
+- **Still missing:** the PROJECT space. `diskusage_report` lists only HOME and SCRATCH, and the `ls ~/projects` check
+  was not in the paste. This doesn't block icx4, which writes only to SCRATCH. It only matters for keeping a durable
+  copy of `cases/`.
 
 | Cluster | Can log in? | `sshare` accounts | Scratch used / quota | H100 partitions (from `sinfo`) | Modules load? | `cases/` size |
 |---|---|---|---|---|---|---|
 | Trillium | yes | def-aso22 (LevelFS: ?) | ? | — | yes | ? |
 | Nibi | ? | ? | ? | ? | ? | — |
-| Fir | ? | ? | ? | ? | ? | — |
+| Fir | **yes** (`login3.int.fir.alliancecan.ca`, `CC_CLUSTER=fir`, so `./icx4` picks the Fir profile itself; `SCRATCH=/scratch/croger`) | **`def-aso22_cpu` and `def-aso22_gpu`**: RawUsage 0, FairShare 0.98, LevelFS inf (top priority); no limits set | HOME 36 KiB / 48 GiB; SCRATCH 20 KiB / 19 TiB; **PROJECT not listed** *(ask)* | `gpubase_bygpu_b1` 3 h, `_b2` 12 h, `_b3` 24 h, `_b4` 3 d (`_b5` 7 d cut off by `head`), plus `gpubackfill` 24 h; ~80 full-H100 nodes and ~43 MIG nodes per partition, ~13 drained | **yes**: `StdEnv/2023 python/3.11.5 cuda/12.6` loads (the chained `module list` ran); `avail_wheels torch` shows **torch 2.14.1, cp311, x86-64-v3** | — |
 | Killarney / Vulcan / tamIA | ? | aip-? | ? | ? | ? | — |

@@ -1,0 +1,145 @@
+#!/bin/bash
+# delta9: Delta v9's decisive score of the icx4 model on Fir (run after `./icx4 status` reports DONE).
+#
+#   cd <root>/experiments/Delta/r9_fir
+#   ./delta9 score     # CPU job (~1 h): tF1 at the pinned hash, ImageCAS-X start points as ostia, FP gate, Dice
+#   ./delta9 aorta     # optional GPU job (~1 h of one H100): TotalSegmentator aortas for the same 160 cases, so
+#                      # `./delta9 score` (run after it) also reports A1-as-written and the paired difference
+#   ./delta9 all       # both: the aorta job, then the score job (afterany: it uses whatever aortas exist)
+#   ./delta9 status    # job state;   ./delta9 collect   # small results -> ./results/
+#   DELTA9_DRYRUN=1 ./delta9 score   # print the job script, submit nothing
+#
+# Scores ImageCAS-X val (80) and the 80 NON-sealed test cases; the 80 sealed cases are refused (A14).
+# Reads icx4's work directory ($SCRATCH/icx4: predictions/, icx/, layout.json) and reuses icx4's venv.
+# Overrides: ACCOUNT (default def-aso22), ICX4_W (default $SCRATCH/icx4), ICX4_VENV, TS_VENV.
+set -euo pipefail
+HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+ROOT="$(cd "$HERE/../../.." && pwd)"
+MODE="${1:-}"
+DRY="${DELTA9_DRYRUN:-0}"
+say() { printf '[delta9] %s\n' "$*"; }
+die() { printf '[delta9] ERROR: %s\n' "$*" >&2; exit 1; }
+[ -n "${SCRATCH:-}" ] || { [ "$DRY" = "1" ] && SCRATCH="${TMPDIR:-/tmp}/delta9-dry"; } || die "\$SCRATCH is not set"
+IW="${ICX4_W:-$SCRATCH/icx4}"
+W="$SCRATCH/delta9"; mkdir -p "$W/logs"
+VENV="${ICX4_VENV:-$HOME/icx14-venv}"
+TS_VENV="${TS_VENV:-$HOME/ts-venv}"
+ACCOUNT_LINE="#SBATCH --account=${ACCOUNT:-def-aso22}"
+
+need_icx4_done() {
+    [ "$DRY" = "1" ] && return 0
+    [ -e "$IW/DONE" ] || die "icx4 is not DONE in $IW (./icx4 status); score after it finishes"
+}
+
+JID=""
+submit() {   # $1 = job script, $2 = optional extra sbatch argument (a dependency)
+    if [ "$DRY" = "1" ]; then say "dry run: would submit (${2:-no dependency}):"; cat "$1"; JID=DRY; return 0; fi
+    cd "$W" && JID="$(sbatch --parsable ${2:+"$2"} "$1")" && say "submitted $JID ($1)"
+}
+
+if [ "$MODE" = "all" ]; then
+    "$0" aorta | tee "$W/logs/all.log"
+    AJ="$(sed -n 's/.*submitted \([0-9]*\) .*/\1/p' "$W/logs/all.log" | tail -n 1)"
+    [ -n "$AJ" ] || [ "$DRY" = "1" ] || die "aorta job was not submitted"
+    DELTA9_AFTER="${AJ:-DRY}" DELTA9_AORTA_PENDING=1 "$0" score
+    exit 0
+fi
+
+case "$MODE" in
+score)
+    need_icx4_done
+    if [ "$DRY" != "1" ]; then
+        module load StdEnv/2023 python/3.11.5
+        # shellcheck disable=SC1091
+        source "$VENV/bin/activate"
+        python -c "import skimage" 2>/dev/null || pip install --no-index scikit-image
+        python -c "import skimage, nibabel, scipy; print('[delta9] venv ok')"
+    fi
+    AORTA_ARG=""
+    { [ -e "$W/.aorta_done" ] || [ -n "${DELTA9_AORTA_PENDING:-}" ]; } && AORTA_ARG="--aorta-dir $W/aorta"
+    cat > "$W/score.sh" <<EOF
+#!/bin/bash
+#SBATCH --job-name=delta9-score
+#SBATCH --nodes=1
+#SBATCH --cpus-per-task=32
+#SBATCH --mem=192G
+#SBATCH --time=03:00:00
+#SBATCH --output=$W/logs/slurm-score-%j.out
+$ACCOUNT_LINE
+set -uo pipefail
+module load StdEnv/2023 python/3.11.5
+source "$VENV/bin/activate"
+export OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 PYTHONUNBUFFERED=1
+python "$HERE/score_tf1.py" "$IW" "$IW/icx" "$ROOT" "$W/results" --nproc 24 $AORTA_ARG
+EOF
+    submit "$W/score.sh" ${DELTA9_AFTER:+--dependency=afterany:$DELTA9_AFTER} ;;
+aorta)
+    need_icx4_done
+    if [ "$DRY" != "1" ]; then
+        module load StdEnv/2023 python/3.11.5
+        if [ ! -f "$TS_VENV/.ts_ok" ]; then   # atlas2's tested recipe (trillium/atlas2/atlas2, setup_venv)
+            virtualenv --no-download "$TS_VENV"
+            # shellcheck disable=SC1091
+            source "$TS_VENV/bin/activate"
+            pip install --no-index --upgrade pip
+            pip install --no-index torch torchvision
+            pip install "nnunetv2==2.8.1" nibabel scipy
+            pip install --no-deps "TotalSegmentator==2.18.0"
+            pip install tqdm requests dicom2nifti xmltodict blosc
+            deactivate; touch "$TS_VENV/.ts_ok"
+        fi
+        # shellcheck disable=SC1091
+        source "$TS_VENV/bin/activate"
+        export TOTALSEG_HOME_DIR="$W/totalseg"
+        if [ ! -e "$TOTALSEG_HOME_DIR/.weights_ok" ]; then
+            mkdir -p "$TOTALSEG_HOME_DIR"; totalseg_download_weights -t total_fast
+            python - "$TOTALSEG_HOME_DIR" <<'PYEOF'
+import json, os, sys
+from totalsegmentator.config import setup_totalseg
+setup_totalseg()
+p = os.path.join(sys.argv[1], 'config.json'); c = json.load(open(p)); c['send_usage_stats'] = False
+json.dump(c, open(p, 'w'))
+PYEOF
+            touch "$TOTALSEG_HOME_DIR/.weights_ok"
+        fi
+        # the 160 non-sealed cases (val + open test) and their CTs, from icx4's layout
+        python - "$IW" "$ROOT/trillium/sealed_test.json" "$W/aorta_cases.json" <<'PYEOF'
+import json, sys
+iw, sealed_json, out = sys.argv[1:4]
+L = json.load(open(f'{iw}/layout.json'))['cases']
+S = json.load(open(sealed_json)); sealed = set(S['sealed_icx_test']) | set(S['sealed_quality0'])
+ids = lambda s: ['c%04d' % (int(x) - 1) for x in open(f'{iw}/icx/{s}.txt').read().split()]
+cases = {c: L[c]['ct'] for c in ids('val') + ids('test') if c not in sealed and c in L}
+json.dump(cases, open(out, 'w')); print(f'[delta9] {len(cases)} cases for aortas (sealed excluded)')
+PYEOF
+    fi
+    cat > "$W/aorta.sh" <<EOF
+#!/bin/bash
+#SBATCH --job-name=delta9-aorta
+#SBATCH --nodes=1
+#SBATCH --gpus-per-node=h100:1
+#SBATCH --cpus-per-task=12
+#SBATCH --mem=96G
+#SBATCH --time=02:00:00
+#SBATCH --output=$W/logs/slurm-aorta-%j.out
+$ACCOUNT_LINE
+set -uo pipefail
+module load StdEnv/2023 python/3.11.5 cuda/12.6
+source "$TS_VENV/bin/activate"
+export TOTALSEG_HOME_DIR="$W/totalseg" PYTHONUNBUFFERED=1
+python "$ROOT/trillium/atlas2/lib/aorta.py" "$W/aorta" "$W/aorta_cases.json" "$ROOT/trillium/sealed_test.json" gpu \
+    && touch "$W/.aorta_done"
+EOF
+    submit "$W/aorta.sh" ;;
+status)
+    command -v squeue >/dev/null && squeue -u "$USER" -n delta9-score,delta9-aorta || true
+    [ -e "$W/.aorta_done" ] && say "aortas done: $(ls "$W/aorta" | wc -l) files"
+    [ -f "$W/results/SUMMARY.md" ] && head -n 20 "$W/results/SUMMARY.md"
+    tail -n 3 "$W"/logs/slurm-*.out 2>/dev/null || true ;;
+collect)
+    mkdir -p "$HERE/results"
+    cp "$W"/results/{SUMMARY.md,summary.json,per_case.jsonl} "$HERE/results/" 2>/dev/null || true
+    cp "$W"/logs/slurm-*.out "$HERE/results/" 2>/dev/null || true
+    say "copied to $HERE/results/ (send SUMMARY.md, summary.json and per_case.jsonl back)" ;;
+*) die "usage: ./delta9 score | aorta | all | status | collect" ;;
+esac

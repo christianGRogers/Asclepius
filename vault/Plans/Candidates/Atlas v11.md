@@ -174,8 +174,8 @@ As built on `dev` today, icx4's `score.py` scores every case in ImageCAS-X's `te
 
 | Job | What | GPU-h on Fir (estimate) |
 |---|---|---|
-| **A** | icx4 (with #66), seed 1, 1000 epochs. Then it predicts all 1000 cases, computes aortas for the open 80, and scores the open 80 by tF1 (decisive on open-36; dev-44 apart) and Dice | 52–110 (see §6.2), +0.5 for aortas |
-| **B** (lead's choice, recommended) | the same, second seed, **concurrent**: `ICX4_WORK=$SCRATCH/icx4-seed2` (#66) | 52–110 |
+| **A** | icx4 (with #66), seed 1, 1000 epochs. Then it predicts all 1000 cases, computes aortas for the open 80, and scores the open 80 by tF1 (decisive on open-36; dev-44 apart) and Dice | 55–85 expected, ≤ 110 (§6.2), +0.5 for aortas |
+| **B** (lead's choice, recommended) | the same, second seed, **concurrent**: `ICX4_WORK=$SCRATCH/icx4-seed2` (#66) | 55–85, ≤ 110 |
 | CPU, login node | `r9_score_icx4.py`: tF1, FP and Dice on the **val 80**, both runs, paired → σ̂_seed | ~2 core-h |
 | **E** (after A and B) | ensemble predictions of val + open 36 with both checkpoints (nnU-Net averages the two models' softmax); softmax saved (A7) | ≈ 1 |
 
@@ -255,7 +255,7 @@ ICX4_CLUSTER=fir CHAIN=5 ./icx4                       # → five job ids
 ./icx4 status        # the epoch line; s/epoch = time between epoch lines. Apply §6.2's rule.
 ```
 
-**Expected:** 52–110 GPU-h for Job A (§6.2), plus ~2 h of preprocessing in job 1, and ~2–4 h of prediction and
+**Expected:** 55–85 GPU-h for Job A, ≤ 110 h worst case (§6.2), plus ~2 h of preprocessing in job 1, and ~2–4 h of prediction and
 ~0.5 h of aortas in the last job. Each hour is charged as one GPU bundle (12.2 RGU).
 
 **Send back** (as for Trillium): `./icx4 collect` → `results/` (SUMMARY.md with the decisive open-36 tF1,
@@ -269,12 +269,13 @@ results.json, logs). The checkpoint stays on Fir. Copy it out of the 60-day purg
 | Trillium, 22 loader workers | 175–182 s/epoch, GPU-bound (loader wait 0.02 %) | R0; icx14 logs |
 | GPU step | ≈ 0.72 s per batch of 2 | 181 s / 250 iterations |
 | Fir loader workers | 10 (`nnUNet_n_proc_DA = cores − 2`) | `job_body.sh` |
-| Augmentation cost per 256³ sample, 1 thread | **≈ 5–8 CPU-s**, heavy-tailed: median 0.6 s, 23–57 s when rotation or scaling fires | [[Atlas - On Fir's 12-core share nnU-Net's loader may set the pace]] |
-| ⇒ loader-bound epoch on Fir | 500 samples × 5–8 s / 10 workers = **250–400 s** | arithmetic |
-| ⇒ 1000 epochs | **52 h** (GPU-bound) to **110 h** (loader-bound) | — |
+| Augmentation cost per 256³ sample, 1 thread | **3.3–6.1 CPU-s** (n = 56; trimmed / pooled mean), bimodal: ~0.1–1 s without a spatial transform, 5–13 s with one (46 % of samples), rare 36–73 s outliers | [[Atlas - On Fir's 12-core share nnU-Net's loader may set the pace]] |
+| Consistency with Trillium | Trillium is loader-bound only if c > 7.9 s; R0 measured a 0.02 % loader wait | ✓ |
+| ⇒ Fir epoch | max(181 s GPU, 500 × c / 10) = **181–305 s** (395 s if a Fir core is 1.3× slower) | arithmetic |
+| ⇒ 1000 epochs | **≈ 55–85 h expected**, ≈ 110 h worst case | — |
 
-Neither number is known to better than ×2: the per-sample cost was measured on a shared 4-core VM, not on a Fir
-EPYC core. So job 1 measures it.
+The per-sample cost was measured on a 4-core VM's Xeon, not a Fir EPYC core, and it leaves out reading the
+preprocessed data, so job 1 measures it for real.
 
 **Rule (fixed now).** Read s/epoch from the first ~20 training epochs of job 1:
 
@@ -397,7 +398,7 @@ two reads**, so the lead must choose where they come from (§9 Q2).
 
 ## 9. Decisions for the lead
 
-1. **Job B (second seed): yes or no.** It doubles Phase F1's GPU (≈ 52–110 h more). Atlas recommends yes, run
+1. **Job B (second seed): yes or no.** It doubles Phase F1's GPU (≈ 55–85 h more). Atlas recommends yes, run
    concurrently with A (`ICX4_WORK`, #66): Fir has 640 H100s, and σ_seed blocks every later decision.
 2. **Where D6's paired reads on sealed cases come from.** D22 means the 80 sealed ImageCAS-X cases will never be read
    by the team, and D23 means the 20 sealed quality-0 cases will not be either. Options:
@@ -436,12 +437,12 @@ two reads**, so the lead must choose where they come from (§9 Q2).
 ## 11. Cost
 
 - **GPU (Fir):**
-  - Job A: 52–110 h.
+  - Job A: 55–85 h expected, ≤ 110 h.
   - Job B: the same (if approved).
   - Ensemble: ≈ 1 h.
   - Pool prediction: ≈ 3–4 h.
 
-  Phase F1 + F2 total: **≈ 56–115 h with A only**, **≈ 110–225 h with B**. Phase F3 is as v10 §2.7.5
+  Phase F1 + F2 total: **≈ 60–90 h with A only** (≤ 115 h), **≈ 115–175 h with B** (≤ 225 h). Phase F3 is as v10 §2.7.5
   (≈ 170 H100-h to the final model), re-costed after R4.
 - **CPU:** login-node scoring, ≈ 2 core-h per run.
 - **Lead time:**

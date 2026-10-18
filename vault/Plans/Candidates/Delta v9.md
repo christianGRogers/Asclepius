@@ -76,7 +76,7 @@ The case mapping c(id − 1) and the split files are ImageCAS-X's own, as in icx
 | 0. Prerequisites: CCDB opt-in for Fir; copy `cases/` (Globus `alliancecan#trillium` → `alliancecan#fir`) and the repo at `dev` **with #55 merged** | lead | 0 | before 1 |
 | 1. **icx4**: plan + preprocess, 1000 epochs, predict 1000 cases, Dice score (open 80 only, after #55) | 1 × H100, 12 cores, 280 GB; chain of 4 × 23:50 | **50–70** (Trillium measured 184 s/epoch, 455 epochs in 23.3 h on icx14; Fir has 10 data workers instead of 22, so up to 1.4× slower) | first |
 | 2. **delta9 aorta** (optional, recommended): TotalSegmentator aortas for the 160 non-sealed test/val cases | 1 × H100, 2 h limit | ≤ 1.5 | after 1 |
-| 3. **delta9 score**: decisive tF1 (P1, P2), A1-as-written paired if step 2 ran, FP gate, Dice | CPU, 32 cores, 128 GB, 3 h limit | 0 | after 2 |
+| 3. **delta9 score**: decisive tF1 (P1, P2), A1-as-written paired if step 2 ran, FP gate, Dice | CPU, 32 cores, 192 GB, 3 h limit | 0 | after 2 |
 | 4. Copy the checkpoint and `results/` from SCRATCH to PROJECT (60-day purge) | lead | 0 | after 3 |
 | Total | | **≈ 52–72 GPU-h** | about 3–4 days with queue wait |
 

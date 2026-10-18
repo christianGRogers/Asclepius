@@ -62,7 +62,7 @@ score)
 #SBATCH --job-name=delta9-score
 #SBATCH --nodes=1
 #SBATCH --cpus-per-task=32
-#SBATCH --mem=128G
+#SBATCH --mem=192G
 #SBATCH --time=03:00:00
 #SBATCH --output=$W/logs/slurm-score-%j.out
 $ACCOUNT_LINE
@@ -70,7 +70,7 @@ set -uo pipefail
 module load StdEnv/2023 python/3.11.5
 source "$VENV/bin/activate"
 export OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 PYTHONUNBUFFERED=1
-python "$HERE/score_tf1.py" "$IW" "$IW/icx" "$ROOT" "$W/results" --nproc 30 $AORTA_ARG
+python "$HERE/score_tf1.py" "$IW" "$IW/icx" "$ROOT" "$W/results" --nproc 24 $AORTA_ARG
 EOF
     submit "$W/score.sh" ${DELTA9_AFTER:+--dependency=afterany:$DELTA9_AFTER} ;;
 aorta)

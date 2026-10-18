@@ -114,7 +114,11 @@ Measured here: [[Foxtrot - On Fir's 12 cores per H100 the icx4 loader may set th
   7-day jobs, but the 24 h chain is the tested path (the icx14 resume bug cost 23 GPU-h), so keep it.
 - **Not proposed:** asking for 24 cores. At 0.98 cores per RGU, 24 cores cost about 24.5 RGU, twice the
   H100's 12.2. That roughly doubles the fairshare charged for a gain of at most ~25 % in wall time, and
-  `def-aso22` runs at opportunistic priority. It is a fallback only (§9).
+  fairshare is worth keeping even though `def-aso22`'s usage on Fir is at zero today. It is a fallback only (§9).
+- **Account facts (#46, via the PM):** Slurm accounts `def-aso22_gpu` / `def-aso22_cpu` (`--account=def-aso22` is
+  what the launcher passes, as on the other Alliance clusters; if `sbatch` rejects it, `ACCOUNT=def-aso22_gpu`);
+  walltime partitions 3 h, 12 h, 24 h, 3 d, 7 d and `gpubackfill` 24 h, so the 23:50 jobs fall in the 24 h
+  partition; `h100:1` must be explicit, or the job may land on a MIG slice (icx4's Fir profile already does this).
 
 ## 6. Deciding metric
 
@@ -276,8 +280,8 @@ pooled volumes with `checkpoint_final.pth`; aortas and tF1 run outside the job.
 | Risk | Likelihood | Effect | Mitigation |
 |---|---|---|---|
 | Fir's loader is slower than estimated | medium | longer wall time, not a worse model | 4-job chain; s/epoch check after job 1 |
-| Opportunistic priority means long queue waits | unknown (#46 has no `sshare` output yet) | days of delay | Nibi has the same profile (`ICX4_CLUSTER=nibi`, 14 cores) |
-| Fir scratch purge (60 days) | certain over time | loses predictions and checkpoint | `./icx4 collect` at the end; copy `checkpoint_final.pth` to PROJECT (1 TB) |
+| Long queue waits | low: the lead's `sshare` on Fir shows `def-aso22` with RawUsage 0 (fairshare at its maximum) and no MaxJobs/MaxTRES/GrpTRES limits (PM, from #46 / PR #52) | days of delay | Nibi has the same profile (`ICX4_CLUSTER=nibi`, 14 cores) |
+| Fir scratch purge (60 days; SCRATCH 19 TiB, HOME 48 GiB per #46) | certain over time | loses predictions and checkpoint | `./icx4 collect` at the end; copy `checkpoint_final.pth` (≈ 0.5 GB) to HOME, or to PROJECT once its quota is confirmed (#46 has not confirmed it) |
 | Sealed test opened by the old `score.py` | low if §10 is followed | A14 broken | #55 before the last job |
 | One seed | certain | no seed CI on the baseline | A22: the first paired decision adds a second seed to its control |
 | The ceiling estimate is approximate | certain | §7.2 thresholds are soft | they decide nothing; A10 decides |

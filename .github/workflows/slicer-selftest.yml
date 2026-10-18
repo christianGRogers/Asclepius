@@ -39,7 +39,10 @@ permissions:
 jobs:
   selftest:
     name: SegQueue inside Slicer
-    runs-on: ubuntu-latest
+    # Pinned, not ubuntu-latest: package names change between images
+    # (libasound2 became libasound2t64 in 24.04), and an image bump should not
+    # silently break the apt step again.
+    runs-on: ubuntu-24.04
     timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
@@ -50,9 +53,8 @@ jobs:
           sudo apt-get install -y --no-install-recommends \
             xvfb libpulse-dev libnss3 libglu1-mesa libxcb-icccm4 \
             libxcb-image0 libxcb-keysyms1 libxcb-randr0 libxcb-render-util0 \
-            libxcb-xinerama4 libxcb-xkb1 libxkbcommon-x11-0 libxrender1 \
-            libsm6 libxt6 libasound2t64 || \
-          sudo apt-get install -y --no-install-recommends libasound2
+            libxcb-xinerama0 libxcb-xkb1 libxkbcommon-x11-0 libxrender1 \
+            libsm6 libxt6 libasound2t64
 
       - name: Download Slicer
         env:
@@ -75,6 +77,10 @@ jobs:
         #
         # The Extensions Manager loads what it installed at the *next* start,
         # which is why this is its own Slicer invocation.
+        #
+        # `shell: bash` turns on pipefail, so a failed install is not hidden
+        # behind the exit status of `tail`.
+        shell: bash
         run: |
           xvfb-run -a "$SLICER" --no-splash --no-main-window \
             --python-code "

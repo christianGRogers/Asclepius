@@ -368,9 +368,11 @@ class SegQueue14Logic(ScriptedLoadableModuleLogic):
         """Load an integer label volume into the project's segments, by value.
 
         A voxel of value 3 goes into the segment whose label is 3 (LCx), and so
-        on for all 14: the prediction, the submission and ImageCAS-X share their
-        label values, so the value *is* the class. Values the project does not
-        know are dropped rather than becoming segments nobody asked for.
+        on for each of the project's four classes (D25): the prelabel and the
+        submission use the project's label values, so the value *is* the class.
+        Values the project does not know are dropped rather than becoming
+        segments nobody asked for. Nothing is remapped here, so a volume in
+        ImageCAS-X's own 14 values would land in the wrong segments (#68).
 
         One class at a time, as a 0/1 mask imported into exactly one named
         segment. Slicer's import resamples into the segmentation's geometry when

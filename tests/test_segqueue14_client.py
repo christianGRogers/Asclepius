@@ -116,6 +116,22 @@ def test_a_missing_required_class_refusal_keeps_its_code():
     assert caught.value.detail["missing"] == ["LCx"]
 
 
+def test_every_client_error_carries_a_code_and_detail(tmp_path):
+    # An unstructured HTTP failure, and one the client raises itself, both have
+    # the two attributes a structured refusal has -- empty, not missing.
+    session = FakeSession({("GET", "user/me"): FakeResponse(
+        502, None, text="Bad gateway")})
+    with pytest.raises(SegQueue14Error) as caught:
+        makeClient(session).whoami()
+    assert (caught.value.code, caught.value.detail) == (None, {})
+    assert str(caught.value) == "Bad gateway (HTTP 502)"
+
+    with pytest.raises(SegQueue14Error) as caught:
+        makeClient(FakeSession()).addCaseNote("c1", "   ")
+    assert (caught.value.code, caught.value.detail) == (None, {})
+    assert caught.value.args == ("There is nothing to post.",)
+
+
 def test_review_routes_are_under_segqueue14(tmp_path):
     session = FakeSession()
     client = makeClient(session)

@@ -45,7 +45,19 @@ Progress = Optional[Callable[[int, int], None]]
 
 
 class SegQueue14Error(RuntimeError):
-    """Anything that went wrong talking to the server, with usable text."""
+    """Anything that went wrong talking to the server, with usable text.
+
+    ``code`` is the server's structured refusal code (a ``protocol.ERR_*``) and
+    ``detail`` its extra fields, when the failure was such a refusal; otherwise
+    ``None`` and ``{}``. Every instance carries both, so callers can branch on
+    ``exc.code`` without first asking whether it is there.
+    """
+
+    def __init__(self, message: str, code: Optional[str] = None,
+                 detail: Optional[Dict[str, Any]] = None) -> None:
+        super().__init__(message)
+        self.code = code
+        self.detail = detail if detail is not None else {}
 
 
 def filenameFromResponse(response: requests.Response) -> str:
@@ -119,10 +131,7 @@ class SegQueue14Client:
 
         structured = protocol.parse_error(body)
         if structured is not None:
-            error = SegQueue14Error(str(structured))
-            error.code = structured.code
-            error.detail = structured.detail
-            return error
+            return SegQueue14Error(str(structured), structured.code, structured.detail)
 
         message = ''
         if isinstance(body, dict):
@@ -132,10 +141,7 @@ class SegQueue14Client:
 
         if response.status_code == 401:
             message = 'Your session has expired. Log in again.'
-        error = SegQueue14Error(f'{message} (HTTP {response.status_code})')
-        error.code = None
-        error.detail = {}
-        return error
+        return SegQueue14Error(f'{message} (HTTP {response.status_code})')
 
     @staticmethod
     def _writeBody(response, handle, total=0, progress=None):
@@ -222,7 +228,7 @@ class SegQueue14Client:
             data = self._json('POST', protocol.path(protocol.NEXT),
                               params={'clientProtocol': PROTOCOL_VERSION})
         except SegQueue14Error as exc:
-            if getattr(exc, 'code', None) == protocol.ERR_QUEUE_EMPTY:
+            if exc.code == protocol.ERR_QUEUE_EMPTY:
                 return None
             raise
         return protocol.AssignmentInfo14.from_dict(data)
@@ -271,7 +277,7 @@ class SegQueue14Client:
                 'GET', protocol.path(protocol.CASE_ASSET, case_id=caseId, kind=kind),
                 stream=True)
         except SegQueue14Error as exc:
-            if getattr(exc, 'code', None) == protocol.ERR_NO_ASSET:
+            if exc.code == protocol.ERR_NO_ASSET:
                 return None
             raise
 
@@ -498,7 +504,7 @@ class SegQueue14Client:
         except SegQueue14Error as exc:
             # Most cases ship neither mask and the panel asks for both on every
             # one, so absence is an answer rather than a failure.
-            if getattr(exc, 'code', None) == protocol.ERR_NO_ASSET:
+            if exc.code == protocol.ERR_NO_ASSET:
                 return None
             raise
 

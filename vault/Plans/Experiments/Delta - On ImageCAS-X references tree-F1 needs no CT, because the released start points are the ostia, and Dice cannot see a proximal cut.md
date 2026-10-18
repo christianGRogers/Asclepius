@@ -32,7 +32,7 @@ icx4 trains a four-class model on ImageCAS-X collapsed by territory (D8, D25). I
 - `r9_vtkcl.py` (VTK reader) and `r9_export_ostia.py` (start points, and the check against a label rule);
 - `r9_pieces.py` (what a second piece is).
 
-CPU only, about 1.5 h on 3 cores.
+CPU only, about 1.5 h on 3 cores. The per-case output is `experiments/Delta/r9_results.jsonl`, and `r9_summary.txt` holds the `summarise_r9.py` output that the tables below quote.
 
 **Ostium from start points.** Each start point becomes a 1 mm ball, passed to `find_ostia` as its `aorta` argument. A1's rule of record ("the reference centreline voxel nearest the aorta, if within 5 mm") then picks the centreline voxel nearest the start point. Same code, same hash.
 - ImageCAS-X defines the start points in "Postprocessing" (arXiv:2608.30404v1): centreline vertices "with a degree of 1 lying within 5 mm of the aorta", the aorta being TotalSegmentator's heart-chambers model. So they are A1's own construction, made by the dataset's authors on its own reference.

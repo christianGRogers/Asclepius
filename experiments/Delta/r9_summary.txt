@@ -1,0 +1,21 @@
+cases: 720 (val 80)
+present: {'LM': 709, 'LAD': 720, 'LCx': 720, 'RCA': 720}
+more than one piece: {'LM': 0, 'LAD': 6, 'LCx': 20, 'RCA': 1}
+trees (components) per case: {np.int64(2): np.int64(707), np.int64(3): np.int64(13)}
+cases with Other voxels: 85
+classes without centreline: 0 cases []
+LM centreline mm: median 9.3, <3 mm: 20, p10 4.4
+expert leaf candidates (left,right) counts: {np.str_('0,1'): np.int64(9), np.str_('0,2'): np.int64(2), np.str_('1,1'): np.int64(657), np.str_('1,2'): np.int64(52)}
+left: expert ostium to our centreline: n 709 median 0.35 p95 1.35 max 4.73; thick rule vs expert: median 0.56, >2 mm 40, >5 mm 0 (0.0 %)
+right: expert ostium to our centreline: n 720 median 0.00 p95 0.71 max 2.01; thick rule vs expert: median 0.38, >2 mm 36, >5 mm 29 (4.0 %)
+flagged cases: thick-only 0 (no cross-check possible without CT), expert-ostium 38; expert-ostium trees by rule: {np.str_('aorta'): np.int64(1429), np.str_('thick'): np.int64(22)}
+
+Q3 cut test on 80 cases
+  LM: Dice median 0.786 (min 0.442); tF1 expert ostia median 0.192 (max 0.857); tF1 thick ostia median 0.192 (max 0.857)
+  LAD: Dice median 1.000 (min 0.986); tF1 expert ostia median 0.000 (max 1.000); tF1 thick ostia median 0.000 (max 1.000)
+  LCx: Dice median 1.000 (min 0.984); tF1 expert ostia median 0.000 (max 1.000); tF1 thick ostia median 0.000 (max 1.000)
+  RCA: Dice median 0.982 (min 0.891); tF1 expert ostia median 0.128 (max 0.992); tF1 thick ostia median 0.129 (max 0.992)
+  whole-tree Dice median 0.982 (min 0.972); macro tF1 expert median 0.086, thick median 0.086
+  cases where thick vs expert ostia change the cut macro by > 0.05: 5 ['c0106', 'c0133', 'c0186', 'c0514', 'c0899']
+  LAD/LCx with Dice >= 0.95 but tF1 < 0.5 (a cut Dice cannot see): 140 of 160
+  self-score tF1 == 1: 80 of 80

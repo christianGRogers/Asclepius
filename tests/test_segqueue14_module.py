@@ -331,3 +331,18 @@ def test_the_archive_is_the_segqueue_extension_and_is_self_sufficient(tmp_path):
     out = subprocess.run([sys.executable, "-I", "-c", code], capture_output=True, text=True)
     assert out.returncode == 0, out.stderr
     assert out.stdout.strip() == "16"
+
+
+def test_a_half_downloaded_helper_is_never_a_cache_hit(tmp_path):
+    # #64: a ``.part`` left by a download Slicer never finished must not be
+    # reused as the helper; only a completed file counts.
+    import os
+    namespace = {"os": os}
+    exec(compile(ast.Module(body=[_method("SegQueue14Logic", "_cachedHelper")],
+                            type_ignores=[]), str(MODULE), "exec"), namespace)
+    cachedHelper = namespace["_cachedHelper"]
+    stem = str(tmp_path / "prelabel")
+    (tmp_path / "prelabel.nii.gz.part").write_bytes(b"\x1f\x8bhalf")
+    assert cachedHelper(None, stem) is None
+    (tmp_path / "prelabel.nii.gz").write_bytes(b"\x1f\x8bwhole")
+    assert cachedHelper(None, stem) == stem + ".nii.gz"

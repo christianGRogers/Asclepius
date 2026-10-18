@@ -20,7 +20,8 @@ RCA) model trained on 1000 cases our labelling team annotates. Notes on running
 the annotation programme, the 14-class schema debate, publication checklists,
 regulation and licensing were removed; they remain in git history.
 
-- **[[Training plan]]** — the method for the multiclass coronary model: what is
+- **[[Training plan]]** — *historical (pre-tournament, 2026-09-19); the plan in force is the
+  [[Master plan]] under [[Human decisions]] D25.* The method for the multiclass coronary model: what is
   decided, the reasoning, and the evidence. The repository's README carries a
   short summary and points here.
 - **[[Plan status]]** — what was removed when the previous plan was retired, and

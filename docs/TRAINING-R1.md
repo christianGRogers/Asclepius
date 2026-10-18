@@ -1,5 +1,13 @@
 # R1 on Trillium: the four-class coronary model
 
+> **Historical (D8, D25).** This runbook trains on the D0 target: ImageCAS-X names projected onto the
+> *original* ImageCAS mask (`segtrain proxy`, task 712, `coronary_branches`). D8 (2026-10-11) replaced that
+> lumen with ImageCAS-X's own, and D25 (2026-10-17) set the four classes on it. The current 4-class run is
+> [`trillium/icx4`](../trillium/icx4/README.md) (Dataset 715, ImageCAS-X collapsed by territory). The plan for
+> Fir is being decided in Tournament Round 9 (#48). The sealed-test refusals and the
+> `segtrain` commands below still work, but no `configs/tasks/` entry exists yet for the `coronary_icx4`
+> label set (see `vault/Plans/Experiments/Echo - Audit for the four-class schema (D25).md`).
+
 The runbook for the model the plan tournament settled on: one four-class nnU-Net
 (`712_CoronaryBranches`: left main, LAD, LCx, RCA) at 0.5 mm, trained first on proxy
 labels and then on the team's double reads. The reasoning is in the vault:

@@ -45,6 +45,10 @@ that contradicts one of them cannot win.
 
 ## The restructure of 2026-10-11 (D8–D10)
 
+> **Partly reversed (D25, 2026-10-17).** The 14-class part of this restructure (D9, and D10's
+> 14-class prelabels) no longer holds: D25 restores four classes and D1/D1b's territory grouping.
+> D8 (ImageCAS-X's lumen) still holds. This section is kept as the record of 2026-10-11.
+
 The project lead found ImageCAS-X and restructured the project: one model is trained on
 ImageCAS-X's 14 classes as drawn (`trillium/icx14`), it predicts all 1000 cases, and the
 annotators correct those predictions in SegQueue. D0, D4 and the four-class grouping of

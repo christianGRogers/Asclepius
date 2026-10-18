@@ -41,6 +41,7 @@ mkdir -p "$W/logs"
 
 check_hash() {
     local h
+    [ -f "$LIB/vendor/segtrain/tf1.py" ] || die "lib/vendor/segtrain was removed after the run (#51); restore it with: git checkout 743fe90 -- trillium/atlas3/lib/vendor"
     h="$(sha256sum "$LIB/vendor/segtrain/tf1.py" | cut -d' ' -f1)"
     [ "$h" = "$FROZEN_SHA" ] || die "lib/vendor/segtrain/tf1.py has sha256 $h, not the pinned $FROZEN_SHA (A1c): refusing to run"
     say "metric: segtrain.tf1 sha256 $h = pinned hash (A1c)"

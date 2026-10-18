@@ -215,6 +215,22 @@ def run():
     check("and into existing classes", filled == 4 and got == {
         name: TUBE_VOXELS for name in TUBES}, got)
 
+    # Without SetLabelValue in the import, a submission still carries the project's
+    # values: exportLabelmap numbers the classes by project order (1 LM ... 4 RCA).
+    logic.segmentationNode = fresh
+    counts, _source, _segmentation = logic.exportLabelmap(os.path.join(tmp, "pre.seg.nrrd"))
+    exported = slicer.util.loadLabelVolume(os.path.join(tmp, "pre.seg.nrrd"))
+    array = slicer.util.arrayFromVolume(exported)
+    slicer.mrmlScene.RemoveNode(exported)
+    byValue = {}
+    for name, (lo, hi) in TUBES.items():
+        found = np.unique(array[5:35, lo:hi, lo:hi])
+        byValue[name] = [int(v) for v in found]
+    check("an imported prelabel exports under the project's label values",
+          counts == {name: TUBE_VOXELS for name in TUBES}
+          and byValue == {name: [labels.LABEL_VALUES[name]] for name in TUBES},
+          (counts, byValue))
+
 
 try:
     run()

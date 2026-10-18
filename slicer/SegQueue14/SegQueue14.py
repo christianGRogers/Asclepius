@@ -418,14 +418,15 @@ class SegQueue14Logic(ScriptedLoadableModuleLogic):
                 target = vtk.vtkStringArray()
                 target.InsertNextValue(segmentId)
                 logic.ImportLabelmapToSegmentationNode(scratch, segmentationNode, target)
+                # No SetLabelValue here: the import leaves the voxels in a layer
+                # under the value it chose, and changing the segment's value
+                # afterwards makes them unreadable -- every class but the first
+                # came back empty (Slicer 5.12, found with #68). Nothing needs it:
+                # exportLabelmap numbers the classes by project order.
                 segment = segmentationNode.GetSegmentation().GetSegment(segmentId)
                 if segment is not None:
                     segment.SetName(spec.name)
                     segment.SetColor(*spec.color)
-                    try:
-                        segment.SetLabelValue(int(spec.label))
-                    except AttributeError:  # pragma: no cover - old Slicer
-                        pass
                 if _segmentHasContent(segmentationNode, spec.name):
                     filled += 1
         finally:

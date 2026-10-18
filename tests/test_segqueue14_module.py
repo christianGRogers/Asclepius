@@ -211,6 +211,9 @@ def test_the_prelabel_goes_into_the_project_segments_by_label_value():
     # One class at a time into one named segment, so a class absent from the
     # prediction cannot shift the rest into the wrong segments.
     assert "values == int(spec.label)" in body
+    # Changing a segment's label value after the import empties every class but the
+    # first (Slicer 5.12; tests/slicer_selftest14.py checks the real thing).
+    assert ".SetLabelValue(" not in body
 
 
 def test_only_the_imagecas_x_reference_is_collapsed_from_14_classes():

@@ -186,6 +186,35 @@ def run():
           ref == {"LM": TUBE_VOXELS, "LAD": TUBE_VOXELS + stub, "LCx": TUBE_VOXELS,
                   "RCA": TUBE_VOXELS}, ref)
 
+    # The same import by value (a prelabel, in the four): every class, not only the
+    # first -- into a fresh node, and again into the classes it now has (a case's
+    # project segments exist before its prelabel is imported).
+    four = np.zeros(SHAPE, np.uint8)
+    for name, (lo, hi) in TUBES.items():
+        four[5:35, lo:hi, lo:hi] = labels.LABEL_VALUES[name]
+    fourNode = slicer.mrmlScene.AddNewNodeByClass("vtkMRMLLabelMapVolumeNode", "four")
+    slicer.util.updateVolumeFromArray(fourNode, four)
+    fourNode.CopyOrientation(volume)
+    fourPath = os.path.join(tmp, "prelabel.nii.gz")
+    slicer.util.saveNode(fourNode, fourPath)
+    slicer.mrmlScene.RemoveNode(fourNode)
+    fresh = slicer.mrmlScene.AddNewNodeByClass("vtkMRMLSegmentationNode", "prelabel")
+    fresh.CreateDefaultDisplayNodes()
+    fresh.SetReferenceImageGeometryParameterFromVolumeNode(volume)
+    filled = logic.importLabelsIntoProject(fourPath, segmentationNode=fresh)
+    got = _counts(slicer, labels, fresh, volume, lambda name: module._segmentIdIn(fresh, name))
+    check("a four-class volume imports into every class", filled == 4 and got == {
+        name: TUBE_VOXELS for name in TUBES}, got)
+    for spec in labels.segment_specs():
+        segment = fresh.GetSegmentation().GetSegment(module._segmentIdIn(fresh, spec.name))
+        segment.SetLabelValue(int(spec.label))  # as _applyTemplate leaves them
+        slicer.util.updateSegmentBinaryLabelmapFromArray(
+            np.zeros(SHAPE, np.uint8), fresh, module._segmentIdIn(fresh, spec.name), volume)
+    filled = logic.importLabelsIntoProject(fourPath, segmentationNode=fresh)
+    got = _counts(slicer, labels, fresh, volume, lambda name: module._segmentIdIn(fresh, name))
+    check("and into existing classes", filled == 4 and got == {
+        name: TUBE_VOXELS for name in TUBES}, got)
+
 
 try:
     run()

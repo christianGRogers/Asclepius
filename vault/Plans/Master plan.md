@@ -24,34 +24,24 @@ The job predicts all 1000 ImageCAS cases and scores **decisive tF1** (A1c hash `
 
 **Before you start.**
 - Fir access is already enabled: the lead has logged in, `CC_CLUSTER=fir`, `SCRATCH=/scratch/croger`.
-- `dev` contains #66: `trillium/icx4/lib/sealed.py` exists.
+- Nothing comes from Trillium (#79/#80): the CTs come from Girder (D22 layout), and the job makes the val-80 aortas itself.
 
-**1. Data, Trillium → Fir.** Use the Globus web app:
-- source `alliancecan#trillium`, path `<root>/cases/` (the folder icx4/icx14 used on Trillium) → destination `alliancecan#fir-globus`, path `/scratch/croger/asclepius/cases/`;
-- second transfer: `$SCRATCH/atlas2/aorta/` on Trillium → `/scratch/croger/asclepius/aorta_val80/`. These are 116 TotalSegmentator aortas, for the val 80 + open 36. They are used later on CPU and do not block the job.
-
-Or use rsync from the Fir login node:
+**1–2. Data, code and submit.** On `fir.alliancecan.ca`, inside `tmux`:
 
 ```sh
+module load StdEnv/2023 python/3.11.5
 mkdir -p $SCRATCH/asclepius && cd $SCRATCH/asclepius
-rsync -a --info=progress2 <you>@trillium.scinet.utoronto.ca:<root>/cases/ cases/
-rsync -a <you>@trillium.scinet.utoronto.ca:'$SCRATCH/atlas2/aorta/' aorta_val80/
-```
-
-**2. Code and submit.** On `fir.alliancecan.ca`, inside `tmux`:
-
-```sh
-cd $SCRATCH/asclepius
-ls cases/*.img.nii.gz | wc -l                 # expect 1000 (each case is <n>.img.nii.gz + <n>.label.nii.gz)
 git clone -b dev https://github.com/christianGRogers/Asclepius.git repo || git -C repo pull --ff-only
-test -f repo/trillium/icx4/lib/sealed.py && echo "#66 present"      # must print; otherwise stop and tell the PM
+python3 repo/trillium/fetch_cases.py cases    # ~91 GB of CTs, resumable (re-run if cut off); asks for the Girder login once
 mkdir -p experiments && rm -rf experiments/icx4 && cp -r repo/trillium/icx4 experiments/icx4
-cd experiments/icx4
-ICX4_CLUSTER=fir CHAIN=5 ./icx4               # builds $HOME/icx14-venv and the TotalSegmentator venv once,
-                                              # fetches ImageCAS-X labels (Zenodo), checks the seal, submits 5 chained jobs
+cd experiments/icx4 && ICX4_CLUSTER=fir CHAIN=5 ./icx4
 ```
+
+Skip `ICX4_DRYRUN=1` on Fir (the system `python3` lacks `remotezip`); the real launcher prints the same checks before it submits.
 
 **Check the printout:**
+- `layout: girder-ct`, `cases found: 1000`;
+- `aorta set: 160 cases (val 80: 80, open 36: 36, dev 44: 44), sealed 0`;
 - `[icx4] cluster: fir`;
 - the metric hash line (`= frozen hash (A1c)`);
 - the sealed filter's counts (open-36 36, dev-44 44);
@@ -65,8 +55,6 @@ squeue -u $USER --name icx4                   # 5 jobs; jobs 2-5 wait on (Depend
 ```
 
 If any header line is wrong, run `scancel $(cat $SCRATCH/icx4/submitted_jobs)` and tell the PM.
-
-You can run `ICX4_DRYRUN=1 ./icx4` first. It may stop at the label fetch if the login node's system Python lacks `remotezip`; that is harmless, and the real run builds the venv first.
 
 **3. After about 3 hours** (job 1 preprocesses for 1–2 h, then trains):
 
@@ -87,7 +75,7 @@ source $HOME/icx14-venv/bin/activate && cd $SCRATCH/asclepius/repo
 python experiments/Atlas/r9_score_icx4.py --pred $SCRATCH/icx4/predictions --icx $SCRATCH/icx4/icx \
   --aorta $SCRATCH/icx4/aorta --splits $SCRATCH/icx4/splits.json --set open36 --out $SCRATCH/icx4/r9_open36_check.json --np 10
 python experiments/Atlas/r9_score_icx4.py --pred $SCRATCH/icx4/predictions --icx $SCRATCH/icx4/icx \
-  --aorta $SCRATCH/asclepius/aorta_val80 --splits $SCRATCH/icx4/splits.json --set val --out $SCRATCH/icx4/r9_tf1_val.json --np 10
+  --aorta $SCRATCH/icx4/aorta --splits $SCRATCH/icx4/splits.json --set val --out $SCRATCH/icx4/r9_tf1_val.json --np 10
 # keep the model past Fir's 60-day scratch purge (PROJECT if it exists, else HOME; < 2 GB)
 DEST=~/projects/def-aso22/$USER/icx4; [ -d ~/projects/def-aso22 ] || DEST=$HOME/icx4-keep; mkdir -p $DEST
 cp -r $SCRATCH/icx4/results $DEST/ && cp $SCRATCH/icx4/nnunet_results/Dataset715_ICX4/*/fold_0/checkpoint_final.pth $DEST/
@@ -102,7 +90,7 @@ cp -r $SCRATCH/icx4/results $DEST/ && cp $SCRATCH/icx4/nnunet_results/Dataset715
   - about 4 h of prediction, aortas and tF1.
 - Range 55–85 GPU-h; hard ceiling 118 (5 × 23.6 h). Spare jobs exit within a minute.
 
-**Send back** on #48 (or a new issue):
+**Send back** on #43:
 - the `./icx4 status` s/epoch line after job 1;
 - at the end: `results/` (SUMMARY.md, results.json, tf1_per_case.json, logs) and both `r9_*.json` files;
 - the `slurm-*.out` of any failed job.

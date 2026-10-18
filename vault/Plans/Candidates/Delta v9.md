@@ -11,12 +11,12 @@ issue: christianGRogers/Asclepius#48
 
 ## 1. The plan in one paragraph
 
-Train **one four-class nnU-Net v2 ResEnc model** (LM, LAD, LCx, RCA; D25) on **ImageCAS-X's lumen collapsed by territory** (D8, D1, D1b), with **`trillium/icx4` exactly as built**, on **one Fir H100**: about **55–75 GPU-hours**. This is the master's recipe, which won Rounds 1–8, applied to the label set the lead has since fixed.
+Train **one four-class nnU-Net v2 ResEnc model** (LM, LAD, LCx, RCA; D25) on **ImageCAS-X's lumen collapsed by territory** (D8, D1, D1b), with **`trillium/icx4` exactly as built**, on **one Fir H100**: about **52–72 GPU-hours**. This is the master's recipe, which won Rounds 1–8, applied to the label set the lead has since fixed.
 
 I propose no change to the model. What icx4 lacks is a valid way to judge it, and that is this plan's contribution:
 
-- **P1. tree-F1 decides, never Dice.** icx4's own scorer reports only Dice. On ImageCAS-X references, a 5 mm cut in the proximal LM leaves LAD and LCx Dice at 1.000 while their tF1 falls to 0 (§4, Q3).
-- **P2. ImageCAS-X's released centreline start points are the ostium of record.** ImageCAS-X defines them as centreline ends within 5 mm of a TotalSegmentator aorta, which is A1's own rule. Passed to the pinned `tf1.py` as the "aorta", they make every icx4 score decisive without a CT. The CT-free cheap rule they replace misses the right ostium by more than 5 mm in about 1 case in 10 (§4, Q2).
+- **P1. tree-F1 decides, never Dice.** icx4's own scorer reports only Dice. On ImageCAS-X references, a 5 mm cut in the proximal LM leaves LAD and LCx Dice at 1.000 while their tF1 falls to 0 (medians over 80 val cases; §4, Q3).
+- **P2. ImageCAS-X's released centreline start points are the ostium of record.** ImageCAS-X defines them as centreline ends within 5 mm of a TotalSegmentator aorta, which is A1's own rule. Passed to the pinned `tf1.py` as the "aorta", they make every icx4 score decisive without a CT. The CT-free cheap rule they would replace misses the right ostium by more than 5 mm in 4 % of cases, a median of 30 mm off, and that flips the verdict on a proximal cut in 5 of 80 val cases (§4, Q2–Q3).
 - **P3. The A14 seal stays shut.** icx4's scorer would open the 80 sealed test cases; Echo's #55 fixes that before the first run. Decisions use the 80 val cases. The 80 open test cases are reported. The sealed 80 are scored once, at the milestone.
 - **P4. D6 cannot be applied as things stand (a question for the lead).** D6 accepts a model against **inter-read tF1 on team reads**. Under D22/D23 the only cases that will ever carry two team reads are the 675 pool volumes, so the A14 sealed set (ImageCAS-X test + quality-0 cases) never can. I propose sealing **60 pool patients now**, before any read exists (list in `experiments/Delta/r9_sealed_pool_proposal.json`). Alternatively, the lead can ask the ImageCAS-X authors for their blind second-analyst reads of the test cases.
 
@@ -33,7 +33,7 @@ Every Fir command the lead runs is in §2.4. The tools for P1–P2 are written a
 | Mirroring | Off | Left/right mirroring would teach that an LAD can be an RCA (vault: *Mirroring is ruled out for multiclass…*) |
 | CT window | nnU-Net's default | Round 8 tie-break (−0.0027 [−0.012, +0.006]); Atlas's LCx guard applies (§5) |
 | Schedule | 1000 epochs, poly LR, 4-job chain of 23:50 jobs, checkpoint every 10 epochs, resume from either checkpoint | icx14 lost 23 GPU-h to a resume bug, now fixed in icx4 (`job_body.sh`) |
-| Loss | Stock Dice + CE. Optional class-weight file, unused unless §5 triggers it | The FP-aware loss pilot (A24) never ran. Its motivation, veins inside the thick mask, may not survive the change to ImageCAS-X's lumen. Re-decided on icx4's FP census (§5) |
+| Loss | Stock Dice + CE. Optional class-weight file, unused unless §5 triggers it | The FP-aware loss pilot (A24) never ran. Its motivation was confident FP components that look like cardiac veins, counted against the thick ImageCAS mask, which labelled vein-like structure inconsistently (Round 8, A24.3). That may not survive the change to ImageCAS-X's expert lumen. Re-decided on icx4's FP census (§5) |
 | Seeds | One. This first model is a forced choice, not a comparison (A22) | — |
 
 ### 2.2 Labels
@@ -45,7 +45,12 @@ Every Fir command the lead runs is in §2.4. The tools for P1–P2 are written a
   - RCA + R-PDA + R-PLA;
   - "Other" takes the class of the nearest LAD or LCx voxel, in mm.
 - **The collapse is verified.** Echo's audit (#49, PR #59) finds this table matches D25 exactly, and all five copies of it agree.
-- **The reference is clean (Q1, §4).** On {N_Q1} non-sealed references, every class is one piece. No class lacks a centreline, so A1c's fallback is never needed (5 % of thick references needed it). The LM is absent in {LM_ABSENT} cases (D13 makes LM optional).
+- **The reference fits tF1 (Q1, §4).** On 720 non-sealed references, no class lacks a centreline, so A1c's fallback is never needed (5 % of thick references needed it). The LM is absent in 11 cases (D13 makes LM optional); they have separate LAD and LCx ostia. A class is in two pieces in 27 cases:
+  - 6 are the ramus, which D1b makes LCx but which leaves the LM;
+  - 2 are "Other" pieces given to the LAD without touching it;
+  - 19 are 1–4 voxel specks.
+
+  tF1 roots by tree, not by class, so none of these changes a score.
 
 ### 2.3 Data and splits
 
@@ -77,8 +82,8 @@ The case mapping c(id − 1) and the split files are ImageCAS-X's own, as in icx
 
 | Step | Resource | GPU-h | When |
 |---|---|---|---|
-| 0. Prerequisites: CCDB opt-in for Fir; copy `cases/` (Globus `alliancecan#trillium` → `alliancecan#fir`) and the repo at `dev` **with #55 merged** | lead | 0 | before 1 |
-| 1. **icx4**: plan + preprocess, 1000 epochs, predict 1000 cases, Dice score (open 80 only, after #55) | 1 × H100, 12 cores, 280 GB; chain of 4 × 23:50 | **50–70** (Trillium measured 184 s/epoch, 455 epochs in 23.3 h on icx14; Fir has 10 data workers instead of 22, so up to 1.4× slower) | first |
+| 0. Prerequisites: CCDB opt-in for Fir; copy `cases/` (Globus `alliancecan#trillium` → `alliancecan#fir`) and the repo at `dev` **with #55 and this PR merged** (this PR carries `experiments/Delta/r9_fir/`) | lead | 0 | before 1 |
+| 1. **icx4**: plan + preprocess, 1000 epochs, predict 1000 cases, Dice score (open 80 only, after #55) | 1 × H100, 12 cores, 280 GB; chain of 4 × 23:50 | **50–70** (Trillium measured 184 s/epoch, 455 epochs in 23.3 h on icx14; Fir has 10 data workers instead of 22; the compute inventory estimates 50–70 h) | first |
 | 2. **delta9 aorta** (optional, recommended): TotalSegmentator aortas for the 160 non-sealed test/val cases | 1 × H100, 2 h limit | ≤ 1.5 | after 1 |
 | 3. **delta9 score**: decisive tF1 (P1, P2), A1-as-written paired if step 2 ran, FP gate, Dice | CPU, 32 cores, 192 GB, 3 h limit | 0 | after 2 |
 | 4. Copy the checkpoint and `results/` out of SCRATCH (60-day purge): PROJECT if confirmed, else HOME (48 GiB) | lead | 0 | after 3 |
@@ -163,15 +168,21 @@ Note: [[Delta - On ImageCAS-X references tree-F1 needs no CT, because the releas
 
 The data was ImageCAS-X labels and centrelines, fetched by range requests from Zenodo (CC BY 4.0). The 80 sealed cases were never downloaded. The pinned `tf1.py` hash was checked at start.
 
-- **Q1, reference audit ({N_Q1} cases).** {Q1_SUMMARY}
-- **Q2, ostia ({N_Q1} cases).**
-  - The released start points coincide with the free end of the LM line (left) and the RCA line (right) in {START_AGREE} (0 mm). Seven LM-less cases have two left start points.
-  - Our skeleton passes through the start points: median {EXP_CL_MED} mm, max {EXP_CL_MAX} mm. ImageCAS-X built its centrelines with the same Lee skeletonisation.
-  - The CT-free "thick" rule lands more than 5 mm from the start point for the **right** ostium in **{THICK_R5}** and the left in {THICK_L5}. It picks a distal RCA end 22–47 mm away.
+- **Q1, reference audit (720 cases).**
+  - 0 classes without centreline.
+  - 11 LM-less cases; 20 LMs with a centreline under 3 mm.
+  - 27 multi-piece classes, explained above.
+- **Q2, ostia (720 cases).**
+  - The released start points coincide with the free end of the LM line (left) and the RCA line (right) in 709 of 709 left and 720 of 720 right ostia (0 mm). The 11 LM-less cases have two left start points (LAD and LCx).
+  - Our skeleton passes through the start points: median 0.35 mm (left) and 0.00 mm (right), max 4.73 mm. ImageCAS-X built its centrelines with the same Lee skeletonisation.
+  - The CT-free "thick" rule lands more than 5 mm from the start point for the **right** ostium in **29 of 720 (4.0 %)**, 5 of them in val, and for the left in 0. It picks a distal RCA end: median 30 mm away, range 5.6–41.3 mm.
+  - **Flags.** Under A1 as written, with start points as the aorta, 38 of 720 cases have a flagged tree, almost all because the thick rule disagrees. Under P2's flag rule, none would be flagged.
   - On Trillium, atlas2 already measured the TotalSegmentator-aorta ostium against these start points on the 80 val cases. The median is 1.9 mm (left) and 2.1 mm (right), and 89–90 % are within 5 mm, although that was on the thick reference, where A1 flagged most of the outliers.
-- **Q3, the cut that Dice cannot see ({N_Q3} val references).** All reference voxels within 2.5 mm of the point 3 mm (left) and 15 mm (right) downstream of each start point were removed, leaving a gap of about 5 mm.
-  - {Q3_SUMMARY}
-  - With the thick-rule ostia, the cut changes the macro tF1 by more than 0.05 differently in {Q3_DIFF} cases: the proximal RCA cut goes unseen (c0106: RCA tF1 0.96 with thick ostia, 0.10 with start points).
+- **Q3, the cut that Dice cannot see (80 val references).** All reference voxels within 2.5 mm of the point 3 mm (left) and 15 mm (right) downstream of each start point were removed, leaving a gap of about 5 mm.
+  - LAD and LCx Dice stay at a median of **1.000** (min 0.984) and whole-tree Dice at 0.982, while LAD and LCx tF1 fall to a median of **0.000**. That is Dice ≥ 0.95 with tF1 < 0.5 in **140 of 160** vessels.
+  - In the other 20 vessels the synthetic cut did not disconnect the tree, so tF1 correctly stayed at 1.
+  - The uncut reference scores 1.000 against itself in 80 of 80.
+  - With the thick-rule ostia, the cut changes the macro tF1 by more than 0.05 differently in 5 of 80 cases: the proximal RCA cut goes unseen (c0106: RCA tF1 0.96 with thick ostia, 0.10 with start points).
 
 ## 5. What results change the plan (pre-registered, read on val 80 at the pinned hash with P2 flags)
 
@@ -181,7 +192,7 @@ The data was ImageCAS-X labels and centrelines, fetched by range requests from Z
 | 2 | Decisive macro < 0.87 | Recipe reopens (Round 8's line). First check: the label census, and "Other" voxels for LAD/LCx swaps |
 | 3 | P2 vs A1-as-written (step 2): ostia within 2 mm in ≥ 95 % of trees **and** \|Δ macro tF1\| ≤ 0.005 | P2 becomes the rule of record for ImageCAS-X references. Otherwise P2 is withdrawn and TotalSegmentator aortas are required for every decisive score, as now |
 | 4 | LCx decisive tF1 < 0.83 | Atlas's Round 8 LCx guard: review calcified LCx cases under the default window |
-| 5 | FP components per case ≤ 1 (A15 met) | A24's FP-loss pilot is dropped. The thick-mask veins were the reason for it |
+| 5 | FP components per case ≤ 1 (A15 met) | A24's FP-loss pilot is dropped. Its reason, vein-like FPs against the thick mask, is gone |
 | 6 | FP per case > 1 | FP census on icx4's val (atlas2's census script). If confident components beside the tree dominate again, A24's pilot runs on Fir (≤ 21 GPU-h, two arms, same seed and epochs, A22 rules) |
 | 7 | Any (case, class) with Dice ≥ 0.85 and tF1 < 0.5 | Listed in the report as evidence for P1. Never a decision |
 

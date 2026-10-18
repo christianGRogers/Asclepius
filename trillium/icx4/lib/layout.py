@@ -4,6 +4,9 @@ Accepted layouts (README contract):
   imagecas  cases/<n>.img.nii.gz + cases/<n>.label.nii.gz      (ImageCAS release; id n -> c{n-1:04d})
   girder    cases/<case>/ct.nii.gz + cases/<case>/coronary_arteries.nii.gz
             <case> = c0000 style (taken as is) or any name ending in digits (ImageCAS id -> c{n-1:04d})
+  girder-ct cases/<case>/ct.nii.gz only (trillium/fetch_cases.py without --masks; icx4 never reads the masks):
+            'mask' is None
+A directory holding more than one of these (e.g. some case folders with a mask and some without) is refused.
 Prints what it found and fails loudly if nothing matches.
 """
 import os, re, sys, json
@@ -44,23 +47,30 @@ def scan(cases_dir):
             lab = os.path.join(cases_dir, f'{m.group(1)}.label.nii.gz')
             if os.path.exists(lab):
                 imgs['c%04d' % (int(m.group(1)) - 1)] = {'ct': os.path.join(cases_dir, f), 'mask': lab}
-    gird = {}
+    gird, ctonly = {}, {}
     for f in ent:
         p = os.path.join(cases_dir, f)
-        if os.path.isdir(p) and os.path.exists(os.path.join(p, 'ct.nii.gz')) and \
-                os.path.exists(os.path.join(p, 'coronary_arteries.nii.gz')):
-            cid = _cid_from_name(f)
-            if cid:
-                gird[cid] = {'ct': os.path.join(p, 'ct.nii.gz'), 'mask': os.path.join(p, 'coronary_arteries.nii.gz')}
-    if imgs and gird:
-        sys.exit(f'Both layouts present in {cases_dir} ({len(imgs)} imagecas, {len(gird)} girder); refusing to guess.')
-    if imgs:
-        return 'imagecas', imgs
-    if gird:
-        return 'girder', gird
+        ct, mask = os.path.join(p, 'ct.nii.gz'), os.path.join(p, 'coronary_arteries.nii.gz')
+        if not (os.path.isdir(p) and os.path.exists(ct)):
+            continue
+        cid = _cid_from_name(f)
+        if not cid:
+            continue
+        if cid in gird or cid in ctonly:
+            sys.exit(f'Two case folders in {cases_dir} map to {cid} (one is {f}); refusing to guess.')
+        if os.path.exists(mask):
+            gird[cid] = {'ct': ct, 'mask': mask}
+        else:
+            ctonly[cid] = {'ct': ct, 'mask': None}
+    found = [(n, d) for n, d in (('imagecas', imgs), ('girder', gird), ('girder-ct', ctonly)) if d]
+    if len(found) > 1:
+        sys.exit(f'More than one layout in {cases_dir} (' + ', '.join(f'{len(d)} {n}' for n, d in found)
+                 + '); refusing to guess. (girder-ct = case folders with ct.nii.gz but no coronary_arteries.nii.gz)')
+    if found:
+        return found[0]
     sample = ent[:15]
     sys.exit(f'Unrecognised layout in {cases_dir}. Expected <n>.img.nii.gz + <n>.label.nii.gz, or '
-             f'<case>/ct.nii.gz + <case>/coronary_arteries.nii.gz. First entries: {sample}')
+             f'<case>/ct.nii.gz [+ <case>/coronary_arteries.nii.gz]. First entries: {sample}')
 
 if __name__ == '__main__':
     d = find_cases_dir(sys.argv[1] if len(sys.argv) > 1 else os.getcwd(), os.environ.get('CASES'))

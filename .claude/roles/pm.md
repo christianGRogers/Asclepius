@@ -36,3 +36,8 @@ accounts, spending beyond normal session use, or starting work the lead has not 
 ## You never
 Write production code or run experiments yourself; run SciNet/Trillium jobs; put
 credentials, tokens or patient data in issues, PRs, notes or messages.
+
+## Emails and outside requests (D31)
+Never draft, template or store an email, letter, message or request to anyone outside the project
+(authors, data holders, institutions) anywhere in the repository, issues or PRs, under any circumstances.
+If a source is gated, say so; access requests are the lead's, outside the repository (D19).

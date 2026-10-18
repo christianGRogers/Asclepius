@@ -2,7 +2,7 @@
 aliases: [Human decisions, D0]
 tags: [plans, decision-record, human]
 status: living
-updated: 2026-10-11
+updated: 2026-10-18
 ---
 
 # Human decisions
@@ -42,6 +42,11 @@ that contradicts one of them cannot win.
 | D24 | SegQueue14 release line (supersedes D17's "beside, replaces nothing" for the Slicer module) | **SegQueue14 replaces the 4-class SegQueue module and continues its version numbers**: published as `SegQueue-<v>-Slicer-<x.y>.zip` under `segqueue-v<v>` from **0.14.0**, so SegQueue 0.13's update button installs it; the archive's `SegQueue.py` is a stub that sends "SegQueue" to SegQueue14. SegQueue14 updates itself from then on (only archives carrying SegQueue14). The 4-class module (`slicer/SegQueue`, 0.13.0) is no longer released; the live server and its queue are untouched. | Decided 2026-10-17 |
 | D25 | Class schema again (reverses D9; restores D1, D1b) | **Four classes: LM, LAD, LCx, RCA.** Side branches take their parent's class (D1): diagonals → LAD; obtuse marginals, the ramus intermedius (D1b) and a left-sided PDA/PLA → LCx; a right-sided PDA/PLA → RCA; ImageCAS-X "Other" (D3/D4, OM3/OM4) → the nearest LAD/LCx. Kept: ImageCAS-X's lumen (D8), free redrawing of the outline (D12), LAD/LCx/RCA required and LM optional (D13), the 675-volume pool queue with TotalSegmentator seeds (D23). SegQueue14 serves the four classes from module 0.15.0 (protocol 15; a 14-class module is told to update); the icx14 jobs were cancelled and `trillium/icx4` trains the 4-class model on ImageCAS-X collapsed by territory (dataset 715). | Decided 2026-10-17 |
 | D26 | Starting point on a seeded case | **Every class starts as a full copy of the vessel seed, hidden by default**; the annotator shows one class at a time and cuts it down to that vessel. The seed itself stays visible as a guide and is never submitted. A case is refused while any voxel is in two classes, which also catches a class left untrimmed. Drafts are never refilled. SegQueue 0.16.0, protocol 16 (a 0.15.0 module is told to update). | Decided 2026-10-17 |
+| D27 | Where acceptance (D6) is measured (Round 9 L1) | **A sealed set of pool patients.** D6 is scored on the A30 seal: 150 pool patients, frozen before any read exists, withheld from fine-tuning, extendable to 200–250 on wave-1 evidence (Round 10). The lead chose option (c) **without** its request to the ImageCAS-X authors, so in effect option (a): nobody contacts the authors, and the sealed ImageCAS-X 80 keeps only its one blind model-vs-expert look (A26). | Decided 2026-10-18 |
+| D28 | A second icx4 seed (Round 9 L2) | **No.** Only Job A runs. A22's fallback stands: the first retrained decision adds a second seed to its control. | Decided 2026-10-18 |
+| D29 | Anomalous anatomy in acceptance (Round 9 L3) | **Own stratum.** ImageALCAPA (30 volumes) and ImageCHD (83) are reported as their own stratum, outside the A10 aggregate. The 74 header-spacing-suspect volumes stay out of A10 until re-gridded. | Decided 2026-10-18 |
+| D30 | Serving order for patients with many volumes (Round 9 L4) | **No change.** D23's serving order stands; one-volume-per-patient-first is not adopted. | Decided 2026-10-18 |
+| D31 | Emails and requests to outside parties | **Never in the repository.** No email, letter, message or request to anyone outside the project (authors, data holders, institutions) is drafted, templated or stored anywhere in the repository (code, vault, docs, issues or PRs), under any circumstances. Access requests remain the lead's, outside the repository (D19). A plan may say that a source is gated; it may not contain the ask. | Decided 2026-10-18 |
 
 ## The restructure of 2026-10-11 (D8–D10)
 

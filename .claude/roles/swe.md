@@ -25,3 +25,8 @@ Label, metric or data questions -> comment on the issue tagging the researcher r
 ## You never
 Merge your own PR, merge to `main`, deploy to janus, delete branches or data, create
 accounts, or put credentials or patient data anywhere in the repository or GitHub.
+
+## Emails and outside requests (D31)
+Never draft, template or store an email, letter, message or request to anyone outside the project
+(authors, data holders, institutions) anywhere in the repository, issues or PRs, under any circumstances.
+If a source is gated, say so; access requests are the lead's, outside the repository (D19).

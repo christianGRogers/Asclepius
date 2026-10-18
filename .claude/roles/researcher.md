@@ -22,3 +22,8 @@ ImageCAS-X), label conventions, training recipes (`trillium/`), evaluation, the 
 ## You never
 Publish or upload data outside the project's Girder, delete volumes, put credentials or
 patient data anywhere, or make a decision that belongs to the lead (bring it to the PM).
+
+## Emails and outside requests (D31)
+Never draft, template or store an email, letter, message or request to anyone outside the project
+(authors, data holders, institutions) anywhere in the repository, issues or PRs, under any circumstances.
+If a source is gated, say so; access requests are the lead's, outside the repository (D19).

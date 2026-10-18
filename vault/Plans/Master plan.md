@@ -18,7 +18,7 @@ Train **one four-class nnU-Net v2 ResEnc model** (LM 1, LAD 2, LCx 3, RCA 4) wit
 - splits: ImageCAS-X train 560 / val 80 / test 160;
 - compute: one H100 on Fir, account `def-aso22`.
 
-The job predicts all 1000 ImageCAS cases and scores **decisive tF1** (A1c hash `24441cf8…5254`) on the open test cases, never on a sealed one (#66). **Decisions are made on val 80** (atlas2 aortas), confirmed on open-36. Team reads come only from the 675 pool volumes (D23), two reads each, starting from TotalSegmentator seeds (D26). They enter later through the A17 fine-tune trainer, with each read a separate sample (A11′). **Where acceptance (D6) is measured is open:** it is the lead's decision ([[Round 9]] §5, L1). A candidate pool seal is frozen meanwhile (A30).
+The job predicts all 1000 ImageCAS cases and scores **decisive tF1** (A1c hash `24441cf8…5254`) on the open test cases, never on a sealed one (#66). **Decisions are made on val 80** (atlas2 aortas), confirmed on open-36. Team reads come only from the 675 pool volumes (D23), two reads each, starting from TotalSegmentator seeds (D26). They enter later through the A17 fine-tune trainer, with each read a separate sample (A11′). **Acceptance (D6) is measured on the A30 pool seal** (150 pool patients, extendable to 200–250 on wave-1 evidence; [[Human decisions]] D27). No second seed for now (D28); anomalous anatomy is its own stratum (D29); D23's serving order is unchanged (D30).
 
 ## The first Fir job (copy-paste; the lead runs it)
 
@@ -109,13 +109,7 @@ cp -r $SCRATCH/icx4/results $DEST/ && cp $SCRATCH/icx4/nnunet_results/Dataset715
 
 Never send a sealed case's file. The job writes none.
 
-**Optional, the lead's call ([[Round 9]] §5, L2): Job B, a second seed.** Submit it only once Job A's first job is running:
-
-```sh
-cd $SCRATCH/asclepius/experiments/icx4 && ICX4_WORK=$SCRATCH/icx4-seed2 ICX4_CLUSTER=fir CHAIN=5 ./icx4
-```
-
-It costs +55–85 GPU-h. Pair it with Job A on val 80 with `r9_score_icx4.py --pair $SCRATCH/icx4-seed2/predictions` (σ_seed, Atlas R4).
+**No Job B.** The lead declined a second concurrent seed (D28); only Job A runs. A22's fallback stands.
 
 ## Binding amendments, Round 9 (summary; full wording in [[Round 9]] §1)
 
@@ -144,13 +138,13 @@ It costs +55–85 GPU-h. Pair it with Job A on val 80 with `r9_score_icx4.py --p
   - an optional pre-read per-source domain check (about 3–4 GPU-h).
 - **A32, carried over:** A1/A1a/A1b/A1c, A2/A15, A9, A11′, A12, A17a/b, A19, A21, A22, A23 (report only). **Lapsed:** A3, A4, A17c, proxies. **Closed:** A24. The `coronary_icx4` segtrain task config is due before wave-1 fine-tuning.
 
-## Open: decisions for the lead ([[Round 9]] §5)
+## Decisions for the lead ([[Round 9]] §5)
 
-- **L1:** where D6 acceptance is measured. Recommended: both a 150-patient pool seal and a request to the ImageCAS-X authors for their second reads.
-- **L2:** Job B. Recommended: yes.
-- **L3:** keep ALCAPA and ImageCHD outside the A10 aggregate. Recommended: yes.
-- **L4:** serve one volume per patient first. Recommended: yes.
-- **L5:** acceptance if reads turn out to be seed-anchored.
+- **L1 → D27:** D6 acceptance is measured on the 150-patient pool seal (A30). The lead declined the request to the ImageCAS-X authors; under D31 no such request is ever written in the repository.
+- **L2 → D28:** no Job B.
+- **L3 → D29:** ALCAPA and ImageCHD are their own stratum, outside the A10 aggregate.
+- **L4 → D30:** not adopted; D23's serving order stands.
+- **Still open, L5:** acceptance if reads turn out to be seed-anchored.
 - **L6:** ASOCA.
 - **L7:** the FP gate.
 

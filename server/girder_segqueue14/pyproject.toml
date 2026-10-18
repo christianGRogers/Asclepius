@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "girder-segqueue14"
 version = "0.1.0"
-description = "SegQueue14: 14-class prelabel correction for the SegQueue annotation platform, as a Girder 5 plugin that runs beside the live one"
+description = "SegQueue14: four-class coronary annotation (D25) for the SegQueue annotation platform, as a Girder 5 plugin that runs beside the live one. The name is historical."
 requires-python = ">=3.10"
 license = { text = "MIT" }
 authors = [{ name = "Christian Rogers" }]

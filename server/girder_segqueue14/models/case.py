@@ -13,7 +13,8 @@ What is different:
   and no random duplicate claim: blind duplicates are cases whose
   ``replicasWanted`` the population tool set to 2 (D11).
 * **A prelabel and a reference.** ``prelabelFileId`` / ``prelabelVersion`` is the
-  14-class model's prediction the annotator corrects (D10); ``referenceFileId`` is
+  4-class model's prediction the annotator corrects (D25; D23 pooled cases are
+  seeded from TotalSegmentator instead); ``referenceFileId`` is
   the ImageCAS-X segmentation every read is scored against, never served to an
   annotator.
 """

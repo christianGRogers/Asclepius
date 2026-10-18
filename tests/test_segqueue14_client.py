@@ -151,3 +151,84 @@ def test_both_libraries_load_side_by_side():
     assert Path(SegQueueLib.__file__).parent.parent.name == "SegQueue"
     assert Path(SegQueue14Lib.__file__).parent.parent.name == "SegQueue14"
     assert SegQueueLib.cache.MANIFEST_NAME != SegQueue14Lib.cache.MANIFEST_NAME
+
+
+# ------------------------------------------------------------------ downloads
+#
+# Each download route used to carry its own copy of the chunk loop. These pin
+# what every copy did -- bytes, progress, return value, the .part rename and the
+# absent-asset answer -- so the shared one is held to the same behaviour.
+
+
+def _streamed(payload, length=True, **headers):
+    if length:
+        headers["Content-Length"] = str(len(payload))
+    return FakeResponse(200, headers=headers, chunks=[payload[:7], b"", payload[7:]])
+
+
+def test_a_case_download_writes_the_bytes_and_reports_progress(tmp_path):
+    payload = b"volume-bytes" * 10
+    session = FakeSession({("GET", "segqueue14/case/c1/download"): _streamed(payload)})
+    dest = tmp_path / "case.nii.gz"
+    seen = []
+    written = makeClient(session).downloadCase(
+        "c1", str(dest), progress=lambda done, total: seen.append((done, total)))
+    assert written == len(payload) and dest.read_bytes() == payload
+    assert not (tmp_path / "case.nii.gz.part").exists()
+    assert seen == [(7, len(payload)), (len(payload), len(payload))]
+
+
+def test_a_truncated_case_download_leaves_nothing_behind(tmp_path):
+    session = FakeSession({("GET", "download"): FakeResponse(
+        200, headers={"Content-Length": "100"}, chunks=[b"x" * 40])})
+    dest = tmp_path / "case.nii.gz"
+    with pytest.raises(SegQueue14Error, match="stopped early"):
+        makeClient(session).downloadCase("c1", str(dest))
+    assert not dest.exists()
+    assert not (tmp_path / "case.nii.gz.part").exists()
+
+
+def test_an_asset_download_reports_progress_without_a_total(tmp_path):
+    payload = b"\x1f\x8bseed-bytes"
+    session = FakeSession({("GET", "asset/seed"): _streamed(payload)})
+    seen = []
+    path = makeClient(session).downloadAsset(
+        "c1", protocol.ASSET_SEED, str(tmp_path / "seed"),
+        progress=lambda done, total: seen.append((done, total)))
+    with open(path, "rb") as handle:
+        assert handle.read() == payload
+    # The asset route never passed Content-Length on to progress.
+    assert seen == [(7, 0), (len(payload), 0)]
+
+
+def test_a_missing_asset_is_none_on_both_asset_routes(tmp_path):
+    session = FakeSession({("GET", "asset/seed"): girderError(
+        protocol.ERR_NO_ASSET, "none", status=404)})
+    client = makeClient(session)
+    assert client.downloadAsset("c1", protocol.ASSET_SEED, str(tmp_path / "a")) is None
+    assert client.downloadCaseAsset("c1", protocol.ASSET_SEED, str(tmp_path / "b")) is None
+    assert not list(tmp_path.iterdir())
+
+
+def test_any_other_asset_failure_still_raises(tmp_path):
+    session = FakeSession({("GET", "asset/seed"): girderError(
+        "something_else", "boom", status=500)})
+    with pytest.raises(SegQueue14Error):
+        makeClient(session).downloadCaseAsset("c1", protocol.ASSET_SEED, str(tmp_path / "b"))
+
+
+@pytest.mark.parametrize("call", [
+    lambda c, p, cb: c.downloadReviewFile("s1", "volume", p, progress=cb),
+    lambda c, p, cb: c.downloadCaseVolume("c1", p, progress=cb),
+    lambda c, p, cb: c.downloadCaseAsset("c1", protocol.ASSET_REFERENCE, p, progress=cb),
+], ids=["review-file", "case-volume", "case-asset"])
+def test_reviewer_downloads_write_the_bytes_and_return_the_count(tmp_path, call):
+    payload = b"reviewer-copy" * 5
+    session = FakeSession()
+    session.default = _streamed(payload)
+    dest = tmp_path / "out.nii.gz"
+    seen = []
+    written = call(makeClient(session), str(dest), lambda d, t: seen.append((d, t)))
+    assert written == len(payload) and dest.read_bytes() == payload
+    assert seen[-1] == (len(payload), len(payload))
+    assert session.calls[0]["stream"] is True

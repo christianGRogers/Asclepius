@@ -18,9 +18,9 @@ has two rules:
 Neither rule can be checked by importing the files -- this suite runs on 3.11,
 where both violations import perfectly. So they are checked statically instead.
 
-The 3.9 syntax rule also covers ``slicer/SegQueue/``, which runs in the same
-interpreter, even though the stdlib rule does not: Slicer ships Qt, VTK and
-``requests``, and the extension is entitled to use them.
+The 3.9 syntax rule also covers ``slicer/SegQueue/`` and ``slicer/SegQueue14/``,
+which run in the same interpreter, even though the stdlib rule does not: Slicer
+ships Qt, VTK and ``requests``, and the extension is entitled to use them.
 """
 
 import ast
@@ -32,6 +32,8 @@ import pytest
 REPO = Path(__file__).resolve().parents[1]
 SHARED = REPO / "src" / "segqueue"
 EXTENSION = REPO / "slicer" / "SegQueue"
+#: The module released since 0.14.0 (CONTRIBUTING.md section 6), in the same Slicer.
+EXTENSION14 = REPO / "slicer" / "SegQueue14"
 
 #: What Slicer's bundled Python provides beyond the standard library. The
 #: extension may import these; the shared package may not. Kept short and by
@@ -102,8 +104,8 @@ def test_the_shared_package_imports_only_the_standard_library(path):
 
 @pytest.mark.parametrize(
     "path",
-    _modules(SHARED) + _modules(EXTENSION),
-    ids=_ids(_modules(SHARED) + _modules(EXTENSION)),
+    _modules(SHARED) + _modules(EXTENSION) + _modules(EXTENSION14),
+    ids=_ids(_modules(SHARED) + _modules(EXTENSION) + _modules(EXTENSION14)),
 )
 def test_everything_slicer_imports_parses_as_python_39(path):
     """Slicer 5.8 bundles Python 3.9, and a SyntaxError there is a missing module.
@@ -125,8 +127,8 @@ def test_everything_slicer_imports_parses_as_python_39(path):
 
 @pytest.mark.parametrize(
     "path",
-    _modules(SHARED) + _modules(EXTENSION),
-    ids=_ids(_modules(SHARED) + _modules(EXTENSION)),
+    _modules(SHARED) + _modules(EXTENSION) + _modules(EXTENSION14),
+    ids=_ids(_modules(SHARED) + _modules(EXTENSION) + _modules(EXTENSION14)),
 )
 def test_no_pep604_unions_where_python_39_would_evaluate_them(path):
     """``int | None`` parses on 3.9 and then raises ``TypeError`` at import.

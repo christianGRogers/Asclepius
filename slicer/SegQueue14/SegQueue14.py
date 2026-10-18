@@ -98,7 +98,7 @@ from SegQueue14Lib import SegQueue14Error as SegQueueError
 
 #: Continues SegQueue's numbering (0.13.0 was the last 4-class release). The
 #: release tag is ``segqueue-v`` + this; bump it to publish.
-__version__ = "0.16.1"
+__version__ = "0.16.2"
 
 #: Where the module's help points.
 HELP_URL = "https://github.com/christianGRogers/Asclepius"
@@ -554,14 +554,18 @@ class SegQueue14Logic(ScriptedLoadableModuleLogic):
             return None
 
     def _cachedHelper(self, stem):
-        """An already-downloaded helper, whatever extension it arrived with."""
+        """An already-downloaded helper, whatever extension it arrived with.
+
+        A ``.part`` file is a download that never finished (Slicer closed
+        mid-transfer), so it is never a hit (#64).
+        """
         directory, prefix = os.path.dirname(stem), os.path.basename(stem)
         try:
             names = os.listdir(directory)
         except OSError:
             return None
         for filename in sorted(names):
-            if filename.startswith(prefix + "."):
+            if filename.startswith(prefix + ".") and not filename.endswith(".part"):
                 return os.path.join(directory, filename)
         return None
 

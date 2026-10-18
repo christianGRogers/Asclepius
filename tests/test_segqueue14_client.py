@@ -10,6 +10,7 @@ import sys
 from pathlib import Path
 
 import pytest
+import requests
 
 REPO = Path(__file__).resolve().parents[1]
 _SRC = REPO / "src"
@@ -275,6 +276,55 @@ def test_an_asset_download_reports_progress_without_a_total(tmp_path):
         assert handle.read() == payload
     # The asset route never passed Content-Length on to progress.
     assert seen == [(7, 0), (len(payload), 0)]
+
+
+class _Dropped(FakeResponse):
+    """A response whose connection drops after the first chunk."""
+
+    def iter_content(self, chunk_size=1):
+        yield from self._chunks[:1]
+        raise requests.exceptions.ChunkedEncodingError("connection dropped")
+
+
+def test_a_dropped_prelabel_download_is_not_cached_and_the_reopen_fetches_it(tmp_path):
+    # #64: the panel caches helpers by name (``prelabel.*``) and reuses any file
+    # it finds, so a partial file at the final path stuck for every reopen.
+    whole = b"\x1f\x8b" + b"prelabel" * 20
+    disposition = {"Content-Disposition": 'attachment; filename="p.prelabel.nii.gz"'}
+    session = FakeSession({("GET", "asset/prelabel"): _Dropped(
+        200, headers=dict(disposition), chunks=[whole[:9], whole[9:]])})
+    client = makeClient(session)
+    stem = str(tmp_path / "prelabel")
+
+    with pytest.raises(requests.exceptions.ChunkedEncodingError):
+        client.downloadAsset("c1", protocol.ASSET_PRELABEL, stem)
+    assert not list(tmp_path.iterdir())
+
+    session.responses[("GET", "asset/prelabel")] = _streamed(whole, **disposition)
+    path = client.downloadAsset("c1", protocol.ASSET_PRELABEL, stem)
+    assert path == stem + ".nii.gz"
+    assert (tmp_path / "prelabel.nii.gz").read_bytes() == whole
+    assert [p.name for p in tmp_path.iterdir()] == ["prelabel.nii.gz"]
+
+
+def test_a_short_asset_body_is_refused_and_leaves_nothing_behind(tmp_path):
+    session = FakeSession({("GET", "asset/seed"): FakeResponse(
+        200, headers={"Content-Length": "100"}, chunks=[b"x" * 40])})
+    with pytest.raises(SegQueue14Error, match="stopped early"):
+        makeClient(session).downloadAsset("c1", protocol.ASSET_SEED, str(tmp_path / "seed"))
+    assert not list(tmp_path.iterdir())
+
+
+@pytest.mark.parametrize("response", [
+    FakeResponse(200, headers={"Content-Length": "100"}, chunks=[b"x" * 40]),
+    _Dropped(200, chunks=[b"x" * 40, b"y" * 60]),
+], ids=["short-body", "dropped"])
+def test_an_interrupted_reviewer_download_leaves_nothing_behind(tmp_path, response):
+    session = FakeSession()
+    session.default = response
+    with pytest.raises((SegQueue14Error, requests.exceptions.ChunkedEncodingError)):
+        makeClient(session).downloadCaseVolume("c1", str(tmp_path / "out.nii.gz"))
+    assert not list(tmp_path.iterdir())
 
 
 def test_a_missing_asset_is_none_on_both_asset_routes(tmp_path):

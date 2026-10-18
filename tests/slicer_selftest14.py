@@ -7,7 +7,8 @@ four full, overlapping copies (one label volume imported into several target
 segments fills only the first -- found in 5.8 while writing this), that trimming
 one copy leaves the others whole, that a saved draft keeps them, that the classes
 start hidden, that ``submit()`` refuses overlapping classes before any upload, and
-that a trimmed case exports one class per voxel.
+that a trimmed case exports one class per voxel, and that the reviewer's
+ImageCAS-X reference is shown in the four classes (#68).
 
 The report goes to ``$SEGQUEUE_SELFTEST_OUT`` (default ``./selftest14.txt``); its
 last line is ``RESULT PASS`` or ``RESULT FAIL``.
@@ -159,6 +160,31 @@ def run():
     counts, _source, _segmentation = logic.exportLabelmap(os.path.join(tmp, "out.seg.nrrd"))
     check("the export has one class per voxel",
           counts == {name: TUBE_VOXELS for name in TUBES}, counts)
+
+    # #68: the reviewer's ImageCAS-X reference is in ImageCAS-X's 14 values. The
+    # LAD tube is drawn as D1 (4), the RCA as 9, and an "Other" (14) stub sits at
+    # the end of the LAD; collapsed, they show as LAD, RCA and LAD (D25).
+    icx = np.zeros(SHAPE, np.uint8)
+    for name, value in (("LM", 1), ("LAD", 4), ("LCx", 3), ("RCA", 9)):
+        lo, hi = TUBES[name]
+        icx[5:35, lo:hi, lo:hi] = value
+    lo, hi = TUBES["LAD"]
+    icx[35:37, lo:hi, lo:hi] = labels.ICX_OTHER
+    refNode = slicer.mrmlScene.AddNewNodeByClass("vtkMRMLLabelMapVolumeNode", "reference")
+    slicer.util.updateVolumeFromArray(refNode, icx)
+    refNode.CopyOrientation(volume)
+    refPath = os.path.join(tmp, "case_reference.nii.gz")
+    slicer.util.saveNode(refNode, refPath)
+    slicer.mrmlScene.RemoveNode(refNode)
+    shown = slicer.mrmlScene.AddNewNodeByClass("vtkMRMLSegmentationNode", "reference")
+    shown.CreateDefaultDisplayNodes()
+    shown.SetReferenceImageGeometryParameterFromVolumeNode(volume)
+    logic.importLabelsIntoProject(refPath, segmentationNode=shown, icx14=True)
+    ref = _counts(slicer, labels, shown, volume, lambda name: module._segmentIdIn(shown, name))
+    stub = 2 * (hi - lo) * (hi - lo)
+    check("the ImageCAS-X reference shows in the four classes (D1 as LAD, RCA as RCA)",
+          ref == {"LM": TUBE_VOXELS, "LAD": TUBE_VOXELS + stub, "LCx": TUBE_VOXELS,
+                  "RCA": TUBE_VOXELS}, ref)
 
 
 try:

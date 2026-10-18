@@ -6,8 +6,9 @@ scored against:
 
 * **a reference** -- the case has an ImageCAS-X segmentation
   (``SegQueue/imagecas-x/segmentations/<id>.coronary.nii.gz``): per-class Dice,
-  HD95 and presence against it, per class; a 14-class ImageCAS-X reference is
-  first collapsed to the project's four (``labels.ICX14_TO_4``, D25);
+  HD95 and presence against it, per class; the reference is always in
+  ImageCAS-X's 14 values and is first collapsed to the project's four
+  (``labels.icx14_to_four``, D25: "Other" to the nearest LAD/LCx in mm);
 * **a second read** -- the case wants two reads (the 200 unlabelled cases, a new
   dataset, or an ImageCAS-X blind duplicate): the same numbers between the two.
 
@@ -95,21 +96,23 @@ def _spacing(image):
     return tuple(reversed(image.GetSpacing()))
 
 
-def scoreAgainst(readFile, referenceFile):
-    """Score one stored label file against another, on the second one's grid."""
+def scoreAgainst(readFile, referenceFile, icx14=False):
+    """Score one stored label file against another, on the second one's grid.
+
+    ``icx14`` says the second file is an ImageCAS-X reference (a case's
+    ``referenceFileId``), in its 14 label values: it is collapsed to the
+    project's four first (``labels.icx14_to_four``, D25), so like is scored with
+    like. It is decided by what the file is, never by its values (#57). A second
+    read is already in the four and is compared as stored.
+    """
     np, sitk = _deps()
     reference = readImage(referenceFile)
     read = readImage(readFile)
     readArr = onGrid(read, reference)
-    refArr = np.asarray(sitk.GetArrayFromImage(reference)).astype(np.uint8, copy=False)
-    if refArr.size and int(refArr.max()) > labels.N_CLASSES:
-        # An ImageCAS-X reference speaks its 14 label values; reads speak the
-        # project's four. Collapse by territory (D1, D1b) so like is scored with
-        # like. "Other" (14) has no fixed parent here and drops out.
-        lut = np.zeros(256, np.uint8)
-        for k, v in labels.ICX14_TO_4.items():
-            lut[k] = v
-        refArr = lut[refArr]
+    refArr = np.asarray(sitk.GetArrayFromImage(reference))
+    if icx14:
+        refArr = labels.icx14_to_four(refArr, _spacing(reference))
+    refArr = refArr.astype(np.uint8, copy=False)
     if np.count_nonzero(readArr) == 0 and np.count_nonzero(sitk.GetArrayViewFromImage(read)):
         # Labels in the file, none after resampling: the two do not overlap in
         # physical space, so every number would be a meaningless zero.
@@ -152,7 +155,7 @@ def scoreOne(submission, thresholds=None):
         if referenceFile is None:
             score['reference'] = {'error': 'reference_missing', 'mean_dice': None}
         else:
-            score['reference'], readArr = scoreAgainst(readFile, referenceFile)
+            score['reference'], readArr = scoreAgainst(readFile, referenceFile, icx14=True)
             score['reference']['referenceFileId'] = str(case['referenceFileId'])
         score['against'].append('imagecas-x')
         score['flags'] += sq.reference_flags(score['reference'], thresholds)

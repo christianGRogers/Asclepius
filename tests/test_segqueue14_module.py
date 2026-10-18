@@ -213,6 +213,24 @@ def test_the_prelabel_goes_into_the_project_segments_by_label_value():
     assert "values == int(spec.label)" in body
 
 
+def test_only_the_imagecas_x_reference_is_collapsed_from_14_classes():
+    # #68: the reviewer's reference is ImageCAS-X's 14 values and is collapsed to
+    # the four (labels.icx14_to_four, D25) because it is the reference -- not by
+    # its values. Prelabels and submissions are imported strictly by value.
+    body = ast.get_source_segment(_source(), _method("SegQueue14Logic",
+                                                     "importLabelsIntoProject"))
+    assert "labels.icx14_to_four(" in body and "if icx14:" in body
+    calls = [node for node in ast.walk(ast.parse(_source()))
+             if isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute)
+             and node.func.attr == "importLabelsIntoProject"]
+    collapsing = [any(k.arg == "icx14" and getattr(k.value, "value", None) is True
+                      for k in call.keywords) for call in calls]
+    assert collapsing.count(True) == 1, collapsing
+    reference = ast.get_source_segment(_source(), _method("SegQueue14Widget",
+                                                          "onShowReference"))
+    assert "icx14=True" in reference and "protocol.ASSET_REFERENCE" in reference
+
+
 def test_the_vessel_seed_is_a_helper_and_never_a_class():
     # D23: the binary seed is shown beside the classes, as the heart region is,
     # so exportLabelmap (the project's own segments only) can never submit it.

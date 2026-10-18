@@ -364,15 +364,20 @@ class SegQueue14Logic(ScriptedLoadableModuleLogic):
         except Exception:
             return 0
 
-    def importLabelsIntoProject(self, path, segmentationNode=None):
+    def importLabelsIntoProject(self, path, segmentationNode=None, icx14=False):
         """Load an integer label volume into the project's segments, by value.
 
         A voxel of value 3 goes into the segment whose label is 3 (LCx), and so
         on for each of the project's four classes (D25): the prelabel and the
         submission use the project's label values, so the value *is* the class.
         Values the project does not know are dropped rather than becoming
-        segments nobody asked for. Nothing is remapped here, so a volume in
-        ImageCAS-X's own 14 values would land in the wrong segments (#68).
+        segments nobody asked for.
+
+        ``icx14`` says the volume is an ImageCAS-X reference, in its own 14
+        values: it is first collapsed to the four exactly as the server scores
+        it (``labels.icx14_to_four``, D25; #68). Only the reviewer's reference
+        button sets it, because the reference asset always is ImageCAS-X;
+        prelabels and submissions keep the strict by-value import.
 
         One class at a time, as a 0/1 mask imported into exactly one named
         segment. Slicer's import resamples into the segmentation's geometry when
@@ -393,6 +398,10 @@ class SegQueue14Logic(ScriptedLoadableModuleLogic):
         try:
             labelNode = slicer.util.loadLabelVolume(path)
             values = slicer.util.arrayFromVolume(labelNode).copy()
+            if icx14:
+                # arrayFromVolume is (k, j, i); the spacing is (i, j, k).
+                values = labels.icx14_to_four(
+                    values, tuple(reversed(labelNode.GetSpacing())))
             scratch = slicer.mrmlScene.AddNewNodeByClass(
                 "vtkMRMLLabelMapVolumeNode", "SegQueue14PrelabelClass")
             logic = slicer.modules.segmentations.logic()
@@ -2659,7 +2668,7 @@ class SegQueue14Widget(ScriptedLoadableModuleWidget):
                 "vtkMRMLSegmentationNode", "ImageCAS-X reference (not submitted)")
             node.CreateDefaultDisplayNodes()
             node.SetReferenceImageGeometryParameterFromVolumeNode(self.logic.volumeNode)
-            self.logic.importLabelsIntoProject(path, segmentationNode=node)
+            self.logic.importLabelsIntoProject(path, segmentationNode=node, icx14=True)
             segmentation = node.GetSegmentation()
             for i in range(segmentation.GetNumberOfSegments()):
                 segment = segmentation.GetSegment(segmentation.GetNthSegmentID(i))

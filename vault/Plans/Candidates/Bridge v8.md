@@ -137,7 +137,9 @@ seed) needs the `ICX4_WORK` workdir override from #54. It gives three things:
 2. **A free check on the run.** icx14's job 2 lost a run to a resume bug.
 3. **A 2-model ensemble.** Scoring it is a fixed-prediction decision with case-only CIs.
 
-Cost: +56–76 GPU-h, with no extra wall-clock if it is submitted beside the first run.
+Cost: +56–76 GPU-h. It adds no wall-clock if it runs beside the first run. But Fir's 24 h queue is busy
+(309 queued at 06:00 UTC), so seed 2 should be submitted only **after seed 1's first job has started**,
+so that it can never delay seed 1.
 
 | Outcome on open 80 (paired, decisive macro) | Action |
 |---|---|
@@ -147,7 +149,7 @@ Cost: +56–76 GPU-h, with no extra wall-clock if it is submitted beside the fir
 
 **This is the lead's GPU-budget call, not a requirement.** Round 8 refused a standalone 40 h seed replicate
 of a settled forced choice. This one is different: it seeds the base model of every later decision, and
-Fir's capacity makes it wall-clock-free. If the lead declines, σ_seed is measured, as Round 8 said, on the
+our unused Fir fairshare makes it cheap in wall-clock. If the lead declines, σ_seed is measured, as Round 8 said, on the
 first retrained decision (likely the first pool fine-tune).
 
 ## 7. Schedule on Fir, and the first job for the lead
@@ -160,7 +162,17 @@ first retrained decision (likely the first pool fine-tune).
 - SCRATCH 20 TB with a 60-day purge;
 - `def-aso22` works after the CCDB opt-in.
 
-*Assumption:* opportunistic priority on `def-aso22` (the issue's default); #46's account table is still empty.
+**Account facts** (the lead's Fir output, #46 comments of 05:55 and 05:57 UTC, PR #52):
+- `CC_CLUSTER=fir`, so `./icx4` picks the Fir job shape by itself.
+- Slurm accounts `def-aso22_gpu` / `_cpu`, charged automatically from `--account=def-aso22`.
+- RawUsage 0 (LevelFS inf), so fairshare priority is at its maximum. No MaxJobs/MaxTRES/GrpTRES limits.
+- HOME 48 GiB; SCRATCH 19 TiB (60-day purge); PROJECT unconfirmed.
+- GPU partitions by walltime: 3 h, 12 h, 24 h (`gpubase_bygpu_b3`, where the 23:50 jobs land), 3 d, 7 d, and
+  `gpubackfill` 24 h.
+- StdEnv/2023 + python 3.11.5 + cuda 12.6 load; the wheelhouse has torch 2.14.1 for cp311.
+- **The queue is busy:** at about 06:00 UTC, 309 one-GPU jobs were queued and 216 running in the 24 h
+  partition, with no idle GPU node. Expect a wait; top fairshare should put us near the front. Keep the 23:50
+  chain: the 3 d and 7 d partitions have fewer nodes (60 and 30).
 
 | Step | Where | GPU-h (Fir) | Note |
 |---|---|---|---|
@@ -177,7 +189,7 @@ first retrained decision (likely the first pool fine-tune).
 # 0. Once, in a browser: CCDB -> Resources -> Access Systems -> opt in to Fir (takes up to 1 h).
 
 # 1. Data: copy cases/ from Trillium to Fir with Globus
-#    (source alliancecan#trillium : <root>/cases  ->  destination alliancecan#fir : $SCRATCH/asclepius/cases),
+#    (source alliancecan#trillium : <root>/cases  ->  destination alliancecan#fir-globus : $SCRATCH/asclepius/cases),
 #    or rsync from a Trillium login node to Fir's scratch (on Fir, `echo $SCRATCH` gives the path):
 #      rsync -a <root>/cases/ fir.alliancecan.ca:<Fir $SCRATCH>/asclepius/cases/
 
@@ -187,8 +199,8 @@ mkdir -p $SCRATCH/asclepius/experiments && cd $SCRATCH/asclepius
 git clone --branch dev https://github.com/christianGRogers/Asclepius.git repo      # or rsync your Trillium checkout
 cp -r repo/trillium/icx4 experiments/icx4
 cd experiments/icx4
-ICX4_CLUSTER=fir ICX4_DRYRUN=1 ./icx4   # must print: --gpus-per-node=h100:1, --cpus-per-task=12, --mem=280G, account def-aso22
-ICX4_CLUSTER=fir ./icx4                 # builds the venv, fetches labels, submits a chain of 4 x 23:50 jobs
+ICX4_DRYRUN=1 ./icx4                    # must print "cluster: fir" and --gpus-per-node=h100:1, --cpus-per-task=12, --mem=280G, def-aso22
+./icx4                                  # builds the venv, fetches labels, submits a chain of 4 x 23:50 jobs
 ./icx4 status                           # after ~2 h: s/epoch; above ~250 s, all 4 chained jobs will be used
 
 # 3. Before training ends (>= 2 days later), once Echo's sealed-split fix and #54 are merged into dev:

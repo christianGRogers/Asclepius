@@ -1,7 +1,7 @@
 """The wire contract between the SegQueue14 Slicer module and its Girder plugin.
 
 The same shapes as ``segqueue.protocol`` -- and most of the dataclasses are
-reused from there unchanged -- with four differences that are the point of
+reused from there unchanged -- with these differences, which are the point of
 having a separate contract:
 
 * **A separate prefix.** Every route is ``/api/v1/segqueue14/...``, so the two
@@ -166,6 +166,7 @@ class AssignmentInfo14(AssignmentInfo):
 
 
 def too_old_message(sent: Optional[int]) -> str:
+    """The 426 refusal text: what the server speaks, what the module sent, what to do."""
     shown = "nothing" if sent is None else str(sent)
     return ("This SegQueue14 module is too old for the server: the server speaks "
             f"SegQueue14 protocol {PROTOCOL_VERSION} and the module sent {shown}. "

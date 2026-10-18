@@ -34,6 +34,8 @@ class NiftiError(ValueError):
 
 @dataclass(frozen=True)
 class NiftiHeader:
+    """The fields of a NIfTI-1 header the prelabel checks read; nothing else."""
+
     dims: Tuple[int, ...]
     datatype: int
     bitpix: int
@@ -116,6 +118,7 @@ def header_from_chunks(chunks: Iterable[bytes], limit: int = 1 << 20) -> NiftiHe
 
 
 def header_from_path(path: str) -> NiftiHeader:
+    """``header_from_chunks`` over a file on disk, gzipped or not."""
     def blocks():
         with open(path, "rb") as handle:
             while True:

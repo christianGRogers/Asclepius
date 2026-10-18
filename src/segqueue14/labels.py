@@ -22,7 +22,7 @@ Decisions (vault/Plans/Human decisions.md):
 
 from __future__ import annotations
 
-from typing import Dict, Iterable, List, Mapping
+from typing import Dict, Iterable, List, Mapping, Optional
 
 #: ``(label, name, colour, required, hint)`` in label order. Names are the short
 #: ImageCAS-X names; they are also the per-class file names in a training export
@@ -93,7 +93,7 @@ def segment_dicts() -> List[dict]:
     ]
 
 
-def segment_specs():
+def segment_specs() -> list:
     """The table as ``segqueue.protocol.SegmentSpec`` objects."""
     from segqueue.protocol import SegmentSpec
 
@@ -101,7 +101,7 @@ def segment_specs():
 
 
 def missing_required(voxel_counts: Mapping[str, int],
-                     required: Iterable[str] = None) -> List[str]:
+                     required: Optional[Iterable[str]] = None) -> List[str]:
     """The required classes with no voxels, in label order.
 
     ``voxel_counts`` is ``{segment name: voxels}``; a name absent from it counts

@@ -10,7 +10,6 @@ from girder.models.file import File
 from girder.models.folder import Folder
 from girder.models.group import Group
 from girder.models.user import User
-from segqueue.checksum import CHUNK_BYTES
 from segqueue14 import plan as sqplan
 from segqueue14 import protocol
 
@@ -146,7 +145,7 @@ def _anyAdmin():
 # ------------------------------------------------------- server-side hashing
 
 
-def hashStoredFile(file, chunkBytes=CHUNK_BYTES):
+def hashStoredFile(file):
     digest = hashlib.sha256()
     stream = File().download(file, headers=False)
     for chunk in stream():

@@ -10,7 +10,6 @@ from girder.models.folder import Folder
 from girder.models.group import Group
 from girder.models.user import User
 from segqueue import protocol
-from segqueue.checksum import CHUNK_BYTES
 
 from .constants import (
     ANNOTATOR_GROUP,
@@ -181,7 +180,7 @@ def _anyAdmin():
 # ------------------------------------------------------- server-side hashing
 
 
-def hashStoredFile(file, chunkBytes=CHUNK_BYTES):
+def hashStoredFile(file):
     """SHA-256 over a file already in an assetstore, without buffering it.
 
     The client sends the digest it computed; this recomputes it from the bytes
@@ -246,9 +245,3 @@ def checkClientProtocol(clientProtocol):
         protocol.check_client_protocol(clientProtocol)
     except protocol.ProtocolError as exc:
         refuse(exc.code, str(exc), status=426, **exc.detail)
-
-
-def grantRead(model, doc, user):
-    """Let a user read a document they legitimately own a stake in."""
-    model.setUserAccess(doc, user, level=AccessType.READ, save=True)
-    return doc

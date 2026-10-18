@@ -26,9 +26,7 @@ from ..maintenance import sweep as sweepStranded
 from ..models import Assignment14 as Assignment
 from ..models import Case14 as Case
 from ..models import Note14 as Note
-from ..models import Review14 as Review
 from ..models import Submission14 as Submission
-from ..models.review import APPROVE, REJECT
 from ..settings import getPolicy
 from ..utils import ensureGroups, refuse
 
@@ -420,8 +418,3 @@ def _median(values):
         return ordered[mid]
     return (ordered[mid - 1] + ordered[mid]) / 2.0
 
-
-#: Verdict names re-exported so the dashboard JS has one source for them.
-VERDICTS = (APPROVE, REJECT)
-
-__all__ = ['AdminResource14', 'Review', 'VERDICTS']

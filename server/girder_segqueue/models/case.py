@@ -255,20 +255,6 @@ class Case(AccessControlledModel):
             return_document=ReturnDocument.AFTER,
         )
 
-    def wantDuplicate(self, caseId):
-        """Raise a case's replica target so a second annotator is served it.
-
-        Called when the policy rolls a duplicate. Raising the target rather than
-        marking a boolean means the ordinary servability rule does all the work:
-        the case simply becomes servable again, to someone who has not seen it.
-        """
-        return self.collection.find_one_and_update(
-            {'_id': caseId, 'retired': False},
-            {'$set': {'replicasWanted': 2, 'updated': datetime.datetime.now(
-                datetime.timezone.utc)}},
-            return_document=ReturnDocument.AFTER,
-        )
-
     # -------------------------------------------------------------- queries
 
     def statusOf(self, case):

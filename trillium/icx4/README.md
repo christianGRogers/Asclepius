@@ -10,6 +10,22 @@ cd <root>/experiments/icx4 && ./icx4      # login node: labels, submit the job c
 ./icx4 collect                             # small results -> ./results/
 ```
 
+## Other clusters (Nibi, Fir, Rorqual)
+
+The same command runs on Alliance general-purpose clusters with the same `def-aso22` account. The launcher picks
+the job shape from the login host (or `$CC_CLUSTER`), or from `ICX4_CLUSTER=trillium|fir|nibi|rorqual`:
+
+| Cluster | Job header |
+|---|---|
+| Trillium | `--gpus-per-node=1` (24 cores and ~188 GiB come with the GPU) |
+| Fir | `--gpus-per-node=h100:1 --cpus-per-task=12 --mem=280G` |
+| Nibi | `--gpus-per-node=h100:1 --cpus-per-task=14 --mem=250G` |
+| Rorqual | `--gpus-per-node=h100:1 --cpus-per-task=16 --mem=124G` |
+
+Copy `cases/` to the new cluster first (Globus or rsync). The venv is built there on the first run. With fewer cores
+per GPU, training may take 50–70 h instead of ~50 h. Details:
+`vault/Plans/Experiments/Compute inventory - Nibi or Fir run icx4 unchanged on def-aso22, the AI clusters need an aip- allocation.md`.
+
 ## Labels
 
 ImageCAS-X's 14 classes collapsed by `lib/territory.py` before training (the same table as

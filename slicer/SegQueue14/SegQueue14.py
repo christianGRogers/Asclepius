@@ -1593,10 +1593,7 @@ class SegQueue14Widget(ScriptedLoadableModuleWidget):
         self.updateProgress.setValue(0)
         self.updateButton.setEnabled(False)
 
-        def progress(done, total):
-            self.updateProgress.setMaximum(max(1, total))
-            self.updateProgress.setValue(done)
-            slicer.app.processEvents()
+        progress = _progressInto(self.updateProgress)
 
         staging = tempfile.mkdtemp(prefix="segqueue14-download-")
         try:
@@ -2308,6 +2305,15 @@ class SegQueue14Widget(ScriptedLoadableModuleWidget):
         self.reviseButton.setEnabled(
             bool(self._claimedSubmission) and hasSubmission and not decided)
 
+    def _reviewDir(self):
+        """The scratch directory under the cache root that reviewer downloads go to."""
+        directory = os.path.join(self.logic.cache.root, "review")
+        try:
+            os.makedirs(directory)
+        except OSError:
+            pass
+        return directory
+
     def _reviewPaths(self, entry):
         """``(volumePath, segPath)`` named after what the files actually are.
 
@@ -2316,13 +2322,9 @@ class SegQueue14Widget(ScriptedLoadableModuleWidget):
         they download, verify and then fail to open with a message that never
         mentions the name -- which is precisely what "the review does not load"
         was. The server sends the real names; where it is too old to, the bytes
-        get sniffed after the download, the same fallback ``_correctSuffix`` is.
+        get sniffed after the download (``SegQueue14Logic.correctSuffix``).
         """
-        directory = os.path.join(self.logic.cache.root, "review")
-        try:
-            os.makedirs(directory)
-        except OSError:
-            pass
+        directory = self._reviewDir()
         return (os.path.join(directory, _safeName(entry.get("volumeName"),
                                                   "volume.nrrd")),
                 os.path.join(directory, _safeName(entry.get("submissionName"),
@@ -2469,11 +2471,7 @@ class SegQueue14Widget(ScriptedLoadableModuleWidget):
                 "first -- opening a case clears the scene.")
             return
 
-        directory = os.path.join(self.logic.cache.root, "review")
-        try:
-            os.makedirs(directory)
-        except OSError:
-            pass
+        directory = self._reviewDir()
         volumePath = os.path.join(
             directory, _safeName(case.get("volumeName"), "case.nrrd"))
 
@@ -2645,11 +2643,7 @@ class SegQueue14Widget(ScriptedLoadableModuleWidget):
         if case is None or self.logic.volumeNode is None:
             slicer.util.errorDisplay("Open a case or a submission first.")
             return
-        directory = os.path.join(self.logic.cache.root, "review")
-        try:
-            os.makedirs(directory)
-        except OSError:
-            pass
+        directory = self._reviewDir()
         path = os.path.join(directory, "case_reference.nii.gz")
         with _busy():
             try:
@@ -2935,10 +2929,7 @@ class SegQueue14Widget(ScriptedLoadableModuleWidget):
         self.progressBar.setVisible(True)
         self.progressBar.setValue(0)
 
-        def progress(done, total):
-            self.progressBar.setMaximum(max(1, total))
-            self.progressBar.setValue(done)
-            slicer.app.processEvents()
+        progress = _progressInto(self.progressBar)
 
         with _busy():
             try:
@@ -3067,10 +3058,7 @@ class SegQueue14Widget(ScriptedLoadableModuleWidget):
 
         self.progressBar.setVisible(True)
 
-        def progress(done, total):
-            self.progressBar.setMaximum(max(1, total))
-            self.progressBar.setValue(done)
-            slicer.app.processEvents()
+        progress = _progressInto(self.progressBar)
 
         with _busy():
             try:
@@ -3136,6 +3124,15 @@ class SegQueue14Widget(ScriptedLoadableModuleWidget):
             button.setEnabled(hasCase)
         self.editorBox.setEnabled(hasCase or reviewing)
         self.notesBox.setEnabled(hasCase)
+
+
+def _progressInto(bar):
+    """A ``progress(done, total)`` callback that drives ``bar`` and keeps the UI live."""
+    def progress(done, total):
+        bar.setMaximum(max(1, total))
+        bar.setValue(done)
+        slicer.app.processEvents()
+    return progress
 
 
 def _deadlineText(deadline):

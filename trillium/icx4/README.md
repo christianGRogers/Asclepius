@@ -47,15 +47,33 @@ ImageCAS-X's 14 classes collapsed by `lib/territory.py` before training (the sam
 | Dataset 715: CT from `cases/`, labels collapsed to 0–4; plan + preprocess | job 1, CPU | ~1–2 h |
 | nnU-Net v2 ResEnc (60 GB plan), 0.5 mm isotropic, patch 256³, batch 2, mirroring off, **1000 epochs** | jobs 1–3 | ~50 h |
 | Predict every case in `cases/` (all 1000) | last job | ~2–4 h |
-| Score the ImageCAS-X test split (160, never trained on), against collapsed ImageCAS-X | last job | minutes |
+| Dice on the **open** ImageCAS-X test cases only (open-36 and dev-44, apart; see below) | last job | minutes |
 
 Splits are ImageCAS-X's own: train 560, val 80 (fold 0), test 160 held out. The chain resumes from either
 checkpoint file (the icx14 resume fix is kept). Optional class weights: `$SCRATCH/icx4/ce_class_weights.json`, a
 list of 5 (background, LM, LAD, LCx, RCA).
 
+## Which cases are scored, and why (A14)
+
+`sealed_test.json` (a byte-identical copy of `trillium/sealed_test.json`, pinned by `tests/test_icx4_sealed.py`)
+splits ImageCAS-X's 160 test cases into three groups. `lib/sealed.py` is the one filter every scoring stage uses:
+
+| Group | Cases | Scored? |
+|---|---|---|
+| Sealed (`sealed_icx_test`) | 80 | **Never.** Scored only at milestones against team reads (`vault/Plans/Sealed test.md`); predicted for SegQueue, never scored, summarised or copied into `results/` |
+| Sealed quality-0 (`sealed_quality0`) | 20 | **Never** (same rule; no ImageCAS-X labels anyway) |
+| open-36 (`open_icx_test`) | 36 | Yes: never sealed and never used in development, so the clean group |
+| dev-44 (`excluded_dev_cases_in_test`) | 44 | Yes, **reported apart**: not sealed, but each was inspected by an advocate, so biased |
+
+The launcher refuses to start (and the job refuses to run) if `sealed_test.json` is missing, unreadable or
+malformed, if the job's copy in `$SCRATCH/icx4/` differs from the experiment folder's, or if ImageCAS-X's test
+split is not exactly those 80 + 36 + 44. It never falls back to scoring everything. `ICX4_DRYRUN=1 ./icx4` prints
+the filter and both group counts. `predictions_index.json` in `results/` omits the sealed cases (it gives only their
+count); the full index stays in the workdir as `predictions_index_all.json` for the SegQueue hand-off.
+
 ## Outputs
 
-- `results/`: `SUMMARY.md`, `results.json` (per-class Dice and detection on the test split), `per_case_test.json`,
+- `results/`: `SUMMARY.md`, `results.json` (per-class Dice and detection, open-36 and dev-44 apart), `per_case_test.json`,
   `predictions_index.json`, nnU-Net's val summary, training log, plans, timings.
 - `$SCRATCH/icx4/predictions/c0000.nii.gz … c0999.nii.gz` (uint8, labels 1–4, each CT's own grid).
 - `$SCRATCH/icx4/nnunet_results/…/fold_0/checkpoint_final.pth`: the model.

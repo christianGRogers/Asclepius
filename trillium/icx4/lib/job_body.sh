@@ -18,6 +18,11 @@ if command -v module >/dev/null 2>&1; then
 fi
 # shellcheck disable=SC1091
 [ -f "$VENV/bin/activate" ] && source "$VENV/bin/activate"
+# A14 (#55): refuse to start without the sealed list, or with a copy that differs from the experiment folder's.
+python "$LIB/sealed.py" check "$W/sealed_test.json" \
+    || { echo "[job] REFUSING: $W/sealed_test.json is missing or invalid (A14)"; exit 3; }
+cmp -s "$W/sealed_test.json" "$LIB/../sealed_test.json" \
+    || { echo "[job] REFUSING: $W/sealed_test.json differs from $LIB/../sealed_test.json (A14)"; exit 3; }
 DEV="${ICX4_DEVICE:-cuda}"   # cpu only in the local self-test
 export nnUNet_raw="$W/nnunet_raw" nnUNet_preprocessed="$W/nnunet_preprocessed" nnUNet_results="$W/nnunet_results"
 export nnUNet_def_n_proc=8 nnUNet_compile=f
@@ -66,16 +71,20 @@ if [ -e "$W/.train_done" ] && [ ! -e "$W/.predict_done" ]; then
             -tr "$TR" -p "$PLANS" -chk checkpoint_final.pth --disable_tta --continue_prediction -npp 6 -nps 6 -device "$DEV" \
             >> "$W/logs/predict.log" 2>&1 || echo "[job] prediction stopped or failed (see logs/predict.log)"
         stamp predict_h
-        # score.py also deletes unreadable files (a kill mid-write), so the next job redoes exactly those
+        # score.py also deletes unreadable files (a kill mid-write), so the next job redoes exactly those.
+        # It scores open-36 + dev-44 only (lib/sealed.py, A14); the sealed cases are predicted, never scored.
         python "$LIB/score.py" "$W" "$ICX" "$W/results" $((NPROC - 2)) && touch "$W/.predict_done" \
-            || echo "[job] predictions incomplete; the next job continues"
+            || echo "[job] predictions incomplete (or the sealed filter refused); the next job continues"
     else
         echo "[job] not enough time left to start prediction; the next job does it"
     fi
 fi
 
-# ---- D. results (small; no weights, no volumes) -------------------------------------------------
+# ---- D. results (small; no weights, no volumes; never a sealed case) -----------------------------
 mkdir -p "$W/results"
+if [ -e "$W/.predict_done" ]; then
+    python "$LIB/report.py" "$W" "$W/results" > "$W/logs/report.log" 2>&1 || echo "[job] report FAILED (see logs/report.log)"
+fi
 cp "$W"/logs/*.log "$W/results/" 2>/dev/null || true
 cp "$FOLD"/{training_log_*.txt,progress.png} "$W/results/" 2>/dev/null || true
 cp "$FOLD/validation/summary.json" "$W/results/val_summary.json" 2>/dev/null || true

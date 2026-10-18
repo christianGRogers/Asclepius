@@ -14,6 +14,7 @@ import numpy as np, nibabel as nib
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from territory import to_four  # noqa: E402
+import sealed  # noqa: E402
 
 W, layout_json, ICX, NP = sys.argv[1], sys.argv[2], sys.argv[3], int(sys.argv[4])
 DS_ID, DS = 715, 'Dataset715_ICX4'
@@ -41,6 +42,10 @@ if len(train) < MIN or len(val) < max(1, MIN // 7):
     sys.exit('[prepare] too few ImageCAS-X train/val cases found in cases/; refusing to run')
 if set(test) & set(train + val):
     sys.exit('[prepare] ImageCAS-X test cases overlap train/val; refusing to run')
+try:  # A14: no sealed case may be trained on (ImageCAS-X's splits already guarantee it; this is the check)
+    sealed.refuse_sealed(train + val, sealed.load(f'{W}/sealed_test.json'), 'prepare')
+except sealed.SealedError as e:
+    sys.exit(f'[prepare] {e}')
 
 
 def one(c):

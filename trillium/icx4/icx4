@@ -1,7 +1,8 @@
 #!/bin/bash
 # icx4: train one 4-class nnU-Net (LM, LAD, LCx, RCA; D25) on ImageCAS-X's lumen collapsed by territory (1000 epochs,
 # ~50 h of GPU), then predict all
-# 1000 cases for the SegQueue hand-off and score the held-out ImageCAS-X test split.
+# 1000 cases for the SegQueue hand-off and score the OPEN ImageCAS-X test cases: open-36 and dev-44, apart. The 80
+# sealed test cases (A14, ./sealed_test.json) are predicted but never scored; without that file nothing starts.
 #
 #   cd <root>/experiments/icx4 && ./icx4     # set up (login node), submit the job chain, or report status
 #   ./icx4 status                              # job state and progress
@@ -113,6 +114,9 @@ RJ="$(running_job || true)"
 if [ -n "$RJ" ]; then say "already queued/running: $RJ (not submitting again)"; status; exit 0; fi
 
 load_modules
+# A14 (#55): the sealed list must be here and valid before anything else happens; never "score everything".
+python3 "$LIB/sealed.py" check "$HERE/sealed_test.json" || die "$HERE/sealed_test.json is missing or invalid (A14): refusing to start"
+cmp -s "$HERE/sealed_test.json" "$W/sealed_test.json" 2>/dev/null || cp "$HERE/sealed_test.json" "$W/sealed_test.json"
 setup_venv
 say "scratch workdir: $W"
 "$PY" "$LIB/layout.py" "$HERE" "$W/layout.json"   # walks up to <root>/cases (or $CASES); fails loudly
@@ -137,6 +141,9 @@ for s in ('train', 'val', 'test'):
     print(f'[icx4] ImageCAS-X {s}: {len(ids)} listed, {sum(c in L for c in ids)} present in cases/')
 print(f'[icx4] all cases to predict: {len(L)}')
 PY
+# the scored case list, from the one filter every stage uses (A14): exactly open-36 + dev-44, never a sealed case
+"$PY" "$LIB/sealed.py" check "$W/sealed_test.json" "$ICX" "$W/layout.json" \
+    || die "the sealed filter refused (see above): not submitting"
 
 JOB="$W/job.sh"
 ACCOUNT_LINE="#SBATCH --account=${ACCOUNT:-def-aso22}"

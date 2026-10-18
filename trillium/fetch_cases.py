@@ -1,33 +1,49 @@
 #!/usr/bin/env python3
-"""Download the 1000 SegQueue cases from Girder into the layout the experiments expect.
+"""Download the 1000 ImageCAS CTs from Girder (D22 layout) into the layout the experiments expect.
 
-    python3 fetch_cases.py <dest>/cases
+    python3 fetch_cases.py <dest>/cases            # CTs only (~91 GB): what icx4 needs
+    python3 fetch_cases.py --masks <dest>/cases    # also the original ImageCAS binary masks
 
-Writes <dest>/cases/c0000/ct.nii.gz + coronary_arteries.nii.gz ... c0999/, the Girder export
-layout of trillium/README.md. Case ids follow the tournament's numbering: the cases are paired
-and ordered by upload time, which makes cNNNN = ImageCAS case NNNN+1 (vault note "Crucible -
-ImageCAS-X is real and its 800 cases are our cases c(id-1)").
+Writes <dest>/cases/c0000/ct.nii.gz ... c0999/ct.nii.gz (with --masks also coronary_arteries.nii.gz
+beside each), plus <dest>/cases/cases.json (case -> ImageCAS id, Girder folder and item ids).
+ImageCAS id n is case c{n-1:04d}. Since D22 the ImageCAS volumes sit in two folders (see GIRDER LAYOUT
+below): the 800 ImageCAS-X cases in ImageCAS-X/cases and the 200 unlabelled ones in SegQueue/cases,
+beside the CCTA-Pool volumes, which are skipped. The run refuses unless the two folders give exactly
+ImageCAS ids 1-1000, each once.
 
-Read-only on Girder. Authenticates with GIRDER_TOKEN, or GIRDER_USER + GIRDER_PASSWORD, or
-prompts once. Resumable: a file already present at the right size is skipped, and downloads go
-to a .part file renamed when complete, so an interrupted run can simply be started again.
-Standard library only.
+Read-only on Girder. Authenticates with GIRDER_TOKEN, or GIRDER_USER + GIRDER_PASSWORD, or prompts
+once. Resumable: a file already present at the right size is skipped, and downloads go to a .part
+file renamed when complete, so an interrupted run can simply be started again. Standard library only.
 """
+import argparse
 import base64
-import bisect
 import concurrent.futures as cf
 import getpass
 import json
 import os
+import re
 import sys
 import time
 import urllib.parse
 import urllib.request
 
 API = os.environ.get('GIRDER_API', 'https://janus.bradensbay.com/api/v1')
-COLLECTION = 'SegQueue'
-FOLDER = 'cases'
 THREADS = int(os.environ.get('FETCH_THREADS', 8))
+
+# ---- GIRDER LAYOUT (D22; folder and item names verified on janus by the PM, 2026-10-18, issue #79) ----
+# (Girder path, number of ImageCAS ids it must hold). Each item holds one file with the item's name.
+FOLDERS = (
+    ('/collection/ImageCAS-X/cases', 800),   # ImageCAS-X's 800 cases (CT + original mask)
+    ('/collection/SegQueue/cases', 200),     # the 200 unlabelled ImageCAS cases; every other item is skipped
+)
+CT_NAME = re.compile(r'ImageCAS__(\d{4})\.nii\.gz')            # the CT, 4-digit 1-based ImageCAS id
+MASK_NAME = re.compile(r'ImageCAS__(\d{4})__mask\.nii\.gz')    # the original ImageCAS binary mask
+N_CASES = 1000
+# ------------------------------------------------------------------------------------------------------
+
+
+class LayoutError(SystemExit):
+    """Girder does not hold exactly what GIRDER LAYOUT describes; nothing is downloaded."""
 
 
 def call(path, token=None, auth=None, params=None):
@@ -49,23 +65,53 @@ def login():
     return call('user/authentication', auth=f'{user}:{pw}')['authToken']['token']
 
 
-def list_cases(token):
-    folder = call('resource/lookup', token, params={'path': f'/collection/{COLLECTION}/{FOLDER}'})
-    items = call('item', token, params={'folderId': folder['_id'], 'limit': 0})
-    items.sort(key=lambda i: i['created'])
-    cts = [i for i in items if i['name'].startswith('ct')]
-    masks = [i for i in items if i['name'].startswith('coronary')]
-    times = [m['created'] for m in masks]
-    pairs, used = [], set()
-    for ct in cts:  # each CT is uploaded just before its own mask
-        j = bisect.bisect_left(times, ct['created'])
-        if j >= len(masks) or j in used:
-            sys.exit(f'cannot pair {ct["name"]} ({ct["_id"]}) with a mask; refusing to guess')
-        used.add(j)
-        pairs.append((ct, masks[j]))
-    if len(pairs) != 1000:
-        print(f'warning: expected 1000 cases, found {len(pairs)}', file=sys.stderr)
-    return pairs
+def scan_folder(items, where):
+    """{ImageCAS id: {'ct': item, 'mask': item or None}} from one folder's items, and the skip count."""
+    found, skipped = {}, 0
+    for it in items:
+        for kind, rx in (('ct', CT_NAME), ('mask', MASK_NAME)):
+            m = rx.fullmatch(it['name'])
+            if m:
+                break
+        else:
+            skipped += 1   # a pool volume (ImageCHD__..., CCA200-HF__...) or anything else
+            continue
+        n = int(m.group(1))
+        entry = found.setdefault(n, {'ct': None, 'mask': None, 'folder': where})
+        if entry[kind] is not None:
+            raise LayoutError(f'{where}: two items named {it["name"]} ({entry[kind]["_id"]}, {it["_id"]}); '
+                              'refusing to guess')
+        entry[kind] = it
+    no_ct = sorted(n for n, e in found.items() if e['ct'] is None)
+    if no_ct:
+        raise LayoutError(f'{where}: {len(no_ct)} ImageCAS mask(s) without a CT, e.g. ids {no_ct[:5]}')
+    return found, skipped
+
+
+def list_cases(token, masks=False):
+    """{ImageCAS id: {'ct', 'mask', 'folder'}} for exactly ids 1..1000, or LayoutError."""
+    cases = {}
+    for path, expect in FOLDERS:
+        folder = call('resource/lookup', token, params={'path': path})
+        items = call('item', token, params={'folderId': folder['_id'], 'limit': 0})
+        found, skipped = scan_folder(items, path)
+        print(f'{path}: {len(found)} ImageCAS ids ({len(items)} items, {skipped} other volumes skipped)',
+              flush=True)
+        if len(found) != expect:
+            raise LayoutError(f'{path}: expected {expect} ImageCAS ids, found {len(found)}; refusing')
+        both = sorted(set(found) & set(cases))
+        if both:
+            raise LayoutError(f'ImageCAS ids in more than one folder, e.g. {both[:5]}; refusing to guess')
+        cases.update(found)
+    if set(cases) != set(range(1, N_CASES + 1)):
+        bad = sorted(set(cases) ^ set(range(1, N_CASES + 1)))
+        raise LayoutError(f'the ImageCAS ids are not exactly 1-{N_CASES} ({len(cases)} found; '
+                          f'off by e.g. {bad[:5]}); refusing')
+    if masks:
+        no_mask = sorted(n for n, e in cases.items() if e['mask'] is None)
+        if no_mask:
+            raise LayoutError(f'--masks: {len(no_mask)} case(s) have no __mask item, e.g. ids {no_mask[:5]}')
+    return cases
 
 
 def fetch(token, item, dest):
@@ -92,19 +138,37 @@ def fetch(token, item, dest):
     raise SystemExit(f'failed to download {dest}')
 
 
-def main():
-    out = os.path.abspath(sys.argv[1] if len(sys.argv) > 1 else 'cases')
+def plan(cases, out, masks=False):
+    """[(item, dest path)] and the cases.json rows."""
+    jobs, rows = [], []
+    for n in sorted(cases):
+        e, c = cases[n], f'c{n - 1:04d}'
+        d = os.path.join(out, c)
+        jobs.append((e['ct'], os.path.join(d, 'ct.nii.gz')))
+        if masks:
+            jobs.append((e['mask'], os.path.join(d, 'coronary_arteries.nii.gz')))
+        rows.append({'case': c, 'imagecas_id': n, 'folder': e['folder'], 'ct_id': e['ct']['_id'],
+                     'mask_id': e['mask']['_id'] if e['mask'] else None})
+    return jobs, rows
+
+
+def main(argv=None):
+    ap = argparse.ArgumentParser(description=__doc__.split('\n')[0])
+    ap.add_argument('dest', nargs='?', default='cases', help='the cases/ directory to fill')
+    ap.add_argument('--masks', action='store_true',
+                    help='also fetch the original ImageCAS masks (icx4 does not read them)')
+    a = ap.parse_args(argv)
+    out = os.path.abspath(a.dest)
     token = login()
-    pairs = list_cases(token)
-    jobs = []
-    for n, (ct, mask) in enumerate(pairs):
-        d = os.path.join(out, f'c{n:04d}')
-        os.makedirs(d, exist_ok=True)
-        jobs += [(ct, os.path.join(d, 'ct.nii.gz')), (mask, os.path.join(d, 'coronary_arteries.nii.gz'))]
-    json.dump([{'case': f'c{n:04d}', 'ct_id': c['_id'], 'mask_id': m['_id']} for n, (c, m) in enumerate(pairs)],
-              open(os.path.join(out, 'cases.json'), 'w'), indent=0)
+    cases = list_cases(token, a.masks)
+    jobs, rows = plan(cases, out, a.masks)
+    for _, d in jobs:
+        os.makedirs(os.path.dirname(d), exist_ok=True)
+    with open(os.path.join(out, 'cases.json'), 'w') as f:
+        json.dump(rows, f, indent=0)
     total = sum(i['size'] for i, _ in jobs)
-    print(f'{len(pairs)} cases, {total / 1e9:.1f} GB -> {out}', flush=True)
+    print(f'{len(cases)} ImageCAS cases ({"CT + mask" if a.masks else "CT only"}), {total / 1e9:.1f} GB -> {out}',
+          flush=True)
     done, t0 = 0, time.time()
     with cf.ThreadPoolExecutor(THREADS) as ex:
         futs = [ex.submit(fetch, token, i, d) for i, d in jobs]

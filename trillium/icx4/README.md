@@ -22,9 +22,29 @@ the job shape from the login host (or `$CC_CLUSTER`), or from `ICX4_CLUSTER=tril
 | Nibi | `--gpus-per-node=h100:1 --cpus-per-task=14 --mem=250G` |
 | Rorqual | `--gpus-per-node=h100:1 --cpus-per-task=16 --mem=124G` |
 
-Copy `cases/` to the new cluster first (Globus or rsync). The venv is built there on the first run. With fewer cores
-per GPU, training may take 50–70 h instead of ~50 h. Details:
+Get `cases/` onto the new cluster first. The simplest route needs no Trillium: fetch the 1000 ImageCAS CTs from
+Girder with `trillium/fetch_cases.py` (D22 layout, below). Copying an existing `cases/` (Globus or rsync) works too.
+The venv is built there on the first run. With fewer cores per GPU, training may take 50–70 h instead of ~50 h. Details:
 `vault/Plans/Experiments/Compute inventory - Nibi or Fir run icx4 unchanged on def-aso22, the AI clusters need an aip- allocation.md`.
+
+### Fir without Trillium (issue #79)
+
+```sh
+module load StdEnv/2023 python/3.11.5
+mkdir -p $SCRATCH/asclepius && cd $SCRATCH/asclepius
+git clone -b dev https://github.com/christianGRogers/Asclepius.git repo || git -C repo pull --ff-only
+python3 repo/trillium/fetch_cases.py cases    # in tmux: ~91 GB of CTs, resumable (re-run if cut off)
+mkdir -p experiments && rm -rf experiments/icx4 && cp -r repo/trillium/icx4 experiments/icx4
+cd experiments/icx4 && ICX4_CLUSTER=fir CHAIN=5 ./icx4
+```
+
+`fetch_cases.py` reads `/collection/ImageCAS-X/cases` (800 ImageCAS ids) and the 200 `ImageCAS__*` items of
+`/collection/SegQueue/cases` (every other volume there is skipped), refuses unless the two give exactly ImageCAS ids
+1–1000, and writes `cases/cNNNN/ct.nii.gz` (ImageCAS id n → `c{n-1:04d}`) and `cases/cases.json`. It asks for the
+Girder login once (or takes `GIRDER_TOKEN`, or `GIRDER_USER` + `GIRDER_PASSWORD`) and never writes to Girder.
+`--masks` also fetches the original ImageCAS masks as `coronary_arteries.nii.gz`; icx4 does not need them.
+The launcher accepts this CT-only layout (`layout: girder-ct`) and prints `aorta set: 160 cases (val 80: 80,
+open 36: 36, dev 44: 44), sealed 0`; the val-80 aortas are made in the job, so nothing comes from Trillium.
 
 ## Labels
 
@@ -48,7 +68,7 @@ ImageCAS-X's 14 classes collapsed by `lib/territory.py` before training (the sam
 | nnU-Net v2 ResEnc (60 GB plan), 0.5 mm isotropic, patch 256³, batch 2, mirroring off, **1000 epochs** | jobs 1–3 | ~50 h |
 | Predict every case in `cases/` (all 1000) | last job | ~2–4 h |
 | Dice on the **open** ImageCAS-X test cases only (open-36 and dev-44, apart; see below) | last job | minutes |
-| TotalSegmentator `total_fast` aortas for the same 80 open cases (never a sealed case) | last job, GPU | ~30 min |
+| TotalSegmentator `total_fast` aortas for ImageCAS-X val 80 + the same 80 open cases (160; never a sealed case) | last job, GPU | ~1 h |
 | **Decisive tree-F1 @ 1.5 mm** (A1/A1c) on the same cases; report | last job, CPU | ~10–20 min |
 
 Splits are ImageCAS-X's own: train 560, val 80 (fold 0), test 160 held out. The chain resumes from either
@@ -81,7 +101,9 @@ the ostium from a TotalSegmentator aorta, computed by `lib/segtrain_tf1.py`: a v
 `24441cf8df0f000bd956c7dd9d8ae1daac866cfb14df1d174441d00e54f05254` (A1c, Round 8; pinned by
 `tests/test_icx4_tf1.py`). Reused from `trillium/atlas2`:
 
-- **Aortas** (`lib/aorta.py`, GPU): TotalSegmentator 2.18.0 `total_fast`, `roi_subset=['aorta']`, in its own venv
+- **Aortas** (`lib/aorta.py`, GPU): for ImageCAS-X's val 80 (A26 decisions; the same masks atlas2 made on
+  Trillium) + open-36 + dev-44, never a sealed case (`ICX4_DRYRUN=1 ./icx4` prints the set). TotalSegmentator
+  2.18.0 `total_fast`, `roi_subset=['aorta']`, in its own venv
   (`$HOME/icx4-tseg-venv`, atlas2's recipe; the training venv is not touched). Weights are downloaded on the login
   node into `$SCRATCH/icx4/totalseg`. A case whose aorta fails twice is scored **provisional** and decides nothing
   (A1a).

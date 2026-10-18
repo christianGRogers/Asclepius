@@ -21,7 +21,7 @@ from pathlib import Path
 import nibabel as nib
 import numpy as np
 import pytest
-from test_icx4_sealed import FIXTURE, ICX4, LIB, SEALED_JSON, _dry, _mod, _root, sealed
+from test_icx4_sealed import FIXTURE, ICX4, LIB, SEALED_JSON, VAL_FIXTURE, _dry, _mod, _root, sealed
 
 REPO = Path(__file__).resolve().parents[1]
 PIN = "24441cf8df0f000bd956c7dd9d8ae1daac866cfb14df1d174441d00e54f05254"
@@ -167,15 +167,66 @@ def test_the_aorta_and_tf1_case_lists_hold_no_sealed_case(tmp_path):
     W.mkdir()
     icx.mkdir()
     shutil.copy(FIXTURE, icx / "test.txt")
+    shutil.copy(VAL_FIXTURE, icx / "val.txt")
     shutil.copy(SEALED_JSON, W / "sealed_test.json")
-    every = {"c%04d" % i: {"ct": f"/ct/{i}.nii.gz", "mask": ""} for i in range(1000)}
+    every = {"c%04d" % i: {"ct": f"/ct/{i}.nii.gz", "mask": None} for i in range(1000)}
     json.dump({"cases": every}, open(W / "layout.json", "w"))
     S = sealed.load(SEALED_JSON)
+    val = {"c%04d" % (int(x) - 1) for x in VAL_FIXTURE.read_text().split()}
     cases = aorta.cases_for_aorta(str(W), str(icx))
-    assert set(cases) == set(S["open_icx_test"]) | set(S["excluded_dev_cases_in_test"])
-    assert len(cases) == 80
+    # A26 (#79): val 80 + open 36 + dev 44 = 160, and not one sealed case
+    assert set(cases) == val | set(S["open_icx_test"]) | set(S["excluded_dev_cases_in_test"])
+    assert len(val) == 80 and len(cases) == 160
     assert not set(cases) & (set(S["sealed_icx_test"]) | set(S["sealed_quality0"]))
     assert cases["c0068"] == "/ct/68.nii.gz"  # the CT path comes from layout.json
+    g = aorta.aorta_groups(str(W), str(icx))
+    assert {k: len(v) for k, v in g.items()} == {"val80": 80, "open36": 36, "dev44": 44}
+
+
+def _aorta_dir(tmp_path, val_ids):
+    W, icx = tmp_path / "w", tmp_path / "icx"
+    W.mkdir()
+    icx.mkdir()
+    shutil.copy(FIXTURE, icx / "test.txt")
+    (icx / "val.txt").write_text("\n".join(map(str, val_ids)))
+    shutil.copy(SEALED_JSON, W / "sealed_test.json")
+    every = {"c%04d" % i: {"ct": f"/ct/{i}.nii.gz", "mask": None} for i in range(1000)}
+    json.dump({"cases": every}, open(W / "layout.json", "w"))
+    return W, icx
+
+
+def test_a_val_list_holding_a_sealed_case_is_refused(tmp_path):
+    S = sealed.load(SEALED_JSON)
+    val = [int(x) for x in VAL_FIXTURE.read_text().split()]
+    val[0] = int(S["sealed_quality0"][0][1:]) + 1
+    W, icx = _aorta_dir(tmp_path, val)
+    with pytest.raises(aorta.sealed.SealedError, match="REFUSING"):
+        aorta.cases_for_aorta(str(W), str(icx))
+    r = _run(LIB / "aorta.py", "plan", W, icx)
+    assert r.returncode == 3 and "sealed" in r.stderr
+    r = _run(LIB / "aorta.py", W, icx, "cpu", env={"ICX4_FAKE_AORTA": "1"})
+    assert r.returncode == 3 and not (W / "aorta").exists()
+
+
+@pytest.mark.parametrize("bad", ["short", "test", "missing"])
+def test_a_wrong_val_list_is_refused(tmp_path, bad):
+    val = [int(x) for x in VAL_FIXTURE.read_text().split()]
+    if bad == "short":
+        val = val[:79]
+    elif bad == "test":
+        val[0] = int(FIXTURE.read_text().split()[0])  # a test case in val: the split is wrong
+    W, icx = _aorta_dir(tmp_path, val)
+    if bad == "missing":
+        os.remove(icx / "val.txt")
+    with pytest.raises(aorta.sealed.SealedError):
+        aorta.cases_for_aorta(str(W), str(icx))
+
+
+def test_aorta_plan_prints_the_set(tmp_path):
+    W, icx = _aorta_dir(tmp_path, VAL_FIXTURE.read_text().split())
+    r = _run(LIB / "aorta.py", "plan", W, icx)
+    assert r.returncode == 0, r.stdout + r.stderr
+    assert "aorta set: 160 cases (val 80: 80, open 36: 36, dev 44: 44), sealed 0" in r.stdout
 
 
 # ------------------------------------------------------------------------------------ end to end
@@ -191,12 +242,14 @@ def test_post_prediction_chain_end_to_end_never_touches_a_sealed_case(tmp_path, 
     (tmp_path / "ct").mkdir()
     icx.mkdir()
     shutil.copy(FIXTURE, icx / "test.txt")
+    shutil.copy(VAL_FIXTURE, icx / "val.txt")
     shutil.copy(SEALED_JSON, W / "sealed_test.json")
     open_, dev = S["open_icx_test"][:2], S["excluded_dev_cases_in_test"][:1]
+    val = ["c%04d" % (int(VAL_FIXTURE.read_text().split()[0]) - 1)]
     seal = [S["sealed_icx_test"][0], S["sealed_quality0"][0]]
     preds = {open_[0]: ref, open_[1]: np.where(ref == 1, 2, ref), dev[0]: stub}
     layout = {}
-    for c in open_ + dev + seal + ["c0001"]:
+    for c in open_ + dev + val + seal + ["c0000"]:
         n = int(c[1:]) + 1
         four = stub if c == dev[0] else ref
         _save(icx / f"{n}.coronary.nii.gz", _icx(four))
@@ -211,7 +264,7 @@ def test_post_prediction_chain_end_to_end_never_touches_a_sealed_case(tmp_path, 
     r = _run(LIB / "aorta.py", W, icx, "cpu", env={"ICX4_FAKE_AORTA": "1"})
     assert r.returncode == 0, r.stdout + r.stderr
     assert sorted(p.name for p in (W / "aorta").glob("*_aorta.nii.gz")) == sorted(
-        f"{c}_aorta.nii.gz" for c in open_ + dev
+        f"{c}_aorta.nii.gz" for c in open_ + dev + val
     )
     r = _run(LIB / "tf1_score.py", W, icx, 2)
     assert r.returncode == 0, r.stdout + r.stderr
@@ -246,7 +299,8 @@ def test_dry_run_shows_the_new_stages_on_every_cluster(tmp_path, cluster):
     r = _dry(root, icx, tmp_path, ICX4_CLUSTER=cluster)
     assert r.returncode == 0, r.stdout + r.stderr
     assert f"metric: segtrain.tf1 sha256 {PIN} = frozen hash (A1c)" in r.stdout
-    assert "TotalSegmentator aortas (GPU, the same open cases only)" in r.stdout
+    assert "TotalSegmentator aortas (GPU; val 80 + open 36 + dev 44, never sealed)" in r.stdout
+    assert "aorta set: 160 cases (val 80: 80, open 36: 36, dev 44: 44), sealed 0" in r.stdout
     assert "tree-F1 @ 1.5 mm with the frozen segtrain.tf1" in r.stdout
     assert "would build TotalSegmentator venv" in r.stdout and "total_fast" in r.stdout
     assert f'FROZEN_SHA="{PIN}"' in r.stdout and "TOTALSEG_HOME_DIR=" in r.stdout

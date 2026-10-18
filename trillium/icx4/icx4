@@ -17,6 +17,7 @@
 # Optional overrides (never needed): CASES=/path, ACCOUNT=def-xxx (default def-aso22), ICX4_VENV, CHAIN=n,
 # ICX4_CLUSTER=trillium|fir|nibi|rorqual (default: $CC_CLUSTER, else the login host's name, else trillium),
 # ICX4_TSEG_VENV (TotalSegmentator venv, default $HOME/icx4-tseg-venv),
+# ICX4_ALLOW_PARTIAL=1: submit even if cases/ lacks some of the 1000 CTs (#82). Default: refuse. Deliberate runs only.
 # ICX4_WORK=/path (workdir, default $SCRATCH/icx4): a second, independent run (a seed replicate) beside the first.
 #   Its jobs are named icx4-<basename> and its results go to ./results-<basename>/.
 set -euo pipefail
@@ -201,14 +202,9 @@ if [ "$DRY" = "1" ] && [ -n "${ICX4_DRY_ICX:-}" ]; then
 else
     "$PY" "$LIB/fetch_icx.py" "$ICX"   # idempotent; ~65 MB from Zenodo
 fi
-"$PY" - "$W/layout.json" "$ICX" <<'PY'
-import json, sys
-L = json.load(open(sys.argv[1]))['cases']
-for s in ('train', 'val', 'test'):
-    ids = ['c%04d' % (int(x) - 1) for x in open(f'{sys.argv[2]}/{s}.txt').read().split()]
-    print(f'[icx4] ImageCAS-X {s}: {len(ids)} listed, {sum(c in L for c in ids)} present in cases/')
-print(f'[icx4] all cases to predict: {len(L)}')
-PY
+# #82: all 1000 CTs and every ImageCAS-X train/val/test case, or nothing is submitted (ICX4_ALLOW_PARTIAL=1 overrides)
+"$PY" "$LIB/layout.py" check "$W/layout.json" "$ICX" || die "cases/ is incomplete (see above): not submitting"
+"$PY" -c 'import json, sys; print("[icx4] all cases to predict:", len(json.load(open(sys.argv[1]))["cases"]))' "$W/layout.json"
 # the scored case list, from the one filter every stage uses (A14): exactly open-36 + dev-44, never a sealed case
 "$PY" "$LIB/sealed.py" check "$W/sealed_test.json" "$ICX" "$W/layout.json" \
     || die "the sealed filter refused (see above): not submitting"
@@ -256,6 +252,7 @@ $ACCOUNT_LINE
 set -uo pipefail
 export W="$W" LIB="$LIB" ICX="$ICX" VENV="$VENV" PYTHONUNBUFFERED=1
 export TSEG_VENV="$TSEG_VENV" TOTALSEG_HOME_DIR="$W/totalseg" FROZEN_SHA="$FROZEN_SHA"
+export ICX4_ALLOW_PARTIAL="${ICX4_ALLOW_PARTIAL:-0}"
 bash "$LIB/job_body.sh"
 EOF
 chmod +x "$JOB"

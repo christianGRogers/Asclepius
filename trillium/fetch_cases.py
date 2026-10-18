@@ -13,7 +13,9 @@ ImageCAS ids 1-1000, each once.
 
 Read-only on Girder. Authenticates with GIRDER_TOKEN, or GIRDER_USER + GIRDER_PASSWORD, or prompts
 once. Resumable: a file already present at the right size is skipped, and downloads go to a .part
-file renamed when complete, so an interrupted run can simply be started again. Standard library only.
+file renamed when complete, so an interrupted run can simply be started again. Ends with a verdict
+("1000 of 1000 CTs complete", or what is missing or partial and how to resume) and exits non-zero
+unless every file is complete (#82). Standard library only.
 """
 import argparse
 import base64
@@ -152,6 +154,23 @@ def plan(cases, out, masks=False):
     return jobs, rows
 
 
+def verdict(jobs, out, n_cases):
+    """Print the completeness verdict from what is on disk; True only if every file is complete (#82)."""
+    bad = [d for i, d in jobs if not (os.path.exists(d) and os.path.getsize(d) == i['size'])]
+    partial = [d for d in bad if os.path.exists(d + '.part')]
+    cts = [d for i, d in jobs if d.endswith('ct.nii.gz')]
+    ok_cts = len(cts) - sum(d.endswith('ct.nii.gz') for d in bad)
+    if not bad:
+        print(f'{ok_cts} of {n_cases} CTs complete', flush=True)
+        return True
+    eg = sorted(os.path.relpath(d, out) for d in bad)[:5]
+    print(f'INCOMPLETE: {ok_cts} of {n_cases} CTs complete; {len(bad) - len(partial)} missing / '
+          f'{len(partial)} partial (.part), e.g. {eg}', flush=True)
+    print(f're-run to resume: python3 {os.path.abspath(__file__)} {"--masks " if len(jobs) > len(cts) else ""}'
+          f'{out}', flush=True)
+    return False
+
+
 def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__.split('\n')[0])
     ap.add_argument('dest', nargs='?', default='cases', help='the cases/ directory to fill')
@@ -170,14 +189,26 @@ def main(argv=None):
     print(f'{len(cases)} ImageCAS cases ({"CT + mask" if a.masks else "CT only"}), {total / 1e9:.1f} GB -> {out}',
           flush=True)
     done, t0 = 0, time.time()
-    with cf.ThreadPoolExecutor(THREADS) as ex:
-        futs = [ex.submit(fetch, token, i, d) for i, d in jobs]
+    ex = cf.ThreadPoolExecutor(THREADS)
+    futs = [ex.submit(fetch, token, i, d) for i, d in jobs]
+    try:
         for k, f in enumerate(cf.as_completed(futs), 1):
-            done += f.result()
+            try:
+                done += f.result()
+            except (Exception, SystemExit) as e:  # noqa: BLE001 - one file failing must not hide the rest
+                print(e, file=sys.stderr, flush=True)
             if k % 50 == 0 or k == len(futs):
                 rate = done / max(time.time() - t0, 1) / 1e6
                 print(f'  {k}/{len(futs)} files, {done / 1e9:.1f} GB new, {rate:.0f} MB/s', flush=True)
-    print('cases complete', flush=True)
+    except KeyboardInterrupt:
+        ex.shutdown(wait=False, cancel_futures=True)
+        print('interrupted', flush=True)
+        verdict(jobs, out, len(cases))
+        sys.stderr.flush()
+        os._exit(130)  # do not wait for the downloads still running; their .part files are resumed next time
+    ex.shutdown()
+    if not verdict(jobs, out, len(cases)):
+        raise SystemExit(1)
 
 
 if __name__ == '__main__':

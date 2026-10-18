@@ -45,6 +45,10 @@ d.setdefault(k, []).append(round((time.time() - t0) / 3600, 2)); json.dump(d, op
 PY
 }
 
+# #82: the launcher's completeness check again, before preprocessing (a second guard; ICX4_ALLOW_PARTIAL=1 overrides)
+python "$LIB/layout.py" check "$W/layout.json" "$ICX" \
+    || { echo "[job] REFUSING: cases/ is incomplete (see above)"; exit 3; }
+
 # ---- A. labels + plan + preprocess (CPU, first job only) ---------------------------------------
 if [ ! -e "$W/.preprocess_done" ] || [ ! -e "$W/.predict_in_done" ]; then
     python "$LIB/prepare.py" "$W" "$W/layout.json" "$ICX" $((NPROC - 2)) || { echo "[job] prepare FAILED"; exit 1; }

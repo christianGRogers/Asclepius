@@ -220,6 +220,46 @@ def test_logs_in_with_user_and_password(girder, tmp_path, monkeypatch):
     assert g.requests[0][1] == "user/authentication"
 
 
+# ------------------------------------------------------------------- the completeness verdict (#82)
+def test_a_complete_run_says_1000_of_1000(girder, tmp_path, capsys):
+    girder()
+    fc.main([str(tmp_path / "cases")])
+    assert "1000 of 1000 CTs complete" in capsys.readouterr().out
+
+
+def test_an_interrupted_fetch_exits_nonzero_with_the_resume_hint(
+    girder, tmp_path, monkeypatch, capsys
+):
+    girder()
+    out = tmp_path / "cases"
+    real = fc.fetch
+    cut = {f"c{i:04d}" for i in range(0, 1000, 3)}  # 334 transfers drop; some leave a .part
+
+    def flaky(token, item, dest):
+        case = os.path.basename(os.path.dirname(dest))
+        if case in cut:
+            if int(case[1:]) % 2:
+                with open(dest + ".part", "wb") as f:
+                    f.write(b"half")
+            raise SystemExit(f"failed to download {dest}")
+        return real(token, item, dest)
+
+    monkeypatch.setattr(fc, "fetch", flaky)
+    with pytest.raises(SystemExit) as e:
+        fc.main([str(out)])
+    assert e.value.code == 1
+    log = capsys.readouterr().out
+    assert "INCOMPLETE: 666 of 1000 CTs complete; 167 missing / 167 partial (.part)" in log
+    assert f"re-run to resume: python3 {REPO / 'trillium' / 'fetch_cases.py'} {out}" in log
+    assert "1000 of 1000" not in log
+    # the folders exist, but icx4 sees them as incomplete, not as cases
+    assert len(layout.scan(str(out))[1]) == 666 and len(layout.incomplete(str(out))) == 334
+
+    monkeypatch.setattr(fc, "fetch", real)  # the re-run resumes and finishes
+    fc.main([str(out)])
+    assert "1000 of 1000 CTs complete" in capsys.readouterr().out
+
+
 # ------------------------------------------------------------------------------------- refusals
 def _mutate(fn):
     f = d22_layout()

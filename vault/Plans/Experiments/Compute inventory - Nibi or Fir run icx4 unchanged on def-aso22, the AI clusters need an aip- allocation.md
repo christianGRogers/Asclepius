@@ -162,12 +162,29 @@ sacctmgr -n show assoc where user=$USER format=account%20,maxjobs,maxsubmit,maxt
   `def-aso22_cpu` *(the usual Alliance mapping; the first `sbatch` confirms it)*.
 - **Partition:** a 23:50 one-GPU job lands in `gpubase_bygpu_b3` (24 h).
 - **Priority:** nothing has been used on Fir yet, so priority is as high as it gets.
-- **Still missing:** the output of `partition-stats`, the module load and `avail_wheels`. The paste ended at
-  `sinfo`'s 40-line `head`. The PROJECT space is also absent from `diskusage_report`.
+- **Software:** the modules icx4 loads are present, and the wheelhouse torch matches Python 3.11. The venv build
+  on the login node should work as on Trillium.
+- **Queue:** `partition-stats` at 2026-10-18 ~06:00 UTC showed **no idle GPU nodes**. A one-GPU job counts as a
+  "by core" GPU job:
+
+  | Max walltime | Queued | Running | Nodes |
+  |---|---|---|---|
+  | 3 h | 1496 | 51 | 90 |
+  | 12 h | 316 | 113 | 90 |
+  | **24 h** | **309** | **216** | **90** |
+  | 72 h | 118 | 230 | 60 |
+  | 168 h | 28 | 195 | 30 |
+
+  Expect a wait before the first job starts. The account's top priority (no usage yet) should put it near the front
+  of the 24 h queue. **Keep icx4's 23:50 chain:** the 24 h partition has 90 nodes, against 60 for 72 h and 30 for
+  7 d, so short jobs have more nodes to start on.
+- **Still missing:** the PROJECT space. `diskusage_report` lists only HOME and SCRATCH, and the `ls ~/projects` check
+  was not in the paste. This doesn't block icx4, which writes only to SCRATCH. It only matters for keeping a durable
+  copy of `cases/`.
 
 | Cluster | Can log in? | `sshare` accounts | Scratch used / quota | H100 partitions (from `sinfo`) | Modules load? | `cases/` size |
 |---|---|---|---|---|---|---|
 | Trillium | yes | def-aso22 (LevelFS: ?) | ? | — | yes | ? |
 | Nibi | ? | ? | ? | ? | ? | — |
-| Fir | **yes** (`login3.int.fir.alliancecan.ca`, `CC_CLUSTER=fir`, so `./icx4` picks the Fir profile itself; `SCRATCH=/scratch/croger`) | **`def-aso22_cpu` and `def-aso22_gpu`**: RawUsage 0, FairShare 0.98, LevelFS inf (top priority); no limits set | HOME 36 KiB / 48 GiB; SCRATCH 20 KiB / 19 TiB; **PROJECT not listed** *(ask)* | `gpubase_bygpu_b1` 3 h, `_b2` 12 h, `_b3` 24 h, `_b4` 3 d (`_b5` 7 d cut off by `head`), plus `gpubackfill` 24 h; ~80 full-H100 nodes and ~43 MIG nodes per partition, ~13 drained | *not shown (output cut off)* | — |
+| Fir | **yes** (`login3.int.fir.alliancecan.ca`, `CC_CLUSTER=fir`, so `./icx4` picks the Fir profile itself; `SCRATCH=/scratch/croger`) | **`def-aso22_cpu` and `def-aso22_gpu`**: RawUsage 0, FairShare 0.98, LevelFS inf (top priority); no limits set | HOME 36 KiB / 48 GiB; SCRATCH 20 KiB / 19 TiB; **PROJECT not listed** *(ask)* | `gpubase_bygpu_b1` 3 h, `_b2` 12 h, `_b3` 24 h, `_b4` 3 d (`_b5` 7 d cut off by `head`), plus `gpubackfill` 24 h; ~80 full-H100 nodes and ~43 MIG nodes per partition, ~13 drained | **yes**: `StdEnv/2023 python/3.11.5 cuda/12.6` loads (the chained `module list` ran); `avail_wheels torch` shows **torch 2.14.1, cp311, x86-64-v3** | — |
 | Killarney / Vulcan / tamIA | ? | aip-? | ? | ? | ? | — |

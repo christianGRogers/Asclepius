@@ -5,8 +5,8 @@ of the rules below exist because of that difference.
 
 | Component | Lives in | Who it reaches |
 |---|---|---|
-| **The labelling app** — Girder plugin, Slicer extension, shared protocol | `server/`, `slicer/`, `src/segqueue/` | A class of annotators, on their own laptops, today |
-| **The training pipeline** — nnU-Net v2 data prep, planning, SciNet jobs | `src/segtrain/`, `configs/`, `scripts/` | One operator, on one cluster |
+| **The labelling app** — Girder plugin, Slicer extension, shared protocol | `server/`, `slicer/`, `src/segqueue/`, `scripts/` | A class of annotators, on their own laptops, today |
+| **The training pipeline** — nnU-Net v2 data prep, planning, SciNet jobs | `src/segtrain/`, `configs/`, `trillium/` | One operator, on one cluster |
 
 A mistake in the training pipeline costs an afternoon of compute. A mistake in
 the labelling app is thirty people who cannot work — and because the extension

@@ -1,5 +1,10 @@
 # atlas3: Atlas run 3, the FP-aware loss pilot (Round 8, A24)
 
+> **Finished; kept as the record.** Results: `trillium-results/round7/atlas3/`. The vendored copy of `segtrain`
+> this job ran from (`lib/vendor/segtrain`, byte-identical to `src/segtrain` at the time) was removed in #51; to
+> re-run, restore it from commit `743fe90`
+> (`git checkout 743fe90 -- trillium/atlas3/lib/vendor`). The launcher refuses to start without it.
+
 This is the third Atlas experiment. It follows the contract in `trillium/README.md`: one command, no arguments,
 one 1×H100 job of at most 23:50, account `def-aso22`. It never writes to Girder, never needs a password and never
 touches a sealed case.
@@ -20,8 +25,8 @@ cd <root>/experiments/atlas3 && ./atlas3     # login node: set up, then submit o
 
 ## What runs
 
-**Two arms**, both the A17a warm fine-tune (`src/segtrain/nnunet_ext`, vendored in `lib/vendor/segtrain`, identical
-to the repo copy). Each loads B's checkpoint in full, heads included, and refuses any other plans or normalisation.
+**Two arms**, both the A17a warm fine-tune (`src/segtrain/nnunet_ext`, vendored in `lib/vendor/segtrain` for the run, identical
+to the repo copy; removed since, see above). Each loads B's checkpoint in full, heads included, and refuses any other plans or normalisation.
 LR warms up over 2,500 iterations to a 1e-2 peak, then poly; the coronary invariants hold (window check against B's
 [−169, 719], no mirroring, val softmax, A14 refusal).
 

@@ -69,7 +69,11 @@ The case mapping c(id − 1) and the split files are ImageCAS-X's own, as in icx
 - Account `def-aso22`, after a CCDB opt-in.
 - SCRATCH 20 TB, **purged after 60 days**; PROJECT 1 TB.
 - Compute nodes have internet.
-- **Assumption:** default allocation, opportunistic priority. Nothing in #46 says otherwise yet.
+- **The lead's account (PM, from #46 / PR #52):**
+  - `def-aso22`, which Slurm maps to `def-aso22_gpu` / `def-aso22_cpu`, with no MaxJobs/MaxTRES/GrpTRES limits;
+  - RawUsage 0, so fairshare priority is at its maximum;
+  - partitions by walltime (3 h, 12 h, 24 h, 3 d, 7 d, plus 24 h gpubackfill), so icx4's 23:50 jobs land in the 24 h partition;
+  - SCRATCH 19 TiB (60-day purge), HOME 48 GiB; PROJECT space unconfirmed.
 
 | Step | Resource | GPU-h | When |
 |---|---|---|---|
@@ -77,7 +81,7 @@ The case mapping c(id − 1) and the split files are ImageCAS-X's own, as in icx
 | 1. **icx4**: plan + preprocess, 1000 epochs, predict 1000 cases, Dice score (open 80 only, after #55) | 1 × H100, 12 cores, 280 GB; chain of 4 × 23:50 | **50–70** (Trillium measured 184 s/epoch, 455 epochs in 23.3 h on icx14; Fir has 10 data workers instead of 22, so up to 1.4× slower) | first |
 | 2. **delta9 aorta** (optional, recommended): TotalSegmentator aortas for the 160 non-sealed test/val cases | 1 × H100, 2 h limit | ≤ 1.5 | after 1 |
 | 3. **delta9 score**: decisive tF1 (P1, P2), A1-as-written paired if step 2 ran, FP gate, Dice | CPU, 32 cores, 192 GB, 3 h limit | 0 | after 2 |
-| 4. Copy the checkpoint and `results/` from SCRATCH to PROJECT (60-day purge) | lead | 0 | after 3 |
+| 4. Copy the checkpoint and `results/` out of SCRATCH (60-day purge): PROJECT if confirmed, else HOME (48 GiB) | lead | 0 | after 3 |
 | Total | | **≈ 52–72 GPU-h** | about 3–4 days with queue wait |
 
 **Commands** (copy-paste; paths assume the repo is at `$SCRATCH/asclepius` with `cases/` inside it):
@@ -100,9 +104,10 @@ DELTA9_DRYRUN=1 ./delta9 all                           # check both job headers
 ./delta9 status
 ./delta9 collect                                       # -> results/SUMMARY.md, summary.json, per_case.jsonl
 
-# 4. keep the model past the 60-day scratch purge
-mkdir -p ~/projects/def-aso22/$USER/icx4 && cp -r $SCRATCH/icx4/results \
-  $SCRATCH/icx4/nnunet_results/Dataset715_ICX4/*/fold_0/checkpoint_final.pth ~/projects/def-aso22/$USER/icx4/
+# 4. keep the model past the 60-day scratch purge (PROJECT if it exists, else HOME: checkpoint + results < 2 GB)
+DEST=~/projects/def-aso22/$USER/icx4; [ -d ~/projects/def-aso22 ] || DEST=$HOME/icx4-keep
+mkdir -p $DEST && cp -r $SCRATCH/icx4/results \
+  $SCRATCH/icx4/nnunet_results/Dataset715_ICX4/*/fold_0/checkpoint_final.pth $DEST/
 ```
 
 **What to send back (on #48 or a new issue):**
@@ -189,7 +194,7 @@ The data was ImageCAS-X labels and centrelines, fetched by range requests from Z
 | P2's start points depend on ImageCAS-X's own TotalSegmentator heart-chambers aorta, not ours | Step 2 measures exactly that (row 3). The two disagree only where the aorta itself does |
 | P4's sealed pool set takes 60 of 242 QC-annotatable volumes out of training | 25 % of the best pool volumes; the number is the lead's. With Bridge's paired SD (0.041 macro), 60 cases resolve about 0.015 macro. Per-class power at D6's 0.05 margin depends on the inter-read SD, which only the first reads measure; N can grow before any sealed volume is read |
 | Patient grouping in the pool is by `<Source>__<Case>` minus `_tp<k>` | Correct for the D22 naming as written. A source that hides one patient under two case names would leak; the source list is short enough for the SWE to check at implementation |
-| 60-day scratch purge on Fir | Step 4 copies the model and results to PROJECT |
+| 60-day scratch purge on Fir | Step 4 copies the model and results to PROJECT, or to HOME while PROJECT is unconfirmed |
 
 ## 7. Decisions for the lead (through the PM)
 

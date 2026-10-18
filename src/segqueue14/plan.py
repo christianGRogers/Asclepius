@@ -29,8 +29,8 @@ from typing import Dict, Iterable, List, Mapping, Optional, Sequence, Tuple
 # ----------------------------------------------------------- case identity
 
 #: The live SegQueue names its ImageCAS cases ``imagecas_NNNN`` with NNNN the
-#: ImageCAS id (1..1000). The tournament and the 14-class model use ``cNNNN`` with
-#: NNNN = id - 1 (trillium/icx14/lib/layout.py); ImageCAS-X names its files
+#: ImageCAS id (1..1000). The tournament and the 4-class model use ``cNNNN`` with
+#: NNNN = id - 1 (trillium/icx4/lib/layout.py); ImageCAS-X names its files
 #: ``<id>.coronary.nii.gz``.
 _CASE_RE = re.compile(r"^imagecas_(\d{1,4})$")
 _TOURNAMENT_RE = re.compile(r"^c(\d{4})$")

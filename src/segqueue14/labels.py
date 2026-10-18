@@ -50,7 +50,7 @@ LABEL_VALUES: Dict[str, int] = {row[1]: row[0] for row in _TABLE}
 #: The classes that must be non-empty to submit (D13).
 REQUIRED: List[str] = [row[1] for row in _TABLE if row[3]]
 
-#: What annotators are told (D10, D12). Shown in the SegQueue14 panel and served
+#: What annotators are told (D25, D26, D12). Shown in the SegQueue14 panel and served
 #: as the default ``segqueue14.project`` instructions.
 INSTRUCTIONS = (
     "Each of the four classes -- LM, LAD, LCx, RCA -- starts as a full copy of the "

@@ -10,7 +10,7 @@ having a separate contract:
   every write. There are no legacy SegQueue14 clients to protect, so unlike the
   live check a *missing* version is refused too: a client that does not say what
   it speaks is not one that was written for this server.
-* **A ``prelabel`` asset** instead of the live binary coronary ``seed`` (D8, D10):
+* **A ``prelabel`` asset** instead of the live binary coronary ``seed`` (D8, D25):
   a model's prediction in the project's classes, loaded straight into the
   project segments.
 * **A ``seed`` asset of its own** (D23): for the pooled new datasets, an

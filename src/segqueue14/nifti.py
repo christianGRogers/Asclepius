@@ -137,7 +137,7 @@ def same_grid(a: NiftiHeader, b: NiftiHeader, spacing_tol: float = 1e-3) -> Opti
 
 
 def check_prelabel_header(header: NiftiHeader) -> Optional[str]:
-    """None for a header a 14-label prelabel can have, else the problem."""
+    """None for a header a prelabel (uint8 labels, one 3D volume) can have, else the problem."""
     if len(header.dims) != 3 and not (len(header.dims) == 4 and header.dims[3] == 1):
         return f"expected a 3D volume, got dims {header.dims}"
     if header.datatype != DT_UINT8:

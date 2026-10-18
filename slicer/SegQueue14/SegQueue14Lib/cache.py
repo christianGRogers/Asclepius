@@ -1,8 +1,8 @@
-"""SegQueue14's local working directory -- the live module's cache, under its own
-root (``~/.segqueue14``) and manifest name, so the two modules installed side by
-side never purge, resume or count each other's cases.
+"""The annotator's local working directory: one case at a time, then gone.
 
-The annotator's local working directory: one case at a time, then gone.
+This is the live module's cache under its own root (``~/.segqueue14``) and
+manifest name, so the two modules installed side by side never purge, resume or
+count each other's cases.
 
 The requirement this file exists for is "no large local storage footprint on the
 annotator machine". That is not enforceable by asking undergraduates to tidy up,
@@ -26,6 +26,7 @@ import json
 import os
 import shutil
 import time
+from typing import Any, Dict, List, Optional
 
 #: Subdirectory name under the cache root for each case's working files.
 _CASE_PREFIX = "case-"
@@ -42,12 +43,15 @@ WORK_NAME = "segmentation.seg.nrrd"
 #: for its own scene and temp files.
 FREE_SPACE_MARGIN_BYTES = 2 * 1024 * 1024 * 1024
 
+#: A case manifest: the JSON object written beside each case.
+Manifest = Dict[str, Any]
+
 
 class CacheError(RuntimeError):
     """A local-storage problem stated in terms the annotator can act on."""
 
 
-def defaultRoot():
+def defaultRoot() -> str:
     """Where the cache lives when nobody has chosen otherwise.
 
     Under the user's home rather than the system temp directory: temp gets swept
@@ -66,28 +70,31 @@ class CaseCache:
     the annotator still owed.
     """
 
-    def __init__(self, root=None, maxCases=1):
+    def __init__(self, root: Optional[str] = None, maxCases: int = 1) -> None:
         self.root = root or defaultRoot()
         self.maxCases = max(1, int(maxCases))
 
     # ------------------------------------------------------------- locations
 
-    def caseDir(self, assignmentId):
+    def caseDir(self, assignmentId: str) -> str:
+        """This assignment's own directory under the root."""
         return os.path.join(self.root, _CASE_PREFIX + str(assignmentId))
 
-    def manifestPath(self, assignmentId):
+    def manifestPath(self, assignmentId: str) -> str:
         return os.path.join(self.caseDir(assignmentId), MANIFEST_NAME)
 
-    def workPath(self, assignmentId):
+    def workPath(self, assignmentId: str) -> str:
+        """Where the in-progress segmentation is autosaved."""
         return os.path.join(self.caseDir(assignmentId), WORK_NAME)
 
-    def volumePath(self, assignmentId, caseName, suffix=".nrrd"):
+    def volumePath(self, assignmentId: str, caseName: str, suffix: str = ".nrrd") -> str:
+        """Where the case's volume is downloaded, named after the case."""
         safe = _safeName(caseName) or "volume"
         return os.path.join(self.caseDir(assignmentId), safe + suffix)
 
     # ------------------------------------------------------------ open/close
 
-    def open(self, assignment, extra=None):
+    def open(self, assignment: Any, extra: Optional[Manifest] = None) -> Manifest:
         """Create (or reopen) the working directory for an assignment.
 
         Returns its manifest. Reopening is the crash-resume path and must not
@@ -125,7 +132,7 @@ class CaseCache:
         self.writeManifest(assignment.assignment_id, manifest)
         return manifest
 
-    def manifest(self, assignmentId):
+    def manifest(self, assignmentId: str) -> Optional[Manifest]:
         """The manifest for an assignment, or None if there is no cached case.
 
         A corrupt manifest is treated as no manifest: it means a crash during
@@ -140,7 +147,7 @@ class CaseCache:
             return None
         return data if isinstance(data, dict) else None
 
-    def writeManifest(self, assignmentId, manifest):
+    def writeManifest(self, assignmentId: str, manifest: Manifest) -> Manifest:
         """Write the manifest atomically, so a crash cannot truncate it."""
         path = self.manifestPath(assignmentId)
         _makedirs(os.path.dirname(path))
@@ -152,7 +159,7 @@ class CaseCache:
         os.rename(tmp, path)
         return manifest
 
-    def update(self, assignmentId, **fields):
+    def update(self, assignmentId: str, **fields: Any) -> Optional[Manifest]:
         """Merge fields into a manifest. Returns the new manifest, or None."""
         manifest = self.manifest(assignmentId)
         if manifest is None:
@@ -160,7 +167,7 @@ class CaseCache:
         manifest.update(fields)
         return self.writeManifest(assignmentId, manifest)
 
-    def addElapsed(self, assignmentId, seconds):
+    def addElapsed(self, assignmentId: str, seconds: float) -> float:
         """Accumulate annotation time. Called on every autosave and on close.
 
         Accumulating into the file rather than reporting one span at submit time
@@ -174,13 +181,14 @@ class CaseCache:
         self.writeManifest(assignmentId, dict(manifest, elapsedSeconds=total))
         return total
 
-    def elapsed(self, assignmentId):
+    def elapsed(self, assignmentId: str) -> float:
+        """Annotation time banked so far; 0 when nothing is cached."""
         manifest = self.manifest(assignmentId)
         return float((manifest or {}).get("elapsedSeconds", 0.0))
 
     # ---------------------------------------------------------------- purge
 
-    def purge(self, assignmentId):
+    def purge(self, assignmentId: str) -> int:
         """Delete everything for one assignment. Returns bytes reclaimed.
 
         Called the moment a submission is accepted or a case is released. Not
@@ -193,14 +201,14 @@ class CaseCache:
         shutil.rmtree(directory, ignore_errors=True)
         return size
 
-    def purgeAll(self):
+    def purgeAll(self) -> int:
         """Delete every cached case. Used at logout and by the panic button."""
         total = 0
         for assignmentId in self.assignmentIds():
             total += self.purge(assignmentId)
         return total
 
-    def enforceCap(self, keep=None):
+    def enforceCap(self, keep: Optional[str] = None) -> List[str]:
         """Purge oldest cases until at most ``maxCases`` remain, ``keep`` among them.
 
         Oldest-first by manifest creation time, because the newest case is the
@@ -226,7 +234,7 @@ class CaseCache:
 
     # -------------------------------------------------------------- queries
 
-    def assignmentIds(self):
+    def assignmentIds(self) -> List[str]:
         """Assignment ids with a directory on disk, in arbitrary order."""
         try:
             names = os.listdir(self.root)
@@ -236,7 +244,7 @@ class CaseCache:
                 if n.startswith(_CASE_PREFIX)
                 and os.path.isdir(os.path.join(self.root, n))]
 
-    def entries(self):
+    def entries(self) -> List[Manifest]:
         """Manifests for every cached case, newest first."""
         found = []
         for assignmentId in self.assignmentIds():
@@ -246,7 +254,7 @@ class CaseCache:
         found.sort(key=lambda m: m.get("createdAt", 0.0), reverse=True)
         return found
 
-    def resumable(self):
+    def resumable(self) -> List[Manifest]:
         """Cached cases that still have work in them, newest first.
 
         A case whose manifest says it was submitted is debris from a purge that
@@ -255,10 +263,7 @@ class CaseCache:
         """
         return [m for m in self.entries() if not m.get("submitted")]
 
-    def totalBytes(self):
-        return _dirSize(self.root)
-
-    def freeBytes(self):
+    def freeBytes(self) -> Optional[int]:
         """Free space on the volume holding the cache, or None if unknowable."""
         target = self.root
         while target and not os.path.exists(target):
@@ -271,7 +276,7 @@ class CaseCache:
         except OSError:
             return None
 
-    def checkRoomFor(self, sizeBytes, margin=FREE_SPACE_MARGIN_BYTES):
+    def checkRoomFor(self, sizeBytes: int, margin: int = FREE_SPACE_MARGIN_BYTES) -> None:
         """Raise ``CacheError`` if a download of ``sizeBytes`` would not fit.
 
         Checked before asking the server for the file rather than discovering it

@@ -139,6 +139,66 @@ def test_the_cache_is_its_own(tmp_path, monkeypatch):
     assert (Path(cache.caseDir("a1")) / "segqueue14.json").is_file()
 
 
+# The SegQueue14 cache is a separate copy of the live one, so the rules the live
+# cache's tests pin are checked against this copy too.
+
+
+def _info(assignmentId="a1", **extra):
+    return protocol.AssignmentInfo14.from_dict(_assignment(assignmentId=assignmentId, **extra))
+
+
+def test_reopening_a_segqueue14_case_keeps_its_time_and_refreshes_its_attempt(tmp_path):
+    cache = CaseCache(str(tmp_path))
+    cache.open(_info())
+    assert cache.addElapsed("a1", 600) == 600
+    cache.open(_info(attempt=2))
+    assert cache.elapsed("a1") == 600
+    assert cache.manifest("a1")["attempt"] == 2
+
+
+def test_the_segqueue14_cache_holds_one_case_and_purges_the_oldest(tmp_path):
+    cache = CaseCache(str(tmp_path), maxCases=1)
+    cache.open(_info("a1"))
+    (tmp_path / "case-a1" / "big.nii.gz").write_bytes(b"x" * 5000)
+    cache.open(_info("a2"))
+    assert cache.assignmentIds() == ["a2"]
+    assert cache.purge("a2") >= 0 and cache.assignmentIds() == []
+
+
+def test_a_submitted_segqueue14_case_is_not_resumable(tmp_path):
+    cache = CaseCache(str(tmp_path), maxCases=5)
+    cache.open(_info("a1"))
+    cache.open(_info("a2"))
+    cache.update("a1", submitted=True)
+    assert [m["assignmentId"] for m in cache.resumable()] == ["a2"]
+    assert cache.purgeAll() >= 0 and cache.assignmentIds() == []
+
+
+def test_a_corrupt_segqueue14_manifest_reads_as_absent(tmp_path):
+    cache = CaseCache(str(tmp_path))
+    cache.open(_info())
+    Path(cache.manifestPath("a1")).write_text("{ not json")
+    assert cache.manifest("a1") is None
+    assert cache.update("a1", volumePath="x") is None
+    assert cache.elapsed("a1") == 0.0
+
+
+def test_the_segqueue14_cache_refuses_a_download_that_will_not_fit(tmp_path):
+    cache = CaseCache(str(tmp_path))
+    cache.freeBytes = lambda: 100 * 1024 * 1024
+    with pytest.raises(cache14.CacheError, match="free disk space"):
+        cache.checkRoomFor(400 * 1024 * 1024)
+    cache.freeBytes = lambda: None
+    cache.checkRoomFor(10 ** 12)
+
+
+def test_a_hostile_case_name_stays_inside_the_segqueue14_cache(tmp_path):
+    cache = CaseCache(str(tmp_path))
+    path = cache.volumePath("a1", "../../etc/passwd", suffix=".nii.gz")
+    assert Path(path).parent == Path(cache.caseDir("a1"))
+    assert Path(path).name == "etc_passwd.nii.gz"
+
+
 def test_both_libraries_load_side_by_side():
     """Slicer puts both modules' directories on one sys.path."""
     live = REPO / "slicer" / "SegQueue"

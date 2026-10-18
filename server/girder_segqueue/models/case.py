@@ -26,6 +26,17 @@ from segqueue import states as st
 from ..constants import CANDIDATE_BATCH
 
 
+def _unseenBy(query, userId):
+    """``query`` narrowed to cases ``userId`` has never been assigned.
+
+    Every way of handing out a case applies this, including to a case the user
+    released or let expire -- see ``candidates`` for why that door is one-way.
+    """
+    query = dict(query)
+    query['assignedUserIds'] = {'$ne': userId}
+    return query
+
+
 class Case(AccessControlledModel):
     """One source volume and its accounting.
 
@@ -146,8 +157,7 @@ class Case(AccessControlledModel):
         of never re-serving someone a case they abandoned is negligible when
         there are thousands of cases and thirty people.
         """
-        query = dict(self.SERVABLE_QUERY)
-        query['assignedUserIds'] = {'$ne': userId}
+        query = _unseenBy(self.SERVABLE_QUERY, userId)
         if wantGold is not None:
             query['isGold'] = bool(wantGold)
         return self.find(
@@ -165,9 +175,8 @@ class Case(AccessControlledModel):
         have retired the case, or this same user may have claimed it in a
         double-clicked request.
         """
-        query = dict(self.SERVABLE_QUERY)
+        query = _unseenBy(self.SERVABLE_QUERY, userId)
         query['_id'] = caseId
-        query['assignedUserIds'] = {'$ne': userId}
         return self.collection.find_one_and_update(
             query,
             {
@@ -224,13 +233,11 @@ class Case(AccessControlledModel):
     }
 
     def duplicateCandidates(self, userId, limit=CANDIDATE_BATCH):
-        query = dict(self.DUPLICATABLE_QUERY)
-        query['assignedUserIds'] = {'$ne': userId}
+        query = _unseenBy(self.DUPLICATABLE_QUERY, userId)
         return self.find(query, limit=limit, sort=[('priority', -1), ('created', 1)])
 
     def hasDuplicateAvailable(self, userId):
-        query = dict(self.DUPLICATABLE_QUERY)
-        query['assignedUserIds'] = {'$ne': userId}
+        query = _unseenBy(self.DUPLICATABLE_QUERY, userId)
         return self.collection.count_documents(query, limit=1) > 0
 
     def claimAsDuplicate(self, caseId, userId):
@@ -241,9 +248,8 @@ class Case(AccessControlledModel):
         that the *next* annotator would receive as an ordinary case -- unscored,
         and silently inflating the duplicate rate the dashboard reports.
         """
-        query = dict(self.DUPLICATABLE_QUERY)
+        query = _unseenBy(self.DUPLICATABLE_QUERY, userId)
         query['_id'] = caseId
-        query['assignedUserIds'] = {'$ne': userId}
         return self.collection.find_one_and_update(
             query,
             {
@@ -252,20 +258,6 @@ class Case(AccessControlledModel):
                 '$inc': {'activeCount': 1},
                 '$push': {'assignedUserIds': userId},
             },
-            return_document=ReturnDocument.AFTER,
-        )
-
-    def wantDuplicate(self, caseId):
-        """Raise a case's replica target so a second annotator is served it.
-
-        Called when the policy rolls a duplicate. Raising the target rather than
-        marking a boolean means the ordinary servability rule does all the work:
-        the case simply becomes servable again, to someone who has not seen it.
-        """
-        return self.collection.find_one_and_update(
-            {'_id': caseId, 'retired': False},
-            {'$set': {'replicasWanted': 2, 'updated': datetime.datetime.now(
-                datetime.timezone.utc)}},
             return_document=ReturnDocument.AFTER,
         )
 
@@ -316,8 +308,7 @@ class Case(AccessControlledModel):
         ``count_documents`` on the collection rather than ``.count()`` on the
         cursor: pymongo 4 removed the latter, and Girder 5 requires pymongo 4.
         """
-        query = dict(self.SERVABLE_QUERY)
-        query['assignedUserIds'] = {'$ne': userId}
+        query = _unseenBy(self.SERVABLE_QUERY, userId)
         query['isGold'] = True
         return self.collection.count_documents(query, limit=1) > 0
 

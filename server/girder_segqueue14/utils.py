@@ -2,6 +2,7 @@
 ``utils`` with SegQueue14's own groups, collection and protocol."""
 
 import hashlib
+from typing import NoReturn, Optional
 
 from girder.constants import AccessType
 from girder.exceptions import RestException
@@ -10,7 +11,6 @@ from girder.models.file import File
 from girder.models.folder import Folder
 from girder.models.group import Group
 from girder.models.user import User
-from segqueue.checksum import CHUNK_BYTES
 from segqueue14 import plan as sqplan
 from segqueue14 import protocol
 
@@ -24,7 +24,7 @@ from .constants import (
 )
 
 
-def refuse(code, message, status=400, **detail):
+def refuse(code: str, message: str, status: int = 400, **detail) -> NoReturn:
     """Raise a structured refusal the SegQueue14 client can act on."""
     raise RestException(message, code=status,
                         extra=protocol.error_body(code, message, **detail))
@@ -33,7 +33,9 @@ def refuse(code, message, status=400, **detail):
 # ------------------------------------------------------------------- roles
 
 
-def isInGroup(user, groupName):
+def isInGroup(user: Optional[dict], groupName: str) -> bool:
+    """Membership by group name. False for no user, and for a group that does
+    not exist yet (before ``ensureGroups`` has had an admin to own it)."""
     if not user:
         return False
     group = Group().findOne({'name': groupName})
@@ -42,15 +44,21 @@ def isInGroup(user, groupName):
     return group['_id'] in (user.get('groups') or [])
 
 
-def isReviewer(user):
+def isReviewer(user: Optional[dict]) -> bool:
     return bool(user and (user.get('admin') or isInGroup(user, REVIEWER_GROUP)))
 
 
-def isAnnotator(user):
+def isAnnotator(user: Optional[dict]) -> bool:
     return bool(user and (user.get('admin') or isInGroup(user, ANNOTATOR_GROUP)))
 
 
-def requireAnnotator(user):
+def fullName(user: dict) -> str:
+    """``First Last`` from a Girder user, '' when it has neither."""
+    return f"{user.get('firstName', '')} {user.get('lastName', '')}".strip()
+
+
+def requireAnnotator(user: Optional[dict]) -> dict:
+    """The user, or a 403 ``not_an_annotator`` refusal."""
     if not isAnnotator(user):
         refuse('not_an_annotator',
                'Your account is not in the SegQueue14 annotator group '
@@ -58,7 +66,8 @@ def requireAnnotator(user):
     return user
 
 
-def requireReviewer(user):
+def requireReviewer(user: Optional[dict]) -> dict:
+    """The user, or a 403 ``not_a_reviewer`` refusal."""
     if not isReviewer(user):
         refuse('not_a_reviewer', 'You do not have SegQueue14 reviewer access.', status=403)
     return user
@@ -67,7 +76,7 @@ def requireReviewer(user):
 # --------------------------------------------------------- storage layout
 
 
-def rootCollection(creator=None):
+def rootCollection(creator: Optional[dict] = None) -> dict:
     """The ``SegQueue14`` collection, created on first use. Private."""
     collection = Collection().findOne({'name': COLLECTION_NAME})
     if collection is None:
@@ -92,18 +101,18 @@ def _folder(name, creator=None, parent=None, parentType='collection'):
     )
 
 
-def submissionsFolder(creator=None):
+def submissionsFolder(creator: Optional[dict] = None) -> dict:
     return _folder(SUBMISSIONS_FOLDER, creator)
 
 
-def prelabelsFolder(version, creator=None):
+def prelabelsFolder(version: str, creator: Optional[dict] = None) -> dict:
     """``SegQueue14/prelabels/<model_version>/``."""
     version = sqplan.validate_model_version(version)
     top = _folder(PRELABELS_FOLDER, creator)
     return _folder(version, creator, parent=top, parentType='folder')
 
 
-def incomingFolder(creator=None):
+def incomingFolder(creator: Optional[dict] = None) -> dict:
     """The drop box clients upload into before /submit. The SegQueue14 annotator
     group gets WRITE here and nowhere else (see the live plugin for why)."""
     folder = _folder(INCOMING_FOLDER, creator)
@@ -121,7 +130,7 @@ def _hasGroupWrite(folder, group):
     return False
 
 
-def ensureGroups(creator=None):
+def ensureGroups(creator: Optional[dict] = None) -> list[str]:
     """Create the two SegQueue14 groups if they do not exist. Idempotent; a no-op
     until an admin exists to own them."""
     owner = creator or _anyAdmin()
@@ -146,7 +155,7 @@ def _anyAdmin():
 # ------------------------------------------------------- server-side hashing
 
 
-def hashStoredFile(file, chunkBytes=CHUNK_BYTES):
+def hashStoredFile(file: dict) -> str:
     digest = hashlib.sha256()
     stream = File().download(file, headers=False)
     for chunk in stream():
@@ -154,7 +163,9 @@ def hashStoredFile(file, chunkBytes=CHUNK_BYTES):
     return digest.hexdigest()
 
 
-def fileForCase(case):
+def fileForCase(case: dict) -> dict:
+    """The case's CT file document, or a 500 ``case_file_missing`` refusal: a
+    case whose volume has gone is a storage fault, not a client error."""
     file = File().load(case['fileId'], force=True)
     if file is None:
         refuse('case_file_missing',
@@ -163,7 +174,7 @@ def fileForCase(case):
     return file
 
 
-def loadOwnAssignment(assignmentModel, assignmentId, user):
+def loadOwnAssignment(assignmentModel, assignmentId, user: dict) -> dict:
     assignment = assignmentModel.load(assignmentId, force=True)
     if assignment is None:
         refuse('no_such_assignment', 'No such assignment.', status=404)
@@ -172,7 +183,7 @@ def loadOwnAssignment(assignmentModel, assignmentId, user):
     return assignment
 
 
-def requireCaseInvolvement(assignmentModel, caseId, user):
+def requireCaseInvolvement(assignmentModel, caseId, user: dict) -> bool:
     if isReviewer(user):
         return True
     held = assignmentModel.collection.count_documents(
@@ -183,7 +194,7 @@ def requireCaseInvolvement(assignmentModel, caseId, user):
     return True
 
 
-def clientProtocolFrom(clientProtocol):
+def clientProtocolFrom(clientProtocol) -> Optional[str]:
     """The version from the request parameter, else from the request header."""
     if clientProtocol not in (None, ''):
         return clientProtocol
@@ -195,7 +206,7 @@ def clientProtocolFrom(clientProtocol):
         return None
 
 
-def checkClientProtocol(clientProtocol):
+def checkClientProtocol(clientProtocol) -> None:
     """Refuse (426) a client that is not a current SegQueue14 module."""
     try:
         protocol.check_client_protocol(clientProtocolFrom(clientProtocol))

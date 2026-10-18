@@ -6,8 +6,6 @@ migration orphans data rather than breaking a test, which is the worst kind of
 change to make casually.
 """
 
-from girder.constants import AccessType  # noqa: F401  (re-exported for convenience)
-
 #: Girder group whose members may be assigned cases.
 ANNOTATOR_GROUP = "segqueue-annotators"
 #: Girder group whose members may review submissions. Reviewers are usually also
@@ -40,12 +38,6 @@ INCOMING_FOLDER = "incoming"
 SETTING_POLICY = "segqueue.policy"
 #: JSON blob holding the project's ``ProjectConfig`` (instructions + segments).
 SETTING_PROJECT = "segqueue.project"
-
-# ------------------------------------------------------------ token scopes
-
-#: Scope for an annotator's long-lived API key, if one is issued. Deliberately
-#: narrow: it cannot be used to read other people's work or to review.
-SCOPE_ANNOTATE = "segqueue.annotate"
 
 # ------------------------------------------------------------ tuning
 

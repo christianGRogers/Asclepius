@@ -1,6 +1,7 @@
 """Shared helpers: roles, storage layout, refusals, and server-side hashing."""
 
 import hashlib
+from typing import NoReturn, Optional
 
 from girder.constants import AccessType
 from girder.exceptions import RestException
@@ -22,7 +23,7 @@ from .constants import (
 )
 
 
-def refuse(code, message, status=400, **detail):
+def refuse(code: str, message: str, status: int = 400, **detail) -> NoReturn:
     """Raise a refusal the Slicer client can act on rather than merely display.
 
     Girder puts the structured payload in ``extra`` and the text in ``message``;
@@ -37,7 +38,9 @@ def refuse(code, message, status=400, **detail):
 # ------------------------------------------------------------------- roles
 
 
-def isInGroup(user, groupName):
+def isInGroup(user: Optional[dict], groupName: str) -> bool:
+    """Membership by group name. False for no user, and for a group that does
+    not exist yet (before ``ensureGroups`` has had an admin to own it)."""
     if not user:
         return False
     group = Group().findOne({'name': groupName})
@@ -46,21 +49,22 @@ def isInGroup(user, groupName):
     return group['_id'] in (user.get('groups') or [])
 
 
-def isReviewer(user):
+def isReviewer(user: Optional[dict]) -> bool:
     """Site admins review by right; nobody has to remember to add them."""
     return bool(user and (user.get('admin') or isInGroup(user, REVIEWER_GROUP)))
 
 
-def isAnnotator(user):
+def isAnnotator(user: Optional[dict]) -> bool:
     return bool(user and (user.get('admin') or isInGroup(user, ANNOTATOR_GROUP)))
 
 
-def fullName(user):
+def fullName(user: dict) -> str:
     """``First Last`` from a Girder user, '' when it has neither."""
     return f"{user.get('firstName', '')} {user.get('lastName', '')}".strip()
 
 
-def requireAnnotator(user):
+def requireAnnotator(user: Optional[dict]) -> dict:
+    """The user, or a 403 ``not_an_annotator`` refusal."""
     if not isAnnotator(user):
         refuse('not_an_annotator',
                'Your account is not in the annotator group. Ask the project '
@@ -68,7 +72,8 @@ def requireAnnotator(user):
     return user
 
 
-def requireReviewer(user):
+def requireReviewer(user: Optional[dict]) -> dict:
+    """The user, or a 403 ``not_a_reviewer`` refusal."""
     if not isReviewer(user):
         refuse('not_a_reviewer', 'You do not have reviewer access.', status=403)
     return user
@@ -77,7 +82,7 @@ def requireReviewer(user):
 # --------------------------------------------------------- storage layout
 
 
-def rootCollection(creator=None):
+def rootCollection(creator: Optional[dict] = None) -> dict:
     """The ``SegQueue`` collection, created on first use.
 
     Public is False: the data is de-identified, but "de-identified" is not
@@ -105,19 +110,19 @@ def _folder(name, creator=None):
     )
 
 
-def casesFolder(creator=None):
+def casesFolder(creator: Optional[dict] = None) -> dict:
     return _folder(CASES_FOLDER, creator)
 
 
-def goldFolder(creator=None):
+def goldFolder(creator: Optional[dict] = None) -> dict:
     return _folder(GOLD_FOLDER, creator)
 
 
-def submissionsFolder(creator=None):
+def submissionsFolder(creator: Optional[dict] = None) -> dict:
     return _folder(SUBMISSIONS_FOLDER, creator)
 
 
-def incomingFolder(creator=None):
+def incomingFolder(creator: Optional[dict] = None) -> dict:
     """Where clients upload before calling /submit.
 
     Separate from ``submissions`` so that an abandoned or rejected upload never
@@ -146,7 +151,7 @@ def _hasGroupWrite(folder, group):
     return False
 
 
-def ensureGroups(creator=None):
+def ensureGroups(creator: Optional[dict] = None) -> list[str]:
     """Create the two role groups if they do not exist.
 
     Idempotent, and called on every plugin load, because the alternative is a
@@ -185,7 +190,7 @@ def _anyAdmin():
 # ------------------------------------------------------- server-side hashing
 
 
-def hashStoredFile(file):
+def hashStoredFile(file: dict) -> str:
     """SHA-256 over a file already in an assetstore, without buffering it.
 
     The client sends the digest it computed; this recomputes it from the bytes
@@ -199,7 +204,9 @@ def hashStoredFile(file):
     return digest.hexdigest()
 
 
-def fileForCase(case):
+def fileForCase(case: dict) -> dict:
+    """The case's CT file document, or a 500 ``case_file_missing`` refusal: a
+    case whose volume has gone is a storage fault, not a client error."""
     file = File().load(case['fileId'], force=True)
     if file is None:
         refuse('case_file_missing',
@@ -209,7 +216,7 @@ def fileForCase(case):
     return file
 
 
-def loadOwnAssignment(assignmentModel, assignmentId, user):
+def loadOwnAssignment(assignmentModel, assignmentId, user: dict) -> dict:
     """Load an assignment and refuse unless it belongs to the caller."""
     assignment = assignmentModel.load(assignmentId, force=True)
     if assignment is None:
@@ -220,7 +227,7 @@ def loadOwnAssignment(assignmentModel, assignmentId, user):
     return assignment
 
 
-def requireCaseInvolvement(assignmentModel, caseId, user):
+def requireCaseInvolvement(assignmentModel, caseId, user: dict) -> bool:
     """Refuse unless the caller has a stake in this case.
 
     A stake is: having ever held it -- any assignment in any state, including
@@ -244,7 +251,7 @@ def requireCaseInvolvement(assignmentModel, caseId, user):
     return True
 
 
-def checkClientProtocol(clientProtocol):
+def checkClientProtocol(clientProtocol) -> None:
     """Translate the shared version check into a Girder refusal."""
     try:
         protocol.check_client_protocol(clientProtocol)

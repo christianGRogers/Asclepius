@@ -787,6 +787,20 @@ def test_annotators_are_listed_by_their_full_names(reviewing):
     assert stats["grace"]["name"] == "Grace Hopper"
 
 
+def test_excluding_a_user_never_edits_the_shared_query(girder_db):
+    """The servability predicates are class attributes shared by every request;
+    narrowing one for a user must copy it, or the next request inherits the
+    previous caller's exclusion."""
+    from girder_segqueue.models import case as caseModule
+
+    before = dict(caseModule.Case.SERVABLE_QUERY)
+    query = caseModule._unseenBy(caseModule.Case.SERVABLE_QUERY, "u1")
+
+    assert query["assignedUserIds"] == {"$ne": "u1"}
+    assert caseModule.Case.SERVABLE_QUERY == before
+    assert "assignedUserIds" not in caseModule.Case.SERVABLE_QUERY
+
+
 def test_a_full_name_never_carries_stray_spaces(girder_db):
     from girder_segqueue.utils import fullName
 

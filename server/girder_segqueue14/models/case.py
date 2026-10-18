@@ -34,6 +34,18 @@ def _now():
     return datetime.datetime.now(datetime.timezone.utc)
 
 
+def _unseenBy(query, userId):
+    """``query`` narrowed to cases ``userId`` has never been assigned.
+
+    Every way of handing out a case applies this, including to a case the user
+    released or let expire -- see the live plugin's ``Case.candidates`` for why
+    that door is one-way.
+    """
+    query = dict(query)
+    query['assignedUserIds'] = {'$ne': userId}
+    return query
+
+
 class Case14(AccessControlledModel):
     def initialize(self):
         self.name = 'segqueue14_case'
@@ -149,15 +161,13 @@ class Case14(AccessControlledModel):
 
     def candidates(self, userId, limit=CANDIDATE_BATCH):
         """Servable cases this user has never held, in serve order."""
-        query = dict(self.SERVABLE_QUERY)
-        query['assignedUserIds'] = {'$ne': userId}
+        query = _unseenBy(self.SERVABLE_QUERY, userId)
         return self.find(query, limit=limit, sort=self.SORT)
 
     def claim(self, caseId, userId):
         """Atomically consume one replica slot, or ``None`` if beaten to it."""
-        query = dict(self.SERVABLE_QUERY)
+        query = _unseenBy(self.SERVABLE_QUERY, userId)
         query['_id'] = caseId
-        query['assignedUserIds'] = {'$ne': userId}
         return self.collection.find_one_and_update(
             query,
             {

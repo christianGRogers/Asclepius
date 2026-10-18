@@ -1,5 +1,9 @@
 # icx14 — 14-class ImageCAS-X model, then prelabels for all 1000 cases
 
+> **Historical. Do not run.** D25 (2026-10-17) reversed the 14-class schema (D9); the icx14 jobs were
+> cancelled and [`../icx4/`](../icx4/README.md) trains the 4-class model instead, with the same
+> recipe. Results so far: `trillium-results/icx14/`. Kept as the record.
+
 The project lead's restructure of 2026-10-11 (`vault/Plans/Human decisions.md`, D8–D10):
 train one model on **ImageCAS-X exactly as drawn, all 14 classes**, run it on all
 1000 cases, and send those predictions to the annotators in SegQueue to correct.

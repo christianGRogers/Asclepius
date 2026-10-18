@@ -1,12 +1,16 @@
 ---
 aliases: [TRAINING-PLAN, Training plan]
 tags: [training/method, nnunet, coronary, decision-record]
-status: living
+status: historical
 repo: Asclepius
 updated: 2026-09-19
 ---
 
 # Training plan
+
+> **Historical (2026-09-19).** The pre-tournament plan, kept as the record. Its open "class schema"
+> question is closed by [[Human decisions]] D25 (four classes by territory), and the plan in force is
+> the [[Master plan]] as ruled by the tournament (Round 9, #48, plans the 4-class model for Fir).
 
 The plan for the multiclass coronary model, as decided so far. Decisions are
 recorded with their reasoning and the evidence behind them; what is still open

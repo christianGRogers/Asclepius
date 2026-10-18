@@ -1,17 +1,12 @@
-# The 14 ImageCAS-X classes, as drawn (vault/Plans/Human decisions.md D8, D9).
+# The 14 ImageCAS-X classes, as drawn: the SOURCE label values of an ImageCAS-X
+# segmentation (Suppl. Table 4), kept so those files can be read. Not a training or
+# annotation label set: D25 (vault/Plans/Human decisions.md, reversing D9) sets four
+# classes, `coronary_icx4.yaml`. ImageCAS-X collapses to it by territory with
+# src/segqueue14/labels.py ICX14_TO_4 and trillium/icx4/lib/territory.py ("Other" -> the
+# nearest LAD/LCx voxel).
 #
-# Label values are ImageCAS-X's own (Suppl. Table 4), which are also the values the
-# 14-class model writes into its prelabels (trillium/icx14) and the values SegQueue14
-# submissions carry -- so an ImageCAS-X reference, a prelabel, a corrected read and a
-# training label all mean the same structure by the same integer, and `source_values`
-# is absent on purpose.
-#
-# Names match src/segqueue14/labels.py, which the SegQueue14 plugin serves as its
-# segment list and its export uses as per-class file names
-# (`<case>/segmentations/<name>.nii.gz`). tests/test_segqueue14_labels.py pins the two
-# together; change neither alone.
-#
-# Order is the trained model's output-channel order and is frozen once a model exists.
+# Historical: this was the label set of the cancelled 14-class run (trillium/icx14,
+# Dataset 714) and of SegQueue14 before protocol 15. Nothing in the code loads it today.
 
 name: coronary_icx14
 count: 14

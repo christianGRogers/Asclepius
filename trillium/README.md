@@ -1,9 +1,11 @@
 # Trillium experiments from the plan tournament
 
-> **Current run: `icx14/`** — the project lead's restructure of 2026-10-11 (14-class model on
-> ImageCAS-X as drawn, then prelabels for all 1000 cases). It is a job chain of ~55 GPU-hours,
-> approved by the project lead as an exception to rule 6 below. The tournament experiments
-> (atlas … atlas3, bridge, crucible, delta) are kept as history.
+> **Current run: `icx4/`**: the 4-class model (LM, LAD, LCx, RCA; `vault/Plans/Human decisions.md`
+> D25) on ImageCAS-X's lumen collapsed by territory, Dataset 715: the same ~55 GPU-hour job chain as
+> icx14, run by the lead's decision (D25) and, like icx14, an exception to rule 6 below. It replaces `icx14/` (14 classes, D9),
+> whose jobs were cancelled when D25 reversed D9 on 2026-10-17; `icx14/` and its results are kept as
+> history. Where icx4 runs this week (Trillium, Fir, Nibi) is in `icx4/README.md` and the Round 9 plan
+> (#48). The tournament experiments (atlas … atlas3, bridge, crucible, delta) are kept as history too.
 
 Each advocate in the plan tournament (`vault/Plans/`) gets one GPU experiment
 on SciNet Trillium. This folder holds them, one sub-folder per advocate. The

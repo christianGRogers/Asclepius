@@ -1,12 +1,17 @@
 ---
 aliases: [Proposed changes, Consolidated proposals]
 tags: [training/method, decision-record, proposal, review]
-status: awaiting review
+status: historical
 repo: Asclepius
 updated: 2026-09-20
 ---
 
 # Proposed changes to the training plan
+
+> **Historical (2026-09-20).** A pre-tournament review set, kept as the record. Its §2.1 ("adopt the
+> ImageCAS-X 14-class schema") was overtaken by the lead's decisions: four classes by territory (D1, D1b),
+> then 14 classes (D9, 2026-10-11), then **four classes again (D25, 2026-10-17)**, which is in force. See
+> [[Human decisions]]. Nothing here is a live instruction.
 
 Everything the research produced, in one place, ordered by what it would change
 rather than by which folder it came from. [[Training plan]] is untouched: an

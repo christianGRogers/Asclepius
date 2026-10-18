@@ -232,6 +232,14 @@ Fir facts (docs.alliancecan.ca, read 2026-10-18; details and quotes in
 - SCRATCH is 20 TB with a **60-day purge**. Compute nodes have internet. Jobs inherit the submitting shell's
   environment.
 
+**Account facts from the lead's output (PM, 2026-10-18; #46/#52).**
+- `def-aso22` (Slurm accounts `def-aso22_gpu` / `_cpu`) has no MaxJobs/TRES limits.
+- RawUsage is 0, so **fairshare priority is at its maximum**, and Job A and Job B can run side by side.
+- Partitions: 3 h / 12 h / 24 h / 3 d / 7 d, plus `gpubackfill` 24 h.
+- SCRATCH is 19 TiB with the 60-day purge; HOME is 48 GiB. **PROJECT space is unconfirmed**: if `$PROJECT` is
+  missing or too small, keep the checkpoint copy in a non-purged location the lead chooses (e.g. `$HOME`, ~1 GB per
+  model).
+
 icx4's Fir profile already asks for `--gpus-per-node=h100:1 --cpus-per-task=12 --mem=280G`, 23:50 per job
 (the 24 h partition, which gets more scheduling chances than the 72 h one).
 

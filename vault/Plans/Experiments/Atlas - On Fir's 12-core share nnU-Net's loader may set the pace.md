@@ -64,7 +64,7 @@ It was not (loader wait 0.02 %), so these costs agree with what was measured the
 - **Expected:** 55–85 GPU-h for 1000 epochs on Fir; worst case ≈ 110 h. That is above the compute inventory's
   50–70 h, which assumed 3 s per sample.
 - **CHAIN=5** (≈ 118 h of capacity) instead of 4. Spare jobs exit within a minute.
-- **Pre-registered:** if job 1's first ~20 epochs run above **420 s/epoch** (1000 epochs would not fit 5 chained
+- **Pre-registered:** if job 1's first ~20 epochs run above **400 s/epoch** (1000 epochs would not fit 5 chained
   jobs), cancel and rerun at 500 epochs (`ICX4_EPOCHS=500`; jobs inherit the environment). The poly schedule then
   completes (A22).
 - Asking for 24 cores would halve the loader time but is charged as 2 GPUs of fairshare (Alliance bundle rule). It

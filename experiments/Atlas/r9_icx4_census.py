@@ -68,5 +68,9 @@ if __name__ == '__main__':
                 split[int(x)] = s
     for r in rows:
         r['split'] = split.get(r['icx_id'], '?')
+    # A14: the sealed ImageCAS-X test cases are never inspected, not even their labels; drop them from the output
+    S = json.load(open(os.path.join(ROOT, 'trillium', 'sealed_test.json')))
+    sealed = set(S['sealed_icx_test']) | set(S['sealed_quality0'])
+    rows = [r for r in rows if r['case'] not in sealed]
     json.dump(rows, open(OUT, 'w'))
     print(f'{len(rows)} cases')

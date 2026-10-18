@@ -58,7 +58,7 @@ For icx14, the LM/LAD/LCx/RCA columns are the 14-class main segments, without th
 **What it changes.**
 
 - The schedule stays at 1000 epochs. `ICX4_EPOCHS=500` is kept as the **pre-registered fallback** if Fir's
-  measured epoch time puts 1000 epochs beyond 5 chained jobs (≈ 118 h, i.e. > 420 s/epoch). Jobs inherit the
+  measured epoch time puts 1000 epochs beyond 5 chained jobs (5 × 23.6 h = 118 h less ~6 h of preprocessing and prediction, i.e. > 400 s/epoch). Jobs inherit the
   submitting shell's environment, so it needs no code change.
 - The 0.014 job-to-job spread in icx14 is one more reason to run a **second seed** before any retrained decision
   (A22). [[Atlas v11]] §6 makes that Job B.

@@ -141,17 +141,27 @@ ImageCAS-X segmentations as drawn, 14 → 4 by `territory.py`:
 
 Echo (#49) verified all five copies of this table against D25 (120 tests pass). Echo also found that
 `segtrain.reads.icx_to_territory` measures "nearest" in voxel indices rather than mm. That matters only for the
-pool-read pipeline, and Echo opens the `role:swe` issue. The four-class census of the labels is in
-[[Atlas - The four-class ImageCAS-X labels, census and connectivity]].
+pool-read pipeline (`role:swe` #56).
+
+**Census of the four classes on the 720 non-sealed cases**
+([[Atlas - The four-class ImageCAS-X labels, census and connectivity]]):
+
+- Every class is one connected piece in ≥ 99 % of cases. The exceptions are 6 detached rami (reached through the
+  LM, which tF1 still roots) and 2 LAD cases with a tiny second piece. No label repair is needed.
+- LM is absent in 11 cases (1.5 %) and is the smallest class (median 99 mm³).
+- "Other" is in 85 cases, 3.7 % of their tree.
+- **Side branches are 24–25 % of the LAD and RCA classes and 35 % of the LCx (p90 57 %).** So the 4-class LCx is the
+  most composite class. Neither icx14's LCx trunk pseudo-Dice nor ImageCAS-X's LCx inter-observer DSC (both trunk
+  only) predicts it.
 
 ### 4.2 Splits and the sealed test (A14)
 
 | Set | Cases | Use |
 |---|---|---|
 | ImageCAS-X train | 560 | training |
-| ImageCAS-X val | 80 | **every decision** (fold 0 val; aortas exist) |
-| ImageCAS-X test, open and clean | 36 | report; out-of-sample check of the val decision (aortas exist) |
-| ImageCAS-X test, open development | 44 | report Dice only (inspected by advocates before; no aortas) |
+| ImageCAS-X val | 80 | **every decision** (fold 0 val). Run 2's aortas exist for exactly these 80: run 1's val set is ImageCAS-X's val split, checked case by case against `per_case_run1.json` |
+| ImageCAS-X test, open and clean | 36 | decisive tF1 in the job (#66): the out-of-sample check of the val decision |
+| ImageCAS-X test, open development | 44 | tF1 and Dice in the job (#66), reported apart: inspected by advocates before, so biased |
 | **ImageCAS-X test, sealed** | **80** | **never scored by this plan's jobs.** Predicted only, as part of "all 1000" for the hand-off. Scored once, at the milestone, under A19 |
 | ImageCAS, not in ImageCAS-X | 200 (20 sealed quality-0) | predicted only; never read under D23 (§9 Q3) |
 | CCTA pool (D23) | 675 volumes, 26 sources | predicted after training (§5.2); team reads → fine-tune and acceptance |
@@ -177,7 +187,7 @@ As built on `dev` today, icx4's `score.py` scores every case in ImageCAS-X's `te
 | **A** | icx4 (with #66), seed 1, 1000 epochs. Then it predicts all 1000 cases, computes aortas for the open 80, and scores the open 80 by tF1 (decisive on open-36; dev-44 apart) and Dice | 55–85 expected, ≤ 110 (§6.2), +0.5 for aortas |
 | **B** (lead's choice, recommended) | the same, second seed, **concurrent**: `ICX4_WORK=$SCRATCH/icx4-seed2` (#66) | 55–85, ≤ 110 |
 | CPU, login node | `r9_score_icx4.py`: tF1, FP and Dice on the **val 80**, both runs, paired → σ̂_seed | ~2 core-h |
-| **E** (after A and B) | ensemble predictions of val + open 36 with both checkpoints (nnU-Net averages the two models' softmax); softmax saved (A7) | ≈ 1 |
+| **E** (after A and B) | ensemble predictions of the val 80 (decision R5) and open 36 (check) with both checkpoints (nnU-Net averages the two models' softmax); softmax saved (A7) | ≈ 1 |
 
 ### 5.2 Phase F2: the pool as a domain-shift check (after Job A; no reads needed)
 
@@ -248,8 +258,9 @@ mkdir -p experiments && cp -r repo/trillium/icx4 experiments/icx4
 
 # 4. Submit (login node). CHAIN=5 covers ≤ ~118 h of training + prediction; spare jobs exit within a minute.
 cd $SCRATCH/asclepius/experiments/icx4
-ICX4_DRYRUN=1 ICX4_CLUSTER=fir ./icx4 | tail -25     # check: "cluster: fir", h100:1 / 12 cores / 280G, the sealed filter
-ICX4_CLUSTER=fir CHAIN=5 ./icx4                       # → five job ids
+ICX4_CLUSTER=fir CHAIN=5 ./icx4
+#   check the printout: "[icx4] cluster: fir", the sealed filter's group counts (open-36 36, dev-44 44), five job ids;
+#   and in $SCRATCH/icx4/job.sh: --gpus-per-node=h100:1, --cpus-per-task=12, --mem=280G, --account=def-aso22
 
 # 5. After ~3 h (job 1 preprocesses for ~1–2 h, then trains):
 ./icx4 status        # the epoch line; s/epoch = time between epoch lines. Apply §6.2's rule.
@@ -279,8 +290,8 @@ preprocessed data, so job 1 measures it for real.
 
 **Rule (fixed now).** Read s/epoch from the first ~20 training epochs of job 1:
 
-- **≤ 420 s/epoch:** let the chain run (1000 epochs ≤ 117 h, which fits CHAIN=5).
-- **> 420 s/epoch:** cancel and resubmit at 500 epochs. The preprocessing is kept; only the started training is
+- **≤ 400 s/epoch:** let the chain run (1000 epochs ≤ 111 h, plus ~6 h of preprocessing, prediction and aortas, fits CHAIN=5: 5 × 23.6 h = 118 h).
+- **> 400 s/epoch:** cancel and resubmit at 500 epochs. The preprocessing is kept; only the started training is
   discarded (< 3 h):
   ```sh
   scancel $(cat $SCRATCH/icx4/submitted_jobs)
@@ -322,11 +333,11 @@ python repo/experiments/Atlas/r9_score_icx4.py --pred $SCRATCH/icx4/predictions 
 R=nnunet_results/Dataset715_ICX4/nnUNetTrainerICX4__nnUNetResEncUNetPlans_60G_iso05__3d_fullres
 cp -r $SCRATCH/icx4-seed2/$R/fold_0 $SCRATCH/icx4/$R/fold_1
 # then one 1-GPU job (≈ 1 h): nnUNetv2_predict -d 715 -c 3d_fullres -f 0 1 -tr nnUNetTrainerICX4
-#   -p nnUNetResEncUNetPlans_60G_iso05 -chk checkpoint_final.pth --save_probabilities, on the val 80 CTs only;
+#   -p nnUNetResEncUNetPlans_60G_iso05 -chk checkpoint_final.pth --save_probabilities, on the val 80 + open 36 CTs only;
 #   score its output with r9_score_icx4.py --pred <ensemble dir> --pair $SCRATCH/icx4/predictions (rule R5).
 ```
 
-The ensemble job script (input folder of the 80 val CT links, sbatch header as icx4's Fir profile, 3 h) is written
+The ensemble job script (input folder of the 116 CT links, sbatch header as icx4's Fir profile, 3 h) is written
 when B has finished; it decides nothing beyond R5.
 
 ## 7. The deciding metric and the decisions
@@ -340,7 +351,7 @@ decisive aggregates (A1a/b). It is reported with:
 - the FP gate (A2/A15);
 - per-class tF1;
 - **per-class Dice**, for the literature (§7.4);
-- the open-80 test Dice from icx4's own `SUMMARY.md`.
+- on the open test cases, #66's in-job tF1 and Dice (`SUMMARY.md`; open-36 decisive, dev-44 apart).
 
 `experiments/Atlas/r9_score_icx4.py` does all of this on CPU. It refuses sealed cases and any other metric hash.
 Its self-test passes: a perfect tree scores 1.0, a 3 mm LAD cut drops the LAD to 0.4, an LCx named LAD scores 0, an
@@ -358,8 +369,8 @@ sealed cases are never used.
 
 | # | Question | Rule | MDE / note |
 |---|---|---|---|
-| R1 | Schedule | §6.2: ≤ 420 s/epoch → 1000 epochs; > 420 → 500 | Forced choice |
-| R2 | **Does the recipe stand?** | Job A decisive macro tF1 ≥ **0.85** → yes. < 0.85 → the recipe reopens, starting with the per-class split and the flagged-tree review | 0.85 is run 1's 0.896 minus the 0.05 D6 margin. On its own (thin) lumen the model should do at least as well as run 1 did on the thick one |
+| R1 | Schedule | §6.2: ≤ 400 s/epoch → 1000 epochs; > 400 → 500 | Forced choice |
+| R2 | **Does the recipe stand?** | Job A decisive macro tF1 ≥ **0.85** → yes. < 0.85 → the recipe reopens, starting with the per-class split and the flagged-tree review | A guard, not a forecast: run 1's 0.896 (thick) minus D6's 0.05 margin. The thin ImageCAS-X reference traces more distal vessel than the thick mask, so recall may be harder; 0.05 of slack allows for that |
 | R3 | LCx guard (Round 8) | LCx decisive tF1 < **0.80** → review calcified LCx cases before Phase F3; the window question reopens | ImageCAS-X's human LCx DSC is 84.8 ± 19.8, so a low LCx alone is not a model failure |
 | R4 | **σ_seed** (Job B) | σ̂_seed = √(max(d² − SE²_case, 0)/2) from the paired val difference d. **≤ 0.013:** A22's prior stands. **0.013–0.025:** A22's SE uses σ̂. **> 0.025:** every retrained decision needs ≥ 3 seeds per arm | One pair is a 1-df estimate. Phase F3's fine-tunes add pairs, and the estimate is pooled as they accrue |
 | R5 | Ship A or the ensemble E | Ship E if (E − A) macro tF1 on val > 0 with the case CI excluding 0, **and** FP/case not higher (case CI). Else ship A (half the inference) | A decision on fixed predictions, so a case-only CI (A22). MDE about 0.010 |
@@ -376,7 +387,7 @@ two reads**, so the lead must choose where they come from (§9 Q2).
 
 | Ours | Published | Comparable? |
 |---|---|---|
-| Per-class Dice on the open test (ImageCAS-X, 4-class territories) | ImageCAS-X inter-observer DSC per **main segment**: LM 91.9, LAD 92.3, LCx 84.8, RCA 95.3 (Table 1) | Same cohort and lumen. **Not the same classes**: ours include the side branches (territories). Report-only "human-level by Dice" if within 3 points |
+| Per-class Dice on the open test (ImageCAS-X, 4-class territories) | ImageCAS-X inter-observer DSC per **main segment**: LM 91.9, LAD 92.3, LCx 84.8, RCA 95.3 (Table 1) | Same cohort and lumen. **Not the same classes**: ours include the side branches, which are 24–25 % (LAD, RCA) and 35 % (LCx) of the class volume (census). Report-only, never "human-level" |
 | Whole-tree Dice on the open test (icx4's `tree_dice`) | ImageCAS-X Table 2, binary, 160 test cases: nnU-Net 89.8, CAS-Net 91.2, inter-observer 92.8, TotalSegmentator 70.5 | **Close**: same lumen and same kind of number. But our 80 open cases are a subset, and the paper's nnU-Net is the auto-planned 3d_fullres (a 48 × 56 × 56 mm field) |
 | Decisive per-class tF1 | Hampe 2024 (J Med Imaging 11:034001), automatic tree + naming, segment F1: LM 0.70, LAD 0.86, LCx 0.74, RCA 0.90 (25 cases) **[WF; re-read before quoting]** | Same task (detect + name). **Different** matching rule, 10 AHA classes, other data |
 | — | CPR-GCN (CVPR 2020), labelling of *reference* centrelines: F1 0.976–0.990 | Upper bound on naming only; not comparable with tF1 |
@@ -386,7 +397,7 @@ two reads**, so the lead must choose where they come from (§9 Q2).
 
 | Result | Change |
 |---|---|
-| R1: > 420 s/epoch | 500-epoch schedule (already pre-registered) |
+| R1: > 400 s/epoch | 500-epoch schedule (already pre-registered) |
 | R2 fails (macro tF1 < 0.85) | The recipe reopens. First look: flagged/provisional share, the per-class split, the cut census on ImageCAS-X. Candidate levers: Skeleton Recall, a weighted FP term (λ set so the term is 5–20 % of the loss), patch/context. Each is two seeds per arm |
 | R4: σ̂_seed > 0.025 | ≥ 3 seeds per arm for every retrained decision. Phase F3's wave decisions get more expensive; the wave plan is re-costed |
 | R4: σ̂_seed ≤ 0.013 and R2 passes | The next GPU work is the first two-seed lever comparison (FP term at a working weight, or Skeleton Recall), chosen by Job A's FP census |
@@ -427,7 +438,7 @@ two reads**, so the lead must choose where they come from (§9 Q2).
 |---|---|---|
 | Fir lands the job on a MIG slice or with 1 core | `nvidia-smi` line in `slurm-*.out` (80 GB?); `cores 12` in the job banner | The Fir profile requests both; `scancel` and check `ICX4_CLUSTER=fir` |
 | Loader-bound epochs | s/epoch in `./icx4 status` | §6.2 rule |
-| The sealed test leaks | The dry run does not show the sealed filter; `SUMMARY.md` lists more than open-36 + dev-44 | #66's filter refuses to start without the list; fallback step 3b; `r9_score_icx4.py` refuses sealed IDs |
+| The sealed test leaks | The launcher printout lacks the sealed filter's counts; `SUMMARY.md` lists more than open-36 + dev-44 | #66's filter refuses to start without the list; fallback step 3b; `r9_score_icx4.py` refuses sealed IDs |
 | Resume bug (icx14 lost 23 h) | "training from scratch" in a later job's log | Fixed in icx4 (resume from either checkpoint) |
 | 60-day scratch purge | — | Copy results and checkpoint to `$PROJECT` at the end (§6.1) |
 | Long queue waits (`def-` opportunistic priority) | Job pending > 24 h | The 24 h partition is already the shortest the run fits; Nibi takes the same command (`ICX4_CLUSTER=nibi`) |

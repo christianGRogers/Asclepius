@@ -527,6 +527,36 @@ def test_duplicate_and_error_flags():
     assert sq.reference_flags({"mean_dice": float("nan")}, {"mean_dice_flag": 0.6}) == []
 
 
+def test_flags_and_headline_skip_anything_that_is_not_a_finite_number():
+    """The scorer's guard is ``segqueue.policy.usable_score``: NaN, inf, None, a
+    bool or a string never trips a flag and is never shown as the headline."""
+    nan, inf = float("nan"), float("inf")
+    assert sq.duplicate_flags(None, {"duplicate_mean_dice_flag": 0.6}) == []
+    assert "other read" in sq.duplicate_flags({"error": "shape"}, {})[0]
+    assert sq.duplicate_flags({"mean_dice": nan}, {"duplicate_mean_dice_flag": 0.6}) == []
+    assert sq.duplicate_flags({"mean_dice": 0.4}, {"duplicate_mean_dice_flag": nan}) == []
+    assert sq.reference_flags(None, {"mean_dice_flag": 0.6}) == []
+    assert sq.reference_flags({"mean_dice": 0.1}, {"mean_dice_flag": "0.6"}) == []
+    assert sq.reference_flags({"mean_dice": True}, {"mean_dice_flag": 2}) == []
+    per = {"per_structure": {"LAD": {"dice": inf}}}
+    assert sq.reference_flags(per, {"class_dice_flags": {"LAD": 0.9}}) == []
+    per = {"per_structure": {"LAD": {"dice": 0.5}}}
+    assert sq.reference_flags(per, {"class_dice_flags": {"LAD": nan}}) == []
+    assert sq.headline_dice({"reference": {"mean_dice": nan},
+                             "duplicate": {"mean_dice": 0.5}}) == 0.5
+    assert sq.headline_dice({"reference": {"mean_dice": None},
+                             "duplicate": {"mean_dice": inf}}) is None
+    assert sq.headline_dice({}) is None
+
+
+def test_required_min_dice_ignores_classes_with_no_dice():
+    result = {"per_structure": {"LAD": {"dice": 0.9}, "LCx": {"dice": None},
+                                "RCA": {"dice": 0.7}}}
+    assert sq.required_min_dice(result) == 0.7
+    assert sq.required_min_dice(result, required=["LCx"]) is None
+    assert sq.required_min_dice({}) is None
+
+
 # ------------------------------------------------------------- the pool (D23)
 
 

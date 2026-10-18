@@ -135,6 +135,9 @@ PRELABEL_3D_OPACITY = 0.85
 SEED_COLOR = (0.95, 0.85, 0.20)
 SEED_FILL = 0.25
 SEED_3D_OPACITY = 0.30
+#: The heart-region helper: a muted red with a barely-there fill, context only.
+REGION_COLOR = (0.85, 0.55, 0.55)
+REGION_FILL = 0.08
 
 #: Settings keys: SegQueue14's own, so the two modules can point at different
 #: servers or caches without either overwriting the other's.
@@ -324,7 +327,7 @@ class SegQueue14Logic(ScriptedLoadableModuleLogic):
         so a helper is structurally unable to reach the server. The live
         project's ImageCAS seed is never shipped (D8); a pooled new-dataset case
         may ship its own binary vessel seed (D23) -- an automatic outline of the
-        whole tree, with no classes, for the annotator to divide into the 14
+        whole tree, with no classes, for the annotator to divide into the project's classes
         (Segment Editor: Islands to pick a branch, Logical operators to add it to
         a class).
         """
@@ -332,7 +335,7 @@ class SegQueue14Logic(ScriptedLoadableModuleLogic):
         if assignment.has_region and self.regionSegmentId is None:
             self.regionSegmentId = self._fetchHelper(
                 assignment, protocol.ASSET_REGION,
-                protocol.REGION_SEGMENT_NAME, (0.85, 0.55, 0.55), fill=0.08)
+                protocol.REGION_SEGMENT_NAME, REGION_COLOR, fill=REGION_FILL)
         self.seedSegmentId = self._helperId(protocol.SEED_SEGMENT_NAME)
         if assignment.has_seed and self.seedSegmentId is None:
             self.seedSegmentId = self._fetchHelper(
@@ -2617,7 +2620,7 @@ class SegQueue14Widget(ScriptedLoadableModuleWidget):
             got = None
         if got:
             self.logic.regionSegmentId = self.logic._importHelper(
-                path, protocol.REGION_SEGMENT_NAME, (0.85, 0.55, 0.55), 0.08)
+                path, protocol.REGION_SEGMENT_NAME, REGION_COLOR, REGION_FILL)
 
         path = os.path.join(directory, "case_prelabel.nii.gz")
         try:

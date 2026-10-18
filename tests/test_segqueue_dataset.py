@@ -154,6 +154,22 @@ def test_no_gold_root_means_no_gold(tmp_path):
     assert next(iter(dataset.find_cases(str(tmp_path)))).gold is None
 
 
+def test_gold_lookup_prefers_suffixes_in_order_and_tolerates_a_bad_root(tmp_path):
+    gold = tmp_path / "gold"
+    gold.mkdir()
+    (gold / "s0050.nrrd").write_bytes(b"")
+    (gold / "s0050.nii.gz").write_bytes(b"")
+    (gold / "s0051.mha").write_bytes(b"")
+    # A directory of the right name is not a reference.
+    (gold / "s0052.nii.gz").mkdir()
+    assert dataset.find_gold("s0050", str(gold)).endswith("s0050.nii.gz")
+    assert dataset.find_gold("s0051", str(gold)).endswith("s0051.mha")
+    assert dataset.find_gold("s0052", str(gold)) is None
+    assert dataset.find_gold("s0050", str(tmp_path / "absent")) is None
+    assert dataset.find_gold("s0050", str(gold / "s0050.nrrd")) is None  # a file
+    assert dataset.find_gold("s0050", "") is None
+
+
 # --------------------------------------------------------------- summary
 
 
@@ -218,6 +234,13 @@ def test_every_ingestable_suffix_survives_a_round_trip():
     """
     for suffix in dataset.MASK_SUFFIXES:
         assert dataset.suffix_for("case" + suffix) == suffix
+
+
+def test_volume_suffixes_are_the_mask_suffixes_longest_first():
+    assert set(dataset.VOLUME_SUFFIXES) == {
+        ".nii.gz", ".nii", ".nrrd", ".nhdr", ".mha", ".mhd"}
+    lengths = [len(s) for s in dataset.VOLUME_SUFFIXES]
+    assert lengths == sorted(lengths, reverse=True)
 
 
 # ------------------------------------------------------ content sniffing

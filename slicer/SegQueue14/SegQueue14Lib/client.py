@@ -60,6 +60,13 @@ class SegQueue14Error(RuntimeError):
         self.detail = detail if detail is not None else {}
 
 
+def _unlinkQuietly(path: str) -> None:
+    try:
+        os.unlink(path)
+    except OSError:
+        pass
+
+
 def filenameFromResponse(response: requests.Response) -> str:
     """The filename a server suggested in Content-Disposition, or ''.
 
@@ -159,6 +166,34 @@ class SegQueue14Client:
                 progress(written, total)
         return written
 
+    def _saveBody(self, response, destPath, progress=None, reportTotal=True):
+        """Save a streamed response at ``destPath``. Returns bytes written.
+
+        Written to ``destPath + '.part'`` and renamed only once the whole body
+        has arrived, checked against ``Content-Length`` when the server sent
+        one. A dropped connection or a short body removes the ``.part`` file
+        and raises, so nothing at ``destPath`` is ever a partial download.
+        ``reportTotal=False`` passes 0 as the total to ``progress``.
+        """
+        partPath = destPath + '.part'
+        total = int(response.headers.get('Content-Length') or 0)
+        try:
+            with open(partPath, 'wb') as handle:
+                written = self._writeBody(
+                    response, handle, total if reportTotal else 0, progress)
+        except BaseException:
+            _unlinkQuietly(partPath)
+            raise
+
+        if total and written != total:
+            _unlinkQuietly(partPath)
+            raise SegQueue14Error(
+                f'The download stopped early: got {written} of {total} bytes. '
+                'Check your connection and try again.')
+
+        os.replace(partPath, destPath)
+        return written
+
     def _json(self, method, path, **kwargs):
         response = self._request(method, path, **kwargs)
         if not response.content:
@@ -240,24 +275,9 @@ class SegQueue14Client:
         interrupted download can never be mistaken for a complete one by the
         code that hashes it next.
         """
-        partPath = destPath + '.part'
         response = self._request(
             'GET', protocol.path(protocol.CASE_DOWNLOAD, case_id=caseId), stream=True)
-        total = int(response.headers.get('Content-Length') or 0)
-
-        with open(partPath, 'wb') as handle:
-            written = self._writeBody(response, handle, total, progress)
-
-        if total and written != total:
-            os.unlink(partPath)
-            raise SegQueue14Error(
-                f'The download stopped early: got {written} of {total} bytes. '
-                'Check your connection and try again.')
-
-        if os.path.exists(destPath):
-            os.unlink(destPath)
-        os.rename(partPath, destPath)
-        return written
+        return self._saveBody(response, destPath, progress)
 
     def downloadAsset(self, caseId: str, kind: str, destPath: str,
                       progress: Progress = None) -> Optional[str]:
@@ -285,8 +305,10 @@ class SegQueue14Client:
         if not destPath.lower().endswith(suffix):
             destPath += suffix
 
-        with open(destPath, 'wb') as handle:
-            self._writeBody(response, handle, 0, progress)
+        # Through a ``.part`` file like every other download: the panel caches
+        # helpers by name and reuses whatever it finds, so a half-written mask
+        # left at ``destPath`` would be reused on every reopen (#64).
+        self._saveBody(response, destPath, progress, reportTotal=False)
         return destPath
 
     def heartbeat(self, assignmentId: str) -> bool:
@@ -511,9 +533,7 @@ class SegQueue14Client:
     def _stream(self, path, destPath, progress=None):
         """Download to a file, reporting progress. Returns the bytes written."""
         response = self._request('GET', path, stream=True)
-        total = int(response.headers.get('Content-Length') or 0)
-        with open(destPath, 'wb') as handle:
-            return self._writeBody(response, handle, total, progress)
+        return self._saveBody(response, destPath, progress)
 
     def returnToPool(self, submissionId: str, reason: str = '') -> Any:
         """Send a submitted case back to the pool for a different annotator."""

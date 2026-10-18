@@ -326,6 +326,19 @@ def test_new_dataset_cases_want_two_reads_and_a_tag():
         sqplan.plan_new_dataset_case("x", "bad tag!")
 
 
+def test_volume_suffixes_strip_whole_and_names_stay_folder_safe():
+    strip = sqplan.strip_volume_suffix
+    assert strip("cases/c0001.seg.nrrd") == "c0001"
+    assert strip("c0001.PRELABEL.NII.GZ") == "c0001"
+    assert strip("c0001.nii") == "c0001"
+    assert strip("notes.txt") == "notes.txt"
+    # Nothing usable left: a placeholder rather than an empty folder name.
+    assert sqplan.new_case_name("asoca", "???.nii.gz") == "asoca_case"
+    assert sqplan.pool_case_name("..nii.gz") == "case"
+    assert sqplan.new_case_name("asoca", "-a b-.mha") == "asoca_a_b"
+    assert sqplan.pool_case_name("A__B c.nhdr") == "A__B_c"
+
+
 # ---------------------------------------------------------- prelabel rules
 
 

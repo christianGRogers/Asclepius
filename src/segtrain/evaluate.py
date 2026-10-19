@@ -99,11 +99,19 @@ def score_predictions(
     compute_nsd: bool = True,
     limit: Optional[int] = None,
     progress: Optional[callable] = None,
+    pool_seal: str = "refuse",
 ) -> dict[str, list[ClassScore]]:
-    """Score every prediction against its ground truth in labelsTs."""
+    """Score every prediction against its ground truth in labelsTs.
+
+    **D27:** a prediction for a sealed SegQueue14 pool volume makes scoring refuse before any file
+    is opened; ``pool_seal="exclude"`` drops those and logs the count, ``"acceptance"`` (acceptance
+    scoring only) keeps them and logs it."""
+    from .pool_seal import apply as apply_pool_seal
+
     labels_ts = task.raw_dir(cfg) / "labelsTs"
     names = task.label_set.names
-    preds = sorted(Path(predictions_dir).glob("*.nii.gz"))
+    preds = apply_pool_seal(sorted(Path(predictions_dir).glob("*.nii.gz")), mode=pool_seal,
+                            what=f"scoring predictions in {predictions_dir}")
     if limit:
         preds = preds[:limit]
 

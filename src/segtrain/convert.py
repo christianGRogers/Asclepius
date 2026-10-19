@@ -473,6 +473,7 @@ class ConvertReport:
     n_skipped: int = 0
     n_excluded: int = 0
     excluded: list[str] = field(default_factory=list)
+    n_pool_sealed: int = 0
     failures: list[CaseResult] = field(default_factory=list)
     with_missing: list[CaseResult] = field(default_factory=list)
     with_overlaps: list[CaseResult] = field(default_factory=list)
@@ -501,6 +502,8 @@ class ConvertReport:
             + (f" ({self.n_skipped} already present, skipped)" if self.n_skipped else "")
             + (f"; {self.n_excluded} sealed or unmappable case(s) excluded (A14)"
                if self.n_excluded else "")
+            + (f"; {self.n_pool_sealed} sealed pool volume(s) excluded (D27)"
+               if self.n_pool_sealed else "")
         ]
         for why in self.excluded[:5]:
             lines.append(f"  excluded: {why}")
@@ -553,8 +556,13 @@ def convert_dataset(
     progress: Optional[callable] = None,
     layout: str = "auto",
     exclude: Optional[set] = None,
+    pool_seal: str = "refuse",
 ) -> ConvertReport:
     """Convert every case for one task.
+
+    **D27:** a row naming a sealed SegQueue14 pool volume (:mod:`segtrain.pool_seal`) makes the
+    whole conversion refuse before anything is written, unless ``pool_seal="exclude"``, which
+    drops those rows and reports the count. That check runs for every task, whatever its A14 list.
 
     The source tree is scanned once here, not once per worker, and the resolved
     paths are handed to the workers. That is what makes both layouts work: the
@@ -579,6 +587,17 @@ def convert_dataset(
             sealed_path = Path(__file__).resolve().parents[2] / sealed_path
         exclude = load_sealed(sealed_path)
     exclude = set(exclude or ())
+    # D27: sealed pool volumes never become training data. Refuse (default) or, explicitly, drop.
+    from .pool_seal import ACCEPTANCE
+    from .pool_seal import apply as apply_pool_seal
+
+    if pool_seal == ACCEPTANCE:
+        raise ValueError("convert builds training data; the D27 acceptance mode is not for it")
+    open_ids = set(apply_pool_seal([r.case_id for r in rows], mode=pool_seal,
+                                   what=f"convert {task.nnunet_name}"))
+    n_rows = len(rows)
+    rows = [r for r in rows if r.case_id in open_ids]
+    n_pool_sealed = n_rows - len(rows)
     # A14 keys on the case behind a name, never on the name: SegQueue exports imagecas_NNNN and
     # second reads as <case>__r2 (Echo D2). With a sealed list in force, a name that maps to no
     # case is refused too.
@@ -606,6 +625,7 @@ def convert_dataset(
         test_ids = test_ids[: max(1, limit // 8)] if test_ids else []
 
     report = ConvertReport(task=task.nnunet_name, overlap_policy=cfg.overlap_policy)
+    report.n_pool_sealed = n_pool_sealed
 
     if dry_run:
         print(f"[dry-run] {task.nnunet_name} -> {raw_dir}")

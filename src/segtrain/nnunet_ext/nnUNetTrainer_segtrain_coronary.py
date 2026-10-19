@@ -15,7 +15,8 @@ re-running the GPU. ``SEGTRAIN_SAVE_PROBABILITIES=0`` turns it off (it costs dis
 per case).
 
 **No sealed case is ever trained on** (A14): ``on_train_start`` refuses if any training or
-validation identifier maps to a sealed case or to no case (``sealed_guard.refuse_sealed``).
+validation identifier maps to a sealed case or to no case (``sealed_guard.refuse_sealed``), or
+to a D27 sealed pool volume.
 
 **The fixed CT window is checked, not assumed.** The window is written into the plans file at
 planning time (``segtrain.plans.apply_ct_window``); a plans file planned without it would
@@ -59,8 +60,8 @@ class nnUNetTrainer_segtrain_coronary(nnUNetTrainer_segtrain):
         # any of its names. The split is what nnU-Net will use (splits_final.json, or its own).
         tr_keys, val_keys = self.do_split()
         n = refuse_sealed(list(tr_keys) + list(val_keys))
-        self.print_to_log_file(f"[segtrain] A14: {n} training/validation identifiers checked, "
-                               "none sealed")
+        self.print_to_log_file(f"[segtrain] A14 + D27: {n} training/validation identifiers "
+                               "checked, none sealed")
         super().on_train_start()
 
     def perform_actual_validation(self, save_probabilities: bool = False):

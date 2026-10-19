@@ -1,0 +1,171 @@
+{
+ "independent": {
+  "seed_anchored_classes": [],
+  "seed": {
+   "LM": [
+    0.7995,
+    0.9422
+   ],
+   "LAD": [
+    0.7487,
+    0.9617
+   ],
+   "LCx": [
+    0.6403,
+    0.9796
+   ],
+   "RCA": [
+    0.7204,
+    0.9613
+   ]
+  },
+  "f_k": {
+   "LM": [
+    0.372,
+    1.98
+   ],
+   "LAD": [
+    0.643,
+    1.133
+   ],
+   "LCx": [
+    0.53,
+    0.546
+   ],
+   "RCA": [
+    0.357,
+    3.356
+   ]
+  },
+  "extension": {
+   "triggered": true,
+   "because": [
+    "LM k=1.98",
+    "RCA k=3.356"
+   ],
+   "measurable": true,
+   "extend_to": 200,
+   "underpowered_at_250": false,
+   "added_patients": [
+    "BMC-BEO2017-SerialStenosis-CCTA__P1",
+    "Figshare-23057000__PA0",
+    "Figshare-CardiacCT15__pat2",
+    "Figshare-DCM3-Pulmonary35__DCM3_Pulmonary_35",
+    "Figshare-EpicardialFat-CE__CE029",
+    "IDC-nsclc_radiogenomics__AMC-027",
+    "IDC-rider_lung_pet_ct__RIDER-2061910848",
+    "IDC-varepop_apollo__AP-26JK",
+    "Kaggle-CAD-RandomSamples__case74",
+    "Kaggle-HeartSR__P02",
+    "Mendeley-9wv3fkxstx__P00001",
+    "Mendeley-SDN-37nnfyh3x9__s003",
+    "Mendeley-SDN-4643nn2z44__s010_f09",
+    "Mendeley-SDN-7x9kb53262__s007",
+    "Mendeley-SDN-cy54ttk3fj__P21",
+    "Mendeley-SDN-spb25zt2c4__s018",
+    "SLAWT2016-CT__CT_2",
+    "Slicer-SampleData__TruncalValve_4DCT_f00",
+    "Taiwan-AICUP-CardiacCT__patient0060",
+    "TotalSegmentator-cardiac__s0980",
+    "VMR-Coronary__0175_H_CORO_KD",
+    "Zenodo-21855641-AtrialFibre__Zvag",
+    "Figshare-CardiacCT15__pat3",
+    "Figshare-EpicardialFat-CE__CE024",
+    "IDC-rider_lung_pet_ct__RIDER-4767464492",
+    "Kaggle-CAD-RandomSamples__case65",
+    "Kaggle-HeartSR__P07",
+    "Mendeley-SDN-37nnfyh3x9__s302",
+    "Mendeley-SDN-4643nn2z44__s010_f05",
+    "Mendeley-SDN-7x9kb53262__s008",
+    "Mendeley-SDN-cy54ttk3fj__P01",
+    "Mendeley-SDN-spb25zt2c4__s009",
+    "SLAWT2016-CT__CT_8",
+    "Slicer-SampleData__TruncalValve_4DCT_f14",
+    "Taiwan-AICUP-CardiacCT__patient0028",
+    "TotalSegmentator-cardiac__s0368",
+    "VMR-Coronary__0069_H_CORO_KD",
+    "Figshare-CardiacCT15__pat8",
+    "Figshare-EpicardialFat-CE__CE022",
+    "IDC-rider_lung_pet_ct__RIDER-2109273429",
+    "Kaggle-CAD-RandomSamples__case82",
+    "Kaggle-HeartSR__P10",
+    "Mendeley-SDN-37nnfyh3x9__s301",
+    "Mendeley-SDN-4643nn2z44__s010_f15",
+    "Mendeley-SDN-cy54ttk3fj__P05",
+    "Mendeley-SDN-spb25zt2c4__s012",
+    "SLAWT2016-CT__CT_10",
+    "Slicer-SampleData__CTCardioSeq_f01",
+    "Taiwan-AICUP-CardiacCT__patient0062",
+    "TotalSegmentator-cardiac__s0738"
+   ]
+  },
+  "n_primary_patients": 24,
+  "power_n150": {
+   "p_all4": 1.0,
+   "per_class": {
+    "LM": 1.0,
+    "LAD": 1.0,
+    "LCx": 1.0,
+    "RCA": 1.0
+   }
+  }
+ },
+ "anchored": {
+  "seed_anchored_classes": [
+   "LM",
+   "LAD",
+   "LCx",
+   "RCA"
+  ],
+  "seed": {
+   "LM": [
+    1.0,
+    1.0
+   ],
+   "LAD": [
+    1.0,
+    1.0
+   ],
+   "LCx": [
+    1.0,
+    1.0
+   ],
+   "RCA": [
+    0.7143,
+    0.7143
+   ]
+  },
+  "f_k": {
+   "LM": [
+    3.781,
+    null
+   ],
+   "LAD": [
+    3.151,
+    null
+   ],
+   "LCx": [
+    3.289,
+    null
+   ],
+   "RCA": [
+    4.992,
+    1.169
+   ]
+  },
+  "extension": {
+   "triggered": true,
+   "because": [
+    "LM f=3.781",
+    "LAD f=3.151",
+    "LCx f=3.289",
+    "RCA f=4.992"
+   ],
+   "measurable": false,
+   "note": "f or k not measurable in every class (fewer than 3 primary patients with values)"
+  },
+  "n_primary_patients": 24,
+  "power_n150": null
+ },
+ "refusal": "a sealed folder in the export stopped the scorer (exit 1)"
+}

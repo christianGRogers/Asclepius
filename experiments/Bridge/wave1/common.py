@@ -3,8 +3,9 @@
 The seal (D27, A30) is the canonical ``configs/segqueue14/sealed-pool-2026-10.json`` once #84 lands, else
 ``experiments/Bridge/r9/sealed_pool_proposal.json`` (#84 copies it byte for byte; if both exist they must match).
 
-**What is refused.** Every volume of a patient in the seal (150 primary + 20 ImageCHD report-only) **and** every
-volume of the first 100 patients of the pre-registered extension order. Those 100 are the patients the seal grows
+**What is refused.** Everything the project's guard (``segtrain.pool_seal``) seals: since D32, 150 real primary
+patients + 20 ImageCHD report-only, by volume and by real patient. **And** every volume of the first 100 patients
+of the pre-registered extension order. Those 100 are the patients the seal grows
 into at 200 and 250 (A30/A31), so their reads must stay uninspected too, or an extension would add patients whose
 reads were already looked at. Names that are not in the pool list are refused as well: a name we cannot place is a
 name we cannot prove unsealed.
@@ -16,6 +17,8 @@ import json
 import os
 import re
 
+import sys
+
 import numpy as np
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -26,6 +29,8 @@ POOL_LIST = os.path.join(REPO, 'configs', 'segqueue14', 'pool-2026-10.txt')
 TF1_PIN = '24441cf8df0f000bd956c7dd9d8ae1daac866cfb14df1d174441d00e54f05254'   # A1c (Round 8, kept by A32)
 EXTENSION_RESERVED = 100          # the seal can grow to 250 = 150 + the first 100 of the extension order
 CLASSES = {1: 'LM', 2: 'LAD', 3: 'LCx', 4: 'RCA'}
+if os.path.join(REPO, 'src') not in sys.path:
+    sys.path.insert(0, os.path.join(REPO, 'src'))   # segtrain.pool_seal, the project's guard
 
 # The same heuristic as experiments/Bridge/r9/seal_pool.py (pinned by a test against the seal file).
 _SUFFIX = re.compile(r'(_tp\d+|_p\d+|_(diast|syst)|_s\d+)$', re.I)
@@ -50,22 +55,12 @@ def patient_key(volume: str) -> str:
     return f'{src}__{_SUFFIX.sub("", case)}'
 
 
-# A30 QC (a30_grouping_qc.py): the ingest code's patient ids where the name heuristic is wrong.
-# tools/ccta/ingest_open.py: the SDN_CASES records are one patient each (patient_id=f'SDN-{did}'; sNNN is a series),
-# and Slicer multi-phase sequences are stored one case per frame (<name>_fNN, patient_id=name).
-SDN_ONE_PATIENT = {'37nnfyh3x9', '4643nn2z44', '7x9kb53262', 'spb25zt2c4'}
-_FRAME = re.compile(r'_f\d+$')
-
-
 def corrected_key(volume: str) -> str:
-    """The patient a volume belongs to according to the ingest code (else the heuristic)."""
-    src = source_of(volume)
-    rec = src[len('Mendeley-SDN-'):] if src.startswith('Mendeley-SDN-') else None
-    if rec in SDN_ONE_PATIENT:
-        return f'{src}__SDN-{rec}'
-    if src == 'Slicer-SampleData':
-        return f'{src}__{_FRAME.sub("", volume[:-len(".nii.gz")].split("__")[1])}'
-    return patient_key(volume)
+    """The real patient of a pool volume: ``segtrain.pool_seal.ingest_patient`` (the ingest code's patient id for
+    the single-patient Mendeley-SDN records and the Slicer 4D frames, else the name rule, then D33's aliases).
+    Since D32 the seal file is keyed by these ids."""
+    from segtrain.pool_seal import ingest_patient
+    return ingest_patient(volume[:-len('.nii.gz')] if volume.endswith('.nii.gz') else volume)
 
 
 def source_of(volume: str) -> str:
@@ -87,34 +82,33 @@ def seal_path() -> str:
 
 
 class Seal:
-    """The patients whose volumes the wave-1 tools must never open."""
+    """The volumes the wave-1 tools must never open.
+
+    Sealed is decided by the project's guard, ``segtrain.pool_seal`` (D27/D32: by volume and by real patient;
+    the file's sha256 is checked on load). On top of it, this refuses the first 100 patients of the extension
+    order (reserved: the seal can grow into them, so their reads stay uninspected) and any name not in the pool
+    list (a name we cannot place is a name we cannot prove unsealed)."""
 
     def __init__(self, path: str | None = None, pool_list: str | None = POOL_LIST):
+        from segtrain.pool_seal import load_pool_seal
         self.path = path or seal_path()
+        self.guard = load_pool_seal(self.path)
         d = json.load(open(self.path))
         self.sealed = set(d['primary']['patients']) | set(d['report_only']['patients'])
+        self.sealed_volumes = set(d['primary']['volumes']) | set(d['report_only']['volumes'])
         self.extension_order = list(d['primary']['extension_order'])
         self.reserved = set(self.extension_order[:EXTENSION_RESERVED])
-        self.sealed_volumes = set(d['primary']['volumes']) | set(d['report_only']['volumes'])
         self.pool = None
         if pool_list:
             self.pool = {l.strip() for l in open(pool_list) if l.strip() and not l.startswith('#')}
-        # A30: refuse by the ingest code's patient too, so a volume of a sealed person that the heuristic split off
-        # (60 volumes on the Round 9 seal) is never opened. Stricter than the seal file; the file is not changed.
-        pool = self.pool or self.sealed_volumes
-        self.sealed_corrected = {corrected_key(v) for v in pool if patient_key(v) in self.sealed} | {
-            corrected_key(v) for v in self.sealed_volumes}
-        self.reserved_corrected = {corrected_key(v) for v in pool if patient_key(v) in self.reserved}
 
     def reason(self, volume: str) -> str | None:
         """Why ``volume`` must not be opened, or None."""
         if self.pool is not None and volume not in self.pool:
             return 'not in the pool list (cannot prove it unsealed)'
-        if volume in self.sealed_volumes or patient_key(volume) in self.sealed:
-            return 'sealed (D27 acceptance set)'
-        if corrected_key(volume) in self.sealed_corrected:
-            return 'same patient as a sealed volume (A30 QC: the seal file under-groups this patient)'
-        if patient_key(volume) in self.reserved or corrected_key(volume) in self.reserved_corrected:
+        if self.guard.is_sealed(volume):
+            return 'sealed (D27/D32 acceptance set)'
+        if corrected_key(volume) in self.reserved or patient_key(volume) in self.reserved:
             return 'reserved for the pre-registered seal extension (200/250)'
         return None
 

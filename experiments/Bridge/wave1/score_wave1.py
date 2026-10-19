@@ -163,7 +163,7 @@ def as_names(d):
 
 def score_volume(item):
     volume, dirs = item
-    row = {'volume': volume, 'patient': C.patient_key(volume), 'source': C.source_of(volume),
+    row = {'volume': volume, 'patient': C.corrected_key(volume), 'source': C.source_of(volume),
            'reads': [os.path.basename(d) for d in dirs]}
     try:
         reads, ref_img = [], None

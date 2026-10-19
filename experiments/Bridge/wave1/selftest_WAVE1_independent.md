@@ -24,20 +24,17 @@
 
 | Class | seed-vs-read [CI] (n) | inter-read [CI] (n) | seed-anchored (≥ inter − 0.02) |
 |---|---|---|---|
-| LM | 0.7995 [0.6861, 0.8956] (23) | 0.9422 [0.9163, 0.9621] (23) | False |
-| LAD | 0.7487 [0.6631, 0.8274] (23) | 0.9617 [0.9363, 0.9814] (23) | False |
-| LCx | 0.6403 [0.5169, 0.7443] (23) | 0.9796 [0.9647, 0.9897] (23) | False |
-| RCA | 0.7204 [0.6175, 0.8216] (18) | 0.9613 [0.9141, 0.9991] (18) | False |
+| LM | 0.7995 [0.6907, 0.8953] (23) | 0.9422 [0.9162, 0.9629] (23) | False |
+| LAD | 0.7487 [0.6564, 0.8295] (23) | 0.9617 [0.9355, 0.981] (23) | False |
+| LCx | 0.6403 [0.5236, 0.7433] (23) | 0.9796 [0.9652, 0.9899] (23) | False |
+| RCA | 0.7204 [0.6142, 0.817] (18) | 0.9613 [0.9135, 0.9991] (18) | False |
 
-Seed edits (report only): reads add 0.4533 [0.4205, 0.4858] of their voxels beyond the seed and remove 0.5609 [0.5377, 0.5825] of the seed; 0 of 48 reads add nothing to it.
+Seed edits (report only): reads add 0.4533 [0.4207, 0.4848] of their voxels beyond the seed and remove 0.5609 [0.5376, 0.5822] of the seed; 0 of 48 reads add nothing to it.
 
 ## A31.3 Model-vs-read per source (report only)
 
 | Source | stratum | patients | macro [CI] | LM | LAD | LCx | RCA |
 |---|---|---|---|---|---|---|---|
-| Figshare-CardiacCT15 | primary | 1 | 0.9413 None | 0.9348 | 0.9918 | 0.8718 | 0.9666 |
-| Figshare-EpicardialFat-CE | primary | 3 | 0.9499 [0.9352, 0.9592] | 0.9417 | 0.931 | 0.9428 | 0.9964 |
-| Kaggle-CAD-RandomSamples | primary | 2 | 0.9058 None | 0.9296 | 0.8905 | 0.8504 | 0.9921 |
-| Mendeley-SDN-cy54ttk3fj | primary | 4 | 0.9558 [0.9429, 0.9734] | 0.932 | 0.9417 | 0.9515 | 0.9981 |
-| Taiwan-AICUP-CardiacCT | primary | 13 | 0.9449 [0.928, 0.9599] | 0.9456 | 0.9375 | 0.9277 | 0.9768 |
-| VMR-Coronary | primary | 1 | 1.0 None | None | None | None | 1.0 |
+| Figshare-EpicardialFat-CE | primary | 3 | 0.9452 [0.9352, 0.9592] | 0.9254 | 0.9525 | 0.9302 | 0.9797 |
+| Mendeley-SDN-cy54ttk3fj | primary | 4 | 0.9304 [0.9058, 0.955] | 0.9525 | 0.8955 | 0.8974 | 0.9974 |
+| Taiwan-AICUP-CardiacCT | primary | 17 | 0.9501 [0.9354, 0.9638] | 0.9409 | 0.9426 | 0.9304 | 0.9833 |

@@ -22,13 +22,16 @@ def test_tf1_pin():
     assert C.check_tf1_pin() == C.TF1_PIN
 
 
-def test_patient_key_reproduces_the_seal_file():
+def test_real_patients_reproduce_the_seal_file():
+    """D32: the seal is keyed by real patient (segtrain.pool_seal.ingest_patient), every volume listed."""
     groups = {}
     for v in SEAL.pool:
-        groups.setdefault(C.patient_key(v), []).append(v)
+        groups.setdefault(C.corrected_key(v), []).append(v)
     multi = {k: sorted(v) for k, v in groups.items() if len(v) > 1}
     assert multi == {k: sorted(v) for k, v in D['multi_volume_patients'].items()}
-    assert all(C.patient_key(v) in set(D['primary']['patients']) for v in D['primary']['volumes'])
+    prim = set(D['primary']['patients'])
+    assert {C.corrected_key(v) for v in D['primary']['volumes']} == prim and len(prim) == 150
+    assert sorted(v for p in prim for v in groups[p]) == sorted(D['primary']['volumes'])
 
 
 def test_volume_name_normalises_export_names():
@@ -40,22 +43,22 @@ def test_volume_name_normalises_export_names():
 def test_seal_refuses_sealed_reserved_leaked_and_unknown():
     sealed = sorted(D['primary']['volumes'])[0]
     chd = sorted(D['report_only']['volumes'])[0]
-    reserved = next(v for v in sorted(SEAL.pool) if C.patient_key(v) == D['primary']['extension_order'][0])
+    reserved = next(v for v in sorted(SEAL.pool) if C.corrected_key(v) == D['primary']['extension_order'][0])
     assert 'sealed' in SEAL.reason(sealed)
     assert 'sealed' in SEAL.reason(chd)
     assert 'reserved' in SEAL.reason(reserved)
     assert 'pool list' in SEAL.reason('Nowhere__x.nii.gz')
-    # A30: a volume the heuristic split off a sealed one-patient SDN record
-    leak = 'Mendeley-SDN-spb25zt2c4__s009.nii.gz'
-    assert leak in SEAL.pool and leak not in SEAL.sealed_volumes
-    assert SEAL.reason(leak)
+    # A30/D32: a volume the name rule split off a sealed one-patient SDN record is in the file now, and a new
+    # series of that record (not in any list) is still refused, by real patient
+    assert 'Mendeley-SDN-spb25zt2c4__s009.nii.gz' in SEAL.sealed_volumes
+    assert SEAL.guard.is_sealed('Mendeley-SDN-spb25zt2c4__s999.nii.gz')
     open_ = [v for v in SEAL.pool if not SEAL.reason(v)]
-    assert len(open_) > 200 and not any(C.corrected_key(v) in SEAL.sealed_corrected for v in open_)
+    assert len(open_) > 150 and not any(C.corrected_key(v) in SEAL.sealed for v in open_)
 
 
 def test_corrected_grouping_counts():
     keys = {C.corrected_key(v) for v in SEAL.pool}
-    assert len(keys) == 469
+    assert len(keys) == 468          # 469 by the ingest code, minus D33's RIDER merge
     assert C.corrected_key('Slicer-SampleData__TruncalValve_4DCT_f09.nii.gz') == 'Slicer-SampleData__TruncalValve_4DCT'
     assert C.corrected_key('Figshare-23057000__PA0.nii.gz') != C.corrected_key('Figshare-23057000__PA1.nii.gz')
 
@@ -105,12 +108,12 @@ def _rows(model_sd, inter_sd, seed_mean, n=40, seed=0):
     vols = []
     for v in sorted(SEAL.pool):
         if not SEAL.reason(v) and R.stratum(C.source_of(v)) == 'primary' and \
-                C.patient_key(v) not in {C.patient_key(x) for x in vols}:
+                C.corrected_key(v) not in {C.corrected_key(x) for x in vols}:
             vols.append(v)
     rows = []
     for v in vols[:n]:
         cl = lambda m, s: {k: float(np.clip(m + rng.normal(0, s), 0, 1)) for k in C.CLASSES.values()}  # noqa: E731
-        rows.append({'volume': v, 'patient': C.patient_key(v), 'source': C.source_of(v), 'provisional': False,
+        rows.append({'volume': v, 'patient': C.corrected_key(v), 'source': C.source_of(v), 'provisional': False,
                      'inter': {'per_class': cl(0.9, inter_sd), 'flagged': []},
                      'model': {'per_class': cl(0.88, model_sd), 'flagged': []},
                      'seed': {'per_class': cl(seed_mean, 0.03), 'flagged': []},

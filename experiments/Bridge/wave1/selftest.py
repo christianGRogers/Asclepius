@@ -51,9 +51,9 @@ def main():
     # one volume per patient, primary sources, spread over sources
     by_p = {}
     for v in open_vols:
-        if C.patient_key(v) not in by_p and C.source_of(v) not in ('ImageCHD', 'ImageALCAPA', 'HOCMvalvesSeg',
+        if C.corrected_key(v) not in by_p and C.source_of(v) not in ('ImageCHD', 'ImageALCAPA', 'HOCMvalvesSeg',
                                                                    'CCA200-HF'):
-            by_p[C.patient_key(v)] = v
+            by_p[C.corrected_key(v)] = v
     vols = list(by_p.values())[::max(1, len(by_p) // n)][:n]
     res = {}
     for name, anchored in (('independent', False), ('anchored', True)):

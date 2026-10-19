@@ -12,9 +12,9 @@ Round 9 pre-registered three measurements on the first team reads (A31). It also
 list's patient grouping before wave 1 (A30). The tools exist now, before any read exists, so that wave 1 is
 measured exactly as pre-registered. Code: `experiments/Bridge/wave1/`.
 
-**Headline: the A30 grouping check failed.** 60 volumes of sealed patients are outside the D27 seal file (§1).
-That has been reported to the PM for the lead, and the seal file is unchanged. The tools refuse those 60 volumes
-anyway.
+**Headline: the A30 grouping check failed.** 60 volumes of sealed patients were outside the D27 seal file (§1).
+**Resolved by D32/D33 (2026-10-19, #93):** the seal is now 150 real patients and every one of their 305 volumes,
+and the tools defer to the project's guard (`segtrain.pool_seal`).
 
 ## 1. A30: the seal's patient grouping, checked against the ingest code
 
@@ -24,7 +24,8 @@ patient. Evidence comes from the ingest code, in order of preference:
 - then the sourcing reports and the QC CSV.
 
 The per-source table, with file:line evidence, is `experiments/Bridge/wave1/a30_qc_per_source.md`. The numbers
-are reproduced by `a30_grouping_qc.py` → `a30_grouping_qc.json`.
+are reproduced by `a30_grouping_qc.py` (`a30_grouping_qc_d27.json` for the D27 file; `a30_grouping_qc.json` for the
+seal in force).
 
 **Finding: six real patients are under-grouped. No over-grouping was found.**
 
@@ -57,16 +58,28 @@ are reproduced by `a30_grouping_qc.py` → `a30_grouping_qc.json`.
   patient id. They rest on the dataset descriptions (one volume per case id). Byte-identical cross-source
   duplicates are excluded by the ingest's sha256 check.
 
-**What was done, and what was not.**
+**Resolution (D32 option A, D33; #93, merged 2026-10-19).**
+- `experiments/Bridge/r9/reseal_d32.py` rebuilt the seal from the D27 file (sha256 `8f529842…1183`, at `4469ed4`):
+  1. every volume of every sealed real patient is sealed;
+  2. D33 merges RIDER-2551730224 into sealed RIDER-2522924559 and drops its extension entry;
+  3. 17 patients are topped up from the pre-registered extension order;
+  4. the extension order is recomputed on real patients.
+- The result is **150 real patients, 305 volumes** (+ 20 ImageCHD), with **0** volumes of a sealed patient
+  outside the file (`a30_grouping_qc.py` on the file in force; on the D27 file it gives 61, the 60 plus the
+  RIDER twin). The extension order is 101 real patients. The new pinned sha256 is `e71141b4…0690`.
+- Power at 150 real patients: 0.964 if the pool is like ImageCAS val, 0.581 if 1.5× more varied.
+- After D32 and the 100 reserved extension patients, wave-1 analysis can use **206 volumes from 198 real
+  patients**.
+
+**What was done before the decision (kept as the record).**
 - The seal file is **not** changed, because it is the D27 acceptance set.
 - The finding went to the PM for the lead on 2026-10-19, with a proposed fix as a separate, explicit PR:
   1. seal every volume of the six patients (adds the 60 volumes; keeps the draw);
   2. top up from the pre-registered extension order, skipping entries of sealed patients, until there are 150
      real patients (17 more);
   3. recompute the extension order on real patients.
-- Until then, the wave-1 tools refuse by the **ingest-code patient** as well as by the file (`common.Seal`).
-  All 60 volumes are refused.
-- #84's guard should do the same.
+- Until then, the wave-1 tools refused by the **ingest-code patient** as well as by the file. All 60 volumes
+  were refused. #91 made the project's guard do the same, and the tools now use that guard (`common.Seal`).
 
 ## 2. What runs on wave 1, on what
 
@@ -84,7 +97,7 @@ python experiments/Bridge/wave1/report_wave1.py wave1/per_volume.jsonl \
 ```
 
 **Refusal comes before opening.** `score_wave1.py` checks every export folder name against:
-- the seal, by file and by ingest-code patient;
+- the seal, through the project's guard (`segtrain.pool_seal`: by volume and by real patient, hash-checked);
 - the 100 extension patients the seal could grow into (so an extension never adds already-inspected patients);
 - the pool list (an unknown name cannot be proven unsealed).
 
@@ -125,7 +138,7 @@ reported apart). A patient with several volumes contributes their mean.
 `pytest experiments/Bridge/wave1` (11 tests, about 10 s) covers:
 - the tF1 pin;
 - the heuristic reproducing the seal file;
-- the corrected grouping (469 patients; `PA0` and `PA1` apart);
+- the real-patient grouping (468 patients after D33; `PA0` and `PA1` apart) and the seal file keyed by it;
 - refusal of sealed, reserved, leaked and unknown volumes before any file is opened;
 - seed naming (a read equal to the seed scores 1.0 and the deleted vein is ignored; a read that cuts the LAD
   short scores lower in the LAD only);

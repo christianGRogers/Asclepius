@@ -118,6 +118,7 @@ def cmd_convert(args) -> int:
 
     print(f"converting {task.nnunet_name} ({task.label_set.n_classes} structures) "
           f"-> {task.raw_dir(cfg)}")
+    _pool_notice(task)
     report = convert_dataset(
         cfg,
         task,
@@ -225,11 +226,46 @@ def cmd_splits(args) -> int:
 # --------------------------------------------------------------------------- plan
 
 
+def _pool_notice(task: TaskConfig) -> None:
+    """Say so when the task's D27 pool seal is hooked but not yet wired (HOOK #84)."""
+    from .plans import sealed_pool_notice
+
+    note = sealed_pool_notice(task)
+    if note:
+        print(note)
+
+
 def cmd_plan(args) -> int:
-    from .plans import describe_plans, extract_fingerprint, plan_experiment, write_splits
+    from .plans import (
+        adopt_plans,
+        describe_plans,
+        extract_fingerprint,
+        plan_experiment,
+        task_extras,
+        write_splits,
+    )
 
     cfg, task = _load(args)
     cfg.validate(require_data=True)
+
+    adopts = task_extras(task).get("plans_from")
+    if args.plans_from or adopts:
+        if not args.plans_from:
+            print(f"error: {task.nnunet_name} adopts the plans of {adopts.get('dataset')} "
+                  f"({adopts.get('plans_name')}) instead of planning; pass --plans-from "
+                  "<that plans json>", file=sys.stderr)
+            return 2
+        try:
+            out = adopt_plans(cfg, task, args.plans_from)
+        except (ValueError, FileNotFoundError) as exc:
+            print(f"error: {exc}", file=sys.stderr)
+            return 2
+        print(f"adopted {args.plans_from} -> {out} (not re-planned)")
+        path = write_splits(cfg, task, scheme=args.scheme, n_folds=args.folds, seed=args.seed)
+        print(f"wrote {path}")
+        print()
+        print(describe_plans(cfg, task))
+        return 0
 
     if not args.skip_fingerprint:
         print(f"extracting fingerprint for {task.nnunet_name} ...")
@@ -259,7 +295,7 @@ def cmd_preprocess(args) -> int:
 # -------------------------------------------------------------------------- train
 
 
-def _train_command(cfg: Config, task: TaskConfig, args) -> list[str]:
+def _train_command(cfg: Config, task: TaskConfig, args, trainer: Optional[str] = None) -> list[str]:
     """Build the nnU-Net training command line."""
     exe = shutil.which("nnUNetv2_train")
     base = [exe] if exe else [sys.executable, "-m", "nnunetv2.run.run_training"]
@@ -269,7 +305,7 @@ def _train_command(cfg: Config, task: TaskConfig, args) -> list[str]:
         task.configuration,
         str(args.fold),
         "-tr",
-        args.trainer or task.trainer,
+        trainer or args.trainer or task.trainer,
         "-p",
         task.plans_name,
         "-device",
@@ -285,6 +321,38 @@ def _train_command(cfg: Config, task: TaskConfig, args) -> list[str]:
     return cmd
 
 
+def _finetune_setup(cfg: Config, task: TaskConfig, args) -> tuple[str, dict]:
+    """The trainer and extra environment for a task's LR arm and fine-tune source.
+
+    For a task that adopts another dataset's plans (``plans_from``, the wave fine-tune): the
+    source checkpoint is required on a fresh start (the trainer refuses random weights anyway;
+    this says so before a queue wait), and the trainer's CT-window check is pointed at the adopted
+    plans' window, since that is the window the source model was trained on. Raises ValueError."""
+    from .plans import adopted_window, task_extras, trainer_for_arm
+
+    arm = getattr(args, "arm", None)
+    if arm and args.trainer:
+        raise ValueError("pass --arm or --trainer, not both")
+    trainer = args.trainer or trainer_for_arm(task, arm)
+    env: dict = {}
+    source = getattr(args, "finetune_from", None)
+    if source:
+        source = Path(source).expanduser()
+        if not source.is_file() and not args.dry_run:
+            raise ValueError(f"--finetune-from: no such file {source}")
+        env["SEGTRAIN_FINETUNE_FROM"] = str(source)
+    if task_extras(task).get("plans_from"):
+        _pool_notice(task)
+        if not source and not args.continue_training:
+            raise ValueError(f"{task.nnunet_name} is a fine-tune: pass --finetune-from "
+                             f"<{task_extras(task)['plans_from'].get('dataset')} "
+                             "checkpoint_final.pth> (or --continue-training to resume)")
+        window = adopted_window(cfg, task)
+        if window is not None and not os.environ.get("SEGTRAIN_CT_WINDOW"):
+            env["SEGTRAIN_CT_WINDOW"] = f"{window[0]:g},{window[1]:g}"
+    return trainer, env
+
+
 def cmd_train(args) -> int:
     from .backends import get_backend
     from .events import env_for_training
@@ -293,14 +361,23 @@ def cmd_train(args) -> int:
     cfg, task = _load(args)
     configure_nnunet_env(cfg)
 
+    try:
+        trainer, finetune_env = _finetune_setup(cfg, task, args)
+    except ValueError as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 2
+
     run_dir = task.run_dir(cfg, args.fold)
     run_dir.mkdir(parents=True, exist_ok=True)
 
-    cmd = _train_command(cfg, task, args)
+    cmd = _train_command(cfg, task, args, trainer=trainer)
     env = env_for_training(run_dir, task.nnunet_name, epochs=args.epochs)
     env.update(cfg.export_nnunet_env())
+    env.update(finetune_env)
     if args.iterations:
         env["SEGTRAIN_ITERATIONS"] = str(args.iterations)
+    for key in sorted(finetune_env):
+        print(f"env      {key}={finetune_env[key]}")
 
     print(f"task     {task.nnunet_name} fold {args.fold}")
     print(f"run dir  {run_dir}")
@@ -842,8 +919,24 @@ def cmd_scinet_submit(args) -> int:
     run_dir.mkdir(parents=True, exist_ok=True)
     script_path = run_dir / "job.sh"
 
+    from types import SimpleNamespace
+
+    # The chain's first block starts fresh, so a fine-tune needs its source here too.
+    setup_args = SimpleNamespace(trainer=None, arm=args.arm, finetune_from=args.finetune_from,
+                                 continue_training=False, dry_run=args.dry_run)
+    try:
+        trainer, _ = _finetune_setup(cfg, task, setup_args)
+    except ValueError as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 2
+    train_extra = []
+    if args.arm:
+        train_extra += ["--arm", args.arm]
+    if args.finetune_from:
+        train_extra += ["--finetune-from", str(Path(args.finetune_from).expanduser())]
     text = render_train_script(cfg, task, args.fold, epochs=args.epochs,
-                               iterations=args.iterations)
+                               iterations=args.iterations, trainer=trainer,
+                               train_extra=train_extra)
     write_script(script_path, text)
 
     block = parse_walltime(sc.walltime)
@@ -1274,6 +1367,14 @@ def cmd_reads_report(args) -> int:
 # --------------------------------------------------------------------------- main
 
 
+def _add_finetune_args(s) -> None:
+    s.add_argument("--arm", help="LR arm declared by the task (lr_arms), e.g. primary or lr1e3 "
+                                 "for task 716 (A17)")
+    s.add_argument("--finetune-from", type=Path, metavar="CHECKPOINT",
+                   help="source checkpoint_final.pth for a fine-tune trainer "
+                        "(sets SEGTRAIN_FINETUNE_FROM)")
+
+
 def build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(
         prog="segtrain",
@@ -1372,6 +1473,9 @@ def build_parser() -> argparse.ArgumentParser:
     s.add_argument("--skip-fingerprint", action="store_true")
     s.add_argument("--verify-integrity", action="store_true",
                    help="re-read every image/label pair; slow, worth it once")
+    s.add_argument("--plans-from", type=Path, metavar="PLANS_JSON",
+                   help="adopt this plans file instead of planning (tasks with plans_from, "
+                        "e.g. 716 adopts icx4's); no fingerprint, no planner")
     s.set_defaults(func=cmd_plan)
 
     s = sub.add_parser("preprocess", parents=[common, task_opt],
@@ -1397,6 +1501,7 @@ def build_parser() -> argparse.ArgumentParser:
     s.add_argument("--dry-run", action="store_true")
     s.add_argument("--i-know-cpu-is-slow", action="store_true",
                    help=argparse.SUPPRESS)
+    _add_finetune_args(s)
     s.set_defaults(func=cmd_train)
 
     s = sub.add_parser("status", parents=[common, task_opt, fold_opt],
@@ -1466,6 +1571,7 @@ def build_parser() -> argparse.ArgumentParser:
     s.add_argument("--chain-mode", choices=("array", "dependency"),
                    help="one --array=1-N%%1 job (default) or N --dependency jobs")
     s.add_argument("--dry-run", action="store_true", help="print the script, submit nothing")
+    _add_finetune_args(s)
     s.set_defaults(func=cmd_scinet_submit)
 
     s = scisub.add_parser("status", parents=[common, task_opt, fold_opt],

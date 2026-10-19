@@ -1,0 +1,73 @@
+# Wave 1 (Round 9 A32): fine-tune icx4 on the team's SegQueue14 reads.
+#
+# icx4 (Dataset715_ICX4, trillium/icx4) is the 4-class model on ImageCAS-X's lumen collapsed by territory
+# (D25). Wave 1 warm-starts from its checkpoint_final.pth and trains on approved SegQueue14 reads through the
+# A17 fine-tune trainer (src/segtrain/nnunet_ext/nnUNetTrainer_segtrain_finetune.py). icx4 itself is not
+# changed by anything here.
+#
+# Dataset id 716. 710-712 are the retired segtrain tasks; 713 and 714 are Atlas's Trillium datasets
+# (trillium/atlas, trillium/atlas2); 715 is icx4. 716 is the first free id. Pinned by tests/test_task_icx4_wave1.py.
+#
+# Source: a `segqueue14-export` tree, <out>/<case>/ct.nii.gz + <case>/segmentations/{LM,LAD,LCx,RCA}.nii.gz.
+# Each read is its own training sample with its own labels (A11'): the first read is <case>, the second
+# <case>__r2. `segtrain index` keys the hash split on the case behind a name, so both reads of a case always
+# land in the same split (Echo D2). Use the default (official) split scheme, not cv5.
+#
+# Plans: NOT planned. The warm start is only valid when the plans are icx4's own, field by field, including
+# nnU-Net's CT window from icx4's fingerprint (finetune_load.check_compatible refuses anything else). So
+# `segtrain plan --task 716 --plans-from <icx4 plans json>` adopts icx4's plans file (0.5 mm iso, ResEnc 60 GB,
+# 256^3 / batch 2) after checking it against the keys below, and `segtrain train` checks the CT window against
+# the adopted plans, not the fixed [-300, 1300] window of task 712. docs/TRAINING-WAVE1.md has the commands.
+
+dataset_id: 716
+dataset_name: CoronaryICX4Wave1
+
+# The four classes of D25, same names and values as src/segqueue14/labels.py (pinned in the tests).
+label_set: coronary_icx4
+
+# icx4's recipe (trillium/icx4/lib/prepare.py): 0.5 mm isotropic.
+spacing: [0.5, 0.5, 0.5]
+max_spacing_mm: 0.5
+
+configuration: 3d_fullres
+# A17a primary arm (peak LR 1e-2); `--arm lr1e3` picks the A17b fallback arm. Both inherit mirroring off,
+# val softmax saved and the A14 trainer-side sealed refusal from nnUNetTrainer_segtrain_coronary.
+trainer: nnUNetTrainer_segtrain_finetune
+# icx4's plans name; a different name would be a different (re-planned) network.
+plans_name: nnUNetResEncUNetPlans_60G_iso05
+
+# The fine-tune trainer's own default (FINETUNE_EPOCHS); warm-up 2500 iterations (10 epochs), then poly.
+epochs: 250
+folds: [0]
+
+# ---- extra recipe keys, read by segtrain.plans.task_extras -----------------------------------------------
+# What the adopted plans must say. `segtrain plan --plans-from` refuses a plans file that differs.
+planner: ResEncUNetPlanner
+gpu_memory_target_gb: 60
+patch_size: [256, 256, 256]
+batch_size: 2
+# No ct_window: icx4 trained on nnU-Net's own window (Round 8: the default tied the fixed one); the adopted
+# plans carry it. No ignore_label: A11' read samples carry none, and icx4 has 4 + 1 outputs.
+
+# Adopt the plans of this dataset instead of planning (see segtrain.plans.adopt_plans).
+plans_from:
+  dataset: Dataset715_ICX4
+  plans_name: nnUNetResEncUNetPlans_60G_iso05
+  trainer: nnUNetTrainerICX4
+
+# A17 learning-rate arms: name -> trainer class. `primary` is the default (`trainer` above).
+lr_arms:
+  primary: nnUNetTrainer_segtrain_finetune         # peak 1e-2 (A17a/b)
+  lr1e3: nnUNetTrainer_segtrain_finetune_lr1e3     # peak 1e-3, the pre-registered fallback (Foxtrot F2)
+
+# A14: the ImageCAS seal. Never converted, never trained on. Under a sealed list, a read whose name maps to no
+# ImageCAS case is refused too (proxy.sealed_reason), so until the pool seal below is wired only ImageCAS reads
+# can reach this dataset.
+sealed_list: trillium/sealed_test.json
+
+# HOOK(#84, D27 / Round 9 A30): the 150 sealed pool patients (216 volumes) + 20 ImageCHD report-only patients.
+# Set this to #84's canonical seal file (e.g. configs/segqueue14/sealed-pool-2026-10.json) once it merges, and
+# use #84's guard in segtrain.convert / sealed_guard. While it is null, `segtrain convert` and `segtrain train`
+# print that the pool seal is not yet enforced, and the fail-safe above (every non-ImageCAS name refused)
+# keeps pool volumes out. tests/test_task_icx4_wave1.py pins both.
+sealed_pool_list: null

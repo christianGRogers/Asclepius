@@ -262,6 +262,12 @@ submissions from the assetstore; nothing else.
   serves and restarts that way. The launcher does not start `segqueue14-score`;
   after a reboot run the `worker` step.
 
+* **`segqueue14-export` leaves the D27 sealed pool cases out** (150 patients + 20
+  ImageCHD report-only, `configs/segqueue14/sealed-pool-2026-10.json`) and prints how
+  many. It needs the seal file: run it from the `~/Asclepius-sq14` checkout, or pass
+  `--seal-file ~/Asclepius-sq14/configs/segqueue14/sealed-pool-2026-10.json` (or set
+  `SEGTRAIN_POOL_SEAL`). A missing or altered file stops the export. `--acceptance-scoring`
+  includes them, for acceptance scoring only. Annotators see no difference.
 * If a live CT is ever deleted or re-ingested under a new file id, the SegQueue14 case
   that points at it fails to download (`case_file_missing`). Re-run
   `segqueue14-populate --update` after a live re-ingest.

@@ -1,4 +1,8 @@
-"""Bridge, Round 9 (proposal, not binding until the judge adopts it): a pre-registered sealed A10 set drawn from
+"""**Superseded by D32 (2026-10-19):** this script produced the D27 seal (sha256 8f529842...1183, kept in git at
+4469ed4). Its name heuristic under-grouped six patients (A30 QC, #87); the seal in force is that file rebuilt on real
+patients by reseal_d32.py. Kept as the record of the Round 9 draw.
+
+Bridge, Round 9 (proposal, not binding until the judge adopts it): a pre-registered sealed A10 set drawn from
 the SegQueue14 pool (D23), by patient, stratified by source, ranked by a salted sha256 so anyone can recompute it.
 
 Strata:

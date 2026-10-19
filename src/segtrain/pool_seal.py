@@ -70,11 +70,18 @@ SDN_SINGLE_PATIENT_RECORDS = frozenset({"7x9kb53262", "37nnfyh3x9", "4643nn2z44"
 #: The source whose sequences are stored one case per frame (``run_slicer``, ``patient_id=name``).
 SLICER_SOURCE = "Slicer-SampleData"
 _FRAME = re.compile(r"_f\d+$")
+#: Patients the ingest stored under two ids, merged by a human decision (patient -> canonical id).
+#: D33: RIDER stores some people under several RIDER ids; these two are taken as one person
+#: (same age and sex, three studies within six weeks), the cautious choice.
+PATIENT_ALIASES = {
+    "IDC-rider_lung_pet_ct__RIDER-2551730224": "IDC-rider_lung_pet_ct__RIDER-2522924559",
+}
 
 
 def ingest_patient(stem: str) -> Optional[str]:
     """The patient behind a pool volume stem, as ``tools/ccta/ingest_open.py`` assigns it;
-    Bridge's name rule for every other source. None for a name with no ``<Source>__``."""
+    Bridge's name rule for every other source, then :data:`PATIENT_ALIASES` (D33). None for a
+    name with no ``<Source>__``."""
     parts = stem.split("__")
     if len(parts) < 2:
         return None
@@ -83,7 +90,8 @@ def ingest_patient(stem: str) -> Optional[str]:
         return src
     if src == SLICER_SOURCE:
         return f"{src}__{_FRAME.sub('', case)}"
-    return _patient_key(stem)
+    key = _patient_key(stem)
+    return PATIENT_ALIASES.get(key, key)
 
 
 class SealedPoolError(RuntimeError):

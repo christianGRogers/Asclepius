@@ -13,7 +13,8 @@ D32 option A, applied in this order:
    kept, sealed patients dropped. The salted ranking is untouched, so this is not a redraw.
 The scoring volume of each patient is the lowest-ranked of its volumes, by the same salted sha256 as before.
 
-Usage: python3 reseal_d32.py <old seal json> <pool list> > new.json   (prints a before/after table to stderr)
+Usage: python3 reseal_d32.py <D27 seal json> <pool list> > new.json   (prints a before/after table to stderr)
+Reproduce: git show 4469ed4:experiments/Bridge/r9/sealed_pool_proposal.json > d27.json, then run on d27.json.
 """
 import hashlib
 import json
@@ -28,6 +29,10 @@ from segtrain.pool_seal import PATIENT_ALIASES, _patient_key, ingest_patient  # 
 N_PRIMARY = 150
 old_path, pool_path = sys.argv[1], sys.argv[2]
 raw = open(old_path, 'rb').read()
+D27_SHA256 = '8f529842934bfb72883a7da593b128ad6c091aecb8228005e9792cd8d92c1183'
+if hashlib.sha256(raw).hexdigest() != D27_SHA256:
+    sys.exit(f'{old_path} is not the D27 seal (sha256 {D27_SHA256}); this script rebuilds that file only. '
+             'Reproduce with: git show 4469ed4:experiments/Bridge/r9/sealed_pool_proposal.json > d27.json')
 old = json.loads(raw)
 SALT = old['salt']
 vols = [ln.strip() for ln in open(pool_path) if ln.strip() and not ln.startswith('#')]

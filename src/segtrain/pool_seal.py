@@ -1,8 +1,9 @@
 """The D27 pool seal: SegQueue14 pool patients no training, prelabel or analysis export may use.
 
-D27 adopts Bridge's Round 9 A30 proposal as the acceptance set: 150 pool patients (216 volumes)
-plus 20 ImageCHD patients scored report-only. Until acceptance scoring, no volume of a listed
-patient is trained on, prelabelled or inspected, and no read of one is exported for analysis.
+D27 adopts Bridge's Round 9 A30 proposal as the acceptance set; D32 rebuilt it on real patients:
+150 pool patients (305 volumes, every volume of each) plus 20 ImageCHD patients scored
+report-only. Until acceptance scoring, no volume of a listed patient is trained on, prelabelled
+or inspected, and no read of one is exported for analysis.
 Annotators still read them like any other case (D23); nothing here touches the queue.
 
 The list is ``configs/segqueue14/sealed-pool-2026-10.json``, a byte-for-byte copy of
@@ -21,8 +22,11 @@ are all sealed or none.
 The last rule is A30's grouping QC (#87): Bridge's name rule under-groups six patients, 60 pool
 volumes. Each single-patient Mendeley-SDN record is one patient (``patient_id=SDN-<did>`` in
 ``tools/ccta/ingest_open.py``; ``sNNN`` is a series), and a Slicer 4D sequence is stored one case
-per frame (``<name>_fNN``, ``patient_id=<name>``). The seal file stays Bridge's list byte for byte
-(changing it needs the lead); the guard refuses by patient.
+per frame (``<name>_fNN``, ``patient_id=<name>``). D32 (option A) then rebuilt the file on those
+patients (``experiments/Bridge/r9/reseal_d32.py``: every volume of every sealed patient, topped up
+to 150 from the pre-registered extension order, the extension order recomputed on real patients),
+and D33 merged two RIDER ids (:data:`PATIENT_ALIASES`). The guard still refuses by patient, so a
+volume added to the pool later is sealed with its patient.
 
 Three modes for a caller holding a list of names (:func:`apply`):
 
@@ -49,7 +53,7 @@ log = logging.getLogger("segtrain.pool_seal")
 #: Repository-relative path of the canonical seal file.
 SEAL_RELPATH = "configs/segqueue14/sealed-pool-2026-10.json"
 #: sha256 of that file. Changing the seal means changing this, in its own reviewed PR.
-SEAL_SHA256 = "8f529842934bfb72883a7da593b128ad6c091aecb8228005e9792cd8d92c1183"
+SEAL_SHA256 = "e71141b407acb79eeff912eee21029d34edb677d984172d871eb5f02cb1d0690"
 #: Environment variable naming the seal file, for an installed (non-checkout) package.
 SEAL_ENV = "SEGTRAIN_POOL_SEAL"
 

@@ -917,6 +917,7 @@ def load_read_folder(
     sealed: Optional[set] = None,
     milestone: bool = False,
     refused: Optional[list] = None,
+    pool_seal: str = "refuse",
 ) -> list[CaseReads]:
     """Load a wave of double reads. Two layouts are accepted:
 
@@ -940,6 +941,10 @@ def load_read_folder(
     it is brought onto the same grid and makes the
     report's tF1 use the A1 ostium of record (non-provisional). Sealed cases must not be
     passed here before a milestone (A14).
+    **D27:** a folder naming a sealed SegQueue14 pool volume makes the load refuse before any
+    file is opened (``pool_seal="refuse"``, the default); ``"exclude"`` skips those folders,
+    lists them in ``refused`` and logs the count; ``"acceptance"`` (acceptance scoring only)
+    keeps them and logs it. ``milestone`` does not lift the pool seal.
     """
     import warnings
 
@@ -950,11 +955,21 @@ def load_read_folder(
     # refused too (proxy.sealed_reason). ``sealed`` defaults to trillium/sealed_test.json.
     if not milestone:
         sealed = load_sealed() if sealed is None else set(sealed)
+    # D27: the pool seal is checked on folder names too, before anything is opened.
+    from .pool_seal import EXCLUDE, load_pool_seal
+    from .pool_seal import apply as apply_pool_seal
+
+    entries = [e for e in sorted(os.listdir(root)) if os.path.isdir(os.path.join(root, e))]
+    seal = load_pool_seal()
+    allowed = set(apply_pool_seal(entries, mode=pool_seal, what=f"loading reads from {root}",
+                                  seal=seal))
+    if pool_seal == EXCLUDE and refused is not None:
+        refused.extend(why for why in (seal.reason(e) for e in entries) if why)
     groups: dict = {}
-    for entry in sorted(os.listdir(root)):
-        cdir = os.path.join(root, entry)
-        if not os.path.isdir(cdir):
+    for entry in entries:
+        if entry not in allowed:
             continue
+        cdir = os.path.join(root, entry)
         if not milestone:
             why = sealed_reason(entry, sealed)
             if why:
@@ -1084,6 +1099,7 @@ def first_reads_report(
     use_namer: bool = True,
     per_case_tf1: bool = False,
     corrections: Optional[Mapping[str, Iterable[str]]] = None,
+    pool_seal: str = "refuse",
 ) -> dict:
     """A12: the single wave-1 report on the first double-read cases.
 
@@ -1105,7 +1121,17 @@ def first_reads_report(
     with :func:`report_markdown`. ``per_case_tf1=True`` scores tF1 per case with that case's
     aorta (``CaseReads.aorta``, from ``load_read_folder(aorta_dir=...)``), so cases with an
     aorta are non-provisional (A1a); otherwise ``scorer`` (or none) is used for every case.
+
+    **D27:** a sealed SegQueue14 pool case makes the report refuse (``pool_seal="refuse"``, the
+    default); ``"exclude"`` drops it and the wave records ``n_pool_sealed_excluded``;
+    ``"acceptance"`` keeps it and logs it (acceptance scoring only).
     """
+    from .pool_seal import apply as apply_pool_seal
+
+    keep = set(apply_pool_seal([cr.case for cr in cases], mode=pool_seal,
+                               what="the A12 reads report"))
+    n_pool_sealed = sum(1 for cr in cases if cr.case not in keep)
+    cases = [cr for cr in cases if cr.case in keep]
     rows, checks = [], []
     per_annot_offset: dict = {}
     per_annot_trunc: dict = {}
@@ -1212,6 +1238,7 @@ def first_reads_report(
     lm_d = [r["lm_end_distance_mm"] for r in pairs]
     wave = {
         "n_cases": len(rows),
+        "n_pool_sealed_excluded": n_pool_sealed,
         "a3_thin_reads": int(sum(c.thin for c in checks)),
         # D7: noted corrections are listed but do not halt; un-noted departures do
         "a3_noted_corrections": int(sum(c.thin and c.corrected for c in checks)),

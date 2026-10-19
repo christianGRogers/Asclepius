@@ -41,7 +41,9 @@ def test_trainer_guard_refuses_a_sealed_pool_volume_and_keeps_a14():
     from segtrain.nnunet_ext.sealed_guard import refuse_sealed
 
     assert refuse_sealed(["c0003", "c0003__r2", "imagecas_0004"]) == 3   # A14 as before
-    for name in (SEALED, f"{SEALED}__r2", REPORT_ONLY):
+    # the last two are unlisted volumes of sealed patients, grouped as the ingest does (#87)
+    for name in (SEALED, f"{SEALED}__r2", REPORT_ONLY, "Mendeley-SDN-spb25zt2c4__s999",
+                 "Slicer-SampleData__TruncalValve_4DCT_f20"):
         with pytest.raises(SealedPoolError, match="D27"):
             refuse_sealed(["c0003", name])
     with pytest.raises(RuntimeError, match="A14"):                     # A14 still refuses

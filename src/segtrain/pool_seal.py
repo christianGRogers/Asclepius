@@ -14,7 +14,15 @@ explicit change to the file and the hash, never something a caller does.
 A name is sealed when, after its directory, volume extension (``.nii.gz``, nnU-Net's ``_0000``
 channel) and read suffix (``__r2``) are removed, it is a sealed volume's stem or a sealed patient
 id, or its patient key (Bridge's rule: ``<Source>__<case>`` without ``_tp0`` / ``_p06`` /
-``_diast`` / ``_s1``) is a sealed patient. Several volumes of one patient are all sealed or none.
+``_diast`` / ``_s1``) is a sealed patient, **or its patient as the ingest assigns it**
+(:func:`ingest_patient`) is the patient of any sealed volume. Several volumes of one patient
+are all sealed or none.
+
+The last rule is A30's grouping QC (#87): Bridge's name rule under-groups six patients, 60 pool
+volumes. Each single-patient Mendeley-SDN record is one patient (``patient_id=SDN-<did>`` in
+``tools/ccta/ingest_open.py``; ``sNNN`` is a series), and a Slicer 4D sequence is stored one case
+per frame (``<name>_fNN``, ``patient_id=<name>``). The seal file stays Bridge's list byte for byte
+(changing it needs the lead); the guard refuses by patient.
 
 Three modes for a caller holding a list of names (:func:`apply`):
 
@@ -56,6 +64,28 @@ _READ_SUFFIX = re.compile(r"(__r\d+|_r[A-Za-z0-9]+)$")  # as segtrain.proxy
 _PATIENT_SUFFIX = re.compile(r"(_tp\d+|_p\d+|_(diast|syst)|_s\d+)$", re.I)
 
 
+#: Mendeley-SDN records that hold one patient (``SDN_CASES`` in tools/ccta/ingest_open.py,
+#: ``patient_id=f'SDN-{did}'``). ``cy54ttk3fj`` is not one: 40 patients, ``P<NN>_diast/_syst``.
+SDN_SINGLE_PATIENT_RECORDS = frozenset({"7x9kb53262", "37nnfyh3x9", "4643nn2z44", "spb25zt2c4"})
+#: The source whose sequences are stored one case per frame (``run_slicer``, ``patient_id=name``).
+SLICER_SOURCE = "Slicer-SampleData"
+_FRAME = re.compile(r"_f\d+$")
+
+
+def ingest_patient(stem: str) -> Optional[str]:
+    """The patient behind a pool volume stem, as ``tools/ccta/ingest_open.py`` assigns it;
+    Bridge's name rule for every other source. None for a name with no ``<Source>__``."""
+    parts = stem.split("__")
+    if len(parts) < 2:
+        return None
+    src, case = parts[0], parts[1]
+    if src.startswith("Mendeley-SDN-") and src[len("Mendeley-SDN-"):] in SDN_SINGLE_PATIENT_RECORDS:
+        return src
+    if src == SLICER_SOURCE:
+        return f"{src}__{_FRAME.sub('', case)}"
+    return _patient_key(stem)
+
+
 class SealedPoolError(RuntimeError):
     """A sealed pool volume reached a path that may not use it (D27)."""
 
@@ -86,6 +116,7 @@ class PoolSeal:
     patients: frozenset
     report_only_patients: frozenset
     extension_order: tuple
+    ingest_patients: frozenset = frozenset()
 
     def reason(self, name) -> Optional[str]:
         """Why ``name`` is sealed (D27), or None if it is not."""
@@ -103,6 +134,9 @@ class PoolSeal:
             key = _patient_key(s)
             if key and key in self.patients:
                 return f"{name}: volume of sealed pool patient {key} (D27)"
+            ingest = ingest_patient(s)
+            if ingest and ingest in self.ingest_patients:
+                return f"{name}: volume of sealed pool patient {ingest} (ingest patient id; D27)"
         return None
 
     def is_sealed(self, name) -> bool:
@@ -149,7 +183,8 @@ def load_pool_seal(path=None) -> PoolSeal:
         raise SealedPoolError(f"{p}: no sealed volumes or patients")
     return PoolSeal(path=str(p), sha256=digest, volumes=vols, patients=pats,
                     report_only_patients=frozenset(rep["patients"]),
-                    extension_order=tuple(prim.get("extension_order", ())))
+                    extension_order=tuple(prim.get("extension_order", ())),
+                    ingest_patients=frozenset(filter(None, map(ingest_patient, vols))))
 
 
 def apply(names: Iterable, mode: str = REFUSE, what: str = "this step",

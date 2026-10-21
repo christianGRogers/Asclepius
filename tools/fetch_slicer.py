@@ -34,19 +34,19 @@ def _get_json(url):
 
 def revision_for(version):
     """The build revision of a released Slicer version, e.g. 5.8.1 -> 33241."""
-    releases = _get_json("{}/app/{}/release?limit=0".format(PACKAGES, APP_ID))
+    releases = _get_json(f"{PACKAGES}/app/{APP_ID}/release?limit=0")
     for release in releases:
         if release.get("name") == version:
             return str(release["meta"]["revision"])
-    raise SystemExit("no Slicer release named {!r} on the package server".format(version))
+    raise SystemExit(f"no Slicer release named {version!r} on the package server")
 
 
 def package_url(os_name, arch, revision):
     query = urllib.parse.urlencode(
         {"os": os_name, "arch": arch, "revision": revision, "limit": 5})
-    packages = _get_json("{}/app/{}/package?{}".format(PACKAGES, APP_ID, query))
+    packages = _get_json(f"{PACKAGES}/app/{APP_ID}/package?{query}")
     if not packages:
-        raise SystemExit("no {}/{} package for revision {}".format(os_name, arch, revision))
+        raise SystemExit(f"no {os_name}/{arch} package for revision {revision}")
     return "{}/item/{}/download".format(PACKAGES, packages[0]["_id"])
 
 
@@ -66,12 +66,11 @@ def main(argv=None):
 
     if args.version in ("release", "preview"):
         url = CHANNEL_URL.format(os=CHANNEL_OS[args.os], channel=args.version)
-        print("Slicer {} channel for {}".format(args.version, args.os))
+        print(f"Slicer {args.version} channel for {args.os}")
     else:
         revision = revision_for(args.version)
         url = package_url(args.os, args.arch, revision)
-        print("Slicer {} (revision {}) for {}/{}".format(
-            args.version, revision, args.os, args.arch))
+        print(f"Slicer {args.version} (revision {revision}) for {args.os}/{args.arch}")
     download(url, args.out)
     return 0
 

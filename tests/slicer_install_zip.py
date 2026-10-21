@@ -38,9 +38,15 @@ def check(name, passed, detail=""):
     say("PASS" if passed else "FAIL", name, detail)
 
 
+def prop(obj, name):
+    """A Qt property: PythonQt exposes most as values, some as getters."""
+    value = getattr(obj, name)
+    return value() if callable(value) else value
+
+
 def scriptedDir(slicer, model):
     version = "{}.{}".format(slicer.app.majorVersion, slicer.app.minorVersion)
-    return os.path.join(model.extensionsInstallPath(), EXTENSION, "lib",
+    return os.path.join(prop(model, "extensionsInstallPath"), EXTENSION, "lib",
                         "Slicer-" + version, "qt-scripted-modules")
 
 
@@ -87,8 +93,8 @@ def main():
     model = slicer.app.extensionsManagerModel()
     model.interactive = False
     say("slicer", slicer.app.applicationVersion, "revision", slicer.app.revision,
-        "os", model.slicerOs(), "arch", model.slicerArch())
-    say("extensions", model.extensionsInstallPath())
+        "os", prop(model, "slicerOs"), "arch", prop(model, "slicerArch"))
+    say("extensions", prop(model, "extensionsInstallPath"))
     say("phase", PHASE)
     if PHASE == "install":
         install(slicer, model)

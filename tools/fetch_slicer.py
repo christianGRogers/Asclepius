@@ -23,8 +23,9 @@ PACKAGES = "https://slicer-packages.kitware.com/api/v1"
 #: The Slicer application's id on the package server.
 APP_ID = "5f4474d0e1d8c75dfc705482"
 CHANNEL_URL = "https://download.slicer.org/download?os={os}&stability={channel}"
-#: download.slicer.org names macOS ``macos``; the package server ``macosx``.
-CHANNEL_OS = {"macosx": "macos", "linux": "linux", "win": "win"}
+#: Both download.slicer.org and the package server name macOS ``macosx``
+#: (``os=macos`` is a 400).
+CHANNEL_OS = {"macosx": "macosx", "linux": "linux", "win": "win"}
 
 
 def _get_json(url):

@@ -19,11 +19,13 @@ last line is ``RESULT PASS`` or ``RESULT FAIL``.
 """
 
 import os
+import sys
 import traceback
 
 OUT = os.environ.get("SEGQUEUE_SELFTEST_OUT", os.path.abspath("install.txt"))
 PHASE = os.environ.get("SEGQUEUE_INSTALL_PHASE", "install")
 EXTENSION = "SegQueue"
+TLS_PROBE = "https://slicer-packages.kitware.com/api/v1/system/version"
 
 log = []
 checks = []
@@ -86,6 +88,19 @@ def load(slicer, model):
     widget = slicer.modules.segqueue14.widgetRepresentation()
     check("the panel builds", widget is not None)
 
+    # The usual macOS Python failure is HTTPS with no CA bundle
+    # (CERTIFICATE_VERIFY_FAILED). The module talks HTTPS only through the
+    # `requests` Slicer bundles; this is the same call path, against a host
+    # that is not GitHub (no rate limit to make it flaky).
+    import requests
+
+    try:
+        reply = requests.get(TLS_PROBE, timeout=(10, 30))
+        check("HTTPS with certificate verification works", reply.status_code == 200,
+              "HTTP {}".format(reply.status_code))
+    except requests.exceptions.SSLError as exc:
+        check("HTTPS with certificate verification works", False, exc)
+
 
 def main():
     import slicer
@@ -95,6 +110,7 @@ def main():
     say("slicer", slicer.app.applicationVersion, "revision", slicer.app.revision,
         "os", prop(model, "slicerOs"), "arch", prop(model, "slicerArch"))
     say("extensions", prop(model, "extensionsInstallPath"))
+    say("python", sys.version.split()[0], sys.platform)
     say("phase", PHASE)
     if PHASE == "install":
         install(slicer, model)

@@ -40,7 +40,12 @@ uninstall it first.
 
 **First install:** download `SegQueue-<version>-Slicer-5.8.zip` from the newest
 `segqueue-v…` release (or build it: `python slicer/build-extension14.py`), then
-**Extensions Manager → Install from file** → restart. From a checkout: add
+**Extensions Manager → Install from file** → restart. **On a Mac, use
+`SegQueue-<version>-Slicer-5.8-macOS.zip`**: macOS Slicer only installs from the
+`Slicer.app/Contents/Extensions-<revision>/` path inside a zip, so the plain zip
+fails there with "Failed to copy directory" (#94). Slicer 5.8.0 and 5.8.1 are
+covered; another revision needs adding to `MACOS_REVISIONS` in
+`slicer/build-extension14.py`. From a checkout: add
 `slicer/SegQueue14` to *Additional module paths*.
 
 **Updating:** the module checks for a newer release when opened and offers

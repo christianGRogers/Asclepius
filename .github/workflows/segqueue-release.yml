@@ -102,7 +102,8 @@ jobs:
             tests/test_segqueue14_client.py \
             tests/test_segqueue14_convert.py \
             tests/test_segqueue14_module.py \
-            tests/test_segqueue14_release_line.py
+            tests/test_segqueue14_release_line.py \
+            tests/test_segqueue14_macos.py
 
       - name: Read the module version
         id: version
@@ -148,10 +149,14 @@ jobs:
           sys.path.insert(0, "src")
           from segqueue.release import ASSET_PATTERN, archive_members
 
+          # The cross-platform archive (every update button reads it) and the
+          # macOS one (Install from file on a Mac, #94), and nothing else.
           archives = glob.glob("dist/*.zip")
-          if len(archives) != 1:
-              raise SystemExit("expected exactly one archive, found %r" % archives)
-          path = archives[0]
+          generic = [a for a in archives if not a.endswith("-macOS.zip")]
+          macos = [a for a in archives if a.endswith("-macOS.zip")]
+          if len(generic) != 1 or len(macos) != 1:
+              raise SystemExit("expected one archive and one macOS archive, found %r" % archives)
+          path = generic[0]
 
           name = path.split("/")[-1]
           match = ASSET_PATTERN.match(name)
@@ -193,6 +198,26 @@ jobs:
           old.inspectArchive(path, slicer_version)
           new.inspectArchive(path, slicer_version)
           print("accepted by the SegQueue 0.13 and SegQueue14 updaters")
+
+          # The macOS archive: for every known revision of this Slicer, the
+          # subtree a Mac's Slicer copies out holds exactly the generic tree.
+          import importlib.util
+          spec = importlib.util.spec_from_file_location("b14", "slicer/build-extension14.py")
+          b14 = importlib.util.module_from_spec(spec)
+          spec.loader.exec_module(b14)
+          mac = macos[0]
+          if mac.split("/")[-1] != name[:-len(".zip")] + "-macOS.zip":
+              raise SystemExit("%s does not match %s" % (mac, name))
+          with zipfile.ZipFile(mac) as archive:
+              macnames = set(archive.namelist())
+          for revision in b14.MACOS_REVISIONS[slicer_version]:
+              prefix = b14.macosBundlePrefix(revision)
+              tree = {n[len(prefix):] for n in macnames if n.startswith(prefix)}
+              expected = {n[len("SegQueue/"):] for n in names if not n.endswith("/")}
+              if tree != expected:
+                  raise SystemExit("macOS archive differs from %s under %s" % (name, prefix))
+          print("%s: installable on macOS Slicer revisions %s"
+                % (mac.split("/")[-1], ", ".join(b14.MACOS_REVISIONS[slicer_version])))
           PY
 
       - name: Keep the archive on the run
@@ -235,7 +260,8 @@ jobs:
           **Installed the separate SegQueue14 0.1.0 extension?** Uninstall it in
           the Extensions Manager first; this release contains it.
 
-          **First install:** download the `.zip` below, then in Slicer go to
+          **First install:** download the `.zip` below (on a **Mac**, the one
+          ending in `-macOS.zip`), then in Slicer go to
           **Extensions Manager -> Install from file**, pick it, and restart.
           Install **SegmentEditorExtraEffects** first if you have not already -
           it provides *Draw tube*, and "Install from file" does not resolve

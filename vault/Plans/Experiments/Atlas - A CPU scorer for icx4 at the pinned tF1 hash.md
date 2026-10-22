@@ -80,3 +80,23 @@ a login node, or about 15 min with 10 workers.
 
 **Not included.** The A23 contrast-supported extent diagnostic (it needs CT HU and is report-only) and the A1b
 review lists. Both are added when pool reads arrive.
+
+## Round 10 update (#86): one implementation, so A26 holds by construction
+
+Round 9's A26 requires the val-80 scorer to reproduce the in-job `tf1_per_case.json` on open-36, per case and per
+class. The Round 9 version of `r9_score_icx4.py` could not:
+
+- it gave `find_ostia` no CT, so the `pool_thick` cross-check rule (and therefore the A1b flags) differed from the
+  job's;
+- it flagged whole cases rather than classes;
+- it did not crop as the job does.
+
+Since #86, `r9_score_icx4.py` **calls icx4's own `lib/tf1_score.score_case`**, which uses the same crop, ostium
+rules, flag rule and frozen `lib/segtrain_tf1.py`, with the CT from icx4's `layout.json`. It summarises with icx4's
+own `report.tf1_summary`, so the decisive macro has the same definition. It still chooses only non-sealed cases and
+adds Dice (report only). Its command line is unchanged; `--layout` defaults to the `layout.json` beside
+`--splits`.
+
+- **Self-test:** its rows equal the in-job function's on identical inputs, through a JSON round trip.
+- **The reading of its output** (A26, A27, A29, A15) is
+  [[icx4 - Results (pending)]] / `experiments/Atlas/r10_read_icx4.py`.

@@ -132,7 +132,10 @@ jobs:
   # --------------------------------------------------------------------------
   slicer-python:
     name: Shared package on Slicer's Python
-    runs-on: ubuntu-latest
+    # Pinned: ubuntu-latest became 26.04 (Oct 2026), for which setup-python has
+    # no 3.9 build, so the job failed before running anything. 3.9 is still
+    # published for 24.04, and 3.9 is what Slicer 5.8 bundles.
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5

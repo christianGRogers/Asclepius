@@ -2,7 +2,7 @@
 aliases: [Human decisions, D0]
 tags: [plans, decision-record, human]
 status: living
-updated: 2026-10-18
+updated: 2026-10-19
 ---
 
 # Human decisions
@@ -47,6 +47,8 @@ that contradicts one of them cannot win.
 | D29 | Anomalous anatomy in acceptance (Round 9 L3) | **Own stratum.** ImageALCAPA (30 volumes) and ImageCHD (83) are reported as their own stratum, outside the A10 aggregate. The 74 header-spacing-suspect volumes stay out of A10 until re-gridded. | Decided 2026-10-18 |
 | D30 | Serving order for patients with many volumes (Round 9 L4) | **No change.** D23's serving order stands; one-volume-per-patient-first is not adopted. | Decided 2026-10-18 |
 | D31 | Emails and requests to outside parties | **Never in the repository.** No email, letter, message or request to anyone outside the project (authors, data holders, institutions) is drafted, templated or stored anywhere in the repository (code, vault, docs, issues or PRs), under any circumstances. Access requests remain the lead's, outside the repository (D19). A plan may say that a source is gated; it may not contain the ask. | Decided 2026-10-18 |
+| D32 | Pool-seal size after the A30 grouping QC (#87) | **150 real patients (option A).** Bridge's QC found the seal's name heuristic under-grouped six patients (four single-patient Mendeley-SDN records; Slicer 4D frames `_fNN`), so the 150 listed keys were 133 real patients and 60 of their volumes sat outside the file. Fix, in one explicit PR to `configs/segqueue14/sealed-pool-2026-10.json`: (1) seal every volume of every sealed patient, as the ingest code groups them (`tools/ccta/ingest_open.py`); (2) top up from the pre-registered extension order, skipping entries of already-sealed patients, to 150 real patients; (3) recompute the extension order on real patients. The salted ranking is kept, so this is not a redraw. The guard has refused by patient since #91. | Decided 2026-10-19 |
+| D33 | RIDER-2522924559 and RIDER-2551730224 | **One patient.** Same age and sex, three studies within six weeks; merged as the cautious choice. The merged patient is sealed, and its extension-order entry (#79) is dropped. | Decided 2026-10-19 |
 
 ## The restructure of 2026-10-11 (D8–D10)
 

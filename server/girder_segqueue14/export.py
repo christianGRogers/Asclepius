@@ -42,6 +42,15 @@ Two things about the inputs that are easy to get wrong:
 
 Runs against the models directly rather than over REST, like ``segqueue-ingest``
 and for the same reason: the files are already on this disk.
+
+**The D27 pool seal.** Reads of the sealed SegQueue14 pool volumes
+(``configs/segqueue14/sealed-pool-2026-10.json``, via ``segtrain.pool_seal``) are
+left out of every export by default, before any file of theirs is opened, and the
+run says how many. ``--acceptance-scoring`` (for acceptance scoring, later) includes
+them, and says so; the manifest records the seal's sha256, the mode and the count.
+Annotators are unaffected: sealed cases stay in the queue and get their reads (D23).
+On a server without a checkout, pass ``--seal-file`` or set ``SEGTRAIN_POOL_SEAL``;
+a missing or altered seal file stops the export.
 """
 
 import argparse
@@ -203,7 +212,11 @@ def selectable(includeUnreviewed=False):
     return [st.APPROVED, st.SUBMITTED] if includeUnreviewed else [st.APPROVED]
 
 
-def collect(since=None, includeUnreviewed=False, limit=0, replicas='first'):
+#: The ``name`` ``collect`` yields for a case the D27 pool seal leaves out.
+SEALED = object()
+
+
+def collect(since=None, includeUnreviewed=False, limit=0, replicas='first', seal=None):
     """Pair each exportable case with the submission(s) to write for it.
 
     Yields ``(case, submission, name)``. For a duplicated case there are two
@@ -212,6 +225,10 @@ def collect(since=None, includeUnreviewed=False, limit=0, replicas='first'):
     writes the others under ``<case>__r2``, ``<case>__r3``. Never silently
     drops one: exporting the same image twice under one name would overwrite,
     and dropping it without a word would hide a disagreement worth seeing.
+
+    ``seal`` (a ``segtrain.pool_seal.PoolSeal``): each of its cases is yielded once
+    as ``(case, None, SEALED)``, before any submission of it is loaded, and does not
+    count towards ``limit``.
     """
     _, Assignment, Case, Submission = _models()
     assignments, submissions, cases = Assignment(), Submission(), Case()
@@ -230,6 +247,9 @@ def collect(since=None, includeUnreviewed=False, limit=0, replicas='first'):
     for caseId, group in byCase.items():
         case = cases.load(caseId, force=True)
         if case is None:
+            continue
+        if seal is not None and seal.is_sealed(case['name']):
+            yield case, None, SEALED
             continue
         for index, assignment in enumerate(group):
             if index and replicas != 'all':
@@ -274,6 +294,7 @@ def _writeManifest(out, cases, segments, args, since):
         'replicas': args.replicas,
         'include_unreviewed': bool(args.include_unreviewed),
         'since': since.isoformat() if since else None,
+        'pool_seal': getattr(args, 'poolSeal', None),
     })
     return manifest.write(out)
 
@@ -300,6 +321,13 @@ def buildParser():
                         help='Stop after this many cases (0 = no limit).')
     parser.add_argument('--dry-run', action='store_true',
                         help='Report what would be written and change nothing.')
+    parser.add_argument('--seal-file', default=None,
+                        help='The D27 pool seal (configs/segqueue14/sealed-pool-2026-10.json); '
+                             'default $SEGTRAIN_POOL_SEAL or the checkout\'s copy. It must be '
+                             'the pinned file.')
+    parser.add_argument('--acceptance-scoring', action='store_true',
+                        help='Include reads of D27 sealed pool volumes, for acceptance '
+                             'scoring only. Off by default: they are left out and counted.')
     return parser
 
 
@@ -326,10 +354,19 @@ def main(argv=None):
         return 2
 
     since = _parseSince(args.since)
+    from segtrain.pool_seal import load_pool_seal
+    try:
+        seal = load_pool_seal(args.seal_file)
+    except (OSError, RuntimeError) as exc:
+        print(f'D27 pool seal: {exc}', file=sys.stderr)
+        return 2
+    acceptance = bool(args.acceptance_scoring)
+    if acceptance:
+        print('ACCEPTANCE SCORING: reads of D27 sealed pool volumes are included.')
     if not args.dry_run:
         os.makedirs(args.out, exist_ok=True)
 
-    written = skippedReplicas = failed = 0
+    written = skippedReplicas = failed = sealedExcluded = sealedIncluded = 0
     emptyStructures = {}
     exportedCases = []
     prelabelVersions = {}
@@ -338,7 +375,11 @@ def main(argv=None):
 
     for case, submission, name in collect(
             since=since, includeUnreviewed=args.include_unreviewed,
-            limit=args.limit, replicas=args.replicas):
+            limit=args.limit, replicas=args.replicas,
+            seal=None if acceptance else seal):
+        if name is SEALED:
+            sealedExcluded += 1
+            continue
         if submission is None:
             skippedReplicas += 1
             print(f'  ~ {case["name"]}  [extra approved annotation not exported]')
@@ -352,6 +393,8 @@ def main(argv=None):
             continue
 
         written += 1
+        if acceptance and seal.is_sealed(case['name']):
+            sealedIncluded += 1
         exportedCases.append(result['case'])
         prelabelVersions[result['case']] = submission.get('prelabelVersion') or ''
         for structure in result.get('empty', ()):
@@ -359,7 +402,16 @@ def main(argv=None):
         note = f'  [{len(result["empty"])} empty]' if result.get('empty') else ''
         print(f'  + {result["case"]}{note}')
 
+    args.poolSeal = {'sha256': seal.sha256,
+                     'mode': 'acceptance' if acceptance else 'exclude',
+                     'excluded_cases': sealedExcluded, 'included_reads': sealedIncluded}
     print(f'\n{verb} {written} case(s) into {args.out}.')
+    if acceptance:
+        print(f'ACCEPTANCE SCORING: {sealedIncluded} read(s) of D27 sealed pool volumes '
+              'included.')
+    else:
+        print(f'{sealedExcluded} D27 sealed pool case(s) left out (seal {seal.sha256[:12]}); '
+              '--acceptance-scoring includes them, for acceptance scoring only.')
 
     if written and not args.dry_run:
         path = _writeManifest(args.out, exportedCases, segments, args, since)

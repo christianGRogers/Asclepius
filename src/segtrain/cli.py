@@ -129,6 +129,7 @@ def cmd_convert(args) -> int:
         dry_run=args.dry_run,
         progress=None if args.dry_run else _progress,
         layout=args.layout,
+        pool_seal="exclude" if args.exclude_sealed_pool else "refuse",
     )
     print(report.render())
     return 0 if report.ok else 1
@@ -1172,6 +1173,7 @@ def cmd_evaluate(args) -> int:
     per_case = score_predictions(
         cfg, task, pred_dir, tolerance_mm=args.nsd_tolerance,
         compute_nsd=not args.no_nsd, limit=args.limit, progress=_progress,
+        pool_seal=args.sealed_pool,
     )
     if not per_case:
         print("no predictions could be matched to ground truth", file=sys.stderr)
@@ -1350,17 +1352,22 @@ def cmd_reads_report(args) -> int:
 
     from .reads import default_scorer, first_reads_report, load_read_folder, report_markdown
 
+    refused: list = []
     cases = load_read_folder(args.reads, mask_dir=args.masks, icx_dir=args.icx,
-                             aorta_dir=args.aorta_dir)
+                             aorta_dir=args.aorta_dir, refused=refused,
+                             pool_seal=args.sealed_pool)
     # With --aorta-dir each case is scored with its own aorta (the A1 ostium of record);
     # cases without one, or a run without the option, stay provisional (A1a).
     scorer = default_scorer() if args.score else None
     report = first_reads_report(cases, scorer=scorer, previous_bias_flag=args.previous_bias_flag,
-                                per_case_tf1=bool(args.aorta_dir) and args.score)
+                                per_case_tf1=bool(args.aorta_dir) and args.score,
+                                pool_seal=args.sealed_pool)
     args.out.mkdir(parents=True, exist_ok=True)
     (args.out / "report.json").write_text(json.dumps(report, indent=1, default=str))
     (args.out / "REPORT.md").write_text(report_markdown(report))
-    print(f"{len(cases)} cases; wrote {args.out / 'REPORT.md'} and report.json")
+    n_pool = sum(1 for why in refused if "(D27)" in why)
+    print(f"{len(cases)} cases; wrote {args.out / 'REPORT.md'} and report.json"
+          + (f"; {n_pool} sealed pool case folder(s) excluded (D27)" if n_pool else ""))
     return 0
 
 
@@ -1422,6 +1429,9 @@ def build_parser() -> argparse.ArgumentParser:
                    help="source layout, as for `index`. Auto-detected, and it has "
                         "to match what index saw or meta.csv names cases convert "
                         "cannot find")
+    s.add_argument("--exclude-sealed-pool", action="store_true",
+                   help="drop D27 sealed pool volumes and report the count; without it a "
+                        "sealed pool volume makes convert refuse")
     s.add_argument("--dry-run", action="store_true")
     s.set_defaults(func=cmd_convert)
 
@@ -1606,6 +1616,10 @@ def build_parser() -> argparse.ArgumentParser:
     s.add_argument("--checkpoint", default="checkpoint_best.pth")
     s.add_argument("--device", default="cuda", choices=("cuda", "cpu", "mps"))
     s.add_argument("--predictions", help="score an existing prediction folder")
+    s.add_argument("--sealed-pool", choices=("refuse", "exclude", "acceptance"),
+                   default="refuse",
+                   help="D27 sealed pool volumes: refuse (default), exclude and report, or "
+                        "acceptance (acceptance scoring only)")
     s.add_argument("--limit", type=int)
     s.add_argument("--no-nsd", action="store_true", help="Dice only; much faster")
     s.add_argument("--nsd-tolerance", type=float, default=1.5)
@@ -1671,6 +1685,11 @@ def build_parser() -> argparse.ArgumentParser:
                    help="skip tF1 (fast; convention and anchor checks only)")
     s.add_argument("--previous-bias-flag", action="store_true",
                    help="the previous wave raised the carina bias flag (confirms it)")
+    s.add_argument("--sealed-pool", choices=("refuse", "exclude", "acceptance"),
+                   default="refuse",
+                   help="D27 sealed pool cases: refuse (default) stops on any; exclude drops "
+                        "them and reports the count; acceptance keeps them (acceptance scoring "
+                        "only)")
     s.add_argument("--out", type=Path, required=True, help="output directory")
     s.set_defaults(func=cmd_reads_report)
 

@@ -77,6 +77,8 @@ The queue is the 675 pooled volumes only (D23): no ImageCAS case of any kind.
 - [ ] `segqueue14-export --out /tmp/sq14-export` writes, per approved case,
       `ct.nii.gz` and four masks `LM.nii.gz`, `LAD.nii.gz`, `LCx.nii.gz`, `RCA.nii.gz`, and a manifest;
       each case folder is named after its `<Source>__<Case>`.
+- [ ] It ends with `N D27 sealed pool case(s) left out`, and no case folder is a sealed
+      pool volume (`configs/segqueue14/sealed-pool-2026-10.json`; D27).
 - [ ] `segtrain convert` with the `coronary_icx4` label set converts it, and the
       label volume has values 0-4 where the read had them
       (`tests/test_segqueue14_convert.py` does exactly this on synthetic reads).

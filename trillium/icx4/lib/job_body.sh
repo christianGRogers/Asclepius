@@ -45,6 +45,10 @@ d.setdefault(k, []).append(round((time.time() - t0) / 3600, 2)); json.dump(d, op
 PY
 }
 
+# #82: the launcher's completeness check again, before preprocessing (a second guard; ICX4_ALLOW_PARTIAL=1 overrides)
+python "$LIB/layout.py" check "$W/layout.json" "$ICX" \
+    || { echo "[job] REFUSING: cases/ is incomplete (see above)"; exit 3; }
+
 # ---- A. labels + plan + preprocess (CPU, first job only) ---------------------------------------
 if [ ! -e "$W/.preprocess_done" ] || [ ! -e "$W/.predict_in_done" ]; then
     python "$LIB/prepare.py" "$W" "$W/layout.json" "$ICX" $((NPROC - 2)) || { echo "[job] prepare FAILED"; exit 1; }
@@ -90,11 +94,11 @@ if [ -e "$W/.train_done" ] && [ ! -e "$W/.predict_done" ]; then
     fi
 fi
 
-# ---- C2. TotalSegmentator aortas (GPU), open-36 + dev-44 only (A1 ostium; ~30 min) ---------------
+# ---- C2. TotalSegmentator aortas (GPU), val-80 + open-36 + dev-44, never sealed (A1 ostium; ~1 h) ---
 if [ -e "$W/.predict_done" ] && [ ! -e "$W/.aorta_done" ]; then
     LEFT=$((DEADLINE - $(date +%s) - 900))
     if [ "$LEFT" -gt 1200 ]; then
-        echo "[job] aortas for the open cases (up to $((LEFT / 60)) min in this job)"
+        echo "[job] aortas for val 80 + the open cases (up to $((LEFT / 60)) min in this job)"
         # shellcheck disable=SC1091
         ( [ -f "$TSEG_VENV/bin/activate" ] && source "$TSEG_VENV/bin/activate"
           TOTALSEG_HOME_DIR="$TOTALSEG_HOME_DIR" timeout "$LEFT" python "$LIB/aorta.py" "$W" "$ICX" "${ICX4_AORTA_DEVICE:-gpu}" ) \

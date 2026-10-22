@@ -753,6 +753,36 @@ def test_export_writes_four_masks_per_approved_read(world, tmp_path):
     assert manifest["source"]["prelabel_versions"][info["caseName"]] == "v1"
 
 
+def test_export_leaves_a_d27_sealed_case_out_unless_acceptance_scoring(world, tmp_path, capsys):
+    import numpy as np
+    from girder_segqueue14 import export, scoring
+    from girder_segqueue14.models import Case14
+
+    seal = json.loads((Path(__file__).resolve().parents[1] / "configs" / "segqueue14"
+                       / "sealed-pool-2026-10.json").read_text())
+    sealedName = seal["primary"]["volumes"][0][: -len(".nii.gz")]
+    _readyProject(world)
+    queue = _resource()
+    _as(world.people["cathy"])
+    info = queue.nextCase(clientProtocol=16)
+    _submit(world, queue, world.people["cathy"], info, _tree(np))
+    scoring.runOnce()
+    case = Case14().findOne({"name": info["caseName"]})
+    Case14().update({"_id": case["_id"]}, {"$set": {"name": sealedName}})
+
+    out = tmp_path / "export"
+    assert export.main(["--out", str(out)]) == 0
+    assert not (out / sealedName).exists()
+    assert "1 D27 sealed pool case(s) left out" in capsys.readouterr().out
+
+    accepted = tmp_path / "acceptance"
+    assert export.main(["--out", str(accepted), "--acceptance-scoring"]) == 0
+    assert (accepted / sealedName / "segmentations" / "LM.nii.gz").is_file()
+    manifest = json.loads((accepted / "manifest.json").read_text())
+    assert manifest["source"]["pool_seal"]["mode"] == "acceptance"
+    assert manifest["source"]["pool_seal"]["included_reads"] == 1
+
+
 def test_admin_prelabel_route_and_stats(world):
     from girder_segqueue14.models import Case14
 

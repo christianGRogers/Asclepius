@@ -50,12 +50,16 @@ The SLURM account is `def-aso22`. Build the venv once, on a login node:
 
 ## 2. Get the data onto `$SCRATCH`
 
-The one-command route used by the tournament experiments downloads the cases from
-Girder in the layout every tool here accepts:
+The one-command route used by the tournament experiments downloads the 1000 ImageCAS
+cases from Girder (D22 layout: `ImageCAS-X/cases` + the `ImageCAS__*` items of
+`SegQueue/cases`; pool volumes are skipped) as `cases/cNNNN/`:
 
 ```sh
-python3 trillium/fetch_cases.py $SCRATCH/asclepius/cases     # ~91 GB, resumable
+python3 trillium/fetch_cases.py --masks $SCRATCH/asclepius/cases     # ~91 GB of CTs + the masks, resumable
 ```
+
+`--masks` adds each case's original ImageCAS mask (`coronary_arteries.nii.gz`), which
+`segtrain proxy` below needs. icx4 reads only the CTs: there, leave `--masks` out.
 
 Then the ImageCAS-X labels (~14 MB, login node only — compute nodes have no internet):
 

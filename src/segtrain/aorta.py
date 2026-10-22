@@ -218,6 +218,7 @@ def produce_aortas(
     margin_mm: float = CROP_MARGIN_MM,
     segmenter: Optional[Segmenter] = None,
     log: Callable[[str], None] = print,
+    pool_seal: str = "refuse",
 ) -> AortaReport:
     """Aorta masks for ``cases`` (``{case: ct_path}``) into ``out_dir``, resumably.
 
@@ -225,11 +226,16 @@ def produce_aortas(
     Every case is attempted; failures are collected, written with the rest to
     ``<out_dir>/aorta_report.json``, and raised together as :class:`AortaBatchError`.
     ``sealed`` cases are refused before any work. ``references`` (``{case: mask path}``) crops each
-    CT around its tree (recommended on CPU)."""
+    CT around its tree (recommended on CPU). A D27 sealed SegQueue14 pool volume is refused too,
+    unless ``pool_seal="acceptance"`` (acceptance scoring only) or ``"exclude"``."""
     if device not in DEVICES and not device.startswith("gpu:"):
         raise ValueError(f"device must be one of {DEVICES} or 'gpu:N', not {device!r}")
     out = Path(out_dir)
     out.mkdir(parents=True, exist_ok=True)
+    from .pool_seal import apply as apply_pool_seal
+
+    open_ = set(apply_pool_seal(sorted(cases), mode=pool_seal, what="aorta masks"))
+    cases = {c: v for c, v in cases.items() if c in open_}
     blocked = sorted(set(cases) & set(sealed or ()))
     if blocked:
         raise ValueError(

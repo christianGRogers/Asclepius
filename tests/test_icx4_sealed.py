@@ -25,6 +25,8 @@ ICX4 = REPO / "trillium" / "icx4"
 LIB = ICX4 / "lib"
 SEALED_JSON = REPO / "trillium" / "sealed_test.json"
 FIXTURE = Path(__file__).resolve().parent / "fixtures" / "imagecas_x_test.txt"
+# ImageCAS-X filelist/val.txt as released (fold 0; same Zenodo record, fetched 2026-10-18)
+VAL_FIXTURE = Path(__file__).resolve().parent / "fixtures" / "imagecas_x_val.txt"
 
 
 def _mod(name):
@@ -255,10 +257,11 @@ def _root(tmp_path, with_sealed=True):
     icx = tmp_path / "icx"
     icx.mkdir()
     shutil.copy(FIXTURE, icx / "test.txt")
+    shutil.copy(VAL_FIXTURE, icx / "val.txt")
     test = {int(x) for x in FIXTURE.read_text().split()}
-    rest = [n for n in range(1, 1001) if n not in test]
+    val = {int(x) for x in VAL_FIXTURE.read_text().split()}
+    rest = [n for n in range(1, 1001) if n not in test | val]
     (icx / "train.txt").write_text("\n".join(map(str, rest[:560])))
-    (icx / "val.txt").write_text("\n".join(map(str, rest[560:640])))
     return root, icx
 
 

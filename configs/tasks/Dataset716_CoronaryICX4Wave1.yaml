@@ -60,14 +60,17 @@ lr_arms:
   primary: nnUNetTrainer_segtrain_finetune         # peak 1e-2 (A17a/b)
   lr1e3: nnUNetTrainer_segtrain_finetune_lr1e3     # peak 1e-3, the pre-registered fallback (Foxtrot F2)
 
-# A14: the ImageCAS seal. Never converted, never trained on. Under a sealed list, a read whose name maps to no
-# ImageCAS case is refused too (proxy.sealed_reason), so until the pool seal below is wired only ImageCAS reads
-# can reach this dataset.
+# A14: the ImageCAS seal. ImageCAS reads (imagecas_NNNN, <case>__r2) on its list are never converted or trained
+# on, and an ImageCAS-looking name A14 cannot map (ImageCAS__0003) is refused.
 sealed_list: trillium/sealed_test.json
 
-# HOOK(#84, D27 / Round 9 A30): the 150 sealed pool patients (216 volumes) + 20 ImageCHD report-only patients.
-# Set this to #84's canonical seal file (e.g. configs/segqueue14/sealed-pool-2026-10.json) once it merges, and
-# use #84's guard in segtrain.convert / sealed_guard. While it is null, `segtrain convert` and `segtrain train`
-# print that the pool seal is not yet enforced, and the fail-safe above (every non-ImageCAS name refused)
-# keeps pool volumes out. tests/test_task_icx4_wave1.py pins both.
-sealed_pool_list: null
+# D27 / Round 9 A30 (#84, rebuilt on real patients by D32/D33): 150 sealed pool patients + 20 ImageCHD
+# report-only patients. segtrain.pool_seal checks the pinned sha256 on every load and refuses by patient
+# (pool_seal.ingest_patient), so an unlisted volume of a sealed patient is refused too. convert refuses on any
+# sealed read (or drops and counts them with --exclude-sealed-pool); the trainer refuses (no exclude mode).
+sealed_pool_list: configs/segqueue14/sealed-pool-2026-10.json
+
+# SegQueue14 pool reads (<Source>__<Case>, D22/D23) are training samples. They are not ImageCAS cases, so A14
+# does not judge them; the D27 seal above does, by patient. Every other name A14 cannot map is still refused.
+# `segtrain index` keys a pool read's split on its patient, so a patient's volumes share a split.
+pool_reads: true

@@ -228,7 +228,7 @@ def cmd_splits(args) -> int:
 
 
 def _pool_notice(task: TaskConfig) -> None:
-    """Say so when the task's D27 pool seal is hooked but not yet wired (HOOK #84)."""
+    """Say which D27 pool seal the task is held to (loading it verifies the pinned hash)."""
     from .plans import sealed_pool_notice
 
     note = sealed_pool_notice(task)
@@ -329,7 +329,9 @@ def _finetune_setup(cfg: Config, task: TaskConfig, args) -> tuple[str, dict]:
     source checkpoint is required on a fresh start (the trainer refuses random weights anyway;
     this says so before a queue wait), and the trainer's CT-window check is pointed at the adopted
     plans' window, since that is the window the source model was trained on. Raises ValueError."""
-    from .plans import adopted_window, task_extras, trainer_for_arm
+    from .nnunet_ext.sealed_guard import POOL_READS_ENV
+    from .plans import adopted_window, sealed_pool_file, task_extras, trainer_for_arm
+    from .pool_seal import SEAL_ENV
 
     arm = getattr(args, "arm", None)
     if arm and args.trainer:
@@ -342,8 +344,14 @@ def _finetune_setup(cfg: Config, task: TaskConfig, args) -> tuple[str, dict]:
         if not source.is_file() and not args.dry_run:
             raise ValueError(f"--finetune-from: no such file {source}")
         env["SEGTRAIN_FINETUNE_FROM"] = str(source)
+    seal_file = sealed_pool_file(task)
+    if seal_file is not None:
+        _pool_notice(task)  # raises on a missing or altered seal, before any queue wait
+        if not os.environ.get(SEAL_ENV):
+            env[SEAL_ENV] = str(seal_file)
+    if task_extras(task).get("pool_reads"):
+        env[POOL_READS_ENV] = "1"
     if task_extras(task).get("plans_from"):
-        _pool_notice(task)
         if not source and not args.continue_training:
             raise ValueError(f"{task.nnunet_name} is a fine-tune: pass --finetune-from "
                              f"<{task_extras(task)['plans_from'].get('dataset')} "

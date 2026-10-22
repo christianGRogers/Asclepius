@@ -130,13 +130,28 @@ def read_name(name) -> str:
     return suffix.lstrip("_") if suffix else "r1"
 
 
-def sealed_reason(name, sealed: set) -> Optional[str]:
+def pool_name(name) -> bool:
+    """True for a SegQueue14 pool case name, ``<Source>__<Case>[...]`` (D22/D23), read suffix
+    aside: a ``__`` after a non-empty source that is not ImageCAS. ``ImageCAS__0003`` is not a
+    pool name (it is an ImageCAS case under a name A14 cannot map, and stays refused)."""
+    base = split_read_suffix(name)[0].replace("\\", "/").rsplit("/", 1)[-1]
+    source, sep, rest = base.partition("__")
+    return bool(sep and source and rest) and not source.lower().startswith("imagecas")
+
+
+def sealed_reason(name, sealed: set, allow_pool: bool = False) -> Optional[str]:
     """Why ``name`` may not enter training under a sealed list (A14), or None if it may.
 
     A name that maps to a sealed case is refused; with a sealed list in force, so is a name that
-    maps to no case at all: an identity nobody can check is treated as sealed, never as open."""
+    maps to no case at all: an identity nobody can check is treated as sealed, never as open.
+
+    ``allow_pool``: a SegQueue14 pool name (:func:`pool_name`) is not an ImageCAS case and so not
+    A14's to judge; it passes here. Only for callers that check it against the D27 pool seal
+    (``segtrain.pool_seal``, by patient) first, as ``convert`` and ``sealed_guard`` do."""
     case = canonical_case(name)
     if case is None:
+        if allow_pool and pool_name(name):
+            return None
         return f"{name}: name does not map to a case id (cNNNN / imagecas_NNNN); refused under A14"
     if case in sealed:
         return f"{name}: sealed case {case} (A14)"

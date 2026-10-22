@@ -14,22 +14,28 @@ import re
 import sys
 from pathlib import Path
 
+import nibabel as nib
+import numpy as np
 import pytest
 import yaml
 
-from segtrain import slurm
+from segtrain import pool_seal, slurm
 from segtrain.config import Config, SciNetConfig, list_tasks, load_label_set, load_task
+from segtrain.convert import convert_dataset
+from segtrain.index import assign_split
 from segtrain.plans import (
     adopt_plans,
     adopted_window,
     check_adoptable,
     plan_experiment,
-    sealed_pool_hook,
+    sealed_pool_file,
     sealed_pool_notice,
     task_extras,
     trainer_for_arm,
 )
-from segtrain.proxy import load_sealed, sealed_reason
+from segtrain.pool_seal import SealedPoolError, ingest_patient, load_pool_seal
+from segtrain.proxy import load_sealed, pool_name, sealed_reason
+from segtrain.splits import SPLIT_TRAIN, CaseMeta
 
 REPO = Path(__file__).resolve().parents[1]
 _SRC = REPO / "src"
@@ -37,6 +43,7 @@ if str(_SRC) not in sys.path:
     sys.path.append(str(_SRC))
 
 from segqueue14 import labels as sq14_labels  # noqa: E402
+from segqueue14.plan import pool_case_name  # noqa: E402
 
 TASK_FILE = REPO / "configs" / "tasks" / "Dataset716_CoronaryICX4Wave1.yaml"
 ICX4_PREPARE = REPO / "trillium" / "icx4" / "lib" / "prepare.py"
@@ -263,25 +270,120 @@ def test_the_imagecas_seal_is_in_force(task):
     assert sealed_reason(f"{some}__r2", sealed) is not None
 
 
-def test_the_pool_seal_is_hooked_for_84(task):
-    """HOOK(#84): when #84's canonical seal file merges, point sealed_pool_list at it and change
-    this test to pin the file."""
-    assert sealed_pool_hook(task) == (True, None)
-    assert "HOOK(#84" in TASK_FILE.read_text(encoding="utf-8")
-    assert "HOOK #84" in sealed_pool_notice(task)
-    assert sealed_pool_hook(load_task(712)) == (False, None)
+# A non-sealed pool volume, a sealed one, and an UNLISTED volume of a sealed patient.
+def _pool_names():
+    seal = load_pool_seal()
+    listed = [n.split("#", 1)[0].strip() for n in
+              (REPO / "configs" / "segqueue14" / "pool-2026-10.txt").read_text().splitlines()]
+    open_stem = next(pool_case_name(n) for n in listed
+                     if n and pool_name(pool_case_name(n)) and not seal.is_sealed(n))
+    sealed_stem = sorted(v for v in seal.volumes if pool_name(v))[0]
+    unlisted = next(f"{p}_tp9" for p in sorted(seal.patients - seal.report_only_patients)
+                    if pool_name(p) and f"{p}_tp9" not in seal.volumes)
+    return open_stem, sealed_stem, unlisted
 
 
-def test_until_84_no_pool_volume_passes_the_seal():
-    """The fail-safe while the pool seal is hooked: a SegQueue14 name that maps to no ImageCAS
-    case (every pool and ImageCHD volume) is refused under the ImageCAS sealed list."""
+def test_the_task_is_held_to_the_pinned_pool_seal(task):
+    assert task_extras(task)["sealed_pool_list"] == pool_seal.SEAL_RELPATH
+    assert sealed_pool_file(task) == REPO / pool_seal.SEAL_RELPATH
+    assert task_extras(task)["pool_reads"] is True
+    assert "HOOK" not in TASK_FILE.read_text(encoding="utf-8")
+    note = sealed_pool_notice(task)
+    assert pool_seal.SEAL_SHA256[:12] in note and "enforced" in note
+    assert sealed_pool_file(load_task(712)) is None
+
+
+def test_the_guard_refuses_by_patient():
+    seal = load_pool_seal()
+    open_stem, sealed_stem, unlisted = _pool_names()
+    assert seal.reason(open_stem) is None
+    assert seal.reason(sealed_stem) and seal.reason(f"{sealed_stem}__r2")
+    assert unlisted not in seal.volumes and seal.reason(unlisted)
+
+
+def test_a14_judges_imagecas_names_and_leaves_pool_names_to_d27():
     sealed = load_sealed(REPO / "trillium" / "sealed_test.json")
-    pool = json.loads((REPO / "experiments" / "Bridge" / "r9" / "sealed_pool_proposal.json")
-                      .read_text(encoding="utf-8"))
-    names = list(pool["report_only"]["patients"])[:5] + ["Figshare-CardiacCT15__p01",
-                                                        "ImageCHD__1001__r2"]
-    for name in names:
-        assert sealed_reason(name, sealed) is not None, name
+    open_stem, _, _ = _pool_names()
+    assert sealed_reason(open_stem, sealed, allow_pool=True) is None
+    assert sealed_reason(f"{open_stem}__r2", sealed, allow_pool=True) is None
+    assert sealed_reason(open_stem, sealed) is not None            # every other task, as before
+    for name in ("ImageCAS__0003", "asoca_7", sorted(sealed)[0]):
+        assert sealed_reason(name, sealed, allow_pool=True) is not None, name
+
+
+def _export(root, names, shape=(12, 10, 8)):
+    """A tiny SegQueue14-export-shaped tree: <case>/ct.nii.gz + <case>/labels.nii.gz."""
+    for i, name in enumerate(names):
+        folder = root / name
+        folder.mkdir(parents=True)
+        lab = np.zeros(shape, dtype=np.uint8)
+        lab[2:5, 2:5, 2:4] = 1 + i % 4
+        nib.save(nib.Nifti1Image(np.zeros(shape, dtype=np.int16), np.eye(4)),
+                 str(folder / "ct.nii.gz"))
+        nib.save(nib.Nifti1Image(lab, np.eye(4)), str(folder / "labels.nii.gz"))
+
+
+def _convert_716(tmp_path, names, **kw):
+    root = tmp_path / "export"
+    _export(root, names)
+    rows = [CaseMeta(case_id=n, split=SPLIT_TRAIN, study_type="ccta") for n in names]
+    cfg = Config(zenodo_root=root, nnunet_raw=tmp_path / "raw",
+                 nnunet_preprocessed=tmp_path / "pre", nnunet_results=tmp_path / "res",
+                 runs_root=tmp_path / "runs", link_mode="copy", convert_workers=1)
+    task = load_task(716)
+    return convert_dataset(cfg, task, rows, **kw), task.raw_dir(cfg)
+
+
+def test_convert_takes_an_open_pool_read_and_both_its_reads(tmp_path):
+    open_stem, _, _ = _pool_names()
+    names = [open_stem, f"{open_stem}__r2", "imagecas_0010"]
+    report, raw = _convert_716(tmp_path, names)
+    assert report.ok, report.render()
+    assert report.n_train == 3 and report.n_excluded == 0 and report.n_pool_sealed == 0
+    for n in names:
+        assert (raw / "labelsTr" / f"{n}.nii.gz").is_file(), n
+
+
+@pytest.mark.parametrize("which", ["sealed", "unlisted"])
+def test_convert_refuses_a_sealed_pool_read(tmp_path, which):
+    open_stem, sealed_stem, unlisted = _pool_names()
+    bad = {"sealed": f"{sealed_stem}__r2", "unlisted": unlisted}[which]
+    with pytest.raises(SealedPoolError):
+        _convert_716(tmp_path, [open_stem, bad])
+    assert not (tmp_path / "raw").exists()
+
+
+def test_convert_exclude_mode_drops_and_counts_them(tmp_path):
+    open_stem, sealed_stem, unlisted = _pool_names()
+    report, raw = _convert_716(tmp_path, [open_stem, sealed_stem, unlisted],
+                               pool_seal="exclude")
+    assert report.n_train == 1 and report.n_pool_sealed == 2
+    assert [p.name for p in (raw / "labelsTr").iterdir()] == [f"{open_stem}.nii.gz"]
+
+
+def test_the_trainer_guard_takes_open_pool_reads_and_refuses_sealed_ones(monkeypatch):
+    from segtrain.nnunet_ext.sealed_guard import POOL_READS_ENV, refuse_sealed
+
+    open_stem, sealed_stem, unlisted = _pool_names()
+    monkeypatch.setenv(POOL_READS_ENV, "1")
+    assert refuse_sealed([open_stem, f"{open_stem}__r2", "c0010"]) == 3
+    for bad in (sealed_stem, unlisted):
+        with pytest.raises(SealedPoolError):
+            refuse_sealed([open_stem, bad])
+    monkeypatch.delenv(POOL_READS_ENV)
+    with pytest.raises(RuntimeError, match="A14"):        # without the task's flag, as before
+        refuse_sealed([open_stem])
+
+
+def test_a_patients_volumes_share_a_split():
+    seal = load_pool_seal()
+    multi = sorted(seal.volumes)
+    by_patient = {}
+    for v in multi:
+        by_patient.setdefault(ingest_patient(v), []).append(v)
+    vols = next(vs for vs in by_patient.values() if len(vs) > 1)
+    for seed in range(20):
+        assert len({assign_split(v, 0.3, 0.3, seed) for v in vols}) == 1, vols
 
 
 # ----------------------------------------------------------------- the CLI
@@ -304,6 +406,7 @@ def test_train_sets_the_source_the_arm_and_the_adopted_window(tmp_path, capsys, 
     from segtrain.cli import main
 
     monkeypatch.delenv("SEGTRAIN_CT_WINDOW", raising=False)
+    monkeypatch.delenv("SEGTRAIN_POOL_SEAL", raising=False)
     pre = tmp_path / "pre" / "Dataset716_CoronaryICX4Wave1"
     pre.mkdir(parents=True)
     (pre / "nnUNetResEncUNetPlans_60G_iso05.json").write_text(json.dumps(_icx4_plans()))
@@ -318,7 +421,9 @@ def test_train_sets_the_source_the_arm_and_the_adopted_window(tmp_path, capsys, 
     assert "-p nnUNetResEncUNetPlans_60G_iso05" in out
     assert f"SEGTRAIN_FINETUNE_FROM={ckpt}" in out
     assert "SEGTRAIN_CT_WINDOW=-169,719" in out
-    assert "pool seal is not enforced yet" in out
+    assert "D27 pool seal: sealed-pool-2026-10.json" in out and "enforced" in out
+    assert f"SEGTRAIN_POOL_SEAL={REPO / pool_seal.SEAL_RELPATH}" in out
+    assert "SEGTRAIN_POOL_READS=1" in out
 
 
 def test_plan_without_plans_from_is_refused_for_716(tmp_path, capsys):

@@ -43,11 +43,15 @@ from .splits import SPLIT_TEST, build_splits, read_meta, select, validate_splits
 #   plans_from            {dataset, plans_name, trainer}: adopt that dataset's plans instead of
 #                         planning (a warm start needs the source model's plans; see adopt_plans)
 #   lr_arms               {arm name: trainer class}, e.g. the A17 fine-tune LR arms
-#   sealed_pool_list      the D27 pool seal (#84); see sealed_pool_hook
+#   sealed_pool_list      repo-relative path of the D27 pool seal (segtrain.pool_seal); the task is
+#                         held to that file (see sealed_pool_file)
+#   pool_reads            true -> SegQueue14 pool reads (<Source>__<Case>) are training samples:
+#                         checked by patient against the D27 seal instead of being refused by A14
+#                         as unmappable names (proxy.sealed_reason allow_pool)
 TASK_EXTRA_KEYS = (
     "planner", "gpu_memory_target_gb", "ct_window", "ct_norm", "patch_size", "batch_size",
     "ignore_label", "sealed_list", "explicit_split", "save_test_probabilities",
-    "plans_from", "lr_arms", "sealed_pool_list",
+    "plans_from", "lr_arms", "sealed_pool_list", "pool_reads",
 )
 
 #: Sidecar beside splits_final.json recording that the split came from explicit lists (ImageCAS-X
@@ -277,34 +281,30 @@ def trainer_for_arm(task: TaskConfig, arm: Optional[str] = None) -> str:
     return str(arms[arm])
 
 
-def sealed_pool_hook(task: TaskConfig) -> tuple[bool, Optional[str]]:
-    """``(declared, path)`` of the task's D27 pool seal (``sealed_pool_list``).
-
-    HOOK(#84): the canonical pool seal file and its guard come from #84. A task that declares the
-    key with a null value is one that must exclude the sealed pool once #84 lands; callers print
-    that the pool seal is not yet enforced. With an ImageCAS ``sealed_list`` in force every name
-    that maps to no ImageCAS case is refused anyway (``proxy.sealed_reason``), which is what keeps
-    pool volumes out until then."""
-    if task.source_path is None or not Path(task.source_path).is_file():
-        return False, None
-    data = _read_yaml(Path(task.source_path))
-    if "sealed_pool_list" not in data:
-        return False, None
-    value = data.get("sealed_pool_list")
-    return True, (str(value) if value else None)
+def sealed_pool_file(task: TaskConfig) -> Optional[Path]:
+    """The D27 pool seal file the task names (``sealed_pool_list``), absolute; None if it names
+    none. Every task is checked against the default seal file by ``convert`` and the trainer
+    anyway; a task that names it is held to that file, which must be the pinned seal."""
+    path = task_extras(task).get("sealed_pool_list")
+    if not path:
+        return None
+    path = Path(path)
+    return path if path.is_absolute() else Path(__file__).resolve().parents[2] / path
 
 
 def sealed_pool_notice(task: TaskConfig) -> Optional[str]:
-    """One line for the user when the task's pool seal is hooked but not yet wired; else None."""
-    declared, path = sealed_pool_hook(task)
-    if not declared:
-        return None
+    """One line saying which D27 seal the task is held to (loading it checks its sha256, so a
+    missing or altered file raises here, before any queue wait); None if it names none."""
+    path = sealed_pool_file(task)
     if path is None:
-        return (f"note: {task.nnunet_name}: the D27 pool seal is not enforced yet (HOOK #84, "
-                "sealed_pool_list is null). Only names that map to an ImageCAS case pass the A14 "
-                "sealed list, so no pool volume can enter this dataset.")
-    return (f"note: {task.nnunet_name}: sealed_pool_list is {path}; enforcing it is #84's guard "
-            "(HOOK #84 in segtrain.plans.sealed_pool_hook).")
+        return None
+    from .pool_seal import load_pool_seal
+
+    seal = load_pool_seal(path)
+    pool = " Pool reads are training samples; each is checked by patient." \
+        if task_extras(task).get("pool_reads") else ""
+    return (f"D27 pool seal: {path.name} (sha256 {seal.sha256[:12]}..., "
+            f"{len(seal.patients)} patients) is enforced for {task.nnunet_name}.{pool}")
 
 
 def plans_window(plans_file: Path) -> Optional[tuple[float, float]]:

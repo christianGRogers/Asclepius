@@ -593,20 +593,32 @@ def convert_dataset(
 
     if pool_seal == ACCEPTANCE:
         raise ValueError("convert builds training data; the D27 acceptance mode is not for it")
+    # A task that names its seal file (sealed_pool_list) is held to that file; it must still be the
+    # pinned seal (load_pool_seal checks the hash). Otherwise the default seal file.
+    seal_obj = None
+    if extras.get("sealed_pool_list"):
+        from .pool_seal import load_pool_seal
+
+        seal_path = Path(extras["sealed_pool_list"])
+        if not seal_path.is_absolute():
+            seal_path = Path(__file__).resolve().parents[2] / seal_path
+        seal_obj = load_pool_seal(seal_path)
     open_ids = set(apply_pool_seal([r.case_id for r in rows], mode=pool_seal,
-                                   what=f"convert {task.nnunet_name}"))
+                                   what=f"convert {task.nnunet_name}", seal=seal_obj))
     n_rows = len(rows)
     rows = [r for r in rows if r.case_id in open_ids]
     n_pool_sealed = n_rows - len(rows)
     # A14 keys on the case behind a name, never on the name: SegQueue exports imagecas_NNNN and
     # second reads as <case>__r2 (Echo D2). With a sealed list in force, a name that maps to no
-    # case is refused too.
+    # case is refused too -- except, for a task with ``pool_reads``, a SegQueue14 pool name, which
+    # is not an ImageCAS case and has just been checked against the D27 seal by patient.
     refused: dict[str, str] = {}
+    allow_pool = bool(extras.get("pool_reads"))
     if exclude:
         from .proxy import sealed_reason
 
         for r in rows:
-            why = sealed_reason(r.case_id, exclude)
+            why = sealed_reason(r.case_id, exclude, allow_pool=allow_pool)
             if why:
                 refused[r.case_id] = why
 

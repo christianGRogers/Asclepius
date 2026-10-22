@@ -16,14 +16,19 @@ from __future__ import annotations
 import os
 from typing import Iterable, Optional
 
+#: Set to 1 by ``segtrain train`` for a task with ``pool_reads`` (task 716): SegQueue14 pool names
+#: pass A14's "unmappable" refusal, after the D27 pool seal has checked them by patient.
+POOL_READS_ENV = "SEGTRAIN_POOL_READS"
+
 
 def refuse_sealed(identifiers: Iterable[str], sealed: Optional[set] = None,
-                  pool_seal=None) -> int:
+                  pool_seal=None, allow_pool: Optional[bool] = None) -> int:
     """Raise RuntimeError if any identifier is sealed (A14 or D27) or unmappable; else the count.
 
     A D27 pool-sealed identifier raises :class:`segtrain.pool_seal.SealedPoolError` (a
     RuntimeError). ``pool_seal`` is a loaded :class:`~segtrain.pool_seal.PoolSeal`; default, the
-    pinned seal file."""
+    pinned seal file. ``allow_pool`` (default: ``$SEGTRAIN_POOL_READS == "1"``) lets a pool name
+    that passed the D27 seal through A14; without it every non-ImageCAS name is refused."""
     from segtrain.pool_seal import apply as apply_pool_seal
     from segtrain.proxy import load_sealed, sealed_reason
 
@@ -32,7 +37,10 @@ def refuse_sealed(identifiers: Iterable[str], sealed: Optional[set] = None,
                     seal=pool_seal)
     if sealed is None:
         sealed = load_sealed(os.environ.get("SEGTRAIN_SEALED_LIST") or None)
-    bad = [why for why in (sealed_reason(i, set(sealed)) for i in ids) if why]
+    if allow_pool is None:
+        allow_pool = os.environ.get(POOL_READS_ENV) == "1"
+    bad = [why for why in (sealed_reason(i, set(sealed), allow_pool=allow_pool) for i in ids)
+           if why]
     if bad:
         raise RuntimeError(f"refusing to train: {len(bad)} identifier(s) are sealed or unmappable "
                            f"(A14), e.g. {bad[:3]}")

@@ -16,28 +16,31 @@ comments give the reasons, and `tests/test_task_icx4_wave1.py` checks it against
 | Plans | icx4's own plans file, adopted rather than re-planned: 0.5 mm iso, ResEnc 60 GB, 256³ / batch 2, icx4's CT window | `segtrain plan --plans-from` refuses any other plans; the trainer's loader refuses a checkpoint whose plans differ |
 | Trainer | `nnUNetTrainer_segtrain_finetune`: full load including the output heads, 2500-iteration warm-up then poly, 250 epochs, mirroring off | the trainer refuses to start from random weights |
 | LR arms | `primary` peak 1e-2 (A17a/b); `lr1e3` peak 1e-3 (the pre-registered fallback) | `--arm` |
-| ImageCAS seal (A14) | `trillium/sealed_test.json`; any name that doesn't map to an ImageCAS case is refused too | `convert`, the trainer's sealed check |
-| Pool seal (D27) | **Not wired yet. Hooked for #84** (`sealed_pool_list: null`) | see below |
+| ImageCAS seal (A14) | `trillium/sealed_test.json`; an ImageCAS name it can't map (`ImageCAS__0003`) or any other unmappable non-pool name is refused | `convert`, the trainer's sealed check |
+| Pool seal (D27) | `configs/segqueue14/sealed-pool-2026-10.json` (150 pool patients + 20 ImageCHD report-only, D32/D33), sha256-pinned | `segtrain.pool_seal`, in `convert` and the trainer |
 
-**The pool seal.** #84 adds the canonical seal file for the 150 sealed pool patients and its guard. Until it merges,
-`sealed_pool_list` stays null and `convert` and `train` print that the pool seal is not enforced. Pool volumes still
-can't get in: under the ImageCAS sealed list, every name that maps to no ImageCAS case (every pool and ImageCHD volume)
-is refused. So until #84 merges, only `imagecas_NNNN` reads reach task 716. Once it merges, point `sealed_pool_list`
-at its file and update the pool-seal test.
+**Pool reads.** SegQueue14 pool reads (`<Source>__<Case>`, `__r2` for the second read) are training samples
+(`pool_reads: true`). They are not ImageCAS cases, so A14 doesn't judge them. The D27 seal does, **by patient**
+(`pool_seal.ingest_patient`): a read of any volume of a sealed patient is refused, including a volume added to the
+pool after the seal was built. `convert` refuses outright if any read is sealed. `--exclude-sealed-pool` drops them
+instead and reports the count. The trainer refuses again, with no exclude mode. `segtrain index` keys a pool read's
+split on its patient, so one patient's volumes never straddle train and val. `train` and `scinet submit` load the
+seal (checking its hash) before anything is queued, and pass `SEGTRAIN_POOL_SEAL` and `SEGTRAIN_POOL_READS=1` to the
+trainer. Running `nnUNetv2_train` directly without them refuses every pool read.
 
 ## Commands
 
 On the Girder host, export approved reads, with second reads as `<case>__r2`:
 
 ```sh
-segqueue14-export --out /srv/segqueue14/export-wave1 --replicas all
+segqueue14-export --out /srv/segqueue14/export-wave1 --replicas all    # leaves out sealed pool reads, says how many
 ```
 
 On the cluster (`$SCRATCH/wave1` here), after moving the export there (`segtrain scinet fetch`, or rsync):
 
 ```sh
 segtrain index   --root $SCRATCH/wave1 --layout nested
-segtrain convert --task 716 --zenodo-root $SCRATCH/wave1      # ImageCAS-sealed and non-ImageCAS names refused
+segtrain convert --task 716 --zenodo-root $SCRATCH/wave1      # refuses on any A14- or D27-sealed read
 segtrain plan    --task 716 --zenodo-root $SCRATCH/wave1 \
                  --plans-from $SCRATCH/icx4/nnunet_preprocessed/Dataset715_ICX4/nnUNetResEncUNetPlans_60G_iso05.json
 segtrain preprocess --task 716

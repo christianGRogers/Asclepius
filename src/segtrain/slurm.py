@@ -243,8 +243,14 @@ def render_train_script(
     *,
     epochs: Optional[int] = None,
     iterations: Optional[int] = None,
+    trainer: Optional[str] = None,
+    train_extra: Optional[list] = None,
 ) -> str:
     """One block of the training chain.
+
+    ``trainer`` names the trainer class when it is not the task's own (an LR arm), so the model
+    directory the script checks is the one nnU-Net writes; ``train_extra`` is appended to the
+    ``segtrain train`` call of every block (``--arm``, ``--finetune-from``).
 
     The same script serves both chain modes. In ``array`` mode SLURM supplies the
     block number in ``$SLURM_ARRAY_TASK_ID``; in ``dependency`` mode the
@@ -255,7 +261,7 @@ def render_train_script(
     run_dir = task.run_dir(cfg, fold)
     budget = train_budget_seconds(sc)
     model_dir = (f"{cfg.nnunet_results}/{task.nnunet_name}/"
-                 f"{task.trainer}__{task.plans_name}__{task.configuration}/fold_{fold}")
+                 f"{trainer or task.trainer}__{task.plans_name}__{task.configuration}/fold_{fold}")
 
     env = _nnunet_env(cfg, sc)
     env.update({
@@ -282,6 +288,7 @@ def render_train_script(
         train_args += ["--epochs", str(epochs)]
     if iterations:
         train_args += ["--iterations", str(iterations)]
+    train_args += [str(a) for a in (train_extra or [])]
 
     status_args = ["status", "--task", str(task.dataset_id), "--fold", str(fold),
                    "--run-dir", str(run_dir), "--is-complete"]

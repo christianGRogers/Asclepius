@@ -491,7 +491,7 @@ jobs:
           ditto -x -k "$ZIP" "$HOME/Downloads"
           xattr -w -r com.apple.quarantine "0083;$(printf %x "$(date +%s)");Safari;" "$HOME/Downloads/SegQueue"
           echo "Safari left this in ~/Downloads (from \`$(basename "$ZIP")\`):" >> "$GITHUB_STEP_SUMMARY"
-          { echo '```'; ls -la "$HOME/Downloads"; find "$HOME/Downloads/SegQueue" -maxdepth 6 -type d | head -20; xattr -l "$HOME/Downloads/SegQueue/share" 2>/dev/null | head -2; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+          { echo '```'; ls -la "$HOME/Downloads"; find "$HOME/Downloads/SegQueue" -maxdepth 6 -type d | head -20; (xattr -lr "$HOME/Downloads/SegQueue" | head -2 || true); echo '```'; } >> "$GITHUB_STEP_SUMMARY"
           echo "zip=$GITHUB_WORKSPACE/$ZIP" >> "$GITHUB_OUTPUT"
 
       - name: Compress it again in Finder (simulated)

@@ -103,7 +103,8 @@ jobs:
             tests/test_segqueue14_convert.py \
             tests/test_segqueue14_module.py \
             tests/test_segqueue14_release_line.py \
-            tests/test_segqueue14_macos.py
+            tests/test_segqueue14_macos.py \
+            tests/test_segqueue14_install_any.py
 
       - name: Read the module version
         id: version
@@ -260,16 +261,32 @@ jobs:
           **Installed the separate SegQueue14 0.1.0 extension?** Uninstall it in
           the Extensions Manager first; this release contains it.
 
-          **First install:** download the `.zip` below (on a **Mac**, the one
-          ending in `-macOS.zip`), then in Slicer go to
+          **First install, any Slicer version (recommended on a Mac):** in
+          Slicer open **View -> Python Console**, paste this line and press Enter:
+
+          ```python
+          import requests; exec(requests.get("https://raw.githubusercontent.com/christianGRogers/Asclepius/main/slicer/install-segqueue.py", timeout=60).text)
+          ```
+
+          It installs this release into `~/SegQueue`, registers it under
+          *Application Settings -> Modules -> Additional module paths*, installs
+          **SegmentEditorExtraEffects** (Draw tube) if missing, and restarts
+          Slicer. It works on any Slicer version or revision (tested on 5.8.1,
+          the latest stable and the current preview). The script is attached
+          below as `install-segqueue.py`. After installing a new Slicer, paste
+          it again.
+
+          **First install through the Extensions Manager (Slicer 5.8 only):**
+          download the `.zip` below (on a **Mac**, the one ending in
+          `-macOS.zip`), then in Slicer go to
           **Extensions Manager -> Install from file**, pick it, and restart.
           Install **SegmentEditorExtraEffects** first if you have not already -
           it provides *Draw tube*, and "Install from file" does not resolve
-          dependencies.
+          dependencies. On any other Slicer, use the installer above.
 
           ---
           MD
-          gh release create "$TAG" dist/*.zip \
+          gh release create "$TAG" dist/*.zip slicer/install-segqueue.py \
             --title "SegQueue $VERSION" \
             --notes-file notes.md \
             --generate-notes \

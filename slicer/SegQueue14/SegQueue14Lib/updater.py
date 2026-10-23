@@ -168,6 +168,23 @@ def moduleRoots(moduleDir: str) -> Tuple[str, Optional[str]]:
     return scripted, root
 
 
+def packagedSlicerVersion(moduleDir: str) -> Optional[str]:
+    """``"5.8"`` for a module installed under ``lib/Slicer-5.8/qt-scripted-modules``.
+
+    The Slicer version the installed archive was built for, which is the one to
+    update from. It is not the running Slicer's on 5.10 and later, where every
+    install holds the 5.8 archive (#97). ``None`` when the layout is not that.
+    """
+    scripted, root = moduleRoots(moduleDir)
+    if root is None:
+        return None
+    version = os.path.basename(os.path.dirname(scripted))[len("Slicer-"):]
+    parts = version.split(".")
+    if len(parts) != 2 or not all(part.isdigit() for part in parts):
+        return None
+    return version
+
+
 def isCheckout(moduleDir: str) -> bool:
     """Whether this module is being run out of a git working tree.
 
@@ -192,7 +209,8 @@ def canInstall(moduleDir: str) -> Tuple[bool, str]:
     _scripted, root = moduleRoots(moduleDir)
     if root is None:
         return False, ("This module is not installed as a Slicer extension, so "
-                       "it cannot update itself. Reinstall it through "
+                       "it cannot update itself. Reinstall it with the one-line "
+                       "installer (slicer/install-segqueue.py) or through "
                        "Extensions Manager -> Install from file.")
     if not os.access(moduleDir, os.W_OK):
         return False, ("Slicer's extension folder is not writable by this "

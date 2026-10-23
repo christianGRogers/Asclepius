@@ -10,6 +10,9 @@ start hidden, that ``submit()`` refuses overlapping classes before any upload, a
 that a trimmed case exports one class per voxel, and that the reviewer's
 ImageCAS-X reference is shown in the four classes (#68).
 
+With ``SEGQUEUE_SELFTEST_INSTALLED=<folder>`` it tests the module Slicer loaded
+from that installed folder instead of the checkout.
+
 The report goes to ``$SEGQUEUE_SELFTEST_OUT`` (default ``./selftest14.txt``); its
 last line is ``RESULT PASS`` or ``RESULT FAIL``.
 """
@@ -65,9 +68,19 @@ def run():
 
     import slicer
 
-    sys.path.insert(0, os.path.join(REPO, "src"))
-    sys.path.insert(0, os.path.join(REPO, "slicer", "SegQueue14"))
-    import SegQueue14 as module
+    installed = os.environ.get("SEGQUEUE_SELFTEST_INSTALLED")
+    if installed:
+        # The module as an annotator has it: the copy Slicer loaded at startup
+        # from an install (#97), not the checkout.
+        import SegQueue14 as module
+
+        where = os.path.dirname(os.path.abspath(module.__file__))
+        check("testing the installed module", os.path.normcase(where)
+              == os.path.normcase(os.path.abspath(installed)), where)
+    else:
+        sys.path.insert(0, os.path.join(REPO, "src"))
+        sys.path.insert(0, os.path.join(REPO, "slicer", "SegQueue14"))
+        import SegQueue14 as module
 
     from segqueue.protocol import ProjectConfig
     from segqueue14 import labels

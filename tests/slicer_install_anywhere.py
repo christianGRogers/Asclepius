@@ -2,7 +2,9 @@
 
     Slicer --no-splash --no-main-window --python-script tests/slicer_install_anywhere.py
 
-Run twice, like ``slicer_install_zip.py``. ``SEGQUEUE_INSTALL_PHASE=install``
+Run twice, like ``slicer_install_zip.py``. With ``SEGQUEUE_REGISTER_FOLDER`` set,
+the install phase only registers that already-unpacked folder, which is the
+manual route (e.g. Safari's auto-extracted download, #97). ``SEGQUEUE_INSTALL_PHASE=install``
 runs ``slicer/install-segqueue.py`` (what an annotator's one pasted line runs)
 on ``$SEGQUEUE_ZIP`` into ``$SEGQUEUE_INSTALL_BASE``, without the restart
 prompt. ``load`` is the restart: the module must load from that folder, import,
@@ -66,7 +68,20 @@ def install(slicer):
     archive = os.environ["SEGQUEUE_ZIP"]
     say("archive", archive)
     say("base", BASE)
-    folder = installer().install(zip_path=archive, base=BASE, restart=False)
+    registerOnly = os.environ.get("SEGQUEUE_REGISTER_FOLDER")
+    if registerOnly:
+        # The manual route: the annotator already has the unpacked folder (e.g.
+        # the one Safari extracted the download into) and adds it under
+        # Application Settings -> Modules -> Additional module paths.
+        folder = os.path.abspath(registerOnly)
+        say("registering an existing folder, as Application Settings does:", folder)
+        settings = slicer.app.revisionUserSettings()
+        settings.setValue("Modules/AdditionalPaths",
+                          installer().with_path(settings.value("Modules/AdditionalPaths"),
+                                                folder))
+        settings.sync()
+    else:
+        folder = installer().install(zip_path=archive, base=BASE, restart=False)
     check("the installer put SegQueue14.py in the folder",
           os.path.isfile(os.path.join(folder, "SegQueue14.py")), folder)
     check("the folder is inside the chosen base", same(os.path.dirname(os.path.dirname(

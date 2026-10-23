@@ -136,7 +136,7 @@ downloads, and Slicer needs the zip itself. Turn that off first.
 1. In Slicer, open the module list (the dropdown at the top of the window), go to
    **Segmentation**, and choose **SegQueue**.
 
-   ![The module dropdown with SegQueue selected](images/annotator/module-selected.png)
+   ![The module dropdown open at Segmentation, with SegQueue in the submenu](images/annotator/module-menu.png)
 
 2. Check that the **Server** box says exactly `https://janus.bradensbay.com`. If
    it shows anything else, delete it and type that address. Slicer remembers it.

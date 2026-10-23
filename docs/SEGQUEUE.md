@@ -173,7 +173,8 @@ new server. (Not `girder-client`: version 5 requires Python
 stdlib-only.)
 
 Full deployment, ingest, backup and upgrade notes:
-**[docs/SERVER-SETUP.md](SERVER-SETUP.md)**. The annotator-facing setup guide for
+**[docs/SERVER-SETUP.md](SERVER-SETUP.md)**. The short guide to hand to new annotators is
+**[docs/ANNOTATOR-SETUP.md](ANNOTATOR-SETUP.md)**; the full setup reference for
 Windows and Mac is **[docs/SETUP-GUIDE.md](SETUP-GUIDE.md)**; the older PDF walkthrough is
 **[docs/SegQueue-Setup-Guide.pdf](SegQueue-Setup-Guide.pdf)**.
 

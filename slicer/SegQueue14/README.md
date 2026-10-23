@@ -32,6 +32,10 @@ and continues its version numbers (D24): same server, its own routes
 
 ## Install
 
+The step-by-step guide for annotators (Windows and Mac, from a blank computer to the
+first submission) is [docs/SETUP-GUIDE.md](../../docs/SETUP-GUIDE.md). The notes below
+are the reference.
+
 **Running SegQueue 0.13 or older:** open SegQueue and press *Check for updates* →
 **Update and restart**. It installs SegQueue14 over it; afterwards open
 **Segmentation → SegQueue14** (opening "SegQueue" takes you there). Your server

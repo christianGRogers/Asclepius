@@ -1,6 +1,11 @@
-# SegQueue setup guide for annotators
+# SegQueue setup guide (full reference)
 
-This guide takes you from a blank computer to submitting your first case. It covers
+This is the complete reference for installing and running SegQueue. New annotators
+should start with the shorter [annotator setup guide](ANNOTATOR-SETUP.md), which gives
+one recommended path per operating system. This page covers every route and the
+reasons behind them.
+
+It takes you from a blank computer to submitting your first case. It covers
 Windows and Mac. Allow about 30 minutes, most of it waiting for downloads.
 
 If anything here does not match what you see on screen, tell the project lead.

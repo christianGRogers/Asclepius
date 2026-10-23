@@ -110,9 +110,12 @@ SegQueue installs through the Extensions Manager from a zip file, the same way a
 on Windows. The one Mac wrinkle is Safari: by default it unzips every zip it
 downloads, and Slicer needs the zip itself. Turn that off first.
 
-1. **If you use Safari:** open **Safari**, then **Settings**, then the **General**
-   tab, and untick **Open "safe" files after downloading**. You can turn it back
-   on afterwards. If you use Chrome or Firefox, skip this step.
+1. **If you use Safari**, do one of these. Either open **Safari**, then
+   **Settings**, then the **General** tab, and untick **Open "safe" files after
+   downloading** (you can turn it back on afterwards). Or leave the setting alone
+   and, in step 3, right-click the file name (Control-click, or a two-finger click
+   on a trackpad) and choose **Download Linked File As**, which keeps it as a zip.
+   If you use Chrome or Firefox, skip this step.
 2. Open https://github.com/christianGRogers/Asclepius/releases/latest in your
    browser and scroll down to **Assets**.
 3. Download the file named `SegQueue-<version>-Slicer-5.8-macOS.zip`, the one
@@ -191,7 +194,7 @@ to download a zip again.
 | What you see | What to do |
 |---|---|
 | "Failed to copy directory" while installing | You are on a newer Slicer than 5.8.1. Go back to Step 1 and install 5.8.1 from the older releases list, then install the zip again |
-| A folder called SegQueue appeared instead of a zip (Mac) | Safari unzipped the download. Delete the folder, turn off "Open safe files" in Safari settings, and download again |
+| A folder called SegQueue appeared instead of a zip (Mac) | Safari unzipped the download. Delete the folder, then either turn off "Open safe files" in Safari settings or right-click the file name and choose Download Linked File As, and download again |
 | Install from file does not list your download | The file picker only shows zip files. If you only see a folder, see the row above |
 | The Server box shows an address ending in `example.edu` | Replace it with `https://janus.bradensbay.com` |
 | "Could not reach the server" | Check your internet connection and the Server box |

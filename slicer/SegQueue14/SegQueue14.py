@@ -150,6 +150,16 @@ _SETTING_UPDATE = "SegQueue14/updateCheck"
 #: updated from SegQueue 0.13 finds their server already filled in.
 _LIVE_SETTING_SERVER = "SegQueue/serverUrl"
 
+#: The project's server (#99), shown on a fresh install. A saved server address
+#: (this module's, else the one SegQueue 0.13 saved) always wins.
+DEFAULT_SERVER_URL = "https://janus.bradensbay.com"
+
+
+def initialServerUrl(settingsValue):
+    """The Server field's starting text, from ``slicer.util.settingsValue``."""
+    return settingsValue(_SETTING_SERVER,
+                         settingsValue(_LIVE_SETTING_SERVER, DEFAULT_SERVER_URL))
+
 
 class SegQueue14(ScriptedLoadableModule):
     def __init__(self, parent):
@@ -1786,11 +1796,7 @@ class SegQueue14Widget(ScriptedLoadableModuleWidget):
         form = qt.QFormLayout(box)
         self.loginBox = box
 
-        self.serverEdit = qt.QLineEdit(
-            slicer.util.settingsValue(
-                _SETTING_SERVER,
-                slicer.util.settingsValue(_LIVE_SETTING_SERVER,
-                                          "https://segqueue.example.edu")))
+        self.serverEdit = qt.QLineEdit(initialServerUrl(slicer.util.settingsValue))
         self.serverEdit.setToolTip(
             "Base URL of the server (the same one as SegQueue). /api/v1 is added "
             "automatically; SegQueue14 uses its own /segqueue14 routes on it.")

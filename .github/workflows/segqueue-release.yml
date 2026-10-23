@@ -104,7 +104,8 @@ jobs:
             tests/test_segqueue14_module.py \
             tests/test_segqueue14_release_line.py \
             tests/test_segqueue14_macos.py \
-            tests/test_segqueue14_install_any.py
+            tests/test_segqueue14_install_any.py \
+            tests/test_segqueue14_server_default.py
 
       - name: Read the module version
         id: version

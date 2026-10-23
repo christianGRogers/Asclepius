@@ -106,6 +106,10 @@ def load(slicer):
 
     widget = slicer.modules.segqueue14.widgetRepresentation()
     check("the panel builds", widget is not None)
+    server = widget.self().serverEdit.text
+    server = server() if callable(server) else server
+    check("a fresh install shows the project's server (#99)",
+          server == module.DEFAULT_SERVER_URL == "https://janus.bradensbay.com", server)
     asked = widget.self()._updateSlicerVersion()
     check("the panel asks for the installed archive's Slicer version", asked == "5.8", asked)
     archive = os.environ["SEGQUEUE_ZIP"]

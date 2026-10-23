@@ -16,4 +16,10 @@ hdiutil detach "$mount" >/dev/null
 xattr -cr "$dest/$(basename "$app")" || true
 slicer="$dest/$(basename "$app")/Contents/MacOS/Slicer"
 "$slicer" --version || true
-echo "SLICER=$slicer" >> "$GITHUB_ENV"
+# Preview apps are named like "3D Slicer 5.13.0 2026-10-22.app" (as on an
+# annotator's Mac), and workflows use $SLICER unquoted (on Linux it carries
+# `xvfb-run -a`), so hand them a launcher path without spaces.
+launcher="$dest/slicer-launcher.sh"
+printf '#!/bin/bash\nexec "%s" "$@"\n' "$slicer" > "$launcher"
+chmod +x "$launcher"
+echo "SLICER=$launcher" >> "$GITHUB_ENV"

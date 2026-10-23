@@ -355,7 +355,9 @@ jobs:
     timeout-minutes: 40
     env:
       SLICER_VERSION: ${{ matrix.slicer }}
-      SEGQUEUE_INSTALL_BASE: ${{ github.workspace }}/home/SegQueue
+      # No SEGQUEUE_INSTALL_BASE: the installer's default, ~/SegQueue, as for an
+      # annotator. (Not under the workspace: that is a git checkout, which the
+      # update button rightly refuses to overwrite.)
     steps:
       - uses: actions/checkout@v4
 
@@ -424,9 +426,9 @@ jobs:
       - name: SegQueue14 self-test on the installed module
         shell: bash
         env:
-          SEGQUEUE_SELFTEST_INSTALLED: ${{ github.workspace }}/home/SegQueue/lib/Slicer-5.8/qt-scripted-modules
           SEGQUEUE_SELFTEST_OUT: ${{ github.workspace }}/selftest14.txt
         run: |
+          export SEGQUEUE_SELFTEST_INSTALLED="$HOME/SegQueue/lib/Slicer-5.8/qt-scripted-modules"
           $SLICER --no-splash --no-main-window --python-script tests/slicer_selftest14.py || true
           cat selftest14.txt
           { echo '### SegQueue14 self-test (installed)'; echo '```'; cat selftest14.txt; echo '```'; } >> "$GITHUB_STEP_SUMMARY"

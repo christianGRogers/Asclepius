@@ -12,84 +12,137 @@ You will need:
 You do not need admin rights or any technical tools. If a step does not look like
 what you see on screen, stop and ask the project lead. A screenshot helps.
 
+Pick your system: [Windows](#windows) or [Mac](#mac). Both paths install the same
+three things, in this order: 3D Slicer 5.8.1, the Draw tube extension, then the
+SegQueue extension.
+
 ---
 
 ## Windows
 
-### Step 1. Install 3D Slicer
+### Step 1. Install 3D Slicer 5.8.1
 
-1. Go to https://download.slicer.org and open the older releases page.
-2. Download **Slicer 5.8.1** for Windows and run the installer. Accept the defaults.
-3. If a blue box says "Windows protected your PC", click **More info**, then
+SegQueue needs Slicer version **5.8.1** exactly. The big download buttons on the
+Slicer site give you a newer version, so use the older releases list instead.
+
+1. Go to https://download.slicer.org.
+2. Under **Stable Release**, click the small link **access older releases**.
+
+   ![The download page, with the access older releases link under Stable Release](images/annotator/slicer-download-page.png)
+
+3. In the first dropdown choose **Slicer 5.8.1**, in the second choose
+   **Windows**, and click **Download**.
+
+   ![Older releases picker set to Slicer 5.8.1 and Windows](images/annotator/slicer-download-windows.png)
+
+4. Run the installer and accept the defaults.
+5. If a blue box says "Windows protected your PC", click **More info**, then
    **Run anyway**. Windows shows that for any program it has not seen often.
-4. Start Slicer once from the Start menu. The first start takes a minute.
+6. Start Slicer once from the Start menu. The first start takes a minute.
 
-### Step 2. Install the Draw tube tool
+### Step 2. Install the Draw tube extension
 
 1. In Slicer, open **View**, then **Extensions Manager**.
 2. Search for **SegmentEditorExtraEffects** and click **Install**.
+
+   ![Extensions Manager showing SegmentEditorExtraEffects with its Install button](images/annotator/extensions-manager-extraeffects.png)
+
 3. Restart Slicer when it asks.
 
-### Step 3. Install SegQueue
+### Step 3. Install the SegQueue extension
 
-1. Open https://github.com/christianGRogers/Asclepius/releases in your browser.
-2. Under the newest release, download the file named
-   `SegQueue-<version>-Slicer-5.8.zip`. Leave it as a zip file.
+1. Open https://github.com/christianGRogers/Asclepius/releases/latest in your
+   browser and scroll down to **Assets**.
+2. Download the file named `SegQueue-<version>-Slicer-5.8.zip`, the one
+   **without** `macOS` in its name. Leave it as a zip file.
+
+   ![The Assets list on the release page with the two SegQueue zips](images/annotator/release-assets.png)
+
 3. In Slicer, open **View**, then **Extensions Manager**.
-4. Click **Install from file**, choose the zip you downloaded, and restart Slicer.
+4. Click **Install from file** at the bottom of the window, choose the zip you
+   downloaded, and restart Slicer.
 
-Now skip to **Logging in** below.
+   ![Extensions Manager with the Install from file button at the bottom](images/annotator/extensions-manager.png)
+
+Now skip to [Logging in](#logging-in).
 
 ---
 
 ## Mac
 
-### Step 1. Install 3D Slicer
+### Step 1. Install 3D Slicer 5.8.1
 
-1. Go to https://download.slicer.org and open the older releases page.
-2. Download **Slicer 5.8.1** for macOS.
-3. Open the downloaded file and drag **Slicer** into your **Applications** folder.
-4. Start Slicer from Applications. If your Mac says the app is from an unidentified
+SegQueue needs Slicer version **5.8.1** exactly. The big download buttons on the
+Slicer site give you a newer version, so use the older releases list instead.
+Slicer 5.8.1 comes as an Intel build only. It runs on Apple chip Macs (M1, M2,
+M3, M4) through Rosetta, which your Mac offers to install the first time.
+
+1. Go to https://download.slicer.org.
+2. Under **Stable Release**, click the small link **access older releases**.
+
+   ![The download page, with the access older releases link under Stable Release](images/annotator/slicer-download-page.png)
+
+3. In the first dropdown choose **Slicer 5.8.1**, in the second choose
+   **macOS Intel (amd64)**, and click **Download**. This is the right choice on
+   every Mac, Intel or Apple chip.
+
+   ![Older releases picker set to Slicer 5.8.1 and macOS Intel](images/annotator/slicer-download-mac.png)
+
+4. Open the downloaded `.dmg` file and drag **Slicer** into your **Applications**
+   folder.
+5. Start Slicer from Applications. If your Mac says the app is from an unidentified
    developer, right-click the Slicer icon, choose **Open**, and confirm. You only
    do this once.
-5. If your Mac offers to install **Rosetta**, accept. Slicer runs fine with it.
+6. If your Mac offers to install **Rosetta**, accept. Slicer runs fine with it.
 
-### Step 2. Install the Draw tube tool
+### Step 2. Install the Draw tube extension
 
 1. In Slicer, open **View**, then **Extensions Manager**.
 2. Search for **SegmentEditorExtraEffects** and click **Install**.
+
+   ![Extensions Manager showing SegmentEditorExtraEffects with its Install button](images/annotator/extensions-manager-extraeffects.png)
+
 3. Restart Slicer when it asks.
 
-### Step 3. Install SegQueue
+### Step 3. Install the SegQueue extension
 
-On a Mac, you add SegQueue as a folder rather than a zip. This works on every
-version of Slicer, and it does not matter if Safari unzips the download for you.
+SegQueue installs through the Extensions Manager from a zip file, the same way as
+on Windows. The one Mac wrinkle is Safari: by default it unzips every zip it
+downloads, and Slicer needs the zip itself. Turn that off first.
 
-1. Open https://github.com/christianGRogers/Asclepius/releases in your browser.
-2. Under the newest release, download the file named
-   `SegQueue-<version>-Slicer-5.8.zip` (the one **without** `macOS` in its name).
-3. If the download is still a zip, double-click it. You now have a folder called
-   **SegQueue**.
-4. Move the SegQueue folder out of Downloads into your home folder or Documents,
-   somewhere you will not delete by accident.
-5. In Slicer, open **Edit**, then **Application Settings**, then click **Modules**
-   on the left.
-6. Next to **Additional module paths**, click **Add**. Open the SegQueue folder,
-   then **lib**, then **Slicer-5.8**, and select the folder named
-   **qt-scripted-modules**. Click **Open**.
-7. Click **OK** and restart Slicer.
+1. **If you use Safari:** open **Safari**, then **Settings**, then the **General**
+   tab, and untick **Open "safe" files after downloading**. You can turn it back
+   on afterwards. If you use Chrome or Firefox, skip this step.
+2. Open https://github.com/christianGRogers/Asclepius/releases/latest in your
+   browser and scroll down to **Assets**.
+3. Download the file named `SegQueue-<version>-Slicer-5.8-macOS.zip`, the one
+   **with** `macOS` in its name. Leave it as a zip file.
 
-If you ever install a different version of Slicer, repeat steps 5 to 7 in it.
+   ![The Assets list on the release page with the two SegQueue zips](images/annotator/release-assets.png)
+
+4. Look in your Downloads folder. You should see the `.zip` file. If instead you
+   see a folder called **SegQueue**, Safari unzipped it: delete that folder, do
+   step 1, and download again.
+5. In Slicer, open **View**, then **Extensions Manager**.
+6. Click **Install from file** at the bottom of the window, choose the zip you
+   downloaded, and restart Slicer.
+
+   ![Extensions Manager with the Install from file button at the bottom](images/annotator/extensions-manager.png)
 
 ---
 
 ## Logging in
 
-1. In Slicer, open the module list (the dropdown at the top), go to
+1. In Slicer, open the module list (the dropdown at the top of the window), go to
    **Segmentation**, and choose **SegQueue**.
+
+   ![The module dropdown open at Segmentation, with SegQueue in the submenu](images/annotator/module-menu.png)
+
 2. Check that the **Server** box says exactly `https://janus.bradensbay.com`. If
    it shows anything else, delete it and type that address. Slicer remembers it.
 3. Enter your username and password and click **Log in**.
+
+   ![The SegQueue panel with the Server box and the login fields](images/annotator/segqueue-panel.png)
 
 If you see "Update the SegQueue14 module", click **Check for updates** and then
 **Update and restart**, then log in again.
@@ -130,17 +183,20 @@ Nothing is stored on your computer once a case is submitted.
 ## Keeping SegQueue up to date
 
 Each time you open SegQueue it checks for a newer version. When one exists it
-offers **Update and restart**. Click it. That is the whole update.
+offers **Update and restart**. Click it. That is the whole update. You never need
+to download a zip again.
 
 ## If something goes wrong
 
 | What you see | What to do |
 |---|---|
-| "Failed to copy directory" while installing | You are not on Slicer 5.8.1. Use the Mac steps (the folder method), which work on any version |
+| "Failed to copy directory" while installing | You are on a newer Slicer than 5.8.1. Go back to Step 1 and install 5.8.1 from the older releases list, then install the zip again |
+| A folder called SegQueue appeared instead of a zip (Mac) | Safari unzipped the download. Delete the folder, turn off "Open safe files" in Safari settings, and download again |
+| Install from file does not list your download | The file picker only shows zip files. If you only see a folder, see the row above |
 | The Server box shows an address ending in `example.edu` | Replace it with `https://janus.bradensbay.com` |
 | "Could not reach the server" | Check your internet connection and the Server box |
 | SegQueue says Draw tube is missing | Go back to Step 2 and install SegmentEditorExtraEffects |
-| SegQueue is not in the module list (Mac) | Check the folder you added ends in `qt-scripted-modules`, then restart Slicer |
+| SegQueue is not in the module list | Make sure you restarted Slicer after installing. If it is still missing, install the zip again |
 | "Cannot submit" | Read the message. Either a required vessel is empty, or two vessels overlap somewhere |
 
 Still stuck? Send the project lead a screenshot, your Slicer version (**Help**,

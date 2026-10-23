@@ -209,9 +209,10 @@ def canInstall(moduleDir: str) -> Tuple[bool, str]:
     _scripted, root = moduleRoots(moduleDir)
     if root is None:
         return False, ("This module is not installed as a Slicer extension, so "
-                       "it cannot update itself. Reinstall it with the one-line "
-                       "installer (slicer/install-segqueue.py) or through "
-                       "Extensions Manager -> Install from file.")
+                       "it cannot update itself. Reinstall it: unzip the release "
+                       "and add its SegQueue/lib/Slicer-5.8/qt-scripted-modules "
+                       "folder under Additional module paths, or on Slicer 5.8 "
+                       "use Extensions Manager -> Install from file.")
     if not os.access(moduleDir, os.W_OK):
         return False, ("Slicer's extension folder is not writable by this "
                        "account, so the update cannot be installed. Ask whoever "

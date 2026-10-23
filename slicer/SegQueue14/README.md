@@ -39,47 +39,31 @@ address carries over. If you installed the separate SegQueue14 0.1.0 extension,
 uninstall it first.
 
 **Supported Slicer versions:** **5.8.1** is the version annotators are asked to
-install, and the one the Extensions Manager route below is for. The newest stable
-Slicer (5.12.4 as of 2026-10-23) and the current preview (5.13.0) are supported
-through the installer: CI installs SegQueue into all three on macOS (Apple
-Silicon and Intel) and Linux, restarts, and runs the module's self-test from the
-install (`install-anywhere` in `.github/workflows/slicer-selftest.yml`, weekly and
-on every pull request that touches the module). A preview is a daily build, so a
-preview that breaks SegQueue is caught by the weekly run, not promised in advance.
+install. The newest stable Slicer (5.12.4 as of 2026-10-23) and the current
+preview (5.13.0) are supported through the module-path route below: CI installs
+SegQueue that way into all three on macOS (Apple Silicon and Intel) and Linux,
+restarts, and runs the module's self-test from the install (`install-anywhere`
+in `.github/workflows/slicer-selftest.yml`, weekly and on every pull request
+that touches the module). A preview is a daily build, so a preview that breaks
+SegQueue is caught by the weekly run, not promised in advance.
 
-**First install, any Slicer version, any OS (recommended on a Mac):** in Slicer,
-open **View → Python Console**, paste this line and press Enter:
+**First install, any Slicer version, any OS:**
 
-```python
-import requests; exec(requests.get("https://raw.githubusercontent.com/christianGRogers/Asclepius/main/slicer/install-segqueue.py", timeout=60).text)
-```
+1. Download `SegQueue-<version>-Slicer-5.8.zip` (not the `-macOS` one) from the
+   newest `segqueue-v…` release, and unzip it (double-click it). You get a
+   folder named `SegQueue`. Put it somewhere you keep, e.g. your home folder.
+2. In Slicer: **Edit → Application Settings → Modules**. Under *Additional
+   module paths* press **Add** and choose the folder
+   `SegQueue/lib/Slicer-5.8/qt-scripted-modules` (e.g.
+   `~/SegQueue/lib/Slicer-5.8/qt-scripted-modules`). Press OK, then restart
+   Slicer.
+3. Install **SegmentEditorExtraEffects** (Draw tube) from the Extensions Manager
+   if you have not already.
+4. The module is under **Segmentation → SegQueue**.
 
-It downloads the newest `segqueue-v…` release, unpacks the module into
-`~/SegQueue` (your home folder), adds `~/SegQueue/lib/Slicer-5.8/qt-scripted-modules`
-to *Edit → Application Settings → Modules → Additional module paths*, installs
-*SegmentEditorExtraEffects* (Draw tube) from the Extensions catalog if it is
-missing, and offers to restart Slicer. After the restart the module is under
-**Segmentation → SegQueue**. It does not depend on Slicer's version or revision,
-which the Extensions Manager does (below). The script is
-[`slicer/install-segqueue.py`](../install-segqueue.py); it only reads public
-GitHub release data. Paste it again after installing a **new Slicer** (each
-Slicer build, and every preview, starts with empty settings): it re-registers the
-folder and brings the module up to date.
-
-The installer downloads the release itself, so it does not matter what your
-browser does with downloads.
-
-*Without the console:* download `SegQueue-<version>-Slicer-5.8.zip` (not the
-`-macOS` one) from the newest `segqueue-v…` release. **Safari unzips it for you**
-("Open 'safe' files after downloading" is on by default) into a folder
-`SegQueue` in Downloads; that folder is what you want. Other browsers leave the
-zip: double-click it. Move the `SegQueue` folder somewhere you keep (e.g. your
-home folder) if you like, then add its `lib/Slicer-5.8/qt-scripted-modules`
-subfolder (e.g. `~/Downloads/SegQueue/lib/Slicer-5.8/qt-scripted-modules`) under
-*Edit → Application Settings → Modules → Additional module paths* and restart.
-Install *SegmentEditorExtraEffects* from the Extensions Manager. Safari's
-quarantine flag on the files does not matter (Slicer reads them as Python, it
-does not launch them). CI checks this exact folder (`install-safari`).
+This route does not depend on Slicer's version or revision, which the Extensions
+Manager does (below). Each Slicer build, and every new preview, keeps its own
+settings: after installing a new Slicer, add the same folder again (step 2).
 
 **First install through the Extensions Manager (Slicer 5.8.0/5.8.1 only):**
 download `SegQueue-<version>-Slicer-5.8.zip`, then **Extensions Manager →
@@ -89,17 +73,16 @@ macOS Slicer installs only from the `Slicer.app/Contents/Extensions-<revision>/`
 path inside a zip, so a Mac on any revision not listed in `MACOS_REVISIONS`
 (`slicer/build-extension14.py`) fails with "Failed to copy directory" (#94,
 #97), and on every OS Slicer 5.10 and later look for `lib/Slicer-<their
-version>`, not the zip's `lib/Slicer-5.8`. Use the installer above on any other
-Slicer. Do not use both routes in one Slicer; the installer refuses if the
-extension is already installed. From a checkout: add `slicer/SegQueue14` to
-*Additional module paths*.
+version>`, not the zip's `lib/Slicer-5.8`. Use the module-path route on any other
+Slicer. Do not use both routes in one Slicer (two copies of the module). From a
+checkout: add `slicer/SegQueue14` to *Additional module paths*.
 
 **Updating:** the module checks for a newer release when opened and offers
 **Update and restart** (`SegQueue14Lib/updater.py`, which only installs archives
 that carry SegQueue14). It works the same for both install routes: it updates
 from the archive for the Slicer version the install was built for
-(`lib/Slicer-5.8`), whatever Slicer is running. If the server's protocol has moved on, login is refused
-with *"Update the SegQueue14 module"*.
+(`lib/Slicer-5.8`), whatever Slicer is running. If the server's protocol has
+moved on, login is refused with *"Update the SegQueue14 module"*.
 
 ## For developers
 

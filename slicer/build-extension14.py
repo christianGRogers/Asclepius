@@ -36,9 +36,9 @@ button keeps using the cross-platform archive on every OS, and the updater never
 picks the macOS one (its name does not match ``release.ASSET_PATTERN``).
 
 The macOS archive only works on the revisions it lists, so it is a Slicer 5.8
-route only. Any other Slicer, on any OS, installs with ``install-segqueue.py``
-(#97), which unpacks the cross-platform archive into a folder of the
-annotator's own and needs no revision.
+route only. Any other Slicer, on any OS, uses the cross-platform archive
+unzipped, with its ``SegQueue/lib/Slicer-<x.y>/qt-scripted-modules`` folder
+added under *Additional module paths* (#97); that needs no revision.
 
 Rebuild after any change to ``src/segqueue14``: the server refuses a module whose
 protocol version is older than its own, with a message saying to update.
@@ -225,10 +225,11 @@ def main(argv=None):
     print(f"  {archive}  [{os.path.getsize(archive) / 1024:.0f} KB]")
     print(f"  {macos}  [{os.path.getsize(macos) / 1024:.0f} KB]  (macOS)")
     print("\nSegQueue 0.13 offers this as an update. First install on any Slicer: "
-          "slicer/install-segqueue.py, pasted into Slicer's Python console (#97). "
-          "On Slicer 5.8 also: Extensions Manager -> Install from file -> pick the zip "
+          "unzip the zip and add SegQueue/lib/Slicer-{0}/qt-scripted-modules under "
+          "Application Settings -> Modules -> Additional module paths -> restart (#97). "
+          "On Slicer {0} also: Extensions Manager -> Install from file -> pick the zip "
           "(the -macOS one on a Mac) -> restart. The module is under "
-          "Segmentation -> SegQueue.")
+          "Segmentation -> SegQueue.".format(args.slicer_version))
     return 0
 
 

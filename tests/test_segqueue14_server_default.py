@@ -63,7 +63,6 @@ def test_the_server_field_starts_from_the_helper():
 def test_nothing_an_annotator_installs_carries_a_placeholder_server():
     shipped = [p for root in ("slicer/SegQueue14", "src/segqueue14", "src/segqueue")
                for p in (REPO / root).rglob("*") if p.suffix in (".py", ".md", ".ui", ".json")]
-    shipped.append(REPO / "slicer" / "install-segqueue.py")
     offenders = [str(p.relative_to(REPO)) for p in shipped
                  if "example.edu" in p.read_text(encoding="utf-8", errors="ignore")]
     assert offenders == []

@@ -1,26 +1,25 @@
-"""Install SegQueue with the console installer, inside a real 3D Slicer (#97).
+"""SegQueue installed as a folder on Slicer's module paths, in a real 3D Slicer (#97).
 
     Slicer --no-splash --no-main-window --python-script tests/slicer_install_anywhere.py
 
-Run twice, like ``slicer_install_zip.py``. With ``SEGQUEUE_REGISTER_FOLDER`` set,
-the install phase only registers that already-unpacked folder, which is the
-manual route (e.g. Safari's auto-extracted download, #97). ``SEGQUEUE_INSTALL_PHASE=install``
-runs ``slicer/install-segqueue.py`` (what an annotator's one pasted line runs)
-on ``$SEGQUEUE_ZIP`` into ``$SEGQUEUE_INSTALL_BASE``, without the restart
-prompt. ``load`` is the restart: the module must load from that folder, import,
-build its panel, and its update button must accept the folder, pick the
-archive for the installed layout, and install over it.
+The route for any Slicer other than 5.8 (and any Mac revision): unzip the
+release zip and add ``SegQueue/lib/Slicer-5.8/qt-scripted-modules`` under *Edit
+-> Application Settings -> Modules -> Additional module paths*, then restart.
+Nothing in it depends on the running Slicer's version or revision, which is what
+breaks the Extensions Manager route (#97). The workflow unzips the archive the
+way the OS does; this script does what the annotator does in Slicer.
 
-The point is that nothing here depends on the running Slicer's version or
-revision, which is what broke the Extensions Manager route on a Mac running a
-preview (#97). CI runs it on Slicer 5.8.1, the latest stable and the current
-preview.
+Run twice, like ``slicer_install_zip.py``. ``SEGQUEUE_INSTALL_PHASE=install``
+adds ``$SEGQUEUE_INSTALL_BASE/lib/Slicer-5.8/qt-scripted-modules`` to the
+module paths, as the Application Settings dialog does. ``load`` is the restart:
+the module must load from that folder, import, build its panel, show the
+project's server, and its update button must accept the folder, pick the archive
+for the installed layout, and install ``$SEGQUEUE_ZIP`` over it.
 
 The report goes to ``$SEGQUEUE_SELFTEST_OUT``; its last line is ``RESULT PASS``
 or ``RESULT FAIL``.
 """
 
-import importlib.util
 import os
 import sys
 import traceback
@@ -29,7 +28,8 @@ OUT = os.environ.get("SEGQUEUE_SELFTEST_OUT", os.path.abspath("install-anywhere.
 PHASE = os.environ.get("SEGQUEUE_INSTALL_PHASE", "install")
 BASE = os.path.abspath(os.environ.get("SEGQUEUE_INSTALL_BASE")
                        or os.path.join(os.path.expanduser("~"), "SegQueue"))
-REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+FOLDER = os.path.join(BASE, "lib", "Slicer-5.8", "qt-scripted-modules")
+SETTING = "Modules/AdditionalPaths"
 TLS_PROBE = "https://slicer-packages.kitware.com/api/v1/system/version"
 
 log = []
@@ -50,62 +50,37 @@ def same(a, b):
 
 
 def registered(slicer):
-    value = slicer.app.revisionUserSettings().value("Modules/AdditionalPaths")
+    value = slicer.app.revisionUserSettings().value(SETTING)
     if value is None:
         return []
     return [value] if isinstance(value, str) else [str(v) for v in value]
 
 
-def installer():
-    path = os.path.join(REPO, "slicer", "install-segqueue.py")
-    spec = importlib.util.spec_from_file_location("install_segqueue", path)
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
-
-
 def install(slicer):
-    archive = os.environ["SEGQUEUE_ZIP"]
-    say("archive", archive)
-    say("base", BASE)
-    registerOnly = os.environ.get("SEGQUEUE_REGISTER_FOLDER")
-    if registerOnly:
-        # The manual route: the annotator already has the unpacked folder (e.g.
-        # the one Safari extracted the download into) and adds it under
-        # Application Settings -> Modules -> Additional module paths.
-        folder = os.path.abspath(registerOnly)
-        say("registering an existing folder, as Application Settings does:", folder)
-        settings = slicer.app.revisionUserSettings()
-        settings.setValue("Modules/AdditionalPaths",
-                          installer().with_path(settings.value("Modules/AdditionalPaths"),
-                                                folder))
-        settings.sync()
-    else:
-        folder = installer().install(zip_path=archive, base=BASE, restart=False)
-    check("the installer put SegQueue14.py in the folder",
-          os.path.isfile(os.path.join(folder, "SegQueue14.py")), folder)
-    check("the folder is inside the chosen base", same(os.path.dirname(os.path.dirname(
-        os.path.dirname(folder))), BASE), folder)
+    say("folder", FOLDER)
+    check("the unzipped folder holds SegQueue14.py",
+          os.path.isfile(os.path.join(FOLDER, "SegQueue14.py")), FOLDER)
     paths = registered(slicer)
+    if not any(same(p, FOLDER) for p in paths):
+        paths.append(FOLDER)
+    settings = slicer.app.revisionUserSettings()
+    settings.setValue(SETTING, paths)
+    settings.sync()
     check("the folder is an additional module path",
-          any(same(p, folder) for p in paths), paths)
-    model = slicer.app.extensionsManagerModel()
+          any(same(p, FOLDER) for p in registered(slicer)), registered(slicer))
     check("the Extensions Manager was not involved",
-          not model.isExtensionInstalled("SegQueue"))
-    say("INFO SegmentEditorExtraEffects installed:",
-        model.isExtensionInstalled("SegmentEditorExtraEffects"))
+          not slicer.app.extensionsManagerModel().isExtensionInstalled("SegQueue"))
 
 
 def load(slicer):
-    folder = os.path.join(BASE, "lib", "Slicer-5.8", "qt-scripted-modules")
     check("the folder is still registered after the restart",
-          any(same(p, folder) for p in registered(slicer)), registered(slicer))
+          any(same(p, FOLDER) for p in registered(slicer)), registered(slicer))
     check("Slicer loaded the SegQueue14 module", hasattr(slicer.modules, "segqueue14"))
 
     import SegQueue14 as module  # on sys.path because Slicer loaded it
 
     where = os.path.dirname(os.path.abspath(module.__file__))
-    check("from the installed folder, not a checkout", same(where, folder), where)
+    check("from the unzipped folder, not a checkout", same(where, FOLDER), where)
     check("its shared packages imported", module._IMPORT_ERROR is None, module._IMPORT_ERROR)
 
     from SegQueue14Lib import updater

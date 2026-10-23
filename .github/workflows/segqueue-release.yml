@@ -262,20 +262,16 @@ jobs:
           **Installed the separate SegQueue14 0.1.0 extension?** Uninstall it in
           the Extensions Manager first; this release contains it.
 
-          **First install, any Slicer version (recommended on a Mac):** in
-          Slicer open **View -> Python Console**, paste this line and press Enter:
-
-          ```python
-          import requests; exec(requests.get("https://raw.githubusercontent.com/christianGRogers/Asclepius/main/slicer/install-segqueue.py", timeout=60).text)
-          ```
-
-          It installs this release into `~/SegQueue`, registers it under
-          *Application Settings -> Modules -> Additional module paths*, installs
-          **SegmentEditorExtraEffects** (Draw tube) if missing, and restarts
-          Slicer. It works on any Slicer version or revision (tested on 5.8.1,
-          the latest stable and the current preview). The script is attached
-          below as `install-segqueue.py`. After installing a new Slicer, paste
-          it again.
+          **First install, any Slicer version, any OS:** download
+          `SegQueue-<version>-Slicer-5.8.zip` below (not the `-macOS` one) and
+          unzip it; you get a folder `SegQueue`. Put it somewhere you keep. In
+          Slicer, **Edit -> Application Settings -> Modules -> Additional module
+          paths -> Add** its `SegQueue/lib/Slicer-5.8/qt-scripted-modules`
+          folder, press OK and restart. Install **SegmentEditorExtraEffects**
+          (Draw tube) from the Extensions Manager if you have not already. This
+          works on any Slicer version or revision (tested on 5.8.1, the latest
+          stable and the current preview). After installing a new Slicer, add
+          the folder again.
 
           **First install through the Extensions Manager (Slicer 5.8 only):**
           download the `.zip` below (on a **Mac**, the one ending in
@@ -283,11 +279,11 @@ jobs:
           **Extensions Manager -> Install from file**, pick it, and restart.
           Install **SegmentEditorExtraEffects** first if you have not already -
           it provides *Draw tube*, and "Install from file" does not resolve
-          dependencies. On any other Slicer, use the installer above.
+          dependencies. On any other Slicer, use the module-path route above.
 
           ---
           MD
-          gh release create "$TAG" dist/*.zip slicer/install-segqueue.py \
+          gh release create "$TAG" dist/*.zip \
             --title "SegQueue $VERSION" \
             --notes-file notes.md \
             --generate-notes \

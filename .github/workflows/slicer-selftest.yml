@@ -21,11 +21,10 @@
 # `install-anywhere` also runs on pull requests: the route for any other Slicer
 # (#97). The Extensions Manager route is tied to Slicer 5.8: on macOS to the
 # revisions written into the zip, everywhere to `lib/Slicer-<running version>`.
-# slicer/install-segqueue.py (one line pasted into Slicer's Python console)
-# installs into a folder the annotator owns and registers it as an additional
-# module path. The job runs it on Slicer 5.8.1, the latest stable and the
-# current preview, on Apple Silicon, Intel macOS and Linux, then runs the
-# SegQueue14 self-test against the installed copy.
+# Unzipping the release zip and adding its folder under Additional module paths
+# is not. The job does that on Slicer 5.8.1, the latest stable and the current
+# preview, on Apple Silicon, Intel macOS and Linux, then runs the SegQueue14
+# self-test against the unzipped copy.
 #
 # What only this job can catch (see tests/slicer_selftest.py):
 #   * Segment Editor effect parameters are strings mapped to enums by name, and
@@ -53,7 +52,6 @@ on:
       - "tests/slicer_install_zip.py"
       - "tests/slicer_install_anywhere.py"
       - "tests/slicer_selftest14.py"
-      - "slicer/install-segqueue.py"
       - "tools/fetch_slicer.py"
       - ".github/workflows/slicer-selftest.yml"
   workflow_dispatch:
@@ -338,14 +336,16 @@ jobs:
             load.txt
           if-no-files-found: ignore
 
+
   install-anywhere:
-    # The console installer (#97), on every Slicer an annotator may have: the
-    # one the instructions name, the newest stable, and today's preview (on an
-    # Apple Silicon Mac the preview is the native arm64 build, as an annotator
-    # downloads it; 5.8-5.12 exist only as x86_64). Then restart, load the
-    # module from the folder, update over it, and run the SegQueue14 self-test
-    # on the installed copy.
-    name: Installer on Slicer ${{ matrix.slicer }} (${{ matrix.runner }})
+    # The route for any Slicer (#97): unzip the release zip and add its
+    # SegQueue/lib/Slicer-5.8/qt-scripted-modules folder under Additional
+    # module paths. On Slicer 5.8.1 (the instructions), the newest stable and
+    # today's preview (on an Apple Silicon Mac the preview is the native arm64
+    # build, as an annotator downloads it; 5.8-5.12 exist only as x86_64). Then
+    # restart, load the module from the folder, update over it, and run the
+    # SegQueue14 self-test on the unzipped copy.
+    name: Module-path install, Slicer ${{ matrix.slicer }} (${{ matrix.runner }})
     strategy:
       fail-fast: false
       matrix:
@@ -355,9 +355,6 @@ jobs:
     timeout-minutes: 40
     env:
       SLICER_VERSION: ${{ matrix.slicer }}
-      # No SEGQUEUE_INSTALL_BASE: the installer's default, ~/SegQueue, as for an
-      # annotator. (Not under the workspace: that is a git checkout, which the
-      # update button rightly refuses to overwrite.)
     steps:
       - uses: actions/checkout@v4
 
@@ -389,17 +386,22 @@ jobs:
           python3 tools/fetch_slicer.py --os macosx --version "$SLICER_VERSION" --out slicer.dmg --github-env
           bash .github/scripts/install-slicer-macos.sh slicer.dmg "$HOME/slicer"
 
-      - name: Build the zip
+      - name: Build and unzip the zip
         id: zip
         shell: bash
         run: |
-          # The archive a release publishes, which is what the installer downloads.
+          # The archive a release publishes, unzipped into the home folder the
+          # way the OS does it (ditto is what Archive Utility runs on a Mac).
+          # Not under the workspace: that is a git checkout, which the update
+          # button rightly refuses to overwrite.
           python3 slicer/build-extension14.py --out dist
           ZIP=$(ls dist/SegQueue-*-Slicer-5.8.zip)
+          if [ "$RUNNER_OS" = macOS ]; then ditto -x -k "$ZIP" "$HOME"; else unzip -q "$ZIP" -d "$HOME"; fi
+          ls "$HOME/SegQueue/lib/Slicer-5.8/qt-scripted-modules"
           echo "zip=$GITHUB_WORKSPACE/$ZIP" >> "$GITHUB_OUTPUT"
-          echo "Installer: \`$ZIP\` into Slicer $SLICER_FETCHED_VERSION (revision $SLICER_FETCHED_REVISION, $SLICER_FETCHED_ARCH; asked for $SLICER_VERSION)" >> "$GITHUB_STEP_SUMMARY"
+          echo "Module path: \`$ZIP\` unzipped to ~/SegQueue, into Slicer $SLICER_FETCHED_VERSION (revision $SLICER_FETCHED_REVISION, $SLICER_FETCHED_ARCH; asked for $SLICER_VERSION)" >> "$GITHUB_STEP_SUMMARY"
 
-      - name: Run the installer
+      - name: Add the folder under Additional module paths
         shell: bash
         env:
           SEGQUEUE_ZIP: ${{ steps.zip.outputs.zip }}
@@ -408,7 +410,7 @@ jobs:
         run: |
           $SLICER --no-splash --no-main-window --python-script tests/slicer_install_anywhere.py || true
           cat install.txt
-          { echo '### Installer, Slicer ${{ matrix.slicer }} on ${{ matrix.runner }}'; echo '```'; cat install.txt; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+          { echo '### Module path, Slicer ${{ matrix.slicer }} on ${{ matrix.runner }}'; echo '```'; cat install.txt; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
           tail -n 1 install.txt | grep -q "RESULT PASS"
 
       - name: Restart and load it
@@ -437,124 +439,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: slicer-installer-report-${{ matrix.runner }}-${{ matrix.slicer }}
-          path: |
-            install.txt
-            load.txt
-            selftest14.txt
-          if-no-files-found: ignore
-
-  install-safari:
-    # Safari unzips downloads by default ("Open 'safe' files after
-    # downloading"), so a Mac annotator who downloads the release by hand gets
-    # a folder, not a zip (#97). Simulated with `ditto -x -k` (what Archive
-    # Utility does) into ~/Downloads, with the quarantine attribute Safari adds.
-    #   safari-folder: that folder registered as an additional module path (the
-    #     manual route), restart, load, update over it, SegQueue14 self-test.
-    #   finder-recompress: the extracted macOS zip compressed again in Finder
-    #     (`ditto -c -k --sequesterRsrc --keepParent`, what Compress does) and
-    #     given to Install from file on Slicer 5.8.1.
-    name: Safari download, ${{ matrix.mode }} (Slicer ${{ matrix.slicer }})
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - {mode: safari-folder, slicer: "5.8.1"}
-          - {mode: safari-folder, slicer: preview}
-          - {mode: finder-recompress, slicer: "5.8.1"}
-    runs-on: macos-14
-    timeout-minutes: 40
-    env:
-      SLICER_VERSION: ${{ matrix.slicer }}
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Rosetta
-        run: sudo softwareupdate --install-rosetta --agree-to-license || true
-
-      - name: Slicer
-        run: |
-          python3 tools/fetch_slicer.py --os macosx --version "$SLICER_VERSION" --out slicer.dmg --github-env
-          bash .github/scripts/install-slicer-macos.sh slicer.dmg "$HOME/slicer"
-
-      - name: Download in Safari (simulated)
-        id: safari
-        shell: bash
-        run: |
-          python3 slicer/build-extension14.py --out dist
-          if [ "${{ matrix.mode }}" = finder-recompress ]; then
-            ZIP=$(ls dist/SegQueue-*-Slicer-5.8-macOS.zip)
-          else
-            ZIP=$(ls dist/SegQueue-*-Slicer-5.8.zip)
-          fi
-          mkdir -p "$HOME/Downloads"
-          ditto -x -k "$ZIP" "$HOME/Downloads"
-          xattr -w -r com.apple.quarantine "0083;$(printf %x "$(date +%s)");Safari;" "$HOME/Downloads/SegQueue"
-          echo "Safari left this in ~/Downloads (from \`$(basename "$ZIP")\`):" >> "$GITHUB_STEP_SUMMARY"
-          { echo '```'; ls -la "$HOME/Downloads"; find "$HOME/Downloads/SegQueue" -maxdepth 6 -type d | head -20; (xattr -lr "$HOME/Downloads/SegQueue" | head -2 || true); echo '```'; } >> "$GITHUB_STEP_SUMMARY"
-          echo "zip=$GITHUB_WORKSPACE/$ZIP" >> "$GITHUB_OUTPUT"
-
-      - name: Compress it again in Finder (simulated)
-        if: matrix.mode == 'finder-recompress'
-        shell: bash
-        run: |
-          (cd "$HOME/Downloads" && ditto -c -k --sequesterRsrc --keepParent SegQueue "$GITHUB_WORKSPACE/SegQueue.zip")
-          { echo '```'; unzip -l SegQueue.zip | head -8; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
-
-      - name: Register the folder / Install from file
-        shell: bash
-        env:
-          SEGQUEUE_INSTALL_PHASE: install
-          SEGQUEUE_SELFTEST_OUT: ${{ github.workspace }}/install.txt
-          SEGQUEUE_PACKAGED_SLICER: "5.8"
-        run: |
-          if [ "${{ matrix.mode }}" = finder-recompress ]; then
-            export SEGQUEUE_ZIP="$GITHUB_WORKSPACE/SegQueue.zip"
-            $SLICER --no-splash --no-main-window --python-script tests/slicer_install_zip.py || true
-          else
-            export SEGQUEUE_ZIP="${{ steps.safari.outputs.zip }}"
-            export SEGQUEUE_INSTALL_BASE="$HOME/Downloads/SegQueue"
-            export SEGQUEUE_REGISTER_FOLDER="$HOME/Downloads/SegQueue/lib/Slicer-5.8/qt-scripted-modules"
-            $SLICER --no-splash --no-main-window --python-script tests/slicer_install_anywhere.py || true
-          fi
-          cat install.txt
-          { echo '### Install (${{ matrix.mode }}, Slicer ${{ matrix.slicer }})'; echo '```'; cat install.txt; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
-          tail -n 1 install.txt | grep -q "RESULT PASS"
-
-      - name: Restart and load it
-        shell: bash
-        env:
-          SEGQUEUE_INSTALL_PHASE: load
-          SEGQUEUE_SELFTEST_OUT: ${{ github.workspace }}/load.txt
-          SEGQUEUE_PACKAGED_SLICER: "5.8"
-        run: |
-          if [ "${{ matrix.mode }}" = finder-recompress ]; then
-            $SLICER --no-splash --no-main-window --python-script tests/slicer_install_zip.py || true
-          else
-            export SEGQUEUE_ZIP="${{ steps.safari.outputs.zip }}"
-            export SEGQUEUE_INSTALL_BASE="$HOME/Downloads/SegQueue"
-            $SLICER --no-splash --no-main-window --python-script tests/slicer_install_anywhere.py || true
-          fi
-          cat load.txt
-          { echo '### Load'; echo '```'; cat load.txt; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
-          tail -n 1 load.txt | grep -q "RESULT PASS"
-
-      - name: SegQueue14 self-test on the installed module
-        if: matrix.mode == 'safari-folder'
-        shell: bash
-        env:
-          SEGQUEUE_SELFTEST_OUT: ${{ github.workspace }}/selftest14.txt
-        run: |
-          export SEGQUEUE_SELFTEST_INSTALLED="$HOME/Downloads/SegQueue/lib/Slicer-5.8/qt-scripted-modules"
-          $SLICER --no-splash --no-main-window --python-script tests/slicer_selftest14.py || true
-          cat selftest14.txt
-          { echo '### SegQueue14 self-test (installed)'; echo '```'; cat selftest14.txt; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
-          tail -n 1 selftest14.txt | grep -q "RESULT PASS"
-
-      - uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: slicer-safari-report-${{ matrix.mode }}-${{ matrix.slicer }}
+          name: slicer-module-path-report-${{ matrix.runner }}-${{ matrix.slicer }}
           path: |
             install.txt
             load.txt

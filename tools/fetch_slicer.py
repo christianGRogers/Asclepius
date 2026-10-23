@@ -24,6 +24,7 @@ import os
 import platform
 import shutil
 import sys
+import urllib.error
 import urllib.parse
 import urllib.request
 
@@ -40,8 +41,13 @@ CHANNEL_OS = {"macosx": "macosx", "linux": "linux", "win": "win"}
 
 
 def _get_json(url):
-    with urllib.request.urlopen(url, timeout=60) as response:
-        return json.load(response)
+    try:
+        with urllib.request.urlopen(url, timeout=60) as response:
+            return json.load(response)
+    except urllib.error.HTTPError as exc:
+        if exc.code == 404:  # e.g. no arm64 build on a channel: try the next arch
+            raise SystemExit(f"not found: {url}") from None
+        raise
 
 
 def revision_for(version):
@@ -122,9 +128,8 @@ def main(argv=None):
         except SystemExit:
             if position == len(arches) - 1:
                 raise
-    asked = args.version
     print(f"Slicer {version} (revision {revision}) for {args.os}/{args.arch}"
-          f" [asked for {asked}]")
+          f" [asked for {args.version}]")
     download(url, args.out)
     if args.github_env:
         with open(os.environ["GITHUB_ENV"], "a", encoding="utf-8") as handle:

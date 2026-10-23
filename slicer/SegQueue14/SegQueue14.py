@@ -98,7 +98,7 @@ from SegQueue14Lib import SegQueue14Error as SegQueueError
 
 #: Continues SegQueue's numbering (0.13.0 was the last 4-class release). The
 #: release tag is ``segqueue-v`` + this; bump it to publish.
-__version__ = "0.16.3"
+__version__ = "0.16.4"
 
 #: Where the module's help points.
 HELP_URL = "https://github.com/christianGRogers/Asclepius"
@@ -149,6 +149,16 @@ _SETTING_UPDATE = "SegQueue14/updateCheck"
 #: The retired module's server setting, read (never written) so an annotator who
 #: updated from SegQueue 0.13 finds their server already filled in.
 _LIVE_SETTING_SERVER = "SegQueue/serverUrl"
+
+#: The project's server (#99), shown on a fresh install. A saved server address
+#: (this module's, else the one SegQueue 0.13 saved) always wins.
+DEFAULT_SERVER_URL = "https://janus.bradensbay.com"
+
+
+def initialServerUrl(settingsValue):
+    """The Server field's starting text, from ``slicer.util.settingsValue``."""
+    return settingsValue(_SETTING_SERVER,
+                         settingsValue(_LIVE_SETTING_SERVER, DEFAULT_SERVER_URL))
 
 
 class SegQueue14(ScriptedLoadableModule):
@@ -1506,6 +1516,15 @@ class SegQueue14Widget(ScriptedLoadableModuleWidget):
 
         self.layout.addWidget(frame)
 
+    def _updateSlicerVersion(self):
+        """The archive's Slicer version to update from: the installed one.
+
+        Every install, on any Slicer, holds the archive built for 5.8 under
+        ``lib/Slicer-5.8``; asking for the running Slicer's version instead
+        finds no archive on 5.10 and later, so no update is ever offered (#97).
+        """
+        return updater.packagedSlicerVersion(_MODULE_DIR) or self._slicerMinorVersion()
+
     def _slicerMinorVersion(self):
         """``"5.8"`` -- the version extensions are packaged against."""
         try:
@@ -1530,7 +1549,7 @@ class SegQueue14Widget(ScriptedLoadableModuleWidget):
         if updater.cacheIsFresh(cached, UPDATE_CHECK_HOURS * 3600):
             return
         try:
-            release = updater.checkForUpdate(__version__, self._slicerMinorVersion())
+            release = updater.checkForUpdate(__version__, self._updateSlicerVersion())
         except UpdateError:
             return
         except Exception:
@@ -1544,7 +1563,7 @@ class SegQueue14Widget(ScriptedLoadableModuleWidget):
         with _busy():
             try:
                 release = updater.checkForUpdate(
-                    __version__, self._slicerMinorVersion())
+                    __version__, self._updateSlicerVersion())
             except UpdateError as exc:
                 slicer.util.errorDisplay(str(exc))
                 return
@@ -1592,11 +1611,11 @@ class SegQueue14Widget(ScriptedLoadableModuleWidget):
             slicer.util.errorDisplay(reason)
             return
 
-        asset = rel.asset_for(release, self._slicerMinorVersion())
+        asset = rel.asset_for(release, self._updateSlicerVersion())
         if asset is None:
             slicer.util.errorDisplay(
                 "That release has no archive for Slicer {}.".format(
-                    self._slicerMinorVersion()))
+                    self._updateSlicerVersion()))
             return
 
         openCase = self.logic.assignment is not None if self.logic else False
@@ -1624,7 +1643,7 @@ class SegQueue14Widget(ScriptedLoadableModuleWidget):
                 archive = os.path.join(staging, str(asset.get("name") or "SegQueue-update.zip"))
                 updater.downloadAsset(asset, archive, progress=progress)
                 backup = updater.installArchive(
-                    archive, _MODULE_DIR, self._slicerMinorVersion())
+                    archive, _MODULE_DIR, self._updateSlicerVersion())
         except UpdateError as exc:
             slicer.util.errorDisplay(str(exc))
             return
@@ -1777,11 +1796,7 @@ class SegQueue14Widget(ScriptedLoadableModuleWidget):
         form = qt.QFormLayout(box)
         self.loginBox = box
 
-        self.serverEdit = qt.QLineEdit(
-            slicer.util.settingsValue(
-                _SETTING_SERVER,
-                slicer.util.settingsValue(_LIVE_SETTING_SERVER,
-                                          "https://segqueue.example.edu")))
+        self.serverEdit = qt.QLineEdit(initialServerUrl(slicer.util.settingsValue))
         self.serverEdit.setToolTip(
             "Base URL of the server (the same one as SegQueue). /api/v1 is added "
             "automatically; SegQueue14 uses its own /segqueue14 routes on it.")

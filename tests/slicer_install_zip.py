@@ -47,7 +47,10 @@ def prop(obj, name):
 
 
 def scriptedDir(slicer, model):
-    version = "{}.{}".format(slicer.app.majorVersion, slicer.app.minorVersion)
+    # The Slicer version the archive was built for (lib/Slicer-5.8 inside it),
+    # which is not the running Slicer's on 5.10 and later (#97).
+    version = os.environ.get("SEGQUEUE_PACKAGED_SLICER") or "{}.{}".format(
+        slicer.app.majorVersion, slicer.app.minorVersion)
     return os.path.join(prop(model, "extensionsInstallPath"), EXTENSION, "lib",
                         "Slicer-" + version, "qt-scripted-modules")
 
@@ -66,6 +69,12 @@ def install(slicer, model):
 
 
 def load(slicer, model):
+    try:
+        paths = slicer.app.moduleManager().factoryManager().searchPaths
+        say("module search paths with SegQueue:",
+            [p for p in (paths() if callable(paths) else paths) if EXTENSION in p])
+    except Exception as exc:
+        say("module search paths unavailable:", exc)
     check("the extension is still installed", model.isExtensionInstalled(EXTENSION))
     check("Slicer loaded the SegQueue14 module", hasattr(slicer.modules, "segqueue14"))
 

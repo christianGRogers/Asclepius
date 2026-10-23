@@ -18,6 +18,14 @@
 # `<zip>/Slicer.app/Contents/Extensions-<revision>/<extension>`, not the zip
 # root, and nothing else in CI ever looked at the archive from a Mac.
 #
+# `install-anywhere` also runs on pull requests: the route for any other Slicer
+# (#97). The Extensions Manager route is tied to Slicer 5.8: on macOS to the
+# revisions written into the zip, everywhere to `lib/Slicer-<running version>`.
+# Unzipping the release zip and adding its folder under Additional module paths
+# is not. The job does that on Slicer 5.8.1, the latest stable and the current
+# preview, on Apple Silicon, Intel macOS and Linux, then runs the SegQueue14
+# self-test against the unzipped copy.
+#
 # What only this job can catch (see tests/slicer_selftest.py):
 #   * Segment Editor effect parameters are strings mapped to enums by name, and
 #     nothing validates them. `Shape="FREE_FORM"` instead of `"FreeForm"` gave
@@ -42,6 +50,8 @@ on:
       - "src/segqueue/**"
       - "src/segqueue14/**"
       - "tests/slicer_install_zip.py"
+      - "tests/slicer_install_anywhere.py"
+      - "tests/slicer_selftest14.py"
       - "tools/fetch_slicer.py"
       - ".github/workflows/slicer-selftest.yml"
   workflow_dispatch:
@@ -92,11 +102,11 @@ jobs:
         env:
           STABILITY: ${{ inputs.slicer_stability || 'release' }}
         run: |
-          # The redirect gives the current build for the chosen channel. It
-          # drifts as Slicer releases, and that drift is the point: this job is
-          # also the early warning that a new Slicer broke the module.
-          curl -L --retry 3 --retry-delay 5 -o slicer.tar.gz \
-            "https://download.slicer.org/download?os=linux&stability=$STABILITY"
+          # The current build for the chosen channel. It drifts as Slicer
+          # releases, and that drift is the point: this job is also the early
+          # warning that a new Slicer broke the module. Through fetch_slicer.py,
+          # because download.slicer.org serves stable for `stability=preview`.
+          python3 tools/fetch_slicer.py --os linux --version "$STABILITY" --out slicer.tar.gz
           mkdir -p "$HOME/slicer"
           tar -xzf slicer.tar.gz -C "$HOME/slicer" --strip-components=1
           echo "SLICER=$HOME/slicer/Slicer" >> "$GITHUB_ENV"
@@ -263,7 +273,7 @@ jobs:
             libxcb-util1 libxcb-xinerama0 libxcb-xkb1 libxkbcommon0 \
             libxkbcommon-x11-0 libxcomposite1 libxcursor1 libxdamage1 libxi6 \
             libxrandr2 libxrender1 libxtst6 libsm6 libxt6 libasound2t64
-          python3 tools/fetch_slicer.py --os linux --version "$SLICER_VERSION" --out slicer.tar.gz
+          python3 tools/fetch_slicer.py --os linux --version "$SLICER_VERSION" --out slicer.tar.gz --github-env
           mkdir -p "$HOME/slicer"
           tar -xzf slicer.tar.gz -C "$HOME/slicer" --strip-components=1
           echo "SLICER=xvfb-run -a $HOME/slicer/Slicer" >> "$GITHUB_ENV"
@@ -271,15 +281,17 @@ jobs:
       - name: Slicer (macOS)
         if: runner.os == 'macOS'
         run: |
-          python3 tools/fetch_slicer.py --os macosx --version "$SLICER_VERSION" --out slicer.dmg
+          python3 tools/fetch_slicer.py --os macosx --version "$SLICER_VERSION" --out slicer.dmg --github-env
           bash .github/scripts/install-slicer-macos.sh slicer.dmg "$HOME/slicer"
 
       - name: Build the zip
         id: zip
         shell: bash
         run: |
-          MINOR=$(echo "$SLICER_VERSION" | cut -d. -f1,2)
-          python3 slicer/build-extension14.py --out dist --slicer-version "$MINOR"
+          # Exactly what a release publishes (built for Slicer 5.8), whatever
+          # Slicer it goes into: that is what an annotator downloads (#97).
+          MINOR=$(python3 -c "import importlib.util as u; s=u.spec_from_file_location('b','slicer/build-extension14.py'); m=u.module_from_spec(s); s.loader.exec_module(m); print(m.DEFAULT_SLICER_VERSION)")
+          python3 slicer/build-extension14.py --out dist
           ls -l dist
           # The archive for this platform: the macOS one where there is one.
           ZIP=$(ls dist/*-Slicer-"$MINOR".zip)
@@ -287,12 +299,14 @@ jobs:
             ZIP=$(ls dist/*-Slicer-"$MINOR"-macOS.zip)
           fi
           echo "zip=$GITHUB_WORKSPACE/$ZIP" >> "$GITHUB_OUTPUT"
-          echo "Installing \`$ZIP\` into Slicer $SLICER_VERSION" >> "$GITHUB_STEP_SUMMARY"
+          echo "packaged=$MINOR" >> "$GITHUB_OUTPUT"
+          echo "Installing \`$ZIP\` into Slicer $SLICER_FETCHED_VERSION (revision $SLICER_FETCHED_REVISION, $SLICER_FETCHED_ARCH; asked for $SLICER_VERSION)" >> "$GITHUB_STEP_SUMMARY"
 
       - name: Install from file
         shell: bash
         env:
           SEGQUEUE_ZIP: ${{ steps.zip.outputs.zip }}
+          SEGQUEUE_PACKAGED_SLICER: ${{ steps.zip.outputs.packaged }}
           SEGQUEUE_INSTALL_PHASE: install
           SEGQUEUE_SELFTEST_OUT: ${{ github.workspace }}/install.txt
         run: |
@@ -304,6 +318,7 @@ jobs:
       - name: Restart and load it
         shell: bash
         env:
+          SEGQUEUE_PACKAGED_SLICER: ${{ steps.zip.outputs.packaged }}
           SEGQUEUE_INSTALL_PHASE: load
           SEGQUEUE_SELFTEST_OUT: ${{ github.workspace }}/load.txt
         run: |
@@ -319,4 +334,114 @@ jobs:
           path: |
             install.txt
             load.txt
+          if-no-files-found: ignore
+
+
+  install-anywhere:
+    # The route for any Slicer (#97): unzip the release zip and add its
+    # SegQueue/lib/Slicer-5.8/qt-scripted-modules folder under Additional
+    # module paths. On Slicer 5.8.1 (the instructions), the newest stable and
+    # today's preview (on an Apple Silicon Mac the preview is the native arm64
+    # build, as an annotator downloads it; 5.8-5.12 exist only as x86_64). Then
+    # restart, load the module from the folder, update over it, and run the
+    # SegQueue14 self-test on the unzipped copy.
+    name: Module-path install, Slicer ${{ matrix.slicer }} (${{ matrix.runner }})
+    strategy:
+      fail-fast: false
+      matrix:
+        runner: [macos-14, macos-15-intel, ubuntu-24.04]
+        slicer: ["5.8.1", release, preview]
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 40
+    env:
+      SLICER_VERSION: ${{ matrix.slicer }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Rosetta
+        if: runner.os == 'macOS' && runner.arch == 'ARM64'
+        run: sudo softwareupdate --install-rosetta --agree-to-license || true
+
+      - name: Slicer (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            xvfb xauth libpulse-dev libpulse-mainloop-glib0 libnss3 \
+            libglu1-mesa libgl1 libopengl0 libfontconfig1 libdbus-1-3 libcups2t64 \
+            libx11-xcb1 libxcb-icccm4 libxcb-image0 libxcb-keysyms1 \
+            libxcb-randr0 libxcb-render0 libxcb-render-util0 libxcb-shape0 \
+            libxcb-shm0 libxcb-sync1 libxcb-xfixes0 libxcb-glx0 libxcb-dri3-0 \
+            libxcb-util1 libxcb-xinerama0 libxcb-xkb1 libxkbcommon0 \
+            libxkbcommon-x11-0 libxcomposite1 libxcursor1 libxdamage1 libxi6 \
+            libxrandr2 libxrender1 libxtst6 libsm6 libxt6 libasound2t64
+          python3 tools/fetch_slicer.py --os linux --version "$SLICER_VERSION" --out slicer.tar.gz --github-env
+          mkdir -p "$HOME/slicer"
+          tar -xzf slicer.tar.gz -C "$HOME/slicer" --strip-components=1
+          echo "SLICER=xvfb-run -a $HOME/slicer/Slicer" >> "$GITHUB_ENV"
+
+      - name: Slicer (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          python3 tools/fetch_slicer.py --os macosx --version "$SLICER_VERSION" --out slicer.dmg --github-env
+          bash .github/scripts/install-slicer-macos.sh slicer.dmg "$HOME/slicer"
+
+      - name: Build and unzip the zip
+        id: zip
+        shell: bash
+        run: |
+          # The archive a release publishes, unzipped into the home folder the
+          # way the OS does it (ditto is what Archive Utility runs on a Mac).
+          # Not under the workspace: that is a git checkout, which the update
+          # button rightly refuses to overwrite.
+          python3 slicer/build-extension14.py --out dist
+          ZIP=$(ls dist/SegQueue-*-Slicer-5.8.zip)
+          if [ "$RUNNER_OS" = macOS ]; then ditto -x -k "$ZIP" "$HOME"; else unzip -q "$ZIP" -d "$HOME"; fi
+          ls "$HOME/SegQueue/lib/Slicer-5.8/qt-scripted-modules"
+          echo "zip=$GITHUB_WORKSPACE/$ZIP" >> "$GITHUB_OUTPUT"
+          echo "Module path: \`$ZIP\` unzipped to ~/SegQueue, into Slicer $SLICER_FETCHED_VERSION (revision $SLICER_FETCHED_REVISION, $SLICER_FETCHED_ARCH; asked for $SLICER_VERSION)" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Add the folder under Additional module paths
+        shell: bash
+        env:
+          SEGQUEUE_ZIP: ${{ steps.zip.outputs.zip }}
+          SEGQUEUE_INSTALL_PHASE: install
+          SEGQUEUE_SELFTEST_OUT: ${{ github.workspace }}/install.txt
+        run: |
+          $SLICER --no-splash --no-main-window --python-script tests/slicer_install_anywhere.py || true
+          cat install.txt
+          { echo '### Module path, Slicer ${{ matrix.slicer }} on ${{ matrix.runner }}'; echo '```'; cat install.txt; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+          tail -n 1 install.txt | grep -q "RESULT PASS"
+
+      - name: Restart and load it
+        shell: bash
+        env:
+          SEGQUEUE_ZIP: ${{ steps.zip.outputs.zip }}
+          SEGQUEUE_INSTALL_PHASE: load
+          SEGQUEUE_SELFTEST_OUT: ${{ github.workspace }}/load.txt
+        run: |
+          $SLICER --no-splash --no-main-window --python-script tests/slicer_install_anywhere.py || true
+          cat load.txt
+          { echo '### Load'; echo '```'; cat load.txt; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+          tail -n 1 load.txt | grep -q "RESULT PASS"
+
+      - name: SegQueue14 self-test on the installed module
+        shell: bash
+        env:
+          SEGQUEUE_SELFTEST_OUT: ${{ github.workspace }}/selftest14.txt
+        run: |
+          export SEGQUEUE_SELFTEST_INSTALLED="$HOME/SegQueue/lib/Slicer-5.8/qt-scripted-modules"
+          $SLICER --no-splash --no-main-window --python-script tests/slicer_selftest14.py || true
+          cat selftest14.txt
+          { echo '### SegQueue14 self-test (installed)'; echo '```'; cat selftest14.txt; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+          tail -n 1 selftest14.txt | grep -q "RESULT PASS"
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: slicer-module-path-report-${{ matrix.runner }}-${{ matrix.slicer }}
+          path: |
+            install.txt
+            load.txt
+            selftest14.txt
           if-no-files-found: ignore

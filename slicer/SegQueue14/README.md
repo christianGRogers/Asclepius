@@ -66,11 +66,20 @@ GitHub release data. Paste it again after installing a **new Slicer** (each
 Slicer build, and every preview, starts with empty settings): it re-registers the
 folder and brings the module up to date.
 
-*Without the console:* download `SegQueue-<version>-Slicer-5.8.zip` from the
-newest `segqueue-v…` release, unzip it somewhere you keep (e.g. your home
-folder), and add its `SegQueue/lib/Slicer-5.8/qt-scripted-modules` folder under
-*Additional module paths*, then restart. Install *SegmentEditorExtraEffects*
-from the Extensions Manager.
+The installer downloads the release itself, so it does not matter what your
+browser does with downloads.
+
+*Without the console:* download `SegQueue-<version>-Slicer-5.8.zip` (not the
+`-macOS` one) from the newest `segqueue-v…` release. **Safari unzips it for you**
+("Open 'safe' files after downloading" is on by default) into a folder
+`SegQueue` in Downloads; that folder is what you want. Other browsers leave the
+zip: double-click it. Move the `SegQueue` folder somewhere you keep (e.g. your
+home folder) if you like, then add its `lib/Slicer-5.8/qt-scripted-modules`
+subfolder (e.g. `~/Downloads/SegQueue/lib/Slicer-5.8/qt-scripted-modules`) under
+*Edit → Application Settings → Modules → Additional module paths* and restart.
+Install *SegmentEditorExtraEffects* from the Extensions Manager. Safari's
+quarantine flag on the files does not matter (Slicer reads them as Python, it
+does not launch them). CI checks this exact folder (`install-safari`).
 
 **First install through the Extensions Manager (Slicer 5.8.0/5.8.1 only):**
 download `SegQueue-<version>-Slicer-5.8.zip`, then **Extensions Manager →

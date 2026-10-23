@@ -40,9 +40,18 @@ from .splits import SPLIT_TEST, build_splits, read_meta, select, validate_splits
 #   batch_size            enforced after planning
 #   ignore_label          true -> labels may carry n_classes+1 = nnU-Net "ignore" (A4 / A11)
 #   sealed_list           repo-relative path of the A14 sealed-test JSON; never converted
+#   plans_from            {dataset, plans_name, trainer}: adopt that dataset's plans instead of
+#                         planning (a warm start needs the source model's plans; see adopt_plans)
+#   lr_arms               {arm name: trainer class}, e.g. the A17 fine-tune LR arms
+#   sealed_pool_list      repo-relative path of the D27 pool seal (segtrain.pool_seal); the task is
+#                         held to that file (see sealed_pool_file)
+#   pool_reads            true -> SegQueue14 pool reads (<Source>__<Case>) are training samples:
+#                         checked by patient against the D27 seal instead of being refused by A14
+#                         as unmappable names (proxy.sealed_reason allow_pool)
 TASK_EXTRA_KEYS = (
     "planner", "gpu_memory_target_gb", "ct_window", "ct_norm", "patch_size", "batch_size",
     "ignore_label", "sealed_list", "explicit_split", "save_test_probabilities",
+    "plans_from", "lr_arms", "sealed_pool_list", "pool_reads",
 )
 
 #: Sidecar beside splits_final.json recording that the split came from explicit lists (ImageCAS-X
@@ -190,10 +199,17 @@ def plan_experiment(
     patches. Note it changes the architecture, so plans made for one budget are
     not interchangeable with checkpoints trained under another.
     """
+    extras = task_extras(task)
+    if extras.get("plans_from"):
+        src = extras["plans_from"]
+        raise RuntimeError(
+            f"{task.nnunet_name} adopts the plans of {src.get('dataset')} "
+            f"({src.get('plans_name')}) for a valid warm start; re-planning would change the "
+            "CT window and possibly the network. Run `segtrain plan --task "
+            f"{task.dataset_id} --plans-from <{src.get('dataset')}/{src.get('plans_name')}.json>`")
     configure_nnunet_env(cfg)
     from nnunetv2.experiment_planning.plan_and_preprocess_api import plan_experiments
 
-    extras = task_extras(task)
     kwargs = dict(
         dataset_ids=[task.dataset_id],
         overwrite_plans_name=task.plans_name,
@@ -247,6 +263,138 @@ def finalize_plans(plans_file: Path, task: TaskConfig) -> dict:
         if not out.exists():
             out.write_text(json.dumps(record, indent=1), encoding="utf-8")
     return record
+
+
+#: Sidecar beside an adopted plans file: where it came from and its sha256 (see adopt_plans).
+ADOPTED_PLANS_RECORD_SUFFIX = ".adopted_from.json"
+
+
+def trainer_for_arm(task: TaskConfig, arm: Optional[str] = None) -> str:
+    """The trainer class for an LR arm of the task (``lr_arms``); the task's trainer when ``arm``
+    is None or ``primary``. Raises ValueError for an arm the task does not declare."""
+    arms = task_extras(task).get("lr_arms") or {}
+    if arm is None or (arm == "primary" and "primary" not in arms):
+        return task.trainer
+    if arm not in arms:
+        known = ", ".join(sorted(arms)) or "none"
+        raise ValueError(f"{task.nnunet_name} has no LR arm {arm!r}; declared arms: {known}")
+    return str(arms[arm])
+
+
+def sealed_pool_file(task: TaskConfig) -> Optional[Path]:
+    """The D27 pool seal file the task names (``sealed_pool_list``), absolute; None if it names
+    none. Every task is checked against the default seal file by ``convert`` and the trainer
+    anyway; a task that names it is held to that file, which must be the pinned seal."""
+    path = task_extras(task).get("sealed_pool_list")
+    if not path:
+        return None
+    path = Path(path)
+    return path if path.is_absolute() else Path(__file__).resolve().parents[2] / path
+
+
+def sealed_pool_notice(task: TaskConfig) -> Optional[str]:
+    """One line saying which D27 seal the task is held to (loading it checks its sha256, so a
+    missing or altered file raises here, before any queue wait); None if it names none."""
+    path = sealed_pool_file(task)
+    if path is None:
+        return None
+    from .pool_seal import load_pool_seal
+
+    seal = load_pool_seal(path)
+    pool = " Pool reads are training samples; each is checked by patient." \
+        if task_extras(task).get("pool_reads") else ""
+    return (f"D27 pool seal: {path.name} (sha256 {seal.sha256[:12]}..., "
+            f"{len(seal.patients)} patients) is enforced for {task.nnunet_name}.{pool}")
+
+
+def plans_window(plans_file: Path) -> Optional[tuple[float, float]]:
+    """The CT clip window (low, high) HU in a plans file, or None."""
+    from .nnunet_ext.ct_window import plans_window as _window
+
+    return _window(json.loads(Path(plans_file).read_text(encoding="utf-8")))
+
+
+def check_adoptable(source: dict, task: TaskConfig) -> list[str]:
+    """What stops a plans dict from being adopted for ``task``: an empty list means it matches the
+    task's recipe (spacing, patch, batch, a ResEnc network, the label count is the trainer's
+    concern). Used by adopt_plans and by the tests against icx4's recipe."""
+    extras = task_extras(task)
+    problems = []
+    conf = (source.get("configurations") or {}).get(task.configuration)
+    if conf is None:
+        return [f"no {task.configuration!r} configuration in the source plans"]
+    if task.spacing is not None and [float(x) for x in conf.get("spacing") or []] != \
+            [float(x) for x in task.spacing]:
+        problems.append(f"spacing {conf.get('spacing')} (task {list(task.spacing)})")
+    if extras.get("patch_size") is not None and \
+            list(conf.get("patch_size") or []) != [int(x) for x in extras["patch_size"]]:
+        problems.append(f"patch {conf.get('patch_size')} (task {extras['patch_size']})")
+    if extras.get("batch_size") is not None and conf.get("batch_size") != int(extras["batch_size"]):
+        problems.append(f"batch {conf.get('batch_size')} (task {extras['batch_size']})")
+    if str(extras.get("planner", "")).startswith("ResEnc"):
+        net = str((conf.get("architecture") or {}).get("network_class_name", ""))
+        if "ResidualEncoder" not in net and "ResEnc" not in net:
+            problems.append(f"network {net or '(none)'} is not a ResEnc U-Net")
+    src_from = extras.get("plans_from") or {}
+    want = src_from.get("plans_name")
+    if want and source.get("plans_name") not in (None, want):
+        problems.append(f"plans_name {source.get('plans_name')!r} (task adopts {want!r})")
+    if want and want != task.plans_name:
+        problems.append(f"task plans_name {task.plans_name!r} differs from the adopted {want!r}")
+    return problems
+
+
+def adopt_plans(cfg: Config, task: TaskConfig, source_plans_file: Path) -> Path:
+    """Adopt another dataset's plans for ``task`` instead of planning it (task key ``plans_from``).
+
+    A warm start from a checkpoint is only valid on the plans it was trained with, field for field,
+    including the CT window nnU-Net took from the source dataset's fingerprint
+    (``finetune_load.check_compatible`` refuses anything else). Re-planning on new data changes that
+    window and may change the patch and architecture. So the source plans file is copied verbatim,
+    with only ``dataset_name`` set to this task's, as ``nnUNetv2_move_plans_between_datasets``
+    does. Refuses a source that does not match the task's recipe. Writes
+    ``<plans>.adopted_from.json`` (source path and sha256) beside it and copies the raw
+    ``dataset.json`` into the preprocessed folder, where nnU-Net's trainer reads it."""
+    import hashlib
+    import shutil
+
+    if not task_extras(task).get("plans_from"):
+        raise ValueError(f"{task.nnunet_name} declares no plans_from; plan it with `segtrain plan`")
+    src = Path(source_plans_file)
+    if not src.is_file():
+        raise FileNotFoundError(f"source plans not found: {src}")
+    raw_bytes = src.read_bytes()
+    plans = json.loads(raw_bytes.decode("utf-8"))
+    problems = check_adoptable(plans, task)
+    if problems:
+        raise ValueError(f"refusing to adopt {src} for {task.nnunet_name}: " + "; ".join(problems))
+    source_dataset = plans.get("dataset_name")
+    want_dataset = (task_extras(task).get("plans_from") or {}).get("dataset")
+    if want_dataset and source_dataset not in (None, want_dataset):
+        raise ValueError(f"refusing to adopt {src}: its dataset is {source_dataset!r}, the task "
+                         f"adopts {want_dataset!r}")
+    plans["dataset_name"] = task.nnunet_name
+    out_dir = task.preprocessed_dir(cfg)
+    out_dir.mkdir(parents=True, exist_ok=True)
+    out = out_dir / f"{task.plans_name}.json"
+    out.write_text(json.dumps(plans, indent=1), encoding="utf-8")
+    record = {"source": str(src.resolve()), "source_sha256": hashlib.sha256(raw_bytes).hexdigest(),
+              "source_dataset": source_dataset, "window": plans_window(out)}
+    out.with_name(out.stem + ADOPTED_PLANS_RECORD_SUFFIX).write_text(
+        json.dumps(record, indent=1), encoding="utf-8")
+    raw_json = task.raw_dir(cfg) / "dataset.json"
+    if raw_json.is_file():
+        shutil.copyfile(raw_json, out_dir / "dataset.json")
+    return out
+
+
+def adopted_window(cfg: Config, task: TaskConfig) -> Optional[tuple[float, float]]:
+    """The CT window of the task's adopted plans, or None when the task adopts nothing or the plans
+    are not there yet."""
+    if not task_extras(task).get("plans_from"):
+        return None
+    plans_file = task.preprocessed_dir(cfg) / f"{task.plans_name}.json"
+    return plans_window(plans_file) if plans_file.is_file() else None
 
 
 def write_explicit_splits(cfg: Config, task: TaskConfig, train: list, val: list,

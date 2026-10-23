@@ -224,9 +224,15 @@ def assign_split(
     # The case behind the name decides, so every read of one case (``<case>__r2``, ``<case>_rA``)
     # and its SegQueue name (``imagecas_NNNN``) land in the same split: reads of one case in
     # different splits would leak val into train (Echo D2).
-    from .proxy import canonical_case, split_read_suffix
+    # A pool volume (``<Source>__<Case>``) is keyed on its patient as the ingest assigns it, so the
+    # volumes (time points, phases, series, frames) of one patient land in the same split too.
+    from .pool_seal import ingest_patient
+    from .proxy import canonical_case, pool_name, split_read_suffix
 
-    key = canonical_case(case_id) or split_read_suffix(case_id)[0]
+    key = canonical_case(case_id)
+    if key is None:
+        base = split_read_suffix(case_id)[0]
+        key = (ingest_patient(base) if pool_name(base) else None) or base
     digest = hashlib.sha256(f"{seed}:{key}".encode()).digest()
     # 53 bits keeps the ratio exactly representable in a float.
     position = int.from_bytes(digest[:8], "big") / 2**64

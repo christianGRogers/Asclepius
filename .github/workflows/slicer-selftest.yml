@@ -92,11 +92,11 @@ jobs:
         env:
           STABILITY: ${{ inputs.slicer_stability || 'release' }}
         run: |
-          # The redirect gives the current build for the chosen channel. It
-          # drifts as Slicer releases, and that drift is the point: this job is
-          # also the early warning that a new Slicer broke the module.
-          curl -L --retry 3 --retry-delay 5 -o slicer.tar.gz \
-            "https://download.slicer.org/download?os=linux&stability=$STABILITY"
+          # The current build for the chosen channel. It drifts as Slicer
+          # releases, and that drift is the point: this job is also the early
+          # warning that a new Slicer broke the module. Through fetch_slicer.py,
+          # because download.slicer.org serves stable for `stability=preview`.
+          python3 tools/fetch_slicer.py --os linux --version "$STABILITY" --out slicer.tar.gz
           mkdir -p "$HOME/slicer"
           tar -xzf slicer.tar.gz -C "$HOME/slicer" --strip-components=1
           echo "SLICER=$HOME/slicer/Slicer" >> "$GITHUB_ENV"
@@ -263,7 +263,7 @@ jobs:
             libxcb-util1 libxcb-xinerama0 libxcb-xkb1 libxkbcommon0 \
             libxkbcommon-x11-0 libxcomposite1 libxcursor1 libxdamage1 libxi6 \
             libxrandr2 libxrender1 libxtst6 libsm6 libxt6 libasound2t64
-          python3 tools/fetch_slicer.py --os linux --version "$SLICER_VERSION" --out slicer.tar.gz
+          python3 tools/fetch_slicer.py --os linux --version "$SLICER_VERSION" --out slicer.tar.gz --github-env
           mkdir -p "$HOME/slicer"
           tar -xzf slicer.tar.gz -C "$HOME/slicer" --strip-components=1
           echo "SLICER=xvfb-run -a $HOME/slicer/Slicer" >> "$GITHUB_ENV"
@@ -271,15 +271,17 @@ jobs:
       - name: Slicer (macOS)
         if: runner.os == 'macOS'
         run: |
-          python3 tools/fetch_slicer.py --os macosx --version "$SLICER_VERSION" --out slicer.dmg
+          python3 tools/fetch_slicer.py --os macosx --version "$SLICER_VERSION" --out slicer.dmg --github-env
           bash .github/scripts/install-slicer-macos.sh slicer.dmg "$HOME/slicer"
 
       - name: Build the zip
         id: zip
         shell: bash
         run: |
-          MINOR=$(echo "$SLICER_VERSION" | cut -d. -f1,2)
-          python3 slicer/build-extension14.py --out dist --slicer-version "$MINOR"
+          # Exactly what a release publishes (built for Slicer 5.8), whatever
+          # Slicer it goes into: that is what an annotator downloads (#97).
+          MINOR=$(python3 -c "import importlib.util as u; s=u.spec_from_file_location('b','slicer/build-extension14.py'); m=u.module_from_spec(s); s.loader.exec_module(m); print(m.DEFAULT_SLICER_VERSION)")
+          python3 slicer/build-extension14.py --out dist
           ls -l dist
           # The archive for this platform: the macOS one where there is one.
           ZIP=$(ls dist/*-Slicer-"$MINOR".zip)
@@ -287,12 +289,14 @@ jobs:
             ZIP=$(ls dist/*-Slicer-"$MINOR"-macOS.zip)
           fi
           echo "zip=$GITHUB_WORKSPACE/$ZIP" >> "$GITHUB_OUTPUT"
-          echo "Installing \`$ZIP\` into Slicer $SLICER_VERSION" >> "$GITHUB_STEP_SUMMARY"
+          echo "packaged=$MINOR" >> "$GITHUB_OUTPUT"
+          echo "Installing \`$ZIP\` into Slicer $SLICER_FETCHED_VERSION (revision $SLICER_FETCHED_REVISION, $SLICER_FETCHED_ARCH; asked for $SLICER_VERSION)" >> "$GITHUB_STEP_SUMMARY"
 
       - name: Install from file
         shell: bash
         env:
           SEGQUEUE_ZIP: ${{ steps.zip.outputs.zip }}
+          SEGQUEUE_PACKAGED_SLICER: ${{ steps.zip.outputs.packaged }}
           SEGQUEUE_INSTALL_PHASE: install
           SEGQUEUE_SELFTEST_OUT: ${{ github.workspace }}/install.txt
         run: |
@@ -304,6 +308,7 @@ jobs:
       - name: Restart and load it
         shell: bash
         env:
+          SEGQUEUE_PACKAGED_SLICER: ${{ steps.zip.outputs.packaged }}
           SEGQUEUE_INSTALL_PHASE: load
           SEGQUEUE_SELFTEST_OUT: ${{ github.workspace }}/load.txt
         run: |

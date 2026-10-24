@@ -1,7 +1,7 @@
 ---
 aliases: [icx4 results]
 tags: [plans, experiment, fir, icx4, four-class, round10]
-status: read 2026-10-23 (r10_read_icx4.py); checked 2026-10-24 (Atlas)
+status: read 2026-10-23 (r10_read_icx4.py); checked 2026-10-24 (Atlas); Dice-row check read 2026-10-24
 updated: 2026-10-24
 issue: christianGRogers/Asclepius#43
 ---
@@ -157,6 +157,8 @@ FP per case 0.362 ≤ 1: A15 met on val; no census needed.
   The **collapse cannot move a whole-tree Dice** (it is binary, and D25 only renames voxels). The script confirms
   that the reference union is unchanged.
 
+  **Result (run by the lead on Fir, 2026-10-24; below): lumen width.** The obligation is discharged.
+
 **A27/A15: FP per case ≤ 1.**
 - A15 is met on val, and A24's FP-loss line is closed.
 - The FP gate stays an acceptance criterion on the final model (A15).
@@ -164,6 +166,50 @@ FP per case 0.362 ≤ 1: A15 met on val; no census needed.
   components, a median 3.0 mm from the tree.
 
 **A29: P2 withdrawn.** TotalSegmentator aortas stay required for every decisive score (A1 as written).
+
+## The A27 Dice-row check: the shortfall is lumen width (F7.1, report only)
+
+**Run.** `experiments/Atlas/r10_dice_check.py`, run by the lead on the Fir login node on 2026-10-24, after #108:
+- 160 cases (val 80, open-36, dev-44), 0 errors, no sealed case;
+- the full JSON is at `$SCRATCH/icx4/r10_dice_check.json`;
+- the per-set table and the worst-10 lists are on #43.
+
+**Structural checks:** in every set, `grid_mismatch`, `bad_values` and `collapse_changes_union` are all empty.
+
+**Per-set means** (median in brackets):
+
+| Set | n | Tree Dice | Tolerant Dice (1 voxel) | Volume ratio | CL recall | CL precision | HU overlap | HU missed | HU extra |
+|---|---|---|---|---|---|---|---|---|---|
+| val 80 | 80 | 0.880 (0.884) | 0.971 (0.973) | 0.867 (0.869) | 0.943 (0.951) | 0.945 (0.956) | 373 | 237 | 240 |
+| open-36 | 36 | 0.877 (0.882) | 0.968 (0.973) | 0.852 (0.861) | 0.938 (0.943) | 0.946 (0.949) | 377 | 237 | 250 |
+| dev-44 | 44 | 0.882 (0.888) | 0.976 (0.979) | 0.867 (0.874) | 0.965 (0.976) | 0.944 (0.949) | 366 | 240 | 239 |
+| open 80 | 80 | 0.879 (0.885) | 0.973 (0.975) | 0.860 (0.868) | 0.953 (0.959) | 0.945 (0.949) | 371 | 238 | 244 |
+
+On val 80, p10 / p90: tree Dice 0.846 / 0.904; tolerant Dice 0.947 / 0.988; volume ratio 0.812 / 0.915; centreline
+recall 0.883 / 0.993.
+
+**Reading (Atlas, agreeing with the PM):**
+
+| F7.1 cause | Evidence | Verdict |
+|---|---|---|
+| Preprocessing | grids and values clean in all 160 | ruled out |
+| Collapse (D25) | the reference union is unchanged; whole-tree Dice is binary anyway | ruled out |
+| Lost tree (F7.1's premise) | centreline recall 0.94–0.97, precision 0.95 | ruled out |
+| **Lumen width** | 1-voxel-tolerant Dice 0.97 against plain 0.88; predicted volume about 13–14 % below ImageCAS-X's | **the cause** |
+| Window | missed voxels about 237 HU against 372 HU in the overlap. That is the dim partial-volume rim, inside nnU-Net's default normalisation range (foreground 0.5–99.5 percentiles, about 61–808 HU on this dataset), so nothing is clipped. The model's extra voxels are just as dim (about 240 HU) | a boundary convention on a dim edge, not a window artefact |
+
+The model places the lumen boundary about one voxel inside ImageCAS-X's, on net. On 2–8-voxel lumens, that costs
+Dice much and tF1 almost nothing.
+
+**What it changes:**
+- **No decision changes** (tF1 decides; A28).
+- **The predictions are usable as they are.**
+- **The A31 pre-read domain check:** report the 1-voxel-tolerant Dice and the volume ratio beside plain Dice. Then a
+  uniform width difference is not read as domain shift. `r10_dice_check.measure()` computes both.
+- **Seeds:** under D23/D26 the pool seeds are TotalSegmentator's, so nothing changes today. If an icx4-family model
+  is ever used as a prelabel, expect annotators to widen rims by about one voxel (allowed, D12).
+- **Lumen width** would matter only for a calibre-based use (e.g. stenosis), which is not in scope. No lever is
+  proposed.
 
 ## What is not settled here (Round 10 / the lead)
 

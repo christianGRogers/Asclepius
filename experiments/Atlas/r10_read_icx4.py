@@ -28,7 +28,7 @@ not near ImageCAS-X is `unknown_no_softmax`, and the command for a val-80 re-pre
 Usage:
   python r10_read_icx4.py read --results DIR --open36 r9_open36_check.json --val r9_tf1_val.json \
       [--delta DELTA/summary.json] [--census CENSUS.json] [--out VERDICT.json] \
-      [--note-template "vault/.../icx4 - Results (pending).md" --note-out NOTE.md]
+      [--note-template experiments/Atlas/r10_icx4_results_template.md --note-out NOTE.md]
   python r10_read_icx4.py census --W $SCRATCH/icx4 --out CENSUS.json [--npz-dir DIR] [--np 8]
 Exit codes (read): 0 read complete; 2 A26 STOP; 3 A27 Stop; 4 inputs missing or sealed case present.
 """

@@ -28,7 +28,7 @@ nib = pytest.importorskip("nibabel")
 
 REPO = Path(__file__).resolve().parents[1]
 ROUND9 = (REPO / "vault/Plans/Judgements/Round 9.md").read_text()
-TEMPLATE = REPO / "vault/Plans/Experiments/icx4 - Results (pending).md"
+TEMPLATE = REPO / "experiments/Atlas/r10_icx4_results_template.md"
 SEALED = json.loads((REPO / "trillium/sealed_test.json").read_text())
 OPEN36 = sorted(SEALED["open_icx_test"])
 
@@ -424,3 +424,9 @@ def test_template_has_a_block_for_every_branch():
         assert f"<!-- if:{k} -->" in tpl and f"<!-- endif:{k} -->" in tpl, k
     with pytest.raises(RD.InputError):
         RD.fill_template("{{nope}}", {}, set())
+
+
+def test_dice_check_separates_lumen_width_from_lost_tree():
+    """r10_dice_check.py (A27 Dice row, Foxtrot F7.1): a thinner lumen lowers Dice but keeps the
+    centreline; a lost branch lowers centreline recall. Its self-test asserts both."""
+    _load("atlas_r10_dice_check", "experiments/Atlas/r10_dice_check.py").selftest()

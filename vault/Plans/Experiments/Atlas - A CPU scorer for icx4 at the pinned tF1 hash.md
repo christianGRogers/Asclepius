@@ -99,4 +99,4 @@ adds Dice (report only). Its command line is unchanged; `--layout` defaults to t
 
 - **Self-test:** its rows equal the in-job function's on identical inputs, through a JSON round trip.
 - **The reading of its output** (A26, A27, A29, A15) is
-  [[icx4 - Results (pending)]] / `experiments/Atlas/r10_read_icx4.py`.
+  `experiments/Atlas/r10_read_icx4.py` (template `experiments/Atlas/r10_icx4_results_template.md`); the result is [[icx4 - Results]].

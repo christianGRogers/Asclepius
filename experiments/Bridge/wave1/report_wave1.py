@@ -158,6 +158,34 @@ def build(rows, val, seal, allow_prov=False):
         out['power'] = None
         ext['note'] = 'f or k not measurable in every class (fewer than 3 primary patients with values)'
     out['extension'] = ext
+    # ---- Round 10 (Bridge v9): rule C on s_d = SD over patients of (model-vs-read - inter-read) -------------
+    # A10's power depends only on s_d per class and the scorable share; s_d already contains f, k and rho.
+    # Rule C: the smallest of 150 / 200 / 250 whose re-powered P(all four pass, delta = 0) >= 0.80 (else 250).
+    # It replaces the f/k ratio trigger above if the judge adopts it; the f/k columns stay as a report.
+    sd_d, rho, keep_c = {}, {}, {}
+    for n in NAMES:
+        pts = [p for p in primary if n in pp['model'].get(p, {}) and n in pp['inter'].get(p, {})]
+        d = [pp['model'][p][n] - pp['inter'][p][n] for p in pts]
+        sd_d[n] = C.sd(d)
+        if len(pts) >= 3:
+            a = np.array([pp['model'][p][n] for p in pts]); b = np.array([pp['inter'][p][n] for p in pts])
+            rho[n] = round(float(np.corrcoef(a, b)[0, 1]), 3) if a.std() > 0 and b.std() > 0 else None
+        else:
+            rho[n] = None
+        keep_c[n] = fk[n]['scorable_share']
+    rc = {'s_d': {n: (round(v, 4) if v else None) for n, v in sd_d.items()}, 'rho_model_inter': rho,
+          'scorable_share': keep_c, 'n_patients': {n: fk[n]['k_n'] for n in NAMES}}
+    if all(sd_d[n] and keep_c[n] for n in NAMES):
+        from math import erf, sqrt
+        phi = lambda x: 0.5 * (1 + erf(x / sqrt(2)))  # noqa: E731
+        pw = {nn: float(np.prod([phi(0.05 * sqrt(max(5, round(nn * keep_c[n]))) / sd_d[n] - 1.96) for n in NAMES]))
+              for nn in (150, 200, 250)}
+        rc['power'] = {str(k): round(v, 3) for k, v in pw.items()}
+        rc['seal_size'] = next((nn for nn in (150, 200, 250) if pw[nn] >= POWER_OK), 250)
+        rc['underpowered_at_250'] = pw[250] < POWER_OK
+    else:
+        rc['note'] = 's_d not measurable in every class'
+    out['rule_c'] = rc
     # ---- A31.2 seed-vs-read ----------------------------------------------------------------------------------
     seed = {}
     for n in NAMES:

@@ -1,5 +1,14 @@
 # Deploying SegQueue14 beside the live SegQueue
 
+> **Since D36 (2026-10-25, issue #124) SegQueue14 is the only queue on janus.** The old
+> 4-class plugin (`girder-segqueue`) is uninstalled, its groups are deleted, and
+> SegQueue14 writes into the `SegQueue` collection (the old queue's `gold`, `incoming`
+> and `submissions` are in `SegQueue/_archive-4class/`). The old queue's Mongo
+> collections (`segqueue_case`, ...) are kept, unused. `CCTA-Pool` (D22's archive) and
+> `ImageCAS-X` are unchanged. See
+> [D36 on janus](#d36-on-janus-one-of-each) below; the rest of this page describes the
+> two-plugin setup it started from.
+
 SegQueue14 is a second Girder plugin. It runs in the **same** Girder as the live
 SegQueue, on the same database, and shares nothing writable with it:
 
@@ -8,7 +17,7 @@ SegQueue, on the same database, and shares nothing writable with it:
 | Python distribution | `girder-segqueue` (`server/`) | `girder-segqueue14` (`server/girder_segqueue14/`) |
 | Girder plugin name | `segqueue` | `segqueue14` |
 | REST prefix | `/api/v1/segqueue` | `/api/v1/segqueue14` |
-| Girder collection | `SegQueue` | `SegQueue14` (prelabels, submissions, incoming) |
+| Girder collection | `SegQueue` | `SegQueue` since D36 (`prelabels/`, `submissions/`, `incoming/`); was `SegQueue14` |
 | Mongo collections | `segqueue_case`, `segqueue_assignment`, ... | `segqueue14_case`, `segqueue14_assignment`, ... |
 | Settings | `segqueue.policy`, `segqueue.project` | `segqueue14.policy`, `segqueue14.project`, `segqueue14.reference` |
 | Groups | `segqueue-annotators`, `segqueue-reviewers` | `segqueue14-annotators`, `segqueue14-reviewers` |
@@ -209,6 +218,28 @@ once. Prelabels for them are attached with `segqueue14-prelabels`, named
 `<tag>_<item>.nii.gz`.
 
 ---
+
+## D36 on janus: one of each
+
+Run through *SegQueue14 on janus*, in this order, with `status` before and after each
+step. Every destructive step is a dry run unless it says `--apply`, and refuses on its
+preconditions.
+
+| Step | What it does | Refuses when |
+|---|---|---|
+| `backup` | `status` (item counts per collection, for the before/after check), then `mongodump` of `girder` (`~/segqueue-data/pre-d36-<time>.archive.gz`, or `.tar.gz` from the pymongo fallback) | the dump fails |
+| `retire-live` | stops `segqueue-score`, uninstalls `girder-segqueue`, restarts Girder; checks `/segqueue/stats` is 404 and `/segqueue14/project` 401 | no `pre-d36` backup from the last 24 h |
+| `restore-live` | rollback of `retire-live`: reinstalls `~/Asclepius/server`, restarts | |
+| `retire-groups [--apply]` | deletes `segqueue-annotators` and `segqueue-reviewers` (Girder removes them from users and access lists) | the old plugin is installed (its `ensureGroups()` would recreate them) |
+| `consolidate [--apply]` | moves `SegQueue/{gold,incoming,submissions}` into `SegQueue/_archive-4class/`, installs `main` (SegQueue14 now writes into `SegQueue`), removes the empty `SegQueue14` collection | the old plugin is installed; SegQueue14 has any submission or prelabel; `SegQueue14` holds any item; `main` does not have the new `COLLECTION_NAME` |
+No step writes to `CCTA-Pool` or `ImageCAS-X`; compare their item counts in
+`status` before and after.
+
+**Rollback.** `restore-live` brings the old plugin back (and with it its two groups,
+recreated empty); the archived folders can be moved back in the Girder web UI. For
+anything else, restore the `pre-d36` dump (`mongorestore --drop --gzip --archive=...`);
+no step deletes assetstore files except the removal of the empty `SegQueue14`
+collection.
 
 ## Rollback
 

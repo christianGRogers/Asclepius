@@ -12,7 +12,7 @@ Runs on the server, against the database directly, like ``segqueue-ingest``::
 ``--dir`` holds one uint8 NIfTI per case, named by case (``imagecas_0002.nii.gz``)
 or by the model's own ``c0001.nii.gz`` (id - 1, as ``trillium/icx14`` writes them);
 either maps to the same case. Each file is uploaded into
-``SegQueue14/prelabels/<model_version>/<case>.prelabel.nii.gz`` and recorded on the
+``SegQueue/prelabels/<model_version>/<case>.prelabel.nii.gz`` and recorded on the
 case with its version. Nothing is ever deleted: a refreshed case keeps its earlier
 prelabel in ``prelabelHistory``, and its file stays where it was.
 
@@ -235,7 +235,7 @@ def buildParser():
                         help='Directory of <case>.nii.gz or cNNNN.nii.gz predictions.')
     attach.add_argument('--model-version', required=True,
                         help='Version of the model that produced them, e.g. icx4-v1. '
-                             'Becomes the folder name under SegQueue14/prelabels/.')
+                             'Becomes the folder name under SegQueue/prelabels/.')
     attach.add_argument('--include-test', action='store_true',
                         help='Also refresh held-out ImageCAS-X test cases (D16 says '
                              'not to).')

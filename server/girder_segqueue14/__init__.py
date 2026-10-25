@@ -1,6 +1,7 @@
 """SegQueue14: the pooled-volume, 4-class SegQueue (D23, D25), as a Girder 5 plugin.
 
-Loads **beside** the live ``segqueue`` plugin in the same Girder and shares
+Since D36 it is the only queue: the old 4-class ``segqueue`` plugin is
+uninstalled on janus. It was built to load beside that plugin, and still shares
 nothing writable with it:
 
 =====================  ==========================  ==============================
@@ -8,7 +9,7 @@ nothing writable with it:
 =====================  ==========================  ==============================
 plugin name            ``segqueue``                 ``segqueue14``
 REST prefix            ``/segqueue``                ``/segqueue14``
-Girder collection      ``SegQueue``                 ``SegQueue14``
+Girder collection      ``SegQueue``                 ``SegQueue`` (D36)
 Mongo collections      ``segqueue_*``               ``segqueue14_*``
 settings               ``segqueue.*``               ``segqueue14.*``
 groups                 ``segqueue-annotators`` ...  ``segqueue14-annotators`` ...

@@ -12,8 +12,18 @@
 #   bash segqueue14-deploy.sh diagnose    # why /segqueue14 is not answering
 #   bash segqueue14-deploy.sh off         # rollback switch: /segqueue14 off, live untouched
 #
-# What it never does: check out a branch in ~/Asclepius, reinstall the live plugin
-# (server/), or write to the live SegQueue's data. `main` is cloned separately into
+# D36 (issue #124): one queue, one group pair, one collection. In this order; the
+# destructive steps are dry runs without --apply and refuse on their preconditions:
+#   bash segqueue14-deploy.sh backup                 # mongodump of girder (pre-d36-<time>)
+#   bash segqueue14-deploy.sh retire-live            # uninstall the old girder_segqueue plugin, restart
+#   bash segqueue14-deploy.sh restore-live           # rollback of retire-live: reinstall it, restart
+#   bash segqueue14-deploy.sh retire-groups [--apply]    # delete segqueue-annotators / -reviewers
+#   bash segqueue14-deploy.sh consolidate [--apply]      # SegQueue14 writes into SegQueue (installs main)
+# CCTA-Pool and ImageCAS-X are out of scope: no step writes to them (status counts them).
+#
+# What it never does: check out a branch in ~/Asclepius, reinstall the old plugin
+# (server/; only restore-live does, from that checkout), or write to the old
+# SegQueue's data outside the D36 steps. `main` is cloned separately into
 # ~/Asclepius-sq14, and only the shared package (repository root, --no-deps) and the
 # girder-segqueue14 plugin are installed into the live venv.
 #
@@ -120,13 +130,22 @@ restart_girder() {
     fi
 }
 
+code_of() { curl -s -o /dev/null -w '%{http_code}' "localhost:8080/api/v1/$1" || true; }
+
 wait_for_girder() {
+    # Girder itself, not a plugin route: the old /segqueue is gone after retire-live.
     for _ in $(seq 1 45); do
-        [ "$(curl -s -o /dev/null -w '%{http_code}' localhost:8080/api/v1/segqueue/project || true)" = 401 ] && return 0
+        [ "$(code_of system/version)" = 200 ] && return 0
         sleep 2
     done
     return 1
 }
+
+# The old 4-class plugin's distribution (server/), retired by D36.
+old_installed() { as_user "$PY" -m pip show -q girder-segqueue >/dev/null 2>&1; }
+
+# The D36 tool, run from the main checkout (newer than the installed plugin).
+d36() { as_user env PYTHONPATH="$SRC/server" "$PY" -m girder_segqueue14.consolidate "$@"; }
 
 plugins_loaded() {
     # Never fails: an empty or unreadable log must not abort the script (set -e).
@@ -159,7 +178,7 @@ print('[sq14] girder', version('girder'), '| girder.plugin entry points:', sorte
 backup() {
     as_user mkdir -p "$DATA"
     local backup
-    backup="$DATA/pre-sq14-$(date +%Y%m%d-%H%M)"
+    backup="$DATA/${1:-pre-sq14}-$(date +%Y%m%d-%H%M)"
     if command -v mongodump >/dev/null 2>&1; then
         say "backup -> $backup.archive.gz"
         as_user mongodump --uri "$GIRDER_MONGO_URI" --archive="$backup.archive.gz" --gzip --quiet \
@@ -207,11 +226,15 @@ install() {
     restart_girder
     wait_for_girder || true
     local live new
-    live=$(curl -s -o /dev/null -w '%{http_code}' localhost:8080/api/v1/segqueue/project || true)
-    new=$(curl -s -o /dev/null -w '%{http_code}' localhost:8080/api/v1/segqueue14/project || true)
-    say "live /segqueue/project -> $live (want 401); /segqueue14/project -> $new (want 401)"
+    live=$(code_of segqueue/project)
+    new=$(code_of segqueue14/project)
     plugins_loaded
-    [ "$live" = "401" ] || die "the LIVE SegQueue is not answering as before -- run: bash $0 off"
+    if old_installed; then
+        say "live /segqueue/project -> $live (want 401); /segqueue14/project -> $new (want 401)"
+        [ "$live" = "401" ] || die "the LIVE SegQueue is not answering as before -- run: bash $0 off"
+    else
+        say "/segqueue14/project -> $new (want 401); old plugin retired (D36): /segqueue/project -> $live"
+    fi
     if [ "$new" != "401" ]; then
         why_not_loaded
         die "SegQueue14 did not load (the live SegQueue is fine). See the lines above."
@@ -273,22 +296,118 @@ worker() {
 }
 
 status() {
-    say "girder: $(pgrep -f 'girder serve' >/dev/null && echo up || echo down); /segqueue14/project -> $(curl -s -o /dev/null -w '%{http_code}' localhost:8080/api/v1/segqueue14/project || true)"
+    say "girder: $(pgrep -f 'girder serve' >/dev/null && echo up || echo down); /segqueue14/project -> $(code_of segqueue14/project); /segqueue14/stats -> $(code_of segqueue14/stats); old /segqueue/stats -> $(code_of segqueue/stats)"
+    say "old plugin (girder-segqueue): $(old_installed && echo installed || echo 'not installed (retired, D36)')"
     { pgrep -af 'segqueue-score|segqueue14-score' | cut -c1-120; } || true
-    as_user "$PY" - <<'PYEOF'
-import os
+    [ -f "$POOL_LIST" ] || fetch_branch
+    as_user "$PY" - "$POOL_LIST" <<'PYEOF'
+import os, sys
 from pymongo import MongoClient
 db = MongoClient(os.environ['GIRDER_MONGO_URI']).get_default_database()
 c = db['segqueue14_case']
 print('[sq14] cases', c.count_documents({}), '| with seed', c.count_documents({'seedFileId': {'$ne': None}}),
+      '| no approved read yet', c.count_documents({'approvedCount': {'$in': [0, None]}}),
+      '| prelabelled', c.count_documents({'prelabelFileId': {'$ne': None}}),
       '| imagecas', c.count_documents({'name': {'$regex': '^imagecas_'}}),
       '| assignments', db['segqueue14_assignment'].count_documents({}),
       '| submissions', db['segqueue14_submission'].count_documents({}),
-      '| live cases (unchanged)', db['segqueue_case'].count_documents({}))
+      '| old queue cases (kept)', db['segqueue_case'].count_documents({}))
 stored = db['setting'].find_one({'key': 'segqueue14.project'})
 print('[sq14] project setting:', 'stored (' + str(len((stored.get('value') or {}).get('segments') or [])) + ' segments)'
       if stored else 'default (from the code)')
+# serveOrder against the pool list (populate gives each case its 0-based list position).
+try:
+    from segqueue14 import plan
+    with open(sys.argv[1], encoding='utf-8') as handle:
+        want = {plan.pool_case_name(n): i for i, n in enumerate(plan.read_include_list(handle.read()))}
+    have = list(c.find({}, {'name': 1, 'serveOrder': 1}))
+    off = sum(1 for d in have if d['name'] in want and d.get('serveOrder') != want[d['name']])
+    print(f"[sq14] serveOrder vs {os.path.basename(sys.argv[1])} ({len(want)} listed): "
+          f"{off} mismatches, {sum(d['name'] not in want for d in have)} cases not in the list")
+except Exception as exc:  # report, never fail status
+    print('[sq14] serveOrder check skipped:', exc)
+print('[sq14] groups:', ', '.join(sorted(g['name'] for g in db['group'].find({'name': {'$regex': '^segqueue'}}))) or 'none')
+for coll in sorted(db['collection'].find({}), key=lambda x: x['name']):
+    top = sorted(f['name'] for f in db['folder'].find({'parentId': coll['_id'], 'parentCollection': 'collection'}))
+    items = db['item'].count_documents({'baseParentType': 'collection', 'baseParentId': coll['_id']})
+    print(f"[sq14] collection {coll['name']}: {items} items; {', '.join(top) or '(no folders)'}")
 PYEOF
+}
+
+# ------------------------------------------------------------ D36 (issue #124)
+
+recent_backup() {   # a D36 database dump from the last 24 h, or nothing
+    as_user find "$DATA" -maxdepth 1 \( -name 'pre-d36-*.archive.gz' -o -name 'pre-d36-*.tar.gz' \) \
+        -size +0 -mmin -1440 2>/dev/null | sort | tail -1
+}
+
+d36_backup() {
+    status
+    backup pre-d36
+    say "backup done: $(recent_backup) ($(as_user du -h "$(recent_backup)" | cut -f1))"
+}
+
+retire_live() {
+    local m
+    m=$(recent_backup)
+    [ -n "$m" ] || die "no D36 backup from the last 24 h in $DATA; run: bash $0 backup"
+    say "backup: $m"
+    if ! old_installed; then
+        say "girder-segqueue is not installed: already retired"
+    else
+        say "stopping the old worker (segqueue-score), uninstalling girder-segqueue (its Mongo collections stay)"
+        $SUDO systemctl stop segqueue-worker 2>/dev/null || true
+        pkill -f 'bin/segqueue-score' 2>/dev/null || true
+        as_user "$PY" -m pip uninstall -q -y girder-segqueue
+        restart_girder
+    fi
+    wait_for_girder || die "Girder did not come back -- bash $0 diagnose; roll back: bash $0 restore-live"
+    # The launcher starts segqueue-score too; with the package gone there is none.
+    pkill -f 'bin/segqueue-score' 2>/dev/null || true
+    local old new stats
+    old=$(code_of segqueue/stats); new=$(code_of segqueue14/project); stats=$(code_of segqueue14/stats)
+    plugins_loaded
+    say "old /segqueue/stats -> $old (want 404); /segqueue14/project -> $new (want 401); /segqueue14/stats -> $stats (want 401)"
+    [ "$old" = 404 ] || die "the old plugin still answers"
+    [ "$new" = 401 ] || { why_not_loaded; die "SegQueue14 is not answering; roll back: bash $0 restore-live"; }
+    status
+    say "old queue retired. Next: bash $0 retire-groups"
+}
+
+restore_live() {
+    say "reinstalling the old plugin from $LIVE/server (rollback of retire-live)"
+    as_user "$PY" -m pip install -q "$LIVE/server[scoring]"
+    restart_girder
+    wait_for_girder || true
+    say "old /segqueue/project -> $(code_of segqueue/project) (want 401); /segqueue14/project -> $(code_of segqueue14/project)"
+}
+
+retire_groups() {
+    if old_installed; then die "girder-segqueue is installed; run retire-live first (its ensureGroups() recreates the groups)"; fi
+    fetch_branch
+    if [ "${1:-}" = "--apply" ]; then
+        d36 groups --apply
+    else
+        d36 groups
+        say "dry run. To delete: bash $0 retire-groups --apply"
+    fi
+}
+
+consolidate() {
+    if old_installed; then die "girder-segqueue is installed; run retire-live first"; fi
+    fetch_branch
+    grep -q '^COLLECTION_NAME = "SegQueue"$' "$SRC/server/girder_segqueue14/constants.py" \
+        || die "main's SegQueue14 does not write into SegQueue yet; nothing done"
+    if [ "${1:-}" != "--apply" ]; then
+        d36 collection --phase move
+        d36 collection --phase drop
+        say "dry run. To apply: bash $0 consolidate --apply (moves, installs main, removes SegQueue14)"
+        return
+    fi
+    d36 collection --phase move --apply || die "move refused or failed; nothing installed"
+    install
+    d36 collection --phase drop --apply || die "the SegQueue14 collection was not removed (see above)"
+    status
 }
 
 off() {
@@ -314,5 +433,10 @@ case "${1:-}" in
     worker) worker ;;
     status) status ;;
     off) off ;;
-    *) sed -n '2,14p' "$0"; exit 1 ;;
+    backup) d36_backup ;;
+    retire-live) retire_live ;;
+    restore-live) restore_live ;;
+    retire-groups) shift; retire_groups "$@" ;;
+    consolidate) shift; consolidate "$@" ;;
+    *) sed -n '2,25p' "$0"; exit 1 ;;
 esac

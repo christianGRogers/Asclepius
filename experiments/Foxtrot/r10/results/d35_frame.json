@@ -1,0 +1,115 @@
+{
+ "pool_volumes": 675,
+ "real_patients": 468,
+ "patients": {
+  "excluded/open": 74,
+  "primary/open": 61,
+  "primary/reserved": 100,
+  "primary/sealed": 150,
+  "report_only/open": 63,
+  "report_only/sealed": 20
+ },
+ "volumes": {
+  "excluded/open": 74,
+  "primary/open": 69,
+  "primary/reserved": 144,
+  "primary/sealed": 305,
+  "report_only/open": 63,
+  "report_only/sealed": 20
+ },
+ "extension_order_len": 101,
+ "reserved_in_order": 100,
+ "extension_tail_beyond_reserve": [
+  "VMR-Coronary__0151_H_CORO_SVGD"
+ ],
+ "primary_by_source": {
+  "BMC-BEO2017-SerialStenosis-CCTA": {
+   "sealed": 1
+  },
+  "Figshare-23057000": {
+   "sealed": 2
+  },
+  "Figshare-CardiacCT15": {
+   "reserved": 8,
+   "sealed": 7
+  },
+  "Figshare-DCM3-Pulmonary35": {
+   "sealed": 1
+  },
+  "Figshare-EpicardialFat-CE": {
+   "open": 5,
+   "reserved": 14,
+   "sealed": 15
+  },
+  "IDC-nsclc_radiogenomics": {
+   "sealed": 2
+  },
+  "IDC-rider_lung_pet_ct": {
+   "sealed": 7,
+   "reserved": 6
+  },
+  "IDC-varepop_apollo": {
+   "sealed": 1
+  },
+  "Kaggle-CAD-RandomSamples": {
+   "sealed": 13,
+   "reserved": 14,
+   "open": 1
+  },
+  "Kaggle-HeartSR": {
+   "reserved": 5,
+   "sealed": 5
+  },
+  "Mendeley-9wv3fkxstx": {
+   "sealed": 1
+  },
+  "Mendeley-SDN-37nnfyh3x9": {
+   "sealed": 1
+  },
+  "Mendeley-SDN-4643nn2z44": {
+   "sealed": 1
+  },
+  "Mendeley-SDN-7x9kb53262": {
+   "sealed": 1
+  },
+  "Mendeley-SDN-cy54ttk3fj": {
+   "reserved": 14,
+   "sealed": 18,
+   "open": 8
+  },
+  "Mendeley-SDN-spb25zt2c4": {
+   "sealed": 1
+  },
+  "SLAWT2016-CT": {
+   "reserved": 4,
+   "sealed": 5
+  },
+  "Slicer-SampleData": {
+   "sealed": 3
+  },
+  "Taiwan-AICUP-CardiacCT": {
+   "open": 43,
+   "reserved": 14,
+   "sealed": 43
+  },
+  "TotalSegmentator-cardiac": {
+   "reserved": 8,
+   "sealed": 8
+  },
+  "VMR-Coronary": {
+   "sealed": 13,
+   "reserved": 13,
+   "open": 4
+  },
+  "Zenodo-21855641-AtrialFibre": {
+   "sealed": 1
+  }
+ },
+ "reconcile": {
+  "#43 \"about 347\" = name-heuristic patients 517 - 150 sealed - 20 sealed ImageCHD": 347,
+  "wave-1 note \"198 open\" = real 468 - 170 sealed - 100 reserved": 198,
+  "non-sealed, non-ImageCHD real patients (all strata)": 235,
+  "non-sealed primary real patients (reserve included)": 161,
+  "open primary real patients (reserve excluded)": 61
+ }
+}

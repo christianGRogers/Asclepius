@@ -1,0 +1,169 @@
+{
+ "table": {
+  "volumes": 675,
+  "real_patients": 468,
+  "name_rule_patients": 517,
+  "by_stratum": {
+   "primary": {
+    "sealed": 150,
+    "sealed_volumes": 305,
+    "reserved": 100,
+    "reserved_volumes": 144,
+    "open": 61,
+    "open_volumes": 69
+   },
+   "report_only": {
+    "open": 63,
+    "open_volumes": 63,
+    "sealed": 20,
+    "sealed_volumes": 20
+   },
+   "excluded": {
+    "open": 74,
+    "open_volumes": 74
+   }
+  },
+  "by_source": {
+   "BMC-BEO2017-SerialStenosis-CCTA": {
+    "sealed": 1,
+    "stratum:primary": 1
+   },
+   "CCA200-HF": {
+    "open": 20,
+    "stratum:excluded": 1
+   },
+   "Figshare-23057000": {
+    "sealed": 2,
+    "stratum:primary": 1
+   },
+   "Figshare-CardiacCT15": {
+    "reserved": 8,
+    "stratum:primary": 1,
+    "sealed": 7
+   },
+   "Figshare-DCM3-Pulmonary35": {
+    "sealed": 1,
+    "stratum:primary": 1
+   },
+   "Figshare-EpicardialFat-CE": {
+    "open": 5,
+    "stratum:primary": 1,
+    "reserved": 14,
+    "sealed": 15
+   },
+   "HOCMvalvesSeg": {
+    "open": 24,
+    "stratum:excluded": 1
+   },
+   "IDC-nsclc_radiogenomics": {
+    "sealed": 2,
+    "stratum:primary": 1
+   },
+   "IDC-rider_lung_pet_ct": {
+    "sealed": 7,
+    "stratum:primary": 1,
+    "reserved": 6
+   },
+   "IDC-varepop_apollo": {
+    "sealed": 1,
+    "stratum:primary": 1
+   },
+   "ImageALCAPA": {
+    "open": 30,
+    "stratum:excluded": 1
+   },
+   "ImageCHD": {
+    "open": 63,
+    "stratum:report_only": 1,
+    "sealed": 20
+   },
+   "Kaggle-CAD-RandomSamples": {
+    "sealed": 13,
+    "stratum:primary": 1,
+    "reserved": 14,
+    "open": 1
+   },
+   "Kaggle-HeartSR": {
+    "reserved": 5,
+    "stratum:primary": 1,
+    "sealed": 5
+   },
+   "Mendeley-9wv3fkxstx": {
+    "sealed": 1,
+    "stratum:primary": 1
+   },
+   "Mendeley-SDN-37nnfyh3x9": {
+    "sealed": 1,
+    "stratum:primary": 1
+   },
+   "Mendeley-SDN-4643nn2z44": {
+    "sealed": 1,
+    "stratum:primary": 1
+   },
+   "Mendeley-SDN-7x9kb53262": {
+    "sealed": 1,
+    "stratum:primary": 1
+   },
+   "Mendeley-SDN-cy54ttk3fj": {
+    "reserved": 14,
+    "stratum:primary": 1,
+    "sealed": 18,
+    "open": 8
+   },
+   "Mendeley-SDN-spb25zt2c4": {
+    "sealed": 1,
+    "stratum:primary": 1
+   },
+   "SLAWT2016-CT": {
+    "reserved": 4,
+    "stratum:primary": 1,
+    "sealed": 5
+   },
+   "Slicer-SampleData": {
+    "sealed": 3,
+    "stratum:primary": 1
+   },
+   "Taiwan-AICUP-CardiacCT": {
+    "open": 43,
+    "stratum:primary": 1,
+    "reserved": 14,
+    "sealed": 43
+   },
+   "TotalSegmentator-cardiac": {
+    "reserved": 8,
+    "stratum:primary": 1,
+    "sealed": 8
+   },
+   "VMR-Coronary": {
+    "sealed": 13,
+    "stratum:primary": 1,
+    "reserved": 13,
+    "open": 4
+   },
+   "Zenodo-21855641-AtrialFibre": {
+    "sealed": 1,
+    "stratum:primary": 1
+   }
+  },
+  "extension_order_len": 101,
+  "reserve": 100
+ },
+ "reconciliation": {
+  "atlas_347": {
+   "formula": "name-rule patients - 150 sealed primary keys - 20 sealed ImageCHD",
+   "value": 347,
+   "note": "counts on the Round 9 name heuristic (517), which D32 replaced, and still includes the non-sealed ImageCHD and the spacing-suspect sets"
+  },
+  "wave1_198": {
+   "formula": "real patients - sealed (150 + 20 ImageCHD) - 100 reserved",
+   "value": 198,
+   "note": "every stratum: includes non-sealed ImageCHD (report only) and spacing-suspect patients"
+  },
+  "non_sealed_non_imagechd_real": 235,
+  "primary_non_sealed": 161,
+  "primary_open_outside_reserve": 61,
+  "primary_reserved": 100,
+  "excluded_non_sealed (spacing-suspect, untf1-able until re-gridded)": 74,
+  "report_only_non_sealed (ImageCHD)": 63
+ }
+}

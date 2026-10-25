@@ -1,0 +1,251 @@
+{
+ "pairs": {
+  "warm_replicate_F0_F1": {
+   "n_cases": 80,
+   "macro": {
+    "n": 80,
+    "mean_a": 0.8908,
+    "mean_b": 0.8955,
+    "mean_diff": 0.0047,
+    "sd_diff": 0.0382,
+    "se_diff": 0.0043,
+    "sd_case_a": 0.0704,
+    "sd_case_b": 0.0631,
+    "corr": 0.842,
+    "ratio_sd_diff_to_sd_case": 0.572,
+    "sigma_g_1df": 0.0013,
+    "share_cases_identical": 0.0
+   },
+   "per_class": {
+    "LM": {
+     "n": 72,
+     "mean_diff": 0.0112,
+     "sd_diff": 0.1239,
+     "sd_case": 0.1172,
+     "ratio": 1.058
+    },
+    "LAD": {
+     "n": 72,
+     "mean_diff": 0.0045,
+     "sd_diff": 0.0426,
+     "sd_case": 0.0851,
+     "ratio": 0.5
+    },
+    "LCx": {
+     "n": 72,
+     "mean_diff": 0.0044,
+     "sd_diff": 0.065,
+     "sd_case": 0.1107,
+     "ratio": 0.587
+    },
+    "RCA": {
+     "n": 56,
+     "mean_diff": 0.007,
+     "sd_diff": 0.0538,
+     "sd_case": 0.0848,
+     "ratio": 0.634
+    }
+   }
+  },
+  "scratch_pair_run1_B": {
+   "n_cases": 80,
+   "macro": {
+    "n": 80,
+    "mean_a": 0.8958,
+    "mean_b": 0.8932,
+    "mean_diff": -0.0027,
+    "sd_diff": 0.0411,
+    "se_diff": 0.0046,
+    "sd_case_a": 0.0645,
+    "sd_case_b": 0.0635,
+    "corr": 0.794,
+    "ratio_sd_diff_to_sd_case": 0.642,
+    "sigma_g_1df": 0.0,
+    "share_cases_identical": 0.0
+   },
+   "per_class": {
+    "LM": {
+     "n": 72,
+     "mean_diff": -0.0002,
+     "sd_diff": 0.05,
+     "sd_case": 0.0698,
+     "ratio": 0.717
+    },
+    "LAD": {
+     "n": 72,
+     "mean_diff": -0.0011,
+     "sd_diff": 0.0468,
+     "sd_case": 0.0821,
+     "ratio": 0.569
+    },
+    "LCx": {
+     "n": 72,
+     "mean_diff": -0.0185,
+     "sd_diff": 0.1026,
+     "sd_case": 0.1236,
+     "ratio": 0.83
+    },
+    "RCA": {
+     "n": 56,
+     "mean_diff": -0.0003,
+     "sd_diff": 0.0385,
+     "sd_case": 0.0768,
+     "ratio": 0.501
+    }
+   }
+  }
+ },
+ "janus0_sd_case": {
+  "source": "CI-derived (#43)",
+  "macro": 0.1173,
+  "LM": 0.1214,
+  "LAD": 0.1262,
+  "LCx": 0.1351,
+  "RCA": 0.0791
+ },
+ "ci_to_sd_check_run1": {
+  "sd_direct": 0.0645,
+  "sd_from_ci": 0.0647
+ },
+ "mde_table": [
+  {
+   "pair_type": "warm (F0/F1 ratio)",
+   "f": 1.0,
+   "sd_diff_pool": 0.0671,
+   "mde_n20": 0.042,
+   "mde_n20_sg013": 0.0665,
+   "mde_n20_sg013_2runs": 0.0556,
+   "mde_n26": 0.0369,
+   "mde_n26_sg013": 0.0633,
+   "mde_n26_sg013_2runs": 0.0518,
+   "mde_n35": 0.0318,
+   "mde_n35_sg013": 0.0605,
+   "mde_n35_sg013_2runs": 0.0483,
+   "mde_n50": 0.0266,
+   "mde_n50_sg013": 0.058,
+   "mde_n50_sg013_2runs": 0.0451,
+   "mde_n61": 0.0241,
+   "mde_n61_sg013": 0.0569,
+   "mde_n61_sg013_2runs": 0.0437,
+   "mde_n80": 0.021,
+   "mde_n80_sg013": 0.0556,
+   "mde_n80_sg013_2runs": 0.042
+  },
+  {
+   "pair_type": "warm (F0/F1 ratio)",
+   "f": 1.25,
+   "sd_diff_pool": 0.0839,
+   "mde_n20": 0.0525,
+   "mde_n20_sg013": 0.0736,
+   "mde_n20_sg013_2runs": 0.0639,
+   "mde_n26": 0.0461,
+   "mde_n26_sg013": 0.0691,
+   "mde_n26_sg013_2runs": 0.0587,
+   "mde_n35": 0.0397,
+   "mde_n35_sg013": 0.065,
+   "mde_n35_sg013_2runs": 0.0539,
+   "mde_n50": 0.0332,
+   "mde_n50_sg013": 0.0613,
+   "mde_n50_sg013_2runs": 0.0493,
+   "mde_n61": 0.0301,
+   "mde_n61_sg013": 0.0596,
+   "mde_n61_sg013_2runs": 0.0472,
+   "mde_n80": 0.0263,
+   "mde_n80_sg013": 0.0578,
+   "mde_n80_sg013_2runs": 0.0449
+  },
+  {
+   "pair_type": "warm (F0/F1 ratio)",
+   "f": 1.5,
+   "sd_diff_pool": 0.1006,
+   "mde_n20": 0.063,
+   "mde_n20_sg013": 0.0814,
+   "mde_n20_sg013_2runs": 0.0728,
+   "mde_n26": 0.0553,
+   "mde_n26_sg013": 0.0756,
+   "mde_n26_sg013_2runs": 0.0662,
+   "mde_n35": 0.0477,
+   "mde_n35_sg013": 0.0702,
+   "mde_n35_sg013_2runs": 0.06,
+   "mde_n50": 0.0399,
+   "mde_n50_sg013": 0.0651,
+   "mde_n50_sg013_2runs": 0.054,
+   "mde_n61": 0.0361,
+   "mde_n61_sg013": 0.0629,
+   "mde_n61_sg013_2runs": 0.0513,
+   "mde_n80": 0.0315,
+   "mde_n80_sg013": 0.0604,
+   "mde_n80_sg013_2runs": 0.0482
+  },
+  {
+   "pair_type": "scratch (run1/B ratio)",
+   "f": 1.0,
+   "sd_diff_pool": 0.0753,
+   "mde_n20": 0.0472,
+   "mde_n20_sg013": 0.0698,
+   "mde_n20_sg013_2runs": 0.0596,
+   "mde_n26": 0.0414,
+   "mde_n26_sg013": 0.0661,
+   "mde_n26_sg013_2runs": 0.0551,
+   "mde_n35": 0.0357,
+   "mde_n35_sg013": 0.0626,
+   "mde_n35_sg013_2runs": 0.051,
+   "mde_n50": 0.0298,
+   "mde_n50_sg013": 0.0595,
+   "mde_n50_sg013_2runs": 0.0471,
+   "mde_n61": 0.027,
+   "mde_n61_sg013": 0.0582,
+   "mde_n61_sg013_2runs": 0.0453,
+   "mde_n80": 0.0236,
+   "mde_n80_sg013": 0.0567,
+   "mde_n80_sg013_2runs": 0.0434
+  },
+  {
+   "pair_type": "scratch (run1/B ratio)",
+   "f": 1.25,
+   "sd_diff_pool": 0.0941,
+   "mde_n20": 0.059,
+   "mde_n20_sg013": 0.0783,
+   "mde_n20_sg013_2runs": 0.0693,
+   "mde_n26": 0.0517,
+   "mde_n26_sg013": 0.073,
+   "mde_n26_sg013_2runs": 0.0633,
+   "mde_n35": 0.0446,
+   "mde_n35_sg013": 0.0681,
+   "mde_n35_sg013_2runs": 0.0576,
+   "mde_n50": 0.0373,
+   "mde_n50_sg013": 0.0636,
+   "mde_n50_sg013_2runs": 0.0521,
+   "mde_n61": 0.0338,
+   "mde_n61_sg013": 0.0616,
+   "mde_n61_sg013_2runs": 0.0497,
+   "mde_n80": 0.0295,
+   "mde_n80_sg013": 0.0593,
+   "mde_n80_sg013_2runs": 0.0469
+  },
+  {
+   "pair_type": "scratch (run1/B ratio)",
+   "f": 1.5,
+   "sd_diff_pool": 0.113,
+   "mde_n20": 0.0708,
+   "mde_n20_sg013": 0.0875,
+   "mde_n20_sg013_2runs": 0.0796,
+   "mde_n26": 0.0621,
+   "mde_n26_sg013": 0.0807,
+   "mde_n26_sg013_2runs": 0.072,
+   "mde_n35": 0.0535,
+   "mde_n35_sg013": 0.0743,
+   "mde_n35_sg013_2runs": 0.0647,
+   "mde_n50": 0.0448,
+   "mde_n50_sg013": 0.0682,
+   "mde_n50_sg013_2runs": 0.0577,
+   "mde_n61": 0.0405,
+   "mde_n61_sg013": 0.0655,
+   "mde_n61_sg013_2runs": 0.0545,
+   "mde_n80": 0.0354,
+   "mde_n80_sg013": 0.0625,
+   "mde_n80_sg013_2runs": 0.0508
+  }
+ ],
+ "notes": "mde = 2.80 * sqrt(sd_diff^2 / n + 2 sigma_g^2 / runs_per_arm); sd_diff on the pool = ratio x Janus 0's val per-case SD x f; _sg013 adds A22's 0.013 as a model-level term per arm"
+}

@@ -1,5 +1,5 @@
 ---
-aliases: [icx4 results]
+aliases: [icx4 results, Janus 0]
 tags: [plans, experiment, fir, icx4, four-class, round10]
 status: read 2026-10-23 (r10_read_icx4.py); checked 2026-10-24 (Atlas); Dice-row check read 2026-10-24
 updated: 2026-10-24
@@ -7,6 +7,8 @@ issue: christianGRogers/Asclepius#43
 ---
 
 # icx4 results: the first 4-class model on ImageCAS-X, read as pre-registered
+
+> **This model is Janus 0** (D34). Models are named Janus and numbered sequentially from here.
 
 **Question.** How good is icx4 (nnU-Net v2 ResEnc, 0.5 mm, 256³, 1000 epochs, ImageCAS-X 560/80 collapsed by D25) on
 the decisive metric, and what does Round 9's pre-registered reading (A26, A27, A29, A15) say to do next?

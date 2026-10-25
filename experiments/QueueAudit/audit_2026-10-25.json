@@ -1,0 +1,891 @@
+{
+ "inputs": {
+  "configs/segqueue14/pool-2026-10.txt": "9f968a0897ba0b7a26a4952439a44be26c120f6f50113f432500cc4dc49b7554",
+  "configs/segqueue14/sealed-pool-2026-10.json": "e71141b407acb79eeff912eee21029d34edb677d984172d871eb5f02cb1d0690",
+  "vault/Research/Datasets and benchmarks/CCTA sourcing 2026-10/QC volume reports.csv": "97f93d52be2326c8cff3d03dfe26b29242b7aeecdcea0acb00c36340ae7f93ba",
+  "experiments/Delta/r10/d35_decision_set_proposal.json": "1a75fe41ffe44aa37c884b723c066a6b8cd3669164e0c670b6439028c2b966b1",
+  "experiments/Atlas/r10/decision_set_proposal.json": "bc47690cc1b0acb50037f19ea05ae0619444c1ed1396be592082371b022b6042",
+  "experiments/Bridge/r10/decision_set_proposal.json": "fb551a7eb4b45c7e858ccf287c9c72dedf517ba9a0a9816dfe66b3145b79b403",
+  "experiments/Crucible/r10/d35_proposal.json": "73effb061580089e2d3379405ade51dee756a23982c31807079cf9387d910429",
+  "experiments/Foxtrot/r10/d35_proposal.json": "a588ad17f7e6f03e128627bfadec84b5b9cb277cd92234352f5b719d2a7cd514",
+  "experiments/QueueAudit/snapshot-2026-10-25/README.md": "9eb6992bf98911bd63188799f36ad604740e7c567d21a7205d4c031dc653aa7c",
+  "experiments/QueueAudit/snapshot-2026-10-25/segqueue14_queue_2026-10-25.csv": "f9e4e8a7cfda95956d29475f6404655118d1093f5555cbeb3f920946f3c9dfcf",
+  "experiments/QueueAudit/snapshot-2026-10-25/segqueue_cases_items_2026-10-25.txt": "9ee820826bcc2fb4f4bf435486eb3262a344ad58ae5be76a6df74522c5d81899",
+  "experiments/QueueAudit/snapshot-2026-10-25/segqueue_seeds_items_2026-10-25.txt": "e92f74c13f05446d59910b9075b445979b34642bfec138a7c91f39459788b69e"
+ },
+ "1_queue_vs_pool_list": {
+  "queue_rows": 675,
+  "queue_distinct_volumes": 675,
+  "queue_distinct_case_names": 675,
+  "pool_list_entries": 675,
+  "pool_list_distinct": 675,
+  "in_queue_not_in_list": [],
+  "in_list_not_in_queue": [],
+  "case_name_is_volume_stem": 675,
+  "dataset_is_name_prefix": 675,
+  "sections": {
+   "QC annotatable": 242,
+   "QC limited": 359,
+   "header spacing suspect (ImageALCAPA, HOCMvalvesSeg, CCA200-HF)": 74
+  },
+  "fields": {
+   "tier": {
+    "new-dataset": 675
+   },
+   "replicasWanted": {
+    "2": 675
+   },
+   "approvedCount": {
+    "0": 675
+   },
+   "activeCount": {
+    "0": 675
+   },
+   "retired": {
+    "False": 675
+   },
+   "blindDuplicate": {
+    "False": 675
+   },
+   "hasReference": {
+    "False": 675
+   },
+   "prelabelVersion": {
+    "": 675
+   }
+  },
+  "serve_order_in_snapshot": false,
+  "section_violations": {
+   "QC annotatable": [],
+   "QC limited": [],
+   "header spacing suspect (ImageALCAPA, HOCMvalvesSeg, CCA200-HF)": []
+  },
+  "section_qc_mix": {
+   "QC annotatable": {
+    "yes": 242
+   },
+   "QC limited": {
+    "limited": 359
+   },
+   "header spacing suspect (ImageALCAPA, HOCMvalvesSeg, CCA200-HF)": {
+    "yes": 19,
+    "limited": 55
+   }
+  },
+  "sections_sorted_by_name": {
+   "QC annotatable": true,
+   "QC limited": true,
+   "header spacing suspect (ImageALCAPA, HOCMvalvesSeg, CCA200-HF)": true
+  }
+ },
+ "2_ct_and_seed": {
+  "cases_items": 1304,
+  "cases_items_distinct": 1304,
+  "seeds_items": 675,
+  "seeds_items_distinct": 675,
+  "queued_without_ct": [],
+  "queued_without_seed": [],
+  "seeds_not_for_a_queued_case": [],
+  "seeds_with_other_name_form": []
+ },
+ "3_left_out": {
+  "imagecas_items": 400,
+  "imagecas_ct": 200,
+  "imagecas_masks": 200,
+  "pool_cts": 904,
+  "qc_lines": 904,
+  "pool_cts_without_qc_line": [],
+  "qc_lines_without_pool_ct": [],
+  "queued": 675,
+  "left_out": 229,
+  "left_out_by_reason": {
+   "QC not annotatable": 212,
+   "PLOS-Peng2016 burned-in text, pending (QC limited)": 16,
+   "PLOS-Peng2016 burned-in text, pending (QC yes)": 1
+  },
+  "left_out_by_source": {
+   "BMC-BEO2017-SerialStenosis-CCTA": {
+    "QC not annotatable": 1
+   },
+   "Figshare-EpicardialFat-CE": {
+    "QC not annotatable": 6
+   },
+   "HOCMvalvesSeg": {
+    "QC not annotatable": 3
+   },
+   "IDC-nsclc_radiogenomics": {
+    "QC not annotatable": 1
+   },
+   "IDC-rider_lung_pet_ct": {
+    "QC not annotatable": 21
+   },
+   "IDC-varepop_apollo": {
+    "QC not annotatable": 3
+   },
+   "ImageCHD": {
+    "QC not annotatable": 27
+   },
+   "Mendeley-SDN-4643nn2z44": {
+    "QC not annotatable": 1
+   },
+   "Mendeley-SDN-spb25zt2c4": {
+    "QC not annotatable": 13
+   },
+   "PLOS-Peng2016-CCTA-JPEG": {
+    "PLOS-Peng2016 burned-in text, pending (QC limited)": 16,
+    "PLOS-Peng2016 burned-in text, pending (QC yes)": 1
+   },
+   "Slicer-SampleData": {
+    "QC not annotatable": 16
+   },
+   "TotalSegmentator-cardiac": {
+    "QC not annotatable": 114
+   },
+   "VMR-Coronary": {
+    "QC not annotatable": 3
+   },
+   "Zenodo-STOPSTORM": {
+    "QC not annotatable": 3
+   }
+  },
+  "not_annotatable_by_what_qc_saw": {
+   "coronaries=no; heart_in_fov=full; contrast=moderate": 70,
+   "coronaries=no; heart_in_fov=full; contrast=weak": 38,
+   "coronaries=barely; heart_in_fov=full; contrast=good": 30,
+   "coronaries=no; heart_in_fov=full; contrast=good": 25,
+   "coronaries=no; heart_in_fov=partial; contrast=weak": 8,
+   "coronaries=barely; heart_in_fov=full; contrast=moderate": 8,
+   "coronaries=barely; heart_in_fov=full; contrast=weak": 8,
+   "coronaries=barely; heart_in_fov=partial; contrast=weak": 5,
+   "coronaries=no; heart_in_fov=partial; contrast=good": 4,
+   "coronaries=no; heart_in_fov=no; contrast=none": 4,
+   "coronaries=no; heart_in_fov=partial; contrast=moderate": 4,
+   "coronaries=barely; heart_in_fov=partial; contrast=good": 3,
+   "coronaries=barely; heart_in_fov=partial; contrast=moderate": 2,
+   "coronaries=no; heart_in_fov=full; contrast=none": 1,
+   "coronaries=proximal; heart_in_fov=partial; contrast=good": 1,
+   "coronaries=barely; heart_in_fov=full; contrast=none": 1
+  },
+  "unexplained": [],
+  "queued_but_qc_no": [],
+  "left_out_list": {
+   "BMC-BEO2017-SerialStenosis-CCTA__P1_s6.nii.gz": "QC not annotatable",
+   "Figshare-EpicardialFat-CE__CE003.nii.gz": "QC not annotatable",
+   "Figshare-EpicardialFat-CE__CE008.nii.gz": "QC not annotatable",
+   "Figshare-EpicardialFat-CE__CE015.nii.gz": "QC not annotatable",
+   "Figshare-EpicardialFat-CE__CE019.nii.gz": "QC not annotatable",
+   "Figshare-EpicardialFat-CE__CE038.nii.gz": "QC not annotatable",
+   "Figshare-EpicardialFat-CE__CE040.nii.gz": "QC not annotatable",
+   "HOCMvalvesSeg__10.nii.gz": "QC not annotatable",
+   "HOCMvalvesSeg__45.nii.gz": "QC not annotatable",
+   "HOCMvalvesSeg__9.nii.gz": "QC not annotatable",
+   "IDC-nsclc_radiogenomics__AMC-015__Gated-Chest-1-0-B25f-BestDiast-70_068007.nii.gz": "QC not annotatable",
+   "IDC-rider_lung_pet_ct__RIDER-1563443119__CINE-0-625_496669_p00.nii.gz": "QC not annotatable",
+   "IDC-rider_lung_pet_ct__RIDER-1563443119__CINE-0-625_844232.nii.gz": "QC not annotatable",
+   "IDC-rider_lung_pet_ct__RIDER-2019259100__SS-Segment-30-75-BPM-0-625mm_659902_p01.nii.gz": "QC not annotatable",
+   "IDC-rider_lung_pet_ct__RIDER-2019259100__SS-Segment-30-75-BPM-0-625mm_659902_p03.nii.gz": "QC not annotatable",
+   "IDC-rider_lung_pet_ct__RIDER-2019259100__SS-Segment-30-75-BPM-0-625mm_659902_p04.nii.gz": "QC not annotatable",
+   "IDC-rider_lung_pet_ct__RIDER-2019259100__SS-Segment-30-75-BPM-0-625mm_659902_p07.nii.gz": "QC not annotatable",
+   "IDC-rider_lung_pet_ct__RIDER-2522924559__SS-Segment-30-75-BPM-0-625mm_499728_p01.nii.gz": "QC not annotatable",
+   "IDC-rider_lung_pet_ct__RIDER-2857227961__SS-Segment-30-75-BPM-0-625mm_173076_p00.nii.gz": "QC not annotatable",
+   "IDC-rider_lung_pet_ct__RIDER-2857227961__SS-Segment-30-75-BPM-0-625mm_173076_p01.nii.gz": "QC not annotatable",
+   "IDC-rider_lung_pet_ct__RIDER-2857227961__SS-Segment-30-75-BPM-0-625mm_173076_p02.nii.gz": "QC not annotatable",
+   "IDC-rider_lung_pet_ct__RIDER-2857227961__SS-Segment-30-75-BPM-0-625mm_173076_p03.nii.gz": "QC not annotatable",
+   "IDC-rider_lung_pet_ct__RIDER-2857227961__SS-Segment-30-75-BPM-0-625mm_173076_p05.nii.gz": "QC not annotatable",
+   "IDC-rider_lung_pet_ct__RIDER-2857227961__SS-Segment-30-75-BPM-0-625mm_173076_p08.nii.gz": "QC not annotatable",
+   "IDC-rider_lung_pet_ct__RIDER-2857227961__SS-Segment-30-75-BPM-0-625mm_173076_p09.nii.gz": "QC not annotatable",
+   "IDC-rider_lung_pet_ct__RIDER-4767464492__SS-Segment-30-75-BPM-0-625mm_356284_p00.nii.gz": "QC not annotatable",
+   "IDC-rider_lung_pet_ct__RIDER-4767464492__SS-Segment-30-75-BPM-0-625mm_356284_p02.nii.gz": "QC not annotatable",
+   "IDC-rider_lung_pet_ct__RIDER-4767464492__SS-Segment-30-75-BPM-0-625mm_356284_p03.nii.gz": "QC not annotatable",
+   "IDC-rider_lung_pet_ct__RIDER-4767464492__SS-Segment-30-75-BPM-0-625mm_356284_p06.nii.gz": "QC not annotatable",
+   "IDC-rider_lung_pet_ct__RIDER-4767464492__SS-Segment-30-75-BPM-0-625mm_356284_p08.nii.gz": "QC not annotatable",
+   "IDC-rider_lung_pet_ct__RIDER-7701645091__SS-Segment-30-75-BPM-0-625mm_238415_p03.nii.gz": "QC not annotatable",
+   "IDC-rider_lung_pet_ct__RIDER-7701645091__SS-Segment-30-75-BPM-0-625mm_238415_p04.nii.gz": "QC not annotatable",
+   "IDC-varepop_apollo__AP-26JK__Carina-to-Apex-0-6-B26f-0-100-Matrix-256_682144_p00.nii.gz": "QC not annotatable",
+   "IDC-varepop_apollo__AP-26JK__Carina-to-Apex-0-6-B26f-0-100-Matrix-256_682144_p05.nii.gz": "QC not annotatable",
+   "IDC-varepop_apollo__AP-26JK__Carina-to-Apex-0-6-B26f-BestSyst-31_028276.nii.gz": "QC not annotatable",
+   "ImageCHD__1002.nii.gz": "QC not annotatable",
+   "ImageCHD__1003.nii.gz": "QC not annotatable",
+   "ImageCHD__1007.nii.gz": "QC not annotatable",
+   "ImageCHD__1013.nii.gz": "QC not annotatable",
+   "ImageCHD__1020.nii.gz": "QC not annotatable",
+   "ImageCHD__1028.nii.gz": "QC not annotatable",
+   "ImageCHD__1032.nii.gz": "QC not annotatable",
+   "ImageCHD__1039.nii.gz": "QC not annotatable",
+   "ImageCHD__1053.nii.gz": "QC not annotatable",
+   "ImageCHD__1059.nii.gz": "QC not annotatable",
+   "ImageCHD__1060.nii.gz": "QC not annotatable",
+   "ImageCHD__1063.nii.gz": "QC not annotatable",
+   "ImageCHD__1077.nii.gz": "QC not annotatable",
+   "ImageCHD__1083.nii.gz": "QC not annotatable",
+   "ImageCHD__1098.nii.gz": "QC not annotatable",
+   "ImageCHD__1112.nii.gz": "QC not annotatable",
+   "ImageCHD__1113.nii.gz": "QC not annotatable",
+   "ImageCHD__1116.nii.gz": "QC not annotatable",
+   "ImageCHD__1117.nii.gz": "QC not annotatable",
+   "ImageCHD__1119.nii.gz": "QC not annotatable",
+   "ImageCHD__1124.nii.gz": "QC not annotatable",
+   "ImageCHD__1126.nii.gz": "QC not annotatable",
+   "ImageCHD__1140.nii.gz": "QC not annotatable",
+   "ImageCHD__1143.nii.gz": "QC not annotatable",
+   "ImageCHD__1144.nii.gz": "QC not annotatable",
+   "ImageCHD__1161.nii.gz": "QC not annotatable",
+   "ImageCHD__1178.nii.gz": "QC not annotatable",
+   "Mendeley-SDN-4643nn2z44__s007.nii.gz": "QC not annotatable",
+   "Mendeley-SDN-spb25zt2c4__s011.nii.gz": "QC not annotatable",
+   "Mendeley-SDN-spb25zt2c4__s014_p10.nii.gz": "QC not annotatable",
+   "Mendeley-SDN-spb25zt2c4__s014_p5.nii.gz": "QC not annotatable",
+   "Mendeley-SDN-spb25zt2c4__s015.nii.gz": "QC not annotatable",
+   "Mendeley-SDN-spb25zt2c4__s018_p0.nii.gz": "QC not annotatable",
+   "Mendeley-SDN-spb25zt2c4__s018_p10.nii.gz": "QC not annotatable",
+   "Mendeley-SDN-spb25zt2c4__s018_p15.nii.gz": "QC not annotatable",
+   "Mendeley-SDN-spb25zt2c4__s018_p35.nii.gz": "QC not annotatable",
+   "Mendeley-SDN-spb25zt2c4__s018_p5.nii.gz": "QC not annotatable",
+   "Mendeley-SDN-spb25zt2c4__s018_p60.nii.gz": "QC not annotatable",
+   "Mendeley-SDN-spb25zt2c4__s018_p85.nii.gz": "QC not annotatable",
+   "Mendeley-SDN-spb25zt2c4__s018_p90.nii.gz": "QC not annotatable",
+   "Mendeley-SDN-spb25zt2c4__s018_p95.nii.gz": "QC not annotatable",
+   "PLOS-Peng2016-CCTA-JPEG__P01.nii.gz": "PLOS-Peng2016 burned-in text, pending (QC limited)",
+   "PLOS-Peng2016-CCTA-JPEG__P02.nii.gz": "PLOS-Peng2016 burned-in text, pending (QC limited)",
+   "PLOS-Peng2016-CCTA-JPEG__P03.nii.gz": "PLOS-Peng2016 burned-in text, pending (QC limited)",
+   "PLOS-Peng2016-CCTA-JPEG__P04.nii.gz": "PLOS-Peng2016 burned-in text, pending (QC limited)",
+   "PLOS-Peng2016-CCTA-JPEG__P05.nii.gz": "PLOS-Peng2016 burned-in text, pending (QC limited)",
+   "PLOS-Peng2016-CCTA-JPEG__P06.nii.gz": "PLOS-Peng2016 burned-in text, pending (QC limited)",
+   "PLOS-Peng2016-CCTA-JPEG__P07.nii.gz": "PLOS-Peng2016 burned-in text, pending (QC limited)",
+   "PLOS-Peng2016-CCTA-JPEG__P08.nii.gz": "PLOS-Peng2016 burned-in text, pending (QC yes)",
+   "PLOS-Peng2016-CCTA-JPEG__P09.nii.gz": "PLOS-Peng2016 burned-in text, pending (QC limited)",
+   "PLOS-Peng2016-CCTA-JPEG__P10.nii.gz": "PLOS-Peng2016 burned-in text, pending (QC limited)",
+   "PLOS-Peng2016-CCTA-JPEG__P11.nii.gz": "PLOS-Peng2016 burned-in text, pending (QC limited)",
+   "PLOS-Peng2016-CCTA-JPEG__P12.nii.gz": "PLOS-Peng2016 burned-in text, pending (QC limited)",
+   "PLOS-Peng2016-CCTA-JPEG__P13.nii.gz": "PLOS-Peng2016 burned-in text, pending (QC limited)",
+   "PLOS-Peng2016-CCTA-JPEG__P14.nii.gz": "PLOS-Peng2016 burned-in text, pending (QC limited)",
+   "PLOS-Peng2016-CCTA-JPEG__P15.nii.gz": "PLOS-Peng2016 burned-in text, pending (QC limited)",
+   "PLOS-Peng2016-CCTA-JPEG__P16.nii.gz": "PLOS-Peng2016 burned-in text, pending (QC limited)",
+   "PLOS-Peng2016-CCTA-JPEG__P19.nii.gz": "PLOS-Peng2016 burned-in text, pending (QC limited)",
+   "Slicer-SampleData__CTCardioSeq_f00.nii.gz": "QC not annotatable",
+   "Slicer-SampleData__CTCardioSeq_f02.nii.gz": "QC not annotatable",
+   "Slicer-SampleData__CTCardioSeq_f03.nii.gz": "QC not annotatable",
+   "Slicer-SampleData__CTCardioSeq_f04.nii.gz": "QC not annotatable",
+   "Slicer-SampleData__CTCardioSeq_f05.nii.gz": "QC not annotatable",
+   "Slicer-SampleData__CTCardioSeq_f06.nii.gz": "QC not annotatable",
+   "Slicer-SampleData__CTCardioSeq_f07.nii.gz": "QC not annotatable",
+   "Slicer-SampleData__CTCardioSeq_f09.nii.gz": "QC not annotatable",
+   "Slicer-SampleData__PDA_CT.nii.gz": "QC not annotatable",
+   "Slicer-SampleData__TruncalValve_4DCT_f02.nii.gz": "QC not annotatable",
+   "Slicer-SampleData__TruncalValve_4DCT_f03.nii.gz": "QC not annotatable",
+   "Slicer-SampleData__TruncalValve_4DCT_f06.nii.gz": "QC not annotatable",
+   "Slicer-SampleData__TruncalValve_4DCT_f10.nii.gz": "QC not annotatable",
+   "Slicer-SampleData__TruncalValve_4DCT_f11.nii.gz": "QC not annotatable",
+   "Slicer-SampleData__TruncalValve_4DCT_f12.nii.gz": "QC not annotatable",
+   "Slicer-SampleData__TruncalValve_4DCT_f18.nii.gz": "QC not annotatable",
+   "TotalSegmentator-cardiac__s0019.nii.gz": "QC not annotatable",
+   "TotalSegmentator-cardiac__s0032.nii.gz": "QC not annotatable",
+   "TotalSegmentator-cardiac__s0076.nii.gz": "QC not annotatable",
+   "TotalSegmentator-cardiac__s0095.nii.gz": "QC not annotatable",
+   "TotalSegmentator-cardiac__s0111.nii.gz": "QC not annotatable",
+   "TotalSegmentator-cardiac__s0115.nii.gz": "QC not annotatable",
+   "TotalSegmentator-cardiac__s0138.nii.gz": "QC not annotatable",
+   "TotalSegmentator-cardiac__s0184.nii.gz": "QC not annotatable",
+   "TotalSegmentator-cardiac__s0189.nii.gz": "QC not annotatable",
+   "TotalSegmentator-cardiac__s0230.nii.gz": "QC not annotatable",
+   "TotalSegmentator-cardiac__s0270.nii.gz": "QC not annotatable",
+   "TotalSegmentator-cardiac__s0271.nii.gz": "QC not annotatable",
+   "TotalSegmentator-cardiac__s0338.nii.gz": "QC not annotatable",
+   "TotalSegmentator-cardiac__s0343.nii.gz": "QC not annotatable",
+   "TotalSegmentator-cardiac__s0349.nii.gz": "QC not annotatable",
+   "TotalSegmentator-cardiac__s0374.nii.gz": "QC not annotatable",
+   "TotalSegmentator-cardiac__s0380.nii.gz": "QC not annotatable",
+   "TotalSegmentator-cardiac__s0391.nii.gz": "QC not annotatable",
+   "TotalSegmentator-cardiac__s0398.nii.gz": "QC not annotatable",
+   "TotalSegmentator-cardiac__s0403.nii.gz": "QC not annotatable",
+   "TotalSegmentator-cardiac__s0405.nii.gz": "QC not annotatable",
+   "TotalSegmentator-cardiac__s0414.nii.gz": "QC not annotatable",
+   "TotalSegmentator-cardiac__s0424.nii.gz": "QC not annotatable",
+   "TotalSegmentator-cardiac__s0435.nii.gz": "QC not annotatable",
+   "TotalSegmentator-cardiac__s0439.nii.gz": "QC not annotatable",
+   "TotalSegmentator-cardiac__s0444.nii.gz": "QC not annotatable",
+   "TotalSegmentator-cardiac__s0452.nii.gz": "QC not annotatable",
+   "TotalSegmentator-cardiac__s0457.nii.gz": "QC not annotatable",
+   "TotalSegmentator-cardiac__s0463.nii.gz": "QC not annotatable",
+   "TotalSegmentator-cardiac__s0488.nii.gz": "QC not annotatable",
+   "TotalSegmentator-cardiac__s0508.nii.gz": "QC not annotatable",
+   "TotalSegmentator-cardiac__s0528.nii.gz": "QC not annotatable",
+   "TotalSegmentator-cardiac__s0531.nii.gz": "QC not annotatable",
+   "TotalSegmentator-cardiac__s0557.nii.gz": "QC not annotatable",
+   "TotalSegmentator-cardiac__s0585.nii.gz": "QC not annotatable",
+   "TotalSegmentator-cardiac__s0594.nii.gz": "QC not annotatable",
+   "TotalSegmentator-cardiac__s0597.nii.gz": "QC not annotatable",
+   "TotalSegmentator-cardiac__s0624.nii.gz": "QC not annotatable",
+   "TotalSegmentator-cardiac__s0653.nii.gz": "QC not annotatable",
+   "TotalSegmentator-cardiac__s0654.nii.gz": "QC not annotatable",
+   "TotalSegmentator-cardiac__s0659.nii.gz": "QC not annotatable",
+   "TotalSegmentator-cardiac__s0665.nii.gz": "QC not annotatable",
+   "TotalSegmentator-cardiac__s0671.nii.gz": "QC not annotatable",
+   "TotalSegmentator-cardiac__s0684.nii.gz": "QC not annotatable",
+   "TotalSegmentator-cardiac__s0695.nii.gz": "QC not annotatable",
+   "TotalSegmentator-cardiac__s0698.nii.gz": "QC not annotatable",
+   "TotalSegmentator-cardiac__s0702.nii.gz": "QC not annotatable",
+   "TotalSegmentator-cardiac__s0710.nii.gz": "QC not annotatable",
+   "TotalSegmentator-cardiac__s0717.nii.gz": "QC not annotatable",
+   "TotalSegmentator-cardiac__s0729.nii.gz": "QC not annotatable",
+   "TotalSegmentator-cardiac__s0767.nii.gz": "QC not annotatable",
+   "TotalSegmentator-cardiac__s0773.nii.gz": "QC not annotatable",
+   "TotalSegmentator-cardiac__s0781.nii.gz": "QC not annotatable",
+   "TotalSegmentator-cardiac__s0784.nii.gz": "QC not annotatable",
+   "TotalSegmentator-cardiac__s0787.nii.gz": "QC not annotatable",
+   "TotalSegmentator-cardiac__s0813.nii.gz": "QC not annotatable",
+   "TotalSegmentator-cardiac__s0822.nii.gz": "QC not annotatable",
+   "TotalSegmentator-cardiac__s0825.nii.gz": "QC not annotatable",
+   "TotalSegmentator-cardiac__s0826.nii.gz": "QC not annotatable",
+   "TotalSegmentator-cardiac__s0832.nii.gz": "QC not annotatable",
+   "TotalSegmentator-cardiac__s0834.nii.gz": "QC not annotatable",
+   "TotalSegmentator-cardiac__s0838.nii.gz": "QC not annotatable",
+   "TotalSegmentator-cardiac__s0848.nii.gz": "QC not annotatable",
+   "TotalSegmentator-cardiac__s0877.nii.gz": "QC not annotatable",
+   "TotalSegmentator-cardiac__s0881.nii.gz": "QC not annotatable",
+   "TotalSegmentator-cardiac__s0883.nii.gz": "QC not annotatable",
+   "TotalSegmentator-cardiac__s0891.nii.gz": "QC not annotatable",
+   "TotalSegmentator-cardiac__s0892.nii.gz": "QC not annotatable",
+   "TotalSegmentator-cardiac__s0901.nii.gz": "QC not annotatable",
+   "TotalSegmentator-cardiac__s0911.nii.gz": "QC not annotatable",
+   "TotalSegmentator-cardiac__s0919.nii.gz": "QC not annotatable",
+   "TotalSegmentator-cardiac__s0935.nii.gz": "QC not annotatable",
+   "TotalSegmentator-cardiac__s0946.nii.gz": "QC not annotatable",
+   "TotalSegmentator-cardiac__s0954.nii.gz": "QC not annotatable",
+   "TotalSegmentator-cardiac__s0956.nii.gz": "QC not annotatable",
+   "TotalSegmentator-cardiac__s0977.nii.gz": "QC not annotatable",
+   "TotalSegmentator-cardiac__s0978.nii.gz": "QC not annotatable",
+   "TotalSegmentator-cardiac__s0987.nii.gz": "QC not annotatable",
+   "TotalSegmentator-cardiac__s1007.nii.gz": "QC not annotatable",
+   "TotalSegmentator-cardiac__s1018.nii.gz": "QC not annotatable",
+   "TotalSegmentator-cardiac__s1021.nii.gz": "QC not annotatable",
+   "TotalSegmentator-cardiac__s1022.nii.gz": "QC not annotatable",
+   "TotalSegmentator-cardiac__s1033.nii.gz": "QC not annotatable",
+   "TotalSegmentator-cardiac__s1049.nii.gz": "QC not annotatable",
+   "TotalSegmentator-cardiac__s1052.nii.gz": "QC not annotatable",
+   "TotalSegmentator-cardiac__s1073.nii.gz": "QC not annotatable",
+   "TotalSegmentator-cardiac__s1083.nii.gz": "QC not annotatable",
+   "TotalSegmentator-cardiac__s1105.nii.gz": "QC not annotatable",
+   "TotalSegmentator-cardiac__s1122.nii.gz": "QC not annotatable",
+   "TotalSegmentator-cardiac__s1133.nii.gz": "QC not annotatable",
+   "TotalSegmentator-cardiac__s1134.nii.gz": "QC not annotatable",
+   "TotalSegmentator-cardiac__s1172.nii.gz": "QC not annotatable",
+   "TotalSegmentator-cardiac__s1179.nii.gz": "QC not annotatable",
+   "TotalSegmentator-cardiac__s1190.nii.gz": "QC not annotatable",
+   "TotalSegmentator-cardiac__s1201.nii.gz": "QC not annotatable",
+   "TotalSegmentator-cardiac__s1225.nii.gz": "QC not annotatable",
+   "TotalSegmentator-cardiac__s1230.nii.gz": "QC not annotatable",
+   "TotalSegmentator-cardiac__s1237.nii.gz": "QC not annotatable",
+   "TotalSegmentator-cardiac__s1239.nii.gz": "QC not annotatable",
+   "TotalSegmentator-cardiac__s1243.nii.gz": "QC not annotatable",
+   "TotalSegmentator-cardiac__s1248.nii.gz": "QC not annotatable",
+   "TotalSegmentator-cardiac__s1250.nii.gz": "QC not annotatable",
+   "TotalSegmentator-cardiac__s1258.nii.gz": "QC not annotatable",
+   "TotalSegmentator-cardiac__s1262.nii.gz": "QC not annotatable",
+   "TotalSegmentator-cardiac__s1269.nii.gz": "QC not annotatable",
+   "TotalSegmentator-cardiac__s1272.nii.gz": "QC not annotatable",
+   "TotalSegmentator-cardiac__s1277.nii.gz": "QC not annotatable",
+   "TotalSegmentator-cardiac__s1280.nii.gz": "QC not annotatable",
+   "TotalSegmentator-cardiac__s1305.nii.gz": "QC not annotatable",
+   "TotalSegmentator-cardiac__s1310.nii.gz": "QC not annotatable",
+   "TotalSegmentator-cardiac__s1326.nii.gz": "QC not annotatable",
+   "TotalSegmentator-cardiac__s1327.nii.gz": "QC not annotatable",
+   "TotalSegmentator-cardiac__s1330.nii.gz": "QC not annotatable",
+   "TotalSegmentator-cardiac__s1332.nii.gz": "QC not annotatable",
+   "VMR-Coronary__0157_H_CORO_SVGD_1.nii.gz": "QC not annotatable",
+   "VMR-Coronary__0157_H_CORO_SVGD_2.nii.gz": "QC not annotatable",
+   "VMR-Coronary__0178_H_CORO_KD.nii.gz": "QC not annotatable",
+   "Zenodo-STOPSTORM__Case1.nii.gz": "QC not annotatable",
+   "Zenodo-STOPSTORM__Case2.nii.gz": "QC not annotatable",
+   "Zenodo-STOPSTORM__Case3.nii.gz": "QC not annotatable"
+  }
+ },
+ "4_patients": {
+  "patients": 468,
+  "seal_file_says": 468,
+  "by_stratum": {
+   "primary": 311,
+   "excluded (spacing suspect, D29)": 74,
+   "report_only (ImageCHD, D29)": 83
+  },
+  "by_source_[patients,volumes]": {
+   "BMC-BEO2017-SerialStenosis-CCTA": [
+    1,
+    1
+   ],
+   "CCA200-HF": [
+    20,
+    20
+   ],
+   "Figshare-23057000": [
+    2,
+    2
+   ],
+   "Figshare-CardiacCT15": [
+    15,
+    15
+   ],
+   "Figshare-DCM3-Pulmonary35": [
+    1,
+    1
+   ],
+   "Figshare-EpicardialFat-CE": [
+    34,
+    34
+   ],
+   "HOCMvalvesSeg": [
+    24,
+    24
+   ],
+   "IDC-nsclc_radiogenomics": [
+    2,
+    3
+   ],
+   "IDC-rider_lung_pet_ct": [
+    13,
+    69
+   ],
+   "IDC-varepop_apollo": [
+    1,
+    9
+   ],
+   "ImageALCAPA": [
+    30,
+    30
+   ],
+   "ImageCHD": [
+    83,
+    83
+   ],
+   "Kaggle-CAD-RandomSamples": [
+    28,
+    28
+   ],
+   "Kaggle-HeartSR": [
+    10,
+    10
+   ],
+   "Mendeley-9wv3fkxstx": [
+    1,
+    2
+   ],
+   "Mendeley-SDN-37nnfyh3x9": [
+    1,
+    12
+   ],
+   "Mendeley-SDN-4643nn2z44": [
+    1,
+    23
+   ],
+   "Mendeley-SDN-7x9kb53262": [
+    1,
+    23
+   ],
+   "Mendeley-SDN-cy54ttk3fj": [
+    40,
+    80
+   ],
+   "Mendeley-SDN-spb25zt2c4": [
+    1,
+    34
+   ],
+   "SLAWT2016-CT": [
+    9,
+    9
+   ],
+   "Slicer-SampleData": [
+    3,
+    16
+   ],
+   "Taiwan-AICUP-CardiacCT": [
+    100,
+    100
+   ],
+   "TotalSegmentator-cardiac": [
+    16,
+    16
+   ],
+   "VMR-Coronary": [
+    30,
+    30
+   ],
+   "Zenodo-21855641-AtrialFibre": [
+    1,
+    1
+   ]
+  },
+  "multi_volume_patients": 59,
+  "sealed_primary_patients_in_queue": 150,
+  "sealed_report_only_patients_in_queue": 20,
+  "sealed_volumes_listed": 325,
+  "sealed_volumes_missing_from_queue": [],
+  "sealed_patients_missing_from_queue": [],
+  "scoring_volumes_missing_from_queue": [],
+  "queued_volumes_of_sealed_patients_not_in_seal_file": [],
+  "extension_order": {
+   "entries": 101,
+   "in_queue": 101,
+   "sealed": 0,
+   "primary": 101
+  },
+  "draws": {
+   "Delta (A33, adopted subject to Q1)": {
+    "patients": 35,
+    "in_queue": 35,
+    "missing_from_queue": [],
+    "volumes_in_queue": 51,
+    "sealed": [],
+    "not_primary": [],
+    "in_extension_order_1_100": 23,
+    "in_extension_order_101": 0
+   },
+   "Atlas (A33 fallback if Q1 declined)": {
+    "patients": 35,
+    "in_queue": 35,
+    "missing_from_queue": [],
+    "volumes_in_queue": 42,
+    "sealed": [],
+    "not_primary": [],
+    "in_extension_order_1_100": 0,
+    "in_extension_order_101": 1
+   },
+   "Bridge (Q1 option b)": {
+    "patients": 35,
+    "in_queue": 35,
+    "missing_from_queue": [],
+    "volumes_in_queue": 47,
+    "sealed": [],
+    "not_primary": [],
+    "in_extension_order_1_100": 14,
+    "in_extension_order_101": 0
+   },
+   "Crucible (not adopted)": {
+    "patients": 35,
+    "in_queue": 35,
+    "missing_from_queue": [],
+    "volumes_in_queue": 47,
+    "sealed": [],
+    "not_primary": [],
+    "in_extension_order_1_100": 23,
+    "in_extension_order_101": 1
+   },
+   "Foxtrot (refused)": {
+    "patients": 50,
+    "in_queue": 50,
+    "missing_from_queue": [],
+    "volumes_in_queue": 72,
+    "sealed": [],
+    "not_primary": [],
+    "in_extension_order_1_100": 50,
+    "in_extension_order_101": 0
+   }
+  },
+  "accounting_A33_Delta_with_A34_reserve": {
+   "D35 decision set": {
+    "patients": 35,
+    "volumes": 51,
+    "reads": 102
+   },
+   "open / excluded (spacing suspect, D29)": {
+    "patients": 74,
+    "volumes": 74,
+    "reads": 148
+   },
+   "open / primary": {
+    "patients": 48,
+    "volumes": 56,
+    "reads": 112
+   },
+   "open / report_only (ImageCHD, D29)": {
+    "patients": 63,
+    "volumes": 63,
+    "reads": 126
+   },
+   "reserve": {
+    "patients": 78,
+    "volumes": 106,
+    "reads": 212
+   },
+   "sealed (ImageCHD report-only)": {
+    "patients": 20,
+    "volumes": 20,
+    "reads": 40
+   },
+   "sealed (primary, A10)": {
+    "patients": 150,
+    "volumes": 305,
+    "reads": 610
+   }
+  },
+  "accounting_Atlas_fallback_with_reserve_100": {
+   "D35 decision set": {
+    "patients": 35,
+    "volumes": 42,
+    "reads": 84
+   },
+   "open / excluded (spacing suspect, D29)": {
+    "patients": 74,
+    "volumes": 74,
+    "reads": 148
+   },
+   "open / primary": {
+    "patients": 26,
+    "volumes": 27,
+    "reads": 54
+   },
+   "open / report_only (ImageCHD, D29)": {
+    "patients": 63,
+    "volumes": 63,
+    "reads": 126
+   },
+   "reserve": {
+    "patients": 100,
+    "volumes": 144,
+    "reads": 288
+   },
+   "sealed (ImageCHD report-only)": {
+    "patients": 20,
+    "volumes": 20,
+    "reads": 40
+   },
+   "sealed (primary, A10)": {
+    "patients": 150,
+    "volumes": 305,
+    "reads": 610
+   }
+  },
+  "frozen_now_until_Q1 (union of three draws + whole extension order)": {
+   "patients": 135,
+   "volumes": 186
+  },
+  "reserve_A34_patients": 78,
+  "reserve_100_patients": 100
+ },
+ "5_reads": {
+  "total": 1350,
+  "A33_Delta": {
+   "D35 decision set": 102,
+   "open / excluded (spacing suspect, D29)": 148,
+   "open / primary": 112,
+   "open / report_only (ImageCHD, D29)": 126,
+   "reserve": 212,
+   "sealed (ImageCHD report-only)": 40,
+   "sealed (primary, A10)": 610
+  },
+  "Atlas_fallback": {
+   "D35 decision set": 84,
+   "open / excluded (spacing suspect, D29)": 148,
+   "open / primary": 54,
+   "open / report_only (ImageCHD, D29)": 126,
+   "reserve": 288,
+   "sealed (ImageCHD report-only)": 40,
+   "sealed (primary, A10)": 610
+  }
+ },
+ "6_other": {
+  "qc_report_flags": {
+   "corrupt": {
+    "VMR-Coronary__0157_H_CORO_SVGD_1.nii.gz": {
+     "queued": false,
+     "qc": "no",
+     "orientation": "unclear"
+    },
+    "VMR-Coronary__0157_H_CORO_SVGD_2.nii.gz": {
+     "queued": false,
+     "qc": "no",
+     "orientation": "unclear"
+    }
+   },
+   "rotated_180": {
+    "VMR-Coronary__0148_H_CORO_SVGD.nii.gz": {
+     "queued": true,
+     "qc": "limited",
+     "orientation": "rotated"
+    },
+    "VMR-Coronary__0157_H_CORO_SVGD_0.nii.gz": {
+     "queued": true,
+     "qc": "limited",
+     "orientation": "rotated"
+    }
+   }
+  },
+  "queued_orientation_not_ok": {
+   "ImageCHD__1022.nii.gz": [
+    "unclear",
+    "Infant CHD; heart lies in the image-left (patient right) chest with collapsed right lung: dextroposition/dextrocardia or an L-R flip, check."
+   ],
+   "ImageCHD__1030.nii.gz": [
+    "unclear",
+    "Neonatal congenital heart CT; abdominal situs/aorta side ambiguous on axials (possible heterotaxy or L-R flip, needs review)."
+   ],
+   "Mendeley-SDN-7x9kb53262__s010_p15.nii.gz": [
+    "unclear",
+    "Markedly dilated/tortuous aorta with large posterior round lumen; blurry, coronaries hard to trace"
+   ],
+   "Mendeley-SDN-7x9kb53262__s010_p90.nii.gz": [
+    "unclear",
+    "Same patient as s010_p15 (other phase); markedly dilated aorta with large posterior lumen"
+   ],
+   "VMR-Coronary__0148_H_CORO_SVGD.nii.gz": [
+    "rotated",
+    "Axial plane appears rotated 180 deg (sternum/sternal wires at image bottom, LV on image left), i.e. both AP and LR flipped; post-CABG with clips/wires."
+   ],
+   "VMR-Coronary__0157_H_CORO_SVGD_0.nii.gz": [
+    "rotated",
+    "Axial plane appears rotated 180 deg (sternum/sternal wires at image bottom, LV on image left), same pattern as VMR 0148; post-CABG (SVG) case, 1.25 mm slices."
+   ]
+  },
+  "queued_contrast_none_or_weak": {
+   "IDC-varepop_apollo__AP-26JK__Carina-to-Apex-0-6-B26f-0-100-Matrix-256_682144_p01.nii.gz": [
+    "weak",
+    "256-matrix recon with weak blood-pool enhancement; a catheter/lead and coronary calcifications visible."
+   ],
+   "IDC-varepop_apollo__AP-26JK__Carina-to-Apex-0-6-B26f-0-100-Matrix-256_682144_p07.nii.gz": [
+    "weak",
+    "256-matrix 0.76 mm; heavy coronary/valve calcification; weak LV opacification."
+   ],
+   "IDC-varepop_apollo__AP-26JK__Carina-to-Apex-0-6-B26f-0-100-Matrix-256_682144_p08.nii.gz": [
+    "weak",
+    "Adjacent phase of AP-26JK p07 series; heavy coronary/valve calcification, weak LV opacification."
+   ],
+   "ImageCHD__1023.nii.gz": [
+    "weak",
+    "Pediatric case with uniform low blood-pool contrast; coronaries not discernible."
+   ],
+   "ImageCHD__1037.nii.gz": [
+    "weak",
+    "Congenital heart case with low, heterogeneous chamber opacification (p95 ~280 HU)."
+   ],
+   "Kaggle-CAD-RandomSamples__case69.nii.gz": [
+    "weak",
+    "Poor bolus: blood pool ~250 HU, barely above myocardium; coronaries mostly seen via calcifications."
+   ],
+   "Mendeley-SDN-cy54ttk3fj__P15_diast.nii.gz": [
+    "weak",
+    "Low blood-pool enhancement (p99 ~520 HU) with visible slab banding."
+   ],
+   "Mendeley-SDN-spb25zt2c4__s016.nii.gz": [
+    "weak",
+    "Blood pool and myocardium similar density; bright prosthetic valve/ring; noisy."
+   ],
+   "Mendeley-SDN-spb25zt2c4__s018_p20.nii.gz": [
+    "weak",
+    "20% phase of subject s018 (metallic valve prosthesis); low blood-myocardium separation."
+   ],
+   "Mendeley-SDN-spb25zt2c4__s018_p30.nii.gz": [
+    "weak",
+    "Blood pool barely brighter than myocardium; prosthetic valve ring; 256 matrix."
+   ],
+   "Mendeley-SDN-spb25zt2c4__s018_p40.nii.gz": [
+    "weak",
+    "Blood pool barely above myocardium; dense aortic-valve calcification/prosthesis at root; 256 matrix with faint banding."
+   ],
+   "Mendeley-SDN-spb25zt2c4__s018_p45.nii.gz": [
+    "weak",
+    "45% phase of subject s018 (metallic valve prosthesis); low blood-myocardium separation."
+   ],
+   "Mendeley-SDN-spb25zt2c4__s018_p50.nii.gz": [
+    "weak",
+    "Another phase of s018 (cf. 6acf2a048b4d3a662c97958e): weak blood-myocardium contrast and dense aortic-valve calcification/prosthesis."
+   ],
+   "Mendeley-SDN-spb25zt2c4__s018_p65.nii.gz": [
+    "weak",
+    "65% phase of subject s018 (metallic valve prosthesis); faint horizontal slab line, low blood-myocardium separation."
+   ],
+   "Mendeley-SDN-spb25zt2c4__s018_p70.nii.gz": [
+    "weak",
+    "Same patient as s018_p30 (70% phase); blood barely brighter than myocardium; prosthetic valve ring."
+   ],
+   "Taiwan-AICUP-CardiacCT__patient0048.nii.gz": [
+    "weak",
+    "Low blood-pool enhancement (~300 HU) with heavy coronary calcification (LAD/LCx) blooming on MIP."
+   ],
+   "VMR-Coronary__0069_H_CORO_KD.nii.gz": [
+    "weak",
+    "Pediatric Kawasaki case; flat blood-myocardium contrast; 100 mm z-range."
+   ]
+  },
+  "queued_coronaries_not_visible": [
+   "ImageCHD__1005.nii.gz",
+   "ImageCHD__1023.nii.gz",
+   "ImageCHD__1030.nii.gz",
+   "ImageCHD__1037.nii.gz",
+   "ImageCHD__1043.nii.gz",
+   "ImageCHD__1070.nii.gz",
+   "ImageCHD__1075.nii.gz",
+   "ImageCHD__1109.nii.gz",
+   "ImageCHD__1110.nii.gz",
+   "ImageCHD__1127.nii.gz",
+   "ImageCHD__1132.nii.gz",
+   "ImageCHD__1139.nii.gz",
+   "ImageCHD__1141.nii.gz",
+   "Mendeley-SDN-spb25zt2c4__s018_p75.nii.gz"
+  ],
+  "queued_qc_note_mentions_duplicate_or_spacing": {
+   "CCA200-HF__CCA_00.nii.gz": "Resampled grid with empty padded slab at top; heart fills nominal 416 mm FOV so header spacing looks ~2x overstated.",
+   "CCA200-HF__CCA_05.nii.gz": "Resampled grid; heart fills a nominal 416 mm FOV, so header spacing looks ~2x overstated (true cardiac FOV ~200 mm).",
+   "CCA200-HF__CCA_08.nii.gz": "Resampled 832^3-type grid; header FOV 416 mm but anatomy looks like a ~200 mm cardiac FOV, so spacing may be overstated ~2x.",
+   "CCA200-HF__CCA_12.nii.gz": "832 grid resampled CCTA; header FOV 416 mm vs apparent ~200 mm cardiac FOV, so spacing may be overstated.",
+   "CCA200-HF__CCA_13.nii.gz": "832^3-ish resampled grid; header FOV 416 mm but heart fills the frame like a ~200 mm cardiac FOV, so spacing may be overstated ~2x.",
+   "CCA200-HF__CCA_15.nii.gz": "Content looks like a ~200-250 mm cardiac FOV but header gives 416 mm, so the 0.5 mm spacing may overstate true size; check spacing.",
+   "HOCMvalvesSeg__13.nii.gz": "Intensities clipped to roughly 0..570 (MIP saturates grey); chest fills a 512 mm FOV so true spacing is probably smaller than 1.0 mm.",
+   "HOCMvalvesSeg__34.nii.gz": "HOCM with thick septum; HU approximate (p1 = -43) and 1.0 mm header spacing implies a ~300 mm heart, so true spacing is probably smaller.",
+   "HOCMvalvesSeg__40.nii.gz": "HOCM case; approximate HU (body p1 -131, bone appears capped); 1 mm/512 mm FOV spacing looks implausible; heart small in chest FOV.",
+   "HOCMvalvesSeg__47.nii.gz": "Approximate HU with intensities clipped near 568 (bone and contrast saturate, MIP flat grey); 1 mm/512 mm FOV spacing implausible; HOCM case.",
+   "IDC-rider_lung_pet_ct__RIDER-1563443119__CINE-0-625_496669_p01.nii.gz": "Visually near-identical to same-patient CINE item 6acf273b8b4d3a662c979206 (likely duplicate/adjacent phase); ~290 HU opacification.",
+   "IDC-rider_lung_pet_ct__RIDER-1563443119__CINE-0-625_496669_p02.nii.gz": "Third near-identical CINE phase of same patient (cf. 6acf273b8b4d3a662c979206, 6acf27388b4d3a662c979202); ~290 HU opacification.",
+   "IDC-rider_lung_pet_ct__RIDER-2522924559__SS-Segment-30-75-BPM-0-625mm_875399_p09.nii.gz": "Another phase (p09) of the same gated series as the p06 item; near-duplicate anatomy.",
+   "ImageALCAPA__1.nii.gz": "Header spacing reads 1.0 mm iso (FOV 512 mm) which looks wrong for an infant; reformats squashed; ALCAPA case.",
+   "ImageALCAPA__10.nii.gz": "Pediatric ALCAPA; spacing header 1.0 mm isotropic looks wrong (512 mm FOV, squashed reformats); very dense contrast.",
+   "ImageALCAPA__11.nii.gz": "Pediatric ALCAPA with very dilated right heart; coronal/sagittal look squashed, consistent with nominal 1.0 mm header spacing not matching true voxel size.",
+   "ImageALCAPA__12.nii.gz": "Pediatric ALCAPA case with markedly dilated LV; header 1.0 mm spacing gives implausible 512 mm FOV and squashed reformats.",
+   "ImageALCAPA__13.nii.gz": "Pediatric ALCAPA case; header spacing 1.0 mm looks nominal (child chest spans ~400 mm), so physical scale is likely wrong.",
+   "ImageALCAPA__14.nii.gz": "Infant with dilated LV (ALCAPA); body fills the 512 mm FOV and reformats look squashed, so the 1 mm header spacing is probably a placeholder.",
+   "ImageALCAPA__16.nii.gz": "Enlarged left atrium; blood pool ~450 HU, coronaries hard to trace; 1.0 mm header spacing may be a placeholder.",
+   "ImageALCAPA__17.nii.gz": "Infant ALCAPA case; header spacing 1.0 mm gives an implausible 512 mm FOV and squashed reformats, so voxel size is likely wrong.",
+   "ImageALCAPA__18.nii.gz": "Infant ALCAPA with dilated LV; 1.0 mm header spacing looks wrong (512 mm FOV, squashed reformats).",
+   "ImageALCAPA__2.nii.gz": "ALCAPA case in larger patient; 1.0 mm header spacing likely placeholder; coronaries faint.",
+   "ImageALCAPA__20.nii.gz": "Infant ALCAPA case with dilated LV; body fills the 512 mm FOV and reformats look squashed, so the 1 mm spacing is probably a placeholder.",
+   "ImageALCAPA__21.nii.gz": "ALCAPA case; header 1.0 mm spacing gives implausible 512 mm chest width, so physical spacing is likely nominal/wrong.",
+   "ImageALCAPA__22.nii.gz": "ALCAPA case; coronal/sagittal appear z-compressed, consistent with nominal 1.0 mm header spacing rather than true voxel size.",
+   "ImageALCAPA__23.nii.gz": "Markedly enlarged left atrium; contrast in left heart moderate, coronaries hard to trace; 1.0 mm header spacing may be a placeholder.",
+   "ImageALCAPA__24.nii.gz": "Pediatric ALCAPA case with dilated LA/LV; 1.0 mm placeholder-like header spacing makes the child's chest ~400 mm wide.",
+   "ImageALCAPA__25.nii.gz": "Infant ALCAPA with dilated LV; spacing header 1.0 mm looks wrong (reformats squashed in z).",
+   "ImageALCAPA__26.nii.gz": "ALCAPA case with tortuous dilated RCA-like vessel; 1.0 mm isotropic header spacing (512 mm FOV) looks implausible; slab banding on reformats.",
+   "ImageALCAPA__27.nii.gz": "Infant ALCAPA case with dilated LV; 1.0 mm isotropic header spacing gives a ~380 mm wide infant chest, so spacing is likely a placeholder.",
+   "ImageALCAPA__29.nii.gz": "Pediatric ALCAPA case with dilated LV; header spacing implausible.",
+   "ImageALCAPA__3.nii.gz": "Pediatric ALCAPA case; header 1.0 mm spacing implausible (512 mm FOV for a child).",
+   "ImageALCAPA__30.nii.gz": "Pediatric ALCAPA case; body fills the 512 mm FOV so the 1 mm header spacing is probably a placeholder; coronaries hard to follow.",
+   "ImageALCAPA__4.nii.gz": "Infant ALCAPA case with dilated LV; 1.0 mm spacing / 512 mm FOV implausible for infant chest, spacing probably wrong; reformats look anisotropic.",
+   "ImageALCAPA__5.nii.gz": "Pediatric ALCAPA case; header 1.0 mm spacing implausible for anatomy size.",
+   "ImageALCAPA__6.nii.gz": "Pediatric ALCAPA case; header spacing 1.0 mm gives implausible 512 mm FOV, true spacing probably smaller.",
+   "ImageALCAPA__7.nii.gz": "Pediatric ALCAPA case with dilated LV; header 1.0 mm spacing implies implausible 512 mm FOV and squashed reformats, voxel size likely wrong.",
+   "ImageALCAPA__8.nii.gz": "Infant ALCAPA, markedly dilated LV; 1 mm iso spacing looks too large for anatomy size (header spacing may be wrong)",
+   "ImageCHD__1129.nii.gz": "Congenital heart case with inhomogeneous right-heart mixing and dense SVC inflow streaks; reformats look somewhat vertically elongated, z spacing worth checking.",
+   "Mendeley-SDN-37nnfyh3x9__s004_p40.nii.gz": "Phase p40 of same patient as s004_p70 (and near-identical to s302_p82); coronaries faint",
+   "Mendeley-SDN-37nnfyh3x9__s004_p60.nii.gz": "Appears to be the same patient/acquisition as s003 (60% phase), near-duplicate anatomy; LV opacification heterogeneous.",
+   "Mendeley-SDN-37nnfyh3x9__s004_p70.nii.gz": "Wide 250 mm FOV, noisy; looks near-identical to s302_p82 (same patient, possible duplicate)",
+   "Mendeley-SDN-37nnfyh3x9__s004_p80.nii.gz": "Anatomy looks near-identical to Mendeley s302_p58 (6acf29018b4d3a662c979444); possibly same patient/other phase or duplicate.",
+   "Mendeley-SDN-4643nn2z44__s010_f02.nii.gz": "Another phase of subject s010 (same as f01); 256 matrix, coronaries poorly separated, calcified RCA.",
+   "Mendeley-SDN-7x9kb53262__s010_p25.nii.gz": "25% phase of the same series as s010_p40/p75 (near-duplicate); large round vascular structure posterior-inferior to heart.",
+   "Mendeley-SDN-7x9kb53262__s010_p40.nii.gz": "40% phase of the same series as s010_p75 (near-duplicate); large round vascular structure posterior-inferior to the heart, banding in reformats.",
+   "Mendeley-SDN-spb25zt2c4__s014_p15.nii.gz": "Appears to be the same anatomy as s017 (6acf29f78b4d3a662c97957e) at lower resolution - possible duplicate/mislabel.",
+   "Mendeley-SDN-spb25zt2c4__s014_p50.nii.gz": "Phase 50% of s014; anatomy matches s017 (possible duplicate subject).",
+   "Mendeley-SDN-spb25zt2c4__s014_p70.nii.gz": "Phase 70% of s014; anatomy matches s017 (possible duplicate subject).",
+   "Slicer-SampleData__TruncalValve_4DCT_f04.nii.gz": "Frame of the same truncal-valve 4D series (near-duplicate of f05/f13/f14); noisy.",
+   "Slicer-SampleData__TruncalValve_4DCT_f14.nii.gz": "Adjacent frame of the same truncal-valve 4D series as f13 (near-duplicate anatomy); noisy."
+  },
+  "queued_qc_note_mentions_corrupt_or_constant": {
+   "CCA200-HF__CCA_00.nii.gz": "Resampled grid with empty padded slab at top; heart fills nominal 416 mm FOV so header spacing looks ~2x overstated."
+  },
+  "names_colliding_when_folded": [],
+  "qc_kept_sources_absent_from_queue": [
+   "PLOS-Peng2016-CCTA-JPEG"
+  ],
+  "seal_file_pool_list_counts": {
+   "n_volumes": 675,
+   "n_patients": 468
+  }
+ },
+ "problems": []
+}

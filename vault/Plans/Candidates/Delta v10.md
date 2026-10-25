@@ -154,6 +154,14 @@ Until the judge rules, A31.1 runs as written and both results are reported.
 
 So the training set is ImageCAS-X train 560 (collapsed by `territory.py`), plus every allowed pool read as its own sample (A11′). Fold-0 val is ImageCAS-X val 80, and no pool read is held out by `segtrain index` (#116 item 3, #118 (c)).
 
+**Does Dataset716 / task 716 (#88) fit?** Partly. Its plans adoption, its A17 trainer with warm-up, its LR arms and its D27 refusal are exactly right. As on `dev` it lacks four things:
+- it trains on pool reads only, with no replay;
+- `segtrain index` holds out its own 15 % val and 15 % test of pool reads, which is a third held-out set beside the seal and D35;
+- it refuses neither D35 nor the reserve (#114);
+- `segtrain scinet` cannot request `h100:1` on Fir.
+
+#116 and #118 fix all four. Until they merge, **no task-716 fine-tune should run.**
+
 **LR arms (A17a/b).**
 - The 1e-3 arm is kept because full fine-tuning can cost out-of-distribution accuracy (Kumar et al., arXiv:2202.10054).
 - On brain MRI, a 1e-3 peak beat 1e-2 consistently (Wald et al., arXiv:2410.23132, Table 3).

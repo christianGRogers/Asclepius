@@ -1,0 +1,122 @@
+{
+ "n_volumes": 675,
+ "n_real_patients": 468,
+ "n_name_rule_patients": 517,
+ "extension_order_len": 101,
+ "by_stratum_state": {
+  "excluded/open": 74,
+  "primary/extension_tail": 1,
+  "primary/open": 60,
+  "primary/reserve_200": 50,
+  "primary/reserve_250": 50,
+  "primary/sealed": 150,
+  "report_only/open": 63,
+  "report_only/sealed": 20
+ },
+ "by_source": {
+  "BMC-BEO2017-SerialStenosis-CCTA": {
+   "sealed": 1
+  },
+  "CCA200-HF": {
+   "open": 20
+  },
+  "Figshare-23057000": {
+   "sealed": 2
+  },
+  "Figshare-CardiacCT15": {
+   "reserve_200": 6,
+   "reserve_250": 2,
+   "sealed": 7
+  },
+  "Figshare-DCM3-Pulmonary35": {
+   "sealed": 1
+  },
+  "Figshare-EpicardialFat-CE": {
+   "open": 5,
+   "reserve_250": 8,
+   "reserve_200": 6,
+   "sealed": 15
+  },
+  "HOCMvalvesSeg": {
+   "open": 24
+  },
+  "IDC-nsclc_radiogenomics": {
+   "sealed": 2
+  },
+  "IDC-rider_lung_pet_ct": {
+   "sealed": 7,
+   "reserve_250": 2,
+   "reserve_200": 4
+  },
+  "IDC-varepop_apollo": {
+   "sealed": 1
+  },
+  "ImageALCAPA": {
+   "open": 30
+  },
+  "ImageCHD": {
+   "open": 63,
+   "sealed": 20
+  },
+  "Kaggle-CAD-RandomSamples": {
+   "sealed": 13,
+   "reserve_250": 9,
+   "reserve_200": 5,
+   "open": 1
+  },
+  "Kaggle-HeartSR": {
+   "reserve_200": 5,
+   "sealed": 5
+  },
+  "Mendeley-9wv3fkxstx": {
+   "sealed": 1
+  },
+  "Mendeley-SDN-37nnfyh3x9": {
+   "sealed": 1
+  },
+  "Mendeley-SDN-4643nn2z44": {
+   "sealed": 1
+  },
+  "Mendeley-SDN-7x9kb53262": {
+   "sealed": 1
+  },
+  "Mendeley-SDN-cy54ttk3fj": {
+   "reserve_200": 5,
+   "sealed": 18,
+   "reserve_250": 9,
+   "open": 8
+  },
+  "Mendeley-SDN-spb25zt2c4": {
+   "sealed": 1
+  },
+  "SLAWT2016-CT": {
+   "reserve_200": 4,
+   "sealed": 5
+  },
+  "Slicer-SampleData": {
+   "sealed": 3
+  },
+  "Taiwan-AICUP-CardiacCT": {
+   "open": 43,
+   "reserve_200": 5,
+   "sealed": 43,
+   "reserve_250": 9
+  },
+  "TotalSegmentator-cardiac": {
+   "reserve_200": 5,
+   "sealed": 8,
+   "reserve_250": 3
+  },
+  "VMR-Coronary": {
+   "sealed": 13,
+   "reserve_250": 8,
+   "reserve_200": 5,
+   "extension_tail": 1,
+   "open": 3
+  },
+  "Zenodo-21855641-AtrialFibre": {
+   "sealed": 1
+  }
+ },
+ "open_primary_volumes": 69
+}

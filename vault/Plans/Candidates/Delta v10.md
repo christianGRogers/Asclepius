@@ -219,11 +219,11 @@ If condition 4 is not met when 1–3 are, start anyway: train without the reserv
 - **Anchored reads** keep a seed that stops L mm short of every tip, and trim 0–2 mm more.
 - Model **M0** is ImageCAS-X exactly. **M1** is ImageCAS-X thinned to Janus 0's measured volume ratio (0.87) with the centreline kept.
 
-**Result** (the full table is in the note; RESULT_PLACEHOLDER):
-- A one-voxel width difference, whether the model is thinner (M1, Janus 0's 0.87 volume ratio) or the reads are one voxel wider, moves A10's contrast by **≤ 0.012** in every class. tF1 is centreline-based. **Janus 0 drawing the lumen about one voxel inside ImageCAS-X's does not matter for A10.**
+**Result** (all 80 cases; the full table is in the note):
+- A one-voxel width difference, whether the model is thinner (M1, Janus 0's 0.87 volume ratio) or the reads are one voxel wider, moves A10's contrast by **≤ 0.010** in every class (the model's own tF1 by ≤ 0.003). tF1 is centreline-based. **Janus 0 drawing the lumen about one voxel inside ImageCAS-X's does not matter for A10.**
 - **Extent does.** Anchored reads agree with each other almost perfectly: inter-read 0.99–1.00 whatever L is. A model that is exactly ImageCAS-X loses **precision** past the reads' distal ends, and its recall stays 1.0.
-- With a seed only **5 mm** short of ImageCAS-X's extent, d is already **−0.045 to −0.068** per class (LAD, LCx, RCA). That is at or past D6's −0.05 margin.
-- At 10 mm, d is −0.08 to −0.13; at 20 mm, −0.15 to −0.29. The LCx, a third side branch, is worst.
+- With a seed only **5 mm** short of ImageCAS-X's extent, d is already **−0.046 (LAD), −0.061 (LCx), −0.040 (RCA)**, with CIs about ±0.005. That is at or past D6's −0.05 margin.
+- At 10 mm, d is −0.07 to −0.12; at 20 mm, −0.16 to −0.24. The LCx, a third side branch, is worst.
 - A10 on anchored reads would then **fail a perfect model**, and reward a model that learned the seed's extent.
 
 **What reads redrawn from a seed would follow.**
@@ -241,8 +241,8 @@ If condition 4 is not met when 1–3 are, start anyway: train without the reserv
   - **Janus 0 against the named seed:** what a fully anchored read would cost Janus 0 on in-domain cases.
 
 **It gives three things:**
-1. **The size of L5's risk before any read exists.** A seed recall of 0.95 or more in a class means anchoring cannot cost more than about 0.03 there (the 5 mm row above). Below 0.90, A10 on that class is at risk.
-2. **A reading for A31.2's seed flag.** The simulation shows the flag (seed-vs-read ≥ inter-read − 0.02) fires **without any anchoring** when the seed is within about 5 mm of the truth's extent. Seed-vs-independent-read was 0.96–0.99 there, against an inter-read of 0.95–0.98. The flag means anchoring only if Job S shows the seed is clearly short (Bridge's own caveat, wave-1 note §4.2).
+1. **The size of L5's risk before any read exists.** In the simulation a seed keeping 0.88–0.92 of ImageCAS-X's centreline (the 5 mm row) puts d at about −0.05. So a seed recall of 0.95 or more in a class means anchoring costs about 0.03 or less there, and below 0.90 A10 on that class is at or past the margin.
+2. **A reading for A31.2's seed flag.** The simulation shows the flag (seed-vs-read ≥ inter-read − 0.02) fires **without any anchoring** when the seed is within about 5 mm of the truth's extent. Seed-vs-independent-read was 0.956–0.980 there, against an independent inter-read of 0.953–0.966. The flag means anchoring only if Job S shows the seed is clearly short (Bridge's own caveat, wave-1 note §4.2).
 3. **The in-domain baseline for the A31.4 domain check.** Per source, Janus 0 against the seed is only readable as domain shift relative to its value on ImageCAS-X's own val. Like Atlas's Dice-row check, it reports 1-voxel-tolerant Dice and the volume ratio beside plain Dice (`r10_dice_check.measure()`), so a uniform width difference is not read as shift.
 
 ### 5.3 What this asks of A10 on the pool (pre-registered; L5 stays the lead's)

@@ -35,21 +35,55 @@ issue: christianGRogers/Asclepius#113
 
 ## Result
 
-Interim, n = 9 of 80 cases. The tables are regenerated from `anchoring_summary.json` when the run completes. RESULTS_TABLE
+All 80 val cases, 0 errors. Mean per class; d with a case-bootstrap 95 % CI; recall and precision are M0 against the reads.
+
+| Reads | Class | n | Inter-read | M0 vs reads | d = M0 − inter [95 % CI] | M0 recall | M0 precision | M1 − M0 (width) |
+|---|---|---|---|---|---|---|---|---|
+| independent | LAD | 80 | 0.953 | 0.965 | **+0.012** [-0.004, +0.032] | 1.000 | 0.933 | -0.003 |
+| independent | LCx | 80 | 0.963 | 0.958 | **-0.005** [-0.013, +0.003] | 1.000 | 0.920 | -0.002 |
+| independent | RCA | 80 | 0.966 | 0.971 | **+0.005** [-0.007, +0.021] | 1.000 | 0.944 | -0.002 |
+| independent, 1 voxel wider | LAD | 80 | 0.963 | 0.968 | **+0.005** [-0.008, +0.022] | 0.998 | 0.940 |  |
+| independent, 1 voxel wider | LCx | 80 | 0.970 | 0.961 | **-0.010** [-0.016, -0.003] | 0.997 | 0.928 |  |
+| independent, 1 voxel wider | RCA | 80 | 0.973 | 0.973 | **-0.000** [-0.009, +0.013] | 0.999 | 0.949 |  |
+| anchored, L = 0 | LAD | 80 | 0.977 | 0.991 | **+0.013** [+0.007, +0.022] | 1.000 | 0.981 |  |
+| anchored, L = 0 | LCx | 80 | 0.969 | 0.988 | **+0.019** [+0.013, +0.025] | 1.000 | 0.976 |  |
+| anchored, L = 0 | RCA | 80 | 0.986 | 0.993 | **+0.007** [+0.004, +0.010] | 1.000 | 0.985 |  |
+| anchored, L = 5 mm | LAD | 80 | 0.995 | 0.949 | **-0.046** [-0.050, -0.042] | 1.000 | 0.903 |  |
+| anchored, L = 5 mm | LCx | 80 | 0.995 | 0.935 | **-0.061** [-0.067, -0.055] | 1.000 | 0.879 |  |
+| anchored, L = 5 mm | RCA | 80 | 0.997 | 0.957 | **-0.040** [-0.043, -0.036] | 1.000 | 0.918 |  |
+| anchored, L = 10 mm | LAD | 79 | 0.987 | 0.904 | **-0.083** [-0.095, -0.069] | 1.000 | 0.827 | -0.002 |
+| anchored, L = 10 mm | LCx | 80 | 0.997 | 0.876 | **-0.120** [-0.132, -0.109] | 1.000 | 0.783 | -0.003 |
+| anchored, L = 10 mm | RCA | 79 | 0.990 | 0.920 | **-0.070** [-0.078, -0.063] | 1.000 | 0.853 | -0.003 |
+| anchored, L = 20 mm | LAD | 79 | 0.977 | 0.796 | **-0.182** [-0.196, -0.167] | 1.000 | 0.669 |  |
+| anchored, L = 20 mm | LCx | 80 | 0.969 | 0.728 | **-0.241** [-0.266, -0.218] | 1.000 | 0.587 |  |
+| anchored, L = 20 mm | RCA | 79 | 0.991 | 0.835 | **-0.156** [-0.170, -0.142] | 1.000 | 0.723 |  |
+
+LM is 1.000 in every condition (it is never trimmed). Pairs dropped as lost trees: 1 at L = 5, 3 at L = 10 and L = 20.
+
+**The seed itself against one independent read** (A31.2's seed-vs-read, extent only), against the independent inter-read:
+
+| Seed short by | LAD | LCx | RCA |
+|---|---|---|---|
+| 0 mm | 0.965 | 0.959 | 0.969 |
+| 5 mm | 0.968 | 0.956 | 0.980 |
+| 10 mm | 0.890 | 0.914 | 0.900 |
+| 20 mm | 0.716 | 0.670 | 0.807 |
+| *(independent inter-read)* | 0.953 | 0.963 | 0.966 |
 
 ## Reading
 
 1. **Width is not what A10 measures.**
-   - Thinning the model to Janus 0's volume ratio (M1 − M0), or widening the reads by a voxel, moves tF1 by ≤ 0.012 in every class and condition.
+   - Thinning the model to Janus 0's volume ratio (M1 − M0), or widening the reads by a voxel, moves tF1 by at most 0.003 (M1 − M0) and the contrast by at most 0.010 (`indep_wide`) in every class.
    - tF1 is a centreline metric with a 1.5 mm tolerance. Atlas's finding that Janus 0 sits one voxel inside ImageCAS-X's boundary does not touch A10, whatever width convention the reads follow.
 2. **Extent is what A10 measures, and anchoring makes it the seed's extent.**
-   - With independent reads, the perfect model sits where a reader sits (d ≈ 0, with CIs that include 0 except a small negative LAD). This is the simulation's calibration: a perfect model is human-level.
+   - With independent reads, the perfect model sits where a reader sits (d between −0.005 and +0.012, every CI including 0). This is the simulation's calibration: a perfect model is human-level.
    - With anchored reads, the reads agree almost perfectly (inter-read 0.97–1.00, because they share the seed's ends). A model that traces ImageCAS-X's extent loses **precision** beyond those ends, and its recall stays 1.0.
-   - From L = 5 mm, d is at or past D6's −0.05 margin in LAD, LCx and RCA. **A10 would fail a model with no error at all**, and pass a model that had learned to stop where the seed stops.
+   - At L = 5 mm, d is −0.046 (LAD), −0.061 (LCx) and −0.040 (RCA), with CIs about ±0.005: at D6's −0.05 margin. At 10 mm it is −0.07 to −0.12, and at 20 mm −0.16 to −0.24, with the LCx worst every time. **A10 would fail a model with no error at all**, and pass a model that had learned to stop where the seed stops.
 3. **A31.2's seed flag cannot tell a good seed from anchoring by itself.**
-   - A seed only 5 mm short of ImageCAS-X scores 0.96–0.99 against an *independent* read. That is above the independent inter-read in LCx and RCA, so the flag (seed-vs-read ≥ inter-read − 0.02) fires with no anchoring at all.
+   - A seed only 5 mm short of ImageCAS-X scores 0.956–0.980 against an *independent* read, within 0.02 of (or above) the independent inter-read of 0.953–0.966 in every class, so the flag (seed-vs-read ≥ inter-read − 0.02) fires with no anchoring at all.
    - This is Bridge's own caveat (wave-1 note §4.2), now with a size. The flag needs to know how short the real seed is. That is Job S (Delta v10 §5.2): TotalSegmentator on the val 80, scored against ImageCAS-X.
-4. **The signature of anchoring is in the A10 decomposition:** recall ≈ 1 with precision falling, and an inter-read near 1.0. Reporting A10's recall and precision halves beside it costs nothing and separates "the model errs" from "the reads stop short".
+4. **Mapping to Job S.** At L = 5 mm, M0's precision against the anchored reads, which is the share of ImageCAS-X's centreline the seed keeps, is 0.88–0.92, and d ≈ −0.05. So a seed recall of about 0.90 against ImageCAS-X puts a class at D6's margin, and a recall of 0.95 or more costs about 0.03 or less.
+5. **The signature of anchoring is in the A10 decomposition:** recall ≈ 1 with precision falling, and an inter-read near 1.0. Reporting A10's recall and precision halves beside it costs nothing and separates "the model errs" from "the reads stop short".
 
 ## What it changes
 

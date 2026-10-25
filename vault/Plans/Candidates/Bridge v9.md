@@ -224,7 +224,7 @@ Reading:
 - **The A31 domain check** reports plain Dice, 1-voxel-tolerant Dice, volume ratio (`r10_dice_check.measure`) and tF1,
   per source, for Janus 0 against the TotalSegmentator seed. The check is defined on Fir F1's outputs and run on CPU
   once the seeds are on Fir. A source flagged only by a width difference is not domain shift. Model-vs-read per
-  source stays report-only (A31.3; n ≈ 5–16 patients per source in the decision set).
+  source stays report-only (A31.3; 1–16 patients per source in the decision set).
 
 ## 6. The left-tree ostium residual (report only)
 
@@ -346,7 +346,7 @@ model, when all reads exist, is ≈ 55–60 GPU-h, one run, outside this round.
 ## 11. Questions for the lead
 
 1. **Replace A31.1's f/k trigger by rule C** (seal size from the measured s_d at wave 1), keeping D27's 150–250 range?
-   Bridge recommends yes: same protection, about one-tenth of the false alarms (§3).
+   Bridge recommends yes: the same protection, with about an eighth of the false alarms (§3).
 2. **L5 (seed anchoring).** If wave 1 flags anchoring in LAD, LCx or RCA:
    - **first**, an annotator instruction (no D-number change): trace each vessel past the seed's end to where the
      lumen is no longer distinguishable, then re-measure on the next 30 reads;

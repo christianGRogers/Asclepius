@@ -299,8 +299,9 @@ status() {
     say "girder: $(pgrep -f 'girder serve' >/dev/null && echo up || echo down); /segqueue14/project -> $(code_of segqueue14/project); /segqueue14/stats -> $(code_of segqueue14/stats); old /segqueue/stats -> $(code_of segqueue/stats)"
     say "old plugin (girder-segqueue): $(old_installed && echo installed || echo 'not installed (retired, D36)')"
     { pgrep -af 'segqueue-score|segqueue14-score' | cut -c1-120; } || true
-    as_user "$PY" - <<'PYEOF'
-import os
+    [ -f "$POOL_LIST" ] || fetch_branch
+    as_user "$PY" - "$POOL_LIST" <<'PYEOF'
+import os, sys
 from pymongo import MongoClient
 db = MongoClient(os.environ['GIRDER_MONGO_URI']).get_default_database()
 c = db['segqueue14_case']
@@ -314,6 +315,17 @@ print('[sq14] cases', c.count_documents({}), '| with seed', c.count_documents({'
 stored = db['setting'].find_one({'key': 'segqueue14.project'})
 print('[sq14] project setting:', 'stored (' + str(len((stored.get('value') or {}).get('segments') or [])) + ' segments)'
       if stored else 'default (from the code)')
+# serveOrder against the pool list (populate gives each case its 0-based list position).
+try:
+    from segqueue14 import plan
+    with open(sys.argv[1], encoding='utf-8') as handle:
+        want = {plan.pool_case_name(n): i for i, n in enumerate(plan.read_include_list(handle.read()))}
+    have = list(c.find({}, {'name': 1, 'serveOrder': 1}))
+    off = sum(1 for d in have if d['name'] in want and d.get('serveOrder') != want[d['name']])
+    print(f"[sq14] serveOrder vs {os.path.basename(sys.argv[1])} ({len(want)} listed): "
+          f"{off} mismatches, {sum(d['name'] not in want for d in have)} cases not in the list")
+except Exception as exc:  # report, never fail status
+    print('[sq14] serveOrder check skipped:', exc)
 print('[sq14] groups:', ', '.join(sorted(g['name'] for g in db['group'].find({'name': {'$regex': '^segqueue'}}))) or 'none')
 for coll in sorted(db['collection'].find({}), key=lambda x: x['name']):
     top = sorted(f['name'] for f in db['folder'].find({'parentId': coll['_id'], 'parentCollection': 'collection'}))

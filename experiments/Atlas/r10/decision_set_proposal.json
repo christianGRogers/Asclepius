@@ -1,0 +1,249 @@
+{
+ "what": "Atlas Round 10 proposal for the D35 decision set (not binding until the judge and the lead adopt it)",
+ "salt": "asclepius-decision-round10-pool:",
+ "pool_list": "configs/segqueue14/pool-2026-10.txt",
+ "pool_list_sha256": "9f968a0897ba0b7a26a4952439a44be26c120f6f50113f432500cc4dc49b7554",
+ "seal": "configs/segqueue14/sealed-pool-2026-10.json",
+ "seal_sha256": "e71141b407acb79eeff912eee21029d34edb677d984172d871eb5f02cb1d0690",
+ "patient_rule": "segtrain.pool_seal.ingest_patient (D32/D33)",
+ "drawn_from": "primary stratum, not sealed, not among the first 100 of the seal extension order",
+ "allocation": "each source at its share of the whole primary stratum, capped at its eligible patients (water-filling, then largest remainder); within source by sha256(salt + patient)",
+ "accounting_patients": {
+  "ext_tail": 1,
+  "imagechd_open": 63,
+  "open_primary": 60,
+  "reserve": 100,
+  "sealed_primary": 150,
+  "sealed_report_only": 20,
+  "spacing_suspect": 74
+ },
+ "accounting_volumes": {
+  "ext_tail": 1,
+  "imagechd_open": 63,
+  "open_primary": 68,
+  "reserve": 144,
+  "sealed_primary": 305,
+  "sealed_report_only": 20,
+  "spacing_suspect": 74
+ },
+ "n_patients_total": 468,
+ "n_non_sealed": 298,
+ "n_non_sealed_non_imagechd": 235,
+ "fifteen_percent_of_non_sealed_non_imagechd": 35.2,
+ "n_eligible": 61,
+ "decision_set": {
+  "n_patients": 35,
+  "n_volumes": 42,
+  "allocation_[drawn,eligible]_by_source": {
+   "Figshare-EpicardialFat-CE": [
+    5,
+    5
+   ],
+   "Kaggle-CAD-RandomSamples": [
+    1,
+    1
+   ],
+   "Mendeley-SDN-cy54ttk3fj": [
+    7,
+    8
+   ],
+   "Taiwan-AICUP-CardiacCT": [
+    18,
+    43
+   ],
+   "VMR-Coronary": [
+    4,
+    4
+   ]
+  },
+  "patients": [
+   "Figshare-EpicardialFat-CE__CE001",
+   "Figshare-EpicardialFat-CE__CE010",
+   "Figshare-EpicardialFat-CE__CE017",
+   "Figshare-EpicardialFat-CE__CE023",
+   "Figshare-EpicardialFat-CE__CE034",
+   "Kaggle-CAD-RandomSamples__case76",
+   "Mendeley-SDN-cy54ttk3fj__P10",
+   "Mendeley-SDN-cy54ttk3fj__P16",
+   "Mendeley-SDN-cy54ttk3fj__P17",
+   "Mendeley-SDN-cy54ttk3fj__P19",
+   "Mendeley-SDN-cy54ttk3fj__P22",
+   "Mendeley-SDN-cy54ttk3fj__P24",
+   "Mendeley-SDN-cy54ttk3fj__P29",
+   "Taiwan-AICUP-CardiacCT__patient0002",
+   "Taiwan-AICUP-CardiacCT__patient0004",
+   "Taiwan-AICUP-CardiacCT__patient0011",
+   "Taiwan-AICUP-CardiacCT__patient0017",
+   "Taiwan-AICUP-CardiacCT__patient0030",
+   "Taiwan-AICUP-CardiacCT__patient0037",
+   "Taiwan-AICUP-CardiacCT__patient0038",
+   "Taiwan-AICUP-CardiacCT__patient0040",
+   "Taiwan-AICUP-CardiacCT__patient0052",
+   "Taiwan-AICUP-CardiacCT__patient0054",
+   "Taiwan-AICUP-CardiacCT__patient0058",
+   "Taiwan-AICUP-CardiacCT__patient0061",
+   "Taiwan-AICUP-CardiacCT__patient0064",
+   "Taiwan-AICUP-CardiacCT__patient0068",
+   "Taiwan-AICUP-CardiacCT__patient0069",
+   "Taiwan-AICUP-CardiacCT__patient0090",
+   "Taiwan-AICUP-CardiacCT__patient0094",
+   "Taiwan-AICUP-CardiacCT__patient0098",
+   "VMR-Coronary__0151_H_CORO_SVGD",
+   "VMR-Coronary__0157_H_CORO_SVGD_0",
+   "VMR-Coronary__0173_H_CORO_KD",
+   "VMR-Coronary__0176_H_CORO_KD"
+  ],
+  "volumes": [
+   "Figshare-EpicardialFat-CE__CE001.nii.gz",
+   "Figshare-EpicardialFat-CE__CE010.nii.gz",
+   "Figshare-EpicardialFat-CE__CE017.nii.gz",
+   "Figshare-EpicardialFat-CE__CE023.nii.gz",
+   "Figshare-EpicardialFat-CE__CE034.nii.gz",
+   "Kaggle-CAD-RandomSamples__case76.nii.gz",
+   "Mendeley-SDN-cy54ttk3fj__P10_diast.nii.gz",
+   "Mendeley-SDN-cy54ttk3fj__P10_syst.nii.gz",
+   "Mendeley-SDN-cy54ttk3fj__P16_diast.nii.gz",
+   "Mendeley-SDN-cy54ttk3fj__P16_syst.nii.gz",
+   "Mendeley-SDN-cy54ttk3fj__P17_diast.nii.gz",
+   "Mendeley-SDN-cy54ttk3fj__P17_syst.nii.gz",
+   "Mendeley-SDN-cy54ttk3fj__P19_diast.nii.gz",
+   "Mendeley-SDN-cy54ttk3fj__P19_syst.nii.gz",
+   "Mendeley-SDN-cy54ttk3fj__P22_diast.nii.gz",
+   "Mendeley-SDN-cy54ttk3fj__P22_syst.nii.gz",
+   "Mendeley-SDN-cy54ttk3fj__P24_diast.nii.gz",
+   "Mendeley-SDN-cy54ttk3fj__P24_syst.nii.gz",
+   "Mendeley-SDN-cy54ttk3fj__P29_diast.nii.gz",
+   "Mendeley-SDN-cy54ttk3fj__P29_syst.nii.gz",
+   "Taiwan-AICUP-CardiacCT__patient0002.nii.gz",
+   "Taiwan-AICUP-CardiacCT__patient0004.nii.gz",
+   "Taiwan-AICUP-CardiacCT__patient0011.nii.gz",
+   "Taiwan-AICUP-CardiacCT__patient0017.nii.gz",
+   "Taiwan-AICUP-CardiacCT__patient0030.nii.gz",
+   "Taiwan-AICUP-CardiacCT__patient0037.nii.gz",
+   "Taiwan-AICUP-CardiacCT__patient0038.nii.gz",
+   "Taiwan-AICUP-CardiacCT__patient0040.nii.gz",
+   "Taiwan-AICUP-CardiacCT__patient0052.nii.gz",
+   "Taiwan-AICUP-CardiacCT__patient0054.nii.gz",
+   "Taiwan-AICUP-CardiacCT__patient0058.nii.gz",
+   "Taiwan-AICUP-CardiacCT__patient0061.nii.gz",
+   "Taiwan-AICUP-CardiacCT__patient0064.nii.gz",
+   "Taiwan-AICUP-CardiacCT__patient0068.nii.gz",
+   "Taiwan-AICUP-CardiacCT__patient0069.nii.gz",
+   "Taiwan-AICUP-CardiacCT__patient0090.nii.gz",
+   "Taiwan-AICUP-CardiacCT__patient0094.nii.gz",
+   "Taiwan-AICUP-CardiacCT__patient0098.nii.gz",
+   "VMR-Coronary__0151_H_CORO_SVGD.nii.gz",
+   "VMR-Coronary__0157_H_CORO_SVGD_0.nii.gz",
+   "VMR-Coronary__0173_H_CORO_KD.nii.gz",
+   "VMR-Coronary__0176_H_CORO_KD.nii.gz"
+  ],
+  "serve_position_p10_p50_p90": [
+   0.124,
+   0.281,
+   0.841
+  ]
+ },
+ "trainable_before_extension_decision": {
+  "primary_patients": [
+   "Mendeley-SDN-cy54ttk3fj__P07",
+   "Taiwan-AICUP-CardiacCT__patient0001",
+   "Taiwan-AICUP-CardiacCT__patient0013",
+   "Taiwan-AICUP-CardiacCT__patient0014",
+   "Taiwan-AICUP-CardiacCT__patient0015",
+   "Taiwan-AICUP-CardiacCT__patient0020",
+   "Taiwan-AICUP-CardiacCT__patient0023",
+   "Taiwan-AICUP-CardiacCT__patient0024",
+   "Taiwan-AICUP-CardiacCT__patient0029",
+   "Taiwan-AICUP-CardiacCT__patient0032",
+   "Taiwan-AICUP-CardiacCT__patient0036",
+   "Taiwan-AICUP-CardiacCT__patient0039",
+   "Taiwan-AICUP-CardiacCT__patient0042",
+   "Taiwan-AICUP-CardiacCT__patient0043",
+   "Taiwan-AICUP-CardiacCT__patient0055",
+   "Taiwan-AICUP-CardiacCT__patient0067",
+   "Taiwan-AICUP-CardiacCT__patient0071",
+   "Taiwan-AICUP-CardiacCT__patient0073",
+   "Taiwan-AICUP-CardiacCT__patient0077",
+   "Taiwan-AICUP-CardiacCT__patient0079",
+   "Taiwan-AICUP-CardiacCT__patient0084",
+   "Taiwan-AICUP-CardiacCT__patient0085",
+   "Taiwan-AICUP-CardiacCT__patient0087",
+   "Taiwan-AICUP-CardiacCT__patient0088",
+   "Taiwan-AICUP-CardiacCT__patient0089",
+   "Taiwan-AICUP-CardiacCT__patient0095"
+  ],
+  "serve_position_p10_p50_p90": [
+   0.222,
+   0.264,
+   0.323
+  ]
+ },
+ "topup": {
+  "rule": "second tranche: if the seal ends below 250 patients (A31.1), released reserve patients join the decision set until it holds 50, the most under-represented source first; the rest of the released reserve is trainable",
+  "to": 50,
+  "by_final_seal_size": {
+   "150": {
+    "n_released": 100,
+    "joins_decision_set": [
+     "Kaggle-CAD-RandomSamples__case75",
+     "TotalSegmentator-cardiac__s0738",
+     "Figshare-CardiacCT15__pat3",
+     "IDC-rider_lung_pet_ct__RIDER-2416820556",
+     "Kaggle-CAD-RandomSamples__case82",
+     "Kaggle-HeartSR__P10",
+     "SLAWT2016-CT__CT_1",
+     "TotalSegmentator-cardiac__s0846",
+     "Figshare-CardiacCT15__pat1",
+     "Kaggle-CAD-RandomSamples__case68",
+     "IDC-rider_lung_pet_ct__RIDER-4767464492",
+     "VMR-Coronary__0075_H_CORO_CAD",
+     "Kaggle-HeartSR__P07",
+     "TotalSegmentator-cardiac__s0356",
+     "Kaggle-CAD-RandomSamples__case57"
+    ],
+    "by_source": {
+     "Kaggle-CAD-RandomSamples": 4,
+     "TotalSegmentator-cardiac": 3,
+     "Figshare-CardiacCT15": 2,
+     "IDC-rider_lung_pet_ct": 2,
+     "Kaggle-HeartSR": 2,
+     "SLAWT2016-CT": 1,
+     "VMR-Coronary": 1
+    }
+   },
+   "200": {
+    "n_released": 50,
+    "joins_decision_set": [
+     "Kaggle-CAD-RandomSamples__case75",
+     "TotalSegmentator-cardiac__s0846",
+     "Figshare-CardiacCT15__pat1",
+     "IDC-rider_lung_pet_ct__RIDER-2416820556",
+     "Kaggle-CAD-RandomSamples__case68",
+     "TotalSegmentator-cardiac__s0879",
+     "Figshare-CardiacCT15__pat12",
+     "Kaggle-CAD-RandomSamples__case57",
+     "IDC-rider_lung_pet_ct__RIDER-1822442188",
+     "VMR-Coronary__0075_H_CORO_CAD",
+     "TotalSegmentator-cardiac__s0936",
+     "Kaggle-CAD-RandomSamples__case69",
+     "Figshare-EpicardialFat-CE__CE028",
+     "VMR-Coronary__0071_H_CORO_KD",
+     "Kaggle-CAD-RandomSamples__case62"
+    ],
+    "by_source": {
+     "Kaggle-CAD-RandomSamples": 5,
+     "TotalSegmentator-cardiac": 3,
+     "Figshare-CardiacCT15": 2,
+     "IDC-rider_lung_pet_ct": 2,
+     "VMR-Coronary": 2,
+     "Figshare-EpicardialFat-CE": 1
+    }
+   },
+   "250": {
+    "n_released": 0,
+    "joins_decision_set": [],
+    "by_source": {}
+   }
+  }
+ }
+}

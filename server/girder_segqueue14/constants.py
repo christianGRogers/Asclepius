@@ -1,8 +1,10 @@
-"""Names SegQueue14 writes into the database. All of them differ from the live
-SegQueue's (``girder_segqueue.constants``), which is what lets both plugins load
-in one Girder at once without either touching the other's data.
+"""Names SegQueue14 writes into the database. The Mongo collections, settings and
+groups differ from the retired 4-class SegQueue's (``girder_segqueue.constants``);
+since D36 the Girder *collection* is shared: SegQueue14 writes into ``SegQueue``,
+beside the CT volumes it serves, and the old queue's folders sit archived in
+``SegQueue/_archive-4class/``.
 
-Renaming any of these without a migration orphans data, as in the live plugin.
+Renaming any of these without a migration orphans data, as in the old plugin.
 """
 
 #: Girder groups. Separate from ``segqueue-annotators`` / ``segqueue-reviewers``:
@@ -12,16 +14,19 @@ REVIEWER_GROUP = "segqueue14-reviewers"
 
 # ------------------------------------------------------------ storage layout
 
-#: Everything SegQueue14 *writes* lives under this collection. The CT volumes it
-#: serves are NOT here: cases reference the live SegQueue collection's files by
-#: id and never copy, move or modify them.
-COLLECTION_NAME = "SegQueue14"
-#: ``SegQueue14/prelabels/<model_version>/<case>.prelabel.nii.gz``.
+#: Everything SegQueue14 *writes* lives under this collection (D36: one collection).
+#: It is the same collection as the CT volumes it serves (``SegQueue/cases``), but
+#: in its own top-level folders; cases reference those CTs by id and never copy,
+#: move or modify them. Before D36 this was a separate ``SegQueue14`` collection.
+COLLECTION_NAME = "SegQueue"
+#: ``SegQueue/prelabels/<model_version>/<case>.prelabel.nii.gz``.
 PRELABELS_FOLDER = "prelabels"
 SUBMISSIONS_FOLDER = "submissions"
 INCOMING_FOLDER = "incoming"
 
-#: Where the population tool looks for the live project's ImageCAS-X material:
+#: Where the CT volumes and seeds are read from -- the same collection as
+#: ``COLLECTION_NAME`` since D36; kept as its own name for the readers.
+#: The population tool's ImageCAS-X material:
 #: ``SegQueue/imagecas-x/segmentations/<id>.coronary.nii.gz``. Read only.
 LIVE_COLLECTION_NAME = "SegQueue"
 ICX_FOLDER = "imagecas-x"

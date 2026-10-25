@@ -321,7 +321,7 @@ class AdminResource14(Resource):
     @autoDescribeRoute(
         Description('Attach an uploaded prelabel to one case, or refresh it (D15).')
         .notes('Upload the uint8 4-label NIfTI anywhere in Girder first; its item '
-               'is moved into SegQueue14/prelabels/<modelVersion>/. The rules are '
+               'is moved into SegQueue/prelabels/<modelVersion>/. The rules are '
                "segqueue14-prelabels': attach if the case has none, skip the same "
                'version, refresh a different version only if nobody has submitted '
                'the case or is working from the old one, and never refresh a '

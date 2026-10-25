@@ -9,6 +9,12 @@
 #   populate | populate --apply            dry run / create the pooled cases
 #   worker | off                           start the SegQueue14 worker / rollback switch
 #
+# D36 (issue #124), in this order; see the script's header:
+#   backup                                 mongodump of girder (pre-d36-<time>)
+#   retire-live | restore-live             uninstall the old plugin / roll that back
+#   retire-groups [--apply]                delete the old segqueue-* groups
+#   consolidate [--apply]                  SegQueue14 writes into SegQueue
+#
 # The script never touches the live checkout, the live plugin or live data; see its
 # header. Secrets: SSH_HOST, SSH_PORT, SSH_USERNAME, SSH_PASSWORD (as server-ssh.yml),
 # SSH_KNOWN_HOSTS optional.
@@ -22,7 +28,9 @@ on:
         description: "deploy step"
         type: choice
         default: diagnose
-        options: [diagnose, status, install, populate, "populate --apply", worker, off]
+        options: [diagnose, status, install, populate, "populate --apply", worker, off,
+                  backup, retire-live, restore-live, retire-groups, "retire-groups --apply",
+                  consolidate, "consolidate --apply"]
 
 concurrency:
   group: server-ssh
@@ -49,6 +57,8 @@ jobs:
           cmd="$INPUT"
           case "$cmd" in
             diagnose|status|install|populate|"populate --apply"|worker|off) ;;
+            backup|retire-live|restore-live|retire-groups|"retire-groups --apply") ;;
+            consolidate|"consolidate --apply") ;;
             *) echo "::error::unknown step '$cmd'"; exit 1 ;;
           esac
           echo "cmd=$cmd" >> "$GITHUB_OUTPUT"

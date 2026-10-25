@@ -199,7 +199,8 @@ jobs:
         # only thing that says which part of the install broke.
         run: |
           set -o pipefail
-          pytest -q -rs tests/test_segqueue_server.py --junitxml=junit.xml \
+          # test_d36_consolidate.py: the D36 janus consolidation steps (issue #124).
+          pytest -q -rs tests/test_segqueue_server.py tests/test_d36_consolidate.py --junitxml=junit.xml \
             2>&1 | tee server-tests.log
       - name: Fail if these skipped
         # These tests skip themselves when Girder or MongoDB is missing, which

@@ -1,0 +1,4175 @@
+{
+ "janus0_sd_from_ci": {
+  "LM": 0.1214,
+  "LAD": 0.1262,
+  "LCx": 0.1351,
+  "RCA": 0.0791
+ },
+ "janus0_macro_sd_from_ci": 0.1173,
+ "run1_sd": {
+  "LM": 0.0813,
+  "LAD": 0.0783,
+  "LCx": 0.1111,
+  "RCA": 0.0793
+ },
+ "ratio_janus0_over_run1": {
+  "LM": 1.494,
+  "LAD": 1.611,
+  "LCx": 1.216,
+  "RCA": 0.997
+ },
+ "check_bridge_r9_n150": 0.964,
+ "seal_power": [
+  {
+   "scenario": "pool like val (f=1)",
+   "f_pool": 1.0,
+   "k": 1.0,
+   "n": 150,
+   "delta": 0.0,
+   "p_all": 0.776,
+   "per_class": {
+    "LM": 0.924,
+    "LAD": 0.934,
+    "LCx": 0.9,
+    "RCA": 1.0
+   }
+  },
+  {
+   "scenario": "pool like val (f=1)",
+   "f_pool": 1.0,
+   "k": 1.0,
+   "n": 150,
+   "delta": -0.02,
+   "p_all": 0.135,
+   "per_class": {
+    "LM": 0.581,
+    "LAD": 0.54,
+    "LCx": 0.487,
+    "RCA": 0.893
+   }
+  },
+  {
+   "scenario": "pool like val (f=1)",
+   "f_pool": 1.0,
+   "k": 1.0,
+   "n": 200,
+   "delta": 0.0,
+   "p_all": 0.914,
+   "per_class": {
+    "LM": 0.976,
+    "LAD": 0.98,
+    "LCx": 0.956,
+    "RCA": 1.0
+   }
+  },
+  {
+   "scenario": "pool like val (f=1)",
+   "f_pool": 1.0,
+   "k": 1.0,
+   "n": 200,
+   "delta": -0.02,
+   "p_all": 0.288,
+   "per_class": {
+    "LM": 0.702,
+    "LAD": 0.673,
+    "LCx": 0.615,
+    "RCA": 0.959
+   }
+  },
+  {
+   "scenario": "pool like val (f=1)",
+   "f_pool": 1.0,
+   "k": 1.0,
+   "n": 250,
+   "delta": 0.0,
+   "p_all": 0.97,
+   "per_class": {
+    "LM": 0.992,
+    "LAD": 0.992,
+    "LCx": 0.986,
+    "RCA": 1.0
+   }
+  },
+  {
+   "scenario": "pool like val (f=1)",
+   "f_pool": 1.0,
+   "k": 1.0,
+   "n": 250,
+   "delta": -0.02,
+   "p_all": 0.409,
+   "per_class": {
+    "LM": 0.79,
+    "LAD": 0.752,
+    "LCx": 0.711,
+    "RCA": 0.985
+   }
+  },
+  {
+   "scenario": "pool like val (f=1)",
+   "f_pool": 1.0,
+   "k": 1.2,
+   "n": 150,
+   "delta": 0.0,
+   "p_all": 0.656,
+   "per_class": {
+    "LM": 0.894,
+    "LAD": 0.882,
+    "LCx": 0.832,
+    "RCA": 0.998
+   }
+  },
+  {
+   "scenario": "pool like val (f=1)",
+   "f_pool": 1.0,
+   "k": 1.2,
+   "n": 150,
+   "delta": -0.02,
+   "p_all": 0.077,
+   "per_class": {
+    "LM": 0.508,
+    "LAD": 0.454,
+    "LCx": 0.408,
+    "RCA": 0.833
+   }
+  },
+  {
+   "scenario": "pool like val (f=1)",
+   "f_pool": 1.0,
+   "k": 1.2,
+   "n": 200,
+   "delta": 0.0,
+   "p_all": 0.85,
+   "per_class": {
+    "LM": 0.962,
+    "LAD": 0.959,
+    "LCx": 0.92,
+    "RCA": 1.0
+   }
+  },
+  {
+   "scenario": "pool like val (f=1)",
+   "f_pool": 1.0,
+   "k": 1.2,
+   "n": 200,
+   "delta": -0.02,
+   "p_all": 0.188,
+   "per_class": {
+    "LM": 0.625,
+    "LAD": 0.585,
+    "LCx": 0.537,
+    "RCA": 0.926
+   }
+  },
+  {
+   "scenario": "pool like val (f=1)",
+   "f_pool": 1.0,
+   "k": 1.2,
+   "n": 250,
+   "delta": 0.0,
+   "p_all": 0.927,
+   "per_class": {
+    "LM": 0.987,
+    "LAD": 0.979,
+    "LCx": 0.961,
+    "RCA": 1.0
+   }
+  },
+  {
+   "scenario": "pool like val (f=1)",
+   "f_pool": 1.0,
+   "k": 1.2,
+   "n": 250,
+   "delta": -0.02,
+   "p_all": 0.286,
+   "per_class": {
+    "LM": 0.723,
+    "LAD": 0.671,
+    "LCx": 0.622,
+    "RCA": 0.959
+   }
+  },
+  {
+   "scenario": "f=1.2 (trigger line)",
+   "f_pool": 1.2,
+   "k": 1.0,
+   "n": 150,
+   "delta": 0.0,
+   "p_all": 0.514,
+   "per_class": {
+    "LM": 0.828,
+    "LAD": 0.82,
+    "LCx": 0.763,
+    "RCA": 0.993
+   }
+  },
+  {
+   "scenario": "f=1.2 (trigger line)",
+   "f_pool": 1.2,
+   "k": 1.0,
+   "n": 150,
+   "delta": -0.02,
+   "p_all": 0.043,
+   "per_class": {
+    "LM": 0.452,
+    "LAD": 0.397,
+    "LCx": 0.356,
+    "RCA": 0.762
+   }
+  },
+  {
+   "scenario": "f=1.2 (trigger line)",
+   "f_pool": 1.2,
+   "k": 1.0,
+   "n": 200,
+   "delta": 0.0,
+   "p_all": 0.736,
+   "per_class": {
+    "LM": 0.918,
+    "LAD": 0.915,
+    "LCx": 0.871,
+    "RCA": 1.0
+   }
+  },
+  {
+   "scenario": "f=1.2 (trigger line)",
+   "f_pool": 1.2,
+   "k": 1.0,
+   "n": 200,
+   "delta": -0.02,
+   "p_all": 0.124,
+   "per_class": {
+    "LM": 0.556,
+    "LAD": 0.518,
+    "LCx": 0.473,
+    "RCA": 0.872
+   }
+  },
+  {
+   "scenario": "f=1.2 (trigger line)",
+   "f_pool": 1.2,
+   "k": 1.0,
+   "n": 250,
+   "delta": 0.0,
+   "p_all": 0.857,
+   "per_class": {
+    "LM": 0.964,
+    "LAD": 0.953,
+    "LCx": 0.933,
+    "RCA": 1.0
+   }
+  },
+  {
+   "scenario": "f=1.2 (trigger line)",
+   "f_pool": 1.2,
+   "k": 1.0,
+   "n": 250,
+   "delta": -0.02,
+   "p_all": 0.197,
+   "per_class": {
+    "LM": 0.645,
+    "LAD": 0.597,
+    "LCx": 0.554,
+    "RCA": 0.919
+   }
+  },
+  {
+   "scenario": "f=1.2 (trigger line)",
+   "f_pool": 1.2,
+   "k": 1.2,
+   "n": 150,
+   "delta": 0.0,
+   "p_all": 0.385,
+   "per_class": {
+    "LM": 0.765,
+    "LAD": 0.743,
+    "LCx": 0.688,
+    "RCA": 0.983
+   }
+  },
+  {
+   "scenario": "f=1.2 (trigger line)",
+   "f_pool": 1.2,
+   "k": 1.2,
+   "n": 150,
+   "delta": -0.02,
+   "p_all": 0.022,
+   "per_class": {
+    "LM": 0.376,
+    "LAD": 0.335,
+    "LCx": 0.299,
+    "RCA": 0.687
+   }
+  },
+  {
+   "scenario": "f=1.2 (trigger line)",
+   "f_pool": 1.2,
+   "k": 1.2,
+   "n": 200,
+   "delta": 0.0,
+   "p_all": 0.61,
+   "per_class": {
+    "LM": 0.879,
+    "LAD": 0.863,
+    "LCx": 0.796,
+    "RCA": 0.996
+   }
+  },
+  {
+   "scenario": "f=1.2 (trigger line)",
+   "f_pool": 1.2,
+   "k": 1.2,
+   "n": 200,
+   "delta": -0.02,
+   "p_all": 0.065,
+   "per_class": {
+    "LM": 0.474,
+    "LAD": 0.443,
+    "LCx": 0.399,
+    "RCA": 0.808
+   }
+  },
+  {
+   "scenario": "f=1.2 (trigger line)",
+   "f_pool": 1.2,
+   "k": 1.2,
+   "n": 250,
+   "delta": 0.0,
+   "p_all": 0.754,
+   "per_class": {
+    "LM": 0.941,
+    "LAD": 0.913,
+    "LCx": 0.882,
+    "RCA": 1.0
+   }
+  },
+  {
+   "scenario": "f=1.2 (trigger line)",
+   "f_pool": 1.2,
+   "k": 1.2,
+   "n": 250,
+   "delta": -0.02,
+   "p_all": 0.119,
+   "per_class": {
+    "LM": 0.567,
+    "LAD": 0.512,
+    "LCx": 0.473,
+    "RCA": 0.875
+   }
+  },
+  {
+   "scenario": "pool 1.5x more varied",
+   "f_pool": 1.5,
+   "k": 1.0,
+   "n": 150,
+   "delta": 0.0,
+   "p_all": 0.225,
+   "per_class": {
+    "LM": 0.661,
+    "LAD": 0.628,
+    "LCx": 0.571,
+    "RCA": 0.942
+   }
+  },
+  {
+   "scenario": "pool 1.5x more varied",
+   "f_pool": 1.5,
+   "k": 1.0,
+   "n": 150,
+   "delta": -0.02,
+   "p_all": 0.01,
+   "per_class": {
+    "LM": 0.317,
+    "LAD": 0.277,
+    "LCx": 0.246,
+    "RCA": 0.575
+   }
+  },
+  {
+   "scenario": "pool 1.5x more varied",
+   "f_pool": 1.5,
+   "k": 1.0,
+   "n": 200,
+   "delta": 0.0,
+   "p_all": 0.423,
+   "per_class": {
+    "LM": 0.783,
+    "LAD": 0.767,
+    "LCx": 0.7,
+    "RCA": 0.985
+   }
+  },
+  {
+   "scenario": "pool 1.5x more varied",
+   "f_pool": 1.5,
+   "k": 1.0,
+   "n": 200,
+   "delta": -0.02,
+   "p_all": 0.033,
+   "per_class": {
+    "LM": 0.389,
+    "LAD": 0.359,
+    "LCx": 0.326,
+    "RCA": 0.699
+   }
+  },
+  {
+   "scenario": "pool 1.5x more varied",
+   "f_pool": 1.5,
+   "k": 1.0,
+   "n": 250,
+   "delta": 0.0,
+   "p_all": 0.564,
+   "per_class": {
+    "LM": 0.866,
+    "LAD": 0.838,
+    "LCx": 0.796,
+    "RCA": 0.995
+   }
+  },
+  {
+   "scenario": "pool 1.5x more varied",
+   "f_pool": 1.5,
+   "k": 1.0,
+   "n": 250,
+   "delta": -0.02,
+   "p_all": 0.058,
+   "per_class": {
+    "LM": 0.47,
+    "LAD": 0.426,
+    "LCx": 0.389,
+    "RCA": 0.785
+   }
+  },
+  {
+   "scenario": "pool 1.5x more varied",
+   "f_pool": 1.5,
+   "k": 1.2,
+   "n": 150,
+   "delta": 0.0,
+   "p_all": 0.14,
+   "per_class": {
+    "LM": 0.589,
+    "LAD": 0.544,
+    "LCx": 0.489,
+    "RCA": 0.902
+   }
+  },
+  {
+   "scenario": "pool 1.5x more varied",
+   "f_pool": 1.5,
+   "k": 1.2,
+   "n": 150,
+   "delta": -0.02,
+   "p_all": 0.004,
+   "per_class": {
+    "LM": 0.253,
+    "LAD": 0.236,
+    "LCx": 0.207,
+    "RCA": 0.494
+   }
+  },
+  {
+   "scenario": "pool 1.5x more varied",
+   "f_pool": 1.5,
+   "k": 1.2,
+   "n": 200,
+   "delta": 0.0,
+   "p_all": 0.294,
+   "per_class": {
+    "LM": 0.717,
+    "LAD": 0.681,
+    "LCx": 0.619,
+    "RCA": 0.966
+   }
+  },
+  {
+   "scenario": "pool 1.5x more varied",
+   "f_pool": 1.5,
+   "k": 1.2,
+   "n": 200,
+   "delta": -0.02,
+   "p_all": 0.018,
+   "per_class": {
+    "LM": 0.317,
+    "LAD": 0.302,
+    "LCx": 0.269,
+    "RCA": 0.613
+   }
+  },
+  {
+   "scenario": "pool 1.5x more varied",
+   "f_pool": 1.5,
+   "k": 1.2,
+   "n": 250,
+   "delta": 0.0,
+   "p_all": 0.422,
+   "per_class": {
+    "LM": 0.804,
+    "LAD": 0.759,
+    "LCx": 0.717,
+    "RCA": 0.988
+   }
+  },
+  {
+   "scenario": "pool 1.5x more varied",
+   "f_pool": 1.5,
+   "k": 1.2,
+   "n": 250,
+   "delta": -0.02,
+   "p_all": 0.031,
+   "per_class": {
+    "LM": 0.393,
+    "LAD": 0.361,
+    "LCx": 0.329,
+    "RCA": 0.712
+   }
+  }
+ ],
+ "seal_power_run1_spread": [
+  {
+   "f_pool": 1.0,
+   "n": 150,
+   "p_all": 0.974
+  },
+  {
+   "f_pool": 1.0,
+   "n": 200,
+   "p_all": 0.994
+  },
+  {
+   "f_pool": 1.0,
+   "n": 250,
+   "p_all": 1.0
+  },
+  {
+   "f_pool": 1.5,
+   "n": 150,
+   "p_all": 0.62
+  },
+  {
+   "f_pool": 1.5,
+   "n": 200,
+   "p_all": 0.808
+  },
+  {
+   "f_pool": 1.5,
+   "n": 250,
+   "p_all": 0.902
+  }
+ ],
+ "d35_inputs": {
+  "s_d_measured_max_over_pairs": {
+   "macro": 0.0455,
+   "LCx": 0.1026,
+   "LAD": 0.0491
+  },
+  "r_janus0_over_run1": {
+   "macro": 1.82,
+   "LCx": 1.216,
+   "LAD": 1.611
+  },
+  "sigma_seed": 0.013
+ },
+ "d35_mde": [
+  {
+   "metric": "macro",
+   "scale": "scaled to Janus 0",
+   "f_pool": 1.0,
+   "design": "model decision: two fixed checkpoints (no seed term)",
+   "n": 10,
+   "se_case": 0.0262,
+   "se_seed": 0.0,
+   "mde": 0.0733
+  },
+  {
+   "metric": "macro",
+   "scale": "scaled to Janus 0",
+   "f_pool": 1.0,
+   "design": "model decision: two fixed checkpoints (no seed term)",
+   "n": 30,
+   "se_case": 0.0151,
+   "se_seed": 0.0,
+   "mde": 0.0423
+  },
+  {
+   "metric": "macro",
+   "scale": "scaled to Janus 0",
+   "f_pool": 1.0,
+   "design": "model decision: two fixed checkpoints (no seed term)",
+   "n": 50,
+   "se_case": 0.0117,
+   "se_seed": 0.0,
+   "mde": 0.0328
+  },
+  {
+   "metric": "macro",
+   "scale": "scaled to Janus 0",
+   "f_pool": 1.0,
+   "design": "model decision: two fixed checkpoints (no seed term)",
+   "n": 61,
+   "se_case": 0.0106,
+   "se_seed": 0.0,
+   "mde": 0.0297
+  },
+  {
+   "metric": "macro",
+   "scale": "scaled to Janus 0",
+   "f_pool": 1.0,
+   "design": "model decision: two fixed checkpoints (no seed term)",
+   "n": 100,
+   "se_case": 0.0083,
+   "se_seed": 0.0,
+   "mde": 0.0232
+  },
+  {
+   "metric": "macro",
+   "scale": "scaled to Janus 0",
+   "f_pool": 1.0,
+   "design": "model decision: two fixed checkpoints (no seed term)",
+   "n": 200,
+   "se_case": 0.0059,
+   "se_seed": 0.0,
+   "mde": 0.0164
+  },
+  {
+   "metric": "macro",
+   "scale": "scaled to Janus 0",
+   "f_pool": 1.0,
+   "design": "recipe decision, 1 seed vs fixed Janus 0",
+   "n": 10,
+   "se_case": 0.0262,
+   "se_seed": 0.013,
+   "mde": 0.0819
+  },
+  {
+   "metric": "macro",
+   "scale": "scaled to Janus 0",
+   "f_pool": 1.0,
+   "design": "recipe decision, 1 seed vs fixed Janus 0",
+   "n": 30,
+   "se_case": 0.0151,
+   "se_seed": 0.013,
+   "mde": 0.0558
+  },
+  {
+   "metric": "macro",
+   "scale": "scaled to Janus 0",
+   "f_pool": 1.0,
+   "design": "recipe decision, 1 seed vs fixed Janus 0",
+   "n": 50,
+   "se_case": 0.0117,
+   "se_seed": 0.013,
+   "mde": 0.049
+  },
+  {
+   "metric": "macro",
+   "scale": "scaled to Janus 0",
+   "f_pool": 1.0,
+   "design": "recipe decision, 1 seed vs fixed Janus 0",
+   "n": 61,
+   "se_case": 0.0106,
+   "se_seed": 0.013,
+   "mde": 0.047
+  },
+  {
+   "metric": "macro",
+   "scale": "scaled to Janus 0",
+   "f_pool": 1.0,
+   "design": "recipe decision, 1 seed vs fixed Janus 0",
+   "n": 100,
+   "se_case": 0.0083,
+   "se_seed": 0.013,
+   "mde": 0.0432
+  },
+  {
+   "metric": "macro",
+   "scale": "scaled to Janus 0",
+   "f_pool": 1.0,
+   "design": "recipe decision, 1 seed vs fixed Janus 0",
+   "n": 200,
+   "se_case": 0.0059,
+   "se_seed": 0.013,
+   "mde": 0.0399
+  },
+  {
+   "metric": "macro",
+   "scale": "scaled to Janus 0",
+   "f_pool": 1.0,
+   "design": "recipe decision, 1 seed per arm",
+   "n": 10,
+   "se_case": 0.0262,
+   "se_seed": 0.0184,
+   "mde": 0.0896
+  },
+  {
+   "metric": "macro",
+   "scale": "scaled to Janus 0",
+   "f_pool": 1.0,
+   "design": "recipe decision, 1 seed per arm",
+   "n": 30,
+   "se_case": 0.0151,
+   "se_seed": 0.0184,
+   "mde": 0.0666
+  },
+  {
+   "metric": "macro",
+   "scale": "scaled to Janus 0",
+   "f_pool": 1.0,
+   "design": "recipe decision, 1 seed per arm",
+   "n": 50,
+   "se_case": 0.0117,
+   "se_seed": 0.0184,
+   "mde": 0.061
+  },
+  {
+   "metric": "macro",
+   "scale": "scaled to Janus 0",
+   "f_pool": 1.0,
+   "design": "recipe decision, 1 seed per arm",
+   "n": 61,
+   "se_case": 0.0106,
+   "se_seed": 0.0184,
+   "mde": 0.0594
+  },
+  {
+   "metric": "macro",
+   "scale": "scaled to Janus 0",
+   "f_pool": 1.0,
+   "design": "recipe decision, 1 seed per arm",
+   "n": 100,
+   "se_case": 0.0083,
+   "se_seed": 0.0184,
+   "mde": 0.0565
+  },
+  {
+   "metric": "macro",
+   "scale": "scaled to Janus 0",
+   "f_pool": 1.0,
+   "design": "recipe decision, 1 seed per arm",
+   "n": 200,
+   "se_case": 0.0059,
+   "se_seed": 0.0184,
+   "mde": 0.054
+  },
+  {
+   "metric": "macro",
+   "scale": "scaled to Janus 0",
+   "f_pool": 1.0,
+   "design": "recipe decision, 2 seeds per arm",
+   "n": 10,
+   "se_case": 0.0262,
+   "se_seed": 0.013,
+   "mde": 0.0819
+  },
+  {
+   "metric": "macro",
+   "scale": "scaled to Janus 0",
+   "f_pool": 1.0,
+   "design": "recipe decision, 2 seeds per arm",
+   "n": 30,
+   "se_case": 0.0151,
+   "se_seed": 0.013,
+   "mde": 0.0558
+  },
+  {
+   "metric": "macro",
+   "scale": "scaled to Janus 0",
+   "f_pool": 1.0,
+   "design": "recipe decision, 2 seeds per arm",
+   "n": 50,
+   "se_case": 0.0117,
+   "se_seed": 0.013,
+   "mde": 0.049
+  },
+  {
+   "metric": "macro",
+   "scale": "scaled to Janus 0",
+   "f_pool": 1.0,
+   "design": "recipe decision, 2 seeds per arm",
+   "n": 61,
+   "se_case": 0.0106,
+   "se_seed": 0.013,
+   "mde": 0.047
+  },
+  {
+   "metric": "macro",
+   "scale": "scaled to Janus 0",
+   "f_pool": 1.0,
+   "design": "recipe decision, 2 seeds per arm",
+   "n": 100,
+   "se_case": 0.0083,
+   "se_seed": 0.013,
+   "mde": 0.0432
+  },
+  {
+   "metric": "macro",
+   "scale": "scaled to Janus 0",
+   "f_pool": 1.0,
+   "design": "recipe decision, 2 seeds per arm",
+   "n": 200,
+   "se_case": 0.0059,
+   "se_seed": 0.013,
+   "mde": 0.0399
+  },
+  {
+   "metric": "macro",
+   "scale": "scaled to Janus 0",
+   "f_pool": 1.0,
+   "design": "recipe decision, 3 seeds per arm",
+   "n": 10,
+   "se_case": 0.0262,
+   "se_seed": 0.0106,
+   "mde": 0.0791
+  },
+  {
+   "metric": "macro",
+   "scale": "scaled to Janus 0",
+   "f_pool": 1.0,
+   "design": "recipe decision, 3 seeds per arm",
+   "n": 30,
+   "se_case": 0.0151,
+   "se_seed": 0.0106,
+   "mde": 0.0517
+  },
+  {
+   "metric": "macro",
+   "scale": "scaled to Janus 0",
+   "f_pool": 1.0,
+   "design": "recipe decision, 3 seeds per arm",
+   "n": 50,
+   "se_case": 0.0117,
+   "se_seed": 0.0106,
+   "mde": 0.0443
+  },
+  {
+   "metric": "macro",
+   "scale": "scaled to Janus 0",
+   "f_pool": 1.0,
+   "design": "recipe decision, 3 seeds per arm",
+   "n": 61,
+   "se_case": 0.0106,
+   "se_seed": 0.0106,
+   "mde": 0.042
+  },
+  {
+   "metric": "macro",
+   "scale": "scaled to Janus 0",
+   "f_pool": 1.0,
+   "design": "recipe decision, 3 seeds per arm",
+   "n": 100,
+   "se_case": 0.0083,
+   "se_seed": 0.0106,
+   "mde": 0.0377
+  },
+  {
+   "metric": "macro",
+   "scale": "scaled to Janus 0",
+   "f_pool": 1.0,
+   "design": "recipe decision, 3 seeds per arm",
+   "n": 200,
+   "se_case": 0.0059,
+   "se_seed": 0.0106,
+   "mde": 0.0339
+  },
+  {
+   "metric": "macro",
+   "scale": "scaled to Janus 0",
+   "f_pool": 1.5,
+   "design": "model decision: two fixed checkpoints (no seed term)",
+   "n": 10,
+   "se_case": 0.0393,
+   "se_seed": 0.0,
+   "mde": 0.11
+  },
+  {
+   "metric": "macro",
+   "scale": "scaled to Janus 0",
+   "f_pool": 1.5,
+   "design": "model decision: two fixed checkpoints (no seed term)",
+   "n": 30,
+   "se_case": 0.0227,
+   "se_seed": 0.0,
+   "mde": 0.0635
+  },
+  {
+   "metric": "macro",
+   "scale": "scaled to Janus 0",
+   "f_pool": 1.5,
+   "design": "model decision: two fixed checkpoints (no seed term)",
+   "n": 50,
+   "se_case": 0.0176,
+   "se_seed": 0.0,
+   "mde": 0.0492
+  },
+  {
+   "metric": "macro",
+   "scale": "scaled to Janus 0",
+   "f_pool": 1.5,
+   "design": "model decision: two fixed checkpoints (no seed term)",
+   "n": 61,
+   "se_case": 0.0159,
+   "se_seed": 0.0,
+   "mde": 0.0445
+  },
+  {
+   "metric": "macro",
+   "scale": "scaled to Janus 0",
+   "f_pool": 1.5,
+   "design": "model decision: two fixed checkpoints (no seed term)",
+   "n": 100,
+   "se_case": 0.0124,
+   "se_seed": 0.0,
+   "mde": 0.0348
+  },
+  {
+   "metric": "macro",
+   "scale": "scaled to Janus 0",
+   "f_pool": 1.5,
+   "design": "model decision: two fixed checkpoints (no seed term)",
+   "n": 200,
+   "se_case": 0.0088,
+   "se_seed": 0.0,
+   "mde": 0.0246
+  },
+  {
+   "metric": "macro",
+   "scale": "scaled to Janus 0",
+   "f_pool": 1.5,
+   "design": "recipe decision, 1 seed vs fixed Janus 0",
+   "n": 10,
+   "se_case": 0.0393,
+   "se_seed": 0.013,
+   "mde": 0.1158
+  },
+  {
+   "metric": "macro",
+   "scale": "scaled to Janus 0",
+   "f_pool": 1.5,
+   "design": "recipe decision, 1 seed vs fixed Janus 0",
+   "n": 30,
+   "se_case": 0.0227,
+   "se_seed": 0.013,
+   "mde": 0.0732
+  },
+  {
+   "metric": "macro",
+   "scale": "scaled to Janus 0",
+   "f_pool": 1.5,
+   "design": "recipe decision, 1 seed vs fixed Janus 0",
+   "n": 50,
+   "se_case": 0.0176,
+   "se_seed": 0.013,
+   "mde": 0.0612
+  },
+  {
+   "metric": "macro",
+   "scale": "scaled to Janus 0",
+   "f_pool": 1.5,
+   "design": "recipe decision, 1 seed vs fixed Janus 0",
+   "n": 61,
+   "se_case": 0.0159,
+   "se_seed": 0.013,
+   "mde": 0.0575
+  },
+  {
+   "metric": "macro",
+   "scale": "scaled to Janus 0",
+   "f_pool": 1.5,
+   "design": "recipe decision, 1 seed vs fixed Janus 0",
+   "n": 100,
+   "se_case": 0.0124,
+   "se_seed": 0.013,
+   "mde": 0.0503
+  },
+  {
+   "metric": "macro",
+   "scale": "scaled to Janus 0",
+   "f_pool": 1.5,
+   "design": "recipe decision, 1 seed vs fixed Janus 0",
+   "n": 200,
+   "se_case": 0.0088,
+   "se_seed": 0.013,
+   "mde": 0.0439
+  },
+  {
+   "metric": "macro",
+   "scale": "scaled to Janus 0",
+   "f_pool": 1.5,
+   "design": "recipe decision, 1 seed per arm",
+   "n": 10,
+   "se_case": 0.0393,
+   "se_seed": 0.0184,
+   "mde": 0.1214
+  },
+  {
+   "metric": "macro",
+   "scale": "scaled to Janus 0",
+   "f_pool": 1.5,
+   "design": "recipe decision, 1 seed per arm",
+   "n": 30,
+   "se_case": 0.0227,
+   "se_seed": 0.0184,
+   "mde": 0.0817
+  },
+  {
+   "metric": "macro",
+   "scale": "scaled to Janus 0",
+   "f_pool": 1.5,
+   "design": "recipe decision, 1 seed per arm",
+   "n": 50,
+   "se_case": 0.0176,
+   "se_seed": 0.0184,
+   "mde": 0.0712
+  },
+  {
+   "metric": "macro",
+   "scale": "scaled to Janus 0",
+   "f_pool": 1.5,
+   "design": "recipe decision, 1 seed per arm",
+   "n": 61,
+   "se_case": 0.0159,
+   "se_seed": 0.0184,
+   "mde": 0.0681
+  },
+  {
+   "metric": "macro",
+   "scale": "scaled to Janus 0",
+   "f_pool": 1.5,
+   "design": "recipe decision, 1 seed per arm",
+   "n": 100,
+   "se_case": 0.0124,
+   "se_seed": 0.0184,
+   "mde": 0.0621
+  },
+  {
+   "metric": "macro",
+   "scale": "scaled to Janus 0",
+   "f_pool": 1.5,
+   "design": "recipe decision, 1 seed per arm",
+   "n": 200,
+   "se_case": 0.0088,
+   "se_seed": 0.0184,
+   "mde": 0.057
+  },
+  {
+   "metric": "macro",
+   "scale": "scaled to Janus 0",
+   "f_pool": 1.5,
+   "design": "recipe decision, 2 seeds per arm",
+   "n": 10,
+   "se_case": 0.0393,
+   "se_seed": 0.013,
+   "mde": 0.1158
+  },
+  {
+   "metric": "macro",
+   "scale": "scaled to Janus 0",
+   "f_pool": 1.5,
+   "design": "recipe decision, 2 seeds per arm",
+   "n": 30,
+   "se_case": 0.0227,
+   "se_seed": 0.013,
+   "mde": 0.0732
+  },
+  {
+   "metric": "macro",
+   "scale": "scaled to Janus 0",
+   "f_pool": 1.5,
+   "design": "recipe decision, 2 seeds per arm",
+   "n": 50,
+   "se_case": 0.0176,
+   "se_seed": 0.013,
+   "mde": 0.0612
+  },
+  {
+   "metric": "macro",
+   "scale": "scaled to Janus 0",
+   "f_pool": 1.5,
+   "design": "recipe decision, 2 seeds per arm",
+   "n": 61,
+   "se_case": 0.0159,
+   "se_seed": 0.013,
+   "mde": 0.0575
+  },
+  {
+   "metric": "macro",
+   "scale": "scaled to Janus 0",
+   "f_pool": 1.5,
+   "design": "recipe decision, 2 seeds per arm",
+   "n": 100,
+   "se_case": 0.0124,
+   "se_seed": 0.013,
+   "mde": 0.0503
+  },
+  {
+   "metric": "macro",
+   "scale": "scaled to Janus 0",
+   "f_pool": 1.5,
+   "design": "recipe decision, 2 seeds per arm",
+   "n": 200,
+   "se_case": 0.0088,
+   "se_seed": 0.013,
+   "mde": 0.0439
+  },
+  {
+   "metric": "macro",
+   "scale": "scaled to Janus 0",
+   "f_pool": 1.5,
+   "design": "recipe decision, 3 seeds per arm",
+   "n": 10,
+   "se_case": 0.0393,
+   "se_seed": 0.0106,
+   "mde": 0.1139
+  },
+  {
+   "metric": "macro",
+   "scale": "scaled to Janus 0",
+   "f_pool": 1.5,
+   "design": "recipe decision, 3 seeds per arm",
+   "n": 30,
+   "se_case": 0.0227,
+   "se_seed": 0.0106,
+   "mde": 0.0701
+  },
+  {
+   "metric": "macro",
+   "scale": "scaled to Janus 0",
+   "f_pool": 1.5,
+   "design": "recipe decision, 3 seeds per arm",
+   "n": 50,
+   "se_case": 0.0176,
+   "se_seed": 0.0106,
+   "mde": 0.0575
+  },
+  {
+   "metric": "macro",
+   "scale": "scaled to Janus 0",
+   "f_pool": 1.5,
+   "design": "recipe decision, 3 seeds per arm",
+   "n": 61,
+   "se_case": 0.0159,
+   "se_seed": 0.0106,
+   "mde": 0.0535
+  },
+  {
+   "metric": "macro",
+   "scale": "scaled to Janus 0",
+   "f_pool": 1.5,
+   "design": "recipe decision, 3 seeds per arm",
+   "n": 100,
+   "se_case": 0.0124,
+   "se_seed": 0.0106,
+   "mde": 0.0457
+  },
+  {
+   "metric": "macro",
+   "scale": "scaled to Janus 0",
+   "f_pool": 1.5,
+   "design": "recipe decision, 3 seeds per arm",
+   "n": 200,
+   "se_case": 0.0088,
+   "se_seed": 0.0106,
+   "mde": 0.0386
+  },
+  {
+   "metric": "macro",
+   "scale": "measured (r=1)",
+   "f_pool": 1.0,
+   "design": "model decision: two fixed checkpoints (no seed term)",
+   "n": 10,
+   "se_case": 0.0144,
+   "se_seed": 0.0,
+   "mde": 0.0403
+  },
+  {
+   "metric": "macro",
+   "scale": "measured (r=1)",
+   "f_pool": 1.0,
+   "design": "model decision: two fixed checkpoints (no seed term)",
+   "n": 30,
+   "se_case": 0.0083,
+   "se_seed": 0.0,
+   "mde": 0.0233
+  },
+  {
+   "metric": "macro",
+   "scale": "measured (r=1)",
+   "f_pool": 1.0,
+   "design": "model decision: two fixed checkpoints (no seed term)",
+   "n": 50,
+   "se_case": 0.0064,
+   "se_seed": 0.0,
+   "mde": 0.018
+  },
+  {
+   "metric": "macro",
+   "scale": "measured (r=1)",
+   "f_pool": 1.0,
+   "design": "model decision: two fixed checkpoints (no seed term)",
+   "n": 61,
+   "se_case": 0.0058,
+   "se_seed": 0.0,
+   "mde": 0.0163
+  },
+  {
+   "metric": "macro",
+   "scale": "measured (r=1)",
+   "f_pool": 1.0,
+   "design": "model decision: two fixed checkpoints (no seed term)",
+   "n": 100,
+   "se_case": 0.0046,
+   "se_seed": 0.0,
+   "mde": 0.0127
+  },
+  {
+   "metric": "macro",
+   "scale": "measured (r=1)",
+   "f_pool": 1.0,
+   "design": "model decision: two fixed checkpoints (no seed term)",
+   "n": 200,
+   "se_case": 0.0032,
+   "se_seed": 0.0,
+   "mde": 0.009
+  },
+  {
+   "metric": "macro",
+   "scale": "measured (r=1)",
+   "f_pool": 1.0,
+   "design": "recipe decision, 1 seed vs fixed Janus 0",
+   "n": 10,
+   "se_case": 0.0144,
+   "se_seed": 0.013,
+   "mde": 0.0543
+  },
+  {
+   "metric": "macro",
+   "scale": "measured (r=1)",
+   "f_pool": 1.0,
+   "design": "recipe decision, 1 seed vs fixed Janus 0",
+   "n": 30,
+   "se_case": 0.0083,
+   "se_seed": 0.013,
+   "mde": 0.0432
+  },
+  {
+   "metric": "macro",
+   "scale": "measured (r=1)",
+   "f_pool": 1.0,
+   "design": "recipe decision, 1 seed vs fixed Janus 0",
+   "n": 50,
+   "se_case": 0.0064,
+   "se_seed": 0.013,
+   "mde": 0.0406
+  },
+  {
+   "metric": "macro",
+   "scale": "measured (r=1)",
+   "f_pool": 1.0,
+   "design": "recipe decision, 1 seed vs fixed Janus 0",
+   "n": 61,
+   "se_case": 0.0058,
+   "se_seed": 0.013,
+   "mde": 0.0399
+  },
+  {
+   "metric": "macro",
+   "scale": "measured (r=1)",
+   "f_pool": 1.0,
+   "design": "recipe decision, 1 seed vs fixed Janus 0",
+   "n": 100,
+   "se_case": 0.0046,
+   "se_seed": 0.013,
+   "mde": 0.0386
+  },
+  {
+   "metric": "macro",
+   "scale": "measured (r=1)",
+   "f_pool": 1.0,
+   "design": "recipe decision, 1 seed vs fixed Janus 0",
+   "n": 200,
+   "se_case": 0.0032,
+   "se_seed": 0.013,
+   "mde": 0.0375
+  },
+  {
+   "metric": "macro",
+   "scale": "measured (r=1)",
+   "f_pool": 1.0,
+   "design": "recipe decision, 1 seed per arm",
+   "n": 10,
+   "se_case": 0.0144,
+   "se_seed": 0.0184,
+   "mde": 0.0654
+  },
+  {
+   "metric": "macro",
+   "scale": "measured (r=1)",
+   "f_pool": 1.0,
+   "design": "recipe decision, 1 seed per arm",
+   "n": 30,
+   "se_case": 0.0083,
+   "se_seed": 0.0184,
+   "mde": 0.0565
+  },
+  {
+   "metric": "macro",
+   "scale": "measured (r=1)",
+   "f_pool": 1.0,
+   "design": "recipe decision, 1 seed per arm",
+   "n": 50,
+   "se_case": 0.0064,
+   "se_seed": 0.0184,
+   "mde": 0.0545
+  },
+  {
+   "metric": "macro",
+   "scale": "measured (r=1)",
+   "f_pool": 1.0,
+   "design": "recipe decision, 1 seed per arm",
+   "n": 61,
+   "se_case": 0.0058,
+   "se_seed": 0.0184,
+   "mde": 0.054
+  },
+  {
+   "metric": "macro",
+   "scale": "measured (r=1)",
+   "f_pool": 1.0,
+   "design": "recipe decision, 1 seed per arm",
+   "n": 100,
+   "se_case": 0.0046,
+   "se_seed": 0.0184,
+   "mde": 0.053
+  },
+  {
+   "metric": "macro",
+   "scale": "measured (r=1)",
+   "f_pool": 1.0,
+   "design": "recipe decision, 1 seed per arm",
+   "n": 200,
+   "se_case": 0.0032,
+   "se_seed": 0.0184,
+   "mde": 0.0523
+  },
+  {
+   "metric": "macro",
+   "scale": "measured (r=1)",
+   "f_pool": 1.0,
+   "design": "recipe decision, 2 seeds per arm",
+   "n": 10,
+   "se_case": 0.0144,
+   "se_seed": 0.013,
+   "mde": 0.0543
+  },
+  {
+   "metric": "macro",
+   "scale": "measured (r=1)",
+   "f_pool": 1.0,
+   "design": "recipe decision, 2 seeds per arm",
+   "n": 30,
+   "se_case": 0.0083,
+   "se_seed": 0.013,
+   "mde": 0.0432
+  },
+  {
+   "metric": "macro",
+   "scale": "measured (r=1)",
+   "f_pool": 1.0,
+   "design": "recipe decision, 2 seeds per arm",
+   "n": 50,
+   "se_case": 0.0064,
+   "se_seed": 0.013,
+   "mde": 0.0406
+  },
+  {
+   "metric": "macro",
+   "scale": "measured (r=1)",
+   "f_pool": 1.0,
+   "design": "recipe decision, 2 seeds per arm",
+   "n": 61,
+   "se_case": 0.0058,
+   "se_seed": 0.013,
+   "mde": 0.0399
+  },
+  {
+   "metric": "macro",
+   "scale": "measured (r=1)",
+   "f_pool": 1.0,
+   "design": "recipe decision, 2 seeds per arm",
+   "n": 100,
+   "se_case": 0.0046,
+   "se_seed": 0.013,
+   "mde": 0.0386
+  },
+  {
+   "metric": "macro",
+   "scale": "measured (r=1)",
+   "f_pool": 1.0,
+   "design": "recipe decision, 2 seeds per arm",
+   "n": 200,
+   "se_case": 0.0032,
+   "se_seed": 0.013,
+   "mde": 0.0375
+  },
+  {
+   "metric": "macro",
+   "scale": "measured (r=1)",
+   "f_pool": 1.0,
+   "design": "recipe decision, 3 seeds per arm",
+   "n": 10,
+   "se_case": 0.0144,
+   "se_seed": 0.0106,
+   "mde": 0.0501
+  },
+  {
+   "metric": "macro",
+   "scale": "measured (r=1)",
+   "f_pool": 1.0,
+   "design": "recipe decision, 3 seeds per arm",
+   "n": 30,
+   "se_case": 0.0083,
+   "se_seed": 0.0106,
+   "mde": 0.0377
+  },
+  {
+   "metric": "macro",
+   "scale": "measured (r=1)",
+   "f_pool": 1.0,
+   "design": "recipe decision, 3 seeds per arm",
+   "n": 50,
+   "se_case": 0.0064,
+   "se_seed": 0.0106,
+   "mde": 0.0348
+  },
+  {
+   "metric": "macro",
+   "scale": "measured (r=1)",
+   "f_pool": 1.0,
+   "design": "recipe decision, 3 seeds per arm",
+   "n": 61,
+   "se_case": 0.0058,
+   "se_seed": 0.0106,
+   "mde": 0.0339
+  },
+  {
+   "metric": "macro",
+   "scale": "measured (r=1)",
+   "f_pool": 1.0,
+   "design": "recipe decision, 3 seeds per arm",
+   "n": 100,
+   "se_case": 0.0046,
+   "se_seed": 0.0106,
+   "mde": 0.0323
+  },
+  {
+   "metric": "macro",
+   "scale": "measured (r=1)",
+   "f_pool": 1.0,
+   "design": "recipe decision, 3 seeds per arm",
+   "n": 200,
+   "se_case": 0.0032,
+   "se_seed": 0.0106,
+   "mde": 0.0311
+  },
+  {
+   "metric": "macro",
+   "scale": "measured (r=1)",
+   "f_pool": 1.5,
+   "design": "model decision: two fixed checkpoints (no seed term)",
+   "n": 10,
+   "se_case": 0.0216,
+   "se_seed": 0.0,
+   "mde": 0.0604
+  },
+  {
+   "metric": "macro",
+   "scale": "measured (r=1)",
+   "f_pool": 1.5,
+   "design": "model decision: two fixed checkpoints (no seed term)",
+   "n": 30,
+   "se_case": 0.0125,
+   "se_seed": 0.0,
+   "mde": 0.0349
+  },
+  {
+   "metric": "macro",
+   "scale": "measured (r=1)",
+   "f_pool": 1.5,
+   "design": "model decision: two fixed checkpoints (no seed term)",
+   "n": 50,
+   "se_case": 0.0097,
+   "se_seed": 0.0,
+   "mde": 0.027
+  },
+  {
+   "metric": "macro",
+   "scale": "measured (r=1)",
+   "f_pool": 1.5,
+   "design": "model decision: two fixed checkpoints (no seed term)",
+   "n": 61,
+   "se_case": 0.0087,
+   "se_seed": 0.0,
+   "mde": 0.0245
+  },
+  {
+   "metric": "macro",
+   "scale": "measured (r=1)",
+   "f_pool": 1.5,
+   "design": "model decision: two fixed checkpoints (no seed term)",
+   "n": 100,
+   "se_case": 0.0068,
+   "se_seed": 0.0,
+   "mde": 0.0191
+  },
+  {
+   "metric": "macro",
+   "scale": "measured (r=1)",
+   "f_pool": 1.5,
+   "design": "model decision: two fixed checkpoints (no seed term)",
+   "n": 200,
+   "se_case": 0.0048,
+   "se_seed": 0.0,
+   "mde": 0.0135
+  },
+  {
+   "metric": "macro",
+   "scale": "measured (r=1)",
+   "f_pool": 1.5,
+   "design": "recipe decision, 1 seed vs fixed Janus 0",
+   "n": 10,
+   "se_case": 0.0216,
+   "se_seed": 0.013,
+   "mde": 0.0705
+  },
+  {
+   "metric": "macro",
+   "scale": "measured (r=1)",
+   "f_pool": 1.5,
+   "design": "recipe decision, 1 seed vs fixed Janus 0",
+   "n": 30,
+   "se_case": 0.0125,
+   "se_seed": 0.013,
+   "mde": 0.0504
+  },
+  {
+   "metric": "macro",
+   "scale": "measured (r=1)",
+   "f_pool": 1.5,
+   "design": "recipe decision, 1 seed vs fixed Janus 0",
+   "n": 50,
+   "se_case": 0.0097,
+   "se_seed": 0.013,
+   "mde": 0.0453
+  },
+  {
+   "metric": "macro",
+   "scale": "measured (r=1)",
+   "f_pool": 1.5,
+   "design": "recipe decision, 1 seed vs fixed Janus 0",
+   "n": 61,
+   "se_case": 0.0087,
+   "se_seed": 0.013,
+   "mde": 0.0439
+  },
+  {
+   "metric": "macro",
+   "scale": "measured (r=1)",
+   "f_pool": 1.5,
+   "design": "recipe decision, 1 seed vs fixed Janus 0",
+   "n": 100,
+   "se_case": 0.0068,
+   "se_seed": 0.013,
+   "mde": 0.0411
+  },
+  {
+   "metric": "macro",
+   "scale": "measured (r=1)",
+   "f_pool": 1.5,
+   "design": "recipe decision, 1 seed vs fixed Janus 0",
+   "n": 200,
+   "se_case": 0.0048,
+   "se_seed": 0.013,
+   "mde": 0.0388
+  },
+  {
+   "metric": "macro",
+   "scale": "measured (r=1)",
+   "f_pool": 1.5,
+   "design": "recipe decision, 1 seed per arm",
+   "n": 10,
+   "se_case": 0.0216,
+   "se_seed": 0.0184,
+   "mde": 0.0794
+  },
+  {
+   "metric": "macro",
+   "scale": "measured (r=1)",
+   "f_pool": 1.5,
+   "design": "recipe decision, 1 seed per arm",
+   "n": 30,
+   "se_case": 0.0125,
+   "se_seed": 0.0184,
+   "mde": 0.0622
+  },
+  {
+   "metric": "macro",
+   "scale": "measured (r=1)",
+   "f_pool": 1.5,
+   "design": "recipe decision, 1 seed per arm",
+   "n": 50,
+   "se_case": 0.0097,
+   "se_seed": 0.0184,
+   "mde": 0.0581
+  },
+  {
+   "metric": "macro",
+   "scale": "measured (r=1)",
+   "f_pool": 1.5,
+   "design": "recipe decision, 1 seed per arm",
+   "n": 61,
+   "se_case": 0.0087,
+   "se_seed": 0.0184,
+   "mde": 0.057
+  },
+  {
+   "metric": "macro",
+   "scale": "measured (r=1)",
+   "f_pool": 1.5,
+   "design": "recipe decision, 1 seed per arm",
+   "n": 100,
+   "se_case": 0.0068,
+   "se_seed": 0.0184,
+   "mde": 0.0549
+  },
+  {
+   "metric": "macro",
+   "scale": "measured (r=1)",
+   "f_pool": 1.5,
+   "design": "recipe decision, 1 seed per arm",
+   "n": 200,
+   "se_case": 0.0048,
+   "se_seed": 0.0184,
+   "mde": 0.0532
+  },
+  {
+   "metric": "macro",
+   "scale": "measured (r=1)",
+   "f_pool": 1.5,
+   "design": "recipe decision, 2 seeds per arm",
+   "n": 10,
+   "se_case": 0.0216,
+   "se_seed": 0.013,
+   "mde": 0.0705
+  },
+  {
+   "metric": "macro",
+   "scale": "measured (r=1)",
+   "f_pool": 1.5,
+   "design": "recipe decision, 2 seeds per arm",
+   "n": 30,
+   "se_case": 0.0125,
+   "se_seed": 0.013,
+   "mde": 0.0504
+  },
+  {
+   "metric": "macro",
+   "scale": "measured (r=1)",
+   "f_pool": 1.5,
+   "design": "recipe decision, 2 seeds per arm",
+   "n": 50,
+   "se_case": 0.0097,
+   "se_seed": 0.013,
+   "mde": 0.0453
+  },
+  {
+   "metric": "macro",
+   "scale": "measured (r=1)",
+   "f_pool": 1.5,
+   "design": "recipe decision, 2 seeds per arm",
+   "n": 61,
+   "se_case": 0.0087,
+   "se_seed": 0.013,
+   "mde": 0.0439
+  },
+  {
+   "metric": "macro",
+   "scale": "measured (r=1)",
+   "f_pool": 1.5,
+   "design": "recipe decision, 2 seeds per arm",
+   "n": 100,
+   "se_case": 0.0068,
+   "se_seed": 0.013,
+   "mde": 0.0411
+  },
+  {
+   "metric": "macro",
+   "scale": "measured (r=1)",
+   "f_pool": 1.5,
+   "design": "recipe decision, 2 seeds per arm",
+   "n": 200,
+   "se_case": 0.0048,
+   "se_seed": 0.013,
+   "mde": 0.0388
+  },
+  {
+   "metric": "macro",
+   "scale": "measured (r=1)",
+   "f_pool": 1.5,
+   "design": "recipe decision, 3 seeds per arm",
+   "n": 10,
+   "se_case": 0.0216,
+   "se_seed": 0.0106,
+   "mde": 0.0673
+  },
+  {
+   "metric": "macro",
+   "scale": "measured (r=1)",
+   "f_pool": 1.5,
+   "design": "recipe decision, 3 seeds per arm",
+   "n": 30,
+   "se_case": 0.0125,
+   "se_seed": 0.0106,
+   "mde": 0.0458
+  },
+  {
+   "metric": "macro",
+   "scale": "measured (r=1)",
+   "f_pool": 1.5,
+   "design": "recipe decision, 3 seeds per arm",
+   "n": 50,
+   "se_case": 0.0097,
+   "se_seed": 0.0106,
+   "mde": 0.0402
+  },
+  {
+   "metric": "macro",
+   "scale": "measured (r=1)",
+   "f_pool": 1.5,
+   "design": "recipe decision, 3 seeds per arm",
+   "n": 61,
+   "se_case": 0.0087,
+   "se_seed": 0.0106,
+   "mde": 0.0385
+  },
+  {
+   "metric": "macro",
+   "scale": "measured (r=1)",
+   "f_pool": 1.5,
+   "design": "recipe decision, 3 seeds per arm",
+   "n": 100,
+   "se_case": 0.0068,
+   "se_seed": 0.0106,
+   "mde": 0.0353
+  },
+  {
+   "metric": "macro",
+   "scale": "measured (r=1)",
+   "f_pool": 1.5,
+   "design": "recipe decision, 3 seeds per arm",
+   "n": 200,
+   "se_case": 0.0048,
+   "se_seed": 0.0106,
+   "mde": 0.0326
+  },
+  {
+   "metric": "LAD",
+   "scale": "scaled to Janus 0",
+   "f_pool": 1.0,
+   "design": "model decision: two fixed checkpoints (no seed term)",
+   "n": 10,
+   "se_case": 0.025,
+   "se_seed": 0.0,
+   "mde": 0.07
+  },
+  {
+   "metric": "LAD",
+   "scale": "scaled to Janus 0",
+   "f_pool": 1.0,
+   "design": "model decision: two fixed checkpoints (no seed term)",
+   "n": 30,
+   "se_case": 0.0144,
+   "se_seed": 0.0,
+   "mde": 0.0404
+  },
+  {
+   "metric": "LAD",
+   "scale": "scaled to Janus 0",
+   "f_pool": 1.0,
+   "design": "model decision: two fixed checkpoints (no seed term)",
+   "n": 50,
+   "se_case": 0.0112,
+   "se_seed": 0.0,
+   "mde": 0.0313
+  },
+  {
+   "metric": "LAD",
+   "scale": "scaled to Janus 0",
+   "f_pool": 1.0,
+   "design": "model decision: two fixed checkpoints (no seed term)",
+   "n": 61,
+   "se_case": 0.0101,
+   "se_seed": 0.0,
+   "mde": 0.0284
+  },
+  {
+   "metric": "LAD",
+   "scale": "scaled to Janus 0",
+   "f_pool": 1.0,
+   "design": "model decision: two fixed checkpoints (no seed term)",
+   "n": 100,
+   "se_case": 0.0079,
+   "se_seed": 0.0,
+   "mde": 0.0221
+  },
+  {
+   "metric": "LAD",
+   "scale": "scaled to Janus 0",
+   "f_pool": 1.0,
+   "design": "model decision: two fixed checkpoints (no seed term)",
+   "n": 200,
+   "se_case": 0.0056,
+   "se_seed": 0.0,
+   "mde": 0.0157
+  },
+  {
+   "metric": "LAD",
+   "scale": "scaled to Janus 0",
+   "f_pool": 1.0,
+   "design": "recipe decision, 1 seed vs fixed Janus 0",
+   "n": 10,
+   "se_case": 0.025,
+   "se_seed": 0.013,
+   "mde": 0.0789
+  },
+  {
+   "metric": "LAD",
+   "scale": "scaled to Janus 0",
+   "f_pool": 1.0,
+   "design": "recipe decision, 1 seed vs fixed Janus 0",
+   "n": 30,
+   "se_case": 0.0144,
+   "se_seed": 0.013,
+   "mde": 0.0544
+  },
+  {
+   "metric": "LAD",
+   "scale": "scaled to Janus 0",
+   "f_pool": 1.0,
+   "design": "recipe decision, 1 seed vs fixed Janus 0",
+   "n": 50,
+   "se_case": 0.0112,
+   "se_seed": 0.013,
+   "mde": 0.048
+  },
+  {
+   "metric": "LAD",
+   "scale": "scaled to Janus 0",
+   "f_pool": 1.0,
+   "design": "recipe decision, 1 seed vs fixed Janus 0",
+   "n": 61,
+   "se_case": 0.0101,
+   "se_seed": 0.013,
+   "mde": 0.0461
+  },
+  {
+   "metric": "LAD",
+   "scale": "scaled to Janus 0",
+   "f_pool": 1.0,
+   "design": "recipe decision, 1 seed vs fixed Janus 0",
+   "n": 100,
+   "se_case": 0.0079,
+   "se_seed": 0.013,
+   "mde": 0.0426
+  },
+  {
+   "metric": "LAD",
+   "scale": "scaled to Janus 0",
+   "f_pool": 1.0,
+   "design": "recipe decision, 1 seed vs fixed Janus 0",
+   "n": 200,
+   "se_case": 0.0056,
+   "se_seed": 0.013,
+   "mde": 0.0396
+  },
+  {
+   "metric": "LAD",
+   "scale": "scaled to Janus 0",
+   "f_pool": 1.0,
+   "design": "recipe decision, 1 seed per arm",
+   "n": 10,
+   "se_case": 0.025,
+   "se_seed": 0.0184,
+   "mde": 0.0869
+  },
+  {
+   "metric": "LAD",
+   "scale": "scaled to Janus 0",
+   "f_pool": 1.0,
+   "design": "recipe decision, 1 seed per arm",
+   "n": 30,
+   "se_case": 0.0144,
+   "se_seed": 0.0184,
+   "mde": 0.0655
+  },
+  {
+   "metric": "LAD",
+   "scale": "scaled to Janus 0",
+   "f_pool": 1.0,
+   "design": "recipe decision, 1 seed per arm",
+   "n": 50,
+   "se_case": 0.0112,
+   "se_seed": 0.0184,
+   "mde": 0.0603
+  },
+  {
+   "metric": "LAD",
+   "scale": "scaled to Janus 0",
+   "f_pool": 1.0,
+   "design": "recipe decision, 1 seed per arm",
+   "n": 61,
+   "se_case": 0.0101,
+   "se_seed": 0.0184,
+   "mde": 0.0588
+  },
+  {
+   "metric": "LAD",
+   "scale": "scaled to Janus 0",
+   "f_pool": 1.0,
+   "design": "recipe decision, 1 seed per arm",
+   "n": 100,
+   "se_case": 0.0079,
+   "se_seed": 0.0184,
+   "mde": 0.056
+  },
+  {
+   "metric": "LAD",
+   "scale": "scaled to Janus 0",
+   "f_pool": 1.0,
+   "design": "recipe decision, 1 seed per arm",
+   "n": 200,
+   "se_case": 0.0056,
+   "se_seed": 0.0184,
+   "mde": 0.0538
+  },
+  {
+   "metric": "LAD",
+   "scale": "scaled to Janus 0",
+   "f_pool": 1.0,
+   "design": "recipe decision, 2 seeds per arm",
+   "n": 10,
+   "se_case": 0.025,
+   "se_seed": 0.013,
+   "mde": 0.0789
+  },
+  {
+   "metric": "LAD",
+   "scale": "scaled to Janus 0",
+   "f_pool": 1.0,
+   "design": "recipe decision, 2 seeds per arm",
+   "n": 30,
+   "se_case": 0.0144,
+   "se_seed": 0.013,
+   "mde": 0.0544
+  },
+  {
+   "metric": "LAD",
+   "scale": "scaled to Janus 0",
+   "f_pool": 1.0,
+   "design": "recipe decision, 2 seeds per arm",
+   "n": 50,
+   "se_case": 0.0112,
+   "se_seed": 0.013,
+   "mde": 0.048
+  },
+  {
+   "metric": "LAD",
+   "scale": "scaled to Janus 0",
+   "f_pool": 1.0,
+   "design": "recipe decision, 2 seeds per arm",
+   "n": 61,
+   "se_case": 0.0101,
+   "se_seed": 0.013,
+   "mde": 0.0461
+  },
+  {
+   "metric": "LAD",
+   "scale": "scaled to Janus 0",
+   "f_pool": 1.0,
+   "design": "recipe decision, 2 seeds per arm",
+   "n": 100,
+   "se_case": 0.0079,
+   "se_seed": 0.013,
+   "mde": 0.0426
+  },
+  {
+   "metric": "LAD",
+   "scale": "scaled to Janus 0",
+   "f_pool": 1.0,
+   "design": "recipe decision, 2 seeds per arm",
+   "n": 200,
+   "se_case": 0.0056,
+   "se_seed": 0.013,
+   "mde": 0.0396
+  },
+  {
+   "metric": "LAD",
+   "scale": "scaled to Janus 0",
+   "f_pool": 1.0,
+   "design": "recipe decision, 3 seeds per arm",
+   "n": 10,
+   "se_case": 0.025,
+   "se_seed": 0.0106,
+   "mde": 0.0761
+  },
+  {
+   "metric": "LAD",
+   "scale": "scaled to Janus 0",
+   "f_pool": 1.0,
+   "design": "recipe decision, 3 seeds per arm",
+   "n": 30,
+   "se_case": 0.0144,
+   "se_seed": 0.0106,
+   "mde": 0.0502
+  },
+  {
+   "metric": "LAD",
+   "scale": "scaled to Janus 0",
+   "f_pool": 1.0,
+   "design": "recipe decision, 3 seeds per arm",
+   "n": 50,
+   "se_case": 0.0112,
+   "se_seed": 0.0106,
+   "mde": 0.0432
+  },
+  {
+   "metric": "LAD",
+   "scale": "scaled to Janus 0",
+   "f_pool": 1.0,
+   "design": "recipe decision, 3 seeds per arm",
+   "n": 61,
+   "se_case": 0.0101,
+   "se_seed": 0.0106,
+   "mde": 0.0411
+  },
+  {
+   "metric": "LAD",
+   "scale": "scaled to Janus 0",
+   "f_pool": 1.0,
+   "design": "recipe decision, 3 seeds per arm",
+   "n": 100,
+   "se_case": 0.0079,
+   "se_seed": 0.0106,
+   "mde": 0.0371
+  },
+  {
+   "metric": "LAD",
+   "scale": "scaled to Janus 0",
+   "f_pool": 1.0,
+   "design": "recipe decision, 3 seeds per arm",
+   "n": 200,
+   "se_case": 0.0056,
+   "se_seed": 0.0106,
+   "mde": 0.0336
+  },
+  {
+   "metric": "LAD",
+   "scale": "scaled to Janus 0",
+   "f_pool": 1.5,
+   "design": "model decision: two fixed checkpoints (no seed term)",
+   "n": 10,
+   "se_case": 0.0375,
+   "se_seed": 0.0,
+   "mde": 0.105
+  },
+  {
+   "metric": "LAD",
+   "scale": "scaled to Janus 0",
+   "f_pool": 1.5,
+   "design": "model decision: two fixed checkpoints (no seed term)",
+   "n": 30,
+   "se_case": 0.0217,
+   "se_seed": 0.0,
+   "mde": 0.0606
+  },
+  {
+   "metric": "LAD",
+   "scale": "scaled to Janus 0",
+   "f_pool": 1.5,
+   "design": "model decision: two fixed checkpoints (no seed term)",
+   "n": 50,
+   "se_case": 0.0168,
+   "se_seed": 0.0,
+   "mde": 0.047
+  },
+  {
+   "metric": "LAD",
+   "scale": "scaled to Janus 0",
+   "f_pool": 1.5,
+   "design": "model decision: two fixed checkpoints (no seed term)",
+   "n": 61,
+   "se_case": 0.0152,
+   "se_seed": 0.0,
+   "mde": 0.0425
+  },
+  {
+   "metric": "LAD",
+   "scale": "scaled to Janus 0",
+   "f_pool": 1.5,
+   "design": "model decision: two fixed checkpoints (no seed term)",
+   "n": 100,
+   "se_case": 0.0119,
+   "se_seed": 0.0,
+   "mde": 0.0332
+  },
+  {
+   "metric": "LAD",
+   "scale": "scaled to Janus 0",
+   "f_pool": 1.5,
+   "design": "model decision: two fixed checkpoints (no seed term)",
+   "n": 200,
+   "se_case": 0.0084,
+   "se_seed": 0.0,
+   "mde": 0.0235
+  },
+  {
+   "metric": "LAD",
+   "scale": "scaled to Janus 0",
+   "f_pool": 1.5,
+   "design": "recipe decision, 1 seed vs fixed Janus 0",
+   "n": 10,
+   "se_case": 0.0375,
+   "se_seed": 0.013,
+   "mde": 0.1112
+  },
+  {
+   "metric": "LAD",
+   "scale": "scaled to Janus 0",
+   "f_pool": 1.5,
+   "design": "recipe decision, 1 seed vs fixed Janus 0",
+   "n": 30,
+   "se_case": 0.0217,
+   "se_seed": 0.013,
+   "mde": 0.0707
+  },
+  {
+   "metric": "LAD",
+   "scale": "scaled to Janus 0",
+   "f_pool": 1.5,
+   "design": "recipe decision, 1 seed vs fixed Janus 0",
+   "n": 50,
+   "se_case": 0.0168,
+   "se_seed": 0.013,
+   "mde": 0.0594
+  },
+  {
+   "metric": "LAD",
+   "scale": "scaled to Janus 0",
+   "f_pool": 1.5,
+   "design": "recipe decision, 1 seed vs fixed Janus 0",
+   "n": 61,
+   "se_case": 0.0152,
+   "se_seed": 0.013,
+   "mde": 0.056
+  },
+  {
+   "metric": "LAD",
+   "scale": "scaled to Janus 0",
+   "f_pool": 1.5,
+   "design": "recipe decision, 1 seed vs fixed Janus 0",
+   "n": 100,
+   "se_case": 0.0119,
+   "se_seed": 0.013,
+   "mde": 0.0493
+  },
+  {
+   "metric": "LAD",
+   "scale": "scaled to Janus 0",
+   "f_pool": 1.5,
+   "design": "recipe decision, 1 seed vs fixed Janus 0",
+   "n": 200,
+   "se_case": 0.0084,
+   "se_seed": 0.013,
+   "mde": 0.0433
+  },
+  {
+   "metric": "LAD",
+   "scale": "scaled to Janus 0",
+   "f_pool": 1.5,
+   "design": "recipe decision, 1 seed per arm",
+   "n": 10,
+   "se_case": 0.0375,
+   "se_seed": 0.0184,
+   "mde": 0.117
+  },
+  {
+   "metric": "LAD",
+   "scale": "scaled to Janus 0",
+   "f_pool": 1.5,
+   "design": "recipe decision, 1 seed per arm",
+   "n": 30,
+   "se_case": 0.0217,
+   "se_seed": 0.0184,
+   "mde": 0.0795
+  },
+  {
+   "metric": "LAD",
+   "scale": "scaled to Janus 0",
+   "f_pool": 1.5,
+   "design": "recipe decision, 1 seed per arm",
+   "n": 50,
+   "se_case": 0.0168,
+   "se_seed": 0.0184,
+   "mde": 0.0697
+  },
+  {
+   "metric": "LAD",
+   "scale": "scaled to Janus 0",
+   "f_pool": 1.5,
+   "design": "recipe decision, 1 seed per arm",
+   "n": 61,
+   "se_case": 0.0152,
+   "se_seed": 0.0184,
+   "mde": 0.0668
+  },
+  {
+   "metric": "LAD",
+   "scale": "scaled to Janus 0",
+   "f_pool": 1.5,
+   "design": "recipe decision, 1 seed per arm",
+   "n": 100,
+   "se_case": 0.0119,
+   "se_seed": 0.0184,
+   "mde": 0.0613
+  },
+  {
+   "metric": "LAD",
+   "scale": "scaled to Janus 0",
+   "f_pool": 1.5,
+   "design": "recipe decision, 1 seed per arm",
+   "n": 200,
+   "se_case": 0.0084,
+   "se_seed": 0.0184,
+   "mde": 0.0566
+  },
+  {
+   "metric": "LAD",
+   "scale": "scaled to Janus 0",
+   "f_pool": 1.5,
+   "design": "recipe decision, 2 seeds per arm",
+   "n": 10,
+   "se_case": 0.0375,
+   "se_seed": 0.013,
+   "mde": 0.1112
+  },
+  {
+   "metric": "LAD",
+   "scale": "scaled to Janus 0",
+   "f_pool": 1.5,
+   "design": "recipe decision, 2 seeds per arm",
+   "n": 30,
+   "se_case": 0.0217,
+   "se_seed": 0.013,
+   "mde": 0.0707
+  },
+  {
+   "metric": "LAD",
+   "scale": "scaled to Janus 0",
+   "f_pool": 1.5,
+   "design": "recipe decision, 2 seeds per arm",
+   "n": 50,
+   "se_case": 0.0168,
+   "se_seed": 0.013,
+   "mde": 0.0594
+  },
+  {
+   "metric": "LAD",
+   "scale": "scaled to Janus 0",
+   "f_pool": 1.5,
+   "design": "recipe decision, 2 seeds per arm",
+   "n": 61,
+   "se_case": 0.0152,
+   "se_seed": 0.013,
+   "mde": 0.056
+  },
+  {
+   "metric": "LAD",
+   "scale": "scaled to Janus 0",
+   "f_pool": 1.5,
+   "design": "recipe decision, 2 seeds per arm",
+   "n": 100,
+   "se_case": 0.0119,
+   "se_seed": 0.013,
+   "mde": 0.0493
+  },
+  {
+   "metric": "LAD",
+   "scale": "scaled to Janus 0",
+   "f_pool": 1.5,
+   "design": "recipe decision, 2 seeds per arm",
+   "n": 200,
+   "se_case": 0.0084,
+   "se_seed": 0.013,
+   "mde": 0.0433
+  },
+  {
+   "metric": "LAD",
+   "scale": "scaled to Janus 0",
+   "f_pool": 1.5,
+   "design": "recipe decision, 3 seeds per arm",
+   "n": 10,
+   "se_case": 0.0375,
+   "se_seed": 0.0106,
+   "mde": 0.1092
+  },
+  {
+   "metric": "LAD",
+   "scale": "scaled to Janus 0",
+   "f_pool": 1.5,
+   "design": "recipe decision, 3 seeds per arm",
+   "n": 30,
+   "se_case": 0.0217,
+   "se_seed": 0.0106,
+   "mde": 0.0675
+  },
+  {
+   "metric": "LAD",
+   "scale": "scaled to Janus 0",
+   "f_pool": 1.5,
+   "design": "recipe decision, 3 seeds per arm",
+   "n": 50,
+   "se_case": 0.0168,
+   "se_seed": 0.0106,
+   "mde": 0.0556
+  },
+  {
+   "metric": "LAD",
+   "scale": "scaled to Janus 0",
+   "f_pool": 1.5,
+   "design": "recipe decision, 3 seeds per arm",
+   "n": 61,
+   "se_case": 0.0152,
+   "se_seed": 0.0106,
+   "mde": 0.0519
+  },
+  {
+   "metric": "LAD",
+   "scale": "scaled to Janus 0",
+   "f_pool": 1.5,
+   "design": "recipe decision, 3 seeds per arm",
+   "n": 100,
+   "se_case": 0.0119,
+   "se_seed": 0.0106,
+   "mde": 0.0446
+  },
+  {
+   "metric": "LAD",
+   "scale": "scaled to Janus 0",
+   "f_pool": 1.5,
+   "design": "recipe decision, 3 seeds per arm",
+   "n": 200,
+   "se_case": 0.0084,
+   "se_seed": 0.0106,
+   "mde": 0.0379
+  },
+  {
+   "metric": "LAD",
+   "scale": "measured (r=1)",
+   "f_pool": 1.0,
+   "design": "model decision: two fixed checkpoints (no seed term)",
+   "n": 10,
+   "se_case": 0.0155,
+   "se_seed": 0.0,
+   "mde": 0.0435
+  },
+  {
+   "metric": "LAD",
+   "scale": "measured (r=1)",
+   "f_pool": 1.0,
+   "design": "model decision: two fixed checkpoints (no seed term)",
+   "n": 30,
+   "se_case": 0.009,
+   "se_seed": 0.0,
+   "mde": 0.0251
+  },
+  {
+   "metric": "LAD",
+   "scale": "measured (r=1)",
+   "f_pool": 1.0,
+   "design": "model decision: two fixed checkpoints (no seed term)",
+   "n": 50,
+   "se_case": 0.0069,
+   "se_seed": 0.0,
+   "mde": 0.0194
+  },
+  {
+   "metric": "LAD",
+   "scale": "measured (r=1)",
+   "f_pool": 1.0,
+   "design": "model decision: two fixed checkpoints (no seed term)",
+   "n": 61,
+   "se_case": 0.0063,
+   "se_seed": 0.0,
+   "mde": 0.0176
+  },
+  {
+   "metric": "LAD",
+   "scale": "measured (r=1)",
+   "f_pool": 1.0,
+   "design": "model decision: two fixed checkpoints (no seed term)",
+   "n": 100,
+   "se_case": 0.0049,
+   "se_seed": 0.0,
+   "mde": 0.0137
+  },
+  {
+   "metric": "LAD",
+   "scale": "measured (r=1)",
+   "f_pool": 1.0,
+   "design": "model decision: two fixed checkpoints (no seed term)",
+   "n": 200,
+   "se_case": 0.0035,
+   "se_seed": 0.0,
+   "mde": 0.0097
+  },
+  {
+   "metric": "LAD",
+   "scale": "measured (r=1)",
+   "f_pool": 1.0,
+   "design": "recipe decision, 1 seed vs fixed Janus 0",
+   "n": 10,
+   "se_case": 0.0155,
+   "se_seed": 0.013,
+   "mde": 0.0567
+  },
+  {
+   "metric": "LAD",
+   "scale": "measured (r=1)",
+   "f_pool": 1.0,
+   "design": "recipe decision, 1 seed vs fixed Janus 0",
+   "n": 30,
+   "se_case": 0.009,
+   "se_seed": 0.013,
+   "mde": 0.0442
+  },
+  {
+   "metric": "LAD",
+   "scale": "measured (r=1)",
+   "f_pool": 1.0,
+   "design": "recipe decision, 1 seed vs fixed Janus 0",
+   "n": 50,
+   "se_case": 0.0069,
+   "se_seed": 0.013,
+   "mde": 0.0413
+  },
+  {
+   "metric": "LAD",
+   "scale": "measured (r=1)",
+   "f_pool": 1.0,
+   "design": "recipe decision, 1 seed vs fixed Janus 0",
+   "n": 61,
+   "se_case": 0.0063,
+   "se_seed": 0.013,
+   "mde": 0.0404
+  },
+  {
+   "metric": "LAD",
+   "scale": "measured (r=1)",
+   "f_pool": 1.0,
+   "design": "recipe decision, 1 seed vs fixed Janus 0",
+   "n": 100,
+   "se_case": 0.0049,
+   "se_seed": 0.013,
+   "mde": 0.0389
+  },
+  {
+   "metric": "LAD",
+   "scale": "measured (r=1)",
+   "f_pool": 1.0,
+   "design": "recipe decision, 1 seed vs fixed Janus 0",
+   "n": 200,
+   "se_case": 0.0035,
+   "se_seed": 0.013,
+   "mde": 0.0377
+  },
+  {
+   "metric": "LAD",
+   "scale": "measured (r=1)",
+   "f_pool": 1.0,
+   "design": "recipe decision, 1 seed per arm",
+   "n": 10,
+   "se_case": 0.0155,
+   "se_seed": 0.0184,
+   "mde": 0.0674
+  },
+  {
+   "metric": "LAD",
+   "scale": "measured (r=1)",
+   "f_pool": 1.0,
+   "design": "recipe decision, 1 seed per arm",
+   "n": 30,
+   "se_case": 0.009,
+   "se_seed": 0.0184,
+   "mde": 0.0573
+  },
+  {
+   "metric": "LAD",
+   "scale": "measured (r=1)",
+   "f_pool": 1.0,
+   "design": "recipe decision, 1 seed per arm",
+   "n": 50,
+   "se_case": 0.0069,
+   "se_seed": 0.0184,
+   "mde": 0.055
+  },
+  {
+   "metric": "LAD",
+   "scale": "measured (r=1)",
+   "f_pool": 1.0,
+   "design": "recipe decision, 1 seed per arm",
+   "n": 61,
+   "se_case": 0.0063,
+   "se_seed": 0.0184,
+   "mde": 0.0544
+  },
+  {
+   "metric": "LAD",
+   "scale": "measured (r=1)",
+   "f_pool": 1.0,
+   "design": "recipe decision, 1 seed per arm",
+   "n": 100,
+   "se_case": 0.0049,
+   "se_seed": 0.0184,
+   "mde": 0.0533
+  },
+  {
+   "metric": "LAD",
+   "scale": "measured (r=1)",
+   "f_pool": 1.0,
+   "design": "recipe decision, 1 seed per arm",
+   "n": 200,
+   "se_case": 0.0035,
+   "se_seed": 0.0184,
+   "mde": 0.0524
+  },
+  {
+   "metric": "LAD",
+   "scale": "measured (r=1)",
+   "f_pool": 1.0,
+   "design": "recipe decision, 2 seeds per arm",
+   "n": 10,
+   "se_case": 0.0155,
+   "se_seed": 0.013,
+   "mde": 0.0567
+  },
+  {
+   "metric": "LAD",
+   "scale": "measured (r=1)",
+   "f_pool": 1.0,
+   "design": "recipe decision, 2 seeds per arm",
+   "n": 30,
+   "se_case": 0.009,
+   "se_seed": 0.013,
+   "mde": 0.0442
+  },
+  {
+   "metric": "LAD",
+   "scale": "measured (r=1)",
+   "f_pool": 1.0,
+   "design": "recipe decision, 2 seeds per arm",
+   "n": 50,
+   "se_case": 0.0069,
+   "se_seed": 0.013,
+   "mde": 0.0413
+  },
+  {
+   "metric": "LAD",
+   "scale": "measured (r=1)",
+   "f_pool": 1.0,
+   "design": "recipe decision, 2 seeds per arm",
+   "n": 61,
+   "se_case": 0.0063,
+   "se_seed": 0.013,
+   "mde": 0.0404
+  },
+  {
+   "metric": "LAD",
+   "scale": "measured (r=1)",
+   "f_pool": 1.0,
+   "design": "recipe decision, 2 seeds per arm",
+   "n": 100,
+   "se_case": 0.0049,
+   "se_seed": 0.013,
+   "mde": 0.0389
+  },
+  {
+   "metric": "LAD",
+   "scale": "measured (r=1)",
+   "f_pool": 1.0,
+   "design": "recipe decision, 2 seeds per arm",
+   "n": 200,
+   "se_case": 0.0035,
+   "se_seed": 0.013,
+   "mde": 0.0377
+  },
+  {
+   "metric": "LAD",
+   "scale": "measured (r=1)",
+   "f_pool": 1.0,
+   "design": "recipe decision, 3 seeds per arm",
+   "n": 10,
+   "se_case": 0.0155,
+   "se_seed": 0.0106,
+   "mde": 0.0527
+  },
+  {
+   "metric": "LAD",
+   "scale": "measured (r=1)",
+   "f_pool": 1.0,
+   "design": "recipe decision, 3 seeds per arm",
+   "n": 30,
+   "se_case": 0.009,
+   "se_seed": 0.0106,
+   "mde": 0.0389
+  },
+  {
+   "metric": "LAD",
+   "scale": "measured (r=1)",
+   "f_pool": 1.0,
+   "design": "recipe decision, 3 seeds per arm",
+   "n": 50,
+   "se_case": 0.0069,
+   "se_seed": 0.0106,
+   "mde": 0.0355
+  },
+  {
+   "metric": "LAD",
+   "scale": "measured (r=1)",
+   "f_pool": 1.0,
+   "design": "recipe decision, 3 seeds per arm",
+   "n": 61,
+   "se_case": 0.0063,
+   "se_seed": 0.0106,
+   "mde": 0.0345
+  },
+  {
+   "metric": "LAD",
+   "scale": "measured (r=1)",
+   "f_pool": 1.0,
+   "design": "recipe decision, 3 seeds per arm",
+   "n": 100,
+   "se_case": 0.0049,
+   "se_seed": 0.0106,
+   "mde": 0.0327
+  },
+  {
+   "metric": "LAD",
+   "scale": "measured (r=1)",
+   "f_pool": 1.0,
+   "design": "recipe decision, 3 seeds per arm",
+   "n": 200,
+   "se_case": 0.0035,
+   "se_seed": 0.0106,
+   "mde": 0.0313
+  },
+  {
+   "metric": "LAD",
+   "scale": "measured (r=1)",
+   "f_pool": 1.5,
+   "design": "model decision: two fixed checkpoints (no seed term)",
+   "n": 10,
+   "se_case": 0.0233,
+   "se_seed": 0.0,
+   "mde": 0.0652
+  },
+  {
+   "metric": "LAD",
+   "scale": "measured (r=1)",
+   "f_pool": 1.5,
+   "design": "model decision: two fixed checkpoints (no seed term)",
+   "n": 30,
+   "se_case": 0.0134,
+   "se_seed": 0.0,
+   "mde": 0.0377
+  },
+  {
+   "metric": "LAD",
+   "scale": "measured (r=1)",
+   "f_pool": 1.5,
+   "design": "model decision: two fixed checkpoints (no seed term)",
+   "n": 50,
+   "se_case": 0.0104,
+   "se_seed": 0.0,
+   "mde": 0.0292
+  },
+  {
+   "metric": "LAD",
+   "scale": "measured (r=1)",
+   "f_pool": 1.5,
+   "design": "model decision: two fixed checkpoints (no seed term)",
+   "n": 61,
+   "se_case": 0.0094,
+   "se_seed": 0.0,
+   "mde": 0.0264
+  },
+  {
+   "metric": "LAD",
+   "scale": "measured (r=1)",
+   "f_pool": 1.5,
+   "design": "model decision: two fixed checkpoints (no seed term)",
+   "n": 100,
+   "se_case": 0.0074,
+   "se_seed": 0.0,
+   "mde": 0.0206
+  },
+  {
+   "metric": "LAD",
+   "scale": "measured (r=1)",
+   "f_pool": 1.5,
+   "design": "model decision: two fixed checkpoints (no seed term)",
+   "n": 200,
+   "se_case": 0.0052,
+   "se_seed": 0.0,
+   "mde": 0.0146
+  },
+  {
+   "metric": "LAD",
+   "scale": "measured (r=1)",
+   "f_pool": 1.5,
+   "design": "recipe decision, 1 seed vs fixed Janus 0",
+   "n": 10,
+   "se_case": 0.0233,
+   "se_seed": 0.013,
+   "mde": 0.0747
+  },
+  {
+   "metric": "LAD",
+   "scale": "measured (r=1)",
+   "f_pool": 1.5,
+   "design": "recipe decision, 1 seed vs fixed Janus 0",
+   "n": 30,
+   "se_case": 0.0134,
+   "se_seed": 0.013,
+   "mde": 0.0524
+  },
+  {
+   "metric": "LAD",
+   "scale": "measured (r=1)",
+   "f_pool": 1.5,
+   "design": "recipe decision, 1 seed vs fixed Janus 0",
+   "n": 50,
+   "se_case": 0.0104,
+   "se_seed": 0.013,
+   "mde": 0.0466
+  },
+  {
+   "metric": "LAD",
+   "scale": "measured (r=1)",
+   "f_pool": 1.5,
+   "design": "recipe decision, 1 seed vs fixed Janus 0",
+   "n": 61,
+   "se_case": 0.0094,
+   "se_seed": 0.013,
+   "mde": 0.045
+  },
+  {
+   "metric": "LAD",
+   "scale": "measured (r=1)",
+   "f_pool": 1.5,
+   "design": "recipe decision, 1 seed vs fixed Janus 0",
+   "n": 100,
+   "se_case": 0.0074,
+   "se_seed": 0.013,
+   "mde": 0.0418
+  },
+  {
+   "metric": "LAD",
+   "scale": "measured (r=1)",
+   "f_pool": 1.5,
+   "design": "recipe decision, 1 seed vs fixed Janus 0",
+   "n": 200,
+   "se_case": 0.0052,
+   "se_seed": 0.013,
+   "mde": 0.0392
+  },
+  {
+   "metric": "LAD",
+   "scale": "measured (r=1)",
+   "f_pool": 1.5,
+   "design": "recipe decision, 1 seed per arm",
+   "n": 10,
+   "se_case": 0.0233,
+   "se_seed": 0.0184,
+   "mde": 0.0831
+  },
+  {
+   "metric": "LAD",
+   "scale": "measured (r=1)",
+   "f_pool": 1.5,
+   "design": "recipe decision, 1 seed per arm",
+   "n": 30,
+   "se_case": 0.0134,
+   "se_seed": 0.0184,
+   "mde": 0.0638
+  },
+  {
+   "metric": "LAD",
+   "scale": "measured (r=1)",
+   "f_pool": 1.5,
+   "design": "recipe decision, 1 seed per arm",
+   "n": 50,
+   "se_case": 0.0104,
+   "se_seed": 0.0184,
+   "mde": 0.0592
+  },
+  {
+   "metric": "LAD",
+   "scale": "measured (r=1)",
+   "f_pool": 1.5,
+   "design": "recipe decision, 1 seed per arm",
+   "n": 61,
+   "se_case": 0.0094,
+   "se_seed": 0.0184,
+   "mde": 0.0579
+  },
+  {
+   "metric": "LAD",
+   "scale": "measured (r=1)",
+   "f_pool": 1.5,
+   "design": "recipe decision, 1 seed per arm",
+   "n": 100,
+   "se_case": 0.0074,
+   "se_seed": 0.0184,
+   "mde": 0.0555
+  },
+  {
+   "metric": "LAD",
+   "scale": "measured (r=1)",
+   "f_pool": 1.5,
+   "design": "recipe decision, 1 seed per arm",
+   "n": 200,
+   "se_case": 0.0052,
+   "se_seed": 0.0184,
+   "mde": 0.0535
+  },
+  {
+   "metric": "LAD",
+   "scale": "measured (r=1)",
+   "f_pool": 1.5,
+   "design": "recipe decision, 2 seeds per arm",
+   "n": 10,
+   "se_case": 0.0233,
+   "se_seed": 0.013,
+   "mde": 0.0747
+  },
+  {
+   "metric": "LAD",
+   "scale": "measured (r=1)",
+   "f_pool": 1.5,
+   "design": "recipe decision, 2 seeds per arm",
+   "n": 30,
+   "se_case": 0.0134,
+   "se_seed": 0.013,
+   "mde": 0.0524
+  },
+  {
+   "metric": "LAD",
+   "scale": "measured (r=1)",
+   "f_pool": 1.5,
+   "design": "recipe decision, 2 seeds per arm",
+   "n": 50,
+   "se_case": 0.0104,
+   "se_seed": 0.013,
+   "mde": 0.0466
+  },
+  {
+   "metric": "LAD",
+   "scale": "measured (r=1)",
+   "f_pool": 1.5,
+   "design": "recipe decision, 2 seeds per arm",
+   "n": 61,
+   "se_case": 0.0094,
+   "se_seed": 0.013,
+   "mde": 0.045
+  },
+  {
+   "metric": "LAD",
+   "scale": "measured (r=1)",
+   "f_pool": 1.5,
+   "design": "recipe decision, 2 seeds per arm",
+   "n": 100,
+   "se_case": 0.0074,
+   "se_seed": 0.013,
+   "mde": 0.0418
+  },
+  {
+   "metric": "LAD",
+   "scale": "measured (r=1)",
+   "f_pool": 1.5,
+   "design": "recipe decision, 2 seeds per arm",
+   "n": 200,
+   "se_case": 0.0052,
+   "se_seed": 0.013,
+   "mde": 0.0392
+  },
+  {
+   "metric": "LAD",
+   "scale": "measured (r=1)",
+   "f_pool": 1.5,
+   "design": "recipe decision, 3 seeds per arm",
+   "n": 10,
+   "se_case": 0.0233,
+   "se_seed": 0.0106,
+   "mde": 0.0717
+  },
+  {
+   "metric": "LAD",
+   "scale": "measured (r=1)",
+   "f_pool": 1.5,
+   "design": "recipe decision, 3 seeds per arm",
+   "n": 30,
+   "se_case": 0.0134,
+   "se_seed": 0.0106,
+   "mde": 0.048
+  },
+  {
+   "metric": "LAD",
+   "scale": "measured (r=1)",
+   "f_pool": 1.5,
+   "design": "recipe decision, 3 seeds per arm",
+   "n": 50,
+   "se_case": 0.0104,
+   "se_seed": 0.0106,
+   "mde": 0.0416
+  },
+  {
+   "metric": "LAD",
+   "scale": "measured (r=1)",
+   "f_pool": 1.5,
+   "design": "recipe decision, 3 seeds per arm",
+   "n": 61,
+   "se_case": 0.0094,
+   "se_seed": 0.0106,
+   "mde": 0.0398
+  },
+  {
+   "metric": "LAD",
+   "scale": "measured (r=1)",
+   "f_pool": 1.5,
+   "design": "recipe decision, 3 seeds per arm",
+   "n": 100,
+   "se_case": 0.0074,
+   "se_seed": 0.0106,
+   "mde": 0.0362
+  },
+  {
+   "metric": "LAD",
+   "scale": "measured (r=1)",
+   "f_pool": 1.5,
+   "design": "recipe decision, 3 seeds per arm",
+   "n": 200,
+   "se_case": 0.0052,
+   "se_seed": 0.0106,
+   "mde": 0.0331
+  },
+  {
+   "metric": "LCx",
+   "scale": "scaled to Janus 0",
+   "f_pool": 1.0,
+   "design": "model decision: two fixed checkpoints (no seed term)",
+   "n": 10,
+   "se_case": 0.0395,
+   "se_seed": 0.0,
+   "mde": 0.1105
+  },
+  {
+   "metric": "LCx",
+   "scale": "scaled to Janus 0",
+   "f_pool": 1.0,
+   "design": "model decision: two fixed checkpoints (no seed term)",
+   "n": 30,
+   "se_case": 0.0228,
+   "se_seed": 0.0,
+   "mde": 0.0638
+  },
+  {
+   "metric": "LCx",
+   "scale": "scaled to Janus 0",
+   "f_pool": 1.0,
+   "design": "model decision: two fixed checkpoints (no seed term)",
+   "n": 50,
+   "se_case": 0.0176,
+   "se_seed": 0.0,
+   "mde": 0.0494
+  },
+  {
+   "metric": "LCx",
+   "scale": "scaled to Janus 0",
+   "f_pool": 1.0,
+   "design": "model decision: two fixed checkpoints (no seed term)",
+   "n": 61,
+   "se_case": 0.016,
+   "se_seed": 0.0,
+   "mde": 0.0447
+  },
+  {
+   "metric": "LCx",
+   "scale": "scaled to Janus 0",
+   "f_pool": 1.0,
+   "design": "model decision: two fixed checkpoints (no seed term)",
+   "n": 100,
+   "se_case": 0.0125,
+   "se_seed": 0.0,
+   "mde": 0.0349
+  },
+  {
+   "metric": "LCx",
+   "scale": "scaled to Janus 0",
+   "f_pool": 1.0,
+   "design": "model decision: two fixed checkpoints (no seed term)",
+   "n": 200,
+   "se_case": 0.0088,
+   "se_seed": 0.0,
+   "mde": 0.0247
+  },
+  {
+   "metric": "LCx",
+   "scale": "scaled to Janus 0",
+   "f_pool": 1.0,
+   "design": "recipe decision, 1 seed vs fixed Janus 0",
+   "n": 10,
+   "se_case": 0.0395,
+   "se_seed": 0.013,
+   "mde": 0.1163
+  },
+  {
+   "metric": "LCx",
+   "scale": "scaled to Janus 0",
+   "f_pool": 1.0,
+   "design": "recipe decision, 1 seed vs fixed Janus 0",
+   "n": 30,
+   "se_case": 0.0228,
+   "se_seed": 0.013,
+   "mde": 0.0734
+  },
+  {
+   "metric": "LCx",
+   "scale": "scaled to Janus 0",
+   "f_pool": 1.0,
+   "design": "recipe decision, 1 seed vs fixed Janus 0",
+   "n": 50,
+   "se_case": 0.0176,
+   "se_seed": 0.013,
+   "mde": 0.0614
+  },
+  {
+   "metric": "LCx",
+   "scale": "scaled to Janus 0",
+   "f_pool": 1.0,
+   "design": "recipe decision, 1 seed vs fixed Janus 0",
+   "n": 61,
+   "se_case": 0.016,
+   "se_seed": 0.013,
+   "mde": 0.0577
+  },
+  {
+   "metric": "LCx",
+   "scale": "scaled to Janus 0",
+   "f_pool": 1.0,
+   "design": "recipe decision, 1 seed vs fixed Janus 0",
+   "n": 100,
+   "se_case": 0.0125,
+   "se_seed": 0.013,
+   "mde": 0.0504
+  },
+  {
+   "metric": "LCx",
+   "scale": "scaled to Janus 0",
+   "f_pool": 1.0,
+   "design": "recipe decision, 1 seed vs fixed Janus 0",
+   "n": 200,
+   "se_case": 0.0088,
+   "se_seed": 0.013,
+   "mde": 0.044
+  },
+  {
+   "metric": "LCx",
+   "scale": "scaled to Janus 0",
+   "f_pool": 1.0,
+   "design": "recipe decision, 1 seed per arm",
+   "n": 10,
+   "se_case": 0.0395,
+   "se_seed": 0.0184,
+   "mde": 0.1219
+  },
+  {
+   "metric": "LCx",
+   "scale": "scaled to Janus 0",
+   "f_pool": 1.0,
+   "design": "recipe decision, 1 seed per arm",
+   "n": 30,
+   "se_case": 0.0228,
+   "se_seed": 0.0184,
+   "mde": 0.082
+  },
+  {
+   "metric": "LCx",
+   "scale": "scaled to Janus 0",
+   "f_pool": 1.0,
+   "design": "recipe decision, 1 seed per arm",
+   "n": 50,
+   "se_case": 0.0176,
+   "se_seed": 0.0184,
+   "mde": 0.0713
+  },
+  {
+   "metric": "LCx",
+   "scale": "scaled to Janus 0",
+   "f_pool": 1.0,
+   "design": "recipe decision, 1 seed per arm",
+   "n": 61,
+   "se_case": 0.016,
+   "se_seed": 0.0184,
+   "mde": 0.0682
+  },
+  {
+   "metric": "LCx",
+   "scale": "scaled to Janus 0",
+   "f_pool": 1.0,
+   "design": "recipe decision, 1 seed per arm",
+   "n": 100,
+   "se_case": 0.0125,
+   "se_seed": 0.0184,
+   "mde": 0.0622
+  },
+  {
+   "metric": "LCx",
+   "scale": "scaled to Janus 0",
+   "f_pool": 1.0,
+   "design": "recipe decision, 1 seed per arm",
+   "n": 200,
+   "se_case": 0.0088,
+   "se_seed": 0.0184,
+   "mde": 0.0571
+  },
+  {
+   "metric": "LCx",
+   "scale": "scaled to Janus 0",
+   "f_pool": 1.0,
+   "design": "recipe decision, 2 seeds per arm",
+   "n": 10,
+   "se_case": 0.0395,
+   "se_seed": 0.013,
+   "mde": 0.1163
+  },
+  {
+   "metric": "LCx",
+   "scale": "scaled to Janus 0",
+   "f_pool": 1.0,
+   "design": "recipe decision, 2 seeds per arm",
+   "n": 30,
+   "se_case": 0.0228,
+   "se_seed": 0.013,
+   "mde": 0.0734
+  },
+  {
+   "metric": "LCx",
+   "scale": "scaled to Janus 0",
+   "f_pool": 1.0,
+   "design": "recipe decision, 2 seeds per arm",
+   "n": 50,
+   "se_case": 0.0176,
+   "se_seed": 0.013,
+   "mde": 0.0614
+  },
+  {
+   "metric": "LCx",
+   "scale": "scaled to Janus 0",
+   "f_pool": 1.0,
+   "design": "recipe decision, 2 seeds per arm",
+   "n": 61,
+   "se_case": 0.016,
+   "se_seed": 0.013,
+   "mde": 0.0577
+  },
+  {
+   "metric": "LCx",
+   "scale": "scaled to Janus 0",
+   "f_pool": 1.0,
+   "design": "recipe decision, 2 seeds per arm",
+   "n": 100,
+   "se_case": 0.0125,
+   "se_seed": 0.013,
+   "mde": 0.0504
+  },
+  {
+   "metric": "LCx",
+   "scale": "scaled to Janus 0",
+   "f_pool": 1.0,
+   "design": "recipe decision, 2 seeds per arm",
+   "n": 200,
+   "se_case": 0.0088,
+   "se_seed": 0.013,
+   "mde": 0.044
+  },
+  {
+   "metric": "LCx",
+   "scale": "scaled to Janus 0",
+   "f_pool": 1.0,
+   "design": "recipe decision, 3 seeds per arm",
+   "n": 10,
+   "se_case": 0.0395,
+   "se_seed": 0.0106,
+   "mde": 0.1144
+  },
+  {
+   "metric": "LCx",
+   "scale": "scaled to Janus 0",
+   "f_pool": 1.0,
+   "design": "recipe decision, 3 seeds per arm",
+   "n": 30,
+   "se_case": 0.0228,
+   "se_seed": 0.0106,
+   "mde": 0.0704
+  },
+  {
+   "metric": "LCx",
+   "scale": "scaled to Janus 0",
+   "f_pool": 1.0,
+   "design": "recipe decision, 3 seeds per arm",
+   "n": 50,
+   "se_case": 0.0176,
+   "se_seed": 0.0106,
+   "mde": 0.0577
+  },
+  {
+   "metric": "LCx",
+   "scale": "scaled to Janus 0",
+   "f_pool": 1.0,
+   "design": "recipe decision, 3 seeds per arm",
+   "n": 61,
+   "se_case": 0.016,
+   "se_seed": 0.0106,
+   "mde": 0.0537
+  },
+  {
+   "metric": "LCx",
+   "scale": "scaled to Janus 0",
+   "f_pool": 1.0,
+   "design": "recipe decision, 3 seeds per arm",
+   "n": 100,
+   "se_case": 0.0125,
+   "se_seed": 0.0106,
+   "mde": 0.0459
+  },
+  {
+   "metric": "LCx",
+   "scale": "scaled to Janus 0",
+   "f_pool": 1.0,
+   "design": "recipe decision, 3 seeds per arm",
+   "n": 200,
+   "se_case": 0.0088,
+   "se_seed": 0.0106,
+   "mde": 0.0386
+  },
+  {
+   "metric": "LCx",
+   "scale": "scaled to Janus 0",
+   "f_pool": 1.5,
+   "design": "model decision: two fixed checkpoints (no seed term)",
+   "n": 10,
+   "se_case": 0.0592,
+   "se_seed": 0.0,
+   "mde": 0.1657
+  },
+  {
+   "metric": "LCx",
+   "scale": "scaled to Janus 0",
+   "f_pool": 1.5,
+   "design": "model decision: two fixed checkpoints (no seed term)",
+   "n": 30,
+   "se_case": 0.0342,
+   "se_seed": 0.0,
+   "mde": 0.0957
+  },
+  {
+   "metric": "LCx",
+   "scale": "scaled to Janus 0",
+   "f_pool": 1.5,
+   "design": "model decision: two fixed checkpoints (no seed term)",
+   "n": 50,
+   "se_case": 0.0265,
+   "se_seed": 0.0,
+   "mde": 0.0741
+  },
+  {
+   "metric": "LCx",
+   "scale": "scaled to Janus 0",
+   "f_pool": 1.5,
+   "design": "model decision: two fixed checkpoints (no seed term)",
+   "n": 61,
+   "se_case": 0.024,
+   "se_seed": 0.0,
+   "mde": 0.0671
+  },
+  {
+   "metric": "LCx",
+   "scale": "scaled to Janus 0",
+   "f_pool": 1.5,
+   "design": "model decision: two fixed checkpoints (no seed term)",
+   "n": 100,
+   "se_case": 0.0187,
+   "se_seed": 0.0,
+   "mde": 0.0524
+  },
+  {
+   "metric": "LCx",
+   "scale": "scaled to Janus 0",
+   "f_pool": 1.5,
+   "design": "model decision: two fixed checkpoints (no seed term)",
+   "n": 200,
+   "se_case": 0.0132,
+   "se_seed": 0.0,
+   "mde": 0.0371
+  },
+  {
+   "metric": "LCx",
+   "scale": "scaled to Janus 0",
+   "f_pool": 1.5,
+   "design": "recipe decision, 1 seed vs fixed Janus 0",
+   "n": 10,
+   "se_case": 0.0592,
+   "se_seed": 0.013,
+   "mde": 0.1696
+  },
+  {
+   "metric": "LCx",
+   "scale": "scaled to Janus 0",
+   "f_pool": 1.5,
+   "design": "recipe decision, 1 seed vs fixed Janus 0",
+   "n": 30,
+   "se_case": 0.0342,
+   "se_seed": 0.013,
+   "mde": 0.1024
+  },
+  {
+   "metric": "LCx",
+   "scale": "scaled to Janus 0",
+   "f_pool": 1.5,
+   "design": "recipe decision, 1 seed vs fixed Janus 0",
+   "n": 50,
+   "se_case": 0.0265,
+   "se_seed": 0.013,
+   "mde": 0.0826
+  },
+  {
+   "metric": "LCx",
+   "scale": "scaled to Janus 0",
+   "f_pool": 1.5,
+   "design": "recipe decision, 1 seed vs fixed Janus 0",
+   "n": 61,
+   "se_case": 0.024,
+   "se_seed": 0.013,
+   "mde": 0.0763
+  },
+  {
+   "metric": "LCx",
+   "scale": "scaled to Janus 0",
+   "f_pool": 1.5,
+   "design": "recipe decision, 1 seed vs fixed Janus 0",
+   "n": 100,
+   "se_case": 0.0187,
+   "se_seed": 0.013,
+   "mde": 0.0638
+  },
+  {
+   "metric": "LCx",
+   "scale": "scaled to Janus 0",
+   "f_pool": 1.5,
+   "design": "recipe decision, 1 seed vs fixed Janus 0",
+   "n": 200,
+   "se_case": 0.0132,
+   "se_seed": 0.013,
+   "mde": 0.0519
+  },
+  {
+   "metric": "LCx",
+   "scale": "scaled to Janus 0",
+   "f_pool": 1.5,
+   "design": "recipe decision, 1 seed per arm",
+   "n": 10,
+   "se_case": 0.0592,
+   "se_seed": 0.0184,
+   "mde": 0.1735
+  },
+  {
+   "metric": "LCx",
+   "scale": "scaled to Janus 0",
+   "f_pool": 1.5,
+   "design": "recipe decision, 1 seed per arm",
+   "n": 30,
+   "se_case": 0.0342,
+   "se_seed": 0.0184,
+   "mde": 0.1086
+  },
+  {
+   "metric": "LCx",
+   "scale": "scaled to Janus 0",
+   "f_pool": 1.5,
+   "design": "recipe decision, 1 seed per arm",
+   "n": 50,
+   "se_case": 0.0265,
+   "se_seed": 0.0184,
+   "mde": 0.0902
+  },
+  {
+   "metric": "LCx",
+   "scale": "scaled to Janus 0",
+   "f_pool": 1.5,
+   "design": "recipe decision, 1 seed per arm",
+   "n": 61,
+   "se_case": 0.024,
+   "se_seed": 0.0184,
+   "mde": 0.0846
+  },
+  {
+   "metric": "LCx",
+   "scale": "scaled to Janus 0",
+   "f_pool": 1.5,
+   "design": "recipe decision, 1 seed per arm",
+   "n": 100,
+   "se_case": 0.0187,
+   "se_seed": 0.0184,
+   "mde": 0.0735
+  },
+  {
+   "metric": "LCx",
+   "scale": "scaled to Janus 0",
+   "f_pool": 1.5,
+   "design": "recipe decision, 1 seed per arm",
+   "n": 200,
+   "se_case": 0.0132,
+   "se_seed": 0.0184,
+   "mde": 0.0634
+  },
+  {
+   "metric": "LCx",
+   "scale": "scaled to Janus 0",
+   "f_pool": 1.5,
+   "design": "recipe decision, 2 seeds per arm",
+   "n": 10,
+   "se_case": 0.0592,
+   "se_seed": 0.013,
+   "mde": 0.1696
+  },
+  {
+   "metric": "LCx",
+   "scale": "scaled to Janus 0",
+   "f_pool": 1.5,
+   "design": "recipe decision, 2 seeds per arm",
+   "n": 30,
+   "se_case": 0.0342,
+   "se_seed": 0.013,
+   "mde": 0.1024
+  },
+  {
+   "metric": "LCx",
+   "scale": "scaled to Janus 0",
+   "f_pool": 1.5,
+   "design": "recipe decision, 2 seeds per arm",
+   "n": 50,
+   "se_case": 0.0265,
+   "se_seed": 0.013,
+   "mde": 0.0826
+  },
+  {
+   "metric": "LCx",
+   "scale": "scaled to Janus 0",
+   "f_pool": 1.5,
+   "design": "recipe decision, 2 seeds per arm",
+   "n": 61,
+   "se_case": 0.024,
+   "se_seed": 0.013,
+   "mde": 0.0763
+  },
+  {
+   "metric": "LCx",
+   "scale": "scaled to Janus 0",
+   "f_pool": 1.5,
+   "design": "recipe decision, 2 seeds per arm",
+   "n": 100,
+   "se_case": 0.0187,
+   "se_seed": 0.013,
+   "mde": 0.0638
+  },
+  {
+   "metric": "LCx",
+   "scale": "scaled to Janus 0",
+   "f_pool": 1.5,
+   "design": "recipe decision, 2 seeds per arm",
+   "n": 200,
+   "se_case": 0.0132,
+   "se_seed": 0.013,
+   "mde": 0.0519
+  },
+  {
+   "metric": "LCx",
+   "scale": "scaled to Janus 0",
+   "f_pool": 1.5,
+   "design": "recipe decision, 3 seeds per arm",
+   "n": 10,
+   "se_case": 0.0592,
+   "se_seed": 0.0106,
+   "mde": 0.1683
+  },
+  {
+   "metric": "LCx",
+   "scale": "scaled to Janus 0",
+   "f_pool": 1.5,
+   "design": "recipe decision, 3 seeds per arm",
+   "n": 30,
+   "se_case": 0.0342,
+   "se_seed": 0.0106,
+   "mde": 0.1002
+  },
+  {
+   "metric": "LCx",
+   "scale": "scaled to Janus 0",
+   "f_pool": 1.5,
+   "design": "recipe decision, 3 seeds per arm",
+   "n": 50,
+   "se_case": 0.0265,
+   "se_seed": 0.0106,
+   "mde": 0.0798
+  },
+  {
+   "metric": "LCx",
+   "scale": "scaled to Janus 0",
+   "f_pool": 1.5,
+   "design": "recipe decision, 3 seeds per arm",
+   "n": 61,
+   "se_case": 0.024,
+   "se_seed": 0.0106,
+   "mde": 0.0734
+  },
+  {
+   "metric": "LCx",
+   "scale": "scaled to Janus 0",
+   "f_pool": 1.5,
+   "design": "recipe decision, 3 seeds per arm",
+   "n": 100,
+   "se_case": 0.0187,
+   "se_seed": 0.0106,
+   "mde": 0.0602
+  },
+  {
+   "metric": "LCx",
+   "scale": "scaled to Janus 0",
+   "f_pool": 1.5,
+   "design": "recipe decision, 3 seeds per arm",
+   "n": 200,
+   "se_case": 0.0132,
+   "se_seed": 0.0106,
+   "mde": 0.0475
+  },
+  {
+   "metric": "LCx",
+   "scale": "measured (r=1)",
+   "f_pool": 1.0,
+   "design": "model decision: two fixed checkpoints (no seed term)",
+   "n": 10,
+   "se_case": 0.0324,
+   "se_seed": 0.0,
+   "mde": 0.0908
+  },
+  {
+   "metric": "LCx",
+   "scale": "measured (r=1)",
+   "f_pool": 1.0,
+   "design": "model decision: two fixed checkpoints (no seed term)",
+   "n": 30,
+   "se_case": 0.0187,
+   "se_seed": 0.0,
+   "mde": 0.0524
+  },
+  {
+   "metric": "LCx",
+   "scale": "measured (r=1)",
+   "f_pool": 1.0,
+   "design": "model decision: two fixed checkpoints (no seed term)",
+   "n": 50,
+   "se_case": 0.0145,
+   "se_seed": 0.0,
+   "mde": 0.0406
+  },
+  {
+   "metric": "LCx",
+   "scale": "measured (r=1)",
+   "f_pool": 1.0,
+   "design": "model decision: two fixed checkpoints (no seed term)",
+   "n": 61,
+   "se_case": 0.0131,
+   "se_seed": 0.0,
+   "mde": 0.0368
+  },
+  {
+   "metric": "LCx",
+   "scale": "measured (r=1)",
+   "f_pool": 1.0,
+   "design": "model decision: two fixed checkpoints (no seed term)",
+   "n": 100,
+   "se_case": 0.0103,
+   "se_seed": 0.0,
+   "mde": 0.0287
+  },
+  {
+   "metric": "LCx",
+   "scale": "measured (r=1)",
+   "f_pool": 1.0,
+   "design": "model decision: two fixed checkpoints (no seed term)",
+   "n": 200,
+   "se_case": 0.0073,
+   "se_seed": 0.0,
+   "mde": 0.0203
+  },
+  {
+   "metric": "LCx",
+   "scale": "measured (r=1)",
+   "f_pool": 1.0,
+   "design": "recipe decision, 1 seed vs fixed Janus 0",
+   "n": 10,
+   "se_case": 0.0324,
+   "se_seed": 0.013,
+   "mde": 0.0979
+  },
+  {
+   "metric": "LCx",
+   "scale": "measured (r=1)",
+   "f_pool": 1.0,
+   "design": "recipe decision, 1 seed vs fixed Janus 0",
+   "n": 30,
+   "se_case": 0.0187,
+   "se_seed": 0.013,
+   "mde": 0.0638
+  },
+  {
+   "metric": "LCx",
+   "scale": "measured (r=1)",
+   "f_pool": 1.0,
+   "design": "recipe decision, 1 seed vs fixed Janus 0",
+   "n": 50,
+   "se_case": 0.0145,
+   "se_seed": 0.013,
+   "mde": 0.0545
+  },
+  {
+   "metric": "LCx",
+   "scale": "measured (r=1)",
+   "f_pool": 1.0,
+   "design": "recipe decision, 1 seed vs fixed Janus 0",
+   "n": 61,
+   "se_case": 0.0131,
+   "se_seed": 0.013,
+   "mde": 0.0517
+  },
+  {
+   "metric": "LCx",
+   "scale": "measured (r=1)",
+   "f_pool": 1.0,
+   "design": "recipe decision, 1 seed vs fixed Janus 0",
+   "n": 100,
+   "se_case": 0.0103,
+   "se_seed": 0.013,
+   "mde": 0.0464
+  },
+  {
+   "metric": "LCx",
+   "scale": "measured (r=1)",
+   "f_pool": 1.0,
+   "design": "recipe decision, 1 seed vs fixed Janus 0",
+   "n": 200,
+   "se_case": 0.0073,
+   "se_seed": 0.013,
+   "mde": 0.0417
+  },
+  {
+   "metric": "LCx",
+   "scale": "measured (r=1)",
+   "f_pool": 1.0,
+   "design": "recipe decision, 1 seed per arm",
+   "n": 10,
+   "se_case": 0.0324,
+   "se_seed": 0.0184,
+   "mde": 0.1044
+  },
+  {
+   "metric": "LCx",
+   "scale": "measured (r=1)",
+   "f_pool": 1.0,
+   "design": "recipe decision, 1 seed per arm",
+   "n": 30,
+   "se_case": 0.0187,
+   "se_seed": 0.0184,
+   "mde": 0.0735
+  },
+  {
+   "metric": "LCx",
+   "scale": "measured (r=1)",
+   "f_pool": 1.0,
+   "design": "recipe decision, 1 seed per arm",
+   "n": 50,
+   "se_case": 0.0145,
+   "se_seed": 0.0184,
+   "mde": 0.0656
+  },
+  {
+   "metric": "LCx",
+   "scale": "measured (r=1)",
+   "f_pool": 1.0,
+   "design": "recipe decision, 1 seed per arm",
+   "n": 61,
+   "se_case": 0.0131,
+   "se_seed": 0.0184,
+   "mde": 0.0633
+  },
+  {
+   "metric": "LCx",
+   "scale": "measured (r=1)",
+   "f_pool": 1.0,
+   "design": "recipe decision, 1 seed per arm",
+   "n": 100,
+   "se_case": 0.0103,
+   "se_seed": 0.0184,
+   "mde": 0.059
+  },
+  {
+   "metric": "LCx",
+   "scale": "measured (r=1)",
+   "f_pool": 1.0,
+   "design": "recipe decision, 1 seed per arm",
+   "n": 200,
+   "se_case": 0.0073,
+   "se_seed": 0.0184,
+   "mde": 0.0553
+  },
+  {
+   "metric": "LCx",
+   "scale": "measured (r=1)",
+   "f_pool": 1.0,
+   "design": "recipe decision, 2 seeds per arm",
+   "n": 10,
+   "se_case": 0.0324,
+   "se_seed": 0.013,
+   "mde": 0.0979
+  },
+  {
+   "metric": "LCx",
+   "scale": "measured (r=1)",
+   "f_pool": 1.0,
+   "design": "recipe decision, 2 seeds per arm",
+   "n": 30,
+   "se_case": 0.0187,
+   "se_seed": 0.013,
+   "mde": 0.0638
+  },
+  {
+   "metric": "LCx",
+   "scale": "measured (r=1)",
+   "f_pool": 1.0,
+   "design": "recipe decision, 2 seeds per arm",
+   "n": 50,
+   "se_case": 0.0145,
+   "se_seed": 0.013,
+   "mde": 0.0545
+  },
+  {
+   "metric": "LCx",
+   "scale": "measured (r=1)",
+   "f_pool": 1.0,
+   "design": "recipe decision, 2 seeds per arm",
+   "n": 61,
+   "se_case": 0.0131,
+   "se_seed": 0.013,
+   "mde": 0.0517
+  },
+  {
+   "metric": "LCx",
+   "scale": "measured (r=1)",
+   "f_pool": 1.0,
+   "design": "recipe decision, 2 seeds per arm",
+   "n": 100,
+   "se_case": 0.0103,
+   "se_seed": 0.013,
+   "mde": 0.0464
+  },
+  {
+   "metric": "LCx",
+   "scale": "measured (r=1)",
+   "f_pool": 1.0,
+   "design": "recipe decision, 2 seeds per arm",
+   "n": 200,
+   "se_case": 0.0073,
+   "se_seed": 0.013,
+   "mde": 0.0417
+  },
+  {
+   "metric": "LCx",
+   "scale": "measured (r=1)",
+   "f_pool": 1.0,
+   "design": "recipe decision, 3 seeds per arm",
+   "n": 10,
+   "se_case": 0.0324,
+   "se_seed": 0.0106,
+   "mde": 0.0956
+  },
+  {
+   "metric": "LCx",
+   "scale": "measured (r=1)",
+   "f_pool": 1.0,
+   "design": "recipe decision, 3 seeds per arm",
+   "n": 30,
+   "se_case": 0.0187,
+   "se_seed": 0.0106,
+   "mde": 0.0603
+  },
+  {
+   "metric": "LCx",
+   "scale": "measured (r=1)",
+   "f_pool": 1.0,
+   "design": "recipe decision, 3 seeds per arm",
+   "n": 50,
+   "se_case": 0.0145,
+   "se_seed": 0.0106,
+   "mde": 0.0503
+  },
+  {
+   "metric": "LCx",
+   "scale": "measured (r=1)",
+   "f_pool": 1.0,
+   "design": "recipe decision, 3 seeds per arm",
+   "n": 61,
+   "se_case": 0.0131,
+   "se_seed": 0.0106,
+   "mde": 0.0473
+  },
+  {
+   "metric": "LCx",
+   "scale": "measured (r=1)",
+   "f_pool": 1.0,
+   "design": "recipe decision, 3 seeds per arm",
+   "n": 100,
+   "se_case": 0.0103,
+   "se_seed": 0.0106,
+   "mde": 0.0413
+  },
+  {
+   "metric": "LCx",
+   "scale": "measured (r=1)",
+   "f_pool": 1.0,
+   "design": "recipe decision, 3 seeds per arm",
+   "n": 200,
+   "se_case": 0.0073,
+   "se_seed": 0.0106,
+   "mde": 0.036
+  },
+  {
+   "metric": "LCx",
+   "scale": "measured (r=1)",
+   "f_pool": 1.5,
+   "design": "model decision: two fixed checkpoints (no seed term)",
+   "n": 10,
+   "se_case": 0.0487,
+   "se_seed": 0.0,
+   "mde": 0.1363
+  },
+  {
+   "metric": "LCx",
+   "scale": "measured (r=1)",
+   "f_pool": 1.5,
+   "design": "model decision: two fixed checkpoints (no seed term)",
+   "n": 30,
+   "se_case": 0.0281,
+   "se_seed": 0.0,
+   "mde": 0.0787
+  },
+  {
+   "metric": "LCx",
+   "scale": "measured (r=1)",
+   "f_pool": 1.5,
+   "design": "model decision: two fixed checkpoints (no seed term)",
+   "n": 50,
+   "se_case": 0.0218,
+   "se_seed": 0.0,
+   "mde": 0.0609
+  },
+  {
+   "metric": "LCx",
+   "scale": "measured (r=1)",
+   "f_pool": 1.5,
+   "design": "model decision: two fixed checkpoints (no seed term)",
+   "n": 61,
+   "se_case": 0.0197,
+   "se_seed": 0.0,
+   "mde": 0.0552
+  },
+  {
+   "metric": "LCx",
+   "scale": "measured (r=1)",
+   "f_pool": 1.5,
+   "design": "model decision: two fixed checkpoints (no seed term)",
+   "n": 100,
+   "se_case": 0.0154,
+   "se_seed": 0.0,
+   "mde": 0.0431
+  },
+  {
+   "metric": "LCx",
+   "scale": "measured (r=1)",
+   "f_pool": 1.5,
+   "design": "model decision: two fixed checkpoints (no seed term)",
+   "n": 200,
+   "se_case": 0.0109,
+   "se_seed": 0.0,
+   "mde": 0.0305
+  },
+  {
+   "metric": "LCx",
+   "scale": "measured (r=1)",
+   "f_pool": 1.5,
+   "design": "recipe decision, 1 seed vs fixed Janus 0",
+   "n": 10,
+   "se_case": 0.0487,
+   "se_seed": 0.013,
+   "mde": 0.141
+  },
+  {
+   "metric": "LCx",
+   "scale": "measured (r=1)",
+   "f_pool": 1.5,
+   "design": "recipe decision, 1 seed vs fixed Janus 0",
+   "n": 30,
+   "se_case": 0.0281,
+   "se_seed": 0.013,
+   "mde": 0.0867
+  },
+  {
+   "metric": "LCx",
+   "scale": "measured (r=1)",
+   "f_pool": 1.5,
+   "design": "recipe decision, 1 seed vs fixed Janus 0",
+   "n": 50,
+   "se_case": 0.0218,
+   "se_seed": 0.013,
+   "mde": 0.071
+  },
+  {
+   "metric": "LCx",
+   "scale": "measured (r=1)",
+   "f_pool": 1.5,
+   "design": "recipe decision, 1 seed vs fixed Janus 0",
+   "n": 61,
+   "se_case": 0.0197,
+   "se_seed": 0.013,
+   "mde": 0.0661
+  },
+  {
+   "metric": "LCx",
+   "scale": "measured (r=1)",
+   "f_pool": 1.5,
+   "design": "recipe decision, 1 seed vs fixed Janus 0",
+   "n": 100,
+   "se_case": 0.0154,
+   "se_seed": 0.013,
+   "mde": 0.0564
+  },
+  {
+   "metric": "LCx",
+   "scale": "measured (r=1)",
+   "f_pool": 1.5,
+   "design": "recipe decision, 1 seed vs fixed Janus 0",
+   "n": 200,
+   "se_case": 0.0109,
+   "se_seed": 0.013,
+   "mde": 0.0475
+  },
+  {
+   "metric": "LCx",
+   "scale": "measured (r=1)",
+   "f_pool": 1.5,
+   "design": "recipe decision, 1 seed per arm",
+   "n": 10,
+   "se_case": 0.0487,
+   "se_seed": 0.0184,
+   "mde": 0.1457
+  },
+  {
+   "metric": "LCx",
+   "scale": "measured (r=1)",
+   "f_pool": 1.5,
+   "design": "recipe decision, 1 seed per arm",
+   "n": 30,
+   "se_case": 0.0281,
+   "se_seed": 0.0184,
+   "mde": 0.094
+  },
+  {
+   "metric": "LCx",
+   "scale": "measured (r=1)",
+   "f_pool": 1.5,
+   "design": "recipe decision, 1 seed per arm",
+   "n": 50,
+   "se_case": 0.0218,
+   "se_seed": 0.0184,
+   "mde": 0.0798
+  },
+  {
+   "metric": "LCx",
+   "scale": "measured (r=1)",
+   "f_pool": 1.5,
+   "design": "recipe decision, 1 seed per arm",
+   "n": 61,
+   "se_case": 0.0197,
+   "se_seed": 0.0184,
+   "mde": 0.0755
+  },
+  {
+   "metric": "LCx",
+   "scale": "measured (r=1)",
+   "f_pool": 1.5,
+   "design": "recipe decision, 1 seed per arm",
+   "n": 100,
+   "se_case": 0.0154,
+   "se_seed": 0.0184,
+   "mde": 0.0671
+  },
+  {
+   "metric": "LCx",
+   "scale": "measured (r=1)",
+   "f_pool": 1.5,
+   "design": "recipe decision, 1 seed per arm",
+   "n": 200,
+   "se_case": 0.0109,
+   "se_seed": 0.0184,
+   "mde": 0.0598
+  },
+  {
+   "metric": "LCx",
+   "scale": "measured (r=1)",
+   "f_pool": 1.5,
+   "design": "recipe decision, 2 seeds per arm",
+   "n": 10,
+   "se_case": 0.0487,
+   "se_seed": 0.013,
+   "mde": 0.141
+  },
+  {
+   "metric": "LCx",
+   "scale": "measured (r=1)",
+   "f_pool": 1.5,
+   "design": "recipe decision, 2 seeds per arm",
+   "n": 30,
+   "se_case": 0.0281,
+   "se_seed": 0.013,
+   "mde": 0.0867
+  },
+  {
+   "metric": "LCx",
+   "scale": "measured (r=1)",
+   "f_pool": 1.5,
+   "design": "recipe decision, 2 seeds per arm",
+   "n": 50,
+   "se_case": 0.0218,
+   "se_seed": 0.013,
+   "mde": 0.071
+  },
+  {
+   "metric": "LCx",
+   "scale": "measured (r=1)",
+   "f_pool": 1.5,
+   "design": "recipe decision, 2 seeds per arm",
+   "n": 61,
+   "se_case": 0.0197,
+   "se_seed": 0.013,
+   "mde": 0.0661
+  },
+  {
+   "metric": "LCx",
+   "scale": "measured (r=1)",
+   "f_pool": 1.5,
+   "design": "recipe decision, 2 seeds per arm",
+   "n": 100,
+   "se_case": 0.0154,
+   "se_seed": 0.013,
+   "mde": 0.0564
+  },
+  {
+   "metric": "LCx",
+   "scale": "measured (r=1)",
+   "f_pool": 1.5,
+   "design": "recipe decision, 2 seeds per arm",
+   "n": 200,
+   "se_case": 0.0109,
+   "se_seed": 0.013,
+   "mde": 0.0475
+  },
+  {
+   "metric": "LCx",
+   "scale": "measured (r=1)",
+   "f_pool": 1.5,
+   "design": "recipe decision, 3 seeds per arm",
+   "n": 10,
+   "se_case": 0.0487,
+   "se_seed": 0.0106,
+   "mde": 0.1395
+  },
+  {
+   "metric": "LCx",
+   "scale": "measured (r=1)",
+   "f_pool": 1.5,
+   "design": "recipe decision, 3 seeds per arm",
+   "n": 30,
+   "se_case": 0.0281,
+   "se_seed": 0.0106,
+   "mde": 0.0841
+  },
+  {
+   "metric": "LCx",
+   "scale": "measured (r=1)",
+   "f_pool": 1.5,
+   "design": "recipe decision, 3 seeds per arm",
+   "n": 50,
+   "se_case": 0.0218,
+   "se_seed": 0.0106,
+   "mde": 0.0678
+  },
+  {
+   "metric": "LCx",
+   "scale": "measured (r=1)",
+   "f_pool": 1.5,
+   "design": "recipe decision, 3 seeds per arm",
+   "n": 61,
+   "se_case": 0.0197,
+   "se_seed": 0.0106,
+   "mde": 0.0627
+  },
+  {
+   "metric": "LCx",
+   "scale": "measured (r=1)",
+   "f_pool": 1.5,
+   "design": "recipe decision, 3 seeds per arm",
+   "n": 100,
+   "se_case": 0.0154,
+   "se_seed": 0.0106,
+   "mde": 0.0523
+  },
+  {
+   "metric": "LCx",
+   "scale": "measured (r=1)",
+   "f_pool": 1.5,
+   "design": "recipe decision, 3 seeds per arm",
+   "n": 200,
+   "se_case": 0.0109,
+   "se_seed": 0.0106,
+   "mde": 0.0426
+  }
+ ]
+}

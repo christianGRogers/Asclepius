@@ -2,7 +2,7 @@
 aliases: [Plan ledger]
 tags: [plans, changelog]
 status: living
-updated: 2026-10-18
+updated: 2026-10-25
 ---
 
 # Plan ledger
@@ -51,3 +51,8 @@ Every plan version ever submitted, and what happened to it.
 | 9 | [[Crucible v10]] | Crucible | Lost; seed-vs-read measurement adopted (A31.2); val-80 tF1 folded into A26; P3/P4 recipe deferred to Round 10 |
 | 9 | [[Delta v9]] | Delta | Lost; Dice decides nothing (A28); start-point ostia (P2) conditional on a CPU test (A29); its 60-patient seal refused as under-powered |
 | 9 | [[Foxtrot v5]] | Foxtrot | Lost; Fir loader budget adopted (A25); human-floor readings (F7) and the external pool test (F8) adopted as reports only (A28, A31.3) |
+| 10 | [[Atlas v12]] | Atlas | Lost the title after nine rounds. Its J1–J7 rules form the Janus 1 gate (A38); A31.2′ is one leg of the anchoring signature (A40); its draw outside the reserve is the D35 fallback if the lead declines Q1 (A33). A22′ and the 50 % pool share were not adopted ([[Round 10]]) |
+| 10 | [[Bridge v9]] | Bridge | Lost. Rule C merged into the seal-sizing rule (A35); its 80-reference anchoring evidence and seed-edit sizes adopted (A40); F0 is Job 0; its re-stated 250-step offered to the lead as Q1(b) |
+| 10 | [[Crucible v11]] | Crucible | Lost. The reserve-inclusive population shared with the winner; the val-80 seed-learning gate (G3), the `trillium/janus1` launcher on icx4's Fir path and the timeline adopted; the two-run Janus 1 and the default seal of 200 not adopted |
+| 10 | [[Delta v10]] | Delta | **Master plan** (new holder). The D35 draw with the seal's mix (A33, subject to Q1), the extension skip (A34), Job S (A40) and the three-run Janus 1 (A37); the ≥ 30-patient start and the lr1e3 tie-break not adopted ([[Round 10]]) |
+| 10 | [[Foxtrot v6]] | Foxtrot | Lost. The model-vs-recipe distinction in A22 adopted (A37); M1 folded into Job S; seal-200-now and the 50-patient D35 from extension positions 51–100 refused |

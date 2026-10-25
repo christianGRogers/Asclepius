@@ -1,16 +1,152 @@
 ---
 aliases: [Master plan]
-tags: [plans, master, four-class, fir]
+tags: [plans, master, four-class, fir, janus, D35]
 status: living
-round: 9
-updated: 2026-10-18
+round: 10
+updated: 2026-10-25
 ---
 
 # Master plan
 
-**In force: [[Atlas v11]], as amended by the judge in [[Round 9]] (A25–A32).** Four classes (D25) on ImageCAS-X's lumen (D8), trained on **Fir**. Atlas has held the title since Round 1 ([[Atlas v1]]). In Round 9 all five candidates kept the same model and competed on how it is scored, scheduled and accepted. The amendments below are binding and override the candidate text where they conflict. Full reasoning and scorecards: [[Round 9]].
+**In force: [[Delta v10]], as amended by the judge in [[Round 10]] (A33–A44).** This is the first change of holder
+since Round 1: Atlas held the title in Rounds 1–9, most recently as [[Atlas v11]].
+
+The plan works on four classes (D25) on ImageCAS-X's lumen (D8), on **Fir**. The base model is **Janus 0** (icx4, D34):
+- val-80 decisive tF1 0.909 [0.880, 0.932];
+- A15 met;
+- P2 withdrawn ([[icx4 - Results]]).
+
+The amendments are binding and override the candidate text where they conflict. Full reasoning, scorecards and the
+lead's questions: [[Round 10]].
 
 ## In one paragraph
+
+**Keep Janus 0 and its recipe.**
+
+**Freeze a 35-patient D35 decision set (A33).**
+- Drawn from the 161 non-sealed primary pool patients, reserve included.
+- Allocation is proportional to the primary pool (the seal's mix); within source, salted by
+  `asclepius-decision-round10-pool:`.
+- The list is `experiments/Delta/r10/d35_decision_set_proposal.json`.
+- It is never trained on. The seal's extension order skips it (A34).
+- This caps the seal at 228. That is the lead's Q1; Atlas's draw outside the reserve is the fallback.
+
+**The seal stays at 150.** It is sized at wave 1 on the measured A10 contrast (A35, replacing the f/k trigger).
+
+**Janus 1** is a warm fine-tune of Janus 0 (A17a, 250 epochs) on ImageCAS-X train 560 + the trainable pool reads (A36).
+- Task 717, with fold-0 val = val 80 and no pool hold-out.
+- Three runs: a1 and a2 at peak LR 1e-2, b at 1e-3. About 45 GPU-h (A37).
+- Adopted only if it gains on D35 and passes the val-80 forgetting and seed-learning guards (A38).
+
+**Seed anchoring:**
+- it is measured before any read (Job S);
+- it is declared only on a three-part signature (A40).
+
+## The first Fir jobs (the lead runs them; account `def-aso22`; exact commands in [[Round 10]] §4)
+
+| # | Job | Waits on | GPU-h |
+|---|---|---|---|
+| 0 | Exact seal re-power (`experiments/Bridge/r10/power_r10.py --val $SCRATCH/icx4/r9_tf1_val.json`) + left-ostium residual (`experiments/Delta/r10/ostium_residual.py`), login node | this PR | 0 |
+| S | TotalSegmentator `coronary_arteries` on val 80, then `experiments/Delta/r10/seed_vs_icx.py` (A40) | this PR; the lead types the TotalSegmentator licence on Fir (never committed) | ≤ 1 |
+| P0 | Janus 0 on the 244 allowed pool volumes + aortas; domain check (A41) | **#116** (with #114's guard), Q1 | 3–4 |
+| J1 | Janus 1: three runs via `trillium/janus1` (task 717) | **#116**, A21 dry run, A39 (≥ 25 D35 and ≥ 40 trainable primary patients double-read) | ≈ 45 |
+
+- **#118 blocks nothing:** its (a)–(c) are folded into #116, and its Fir string for `segtrain scinet` is for later use.
+- **Every GPU job:** 1 × H100 80 GB (`h100:1`), 12 cores, 280 G (64 G for Job S), charged to `def-aso22_gpu`.
+- **No job touches a sealed case or a reserved volume.**
+
+## Binding amendments, Round 10 (summary; full wording in [[Round 10]] §1)
+
+- **A33, D35:** 35 patients and 51 volumes from 10 sources, as above.
+  - Scoring volume = the patient's first volume in D23 serve order.
+  - Frozen by #116 as `configs/segqueue14/decision-set-2026-10.json` (sha256-pinned).
+  - Until #116 merges, no pool read is exported. Until Q1 is answered, the union of the three candidate draws is
+    frozen.
+- **A34, the reserve:** the extension order skipping D35, 78 patients.
+  - It stays untrained and uninspected until A35, then the entries not sealed are released.
+  - The seal file changes only in A35's explicit PR.
+- **A35, the seal size:** at ≥ 50 double-read primary non-sealed, non-reserved patients, compute d = model-vs-read −
+  inter-read per patient and class (Janus 0).
+  - The seal is the smallest of 150 / 200 / cap with simulated P(pass) ≥ 0.80 at the bootstrap 80th-percentile SD, the
+    larger of the unweighted and seal-mix-weighted answers.
+  - It is set before any sealed read is scored or any reserve patient is used.
+  - f and k are a report.
+- **A36, the recipe:** warm from Janus 0, 250 epochs, ImageCAS-X 560 replay + trainable pool reads.
+  - Uniform per sample; each read a sample.
+  - Val = val 80; no `segtrain index` hold-out.
+  - Spacing-suspect volumes out until re-gridded. Task 716 is not run for wave 1.
+- **A37, runs:** a1/a2 primary, b at 1e-3; read as Janus 1/2/3.
+  - D28's second seed = a2 (Q4).
+  - A22 distinguishes model decisions (case CI, pre-registered ship) from recipe claims (seed term ≥ 0.012). A22′ not
+    adopted.
+- **A38, the gate:**
+  - **G1:** D35 Δ(a1 − Janus 0) lower bound > 0, with a2 in the same sign.
+  - **G2:** val-80 Δ lower bound > −0.02, and no class < −0.03.
+  - **G3:** no class's val-80 centreline recall falls by more than 0.02.
+  - **G4:** open-36 sign.
+  - **G5:** class review if any class drops by more than 0.05.
+  - **G6:** FP is reported.
+  - b only if a1 fails G2 or G3 alone.
+- **A39, the start:** #116 merged; P0 done; A21 passed; ≥ 25 D35 and ≥ 40 trainable primary patients double-read.
+  Train without the reserve if A35 has not run.
+- **A40, anchoring:** Job S first.
+  - Declared only if all three hold: A31.2's flag, reads adding < 10 % beyond the seed, and a model-vs-read
+    precision − recall gap below −0.03 while inter-read precision is not also low.
+  - All are reported every wave.
+- **A41:** the domain check reports plain, tolerant Dice, volume ratio, centreline recall and precision, and the
+  centreline-in-seed share. Per source is report only, split into seen and unseen sources.
+- **A42:** the left-ostium residual is report only; A1 is unchanged.
+- **A43:** #116 is the critical path; #114 closes into it; #118 keeps only (d) and (e).
+- **A44:** carried: A1/A1a–c, A2/A15, A9, A11′, A12, A17a/b, A19, A21, A23, A26, A28, A30's 150-patient seal.
+  - Replaced: A31.1 (by A35).
+  - Read through: A31.2–A31.4 (A40, A41).
+  - Closed: A27, A29.
+
+## Decisions for the lead ([[Round 10]] §5)
+
+**These change, or read, a human decision:**
+- **Q1 (D27's 250):** the D35 population.
+  - Recommended: (a) Delta's draw, cap 228.
+  - (b) Bridge's re-stated 250-step.
+  - (c) Atlas's draw outside the reserve, the fallback.
+- **Q2 (D23/D30):** serve the 35 D35 scoring volumes first. Recommended: yes.
+- **Q3 (L5):** if anchoring is declared in a class, also require A26's sealed-80 red flag per class and G2/G3.
+  Recommended: (b).
+- **Q4 (D28):** confirm a2 as D28's second seed.
+
+**The lead's calls that change no D-number:**
+- **Q5:** confirm D35 at 35.
+- **Q6:** a SegQueue14 note to trace past the seed's end (yes).
+- **Q7:** the final retrain: decide after Janus 1; from scratch; keep val 80 and open-36 untrained.
+- **Q8:** ASOCA: not now.
+- **Q9:** re-grid the 74 spacing-suspect volumes (yes, low priority).
+
+## Next round
+
+Round 11 runs when either of these comes first:
+- Janus 1's A38 verdict;
+- A35's seal size with the first A40 report.
+
+## Human decisions in force
+
+All of [[Human decisions]] binds. The operative ones:
+- D25 (D1, D1b), D8, D12, D3, D6, D13;
+- D22, D23, D26;
+- D27 (the seal), D28 (no Job B), D29 (strata), D30 (serving order);
+- D31 (no outside requests), D32, D33, D34 (Janus names), D35 (the decision set).
+
+---
+
+## Record: the Round 9 plan ([[Atlas v11]], A25–A32)
+
+> Kept as the record. Janus 0 was trained and read under it. A27 and A29 are closed. A31.1 is replaced by A35, and
+> A31.2–4 are read through A40–A41. Everything else listed in A44 still binds.
+
+
+
+**In force: [[Atlas v11]], as amended by the judge in [[Round 9]] (A25–A32).** Four classes (D25) on ImageCAS-X's lumen (D8), trained on **Fir**. Atlas has held the title since Round 1 ([[Atlas v1]]). In Round 9 all five candidates kept the same model and competed on how it is scored, scheduled and accepted. The amendments below are binding and override the candidate text where they conflict. Full reasoning and scorecards: [[Round 9]].
+
+### In one paragraph
 
 Train **one four-class nnU-Net v2 ResEnc model** (LM 1, LAD 2, LCx 3, RCA 4) with `trillium/icx4` exactly as on `dev`:
 - data: **ImageCAS-X as drawn**, collapsed by territory (`trillium/icx4/lib/territory.py`: D25, D1, D1b; "Other" → the nearest LAD/LCx in mm); dataset 715;
@@ -20,7 +156,7 @@ Train **one four-class nnU-Net v2 ResEnc model** (LM 1, LAD 2, LCx 3, RCA 4) wit
 
 The job predicts all 1000 ImageCAS cases and scores **decisive tF1** (A1c hash `24441cf8…5254`) on the open test cases, never on a sealed one (#66). **Decisions are made on val 80** (atlas2 aortas), confirmed on open-36. Team reads come only from the 675 pool volumes (D23), two reads each, starting from TotalSegmentator seeds (D26). They enter later through the A17 fine-tune trainer, with each read a separate sample (A11′). **Acceptance (D6) is measured on the A30 pool seal** (150 pool patients, extendable to 200–250 on wave-1 evidence; [[Human decisions]] D27). No second seed for now (D28); anomalous anatomy is its own stratum (D29); D23's serving order is unchanged (D30).
 
-## The first Fir job (copy-paste; the lead runs it)
+### The first Fir job (copy-paste; the lead runs it)
 
 **Before you start.**
 - Fir access is already enabled: the lead has logged in, `CC_CLUSTER=fir`, `SCRATCH=/scratch/croger`.
@@ -99,7 +235,7 @@ Never send a sealed case's file. The job writes none.
 
 **No Job B.** The lead declined a second concurrent seed (D28); only Job A runs. A22's fallback stands.
 
-## Binding amendments, Round 9 (summary; full wording in [[Round 9]] §1)
+### Binding amendments, Round 9 (summary; full wording in [[Round 9]] §1)
 
 - **A25, the job:** icx4 as on `dev`, unchanged, `CHAIN=5`, 1000 epochs always. No 500-epoch fallback and no 24-core request by default. Expected 60–75 GPU-h.
 - **A26, decision sets:**
@@ -126,7 +262,7 @@ Never send a sealed case's file. The job writes none.
   - an optional pre-read per-source domain check (about 3–4 GPU-h).
 - **A32, carried over:** A1/A1a/A1b/A1c, A2/A15, A9, A11′, A12, A17a/b, A19, A21, A22, A23 (report only). **Lapsed:** A3, A4, A17c, proxies. **Closed:** A24. The `coronary_icx4` segtrain task config is due before wave-1 fine-tuning.
 
-## Decisions for the lead ([[Round 9]] §5)
+### Decisions for the lead ([[Round 9]] §5)
 
 - **L1 → D27:** D6 acceptance is measured on the 150-patient pool seal (A30). The lead declined the request to the ImageCAS-X authors; under D31 no such request is ever written in the repository.
 - **L2 → D28:** no Job B.
@@ -136,7 +272,7 @@ Never send a sealed case's file. The job writes none.
 - **L6:** ASOCA.
 - **L7:** the FP gate.
 
-## Next round
+### Next round
 
 The plan is settled for the first job and the recipe. **Round 10 runs after icx4's results are back** ([[Round 9]] §6), to settle:
 - the reading of icx4 (and σ_seed);
@@ -145,7 +281,7 @@ The plan is settled for the first job and the recipe. **Round 10 runs after icx4
 - what seed-anchored team reads measure;
 - the FP lever, if needed.
 
-## Human decisions in force
+### Human decisions in force
 
 All of [[Human decisions]] binds. For this plan the operative ones are:
 
@@ -163,7 +299,7 @@ D0, D2, D4, D7, D9, D10 and D11 are superseded.
 
 ---
 
-## Record: the D0-era master plan (Rounds 1–8)
+### Record: the D0-era master plan (Rounds 1–8)
 
 > Kept as the record. It trained on proxy labels projected onto the original ImageCAS mask (D0), which D8 retired. The 14-class restructure that briefly replaced it (D9, `trillium/icx14`) was itself reversed by D25. The amendments still in force are listed in A32 above.
 
@@ -175,7 +311,7 @@ The plan text is the candidate file; the amendments below are binding and
 override it where they conflict. Full reasoning, scorecards and what would
 change the ruling: [[Round 8]] (earlier: [[Round 7]] … [[Round 1]]).
 
-### In one paragraph
+#### In one paragraph
 
 One four-class nnU-Net v2 ResEnc model, trained directly at 0.5 mm isotropic
 with a 256³ patch (a 128 mm patch holds the whole tree in ~98 % of cases), a
@@ -183,7 +319,7 @@ fixed CT window instead of nnU-Net's automatic one, mirroring off. Training
 starts now on proxy labels — ImageCAS-X's per-branch names projected onto our
 cases — and team labels replace the proxies case by case as they arrive.
 
-### Binding amendments (as of Round 2)
+#### Binding amendments (as of Round 2)
 
 Round 1's A1–A6 as revised in Round 2, plus A7–A9. The full wording is in
 [[Round 2]] §1; this is the summary.
@@ -207,7 +343,7 @@ Round 1's A1–A6 as revised in Round 2, plus A7–A9. The full wording is in
 - **A8 — the ramus rule is a switch** set from the humans' written rule.
 - **A9 — one implementation:** only the ported `src/segtrain` tF1 may decide.
 
-### Round 3 changes (summary; full wording in [[Round 3]] §1)
+#### Round 3 changes (summary; full wording in [[Round 3]] §1)
 
 - **A1:** ostia found per tree component, so cases with no left main are handled.
 - **A2:** the support rule is withdrawn. Re-inference (P1′) stays unproven and is
@@ -227,7 +363,7 @@ Round 1's A1–A6 as revised in Round 2, plus A7–A9. The full wording is in
   checkpoint; Bridge's and Delta's questions can then run inference-only on it.
   Delta's decisions may use only the 80 non-sealed test cases.
 
-### Round 4 changes (summary; full wording in [[Round 4]] §1)
+#### Round 4 changes (summary; full wording in [[Round 4]] §1)
 
 - **A14 — the official sealed test:** 80 ImageCAS-X test cases + 20 quality-0
   cases, ranked by `sha256('asclepius-sealed-round4:' + case_id)` after excluding
@@ -241,7 +377,7 @@ Round 1's A1–A6 as revised in Round 2, plus A7–A9. The full wording is in
   6/13 false-positive joins on the thick reference).
 - Atlas's decision-table row for the short R1 is now numeric (≤ 0.03 / > 0.10).
 
-### Round 5 changes (first GPU results; full wording in [[Round 5]] §1)
+#### Round 5 changes (first GPU results; full wording in [[Round 5]] §1)
 
 Measured on Trillium: R0 passes (175 s/epoch, 55.6 GiB; 1000 epochs ≈ 48.6 h). A
 412-epoch R1 on the proxy scores macro tF1 0.846 under the provisional ostium; the
@@ -264,7 +400,7 @@ judge accepts only the bounds 0.846–0.895 until the A1 re-score. The FP gate f
   and Phase B (window ablation, 412 epochs, paired against run 1). Full-length R1 waits
   for run 2's winning window.
 
-### Round 6 changes (CPU round while Atlas run 2 is on Trillium; full wording in [[Round 6]] §1)
+#### Round 6 changes (CPU round while Atlas run 2 is on Trillium; full wording in [[Round 6]] §1)
 
 - **Closed:** P1′, P1 and P2 failed their own pre-registered tests and leave the recipe.
 - **A17 — fine-tuning as team reads arrive:** a dedicated fine-tune trainer comes first
@@ -284,7 +420,7 @@ judge accepts only the bounds 0.846–0.895 until the A1 re-score. The FP gate f
   decisive tF1 is computed outside a Trillium job (A1a); Echo's remaining suspicions go to
   their owners.
 
-### Round 7 changes (full wording in [[Round 7]])
+#### Round 7 changes (full wording in [[Round 7]])
 
 - **A1c change approved — report-only:** `segtrain.tf1` reports any reference class with
   no centreline voxels (7 of 143 references: short wide LM ×6, LCx ×1) instead of skipping
@@ -298,7 +434,7 @@ judge accepts only the bounds 0.846–0.895 until the A1 re-score. The FP gate f
   the SegQueue export dry run passed on test submissions — it must be repeated on the
   first real four-class double-read export before wave 1.
 
-### Round 8 changes (atlas2 and Crucible seed 2; full wording in [[Round 8]])
+#### Round 8 changes (atlas2 and Crucible seed 2; full wording in [[Round 8]])
 
 Measured: run 1 re-scored under the A1 ostium of record — decisive macro tF1 **0.896**
 (LM 0.966 / LAD 0.901 / LCx 0.846 / RCA 0.883), 44 of 316 trees flagged. Recall of
@@ -325,14 +461,14 @@ cardiac veins beside the tree; no threshold or ROI rule removes them.
   test is dropped. **F3/A20 withdrawn** (the FPs sit on the heart); aorta masks remain
   required. **A10** uses D6's 0.05 per class.
 
-### Human decisions taken 2026-10-11
+#### Human decisions taken 2026-10-11
 
 - **D6 — acceptance margin:** 0.05 per class; A10 is reinstated with that margin (A18
   resolved).
 - **D7 — mask outline:** keep it; redraw only to correct a major error in the original
   segmentation (rare), recorded in the case note.
 
-### Human decisions
+#### Human decisions
 
 Recorded in [[Human decisions]] (2026-10-05) and binding on every plan:
 the original ImageCAS mask (current Girder mask) is the lumen target, seed and

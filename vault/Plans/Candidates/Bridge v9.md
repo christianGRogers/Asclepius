@@ -35,7 +35,7 @@ plan; each has a note and code in this PR.
 5. **The wave-1 training path as it stands would not run the plan.** Task 716 trains on pool reads only (no
    ImageCAS-X rehearsal); `segtrain index` would hold out its own 15 % val + 15 % test of pool reads by hash; nothing
    refuses decision-set or reserve volumes; and `segtrain scinet` can only write `--gpus-per-node=<int>`, so on Fir
-   it may land on a MIG slice. One role:swe issue (§12) covers all four.
+   it may land on a MIG slice. One role:swe issue (#118, §12) covers all four.
 
 **Janus 1** is therefore one well-seeded question: does a warm fine-tune from Janus 0 on ImageCAS-X train 560 plus
 the wave-1 pool reads beat Janus 0 on the D35 decision set, without losing more than 0.02 on val 80? From-scratch
@@ -184,7 +184,7 @@ aortas (A1), model-vs-read averaged over both reads, flagged trees apart (A1b).
 test split of pool reads, refuses only the D27 seal, and submits through `segtrain scinet`, which cannot request a
 full H100 on Fir. The fix is a task 717 (or 716 v2) with: ImageCAS-X train 560 + pool reads, val = ImageCAS-X val
 80, no pool hold-out, refusal of the decision set and the reserve, and a Fir GPU string. It is a role:swe issue
-(§12); task 716's plans adoption and the A17 trainer are reused unchanged.
+(#118); task 716's plans adoption and the A17 trainer are reused unchanged.
 
 ## 5. What seed-anchored reads measure (A31.2, L5)
 
@@ -259,7 +259,7 @@ bash experiments/Bridge/r10/fir/janus0_pool.sh status     # when done: pred 212,
 - It reuses icx4's venvs and TotalSegmentator weights (`$HOME/icx14-venv`, `$HOME/icx4-tseg-venv`,
   `$SCRATCH/icx4/totalseg`). Copy `$SCRATCH/janus0-pool/pred` to PROJECT or HOME within a month (60-day purge).
 
-**F2, at the §7 trigger, after the role:swe issue (§12) has merged: Janus 1, three concurrent runs (~45 GPU-h).**
+**F2, at the §7 trigger, after the role:swe issue #118 has merged: Janus 1, three concurrent runs (~45 GPU-h).**
 
 ```sh
 # reads export (Girder host): segqueue14-export --out /srv/segqueue14/export-wave1 --replicas all ; move it to $SCRATCH/wave1
@@ -320,7 +320,7 @@ model, when all reads exist, is ≈ 55–60 GPU-h, one run, outside this round.
    GPU-h), checked once against the last warm model on D35 and val 80 for non-inferiority.
 5. **L6 (ASOCA):** not now; the pool already has 26 external sources.
 
-## 12. role:swe issue (one, linked from #113)
+## 12. role:swe issue: #118 (linked from #113)
 
 "Wave-1 fine-tune path for Round 10": (a) freeze the decision set and the re-stated reserve as pinned config files;
 (b) refuse both in `convert` and the trainer, like the D27 seal (the reserve releasable by an explicit PR after rule

@@ -17,14 +17,16 @@ redrawn from such a seed follow, and what does that do to A10 on the pool?
   one-voxel boundary convention barely moves it (#43: tolerant Dice 0.97, tF1 0.91 against plain Dice 0.88). What
   tF1 sees is **where each vessel stops** and which thin branches exist.
 - **If both reads keep a seed that stops early, A10 fails a perfect model.** On the 80 ImageCAS-X val trees, a model
-  that traces ImageCAS-X's full extent scores **0.24–0.75 tF1 below inter-read** in LAD, LCx and RCA when both reads
-  stop where the seed stops. Inter-read stays near 1, because the reads share the seed's stopping points. LM is
+  that traces ImageCAS-X's full extent scores below inter-read in LAD, LCx and RCA when both reads stop where the
+  seed stops: by 0.02–0.04 if the seed keeps 96 % of the centreline, **0.08–0.10 at 88 %** (beyond D6's 0.05
+  margin) and 0.24–0.75 at 56–20 %. Inter-read stays near 1, because the reads share the seed's stopping points. LM is
   untouched (it is short and wide, and every seed keeps it).
-- **If only one read is anchored, the bias reverses:** inter-read collapses and A10 passes too easily (+0.21 to
-  +0.32).
-- **A31.2's flag separates the cases cleanly** in LAD, LCx and RCA: seed-vs-read equals inter-read exactly when both
-  reads are anchored, and sits 0.25–0.80 below it when readers trace independently. In LM it fires either way and
-  says nothing.
+- **If only one read is anchored, the bias reverses:** inter-read falls and A10 passes too easily (+0.03 at 88 %,
+  +0.21 to +0.32 at 34 %).
+- **A31.2's flag separates the cases once the seed misses about a tenth of the tree** (LAD, LCx, RCA): seed-vs-read
+  equals inter-read exactly when both reads are anchored, and sits 0.06–0.80 below it when readers trace
+  independently. With a near-complete seed (96 %) it fires without anchoring, but then the bias is inside the margin.
+  In LM it fires either way and says nothing.
 - **The tell-tale on real reads is precision without recall.** An extent mismatch costs the model precision against
   the read (its centreline runs past the read's end) and costs no recall. A model that fails A10 by precision alone,
   with recall near 1, is being scored against a shorter convention, not failing.
@@ -67,7 +69,18 @@ pass a model with ImageCAS-X's extent comfortably.
 | 0.8 mm (34 %) | LAD / LCx / RCA | 0.987 / 0.987 / 0.924 | 0.403 / 0.343 / 0.584 | **−0.58 / −0.64 / −0.34** | = inter |
 | 1.0 mm (20 %) | LAD / LCx / RCA | 0.947 / 0.934 / 0.842 | 0.218 / 0.182 / 0.407 | **−0.73 / −0.75 / −0.43** | = inter |
 
-[MILD]
+**Milder seeds** (`anchoring_mild.json`; the 0.5 mm row also runs one anchored reader).
+
+| Seed r_s (centreline kept) | Both anchored: contrast LAD / LCx / RCA | Seed-vs-read, independent readers (inter-read ≈ 0.98–0.99) | One anchored: contrast |
+|---|---|---|---|
+| 0.45 mm (96 %) | −0.039 / −0.033 / −0.016 | 0.97 / 0.98 / 0.99: **the flag fires without anchoring** | — |
+| 0.5 mm (88 %) | **−0.087 / −0.101 / −0.079** | 0.92 / 0.91 / 0.92 (flag silent) | +0.032 / +0.028 / +0.031 |
+
+So the bias crosses D6's 0.05 margin once the seed misses about a tenth of the tree and both reads keep it. A seed
+that misses only a few percent cannot be told apart from careful independent readers by the flag; there, the flag
+fires without meaning anything, but the bias it would warn of is also within the margin. That is why the flag is
+read with the seed-edit sizes (wave-1 note §4): anchoring shows as reads that add nothing beyond the seed.
+
 
 **One reader anchored, one not (α = 0.5, r_s = 0.8):** inter-read falls to LAD 0.40, LCx 0.34, RCA 0.58, while the
 model matches the independent read, so the contrast is **+0.30 / +0.32 / +0.21**.
@@ -77,9 +90,9 @@ model matches the independent read, so the contrast is **+0.30 / +0.32 / +0.21**
 
 ## Reading
 
-1. **The size of the effect.** A10's margin is 0.05 (D6). Any seed that misses even a modest share of the distal
-   tree, if the readers keep its stopping points, moves the contrast by several times the margin. Anchoring is
-   therefore not a second-order worry for A10: if it happens, it decides A10.
+1. **The size of the effect.** A10's margin is 0.05 (D6). A seed that misses about a tenth of the distal tree, if
+   both readers keep its stopping points, already moves the contrast past the margin (−0.08 to −0.10); a seed that
+   misses half moves it by several times the margin. If anchoring happens at that scale, it decides A10.
 2. **The direction depends on how many reads are anchored.** Both anchored: biased against a model with the expert's
    extent. One anchored: biased for any model. Mixed habits across annotators would add a large, patient-level
    variance to the contrast, which rule C would read as a need for a bigger seal.

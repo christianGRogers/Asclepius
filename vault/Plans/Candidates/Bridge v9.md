@@ -25,9 +25,10 @@ plan; each has a note and code in this PR.
    the seal is **sized at wave 1 from the one quantity A10 depends on** (rule C), not extended on a surrogate now.
    ([[Bridge - On Janus 0's spread the 150-patient seal is under-powered unless reads and model fail on the same patients]])
 3. **Seed-anchored reads move A10 through extent, not width.** On the 80 ImageCAS-X val trees, if both reads keep a
-   seed's early stopping points, a model with ImageCAS-X's extent scores 0.24–0.75 tF1 below inter-read in LAD, LCx
-   and RCA: A10 would fail a perfect model. With one read anchored the bias flips. A31.2's flag separates the cases
-   cleanly (LM excepted), and the signature on real reads is a precision-only deficit.
+   seed's early stopping points, a model with ImageCAS-X's extent scores below inter-read by 0.02–0.04 when the seed
+   keeps 96 % of the tree, 0.08–0.10 at 88 % (beyond D6's 0.05), and 0.24–0.75 at 56–20 %, in LAD, LCx and RCA.
+   With one read anchored the bias flips. A31.2's flag separates the cases once the seed misses about a tenth of the
+   tree (LM excepted), and the signature on real reads is a precision-only deficit.
    ([[Bridge - Seed-anchored reads move A10 through where vessels stop, not through lumen width]])
 4. **Run-to-run noise on the master-size network is small, so the decision set's size matters.** Two warm
    fine-tunes from one checkpoint, and two from-scratch trainings, both differ by less than case noise on val 80;
@@ -201,11 +202,19 @@ modelled as calibre cut-offs, the model = ImageCAS-X's own extent):
 | Readers | LAD contrast (model − inter) | LCx | RCA | LM |
 |---|---|---|---|---|
 | Both independent | +0.006 | +0.002 | +0.001 | 0.000 |
-| Both anchored, seed keeps 56 % of the centreline | **−0.34** | **−0.38** | **−0.24** | −0.002 |
+| Both anchored, seed keeps 96 % of the centreline | −0.039 | −0.033 | −0.016 | 0.000 |
+| Both anchored, seed keeps 88 % | **−0.087** | **−0.101** | **−0.079** | 0.000 |
+| Both anchored, seed keeps 56 % | **−0.34** | **−0.38** | **−0.24** | −0.002 |
 | Both anchored, seed keeps 34 % | −0.58 | −0.64 | −0.34 | −0.003 |
+| One anchored, one not (88 %) | +0.032 | +0.028 | +0.031 | 0.000 |
 | One anchored, one not (34 %) | +0.30 | +0.32 | +0.21 | +0.005 |
 
-[MILD]
+The bias crosses D6's 0.05 margin once the seed misses about a tenth of the tree and both reads keep it.
+TotalSegmentator's 70.5 Dice against ImageCAS-X (arXiv 2608.30404, Table 2) does not say how much of its error is
+extent and how much is width; how much distal tree the real seeds miss, and how much of that the reads keep, is the
+wave-1 measurement. With a near-complete seed (96 %) the flag fires
+for independent readers too; there it means nothing, and the bias is within the margin anyway, which is why the flag
+is read with the seed-edit sizes.
 
 Reading:
 - **If anchoring happens, it decides A10.** The margin is 0.05.
@@ -213,8 +222,8 @@ Reading:
   One anchored: biased for any model.
 - **A fine-tune on anchored reads learns the seed's extent.** Janus 1 would then pass A10 by stopping where
   TotalSegmentator stops: a silent move away from D8. The Janus-1 val-80 guard (§4) is what catches that.
-- **A31.2's flag works in LAD, LCx and RCA.** When both reads are anchored, seed-vs-read equals inter-read exactly;
-  with independent readers it sits 0.25–0.80 below. In LM the flag fires either way.
+- **A31.2's flag works in LAD, LCx and RCA once the seed misses about a tenth of the tree.** When both reads are anchored, seed-vs-read equals inter-read exactly;
+  with independent readers it sits 0.06–0.80 below (88 % to 20 % seeds). In LM it fires either way.
 
 **Proposed for wave 1:**
 - **A31.2** is read per class with LM excluded, together with the seed-edit sizes. Both reads of a patient

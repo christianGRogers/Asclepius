@@ -1,6 +1,6 @@
 """SegQueue14 housekeeping, adapted from ``girder_segqueue.maintenance``: the same
 lease sweep and drop-box cleanup, over SegQueue14's own assignments and its own
-``SegQueue14/incoming`` folder (never the live one).
+``SegQueue/incoming`` folder (D36; the old queue's is archived).
 
 Periodic housekeeping: reclaim cases nobody is working on any more.
 

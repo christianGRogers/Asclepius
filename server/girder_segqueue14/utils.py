@@ -77,16 +77,15 @@ def requireReviewer(user: Optional[dict]) -> dict:
 
 
 def rootCollection(creator: Optional[dict] = None) -> dict:
-    """The ``SegQueue14`` collection, created on first use. Private."""
+    """The ``SegQueue`` collection (D36), created on first use. Private."""
     collection = Collection().findOne({'name': COLLECTION_NAME})
     if collection is None:
         collection = Collection().createCollection(
             COLLECTION_NAME,
             creator=creator or _anyAdmin(),
-            description='Prelabels, submissions and scratch uploads for the '
-                        'SegQueue14 (4-class coronary) project. The CT '
-                        'volumes are not here: cases reference the SegQueue '
-                        "collection's files by id.",
+            description='The SegQueue annotation project: CT volumes (cases/), '
+                        'seeds, and SegQueue14 prelabels, submissions and '
+                        'scratch uploads.',
             public=False,
             reuseExisting=True,
         )
@@ -106,7 +105,7 @@ def submissionsFolder(creator: Optional[dict] = None) -> dict:
 
 
 def prelabelsFolder(version: str, creator: Optional[dict] = None) -> dict:
-    """``SegQueue14/prelabels/<model_version>/``."""
+    """``SegQueue/prelabels/<model_version>/``."""
     version = sqplan.validate_model_version(version)
     top = _folder(PRELABELS_FOLDER, creator)
     return _folder(version, creator, parent=top, parentType='folder')

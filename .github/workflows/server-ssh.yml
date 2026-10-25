@@ -17,6 +17,9 @@
 #            it never touches `girder`.
 #   deploy   check the ref out on the box, rebuild, wait for health, then smoke.
 #            Rolls back to the previous commit if the new one will not serve.
+#            Refused once the old plugin is retired (D36): it reinstalls ./server,
+#            which would bring the old queue and its groups back. SegQueue14 is
+#            deployed by segqueue14-janus.yml.
 #
 # Secrets: SSH_HOST, SSH_PORT, SSH_USERNAME, SSH_PASSWORD.
 #
@@ -199,6 +202,11 @@ jobs:
           "$RUNNER_TEMP/remote-root" <<REMOTE
           set -euo pipefail
           cd "$SEGQUEUE_DIR"
+          if ! .venv/bin/python -m pip show -q girder-segqueue >/dev/null 2>&1; then
+            echo "refused: the old plugin (girder-segqueue) is retired (D36); deploying it would bring it back."
+            echo "SegQueue14 is deployed with the 'SegQueue14 on janus' workflow."
+            exit 1
+          fi
           previous=\$(git rev-parse HEAD)
           echo "was \$previous"
           git fetch --all --tags --prune
@@ -264,12 +272,22 @@ jobs:
           except Exception as exc:
               sys.exit(f"the server did not return a usable API description: {exc}")
           have = set(spec.get("paths") or {})
-          wanted = [
+          # The old 4-class queue's routes, if its plugin is still installed;
+          # SegQueue14's otherwise (D36 retired the old one).
+          old = [
               "/segqueue/review/cases",
               "/segqueue/review/case/{caseId}/submissions",
               "/segqueue/review/{submissionId}/revise",
               "/segqueue/review/{submissionId}/pool",
           ]
+          new = [
+              "/segqueue14/project",
+              "/segqueue14/next",
+              "/segqueue14/case/{caseId}/download",
+              "/segqueue14/assignment/{assignmentId}/submit",
+              "/segqueue14/stats",
+          ]
+          wanted = old if any(p.startswith("/segqueue/") for p in have) else new
           missing = [w for w in wanted if w not in have]
           lines = ["### Smoke test", "",
                    f"{len(have)} routes, "
@@ -281,6 +299,6 @@ jobs:
               print(f"::error title=Route missing on the server::{route}")
           if missing:
               sys.exit("the deployed server does not serve: " + ", ".join(missing))
-          print("all four reviewer routes are live")
+          print(f"all {len(wanted)} expected routes are live")
           PY
           cat summary.md >> "$GITHUB_STEP_SUMMARY"

@@ -150,3 +150,14 @@ def test_report_refuses_a_sealed_row_and_drops_provisional():
         R.build(rows + [bad], _val(0.05), SEAL)
     rows[0]['provisional'] = True
     assert R.build(rows, _val(0.05), SEAL)['n_patients'] == 4
+
+
+def test_rule_c_sizes_the_seal_from_s_d():
+    # Round 10 (Bridge v9): small per-patient differences keep 150; wide independent spreads (0.15 each, clipped
+    # at tF1 = 1, so s_d about 0.17-0.2) grow the seal.
+    small = R.build(_rows(0.03, 0.02, 0.80), _val(0.05), SEAL)['rule_c']
+    assert small['seal_size'] == 150 and small['power']['150'] >= 0.8
+    big = R.build(_rows(0.15, 0.15, 0.80, n=60), _val(0.05), SEAL)['rule_c']
+    assert big['seal_size'] in (200, 250) and all(0.13 < big['s_d'][n] < 0.26 for n in R.NAMES)
+    assert big['power']['150'] < 0.8 <= big['power'][str(big['seal_size'])] or big['seal_size'] == 250
+    assert all(v is None or -1 <= v <= 1 for v in big['rho_model_inter'].values())

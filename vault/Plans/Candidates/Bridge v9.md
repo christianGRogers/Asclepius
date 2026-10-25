@@ -24,8 +24,10 @@ plan; each has a note and code in this PR.
    **0.996** if model-vs-read and inter-read fall on the same hard patients (ρ = 0.5), and nothing has measured ρ. So
    the seal is **sized at wave 1 from the one quantity A10 depends on** (rule C), not extended on a surrogate now.
    ([[Bridge - On Janus 0's spread the 150-patient seal is under-powered unless reads and model fail on the same patients]])
-3. **Seed-anchored reads bias A10 against the model through extent, not width.** [filled in §5 from the anchoring
-   experiment on the 80 val references.]
+3. **Seed-anchored reads move A10 through extent, not width.** On the 80 ImageCAS-X val trees, if both reads keep a
+   seed's early stopping points, a model with ImageCAS-X's extent scores 0.24–0.75 tF1 below inter-read in LAD, LCx
+   and RCA: A10 would fail a perfect model. With one read anchored the bias flips. A31.2's flag separates the cases
+   cleanly (LM excepted), and the signature on real reads is a precision-only deficit.
    ([[Bridge - Seed-anchored reads move A10 through where vessels stop, not through lumen width]])
 4. **Run-to-run noise on the master-size network is small, so the decision set's size matters.** Two warm
    fine-tunes from one checkpoint, and two from-scratch trainings, both differ by less than case noise on val 80;
@@ -188,7 +190,41 @@ full H100 on Fir. The fix is a task 717 (or 716 v2) with: ImageCAS-X train 560 +
 
 ## 5. What seed-anchored reads measure (A31.2, L5)
 
-[Filled from `anchoring.json`: see the note. Summary placeholder replaced before the PR.]
+**Width.** Janus 0 draws the lumen about one voxel inside ImageCAS-X's (#43: plain Dice 0.88, 1-voxel-tolerant
+0.97, volume ratio 0.86). Reads redrawn from a TotalSegmentator seed take whatever width the annotator draws (D12).
+tF1 is a centreline score with a 1.5 mm tolerance, so width conventions do not move A10.
+
+**Extent** is what tF1 sees, and anchoring acts on it. Measured on the 80 val references
+([[Bridge - Seed-anchored reads move A10 through where vessels stop, not through lumen width]]; seeds and readers
+modelled as calibre cut-offs, the model = ImageCAS-X's own extent):
+
+| Readers | LAD contrast (model − inter) | LCx | RCA | LM |
+|---|---|---|---|---|
+| Both independent | +0.006 | +0.002 | +0.001 | 0.000 |
+| Both anchored, seed keeps 56 % of the centreline | **−0.34** | **−0.38** | **−0.24** | −0.002 |
+| Both anchored, seed keeps 34 % | −0.58 | −0.64 | −0.34 | −0.003 |
+| One anchored, one not (34 %) | +0.30 | +0.32 | +0.21 | +0.005 |
+
+[MILD]
+
+Reading:
+- **If anchoring happens, it decides A10.** The margin is 0.05.
+- **Its direction depends on how many reads are anchored.** Both anchored: biased against an expert-extent model.
+  One anchored: biased for any model.
+- **A fine-tune on anchored reads learns the seed's extent.** Janus 1 would then pass A10 by stopping where
+  TotalSegmentator stops: a silent move away from D8. The Janus-1 val-80 guard (§4) is what catches that.
+- **A31.2's flag works in LAD, LCx and RCA.** When both reads are anchored, seed-vs-read equals inter-read exactly;
+  with independent readers it sits 0.25–0.80 below. In LM the flag fires either way.
+
+**Proposed for wave 1:**
+- **A31.2** is read per class with LM excluded, together with the seed-edit sizes. Both reads of a patient
+  anchored = the bias case.
+- **A10's report gives recall and precision per class** for model-vs-read and inter-read. A precision-only deficit
+  with recall near 1 is an extent mismatch.
+- **The A31 domain check** reports plain Dice, 1-voxel-tolerant Dice, volume ratio (`r10_dice_check.measure`) and tF1,
+  per source, for Janus 0 against the TotalSegmentator seed. The check is defined on Fir F1's outputs and run on CPU
+  once the seeds are on Fir. A source flagged only by a width difference is not domain shift. Model-vs-read per
+  source stays report-only (A31.3; n ≈ 5–16 patients per source in the decision set).
 
 ## 6. The left-tree ostium residual (report only)
 
@@ -311,7 +347,15 @@ model, when all reads exist, is ≈ 55–60 GPU-h, one run, outside this round.
 
 1. **Replace A31.1's f/k trigger by rule C** (seal size from the measured s_d at wave 1), keeping D27's 150–250 range?
    Bridge recommends yes: same protection, about one-tenth of the false alarms (§3).
-2. **L5 (seed anchoring).** [Recommendation from §5.]
+2. **L5 (seed anchoring).** If wave 1 flags anchoring in LAD, LCx or RCA:
+   - **first**, an annotator instruction (no D-number change): trace each vessel past the seed's end to where the
+     lumen is no longer distinguishable, then re-measure on the next 30 reads;
+   - **if it persists**, A10 on the pool is not the test D6 intends. The lead chooses between two options:
+     - accept the seed's extent as the pool convention, which changes D8's meaning for the pool and what Janus 1
+       learns;
+     - also require the sealed-80 model-vs-ImageCAS-X look (A26) to pass a pre-set line.
+
+   Bridge recommends the instruction now, before wave 1, since it costs nothing and protects D8.
 3. **Serve the 12 late decision-set volumes earlier?** It moves 12 volumes up the queue (no volume added or dropped)
    so the decision set is complete by position ≈ 242. This touches D23/D30, so it is the lead's call; without it the
    plan works on the 23 read by then.

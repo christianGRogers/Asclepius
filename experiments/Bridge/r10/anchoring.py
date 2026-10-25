@@ -131,7 +131,7 @@ def one(path):
         S = truncate(T, rad, rs, zone)
         seed_share = cl_len(S, sp) / max(full, 1)
         anch = [truncate(T, rad, max(u[i], rs), zone) for i in range(2)]
-        for alpha, reads in ((0.0, ind), (1.0, anch)) + (((0.5, [anch[0], ind[1]]),) if rs == 0.8 else ()):
+        for alpha, reads in ((0.0, ind), (1.0, anch)) + (((0.5, [anch[0], ind[1]]),) if rs in (0.5, 0.8) else ()):
             sc = dict(base) if alpha == 0.0 else score(reads)
             sc['seed'] = mean_dicts([tf(reads[0], S, sp), tf(S, reads[0], sp)])
             res['scen'].append({'seed_r': rs, 'alpha': alpha, 'seed_cl_share': round(seed_share, 4), **sc})
@@ -163,6 +163,7 @@ def main():
     ap.add_argument('--out', required=True)
     ap.add_argument('--np', type=int, default=4)
     ap.add_argument('--limit', type=int)
+    ap.add_argument('--seed-r', type=float, nargs='+', help='seed radii (mm); default 0.6 0.8 1.0')
     a = ap.parse_args()
     s = json.load(open(SEALED))
     sealed = set(s['sealed_icx_test']) | set(s['sealed_quality0'])
@@ -172,6 +173,9 @@ def main():
         sys.exit(f'refusing: sealed cases in {a.icx}: {bad}')
     if a.limit:
         paths = paths[:a.limit]
+    if a.seed_r:
+        global SEED_R
+        SEED_R = tuple(a.seed_r)
     with Pool(a.np) as pool:
         rows = pool.map(one, paths)
     summ = summarise(rows)

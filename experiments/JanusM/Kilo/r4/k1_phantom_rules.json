@@ -1,0 +1,340 @@
+{
+ "phantom": "tests/janusm_synth.StaticChest(gap_mm=5)",
+ "cuts": "tight: max(1.2 x aligned QC, 0.003)",
+ "cut_values": [
+  0.0328,
+  0.0072,
+  0.003,
+  0.1449
+ ],
+ "aligned_qc": [
+  0.0273,
+  0.006,
+  0.0012,
+  0.1208
+ ],
+ "rows": [
+  {
+   "motion": "scale_+3",
+   "seed": 0,
+   "tre_rigid": 1.358,
+   "tre_affine": 0.231,
+   "log_det": -0.0797,
+   "sanity_ok": true,
+   "rigid_norm": [
+    0.119,
+    4.762,
+    5.851,
+    0.439
+   ],
+   "affine_norm": [
+    0.908,
+    1.019,
+    0.811,
+    0.978
+   ],
+   "ja51": false,
+   "a": false,
+   "b": true,
+   "c": true,
+   "k": true
+  },
+  {
+   "motion": "scale_+3",
+   "seed": 1,
+   "tre_rigid": 1.31,
+   "tre_affine": 0.185,
+   "log_det": -0.0791,
+   "sanity_ok": true,
+   "rigid_norm": [
+    0.079,
+    4.784,
+    5.802,
+    0.457
+   ],
+   "affine_norm": [
+    0.864,
+    0.773,
+    0.588,
+    1.108
+   ],
+   "ja51": false,
+   "a": false,
+   "b": false,
+   "c": true,
+   "k": false
+  },
+  {
+   "motion": "scale_+3",
+   "seed": 2,
+   "tre_rigid": 1.343,
+   "tre_affine": 0.296,
+   "log_det": -0.0775,
+   "sanity_ok": true,
+   "rigid_norm": [
+    0.0,
+    4.398,
+    5.204,
+    0.353
+   ],
+   "affine_norm": [
+    0.842,
+    1.207,
+    1.081,
+    1.033
+   ],
+   "ja51": false,
+   "a": false,
+   "b": false,
+   "c": true,
+   "k": false
+  },
+  {
+   "motion": "scale_-3",
+   "seed": 0,
+   "tre_rigid": 1.272,
+   "tre_affine": 0.228,
+   "log_det": 0.1019,
+   "sanity_ok": true,
+   "rigid_norm": [
+    4.094,
+    0.994,
+    0.762,
+    2.389
+   ],
+   "affine_norm": [
+    0.487,
+    1.677,
+    1.321,
+    0.683
+   ],
+   "ja51": false,
+   "a": false,
+   "b": false,
+   "c": true,
+   "k": false
+  },
+  {
+   "motion": "scale_-3",
+   "seed": 1,
+   "tre_rigid": 1.297,
+   "tre_affine": 0.344,
+   "log_det": 0.102,
+   "sanity_ok": true,
+   "rigid_norm": [
+    4.165,
+    1.007,
+    0.838,
+    2.341
+   ],
+   "affine_norm": [
+    0.517,
+    1.62,
+    1.417,
+    0.693
+   ],
+   "ja51": false,
+   "a": false,
+   "b": false,
+   "c": true,
+   "k": false
+  },
+  {
+   "motion": "scale_-3",
+   "seed": 2,
+   "tre_rigid": 1.319,
+   "tre_affine": 0.183,
+   "log_det": 0.1009,
+   "sanity_ok": true,
+   "rigid_norm": [
+    4.014,
+    1.634,
+    1.518,
+    2.354
+   ],
+   "affine_norm": [
+    0.565,
+    1.657,
+    1.274,
+    0.628
+   ],
+   "ja51": false,
+   "a": false,
+   "b": true,
+   "c": true,
+   "k": false
+  },
+  {
+   "motion": "shift_4mm",
+   "seed": 0,
+   "tre_rigid": 0.243,
+   "tre_affine": 0.303,
+   "log_det": 0.0153,
+   "sanity_ok": true,
+   "rigid_norm": [
+    0.881,
+    0.97,
+    0.56,
+    0.94
+   ],
+   "affine_norm": [
+    0.592,
+    1.204,
+    0.766,
+    0.786
+   ],
+   "ja51": false,
+   "a": false,
+   "b": false,
+   "c": false,
+   "k": false
+  },
+  {
+   "motion": "shift_4mm",
+   "seed": 1,
+   "tre_rigid": 0.239,
+   "tre_affine": 0.398,
+   "log_det": 0.0117,
+   "sanity_ok": true,
+   "rigid_norm": [
+    0.992,
+    1.167,
+    0.936,
+    0.989
+   ],
+   "affine_norm": [
+    0.834,
+    1.291,
+    1.068,
+    0.842
+   ],
+   "ja51": false,
+   "a": false,
+   "b": false,
+   "c": false,
+   "k": false
+  },
+  {
+   "motion": "shift_4mm",
+   "seed": 2,
+   "tre_rigid": 0.205,
+   "tre_affine": 0.753,
+   "log_det": 0.0177,
+   "sanity_ok": true,
+   "rigid_norm": [
+    1.03,
+    1.028,
+    0.796,
+    1.011
+   ],
+   "affine_norm": [
+    0.786,
+    1.116,
+    0.863,
+    0.837
+   ],
+   "ja51": false,
+   "a": false,
+   "b": false,
+   "c": false,
+   "k": false
+  },
+  {
+   "motion": "uniaxial_+6",
+   "seed": 0,
+   "tre_rigid": 1.221,
+   "tre_affine": 0.505,
+   "log_det": -0.0499,
+   "sanity_ok": true,
+   "rigid_norm": [
+    0.52,
+    3.63,
+    4.148,
+    0.679
+   ],
+   "affine_norm": [
+    0.629,
+    0.959,
+    0.688,
+    0.87
+   ],
+   "ja51": false,
+   "a": false,
+   "b": true,
+   "c": true,
+   "k": true
+  },
+  {
+   "motion": "uniaxial_+6",
+   "seed": 1,
+   "tre_rigid": 1.363,
+   "tre_affine": 0.458,
+   "log_det": -0.0467,
+   "sanity_ok": true,
+   "rigid_norm": [
+    0.367,
+    3.932,
+    4.597,
+    0.583
+   ],
+   "affine_norm": [
+    0.593,
+    1.356,
+    1.05,
+    0.806
+   ],
+   "ja51": false,
+   "a": false,
+   "b": true,
+   "c": true,
+   "k": true
+  },
+  {
+   "motion": "uniaxial_+6",
+   "seed": 2,
+   "tre_rigid": 1.537,
+   "tre_affine": 0.844,
+   "log_det": -0.0476,
+   "sanity_ok": true,
+   "rigid_norm": [
+    0.131,
+    2.329,
+    2.078,
+    0.477
+   ],
+   "affine_norm": [
+    0.578,
+    0.991,
+    0.666,
+    0.769
+   ],
+   "ja51": false,
+   "a": false,
+   "b": true,
+   "c": true,
+   "k": true
+  }
+ ],
+ "summary": {
+  "ja51": {
+   "kept_when_better": "0/9",
+   "kept_when_worse": "0/1"
+  },
+  "a": {
+   "kept_when_better": "0/9",
+   "kept_when_worse": "0/1"
+  },
+  "b": {
+   "kept_when_better": "5/9",
+   "kept_when_worse": "0/1"
+  },
+  "c": {
+   "kept_when_better": "9/9",
+   "kept_when_worse": "0/1"
+  },
+  "k": {
+   "kept_when_better": "4/9",
+   "kept_when_worse": "0/1"
+  }
+ }
+}

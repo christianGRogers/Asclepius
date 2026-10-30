@@ -1,0 +1,4623 @@
+{
+ "grid": [
+  {
+   "phase_mix": "all_ED",
+   "cv_n": 0.06,
+   "sig_m": 0.25,
+   "depth": 0.2,
+   "prev": 0.1,
+   "k_mad": 1.7500000000000007,
+   "A_cmr_5p5mm": {
+    "patient_false_flag": 0.88,
+    "territory_sensitivity": 0.891,
+    "patient_false_flag_by_phase": {
+     "ED": 0.88
+    }
+   },
+   "B_pop_p2p5": {
+    "patient_false_flag": 0.03,
+    "territory_sensitivity": 0.268,
+    "patient_false_flag_by_phase": {
+     "ED": 0.03
+    }
+   },
+   "C_relative_territory": {
+    "patient_false_flag": 0.03,
+    "territory_sensitivity": 0.59,
+    "patient_false_flag_by_phase": {
+     "ED": 0.03
+    }
+   }
+  },
+  {
+   "phase_mix": "all_ED",
+   "cv_n": 0.06,
+   "sig_m": 0.25,
+   "depth": 0.2,
+   "prev": 0.3,
+   "k_mad": 1.7000000000000006,
+   "A_cmr_5p5mm": {
+    "patient_false_flag": 0.884,
+    "territory_sensitivity": 0.881,
+    "patient_false_flag_by_phase": {
+     "ED": 0.884
+    }
+   },
+   "B_pop_p2p5": {
+    "patient_false_flag": 0.023,
+    "territory_sensitivity": 0.179,
+    "patient_false_flag_by_phase": {
+     "ED": 0.023
+    }
+   },
+   "C_relative_territory": {
+    "patient_false_flag": 0.013,
+    "territory_sensitivity": 0.514,
+    "patient_false_flag_by_phase": {
+     "ED": 0.013
+    }
+   }
+  },
+  {
+   "phase_mix": "all_ED",
+   "cv_n": 0.06,
+   "sig_m": 0.25,
+   "depth": 0.3,
+   "prev": 0.1,
+   "k_mad": 1.7500000000000007,
+   "A_cmr_5p5mm": {
+    "patient_false_flag": 0.89,
+    "territory_sensitivity": 0.954,
+    "patient_false_flag_by_phase": {
+     "ED": 0.89
+    }
+   },
+   "B_pop_p2p5": {
+    "patient_false_flag": 0.023,
+    "territory_sensitivity": 0.579,
+    "patient_false_flag_by_phase": {
+     "ED": 0.023
+    }
+   },
+   "C_relative_territory": {
+    "patient_false_flag": 0.016,
+    "territory_sensitivity": 0.944,
+    "patient_false_flag_by_phase": {
+     "ED": 0.016
+    }
+   }
+  },
+  {
+   "phase_mix": "all_ED",
+   "cv_n": 0.06,
+   "sig_m": 0.25,
+   "depth": 0.3,
+   "prev": 0.3,
+   "k_mad": 1.7500000000000007,
+   "A_cmr_5p5mm": {
+    "patient_false_flag": 0.887,
+    "territory_sensitivity": 0.97,
+    "patient_false_flag_by_phase": {
+     "ED": 0.887
+    }
+   },
+   "B_pop_p2p5": {
+    "patient_false_flag": 0.004,
+    "territory_sensitivity": 0.311,
+    "patient_false_flag_by_phase": {
+     "ED": 0.004
+    }
+   },
+   "C_relative_territory": {
+    "patient_false_flag": 0.009,
+    "territory_sensitivity": 0.956,
+    "patient_false_flag_by_phase": {
+     "ED": 0.009
+    }
+   }
+  },
+  {
+   "phase_mix": "all_ED",
+   "cv_n": 0.06,
+   "sig_m": 0.25,
+   "depth": 0.4,
+   "prev": 0.1,
+   "k_mad": 1.7500000000000007,
+   "A_cmr_5p5mm": {
+    "patient_false_flag": 0.88,
+    "territory_sensitivity": 0.99,
+    "patient_false_flag_by_phase": {
+     "ED": 0.88
+    }
+   },
+   "B_pop_p2p5": {
+    "patient_false_flag": 0.011,
+    "territory_sensitivity": 0.86,
+    "patient_false_flag_by_phase": {
+     "ED": 0.011
+    }
+   },
+   "C_relative_territory": {
+    "patient_false_flag": 0.023,
+    "territory_sensitivity": 1.0,
+    "patient_false_flag_by_phase": {
+     "ED": 0.023
+    }
+   }
+  },
+  {
+   "phase_mix": "all_ED",
+   "cv_n": 0.06,
+   "sig_m": 0.25,
+   "depth": 0.4,
+   "prev": 0.3,
+   "k_mad": 1.7500000000000007,
+   "A_cmr_5p5mm": {
+    "patient_false_flag": 0.876,
+    "territory_sensitivity": 0.998,
+    "patient_false_flag_by_phase": {
+     "ED": 0.876
+    }
+   },
+   "B_pop_p2p5": {
+    "patient_false_flag": 0.001,
+    "territory_sensitivity": 0.394,
+    "patient_false_flag_by_phase": {
+     "ED": 0.001
+    }
+   },
+   "C_relative_territory": {
+    "patient_false_flag": 0.013,
+    "territory_sensitivity": 1.0,
+    "patient_false_flag_by_phase": {
+     "ED": 0.013
+    }
+   }
+  },
+  {
+   "phase_mix": "all_ED",
+   "cv_n": 0.06,
+   "sig_m": 0.25,
+   "depth": 0.5,
+   "prev": 0.1,
+   "k_mad": 1.7500000000000007,
+   "A_cmr_5p5mm": {
+    "patient_false_flag": 0.865,
+    "territory_sensitivity": 1.0,
+    "patient_false_flag_by_phase": {
+     "ED": 0.865
+    }
+   },
+   "B_pop_p2p5": {
+    "patient_false_flag": 0.007,
+    "territory_sensitivity": 0.98,
+    "patient_false_flag_by_phase": {
+     "ED": 0.007
+    }
+   },
+   "C_relative_territory": {
+    "patient_false_flag": 0.023,
+    "territory_sensitivity": 1.0,
+    "patient_false_flag_by_phase": {
+     "ED": 0.023
+    }
+   }
+  },
+  {
+   "phase_mix": "all_ED",
+   "cv_n": 0.06,
+   "sig_m": 0.25,
+   "depth": 0.5,
+   "prev": 0.3,
+   "k_mad": 1.7500000000000007,
+   "A_cmr_5p5mm": {
+    "patient_false_flag": 0.876,
+    "territory_sensitivity": 1.0,
+    "patient_false_flag_by_phase": {
+     "ED": 0.876
+    }
+   },
+   "B_pop_p2p5": {
+    "patient_false_flag": 0.0,
+    "territory_sensitivity": 0.39,
+    "patient_false_flag_by_phase": {
+     "ED": 0.0
+    }
+   },
+   "C_relative_territory": {
+    "patient_false_flag": 0.018,
+    "territory_sensitivity": 1.0,
+    "patient_false_flag_by_phase": {
+     "ED": 0.018
+    }
+   }
+  },
+  {
+   "phase_mix": "all_ED",
+   "cv_n": 0.06,
+   "sig_m": 0.5,
+   "depth": 0.2,
+   "prev": 0.1,
+   "k_mad": 1.7500000000000007,
+   "A_cmr_5p5mm": {
+    "patient_false_flag": 0.858,
+    "territory_sensitivity": 0.87,
+    "patient_false_flag_by_phase": {
+     "ED": 0.858
+    }
+   },
+   "B_pop_p2p5": {
+    "patient_false_flag": 0.028,
+    "territory_sensitivity": 0.135,
+    "patient_false_flag_by_phase": {
+     "ED": 0.028
+    }
+   },
+   "C_relative_territory": {
+    "patient_false_flag": 0.029,
+    "territory_sensitivity": 0.266,
+    "patient_false_flag_by_phase": {
+     "ED": 0.029
+    }
+   }
+  },
+  {
+   "phase_mix": "all_ED",
+   "cv_n": 0.06,
+   "sig_m": 0.5,
+   "depth": 0.2,
+   "prev": 0.3,
+   "k_mad": 1.7000000000000006,
+   "A_cmr_5p5mm": {
+    "patient_false_flag": 0.869,
+    "territory_sensitivity": 0.885,
+    "patient_false_flag_by_phase": {
+     "ED": 0.869
+    }
+   },
+   "B_pop_p2p5": {
+    "patient_false_flag": 0.022,
+    "territory_sensitivity": 0.134,
+    "patient_false_flag_by_phase": {
+     "ED": 0.022
+    }
+   },
+   "C_relative_territory": {
+    "patient_false_flag": 0.028,
+    "territory_sensitivity": 0.277,
+    "patient_false_flag_by_phase": {
+     "ED": 0.028
+    }
+   }
+  },
+  {
+   "phase_mix": "all_ED",
+   "cv_n": 0.06,
+   "sig_m": 0.5,
+   "depth": 0.3,
+   "prev": 0.1,
+   "k_mad": 1.7500000000000007,
+   "A_cmr_5p5mm": {
+    "patient_false_flag": 0.876,
+    "territory_sensitivity": 0.941,
+    "patient_false_flag_by_phase": {
+     "ED": 0.876
+    }
+   },
+   "B_pop_p2p5": {
+    "patient_false_flag": 0.024,
+    "territory_sensitivity": 0.36,
+    "patient_false_flag_by_phase": {
+     "ED": 0.024
+    }
+   },
+   "C_relative_territory": {
+    "patient_false_flag": 0.027,
+    "territory_sensitivity": 0.747,
+    "patient_false_flag_by_phase": {
+     "ED": 0.027
+    }
+   }
+  },
+  {
+   "phase_mix": "all_ED",
+   "cv_n": 0.06,
+   "sig_m": 0.5,
+   "depth": 0.3,
+   "prev": 0.3,
+   "k_mad": 1.7000000000000006,
+   "A_cmr_5p5mm": {
+    "patient_false_flag": 0.873,
+    "territory_sensitivity": 0.959,
+    "patient_false_flag_by_phase": {
+     "ED": 0.873
+    }
+   },
+   "B_pop_p2p5": {
+    "patient_false_flag": 0.014,
+    "territory_sensitivity": 0.202,
+    "patient_false_flag_by_phase": {
+     "ED": 0.014
+    }
+   },
+   "C_relative_territory": {
+    "patient_false_flag": 0.032,
+    "territory_sensitivity": 0.69,
+    "patient_false_flag_by_phase": {
+     "ED": 0.032
+    }
+   }
+  },
+  {
+   "phase_mix": "all_ED",
+   "cv_n": 0.06,
+   "sig_m": 0.5,
+   "depth": 0.4,
+   "prev": 0.1,
+   "k_mad": 1.7500000000000007,
+   "A_cmr_5p5mm": {
+    "patient_false_flag": 0.886,
+    "territory_sensitivity": 0.99,
+    "patient_false_flag_by_phase": {
+     "ED": 0.886
+    }
+   },
+   "B_pop_p2p5": {
+    "patient_false_flag": 0.017,
+    "territory_sensitivity": 0.619,
+    "patient_false_flag_by_phase": {
+     "ED": 0.017
+    }
+   },
+   "C_relative_territory": {
+    "patient_false_flag": 0.031,
+    "territory_sensitivity": 0.959,
+    "patient_false_flag_by_phase": {
+     "ED": 0.031
+    }
+   }
+  },
+  {
+   "phase_mix": "all_ED",
+   "cv_n": 0.06,
+   "sig_m": 0.5,
+   "depth": 0.4,
+   "prev": 0.3,
+   "k_mad": 1.7000000000000006,
+   "A_cmr_5p5mm": {
+    "patient_false_flag": 0.851,
+    "territory_sensitivity": 0.988,
+    "patient_false_flag_by_phase": {
+     "ED": 0.851
+    }
+   },
+   "B_pop_p2p5": {
+    "patient_false_flag": 0.001,
+    "territory_sensitivity": 0.32,
+    "patient_false_flag_by_phase": {
+     "ED": 0.001
+    }
+   },
+   "C_relative_territory": {
+    "patient_false_flag": 0.027,
+    "territory_sensitivity": 0.956,
+    "patient_false_flag_by_phase": {
+     "ED": 0.027
+    }
+   }
+  },
+  {
+   "phase_mix": "all_ED",
+   "cv_n": 0.06,
+   "sig_m": 0.5,
+   "depth": 0.5,
+   "prev": 0.1,
+   "k_mad": 1.7500000000000007,
+   "A_cmr_5p5mm": {
+    "patient_false_flag": 0.864,
+    "territory_sensitivity": 1.0,
+    "patient_false_flag_by_phase": {
+     "ED": 0.864
+    }
+   },
+   "B_pop_p2p5": {
+    "patient_false_flag": 0.013,
+    "territory_sensitivity": 0.892,
+    "patient_false_flag_by_phase": {
+     "ED": 0.013
+    }
+   },
+   "C_relative_territory": {
+    "patient_false_flag": 0.028,
+    "territory_sensitivity": 0.99,
+    "patient_false_flag_by_phase": {
+     "ED": 0.028
+    }
+   }
+  },
+  {
+   "phase_mix": "all_ED",
+   "cv_n": 0.06,
+   "sig_m": 0.5,
+   "depth": 0.5,
+   "prev": 0.3,
+   "k_mad": 1.7000000000000006,
+   "A_cmr_5p5mm": {
+    "patient_false_flag": 0.861,
+    "territory_sensitivity": 0.998,
+    "patient_false_flag_by_phase": {
+     "ED": 0.861
+    }
+   },
+   "B_pop_p2p5": {
+    "patient_false_flag": 0.0,
+    "territory_sensitivity": 0.333,
+    "patient_false_flag_by_phase": {
+     "ED": 0.0
+    }
+   },
+   "C_relative_territory": {
+    "patient_false_flag": 0.02,
+    "territory_sensitivity": 0.997,
+    "patient_false_flag_by_phase": {
+     "ED": 0.02
+    }
+   }
+  },
+  {
+   "phase_mix": "all_ED",
+   "cv_n": 0.06,
+   "sig_m": 1.0,
+   "depth": 0.2,
+   "prev": 0.1,
+   "k_mad": 1.7500000000000007,
+   "A_cmr_5p5mm": {
+    "patient_false_flag": 0.886,
+    "territory_sensitivity": 0.887,
+    "patient_false_flag_by_phase": {
+     "ED": 0.886
+    }
+   },
+   "B_pop_p2p5": {
+    "patient_false_flag": 0.02,
+    "territory_sensitivity": 0.074,
+    "patient_false_flag_by_phase": {
+     "ED": 0.02
+    }
+   },
+   "C_relative_territory": {
+    "patient_false_flag": 0.042,
+    "territory_sensitivity": 0.113,
+    "patient_false_flag_by_phase": {
+     "ED": 0.042
+    }
+   }
+  },
+  {
+   "phase_mix": "all_ED",
+   "cv_n": 0.06,
+   "sig_m": 1.0,
+   "depth": 0.2,
+   "prev": 0.3,
+   "k_mad": 1.7000000000000006,
+   "A_cmr_5p5mm": {
+    "patient_false_flag": 0.87,
+    "territory_sensitivity": 0.846,
+    "patient_false_flag_by_phase": {
+     "ED": 0.87
+    }
+   },
+   "B_pop_p2p5": {
+    "patient_false_flag": 0.021,
+    "territory_sensitivity": 0.072,
+    "patient_false_flag_by_phase": {
+     "ED": 0.021
+    }
+   },
+   "C_relative_territory": {
+    "patient_false_flag": 0.036,
+    "territory_sensitivity": 0.122,
+    "patient_false_flag_by_phase": {
+     "ED": 0.036
+    }
+   }
+  },
+  {
+   "phase_mix": "all_ED",
+   "cv_n": 0.06,
+   "sig_m": 1.0,
+   "depth": 0.3,
+   "prev": 0.1,
+   "k_mad": 1.7000000000000006,
+   "A_cmr_5p5mm": {
+    "patient_false_flag": 0.87,
+    "territory_sensitivity": 0.963,
+    "patient_false_flag_by_phase": {
+     "ED": 0.87
+    }
+   },
+   "B_pop_p2p5": {
+    "patient_false_flag": 0.015,
+    "territory_sensitivity": 0.132,
+    "patient_false_flag_by_phase": {
+     "ED": 0.015
+    }
+   },
+   "C_relative_territory": {
+    "patient_false_flag": 0.033,
+    "territory_sensitivity": 0.297,
+    "patient_false_flag_by_phase": {
+     "ED": 0.033
+    }
+   }
+  },
+  {
+   "phase_mix": "all_ED",
+   "cv_n": 0.06,
+   "sig_m": 1.0,
+   "depth": 0.3,
+   "prev": 0.3,
+   "k_mad": 1.7500000000000007,
+   "A_cmr_5p5mm": {
+    "patient_false_flag": 0.885,
+    "territory_sensitivity": 0.923,
+    "patient_false_flag_by_phase": {
+     "ED": 0.885
+    }
+   },
+   "B_pop_p2p5": {
+    "patient_false_flag": 0.009,
+    "territory_sensitivity": 0.109,
+    "patient_false_flag_by_phase": {
+     "ED": 0.009
+    }
+   },
+   "C_relative_territory": {
+    "patient_false_flag": 0.033,
+    "territory_sensitivity": 0.229,
+    "patient_false_flag_by_phase": {
+     "ED": 0.033
+    }
+   }
+  },
+  {
+   "phase_mix": "all_ED",
+   "cv_n": 0.06,
+   "sig_m": 1.0,
+   "depth": 0.4,
+   "prev": 0.1,
+   "k_mad": 1.7500000000000007,
+   "A_cmr_5p5mm": {
+    "patient_false_flag": 0.888,
+    "territory_sensitivity": 0.964,
+    "patient_false_flag_by_phase": {
+     "ED": 0.888
+    }
+   },
+   "B_pop_p2p5": {
+    "patient_false_flag": 0.017,
+    "territory_sensitivity": 0.287,
+    "patient_false_flag_by_phase": {
+     "ED": 0.017
+    }
+   },
+   "C_relative_territory": {
+    "patient_false_flag": 0.043,
+    "territory_sensitivity": 0.487,
+    "patient_false_flag_by_phase": {
+     "ED": 0.043
+    }
+   }
+  },
+  {
+   "phase_mix": "all_ED",
+   "cv_n": 0.06,
+   "sig_m": 1.0,
+   "depth": 0.4,
+   "prev": 0.3,
+   "k_mad": 1.7500000000000007,
+   "A_cmr_5p5mm": {
+    "patient_false_flag": 0.876,
+    "territory_sensitivity": 0.976,
+    "patient_false_flag_by_phase": {
+     "ED": 0.876
+    }
+   },
+   "B_pop_p2p5": {
+    "patient_false_flag": 0.007,
+    "territory_sensitivity": 0.177,
+    "patient_false_flag_by_phase": {
+     "ED": 0.007
+    }
+   },
+   "C_relative_territory": {
+    "patient_false_flag": 0.035,
+    "territory_sensitivity": 0.48,
+    "patient_false_flag_by_phase": {
+     "ED": 0.035
+    }
+   }
+  },
+  {
+   "phase_mix": "all_ED",
+   "cv_n": 0.06,
+   "sig_m": 1.0,
+   "depth": 0.5,
+   "prev": 0.1,
+   "k_mad": 1.7500000000000007,
+   "A_cmr_5p5mm": {
+    "patient_false_flag": 0.87,
+    "territory_sensitivity": 0.986,
+    "patient_false_flag_by_phase": {
+     "ED": 0.87
+    }
+   },
+   "B_pop_p2p5": {
+    "patient_false_flag": 0.01,
+    "territory_sensitivity": 0.48,
+    "patient_false_flag_by_phase": {
+     "ED": 0.01
+    }
+   },
+   "C_relative_territory": {
+    "patient_false_flag": 0.033,
+    "territory_sensitivity": 0.661,
+    "patient_false_flag_by_phase": {
+     "ED": 0.033
+    }
+   }
+  },
+  {
+   "phase_mix": "all_ED",
+   "cv_n": 0.06,
+   "sig_m": 1.0,
+   "depth": 0.5,
+   "prev": 0.3,
+   "k_mad": 1.7500000000000007,
+   "A_cmr_5p5mm": {
+    "patient_false_flag": 0.875,
+    "territory_sensitivity": 0.988,
+    "patient_false_flag_by_phase": {
+     "ED": 0.875
+    }
+   },
+   "B_pop_p2p5": {
+    "patient_false_flag": 0.002,
+    "territory_sensitivity": 0.244,
+    "patient_false_flag_by_phase": {
+     "ED": 0.002
+    }
+   },
+   "C_relative_territory": {
+    "patient_false_flag": 0.027,
+    "territory_sensitivity": 0.683,
+    "patient_false_flag_by_phase": {
+     "ED": 0.027
+    }
+   }
+  },
+  {
+   "phase_mix": "all_ED",
+   "cv_n": 0.1,
+   "sig_m": 0.25,
+   "depth": 0.2,
+   "prev": 0.1,
+   "k_mad": 1.7000000000000006,
+   "A_cmr_5p5mm": {
+    "patient_false_flag": 0.865,
+    "territory_sensitivity": 0.89,
+    "patient_false_flag_by_phase": {
+     "ED": 0.865
+    }
+   },
+   "B_pop_p2p5": {
+    "patient_false_flag": 0.028,
+    "territory_sensitivity": 0.23,
+    "patient_false_flag_by_phase": {
+     "ED": 0.028
+    }
+   },
+   "C_relative_territory": {
+    "patient_false_flag": 0.017,
+    "territory_sensitivity": 0.239,
+    "patient_false_flag_by_phase": {
+     "ED": 0.017
+    }
+   }
+  },
+  {
+   "phase_mix": "all_ED",
+   "cv_n": 0.1,
+   "sig_m": 0.25,
+   "depth": 0.2,
+   "prev": 0.3,
+   "k_mad": 1.7500000000000007,
+   "A_cmr_5p5mm": {
+    "patient_false_flag": 0.87,
+    "territory_sensitivity": 0.899,
+    "patient_false_flag_by_phase": {
+     "ED": 0.87
+    }
+   },
+   "B_pop_p2p5": {
+    "patient_false_flag": 0.026,
+    "territory_sensitivity": 0.116,
+    "patient_false_flag_by_phase": {
+     "ED": 0.026
+    }
+   },
+   "C_relative_territory": {
+    "patient_false_flag": 0.014,
+    "territory_sensitivity": 0.208,
+    "patient_false_flag_by_phase": {
+     "ED": 0.014
+    }
+   }
+  },
+  {
+   "phase_mix": "all_ED",
+   "cv_n": 0.1,
+   "sig_m": 0.25,
+   "depth": 0.3,
+   "prev": 0.1,
+   "k_mad": 1.8000000000000007,
+   "A_cmr_5p5mm": {
+    "patient_false_flag": 0.884,
+    "territory_sensitivity": 0.958,
+    "patient_false_flag_by_phase": {
+     "ED": 0.884
+    }
+   },
+   "B_pop_p2p5": {
+    "patient_false_flag": 0.03,
+    "territory_sensitivity": 0.387,
+    "patient_false_flag_by_phase": {
+     "ED": 0.03
+    }
+   },
+   "C_relative_territory": {
+    "patient_false_flag": 0.011,
+    "territory_sensitivity": 0.634,
+    "patient_false_flag_by_phase": {
+     "ED": 0.011
+    }
+   }
+  },
+  {
+   "phase_mix": "all_ED",
+   "cv_n": 0.1,
+   "sig_m": 0.25,
+   "depth": 0.3,
+   "prev": 0.3,
+   "k_mad": 1.7500000000000007,
+   "A_cmr_5p5mm": {
+    "patient_false_flag": 0.866,
+    "territory_sensitivity": 0.964,
+    "patient_false_flag_by_phase": {
+     "ED": 0.866
+    }
+   },
+   "B_pop_p2p5": {
+    "patient_false_flag": 0.007,
+    "territory_sensitivity": 0.238,
+    "patient_false_flag_by_phase": {
+     "ED": 0.007
+    }
+   },
+   "C_relative_territory": {
+    "patient_false_flag": 0.009,
+    "territory_sensitivity": 0.594,
+    "patient_false_flag_by_phase": {
+     "ED": 0.009
+    }
+   }
+  },
+  {
+   "phase_mix": "all_ED",
+   "cv_n": 0.1,
+   "sig_m": 0.25,
+   "depth": 0.4,
+   "prev": 0.1,
+   "k_mad": 1.7500000000000007,
+   "A_cmr_5p5mm": {
+    "patient_false_flag": 0.872,
+    "territory_sensitivity": 0.985,
+    "patient_false_flag_by_phase": {
+     "ED": 0.872
+    }
+   },
+   "B_pop_p2p5": {
+    "patient_false_flag": 0.017,
+    "territory_sensitivity": 0.721,
+    "patient_false_flag_by_phase": {
+     "ED": 0.017
+    }
+   },
+   "C_relative_territory": {
+    "patient_false_flag": 0.015,
+    "territory_sensitivity": 0.955,
+    "patient_false_flag_by_phase": {
+     "ED": 0.015
+    }
+   }
+  },
+  {
+   "phase_mix": "all_ED",
+   "cv_n": 0.1,
+   "sig_m": 0.25,
+   "depth": 0.4,
+   "prev": 0.3,
+   "k_mad": 1.7000000000000006,
+   "A_cmr_5p5mm": {
+    "patient_false_flag": 0.88,
+    "territory_sensitivity": 0.995,
+    "patient_false_flag_by_phase": {
+     "ED": 0.88
+    }
+   },
+   "B_pop_p2p5": {
+    "patient_false_flag": 0.001,
+    "territory_sensitivity": 0.345,
+    "patient_false_flag_by_phase": {
+     "ED": 0.001
+    }
+   },
+   "C_relative_territory": {
+    "patient_false_flag": 0.013,
+    "territory_sensitivity": 0.958,
+    "patient_false_flag_by_phase": {
+     "ED": 0.013
+    }
+   }
+  },
+  {
+   "phase_mix": "all_ED",
+   "cv_n": 0.1,
+   "sig_m": 0.25,
+   "depth": 0.5,
+   "prev": 0.1,
+   "k_mad": 1.7500000000000007,
+   "A_cmr_5p5mm": {
+    "patient_false_flag": 0.879,
+    "territory_sensitivity": 1.0,
+    "patient_false_flag_by_phase": {
+     "ED": 0.879
+    }
+   },
+   "B_pop_p2p5": {
+    "patient_false_flag": 0.007,
+    "territory_sensitivity": 0.93,
+    "patient_false_flag_by_phase": {
+     "ED": 0.007
+    }
+   },
+   "C_relative_territory": {
+    "patient_false_flag": 0.018,
+    "territory_sensitivity": 1.0,
+    "patient_false_flag_by_phase": {
+     "ED": 0.018
+    }
+   }
+  },
+  {
+   "phase_mix": "all_ED",
+   "cv_n": 0.1,
+   "sig_m": 0.25,
+   "depth": 0.5,
+   "prev": 0.3,
+   "k_mad": 1.7500000000000007,
+   "A_cmr_5p5mm": {
+    "patient_false_flag": 0.869,
+    "territory_sensitivity": 1.0,
+    "patient_false_flag_by_phase": {
+     "ED": 0.869
+    }
+   },
+   "B_pop_p2p5": {
+    "patient_false_flag": 0.0,
+    "territory_sensitivity": 0.357,
+    "patient_false_flag_by_phase": {
+     "ED": 0.0
+    }
+   },
+   "C_relative_territory": {
+    "patient_false_flag": 0.013,
+    "territory_sensitivity": 1.0,
+    "patient_false_flag_by_phase": {
+     "ED": 0.013
+    }
+   }
+  },
+  {
+   "phase_mix": "all_ED",
+   "cv_n": 0.1,
+   "sig_m": 0.5,
+   "depth": 0.2,
+   "prev": 0.1,
+   "k_mad": 1.7000000000000006,
+   "A_cmr_5p5mm": {
+    "patient_false_flag": 0.875,
+    "territory_sensitivity": 0.877,
+    "patient_false_flag_by_phase": {
+     "ED": 0.875
+    }
+   },
+   "B_pop_p2p5": {
+    "patient_false_flag": 0.034,
+    "territory_sensitivity": 0.118,
+    "patient_false_flag_by_phase": {
+     "ED": 0.034
+    }
+   },
+   "C_relative_territory": {
+    "patient_false_flag": 0.03,
+    "territory_sensitivity": 0.184,
+    "patient_false_flag_by_phase": {
+     "ED": 0.03
+    }
+   }
+  },
+  {
+   "phase_mix": "all_ED",
+   "cv_n": 0.1,
+   "sig_m": 0.5,
+   "depth": 0.2,
+   "prev": 0.3,
+   "k_mad": 1.7500000000000007,
+   "A_cmr_5p5mm": {
+    "patient_false_flag": 0.87,
+    "territory_sensitivity": 0.864,
+    "patient_false_flag_by_phase": {
+     "ED": 0.87
+    }
+   },
+   "B_pop_p2p5": {
+    "patient_false_flag": 0.024,
+    "territory_sensitivity": 0.101,
+    "patient_false_flag_by_phase": {
+     "ED": 0.024
+    }
+   },
+   "C_relative_territory": {
+    "patient_false_flag": 0.017,
+    "territory_sensitivity": 0.141,
+    "patient_false_flag_by_phase": {
+     "ED": 0.017
+    }
+   }
+  },
+  {
+   "phase_mix": "all_ED",
+   "cv_n": 0.1,
+   "sig_m": 0.5,
+   "depth": 0.3,
+   "prev": 0.1,
+   "k_mad": 1.7500000000000007,
+   "A_cmr_5p5mm": {
+    "patient_false_flag": 0.873,
+    "territory_sensitivity": 0.947,
+    "patient_false_flag_by_phase": {
+     "ED": 0.873
+    }
+   },
+   "B_pop_p2p5": {
+    "patient_false_flag": 0.027,
+    "territory_sensitivity": 0.32,
+    "patient_false_flag_by_phase": {
+     "ED": 0.027
+    }
+   },
+   "C_relative_territory": {
+    "patient_false_flag": 0.025,
+    "territory_sensitivity": 0.467,
+    "patient_false_flag_by_phase": {
+     "ED": 0.025
+    }
+   }
+  },
+  {
+   "phase_mix": "all_ED",
+   "cv_n": 0.1,
+   "sig_m": 0.5,
+   "depth": 0.3,
+   "prev": 0.3,
+   "k_mad": 1.7000000000000006,
+   "A_cmr_5p5mm": {
+    "patient_false_flag": 0.865,
+    "territory_sensitivity": 0.933,
+    "patient_false_flag_by_phase": {
+     "ED": 0.865
+    }
+   },
+   "B_pop_p2p5": {
+    "patient_false_flag": 0.008,
+    "territory_sensitivity": 0.193,
+    "patient_false_flag_by_phase": {
+     "ED": 0.008
+    }
+   },
+   "C_relative_territory": {
+    "patient_false_flag": 0.023,
+    "territory_sensitivity": 0.433,
+    "patient_false_flag_by_phase": {
+     "ED": 0.023
+    }
+   }
+  },
+  {
+   "phase_mix": "all_ED",
+   "cv_n": 0.1,
+   "sig_m": 0.5,
+   "depth": 0.4,
+   "prev": 0.1,
+   "k_mad": 1.7500000000000007,
+   "A_cmr_5p5mm": {
+    "patient_false_flag": 0.851,
+    "territory_sensitivity": 0.99,
+    "patient_false_flag_by_phase": {
+     "ED": 0.851
+    }
+   },
+   "B_pop_p2p5": {
+    "patient_false_flag": 0.013,
+    "territory_sensitivity": 0.536,
+    "patient_false_flag_by_phase": {
+     "ED": 0.013
+    }
+   },
+   "C_relative_territory": {
+    "patient_false_flag": 0.02,
+    "territory_sensitivity": 0.789,
+    "patient_false_flag_by_phase": {
+     "ED": 0.02
+    }
+   }
+  },
+  {
+   "phase_mix": "all_ED",
+   "cv_n": 0.1,
+   "sig_m": 0.5,
+   "depth": 0.4,
+   "prev": 0.3,
+   "k_mad": 1.7500000000000007,
+   "A_cmr_5p5mm": {
+    "patient_false_flag": 0.869,
+    "territory_sensitivity": 0.989,
+    "patient_false_flag_by_phase": {
+     "ED": 0.869
+    }
+   },
+   "B_pop_p2p5": {
+    "patient_false_flag": 0.002,
+    "territory_sensitivity": 0.3,
+    "patient_false_flag_by_phase": {
+     "ED": 0.002
+    }
+   },
+   "C_relative_territory": {
+    "patient_false_flag": 0.02,
+    "territory_sensitivity": 0.787,
+    "patient_false_flag_by_phase": {
+     "ED": 0.02
+    }
+   }
+  },
+  {
+   "phase_mix": "all_ED",
+   "cv_n": 0.1,
+   "sig_m": 0.5,
+   "depth": 0.5,
+   "prev": 0.1,
+   "k_mad": 1.7500000000000007,
+   "A_cmr_5p5mm": {
+    "patient_false_flag": 0.871,
+    "territory_sensitivity": 1.0,
+    "patient_false_flag_by_phase": {
+     "ED": 0.871
+    }
+   },
+   "B_pop_p2p5": {
+    "patient_false_flag": 0.01,
+    "territory_sensitivity": 0.829,
+    "patient_false_flag_by_phase": {
+     "ED": 0.01
+    }
+   },
+   "C_relative_territory": {
+    "patient_false_flag": 0.021,
+    "territory_sensitivity": 0.978,
+    "patient_false_flag_by_phase": {
+     "ED": 0.021
+    }
+   }
+  },
+  {
+   "phase_mix": "all_ED",
+   "cv_n": 0.1,
+   "sig_m": 0.5,
+   "depth": 0.5,
+   "prev": 0.3,
+   "k_mad": 1.7500000000000007,
+   "A_cmr_5p5mm": {
+    "patient_false_flag": 0.859,
+    "territory_sensitivity": 0.995,
+    "patient_false_flag_by_phase": {
+     "ED": 0.859
+    }
+   },
+   "B_pop_p2p5": {
+    "patient_false_flag": 0.0,
+    "territory_sensitivity": 0.326,
+    "patient_false_flag_by_phase": {
+     "ED": 0.0
+    }
+   },
+   "C_relative_territory": {
+    "patient_false_flag": 0.016,
+    "territory_sensitivity": 0.978,
+    "patient_false_flag_by_phase": {
+     "ED": 0.016
+    }
+   }
+  },
+  {
+   "phase_mix": "all_ED",
+   "cv_n": 0.1,
+   "sig_m": 1.0,
+   "depth": 0.2,
+   "prev": 0.1,
+   "k_mad": 1.7500000000000007,
+   "A_cmr_5p5mm": {
+    "patient_false_flag": 0.887,
+    "territory_sensitivity": 0.829,
+    "patient_false_flag_by_phase": {
+     "ED": 0.887
+    }
+   },
+   "B_pop_p2p5": {
+    "patient_false_flag": 0.027,
+    "territory_sensitivity": 0.065,
+    "patient_false_flag_by_phase": {
+     "ED": 0.027
+    }
+   },
+   "C_relative_territory": {
+    "patient_false_flag": 0.043,
+    "territory_sensitivity": 0.085,
+    "patient_false_flag_by_phase": {
+     "ED": 0.043
+    }
+   }
+  },
+  {
+   "phase_mix": "all_ED",
+   "cv_n": 0.1,
+   "sig_m": 1.0,
+   "depth": 0.2,
+   "prev": 0.3,
+   "k_mad": 1.7500000000000007,
+   "A_cmr_5p5mm": {
+    "patient_false_flag": 0.884,
+    "territory_sensitivity": 0.821,
+    "patient_false_flag_by_phase": {
+     "ED": 0.884
+    }
+   },
+   "B_pop_p2p5": {
+    "patient_false_flag": 0.021,
+    "territory_sensitivity": 0.044,
+    "patient_false_flag_by_phase": {
+     "ED": 0.021
+    }
+   },
+   "C_relative_territory": {
+    "patient_false_flag": 0.034,
+    "territory_sensitivity": 0.054,
+    "patient_false_flag_by_phase": {
+     "ED": 0.034
+    }
+   }
+  },
+  {
+   "phase_mix": "all_ED",
+   "cv_n": 0.1,
+   "sig_m": 1.0,
+   "depth": 0.3,
+   "prev": 0.1,
+   "k_mad": 1.7500000000000007,
+   "A_cmr_5p5mm": {
+    "patient_false_flag": 0.881,
+    "territory_sensitivity": 0.95,
+    "patient_false_flag_by_phase": {
+     "ED": 0.881
+    }
+   },
+   "B_pop_p2p5": {
+    "patient_false_flag": 0.019,
+    "territory_sensitivity": 0.136,
+    "patient_false_flag_by_phase": {
+     "ED": 0.019
+    }
+   },
+   "C_relative_territory": {
+    "patient_false_flag": 0.033,
+    "territory_sensitivity": 0.196,
+    "patient_false_flag_by_phase": {
+     "ED": 0.033
+    }
+   }
+  },
+  {
+   "phase_mix": "all_ED",
+   "cv_n": 0.1,
+   "sig_m": 1.0,
+   "depth": 0.3,
+   "prev": 0.3,
+   "k_mad": 1.7500000000000007,
+   "A_cmr_5p5mm": {
+    "patient_false_flag": 0.89,
+    "territory_sensitivity": 0.938,
+    "patient_false_flag_by_phase": {
+     "ED": 0.89
+    }
+   },
+   "B_pop_p2p5": {
+    "patient_false_flag": 0.012,
+    "territory_sensitivity": 0.102,
+    "patient_false_flag_by_phase": {
+     "ED": 0.012
+    }
+   },
+   "C_relative_territory": {
+    "patient_false_flag": 0.024,
+    "territory_sensitivity": 0.203,
+    "patient_false_flag_by_phase": {
+     "ED": 0.024
+    }
+   }
+  },
+  {
+   "phase_mix": "all_ED",
+   "cv_n": 0.1,
+   "sig_m": 1.0,
+   "depth": 0.4,
+   "prev": 0.1,
+   "k_mad": 1.7000000000000006,
+   "A_cmr_5p5mm": {
+    "patient_false_flag": 0.888,
+    "territory_sensitivity": 0.97,
+    "patient_false_flag_by_phase": {
+     "ED": 0.888
+    }
+   },
+   "B_pop_p2p5": {
+    "patient_false_flag": 0.016,
+    "territory_sensitivity": 0.169,
+    "patient_false_flag_by_phase": {
+     "ED": 0.016
+    }
+   },
+   "C_relative_territory": {
+    "patient_false_flag": 0.034,
+    "territory_sensitivity": 0.423,
+    "patient_false_flag_by_phase": {
+     "ED": 0.034
+    }
+   }
+  },
+  {
+   "phase_mix": "all_ED",
+   "cv_n": 0.1,
+   "sig_m": 1.0,
+   "depth": 0.4,
+   "prev": 0.3,
+   "k_mad": 1.7000000000000006,
+   "A_cmr_5p5mm": {
+    "patient_false_flag": 0.879,
+    "territory_sensitivity": 0.972,
+    "patient_false_flag_by_phase": {
+     "ED": 0.879
+    }
+   },
+   "B_pop_p2p5": {
+    "patient_false_flag": 0.005,
+    "territory_sensitivity": 0.149,
+    "patient_false_flag_by_phase": {
+     "ED": 0.005
+    }
+   },
+   "C_relative_territory": {
+    "patient_false_flag": 0.026,
+    "territory_sensitivity": 0.392,
+    "patient_false_flag_by_phase": {
+     "ED": 0.026
+    }
+   }
+  },
+  {
+   "phase_mix": "all_ED",
+   "cv_n": 0.1,
+   "sig_m": 1.0,
+   "depth": 0.5,
+   "prev": 0.1,
+   "k_mad": 1.7500000000000007,
+   "A_cmr_5p5mm": {
+    "patient_false_flag": 0.871,
+    "territory_sensitivity": 0.99,
+    "patient_false_flag_by_phase": {
+     "ED": 0.871
+    }
+   },
+   "B_pop_p2p5": {
+    "patient_false_flag": 0.012,
+    "territory_sensitivity": 0.435,
+    "patient_false_flag_by_phase": {
+     "ED": 0.012
+    }
+   },
+   "C_relative_territory": {
+    "patient_false_flag": 0.027,
+    "territory_sensitivity": 0.647,
+    "patient_false_flag_by_phase": {
+     "ED": 0.027
+    }
+   }
+  },
+  {
+   "phase_mix": "all_ED",
+   "cv_n": 0.1,
+   "sig_m": 1.0,
+   "depth": 0.5,
+   "prev": 0.3,
+   "k_mad": 1.7500000000000007,
+   "A_cmr_5p5mm": {
+    "patient_false_flag": 0.882,
+    "territory_sensitivity": 0.997,
+    "patient_false_flag_by_phase": {
+     "ED": 0.882
+    }
+   },
+   "B_pop_p2p5": {
+    "patient_false_flag": 0.002,
+    "territory_sensitivity": 0.221,
+    "patient_false_flag_by_phase": {
+     "ED": 0.002
+    }
+   },
+   "C_relative_territory": {
+    "patient_false_flag": 0.028,
+    "territory_sensitivity": 0.638,
+    "patient_false_flag_by_phase": {
+     "ED": 0.028
+    }
+   }
+  },
+  {
+   "phase_mix": "all_ED",
+   "cv_n": 0.15,
+   "sig_m": 0.25,
+   "depth": 0.2,
+   "prev": 0.1,
+   "k_mad": 1.7500000000000007,
+   "A_cmr_5p5mm": {
+    "patient_false_flag": 0.877,
+    "territory_sensitivity": 0.863,
+    "patient_false_flag_by_phase": {
+     "ED": 0.877
+    }
+   },
+   "B_pop_p2p5": {
+    "patient_false_flag": 0.028,
+    "territory_sensitivity": 0.109,
+    "patient_false_flag_by_phase": {
+     "ED": 0.028
+    }
+   },
+   "C_relative_territory": {
+    "patient_false_flag": 0.014,
+    "territory_sensitivity": 0.104,
+    "patient_false_flag_by_phase": {
+     "ED": 0.014
+    }
+   }
+  },
+  {
+   "phase_mix": "all_ED",
+   "cv_n": 0.15,
+   "sig_m": 0.25,
+   "depth": 0.2,
+   "prev": 0.3,
+   "k_mad": 1.8000000000000007,
+   "A_cmr_5p5mm": {
+    "patient_false_flag": 0.884,
+    "territory_sensitivity": 0.847,
+    "patient_false_flag_by_phase": {
+     "ED": 0.884
+    }
+   },
+   "B_pop_p2p5": {
+    "patient_false_flag": 0.017,
+    "territory_sensitivity": 0.082,
+    "patient_false_flag_by_phase": {
+     "ED": 0.017
+    }
+   },
+   "C_relative_territory": {
+    "patient_false_flag": 0.009,
+    "territory_sensitivity": 0.035,
+    "patient_false_flag_by_phase": {
+     "ED": 0.009
+    }
+   }
+  },
+  {
+   "phase_mix": "all_ED",
+   "cv_n": 0.15,
+   "sig_m": 0.25,
+   "depth": 0.3,
+   "prev": 0.1,
+   "k_mad": 1.8000000000000007,
+   "A_cmr_5p5mm": {
+    "patient_false_flag": 0.879,
+    "territory_sensitivity": 0.977,
+    "patient_false_flag_by_phase": {
+     "ED": 0.879
+    }
+   },
+   "B_pop_p2p5": {
+    "patient_false_flag": 0.021,
+    "territory_sensitivity": 0.285,
+    "patient_false_flag_by_phase": {
+     "ED": 0.021
+    }
+   },
+   "C_relative_territory": {
+    "patient_false_flag": 0.006,
+    "territory_sensitivity": 0.234,
+    "patient_false_flag_by_phase": {
+     "ED": 0.006
+    }
+   }
+  },
+  {
+   "phase_mix": "all_ED",
+   "cv_n": 0.15,
+   "sig_m": 0.25,
+   "depth": 0.3,
+   "prev": 0.3,
+   "k_mad": 1.8000000000000007,
+   "A_cmr_5p5mm": {
+    "patient_false_flag": 0.888,
+    "territory_sensitivity": 0.946,
+    "patient_false_flag_by_phase": {
+     "ED": 0.888
+    }
+   },
+   "B_pop_p2p5": {
+    "patient_false_flag": 0.01,
+    "territory_sensitivity": 0.165,
+    "patient_false_flag_by_phase": {
+     "ED": 0.01
+    }
+   },
+   "C_relative_territory": {
+    "patient_false_flag": 0.005,
+    "territory_sensitivity": 0.204,
+    "patient_false_flag_by_phase": {
+     "ED": 0.005
+    }
+   }
+  },
+  {
+   "phase_mix": "all_ED",
+   "cv_n": 0.15,
+   "sig_m": 0.25,
+   "depth": 0.4,
+   "prev": 0.1,
+   "k_mad": 1.8000000000000007,
+   "A_cmr_5p5mm": {
+    "patient_false_flag": 0.877,
+    "territory_sensitivity": 0.996,
+    "patient_false_flag_by_phase": {
+     "ED": 0.877
+    }
+   },
+   "B_pop_p2p5": {
+    "patient_false_flag": 0.016,
+    "territory_sensitivity": 0.545,
+    "patient_false_flag_by_phase": {
+     "ED": 0.016
+    }
+   },
+   "C_relative_territory": {
+    "patient_false_flag": 0.01,
+    "territory_sensitivity": 0.634,
+    "patient_false_flag_by_phase": {
+     "ED": 0.01
+    }
+   }
+  },
+  {
+   "phase_mix": "all_ED",
+   "cv_n": 0.15,
+   "sig_m": 0.25,
+   "depth": 0.4,
+   "prev": 0.3,
+   "k_mad": 1.8000000000000007,
+   "A_cmr_5p5mm": {
+    "patient_false_flag": 0.891,
+    "territory_sensitivity": 0.991,
+    "patient_false_flag_by_phase": {
+     "ED": 0.891
+    }
+   },
+   "B_pop_p2p5": {
+    "patient_false_flag": 0.003,
+    "territory_sensitivity": 0.295,
+    "patient_false_flag_by_phase": {
+     "ED": 0.003
+    }
+   },
+   "C_relative_territory": {
+    "patient_false_flag": 0.003,
+    "territory_sensitivity": 0.568,
+    "patient_false_flag_by_phase": {
+     "ED": 0.003
+    }
+   }
+  },
+  {
+   "phase_mix": "all_ED",
+   "cv_n": 0.15,
+   "sig_m": 0.25,
+   "depth": 0.5,
+   "prev": 0.1,
+   "k_mad": 1.8000000000000007,
+   "A_cmr_5p5mm": {
+    "patient_false_flag": 0.881,
+    "territory_sensitivity": 1.0,
+    "patient_false_flag_by_phase": {
+     "ED": 0.881
+    }
+   },
+   "B_pop_p2p5": {
+    "patient_false_flag": 0.006,
+    "territory_sensitivity": 0.826,
+    "patient_false_flag_by_phase": {
+     "ED": 0.006
+    }
+   },
+   "C_relative_territory": {
+    "patient_false_flag": 0.008,
+    "territory_sensitivity": 0.957,
+    "patient_false_flag_by_phase": {
+     "ED": 0.008
+    }
+   }
+  },
+  {
+   "phase_mix": "all_ED",
+   "cv_n": 0.15,
+   "sig_m": 0.25,
+   "depth": 0.5,
+   "prev": 0.3,
+   "k_mad": 1.8000000000000007,
+   "A_cmr_5p5mm": {
+    "patient_false_flag": 0.892,
+    "territory_sensitivity": 0.998,
+    "patient_false_flag_by_phase": {
+     "ED": 0.892
+    }
+   },
+   "B_pop_p2p5": {
+    "patient_false_flag": 0.0,
+    "territory_sensitivity": 0.343,
+    "patient_false_flag_by_phase": {
+     "ED": 0.0
+    }
+   },
+   "C_relative_territory": {
+    "patient_false_flag": 0.006,
+    "territory_sensitivity": 0.903,
+    "patient_false_flag_by_phase": {
+     "ED": 0.006
+    }
+   }
+  },
+  {
+   "phase_mix": "all_ED",
+   "cv_n": 0.15,
+   "sig_m": 0.5,
+   "depth": 0.2,
+   "prev": 0.1,
+   "k_mad": 1.7500000000000007,
+   "A_cmr_5p5mm": {
+    "patient_false_flag": 0.874,
+    "territory_sensitivity": 0.893,
+    "patient_false_flag_by_phase": {
+     "ED": 0.874
+    }
+   },
+   "B_pop_p2p5": {
+    "patient_false_flag": 0.022,
+    "territory_sensitivity": 0.102,
+    "patient_false_flag_by_phase": {
+     "ED": 0.022
+    }
+   },
+   "C_relative_territory": {
+    "patient_false_flag": 0.013,
+    "territory_sensitivity": 0.037,
+    "patient_false_flag_by_phase": {
+     "ED": 0.013
+    }
+   }
+  },
+  {
+   "phase_mix": "all_ED",
+   "cv_n": 0.15,
+   "sig_m": 0.5,
+   "depth": 0.2,
+   "prev": 0.3,
+   "k_mad": 1.7500000000000007,
+   "A_cmr_5p5mm": {
+    "patient_false_flag": 0.878,
+    "territory_sensitivity": 0.851,
+    "patient_false_flag_by_phase": {
+     "ED": 0.878
+    }
+   },
+   "B_pop_p2p5": {
+    "patient_false_flag": 0.018,
+    "territory_sensitivity": 0.058,
+    "patient_false_flag_by_phase": {
+     "ED": 0.018
+    }
+   },
+   "C_relative_territory": {
+    "patient_false_flag": 0.015,
+    "territory_sensitivity": 0.053,
+    "patient_false_flag_by_phase": {
+     "ED": 0.015
+    }
+   }
+  },
+  {
+   "phase_mix": "all_ED",
+   "cv_n": 0.15,
+   "sig_m": 0.5,
+   "depth": 0.3,
+   "prev": 0.1,
+   "k_mad": 1.7500000000000007,
+   "A_cmr_5p5mm": {
+    "patient_false_flag": 0.873,
+    "territory_sensitivity": 0.934,
+    "patient_false_flag_by_phase": {
+     "ED": 0.873
+    }
+   },
+   "B_pop_p2p5": {
+    "patient_false_flag": 0.017,
+    "territory_sensitivity": 0.179,
+    "patient_false_flag_by_phase": {
+     "ED": 0.017
+    }
+   },
+   "C_relative_territory": {
+    "patient_false_flag": 0.018,
+    "territory_sensitivity": 0.231,
+    "patient_false_flag_by_phase": {
+     "ED": 0.018
+    }
+   }
+  },
+  {
+   "phase_mix": "all_ED",
+   "cv_n": 0.15,
+   "sig_m": 0.5,
+   "depth": 0.3,
+   "prev": 0.3,
+   "k_mad": 1.7500000000000007,
+   "A_cmr_5p5mm": {
+    "patient_false_flag": 0.874,
+    "territory_sensitivity": 0.936,
+    "patient_false_flag_by_phase": {
+     "ED": 0.874
+    }
+   },
+   "B_pop_p2p5": {
+    "patient_false_flag": 0.006,
+    "territory_sensitivity": 0.15,
+    "patient_false_flag_by_phase": {
+     "ED": 0.006
+    }
+   },
+   "C_relative_territory": {
+    "patient_false_flag": 0.009,
+    "territory_sensitivity": 0.204,
+    "patient_false_flag_by_phase": {
+     "ED": 0.009
+    }
+   }
+  },
+  {
+   "phase_mix": "all_ED",
+   "cv_n": 0.15,
+   "sig_m": 0.5,
+   "depth": 0.4,
+   "prev": 0.1,
+   "k_mad": 1.8000000000000007,
+   "A_cmr_5p5mm": {
+    "patient_false_flag": 0.88,
+    "territory_sensitivity": 1.0,
+    "patient_false_flag_by_phase": {
+     "ED": 0.88
+    }
+   },
+   "B_pop_p2p5": {
+    "patient_false_flag": 0.016,
+    "territory_sensitivity": 0.424,
+    "patient_false_flag_by_phase": {
+     "ED": 0.016
+    }
+   },
+   "C_relative_territory": {
+    "patient_false_flag": 0.014,
+    "territory_sensitivity": 0.517,
+    "patient_false_flag_by_phase": {
+     "ED": 0.014
+    }
+   }
+  },
+  {
+   "phase_mix": "all_ED",
+   "cv_n": 0.15,
+   "sig_m": 0.5,
+   "depth": 0.4,
+   "prev": 0.3,
+   "k_mad": 1.7500000000000007,
+   "A_cmr_5p5mm": {
+    "patient_false_flag": 0.877,
+    "territory_sensitivity": 0.989,
+    "patient_false_flag_by_phase": {
+     "ED": 0.877
+    }
+   },
+   "B_pop_p2p5": {
+    "patient_false_flag": 0.004,
+    "territory_sensitivity": 0.236,
+    "patient_false_flag_by_phase": {
+     "ED": 0.004
+    }
+   },
+   "C_relative_territory": {
+    "patient_false_flag": 0.01,
+    "territory_sensitivity": 0.475,
+    "patient_false_flag_by_phase": {
+     "ED": 0.01
+    }
+   }
+  },
+  {
+   "phase_mix": "all_ED",
+   "cv_n": 0.15,
+   "sig_m": 0.5,
+   "depth": 0.5,
+   "prev": 0.1,
+   "k_mad": 1.8000000000000007,
+   "A_cmr_5p5mm": {
+    "patient_false_flag": 0.886,
+    "territory_sensitivity": 0.995,
+    "patient_false_flag_by_phase": {
+     "ED": 0.886
+    }
+   },
+   "B_pop_p2p5": {
+    "patient_false_flag": 0.008,
+    "territory_sensitivity": 0.694,
+    "patient_false_flag_by_phase": {
+     "ED": 0.008
+    }
+   },
+   "C_relative_territory": {
+    "patient_false_flag": 0.01,
+    "territory_sensitivity": 0.811,
+    "patient_false_flag_by_phase": {
+     "ED": 0.01
+    }
+   }
+  },
+  {
+   "phase_mix": "all_ED",
+   "cv_n": 0.15,
+   "sig_m": 0.5,
+   "depth": 0.5,
+   "prev": 0.3,
+   "k_mad": 1.7500000000000007,
+   "A_cmr_5p5mm": {
+    "patient_false_flag": 0.873,
+    "territory_sensitivity": 0.995,
+    "patient_false_flag_by_phase": {
+     "ED": 0.873
+    }
+   },
+   "B_pop_p2p5": {
+    "patient_false_flag": 0.0,
+    "territory_sensitivity": 0.317,
+    "patient_false_flag_by_phase": {
+     "ED": 0.0
+    }
+   },
+   "C_relative_territory": {
+    "patient_false_flag": 0.009,
+    "territory_sensitivity": 0.813,
+    "patient_false_flag_by_phase": {
+     "ED": 0.009
+    }
+   }
+  },
+  {
+   "phase_mix": "all_ED",
+   "cv_n": 0.15,
+   "sig_m": 1.0,
+   "depth": 0.2,
+   "prev": 0.1,
+   "k_mad": 1.7500000000000007,
+   "A_cmr_5p5mm": {
+    "patient_false_flag": 0.892,
+    "territory_sensitivity": 0.85,
+    "patient_false_flag_by_phase": {
+     "ED": 0.892
+    }
+   },
+   "B_pop_p2p5": {
+    "patient_false_flag": 0.018,
+    "territory_sensitivity": 0.032,
+    "patient_false_flag_by_phase": {
+     "ED": 0.018
+    }
+   },
+   "C_relative_territory": {
+    "patient_false_flag": 0.018,
+    "territory_sensitivity": 0.043,
+    "patient_false_flag_by_phase": {
+     "ED": 0.018
+    }
+   }
+  },
+  {
+   "phase_mix": "all_ED",
+   "cv_n": 0.15,
+   "sig_m": 1.0,
+   "depth": 0.2,
+   "prev": 0.3,
+   "k_mad": 1.7500000000000007,
+   "A_cmr_5p5mm": {
+    "patient_false_flag": 0.891,
+    "territory_sensitivity": 0.846,
+    "patient_false_flag_by_phase": {
+     "ED": 0.891
+    }
+   },
+   "B_pop_p2p5": {
+    "patient_false_flag": 0.017,
+    "territory_sensitivity": 0.044,
+    "patient_false_flag_by_phase": {
+     "ED": 0.017
+    }
+   },
+   "C_relative_territory": {
+    "patient_false_flag": 0.019,
+    "territory_sensitivity": 0.049,
+    "patient_false_flag_by_phase": {
+     "ED": 0.019
+    }
+   }
+  },
+  {
+   "phase_mix": "all_ED",
+   "cv_n": 0.15,
+   "sig_m": 1.0,
+   "depth": 0.3,
+   "prev": 0.1,
+   "k_mad": 1.7500000000000007,
+   "A_cmr_5p5mm": {
+    "patient_false_flag": 0.89,
+    "territory_sensitivity": 0.921,
+    "patient_false_flag_by_phase": {
+     "ED": 0.89
+    }
+   },
+   "B_pop_p2p5": {
+    "patient_false_flag": 0.023,
+    "territory_sensitivity": 0.079,
+    "patient_false_flag_by_phase": {
+     "ED": 0.023
+    }
+   },
+   "C_relative_territory": {
+    "patient_false_flag": 0.023,
+    "territory_sensitivity": 0.1,
+    "patient_false_flag_by_phase": {
+     "ED": 0.023
+    }
+   }
+  },
+  {
+   "phase_mix": "all_ED",
+   "cv_n": 0.15,
+   "sig_m": 1.0,
+   "depth": 0.3,
+   "prev": 0.3,
+   "k_mad": 1.8000000000000007,
+   "A_cmr_5p5mm": {
+    "patient_false_flag": 0.886,
+    "territory_sensitivity": 0.916,
+    "patient_false_flag_by_phase": {
+     "ED": 0.886
+    }
+   },
+   "B_pop_p2p5": {
+    "patient_false_flag": 0.011,
+    "territory_sensitivity": 0.075,
+    "patient_false_flag_by_phase": {
+     "ED": 0.011
+    }
+   },
+   "C_relative_territory": {
+    "patient_false_flag": 0.018,
+    "territory_sensitivity": 0.105,
+    "patient_false_flag_by_phase": {
+     "ED": 0.018
+    }
+   }
+  },
+  {
+   "phase_mix": "all_ED",
+   "cv_n": 0.15,
+   "sig_m": 1.0,
+   "depth": 0.4,
+   "prev": 0.1,
+   "k_mad": 1.7500000000000007,
+   "A_cmr_5p5mm": {
+    "patient_false_flag": 0.894,
+    "territory_sensitivity": 0.967,
+    "patient_false_flag_by_phase": {
+     "ED": 0.894
+    }
+   },
+   "B_pop_p2p5": {
+    "patient_false_flag": 0.013,
+    "territory_sensitivity": 0.226,
+    "patient_false_flag_by_phase": {
+     "ED": 0.013
+    }
+   },
+   "C_relative_territory": {
+    "patient_false_flag": 0.022,
+    "territory_sensitivity": 0.302,
+    "patient_false_flag_by_phase": {
+     "ED": 0.022
+    }
+   }
+  },
+  {
+   "phase_mix": "all_ED",
+   "cv_n": 0.15,
+   "sig_m": 1.0,
+   "depth": 0.4,
+   "prev": 0.3,
+   "k_mad": 1.7500000000000007,
+   "A_cmr_5p5mm": {
+    "patient_false_flag": 0.891,
+    "territory_sensitivity": 0.951,
+    "patient_false_flag_by_phase": {
+     "ED": 0.891
+    }
+   },
+   "B_pop_p2p5": {
+    "patient_false_flag": 0.004,
+    "territory_sensitivity": 0.118,
+    "patient_false_flag_by_phase": {
+     "ED": 0.004
+    }
+   },
+   "C_relative_territory": {
+    "patient_false_flag": 0.023,
+    "territory_sensitivity": 0.23,
+    "patient_false_flag_by_phase": {
+     "ED": 0.023
+    }
+   }
+  },
+  {
+   "phase_mix": "all_ED",
+   "cv_n": 0.15,
+   "sig_m": 1.0,
+   "depth": 0.5,
+   "prev": 0.1,
+   "k_mad": 1.7500000000000007,
+   "A_cmr_5p5mm": {
+    "patient_false_flag": 0.872,
+    "territory_sensitivity": 0.99,
+    "patient_false_flag_by_phase": {
+     "ED": 0.872
+    }
+   },
+   "B_pop_p2p5": {
+    "patient_false_flag": 0.014,
+    "territory_sensitivity": 0.382,
+    "patient_false_flag_by_phase": {
+     "ED": 0.014
+    }
+   },
+   "C_relative_territory": {
+    "patient_false_flag": 0.029,
+    "territory_sensitivity": 0.576,
+    "patient_false_flag_by_phase": {
+     "ED": 0.029
+    }
+   }
+  },
+  {
+   "phase_mix": "all_ED",
+   "cv_n": 0.15,
+   "sig_m": 1.0,
+   "depth": 0.5,
+   "prev": 0.3,
+   "k_mad": 1.7500000000000007,
+   "A_cmr_5p5mm": {
+    "patient_false_flag": 0.891,
+    "territory_sensitivity": 0.992,
+    "patient_false_flag_by_phase": {
+     "ED": 0.891
+    }
+   },
+   "B_pop_p2p5": {
+    "patient_false_flag": 0.001,
+    "territory_sensitivity": 0.21,
+    "patient_false_flag_by_phase": {
+     "ED": 0.001
+    }
+   },
+   "C_relative_territory": {
+    "patient_false_flag": 0.021,
+    "territory_sensitivity": 0.494,
+    "patient_false_flag_by_phase": {
+     "ED": 0.021
+    }
+   }
+  },
+  {
+   "phase_mix": "mixed",
+   "cv_n": 0.06,
+   "sig_m": 0.25,
+   "depth": 0.2,
+   "prev": 0.1,
+   "k_mad": 1.7000000000000006,
+   "A_cmr_5p5mm": {
+    "patient_false_flag": 0.584,
+    "territory_sensitivity": 0.698,
+    "patient_false_flag_by_phase": {
+     "ED": 0.891,
+     "MD": 0.535,
+     "SYS": 0.075
+    }
+   },
+   "B_pop_p2p5": {
+    "patient_false_flag": 0.034,
+    "territory_sensitivity": 0.17,
+    "patient_false_flag_by_phase": {
+     "ED": 0.08,
+     "MD": 0.004,
+     "SYS": 0.0
+    }
+   },
+   "C_relative_territory": {
+    "patient_false_flag": 0.027,
+    "territory_sensitivity": 0.623,
+    "patient_false_flag_by_phase": {
+     "ED": 0.031,
+     "MD": 0.027,
+     "SYS": 0.022
+    }
+   }
+  },
+  {
+   "phase_mix": "mixed",
+   "cv_n": 0.06,
+   "sig_m": 0.25,
+   "depth": 0.2,
+   "prev": 0.3,
+   "k_mad": 1.7000000000000006,
+   "A_cmr_5p5mm": {
+    "patient_false_flag": 0.581,
+    "territory_sensitivity": 0.621,
+    "patient_false_flag_by_phase": {
+     "ED": 0.865,
+     "MD": 0.557,
+     "SYS": 0.091
+    }
+   },
+   "B_pop_p2p5": {
+    "patient_false_flag": 0.026,
+    "territory_sensitivity": 0.177,
+    "patient_false_flag_by_phase": {
+     "ED": 0.059,
+     "MD": 0.007,
+     "SYS": 0.0
+    }
+   },
+   "C_relative_territory": {
+    "patient_false_flag": 0.016,
+    "territory_sensitivity": 0.598,
+    "patient_false_flag_by_phase": {
+     "ED": 0.024,
+     "MD": 0.012,
+     "SYS": 0.01
+    }
+   }
+  },
+  {
+   "phase_mix": "mixed",
+   "cv_n": 0.06,
+   "sig_m": 0.25,
+   "depth": 0.3,
+   "prev": 0.1,
+   "k_mad": 1.7500000000000007,
+   "A_cmr_5p5mm": {
+    "patient_false_flag": 0.585,
+    "territory_sensitivity": 0.862,
+    "patient_false_flag_by_phase": {
+     "ED": 0.871,
+     "MD": 0.541,
+     "SYS": 0.082
+    }
+   },
+   "B_pop_p2p5": {
+    "patient_false_flag": 0.025,
+    "territory_sensitivity": 0.476,
+    "patient_false_flag_by_phase": {
+     "ED": 0.056,
+     "MD": 0.004,
+     "SYS": 0.0
+    }
+   },
+   "C_relative_territory": {
+    "patient_false_flag": 0.022,
+    "territory_sensitivity": 0.979,
+    "patient_false_flag_by_phase": {
+     "ED": 0.035,
+     "MD": 0.014,
+     "SYS": 0.008
+    }
+   }
+  },
+  {
+   "phase_mix": "mixed",
+   "cv_n": 0.06,
+   "sig_m": 0.25,
+   "depth": 0.3,
+   "prev": 0.3,
+   "k_mad": 1.7500000000000007,
+   "A_cmr_5p5mm": {
+    "patient_false_flag": 0.611,
+    "territory_sensitivity": 0.794,
+    "patient_false_flag_by_phase": {
+     "ED": 0.901,
+     "MD": 0.583,
+     "SYS": 0.042
+    }
+   },
+   "B_pop_p2p5": {
+    "patient_false_flag": 0.01,
+    "territory_sensitivity": 0.285,
+    "patient_false_flag_by_phase": {
+     "ED": 0.023,
+     "MD": 0.002,
+     "SYS": 0.0
+    }
+   },
+   "C_relative_territory": {
+    "patient_false_flag": 0.014,
+    "territory_sensitivity": 0.958,
+    "patient_false_flag_by_phase": {
+     "ED": 0.014,
+     "MD": 0.018,
+     "SYS": 0.008
+    }
+   }
+  },
+  {
+   "phase_mix": "mixed",
+   "cv_n": 0.06,
+   "sig_m": 0.25,
+   "depth": 0.4,
+   "prev": 0.1,
+   "k_mad": 1.8000000000000007,
+   "A_cmr_5p5mm": {
+    "patient_false_flag": 0.595,
+    "territory_sensitivity": 0.931,
+    "patient_false_flag_by_phase": {
+     "ED": 0.882,
+     "MD": 0.591,
+     "SYS": 0.098
+    }
+   },
+   "B_pop_p2p5": {
+    "patient_false_flag": 0.017,
+    "territory_sensitivity": 0.709,
+    "patient_false_flag_by_phase": {
+     "ED": 0.041,
+     "MD": 0.003,
+     "SYS": 0.0
+    }
+   },
+   "C_relative_territory": {
+    "patient_false_flag": 0.012,
+    "territory_sensitivity": 1.0,
+    "patient_false_flag_by_phase": {
+     "ED": 0.015,
+     "MD": 0.012,
+     "SYS": 0.008
+    }
+   }
+  },
+  {
+   "phase_mix": "mixed",
+   "cv_n": 0.06,
+   "sig_m": 0.25,
+   "depth": 0.4,
+   "prev": 0.3,
+   "k_mad": 1.7500000000000007,
+   "A_cmr_5p5mm": {
+    "patient_false_flag": 0.596,
+    "territory_sensitivity": 0.936,
+    "patient_false_flag_by_phase": {
+     "ED": 0.872,
+     "MD": 0.565,
+     "SYS": 0.065
+    }
+   },
+   "B_pop_p2p5": {
+    "patient_false_flag": 0.003,
+    "territory_sensitivity": 0.382,
+    "patient_false_flag_by_phase": {
+     "ED": 0.007,
+     "MD": 0.0,
+     "SYS": 0.0
+    }
+   },
+   "C_relative_territory": {
+    "patient_false_flag": 0.017,
+    "territory_sensitivity": 1.0,
+    "patient_false_flag_by_phase": {
+     "ED": 0.019,
+     "MD": 0.018,
+     "SYS": 0.008
+    }
+   }
+  },
+  {
+   "phase_mix": "mixed",
+   "cv_n": 0.06,
+   "sig_m": 0.25,
+   "depth": 0.5,
+   "prev": 0.1,
+   "k_mad": 1.7500000000000007,
+   "A_cmr_5p5mm": {
+    "patient_false_flag": 0.584,
+    "territory_sensitivity": 0.984,
+    "patient_false_flag_by_phase": {
+     "ED": 0.893,
+     "MD": 0.537,
+     "SYS": 0.083
+    }
+   },
+   "B_pop_p2p5": {
+    "patient_false_flag": 0.012,
+    "territory_sensitivity": 0.888,
+    "patient_false_flag_by_phase": {
+     "ED": 0.027,
+     "MD": 0.003,
+     "SYS": 0.0
+    }
+   },
+   "C_relative_territory": {
+    "patient_false_flag": 0.014,
+    "territory_sensitivity": 1.0,
+    "patient_false_flag_by_phase": {
+     "ED": 0.02,
+     "MD": 0.014,
+     "SYS": 0.005
+    }
+   }
+  },
+  {
+   "phase_mix": "mixed",
+   "cv_n": 0.06,
+   "sig_m": 0.25,
+   "depth": 0.5,
+   "prev": 0.3,
+   "k_mad": 1.8000000000000007,
+   "A_cmr_5p5mm": {
+    "patient_false_flag": 0.575,
+    "territory_sensitivity": 0.98,
+    "patient_false_flag_by_phase": {
+     "ED": 0.859,
+     "MD": 0.53,
+     "SYS": 0.11
+    }
+   },
+   "B_pop_p2p5": {
+    "patient_false_flag": 0.0,
+    "territory_sensitivity": 0.387,
+    "patient_false_flag_by_phase": {
+     "ED": 0.0,
+     "MD": 0.0,
+     "SYS": 0.0
+    }
+   },
+   "C_relative_territory": {
+    "patient_false_flag": 0.009,
+    "territory_sensitivity": 1.0,
+    "patient_false_flag_by_phase": {
+     "ED": 0.009,
+     "MD": 0.011,
+     "SYS": 0.003
+    }
+   }
+  },
+  {
+   "phase_mix": "mixed",
+   "cv_n": 0.06,
+   "sig_m": 0.5,
+   "depth": 0.2,
+   "prev": 0.1,
+   "k_mad": 1.7000000000000006,
+   "A_cmr_5p5mm": {
+    "patient_false_flag": 0.569,
+    "territory_sensitivity": 0.681,
+    "patient_false_flag_by_phase": {
+     "ED": 0.854,
+     "MD": 0.555,
+     "SYS": 0.107
+    }
+   },
+   "B_pop_p2p5": {
+    "patient_false_flag": 0.034,
+    "territory_sensitivity": 0.141,
+    "patient_false_flag_by_phase": {
+     "ED": 0.076,
+     "MD": 0.011,
+     "SYS": 0.0
+    }
+   },
+   "C_relative_territory": {
+    "patient_false_flag": 0.028,
+    "territory_sensitivity": 0.333,
+    "patient_false_flag_by_phase": {
+     "ED": 0.047,
+     "MD": 0.024,
+     "SYS": 0.002
+    }
+   }
+  },
+  {
+   "phase_mix": "mixed",
+   "cv_n": 0.06,
+   "sig_m": 0.5,
+   "depth": 0.2,
+   "prev": 0.3,
+   "k_mad": 1.7500000000000007,
+   "A_cmr_5p5mm": {
+    "patient_false_flag": 0.595,
+    "territory_sensitivity": 0.674,
+    "patient_false_flag_by_phase": {
+     "ED": 0.885,
+     "MD": 0.552,
+     "SYS": 0.083
+    }
+   },
+   "B_pop_p2p5": {
+    "patient_false_flag": 0.032,
+    "territory_sensitivity": 0.121,
+    "patient_false_flag_by_phase": {
+     "ED": 0.074,
+     "MD": 0.007,
+     "SYS": 0.0
+    }
+   },
+   "C_relative_territory": {
+    "patient_false_flag": 0.027,
+    "territory_sensitivity": 0.321,
+    "patient_false_flag_by_phase": {
+     "ED": 0.043,
+     "MD": 0.017,
+     "SYS": 0.016
+    }
+   }
+  },
+  {
+   "phase_mix": "mixed",
+   "cv_n": 0.06,
+   "sig_m": 0.5,
+   "depth": 0.3,
+   "prev": 0.1,
+   "k_mad": 1.7500000000000007,
+   "A_cmr_5p5mm": {
+    "patient_false_flag": 0.586,
+    "territory_sensitivity": 0.775,
+    "patient_false_flag_by_phase": {
+     "ED": 0.862,
+     "MD": 0.568,
+     "SYS": 0.092
+    }
+   },
+   "B_pop_p2p5": {
+    "patient_false_flag": 0.034,
+    "territory_sensitivity": 0.245,
+    "patient_false_flag_by_phase": {
+     "ED": 0.076,
+     "MD": 0.009,
+     "SYS": 0.0
+    }
+   },
+   "C_relative_territory": {
+    "patient_false_flag": 0.027,
+    "territory_sensitivity": 0.765,
+    "patient_false_flag_by_phase": {
+     "ED": 0.039,
+     "MD": 0.029,
+     "SYS": 0.003
+    }
+   }
+  },
+  {
+   "phase_mix": "mixed",
+   "cv_n": 0.06,
+   "sig_m": 0.5,
+   "depth": 0.3,
+   "prev": 0.3,
+   "k_mad": 1.7000000000000006,
+   "A_cmr_5p5mm": {
+    "patient_false_flag": 0.617,
+    "territory_sensitivity": 0.831,
+    "patient_false_flag_by_phase": {
+     "ED": 0.871,
+     "MD": 0.587,
+     "SYS": 0.111
+    }
+   },
+   "B_pop_p2p5": {
+    "patient_false_flag": 0.016,
+    "territory_sensitivity": 0.208,
+    "patient_false_flag_by_phase": {
+     "ED": 0.038,
+     "MD": 0.002,
+     "SYS": 0.0
+    }
+   },
+   "C_relative_territory": {
+    "patient_false_flag": 0.035,
+    "territory_sensitivity": 0.74,
+    "patient_false_flag_by_phase": {
+     "ED": 0.049,
+     "MD": 0.031,
+     "SYS": 0.012
+    }
+   }
+  },
+  {
+   "phase_mix": "mixed",
+   "cv_n": 0.06,
+   "sig_m": 0.5,
+   "depth": 0.4,
+   "prev": 0.1,
+   "k_mad": 1.7500000000000007,
+   "A_cmr_5p5mm": {
+    "patient_false_flag": 0.602,
+    "territory_sensitivity": 0.93,
+    "patient_false_flag_by_phase": {
+     "ED": 0.877,
+     "MD": 0.584,
+     "SYS": 0.102
+    }
+   },
+   "B_pop_p2p5": {
+    "patient_false_flag": 0.022,
+    "territory_sensitivity": 0.576,
+    "patient_false_flag_by_phase": {
+     "ED": 0.054,
+     "MD": 0.004,
+     "SYS": 0.0
+    }
+   },
+   "C_relative_territory": {
+    "patient_false_flag": 0.031,
+    "territory_sensitivity": 0.977,
+    "patient_false_flag_by_phase": {
+     "ED": 0.049,
+     "MD": 0.025,
+     "SYS": 0.005
+    }
+   }
+  },
+  {
+   "phase_mix": "mixed",
+   "cv_n": 0.06,
+   "sig_m": 0.5,
+   "depth": 0.4,
+   "prev": 0.3,
+   "k_mad": 1.7500000000000007,
+   "A_cmr_5p5mm": {
+    "patient_false_flag": 0.59,
+    "territory_sensitivity": 0.923,
+    "patient_false_flag_by_phase": {
+     "ED": 0.868,
+     "MD": 0.545,
+     "SYS": 0.124
+    }
+   },
+   "B_pop_p2p5": {
+    "patient_false_flag": 0.005,
+    "territory_sensitivity": 0.312,
+    "patient_false_flag_by_phase": {
+     "ED": 0.013,
+     "MD": 0.0,
+     "SYS": 0.0
+    }
+   },
+   "C_relative_territory": {
+    "patient_false_flag": 0.017,
+    "territory_sensitivity": 0.957,
+    "patient_false_flag_by_phase": {
+     "ED": 0.025,
+     "MD": 0.015,
+     "SYS": 0.007
+    }
+   }
+  },
+  {
+   "phase_mix": "mixed",
+   "cv_n": 0.06,
+   "sig_m": 0.5,
+   "depth": 0.5,
+   "prev": 0.1,
+   "k_mad": 1.7000000000000006,
+   "A_cmr_5p5mm": {
+    "patient_false_flag": 0.62,
+    "territory_sensitivity": 0.985,
+    "patient_false_flag_by_phase": {
+     "ED": 0.899,
+     "MD": 0.586,
+     "SYS": 0.099
+    }
+   },
+   "B_pop_p2p5": {
+    "patient_false_flag": 0.016,
+    "territory_sensitivity": 0.788,
+    "patient_false_flag_by_phase": {
+     "ED": 0.039,
+     "MD": 0.0,
+     "SYS": 0.0
+    }
+   },
+   "C_relative_territory": {
+    "patient_false_flag": 0.025,
+    "territory_sensitivity": 0.995,
+    "patient_false_flag_by_phase": {
+     "ED": 0.038,
+     "MD": 0.021,
+     "SYS": 0.006
+    }
+   }
+  },
+  {
+   "phase_mix": "mixed",
+   "cv_n": 0.06,
+   "sig_m": 0.5,
+   "depth": 0.5,
+   "prev": 0.3,
+   "k_mad": 1.7500000000000007,
+   "A_cmr_5p5mm": {
+    "patient_false_flag": 0.584,
+    "territory_sensitivity": 0.985,
+    "patient_false_flag_by_phase": {
+     "ED": 0.853,
+     "MD": 0.563,
+     "SYS": 0.065
+    }
+   },
+   "B_pop_p2p5": {
+    "patient_false_flag": 0.0,
+    "territory_sensitivity": 0.363,
+    "patient_false_flag_by_phase": {
+     "ED": 0.0,
+     "MD": 0.0,
+     "SYS": 0.0
+    }
+   },
+   "C_relative_territory": {
+    "patient_false_flag": 0.019,
+    "territory_sensitivity": 0.997,
+    "patient_false_flag_by_phase": {
+     "ED": 0.024,
+     "MD": 0.017,
+     "SYS": 0.011
+    }
+   }
+  },
+  {
+   "phase_mix": "mixed",
+   "cv_n": 0.06,
+   "sig_m": 1.0,
+   "depth": 0.2,
+   "prev": 0.1,
+   "k_mad": 1.7000000000000006,
+   "A_cmr_5p5mm": {
+    "patient_false_flag": 0.626,
+    "territory_sensitivity": 0.703,
+    "patient_false_flag_by_phase": {
+     "ED": 0.878,
+     "MD": 0.606,
+     "SYS": 0.168
+    }
+   },
+   "B_pop_p2p5": {
+    "patient_false_flag": 0.034,
+    "territory_sensitivity": 0.081,
+    "patient_false_flag_by_phase": {
+     "ED": 0.075,
+     "MD": 0.008,
+     "SYS": 0.0
+    }
+   },
+   "C_relative_territory": {
+    "patient_false_flag": 0.056,
+    "territory_sensitivity": 0.157,
+    "patient_false_flag_by_phase": {
+     "ED": 0.079,
+     "MD": 0.055,
+     "SYS": 0.014
+    }
+   }
+  },
+  {
+   "phase_mix": "mixed",
+   "cv_n": 0.06,
+   "sig_m": 1.0,
+   "depth": 0.2,
+   "prev": 0.3,
+   "k_mad": 1.7500000000000007,
+   "A_cmr_5p5mm": {
+    "patient_false_flag": 0.63,
+    "territory_sensitivity": 0.621,
+    "patient_false_flag_by_phase": {
+     "ED": 0.894,
+     "MD": 0.622,
+     "SYS": 0.147
+    }
+   },
+   "B_pop_p2p5": {
+    "patient_false_flag": 0.026,
+    "territory_sensitivity": 0.062,
+    "patient_false_flag_by_phase": {
+     "ED": 0.058,
+     "MD": 0.007,
+     "SYS": 0.0
+    }
+   },
+   "C_relative_territory": {
+    "patient_false_flag": 0.032,
+    "territory_sensitivity": 0.107,
+    "patient_false_flag_by_phase": {
+     "ED": 0.056,
+     "MD": 0.022,
+     "SYS": 0.007
+    }
+   }
+  },
+  {
+   "phase_mix": "mixed",
+   "cv_n": 0.06,
+   "sig_m": 1.0,
+   "depth": 0.3,
+   "prev": 0.1,
+   "k_mad": 1.7500000000000007,
+   "A_cmr_5p5mm": {
+    "patient_false_flag": 0.634,
+    "territory_sensitivity": 0.771,
+    "patient_false_flag_by_phase": {
+     "ED": 0.891,
+     "MD": 0.649,
+     "SYS": 0.129
+    }
+   },
+   "B_pop_p2p5": {
+    "patient_false_flag": 0.035,
+    "territory_sensitivity": 0.144,
+    "patient_false_flag_by_phase": {
+     "ED": 0.07,
+     "MD": 0.017,
+     "SYS": 0.0
+    }
+   },
+   "C_relative_territory": {
+    "patient_false_flag": 0.037,
+    "territory_sensitivity": 0.287,
+    "patient_false_flag_by_phase": {
+     "ED": 0.059,
+     "MD": 0.031,
+     "SYS": 0.008
+    }
+   }
+  },
+  {
+   "phase_mix": "mixed",
+   "cv_n": 0.06,
+   "sig_m": 1.0,
+   "depth": 0.3,
+   "prev": 0.3,
+   "k_mad": 1.7500000000000007,
+   "A_cmr_5p5mm": {
+    "patient_false_flag": 0.606,
+    "territory_sensitivity": 0.776,
+    "patient_false_flag_by_phase": {
+     "ED": 0.872,
+     "MD": 0.584,
+     "SYS": 0.179
+    }
+   },
+   "B_pop_p2p5": {
+    "patient_false_flag": 0.014,
+    "territory_sensitivity": 0.127,
+    "patient_false_flag_by_phase": {
+     "ED": 0.038,
+     "MD": 0.0,
+     "SYS": 0.0
+    }
+   },
+   "C_relative_territory": {
+    "patient_false_flag": 0.03,
+    "territory_sensitivity": 0.299,
+    "patient_false_flag_by_phase": {
+     "ED": 0.045,
+     "MD": 0.025,
+     "SYS": 0.01
+    }
+   }
+  },
+  {
+   "phase_mix": "mixed",
+   "cv_n": 0.06,
+   "sig_m": 1.0,
+   "depth": 0.4,
+   "prev": 0.1,
+   "k_mad": 1.7500000000000007,
+   "A_cmr_5p5mm": {
+    "patient_false_flag": 0.644,
+    "territory_sensitivity": 0.907,
+    "patient_false_flag_by_phase": {
+     "ED": 0.871,
+     "MD": 0.637,
+     "SYS": 0.176
+    }
+   },
+   "B_pop_p2p5": {
+    "patient_false_flag": 0.022,
+    "territory_sensitivity": 0.295,
+    "patient_false_flag_by_phase": {
+     "ED": 0.044,
+     "MD": 0.01,
+     "SYS": 0.0
+    }
+   },
+   "C_relative_territory": {
+    "patient_false_flag": 0.036,
+    "territory_sensitivity": 0.568,
+    "patient_false_flag_by_phase": {
+     "ED": 0.055,
+     "MD": 0.031,
+     "SYS": 0.006
+    }
+   }
+  },
+  {
+   "phase_mix": "mixed",
+   "cv_n": 0.06,
+   "sig_m": 1.0,
+   "depth": 0.4,
+   "prev": 0.3,
+   "k_mad": 1.7500000000000007,
+   "A_cmr_5p5mm": {
+    "patient_false_flag": 0.636,
+    "territory_sensitivity": 0.89,
+    "patient_false_flag_by_phase": {
+     "ED": 0.877,
+     "MD": 0.589,
+     "SYS": 0.147
+    }
+   },
+   "B_pop_p2p5": {
+    "patient_false_flag": 0.007,
+    "territory_sensitivity": 0.191,
+    "patient_false_flag_by_phase": {
+     "ED": 0.017,
+     "MD": 0.0,
+     "SYS": 0.0
+    }
+   },
+   "C_relative_territory": {
+    "patient_false_flag": 0.036,
+    "territory_sensitivity": 0.574,
+    "patient_false_flag_by_phase": {
+     "ED": 0.051,
+     "MD": 0.032,
+     "SYS": 0.008
+    }
+   }
+  },
+  {
+   "phase_mix": "mixed",
+   "cv_n": 0.06,
+   "sig_m": 1.0,
+   "depth": 0.5,
+   "prev": 0.1,
+   "k_mad": 1.7500000000000007,
+   "A_cmr_5p5mm": {
+    "patient_false_flag": 0.621,
+    "territory_sensitivity": 0.927,
+    "patient_false_flag_by_phase": {
+     "ED": 0.867,
+     "MD": 0.601,
+     "SYS": 0.17
+    }
+   },
+   "B_pop_p2p5": {
+    "patient_false_flag": 0.017,
+    "territory_sensitivity": 0.446,
+    "patient_false_flag_by_phase": {
+     "ED": 0.04,
+     "MD": 0.003,
+     "SYS": 0.0
+    }
+   },
+   "C_relative_territory": {
+    "patient_false_flag": 0.042,
+    "territory_sensitivity": 0.824,
+    "patient_false_flag_by_phase": {
+     "ED": 0.073,
+     "MD": 0.026,
+     "SYS": 0.008
+    }
+   }
+  },
+  {
+   "phase_mix": "mixed",
+   "cv_n": 0.06,
+   "sig_m": 1.0,
+   "depth": 0.5,
+   "prev": 0.3,
+   "k_mad": 1.7000000000000006,
+   "A_cmr_5p5mm": {
+    "patient_false_flag": 0.643,
+    "territory_sensitivity": 0.951,
+    "patient_false_flag_by_phase": {
+     "ED": 0.889,
+     "MD": 0.628,
+     "SYS": 0.171
+    }
+   },
+   "B_pop_p2p5": {
+    "patient_false_flag": 0.004,
+    "territory_sensitivity": 0.248,
+    "patient_false_flag_by_phase": {
+     "ED": 0.009,
+     "MD": 0.0,
+     "SYS": 0.0
+    }
+   },
+   "C_relative_territory": {
+    "patient_false_flag": 0.028,
+    "territory_sensitivity": 0.82,
+    "patient_false_flag_by_phase": {
+     "ED": 0.049,
+     "MD": 0.015,
+     "SYS": 0.011
+    }
+   }
+  },
+  {
+   "phase_mix": "mixed",
+   "cv_n": 0.1,
+   "sig_m": 0.25,
+   "depth": 0.2,
+   "prev": 0.1,
+   "k_mad": 1.7500000000000007,
+   "A_cmr_5p5mm": {
+    "patient_false_flag": 0.605,
+    "territory_sensitivity": 0.678,
+    "patient_false_flag_by_phase": {
+     "ED": 0.863,
+     "MD": 0.583,
+     "SYS": 0.112
+    }
+   },
+   "B_pop_p2p5": {
+    "patient_false_flag": 0.033,
+    "territory_sensitivity": 0.194,
+    "patient_false_flag_by_phase": {
+     "ED": 0.071,
+     "MD": 0.009,
+     "SYS": 0.0
+    }
+   },
+   "C_relative_territory": {
+    "patient_false_flag": 0.011,
+    "territory_sensitivity": 0.265,
+    "patient_false_flag_by_phase": {
+     "ED": 0.012,
+     "MD": 0.01,
+     "SYS": 0.011
+    }
+   }
+  },
+  {
+   "phase_mix": "mixed",
+   "cv_n": 0.1,
+   "sig_m": 0.25,
+   "depth": 0.2,
+   "prev": 0.3,
+   "k_mad": 1.7500000000000007,
+   "A_cmr_5p5mm": {
+    "patient_false_flag": 0.619,
+    "territory_sensitivity": 0.669,
+    "patient_false_flag_by_phase": {
+     "ED": 0.877,
+     "MD": 0.583,
+     "SYS": 0.101
+    }
+   },
+   "B_pop_p2p5": {
+    "patient_false_flag": 0.026,
+    "territory_sensitivity": 0.126,
+    "patient_false_flag_by_phase": {
+     "ED": 0.055,
+     "MD": 0.007,
+     "SYS": 0.0
+    }
+   },
+   "C_relative_territory": {
+    "patient_false_flag": 0.01,
+    "territory_sensitivity": 0.229,
+    "patient_false_flag_by_phase": {
+     "ED": 0.01,
+     "MD": 0.012,
+     "SYS": 0.004
+    }
+   }
+  },
+  {
+   "phase_mix": "mixed",
+   "cv_n": 0.1,
+   "sig_m": 0.25,
+   "depth": 0.3,
+   "prev": 0.1,
+   "k_mad": 1.7500000000000007,
+   "A_cmr_5p5mm": {
+    "patient_false_flag": 0.58,
+    "territory_sensitivity": 0.822,
+    "patient_false_flag_by_phase": {
+     "ED": 0.861,
+     "MD": 0.55,
+     "SYS": 0.085
+    }
+   },
+   "B_pop_p2p5": {
+    "patient_false_flag": 0.029,
+    "territory_sensitivity": 0.361,
+    "patient_false_flag_by_phase": {
+     "ED": 0.068,
+     "MD": 0.004,
+     "SYS": 0.0
+    }
+   },
+   "C_relative_territory": {
+    "patient_false_flag": 0.012,
+    "territory_sensitivity": 0.75,
+    "patient_false_flag_by_phase": {
+     "ED": 0.013,
+     "MD": 0.013,
+     "SYS": 0.011
+    }
+   }
+  },
+  {
+   "phase_mix": "mixed",
+   "cv_n": 0.1,
+   "sig_m": 0.25,
+   "depth": 0.3,
+   "prev": 0.3,
+   "k_mad": 1.7500000000000007,
+   "A_cmr_5p5mm": {
+    "patient_false_flag": 0.585,
+    "territory_sensitivity": 0.8,
+    "patient_false_flag_by_phase": {
+     "ED": 0.853,
+     "MD": 0.541,
+     "SYS": 0.135
+    }
+   },
+   "B_pop_p2p5": {
+    "patient_false_flag": 0.014,
+    "territory_sensitivity": 0.22,
+    "patient_false_flag_by_phase": {
+     "ED": 0.034,
+     "MD": 0.002,
+     "SYS": 0.0
+    }
+   },
+   "C_relative_territory": {
+    "patient_false_flag": 0.016,
+    "territory_sensitivity": 0.663,
+    "patient_false_flag_by_phase": {
+     "ED": 0.02,
+     "MD": 0.016,
+     "SYS": 0.011
+    }
+   }
+  },
+  {
+   "phase_mix": "mixed",
+   "cv_n": 0.1,
+   "sig_m": 0.25,
+   "depth": 0.4,
+   "prev": 0.1,
+   "k_mad": 1.7000000000000006,
+   "A_cmr_5p5mm": {
+    "patient_false_flag": 0.616,
+    "territory_sensitivity": 0.86,
+    "patient_false_flag_by_phase": {
+     "ED": 0.872,
+     "MD": 0.589,
+     "SYS": 0.129
+    }
+   },
+   "B_pop_p2p5": {
+    "patient_false_flag": 0.019,
+    "territory_sensitivity": 0.524,
+    "patient_false_flag_by_phase": {
+     "ED": 0.041,
+     "MD": 0.004,
+     "SYS": 0.0
+    }
+   },
+   "C_relative_territory": {
+    "patient_false_flag": 0.019,
+    "territory_sensitivity": 0.952,
+    "patient_false_flag_by_phase": {
+     "ED": 0.023,
+     "MD": 0.019,
+     "SYS": 0.011
+    }
+   }
+  },
+  {
+   "phase_mix": "mixed",
+   "cv_n": 0.1,
+   "sig_m": 0.25,
+   "depth": 0.4,
+   "prev": 0.3,
+   "k_mad": 1.7500000000000007,
+   "A_cmr_5p5mm": {
+    "patient_false_flag": 0.585,
+    "territory_sensitivity": 0.926,
+    "patient_false_flag_by_phase": {
+     "ED": 0.87,
+     "MD": 0.566,
+     "SYS": 0.085
+    }
+   },
+   "B_pop_p2p5": {
+    "patient_false_flag": 0.002,
+    "territory_sensitivity": 0.351,
+    "patient_false_flag_by_phase": {
+     "ED": 0.005,
+     "MD": 0.0,
+     "SYS": 0.0
+    }
+   },
+   "C_relative_territory": {
+    "patient_false_flag": 0.004,
+    "territory_sensitivity": 0.956,
+    "patient_false_flag_by_phase": {
+     "ED": 0.005,
+     "MD": 0.002,
+     "SYS": 0.007
+    }
+   }
+  },
+  {
+   "phase_mix": "mixed",
+   "cv_n": 0.1,
+   "sig_m": 0.25,
+   "depth": 0.5,
+   "prev": 0.1,
+   "k_mad": 1.7500000000000007,
+   "A_cmr_5p5mm": {
+    "patient_false_flag": 0.586,
+    "territory_sensitivity": 0.995,
+    "patient_false_flag_by_phase": {
+     "ED": 0.851,
+     "MD": 0.567,
+     "SYS": 0.079
+    }
+   },
+   "B_pop_p2p5": {
+    "patient_false_flag": 0.017,
+    "territory_sensitivity": 0.815,
+    "patient_false_flag_by_phase": {
+     "ED": 0.038,
+     "MD": 0.003,
+     "SYS": 0.0
+    }
+   },
+   "C_relative_territory": {
+    "patient_false_flag": 0.011,
+    "territory_sensitivity": 1.0,
+    "patient_false_flag_by_phase": {
+     "ED": 0.016,
+     "MD": 0.008,
+     "SYS": 0.003
+    }
+   }
+  },
+  {
+   "phase_mix": "mixed",
+   "cv_n": 0.1,
+   "sig_m": 0.25,
+   "depth": 0.5,
+   "prev": 0.3,
+   "k_mad": 1.7500000000000007,
+   "A_cmr_5p5mm": {
+    "patient_false_flag": 0.615,
+    "territory_sensitivity": 0.987,
+    "patient_false_flag_by_phase": {
+     "ED": 0.888,
+     "MD": 0.565,
+     "SYS": 0.104
+    }
+   },
+   "B_pop_p2p5": {
+    "patient_false_flag": 0.0,
+    "territory_sensitivity": 0.386,
+    "patient_false_flag_by_phase": {
+     "ED": 0.0,
+     "MD": 0.0,
+     "SYS": 0.0
+    }
+   },
+   "C_relative_territory": {
+    "patient_false_flag": 0.006,
+    "territory_sensitivity": 1.0,
+    "patient_false_flag_by_phase": {
+     "ED": 0.007,
+     "MD": 0.005,
+     "SYS": 0.004
+    }
+   }
+  },
+  {
+   "phase_mix": "mixed",
+   "cv_n": 0.1,
+   "sig_m": 0.5,
+   "depth": 0.2,
+   "prev": 0.1,
+   "k_mad": 1.7500000000000007,
+   "A_cmr_5p5mm": {
+    "patient_false_flag": 0.617,
+    "territory_sensitivity": 0.681,
+    "patient_false_flag_by_phase": {
+     "ED": 0.89,
+     "MD": 0.577,
+     "SYS": 0.118
+    }
+   },
+   "B_pop_p2p5": {
+    "patient_false_flag": 0.035,
+    "territory_sensitivity": 0.137,
+    "patient_false_flag_by_phase": {
+     "ED": 0.072,
+     "MD": 0.012,
+     "SYS": 0.0
+    }
+   },
+   "C_relative_territory": {
+    "patient_false_flag": 0.029,
+    "territory_sensitivity": 0.165,
+    "patient_false_flag_by_phase": {
+     "ED": 0.038,
+     "MD": 0.026,
+     "SYS": 0.016
+    }
+   }
+  },
+  {
+   "phase_mix": "mixed",
+   "cv_n": 0.1,
+   "sig_m": 0.5,
+   "depth": 0.2,
+   "prev": 0.3,
+   "k_mad": 1.8000000000000007,
+   "A_cmr_5p5mm": {
+    "patient_false_flag": 0.591,
+    "territory_sensitivity": 0.672,
+    "patient_false_flag_by_phase": {
+     "ED": 0.862,
+     "MD": 0.598,
+     "SYS": 0.102
+    }
+   },
+   "B_pop_p2p5": {
+    "patient_false_flag": 0.034,
+    "territory_sensitivity": 0.1,
+    "patient_false_flag_by_phase": {
+     "ED": 0.084,
+     "MD": 0.005,
+     "SYS": 0.0
+    }
+   },
+   "C_relative_territory": {
+    "patient_false_flag": 0.011,
+    "territory_sensitivity": 0.145,
+    "patient_false_flag_by_phase": {
+     "ED": 0.019,
+     "MD": 0.007,
+     "SYS": 0.003
+    }
+   }
+  },
+  {
+   "phase_mix": "mixed",
+   "cv_n": 0.1,
+   "sig_m": 0.5,
+   "depth": 0.3,
+   "prev": 0.1,
+   "k_mad": 1.7500000000000007,
+   "A_cmr_5p5mm": {
+    "patient_false_flag": 0.625,
+    "territory_sensitivity": 0.819,
+    "patient_false_flag_by_phase": {
+     "ED": 0.881,
+     "MD": 0.624,
+     "SYS": 0.128
+    }
+   },
+   "B_pop_p2p5": {
+    "patient_false_flag": 0.022,
+    "territory_sensitivity": 0.295,
+    "patient_false_flag_by_phase": {
+     "ED": 0.046,
+     "MD": 0.01,
+     "SYS": 0.0
+    }
+   },
+   "C_relative_territory": {
+    "patient_false_flag": 0.019,
+    "territory_sensitivity": 0.551,
+    "patient_false_flag_by_phase": {
+     "ED": 0.024,
+     "MD": 0.02,
+     "SYS": 0.008
+    }
+   }
+  },
+  {
+   "phase_mix": "mixed",
+   "cv_n": 0.1,
+   "sig_m": 0.5,
+   "depth": 0.3,
+   "prev": 0.3,
+   "k_mad": 1.7500000000000007,
+   "A_cmr_5p5mm": {
+    "patient_false_flag": 0.608,
+    "territory_sensitivity": 0.78,
+    "patient_false_flag_by_phase": {
+     "ED": 0.864,
+     "MD": 0.577,
+     "SYS": 0.142
+    }
+   },
+   "B_pop_p2p5": {
+    "patient_false_flag": 0.013,
+    "territory_sensitivity": 0.184,
+    "patient_false_flag_by_phase": {
+     "ED": 0.028,
+     "MD": 0.004,
+     "SYS": 0.0
+    }
+   },
+   "C_relative_territory": {
+    "patient_false_flag": 0.017,
+    "territory_sensitivity": 0.46,
+    "patient_false_flag_by_phase": {
+     "ED": 0.016,
+     "MD": 0.026,
+     "SYS": 0.004
+    }
+   }
+  },
+  {
+   "phase_mix": "mixed",
+   "cv_n": 0.1,
+   "sig_m": 0.5,
+   "depth": 0.4,
+   "prev": 0.1,
+   "k_mad": 1.7500000000000007,
+   "A_cmr_5p5mm": {
+    "patient_false_flag": 0.621,
+    "territory_sensitivity": 0.92,
+    "patient_false_flag_by_phase": {
+     "ED": 0.89,
+     "MD": 0.594,
+     "SYS": 0.107
+    }
+   },
+   "B_pop_p2p5": {
+    "patient_false_flag": 0.021,
+    "territory_sensitivity": 0.524,
+    "patient_false_flag_by_phase": {
+     "ED": 0.047,
+     "MD": 0.004,
+     "SYS": 0.0
+    }
+   },
+   "C_relative_territory": {
+    "patient_false_flag": 0.019,
+    "territory_sensitivity": 0.845,
+    "patient_false_flag_by_phase": {
+     "ED": 0.025,
+     "MD": 0.018,
+     "SYS": 0.006
+    }
+   }
+  },
+  {
+   "phase_mix": "mixed",
+   "cv_n": 0.1,
+   "sig_m": 0.5,
+   "depth": 0.4,
+   "prev": 0.3,
+   "k_mad": 1.7500000000000007,
+   "A_cmr_5p5mm": {
+    "patient_false_flag": 0.594,
+    "territory_sensitivity": 0.929,
+    "patient_false_flag_by_phase": {
+     "ED": 0.858,
+     "MD": 0.572,
+     "SYS": 0.109
+    }
+   },
+   "B_pop_p2p5": {
+    "patient_false_flag": 0.004,
+    "territory_sensitivity": 0.263,
+    "patient_false_flag_by_phase": {
+     "ED": 0.011,
+     "MD": 0.0,
+     "SYS": 0.0
+    }
+   },
+   "C_relative_territory": {
+    "patient_false_flag": 0.02,
+    "territory_sensitivity": 0.839,
+    "patient_false_flag_by_phase": {
+     "ED": 0.024,
+     "MD": 0.018,
+     "SYS": 0.015
+    }
+   }
+  },
+  {
+   "phase_mix": "mixed",
+   "cv_n": 0.1,
+   "sig_m": 0.5,
+   "depth": 0.5,
+   "prev": 0.1,
+   "k_mad": 1.7500000000000007,
+   "A_cmr_5p5mm": {
+    "patient_false_flag": 0.603,
+    "territory_sensitivity": 0.97,
+    "patient_false_flag_by_phase": {
+     "ED": 0.868,
+     "MD": 0.607,
+     "SYS": 0.099
+    }
+   },
+   "B_pop_p2p5": {
+    "patient_false_flag": 0.016,
+    "territory_sensitivity": 0.705,
+    "patient_false_flag_by_phase": {
+     "ED": 0.036,
+     "MD": 0.004,
+     "SYS": 0.0
+    }
+   },
+   "C_relative_territory": {
+    "patient_false_flag": 0.024,
+    "territory_sensitivity": 0.99,
+    "patient_false_flag_by_phase": {
+     "ED": 0.034,
+     "MD": 0.018,
+     "SYS": 0.016
+    }
+   }
+  },
+  {
+   "phase_mix": "mixed",
+   "cv_n": 0.1,
+   "sig_m": 0.5,
+   "depth": 0.5,
+   "prev": 0.3,
+   "k_mad": 1.7500000000000007,
+   "A_cmr_5p5mm": {
+    "patient_false_flag": 0.601,
+    "territory_sensitivity": 0.977,
+    "patient_false_flag_by_phase": {
+     "ED": 0.855,
+     "MD": 0.571,
+     "SYS": 0.12
+    }
+   },
+   "B_pop_p2p5": {
+    "patient_false_flag": 0.0,
+    "territory_sensitivity": 0.357,
+    "patient_false_flag_by_phase": {
+     "ED": 0.0,
+     "MD": 0.0,
+     "SYS": 0.0
+    }
+   },
+   "C_relative_territory": {
+    "patient_false_flag": 0.013,
+    "territory_sensitivity": 0.983,
+    "patient_false_flag_by_phase": {
+     "ED": 0.018,
+     "MD": 0.011,
+     "SYS": 0.008
+    }
+   }
+  },
+  {
+   "phase_mix": "mixed",
+   "cv_n": 0.1,
+   "sig_m": 1.0,
+   "depth": 0.2,
+   "prev": 0.1,
+   "k_mad": 1.7000000000000006,
+   "A_cmr_5p5mm": {
+    "patient_false_flag": 0.645,
+    "territory_sensitivity": 0.623,
+    "patient_false_flag_by_phase": {
+     "ED": 0.882,
+     "MD": 0.64,
+     "SYS": 0.169
+    }
+   },
+   "B_pop_p2p5": {
+    "patient_false_flag": 0.03,
+    "territory_sensitivity": 0.06,
+    "patient_false_flag_by_phase": {
+     "ED": 0.067,
+     "MD": 0.006,
+     "SYS": 0.0
+    }
+   },
+   "C_relative_territory": {
+    "patient_false_flag": 0.039,
+    "territory_sensitivity": 0.077,
+    "patient_false_flag_by_phase": {
+     "ED": 0.065,
+     "MD": 0.027,
+     "SYS": 0.011
+    }
+   }
+  },
+  {
+   "phase_mix": "mixed",
+   "cv_n": 0.1,
+   "sig_m": 1.0,
+   "depth": 0.2,
+   "prev": 0.3,
+   "k_mad": 1.7000000000000006,
+   "A_cmr_5p5mm": {
+    "patient_false_flag": 0.652,
+    "territory_sensitivity": 0.653,
+    "patient_false_flag_by_phase": {
+     "ED": 0.903,
+     "MD": 0.631,
+     "SYS": 0.182
+    }
+   },
+   "B_pop_p2p5": {
+    "patient_false_flag": 0.026,
+    "territory_sensitivity": 0.057,
+    "patient_false_flag_by_phase": {
+     "ED": 0.056,
+     "MD": 0.009,
+     "SYS": 0.0
+    }
+   },
+   "C_relative_territory": {
+    "patient_false_flag": 0.033,
+    "territory_sensitivity": 0.084,
+    "patient_false_flag_by_phase": {
+     "ED": 0.052,
+     "MD": 0.026,
+     "SYS": 0.007
+    }
+   }
+  },
+  {
+   "phase_mix": "mixed",
+   "cv_n": 0.1,
+   "sig_m": 1.0,
+   "depth": 0.3,
+   "prev": 0.1,
+   "k_mad": 1.7500000000000007,
+   "A_cmr_5p5mm": {
+    "patient_false_flag": 0.651,
+    "territory_sensitivity": 0.714,
+    "patient_false_flag_by_phase": {
+     "ED": 0.869,
+     "MD": 0.653,
+     "SYS": 0.181
+    }
+   },
+   "B_pop_p2p5": {
+    "patient_false_flag": 0.022,
+    "territory_sensitivity": 0.136,
+    "patient_false_flag_by_phase": {
+     "ED": 0.047,
+     "MD": 0.008,
+     "SYS": 0.0
+    }
+   },
+   "C_relative_territory": {
+    "patient_false_flag": 0.033,
+    "territory_sensitivity": 0.216,
+    "patient_false_flag_by_phase": {
+     "ED": 0.043,
+     "MD": 0.029,
+     "SYS": 0.021
+    }
+   }
+  },
+  {
+   "phase_mix": "mixed",
+   "cv_n": 0.1,
+   "sig_m": 1.0,
+   "depth": 0.3,
+   "prev": 0.3,
+   "k_mad": 1.7000000000000006,
+   "A_cmr_5p5mm": {
+    "patient_false_flag": 0.652,
+    "territory_sensitivity": 0.775,
+    "patient_false_flag_by_phase": {
+     "ED": 0.882,
+     "MD": 0.638,
+     "SYS": 0.171
+    }
+   },
+   "B_pop_p2p5": {
+    "patient_false_flag": 0.009,
+    "territory_sensitivity": 0.109,
+    "patient_false_flag_by_phase": {
+     "ED": 0.02,
+     "MD": 0.003,
+     "SYS": 0.0
+    }
+   },
+   "C_relative_territory": {
+    "patient_false_flag": 0.041,
+    "territory_sensitivity": 0.201,
+    "patient_false_flag_by_phase": {
+     "ED": 0.054,
+     "MD": 0.036,
+     "SYS": 0.024
+    }
+   }
+  },
+  {
+   "phase_mix": "mixed",
+   "cv_n": 0.1,
+   "sig_m": 1.0,
+   "depth": 0.4,
+   "prev": 0.1,
+   "k_mad": 1.7500000000000007,
+   "A_cmr_5p5mm": {
+    "patient_false_flag": 0.629,
+    "territory_sensitivity": 0.908,
+    "patient_false_flag_by_phase": {
+     "ED": 0.882,
+     "MD": 0.588,
+     "SYS": 0.194
+    }
+   },
+   "B_pop_p2p5": {
+    "patient_false_flag": 0.018,
+    "territory_sensitivity": 0.285,
+    "patient_false_flag_by_phase": {
+     "ED": 0.042,
+     "MD": 0.003,
+     "SYS": 0.0
+    }
+   },
+   "C_relative_territory": {
+    "patient_false_flag": 0.038,
+    "territory_sensitivity": 0.531,
+    "patient_false_flag_by_phase": {
+     "ED": 0.052,
+     "MD": 0.034,
+     "SYS": 0.017
+    }
+   }
+  },
+  {
+   "phase_mix": "mixed",
+   "cv_n": 0.1,
+   "sig_m": 1.0,
+   "depth": 0.4,
+   "prev": 0.3,
+   "k_mad": 1.7000000000000006,
+   "A_cmr_5p5mm": {
+    "patient_false_flag": 0.638,
+    "territory_sensitivity": 0.883,
+    "patient_false_flag_by_phase": {
+     "ED": 0.856,
+     "MD": 0.673,
+     "SYS": 0.178
+    }
+   },
+   "B_pop_p2p5": {
+    "patient_false_flag": 0.008,
+    "territory_sensitivity": 0.169,
+    "patient_false_flag_by_phase": {
+     "ED": 0.02,
+     "MD": 0.0,
+     "SYS": 0.0
+    }
+   },
+   "C_relative_territory": {
+    "patient_false_flag": 0.033,
+    "territory_sensitivity": 0.471,
+    "patient_false_flag_by_phase": {
+     "ED": 0.052,
+     "MD": 0.026,
+     "SYS": 0.01
+    }
+   }
+  },
+  {
+   "phase_mix": "mixed",
+   "cv_n": 0.1,
+   "sig_m": 1.0,
+   "depth": 0.5,
+   "prev": 0.1,
+   "k_mad": 1.7500000000000007,
+   "A_cmr_5p5mm": {
+    "patient_false_flag": 0.651,
+    "territory_sensitivity": 0.946,
+    "patient_false_flag_by_phase": {
+     "ED": 0.869,
+     "MD": 0.625,
+     "SYS": 0.218
+    }
+   },
+   "B_pop_p2p5": {
+    "patient_false_flag": 0.017,
+    "territory_sensitivity": 0.462,
+    "patient_false_flag_by_phase": {
+     "ED": 0.033,
+     "MD": 0.007,
+     "SYS": 0.003
+    }
+   },
+   "C_relative_territory": {
+    "patient_false_flag": 0.035,
+    "territory_sensitivity": 0.769,
+    "patient_false_flag_by_phase": {
+     "ED": 0.046,
+     "MD": 0.032,
+     "SYS": 0.018
+    }
+   }
+  },
+  {
+   "phase_mix": "mixed",
+   "cv_n": 0.1,
+   "sig_m": 1.0,
+   "depth": 0.5,
+   "prev": 0.3,
+   "k_mad": 1.7500000000000007,
+   "A_cmr_5p5mm": {
+    "patient_false_flag": 0.628,
+    "territory_sensitivity": 0.961,
+    "patient_false_flag_by_phase": {
+     "ED": 0.901,
+     "MD": 0.613,
+     "SYS": 0.171
+    }
+   },
+   "B_pop_p2p5": {
+    "patient_false_flag": 0.001,
+    "territory_sensitivity": 0.26,
+    "patient_false_flag_by_phase": {
+     "ED": 0.004,
+     "MD": 0.0,
+     "SYS": 0.0
+    }
+   },
+   "C_relative_territory": {
+    "patient_false_flag": 0.026,
+    "territory_sensitivity": 0.732,
+    "patient_false_flag_by_phase": {
+     "ED": 0.05,
+     "MD": 0.013,
+     "SYS": 0.007
+    }
+   }
+  },
+  {
+   "phase_mix": "mixed",
+   "cv_n": 0.15,
+   "sig_m": 0.25,
+   "depth": 0.2,
+   "prev": 0.1,
+   "k_mad": 1.8000000000000007,
+   "A_cmr_5p5mm": {
+    "patient_false_flag": 0.631,
+    "territory_sensitivity": 0.707,
+    "patient_false_flag_by_phase": {
+     "ED": 0.875,
+     "MD": 0.603,
+     "SYS": 0.152
+    }
+   },
+   "B_pop_p2p5": {
+    "patient_false_flag": 0.029,
+    "territory_sensitivity": 0.115,
+    "patient_false_flag_by_phase": {
+     "ED": 0.061,
+     "MD": 0.007,
+     "SYS": 0.0
+    }
+   },
+   "C_relative_territory": {
+    "patient_false_flag": 0.005,
+    "territory_sensitivity": 0.042,
+    "patient_false_flag_by_phase": {
+     "ED": 0.007,
+     "MD": 0.004,
+     "SYS": 0.003
+    }
+   }
+  },
+  {
+   "phase_mix": "mixed",
+   "cv_n": 0.15,
+   "sig_m": 0.25,
+   "depth": 0.2,
+   "prev": 0.3,
+   "k_mad": 1.8000000000000007,
+   "A_cmr_5p5mm": {
+    "patient_false_flag": 0.621,
+    "territory_sensitivity": 0.639,
+    "patient_false_flag_by_phase": {
+     "ED": 0.913,
+     "MD": 0.614,
+     "SYS": 0.123
+    }
+   },
+   "B_pop_p2p5": {
+    "patient_false_flag": 0.027,
+    "territory_sensitivity": 0.095,
+    "patient_false_flag_by_phase": {
+     "ED": 0.067,
+     "MD": 0.004,
+     "SYS": 0.0
+    }
+   },
+   "C_relative_territory": {
+    "patient_false_flag": 0.006,
+    "territory_sensitivity": 0.045,
+    "patient_false_flag_by_phase": {
+     "ED": 0.004,
+     "MD": 0.007,
+     "SYS": 0.007
+    }
+   }
+  },
+  {
+   "phase_mix": "mixed",
+   "cv_n": 0.15,
+   "sig_m": 0.25,
+   "depth": 0.3,
+   "prev": 0.1,
+   "k_mad": 1.7500000000000007,
+   "A_cmr_5p5mm": {
+    "patient_false_flag": 0.63,
+    "territory_sensitivity": 0.826,
+    "patient_false_flag_by_phase": {
+     "ED": 0.88,
+     "MD": 0.605,
+     "SYS": 0.133
+    }
+   },
+   "B_pop_p2p5": {
+    "patient_false_flag": 0.033,
+    "territory_sensitivity": 0.203,
+    "patient_false_flag_by_phase": {
+     "ED": 0.066,
+     "MD": 0.013,
+     "SYS": 0.0
+    }
+   },
+   "C_relative_territory": {
+    "patient_false_flag": 0.011,
+    "territory_sensitivity": 0.222,
+    "patient_false_flag_by_phase": {
+     "ED": 0.012,
+     "MD": 0.01,
+     "SYS": 0.012
+    }
+   }
+  },
+  {
+   "phase_mix": "mixed",
+   "cv_n": 0.15,
+   "sig_m": 0.25,
+   "depth": 0.3,
+   "prev": 0.3,
+   "k_mad": 1.8000000000000007,
+   "A_cmr_5p5mm": {
+    "patient_false_flag": 0.629,
+    "territory_sensitivity": 0.833,
+    "patient_false_flag_by_phase": {
+     "ED": 0.909,
+     "MD": 0.583,
+     "SYS": 0.166
+    }
+   },
+   "B_pop_p2p5": {
+    "patient_false_flag": 0.014,
+    "territory_sensitivity": 0.185,
+    "patient_false_flag_by_phase": {
+     "ED": 0.031,
+     "MD": 0.005,
+     "SYS": 0.0
+    }
+   },
+   "C_relative_territory": {
+    "patient_false_flag": 0.004,
+    "territory_sensitivity": 0.231,
+    "patient_false_flag_by_phase": {
+     "ED": 0.005,
+     "MD": 0.002,
+     "SYS": 0.007
+    }
+   }
+  },
+  {
+   "phase_mix": "mixed",
+   "cv_n": 0.15,
+   "sig_m": 0.25,
+   "depth": 0.4,
+   "prev": 0.1,
+   "k_mad": 1.8000000000000007,
+   "A_cmr_5p5mm": {
+    "patient_false_flag": 0.623,
+    "territory_sensitivity": 0.901,
+    "patient_false_flag_by_phase": {
+     "ED": 0.884,
+     "MD": 0.624,
+     "SYS": 0.155
+    }
+   },
+   "B_pop_p2p5": {
+    "patient_false_flag": 0.013,
+    "territory_sensitivity": 0.443,
+    "patient_false_flag_by_phase": {
+     "ED": 0.034,
+     "MD": 0.001,
+     "SYS": 0.0
+    }
+   },
+   "C_relative_territory": {
+    "patient_false_flag": 0.004,
+    "territory_sensitivity": 0.65,
+    "patient_false_flag_by_phase": {
+     "ED": 0.004,
+     "MD": 0.004,
+     "SYS": 0.005
+    }
+   }
+  },
+  {
+   "phase_mix": "mixed",
+   "cv_n": 0.15,
+   "sig_m": 0.25,
+   "depth": 0.4,
+   "prev": 0.3,
+   "k_mad": 1.7500000000000007,
+   "A_cmr_5p5mm": {
+    "patient_false_flag": 0.65,
+    "territory_sensitivity": 0.91,
+    "patient_false_flag_by_phase": {
+     "ED": 0.895,
+     "MD": 0.631,
+     "SYS": 0.158
+    }
+   },
+   "B_pop_p2p5": {
+    "patient_false_flag": 0.006,
+    "territory_sensitivity": 0.279,
+    "patient_false_flag_by_phase": {
+     "ED": 0.013,
+     "MD": 0.002,
+     "SYS": 0.0
+    }
+   },
+   "C_relative_territory": {
+    "patient_false_flag": 0.006,
+    "territory_sensitivity": 0.61,
+    "patient_false_flag_by_phase": {
+     "ED": 0.007,
+     "MD": 0.007,
+     "SYS": 0.004
+    }
+   }
+  },
+  {
+   "phase_mix": "mixed",
+   "cv_n": 0.15,
+   "sig_m": 0.25,
+   "depth": 0.5,
+   "prev": 0.1,
+   "k_mad": 1.8000000000000007,
+   "A_cmr_5p5mm": {
+    "patient_false_flag": 0.624,
+    "territory_sensitivity": 0.981,
+    "patient_false_flag_by_phase": {
+     "ED": 0.887,
+     "MD": 0.596,
+     "SYS": 0.142
+    }
+   },
+   "B_pop_p2p5": {
+    "patient_false_flag": 0.011,
+    "territory_sensitivity": 0.748,
+    "patient_false_flag_by_phase": {
+     "ED": 0.024,
+     "MD": 0.003,
+     "SYS": 0.0
+    }
+   },
+   "C_relative_territory": {
+    "patient_false_flag": 0.009,
+    "territory_sensitivity": 0.942,
+    "patient_false_flag_by_phase": {
+     "ED": 0.01,
+     "MD": 0.004,
+     "SYS": 0.02
+    }
+   }
+  },
+  {
+   "phase_mix": "mixed",
+   "cv_n": 0.15,
+   "sig_m": 0.25,
+   "depth": 0.5,
+   "prev": 0.3,
+   "k_mad": 1.7500000000000007,
+   "A_cmr_5p5mm": {
+    "patient_false_flag": 0.631,
+    "territory_sensitivity": 0.971,
+    "patient_false_flag_by_phase": {
+     "ED": 0.878,
+     "MD": 0.63,
+     "SYS": 0.133
+    }
+   },
+   "B_pop_p2p5": {
+    "patient_false_flag": 0.001,
+    "territory_sensitivity": 0.373,
+    "patient_false_flag_by_phase": {
+     "ED": 0.002,
+     "MD": 0.0,
+     "SYS": 0.0
+    }
+   },
+   "C_relative_territory": {
+    "patient_false_flag": 0.013,
+    "territory_sensitivity": 0.923,
+    "patient_false_flag_by_phase": {
+     "ED": 0.011,
+     "MD": 0.014,
+     "SYS": 0.015
+    }
+   }
+  },
+  {
+   "phase_mix": "mixed",
+   "cv_n": 0.15,
+   "sig_m": 0.5,
+   "depth": 0.2,
+   "prev": 0.1,
+   "k_mad": 1.8000000000000007,
+   "A_cmr_5p5mm": {
+    "patient_false_flag": 0.635,
+    "territory_sensitivity": 0.645,
+    "patient_false_flag_by_phase": {
+     "ED": 0.894,
+     "MD": 0.613,
+     "SYS": 0.155
+    }
+   },
+   "B_pop_p2p5": {
+    "patient_false_flag": 0.03,
+    "territory_sensitivity": 0.09,
+    "patient_false_flag_by_phase": {
+     "ED": 0.07,
+     "MD": 0.004,
+     "SYS": 0.0
+    }
+   },
+   "C_relative_territory": {
+    "patient_false_flag": 0.009,
+    "territory_sensitivity": 0.057,
+    "patient_false_flag_by_phase": {
+     "ED": 0.014,
+     "MD": 0.007,
+     "SYS": 0.003
+    }
+   }
+  },
+  {
+   "phase_mix": "mixed",
+   "cv_n": 0.15,
+   "sig_m": 0.5,
+   "depth": 0.2,
+   "prev": 0.3,
+   "k_mad": 1.8000000000000007,
+   "A_cmr_5p5mm": {
+    "patient_false_flag": 0.641,
+    "territory_sensitivity": 0.661,
+    "patient_false_flag_by_phase": {
+     "ED": 0.89,
+     "MD": 0.621,
+     "SYS": 0.139
+    }
+   },
+   "B_pop_p2p5": {
+    "patient_false_flag": 0.022,
+    "territory_sensitivity": 0.083,
+    "patient_false_flag_by_phase": {
+     "ED": 0.054,
+     "MD": 0.0,
+     "SYS": 0.0
+    }
+   },
+   "C_relative_territory": {
+    "patient_false_flag": 0.01,
+    "territory_sensitivity": 0.066,
+    "patient_false_flag_by_phase": {
+     "ED": 0.007,
+     "MD": 0.011,
+     "SYS": 0.016
+    }
+   }
+  },
+  {
+   "phase_mix": "mixed",
+   "cv_n": 0.15,
+   "sig_m": 0.5,
+   "depth": 0.3,
+   "prev": 0.1,
+   "k_mad": 1.7500000000000007,
+   "A_cmr_5p5mm": {
+    "patient_false_flag": 0.644,
+    "territory_sensitivity": 0.807,
+    "patient_false_flag_by_phase": {
+     "ED": 0.888,
+     "MD": 0.634,
+     "SYS": 0.186
+    }
+   },
+   "B_pop_p2p5": {
+    "patient_false_flag": 0.027,
+    "territory_sensitivity": 0.223,
+    "patient_false_flag_by_phase": {
+     "ED": 0.061,
+     "MD": 0.007,
+     "SYS": 0.0
+    }
+   },
+   "C_relative_territory": {
+    "patient_false_flag": 0.014,
+    "territory_sensitivity": 0.254,
+    "patient_false_flag_by_phase": {
+     "ED": 0.017,
+     "MD": 0.014,
+     "SYS": 0.011
+    }
+   }
+  },
+  {
+   "phase_mix": "mixed",
+   "cv_n": 0.15,
+   "sig_m": 0.5,
+   "depth": 0.3,
+   "prev": 0.3,
+   "k_mad": 1.7500000000000007,
+   "A_cmr_5p5mm": {
+    "patient_false_flag": 0.621,
+    "territory_sensitivity": 0.759,
+    "patient_false_flag_by_phase": {
+     "ED": 0.862,
+     "MD": 0.594,
+     "SYS": 0.172
+    }
+   },
+   "B_pop_p2p5": {
+    "patient_false_flag": 0.012,
+    "territory_sensitivity": 0.123,
+    "patient_false_flag_by_phase": {
+     "ED": 0.028,
+     "MD": 0.0,
+     "SYS": 0.0
+    }
+   },
+   "C_relative_territory": {
+    "patient_false_flag": 0.014,
+    "territory_sensitivity": 0.197,
+    "patient_false_flag_by_phase": {
+     "ED": 0.014,
+     "MD": 0.013,
+     "SYS": 0.015
+    }
+   }
+  },
+  {
+   "phase_mix": "mixed",
+   "cv_n": 0.15,
+   "sig_m": 0.5,
+   "depth": 0.4,
+   "prev": 0.1,
+   "k_mad": 1.8000000000000007,
+   "A_cmr_5p5mm": {
+    "patient_false_flag": 0.635,
+    "territory_sensitivity": 0.915,
+    "patient_false_flag_by_phase": {
+     "ED": 0.88,
+     "MD": 0.611,
+     "SYS": 0.173
+    }
+   },
+   "B_pop_p2p5": {
+    "patient_false_flag": 0.018,
+    "territory_sensitivity": 0.377,
+    "patient_false_flag_by_phase": {
+     "ED": 0.043,
+     "MD": 0.004,
+     "SYS": 0.0
+    }
+   },
+   "C_relative_territory": {
+    "patient_false_flag": 0.013,
+    "territory_sensitivity": 0.547,
+    "patient_false_flag_by_phase": {
+     "ED": 0.017,
+     "MD": 0.014,
+     "SYS": 0.003
+    }
+   }
+  },
+  {
+   "phase_mix": "mixed",
+   "cv_n": 0.15,
+   "sig_m": 0.5,
+   "depth": 0.4,
+   "prev": 0.3,
+   "k_mad": 1.8000000000000007,
+   "A_cmr_5p5mm": {
+    "patient_false_flag": 0.624,
+    "territory_sensitivity": 0.895,
+    "patient_false_flag_by_phase": {
+     "ED": 0.873,
+     "MD": 0.618,
+     "SYS": 0.15
+    }
+   },
+   "B_pop_p2p5": {
+    "patient_false_flag": 0.006,
+    "territory_sensitivity": 0.228,
+    "patient_false_flag_by_phase": {
+     "ED": 0.011,
+     "MD": 0.004,
+     "SYS": 0.0
+    }
+   },
+   "C_relative_territory": {
+    "patient_false_flag": 0.01,
+    "territory_sensitivity": 0.473,
+    "patient_false_flag_by_phase": {
+     "ED": 0.016,
+     "MD": 0.006,
+     "SYS": 0.007
+    }
+   }
+  },
+  {
+   "phase_mix": "mixed",
+   "cv_n": 0.15,
+   "sig_m": 0.5,
+   "depth": 0.5,
+   "prev": 0.1,
+   "k_mad": 1.8000000000000007,
+   "A_cmr_5p5mm": {
+    "patient_false_flag": 0.633,
+    "territory_sensitivity": 0.981,
+    "patient_false_flag_by_phase": {
+     "ED": 0.888,
+     "MD": 0.631,
+     "SYS": 0.169
+    }
+   },
+   "B_pop_p2p5": {
+    "patient_false_flag": 0.011,
+    "territory_sensitivity": 0.633,
+    "patient_false_flag_by_phase": {
+     "ED": 0.028,
+     "MD": 0.001,
+     "SYS": 0.0
+    }
+   },
+   "C_relative_territory": {
+    "patient_false_flag": 0.015,
+    "territory_sensitivity": 0.837,
+    "patient_false_flag_by_phase": {
+     "ED": 0.022,
+     "MD": 0.011,
+     "SYS": 0.011
+    }
+   }
+  },
+  {
+   "phase_mix": "mixed",
+   "cv_n": 0.15,
+   "sig_m": 0.5,
+   "depth": 0.5,
+   "prev": 0.3,
+   "k_mad": 1.7500000000000007,
+   "A_cmr_5p5mm": {
+    "patient_false_flag": 0.617,
+    "territory_sensitivity": 0.97,
+    "patient_false_flag_by_phase": {
+     "ED": 0.866,
+     "MD": 0.597,
+     "SYS": 0.156
+    }
+   },
+   "B_pop_p2p5": {
+    "patient_false_flag": 0.001,
+    "territory_sensitivity": 0.278,
+    "patient_false_flag_by_phase": {
+     "ED": 0.002,
+     "MD": 0.0,
+     "SYS": 0.0
+    }
+   },
+   "C_relative_territory": {
+    "patient_false_flag": 0.01,
+    "territory_sensitivity": 0.83,
+    "patient_false_flag_by_phase": {
+     "ED": 0.013,
+     "MD": 0.011,
+     "SYS": 0.004
+    }
+   }
+  },
+  {
+   "phase_mix": "mixed",
+   "cv_n": 0.15,
+   "sig_m": 1.0,
+   "depth": 0.2,
+   "prev": 0.1,
+   "k_mad": 1.7500000000000007,
+   "A_cmr_5p5mm": {
+    "patient_false_flag": 0.655,
+    "territory_sensitivity": 0.69,
+    "patient_false_flag_by_phase": {
+     "ED": 0.88,
+     "MD": 0.641,
+     "SYS": 0.177
+    }
+   },
+   "B_pop_p2p5": {
+    "patient_false_flag": 0.023,
+    "territory_sensitivity": 0.061,
+    "patient_false_flag_by_phase": {
+     "ED": 0.052,
+     "MD": 0.003,
+     "SYS": 0.0
+    }
+   },
+   "C_relative_territory": {
+    "patient_false_flag": 0.024,
+    "territory_sensitivity": 0.085,
+    "patient_false_flag_by_phase": {
+     "ED": 0.041,
+     "MD": 0.013,
+     "SYS": 0.006
+    }
+   }
+  },
+  {
+   "phase_mix": "mixed",
+   "cv_n": 0.15,
+   "sig_m": 1.0,
+   "depth": 0.2,
+   "prev": 0.3,
+   "k_mad": 1.8000000000000007,
+   "A_cmr_5p5mm": {
+    "patient_false_flag": 0.68,
+    "territory_sensitivity": 0.664,
+    "patient_false_flag_by_phase": {
+     "ED": 0.903,
+     "MD": 0.652,
+     "SYS": 0.241
+    }
+   },
+   "B_pop_p2p5": {
+    "patient_false_flag": 0.021,
+    "territory_sensitivity": 0.047,
+    "patient_false_flag_by_phase": {
+     "ED": 0.046,
+     "MD": 0.004,
+     "SYS": 0.0
+    }
+   },
+   "C_relative_territory": {
+    "patient_false_flag": 0.024,
+    "territory_sensitivity": 0.041,
+    "patient_false_flag_by_phase": {
+     "ED": 0.042,
+     "MD": 0.015,
+     "SYS": 0.0
+    }
+   }
+  },
+  {
+   "phase_mix": "mixed",
+   "cv_n": 0.15,
+   "sig_m": 1.0,
+   "depth": 0.3,
+   "prev": 0.1,
+   "k_mad": 1.7500000000000007,
+   "A_cmr_5p5mm": {
+    "patient_false_flag": 0.671,
+    "territory_sensitivity": 0.686,
+    "patient_false_flag_by_phase": {
+     "ED": 0.89,
+     "MD": 0.664,
+     "SYS": 0.211
+    }
+   },
+   "B_pop_p2p5": {
+    "patient_false_flag": 0.021,
+    "territory_sensitivity": 0.086,
+    "patient_false_flag_by_phase": {
+     "ED": 0.042,
+     "MD": 0.008,
+     "SYS": 0.0
+    }
+   },
+   "C_relative_territory": {
+    "patient_false_flag": 0.025,
+    "territory_sensitivity": 0.137,
+    "patient_false_flag_by_phase": {
+     "ED": 0.033,
+     "MD": 0.024,
+     "SYS": 0.011
+    }
+   }
+  },
+  {
+   "phase_mix": "mixed",
+   "cv_n": 0.15,
+   "sig_m": 1.0,
+   "depth": 0.3,
+   "prev": 0.3,
+   "k_mad": 1.8000000000000007,
+   "A_cmr_5p5mm": {
+    "patient_false_flag": 0.676,
+    "territory_sensitivity": 0.79,
+    "patient_false_flag_by_phase": {
+     "ED": 0.892,
+     "MD": 0.681,
+     "SYS": 0.222
+    }
+   },
+   "B_pop_p2p5": {
+    "patient_false_flag": 0.014,
+    "territory_sensitivity": 0.069,
+    "patient_false_flag_by_phase": {
+     "ED": 0.029,
+     "MD": 0.007,
+     "SYS": 0.0
+    }
+   },
+   "C_relative_territory": {
+    "patient_false_flag": 0.013,
+    "territory_sensitivity": 0.115,
+    "patient_false_flag_by_phase": {
+     "ED": 0.02,
+     "MD": 0.01,
+     "SYS": 0.004
+    }
+   }
+  },
+  {
+   "phase_mix": "mixed",
+   "cv_n": 0.15,
+   "sig_m": 1.0,
+   "depth": 0.4,
+   "prev": 0.1,
+   "k_mad": 1.8000000000000007,
+   "A_cmr_5p5mm": {
+    "patient_false_flag": 0.661,
+    "territory_sensitivity": 0.875,
+    "patient_false_flag_by_phase": {
+     "ED": 0.904,
+     "MD": 0.649,
+     "SYS": 0.219
+    }
+   },
+   "B_pop_p2p5": {
+    "patient_false_flag": 0.017,
+    "territory_sensitivity": 0.24,
+    "patient_false_flag_by_phase": {
+     "ED": 0.033,
+     "MD": 0.01,
+     "SYS": 0.0
+    }
+   },
+   "C_relative_territory": {
+    "patient_false_flag": 0.026,
+    "territory_sensitivity": 0.307,
+    "patient_false_flag_by_phase": {
+     "ED": 0.032,
+     "MD": 0.029,
+     "SYS": 0.008
+    }
+   }
+  },
+  {
+   "phase_mix": "mixed",
+   "cv_n": 0.15,
+   "sig_m": 1.0,
+   "depth": 0.4,
+   "prev": 0.3,
+   "k_mad": 1.8000000000000007,
+   "A_cmr_5p5mm": {
+    "patient_false_flag": 0.68,
+    "territory_sensitivity": 0.861,
+    "patient_false_flag_by_phase": {
+     "ED": 0.894,
+     "MD": 0.695,
+     "SYS": 0.239
+    }
+   },
+   "B_pop_p2p5": {
+    "patient_false_flag": 0.006,
+    "territory_sensitivity": 0.148,
+    "patient_false_flag_by_phase": {
+     "ED": 0.013,
+     "MD": 0.002,
+     "SYS": 0.0
+    }
+   },
+   "C_relative_territory": {
+    "patient_false_flag": 0.012,
+    "territory_sensitivity": 0.249,
+    "patient_false_flag_by_phase": {
+     "ED": 0.011,
+     "MD": 0.017,
+     "SYS": 0.004
+    }
+   }
+  },
+  {
+   "phase_mix": "mixed",
+   "cv_n": 0.15,
+   "sig_m": 1.0,
+   "depth": 0.5,
+   "prev": 0.1,
+   "k_mad": 1.8000000000000007,
+   "A_cmr_5p5mm": {
+    "patient_false_flag": 0.678,
+    "territory_sensitivity": 0.96,
+    "patient_false_flag_by_phase": {
+     "ED": 0.898,
+     "MD": 0.675,
+     "SYS": 0.25
+    }
+   },
+   "B_pop_p2p5": {
+    "patient_false_flag": 0.014,
+    "territory_sensitivity": 0.389,
+    "patient_false_flag_by_phase": {
+     "ED": 0.031,
+     "MD": 0.005,
+     "SYS": 0.0
+    }
+   },
+   "C_relative_territory": {
+    "patient_false_flag": 0.023,
+    "territory_sensitivity": 0.586,
+    "patient_false_flag_by_phase": {
+     "ED": 0.034,
+     "MD": 0.018,
+     "SYS": 0.014
+    }
+   }
+  },
+  {
+   "phase_mix": "mixed",
+   "cv_n": 0.15,
+   "sig_m": 1.0,
+   "depth": 0.5,
+   "prev": 0.3,
+   "k_mad": 1.7500000000000007,
+   "A_cmr_5p5mm": {
+    "patient_false_flag": 0.648,
+    "territory_sensitivity": 0.949,
+    "patient_false_flag_by_phase": {
+     "ED": 0.889,
+     "MD": 0.651,
+     "SYS": 0.201
+    }
+   },
+   "B_pop_p2p5": {
+    "patient_false_flag": 0.004,
+    "territory_sensitivity": 0.226,
+    "patient_false_flag_by_phase": {
+     "ED": 0.007,
+     "MD": 0.002,
+     "SYS": 0.0
+    }
+   },
+   "C_relative_territory": {
+    "patient_false_flag": 0.028,
+    "territory_sensitivity": 0.532,
+    "patient_false_flag_by_phase": {
+     "ED": 0.046,
+     "MD": 0.018,
+     "SYS": 0.013
+    }
+   }
+  }
+ ],
+ "depth_for_80pct_sensitivity_rule_C": {
+  "cv0.06_sig0.25": 0.3,
+  "cv0.06_sig0.5": 0.4,
+  "cv0.06_sig1.0": 0.5,
+  "cv0.1_sig0.25": 0.4,
+  "cv0.1_sig0.5": 0.4,
+  "cv0.1_sig1.0": ">0.5",
+  "cv0.15_sig0.25": 0.5,
+  "cv0.15_sig0.5": 0.5,
+  "cv0.15_sig1.0": ">0.5"
+ }
+}

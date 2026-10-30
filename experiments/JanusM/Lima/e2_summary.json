@@ -1,0 +1,433 @@
+{
+ "n_cases": 23,
+ "n_used": 23,
+ "skipped": [],
+ "wall_mm_0p5": 9.756,
+ "voxels_per_third_0p5": 6.504,
+ "table": [
+  {
+   "model": "bias_endo_in",
+   "sigma_nominal": 0.0,
+   "n": 23,
+   "dice_myo": 0.971,
+   "dice_subendo": 0.83,
+   "dice_mid": 0.885,
+   "dice_subepi": 0.965,
+   "assd_endo": 0.622,
+   "assd_epi": 0.0,
+   "bias_endo": -0.522,
+   "bias_epi": 0.0,
+   "seg_thick_err_mm": 0.642,
+   "sta": 0.969
+  },
+  {
+   "model": "bias_endo_out",
+   "sigma_nominal": 0.0,
+   "n": 23,
+   "dice_myo": 0.973,
+   "dice_subendo": 0.821,
+   "dice_mid": 0.894,
+   "dice_subepi": 0.968,
+   "assd_endo": 0.535,
+   "assd_epi": 0.0,
+   "bias_endo": 0.534,
+   "bias_epi": 0.0,
+   "seg_thick_err_mm": 0.625,
+   "sta": 0.984
+  },
+  {
+   "model": "bias_epi_out",
+   "sigma_nominal": 0.0,
+   "n": 23,
+   "dice_myo": 0.954,
+   "dice_subendo": 0.944,
+   "dice_mid": 0.867,
+   "dice_subepi": 0.836,
+   "assd_endo": 0.0,
+   "assd_epi": 0.63,
+   "bias_endo": 0.0,
+   "bias_epi": 0.623,
+   "seg_thick_err_mm": 0.639,
+   "sta": 0.953
+  },
+  {
+   "model": "golf",
+   "sigma_nominal": 0.25,
+   "n": 23,
+   "dice_myo": 0.987,
+   "dice_subendo": 0.963,
+   "dice_mid": 0.964,
+   "dice_subepi": 0.968,
+   "assd_endo": 0.134,
+   "assd_epi": 0.13,
+   "bias_endo": 0.006,
+   "bias_epi": 0.037,
+   "seg_thick_err_mm": 0.128,
+   "sta": 1.0
+  },
+  {
+   "model": "golf",
+   "sigma_nominal": 0.5,
+   "n": 23,
+   "dice_myo": 0.962,
+   "dice_subendo": 0.897,
+   "dice_mid": 0.902,
+   "dice_subepi": 0.901,
+   "assd_endo": 0.325,
+   "assd_epi": 0.358,
+   "bias_endo": 0.047,
+   "bias_epi": 0.016,
+   "seg_thick_err_mm": 0.368,
+   "sta": 0.984
+  },
+  {
+   "model": "golf",
+   "sigma_nominal": 1.0,
+   "n": 23,
+   "dice_myo": 0.917,
+   "dice_subendo": 0.781,
+   "dice_mid": 0.81,
+   "dice_subepi": 0.797,
+   "assd_endo": 0.697,
+   "assd_epi": 0.696,
+   "bias_endo": 0.043,
+   "bias_epi": 0.055,
+   "seg_thick_err_mm": 0.638,
+   "sta": 0.828
+  },
+  {
+   "model": "hotel",
+   "sigma_nominal": 0.25,
+   "n": 23,
+   "dice_myo": 1.0,
+   "dice_subendo": 1.0,
+   "dice_mid": 1.0,
+   "dice_subepi": 1.0,
+   "assd_endo": 0.0,
+   "assd_epi": 0.0,
+   "bias_endo": 0.0,
+   "bias_epi": 0.0,
+   "seg_thick_err_mm": 0.0,
+   "sta": 1.0
+  },
+  {
+   "model": "hotel",
+   "sigma_nominal": 0.5,
+   "n": 23,
+   "dice_myo": 0.993,
+   "dice_subendo": 0.982,
+   "dice_mid": 0.98,
+   "dice_subepi": 0.98,
+   "assd_endo": 0.053,
+   "assd_epi": 0.071,
+   "bias_endo": 0.011,
+   "bias_epi": 0.006,
+   "seg_thick_err_mm": 0.059,
+   "sta": 1.0
+  },
+  {
+   "model": "hotel",
+   "sigma_nominal": 1.0,
+   "n": 23,
+   "dice_myo": 0.956,
+   "dice_subendo": 0.883,
+   "dice_mid": 0.883,
+   "dice_subepi": 0.887,
+   "assd_endo": 0.388,
+   "assd_epi": 0.388,
+   "bias_endo": 0.022,
+   "bias_epi": 0.066,
+   "seg_thick_err_mm": 0.354,
+   "sta": 0.938
+  },
+  {
+   "model": "india",
+   "sigma_nominal": 0.25,
+   "n": 23,
+   "dice_myo": 0.996,
+   "dice_subendo": 0.99,
+   "dice_mid": 0.989,
+   "dice_subepi": 0.991,
+   "assd_endo": 0.031,
+   "assd_epi": 0.036,
+   "bias_endo": 0.0,
+   "bias_epi": 0.006,
+   "seg_thick_err_mm": 0.024,
+   "sta": 1.0
+  },
+  {
+   "model": "india",
+   "sigma_nominal": 0.5,
+   "n": 23,
+   "dice_myo": 0.975,
+   "dice_subendo": 0.93,
+   "dice_mid": 0.928,
+   "dice_subepi": 0.929,
+   "assd_endo": 0.225,
+   "assd_epi": 0.223,
+   "bias_endo": -0.015,
+   "bias_epi": 0.057,
+   "seg_thick_err_mm": 0.19,
+   "sta": 1.0
+  },
+  {
+   "model": "india",
+   "sigma_nominal": 1.0,
+   "n": 23,
+   "dice_myo": 0.931,
+   "dice_subendo": 0.819,
+   "dice_mid": 0.839,
+   "dice_subepi": 0.827,
+   "assd_endo": 0.569,
+   "assd_epi": 0.582,
+   "bias_endo": -0.008,
+   "bias_epi": -0.043,
+   "seg_thick_err_mm": 0.56,
+   "sta": 0.922
+  },
+  {
+   "model": "kilo",
+   "sigma_nominal": 0.25,
+   "n": 23,
+   "dice_myo": 0.989,
+   "dice_subendo": 0.955,
+   "dice_mid": 0.961,
+   "dice_subepi": 0.976,
+   "assd_endo": 0.121,
+   "assd_epi": 0.116,
+   "bias_endo": -0.022,
+   "bias_epi": -0.002,
+   "seg_thick_err_mm": 0.096,
+   "sta": 1.0
+  },
+  {
+   "model": "kilo",
+   "sigma_nominal": 0.5,
+   "n": 23,
+   "dice_myo": 0.98,
+   "dice_subendo": 0.936,
+   "dice_mid": 0.937,
+   "dice_subepi": 0.95,
+   "assd_endo": 0.203,
+   "assd_epi": 0.219,
+   "bias_endo": -0.009,
+   "bias_epi": 0.001,
+   "seg_thick_err_mm": 0.169,
+   "sta": 1.0
+  },
+  {
+   "model": "kilo",
+   "sigma_nominal": 1.0,
+   "n": 23,
+   "dice_myo": 0.961,
+   "dice_subendo": 0.893,
+   "dice_mid": 0.903,
+   "dice_subepi": 0.905,
+   "assd_endo": 0.369,
+   "assd_epi": 0.381,
+   "bias_endo": -0.044,
+   "bias_epi": 0.074,
+   "seg_thick_err_mm": 0.302,
+   "sta": 0.969
+  },
+  {
+   "model": "lima_c16",
+   "sigma_nominal": 0.5,
+   "n": 23,
+   "dice_myo": 0.968,
+   "dice_subendo": 0.913,
+   "dice_mid": 0.916,
+   "dice_subepi": 0.917,
+   "assd_endo": 0.323,
+   "assd_epi": 0.301,
+   "bias_endo": -0.038,
+   "bias_epi": -0.009,
+   "seg_thick_err_mm": 0.317,
+   "sta": 0.953
+  },
+  {
+   "model": "lima_c4",
+   "sigma_nominal": 0.5,
+   "n": 23,
+   "dice_myo": 0.96,
+   "dice_subendo": 0.889,
+   "dice_mid": 0.898,
+   "dice_subepi": 0.896,
+   "assd_endo": 0.356,
+   "assd_epi": 0.362,
+   "bias_endo": 0.022,
+   "bias_epi": 0.039,
+   "seg_thick_err_mm": 0.252,
+   "sta": 0.984
+  },
+  {
+   "model": "lima_c8",
+   "sigma_nominal": 0.25,
+   "n": 23,
+   "dice_myo": 0.987,
+   "dice_subendo": 0.964,
+   "dice_mid": 0.964,
+   "dice_subepi": 0.966,
+   "assd_endo": 0.111,
+   "assd_epi": 0.135,
+   "bias_endo": 0.003,
+   "bias_epi": 0.017,
+   "seg_thick_err_mm": 0.107,
+   "sta": 1.0
+  },
+  {
+   "model": "lima_c8",
+   "sigma_nominal": 0.5,
+   "n": 23,
+   "dice_myo": 0.962,
+   "dice_subendo": 0.898,
+   "dice_mid": 0.902,
+   "dice_subepi": 0.9,
+   "assd_endo": 0.348,
+   "assd_epi": 0.336,
+   "bias_endo": -0.004,
+   "bias_epi": 0.006,
+   "seg_thick_err_mm": 0.347,
+   "sta": 0.984
+  },
+  {
+   "model": "lima_c8",
+   "sigma_nominal": 1.0,
+   "n": 23,
+   "dice_myo": 0.92,
+   "dice_subendo": 0.793,
+   "dice_mid": 0.808,
+   "dice_subepi": 0.794,
+   "assd_endo": 0.689,
+   "assd_epi": 0.691,
+   "bias_endo": -0.019,
+   "bias_epi": -0.017,
+   "seg_thick_err_mm": 0.512,
+   "sta": 0.875
+  }
+ ],
+ "nominal_spread_subendo_dice": {
+  "0.25": [
+   0.955,
+   1.0
+  ],
+  "0.5": [
+   0.897,
+   0.982
+  ],
+  "1.0": [
+   0.781,
+   0.893
+  ]
+ },
+ "fit_subendo_dice_vs_realised_assd": {
+  "quadratic": [
+   0.0007,
+   -0.3136,
+   1.0008
+  ],
+  "residual_sd": 0.0177,
+  "total_sd": 0.0712
+ },
+ "mean_residual_by_model": {
+  "golf": -0.0005,
+  "hotel": 0.0001,
+  "india": -0.0015,
+  "kilo": 0.0006,
+  "lima_c8": 0.0013
+ },
+ "by_realised_assd_bin": [
+  {
+   "assd_mm": "0.0-0.1",
+   "n": 73,
+   "dice_subendo": 0.989,
+   "india": 0.99,
+   "kilo": 0.97,
+   "hotel": 0.994,
+   "sta": 1.0,
+   "seg_thick_err_mm": 0.024
+  },
+  {
+   "assd_mm": "0.1-0.2",
+   "n": 77,
+   "dice_subendo": 0.96,
+   "golf": 0.963,
+   "india": 0.947,
+   "kilo": 0.95,
+   "lima_c8": 0.964,
+   "sta": 1.0,
+   "seg_thick_err_mm": 0.124
+  },
+  {
+   "assd_mm": "0.2-0.3",
+   "n": 35,
+   "dice_subendo": 0.925,
+   "india": 0.923,
+   "kilo": 0.926,
+   "sta": 1.0,
+   "seg_thick_err_mm": 0.195
+  },
+  {
+   "assd_mm": "0.3-0.4",
+   "n": 72,
+   "dice_subendo": 0.897,
+   "golf": 0.896,
+   "kilo": 0.906,
+   "hotel": 0.893,
+   "lima_c8": 0.9,
+   "sta": 0.984,
+   "seg_thick_err_mm": 0.317
+  },
+  {
+   "assd_mm": "0.4-0.5",
+   "n": 20,
+   "dice_subendo": 0.869,
+   "kilo": 0.868,
+   "hotel": 0.871,
+   "lima_c8": 0.878,
+   "sta": 0.938,
+   "seg_thick_err_mm": 0.41
+  },
+  {
+   "assd_mm": "0.5-0.7",
+   "n": 49,
+   "dice_subendo": 0.807,
+   "golf": 0.784,
+   "india": 0.819,
+   "lima_c8": 0.799,
+   "sta": 0.891,
+   "seg_thick_err_mm": 0.593
+  },
+  {
+   "assd_mm": "0.7-1.0",
+   "n": 19,
+   "dice_subendo": 0.778,
+   "golf": 0.78,
+   "lima_c8": 0.767,
+   "sta": 0.859,
+   "seg_thick_err_mm": 0.512
+  }
+ ],
+ "gain_realised_over_nominal": {
+  "golf": {
+   "0.5": 0.696,
+   "1.0": 0.685
+  },
+  "india": {
+   "0.5": 0.467,
+   "1.0": 0.575
+  },
+  "kilo": {
+   "0.5": 0.445,
+   "1.0": 0.381
+  },
+  "hotel": {
+   "0.5": 0.126,
+   "1.0": 0.391
+  },
+  "lima_c8": {
+   "0.5": 0.676,
+   "1.0": 0.685
+  }
+ }
+}

@@ -16,6 +16,7 @@ from janusm_reads import protocol
 
 from .constants import (
     ADMIN_GROUP,
+    CHECK_SEEDS_FOLDER,
     COLLECTION_NAME,
     DEFAULT_MAX_OPEN,
     INCOMING_FOLDER,
@@ -143,6 +144,11 @@ def readsFolder(creator=None):
     return _folder(READS_FOLDER, creator)
 
 
+def checkSeedsFolder(creator=None):
+    """Blank cases' check seeds (JA66). Private: no group is ever given access."""
+    return _folder(CHECK_SEEDS_FOLDER, creator)
+
+
 def incomingFolder(creator=None):
     """The one place readers may write: their uploads, before /submit."""
     folder = _folder(INCOMING_FOLDER, creator)
@@ -178,3 +184,30 @@ def checkClientProtocol(clientProtocol) -> None:
         protocol.check_client_protocol(clientProtocolFrom(clientProtocol))
     except protocol.ProtocolError as exc:
         refuse(exc.code, exc.message, status=426, **exc.detail)
+
+
+# --------------------------------------------------------------- CT geometry
+
+
+def ctWorldBounds(case):
+    """``(lo, hi)``: the world (RAS, mm) bounding box of a case's CT, voxel edges
+    included, from its header alone; cached on the case. None when the CT is not a
+    NIfTI file (JA67's lesion-point check then cannot run)."""
+    if case.get('ctWorldBounds'):
+        return case['ctWorldBounds']
+    from janusm_reads import niftihead
+
+    from .models import JanusMCase
+
+    file = File().load(case['ctFileId'], force=True)
+    if file is None:
+        return None
+    raw = b''.join(File().download(file, headers=False,
+                                   endByte=niftihead.HEADER_READ_BYTES)())
+    bounds = niftihead.world_bounds(raw)
+    if bounds is None:
+        return None
+    bounds = [list(bounds[0]), list(bounds[1])]
+    JanusMCase().collection.update_one({'_id': case['_id']},
+                                       {'$set': {'ctWorldBounds': bounds}})
+    return bounds

@@ -16,8 +16,10 @@ Two halves, kept apart like ``src/segqueue``:
 """
 
 #: The Janus-M read protocol version. Its own number line, starting at 1: it is
-#: not SegQueue's or SegQueue14's, and is never compared with them.
-PROTOCOL_VERSION = 1
+#: not SegQueue's or SegQueue14's, and is never compared with them. 2 (JA67): the
+#: read form allows per-vessel grades only, so a version-1 client is refused at
+#: ``next``, before it can claim and draw a case.
+PROTOCOL_VERSION = 2
 
 #: The name a client and server use for this protocol in headers and refusals.
 PROTOCOL_NAME = "janusm-read"

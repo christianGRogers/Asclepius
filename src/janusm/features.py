@@ -16,6 +16,16 @@ core guard ``guard_mm`` that the reference config records and the report reuses:
 Added for the table: the subepicardial HU (for the endocardial-predominance construct check),
 fat cluster volume per territory, and territory masses at 1.05 g/ml.
 
+Round 4 (``jm/rest-ccta`` JA63, JA43 R8, JA69 (a)):
+
+* fat clusters per **patient-map** territory as well as per AHA-default territory
+  (``fat_clusters_mm3_patient``; fat's D uses them, rule C's fat flag stays on the AHA map);
+* the **geodesic** segment majority beside the Euclidean one (``segment_territory_geodesic``),
+  for R8's "shared";
+* the **arc-proportional** septal values (``septal_arc``): wall and relative subendocardial HU of
+  segments 2, 3, 8 and 9 on :func:`janusm.geometry.arc_segments`'s sectors, None below JM-0R's
+  0.995 frame-agreement guard.
+
 No file access, no case id: arrays in, numbers out. Callers run the JA12 guard first.
 """
 
@@ -28,9 +38,10 @@ from scipy import ndimage as ndi
 
 from janusm import geometry as G
 
-FEATURES_VERSION = "1.0.0"
+FEATURES_VERSION = "1.1.0"
 TERRITORIES = ("LAD", "LCx", "RCA")
 SEGMENTS16 = tuple(range(1, 17))
+ARC_SEPTAL = G.ARC_SEPTAL            # JA69 (a): segments 2, 3, 8, 9
 MYO_DENSITY_G_PER_ML = 1.05
 MIN_VOX = 30                          # JM-0R TPR_MIN_VOX
 FAT_WINDOW = (-180.0, 0.0)            # JA18
@@ -55,11 +66,12 @@ def _clusters(mask, structure):
     return lab, n
 
 
-def fat_cluster_volumes(ct, core, segments, vox_mm3, c):
-    """26-connected core clusters within -180 HU .. ``c``. Returns (per AHA-default territory,
-    the volume (mm3) of every cluster whose majority of voxels lies in it, clusters on segment 0
-    under ``"none"``; per V in :data:`FAT_VOLS`, the fat volume (mm3) per segment 1-17 that
-    belongs to clusters >= V)."""
+def fat_cluster_volumes(ct, core, segments, vox_mm3, c, seg_territory=None):
+    """26-connected core clusters within -180 HU .. ``c``. Returns (per territory, the volume
+    (mm3) of every cluster whose majority of voxels lies in it, clusters on segment 0 under
+    ``"none"``; per V in :data:`FAT_VOLS`, the fat volume (mm3) per segment 1-17 that belongs to
+    clusters >= V). Territories are the AHA default map's, or ``seg_territory``'s ({segment:
+    territory}, the patient map; a segment it lacks counts as ``"none"``)."""
     lab, n = _clusters(core & (ct >= FAT_WINDOW[0]) & (ct < c), np.ones((3, 3, 3)))
     out: Dict[str, list] = {t: [] for t in (*TERRITORIES, "none")}
     per_seg = {str(v): {} for v in FAT_VOLS}
@@ -73,8 +85,9 @@ def fat_cluster_volumes(ct, core, segments, vox_mm3, c):
         per_seg[str(v)] = {k: round(float(cnt[k] * vox_mm3), 3) for k in range(1, 18) if cnt[k]}
     # majority segment of each cluster -> its AHA-default territory
     terr_code = np.zeros(18, np.int64)
-    for k, t in _STD.items():
-        terr_code[k] = 1 + TERRITORIES.index(t)
+    for k, t in (_STD if seg_territory is None else seg_territory).items():
+        if t in TERRITORIES and 1 <= int(k) <= 17:
+            terr_code[int(k)] = 1 + TERRITORIES.index(t)
     tl = terr_code[np.clip(segments, 0, 17)]
     sel = lab > 0
     counts = np.zeros((n + 1, 4), np.int64)
@@ -95,6 +108,38 @@ def hotel_fat(ct, core):
     cut = min(FAT_WINDOW[1], med - HOTEL_K * sd)
     lab, n = ndi.label(core & (ct >= FAT_WINDOW[0]) & (ct < cut))
     return bool(n and (np.bincount(lab.ravel())[1:] >= HOTEL_MIN_VOX).any()), cut
+
+
+def _mid_wall_mm(dep, sel) -> Optional[float]:
+    """A region's wall as :func:`janusm.geometry.layers` measures it: the median thickness of its
+    mid-wall voxels (|u - 1/2| < 1/6), else of all its voxels."""
+    if not sel.any():
+        return None
+    mid = sel & (np.abs(dep.u - 0.5) < 1 / 6)
+    return float(np.median(dep.thickness[mid] if mid.any() else dep.thickness[sel]))
+
+
+def septal_arc_values(labels, ct, affine, geo, sub_median: Optional[float], *,
+                      guard_mm: float = DEFAULT_GUARD_MM, arc_deg: Optional[float] = None) -> dict:
+    """JA69 (a): the wall (mm) and relative subendocardial HU (the case's fixed-sector median as
+    the divisor) of segments 2, 3, 8 and 9 on the arc-proportional sectors. Values are None when
+    the recomputed frame agrees with JA3's on < 0.995 of the ring voxels (JM-0R's guard).
+    ``arc_deg`` overrides the measured arc (tests)."""
+    seg, agree = G.arc_segments(labels, affine, geo.aha, arc_deg=arc_deg)
+    out = {"agreement": _r(agree), "wall_mm": {k: None for k in G.ARC_SEPTAL},
+           "rel_subendo_hu": {k: None for k in G.ARC_SEPTAL}}
+    if seg is None or agree is None or agree < G.ARC_AGREEMENT_MIN:
+        out["note"] = "frame agreement below 0.995: not computed"
+        return out
+    dep = geo.depth
+    myo = np.asarray(labels) == G.MYO
+    for k in G.ARC_SEPTAL:
+        s = myo & (seg == k)
+        out["wall_mm"][k] = _r(_mid_wall_mm(dep, s))
+        a = s & (dep.u < 1 / 3) & (dep.d_endo >= guard_mm)
+        if sub_median and a.sum() >= MIN_VOX:
+            out["rel_subendo_hu"][k] = _r(float(ct[a].mean()) / sub_median)
+    return out
 
 
 def case_features(labels, ct, affine, coronary=None, *, guard_mm: float = DEFAULT_GUARD_MM,
@@ -136,6 +181,7 @@ def case_features(labels, ct, affine, coronary=None, *, guard_mm: float = DEFAUL
                               if k in f["wall_mm"]}
 
     sub, epi = {}, {}
+    ms = None
     for k in SEGMENTS16:
         s = myo & (seg == k)
         a = s & (dep.u < 1 / 3) & (dep.d_endo >= guard_mm)
@@ -150,6 +196,7 @@ def case_features(labels, ct, affine, coronary=None, *, guard_mm: float = DEFAUL
             f["rel_subendo_hu"] = {k: _r(x / ms) for k, x in sub.items()}
             f["rel_subepi_hu"] = {k: _r(x / ms) for k, x in epi.items()}
     f["tpr"] = {k: _r(sub[k] / epi[k]) for k in sub if k in epi and epi[k] > 20}
+    f["septal_arc"] = septal_arc_values(labels, ct, aff, geo, ms or None, guard_mm=guard_mm)
 
     core = myo & (dep.d_endo >= guard_mm) & (dep.d_epi >= guard_mm)
     vox_mm3 = vox_ml * 1000.0
@@ -158,6 +205,11 @@ def case_features(labels, ct, affine, coronary=None, *, guard_mm: float = DEFAUL
         fat[str(c)], fat_seg[str(c)] = fat_cluster_volumes(ct, core, seg, vox_mm3, c)
     f["fat_clusters_mm3"] = fat
     f["fat_segment_mm3"] = fat_seg
+    te = geo.territories
+    if te is not None:
+        pmap = {k: v["territory"] for k, v in te.segments.items()}
+        f["fat_clusters_mm3_patient"] = {
+            str(c): fat_cluster_volumes(ct, core, seg, vox_mm3, c, pmap)[0] for c in FAT_CUTS}
     f["fat_grid"] = {fat_key(c, v): any(x >= v for t in fat[str(c)].values() for x in t)
                      for c in FAT_CUTS for v in FAT_VOLS}
     f["fat_hotel_any"], cut = hotel_fat(ct, core)
@@ -167,7 +219,6 @@ def case_features(labels, ct, affine, coronary=None, *, guard_mm: float = DEFAUL
     f["mass_g_aha"] = {t: _r(sum(int((myo & (seg == k)).sum()) for k in range(1, 18)
                                  if _STD[k] == t) * vox_ml * MYO_DENSITY_G_PER_ML, 2)
                        for t in TERRITORIES}
-    te = geo.territories
     if te is not None:
         f["segment_territory"] = {k: v["territory"] for k, v in te.segments.items()}
         f["segment_territory_share"] = {k: v["majority_share"] for k, v in te.segments.items()}
@@ -176,6 +227,8 @@ def case_features(labels, ct, affine, coronary=None, *, guard_mm: float = DEFAUL
                                                 * MYO_DENSITY_G_PER_ML, 2)
                        for c in (G.LAD, G.LCX, G.RCA)}
         f["mass_share"] = dict(te.share)
+        geo_t = G.territories(labels, coronary, affine=aff, segments=seg, method="geodesic")
+        f["segment_territory_geodesic"] = {k: v["territory"] for k, v in geo_t.segments.items()}
     f["halves_segments"] = sorted(k for k, s in f["layer_scheme"].items() if s == "halves")
     return f
 

@@ -19,14 +19,18 @@ list, never an id.
 thinning and hypoattenuation; the fat cut (JA43 R6 order); population percentiles; the composite
 rate; the construct checks; and cv_n (JA40: plain SD of relative thickness / shape).
 
-**Reads** (:func:`read_agreement`): F1's RC per sign and territory by JA42, from the first 20
+**Reads** (:func:`read_agreement`): F1's RC per sign and territory by JA42 as amended by JA63
+(n = patients with a pair, each territory's own offset) and JA64 (a relative RC for the depth
+signs when |Δ| grows with E_T; fat always on differences; one floor function,
+:func:`rc_floor_mm`, for the gate and the report), from the first 20
 decision cases with two accepted reads, and κ and ICC(2,1) (reported, never gating; JA41) on the
 40 decision cases. The builder never opens a decision case: it takes anonymous per-read feature
 records (no id), produced by the decision-scoring path.
 
 **Gate** (JA41): a sign flags only if its cut exists, its RC exists (F1) and, for thinning and
 hypoattenuation, its detectable depth (JA40, at this population's cv_n and shape and the
-measured RC) is <= 0.50. Fat: cut and RC.
+measured RC; JA60: simulated on the population's measured median, hypoattenuation with an
+ED-only phase mix) is <= 0.50. Fat: cut and RC.
 
 **Pin.** :func:`load` refuses a config whose sha256 is not :data:`janusm.guard.REFERENCE_SHA256`.
 Until the lead's run is committed that pin is None, and every load refuses.
@@ -185,6 +189,13 @@ def percentiles(columns: Dict[int, list]) -> Dict[str, list]:
             for k, v in sorted(columns.items()) if len(v)}
 
 
+def _gk(d: Optional[dict], k):
+    """``d[k]`` for an int key that JSON may have turned into a string."""
+    if not d:
+        return None
+    return d.get(k, d.get(str(k)))
+
+
 def percentile_of(x, table: Sequence[float]) -> Optional[int]:
     """Population percentile (0-100) of ``x`` by linear interpolation of the 101-point table."""
     if x is None or not table:
@@ -208,17 +219,35 @@ def fat_choice(grid_shares: Dict[str, float], hotel_share: Optional[float]) -> d
     return {"rule": "none", "c_hu": None, "v_mm3": None, "null_rate": None}
 
 
-def fat_territory_volume(feat: dict, fat_block: dict) -> Dict[str, Optional[float]]:
-    """Core fat cluster volume (mm3) per AHA-default territory at the chosen (c, V): the sum of
-    its clusters >= V. None if the config chose no grid cell."""
+def fat_territory_volume(feat: dict, fat_block: dict, source: str = "aha"):
+    """Core fat cluster volume (mm3) per territory at the chosen (c, V): the sum of its clusters
+    >= V. ``source``: the AHA default map (``"aha"``; rule C's fat flag, as calibrated) or the
+    patient map (``"patient"``; fat's D, JA63 step 1). Returns ({territory: mm3 or None}, the map
+    used); a patient request without patient clusters falls back to the AHA map and says so
+    (``"aha_fallback"``). None everywhere if the config chose no grid cell."""
     c, v = fat_block.get("c_hu"), fat_block.get("v_mm3")
+    used = "aha"
+    if source == "patient":
+        if feat.get("fat_clusters_mm3_patient"):
+            used = "patient"
+        else:
+            used = "aha_fallback"
     if c is None:
-        return {t: None for t in TERRITORIES}
-    cl = (feat.get("fat_clusters_mm3") or {}).get(str(c), {})
-    return {t: _r(sum(x for x in cl.get(t, []) if x >= v), 3) for t in TERRITORIES}
+        return {t: None for t in TERRITORIES}, used
+    key = "fat_clusters_mm3_patient" if used == "patient" else "fat_clusters_mm3"
+    cl = (feat.get(key) or {}).get(str(c), {})
+    return {t: _r(sum(x for x in cl.get(t, []) if x >= v), 3) for t in TERRITORIES}, used
 
 
 # --------------------------------------------------------------------------------------- per case
+def _remote_level(values16, shape16, segs) -> float:
+    """``f1_deviation``'s remote level: the median of the shape-corrected values outside the
+    territory."""
+    v, sh = np.asarray(values16, float), np.asarray(shape16, float)
+    rem = [s for s in range(16) if s + 1 not in segs]
+    return float(np.median(v[rem] / sh[rem]))
+
+
 def territory_deviation(values16, shape16, terr_segments: Dict[str, Sequence[int]]) -> dict:
     """Hotel's shape-corrected deviation D per territory (``f1_deviation``) on the given map.
     Positive = lower than the patient's remote level predicts. None for an empty territory."""
@@ -233,6 +262,28 @@ def territory_deviation(values16, shape16, terr_segments: Dict[str, Sequence[int
     return out
 
 
+def territory_expected(values16, shape16, terr_segments: Dict[str, Sequence[int]]) -> dict:
+    """JA64's E_T per territory: the remote level x the territory's mean shape, the term D is
+    measured against in ``f1_deviation``. None for an empty territory."""
+    out = {}
+    sh = np.asarray(shape16, float)
+    for t in TERRITORIES:
+        segs = [s for s in terr_segments.get(t, []) if 1 <= s <= 16]
+        if not segs or len(segs) == 16:
+            out[t] = None
+            continue
+        out[t] = _remote_level(values16, sh, segs) * float(sh[[s - 1 for s in segs]].mean())
+    return out
+
+
+def population_expected(blk: dict) -> Dict[str, float]:
+    """E_T for ``gate()`` (JA64): the population's median level x the territory's mean shape on
+    the AHA default map."""
+    sh = np.asarray(blk["shape"], float)
+    lvl = float(blk["median_level"])
+    return {t: lvl * float(sh[[s - 1 for s in calibrate.TERR16[t]]].mean()) for t in TERRITORIES}
+
+
 def sign_values(feat: dict, sign: str):
     """The 16-vector rule C runs on for a sign: wall thickness (mm) or relative subendo HU."""
     if sign == "thinning":
@@ -243,12 +294,18 @@ def sign_values(feat: dict, sign: str):
 
 
 def case_state(feat: dict, cfg: dict, map_source: str = "patient") -> dict:
-    """Per sign and territory: rule C territory flag (AHA default, as calibrated), D (on
-    ``map_source``'s map, falling back to AHA default), and the segment flags."""
-    out = {}
+    """Per sign and territory: rule C territory flag (AHA default, as calibrated), D on
+    ``map_source``'s map, E_T (depth signs; JA64) and the segment flags.
+
+    JA63: a patient-map request that has no patient map (or, for fat, no patient-map clusters)
+    falls back to the AHA default map; the sign's ``map`` and the case's ``map`` then read
+    ``"aha_fallback"``, which callers count. Never silent."""
+    out: dict = {}
     tmap = F.territory_segments(feat, map_source)
+    used = map_source
     if not any(tmap.values()):
         tmap = F.territory_segments(feat, "aha")
+        used = "aha_fallback" if map_source == "patient" else "aha"
     for sign in DEPTH_SIGNS:
         blk = cfg[sign]
         v = sign_values(feat, sign)
@@ -259,14 +316,19 @@ def case_state(feat: dict, cfg: dict, map_source: str = "patient") -> dict:
         seg_flag = z < blk["cut"]
         tf = calibrate.territory_flags(seg_flag[None])[0]
         tflag = {t: bool(tf[calibrate.TNAMES.index(t)]) for t in TERRITORIES}
-        dev = territory_deviation(v, np.asarray(blk["shape"], float), tmap)
-        out[sign] = {"z": z, "seg_flag": seg_flag, "territory_rule_c": tflag, "D": dev,
-                     "level": float(np.median(v))}
+        shape = np.asarray(blk["shape"], float)
+        out[sign] = {"z": z, "seg_flag": seg_flag, "territory_rule_c": tflag,
+                     "D": territory_deviation(v, shape, tmap),
+                     "E": territory_expected(v, shape, tmap), "map": used}
     fb = cfg["fat"]
-    vol = fat_territory_volume(feat, fb)
-    out["fat"] = {"territory_rule_c": {t: (vol[t] is not None and vol[t] > 0)
+    flag_vol, _ = fat_territory_volume(feat, fb, "aha")
+    d_vol, fat_map = fat_territory_volume(feat, fb, "patient" if map_source == "patient"
+                                          else "aha")
+    out["fat"] = {"territory_rule_c": {t: (flag_vol[t] is not None and flag_vol[t] > 0)
                                        for t in TERRITORIES},
-                  "D": vol}
+                  "D": d_vol, "E": None, "map": fat_map}
+    maps = {x["map"] for x in out.values() if x is not None}
+    out["map"] = "aha_fallback" if "aha_fallback" in maps else map_source
     return out
 
 
@@ -288,6 +350,11 @@ def pooled(feats: List[dict], *, seed: int = SEED) -> dict:
         fit = rule_c_fit(np.vstack(keep), seed + 1000 * (i + 1))
         fit.pop("_z")
         out[sign] = fit
+    arc = [f.get("septal_arc") or {} for f in usable]
+    out["septal_arc_percentiles"] = {
+        q: percentiles({k: [v for v in (_gk(a.get(q), k) for a in arc) if v is not None]
+                        for k in F.ARC_SEPTAL})
+        for q in ("wall_mm", "rel_subendo_hu")}
     out["thinning_percentiles"] = percentiles(
         {k: [f["wall_mm"][k] for f in usable if k in f.get("wall_mm", {})] for k in range(1, 18)})
     out["hypoattenuation_percentiles"] = percentiles(
@@ -363,87 +430,123 @@ def rest_tpr_block(feats: List[dict], gate: str) -> dict:
 
 
 # --------------------------------------------------------------------------------------- reads
-def repeatability(d1, d2) -> dict:
-    """F1's RC by JA42 steps 3-5. ``d1``, ``d2``: {territory: [D per case]} for the two reads
-    (None where a case lacks the territory). Returns per-territory RC (the upper 95 % bound,
-    plus offset when needed), the point estimates, n and every decision taken."""
-    from scipy.stats import chi2, spearmanr
+def _chi2_factor(n: int) -> float:
+    """sqrt((n - 1) / chi2_0.025,n-1): the upper 95 % bound of an SD over its estimate."""
+    from scipy.stats import chi2
 
-    def bound(sd, n):
-        return sd * math.sqrt((n - 1) / chi2.ppf(0.025, n - 1))
+    return math.sqrt((n - 1) / chi2.ppf(0.025, n - 1))
 
-    diffs, means = {}, {}
+
+def _spearman(x, y) -> float:
+    from scipy.stats import spearmanr
+
+    x, y = np.asarray(x, float), np.asarray(y, float)
+    if len(x) < 3 or np.ptp(x) == 0 or np.ptp(y) == 0:
+        return float("nan")  # constant input: no trend to test
+    return float(spearmanr(x, y).statistic)
+
+
+def repeatability(d1, d2, e1=None, e2=None, *, cases=None) -> dict:
+    """F1's RC by JA42 steps 3-5 as amended by JA63 and JA64.
+
+    ``d1``, ``d2``: {territory: [D per position]} for the two reads, None where a case lacks the
+    territory. ``e1``, ``e2``: the same for E_T (JA64; depth signs), or None (fat: always on
+    differences). ``cases``: the case index of each position (default: the position), so that n
+    counts **patients** with at least one pair, never values (JA63).
+
+    Step 3: the pooled SD is over every value; its 95 % bound and the switch to a territory's own
+    SD (n_T >= 15 patients and SD_T above the pooled bound) use n = patients. Step 4a: each
+    territory's **own** mean difference is added when larger than 0.5 x the SD it uses. Step 4b
+    (JA64): if Spearman rho(|Δ_T|, mean of the two reads' E_T) > 0.4 and E_T > 0 for every pair,
+    the RC is on Δ_T / Ē_T (``scale`` ``"relative"``, applied as RC x E by
+    :func:`rc_floor_mm`); otherwise on differences, with the decision recorded."""
+    npos = max([len(d1.get(t, [])) for t in TERRITORIES] + [0])
+    cases = list(range(npos)) if cases is None else list(cases)
+    rows = {}
     for t in TERRITORIES:
-        pairs = [(a, b) for a, b in zip(d1.get(t, []), d2.get(t, []))
-                 if a is not None and b is not None]
-        diffs[t] = np.array([a - b for a, b in pairs], float)
-        means[t] = np.array([(a + b) / 2 for a, b in pairs], float)
-    alld = np.concatenate([diffs[t] for t in TERRITORIES])
-    allm = np.concatenate([means[t] for t in TERRITORIES])
-    if len(alld) < 3:
-        return {"status": "not_computed", "reason": f"{len(alld)} paired values"}
+        a_, b_ = d1.get(t, []), d2.get(t, [])
+        ea = (e1 or {}).get(t) or [None] * len(a_)
+        eb = (e2 or {}).get(t) or [None] * len(b_)
+        rows[t] = [(cases[i], a_[i], b_[i], ea[i], eb[i]) for i in range(min(len(a_), len(b_)))
+                   if a_[i] is not None and b_[i] is not None]
+    allrows = [r for t in TERRITORIES for r in rows[t]]
+    n_values = len(allrows)
+    n_patients = len({r[0] for r in allrows})
+    if n_values < 3 or n_patients < 2:
+        return {"status": "not_computed",
+                "reason": f"{n_values} paired values on {n_patients} patients",
+                "n_patients": n_patients, "n_values": n_values}
     decisions = []
-    # log scale (India) if |Δ| grows with the level and every D is positive
-    if np.ptp(allm) > 0 and np.ptp(np.abs(alld)) > 0:
-        rho = float(spearmanr(np.abs(alld), allm).statistic)
+    delta = {t: np.array([a - b for _, a, b, _, _ in rows[t]], float) for t in TERRITORIES}
+    alld = np.concatenate([delta[t] for t in TERRITORIES])
+    relative, rho = False, None
+    if e1 is None or e2 is None:
+        decisions.append("fat: RC on differences, in mm³ (JA64)")
     else:
-        rho = float("nan")  # constant input: no trend to test
-    log = bool(math.isfinite(rho) and rho > SPEARMAN_LOG)
-    if log:
-        pos = all((d1[t][i] or 0) > 0 and (d2[t][i] or 0) > 0
-                  for t in TERRITORIES for i in range(len(d1.get(t, [])))
-                  if d1[t][i] is not None and d2[t][i] is not None)
-        if pos:
-            for t in TERRITORIES:
-                a = np.array([x for x, y in zip(d1[t], d2[t]) if x is not None and y is not None])
-                b = np.array([y for x, y in zip(d1[t], d2[t]) if x is not None and y is not None])
-                diffs[t] = np.log(a / b) if len(a) else np.zeros(0)
-            alld = np.concatenate([diffs[t] for t in TERRITORIES])
-            decisions.append(f"Spearman rho {rho:.3f} > {SPEARMAN_LOG}: RC on log ratios, "
-                             "applied multiplicatively")
+        ebar = np.array([(ea + eb) / 2 if ea is not None and eb is not None else np.nan
+                         for t in TERRITORIES for _, _, _, ea, eb in rows[t]], float)
+        ok = np.isfinite(ebar)
+        rho = _spearman(np.abs(alld[ok]), ebar[ok])
+        if not (math.isfinite(rho) and rho > SPEARMAN_LOG):
+            decisions.append(f"Spearman rho(|Δ|, E) {rho:.3f} <= {SPEARMAN_LOG}: "
+                             "RC on differences")
+        elif not all(ea is not None and eb is not None and ea > 0 and eb > 0
+                     for _, _, _, ea, eb in allrows):
+            decisions.append(f"Spearman rho(|Δ|, E) {rho:.3f} > {SPEARMAN_LOG}, but E_T <= 0 (or "
+                             "missing) for a pair: RC kept on differences (JA64)")
         else:
-            log = False
-            decisions.append(f"Spearman rho {rho:.3f} > {SPEARMAN_LOG}, but D is not positive "
-                             "throughout: log ratios undefined, RC kept on differences")
-    else:
-        decisions.append(f"Spearman rho {rho:.3f} <= {SPEARMAN_LOG}: RC on differences")
-    n_pool = len(alld)
+            relative = True
+            for t in TERRITORIES:
+                delta[t] = np.array([(a - b) / ((ea + eb) / 2) for _, a, b, ea, eb in rows[t]],
+                                    float)
+            alld = np.concatenate([delta[t] for t in TERRITORIES])
+            decisions.append(f"Spearman rho(|Δ|, E) {rho:.3f} > {SPEARMAN_LOG} and E_T > 0 "
+                             "for every pair: RC on Δ / Ē, applied as RC x E_T (JA64)")
     sd_pool = float(np.std(alld, ddof=1))
-    pool_ub = bound(sd_pool, n_pool)
-    out = {"scale": "log" if log else "difference", "spearman_rho": _r(rho),
-           "pooled": {"sd": _r(sd_pool), "sd_upper95": _r(pool_ub), "n": n_pool}, "territory": {}}
+    pool_ub = sd_pool * _chi2_factor(n_patients)
+    out = {"scale": "relative" if relative else "difference", "spearman_rho": _r(rho),
+           "n_patients": n_patients, "n_values": n_values,
+           "pooled": {"sd": _r(sd_pool), "sd_upper95": _r(pool_ub), "n_patients": n_patients,
+                      "n_values": n_values, "mean_diff": _r(float(alld.mean()))},
+           "territory": {}}
     for t in TERRITORIES:
-        dt = diffs[t]
-        n_t = len(dt)
-        sd_t = float(np.std(dt, ddof=1)) if n_t > 1 else float("nan")
+        dt = delta[t]
+        n_t = len({r[0] for r in rows[t]})
+        sd_t = float(np.std(dt, ddof=1)) if len(dt) > 1 else float("nan")
         own = n_t >= RC_PER_TERRITORY_MIN_N
         use_own = own and math.isfinite(sd_t) and sd_t > pool_ub
         if not own:
-            why = f"n_T {n_t} < {RC_PER_TERRITORY_MIN_N}: pooled"
+            why = f"n_T {n_t} < {RC_PER_TERRITORY_MIN_N} patients: pooled"
         elif use_own:
             why = f"SD_T {sd_t:.4f} > pooled 95 % bound {pool_ub:.4f}: own"
         else:
             why = "SD_T within the pooled 95 % bound: pooled"
-        sd, n, md = ((sd_t, n_t, float(dt.mean())) if use_own
-                     else (sd_pool, n_pool, float(alld.mean())))
+        sd, n = (sd_t, n_t) if use_own else (sd_pool, n_patients)
+        md = float(dt.mean()) if len(dt) else 0.0  # step 4a: the territory's own mean (JA63)
         rc_point = 1.96 * sd
-        rc = 1.96 * bound(sd, n)
+        rc = 1.96 * sd * _chi2_factor(n)
         if abs(md) > OFFSET_FRACTION * sd:
             rc += abs(md)
-            why += f"; |mean diff| {abs(md):.4f} > {OFFSET_FRACTION} SD: added"
+            why += f"; |own mean diff| {abs(md):.4f} > {OFFSET_FRACTION} SD: added"
         out["territory"][t] = {"rc": _r(rc), "rc_point": _r(rc_point), "sd": _r(sd), "n": n,
-                               "n_territory": n_t, "mean_diff": _r(md), "source":
-                               "territory" if use_own else "pooled", "decision": why}
+                               "n_territory": n_t, "n_values": len(dt), "mean_diff": _r(md),
+                               "source": "territory" if use_own else "pooled", "decision": why}
     out["decisions"] = decisions
     out["status"] = "computed"
     return out
 
 
-def rc_abs(rc: dict, territory: str, level: float) -> float:
-    """RC_T in the sign's own units. On the log scale (JA42 step 4, applied multiplicatively)
-    it is (exp(RC) - 1) x the level it applies to."""
+def rc_floor_mm(rc: dict, territory: str, e: Optional[float]) -> Optional[float]:
+    """F1's floor for one territory in the sign's own units (JA64): the RC itself on
+    differences, RC_rel x E on the relative scale. ``gate()`` passes the population's E_T, the
+    report the patient's. None when the RC is relative and E is missing or not positive (no
+    floor, so no flag)."""
     v = float(rc["territory"][territory]["rc"])
-    return (math.exp(v) - 1.0) * float(level) if rc.get("scale") == "log" else v
+    if rc.get("scale") != "relative":
+        return v
+    if e is None or not math.isfinite(float(e)) or float(e) <= 0:
+        return None
+    return v * float(e)
 
 
 def cohen_kappa(a: Sequence[bool], b: Sequence[bool]) -> Optional[float]:
@@ -452,6 +555,20 @@ def cohen_kappa(a: Sequence[bool], b: Sequence[bool]) -> Optional[float]:
     pa, pb = a.mean(), b.mean()
     pe = float(pa * pb + (1 - pa) * (1 - pb))
     return None if pe >= 1 else (po - pe) / (1 - pe)
+
+
+def kappa_status(fa: Sequence[bool], fb: Sequence[bool]):
+    """(κ, status) for JA41: "not estimable" below :data:`KAPPA_MIN_FLAGGED` flagged units in
+    either read, or when chance agreement is 1 (κ is 0 / 0)."""
+    if not len(fa):
+        return None, "no units"
+    if min(sum(fa), sum(fb)) < KAPPA_MIN_FLAGGED:
+        return None, (f"not estimable: a read has < {KAPPA_MIN_FLAGGED} flagged units "
+                      f"({sum(fa)}, {sum(fb)})")
+    k = cohen_kappa(fa, fb)
+    if k is None:
+        return None, "not estimable: chance agreement pe = 1"
+    return k, "estimated"
 
 
 def icc_2_1(x: Sequence[float], y: Sequence[float]) -> Optional[float]:
@@ -473,29 +590,33 @@ def read_agreement(reads: List[dict], cfg: dict) -> dict:
     """RC (first 20 entries) and κ / ICC (first 40) per sign from anonymous read pairs.
 
     ``reads``: decision cases in draw order, each ``{"read_1": features, "read_2": features}``
-    (outputs of :func:`features.case_features` on the two accepted reads, no id). D uses the
-    patient-specific map of each read (JA42 step 1); rule C flags use the AHA default map."""
+    (outputs of :func:`features.case_features` on the two accepted reads, no id). D and E_T use
+    the patient-specific map of each read (JA42 step 1, JA63); rule C flags use the AHA default
+    map. Every read that fell back to the AHA map is counted in ``rc["decisions"]`` (JA63)."""
     assert_anonymous(reads, "the read records")
     out: Dict[str, dict] = {}
     states = [(case_state(r["read_1"], cfg), case_state(r["read_2"], cfg)) for r in reads]
     for sign in SIGNS:
-        rc_rows = [(a[sign], b[sign]) for a, b in states[:RC_CASES]
+        rc_rows = [(i, a[sign], b[sign]) for i, (a, b) in enumerate(states[:RC_CASES])
                    if a.get(sign) is not None and b.get(sign) is not None]
-        d1 = {t: [a["D"][t] for a, _ in rc_rows] for t in TERRITORIES}
-        d2 = {t: [b["D"][t] for _, b in rc_rows] for t in TERRITORIES}
-        rc = repeatability(d1, d2)
+        d1 = {t: [a["D"][t] for _, a, _ in rc_rows] for t in TERRITORIES}
+        d2 = {t: [b["D"][t] for _, _, b in rc_rows] for t in TERRITORIES}
+        if sign in DEPTH_SIGNS:
+            e1 = {t: [a["E"][t] for _, a, _ in rc_rows] for t in TERRITORIES}
+            e2 = {t: [b["E"][t] for _, _, b in rc_rows] for t in TERRITORIES}
+        else:
+            e1 = e2 = None
+        rc = repeatability(d1, d2, e1, e2, cases=[i for i, _, _ in rc_rows])
         rc["n_cases"] = len(rc_rows)
+        fell = sum(x["map"] == "aha_fallback" for _, a, b in rc_rows for x in (a, b))
+        rc["aha_fallback_reads"] = fell
+        rc.setdefault("decisions", []).append(
+            f"{fell} of {2 * len(rc_rows)} reads fell back to the AHA default map (JA63)")
         k_rows = [(a[sign], b[sign]) for a, b in states[:KAPPA_CASES]
                   if a.get(sign) is not None and b.get(sign) is not None]
         fa = [a["territory_rule_c"][t] for a, _ in k_rows for t in TERRITORIES]
         fb = [b["territory_rule_c"][t] for _, b in k_rows for t in TERRITORIES]
-        if not fa:
-            kap, kn = None, "no units"
-        elif min(sum(fa), sum(fb)) < KAPPA_MIN_FLAGGED:
-            kap, kn = None, (f"not estimable: a read has < {KAPPA_MIN_FLAGGED} flagged units "
-                             f"({sum(fa)}, {sum(fb)})")
-        else:
-            kap, kn = cohen_kappa(fa, fb), "estimated"
+        kap, kn = kappa_status(fa, fb)
         xs = [(a["D"][t], b["D"][t]) for a, b in k_rows for t in TERRITORIES
               if a["D"][t] is not None and b["D"][t] is not None]
         icc = icc_2_1([p[0] for p in xs], [p[1] for p in xs]) if xs else None
@@ -505,9 +626,24 @@ def read_agreement(reads: List[dict], cfg: dict) -> dict:
 
 
 # --------------------------------------------------------------------------------------- gate
+#: JA60: hypoattenuation is a relative HU level, which phase does not scale.
+HYPO_PHASE_MIX = {"ED": 1.0, "MD": 0.0, "SYS": 0.0}  # every phase named: S3's sampler needs them
+
+
+def s3_wall_kwargs(sign: str, blk: dict) -> dict:
+    """The wall input ``gate()`` gives S3 (JA60, R4-S10): ``measured_median_mm`` = this
+    population's median level and, for hypoattenuation (a relative HU level, which phase does
+    not scale), ``phase_mix={"ED": 1.0}``. Never ``median_mm``, which is E7's only."""
+    kw = {"measured_median_mm": float(blk["median_level"])}
+    if sign == "hypoattenuation":
+        kw["phase_mix"] = dict(HYPO_PHASE_MIX)
+    return kw
+
+
 def gate(sign: str, cfg: dict, agreement: dict, *, seed: int = SEED, sig_m: float = 0.0) -> dict:
     """JA41 for one sign. Depth (thinning, hypoattenuation) at the population's cv_n and shape,
-    the conservative RC (the largest territory RC) and the population's median level."""
+    the conservative floor (the largest territory floor, at the population's E_T; JA64) and the
+    population's measured median level (JA60)."""
     blk = cfg[sign]
     ag = agreement.get(sign) or {}
     rc = ag.get("rc") or {}
@@ -517,18 +653,29 @@ def gate(sign: str, cfg: dict, agreement: dict, *, seed: int = SEED, sig_m: floa
     if sign == "fat":
         has_cut = blk.get("rule") in ("grid", "patient_noise")
         g["pass"] = bool(has_cut and has_rc)
-        g["why"] = "fat: cut and F1 (JA41; no depth gate)"
+        g["why"] = ("fat: cut and F1 (JA41; no depth gate)" if g["pass"] else
+                    "fat: no cut" if not has_cut else "fat: no RC (F1)")
         return g
     if blk.get("cut") is None or not has_rc:
         g["pass"] = False
         g["why"] = "no cut" if blk.get("cut") is None else "no RC (F1)"
         return g
-    rc_mm = max(rc_abs(rc, t, blk["median_level"]) for t in TERRITORIES)
+    e = population_expected(blk)
+    floors = {t: rc_floor_mm(rc, t, e[t]) for t in TERRITORIES}
+    if any(v is None for v in floors.values()):
+        g["pass"] = False
+        g["why"] = "no F1 floor: the population's E_T is not positive"
+        return g
+    rc_mm = max(floors.values())
+    kw = s3_wall_kwargs(sign, blk)
     dd = calibrate.detectable_depth(blk["cv_n"], np.asarray(blk["shape"], float), rc_mm,
-                                    sig_m=sig_m, seed=seed, median_mm=blk["median_level"])
+                                    sig_m=sig_m, seed=seed, **kw)
     g.update(depth=dd["depth"], sens_range=dd["sens_range"], false_flag=dd["false_flag"],
-             rc_terr_for_depth=_r(rc_mm), depth_seed=int(seed))
-    g["pass"] = bool(dd["depth"] is not None and dd["depth"] <= DEPTH_GATE)
+             rc_terr_for_depth=_r(rc_mm), depth_seed=int(seed),
+             floor_mm={t: _r(v) for t, v in floors.items()},
+             expected={t: _r(v) for t, v in e.items()},
+             s3_wall_input={k: v for k, v in kw.items()})
+    g["pass"] = bool(dd["depth"] is not None and dd["depth"] <= DEPTH_GATE + 1e-9)
     g["why"] = (f"depth {dd['depth']} <= {DEPTH_GATE}" if g["pass"] else
                 f"depth {dd['depth'] if dd['depth'] is not None else '> 0.60'} > {DEPTH_GATE}")
     return g
@@ -560,13 +707,15 @@ def build_config(feats: List[dict], reads: List[dict], *, cases_sha: str, n_case
                 "before any seal read; never refitted on seal cases.",
         "geometry_version": geometry.GEOMETRY_VERSION, "guard_version": guard.GUARD_VERSION,
         "features_version": F.FEATURES_VERSION, "calibrate": calibrate.__name__,
+        "calibrate_version": calibrate.CALIBRATE_VERSION,
         "model": model, "guard_mm": float(guard_mm),
         "cases_sha256": cases_sha, "splits_sha256_prefix": guard.PINNED[guard.SPLITS_RELPATH][:12],
         "n_cases": int(n_cases), "n_usable": cfg.pop("n_usable"), "excluded": cfg.pop("excluded"),
         "label": LABEL, "seed": int(seed),
         "thinning": cfg["thinning"], "hypoattenuation": cfg["hypoattenuation"], "fat": cfg["fat"],
         "percentiles": {"thickness_mm": cfg.pop("thinning_percentiles"),
-                        "rel_subendo_hu": cfg.pop("hypoattenuation_percentiles")},
+                        "rel_subendo_hu": cfg.pop("hypoattenuation_percentiles"),
+                        "septal_arc": cfg.pop("septal_arc_percentiles")},
         "gate": gates, "rc": {s: ag[s]["rc"] for s in SIGNS},
         "rest_tpr": rest_tpr_block(feats, rest_tpr_gate),
         "composite": cfg["composite"], "construct_checks": cfg["construct_checks"],

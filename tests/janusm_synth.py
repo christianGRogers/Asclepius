@@ -33,6 +33,7 @@ def feature_record(wall17, sub16, rng, *, fat_mm3=0.0, tpr=1.0):
         "fat_grid": {F.fat_key(c, v): bool(fat_mm3 >= v) for c in F.FAT_CUTS for v in F.FAT_VOLS},
         "fat_hotel_any": bool(fat_mm3 > 0),
         "fat_clusters_mm3": fat,
+        "fat_clusters_mm3_patient": fat,  # the patient map is the AHA map here
         "segment_territory": dict(G.AHA_STANDARD),
         "segment_territory_share": {k: 1.0 for k in range(1, 18)},
         "segment_territory_aha": dict(G.AHA_STANDARD),

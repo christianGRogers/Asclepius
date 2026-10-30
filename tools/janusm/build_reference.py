@@ -18,12 +18,15 @@ Guard, before any image, mask, label, layout or read file is opened (any error s
 
 Inputs: the case list; Janus-M 0's ``heartchambers_highres`` masks; the CT (``layout.json``); the
 ImageCAS-X reference coronary labels; the anonymous read records of the decision cases
-(``--reads``: ``{"reads": [{"read_1": features, "read_2": features}, ...]}`` in draw order, the
-outputs of :func:`janusm.features.case_features` on the two accepted reads, made by the
-decision-scoring path; no id; refused if any id appears); and three verdicts of the JA43 decision
-script (R5 rest TPR gate, R7 septal-arc column, R2 halves note).
+(``--reads``: the output of ``tools/janusm/score_decision.py``,
+``{"reads": [{"read_1": features, "read_2": features}, ...], ...}`` in draw order, the outputs of
+:func:`janusm.features.case_features` on the two accepted reads; no id; refused if any id
+appears, or if its ``features_version`` or ``guard_mm`` differs from this run's); and four
+verdicts of the JA43 decision script (R5 rest TPR gate, R7 septal-arc column, R2 halves note, R8
+geodesic "shared"), each required with ``--run``.
 
-Outputs: the config (``--out``; no case id, the sorted list's sha256 only) and
+Outputs: the config (``--out``; UTF-8 bytes, hashed as written; no case id, the sorted list's
+sha256 only) and
 ``OUT.cases.jsonl`` beside it, per-case features with ids, which **stays on Fir**.
 
     python tools/janusm/build_reference.py                 # prints the Fir commands
@@ -66,7 +69,8 @@ sbatch --account=def-aso22 --job-name=jm-ref --cpus-per-task=8 --mem=48G --time=
     --layout $SCRATCH/icx4/layout.json --icx $SCRATCH/icx4/icx --splits $SCRATCH/icx4/splits.json \
     --reads $SCRATCH/janusm/decision_read_features.json \
     --rest-tpr-gate <R5: pass|fail|not_evaluable> --septal-arc-column <R7: keep|drop> \
-    --halves-note <R2: yes|no> --out $SCRATCH/janusm/reference-r1.json --np 8"
+    --halves-note <R2: yes|no> --geodesic-shared <R8: yes|no> \
+    --out $SCRATCH/janusm/reference-r1.json --np 8"
 
 # when it ends: the guard line, then the config (aggregates only, no case id)
 grep -m1 '^guard:' $SCRATCH/janusm/jm-ref-*.log
@@ -98,13 +102,42 @@ def _features_one(job):
     return r
 
 
+def load_decision_reads(obj, guard_mm: float = F.DEFAULT_GUARD_MM) -> list:
+    """The decision read records from ``tools/janusm/score_decision.py``'s output (a path or the
+    loaded dict). Refuses an output with an id, or whose ``features_version`` or ``guard_mm``
+    (at the top or on any read) differs from this run's: the reads and the reference population
+    must be measured by one feature code at one guard band."""
+    d = obj if isinstance(obj, dict) else json.loads(Path(obj).read_text())
+    R.assert_anonymous(d, "--reads")
+    reads = d["reads"]
+    recs = [d] + [r[k] for r in reads for k in ("read_1", "read_2")]
+    for r in recs:
+        if r.get("features_version") != F.FEATURES_VERSION:
+            raise R.ReferenceError(
+                f"--reads: features_version {r.get('features_version')!r} is not this "
+                f"code's {F.FEATURES_VERSION!r}; rescore the decision reads")
+        if r.get("guard_mm") is None or abs(float(r["guard_mm"]) - float(guard_mm)) > 1e-9:
+            raise R.ReferenceError(
+                f"--reads: guard_mm {r.get('guard_mm')!r} is not this run's {guard_mm}")
+    return reads
+
+
 def build(cases, feats, reads, *, rest_tpr_gate, septal_arc_column, halves_note,
-          guard_mm=F.DEFAULT_GUARD_MM, seed=R.SEED) -> dict:
+          geodesic_shared, guard_mm=F.DEFAULT_GUARD_MM, seed=R.SEED) -> dict:
     """The config from already-measured features. ``cases`` has passed :func:`R.refuse_cases`."""
     return R.build_config(
         feats, reads, cases_sha=R.cases_sha256(cases), n_cases=len(cases),
         rest_tpr_gate=rest_tpr_gate, septal_arc_column=septal_arc_column,
-        halves_note=halves_note, model=MODEL, guard_mm=guard_mm, seed=seed)
+        halves_note=halves_note, geodesic_shared=geodesic_shared, model=MODEL,
+        guard_mm=guard_mm, seed=seed)
+
+
+def write_config(path, cfg: dict) -> str:
+    """Write the canonical config as UTF-8 bytes, whatever the locale, and return the sha256 of
+    the bytes written (R4-S11)."""
+    data = R.dumps(cfg).encode("utf-8")
+    Path(path).write_bytes(data)
+    return hashlib.sha256(data).hexdigest()
 
 
 def main(argv=None) -> int:
@@ -115,6 +148,8 @@ def main(argv=None) -> int:
     ap.add_argument("--rest-tpr-gate", choices=("pass", "fail", "not_evaluable"))
     ap.add_argument("--septal-arc-column", choices=("keep", "drop"))
     ap.add_argument("--halves-note", choices=("yes", "no"))
+    ap.add_argument("--geodesic-shared", choices=("yes", "no"),
+                    help="JA43 R8: mark segments whose two majorities differ as shared")
     ap.add_argument("--guard-mm", type=float, default=F.DEFAULT_GUARD_MM)
     ap.add_argument("--np", type=int, default=8)
     a = ap.parse_args(argv)
@@ -126,7 +161,8 @@ def main(argv=None) -> int:
               "opened. Run without --run for the lead's commands.", file=sys.stderr)
         return 3
     missing = [k for k in ("cases", "hc", "layout", "icx", "splits", "reads", "out",
-                           "rest_tpr_gate", "septal_arc_column", "halves_note")
+                           "rest_tpr_gate", "septal_arc_column", "halves_note",
+                           "geodesic_shared")
                if getattr(a, k) is None]
     if missing:
         ap.error("--run needs " + ", ".join("--" + m.replace("_", "-") for m in missing))
@@ -139,8 +175,11 @@ def main(argv=None) -> int:
     print(f"guard: {len(cases)} cases, the derived reference population, 0 refused "
           "(janusm.guard purpose=any; JM-0 refused; splits.json hash ok)", file=sys.stderr,
           flush=True)
-    reads = json.loads(Path(a.reads).read_text())["reads"]
-    R.assert_anonymous(reads, "--reads")
+    try:
+        reads = load_decision_reads(a.reads, a.guard_mm)
+    except R.ReferenceError as e:
+        print(f"REFUSED: {e}", file=sys.stderr)
+        return 3
     m = _jm0r()
     layout = json.loads(Path(a.layout).read_text())["cases"]
     ids = m.hc_ids()
@@ -155,7 +194,8 @@ def main(argv=None) -> int:
     else:
         pool, it = None, map(_features_one, jobs)
     try:
-        with open(str(out) + ".cases.jsonl", "w") as fh:  # per-case rows: stay on Fir
+        # per-case rows: stay on Fir
+        with open(str(out) + ".cases.jsonl", "w", encoding="utf-8") as fh:
             for i, (c, r) in enumerate(zip(cases, it), 1):
                 fh.write(json.dumps({"id": c, **r}) + "\n")
                 feats.append(r)
@@ -169,11 +209,11 @@ def main(argv=None) -> int:
         r.pop("seconds", None)
     cfg = build(cases, feats, reads, rest_tpr_gate=a.rest_tpr_gate,
                 septal_arc_column=a.septal_arc_column == "keep",
-                halves_note=a.halves_note == "yes", guard_mm=a.guard_mm)
-    text = R.dumps(cfg)
-    out.write_text(text)
-    print(text, end="")
-    print(f"sha256 {hashlib.sha256(text.encode()).hexdigest()}", file=sys.stderr)
+                halves_note=a.halves_note == "yes", geodesic_shared=a.geodesic_shared == "yes",
+                guard_mm=a.guard_mm)
+    sha = write_config(out, cfg)
+    sys.stdout.buffer.write(out.read_bytes())
+    print(f"sha256 {sha}", file=sys.stderr)
     return 0
 
 

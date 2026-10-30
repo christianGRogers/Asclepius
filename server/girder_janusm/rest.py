@@ -2,7 +2,8 @@
 
 Readers: ``project``, ``mine``, ``next``, then per read ``ct``, ``seed``, ``submit``
 and ``release``. Admins (site admins or ``janusm-admins``): the case table, a
-case's reads, opening the seal, and running the check on a read now.
+case's reads, opening the seal, running the check on a read now, and opening a
+flagged wave's third reads (JA47 rule 2).
 
 Every case served goes through the JA12 guard at claim time, under its set's
 purpose, as well as at populate time: a case the guard refuses later (a changed
@@ -18,7 +19,14 @@ from girder.constants import AccessType
 from girder.models.file import File
 from girder.models.item import Item
 from girder.models.setting import Setting
-from janusm_reads import PROTOCOL_NAME, PROTOCOL_VERSION, holdout, protocol, readset
+from janusm_reads import (
+    BORDER_PROTOCOL,
+    PROTOCOL_NAME,
+    PROTOCOL_VERSION,
+    holdout,
+    protocol,
+    readset,
+)
 from janusm_reads import labels as L
 
 from .constants import MAX_CLAIM_ATTEMPTS, SETTING_SEAL_OPEN
@@ -39,12 +47,17 @@ logger = logging.getLogger(__name__)
 
 
 def readInfo(read, case=None):
+    """What a reader sees of their own read. The half-maximum profiles go with a
+    returned read only; nothing names the read set, a third read or the other read."""
     case = case or JanusMCase().load(read['caseId'], force=True) or {}
+    returned = read['state'] == protocol.RETURNED
     return protocol.ReadInfo(
         read_id=str(read['_id']), case_name=case.get('name', ''), state=read['state'],
         has_seed=bool(read.get('seeded')), checksum=case.get('ctChecksum', ''),
         size_bytes=int(case.get('ctSizeBytes', 0)),
-        check_summary=read.get('checkSummary', '') or '')
+        check_summary=read.get('checkSummary', '') or '',
+        flagged=bool(read.get('flagged')),
+        check_profile=protocol.profile_for_reader(read.get('check')) if returned else {})
 
 
 def servableSets():
@@ -66,11 +79,19 @@ def guardCase(case):
 
 
 def claimNext(user):
+    """A third read waiting for this reader first (JA47 rule 2), then the next slot."""
     sets = servableSets()
     for _ in range(MAX_CLAIM_ATTEMPTS):
+        thirds = list(JanusMCase().thirdCandidates(user['_id'], sets))
         candidates = list(JanusMCase().candidates(user['_id'], sets))
-        if not candidates:
+        if not thirds and not candidates:
             return None
+        for case in thirds:
+            if not guardCase(case):
+                continue
+            claimed = JanusMCase().claimThird(case['_id'], user['_id'], sets)
+            if claimed is not None:
+                return JanusMRead().createRead(claimed, user, third=True), claimed
         for case in candidates:
             if not guardCase(case):
                 continue
@@ -95,6 +116,7 @@ class JanusMResource(Resource):
         self.route('GET', ('admin', 'case', ':caseId', 'reads'), self.adminReads)
         self.route('POST', ('admin', 'seal', 'open'), self.adminOpenSeal)
         self.route('POST', ('admin', 'read', ':readId', 'check'), self.adminCheck)
+        self.route('POST', ('admin', 'third-reads'), self.adminThirdReads)
 
     # ------------------------------------------------------------ readers
 
@@ -109,7 +131,11 @@ class JanusMResource(Resource):
         user = requireReader(self.getCurrentUser())
         return {
             'protocol': PROTOCOL_NAME, 'protocolVersion': PROTOCOL_VERSION,
+            'border_protocol': BORDER_PROTOCOL,
             'protocolDocument': 'docs/JANUSM-READ-PROTOCOL.md',
+            'readForm': {'vessels': list(protocol.VESSELS),
+                         'cadrads': list(protocol.CADRADS_GRADES),
+                         'lesionGrades': sorted(protocol.LESION_GRADES)},
             'labels': [{'value': v, 'name': n, 'includes': L.CONVENTIONS[v],
                         'color': list(L.COLORS[v])} for v, n in L.CLASSES.items()],
             'maxOpen': maxOpen(),
@@ -177,7 +203,7 @@ class JanusMResource(Resource):
         user = requireReader(self.getCurrentUser())
         read = self._ownOpenRead(readId, user)
         case = JanusMCase().load(read['caseId'], force=True)
-        if not case.get('seedFileId'):
+        if not read.get('seeded') or not case.get('seedFileId'):
             refuse(protocol.ERR_NO_SEED, 'This case is read from blank: it has no seed.',
                    status=404)
         return File().download(File().load(case['seedFileId'], force=True))
@@ -202,6 +228,9 @@ class JanusMResource(Resource):
         if missing:
             refuse(protocol.ERR_MISSING_CLASS, L.missing_message(missing), status=400,
                    missing=missing)
+        problems = sub.form_problems()
+        if problems:
+            refuse(protocol.ERR_READ_FORM, ' '.join(problems), status=400, problems=problems)
         file = File().load(fileId, level=AccessType.WRITE, user=user)
         if file is None:
             refuse('no_such_file', 'That upload could not be found.', status=404)
@@ -217,7 +246,9 @@ class JanusMResource(Resource):
         moved = JanusMRead().transition(
             read, protocol.SUBMITTED, fileId=file['_id'], checksum=actual,
             sizeBytes=int(file['size']), voxelCounts=sub.voxel_counts, seconds=sub.seconds,
-            clientVersion=sub.client_version, note=sub.note, check=None, checkSummary='')
+            clientVersion=sub.client_version, note=sub.note, check=None, checkSummary='',
+            cadrads=dict(sub.cadrads), lesionPoints=dict(sub.lesion_points),
+            border_protocol=BORDER_PROTOCOL)
         if moved is None:
             refuse(protocol.ERR_BAD_STATE, 'That read changed state; reload.', status=409)
         return readInfo(moved).to_dict()
@@ -233,7 +264,10 @@ class JanusMResource(Resource):
         moved = JanusMRead().transition(read, protocol.RELEASED)
         if moved is None:
             refuse(protocol.ERR_BAD_STATE, 'That read changed state; reload.', status=409)
-        JanusMCase().releaseSlot(read['caseId'])
+        if read.get('third'):
+            JanusMCase().releaseThird(read['caseId'])
+        else:
+            JanusMCase().releaseSlot(read['caseId'])
         return readInfo(moved).to_dict()
 
     # ------------------------------------------------------------- admins
@@ -249,6 +283,9 @@ class JanusMResource(Resource):
                 'blank': case['blank'], 'slotsTaken': case['slotsTaken'],
                 'accepted': case['acceptedCount'], 'retired': case['retired'],
                 'hasSeed': bool(case.get('seedFileId')),
+                'thirdRead': ('accepted' if case.get('thirdReadAccepted') else 'taken'
+                              if case.get('thirdReadTaken') else 'waiting'
+                              if case.get('thirdReadWanted') else None),
             })
         return {'sealOpen': sealOpen(), 'cases': out}
 
@@ -261,7 +298,9 @@ class JanusMResource(Resource):
         requireAdmin(self.getCurrentUser())
         return [{'readId': str(r['_id']), 'userId': str(r['userId']), 'state': r['state'],
                  'seeded': r.get('seeded'), 'check': r.get('check'),
-                 'attempts': r.get('attempts', 0)}
+                 'attempts': r.get('attempts', 0), 'flagged': bool(r.get('flagged')),
+                 'flagReasons': r.get('flagReasons') or [], 'third': bool(r.get('third')),
+                 'border_protocol': r.get('border_protocol')}
                 for r in JanusMRead().find({'caseId': case['_id']}, sort=[('assignedAt', 1)])]
 
     @access.user
@@ -290,3 +329,31 @@ class JanusMResource(Resource):
             refuse(protocol.ERR_BAD_STATE, 'Only a submitted read can be checked.', status=409)
         done = checkRead(read)
         return {'state': done['state'], 'check': done.get('check')}
+
+    @access.user
+    @autoDescribeRoute(
+        Description("Open third reads from blank on a flagged wave's drawn cases (admins).")
+        .notes('JA47 rule 2: the cases are the anchoring report\'s rule2.thirdReadCases. '
+               'Each must be a seeded case with both reads accepted. The third read is '
+               'served without the seed to a reader who has not read the case, and never '
+               'enters the reference standard.')
+        .jsonParam('cases', 'Case names, as a JSON list.', requireArray=True)
+    )
+    def adminThirdReads(self, cases):
+        requireAdmin(self.getCurrentUser())
+        names = [str(c) for c in cases]
+        found = {c['name']: c for c in JanusMCase().find({'name': {'$in': names}})}
+        problems = []
+        for name in names:
+            case = found.get(name)
+            if case is None:
+                problems.append(f'{name}: not a Janus-M case')
+            elif case['blank']:
+                problems.append(f'{name}: read from blank, not seeded')
+            elif case['acceptedCount'] < case['readsWanted']:
+                problems.append(f'{name}: its two reads are not both accepted')
+        if problems:
+            refuse(protocol.ERR_BAD_STATE, 'No third read opened: ' + '; '.join(problems),
+                   status=400, problems=problems)
+        opened = [name for name in names if JanusMCase().openThirdRead(found[name])]
+        return {'opened': opened, 'alreadyOpen': [n for n in names if n not in opened]}

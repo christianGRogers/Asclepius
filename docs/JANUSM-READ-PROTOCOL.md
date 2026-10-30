@@ -1,14 +1,24 @@
-# Janus-M border read protocol (JA7)
+# Janus-M border read protocol: protocol v1 (JA21, JA46)
 
-**Status:** Round 1 protocol. Sections marked **[Round 2]** are placeholders that
-Janus-M Round 2 settles (Round 1 ruling §6, item 4) before any seal case is read.
-Source: `vault/JanusM/Judgements/Round 1.md`, amendments JA1, JA6, JA7, JA12.
-Code: `src/janusm_reads/`. Issue: #141.
+**Status:** **border protocol v1** (`border_protocol: 1`), final. It replaces the
+Round 1 placeholders. Sources: `vault/JanusM/Judgements/Round 1.md` (JA1, JA6, JA7,
+JA12); Round 2 (JA21, adopting Hotel v2 §5.4); Round 3 on `jm/rest-ccta` (JA44,
+JA46, JA47, and the S5 change list, which supersedes Hotel v3 §5.2 and India v3 §7).
+The reading text is Hotel v3 §5.1, as JA46 amends it.
+Code: `src/janusm_reads/`, `server/girder_janusm/`, `slicer/JanusMRead/`. Issues: #141,
+#195.
 
 This protocol is for reading the **Janus-M reference borders** on rest CCTA. It is
 not the coronary (SegQueue14) protocol: other labels, another queue, other groups.
 A SegQueue14 module cannot open a Janus-M case, and a Janus-M read is never stored
 with coronary reads.
+
+**Two version numbers.** The *wire* protocol (`janusm-read` 1,
+`janusm_reads.PROTOCOL_VERSION`) is how a client talks to the queue. The *border*
+protocol (`janusm_reads.BORDER_PROTOCOL`, 1) is this text: the rules a read is drawn
+and checked under. Every read record, check report and export carries
+`border_protocol`, so a later change to the text is visible in the data even if the
+wire protocol stays the same.
 
 ---
 
@@ -17,99 +27,170 @@ with coronary reads.
 | | |
 |---|---|
 | Cases | the frozen Janus-M **decision set (40)** and **seal (60)**, ImageCAS-X *train* cases only (JA5, JA6). Nothing else is ever served. |
-| Reads per case | **two, independent** (JA7). |
+| Reads per case | **two, independent** (JA7), plus a **third read from blank** on 5 seeded cases of a flagged wave (§7, rule 2). |
 | Starting point | a **seed** (§5) on 90 cases; **no seed** on 10 seal cases (§5.2). |
 | Order | the decision set first; seal cases only after the seal is re-powered on the first 20 double-read decision cases (JA6) and an admin opens it. |
+| Read form | per vessel, the CAD-RADS 2.0 grade of the worst lesion, and an optional lesion point (§4.4). |
 
 Thirds, AHA segments and territories have **no read of their own**: code computes
 them from the borders (JA2–JA4).
 
-## 2. Labels (JA1)
+## 2. Labels (JA1, as protocol v1 states them)
+
+Only these four classes are drawn; everything else is 0.
 
 | Value | Class | Includes | Excludes |
 |---|---|---|---|
-| 0 | background | everything else, including RA, aorta, pulmonary artery, pericardium, fat | |
-| 1 | **LV myocardium** | the compact LV wall, **septum included** | papillary muscles, trabeculae, RV free wall |
-| 2 | **LV blood pool** | the LV cavity **with papillary muscles and trabeculae**; basal limit at the mitral and aortic valve planes | LV outflow above the aortic valve plane |
-| 3 | **RV blood pool** | the RV cavity | RV wall |
-| 4 | **LA blood pool** | the LA cavity, to the mitral annulus | pulmonary veins beyond the ostia **[Round 2]** |
+| 0 | background | everything else, including RA, aorta, pulmonary artery, pericardium, fat, and the mitral gap where it is not myocardium | |
+| 1 | **LV myocardium** | the compact LV wall, **septum included** | papillary muscles, trabeculae, RV free wall; **myocardium above the mitral annulus is not labelled** |
+| 2 | **LV blood pool** | the LV cavity **with papillary muscles and trabeculae**; ends at the **mitral annulus plane** and the **aortic valve plane** | the LV outflow above the aortic valve plane |
+| 3 | **RV blood pool** | the RV cavity from the **tricuspid annulus to the pulmonary valve**, trabeculae included | the RV wall; the pulmonary artery beyond the pulmonary valve |
+| 4 | **LA blood pool** | the LA cavity, to the mitral annulus | the **LA appendage** and the **pulmonary veins beyond their ostia** |
 
-Conventions the automatic check enforces (§4):
+The rules a reader follows:
 
-- every class is present;
-- the LV and RV pools never touch: the septum between them is myocardium (1);
-- the LV pool has no enclosed holes: papillary muscles and trabeculae are pool (2);
-- the myocardium is one shell, not loose pieces.
+1. **Papillary muscles and trabeculae are LV blood pool (2).** The endocardium is the
+   compact-wall surface. Where trabeculae merge with the compact wall, the border
+   goes at the **outer edge of the blood-filled recesses**.
+2. **Basal limits.** The LV pool ends at the mitral annulus plane and the aortic
+   valve plane, each a flat plane through the valve's hinge points as best seen.
+   Myocardium above the mitral annulus is not labelled. The LA runs to the mitral
+   annulus; the LA appendage and the pulmonary veins are excluded beyond their
+   ostia. The RV pool runs from the tricuspid annulus to the pulmonary valve.
+3. **The mitral gap.** Labels 2 and 4 **never share a face**: between the LV pool and
+   the LA there is always a gap of background (0) or myocardium (1), and the LV pool
+   reaches at most 3 mm above the mitral plane (§4.1).
+4. **The septum is myocardium (1)**, so the LV and RV pools do not touch, except over
+   the membranous septum (fibrous, not labelled myocardium), where they may meet over
+   at most 0.5 % of the LV pool's surface (JA46 (b)).
+5. The myocardium is **one shell**, not loose pieces. The LV pool has no enclosed
+   holes.
 
-**[Round 2] Basal limits.** The exact mitral and aortic valve planes (which slice,
-how the plane is drawn through an oblique annulus, what happens at the
-aorto-mitral continuity) and the apex cap. Until then: close the LV pool with a
-flat plane through the hinge points of each valve as best seen.
+`janusm_reads.labels.CONVENTIONS` carries the same text, and the reader module shows
+it on each class.
 
-## 3. The half-maximum rule (Hotel)
+## 3. The half-maximum rule (Hotel; JA21)
 
 **A border lies halfway between the plateaus on either side of it.** A plateau is
 the typical HU of a tissue away from any edge.
 
 | Border | Between | Threshold |
 |---|---|---|
-| endocardial (LV) | LV blood pool and myocardium | (LV blood + myocardium) / 2 |
-| epicardial (free wall) | myocardium and epicardial fat | (myocardium + fat) / 2 |
-| septal, RV side | myocardium and RV blood pool | (RV blood + myocardium) / 2 |
+| endocardial (LV) | LV blood pool and core myocardium | (LV blood + myocardium) / 2 |
+| epicardial (free wall) | core myocardium and epicardial fat | (myocardium + fat) / 2 |
+| septal, RV side | core myocardium and RV blood pool | (RV blood + myocardium) / 2 |
 
 How to apply it while reading:
 
-1. Measure the plateaus once per case: the mean HU of a region well inside the LV
-   pool, of the mid-wall myocardium, and of epicardial fat (inside −180 to 0 HU).
-   Slicer's *Segment Statistics* or a small ROI gives them.
-2. For a border, set the window **level to that border's threshold** and the width
-   narrow (about 50 HU). The border is where the image turns from white to black.
-3. Draw on that transition, not on the visually "sharp" edge: partial volume
-   makes the eye place a bright-blood edge outward and a fat edge inward.
+1. **Plateaus.** On a seeded case they are measured from the seed when the case
+   opens, and shown. On a blank case the reader places a small ROI in each tissue:
+   inside the LV pool, mid-wall myocardium, epicardial fat (−180 to 0 HU).
+2. **The border window is the default.** For the border being drawn the module sets
+   **level = (p₁ + p₂) / 2** and **width = 1.5 × |p₁ − p₂|** (Hotel v2 §5.4). A case
+   opens on the endocardial border; the reader may switch borders. A fixed
+   **800 / 300** window is available, but is not the default (a blank case shows it
+   until its plateaus are measured).
+3. Draw on the half-way transition, not on the visually "sharp" edge: partial
+   volume makes the eye place a bright-blood edge outward and a fat edge inward.
 
-Trabeculae and papillary muscles sit inside the pool by convention (JA1): the
-endocardial border is drawn at the compact wall, around them.
+**The canonical sign (JA44).** Every half-maximum offset this project reports (the
+read checker, the queue's export, the anchoring report, the tables) uses one sign:
+**+ = the region bounded by the border extends beyond the image half-maximum**. That
+region is the LV pool for the endocardium and pool + myocardium for the epicardium
+(and the septal RV side). So + means the read spills past the edge, − that it stops
+short of it.
 
-## 4. The automatic read check
+## 4. The automatic read check, and what happens to a read
 
-Every submitted read is checked by `janusm_reads.checker.check_read`, before it
-counts as a reference read. A failed read goes back to its reader with the
-reasons; a passed read is accepted.
+Every submitted read is checked by `janusm_reads.checker.check_read` (on the server,
+by `janusm-check`) before it counts as a reference read.
 
-1. **Label values and conventions** (§2).
-2. **Half-maximum offsets.** From the read's own labels the check measures the
-   plateaus (LV blood ≥ 2 mm deep in the pool; myocardium ≥ 1 mm from any other
-   class; fat 1–4 mm outside the myocardium in −180..0 HU). Across each border it
-   takes the median CT value as a function of signed distance to the read's border
-   (bins of 0.25 mm, ±3 mm), and finds where that profile crosses the threshold.
-   The crossing's distance from the read's border is the border's **offset**:
-   positive when the read is drawn inside the image border, negative when it spills
-   past it.
-3. The offset is measured over the whole border **and in eight sectors** (octants
-   about the LV pool's centre), so a local error is caught as well as a bias.
-4. A read **fails** if any border's offset, whole or in one sector, exceeds the
-   tolerance.
+### 4.1 Checks at submission
 
-| Setting (`CheckConfig`) | Round 1 value | |
+| Check | Rule | Kind |
 |---|---|---|
-| `tolerance_mm` | **1.0 mm** | **[Round 2]** JA8's bias guard on the model is 0.5 mm |
+| Label values | only 0–4; all four classes present | hard |
+| Half-maximum, per border | **median offset over the border ≤ 0.5 mm** (canonical sign, reported) | hard: return once (§4.2) |
+| Half-maximum, per octant | octant offset > 1.0 mm | **warning only** (JA46 (c)) |
+| LV pool ↔ LA pool | labels 2 and 4 never share a face | hard |
+| Mitral plane | label 2 extends ≤ 3 mm above the mitral plane (JA46 (a), below) | hard |
+| LV pool ↔ RV pool | contact ≤ 0.5 % of the LV pool's surface (JA46 (b)) | hard |
+| LV pool holes | none enclosed (> 0.2 % of its volume) | hard |
+| Myocardium connectivity | > 2 % outside the largest piece | hard; 0–2 % a warning |
+| LV pool facing background | > 25 % of its surface | warning |
+
+**The half-maximum offsets.** From the read's own labels the check measures the
+plateaus (LV and RV blood ≥ 2 mm deep in their pools; myocardium ≥ 1 mm from any
+other class; fat 1–4 mm outside the myocardium in −180..0 HU). Across each border it
+takes the median CT value as a function of signed distance to the read's border
+(bins of 0.25 mm, ±3 mm) and finds where that profile crosses the threshold. The
+crossing's distance from the read's border, in the canonical sign, is the border's
+offset. It is measured over the whole border, which decides, and in eight octants
+about the LV pool's centre, which only warn. The epicardial check is skipped, with a
+warning, where no fat plateau can be measured.
+
+**The mitral plane (JA46 (a)).** Fitted by least squares:
+
+1. on a seeded case, to the **seed's** 2–4 interface (or, if the seed has a mitral
+   gap, to its label-2 voxels within 3 mm of label 4);
+2. on a blank case, to the **read's** label-2 voxels within 3 mm of label 4 (the
+   mitral gap);
+3. if neither exists, to the annular hinge points.
+
+The plane's normal points into the LA. The check measures how far the LV pool
+reaches above it over the plane's own footprint (the extent of the points it was
+fitted to), so the outflow tract under the aortic valve is not measured against the
+mitral plane. Where no plane can be fitted, the check warns that the basal limit was
+not checked.
+
+| Setting (`CheckConfig`) | v1 value | |
+|---|---|---|
+| `tolerance_mm` | **0.5 mm** | whole-border median (JA21) |
+| `octant_warning_mm` | 1.0 mm | warning only (JA46 (c)) |
+| `max_pool_contact_share` | 0.5 % | LV–RV (JA46 (b)) |
+| `mitral_gap_mm` / `max_pool_above_mitral_mm` | 3 mm / 3 mm | JA46 (a) |
 | `band_mm` / `bin_mm` | 3.0 / 0.25 mm | |
 | `fat_window_hu` | −180 .. 0 HU | JA11, verified |
-| `fat_shell_mm` | 1–4 mm | **[Round 2]** |
+| `fat_shell_mm` | 1–4 mm | |
 
-The epicardial check is skipped, with a warning, where no fat plateau can be
-measured (too little fat in the shell).
+### 4.2 Return once, then accept and flag
+
+- **A passed read** is accepted.
+- **First failure** of any hard or half-maximum check: the read is **returned** with
+  the failing checks and, for the half-maximum check, the **profile plot** (HU
+  against signed distance from the read's border, with both plateaus and the half
+  level marked; the failing border named). The reader module plots it.
+- **Second failure:** the read is **accepted and flagged** (`flagged: true`, with the
+  reasons). A flagged read counts in every analysis, and the flag is reported.
+- A read the checker cannot run on at all goes back unflagged: that is not a failed
+  check.
+
+The count is the read's `attempts`; `protocol.MAX_RETURNS` is 1.
+
+### 4.3 What is stored with every read
+
+Reader, seeded or blank, third read or not, seconds, attempts, the check report,
+flagged and its reasons, the read form, and `border_protocol: 1`.
+
+### 4.4 The read form (JA46 (d))
+
+On every case (seal and decision), the reader gives, for each of **LM, LAD, LCx and
+RCA** (with their branches), the **CAD-RADS 2.0** grade of its worst lesion: **0, 1,
+2, 3, 4A, 4B, 5 or N** (non-diagnostic). Optionally they mark the worst lesion's point
+(world mm, RAS) on any vessel graded 1–5. A read is not submitted until every vessel
+is graded. The form is stored with the read for the export, and **never shown to the
+other reader** (LQ10 (a)).
 
 ## 5. Seeds and blank reads
 
 ### 5.1 Seeds
 
 A seed is TotalSegmentator `heartchambers_highres` (licence: JA9 / LQ3), mapped to
-§2's values, **coarsened to 2 mm and smoothed** (Golf), and resampled to the CT
-grid (`janusm_reads.seeds`). It is a rough start on purpose. Mapping:
-`heart_myocardium` → 1, `heart_ventricle_left` → 2, `heart_ventricle_right` → 3,
-`heart_atrium_left` → 4; the rest → 0. **[Round 2]** the smoothing (σ = 1 mm on
-the 2 mm grid).
+§2's values, **coarsened to 2 mm and smoothed (σ = 1 mm, confirmed)** (Golf), and
+resampled to the CT grid (`janusm_reads.seeds`). It is a rough start on purpose.
+Mapping: `heart_myocardium` → 1, `heart_ventricle_left` → 2, `heart_ventricle_right` →
+3, `heart_atrium_left` → 4; the rest → 0. The reader sees no model output other than
+the seed.
 
 ### 5.2 Blank reads
 
@@ -161,31 +242,44 @@ queue's deploy notes.
 
 ## 6. Independence
 
-- Each case's two reads are by two different readers. A reader never gets both.
-- A reader never sees the other read, the read set (seal or decision), or whether
-  the case is scored. A reader is told only whether the case has a seed.
+- Each case's reads are by different readers. A reader never gets a case twice.
+- A reader never sees the other read, the other read form, the read set (seal or
+  decision), whether the case is scored, or whether theirs is a third read. A reader
+  is told only whether the case has a seed.
 - Readers do not discuss cases with each other while a wave is open.
 - A reader's released case is never handed back to them.
 
-## 7. The anchoring report, per wave
+## 7. Anchoring, per wave (JA21, JA47)
 
+`janusm-export` writes a wave's accepted double reads and a manifest;
 `python -m janusm_reads.anchoring <manifest.json>` gives, per border (endocardial =
 surface of class 2; epicardial = surface of classes 1 + 2):
 
-- **seed-vs-read ASSD** (each read, against the case's seed);
+- **seed-vs-read ASSD** (each read, against the case's seed; voxel ASSD, JA39);
 - **inter-read ASSD** (the two reads of a case);
-- the **share of voxels changed** from the seed (voxels whose class differs, over
-  voxels labelled in either).
+- the **share of seed voxels changed** per read (voxels whose class differs, over
+  voxels labelled in either);
+- the **half-maximum offsets of the seeds and the reads** (canonical sign).
 
-Each is reported for seeded and blank cases separately. JA7: if blank reads differ
-from seeded reads by more than the inter-read difference, seeded reads cannot
-accept a model. The report reads this as
+Each is reported for seeded and blank cases separately.
 
-    anchored  if  mean seed-vs-read ASSD (blank) − mean seed-vs-read ASSD (seeded)
-                  >  mean inter-read ASSD (seeded)
+**Rule 1.** gap = mean seed-vs-read ASSD on blank-case reads − the same on
+seeded-case reads. **Seeded reads cannot accept a model** if the upper 95 % bound of
+(gap − mean seeded inter-read ASSD) exceeds **0.2 mm** on either border. The bound
+comes from a **two-sample** bootstrap: blank and seeded cases are resampled
+independently (no case has both a blank and a seeded read), 2 000 draws, fixed seed.
 
-per border, and sets `seededReadsMayAcceptModel` to false when either border is
-anchored. **[Round 2] Anchoring thresholds**: this reading of JA7 and its threshold.
+**Rule 2.** If more than half of a wave's seeded reads change **< 5 %** of seed
+voxels, the wave is **flagged**. Then **5** of its seeded cases, drawn by salted hash
+(`janusm_reads.anchoring.third_read_cases`), get a **third read from blank by a reader
+who has not read them** (an admin opens them: `POST /janusm/admin/third-reads`), and
+Rule 1 is evaluated on them: the third reads take the blank side and the same
+cases' seeded reads the seeded side. **Third reads never enter the reference
+standard**: they are exported apart and never counted as a case's reads.
+
+`seededReadsMayAcceptModel` is false when Rule 1 fails (on the wave, or on a flagged
+wave's third reads), true when both pass, and empty while a sample is missing or a
+flagged wave's third reads are not all in.
 
 ## 8. Hold-outs (JA12)
 
@@ -198,13 +292,26 @@ a seal or decision case is refused. A case outside the frozen seal and decision
 lists is refused before the guard is asked. If the guard cannot be imported or
 loaded, the step is refused (it fails closed).
 
-## 9. Placeholders for Round 2
+## 9. Protocol v1: what was settled, and where
 
-| Item | Where | Round 1 value |
-|---|---|---|
-| Basal limits: mitral and aortic valve planes, apex cap | §2 | flat plane through the valve hinge points |
-| LA limit at the pulmonary veins | §2 | ostia |
-| Check tolerance | §4, `CheckConfig.tolerance_mm` | 1.0 mm |
-| Fat shell | §4, `CheckConfig.fat_shell_mm` | 1–4 mm |
-| Seed smoothing | §5.1, `seeds.SMOOTH_MM` | 1 mm |
-| Anchoring rule and threshold | §7 | gap > mean seeded inter-read ASSD |
+Every Round 1 placeholder is settled. The values below are border protocol 1
+(`border_protocol: 1` in every read record, check report and export).
+
+| Item | Where | v1 | Source |
+|---|---|---|---|
+| Basal limits | §2 | mitral annulus plane and aortic valve plane; no myocardium above the annulus | Hotel v3 §5.1, JA21 |
+| Mitral gap | §2, §4.1 | labels 2 and 4 never share a face; LV pool ≤ 3 mm above the fitted mitral plane | JA46 (a) |
+| LA limits | §2 | to the mitral annulus; appendage and pulmonary veins excluded beyond their ostia | Hotel v3 §5.1 |
+| RV extent | §2 | tricuspid annulus to pulmonary valve, trabeculae included | Hotel v3 §5.1 |
+| Trabeculae | §2 | LV pool; border at the outer edge of the blood-filled recesses | Hotel v3 §5.1 |
+| Window | §3 | border window: level (p₁ + p₂) / 2, width 1.5 × \|p₁ − p₂\|; 800 / 300 on request | Hotel v2 §5.4, JA21 |
+| Offset sign | §3 | + = the region extends beyond the half-maximum | JA44 |
+| Check tolerance | §4.1, `CheckConfig.tolerance_mm` | 0.5 mm, whole-border median | JA21 |
+| Octants | §4.1, `CheckConfig.octant_warning_mm` | > 1.0 mm is a warning only | JA46 (c) |
+| LV–RV contact | §4.1 | ≤ 0.5 % of the LV pool's surface | JA46 (b) |
+| Failed reads | §4.2 | returned once, then accepted and flagged | Hotel v3 §5.1 |
+| Read form | §4.4 | per-vessel CAD-RADS 2.0 and an optional lesion point | JA46 (d) |
+| Fat shell | §4.1, `CheckConfig.fat_shell_mm` | 1–4 mm (unchanged) | Round 1 |
+| Seed smoothing | §5.1, `seeds.SMOOTH_MM` | σ = 1 mm, confirmed | Hotel v3 §5.1 |
+| Anchoring rules | §7 | rule 1 (two-sample bootstrap, 0.2 mm) and rule 2 (wave flag, 5 third reads) | JA47 |
+| Versioning | everywhere | `border_protocol: 1`, apart from the wire `PROTOCOL_VERSION` (1) | S5 |

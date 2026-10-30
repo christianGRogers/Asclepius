@@ -12,7 +12,8 @@ heart, too coarse to be accepted as it is. Steps, per case:
 4. resampled back to the CT grid and assigned by largest soft value (background
    wins unless a class reaches 0.5).
 
-The 2 mm comes from JA7; ``smooth_mm`` (1 mm) is a placeholder until Round 2.
+The 2 mm comes from JA7; ``smooth_mm`` (1 mm) is confirmed by border protocol v1
+(Hotel v3 section 5.1).
 
 This module only transforms arrays. The Fir job that runs TotalSegmentator and
 then this is ``tools/janusm/make_seeds.py``; the lead runs it (JA10).

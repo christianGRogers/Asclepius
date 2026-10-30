@@ -15,7 +15,7 @@ from pathlib import Path
 import numpy as np
 import pytest
 
-from janusm import calibrate_s3_stub as C
+from janusm import calibrate as C
 from janusm import guard, sealed_r1
 from janusm import reference as R
 

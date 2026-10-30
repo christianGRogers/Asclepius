@@ -7,8 +7,8 @@
 - **AHA orientation:** pass; septal arc 115.7°
 - **Territory source:** ImageCAS-X reference tree
 - **Layers per segment:** 0 in thirds, 17 in halves
-- **Versions:** harness 1.0.0, geometry 1.0.0, features 1.0.0, report 1.0.0, guard 2
-- **Reference config sha256:** 38e7fe562a779603bd5e7fc87bac9ff8e6323791cc29cb73356ec18725a3b6d2
+- **Versions:** harness 1.1.0, geometry 1.0.0, features 1.0.0, report 1.0.0, guard 2
+- **Reference config sha256:** 158c8f98e2342ad47c32f37155f1f8b87583955564d70fcdf52eb56d2cb79ed8
 
 ## Table A: segments (numbers, never flags)
 

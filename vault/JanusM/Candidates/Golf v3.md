@@ -102,7 +102,9 @@ Each is the rulings' recommendation, held until the lead answers.
 
 ### 4.2 The benchmark's verdict
 
-{{BENCH}}
+*Pending: the benchmark's full run (24 hearts × 30 conditions) is due on #179 at about 12:30 UTC, after this PR
+opens. This section will then give its strike table, and say where E8 (§4.3) agrees or disagrees. Until then,
+§4.3–4.4 are Golf's cross-check and proposal, not the verdict.*
 
 ### 4.3 Golf E8 (cross-check), and what it adds
 
@@ -120,8 +122,10 @@ CNR 5, 22 hearts, sensitivity / specificity:
    extents.
 3. **P-G holds:** specificity ≥ 0.98 after affine, and sensitivity 0.75–0.81.
 4. **Sensitivity by true bin, every rule:** bins 2–4 ≈ 1.00; bin 1 0.41–0.53 (P-G, exact) and 0.08–0.24 (P-J).
-   Pooled sensitivity ≈ 1 − bin-1 share × (1 − bin-1 sensitivity). With 37 % bin-1 segments here, P-G sits at
-   ≈ 0.80; with 25 % (the benchmark's mix), higher. **The JA32 sensitivity endpoint therefore rides on the cohort's
+   Pooled sensitivity ≈ 1 − bin-1 share × (1 − bin-1 sensitivity). E8 uses the pre-registered mix (depths 15 / 35 /
+   60 / 90 % with equal weight), but by volume-share truth 37 % of scarred segments are bin 1, not 25 %. A curved
+   wall's inner layers hold less tissue, so some 35 %-depth scars fall under 25 % of the segment. P-G then sits at
+   ≈ 0.80. **The JA32 sensitivity endpoint therefore rides on the cohort's
    bin-1 share**, which the development set measures (JA28).
 5. **The spill share of P-G's sensitivity (the §7 item 1 measurement): ≤ 0.05** on exact, rigid, affine and chain
    borders, at every blood level. Only unregistered R0 borders (≈ 2 mm off) reach 0.19–0.21. **Spill costs
@@ -168,7 +172,10 @@ reader error 0.08 (reader bin agreement 0.69).
 | Golf R2: 1 + Poisson(3) (mean 4) | 135 (155) | 97 (108) |
 
 JA28's "about 135 at 50 %" holds for Golf's larger infarcts only. With Kilo's, **the floor alone needs ≈ 170–190
-patients at 50 % enrichment**. That makes the segment floor, not the 120-patient floor, the binding size at 50 %.
+patients at 50 % enrichment**. That makes the segment floor, not the 120-patient floor, the binding size at 50 %. The merged engine (#187)
+uses Golf's infarct size and gets the same 136 at 50 %, and 240 / 160 under strong clustering for joint power at
+its default extent error. The difference between Golf's and Kilo's infarct sizes is what development must
+measure.
 
 ### 5.2 Seal size under weak and strong clustering, per endpoint
 
@@ -228,7 +235,8 @@ Sweep over CT extent error × reader error (`power_ja32_sweep.json`; joint power
    agreement with the reference is more than **0.03 below** the development reader agreement (point estimates),
    the third endpoint cannot be powered at any feasible N. Scar-1 is then triggered on extent before any seal
    grading, even if presence passes. In E10's terms the CT extent error must be ≲ the readers' (here ≲ 0.08 of
-   wall share); E8 (§4) shows how far the Scar-0 extent measures are from that.
+   wall share). E8 (§4.3): after always-affine registration, E-V's error SD is 0.06–0.09, at that limit; after the
+   JA29 chain it is 0.09–0.15, beyond it. Hence §8.2.
 
 ## 6. §7 item 3: the LGE read form and the registration check form
 
@@ -320,7 +328,7 @@ Dictionary).
 | Check | Fields | Outcome if it fails |
 |---|---|---|
 | CCTA and LIE are one session | `StudyInstanceUID` (0020,000D) equal; or the same `FrameOfReferenceUID` and acquisition times ≤ 30 min apart | **exclusion** from T2 (the patient may still be T1) |
-| Shared frame of reference | `FrameOfReferenceUID` (0020,0052) equal across the CCTA and LIE series | **R0 unavailable**: the patient stays in T2, but the chain starts at rigid (JA29 step 3). Reported as a stratum |
+| Shared frame of reference | `FrameOfReferenceUID` (0020,0052) equal across the CCTA and LIE series | **R0 unavailable**: the patient stays in T2, and registration starts from the image centres (under §8.2, R0 is only logged anyway). Reported as a stratum |
 | Geometry kept | `ImagePositionPatient` (0020,0032), `ImageOrientationPatient` (0020,0037) and `PixelSpacing` (0028,0030) present on every slice; `TablePosition` (0018,9327), or `TableHeight` (0018,1130), where present | **hold** |
 | No patient move | the same `TableHeight` on both series where recorded; R0's estimated shift logged | logged only |
 
@@ -401,8 +409,8 @@ check results, and nothing that identifies the patient. The summary counts (no i
      at 0.035 flags 76 % of phase cases with 17 % false flags; at 0.045, 52 % and 9 %. Breath-hold motion here
      includes a 3 % scale, so in phase-matched patients the false-flag rate should be lower.
    - **Kilo E8's** remote-segment endocardial half-maximum offset (|offset| > 0.6 mm flags 90–100 % of phase cases,
-     0–10 % false flags) is stronger on Kilo's generator. Golf's all-segment version reached only AUC 0.68–0.72, as
-     scarred segments bias it.
+     0–10 % false flags) is stronger on Kilo's generator. Golf's all-segment version reached only AUC 0.66–0.75 (by blood level and
+     stage), as scarred segments bias it.
    - **Rule:** a patient is phase-flagged if **either** check exceeds its development p95 over phase-matched
      patients. A flag on a patient whose phase match comes from DICOM moves the patient to the phase-unmatched
      stratum only if the reader also marks "cavity size differs (phase)". A flag on a patient whose phase is

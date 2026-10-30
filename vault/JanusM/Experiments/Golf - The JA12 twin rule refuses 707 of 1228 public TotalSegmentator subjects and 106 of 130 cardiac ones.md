@@ -87,6 +87,6 @@ ages.
    while this round ran.
    - Its pinned list `configs/janusm/ts-twins-r1.json` (built by `tools/janusm/build_ts_twins.py`) holds **the same
      707 s-numbers**, with zero differences from `guard_r2_twins.json`.
-   - All 22 + 2 public cases Golf used this round pass it.
+   - All 22 public cases Golf used this round pass it.
    - `guard_r2.refuse` now calls the shared guard as well. `guard_r2.py` is kept only as the record of this
      experiment.

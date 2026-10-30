@@ -4,10 +4,10 @@ author: Golf
 round: 1
 updated: 2026-10-30
 issue: christianGRogers/Asclepius#130
-code: experiments/JanusM/Golf/census.py, experiments/JanusM/Golf/janusm_seal.py
+code: experiments/JanusM/Golf/census.py, experiments/JanusM/Golf/heldout.py, experiments/JanusM/Golf/janusm_seal.py
 ---
 
-# The coronary seal, D35 draws and reserve leave Janus-M 164 of 675 pool volumes, so its adult data is ImageCAS
+# The coronary seal, D35 draws and reserve leave Janus-M 137 of 675 pool volumes, so its adult data is ImageCAS
 
 ## Question
 
@@ -27,37 +27,49 @@ volumes) and drops, in this order:
    their union until the lead answers Q1.
 3. **Reserve:** every patient on the seal's `extension_order` (101 entries). A34 keeps the reserve untrained and
    uninspected.
+4. **Guard:** `heldout.py` drops every patient named **anywhere** in a D35 draw file. That covers the draws'
+   trainable and reserve lists too, which is more than the A33 freeze requires. Janus-M takes the conservative
+   reading, following the PM's instruction of 2026-10-30.
+
+`heldout.py` is the one guard every Golf script calls before it opens, downloads, reads or scores a case. It
+refuses by real patient (`ingest_patient`). The three positive controls refused: `TotalSegmentator-cardiac__s0356`,
+ImageCAS `c0002` and `Mendeley-SDN-cy54ttk3fj__P07_diast`.
 
 Patients are grouped with `segtrain.pool_seal.ingest_patient`, the rule the guard itself uses.
 
 ## Result
 
-**164 volumes from 163 patients are open to Janus-M.**
+**137 volumes from 137 patients are open to Janus-M.** Without step 4 the count would be 164.
 
-| Source | Pool volumes | Sealed | D35 draws | Reserve | Janus-M allowed (patients) | Myocardium relevance |
-|---|---|---|---|---|---|---|
-| ImageCHD | 83 | 20 | 0 | 0 | **63 (63)** | myocardium label 5; congenital, mostly children |
-| ImageALCAPA | 30 | 0 | 0 | 0 | 30 (30) | spacing lost (D29 suspect) |
-| Taiwan-AICUP-CardiacCT | 100 | 43 | 21 | 11 | 25 (25) | adult CCTA, no myocardium label |
-| HOCMvalvesSeg | 24 | 0 | 0 | 0 | 24 (24) | uint8 windowed, not HU |
-| CCA200-HF | 20 | 0 | 0 | 0 | 20 (20) | suspect spacing |
-| Mendeley-SDN-cy54ttk3fj (normal perfusion) | 80 | 36 | 24 | 18 | **2 (1)** | normal rest-perfusion reference |
-| Figshare-EpicardialFat-CE | 34 | 15 | 8 | 11 | **0** | epicardial fat mask |
-| TotalSegmentator-cardiac | 16 | 8 | 2 | 6 | **0** | myocardium label |
-| every other source (18) | 288 | 203 | 28 | 57 | 0 | |
+| Source | Pool volumes | Sealed | D35 draws | Reserve | Guard (step 4) | Janus-M allowed (patients) | Myocardium relevance |
+|---|---|---|---|---|---|---|---|
+| ImageCHD | 83 | 20 | 0 | 0 | 0 | **63 (63)** | myocardium label 5; congenital, mostly children |
+| ImageALCAPA | 30 | 0 | 0 | 0 | 0 | 30 (30) | spacing lost (D29 suspect) |
+| HOCMvalvesSeg | 24 | 0 | 0 | 0 | 0 | 24 (24) | uint8 windowed, not HU |
+| CCA200-HF | 20 | 0 | 0 | 0 | 0 | 20 (20) | suspect spacing |
+| Taiwan-AICUP-CardiacCT | 100 | 43 | 21 | 11 | 25 | **0** | adult CCTA, no myocardium label |
+| Mendeley-SDN-cy54ttk3fj (normal perfusion) | 80 | 36 | 24 | 18 | 2 | **0** | normal rest-perfusion reference |
+| Figshare-EpicardialFat-CE | 34 | 15 | 8 | 11 | 0 | **0** | epicardial fat mask |
+| TotalSegmentator-cardiac | 16 | 8 | 2 | 6 | 0 | **0** | myocardium label |
+| every other source (18) | 288 | 203 | 28 | 57 | 0 | 0 | |
 
 Full table and the volume list: `experiments/JanusM/Golf/census.json`.
 
 ## What it implies
 
-- **The pool cannot carry Janus-M.** The three pool sets with myocardium value have 0, 1 and 0 usable adult
-  patients. The two cohorts Janus-M would most want are gone: the 40-patient SDN normal-perfusion cohort ([[#Forte2020]])
+- **The pool cannot carry Janus-M.** The three pool sets with myocardium value (SDN normal perfusion, epicardial
+  fat, TotalSegmentator) have no usable patient. No adult gated CCTA with HU and a trusted grid is left in the pool. The two cohorts Janus-M would most want are gone: the 40-patient SDN normal-perfusion cohort ([[#Forte2020]])
   and the epicardial-fat set. The usable remainder is mostly congenital (ImageCHD), suspect-spacing or windowed.
 - **ImageCAS is the adult source.** Its 1000 ECG-gated CCTA are not pool volumes, so the pool seal, the reserve and
   D35 cannot touch them. Only the coronary A14 seal applies: 80 ImageCAS-X test cases and 20 quality-0 cases. That
   leaves **900** cases.
 - **The TotalSegmentator cardiac cases outside the pool are clean too.** 114 of the 130 in CCTA-Pool are not pool
-  volumes (101 of the 116 "gated_like"). Their myocardium labels are CC BY 4.0. E2 uses them.
+  volumes (101 of the 116 "gated_like"). Their myocardium labels are CC BY 4.0. E2 uses 24 of them.
+  - All 24 pass `heldout.py`, which `fetch_ts.py` and `layers_ts.py` call before any download or load.
+  - Golf opened no held-out case.
+  - **Residual risk:** TotalSegmentator does not publish which s-numbers belong to the same patient. A pool patient
+    scanned twice under two s-numbers could not be caught by any guard. The release gives nothing to check this
+    against.
 - **Proposed Janus-M seal, drawn now:** `janusm_seal.py` ranks the 900 allowed ImageCAS cases by
   `sha256('asclepius-janusm-sealed-r1:' + case)`:
   - the first 60 form the **Janus-M seal**;

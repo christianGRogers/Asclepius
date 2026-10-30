@@ -6,6 +6,8 @@ Usage: python fetch_ts.py <outdir> [N=24]"""
 import hashlib, json, os, sys, urllib.request
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+
 ROOT = Path(__file__).resolve().parents[3]
 MIRROR = "https://huggingface.co/datasets/MedOtter/totalsegmentator-cardiac/resolve/main/{id}/{f}"
 
@@ -13,7 +15,9 @@ MIRROR = "https://huggingface.co/datasets/MedOtter/totalsegmentator-cardiac/reso
 def chosen(n):
     ids = json.loads((ROOT / "tools/ccta/totalseg_cardiac_ids.json").read_text())
     pool = (ROOT / "configs/segqueue14/pool-2026-10.txt").read_text()
-    cand = [i for i in ids["gated_like"] if f"TotalSegmentator-cardiac__{i}" not in pool]
+    from heldout import reason
+    cand = [i for i in ids["gated_like"] if f"TotalSegmentator-cardiac__{i}" not in pool
+            and not reason("TotalSegmentator-cardiac", i)]   # held-out guard, by real patient
     return sorted(cand, key=lambda i: hashlib.sha256(f"janusm-golf-r1:{i}".encode()).hexdigest())[:n], ids["meta"]
 
 
@@ -21,7 +25,9 @@ if __name__ == "__main__":
     out, n = Path(sys.argv[1]), int(sys.argv[2]) if len(sys.argv) > 2 else 24
     sel, meta = chosen(n)
     (Path(__file__).parent / "ts_cases.json").write_text(json.dumps({i: meta[i] for i in sel}, indent=1))
+    from heldout import refuse
     for i in sel:
+        refuse("TotalSegmentator-cardiac", i)
         (out / i).mkdir(parents=True, exist_ok=True)
         for f in ("ct.nii.gz", "cardiac_label.nii.gz"):
             p = out / i / f

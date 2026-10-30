@@ -109,6 +109,9 @@ def allowed_cases(sealed_json):
     cases = [c for c in (f"c{i:04d}" for i in range(1000))
              if c not in blocked and c not in S.sealed_set(seal)]   # drop the 100 coronary-sealed cases (A14)
     S.refuse_sealed(cases, seal, "janusm territories")              # and let the A14 guard confirm it
+    from heldout import refuse
+    for c in cases:
+        refuse("ImageCAS", c)
     return cases
 
 

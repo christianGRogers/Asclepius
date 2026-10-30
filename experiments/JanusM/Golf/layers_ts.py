@@ -171,6 +171,8 @@ def aha_labels(myo, geom, anterior_vox):
 
 # ---------------------------------------------------------------------------------------------- per case
 def load(case_dir):
+    from heldout import refuse
+    refuse("TotalSegmentator-cardiac", Path(case_dir).name)   # never opens a held-out case
     ct = nib.load(case_dir / "ct.nii.gz")
     lab = nib.load(case_dir / "cardiac_label.nii.gz")
     L = np.asanyarray(lab.dataobj) > 0.5           # (13, X, Y, Z)

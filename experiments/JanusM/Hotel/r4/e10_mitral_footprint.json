@@ -1,0 +1,40 @@
+{
+ "spacing": [
+  0.5,
+  0.5,
+  0.5
+ ],
+ "fit_radius_mm": 5.7,
+ "plane_source": "seed",
+ "la_inplane_max_mm": 8.0,
+ "rows": [
+  {
+   "probe": "A outside footprint, seeded",
+   "voxels_added": 3712,
+   "reported_above_mm": 1.09,
+   "true_max_above_mm": 7.59,
+   "mitral_error": false
+  },
+  {
+   "probe": "A outside footprint, blank",
+   "voxels_added": 3712,
+   "reported_above_mm": 2.81,
+   "true_max_above_mm": 7.59,
+   "mitral_error": false
+  },
+  {
+   "probe": "B inside footprint, seeded",
+   "voxels_added": 3771,
+   "reported_above_mm": 4.59,
+   "true_max_above_mm": 4.59,
+   "mitral_error": true
+  },
+  {
+   "probe": "B inside footprint, blank (read-fitted)",
+   "voxels_added": 3771,
+   "reported_above_mm": 1.43,
+   "true_max_above_mm": 4.59,
+   "mitral_error": false
+  }
+ ]
+}

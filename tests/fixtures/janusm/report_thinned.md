@@ -10,7 +10,7 @@
 - **Shared segments:** majority share < 0.6
 - **Layers per segment:** 0 in thirds, 17 in halves
 - **Versions:** harness 1.2.0, geometry 1.0.0, features 1.1.0, report 1.1.0, guard 2
-- **Reference config sha256:** ad8f041269a6c841ffe24079875805ef621c26a5175080456ddde87964f7250a
+- **Reference config sha256:** 977f0c331e2f90e2cd415bd4ff6857037153ab46569fcf741792c3b24067b2fe
 
 ## Table A: segments (numbers, never flags)
 

@@ -397,3 +397,114 @@ def test_septal_arc_column_omitted_when_r7_drops_it(ref_geodesic, tmp_path, monk
     rep = P.build("Synthetic__normal", lab, ct, aff, cor, path, purpose="any")
     assert all("septal_arc_value" not in r for r in rep["table_a"])
     assert "Septal arc:" not in P.render_markdown(rep)
+
+
+# ------------------------------------------------------------------------------------ R5-S5
+def test_r5s5_a_report_without_segment_territory_falls_back_and_says_so(ref, monkeypatch):
+    """R5-S5 (JA75, JA63): ``segment_territory`` dropped -> ``territory_map == "aha_fallback"``,
+    and the fall-back note is in the header and the markdown. With the map, neither."""
+    lab, ct, aff, cor = Y.heart()
+    kept = P.build("Synthetic__normal", lab, ct, aff, cor, ref, purpose="any")
+    real = F.case_features
+
+    def dropped(*a, **k):
+        f = real(*a, **k)
+        f.pop("segment_territory")
+        return f
+
+    monkeypatch.setattr(F, "case_features", dropped)
+    rep = P.build("Synthetic__normal", lab, ct, aff, cor, ref, purpose="any")
+    h = rep["header"]
+    note = "D on the AHA default map: no patient-specific map (fall-back, JA63)"
+    assert h["territory_map"] == "aha_fallback" and h["territory_map_note"] == note
+    assert f"- **Territory map:** {note}" in P.render_markdown(rep)
+    assert note in P.render_html(rep)
+    for row in rep["table_b"]:
+        for sign in ("thinning", "hypoattenuation"):
+            assert row["signs"][sign]["map"] == "aha_fallback"
+    assert kept["header"]["territory_map"] == "patient"
+    assert "territory_map_note" not in kept["header"]
+    assert "- **Territory map:** patient-specific" in P.render_markdown(kept)
+    assert note not in P.render_markdown(kept)
+
+
+# ------------------------------------------------------------------------ R5-S6: halves_note
+def test_r5s6_halves_note_false(tmp_path, monkeypatch):
+    """R5-S6: ``halves_note`` tested False as well as True (``test_header_fields``): False
+    leaves the "Layers per segment" line out."""
+    path = _pin(tmp_path / "nohalves.json", _config(halves_note=False), monkeypatch)
+    lab, ct, aff, cor = Y.heart()
+    rep = P.build("Synthetic__normal", lab, ct, aff, cor, path, purpose="any")
+    assert rep["header"]["halves_note"] is False
+    md = P.render_markdown(rep)
+    assert "Layers per segment" not in md and "Layers per segment" not in P.render_html(rep)
+    assert "Territory map" in md  # the rest of the header is printed
+
+
+# ------------------------------------------------------------------------------- R5-S6: S12
+def test_r5s6_s12_a_real_geodesic_majority_differs_on_one_segment_shared_only_with_r8_on(
+        ref_text, ref_geodesic, tmp_path, monkeypatch):
+    """S12: ``janusm_synth.heart_r8``'s real ``geometry.territories(method="geodesic")``
+    majority differs from the Euclidean one on segment 1 only (no monkeypatch); segment 1 is
+    "shared" only with R8 on."""
+    lab, ct, aff, cor = Y.heart_r8()
+    f = F.case_features(lab, ct, aff, cor)
+    e, g = f["segment_territory"], f["segment_territory_geodesic"]
+    assert {k for k in e if e[k] != g[k]} == {1}
+    assert (e[1], g[1]) == ("LCx", "LAD")
+    assert f["segment_territory_share"][1] >= F.SHARED_BELOW  # not "shared" by its share
+    plain = F.case_features(*Y.heart_r8(branch=False))         # the branch is what moves it
+    assert all(plain["segment_territory"][k] == plain["segment_territory_geodesic"][k]
+               for k in plain["segment_territory"])
+    out = {}
+    for name, text in (("off", ref_text), ("on", ref_geodesic)):
+        path = _pin(tmp_path / f"{name}.json", text, monkeypatch)
+        out[name] = P.build("Synthetic__r8", lab, ct, aff, cor, path, purpose="any")
+    shared = {n: {r["segment"] for r in out[n]["table_a"] if r["shared"]} for n in out}
+    assert shared["on"] - shared["off"] == {1}
+    assert out["off"]["table_a"][0]["shared"] is False
+    assert out["on"]["table_a"][0]["shared"] is True
+    lcx = {n: next(r for r in out[n]["table_b"] if r["territory"] == "LCx") for n in out}
+    assert 1 in lcx["off"]["segments"] and 1 in lcx["on"]["shared_segments"]
+
+
+# ------------------------------------------------------------------------------- R5-S6: S13
+def test_r5s6_s13_grades_round_trip_through_the_export_mapping(ref):
+    """S13: a read stored as ``rest.submit`` stores it, written by the export's own mapping
+    (``janusm_reads.readform.read_form``, which ``export.readRecord`` calls), into Table B."""
+    from janusm_reads import readform
+    from janusm_reads.protocol import ReadSubmission
+
+    sub = ReadSubmission.from_dict(ReadSubmission(
+        checksum="0" * 64, size_bytes=1, cadrads={"LM": "2", "LAD": "3", "LCx": "0", "RCA": "N"},
+        lesion_points={"LAD": [1.0, 2.0, 3.0]}).to_dict())
+    stored = {"userId": "u", "seeded": True, "border_protocol": 1,       # rest.submit's fields
+              "cadrads": dict(sub.cadrads), "lesionPoints": dict(sub.lesion_points)}
+    rec = {"reader": "u", **readform.read_form(stored)}                 # export.readRecord
+    grades = P.grades_from_read_record(rec)
+    assert grades == {"LM": "2", "LAD": "3", "LCx": "0", "RCA": "N",
+                      "lesion_point": {"LAD": [1.0, 2.0, 3.0]}}
+    assert grades == readform.reader_grades(stored)
+    lab, ct, aff, cor = Y.heart()
+    rep = P.build("Synthetic__normal", lab, ct, aff, cor, ref, grades, purpose="any")
+    by = {r["territory"]: r for r in rep["table_b"]}
+    assert (by["LAD"]["grade"], by["LCx"]["grade"], by["RCA"]["grade"]) == ("3", "2", "N")
+    assert by["LCx"]["grade_source"] == "LM 2"
+    assert by["LAD"]["mass_distal_note"] == P.DISTAL_NOTE
+
+
+def test_r5s6_s13_the_export_writes_the_form_with_readform():
+    """S13: ``export.readRecord`` takes its form fields from ``readform.read_form`` and writes
+    no ``cadrads`` / ``lesionPoints`` of its own (read from the source: the export needs
+    girder, which this job does not install)."""
+    import ast
+
+    src = (Path(__file__).parents[1] / "server/girder_janusm/export.py").read_text("utf-8")
+    fn = next(n for n in ast.walk(ast.parse(src))
+              if isinstance(n, ast.FunctionDef) and n.name == "readRecord")
+    ret = next(n for n in ast.walk(fn) if isinstance(n, ast.Return))
+    assert isinstance(ret.value, ast.Dict)
+    keys = {k.value for k in ret.value.keys if isinstance(k, ast.Constant)}
+    assert not keys & {"cadrads", "lesionPoints"}
+    spread = [v for k, v in zip(ret.value.keys, ret.value.values) if k is None]
+    assert [ast.unparse(v) for v in spread] == ["readform.read_form(read)"]

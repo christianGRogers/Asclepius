@@ -35,6 +35,10 @@ ED-only phase mix) is <= 0.50. Fat: cut and RC.
 **Pin.** :func:`load` refuses a config whose sha256 is not :data:`janusm.guard.REFERENCE_SHA256`.
 Until the lead's run is committed that pin is None, and every load refuses.
 
+**Fall-backs** (JA75, Round 5): every read that fell back to the AHA default map is counted over
+all reads the population uses, the RC's first 20 and κ / ICC's first 40, per use and in total
+(:func:`fallback_counts`), in ``rc["aha_fallback"]`` and ``rc["decisions"]``.
+
 The detectable depth and rule C come from S3 (``janusm.calibrate``, #194).
 """
 
@@ -586,13 +590,37 @@ def icc_2_1(x: Sequence[float], y: Sequence[float]) -> Optional[float]:
     return None if den == 0 else float((msr - mse) / den)
 
 
+def fallback_counts(states, sign: str, rc_idx: Sequence[int], k_idx: Sequence[int]) -> dict:
+    """JA75: AHA fall-backs over every read the population uses, per use and in total.
+
+    ``states``: (read 1, read 2) :func:`case_state` pairs in draw order; ``rc_idx`` and
+    ``k_idx``: the entries the RC (first 20) and κ / ICC (first 40) use for ``sign``. Returns
+    ``{"rc" | "kappa_icc" | "total": {"fell": n, "reads": n}}``; ``total`` is over the union, so
+    a read both uses share is counted once."""
+    def count(idx):
+        idx = sorted(set(idx))
+        fell = sum(states[i][r][sign]["map"] == "aha_fallback" for i in idx for r in (0, 1))
+        return {"fell": int(fell), "reads": 2 * len(idx)}
+
+    return {"rc": count(rc_idx), "kappa_icc": count(k_idx),
+            "total": count(list(rc_idx) + list(k_idx))}
+
+
+def fallback_decision(fb: dict) -> str:
+    """The ``rc["decisions"]`` line for :func:`fallback_counts` (JA63's "never silent")."""
+    part = lambda k: f"{fb[k]['fell']} of {fb[k]['reads']}"  # noqa: E731
+    return (f"AHA default-map fall-backs (JA63, JA75): RC {part('rc')} reads, "
+            f"κ / ICC {part('kappa_icc')} reads, total {part('total')} reads")
+
+
 def read_agreement(reads: List[dict], cfg: dict) -> dict:
     """RC (first 20 entries) and κ / ICC (first 40) per sign from anonymous read pairs.
 
     ``reads``: decision cases in draw order, each ``{"read_1": features, "read_2": features}``
     (outputs of :func:`features.case_features` on the two accepted reads, no id). D and E_T use
     the patient-specific map of each read (JA42 step 1, JA63); rule C flags use the AHA default
-    map. Every read that fell back to the AHA map is counted in ``rc["decisions"]`` (JA63)."""
+    map. Every read that fell back to the AHA map is counted in ``rc["decisions"]`` and
+    ``rc["aha_fallback"]``, per use (RC, κ / ICC) and in total (JA63, JA75)."""
     assert_anonymous(reads, "the read records")
     out: Dict[str, dict] = {}
     states = [(case_state(r["read_1"], cfg), case_state(r["read_2"], cfg)) for r in reads]
@@ -608,12 +636,13 @@ def read_agreement(reads: List[dict], cfg: dict) -> dict:
             e1 = e2 = None
         rc = repeatability(d1, d2, e1, e2, cases=[i for i, _, _ in rc_rows])
         rc["n_cases"] = len(rc_rows)
-        fell = sum(x["map"] == "aha_fallback" for _, a, b in rc_rows for x in (a, b))
-        rc["aha_fallback_reads"] = fell
-        rc.setdefault("decisions", []).append(
-            f"{fell} of {2 * len(rc_rows)} reads fell back to the AHA default map (JA63)")
-        k_rows = [(a[sign], b[sign]) for a, b in states[:KAPPA_CASES]
-                  if a.get(sign) is not None and b.get(sign) is not None]
+        k_idx = [i for i, (a, b) in enumerate(states[:KAPPA_CASES])
+                 if a.get(sign) is not None and b.get(sign) is not None]
+        k_rows = [(states[i][0][sign], states[i][1][sign]) for i in k_idx]
+        fb = fallback_counts(states, sign, [i for i, _, _ in rc_rows], k_idx)
+        rc["aha_fallback"] = fb
+        rc["aha_fallback_reads"] = fb["total"]["fell"]
+        rc.setdefault("decisions", []).append(fallback_decision(fb))
         fa = [a["territory_rule_c"][t] for a, _ in k_rows for t in TERRITORIES]
         fb = [b["territory_rule_c"][t] for _, b in k_rows for t in TERRITORIES]
         kap, kn = kappa_status(fa, fb)

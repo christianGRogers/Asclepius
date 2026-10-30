@@ -1,9 +1,13 @@
 """The four Janus-M classes (JA1) and the label-value checks every read must pass.
 
-JA1 (Janus-M Round 1 ruling): 0 background; 1 LV myocardium (compact wall, septum
-included); 2 LV blood pool (papillary muscles and trabeculae included; basal limit
-at the mitral and aortic valve planes); 3 RV blood pool; 4 LA blood pool (to the
-mitral annulus). No layer, segment or scar class: those are computed (JA2-JA4).
+JA1 (Janus-M Round 1 ruling), as border protocol v1 states them (Hotel v3 section
+5.1, JA21, JA46): 0 background; 1 LV myocardium (compact wall, septum included; none
+above the mitral annulus); 2 LV blood pool (papillary muscles and trabeculae
+included; basal limit at the mitral annulus and aortic valve planes); 3 RV blood
+pool (tricuspid annulus to pulmonary valve, trabeculae included); 4 LA blood pool
+(to the mitral annulus; appendage and pulmonary veins excluded beyond their ostia).
+Labels 2 and 4 never share a face: the mitral gap is 0 or 1. No layer, segment or
+scar class: those are computed (JA2-JA4).
 
 Stdlib only, Python 3.9.
 """
@@ -29,11 +33,16 @@ CLASSES: Dict[int, str] = {
 #: value -> what the reader includes, from JA1. Shown in the protocol and the client.
 CONVENTIONS: Dict[int, str] = {
     LV_MYO: "compact LV wall, septum included; papillary muscles and trabeculae are NOT "
-            "myocardium",
-    LV_POOL: "LV cavity with papillary muscles and trabeculae included; basal limit at the "
-             "mitral and aortic valve planes",
-    RV_POOL: "RV cavity",
-    LA_POOL: "LA cavity, to the mitral annulus",
+            "myocardium; myocardium above the mitral annulus is not labelled",
+    LV_POOL: "LV cavity with papillary muscles and trabeculae included (where trabeculae "
+             "merge with the compact wall, the border goes at the outer edge of the "
+             "blood-filled recesses); basal limit at the mitral annulus plane and the "
+             "aortic valve plane; never shares a face with the LA pool (the mitral gap "
+             "is 0 or 1)",
+    RV_POOL: "RV cavity from the tricuspid annulus to the pulmonary valve, trabeculae "
+             "included",
+    LA_POOL: "LA cavity, to the mitral annulus; the LA appendage and the pulmonary veins "
+             "are excluded beyond their ostia",
 }
 
 #: Display colours (0..1 RGB). Distinct from SegQueue14's coronary colours, so a

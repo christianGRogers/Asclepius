@@ -341,6 +341,15 @@ waves. `janusm-export
 lists, in `skippedReads`) any read not drawn under `border_protocol: 1`, and measures
 the seeds' half-maximum offsets by default.
 
+**Read timing (PS3-S11, JA58).** The server stamps every read, in UTC: `claimed_at`
+when it is claimed (once; a returned read keeps it), `submitted_at` at its first
+submission (once), and `submitted_at_attempts`, every submission in order.
+`janusm-export` writes `timing.json` beside the manifest: one row per exported read
+(`secondsToSubmit`, claim to first submission; `secondsToEachSubmission`; `seeded`;
+`third`), sorted by duration, with **no identifier** (no reader, case, read or file
+id). Reads stored before this have no `claimed_at` and are counted in `untimedReads`.
+Timing is practice and description only, never a gate on a reader (JA58).
+
 **Check seeds before the first wave (JA76).** Every blank case must have its check
 seed before it is read: `janusm-check` refuses a blank read without one (could not be
 checked; the PM is alerted). Blank cases populated before #220 have none; the lead

@@ -52,6 +52,7 @@ MIS = {"none": (0, 0, 0, 0), "typical": (4.0, 2.0, 0.03, 1.0), "large": (8.0, 4.
 REGS = ["identity", "rigid", "affine", "bspline"]
 CNRS = [3.0, 5.0]
 D = 60.0
+GRADERS = ["T", "P", "T10", "T15", "T20"]
 
 
 def kim(f):
@@ -171,7 +172,7 @@ def register_all(fixed, moving, mmask):
     comp = sitk.CompositeTransform(3); comp.AddTransform(aff); comp.AddTransform(bs)
 
     def lb(R):
-        R.SetOptimizerAsLBFGSB(gradientConvergenceTolerance=1e-5, numberOfIterations=100, maximumNumberOfCorrections=5)
+        R.SetOptimizerAsLBFGSB(gradientConvergenceTolerance=1e-5, numberOfIterations=60, maximumNumberOfCorrections=5)
     R = sitk.ImageRegistrationMethod()
     R.SetMetricAsMattesMutualInformation(50)
     R.SetMetricSamplingStrategy(R.RANDOM); R.SetMetricSamplingPercentage(0.1, seed=7)
@@ -192,8 +193,9 @@ def resample(a, ref, tx, nearest=False):
 def surf_dist(a, b):
     sa, sb = a & ~ndi.binary_erosion(a), b & ~ndi.binary_erosion(b)
     da, db = ndi.distance_transform_edt(~sa), ndi.distance_transform_edt(~sb)
-    return float((db[sa].mean() + da[sb].mean()) / 2), float(np.mean(
-        (ndi.distance_transform_edt(~b) - ndi.distance_transform_edt(b))[sa]))   # ASSD, signed (a outside b > 0)
+    sd = lambda m: (ndi.distance_transform_edt(~m) - 0.5) * ~m - (ndi.distance_transform_edt(m) - 0.5) * m
+    # ASSD, and the signed bias of a's surface relative to b (> 0: a lies outside b), 0 for identical masks
+    return float((db[sa].mean() + da[sb].mean()) / 2), float(np.mean(sd(b)[sa]) - np.mean(sd(a)[sa]))
 
 
 def grade(lie, myo, cav, seg):
@@ -213,7 +215,9 @@ def grade(lie, myo, cav, seg):
         f = sc[m].sum() / n
         T.append(f)
         P.append(f if core[m].sum() / n >= 0.05 else 0.0)
-    return np.array(T), np.array(P)
+    T = np.array(T)
+    return {"T": T, "P": np.array(P), "T10": np.where(T >= 0.10, T, 0.0), "T15": np.where(T >= 0.15, T, 0.0),
+            "T20": np.where(T >= 0.20, T, 0.0)}
 
 
 def run_case(args):
@@ -256,12 +260,12 @@ def run_case(args):
                 myo_w &= ~cav_w
                 endo, endo_b = surf_dist(cav_w, cav_t)
                 epi, epi_b = surf_dist(myo_w | cav_w, epi_t)
-                T, P = grade(lie, myo_w, cav_w, seg_w * myo_w)
+                G = grade(lie, myo_w, cav_w, seg_w * myo_w)
                 r = {"mis": level, "cnr": cnr, "reg": reg, "assd_endo": endo, "assd_epi": epi,
                      "bias_endo": endo_b, "bias_epi": epi_b}
-                for name, g in (("T", T), ("P", P)):
+                for name, g in G.items():
                     gb = kim(g)
-                    r[name] = {"acc": float((gb == tb).mean()), "bins": gb.tolist(),
+                    r[name] = {"acc": float((gb == tb).mean()), "bins": gb.tolist(), "frac": g.round(4).tolist(),
                                "mae_pp": float(np.abs(g - truth).mean() * 100)}
                 out["runs"].append(r)
         print(case_dir.name, level, f"{time.time() - t0:.0f}s", flush=True)
@@ -277,10 +281,12 @@ def summarise(res):
         tb = np.array(o["truth_bins"])
         for r in o["runs"]:
             k = (r["mis"], r["cnr"], r["reg"])
-            d = rows.setdefault(k, {"endo": [], "epi": [], "bendo": [], "bepi": [], "tb": [], "T": [], "P": []})
+            d = rows.setdefault(k, {"endo": [], "epi": [], "bendo": [], "bepi": [], "tb": [], **{g: [] for g in GRADERS}})
             d["endo"].append(r["assd_endo"]); d["epi"].append(r["assd_epi"])
             d["bendo"].append(r["bias_endo"]); d["bepi"].append(r["bias_epi"])
-            d["tb"] += tb.tolist(); d["T"] += r["T"]["bins"]; d["P"] += r["P"]["bins"]
+            d["tb"] += tb.tolist()
+            for g in GRADERS:
+                d[g] += r[g]["bins"]
     out = []
     for (mis, cnr, reg), d in rows.items():
         tb = np.array(d["tb"])
@@ -288,7 +294,7 @@ def summarise(res):
                "assd_endo_median": float(np.median(d["endo"])), "assd_epi_median": float(np.median(d["epi"])),
                "assd_endo_p90": float(np.percentile(d["endo"], 90)), "assd_epi_p90": float(np.percentile(d["epi"], 90)),
                "bias_endo_median": float(np.median(d["bendo"])), "bias_epi_median": float(np.median(d["bepi"]))}
-        for g in ("T", "P"):
+        for g in GRADERS:
             gb = np.array(d[g])
             pos = tb > 0
             row[g] = {"kim_acc": float((gb == tb).mean()), "wkappa": wkappa(tb, gb),
@@ -320,4 +326,4 @@ if __name__ == "__main__":
     (HERE / "lie_reg.json").write_text(json.dumps({"summary": s, "cases": res}, indent=1) + "\n")
     for r in s:
         print(r["mis"], r["cnr"], r["reg"], f"endo {r['assd_endo_median']:.2f} epi {r['assd_epi_median']:.2f}",
-              "T", {k: round(v, 3) for k, v in r["T"].items()}, "P", {k: round(v, 3) for k, v in r["P"].items()})
+              {g: {k: round(v, 3) for k, v in r[g].items()} for g in GRADERS})

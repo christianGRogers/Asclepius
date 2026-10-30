@@ -72,24 +72,51 @@ Juliet's step already reports voxels per third, the thickness distribution, AHA 
 
 **Finding.** The four Round 1 curves disagree because their signed-distance functions convert a field value into a
 surface shift with different gains, not because their error physics differ. E5 re-implemented each advocate's
-committed perturbation on the same ⟨E5n⟩ public cases and measured what each one actually does to the border.
+committed perturbation on the same 37 public cases and measured what each one actually does to the border.
 
-⟨E5 TABLE⟩
+| Model (Round 1 code) | SDF value at the first voxel off the surface | Corr. | Subendo-third Dice at nominal σ 0.5 mm (Round 1 reported) | **Realised endocardial ASSD** at σ 0.5 | A uniform 0.5 mm shift moves the border by |
+|---|---|---|---|---|---|
+| Golf | ±0.25 mm (slope 1) | 8 mm | **0.897** (0.909) | **0.35 mm** | 0.53 mm |
+| India v1 | ±0.375 mm (slope 1.5) | 8 mm | **0.929** (0.927) | **0.22 mm** | 0.51 mm |
+| Kilo | ±1.5 mm native, zoomed (slope 2) | 10 mm | **0.944** (0.939) | **0.21 mm** | 0.27 mm |
+| Hotel | ±0.75 mm on 0.75 mm (slope 2) | 6 mm | **0.977** (0.975) | **0.08 mm** | **0.00 mm** |
+
+(Medians over 37 cases; p10–p90 in `summary_r2.json`.) E5 reproduces all four reported values to within 0.012 and in
+the same order. **The order is the order of the dead zone**: a smooth field smaller than the SDF value of the first
+voxel off the surface moves no voxel, so the wider that value, the less of a "0.5 mm" field reaches the border. In
+Hotel's model a 0.5 mm shift is entirely inside the dead zone (it moves nothing); in Kilo's it moves half as far.
+Indexed by the realised ASSD instead of σ, the curves fall together: at a realised ASSD of 0.21–0.22 mm the
+subendocardial Dice is 0.929 (India), 0.942 (U) and 0.944 (Kilo); at 0.35–0.41 mm it is 0.897 (Golf), 0.896 (U),
+0.891 (Kilo at σ 1.0) and 0.866 (Hotel at σ 1.0, the largest ASSD of the four). The spread at matched ASSD is
+≤ 0.03, against 0.08 at matched nominal σ. The correlation length (4 / 8 / 16 mm in U) moves the Dice by ≤ 0.03 at
+σ 0.5.
 
 **Ruling asked for: one error model.** India proposes **U**: the slope-1 SDF (surface half-way between voxel centres)
 on 0.5 mm, a Gaussian random field of RMS σ and correlation length 8 mm per border, plus fixed biases. U is
 **indexed by the realised border ASSD**, not by σ, so any later simulation is comparable with any other and with
-reads. In U (⟨E5n⟩ cases):
+reads. In U (37 cases):
 
-⟨E5 U TABLE⟩
+| U condition | Realised endo / epi ASSD (mm) | Subendo Dice | STA median (p10) | Median segment thickness error (mm) |
+|---|---|---|---|---|
+| random σ 0.25 | 0.21 / 0.19 | 0.942 | 1.00 (0.98) | 0.16 |
+| random σ 0.5 | 0.36 / 0.36 | 0.896 | 0.94 (0.72) | 0.32 |
+| random σ 1.0 | 0.70 / 0.71 | 0.782 | 0.61 (0.38) | 0.65 |
+| endocardium 0.5 mm inward | 0.54 / 0 | 0.856 | 1.00 (0.98) | 0.49 (all thicker) |
+| endocardium 0.5 mm outward | 0.53 / 0 | 0.870 | 1.00 (1.00) | 0.43 (all thinner) |
+| epicardium 0.5 mm outward | 0 / 0.52 | 0.975 | 1.00 (0.98) | 0.42 (all thicker) |
 
 What this changes:
 - **No absolute bar is read off any curve** (the ruling's point, now explained). India v1's 0.25 mm was σ in a
   slope-1.5 SDF; Hotel's "0.5 mm" was a field that moved most of the border by nothing.
-- **STA is computed in U** by one harness (`harness_r2.py`). It is flat at realistic error and responds only when
-  the realised ASSD approaches ⟨E5 sta knee⟩; it reports clinical consequence but does not discriminate models at
-  the error levels JA8 accepts. It stays **reported**, as ruled.
-- **Segment thickness catches bias that ASSD and Dice do not** (U's bias rows), confirming JA8's co-primary.
+- **STA is computed in U** by one harness (`harness_r2.py`). It is ≈ 1 at a realised ASSD of 0.2 mm, falls to a
+  median 0.94 (p10 0.72) at 0.36 mm and 0.61 at 0.70 mm: it responds to random error, with a wide per-patient spread.
+  **It does not see a 0.5 mm bias at all** (STA 1.00 for every bias row), because a virtual scar placed at a bin
+  centre survives a uniform shift. It stays **reported**, as ruled, and is not a guard.
+- **Segment thickness catches the bias that STA and Dice miss** (0.42–0.49 mm, with a consistent sign, for every
+  0.5 mm bias row), confirming JA8's thickness co-primary and the signed-bias guards.
+- **A realised ASSD of 0.25 mm over read-vs-read** (JA8's margin) corresponds in U to a subendocardial Dice ≈ 0.93
+  and STA ≈ 0.99; at 0.36 mm, STA's p10 is already 0.72. The 0.25 mm margin is therefore kept as the starting value
+  of the E8 rule.
 
 ### 3.3 Item 3: depth, sectors, territories (E6, and JM-0 block B–D)
 

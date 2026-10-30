@@ -52,6 +52,7 @@ spec.loader.exec_module(T)
 
 W = H.JA37_BAND_MM
 TOL = H.BIAS_CHECK_TOLERANCE_MM
+SHIPPED_BAND = H.ja37_band  # kept: validate() patches H.ja37_band for one call
 
 
 def face_centres(mask, bg, sp):
@@ -100,7 +101,7 @@ def opening_plane(lab, sp):
 def band_variant(lab, sp, border, which):
     lab = np.asarray(lab)
     sp = np.asarray(sp, float)
-    band = H.ja37_band(lab, sp, border)
+    band = SHIPPED_BAND(lab, sp, border)
     if which == "shipped":
         return band
     cav, sol = H.borders(lab)

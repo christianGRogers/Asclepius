@@ -65,7 +65,7 @@ def test_ja60_default_anchor_is_the_ed_median_and_gives_the_provisional_45():
     assert r["inputs"]["anchor_mm"] == C.ED_MEDIAN_MM == 5.7
     assert r["inputs"]["anchor_source"] == "ed_default"
     assert r["inputs"]["measured_median_mm"] is None and r["inputs"]["median_mm"] is None
-    assert r["calibrate_version"] == C.CALIBRATE_VERSION == "1.1.0"
+    assert r["calibrate_version"] == C.CALIBRATE_VERSION == "1.1.1"
     assert "above 40 %" in C.page_line(r)  # JA40's warning sentence
 
 

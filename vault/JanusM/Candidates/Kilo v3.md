@@ -29,10 +29,14 @@ rule:
   CT's point agreement must therefore come within ≈ 0.03 of the readers'. At the extent error measured in Round 2 the
   power curve is flat. So the seal is sized on sensitivity, specificity and the ≥ 270-segment floor, with growth
   capped at 240. Transmurality is scored once and can validate the Kim bin, but no seal growth is chased for it.
-- **Registration failure counts as "no call", plus a yield endpoint** (E9). JA29 counts a not-graded LGE-negative
-  segment as a false call. The engine (#187) shows that this fails specificity at any N once ≥ 2–5 % of patients fail.
-  "Not graded" never reads as scar on a report, so a not-graded segment is scored as no scar called (a miss if
-  LGE-positive). The failure rate becomes its own deciding endpoint: upper 95 % bound ≤ 10 %.
+- **Registration failure gets its own deciding endpoint instead of being counted as false calls** (E9, on the merged
+  engine). JA29's worst-case rule drops joint power to 0.37–0.66 at 2 % whole-patient failure and to ≈ 0.03 at 5 %.
+  Proposed instead:
+  - accuracy on graded patients;
+  - a deciding **yield** endpoint: the not-graded share, upper 95 % bound ≤ 0.10;
+  - a pre-registered switch to "no call" scoring if failures fall preferentially on scarred hearts.
+
+  This holds 0.88–1.00 at 2 % failure and 0.63–0.89 at 5 %, and fails at 10 %, as JA29 intends.
 
 **Committed compute: unchanged** (≈ 3 GPU-h PB-0, only once the cohort exists; Scar-0 and Scar-1 on CPU; voxel head
 ≈ 55 GPU-h conditional). **No Fir command is due this round** (JA34).
@@ -41,7 +45,7 @@ rule:
 read, scored or trained on):
 - [[Kilo - E7 At the JA32 bars the transmurality endpoint passes only if CT grades extent about as well as the LGE readers]]
 - [[Kilo - E8 ⟨title⟩]]
-- [[Kilo - E9 ⟨title⟩]]
+- [[Kilo - E9 On the merged engine, worst-case counting of registration failures sinks specificity, and a yield endpoint fixes it]]
 - The shared benchmark results for the JA30 menu (§3), from Juliet's `bench_lie/`.
 
 **Held-out cases.** My 13 hearts (the non-skipped cases of Round 2 E5) passed `janusm.guard.refuse(...,
@@ -128,9 +132,9 @@ level, CNR 5, aligned and after rigid⟩
 | | Result | Source |
 |---|---|---|
 | Sensitivity | ≈ 0.9 power at 120 under weak clustering; ≈ 0.4 at 120 under strong clustering with pooled sensitivity 0.81 | E7; engine #187 (240 at 50 %, 160 at 70 % under strong clustering) |
-| Specificity | never binds with no registration failures; **binds at any N** with ≥ 2–5 % failures under JA29's worst-case rule | E7; E9; #187 |
+| Specificity | never binds with no registration failures; **binds at any N** with ≥ 2–5 % failures under JA29's worst-case rule (E9: 0.44–0.67 power at 2 %) | E7; E9; #187 |
 | ≥ 270 scarred segments | ≈ 170 patients at 50 %, ≈ 125–140 at 70 % (3.25 segments per scar patient); 136 / 97 at 4.0 per patient (engine) | E7; #187 |
-| Transmurality | binds whenever CT exact-bin agreement is within ≈ 0.03 of the anchor; flat in N above extent-error SD ≈ 0.10 | E7; E9 part A |
+| Transmurality | binds whenever CT exact-bin agreement is within ≈ 0.03 of the anchor; flat in N above extent-error SD ≈ 0.10. On the engine: joint power 0.88–0.99 at agreement 0.73, 0.23–0.35 at 0.66 (anchor 0.72) | E7; E9 part A |
 
 ### 4.2 The seal size
 
@@ -152,10 +156,22 @@ level, CNR 5, aligned and after rigid⟩
 2. **An anchor < 0.60 validates presence only.** If the LGE readers cannot agree on Kim bins, the Kim bin keeps "not
    validated" whatever happens. JA32 currently makes transmurality report-only and lets the study pass, so noisier
    readers make passing easier (E7: joint power 0.70 → 0.85 as reader agreement falls from 0.72 to 0.56).
-3. **Registration failure: "no call" plus a yield endpoint** (replaces JA29's worst-case rule in the primary
-   analysis). A not-graded segment counts as **no scar called**: a miss if LGE-positive, correct if LGE-negative. A
-   fourth deciding endpoint: **not-graded patient share, upper 95 % bound ≤ 0.10**. The worst-case analysis (JA29 as
-   written) and graded-only are reported. ⟨E9 numbers⟩
+3. **Registration failure: graded-only accuracy plus a deciding yield endpoint** (replaces JA29's worst-case rule in
+   the primary analysis).
+   - **Yield:** a fourth deciding endpoint, the not-graded patient share, with upper 95 % bound ≤ 0.10.
+   - **Guard:** if the LGE-positive segment share among not-graded patients is ≥ 1.5× that among graded patients
+     (bootstrap lower bound > 1), the **no-call** analysis becomes primary instead. In no-call, a not-graded segment
+     is "no scar called": a miss if LGE-positive, correct if LGE-negative.
+   - **Reported beside it:** worst-case (JA29 as written) and no-call.
+   - **E9, engine #187, 50 % / 70 % enrichment, joint power at N = 120–240:**
+
+     | Failure rate | Worst case | No call | Graded-only + yield |
+     |---|---|---|---|
+     | 2 % | 0.37–0.66 | 0.65–0.96 | 0.88–1.00 |
+     | 5 % | ≤ 0.05 | 0.32–0.60 | 0.63–0.89 |
+     | 10 % | 0 | ≤ 0.10 | ≤ 0.08 |
+
+     Planning assumes ≤ 2 % failure; development measures it.
 
 ## 5. Item 3: the two forms
 
@@ -356,8 +372,9 @@ a Kim bin that stays "research" unless CT extent proves as reproducible as the C
    `edge_offset`, `nearest_segment`, half-voxel-corrected signed distance); a "phase-suspect" status beside passed /
    re-registered / not graded; P-K removed from the menu.
 2. **#182 / #187 (power + scoring) additions:**
-   - an option to resolve not-graded segments as "no call";
-   - the yield endpoint (not-graded patient share, upper bound ≤ 0.10);
+   - options to resolve not-graded segments as "no call" or graded-only (E9's `score_study` shows both on the
+     engine's own functions);
+   - the yield endpoint (not-graded patient share, upper bound ≤ 0.10) and the selective-failure guard;
    - the anchor computed over all double-read patients, with its CI;
    - "anchor < 0.60 ⇒ presence-only claim" in `decide`;
    - a 240 cap in `seal_size`.

@@ -11,8 +11,10 @@ Ruling: ``vault/JanusM/Judgements/Round 2 - paired-scar.md``. It replaces the th
   transmurality agreement (exact Kim bin among segments scar on both) >= the LGE inter-reader
   anchor - 0.10, all on the 95 % patient-bootstrap lower bound, one look; kappa is reported only;
 * every simulated study is scored by :mod:`janusm.scar.scoring`, the harness the seal will be
-  scored by, including intention-to-diagnose: a patient whose registration fails (probability
-  ``p_fail``) has every segment counted wrong (JA29).
+  scored by, including intention-to-diagnose under JA55 (``itd_mode``, ``"split"`` by default): a
+  patient whose registration fails (probability ``p_fail``) has its scarred segments counted as
+  misses, its scar-free segments out of specificity, and a yield bar (<= 0.10, upper bound) on the
+  not-graded patient share. :func:`claim_power` gives JA56's two ordered claims.
 
 Two additions to Golf's model, both off when reproducing Golf (``bin_tau=0, p_fail=0``):
 
@@ -26,9 +28,10 @@ generators, and :data:`ROUND2_RECORD` holds the Round 2 numbers each script comm
 ``tests/test_janusm_scar_power.py`` re-runs every recorded cell through this one engine and checks
 it within Monte-Carlo error.
 
-**Seal size** (:func:`seal_size`): the smallest N at >= 80 % power for all deciding JA32 endpoints
-jointly (JA28), then JA28's floor: >= 120 patients and >= 270 scarred segments, whichever needs
-more.
+**Seal size** (:func:`seal_size`, JA57, Round 3 ruling): max(120; N for >= 270 scarred segments;
+N for >= 80 % power on claim 1, and on claim 2 too if development's CT bin agreement is within
+0.03 of its anchor), capped at 240, from development's measured inputs. Round 3's cells (Juliet E9,
+Kilo E9, Golf E10, #187) are reproduced in ``tests/test_janusm_scar_ps3_power.py``.
 
 Usage::
 
@@ -77,7 +80,10 @@ def golf_cohort(
     bin_tau: float = 0.0,
     p_fail: float = 0.0,
 ):
-    """Golf R2 E6's cohort (``Golf/cohort_power.py``), vectorised, plus ``bin_tau``, ``p_fail``."""
+    """Golf R2 E6's cohort (``Golf/cohort_power.py``), vectorised, plus ``bin_tau``, ``p_fail``.
+
+    ``q`` (the bin-error rate, JA57's "extent error") is a scalar or one rate per LGE bin 1-4.
+    """
     ref = np.zeros((n, segments), int)
     b = rng.normal(0, tau, (n, 1))
     for i in np.flatnonzero(rng.random(n) < enrich):
@@ -89,7 +95,12 @@ def golf_cohort(
     false_call = rng.random(shape) < _expit(_logit(1 - spec) + b)
     false_bin = np.where(rng.random(shape) < 0.7, 1, 2)
     detected = rng.random(shape) < _expit(_logit(sens) - b)
-    qi = _expit(_logit(q) + bin_tau * b) if 0 < q < 1 else np.full((n, 1), q)
+    qb = np.asarray(q, float)
+    if qb.ndim:  # per LGE bin: index 0 (no scar) is never graded, so its rate is irrelevant
+        qb = np.r_[0.5, qb][ref]
+    with np.errstate(divide="ignore"):
+        shifted = _expit(_logit(np.clip(qb, 1e-12, 1 - 1e-12)) + bin_tau * b)
+        qi = np.where((qb > 0) & (qb < 1), shifted, qb)
     off = rng.random(shape) < qi
     step = np.where(rng.random(shape) < 0.5, -1, 1)
     graded = np.where(off, np.clip(ref + step, 1, 4), ref)
@@ -191,38 +202,84 @@ GENERATORS: Dict[str, Callable] = {
 
 
 def simulate_studies(
-    generator: Callable, n: int, sims: int, boot: int, seed: int, **params
+    generator: Callable,
+    n: int,
+    sims: int,
+    boot: int,
+    seed: int,
+    itd_mode: str = S.DEFAULT_ITD,
+    **params,
 ) -> Dict:
     """Simulate ``sims`` studies of ``n`` patients; score each with the harness's cluster bootstrap.
 
-    Returns per-study arrays: ``lower``, ``upper`` and ``point`` per endpoint, and
-    ``scar_segments``.
+    ``itd_mode`` is the JA55 accounting of a not-graded segment (:data:`scoring.ITD_MODES`). Returns
+    per-study arrays: ``lower``, ``upper`` and ``point`` per endpoint, ``yield_upper`` (the
+    not-graded patient share's upper bound, on the same patient replicates when every patient is
+    in the analysis) and ``scar_segments``.
     """
     rng = np.random.default_rng(seed)
     lower = {k: np.empty(sims) for k in S.ENDPOINTS}
     upper = {k: np.empty(sims) for k in S.ENDPOINTS}
     point = {k: np.empty(sims) for k in S.ENDPOINTS}
+    yld = np.empty(sims)
     scar = np.empty(sims)
     for r in range(sims):
         ref, ct = generator(rng, n, **params)
-        stats = S.patient_stats(ref, S.intention_to_diagnose(ref, ct))
-        ci = S.cluster_bootstrap(stats, boot, rng)
+        ng = (ct == S.NOT_GRADED).all(1)
+        ct2, mask, keep = S.resolve(ref, ct, None, itd_mode)
+        stats = S.patient_stats(ref[keep], ct2[keep], mask[keep])
+        w = S.bootstrap_weights(n, boot, rng)
+        ci = S.cluster_bootstrap(stats, boot, rng, weights=w[:, keep])
         for k in S.ENDPOINTS:
             lower[k][r], upper[k][r], point[k][r] = ci[k]["lower"], ci[k]["upper"], ci[k]["point"]
+        yld[r] = S.yield_upper_bound(ng, weights=w)["upper"] if ng.any() else 0.0
         scar[r] = (ref > 0).sum()
-    return {"lower": lower, "upper": upper, "point": point, "scar_segments": scar}
+    return {
+        "lower": lower,
+        "upper": upper,
+        "point": point,
+        "yield_upper": yld,
+        "scar_segments": scar,
+        "itd_mode": itd_mode,
+    }
 
 
-def power_from(studies: Mapping, bars: Mapping[str, Optional[float]]) -> Dict:
-    """Per-endpoint and joint power: the share of studies whose lower bounds clear each bar."""
+def power_from(
+    studies: Mapping, bars: Mapping[str, Optional[float]], yield_bar: Optional[float] = None
+) -> Dict:
+    """Per-endpoint and joint power: the share of studies whose lower bounds clear each bar.
+
+    With ``yield_bar``, the yield upper bound must also be <= it (JA55's fourth endpoint).
+    """
     deciding = {k: b for k, b in bars.items() if b is not None}
     hit = {k: np.nan_to_num(studies["lower"][k], nan=-np.inf) >= b for k, b in deciding.items()}
+    if yield_bar is not None:
+        hit["yield"] = np.asarray(studies["yield_upper"]) <= yield_bar
     joint = np.logical_and.reduce(list(hit.values())) if hit else None
     return {
         "bars_lower95": dict(bars),
+        "yield_bar_upper95": yield_bar,
         "power": {k: float(v.mean()) for k, v in hit.items()},
         "power_all": float(joint.mean()) if hit else float("nan"),
     }
+
+
+def claim_power(studies: Mapping, anchor: Optional[float]) -> Dict[str, Optional[float]]:
+    """JA56 power of the two ordered claims.
+
+    ``presence``: sensitivity, specificity and yield all pass. ``kim_bin``: presence passes *and*
+    the Kim-bin lower bound clears ``anchor`` - 0.10 (claim 2 is tested only after claim 1, so
+    this is also the joint power); None when the anchor is < 0.60 (it cannot be validated).
+    """
+    lo = {k: np.nan_to_num(studies["lower"][k], nan=-np.inf) for k in ("sens", "spec", "tbin")}
+    presence = (
+        (lo["sens"] >= S.SENS_BAR)
+        & (lo["spec"] >= S.SPEC_BAR)
+        & (np.asarray(studies["yield_upper"]) <= S.YIELD_BAR)
+    )
+    tbar = S.bars(anchor)["tbin"]
+    kim = None if tbar is None else float((presence & (lo["tbin"] >= tbar)).mean())
+    return {"presence": float(presence.mean()), "kim_bin": kim}
 
 
 def summarise(studies: Mapping) -> Dict:
@@ -248,33 +305,193 @@ def expected_scar_segments(enrich: float, lam: float, segments: int = 16) -> flo
     return enrich * e_k
 
 
+def patients_for_scarred_segments(
+    n_segments: int, enrich: float, segs_per_scar_patient: float
+) -> int:
+    """Patients for an expected ``n_segments`` scarred segments, given the mean per scar patient."""
+    return int(math.ceil(n_segments / (enrich * segs_per_scar_patient) - 1e-9))
+
+
 def patients_for_segments(n_segments: int, enrich: float, lam: float, segments: int = 16) -> int:
     """Patients needed for an expected ``n_segments`` scarred segments (JA28's >= 270)."""
     return int(math.ceil(n_segments / expected_scar_segments(enrich, lam, segments)))
 
 
-def seal_size(
+def kilo_segments_per_scar_patient() -> float:
+    """Kilo's mean infarct size: one territory (LAD/RCA/LCx 0.5/0.3/0.2), 1 + Bin(n - 1, 0.45)."""
+    return float(
+        sum(KILO_TERR_P[t] * (1 + 0.45 * (len(KILO_TERR[t]) - 1)) for t in KILO_TERR)
+    )
+
+
+def segments_needed_mc(
+    rng: np.random.Generator,
+    draw_k: Callable[[np.random.Generator], int],
+    enrich: float,
+    n_segments: int = 270,
+    sims: int = 4000,
+) -> Dict[str, int]:
+    """Golf E10's count: patients enrolled until ``n_segments`` scarred segments; median and p90.
+
+    ``draw_k(rng)`` draws one scar patient's scarred-segment count.
+    """
+    need = np.empty(sims, int)
+    for i in range(sims):
+        tot = n = 0
+        while tot < n_segments:
+            n += 1
+            if rng.random() < enrich:
+                tot += draw_k(rng)
+        need[i] = n
+    return {"median": int(np.median(need)), "p90": int(np.percentile(need, 90))}
+
+
+def _first_n_staying_above(power_by_n: Mapping[int, float], target: float) -> Optional[int]:
+    ns = sorted(power_by_n)
+    for i, n in enumerate(ns):
+        if all(power_by_n[m] >= target for m in ns[i:]):
+            return n
+    return None
+
+
+def seal_size_from_curve(
     power_by_n: Mapping[int, float],
     enrich: float,
     lam: float,
     target: float = 0.80,
     min_patients: int = 120,
     min_segments: int = 270,
+    cap: Optional[int] = None,
 ) -> Dict[str, Optional[int]]:
     """JA28's seal size from a joint-power curve: max(power-N, 120, the >= 270-segment N).
 
     ``power-N`` is the smallest N in the grid from which joint power stays >= ``target``; None if
-    the grid never gets there, and then the seal size is None too (no N in the grid suffices).
+    the grid never gets there. Without a ``cap`` the seal is then None (no N in the grid
+    suffices); with one (JA57: 240) the seal is the cap whenever the requirement exceeds it.
     """
-    ns = sorted(power_by_n)
-    n_power = None
-    for i, n in enumerate(ns):
-        if all(power_by_n[m] >= target for m in ns[i:]):
-            n_power = n
-            break
+    n_power = _first_n_staying_above(power_by_n, target)
     n_seg = patients_for_segments(min_segments, enrich, lam)
-    seal = None if n_power is None else max(n_power, min_patients, n_seg)
-    return {"n_power": n_power, "n_segments_270": n_seg, "n_floor": min_patients, "seal": seal}
+    need = None if n_power is None else max(n_power, min_patients, n_seg)
+    if cap is None:
+        seal = need
+    else:
+        seal = cap if need is None else min(need, cap)
+    return {
+        "n_power": n_power,
+        "n_segments_270": n_seg,
+        "n_floor": min_patients,
+        "n_required": need,
+        "cap": cap,
+        "capped": cap is not None and (need is None or need > cap),
+        "seal": seal,
+    }
+
+
+#: JA57
+SEAL_CAP = 240
+SEAL_FLOOR = 120
+SEAL_SEGMENTS = 270
+CLAIM2_GAP = -0.03  # development CT bin agreement - development anchor must be >= this
+SEAL_N_GRID = (120, 140, 160, 180, 200, 220, 240)
+
+
+def seal_size(
+    p_fail: float,
+    segs_per_scar_patient: float,
+    extent_error,
+    sens_by_bin: Sequence[float],
+    enrich: float,
+    *,
+    tau: float = 0.7,
+    spec: float = 0.98,
+    bin_w: Sequence[float] = GOLF_BIN_W,
+    bin_tau: float = 1.0,
+    dev_ct_agreement: Optional[float] = None,
+    dev_anchor: Optional[float] = None,
+    previous: Optional[int] = None,
+    n_grid: Iterable[int] = SEAL_N_GRID,
+    sims: int = 400,
+    boot: int = 400,
+    seed: int = 57,
+    target: float = 0.80,
+    cap: int = SEAL_CAP,
+) -> Dict[str, object]:
+    """JA57's seal size: max(120; N for >= 270 scarred segments; N for >= 80 % power), capped.
+
+    Every input is a development measurement: the not-graded rate ``p_fail``, the mean scarred
+    segments per scar patient, the bin-error rate ``extent_error`` (scalar or per LGE bin 1-4),
+    sensitivity by bin, the bin shares ``bin_w`` (bin-1 share first), clustering ``tau`` and the
+    target ``enrich``. Studies are simulated with Golf's cohort (K = 1 + Poisson(mean - 1)) and
+    scored with JA55's split accounting and yield bar.
+
+    The power target is claim 1 (presence). Claim 2 (the Kim bin) enters it only if
+    ``dev_ct_agreement - dev_anchor >= -0.03`` and the anchor can validate (>= 0.60); if the gap is
+    larger, ``scar1_triggered`` is True (JA57 extends JA31's trigger) and the size stays on
+    presence. The size is capped at 240 and only grows: it is at least ``previous``.
+    """
+    lam = max(segs_per_scar_patient - 1.0, 0.0)
+    n_seg = patients_for_scarred_segments(SEAL_SEGMENTS, enrich, segs_per_scar_patient)
+    gap = (
+        None
+        if dev_ct_agreement is None or dev_anchor is None
+        else float(dev_ct_agreement - dev_anchor)
+    )
+    anchor_ok = S.bars(dev_anchor)["tbin"] is not None
+    claim2 = gap is not None and gap >= CLAIM2_GAP - 1e-12 and anchor_ok
+    params = dict(
+        enrich=enrich,
+        lam=lam,
+        tau=tau,
+        q=extent_error,
+        spec=spec,
+        sens_by_bin=tuple(sens_by_bin),
+        bin_w=tuple(bin_w),
+        bin_tau=bin_tau,
+        p_fail=p_fail,
+    )
+    curve_presence, curve_kim = {}, {}
+    for i, n in enumerate(sorted(n_grid)):
+        st = simulate_studies(golf_cohort, n, sims, boot, seed + i, itd_mode="split", **params)
+        cp = claim_power(st, dev_anchor if claim2 else None)
+        curve_presence[n] = cp["presence"]
+        if claim2:
+            curve_kim[n] = cp["kim_bin"]
+    n_presence = _first_n_staying_above(curve_presence, target)
+    n_kim = _first_n_staying_above(curve_kim, target) if claim2 else None
+    powered = [n_presence] + ([n_kim] if claim2 else [])
+    need = None if None in powered else max([SEAL_FLOOR, n_seg] + powered)
+    capped = need is None or need > cap
+    seal = cap if capped else need
+    if previous is not None:
+        seal = min(max(seal, previous), cap)
+    return {
+        "inputs": {
+            "p_fail": p_fail,
+            "segs_per_scar_patient": segs_per_scar_patient,
+            "extent_error": extent_error if np.ndim(extent_error) == 0 else list(extent_error),
+            "sens_by_bin": list(sens_by_bin),
+            "bin_w": list(bin_w),
+            "enrich": enrich,
+            "tau": tau,
+            "dev_ct_agreement": dev_ct_agreement,
+            "dev_anchor": dev_anchor,
+        },
+        "n_segments_270": n_seg,
+        "n_floor": SEAL_FLOOR,
+        "n_power_presence": n_presence,
+        "claim2_gap": gap,
+        "claim2_powered": claim2,
+        "scar1_triggered": gap is not None and gap < CLAIM2_GAP - 1e-12,
+        "n_power_kim_bin": n_kim,
+        "power_presence": {str(k): v for k, v in curve_presence.items()},
+        "power_kim_bin": {str(k): v for k, v in curve_kim.items()},
+        "n_required": need,
+        "cap": cap,
+        "capped": capped,
+        "seal": int(seal),
+        "sims": sims,
+        "boot": boot,
+    }
 
 
 # -------------------------------------------------------------------------------------------------
@@ -352,12 +569,15 @@ def ja32_study(
     n_grid: Iterable[int] = N_GRID,
     anchors: Iterable[float] = ANCHORS,
     log: Optional[Callable] = None,
+    itd_mode: str = S.DEFAULT_ITD,
+    cap: Optional[int] = SEAL_CAP,
 ) -> Dict:
     """Power and seal size at the JA32 bars over clustering, enrichment, failure rate and anchor.
 
-    The anchor ``None`` row is the case JA32 provides for an anchor < 0.60: transmurality reported
-    only, presence decides.
+    Scored with JA55's accounting (``itd_mode``; the yield bar applies under ``"split"`` and
+    ``"nocall"``) and capped by JA57. The anchor ``None`` row is presence alone (JA56 claim 1).
     """
+    yield_bar = S.YIELD_BAR if itd_mode in ("split", "nocall") else None
     levels = list(anchors) + [None]
     n_grid = list(n_grid)
     rows, seals = [], []
@@ -369,11 +589,13 @@ def ja32_study(
                 curves = {a: {} for a in levels}
                 for n in n_grid:
                     params = {**JA32_BASE, "tau": tau, "enrich": enrich, "p_fail": p_fail}
-                    st = simulate_studies(golf_cohort, n, sims, boot, seed + cell, **params)
+                    st = simulate_studies(
+                        golf_cohort, n, sims, boot, seed + cell, itd_mode=itd_mode, **params
+                    )
                     cell += 1
                     summ = summarise(st)
                     for a in levels:
-                        pw = power_from(st, S.bars(a))
+                        pw = power_from(st, S.bars(a), yield_bar)
                         curves[a][n] = pw["power_all"]
                         rows.append({**where, "anchor": a, "n": n, **pw, **summ})
                     if log:
@@ -381,7 +603,7 @@ def ja32_study(
                         pws = " ".join(f"P[{a}]={curves[a][n]:.3f}" for a in levels)
                         log(f"{cl} enrich={enrich} p_fail={p_fail} n={n} tbin={tb:.3f} {pws}")
                 for a in levels:
-                    size = seal_size(curves[a], enrich, JA32_BASE["lam"])
+                    size = seal_size_from_curve(curves[a], enrich, JA32_BASE["lam"], cap=cap)
                     seals.append({**where, "anchor": a, **size})
     return {
         "assumptions": {
@@ -399,7 +621,10 @@ def ja32_study(
                 "spec": S.SPEC_BAR,
                 "tbin": f"anchor - {S.TBIN_MARGIN}; reported only if anchor < {S.MIN_ANCHOR}",
             },
-            "anchor_none": "anchor < 0.60: transmurality reported only, presence decides",
+            "anchor_none": "presence alone (JA56 claim 1); the Kim bin cannot be validated",
+            "itd_mode": itd_mode,
+            "yield_bar_upper95": yield_bar,
+            "seal_cap": cap,
             "power_target_joint": 0.80,
             "sims": sims,
             "boot": boot,

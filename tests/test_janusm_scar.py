@@ -231,7 +231,7 @@ def test_scar0_inside_the_registered_wall_of_the_static_chest_phantom(juliet):
     assert reg.final.name == "rigid"
     reg.record_reader_check(True)
     out = S.scar0(lie, reg.carried, status=reg.status)
-    tab = out.table("P-K", "E-V")
+    tab = out.table("P-G", "E-V")
     pres = np.array([tab["segments"][s]["presence"] for s in range(1, 18)])
     assert pres[ref >= 0.25].all()
     assert not pres[ref == 0].any()
@@ -298,7 +298,7 @@ def test_kilo_case_rigid_reaches_the_non_rigid_floor(juliet, kilo_case):
     assert tre < 1.5, tre  # Kilo E5: 0.78-0.82 mm, the floor set by the 1.5 mm non-rigid field
     assert tre < tre_r0
     out = S.scar0(kilo_case.lie, reg.carried, status=SC.AWAITING)
-    pk = out.presence("P-K")
+    pk = out.diagnostic_presence("P-K")
     thick = [s for s in range(1, 18) if kilo_case.ref[s - 1] >= 0.3]
     assert thick and all(pk[s] for s in thick)
 
@@ -372,17 +372,21 @@ def test_slab_candidates_have_their_closed_forms():
         # a flat step cut half way is exact; a one-voxel scar sits just above the cut once blurred
         tol = 1e-9 if SLAB_K[s - 1] != 1 else 0.05
         assert abs(row["share_pk"] - k) < tol, (s, row)
-        assert abs(row["extent_ed"] - k) < tol, (s, row)
+        # JA54: E-D's cut is remote + 3 SD, which keeps one blur layer: one depth bin more
+        assert row["extent_ed"] == pytest.approx(min(k + 0.1, 1.0) if k > 0 else 0.0), (s, row)
         assert k - 0.01 <= row["share_ev"] <= k + 0.15  # remote + 3 SD keeps about one blur layer
         if k > 0:
-            assert row["deepest_ed"] == pytest.approx(SLAB_K[s - 1] / 10)  # far edge of its bin
-    tab = out.table("P-K", "E-D")
+            assert row["deepest_ed"] == pytest.approx(min(k + 0.1, 1.0))  # far edge of its bin
+            assert row["deepest_ed_median"] == pytest.approx(min(k + 0.1, 1.0))
+    tab = out.table("P-J", "E-D")
     for s in range(1, 18):
         k = SLAB_K[s - 1] / 10
+        e = min(k + 0.1, 1.0) if k > 0 else 0.0
         r = tab["segments"][s]
-        assert r["presence"] == (k >= 0.05)
-        assert r["kim_bin"] == S.kim_bin(k, k > 0)
-        assert r["share"] == pytest.approx(k, abs=0.05)
+        assert r["presence"] == (k > 0)
+        assert r["kim_bin"] == S.kim_bin(e, k > 0)
+        assert r["share"] == pytest.approx(e, abs=1e-6)
+        assert r["diagnostic_pk"] == (k >= 0.05)
     pj = out.presence("P-J")
     assert all(pj[s] == (SLAB_K[s - 1] > 0) for s in range(1, 18))
 
@@ -391,7 +395,7 @@ def test_p_g_ignores_the_endocardial_millimetre_and_blood_spill():
     # blood as bright as scar (Golf's hard case)
     lie, car = slab(cavity_hu=150.0)
     out = S.scar0(lie, car, status=SC.PASSED)
-    pg, pk = out.presence("P-G"), out.presence("P-K")
+    pg, pk = out.presence("P-G"), out.diagnostic_presence("P-K")
     for s in range(1, 9):  # scar-free
         assert out.segments[s]["share_ev"] >= 0.09  # the wall's first layer reads blood
         assert not pg[s] and not pk[s]
@@ -418,7 +422,8 @@ def test_kim_bins():
 def test_table_carries_status_label_and_territories():
     lie, car = slab()
     terr = {s: ("LAD" if s <= 8 else "RCA") for s in range(1, 18)}
-    tab = S.scar0(lie, car, status=SC.REREGISTERED, territory=terr).table("P-K", "E-V")
+    out = S.scar0(lie, car, status=SC.REREGISTERED, territory=terr, tau=0.05)
+    tab = out.table("P-J", "E-V")
     assert tab["label"] == "research output, not validated"
     assert tab["registration_status"] == SC.REREGISTERED
     assert tab["territories"]["LAD"]["share_scar_present"] == 0.0
@@ -433,7 +438,7 @@ def test_table_carries_status_label_and_territories():
 
 def test_not_graded_patients_get_no_grade():
     lie, car = slab()
-    tab = S.scar0(lie, car, status=SC.NOT_GRADED).table("P-K", "E-V")
+    tab = S.scar0(lie, car, status=SC.NOT_GRADED).table("P-G", "E-V")
     assert not tab["graded"] and tab["registration_status"] == SC.NOT_GRADED
     assert all(r["presence"] is None and r["kim_bin"] is None for r in tab["segments"].values())
 
@@ -442,15 +447,17 @@ def test_outputs_feed_the_scoring_harness():
     from janusm.scar import scoring
 
     lie, car = slab()
-    bins, shares = S.scar0(lie, car, status=SC.PASSED).for_scoring("P-K", "E-D")
-    ref = np.array([S.kim_bin(k / 10, k > 0) for k in SLAB_K])
+    out = S.scar0(lie, car, status=SC.PASSED, tau=0.05)
+    bins, shares = out.for_scoring("P-J", "E-D")
+    ref = np.array([S.kim_bin(min(k / 10 + 0.1, 1.0), k > 0) for k in SLAB_K])
     assert np.array_equal(bins, ref)
+    assert np.array_equal(out.for_scoring("P-J", "E-D").kim_bin, ref)
     scoring.Patient(ref=ref, ct=bins, ct_share=shares)
-    ng, ng_share = S.scar0(lie, car, status=SC.NOT_GRADED).for_scoring("P-K", "E-V")
+    ng, ng_share = S.scar0(lie, car, status=SC.NOT_GRADED).for_scoring("P-G", "E-V")
     assert (ng == scoring.NOT_GRADED).all() and np.isnan(ng_share).all()
     scoring.Patient(ref=ref, ct=ng)
     with pytest.raises(ValueError, match="final"):
-        S.scar0(lie, car, status=SC.AWAITING).for_scoring("P-K", "E-V")
+        S.scar0(lie, car, status=SC.AWAITING).for_scoring("P-G", "E-V")
 
 
 def test_menu_arguments_are_checked():
@@ -461,7 +468,9 @@ def test_menu_arguments_are_checked():
     with pytest.raises(ValueError):
         out.table("P-X", "E-V")
     with pytest.raises(ValueError):
-        out.table("P-K", "E-X")
+        out.table("P-G", "E-X")
+    with pytest.raises(ValueError, match="struck"):
+        out.table("P-K", "E-V")
     with pytest.raises(ValueError):
         S.scar0(lie, car, status="fine")
 
@@ -472,7 +481,7 @@ def test_too_few_remote_segments_is_ungradable():
     seg[seg > 5] = 0
     car.myo = seg > 0
     car.segments = seg
-    tab = S.scar0(lie, car, status=SC.PASSED).table("P-K", "E-V")
+    tab = S.scar0(lie, car, status=SC.PASSED).table("P-G", "E-V")
     assert not tab["graded"] and "fewer than 6" in tab["ungradable"]
 
 
@@ -489,9 +498,10 @@ def test_tau_per_protocol_or_pooled():
 
 
 def test_presence_and_extent_choice():
-    dev = {"P-K": (0.80, 0.96), "P-J": (0.85, 0.94), "P-G": (0.80, 0.97)}
-    assert S.choose_presence(dev) == "P-K"  # P-J fails the bound; P-K beats P-G on the tie
-    assert S.choose_presence({"P-K": (0.9, 0.90)}) is None
+    dev = {"P-J": (0.85, 0.94), "P-G": (0.80, 0.97)}
+    assert S.choose_presence(dev) == "P-G"  # P-J fails the bound
+    assert S.choose_presence({"P-J": (0.80, 0.96), "P-G": (0.80, 0.97)}) == "P-J"  # tie: order
+    assert S.choose_presence({"P-G": (0.9, 0.90)}) is None
     assert S.choose_extent({"E-V": 0.6, "E-D": 0.7}) == "E-D"
     assert S.choose_extent({"E-V": 0.6, "E-D": 0.6}) == "E-V"
     with pytest.raises(ValueError):

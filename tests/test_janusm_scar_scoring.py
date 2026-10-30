@@ -1,4 +1,5 @@
-"""The paired-seal scoring harness (JA27, JA29, JA32; JA35 item 6), on synthetic reads only."""
+"""The paired-seal scoring harness (JA27, JA32, JA55, JA56; JA35 item 6; PS3-S8, PS3-S9), on
+synthetic reads only."""
 
 from __future__ import annotations
 
@@ -83,14 +84,16 @@ def test_bars_and_the_reader_anchor():
     assert a == {"agreement": pytest.approx(3 / 4), "segments": 4}
 
 
-def test_decide_needs_every_deciding_endpoint():
+def test_decide_needs_every_presence_endpoint():
     ci = {"sens": {"lower": 0.76}, "spec": {"lower": 0.95}, "tbin": {"lower": 0.50}}
-    assert S.decide(ci, S.bars(0.55)) == {
-        "per_endpoint": {"sens": True, "spec": True},
-        "passed": True,
-    }
-    d = S.decide(ci, S.bars(0.70))
-    assert d["per_endpoint"]["tbin"] is False and d["passed"] is False
+    d = S.decide(ci, 0.55, yield_upper=0.05)
+    assert d["presence"]["per_endpoint"] == {"sens": True, "spec": True, "yield": True}
+    assert d["presence_validated"] is True and d["kim_bin_validated"] is False
+    d = S.decide(ci, 0.70, yield_upper=0.05)
+    assert d["kim_bin"]["passed_anchor_bar"] is False and d["kim_bin_validated"] is False
+    assert S.decide(ci, 0.55, yield_upper=0.11)["presence_validated"] is False
+    low = {**ci, "spec": {"lower": 0.92}}
+    assert S.decide(low, 0.55, yield_upper=0.0)["presence_validated"] is False
 
 
 def test_patient_validation():
@@ -145,7 +148,8 @@ def test_score_primary_excludes_strata_and_non_ischaemic_segments():
     assert rep["primary"]["counts"]["patients"] == len(perfect) + 1
     assert set(rep["strata"]) == {"acute", "non_ischaemic", "phase_unmatched"}
     assert rep["strata"]["acute"]["sens"]["point"] == 0.0
-    assert rep["decision"]["passed"] is True
+    assert rep["decision"]["presence_validated"] is True
+    assert rep["decision"]["kim_bin_validated"] is True
     json.dumps(rep)  # JSON-ready, counts and estimates only
 
 
@@ -162,20 +166,22 @@ def test_prior_cabg_stays_in_for_scar_but_not_territories():
     assert rep["strata"]["prior_cabg"]["sens"]["point"] == 0.0
 
 
-def test_score_itd_against_graded_only():
+def test_score_worst_case_itd_against_graded_only():
     rng = np.random.default_rng(3)
     pts = _cohort(rng)
     s = 17
     failed = S.Patient(ref=np.array([2] * 3 + [0] * (s - 3)), ct=np.full(s, S.NOT_GRADED))
-    rep = S.score(pts + [failed], anchor=0.8, n_boot=300)
+    rep = S.score(pts + [failed], anchor=0.8, n_boot=300, itd_mode="worst")
     rep_ok = S.score(pts, anchor=0.8, n_boot=300)
-    # ITD: the failed patient's scar is missed and its scar-free segments are false calls
+    # JA29 worst case: the failed patient's scar is missed and its scar-free segments false calls
     assert rep["primary"]["sens"]["point"] < rep_ok["primary"]["sens"]["point"]
     assert rep["primary"]["spec"]["point"] < rep_ok["primary"]["spec"]["point"]
     # it never enters scar-on-both, so transmurality agreement does not move
     assert rep["primary"]["tbin"]["point"] == pytest.approx(rep_ok["primary"]["tbin"]["point"])
     # graded-only drops it
-    assert rep["graded_only"]["sens"]["point"] == pytest.approx(rep_ok["primary"]["sens"]["point"])
+    graded = rep["accountings"]["graded"]
+    assert graded["sens"]["point"] == pytest.approx(rep_ok["primary"]["sens"]["point"])
+    assert graded["counts"]["patients"] == len(pts)
     assert rep["not_graded"]["patients_not_graded"] == 1
     assert rep["not_graded"]["segment_rate"] == pytest.approx(s / (s * (len(pts) + 1)))
 
@@ -184,7 +190,8 @@ def test_score_reports_everything_ja32_lists():
     rng = np.random.default_rng(4)
     rep = S.score(_cohort(rng), anchor=0.55, n_boot=300)
     assert rep["rule"]["tbin_deciding"] is False
-    assert set(rep["decision"]["per_endpoint"]) == {"sens", "spec"}
+    assert set(rep["decision"]["presence"]["per_endpoint"]) == {"sens", "spec", "yield"}
+    assert set(rep["accountings"]) == {"worst", "nocall", "graded"}
     for k in ("kappa_linear", "kappa_quadratic", "patient_sens", "patient_spec"):
         assert (
             0

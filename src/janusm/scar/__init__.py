@@ -7,10 +7,10 @@ Ruling: ``vault/JanusM/Judgements/Round 2 - paired-scar.md``, JA26-JA32 (JA35 it
   and a per-patient log.
 - :mod:`janusm.scar.scar0` (JA30): every Scar-0 menu candidate inside the registered class 1,
   aggregated per AHA segment 1-17 from :mod:`janusm.geometry` (JA26).
-- :mod:`janusm.scar.scoring` (JA27-JA32): the scoring harness (cluster bootstrap over patients,
-  intention-to-diagnose, JA27 strata, the JA32 rule).
-- :mod:`janusm.scar.power`: the one power script for the JA32 endpoints, scoring every simulated
-  study with that harness.
+- :mod:`janusm.scar.scoring` (JA27-JA32, JA55, JA56): the scoring harness (cluster bootstrap over
+  patients, JA55 intention-to-diagnose and yield, JA27 strata, JA56's two ordered claims).
+- :mod:`janusm.scar.power`: the one power script, scoring every simulated study with that harness,
+  and JA57's seal size.
 
 Scar is never a learned class (JA26). Every output here is research output, not validated, until
 JA32 passes on the paired seal, and carries the patient's registration status.

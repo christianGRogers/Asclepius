@@ -1,0 +1,522 @@
+{
+ "A": {
+  "1": {
+   "present": false,
+   "share": 0.0,
+   "kim_bin": 0,
+   "pattern": null
+  },
+  "2": {
+   "present": false,
+   "share": 0.0,
+   "kim_bin": 0,
+   "pattern": null
+  },
+  "3": {
+   "present": false,
+   "share": 0.0,
+   "kim_bin": 0,
+   "pattern": null
+  },
+  "4": {
+   "present": false,
+   "share": 0.0,
+   "kim_bin": 0,
+   "pattern": null
+  },
+  "5": {
+   "present": false,
+   "share": 0.0,
+   "kim_bin": 0,
+   "pattern": null
+  },
+  "6": {
+   "present": false,
+   "share": 0.0,
+   "kim_bin": 0,
+   "pattern": null
+  },
+  "7": {
+   "present": false,
+   "share": 0.0,
+   "kim_bin": 0,
+   "pattern": null
+  },
+  "8": {
+   "present": false,
+   "share": 0.0,
+   "kim_bin": 0,
+   "pattern": null
+  },
+  "9": {
+   "present": false,
+   "share": 0.0,
+   "kim_bin": 0,
+   "pattern": null
+  },
+  "10": {
+   "present": false,
+   "share": 0.0,
+   "kim_bin": 0,
+   "pattern": null
+  },
+  "11": {
+   "present": false,
+   "share": 0.0,
+   "kim_bin": 0,
+   "pattern": null
+  },
+  "12": {
+   "present": false,
+   "share": 0.0,
+   "kim_bin": 0,
+   "pattern": null
+  },
+  "13": {
+   "present": false,
+   "share": 0.0,
+   "kim_bin": 0,
+   "pattern": null
+  },
+  "14": {
+   "present": false,
+   "share": 0.0,
+   "kim_bin": 0,
+   "pattern": null
+  },
+  "15": {
+   "present": false,
+   "share": 0.0,
+   "kim_bin": 0,
+   "pattern": null
+  },
+  "16": {
+   "present": false,
+   "share": 0.0,
+   "kim_bin": 0,
+   "pattern": null
+  },
+  "17": {
+   "present": false,
+   "share": 0.0,
+   "kim_bin": 0,
+   "pattern": null
+  }
+ },
+ "B": {
+  "1": {
+   "present": false,
+   "share": 0.0,
+   "kim_bin": 0,
+   "pattern": null
+  },
+  "2": {
+   "present": false,
+   "share": 0.0,
+   "kim_bin": 0,
+   "pattern": null
+  },
+  "3": {
+   "present": false,
+   "share": 0.0,
+   "kim_bin": 0,
+   "pattern": null
+  },
+  "4": {
+   "present": false,
+   "share": 0.0,
+   "kim_bin": 0,
+   "pattern": null
+  },
+  "5": {
+   "present": false,
+   "share": 0.0,
+   "kim_bin": 0,
+   "pattern": null
+  },
+  "6": {
+   "present": false,
+   "share": 0.0,
+   "kim_bin": 0,
+   "pattern": null
+  },
+  "7": {
+   "present": true,
+   "share": 0.126,
+   "kim_bin": 1,
+   "pattern": "ischaemic, subendocardial"
+  },
+  "8": {
+   "present": true,
+   "share": 0.355,
+   "kim_bin": 2,
+   "pattern": "ischaemic, subendocardial"
+  },
+  "9": {
+   "present": false,
+   "share": 0.0,
+   "kim_bin": 0,
+   "pattern": null
+  },
+  "10": {
+   "present": false,
+   "share": 0.0,
+   "kim_bin": 0,
+   "pattern": null
+  },
+  "11": {
+   "present": false,
+   "share": 0.0,
+   "kim_bin": 0,
+   "pattern": null
+  },
+  "12": {
+   "present": false,
+   "share": 0.0,
+   "kim_bin": 0,
+   "pattern": null
+  },
+  "13": {
+   "present": true,
+   "share": 0.582,
+   "kim_bin": 3,
+   "pattern": "ischaemic, subendocardial"
+  },
+  "14": {
+   "present": true,
+   "share": 1.0,
+   "kim_bin": 4,
+   "pattern": "ischaemic, transmural"
+  },
+  "15": {
+   "present": false,
+   "share": 0.0,
+   "kim_bin": 0,
+   "pattern": null
+  },
+  "16": {
+   "present": false,
+   "share": 0.0,
+   "kim_bin": 0,
+   "pattern": null
+  },
+  "17": {
+   "present": false,
+   "share": 0.0,
+   "kim_bin": 0,
+   "pattern": null
+  }
+ },
+ "C": {
+  "1": {
+   "present": false,
+   "share": 0.0,
+   "kim_bin": 0,
+   "pattern": null
+  },
+  "2": {
+   "present": false,
+   "share": 0.0,
+   "kim_bin": 0,
+   "pattern": null
+  },
+  "3": {
+   "present": false,
+   "share": 0.0,
+   "kim_bin": 0,
+   "pattern": null
+  },
+  "4": {
+   "present": true,
+   "share": 1.0,
+   "kim_bin": 4,
+   "pattern": "ischaemic, transmural"
+  },
+  "5": {
+   "present": false,
+   "share": 0.0,
+   "kim_bin": 0,
+   "pattern": null
+  },
+  "6": {
+   "present": false,
+   "share": 0.0,
+   "kim_bin": 0,
+   "pattern": null
+  },
+  "7": {
+   "present": false,
+   "share": 0.0,
+   "kim_bin": 0,
+   "pattern": null
+  },
+  "8": {
+   "present": false,
+   "share": 0.0,
+   "kim_bin": 0,
+   "pattern": null
+  },
+  "9": {
+   "present": false,
+   "share": 0.0,
+   "kim_bin": 0,
+   "pattern": null
+  },
+  "10": {
+   "present": true,
+   "share": 0.825,
+   "kim_bin": 4,
+   "pattern": "ischaemic, subendocardial"
+  },
+  "11": {
+   "present": false,
+   "share": 0.0,
+   "kim_bin": 0,
+   "pattern": null
+  },
+  "12": {
+   "present": false,
+   "share": 0.0,
+   "kim_bin": 0,
+   "pattern": null
+  },
+  "13": {
+   "present": false,
+   "share": 0.0,
+   "kim_bin": 0,
+   "pattern": null
+  },
+  "14": {
+   "present": false,
+   "share": 0.0,
+   "kim_bin": 0,
+   "pattern": null
+  },
+  "15": {
+   "present": true,
+   "share": 0.331,
+   "kim_bin": 2,
+   "pattern": "ischaemic, subendocardial"
+  },
+  "16": {
+   "present": false,
+   "share": 0.0,
+   "kim_bin": 0,
+   "pattern": null
+  },
+  "17": {
+   "present": false,
+   "share": 0.0,
+   "kim_bin": 0,
+   "pattern": null
+  }
+ },
+ "D": {
+  "1": {
+   "present": false,
+   "share": 0.0,
+   "kim_bin": 0,
+   "pattern": null
+  },
+  "2": {
+   "present": true,
+   "share": 0.183,
+   "kim_bin": 1,
+   "pattern": "non-ischaemic, mid-wall"
+  },
+  "3": {
+   "present": true,
+   "share": 0.183,
+   "kim_bin": 1,
+   "pattern": "non-ischaemic, mid-wall"
+  },
+  "4": {
+   "present": false,
+   "share": 0.0,
+   "kim_bin": 0,
+   "pattern": null
+  },
+  "5": {
+   "present": false,
+   "share": 0.0,
+   "kim_bin": 0,
+   "pattern": null
+  },
+  "6": {
+   "present": false,
+   "share": 0.0,
+   "kim_bin": 0,
+   "pattern": null
+  },
+  "7": {
+   "present": false,
+   "share": 0.0,
+   "kim_bin": 0,
+   "pattern": null
+  },
+  "8": {
+   "present": false,
+   "share": 0.0,
+   "kim_bin": 0,
+   "pattern": null
+  },
+  "9": {
+   "present": true,
+   "share": 0.184,
+   "kim_bin": 1,
+   "pattern": "non-ischaemic, mid-wall"
+  },
+  "10": {
+   "present": false,
+   "share": 0.0,
+   "kim_bin": 0,
+   "pattern": null
+  },
+  "11": {
+   "present": false,
+   "share": 0.0,
+   "kim_bin": 0,
+   "pattern": null
+  },
+  "12": {
+   "present": false,
+   "share": 0.0,
+   "kim_bin": 0,
+   "pattern": null
+  },
+  "13": {
+   "present": false,
+   "share": 0.0,
+   "kim_bin": 0,
+   "pattern": null
+  },
+  "14": {
+   "present": false,
+   "share": 0.0,
+   "kim_bin": 0,
+   "pattern": null
+  },
+  "15": {
+   "present": false,
+   "share": 0.0,
+   "kim_bin": 0,
+   "pattern": null
+  },
+  "16": {
+   "present": false,
+   "share": 0.0,
+   "kim_bin": 0,
+   "pattern": null
+  },
+  "17": {
+   "present": false,
+   "share": 0.0,
+   "kim_bin": 0,
+   "pattern": null
+  }
+ },
+ "E": {
+  "1": {
+   "present": false,
+   "share": 0.0,
+   "kim_bin": 0,
+   "pattern": null
+  },
+  "2": {
+   "present": false,
+   "share": 0.0,
+   "kim_bin": 0,
+   "pattern": null
+  },
+  "3": {
+   "present": false,
+   "share": 0.0,
+   "kim_bin": 0,
+   "pattern": null
+  },
+  "4": {
+   "present": false,
+   "share": 0.0,
+   "kim_bin": 0,
+   "pattern": null
+  },
+  "5": {
+   "present": true,
+   "share": 0.132,
+   "kim_bin": 1,
+   "pattern": "ischaemic, subendocardial"
+  },
+  "6": {
+   "present": false,
+   "share": 0.0,
+   "kim_bin": 0,
+   "pattern": null
+  },
+  "7": {
+   "present": false,
+   "share": 0.0,
+   "kim_bin": 0,
+   "pattern": null
+  },
+  "8": {
+   "present": false,
+   "share": 0.0,
+   "kim_bin": 0,
+   "pattern": null
+  },
+  "9": {
+   "present": false,
+   "share": 0.0,
+   "kim_bin": 0,
+   "pattern": null
+  },
+  "10": {
+   "present": false,
+   "share": 0.0,
+   "kim_bin": 0,
+   "pattern": null
+  },
+  "11": {
+   "present": true,
+   "share": 0.113,
+   "kim_bin": 1,
+   "pattern": "ischaemic, subendocardial"
+  },
+  "12": {
+   "present": true,
+   "share": 0.262,
+   "kim_bin": 2,
+   "pattern": "non-ischaemic, epicardial"
+  },
+  "13": {
+   "present": false,
+   "share": 0.0,
+   "kim_bin": 0,
+   "pattern": null
+  },
+  "14": {
+   "present": false,
+   "share": 0.0,
+   "kim_bin": 0,
+   "pattern": null
+  },
+  "15": {
+   "present": false,
+   "share": 0.0,
+   "kim_bin": 0,
+   "pattern": null
+  },
+  "16": {
+   "present": false,
+   "share": 0.0,
+   "kim_bin": 0,
+   "pattern": null
+  },
+  "17": {
+   "present": false,
+   "share": 0.0,
+   "kim_bin": 0,
+   "pattern": null
+  }
+ }
+}

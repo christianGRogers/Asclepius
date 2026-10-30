@@ -645,8 +645,11 @@ def aggregate(rows) -> dict:
         "share_mass_changing_segment_case": q([r["arc_changed_ml"] / r["seg_ml"] for r in arc]),
         "share_mass_changing_aha_territory_pooled": _ratio(
             sum(r["arc_terr_changed_ml"] for r in arc), seg_ml)}
+    # JA69 (R4-S3): the pooled share is reported only. R7 (jm0r_decide) keeps or drops the
+    # septal-arc column on the **case median** (``decision_inputs.septal_arc_mass_changed_median``);
+    # where the two disagree, the case median decides.
     sh = lim["arc_sectors"]["share_mass_changing_segment_pooled"]
-    lim["ja20_septal_arc_column_kept"] = None if sh is None else sh >= 0.10
+    lim["ja20_septal_arc_column_kept_pooled_reported"] = None if sh is None else sh >= 0.10
     t = [r for r in fr if "terr_n_segments" in r]
     n_eu = sum(r["terr_n_segments"] for r in t)
     n_ge = sum(r["terr_n_segments_geodesic"] for r in t)

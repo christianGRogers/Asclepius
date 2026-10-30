@@ -25,21 +25,32 @@ territory (``calibrate_c``); a territory is flagged when two contiguous segments
 against the patient's remote segments exceeds ``rc_terr_mm`` (1.0 mm until the reads exist, then
 JA42's RC).
 
+**The wall (JA60, Round 4).** The F1 floor is in mm, so the depth depends on the wall it is read
+against. ``detectable_depth`` takes the measured median wall of the population whose table it
+prints (``measured_median_mm``: JM-0R's ``thickness_median_mm`` in R9, the reference population's
+``median_level`` in ``reference.gate``). ``population()`` multiplies its anchor by the patient
+phase, so the anchor is ``measured / population_factor(phase_mix, shape, cv_n)``; the simulated
+population's median wall then equals the measured one. With no wall the anchor is
+``ED_MEDIAN_MM`` (5.7 mm). ``median_mm`` (an anchor, used as is) stays only for E7's regression
+rows; passing both raises. 9.668 mm is never a plan input (JA60).
+
 **The read-out (Hotel E7, JA40).** 4 replicate populations of 2000 per depth, depths 0.10-0.60 in
 0.05 steps; the detectable depth is the smallest depth whose mean territory sensitivity is >= 0.80.
 Being on the 0.05 grid, it is rounded **up** to 0.05. With the default ``seed`` the seeds are E7's,
-so its primary rows (cv_n 0.088, Lima's shape and median) come back exactly: 0.30 at RC 0 and 0.35
-at RC 1.0.
+so its primary rows (cv_n 0.088, Lima's shape, ``median_mm=9.668``) come back exactly: 0.30 at
+RC 0 and 0.35 at RC 1.0. At the 5.7 mm default anchor the same inputs give 0.45, JA60's
+provisional print.
 """
 
 from __future__ import annotations
 
-from typing import Dict, Mapping, Optional, Sequence
+from functools import lru_cache
+from typing import Dict, Mapping, Optional, Sequence, Tuple
 
 import numpy as np
 
 #: Bump on any change that can move a reported number.
-CALIBRATE_VERSION = "1.0.0"
+CALIBRATE_VERSION = "1.1.0"
 
 # AHA default territories and bullseye adjacency (Lima's calibrate_sim)
 AHA = {"LAD": [1, 2, 7, 8, 13, 14, 17], "RCA": [3, 4, 9, 10, 15], "LCx": [5, 6, 11, 12, 16]}
@@ -60,8 +71,10 @@ LIMA_SHAPE = (
     1.276, 1.022, 0.916, 1.074, 0.777, 0.825, 0.756, 0.819,
 )  # fmt: skip
 LIMA_CV_N = 0.088
-LIMA_MEDIAN_MM = 9.668  # the measured median wall; E7 (and so detectable_depth) uses it
-ED_MEDIAN_MM = 5.7  # Lima's anchor (Chen 2025, CT end-diastole): population()'s default
+# Lima's self-test median wall. E7 passed it as an anchor (``median_mm``); kept only to reproduce
+# E7's rows. Never a plan input (JA60): it fails R3's window and was phase-scaled twice.
+LIMA_MEDIAN_MM = 9.668
+ED_MEDIAN_MM = 5.7  # Lima's anchor (Chen 2025, CT end-diastole): the default anchor (JA60)
 
 PHASES = {"ED": 1.00, "MD": 1.14, "SYS": 1.40}
 PHASE_MIX = {"ED": 0.4, "MD": 0.4, "SYS": 0.2}  # JA40
@@ -77,6 +90,8 @@ NULL_HEARTS = 20000
 NULL_PATIENTS = NULL_HEARTS
 RC_TERR_PROVISIONAL_MM = 1.0  # JA40: the F1 floor until the reads exist
 DEPTH_WARN = 0.40  # JA40: above this the page says so
+FACTOR_HEARTS = 200000  # JA60: population_factor's hearts (Lima G1, E6)
+FACTOR_SEED = 7  # JA60: population_factor's fixed seed
 E7_SEED = 31000  # Hotel E7's first seed: with it, E7's rows reproduce exactly
 DEFAULT_SEED = E7_SEED
 
@@ -96,7 +111,8 @@ def population(
 ):
     """Lima's simulated population: (measured n x 16 mm, lesion n x 16, sick n, territory n,
     phase n). The draws are made in Lima's order, so a seed gives Lima's and Hotel's hearts.
-    ``median_mm`` defaults to Lima's 5.7 mm; E7 (``detectable_depth``) passes 9.668 mm."""
+    ``median_mm`` is the end-diastolic anchor (Lima's 5.7 mm by default); each heart's wall is
+    also scaled by its phase, so the population's median wall is ``population_factor`` x it."""
     shape = np.asarray(shape, float)
     scale = median_mm * np.exp(rng.normal(0, SCALE_CV, n))
     ph_names = rng.choice(list(PHASES), size=n, p=[phase_mix[k] for k in PHASES])
@@ -120,6 +136,57 @@ def population(
     true = np.where(lesion, true * (1 - depth), true)
     meas = true + rng.normal(0, sig_m, (n, 16))
     return meas, lesion, sick, terr, ph_names
+
+
+def _phase_key(phase_mix: Mapping[str, float]) -> Tuple[Tuple[str, float], ...]:
+    if set(phase_mix) - set(PHASES):
+        raise ValueError(f"unknown phase in {dict(phase_mix)}; phases are {list(PHASES)}")
+    p = tuple((k, float(phase_mix.get(k, 0.0))) for k in PHASES)
+    if any((not np.isfinite(v)) or v < 0 for _, v in p) or not np.isclose(sum(v for _, v in p), 1):
+        raise ValueError(f"phase_mix must be shares summing to 1, got {dict(phase_mix)}")
+    return p
+
+
+@lru_cache(maxsize=32)
+def _population_factor(
+    phase: Tuple[Tuple[str, float], ...], shape: Tuple[float, ...], cv_n: float
+) -> float:
+    rng = np.random.default_rng(FACTOR_SEED)
+    meas, *_ = population(
+        FACTOR_HEARTS, 0.0, 0.0, cv_n, 0.0, dict(phase), rng, shape=shape, median_mm=1.0
+    )
+    return float(np.median(np.median(meas, 1)))
+
+
+def population_factor(
+    phase_mix: Mapping[str, float] = PHASE_MIX,
+    shape: Sequence[float] = LIMA_SHAPE,
+    cv_n: float = LIMA_CV_N,
+) -> float:
+    """JA60: the simulated population's median wall (the median over hearts of each heart's
+    median segment) divided by the anchor ``median_mm``. Deterministic: ``FACTOR_HEARTS``
+    (200 000) infarct-free hearts, no added error, seed ``FACTOR_SEED`` (7). 1.109 at Lima's
+    inputs (mixed phase, ``LIMA_SHAPE``, cv_n 0.088; Lima G1: 1.1087)."""
+    shape_t = tuple(float(x) for x in np.asarray(shape, float).ravel())
+    if len(shape_t) != 16:
+        raise ValueError("shape must be 16 segment ratios")
+    if not np.isfinite(cv_n) or cv_n < 0:
+        raise ValueError(f"bad cv_n {cv_n}")
+    return _population_factor(_phase_key(phase_mix), shape_t, float(cv_n))
+
+
+def anchor_mm(
+    measured_median_mm: float,
+    phase_mix: Mapping[str, float] = PHASE_MIX,
+    shape: Sequence[float] = LIMA_SHAPE,
+    cv_n: float = LIMA_CV_N,
+) -> float:
+    """The end-diastolic anchor whose simulated population has ``measured_median_mm`` as its
+    median wall (JA60): measured / ``population_factor``."""
+    m = float(measured_median_mm)
+    if not np.isfinite(m) or m <= 0:
+        raise ValueError(f"measured_median_mm must be a positive wall in mm, got {m}")
+    return m / population_factor(phase_mix, shape, cv_n)
 
 
 def territory_flags(flag) -> np.ndarray:
@@ -188,14 +255,15 @@ def simulate(
     seed: int,
     *,
     sig_m: float = 0.0,
-    median_mm: float = LIMA_MEDIAN_MM,
+    median_mm: float = ED_MEDIAN_MM,
     prev: float = PREVALENCE,
     phase_mix: Mapping[str, float] = PHASE_MIX,
     n: int = N_PER_POPULATION,
 ) -> dict:
     """One population (Hotel E7's ``one``): {"k_mad": k, rc: {"false_flag", "sens"}} for each F1
     floor in ``rcs``. ``false_flag`` is the share of infarct-free hearts with any shown flag;
-    ``sens`` the share of infarcted hearts whose infarct territory shows a flag."""
+    ``sens`` the share of infarcted hearts whose infarct territory shows a flag. ``median_mm`` is
+    ``population``'s anchor (``detectable_depth`` converts a measured wall to it, JA60)."""
     shape = np.asarray(shape, float)
     rng = np.random.default_rng(seed)
     meas, _, sick, terr, _ = population(
@@ -234,6 +302,24 @@ def _check_inputs(cv_n, shape, rcs, sig_m):
     return shape
 
 
+def _anchor(measured_median_mm, median_mm, phase_mix, shape, cv_n):
+    """(anchor, factor, source) per JA60."""
+    if measured_median_mm is not None and median_mm is not None:
+        raise ValueError(
+            "pass measured_median_mm (the measured wall) or median_mm (an anchor, E7's "
+            "regression rows only), not both"
+        )
+    if measured_median_mm is not None:
+        factor = population_factor(phase_mix, shape, cv_n)
+        return anchor_mm(measured_median_mm, phase_mix, shape, cv_n), factor, "measured"
+    if median_mm is not None:
+        m = float(median_mm)
+        if not np.isfinite(m) or m <= 0:
+            raise ValueError(f"median_mm must be a positive anchor in mm, got {median_mm}")
+        return m, None, "median_mm"
+    return ED_MEDIAN_MM, None, "ed_default"
+
+
 def detectable_depths(
     cv_n: float,
     shape: Sequence[float],
@@ -241,19 +327,34 @@ def detectable_depths(
     *,
     sig_m: float = 0.0,
     seed: int,
-    median_mm: float = LIMA_MEDIAN_MM,
+    measured_median_mm: Optional[float] = None,
+    median_mm: Optional[float] = None,
+    phase_mix: Mapping[str, float] = PHASE_MIX,
 ) -> Dict[float, dict]:
     """``detectable_depth`` for several F1 floors on the same populations (as E7 swept them):
     {rc: result}. Each population is simulated once and read at every floor."""
     rcs = [float(r) for r in np.atleast_1d(rc_terr_mm)]
     shape = _check_inputs(cv_n, shape, rcs, sig_m)
+    _phase_key(phase_mix)
+    anchor, factor, source = _anchor(measured_median_mm, median_mm, phase_mix, shape, cv_n)
     rows = []
     s = seed
     for depth in DEPTHS:
         reps = []
         for _ in range(REPLICATES):
             s += 2  # E7's seed sequence: population seed s, null seed s + 1
-            reps.append(simulate(depth, cv_n, shape, rcs, s, sig_m=sig_m, median_mm=median_mm))
+            reps.append(
+                simulate(
+                    depth,
+                    cv_n,
+                    shape,
+                    rcs,
+                    s,
+                    sig_m=sig_m,
+                    median_mm=anchor,
+                    phase_mix=phase_mix,
+                )
+            )
         rows.append((depth, reps))
     out = {}
     for rc in rcs:
@@ -278,11 +379,17 @@ def detectable_depths(
                 "shape": [float(x) for x in shape],
                 "rc_terr_mm": rc,
                 "sig_m": float(sig_m),
-                "median_mm": float(median_mm),
+                "measured_median_mm": (
+                    None if measured_median_mm is None else float(measured_median_mm)
+                ),
+                "median_mm": None if median_mm is None else float(median_mm),
+                "anchor_mm": float(anchor),
+                "anchor_source": source,
+                "population_factor": factor,
                 "seed": int(seed),
             },
             "design": {
-                "phase_mix": dict(PHASE_MIX),
+                "phase_mix": dict(phase_mix),
                 "prevalence": PREVALENCE,
                 "n_per_population": N_PER_POPULATION,
                 "replicates": REPLICATES,
@@ -302,7 +409,9 @@ def detectable_depth(
     *,
     sig_m: float = 0.0,
     seed: int,
-    median_mm: float = LIMA_MEDIAN_MM,
+    measured_median_mm: Optional[float] = None,
+    median_mm: Optional[float] = None,
+    phase_mix: Mapping[str, float] = PHASE_MIX,
 ) -> dict:
     """JA40's detectable depth: the smallest relative thinning (0.10-0.60, 0.05 steps, so rounded
     up to 0.05) whose mean territory sensitivity over 4 populations of 2000 is >= 0.80.
@@ -315,10 +424,23 @@ def detectable_depth(
     ``cv_n`` is the plain SD of thickness / shape; ``shape`` the 16 segment ratios;
     ``rc_terr_mm`` the F1 floor; ``sig_m`` the error to add (0 when ``cv_n`` was measured on the
     borders of the model that fills the table, JA40); ``seed`` the first seed (``E7_SEED``
-    reproduces E7); ``median_mm`` the population's median wall, which the F1 floor (in mm) depends
-    on (Lima's measured 9.668 mm by default; E7 used it)."""
+    reproduces E7).
+
+    The wall (JA60): ``measured_median_mm`` is the measured median wall of the population whose
+    table this depth is printed for; the anchor is it / ``population_factor(phase_mix, shape,
+    cv_n)``. ``median_mm`` is an anchor used as is, for E7's regression rows only. Passing both
+    raises; with neither the anchor is ``ED_MEDIAN_MM`` (5.7 mm). ``phase_mix`` is the
+    population's phase mix (JA40's mix by default; ``{"ED": 1.0}`` for hypoattenuation, which
+    phase does not scale). ``inputs`` records the measured wall, the anchor and the factor."""
     return detectable_depths(
-        cv_n, shape, [rc_terr_mm], sig_m=sig_m, seed=seed, median_mm=median_mm
+        cv_n,
+        shape,
+        [rc_terr_mm],
+        sig_m=sig_m,
+        seed=seed,
+        measured_median_mm=measured_median_mm,
+        median_mm=median_mm,
+        phase_mix=phase_mix,
     )[float(rc_terr_mm)]
 
 

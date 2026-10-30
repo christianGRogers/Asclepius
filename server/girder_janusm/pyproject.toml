@@ -1,0 +1,43 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "girder-janusm"
+version = "0.1.0"
+description = "The Janus-M border read queue (JA7): four-label double reads of the Janus-M seal and decision set, as a Girder 5 plugin separate from SegQueue14."
+requires-python = ">=3.10"
+license = { text = "MIT" }
+authors = [{ name = "Christian Rogers" }]
+# Like girder-segqueue14, `janusm_reads` is NOT declared: it ships in the repository
+# root's `segtrain` distribution (src/), and `segtrain` on PyPI is an unrelated
+# project. Install the repository root first. See DEPLOY.md.
+dependencies = [
+    "girder>=5,<6",
+]
+
+[project.optional-dependencies]
+# The read check (janusm-check) needs these; the web server does not.
+check = [
+    "numpy>=1.21",
+    "scipy>=1.7",
+    "nibabel>=4.0",
+]
+
+# Its own plugin name: Girder loads it beside segqueue14, never in place of it.
+[project.entry-points."girder.plugin"]
+janusm = "girder_janusm:JanusMPlugin"
+
+[project.scripts]
+janusm-populate = "girder_janusm.populate:main"
+janusm-check = "girder_janusm.check:main"
+janusm-export = "girder_janusm.export:main"
+
+# The package is this directory, mapped onto "." as girder_segqueue14 does, so it is a
+# distribution of its own and server/pyproject.toml (girder-segqueue) never ships it.
+[tool.setuptools]
+package-dir = { "girder_janusm" = "." }
+packages = ["girder_janusm"]
+
+[tool.setuptools.package-data]
+girder_janusm = ["*.md"]

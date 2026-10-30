@@ -25,6 +25,7 @@ Per case (public TotalSegmentator v2.0.1 gated-like cardiac CT that passes guard
                              transmurality = scar / myocardium per segment.
        P  "presence first":  as T, but a segment is scar-present only if, after a 1-voxel opening and leaving out the
                              1 mm next to the warped endocardium, >= 5 % of its voxels are scar; else bin 0.
+       T10/T15/T20:          presence if T >= 0.10 / 0.15 / 0.20 (lie_calib.py chooses tau on half the hearts).
   Outputs: endo/epi ASSD of the warped borders against the true ones (mm), and per-segment Kim-bin accuracy,
   linear-weighted kappa, scar-presence sensitivity and specificity.
 

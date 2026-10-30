@@ -41,11 +41,12 @@ one thing path A cannot do.
   - Path B does not need those cases, so the rule stands.
 - **E5, LIE-to-CCTA registration and the scar grade on real anatomy (§6 item 8).**
   [[Golf - LIE registration leaves about 0.6 mm of border error, and that error, not the threshold, limits the scar grade]]
-  - Setup: 12 public hearts, a synthetic bright-blood LIE scan, a known misalignment, four registration methods,
-    five graders.
+  - Setup: 11 public hearts (a 12th pending), a synthetic bright-blood LIE scan, a known misalignment, four
+    registration methods, five graders.
   - Affine registration is the default (≈ 0.6 mm residual).
-  - A development-calibrated presence threshold is required: without it, half of scar-free segments read as scar.
-  - Calibrated sensitivity is 0.58–0.65, below E6's bound, so Scar-1 is planned.
+  - Without a presence rule, 55 % of scar-free segments read as scar.
+  - A core-presence rule that ignores the innermost millimetre gives weighted kappa 0.84, sensitivity 0.75 and
+    specificity 0.99 at CNR 5. That is exactly at E6's bound, so Scar-1 is planned.
 - **E6, paired-cohort power (§6 item 8).**
   [[Golf - A paired LIE-vs-LGE seal needs about 120 patients, half with scar, and segment sensitivity is what sets the size]]
   - Patient-clustered Monte Carlo with patient-bootstrap bounds.
@@ -55,7 +56,7 @@ one thing path A cannot do.
   - The Round 1 spread (0.909–0.975) is the signed-distance construction.
   - On realised ASSD all four recipes agree: residual SD 0.007, against 0.032 on nominal RMS.
 
-**Held-out cases.** `guard_r2.py` (§3, E4) runs before any case is opened. No held-out case or twin was opened this
+**Held-out cases.** `guard_r2.py` (E4) runs before any case is opened. No held-out case or twin was opened this
 round. One disclosure: 20 of the 24 public cases in Golf's **Round 1** E2 are refused as possible twins under the
 new rule (E4). None is a held-out subject by s-number.
 
@@ -67,7 +68,7 @@ Each is the ruling's recommendation, held as an assumption until the lead answer
 |---|---|---|
 | LQ2 | (a) LV myocardium + LV, RV, LA pools; papillary muscles in the pool | (b) adds RV wall thickness only; the scar grade stays LV only |
 | LQ3 | (a) `heartchambers_highres` for Janus-M 0 and seeds, licence key typed by the lead on Fir | (b) Janus-M 1 runs early; the paired cohort's borders then come from Janus-M 1 |
-| LQ4 | (a) ImageCAS-X train 560 + 180 non-sealed quality-0 | (b) the border seal moves to the paired cohort's first-pass scans (§6.4) |
+| LQ4 | (a) ImageCAS-X train 560 + 180 non-sealed quality-0 | (b) pool only after #116, which leaves almost no adult CCTA; path B would then draw the border seal from the paired cohort's first-pass scans instead (§6.4) |
 | LQ5 | (a) 200 border double reads after the coronary wave-1 start condition (A39) | The LGE reads (§6.2) are separate and come with the cohort, not from the team |
 | LQ6 | (a) MM-WHS, low priority, external border check only | none |
 | LQ7 | (a) released coronary patients for training only, by explicit PR | none (path B's scar data is institutional) |
@@ -222,7 +223,7 @@ TotalSegmentator data, so Golf keeps the rule as written. The shared guard (#138
 ### 5.2 Registration (LIE → first-pass CCTA)
 
 **Evidence: E5** ([[Golf - LIE registration leaves about 0.6 mm of border error, and that error, not the threshold, limits the scar grade]]).
-- **Data:** 12 public hearts, real anatomy and real CT.
+- **Data:** 11 public hearts (a 12th pending), real anatomy and real CT.
 - **The late scan:** a synthetic LIE scan with bright blood as bright as scar, misaligned by a known transform at
   three levels: none; typical (4 mm, 2°, 3 % scale, 1 mm non-rigid); large (8 mm, 4°, 6 %, 2 mm).
 - **What is scored:** the first-pass CT is registered to it by four methods, and the first-pass borders are carried
@@ -271,25 +272,29 @@ grader** working on the carried borders.
 2. **Scar voxel:** LIE > remote mean + k·SD, with k = 3. Juliet's half-way rule is the alternative, and the
    development set picks between them.
 3. **Fraction:** T = scar voxels / myocardial voxels, per segment and per third.
-4. **Presence first:** a segment is scar-present only if **T ≥ τ**. τ is **chosen on the development set** by
-   weighted kappa against LGE, from {0, 0.05, …, 0.30}. Otherwise the segment is bin 0.
-5. **Kim bin** from T.
+4. **Presence first, from the core.** A segment is scar-present only if ≥ 5 % of its voxels are scar **after a
+   1-voxel opening and outside the 1 mm next to the carried endocardium** (rule P in E5). Otherwise it is bin 0.
+   - The development set may replace this with a threshold T ≥ τ, τ ∈ {0, 0.05, …, 0.30}, chosen by weighted kappa
+     against LGE.
+   - It does so only if τ beats P on development.
+5. **Kim bin** from the full T, innermost millimetre included, for present segments only.
 
 **Why presence comes first.**
 - With exact borders the plain fraction is excellent: Kim weighted kappa 0.96 at CNR 5, presence sensitivity and
   specificity 1.0 (E5).
 - After registration, the ≈ 0.6 mm residual puts bright blood inside the carried wall. Without a presence threshold,
   **half of scar-free segments are called scar** (specificity 0.47–0.64).
-- A τ chosen on half the hearts and scored once on the other half restores specificity to ≥ 0.98, with weighted
-  kappa 0.76–0.83 after rigid or affine registration at CNR 5.
+- The core-presence rule ignores the innermost millimetre, where carried blood lands. After affine registration
+  at CNR 5 it keeps specificity at 0.99, with weighted kappa 0.84 and sensitivity 0.75 (11 hearts).
+- A single τ on T, chosen on half the hearts and scored once on the other half, also restores specificity (1.00).
+  But it loses small scars (sensitivity 0.58).
 - This confirms Juliet R1 E3 (scar-free walls read 4–12 %) on real anatomy, and shows that **registration error,
-  not image noise, is what τ absorbs.**
+  not image noise, is what the presence rule must absorb.**
 
 **What E5 also shows, and what Golf therefore plans for.**
-- In E5's half-split, Scar-0's calibrated **presence sensitivity is only 0.58–0.65**. τ that removes the false calls
-  also removes small (bin 1) scars.
-- That is below the 0.75 bound E6 sizes the seal for. **So Golf expects Scar-0 may fail on development, and plans
-  Scar-1 now rather than hoping.**
+- Even the core rule's sensitivity, 0.75 at CNR 5, is **only at** the 0.75 lower bound that E6 sizes the seal for.
+- At CNR 3 it falls far below that.
+- **So Golf expects Scar-0 may fail on development, and plans Scar-1 now rather than hoping.**
 
 **Scar-1 (only if Scar-0 fails the §5.5 endpoints on development; CPU):**
 - **Input per segment:** the LIE profile across the wall. That is the median LIE in 10 depth bins of u,

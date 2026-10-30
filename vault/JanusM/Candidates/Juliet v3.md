@@ -18,17 +18,51 @@ trunk (JA1–JA14) and path A's Stage A (JA15–JA24, by JA25). **Juliet v3 is t
 
 | Ruling §7 item | Where | In one line |
 |---|---|---|
-| 1. One shared synthetic-LIE benchmark | §1, `experiments/JanusM/bench_lie/` | [BENCH-ONE-LINE] |
+| 1. One shared synthetic-LIE benchmark | §1, E8, `experiments/JanusM/bench_lie/` | 630 cases on 20 real hearts and the phantom, with rules pre-registered and agreed with Golf and Kilo. **P-K struck** (calls scar in scar-free hearts). **P-G struck under JA29's registration**, but clean once registration is fixed. **P-J, E-V and E-D survive.** P-G's spill share is 0.00–0.02 |
 | 2. The merged power script at the JA32 bars | §2, E9 | #187's run gives a 120–240-patient seal. But at a 2 % registration-failure rate, JA29's per-segment intention-to-diagnose keeps joint power below 0.80 at every N ≤ 320; a split accounting needs 160–200 |
 | 3. LGE read form and registration check form | §3, `experiments/JanusM/Juliet/r3/` | written for the Janus-M queue, with a synthetic LGE mock-up (5 patients with truth) and an example panel; form-entry time estimated, viewing time measured on the mock-up by the queue's own timestamps |
 | 4. JA27 intake checker | §4 | every JA27 requirement mapped to a DICOM attribute or a manifest field, with what a failing patient becomes |
-| 5. Registration QC cuts, and a phase check | §5 | [QC-ONE-LINE] |
+| 5. Registration QC cuts, and a phase check | §5, E8 | Cuts at the 95th percentile of aligned development cases, plus a new check, **`rim_dark`**. It catches phase mismatch (AUC 0.98–0.99, where the JA29 trio scores 0.07–0.56) and misregistration (0.988). With a **4 mm** MI mask, the 4 mm-shift residual falls from 1.33 to 0.30 mm (median) |
 | 6. JA25 hand-over | §6 | harness and JM-0R are on `dev` (#183); this branch has not synced `dev` yet; the table writer is not built; JM-0R has not run, so there are no numbers to apply |
 | 7. Path summary for the lead | §7 | updated |
 
 ## 1. The shared synthetic-LIE benchmark (item 1)
 
-[BENCHMARK SECTION]
+Golf and Kilo agreed on #179 that Juliet builds it and that all three use it (Golf's E8 is a cross-check on his own
+generator). The full note is [[Juliet - On the shared LIE benchmark P-K and P-G are struck under JA29 registration, and a 4 mm mask with a cavity-rim check fixes registration and catches phase mismatch]].
+
+**What it is.**
+- **Hearts:** 23 guard-checked public TotalSegmentator v2.0.1 hearts (Golf's 22 ∪ Kilo's 15; 0 refused). 20 had LV
+  contrast. Juliet's R2 phantom is added.
+- **First pass:** the real first-pass CT and labels.
+- **LIE:** synthetic inside the heart, the real chest outside.
+- **Grid:** blood below, equal to or above scar × CNR 3 or 5 × five motions:
+  - none;
+  - the heart moving 4 mm against a static chest;
+  - + 3 % scale;
+  - + 5 % phase change;
+  - Kilo's whole-image non-rigid motion.
+
+  That is **630 cases**.
+- **Truth** is both volume share and depth extent. Golf's scar mix is used, which includes thin bin-1 scars.
+- **Per case,** the scarred LIE, its scar-free twin and a blood→remote copy share one noise draw.
+- **Arms:** every JA29 stage, the emulated chain, two variants and an oracle.
+- **Re-use:** `results.jsonl.gz` holds every per-segment value, so any rule can be re-scored without re-running.
+
+**Strikes, by the rules pre-registered on #179** (JA29 chain, CNR 5, motion none or rigid):
+
+| Menu item | Verdict | Why |
+|---|---|---|
+| P-K | **struck** | specificity on scar-free hearts 0.006–0.31, and 0.006–0.056 even on true borders: its half-way threshold re-fits to noise when a heart has no scar |
+| P-G | **struck as JA29 stands** | specificity 0.78–0.86 when the heart moves, from registration. On true borders 0.99–1.00; with §5's registration ≥ 0.985 |
+| P-J | survives | sensitivity 0.76–0.84; both specificities ≥ 0.96. Its bin-1 sensitivity is 0.00–0.30 on the chain. With §5's registration, its sensitivity is ≥ 0.89 (bin 1: ≥ 0.60) |
+| E-V / E-D | both survive | exact bin agreement on scar-on-both 0.90 / 0.89 (volume truth), 0.94 / 0.93 (depth truth) |
+
+- **The spill share of Golf's core rule** (Golf's counterfactual) **is 0.00–0.02.** P-G's sensitivity is scar, not
+  blood.
+- **What development then chooses between:** P-J alone, or P-J and P-G if the judge adopts §10's A2 (presence); and
+  E-V or E-D (extent).
+- **#181's shipped modules** should reproduce `scores.json` on these cases arm by arm (§9).
 
 ## 2. The merged power script (item 2)
 
@@ -212,7 +246,38 @@ DICOM at all.
 
 ## 5. Registration QC cuts, and a phase check (item 5)
 
-[QC SECTION]
+**How the cuts are set (fixed now, run once on development).**
+1. **The aligned reference.** Development patients whose R0 and heart-masked rigid MI agree within 0.5 mm (both
+   estimates are logged, JA29), and whose reader check passes at R0.
+2. **Each cut** (fat-like, blood-like, above-blood, rim_dark) is the **95th percentile** of that value over the
+   aligned reference, per protocol key (§4) when a key has ≥ 15 aligned development patients, pooled otherwise.
+3. **If fewer than 15 development patients are aligned at R0,** the cuts are taken from the benchmark's aligned cases
+   at the matching blood/CNR level. The benchmark's own cuts are recorded in `bench_lie/scores.json` (`qc_cuts`). The
+   freeze PR records which source was used.
+4. The cuts are frozen with JA28's freeze, before any seal patient is registered. They never move after.
+
+**What the benchmark shows about them (E8).**
+- **The JA29 trio separates moved from aligned scans only moderately:** AUC fat-like 0.82, blood-like 0.80,
+  above-blood 0.69. At their 95th-percentile cuts, **11 % of 4 mm-moved cases pass QC at R0** and are graded about
+  4 mm off.
+- **`rim_dark` separates them at AUC 0.988.** With it in the QC, 0 of 504 moved cases are kept at R0.
+  `rim_dark` is the share of the carried cavity's 2 mm inner rim below (remote + blood) / 2 on the smoothed LIE.
+
+**A truth-free phase check exists: `rim_dark`.**
+- It separates a 5 % phase mismatch from rigid misalignment at AUC 0.98–0.99, and from Kilo's non-rigid motion at
+  0.985–0.992, at every blood level. The JA29 trio scores 0.07–0.56 there.
+- **The mechanism:** when the LIE's cavity is smaller, the carried cavity's rim lies on myocardium.
+- **The rule:** a patient whose `rim_dark` exceeds its cut *after* the chain has registered is the reader check's
+  "wall thickness differs" case. It goes to the JA27 phase-unmatched stratum, never to the primary analysis.
+- **Its limit:** it needs LIE blood brighter than remote myocardium. It was tested at blood 30–90 HU above remote. A
+  protocol where blood equals remote myocardium on the LIE would blind it; the intake's protocol key (§4) shows when.
+
+**The mask.**
+- JA29's 10 mm dilation admits enough static chest to pull rigid MI toward R0: median residual 1.24 mm against
+  0.30 mm with a **4 mm** mask, after a 4 mm heart shift.
+- The 4 mm mask costs nothing on aligned scans (0.17 against 0.09 mm, both well under the 0.5 mm tolerance of Juliet
+  R2 E6).
+- §10 proposes it, together with `rim_dark`. [E10 LINE]
 
 ## 6. The JA25 hand-over (item 6)
 
@@ -235,7 +300,22 @@ DICOM at all.
 
 ## 7. Path summary for the lead (item 7, Round 2 §8 updated)
 
-[PATH SUMMARY]
+| | Path A, `jm/rest-ccta` | Path B, `jm/paired-scar` (after Round 3) |
+|---|---|---|
+| Assumes | no reference for scar or ischaemia | the lead obtains a paired CCTA + same-session LIE + CMR LGE cohort (data requirements only, D31) |
+| Stage A | built and calibrated (JA15–JA24) | **identical** (JA25); the shared harness and JM-0R are on `dev` (#183) and reach this path when `dev` is synced |
+| "Scarring" in the brief | inferred, from calibrated research flags | **measured**: presence and Kim bin on LIE against LGE, plus path A's flags against LGE |
+| What Round 3 settled | — | a shared benchmark: P-K struck; P-G struck unless registration is fixed; P-J, E-V, E-D go to development. A phase check (`rim_dark`). The forms, the mock-up, the intake checker. The seal size from the merged engine |
+| Seal size | — | 120–240 patients (#187; weak/strong clustering, 50–70 % scar), **if the registration-failure rate is ~0**. At 2 % failure, JA29's accounting needs > 320; the split accounting (§10 A1) needs 160–200 |
+| Committed compute | ≈ 15 GPU-h | the same + ≈ 3 GPU-h once the cohort exists; scar is CPU |
+| Extra reader time | none | ≈ 55 CMR reader-hours (planning figure until the mock-up timing replaces it) + about 3 min per patient for the registration check |
+| Main risks | flags with no measured sensitivity | the cohort never arrives; the registration-failure rate on real data; non-rigid misalignment (≈ 1.5 mm RMS defeats every rule after rigid/affine) |
+| If the cohort never arrives | — | path B reduces to path A exactly; nothing built is lost |
+
+**In short:** Round 3 turned path B's rule menu into one survivor plus one conditional (P-J; P-G with the registration
+fix), found a registration flaw (the 10 mm mask) and its fix, and found the phase check Round 2 lacked. The study
+stands or falls on the cohort and on its registration-failure rate. Both are measured on the first 40 development
+patients, before anything is claimed.
 
 ## 8. Assumptions carried
 
@@ -262,7 +342,30 @@ DICOM at all.
 
 ## 10. Proposed amendments for the judge
 
-[AMENDMENTS]
+Each is backed by a Round 3 experiment. All are for the judge to accept or reject.
+
+- **A1. Count a not-graded patient as missed scar, not as false calls (E9).**
+  - **The change:** a not-graded patient's LGE-positive segments stay misses, and its LGE-negative segments leave the
+    specificity denominator. A fourth deciding bar is added: the not-graded patient rate, upper 95 % ≤ 0.10.
+  - **Why:** under JA29 as written, 2 % failure keeps joint power below 0.80 at every N ≤ 320. Under A1, N = 200
+    (50 % scar) or 160 (70 %).
+  - **Alternative:** Kilo's graded-only + yield (#179) is more powerful but charges sensitivity less. Either fixes the
+    problem; A1 is the more conservative.
+- **A2. Mask the registration metric to classes 1–4 dilated 4 mm (not 10 mm), and add `rim_dark` to the QC (E8).**
+  - With both, the median residual after a 4 mm heart shift falls from 1.33 to 0.30 mm (p90 3.65 → 0.44), and no
+    moved case passes QC at R0.
+  - **If A2 is adopted, P-G is reinstated to the menu.** Its strike was the registration's: with A2 it passes every
+    bar.
+- **A3. `rim_dark` above its cut after registration routes a patient to the phase-unmatched stratum (E8, item 5).**
+  It is the truth-free phase check Round 2 lacked (AUC 0.98–0.99).
+- **A4. The LGE reference rule (§3.1.4).** Agreement is the shared presence and the **lower** of two adjacent bins.
+  Adjudication applies only on a presence disagreement or a difference of ≥ 2 bins. The inter-reader anchor is
+  computed on the unadjudicated reads.
+- **A5. Reader qualification on the mock-up (§3.3).** Bin agreement ≥ 0.80 on the mock scarred segments, and every
+  pattern correct, before a CMR reader reads a cohort patient.
+- **A6. Non-rigid misalignment.** If development's logged registration residuals show a non-rigid component of about
+  1.5 mm RMS (the benchmark's `nonrigid` motion defeats every rule after rigid or affine registration), the JA29
+  B-spline development arm is opened before seal grading. No new GPU is needed.
 
 ## 11. Held-out record and limits
 
@@ -272,4 +375,12 @@ DICOM at all.
   outside the repository; no case id appears in an experiment note except as a heart label in the shared lists
   Golf and Kilo already committed. No twin was used.
 - **The LGE mock-up** is drawn from geometry; no case is opened.
-- **Limits:** [LIMITS]
+- **Limits:**
+  - **The benchmark** is synthetic LIE in real anatomy: homogeneous tissue, no microvascular obstruction, no beam
+    hardening, one scar draw per heart and condition, and 20 real hearts from one public dataset.
+  - **The QC cuts** are emulated from the other half of the hearts.
+  - **The registration** is SimpleITK's Mattes MI. E10 repeats the mask test on the shipped module.
+  - **E9** uses Golf's cohort model.
+  - **The reader-time figure** is an estimate until the mock-up is timed.
+  - **The DICOM fields** are as named in PS3.6. Vendors' phase reporting varies, which is why §4 falls back to text,
+    flagged.

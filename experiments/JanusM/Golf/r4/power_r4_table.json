@@ -1,0 +1,566 @@
+{
+ "source": "power_r4.json",
+ "sims": 1500,
+ "rows": [
+  {
+   "clustering": "strong",
+   "enrich": 0.5,
+   "p_fail": 0.0,
+   "infarct_size": "golf",
+   "n_segments_270": 136,
+   "power_at_160": 0.6733,
+   "power_at_200": 0.7687,
+   "power_at_240": 0.836,
+   "max_power_grid": 0.9307,
+   "n80_grid": 220,
+   "n80_interp": 216.5,
+   "n80_mc_band": [
+    205.2,
+    229.0
+   ],
+   "seal_grid": 220,
+   "seal_interp": 217,
+   "claim2_joint_n80_interp": 216.5,
+   "binding": "power"
+  },
+  {
+   "clustering": "strong",
+   "enrich": 0.5,
+   "p_fail": 0.0,
+   "infarct_size": "kilo",
+   "n_segments_270": 167,
+   "power_at_160": 0.608,
+   "power_at_200": 0.714,
+   "power_at_240": 0.7993,
+   "max_power_grid": 0.8787,
+   "n80_grid": 260,
+   "n80_interp": 240.4,
+   "n80_mc_band": [
+    229.6,
+    252.3
+   ],
+   "seal_grid": 240,
+   "seal_interp": 240,
+   "claim2_joint_n80_interp": 240.4,
+   "binding": "cap"
+  },
+  {
+   "clustering": "strong",
+   "enrich": 0.5,
+   "p_fail": 0.02,
+   "infarct_size": "golf",
+   "n_segments_270": 136,
+   "power_at_160": 0.4227,
+   "power_at_200": 0.502,
+   "power_at_240": 0.562,
+   "max_power_grid": 0.6693,
+   "n80_grid": null,
+   "n80_interp": null,
+   "n80_mc_band": [
+    null,
+    null
+   ],
+   "seal_grid": 240,
+   "seal_interp": 240,
+   "claim2_joint_n80_interp": null,
+   "binding": "cap"
+  },
+  {
+   "clustering": "strong",
+   "enrich": 0.5,
+   "p_fail": 0.02,
+   "infarct_size": "kilo",
+   "n_segments_270": 167,
+   "power_at_160": 0.382,
+   "power_at_200": 0.436,
+   "power_at_240": 0.5153,
+   "max_power_grid": 0.6153,
+   "n80_grid": null,
+   "n80_interp": null,
+   "n80_mc_band": [
+    null,
+    null
+   ],
+   "seal_grid": 240,
+   "seal_interp": 240,
+   "claim2_joint_n80_interp": null,
+   "binding": "cap"
+  },
+  {
+   "clustering": "strong",
+   "enrich": 0.5,
+   "p_fail": 0.05,
+   "infarct_size": "golf",
+   "n_segments_270": 136,
+   "power_at_160": 0.1467,
+   "power_at_200": 0.1553,
+   "power_at_240": 0.1973,
+   "max_power_grid": 0.2353,
+   "n80_grid": null,
+   "n80_interp": null,
+   "n80_mc_band": [
+    null,
+    null
+   ],
+   "seal_grid": 240,
+   "seal_interp": 240,
+   "claim2_joint_n80_interp": null,
+   "binding": "cap"
+  },
+  {
+   "clustering": "strong",
+   "enrich": 0.5,
+   "p_fail": 0.05,
+   "infarct_size": "kilo",
+   "n_segments_270": 167,
+   "power_at_160": 0.136,
+   "power_at_200": 0.1687,
+   "power_at_240": 0.1773,
+   "max_power_grid": 0.208,
+   "n80_grid": null,
+   "n80_interp": null,
+   "n80_mc_band": [
+    null,
+    null
+   ],
+   "seal_grid": 240,
+   "seal_interp": 240,
+   "claim2_joint_n80_interp": null,
+   "binding": "cap"
+  },
+  {
+   "clustering": "strong",
+   "enrich": 0.7,
+   "p_fail": 0.0,
+   "infarct_size": "golf",
+   "n_segments_270": 97,
+   "power_at_160": 0.7953,
+   "power_at_200": 0.8907,
+   "power_at_240": 0.932,
+   "max_power_grid": 0.9747,
+   "n80_grid": 180,
+   "n80_interp": 161.7,
+   "n80_mc_band": [
+    147.7,
+    168.6
+   ],
+   "seal_grid": 180,
+   "seal_interp": 162,
+   "claim2_joint_n80_interp": 161.7,
+   "binding": "power"
+  },
+  {
+   "clustering": "strong",
+   "enrich": 0.7,
+   "p_fail": 0.0,
+   "infarct_size": "kilo",
+   "n_segments_270": 119,
+   "power_at_160": 0.768,
+   "power_at_200": 0.838,
+   "power_at_240": 0.8853,
+   "max_power_grid": 0.9707,
+   "n80_grid": 180,
+   "n80_interp": 172.6,
+   "n80_mc_band": [
+    164.2,
+    181.2
+   ],
+   "seal_grid": 180,
+   "seal_interp": 173,
+   "claim2_joint_n80_interp": 172.6,
+   "binding": "power"
+  },
+  {
+   "clustering": "strong",
+   "enrich": 0.7,
+   "p_fail": 0.02,
+   "infarct_size": "golf",
+   "n_segments_270": 97,
+   "power_at_160": 0.5213,
+   "power_at_200": 0.598,
+   "power_at_240": 0.69,
+   "max_power_grid": 0.7733,
+   "n80_grid": null,
+   "n80_interp": null,
+   "n80_mc_band": [
+    null,
+    null
+   ],
+   "seal_grid": 240,
+   "seal_interp": 240,
+   "claim2_joint_n80_interp": null,
+   "binding": "cap"
+  },
+  {
+   "clustering": "strong",
+   "enrich": 0.7,
+   "p_fail": 0.02,
+   "infarct_size": "kilo",
+   "n_segments_270": 119,
+   "power_at_160": 0.4727,
+   "power_at_200": 0.528,
+   "power_at_240": 0.64,
+   "max_power_grid": 0.7573,
+   "n80_grid": null,
+   "n80_interp": null,
+   "n80_mc_band": [
+    null,
+    null
+   ],
+   "seal_grid": 240,
+   "seal_interp": 240,
+   "claim2_joint_n80_interp": null,
+   "binding": "cap"
+  },
+  {
+   "clustering": "strong",
+   "enrich": 0.7,
+   "p_fail": 0.05,
+   "infarct_size": "golf",
+   "n_segments_270": 97,
+   "power_at_160": 0.17,
+   "power_at_200": 0.1973,
+   "power_at_240": 0.218,
+   "max_power_grid": 0.28,
+   "n80_grid": null,
+   "n80_interp": null,
+   "n80_mc_band": [
+    null,
+    null
+   ],
+   "seal_grid": 240,
+   "seal_interp": 240,
+   "claim2_joint_n80_interp": null,
+   "binding": "cap"
+  },
+  {
+   "clustering": "strong",
+   "enrich": 0.7,
+   "p_fail": 0.05,
+   "infarct_size": "kilo",
+   "n_segments_270": 119,
+   "power_at_160": 0.1613,
+   "power_at_200": 0.1953,
+   "power_at_240": 0.2067,
+   "max_power_grid": 0.2553,
+   "n80_grid": null,
+   "n80_interp": null,
+   "n80_mc_band": [
+    null,
+    null
+   ],
+   "seal_grid": 240,
+   "seal_interp": 240,
+   "claim2_joint_n80_interp": null,
+   "binding": "cap"
+  },
+  {
+   "clustering": "weak",
+   "enrich": 0.5,
+   "p_fail": 0.0,
+   "infarct_size": "golf",
+   "n_segments_270": 136,
+   "power_at_160": 0.9687,
+   "power_at_200": 0.986,
+   "power_at_240": 0.9973,
+   "max_power_grid": 0.9993,
+   "n80_grid": 100,
+   "n80_interp": 84.8,
+   "n80_mc_band": [
+    80.0,
+    90.2
+   ],
+   "seal_grid": 136,
+   "seal_interp": 136,
+   "claim2_joint_n80_interp": 85.1,
+   "binding": "segments"
+  },
+  {
+   "clustering": "weak",
+   "enrich": 0.5,
+   "p_fail": 0.0,
+   "infarct_size": "kilo",
+   "n_segments_270": 167,
+   "power_at_160": 0.9367,
+   "power_at_200": 0.97,
+   "power_at_240": 0.9867,
+   "max_power_grid": 1.0,
+   "n80_grid": 100,
+   "n80_interp": 98.6,
+   "n80_mc_band": [
+    94.5,
+    106.0
+   ],
+   "seal_grid": 167,
+   "seal_interp": 167,
+   "claim2_joint_n80_interp": 98.7,
+   "binding": "segments"
+  },
+  {
+   "clustering": "weak",
+   "enrich": 0.5,
+   "p_fail": 0.02,
+   "infarct_size": "golf",
+   "n_segments_270": 136,
+   "power_at_160": 0.752,
+   "power_at_200": 0.8387,
+   "power_at_240": 0.8973,
+   "max_power_grid": 0.9447,
+   "n80_grid": 200,
+   "n80_interp": 181.6,
+   "n80_mc_band": [
+    171.9,
+    191.0
+   ],
+   "seal_grid": 200,
+   "seal_interp": 182,
+   "claim2_joint_n80_interp": 181.6,
+   "binding": "power"
+  },
+  {
+   "clustering": "weak",
+   "enrich": 0.5,
+   "p_fail": 0.02,
+   "infarct_size": "kilo",
+   "n_segments_270": 167,
+   "power_at_160": 0.7133,
+   "power_at_200": 0.812,
+   "power_at_240": 0.8467,
+   "max_power_grid": 0.9233,
+   "n80_grid": 200,
+   "n80_interp": 196.1,
+   "n80_mc_band": [
+    189.1,
+    207.6
+   ],
+   "seal_grid": 200,
+   "seal_interp": 197,
+   "claim2_joint_n80_interp": 196.1,
+   "binding": "power"
+  },
+  {
+   "clustering": "weak",
+   "enrich": 0.5,
+   "p_fail": 0.05,
+   "infarct_size": "golf",
+   "n_segments_270": 136,
+   "power_at_160": 0.3533,
+   "power_at_200": 0.42,
+   "power_at_240": 0.4473,
+   "max_power_grid": 0.596,
+   "n80_grid": null,
+   "n80_interp": null,
+   "n80_mc_band": [
+    null,
+    null
+   ],
+   "seal_grid": 240,
+   "seal_interp": 240,
+   "claim2_joint_n80_interp": null,
+   "binding": "cap"
+  },
+  {
+   "clustering": "weak",
+   "enrich": 0.5,
+   "p_fail": 0.05,
+   "infarct_size": "kilo",
+   "n_segments_270": 167,
+   "power_at_160": 0.3187,
+   "power_at_200": 0.382,
+   "power_at_240": 0.436,
+   "max_power_grid": 0.5587,
+   "n80_grid": null,
+   "n80_interp": null,
+   "n80_mc_band": [
+    null,
+    null
+   ],
+   "seal_grid": 240,
+   "seal_interp": 240,
+   "claim2_joint_n80_interp": null,
+   "binding": "cap"
+  },
+  {
+   "clustering": "weak",
+   "enrich": 0.7,
+   "p_fail": 0.0,
+   "infarct_size": "golf",
+   "n_segments_270": 97,
+   "power_at_160": 0.9907,
+   "power_at_200": 0.9987,
+   "power_at_240": 1.0,
+   "max_power_grid": 1.0,
+   "n80_grid": 80,
+   "n80_interp": 80.0,
+   "n80_mc_band": [
+    80.0,
+    80.0
+   ],
+   "seal_grid": 120,
+   "seal_interp": 120,
+   "claim2_joint_n80_interp": 80.0,
+   "binding": "floor"
+  },
+  {
+   "clustering": "weak",
+   "enrich": 0.7,
+   "p_fail": 0.0,
+   "infarct_size": "kilo",
+   "n_segments_270": 119,
+   "power_at_160": 0.98,
+   "power_at_200": 0.9967,
+   "power_at_240": 0.9993,
+   "max_power_grid": 1.0,
+   "n80_grid": 80,
+   "n80_interp": 80.0,
+   "n80_mc_band": [
+    80.0,
+    80.0
+   ],
+   "seal_grid": 120,
+   "seal_interp": 120,
+   "claim2_joint_n80_interp": 80.0,
+   "binding": "floor"
+  },
+  {
+   "clustering": "weak",
+   "enrich": 0.7,
+   "p_fail": 0.02,
+   "infarct_size": "golf",
+   "n_segments_270": 97,
+   "power_at_160": 0.856,
+   "power_at_200": 0.9213,
+   "power_at_240": 0.962,
+   "max_power_grid": 0.9867,
+   "n80_grid": 140,
+   "n80_interp": 128.1,
+   "n80_mc_band": [
+    119.3,
+    136.7
+   ],
+   "seal_grid": 140,
+   "seal_interp": 129,
+   "claim2_joint_n80_interp": 128.1,
+   "binding": "power"
+  },
+  {
+   "clustering": "weak",
+   "enrich": 0.7,
+   "p_fail": 0.02,
+   "infarct_size": "kilo",
+   "n_segments_270": 119,
+   "power_at_160": 0.8467,
+   "power_at_200": 0.9,
+   "power_at_240": 0.9573,
+   "max_power_grid": 0.9847,
+   "n80_grid": 160,
+   "n80_interp": 145.3,
+   "n80_mc_band": [
+    137.6,
+    151.5
+   ],
+   "seal_grid": 160,
+   "seal_interp": 146,
+   "claim2_joint_n80_interp": 145.3,
+   "binding": "power"
+  },
+  {
+   "clustering": "weak",
+   "enrich": 0.7,
+   "p_fail": 0.05,
+   "infarct_size": "golf",
+   "n_segments_270": 97,
+   "power_at_160": 0.4393,
+   "power_at_200": 0.5167,
+   "power_at_240": 0.6027,
+   "max_power_grid": 0.7187,
+   "n80_grid": null,
+   "n80_interp": null,
+   "n80_mc_band": [
+    null,
+    null
+   ],
+   "seal_grid": 240,
+   "seal_interp": 240,
+   "claim2_joint_n80_interp": null,
+   "binding": "cap"
+  },
+  {
+   "clustering": "weak",
+   "enrich": 0.7,
+   "p_fail": 0.05,
+   "infarct_size": "kilo",
+   "n_segments_270": 119,
+   "power_at_160": 0.408,
+   "power_at_200": 0.4487,
+   "power_at_240": 0.5653,
+   "max_power_grid": 0.6753,
+   "n80_grid": null,
+   "n80_interp": null,
+   "n80_mc_band": [
+    null,
+    null
+   ],
+   "seal_grid": 240,
+   "seal_interp": 240,
+   "claim2_joint_n80_interp": null,
+   "binding": "cap"
+  }
+ ],
+ "reproductions": {
+  "juliet_e9_split_0.5_200": {
+   "recorded": 0.848,
+   "recorded_sims": 400,
+   "now": 0.8453,
+   "sims": 1500,
+   "z": -0.13
+  },
+  "juliet_e9_split_0.7_160": {
+   "recorded": 0.865,
+   "recorded_sims": 400,
+   "now": 0.8667,
+   "sims": 1500,
+   "z": 0.09
+  },
+  "golf_e10_segments_kilo_0.5": {
+   "recorded": {
+    "median": 167,
+    "p90": 187
+   },
+   "now": {
+    "median": 167,
+    "p90": 186
+   }
+  },
+  "golf_e10_segments_kilo_0.7": {
+   "recorded": {
+    "median": 119,
+    "p90": 130
+   },
+   "now": {
+    "median": 119,
+    "p90": 131
+   }
+  },
+  "golf_e10_segments_golf_0.5": {
+   "recorded": {
+    "median": 135,
+    "p90": 155
+   },
+   "now": {
+    "median": 135,
+    "p90": 153
+   }
+  },
+  "golf_e10_segments_golf_0.7": {
+   "recorded": {
+    "median": 97,
+    "p90": 108
+   },
+   "now": {
+    "median": 97,
+    "p90": 107
+   }
+  }
+ }
+}

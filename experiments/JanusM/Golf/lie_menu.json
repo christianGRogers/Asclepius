@@ -92,66 +92,246 @@
   "qc_bloodlike"
  ],
  "tau_pj": {
-  "0|below|3.0|exact": 0.1168,
-  "0|below|3.0|R0": 0.7423,
-  "0|below|3.0|rigid": 0.1801,
-  "0|below|3.0|affine": 0.1575,
-  "0|below|5.0|exact": 0.1634,
-  "0|below|5.0|R0": 0.8238,
-  "0|below|5.0|rigid": 0.1964,
-  "0|below|5.0|affine": 0.2124,
-  "0|equal|3.0|exact": 0.166,
-  "0|equal|3.0|R0": 0.755,
-  "0|equal|3.0|rigid": 0.1577,
-  "0|equal|3.0|affine": 0.1703,
-  "0|equal|5.0|exact": 0.2203,
-  "0|equal|5.0|R0": 0.8197,
-  "0|equal|5.0|rigid": 0.1904,
-  "0|equal|5.0|affine": 0.1945,
-  "0|above|3.0|exact": 0.1944,
-  "0|above|3.0|R0": 0.7677,
-  "0|above|3.0|rigid": 0.1928,
-  "0|above|3.0|affine": 0.1926,
-  "0|above|5.0|exact": 0.2165,
-  "0|above|5.0|R0": 0.8262,
-  "0|above|5.0|rigid": 0.1503,
-  "0|above|5.0|affine": 0.1533,
-  "0|below|3.0|rigid_nomask": 0.7689,
-  "0|below|5.0|rigid_nomask": 0.9285,
-  "0|equal|3.0|rigid_nomask": 0.7988,
-  "0|equal|5.0|rigid_nomask": 0.9293,
-  "0|above|3.0|rigid_nomask": 0.81,
-  "0|above|5.0|rigid_nomask": 0.9427,
-  "1|below|3.0|exact": 0.1251,
-  "1|below|3.0|R0": 0.315,
-  "1|below|3.0|rigid": 0.1755,
-  "1|below|3.0|affine": 0.1575,
-  "1|below|5.0|exact": 0.1656,
-  "1|below|5.0|R0": 0.3539,
-  "1|below|5.0|rigid": 0.1877,
-  "1|below|5.0|affine": 0.1519,
-  "1|equal|3.0|exact": 0.1777,
-  "1|equal|3.0|R0": 0.3966,
-  "1|equal|3.0|rigid": 0.1709,
-  "1|equal|3.0|affine": 0.1507,
-  "1|equal|5.0|exact": 0.2129,
-  "1|equal|5.0|R0": 0.419,
-  "1|equal|5.0|rigid": 0.1506,
-  "1|equal|5.0|affine": 0.1475,
-  "1|above|3.0|exact": 0.2044,
-  "1|above|3.0|R0": 0.4122,
-  "1|above|3.0|rigid": 0.1761,
-  "1|above|3.0|affine": 0.165,
-  "1|above|5.0|exact": 0.2288,
-  "1|above|5.0|R0": 0.4217,
-  "1|above|5.0|rigid": 0.2033,
-  "1|above|5.0|affine": 0.1502,
-  "1|below|3.0|rigid_nomask": 0.2393,
-  "1|below|5.0|rigid_nomask": 0.2705,
-  "1|equal|3.0|rigid_nomask": 0.2928,
-  "1|equal|5.0|rigid_nomask": 0.3293,
-  "1|above|3.0|rigid_nomask": 0.3184,
-  "1|above|5.0|rigid_nomask": 0.3276
+  "0|below|3.0|exact": [
+   0.1168,
+   0.0087
+  ],
+  "0|below|3.0|R0": [
+   0.7423,
+   0.085
+  ],
+  "0|below|3.0|rigid": [
+   0.1801,
+   0.0407
+  ],
+  "0|below|3.0|affine": [
+   0.1575,
+   0.038
+  ],
+  "0|below|5.0|exact": [
+   0.1634,
+   0.023
+  ],
+  "0|below|5.0|R0": [
+   0.8238,
+   0.2357
+  ],
+  "0|below|5.0|rigid": [
+   0.1964,
+   0.0695
+  ],
+  "0|below|5.0|affine": [
+   0.2124,
+   0.0768
+  ],
+  "0|equal|3.0|exact": [
+   0.166,
+   0.0155
+  ],
+  "0|equal|3.0|R0": [
+   0.755,
+   0.3101
+  ],
+  "0|equal|3.0|rigid": [
+   0.1577,
+   0.097
+  ],
+  "0|equal|3.0|affine": [
+   0.1703,
+   0.1071
+  ],
+  "0|equal|5.0|exact": [
+   0.2203,
+   0.0534
+  ],
+  "0|equal|5.0|R0": [
+   0.8197,
+   0.3911
+  ],
+  "0|equal|5.0|rigid": [
+   0.1904,
+   0.1228
+  ],
+  "0|equal|5.0|affine": [
+   0.1945,
+   0.1378
+  ],
+  "0|above|3.0|exact": [
+   0.1944,
+   0.0408
+  ],
+  "0|above|3.0|R0": [
+   0.7677,
+   0.3927
+  ],
+  "0|above|3.0|rigid": [
+   0.1928,
+   0.1258
+  ],
+  "0|above|3.0|affine": [
+   0.1926,
+   0.1256
+  ],
+  "0|above|5.0|exact": [
+   0.2165,
+   0.0989
+  ],
+  "0|above|5.0|R0": [
+   0.8262,
+   0.3988
+  ],
+  "0|above|5.0|rigid": [
+   0.1503,
+   0.1569
+  ],
+  "0|above|5.0|affine": [
+   0.1533,
+   0.1616
+  ],
+  "0|below|3.0|rigid_nomask": [
+   0.7689,
+   0.0816
+  ],
+  "0|below|5.0|rigid_nomask": [
+   0.9285,
+   0.2146
+  ],
+  "0|equal|3.0|rigid_nomask": [
+   0.7988,
+   0.2618
+  ],
+  "0|equal|5.0|rigid_nomask": [
+   0.9293,
+   0.3333
+  ],
+  "0|above|3.0|rigid_nomask": [
+   0.81,
+   0.3222
+  ],
+  "0|above|5.0|rigid_nomask": [
+   0.9427,
+   0.3678
+  ],
+  "1|below|3.0|exact": [
+   0.1251,
+   0.009
+  ],
+  "1|below|3.0|R0": [
+   0.315,
+   0.0994
+  ],
+  "1|below|3.0|rigid": [
+   0.1755,
+   0.0373
+  ],
+  "1|below|3.0|affine": [
+   0.1575,
+   0.0347
+  ],
+  "1|below|5.0|exact": [
+   0.1656,
+   0.0217
+  ],
+  "1|below|5.0|R0": [
+   0.3539,
+   0.2938
+  ],
+  "1|below|5.0|rigid": [
+   0.1877,
+   0.0685
+  ],
+  "1|below|5.0|affine": [
+   0.1519,
+   0.077
+  ],
+  "1|equal|3.0|exact": [
+   0.1777,
+   0.0209
+  ],
+  "1|equal|3.0|R0": [
+   0.3966,
+   0.3448
+  ],
+  "1|equal|3.0|rigid": [
+   0.1709,
+   0.0928
+  ],
+  "1|equal|3.0|affine": [
+   0.1507,
+   0.0965
+  ],
+  "1|equal|5.0|exact": [
+   0.2129,
+   0.0622
+  ],
+  "1|equal|5.0|R0": [
+   0.419,
+   0.4194
+  ],
+  "1|equal|5.0|rigid": [
+   0.1506,
+   0.1275
+  ],
+  "1|equal|5.0|affine": [
+   0.1475,
+   0.1357
+  ],
+  "1|above|3.0|exact": [
+   0.2044,
+   0.0532
+  ],
+  "1|above|3.0|R0": [
+   0.4122,
+   0.4221
+  ],
+  "1|above|3.0|rigid": [
+   0.1761,
+   0.1221
+  ],
+  "1|above|3.0|affine": [
+   0.165,
+   0.1314
+  ],
+  "1|above|5.0|exact": [
+   0.2288,
+   0.1178
+  ],
+  "1|above|5.0|R0": [
+   0.4217,
+   0.4653
+  ],
+  "1|above|5.0|rigid": [
+   0.2033,
+   0.1654
+  ],
+  "1|above|5.0|affine": [
+   0.1502,
+   0.1734
+  ],
+  "1|below|3.0|rigid_nomask": [
+   0.2393,
+   0.0761
+  ],
+  "1|below|5.0|rigid_nomask": [
+   0.2705,
+   0.228
+  ],
+  "1|equal|3.0|rigid_nomask": [
+   0.2928,
+   0.2728
+  ],
+  "1|equal|5.0|rigid_nomask": [
+   0.3293,
+   0.3193
+  ],
+  "1|above|3.0|rigid_nomask": [
+   0.3184,
+   0.3248
+  ],
+  "1|above|5.0|rigid_nomask": [
+   0.3276,
+   0.3532
+  ]
  },
  "rows": [
   {
@@ -245,6 +425,34 @@
     "fp_rate": 0.0155,
     "fp_rate_blood_remote": 0.0
    },
+   "P-J3": {
+    "sens": 0.96,
+    "sens_ci": [
+     0.924,
+     0.991
+    ],
+    "spec": 0.991,
+    "spec_ci": [
+     0.98,
+     0.998
+    ],
+    "sens_blood_remote": 0.96,
+    "sens_by_true_bin": [
+     0.892,
+     1.0,
+     1.0,
+     1.0
+    ],
+    "n_by_true_bin": [
+     37,
+     20,
+     17,
+     27
+    ],
+    "spill_share_sens": 0.0,
+    "fp_rate": 0.0093,
+    "fp_rate_blood_remote": 0.0015
+   },
    "E-V|P-G": {
     "n": 73,
     "agree_vs_vol": 0.986,
@@ -310,12 +518,12 @@
    "P-K": {
     "sens": 0.782,
     "sens_ci": [
-     0.706,
-     0.856
+     0.711,
+     0.853
     ],
     "spec": 0.569,
     "spec_ci": [
-     0.505,
+     0.503,
      0.627
     ],
     "sens_blood_remote": 0.752,
@@ -338,12 +546,12 @@
    "P-G": {
     "sens": 0.465,
     "sens_ci": [
-     0.314,
-     0.625
+     0.309,
+     0.619
     ],
     "spec": 0.991,
     "spec_ci": [
-     0.981,
+     0.98,
      0.998
     ],
     "sens_blood_remote": 0.455,
@@ -366,8 +574,8 @@
    "P-J": {
     "sens": 0.257,
     "sens_ci": [
-     0.15,
-     0.379
+     0.143,
+     0.377
     ],
     "spec": 0.991,
     "spec_ci": [
@@ -390,6 +598,34 @@
     "spill_share_sens": 0.192,
     "fp_rate": 0.0093,
     "fp_rate_blood_remote": 0.0185
+   },
+   "P-J3": {
+    "sens": 0.475,
+    "sens_ci": [
+     0.311,
+     0.645
+    ],
+    "spec": 0.985,
+    "spec_ci": [
+     0.967,
+     0.998
+    ],
+    "sens_blood_remote": 0.455,
+    "sens_by_true_bin": [
+     0.162,
+     0.55,
+     0.588,
+     0.778
+    ],
+    "n_by_true_bin": [
+     37,
+     20,
+     17,
+     27
+    ],
+    "spill_share_sens": 0.042,
+    "fp_rate": 0.0155,
+    "fp_rate_blood_remote": 0.0046
    },
    "E-V|P-G": {
     "n": 47,
@@ -457,11 +693,11 @@
     "sens": 0.743,
     "sens_ci": [
      0.676,
-     0.818
+     0.821
     ],
     "spec": 0.4,
     "spec_ci": [
-     0.349,
+     0.355,
      0.432
     ],
     "sens_blood_remote": 0.743,
@@ -484,8 +720,8 @@
    "P-G": {
     "sens": 0.683,
     "sens_ci": [
-     0.606,
-     0.763
+     0.602,
+     0.762
     ],
     "spec": 1.0,
     "spec_ci": [
@@ -512,12 +748,12 @@
    "P-J": {
     "sens": 0.644,
     "sens_ci": [
-     0.566,
-     0.729
+     0.571,
+     0.732
     ],
     "spec": 0.986,
     "spec_ci": [
-     0.969,
+     0.97,
      1.0
     ],
     "sens_blood_remote": 0.644,
@@ -536,6 +772,34 @@
     "spill_share_sens": 0.0,
     "fp_rate": 0.0139,
     "fp_rate_blood_remote": 0.0
+   },
+   "P-J3": {
+    "sens": 0.832,
+    "sens_ci": [
+     0.768,
+     0.895
+    ],
+    "spec": 0.992,
+    "spec_ci": [
+     0.984,
+     0.998
+    ],
+    "sens_blood_remote": 0.832,
+    "sens_by_true_bin": [
+     0.541,
+     1.0,
+     1.0,
+     1.0
+    ],
+    "n_by_true_bin": [
+     37,
+     20,
+     17,
+     27
+    ],
+    "spill_share_sens": 0.0,
+    "fp_rate": 0.0077,
+    "fp_rate_blood_remote": 0.0031
    },
    "E-V|P-G": {
     "n": 69,
@@ -602,13 +866,13 @@
    "P-K": {
     "sens": 0.782,
     "sens_ci": [
-     0.71,
-     0.856
+     0.711,
+     0.857
     ],
     "spec": 0.459,
     "spec_ci": [
-     0.42,
-     0.512
+     0.419,
+     0.511
     ],
     "sens_blood_remote": 0.782,
     "sens_by_true_bin": [
@@ -630,8 +894,8 @@
    "P-G": {
     "sens": 0.723,
     "sens_ci": [
-     0.644,
-     0.802
+     0.643,
+     0.8
     ],
     "spec": 1.0,
     "spec_ci": [
@@ -658,8 +922,8 @@
    "P-J": {
     "sens": 0.673,
     "sens_ci": [
-     0.604,
-     0.755
+     0.6,
+     0.753
     ],
     "spec": 0.986,
     "spec_ci": [
@@ -682,6 +946,34 @@
     "spill_share_sens": 0.0,
     "fp_rate": 0.0139,
     "fp_rate_blood_remote": 0.0
+   },
+   "P-J3": {
+    "sens": 0.851,
+    "sens_ci": [
+     0.791,
+     0.905
+    ],
+    "spec": 0.991,
+    "spec_ci": [
+     0.976,
+     1.0
+    ],
+    "sens_blood_remote": 0.842,
+    "sens_by_true_bin": [
+     0.595,
+     1.0,
+     1.0,
+     1.0
+    ],
+    "n_by_true_bin": [
+     37,
+     20,
+     17,
+     27
+    ],
+    "spill_share_sens": 0.012,
+    "fp_rate": 0.0093,
+    "fp_rate_blood_remote": 0.0015
    },
    "E-V|P-G": {
     "n": 73,
@@ -748,13 +1040,13 @@
    "P-K": {
     "sens": 0.752,
     "sens_ci": [
-     0.684,
-     0.83
+     0.685,
+     0.828
     ],
     "spec": 0.493,
     "spec_ci": [
-     0.449,
-     0.54
+     0.448,
+     0.542
     ],
     "sens_blood_remote": 0.743,
     "sens_by_true_bin": [
@@ -776,8 +1068,8 @@
    "P-G": {
     "sens": 0.673,
     "sens_ci": [
-     0.602,
-     0.75
+     0.6,
+     0.753
     ],
     "spec": 0.998,
     "spec_ci": [
@@ -804,12 +1096,12 @@
    "P-J": {
     "sens": 0.465,
     "sens_ci": [
-     0.333,
-     0.595
+     0.32,
+     0.584
     ],
     "spec": 0.992,
     "spec_ci": [
-     0.981,
+     0.98,
      1.0
     ],
     "sens_blood_remote": 0.446,
@@ -828,6 +1120,34 @@
     "spill_share_sens": 0.043,
     "fp_rate": 0.0077,
     "fp_rate_blood_remote": 0.0
+   },
+   "P-J3": {
+    "sens": 0.782,
+    "sens_ci": [
+     0.701,
+     0.859
+    ],
+    "spec": 0.988,
+    "spec_ci": [
+     0.97,
+     0.998
+    ],
+    "sens_blood_remote": 0.772,
+    "sens_by_true_bin": [
+     0.405,
+     1.0,
+     1.0,
+     1.0
+    ],
+    "n_by_true_bin": [
+     37,
+     20,
+     17,
+     27
+    ],
+    "spill_share_sens": 0.013,
+    "fp_rate": 0.0124,
+    "fp_rate_blood_remote": 0.0031
    },
    "E-V|P-G": {
     "n": 68,
@@ -894,13 +1214,13 @@
    "P-K": {
     "sens": 0.782,
     "sens_ci": [
-     0.716,
-     0.859
+     0.713,
+     0.86
     ],
     "spec": 0.417,
     "spec_ci": [
      0.403,
-     0.43
+     0.431
     ],
     "sens_blood_remote": 0.782,
     "sens_by_true_bin": [
@@ -923,7 +1243,7 @@
     "sens": 0.782,
     "sens_ci": [
      0.714,
-     0.859
+     0.852
     ],
     "spec": 1.0,
     "spec_ci": [
@@ -950,8 +1270,8 @@
    "P-J": {
     "sens": 0.723,
     "sens_ci": [
-     0.644,
-     0.806
+     0.645,
+     0.811
     ],
     "spec": 0.986,
     "spec_ci": [
@@ -973,6 +1293,34 @@
     ],
     "spill_share_sens": 0.014,
     "fp_rate": 0.0139,
+    "fp_rate_blood_remote": 0.0
+   },
+   "P-J3": {
+    "sens": 0.95,
+    "sens_ci": [
+     0.913,
+     0.982
+    ],
+    "spec": 0.992,
+    "spec_ci": [
+     0.984,
+     0.998
+    ],
+    "sens_blood_remote": 0.95,
+    "sens_by_true_bin": [
+     0.865,
+     1.0,
+     1.0,
+     1.0
+    ],
+    "n_by_true_bin": [
+     37,
+     20,
+     17,
+     27
+    ],
+    "spill_share_sens": 0.0,
+    "fp_rate": 0.0077,
     "fp_rate_blood_remote": 0.0
    },
    "E-V|P-G": {
@@ -1040,13 +1388,13 @@
    "P-K": {
     "sens": 0.792,
     "sens_ci": [
-     0.729,
-     0.864
+     0.723,
+     0.862
     ],
     "spec": 0.645,
     "spec_ci": [
-     0.562,
-     0.721
+     0.563,
+     0.724
     ],
     "sens_blood_remote": 0.762,
     "sens_by_true_bin": [
@@ -1069,12 +1417,12 @@
     "sens": 0.644,
     "sens_ci": [
      0.509,
-     0.765
+     0.76
     ],
     "spec": 0.918,
     "spec_ci": [
-     0.852,
-     0.972
+     0.854,
+     0.971
     ],
     "sens_blood_remote": 0.653,
     "sens_by_true_bin": [
@@ -1096,8 +1444,8 @@
    "P-J": {
     "sens": 0.228,
     "sens_ci": [
-     0.129,
-     0.337
+     0.124,
+     0.33
     ],
     "spec": 0.988,
     "spec_ci": [
@@ -1120,6 +1468,34 @@
     "spill_share_sens": 0.13,
     "fp_rate": 0.0124,
     "fp_rate_blood_remote": 0.0201
+   },
+   "P-J3": {
+    "sens": 0.475,
+    "sens_ci": [
+     0.352,
+     0.608
+    ],
+    "spec": 0.986,
+    "spec_ci": [
+     0.962,
+     1.0
+    ],
+    "sens_blood_remote": 0.406,
+    "sens_by_true_bin": [
+     0.135,
+     0.35,
+     0.647,
+     0.926
+    ],
+    "n_by_true_bin": [
+     37,
+     20,
+     17,
+     27
+    ],
+    "spill_share_sens": 0.146,
+    "fp_rate": 0.0139,
+    "fp_rate_blood_remote": 0.0
    },
    "E-V|P-G": {
     "n": 65,
@@ -1186,13 +1562,13 @@
    "P-K": {
     "sens": 0.762,
     "sens_ci": [
-     0.693,
-     0.83
+     0.699,
+     0.835
     ],
     "spec": 0.515,
     "spec_ci": [
      0.453,
-     0.586
+     0.583
     ],
     "sens_blood_remote": 0.762,
     "sens_by_true_bin": [
@@ -1214,8 +1590,8 @@
    "P-G": {
     "sens": 0.723,
     "sens_ci": [
-     0.653,
-     0.798
+     0.657,
+     0.8
     ],
     "spec": 0.998,
     "spec_ci": [
@@ -1243,12 +1619,12 @@
     "sens": 0.644,
     "sens_ci": [
      0.571,
-     0.73
+     0.729
     ],
     "spec": 0.978,
     "spec_ci": [
-     0.959,
-     0.994
+     0.957,
+     0.995
     ],
     "sens_blood_remote": 0.644,
     "sens_by_true_bin": [
@@ -1265,6 +1641,34 @@
     ],
     "spill_share_sens": 0.0,
     "fp_rate": 0.0216,
+    "fp_rate_blood_remote": 0.0015
+   },
+   "P-J3": {
+    "sens": 0.832,
+    "sens_ci": [
+     0.764,
+     0.901
+    ],
+    "spec": 0.991,
+    "spec_ci": [
+     0.982,
+     0.997
+    ],
+    "sens_blood_remote": 0.822,
+    "sens_by_true_bin": [
+     0.541,
+     1.0,
+     1.0,
+     1.0
+    ],
+    "n_by_true_bin": [
+     37,
+     20,
+     17,
+     27
+    ],
+    "spill_share_sens": 0.012,
+    "fp_rate": 0.0093,
     "fp_rate_blood_remote": 0.0015
    },
    "E-V|P-G": {
@@ -1332,13 +1736,13 @@
    "P-K": {
     "sens": 0.822,
     "sens_ci": [
-     0.762,
+     0.763,
      0.887
     ],
     "spec": 0.544,
     "spec_ci": [
-     0.474,
-     0.624
+     0.47,
+     0.625
     ],
     "sens_blood_remote": 0.802,
     "sens_by_true_bin": [
@@ -1360,8 +1764,8 @@
    "P-G": {
     "sens": 0.812,
     "sens_ci": [
-     0.744,
-     0.88
+     0.743,
+     0.883
     ],
     "spec": 1.0,
     "spec_ci": [
@@ -1388,12 +1792,12 @@
    "P-J": {
     "sens": 0.693,
     "sens_ci": [
-     0.619,
-     0.772
+     0.621,
+     0.775
     ],
     "spec": 0.966,
     "spec_ci": [
-     0.936,
+     0.935,
      0.992
     ],
     "sens_blood_remote": 0.693,
@@ -1412,6 +1816,34 @@
     "spill_share_sens": 0.0,
     "fp_rate": 0.034,
     "fp_rate_blood_remote": 0.0031
+   },
+   "P-J3": {
+    "sens": 0.842,
+    "sens_ci": [
+     0.786,
+     0.902
+    ],
+    "spec": 0.989,
+    "spec_ci": [
+     0.974,
+     1.0
+    ],
+    "sens_blood_remote": 0.832,
+    "sens_by_true_bin": [
+     0.568,
+     1.0,
+     1.0,
+     1.0
+    ],
+    "n_by_true_bin": [
+     37,
+     20,
+     17,
+     27
+    ],
+    "spill_share_sens": 0.012,
+    "fp_rate": 0.0108,
+    "fp_rate_blood_remote": 0.0
    },
    "E-V|P-G": {
     "n": 82,
@@ -1478,13 +1910,13 @@
    "P-K": {
     "sens": 0.782,
     "sens_ci": [
-     0.714,
-     0.853
+     0.713,
+     0.851
     ],
     "spec": 0.587,
     "spec_ci": [
-     0.513,
-     0.664
+     0.512,
+     0.667
     ],
     "sens_blood_remote": 0.772,
     "sens_by_true_bin": [
@@ -1506,12 +1938,12 @@
    "P-G": {
     "sens": 0.713,
     "sens_ci": [
-     0.635,
-     0.785
+     0.634,
+     0.792
     ],
     "spec": 0.957,
     "spec_ci": [
-     0.91,
+     0.909,
      0.989
     ],
     "sens_blood_remote": 0.703,
@@ -1534,8 +1966,8 @@
    "P-J": {
     "sens": 0.446,
     "sens_ci": [
-     0.32,
-     0.568
+     0.311,
+     0.563
     ],
     "spec": 0.981,
     "spec_ci": [
@@ -1557,6 +1989,34 @@
     ],
     "spill_share_sens": 0.022,
     "fp_rate": 0.0185,
+    "fp_rate_blood_remote": 0.0015
+   },
+   "P-J3": {
+    "sens": 0.752,
+    "sens_ci": [
+     0.663,
+     0.836
+    ],
+    "spec": 0.983,
+    "spec_ci": [
+     0.958,
+     0.997
+    ],
+    "sens_blood_remote": 0.683,
+    "sens_by_true_bin": [
+     0.378,
+     0.9,
+     1.0,
+     1.0
+    ],
+    "n_by_true_bin": [
+     37,
+     20,
+     17,
+     27
+    ],
+    "spill_share_sens": 0.092,
+    "fp_rate": 0.017,
     "fp_rate_blood_remote": 0.0015
    },
    "E-V|P-G": {
@@ -1624,13 +2084,13 @@
    "P-K": {
     "sens": 0.752,
     "sens_ci": [
-     0.687,
-     0.83
+     0.686,
+     0.828
     ],
     "spec": 0.417,
     "spec_ci": [
      0.403,
-     0.431
+     0.432
     ],
     "sens_blood_remote": 0.743,
     "sens_by_true_bin": [
@@ -1653,7 +2113,7 @@
     "sens": 0.723,
     "sens_ci": [
      0.649,
-     0.798
+     0.802
     ],
     "spec": 1.0,
     "spec_ci": [
@@ -1680,13 +2140,13 @@
    "P-J": {
     "sens": 0.673,
     "sens_ci": [
-     0.606,
-     0.758
+     0.602,
+     0.753
     ],
     "spec": 0.983,
     "spec_ci": [
-     0.97,
-     0.995
+     0.969,
+     0.994
     ],
     "sens_blood_remote": 0.663,
     "sens_by_true_bin": [
@@ -1703,6 +2163,34 @@
     ],
     "spill_share_sens": 0.015,
     "fp_rate": 0.017,
+    "fp_rate_blood_remote": 0.0
+   },
+   "P-J3": {
+    "sens": 0.931,
+    "sens_ci": [
+     0.891,
+     0.969
+    ],
+    "spec": 0.978,
+    "spec_ci": [
+     0.955,
+     0.997
+    ],
+    "sens_blood_remote": 0.881,
+    "sens_by_true_bin": [
+     0.811,
+     1.0,
+     1.0,
+     1.0
+    ],
+    "n_by_true_bin": [
+     37,
+     20,
+     17,
+     27
+    ],
+    "spill_share_sens": 0.053,
+    "fp_rate": 0.0216,
     "fp_rate_blood_remote": 0.0
    },
    "E-V|P-G": {
@@ -1770,13 +2258,13 @@
    "P-K": {
     "sens": 0.812,
     "sens_ci": [
-     0.74,
-     0.883
+     0.738,
+     0.885
     ],
     "spec": 0.589,
     "spec_ci": [
-     0.498,
-     0.677
+     0.501,
+     0.674
     ],
     "sens_blood_remote": 0.752,
     "sens_by_true_bin": [
@@ -1798,13 +2286,13 @@
    "P-G": {
     "sens": 0.515,
     "sens_ci": [
-     0.345,
+     0.346,
      0.691
     ],
     "spec": 0.856,
     "spec_ci": [
-     0.763,
-     0.935
+     0.76,
+     0.936
     ],
     "sens_blood_remote": 0.426,
     "sens_by_true_bin": [
@@ -1826,8 +2314,8 @@
    "P-J": {
     "sens": 0.267,
     "sens_ci": [
-     0.163,
-     0.393
+     0.16,
+     0.385
     ],
     "spec": 1.0,
     "spec_ci": [
@@ -1850,6 +2338,34 @@
     "spill_share_sens": 0.444,
     "fp_rate": 0.0,
     "fp_rate_blood_remote": 0.017
+   },
+   "P-J3": {
+    "sens": 0.356,
+    "sens_ci": [
+     0.219,
+     0.523
+    ],
+    "spec": 0.985,
+    "spec_ci": [
+     0.966,
+     1.0
+    ],
+    "sens_blood_remote": 0.238,
+    "sens_by_true_bin": [
+     0.108,
+     0.3,
+     0.471,
+     0.667
+    ],
+    "n_by_true_bin": [
+     37,
+     20,
+     17,
+     27
+    ],
+    "spill_share_sens": 0.333,
+    "fp_rate": 0.0155,
+    "fp_rate_blood_remote": 0.0
    },
    "E-V|P-G": {
     "n": 52,
@@ -1916,13 +2432,13 @@
    "P-K": {
     "sens": 0.743,
     "sens_ci": [
-     0.679,
-     0.821
+     0.676,
+     0.816
     ],
     "spec": 0.598,
     "spec_ci": [
-     0.523,
-     0.678
+     0.526,
+     0.677
     ],
     "sens_blood_remote": 0.733,
     "sens_by_true_bin": [
@@ -1944,8 +2460,8 @@
    "P-G": {
     "sens": 0.683,
     "sens_ci": [
-     0.61,
-     0.764
+     0.608,
+     0.761
     ],
     "spec": 1.0,
     "spec_ci": [
@@ -1972,8 +2488,8 @@
    "P-J": {
     "sens": 0.653,
     "sens_ci": [
-     0.577,
-     0.738
+     0.578,
+     0.736
     ],
     "spec": 0.989,
     "spec_ci": [
@@ -1994,6 +2510,34 @@
      27
     ],
     "spill_share_sens": 0.0,
+    "fp_rate": 0.0108,
+    "fp_rate_blood_remote": 0.0
+   },
+   "P-J3": {
+    "sens": 0.703,
+    "sens_ci": [
+     0.629,
+     0.777
+    ],
+    "spec": 0.989,
+    "spec_ci": [
+     0.979,
+     0.998
+    ],
+    "sens_blood_remote": 0.693,
+    "sens_by_true_bin": [
+     0.189,
+     1.0,
+     1.0,
+     1.0
+    ],
+    "n_by_true_bin": [
+     37,
+     20,
+     17,
+     27
+    ],
+    "spill_share_sens": 0.014,
     "fp_rate": 0.0108,
     "fp_rate_blood_remote": 0.0
    },
@@ -2062,13 +2606,13 @@
    "P-K": {
     "sens": 0.782,
     "sens_ci": [
-     0.717,
-     0.851
+     0.716,
+     0.849
     ],
     "spec": 0.563,
     "spec_ci": [
-     0.486,
-     0.641
+     0.488,
+     0.64
     ],
     "sens_blood_remote": 0.752,
     "sens_by_true_bin": [
@@ -2090,8 +2634,8 @@
    "P-G": {
     "sens": 0.723,
     "sens_ci": [
-     0.644,
-     0.804
+     0.645,
+     0.808
     ],
     "spec": 1.0,
     "spec_ci": [
@@ -2118,13 +2662,13 @@
    "P-J": {
     "sens": 0.663,
     "sens_ci": [
-     0.591,
-     0.747
+     0.596,
+     0.745
     ],
     "spec": 0.986,
     "spec_ci": [
      0.971,
-     0.997
+     0.998
     ],
     "sens_blood_remote": 0.683,
     "sens_by_true_bin": [
@@ -2141,6 +2685,34 @@
     ],
     "spill_share_sens": -0.03,
     "fp_rate": 0.0139,
+    "fp_rate_blood_remote": 0.0
+   },
+   "P-J3": {
+    "sens": 0.762,
+    "sens_ci": [
+     0.696,
+     0.839
+    ],
+    "spec": 0.991,
+    "spec_ci": [
+     0.976,
+     1.0
+    ],
+    "sens_blood_remote": 0.743,
+    "sens_by_true_bin": [
+     0.351,
+     1.0,
+     1.0,
+     1.0
+    ],
+    "n_by_true_bin": [
+     37,
+     20,
+     17,
+     27
+    ],
+    "spill_share_sens": 0.026,
+    "fp_rate": 0.0093,
     "fp_rate_blood_remote": 0.0
    },
    "E-V|P-G": {
@@ -2208,13 +2780,13 @@
    "P-K": {
     "sens": 0.752,
     "sens_ci": [
-     0.678,
+     0.68,
      0.835
     ],
     "spec": 0.577,
     "spec_ci": [
-     0.508,
-     0.642
+     0.509,
+     0.649
     ],
     "sens_blood_remote": 0.743,
     "sens_by_true_bin": [
@@ -2236,12 +2808,12 @@
    "P-G": {
     "sens": 0.693,
     "sens_ci": [
-     0.62,
-     0.771
+     0.617,
+     0.773
     ],
     "spec": 0.954,
     "spec_ci": [
-     0.912,
+     0.911,
      0.991
     ],
     "sens_blood_remote": 0.683,
@@ -2265,11 +2837,11 @@
     "sens": 0.604,
     "sens_ci": [
      0.5,
-     0.696
+     0.697
     ],
     "spec": 0.985,
     "spec_ci": [
-     0.959,
+     0.96,
      1.0
     ],
     "sens_blood_remote": 0.574,
@@ -2287,6 +2859,34 @@
     ],
     "spill_share_sens": 0.049,
     "fp_rate": 0.0155,
+    "fp_rate_blood_remote": 0.0
+   },
+   "P-J3": {
+    "sens": 0.693,
+    "sens_ci": [
+     0.618,
+     0.771
+    ],
+    "spec": 0.998,
+    "spec_ci": [
+     0.995,
+     1.0
+    ],
+    "sens_blood_remote": 0.634,
+    "sens_by_true_bin": [
+     0.216,
+     0.9,
+     1.0,
+     1.0
+    ],
+    "n_by_true_bin": [
+     37,
+     20,
+     17,
+     27
+    ],
+    "spill_share_sens": 0.086,
+    "fp_rate": 0.0015,
     "fp_rate_blood_remote": 0.0
    },
    "E-V|P-G": {
@@ -2354,8 +2954,8 @@
    "P-K": {
     "sens": 0.782,
     "sens_ci": [
-     0.714,
-     0.86
+     0.716,
+     0.853
     ],
     "spec": 0.417,
     "spec_ci": [
@@ -2383,7 +2983,7 @@
     "sens": 0.802,
     "sens_ci": [
      0.731,
-     0.876
+     0.879
     ],
     "spec": 1.0,
     "spec_ci": [
@@ -2410,8 +3010,8 @@
    "P-J": {
     "sens": 0.663,
     "sens_ci": [
-     0.598,
-     0.739
+     0.594,
+     0.738
     ],
     "spec": 0.995,
     "spec_ci": [
@@ -2433,6 +3033,34 @@
     ],
     "spill_share_sens": 0.0,
     "fp_rate": 0.0046,
+    "fp_rate_blood_remote": 0.0
+   },
+   "P-J3": {
+    "sens": 0.921,
+    "sens_ci": [
+     0.87,
+     0.968
+    ],
+    "spec": 0.985,
+    "spec_ci": [
+     0.966,
+     0.997
+    ],
+    "sens_blood_remote": 0.871,
+    "sens_by_true_bin": [
+     0.784,
+     1.0,
+     1.0,
+     1.0
+    ],
+    "n_by_true_bin": [
+     37,
+     20,
+     17,
+     27
+    ],
+    "spill_share_sens": 0.054,
+    "fp_rate": 0.0155,
     "fp_rate_blood_remote": 0.0
    },
    "E-V|P-G": {
@@ -2500,13 +3128,13 @@
    "P-K": {
     "sens": 0.842,
     "sens_ci": [
-     0.78,
+     0.782,
      0.901
     ],
     "spec": 0.555,
     "spec_ci": [
-     0.457,
-     0.644
+     0.468,
+     0.648
     ],
     "sens_blood_remote": 0.762,
     "sens_by_true_bin": [
@@ -2528,13 +3156,13 @@
    "P-G": {
     "sens": 0.683,
     "sens_ci": [
-     0.542,
-     0.804
+     0.537,
+     0.806
     ],
     "spec": 0.774,
     "spec_ci": [
-     0.676,
-     0.856
+     0.679,
+     0.858
     ],
     "sens_blood_remote": 0.653,
     "sens_by_true_bin": [
@@ -2556,8 +3184,8 @@
    "P-J": {
     "sens": 0.238,
     "sens_ci": [
-     0.125,
-     0.368
+     0.126,
+     0.364
     ],
     "spec": 1.0,
     "spec_ci": [
@@ -2580,6 +3208,34 @@
     "spill_share_sens": 0.375,
     "fp_rate": 0.0,
     "fp_rate_blood_remote": 0.0201
+   },
+   "P-J3": {
+    "sens": 0.455,
+    "sens_ci": [
+     0.333,
+     0.587
+    ],
+    "spec": 0.988,
+    "spec_ci": [
+     0.975,
+     0.998
+    ],
+    "sens_blood_remote": 0.317,
+    "sens_by_true_bin": [
+     0.108,
+     0.35,
+     0.588,
+     0.926
+    ],
+    "n_by_true_bin": [
+     37,
+     20,
+     17,
+     27
+    ],
+    "spill_share_sens": 0.304,
+    "fp_rate": 0.0124,
+    "fp_rate_blood_remote": 0.0
    },
    "E-V|P-G": {
     "n": 69,
@@ -2646,12 +3302,12 @@
    "P-K": {
     "sens": 0.772,
     "sens_ci": [
-     0.705,
-     0.845
+     0.703,
+     0.846
     ],
     "spec": 0.688,
     "spec_ci": [
-     0.591,
+     0.598,
      0.779
     ],
     "sens_blood_remote": 0.743,
@@ -2674,8 +3330,8 @@
    "P-G": {
     "sens": 0.713,
     "sens_ci": [
-     0.648,
-     0.785
+     0.643,
+     0.79
     ],
     "spec": 0.995,
     "spec_ci": [
@@ -2702,8 +3358,8 @@
    "P-J": {
     "sens": 0.663,
     "sens_ci": [
-     0.59,
-     0.744
+     0.593,
+     0.747
     ],
     "spec": 0.974,
     "spec_ci": [
@@ -2726,6 +3382,34 @@
     "spill_share_sens": 0.0,
     "fp_rate": 0.0263,
     "fp_rate_blood_remote": 0.0046
+   },
+   "P-J3": {
+    "sens": 0.713,
+    "sens_ci": [
+     0.64,
+     0.787
+    ],
+    "spec": 0.986,
+    "spec_ci": [
+     0.972,
+     0.997
+    ],
+    "sens_blood_remote": 0.713,
+    "sens_by_true_bin": [
+     0.216,
+     1.0,
+     1.0,
+     1.0
+    ],
+    "n_by_true_bin": [
+     37,
+     20,
+     17,
+     27
+    ],
+    "spill_share_sens": 0.0,
+    "fp_rate": 0.0139,
+    "fp_rate_blood_remote": 0.0
    },
    "E-V|P-G": {
     "n": 72,
@@ -2792,13 +3476,13 @@
    "P-K": {
     "sens": 0.832,
     "sens_ci": [
-     0.766,
-     0.892
+     0.769,
+     0.898
     ],
     "spec": 0.638,
     "spec_ci": [
-     0.55,
-     0.721
+     0.555,
+     0.723
     ],
     "sens_blood_remote": 0.802,
     "sens_by_true_bin": [
@@ -2820,7 +3504,7 @@
    "P-G": {
     "sens": 0.812,
     "sens_ci": [
-     0.745,
+     0.748,
      0.883
     ],
     "spec": 0.994,
@@ -2848,13 +3532,13 @@
    "P-J": {
     "sens": 0.693,
     "sens_ci": [
-     0.622,
-     0.777
+     0.619,
+     0.774
     ],
     "spec": 0.977,
     "spec_ci": [
-     0.955,
-     0.992
+     0.954,
+     0.994
     ],
     "sens_blood_remote": 0.693,
     "sens_by_true_bin": [
@@ -2872,6 +3556,34 @@
     "spill_share_sens": 0.0,
     "fp_rate": 0.0232,
     "fp_rate_blood_remote": 0.0015
+   },
+   "P-J3": {
+    "sens": 0.772,
+    "sens_ci": [
+     0.699,
+     0.849
+    ],
+    "spec": 0.985,
+    "spec_ci": [
+     0.968,
+     0.998
+    ],
+    "sens_blood_remote": 0.772,
+    "sens_by_true_bin": [
+     0.378,
+     1.0,
+     1.0,
+     1.0
+    ],
+    "n_by_true_bin": [
+     37,
+     20,
+     17,
+     27
+    ],
+    "spill_share_sens": 0.0,
+    "fp_rate": 0.0155,
+    "fp_rate_blood_remote": 0.0
    },
    "E-V|P-G": {
     "n": 82,
@@ -2938,13 +3650,13 @@
    "P-K": {
     "sens": 0.802,
     "sens_ci": [
-     0.731,
-     0.879
+     0.728,
+     0.88
     ],
     "spec": 0.646,
     "spec_ci": [
-     0.566,
-     0.731
+     0.564,
+     0.727
     ],
     "sens_blood_remote": 0.772,
     "sens_by_true_bin": [
@@ -2967,12 +3679,12 @@
     "sens": 0.733,
     "sens_ci": [
      0.657,
-     0.808
+     0.813
     ],
     "spec": 0.926,
     "spec_ci": [
      0.861,
-     0.976
+     0.977
     ],
     "sens_blood_remote": 0.713,
     "sens_by_true_bin": [
@@ -2994,8 +3706,8 @@
    "P-J": {
     "sens": 0.554,
     "sens_ci": [
-     0.42,
-     0.667
+     0.426,
+     0.67
     ],
     "spec": 0.985,
     "spec_ci": [
@@ -3018,6 +3730,34 @@
     "spill_share_sens": 0.054,
     "fp_rate": 0.0155,
     "fp_rate_blood_remote": 0.0046
+   },
+   "P-J3": {
+    "sens": 0.663,
+    "sens_ci": [
+     0.596,
+     0.738
+    ],
+    "spec": 0.992,
+    "spec_ci": [
+     0.983,
+     1.0
+    ],
+    "sens_blood_remote": 0.634,
+    "sens_by_true_bin": [
+     0.189,
+     0.8,
+     1.0,
+     1.0
+    ],
+    "n_by_true_bin": [
+     37,
+     20,
+     17,
+     27
+    ],
+    "spill_share_sens": 0.045,
+    "fp_rate": 0.0077,
+    "fp_rate_blood_remote": 0.0
    },
    "E-V|P-G": {
     "n": 74,
@@ -3084,13 +3824,13 @@
    "P-K": {
     "sens": 0.772,
     "sens_ci": [
-     0.701,
-     0.847
+     0.699,
+     0.854
     ],
     "spec": 0.417,
     "spec_ci": [
-     0.404,
-     0.431
+     0.403,
+     0.432
     ],
     "sens_blood_remote": 0.762,
     "sens_by_true_bin": [
@@ -3112,8 +3852,8 @@
    "P-G": {
     "sens": 0.723,
     "sens_ci": [
-     0.648,
-     0.802
+     0.645,
+     0.798
     ],
     "spec": 1.0,
     "spec_ci": [
@@ -3140,12 +3880,12 @@
    "P-J": {
     "sens": 0.663,
     "sens_ci": [
-     0.594,
-     0.738
+     0.593,
+     0.74
     ],
     "spec": 0.991,
     "spec_ci": [
-     0.98,
+     0.978,
      0.998
     ],
     "sens_blood_remote": 0.653,
@@ -3164,6 +3904,34 @@
     "spill_share_sens": 0.015,
     "fp_rate": 0.0093,
     "fp_rate_blood_remote": 0.0
+   },
+   "P-J3": {
+    "sens": 0.881,
+    "sens_ci": [
+     0.817,
+     0.946
+    ],
+    "spec": 0.98,
+    "spec_ci": [
+     0.954,
+     0.998
+    ],
+    "sens_blood_remote": 0.861,
+    "sens_by_true_bin": [
+     0.676,
+     1.0,
+     1.0,
+     1.0
+    ],
+    "n_by_true_bin": [
+     37,
+     20,
+     17,
+     27
+    ],
+    "spill_share_sens": 0.022,
+    "fp_rate": 0.0201,
+    "fp_rate_blood_remote": 0.0015
    },
    "E-V|P-G": {
     "n": 73,
@@ -3230,13 +3998,13 @@
    "P-K": {
     "sens": 0.812,
     "sens_ci": [
-     0.743,
+     0.74,
      0.881
     ],
     "spec": 0.547,
     "spec_ci": [
-     0.464,
-     0.629
+     0.46,
+     0.631
     ],
     "sens_blood_remote": 0.752,
     "sens_by_true_bin": [
@@ -3258,13 +4026,13 @@
    "P-G": {
     "sens": 0.564,
     "sens_ci": [
-     0.406,
-     0.733
+     0.41,
+     0.722
     ],
     "spec": 0.77,
     "spec_ci": [
-     0.677,
-     0.852
+     0.673,
+     0.85
     ],
     "sens_blood_remote": 0.455,
     "sens_by_true_bin": [
@@ -3286,7 +4054,7 @@
    "P-J": {
     "sens": 0.218,
     "sens_ci": [
-     0.106,
+     0.109,
      0.333
     ],
     "spec": 1.0,
@@ -3310,6 +4078,34 @@
     "spill_share_sens": 0.318,
     "fp_rate": 0.0,
     "fp_rate_blood_remote": 0.017
+   },
+   "P-J3": {
+    "sens": 0.317,
+    "sens_ci": [
+     0.193,
+     0.443
+    ],
+    "spec": 0.988,
+    "spec_ci": [
+     0.975,
+     0.997
+    ],
+    "sens_blood_remote": 0.208,
+    "sens_by_true_bin": [
+     0.108,
+     0.15,
+     0.471,
+     0.63
+    ],
+    "n_by_true_bin": [
+     37,
+     20,
+     17,
+     27
+    ],
+    "spill_share_sens": 0.344,
+    "fp_rate": 0.0124,
+    "fp_rate_blood_remote": 0.0
    },
    "E-V|P-G": {
     "n": 57,
@@ -3376,13 +4172,13 @@
    "P-K": {
     "sens": 0.772,
     "sens_ci": [
-     0.696,
-     0.847
+     0.7,
+     0.85
     ],
     "spec": 0.617,
     "spec_ci": [
-     0.538,
-     0.695
+     0.532,
+     0.692
     ],
     "sens_blood_remote": 0.743,
     "sens_by_true_bin": [
@@ -3405,7 +4201,7 @@
     "sens": 0.653,
     "sens_ci": [
      0.577,
-     0.738
+     0.736
     ],
     "spec": 0.995,
     "spec_ci": [
@@ -3432,8 +4228,8 @@
    "P-J": {
     "sens": 0.614,
     "sens_ci": [
-     0.534,
-     0.706
+     0.533,
+     0.703
     ],
     "spec": 0.98,
     "spec_ci": [
@@ -3455,6 +4251,34 @@
     ],
     "spill_share_sens": 0.016,
     "fp_rate": 0.0201,
+    "fp_rate_blood_remote": 0.0
+   },
+   "P-J3": {
+    "sens": 0.683,
+    "sens_ci": [
+     0.604,
+     0.768
+    ],
+    "spec": 0.989,
+    "spec_ci": [
+     0.979,
+     0.998
+    ],
+    "sens_blood_remote": 0.653,
+    "sens_by_true_bin": [
+     0.162,
+     1.0,
+     0.941,
+     1.0
+    ],
+    "n_by_true_bin": [
+     37,
+     20,
+     17,
+     27
+    ],
+    "spill_share_sens": 0.043,
+    "fp_rate": 0.0108,
     "fp_rate_blood_remote": 0.0
    },
    "E-V|P-G": {
@@ -3522,13 +4346,13 @@
    "P-K": {
     "sens": 0.822,
     "sens_ci": [
-     0.75,
-     0.895
+     0.748,
+     0.891
     ],
     "spec": 0.663,
     "spec_ci": [
-     0.576,
-     0.748
+     0.579,
+     0.744
     ],
     "sens_blood_remote": 0.772,
     "sens_by_true_bin": [
@@ -3550,8 +4374,8 @@
    "P-G": {
     "sens": 0.703,
     "sens_ci": [
-     0.626,
-     0.782
+     0.627,
+     0.78
     ],
     "spec": 0.995,
     "spec_ci": [
@@ -3578,13 +4402,13 @@
    "P-J": {
     "sens": 0.653,
     "sens_ci": [
-     0.578,
-     0.73
+     0.583,
+     0.731
     ],
     "spec": 0.985,
     "spec_ci": [
      0.966,
-     0.998
+     0.997
     ],
     "sens_blood_remote": 0.653,
     "sens_by_true_bin": [
@@ -3601,6 +4425,34 @@
     ],
     "spill_share_sens": 0.0,
     "fp_rate": 0.0155,
+    "fp_rate_blood_remote": 0.0
+   },
+   "P-J3": {
+    "sens": 0.713,
+    "sens_ci": [
+     0.633,
+     0.794
+    ],
+    "spec": 0.988,
+    "spec_ci": [
+     0.974,
+     0.998
+    ],
+    "sens_blood_remote": 0.683,
+    "sens_by_true_bin": [
+     0.243,
+     1.0,
+     0.941,
+     1.0
+    ],
+    "n_by_true_bin": [
+     37,
+     20,
+     17,
+     27
+    ],
+    "spill_share_sens": 0.042,
+    "fp_rate": 0.0124,
     "fp_rate_blood_remote": 0.0
    },
    "E-V|P-G": {
@@ -3668,13 +4520,13 @@
    "P-K": {
     "sens": 0.782,
     "sens_ci": [
-     0.705,
-     0.862
+     0.709,
+     0.865
     ],
     "spec": 0.578,
     "spec_ci": [
-     0.501,
-     0.651
+     0.502,
+     0.657
     ],
     "sens_blood_remote": 0.762,
     "sens_by_true_bin": [
@@ -3696,13 +4548,13 @@
    "P-G": {
     "sens": 0.683,
     "sens_ci": [
-     0.596,
-     0.771
+     0.6,
+     0.772
     ],
     "spec": 0.92,
     "spec_ci": [
-     0.846,
-     0.977
+     0.848,
+     0.98
     ],
     "sens_blood_remote": 0.683,
     "sens_by_true_bin": [
@@ -3724,8 +4576,8 @@
    "P-J": {
     "sens": 0.594,
     "sens_ci": [
-     0.52,
-     0.673
+     0.526,
+     0.674
     ],
     "spec": 0.991,
     "spec_ci": [
@@ -3747,6 +4599,34 @@
     ],
     "spill_share_sens": 0.067,
     "fp_rate": 0.0093,
+    "fp_rate_blood_remote": 0.0
+   },
+   "P-J3": {
+    "sens": 0.663,
+    "sens_ci": [
+     0.584,
+     0.739
+    ],
+    "spec": 0.994,
+    "spec_ci": [
+     0.986,
+     1.0
+    ],
+    "sens_blood_remote": 0.604,
+    "sens_by_true_bin": [
+     0.189,
+     0.85,
+     0.941,
+     1.0
+    ],
+    "n_by_true_bin": [
+     37,
+     20,
+     17,
+     27
+    ],
+    "spill_share_sens": 0.09,
+    "fp_rate": 0.0062,
     "fp_rate_blood_remote": 0.0
    },
    "E-V|P-G": {
@@ -3814,13 +4694,13 @@
    "P-K": {
     "sens": 0.782,
     "sens_ci": [
-     0.712,
-     0.853
+     0.708,
+     0.855
     ],
     "spec": 0.42,
     "spec_ci": [
-     0.406,
-     0.436
+     0.405,
+     0.435
     ],
     "sens_blood_remote": 0.762,
     "sens_by_true_bin": [
@@ -3843,7 +4723,7 @@
     "sens": 0.802,
     "sens_ci": [
      0.73,
-     0.878
+     0.874
     ],
     "spec": 1.0,
     "spec_ci": [
@@ -3870,8 +4750,8 @@
    "P-J": {
     "sens": 0.663,
     "sens_ci": [
-     0.596,
-     0.736
+     0.591,
+     0.741
     ],
     "spec": 0.991,
     "spec_ci": [
@@ -3893,6 +4773,34 @@
     ],
     "spill_share_sens": 0.0,
     "fp_rate": 0.0093,
+    "fp_rate_blood_remote": 0.0
+   },
+   "P-J3": {
+    "sens": 0.861,
+    "sens_ci": [
+     0.793,
+     0.925
+    ],
+    "spec": 0.981,
+    "spec_ci": [
+     0.96,
+     0.997
+    ],
+    "sens_blood_remote": 0.832,
+    "sens_by_true_bin": [
+     0.622,
+     1.0,
+     1.0,
+     1.0
+    ],
+    "n_by_true_bin": [
+     37,
+     20,
+     17,
+     27
+    ],
+    "spill_share_sens": 0.034,
+    "fp_rate": 0.0185,
     "fp_rate_blood_remote": 0.0
    },
    "E-V|P-G": {
@@ -3960,13 +4868,13 @@
    "P-K": {
     "sens": 0.822,
     "sens_ci": [
-     0.756,
-     0.888
+     0.752,
+     0.883
     ],
     "spec": 0.544,
     "spec_ci": [
-     0.46,
-     0.627
+     0.454,
+     0.631
     ],
     "sens_blood_remote": 0.762,
     "sens_by_true_bin": [
@@ -3988,13 +4896,13 @@
    "P-G": {
     "sens": 0.703,
     "sens_ci": [
-     0.602,
+     0.594,
      0.804
     ],
     "spec": 0.708,
     "spec_ci": [
-     0.609,
-     0.8
+     0.615,
+     0.802
     ],
     "sens_blood_remote": 0.673,
     "sens_by_true_bin": [
@@ -4016,8 +4924,8 @@
    "P-J": {
     "sens": 0.208,
     "sens_ci": [
-     0.106,
-     0.323
+     0.1,
+     0.33
     ],
     "spec": 1.0,
     "spec_ci": [
@@ -4040,6 +4948,34 @@
     "spill_share_sens": 0.286,
     "fp_rate": 0.0,
     "fp_rate_blood_remote": 0.0201
+   },
+   "P-J3": {
+    "sens": 0.426,
+    "sens_ci": [
+     0.291,
+     0.564
+    ],
+    "spec": 0.985,
+    "spec_ci": [
+     0.966,
+     0.998
+    ],
+    "sens_blood_remote": 0.287,
+    "sens_by_true_bin": [
+     0.108,
+     0.35,
+     0.529,
+     0.852
+    ],
+    "n_by_true_bin": [
+     37,
+     20,
+     17,
+     27
+    ],
+    "spill_share_sens": 0.326,
+    "fp_rate": 0.0155,
+    "fp_rate_blood_remote": 0.0
    },
    "E-V|P-G": {
     "n": 71,
@@ -4106,13 +5042,13 @@
    "P-K": {
     "sens": 0.802,
     "sens_ci": [
-     0.726,
-     0.872
+     0.729,
+     0.874
     ],
     "spec": 0.743,
     "spec_ci": [
-     0.668,
-     0.813
+     0.664,
+     0.812
     ],
     "sens_blood_remote": 0.752,
     "sens_by_true_bin": [
@@ -4134,12 +5070,12 @@
    "P-G": {
     "sens": 0.733,
     "sens_ci": [
-     0.667,
-     0.809
+     0.664,
+     0.806
     ],
     "spec": 0.98,
     "spec_ci": [
-     0.963,
+     0.962,
      0.995
     ],
     "sens_blood_remote": 0.713,
@@ -4162,12 +5098,12 @@
    "P-J": {
     "sens": 0.644,
     "sens_ci": [
-     0.557,
+     0.556,
      0.735
     ],
     "spec": 0.985,
     "spec_ci": [
-     0.958,
+     0.957,
      1.0
     ],
     "sens_blood_remote": 0.644,
@@ -4185,6 +5121,34 @@
     ],
     "spill_share_sens": 0.0,
     "fp_rate": 0.0155,
+    "fp_rate_blood_remote": 0.0
+   },
+   "P-J3": {
+    "sens": 0.683,
+    "sens_ci": [
+     0.605,
+     0.763
+    ],
+    "spec": 0.988,
+    "spec_ci": [
+     0.971,
+     1.0
+    ],
+    "sens_blood_remote": 0.663,
+    "sens_by_true_bin": [
+     0.162,
+     1.0,
+     0.941,
+     1.0
+    ],
+    "n_by_true_bin": [
+     37,
+     20,
+     17,
+     27
+    ],
+    "spill_share_sens": 0.029,
+    "fp_rate": 0.0124,
     "fp_rate_blood_remote": 0.0
    },
    "E-V|P-G": {
@@ -4252,13 +5216,13 @@
    "P-K": {
     "sens": 0.861,
     "sens_ci": [
-     0.791,
+     0.789,
      0.929
     ],
     "spec": 0.705,
     "spec_ci": [
-     0.635,
-     0.773
+     0.631,
+     0.769
     ],
     "sens_blood_remote": 0.792,
     "sens_by_true_bin": [
@@ -4280,12 +5244,12 @@
    "P-G": {
     "sens": 0.802,
     "sens_ci": [
-     0.736,
-     0.875
+     0.729,
+     0.878
     ],
     "spec": 0.983,
     "spec_ci": [
-     0.964,
+     0.963,
      0.997
     ],
     "sens_blood_remote": 0.782,
@@ -4308,8 +5272,8 @@
    "P-J": {
     "sens": 0.693,
     "sens_ci": [
-     0.618,
-     0.776
+     0.62,
+     0.777
     ],
     "spec": 0.992,
     "spec_ci": [
@@ -4331,6 +5295,34 @@
     ],
     "spill_share_sens": 0.029,
     "fp_rate": 0.0077,
+    "fp_rate_blood_remote": 0.0
+   },
+   "P-J3": {
+    "sens": 0.733,
+    "sens_ci": [
+     0.663,
+     0.812
+    ],
+    "spec": 0.983,
+    "spec_ci": [
+     0.965,
+     0.997
+    ],
+    "sens_blood_remote": 0.713,
+    "sens_by_true_bin": [
+     0.297,
+     1.0,
+     0.941,
+     1.0
+    ],
+    "n_by_true_bin": [
+     37,
+     20,
+     17,
+     27
+    ],
+    "spill_share_sens": 0.027,
+    "fp_rate": 0.017,
     "fp_rate_blood_remote": 0.0
    },
    "E-V|P-G": {
@@ -4398,12 +5390,12 @@
    "P-K": {
     "sens": 0.822,
     "sens_ci": [
-     0.747,
-     0.892
+     0.744,
+     0.898
     ],
     "spec": 0.705,
     "spec_ci": [
-     0.635,
+     0.631,
      0.77
     ],
     "sens_blood_remote": 0.772,
@@ -4426,12 +5418,12 @@
    "P-G": {
     "sens": 0.782,
     "sens_ci": [
-     0.716,
-     0.854
+     0.717,
+     0.862
     ],
     "spec": 0.986,
     "spec_ci": [
-     0.974,
+     0.973,
      0.997
     ],
     "sens_blood_remote": 0.762,
@@ -4454,12 +5446,12 @@
    "P-J": {
     "sens": 0.663,
     "sens_ci": [
-     0.587,
-     0.74
+     0.591,
+     0.742
     ],
     "spec": 0.978,
     "spec_ci": [
-     0.949,
+     0.95,
      0.997
     ],
     "sens_blood_remote": 0.653,
@@ -4477,6 +5469,34 @@
     ],
     "spill_share_sens": 0.015,
     "fp_rate": 0.0216,
+    "fp_rate_blood_remote": 0.0
+   },
+   "P-J3": {
+    "sens": 0.713,
+    "sens_ci": [
+     0.641,
+     0.788
+    ],
+    "spec": 0.986,
+    "spec_ci": [
+     0.971,
+     1.0
+    ],
+    "sens_blood_remote": 0.693,
+    "sens_by_true_bin": [
+     0.243,
+     1.0,
+     0.941,
+     1.0
+    ],
+    "n_by_true_bin": [
+     37,
+     20,
+     17,
+     27
+    ],
+    "spill_share_sens": 0.028,
+    "fp_rate": 0.0139,
     "fp_rate_blood_remote": 0.0
    },
    "E-V|P-G": {
@@ -4544,13 +5564,13 @@
    "P-K": {
     "sens": 0.76,
     "sens_ci": [
-     0.683,
-     0.842
+     0.682,
+     0.839
     ],
     "spec": 0.435,
     "spec_ci": [
      0.412,
-     0.467
+     0.468
     ],
     "sens_blood_remote": 0.75,
     "sens_by_true_bin": [
@@ -4572,8 +5592,8 @@
    "P-G": {
     "sens": 0.72,
     "sens_ci": [
-     0.642,
-     0.8
+     0.645,
+     0.798
     ],
     "spec": 1.0,
     "spec_ci": [
@@ -4600,12 +5620,12 @@
    "P-J": {
     "sens": 0.7,
     "sens_ci": [
-     0.626,
-     0.785
+     0.625,
+     0.781
     ],
     "spec": 0.988,
     "spec_ci": [
-     0.975,
+     0.977,
      0.997
     ],
     "sens_blood_remote": 0.7,
@@ -4624,6 +5644,34 @@
     "spill_share_sens": 0.0,
     "fp_rate": 0.0123,
     "fp_rate_blood_remote": 0.0
+   },
+   "P-J3": {
+    "sens": 0.99,
+    "sens_ci": [
+     0.967,
+     1.0
+    ],
+    "spec": 0.989,
+    "spec_ci": [
+     0.981,
+     0.997
+    ],
+    "sens_blood_remote": 0.98,
+    "sens_by_true_bin": [
+     0.973,
+     1.0,
+     1.0,
+     1.0
+    ],
+    "n_by_true_bin": [
+     37,
+     19,
+     17,
+     27
+    ],
+    "spill_share_sens": 0.01,
+    "fp_rate": 0.0108,
+    "fp_rate_blood_remote": 0.0093
    },
    "E-V|P-G": {
     "n": 72,
@@ -4690,13 +5738,13 @@
    "P-K": {
     "sens": 0.81,
     "sens_ci": [
-     0.731,
-     0.89
+     0.735,
+     0.893
     ],
     "spec": 0.491,
     "spec_ci": [
-     0.406,
-     0.571
+     0.41,
+     0.567
     ],
     "sens_blood_remote": 0.78,
     "sens_by_true_bin": [
@@ -4719,12 +5767,12 @@
     "sens": 0.49,
     "sens_ci": [
      0.33,
-     0.644
+     0.637
     ],
     "spec": 0.991,
     "spec_ci": [
-     0.983,
-     0.997
+     0.982,
+     0.998
     ],
     "sens_blood_remote": 0.47,
     "sens_by_true_bin": [
@@ -4747,12 +5795,12 @@
     "sens": 0.24,
     "sens_ci": [
      0.132,
-     0.357
+     0.36
     ],
     "spec": 0.968,
     "spec_ci": [
-     0.912,
-     0.997
+     0.91,
+     0.998
     ],
     "sens_blood_remote": 0.22,
     "sens_by_true_bin": [
@@ -4770,6 +5818,34 @@
     "spill_share_sens": 0.083,
     "fp_rate": 0.0324,
     "fp_rate_blood_remote": 0.0278
+   },
+   "P-J3": {
+    "sens": 0.48,
+    "sens_ci": [
+     0.34,
+     0.624
+    ],
+    "spec": 0.992,
+    "spec_ci": [
+     0.984,
+     0.998
+    ],
+    "sens_blood_remote": 0.47,
+    "sens_by_true_bin": [
+     0.189,
+     0.421,
+     0.588,
+     0.852
+    ],
+    "n_by_true_bin": [
+     37,
+     19,
+     17,
+     27
+    ],
+    "spill_share_sens": 0.021,
+    "fp_rate": 0.0077,
+    "fp_rate_blood_remote": 0.0031
    },
    "E-V|P-G": {
     "n": 49,
@@ -4836,13 +5912,13 @@
    "P-K": {
     "sens": 0.75,
     "sens_ci": [
-     0.675,
-     0.83
+     0.67,
+     0.828
     ],
     "spec": 0.468,
     "spec_ci": [
-     0.432,
-     0.504
+     0.433,
+     0.506
     ],
     "sens_blood_remote": 0.74,
     "sens_by_true_bin": [
@@ -4864,8 +5940,8 @@
    "P-G": {
     "sens": 0.69,
     "sens_ci": [
-     0.617,
-     0.773
+     0.61,
+     0.769
     ],
     "spec": 0.997,
     "spec_ci": [
@@ -4892,12 +5968,12 @@
    "P-J": {
     "sens": 0.66,
     "sens_ci": [
-     0.588,
+     0.586,
      0.747
     ],
     "spec": 0.988,
     "spec_ci": [
-     0.971,
+     0.973,
      1.0
     ],
     "sens_blood_remote": 0.66,
@@ -4916,6 +5992,34 @@
     "spill_share_sens": 0.0,
     "fp_rate": 0.0123,
     "fp_rate_blood_remote": 0.0
+   },
+   "P-J3": {
+    "sens": 0.81,
+    "sens_ci": [
+     0.727,
+     0.888
+    ],
+    "spec": 0.986,
+    "spec_ci": [
+     0.976,
+     0.995
+    ],
+    "sens_blood_remote": 0.8,
+    "sens_by_true_bin": [
+     0.486,
+     1.0,
+     1.0,
+     1.0
+    ],
+    "n_by_true_bin": [
+     37,
+     19,
+     17,
+     27
+    ],
+    "spill_share_sens": 0.012,
+    "fp_rate": 0.0139,
+    "fp_rate_blood_remote": 0.0123
    },
    "E-V|P-G": {
     "n": 69,
@@ -4987,8 +6091,8 @@
     ],
     "spec": 0.438,
     "spec_ci": [
-     0.415,
-     0.466
+     0.413,
+     0.467
     ],
     "sens_blood_remote": 0.75,
     "sens_by_true_bin": [
@@ -5010,8 +6114,8 @@
    "P-G": {
     "sens": 0.71,
     "sens_ci": [
-     0.634,
-     0.79
+     0.635,
+     0.791
     ],
     "spec": 0.997,
     "spec_ci": [
@@ -5038,8 +6142,8 @@
    "P-J": {
     "sens": 0.69,
     "sens_ci": [
-     0.615,
-     0.768
+     0.617,
+     0.773
     ],
     "spec": 0.992,
     "spec_ci": [
@@ -5062,6 +6166,34 @@
     "spill_share_sens": 0.0,
     "fp_rate": 0.0077,
     "fp_rate_blood_remote": 0.0
+   },
+   "P-J3": {
+    "sens": 0.85,
+    "sens_ci": [
+     0.79,
+     0.913
+    ],
+    "spec": 0.991,
+    "spec_ci": [
+     0.981,
+     0.998
+    ],
+    "sens_blood_remote": 0.83,
+    "sens_by_true_bin": [
+     0.595,
+     1.0,
+     1.0,
+     1.0
+    ],
+    "n_by_true_bin": [
+     37,
+     19,
+     17,
+     27
+    ],
+    "spill_share_sens": 0.024,
+    "fp_rate": 0.0093,
+    "fp_rate_blood_remote": 0.0062
    },
    "E-V|P-G": {
     "n": 71,
@@ -5128,13 +6260,13 @@
    "P-K": {
     "sens": 0.74,
     "sens_ci": [
-     0.67,
-     0.815
+     0.673,
+     0.816
     ],
     "spec": 0.494,
     "spec_ci": [
-     0.449,
-     0.545
+     0.447,
+     0.547
     ],
     "sens_blood_remote": 0.73,
     "sens_by_true_bin": [
@@ -5156,8 +6288,8 @@
    "P-G": {
     "sens": 0.66,
     "sens_ci": [
-     0.581,
-     0.747
+     0.584,
+     0.744
     ],
     "spec": 0.994,
     "spec_ci": [
@@ -5185,7 +6317,7 @@
     "sens": 0.54,
     "sens_ci": [
      0.417,
-     0.653
+     0.657
     ],
     "spec": 0.991,
     "spec_ci": [
@@ -5208,6 +6340,34 @@
     "spill_share_sens": 0.0,
     "fp_rate": 0.0093,
     "fp_rate_blood_remote": 0.0
+   },
+   "P-J3": {
+    "sens": 0.76,
+    "sens_ci": [
+     0.68,
+     0.84
+    ],
+    "spec": 0.986,
+    "spec_ci": [
+     0.976,
+     0.994
+    ],
+    "sens_blood_remote": 0.73,
+    "sens_by_true_bin": [
+     0.432,
+     0.842,
+     1.0,
+     1.0
+    ],
+    "n_by_true_bin": [
+     37,
+     19,
+     17,
+     27
+    ],
+    "spill_share_sens": 0.039,
+    "fp_rate": 0.0139,
+    "fp_rate_blood_remote": 0.0093
    },
    "E-V|P-G": {
     "n": 66,
@@ -5274,13 +6434,13 @@
    "P-K": {
     "sens": 0.82,
     "sens_ci": [
-     0.745,
-     0.899
+     0.743,
+     0.895
     ],
     "spec": 0.517,
     "spec_ci": [
-     0.42,
-     0.606
+     0.423,
+     0.613
     ],
     "sens_blood_remote": 0.79,
     "sens_by_true_bin": [
@@ -5302,8 +6462,8 @@
    "P-G": {
     "sens": 0.54,
     "sens_ci": [
-     0.381,
-     0.693
+     0.383,
+     0.694
     ],
     "spec": 0.989,
     "spec_ci": [
@@ -5331,11 +6491,11 @@
     "sens": 0.3,
     "sens_ci": [
      0.171,
-     0.442
+     0.435
     ],
     "spec": 0.968,
     "spec_ci": [
-     0.915,
+     0.912,
      1.0
     ],
     "sens_blood_remote": 0.27,
@@ -5354,6 +6514,34 @@
     "spill_share_sens": 0.1,
     "fp_rate": 0.0324,
     "fp_rate_blood_remote": 0.0355
+   },
+   "P-J3": {
+    "sens": 0.59,
+    "sens_ci": [
+     0.426,
+     0.742
+    ],
+    "spec": 0.988,
+    "spec_ci": [
+     0.977,
+     0.995
+    ],
+    "sens_blood_remote": 0.58,
+    "sens_by_true_bin": [
+     0.297,
+     0.684,
+     0.647,
+     0.889
+    ],
+    "n_by_true_bin": [
+     37,
+     19,
+     17,
+     27
+    ],
+    "spill_share_sens": 0.017,
+    "fp_rate": 0.0123,
+    "fp_rate_blood_remote": 0.0093
    },
    "E-V|P-G": {
     "n": 54,
@@ -5420,13 +6608,13 @@
    "P-K": {
     "sens": 0.77,
     "sens_ci": [
-     0.689,
-     0.856
+     0.688,
+     0.854
     ],
     "spec": 0.434,
     "spec_ci": [
-     0.411,
-     0.463
+     0.412,
+     0.465
     ],
     "sens_blood_remote": 0.77,
     "sens_by_true_bin": [
@@ -5449,7 +6637,7 @@
     "sens": 0.82,
     "sens_ci": [
      0.758,
-     0.881
+     0.884
     ],
     "spec": 1.0,
     "spec_ci": [
@@ -5476,8 +6664,8 @@
    "P-J": {
     "sens": 0.72,
     "sens_ci": [
-     0.644,
-     0.796
+     0.639,
+     0.802
     ],
     "spec": 0.991,
     "spec_ci": [
@@ -5500,6 +6688,34 @@
     "spill_share_sens": 0.014,
     "fp_rate": 0.0093,
     "fp_rate_blood_remote": 0.0
+   },
+   "P-J3": {
+    "sens": 0.96,
+    "sens_ci": [
+     0.912,
+     1.0
+    ],
+    "spec": 0.986,
+    "spec_ci": [
+     0.977,
+     0.994
+    ],
+    "sens_blood_remote": 0.96,
+    "sens_by_true_bin": [
+     0.892,
+     1.0,
+     1.0,
+     1.0
+    ],
+    "n_by_true_bin": [
+     37,
+     19,
+     17,
+     27
+    ],
+    "spill_share_sens": 0.0,
+    "fp_rate": 0.0139,
+    "fp_rate_blood_remote": 0.0062
    },
    "E-V|P-G": {
     "n": 82,
@@ -5566,13 +6782,13 @@
    "P-K": {
     "sens": 0.82,
     "sens_ci": [
-     0.743,
-     0.898
+     0.745,
+     0.903
     ],
     "spec": 0.563,
     "spec_ci": [
-     0.479,
-     0.637
+     0.482,
+     0.634
     ],
     "sens_blood_remote": 0.8,
     "sens_by_true_bin": [
@@ -5594,13 +6810,13 @@
    "P-G": {
     "sens": 0.62,
     "sens_ci": [
-     0.465,
-     0.765
+     0.461,
+     0.761
     ],
     "spec": 0.929,
     "spec_ci": [
-     0.874,
-     0.973
+     0.872,
+     0.975
     ],
     "sens_blood_remote": 0.59,
     "sens_by_true_bin": [
@@ -5623,11 +6839,11 @@
     "sens": 0.23,
     "sens_ci": [
      0.118,
-     0.346
+     0.354
     ],
     "spec": 0.963,
     "spec_ci": [
-     0.911,
+     0.908,
      0.997
     ],
     "sens_blood_remote": 0.21,
@@ -5646,6 +6862,34 @@
     "spill_share_sens": 0.087,
     "fp_rate": 0.037,
     "fp_rate_blood_remote": 0.0525
+   },
+   "P-J3": {
+    "sens": 0.46,
+    "sens_ci": [
+     0.333,
+     0.589
+    ],
+    "spec": 0.988,
+    "spec_ci": [
+     0.972,
+     1.0
+    ],
+    "sens_blood_remote": 0.4,
+    "sens_by_true_bin": [
+     0.135,
+     0.316,
+     0.588,
+     0.926
+    ],
+    "n_by_true_bin": [
+     37,
+     19,
+     17,
+     27
+    ],
+    "spill_share_sens": 0.13,
+    "fp_rate": 0.0123,
+    "fp_rate_blood_remote": 0.0
    },
    "E-V|P-G": {
     "n": 62,
@@ -5712,13 +6956,13 @@
    "P-K": {
     "sens": 0.76,
     "sens_ci": [
-     0.684,
-     0.842
+     0.68,
+     0.837
     ],
     "spec": 0.56,
     "spec_ci": [
-     0.495,
-     0.638
+     0.488,
+     0.64
     ],
     "sens_blood_remote": 0.75,
     "sens_by_true_bin": [
@@ -5740,12 +6984,12 @@
    "P-G": {
     "sens": 0.75,
     "sens_ci": [
-     0.673,
-     0.833
+     0.67,
+     0.83
     ],
     "spec": 0.992,
     "spec_ci": [
-     0.984,
+     0.983,
      0.998
     ],
     "sens_blood_remote": 0.73,
@@ -5768,7 +7012,7 @@
    "P-J": {
     "sens": 0.67,
     "sens_ci": [
-     0.594,
+     0.596,
      0.75
     ],
     "spec": 0.997,
@@ -5792,6 +7036,34 @@
     "spill_share_sens": -0.015,
     "fp_rate": 0.0031,
     "fp_rate_blood_remote": 0.0015
+   },
+   "P-J3": {
+    "sens": 0.84,
+    "sens_ci": [
+     0.781,
+     0.905
+    ],
+    "spec": 0.983,
+    "spec_ci": [
+     0.971,
+     0.994
+    ],
+    "sens_blood_remote": 0.83,
+    "sens_by_true_bin": [
+     0.568,
+     1.0,
+     1.0,
+     1.0
+    ],
+    "n_by_true_bin": [
+     37,
+     19,
+     17,
+     27
+    ],
+    "spill_share_sens": 0.012,
+    "fp_rate": 0.017,
+    "fp_rate_blood_remote": 0.0077
    },
    "E-V|P-G": {
     "n": 75,
@@ -5858,13 +7130,13 @@
    "P-K": {
     "sens": 0.8,
     "sens_ci": [
-     0.733,
+     0.738,
      0.867
     ],
     "spec": 0.539,
     "spec_ci": [
-     0.476,
-     0.61
+     0.477,
+     0.612
     ],
     "sens_blood_remote": 0.8,
     "sens_by_true_bin": [
@@ -5886,8 +7158,8 @@
    "P-G": {
     "sens": 0.77,
     "sens_ci": [
-     0.7,
-     0.839
+     0.701,
+     0.84
     ],
     "spec": 0.995,
     "spec_ci": [
@@ -5914,7 +7186,7 @@
    "P-J": {
     "sens": 0.7,
     "sens_ci": [
-     0.624,
+     0.625,
      0.781
     ],
     "spec": 0.988,
@@ -5938,6 +7210,34 @@
     "spill_share_sens": 0.0,
     "fp_rate": 0.0123,
     "fp_rate_blood_remote": 0.0031
+   },
+   "P-J3": {
+    "sens": 0.83,
+    "sens_ci": [
+     0.76,
+     0.895
+    ],
+    "spec": 0.991,
+    "spec_ci": [
+     0.982,
+     0.997
+    ],
+    "sens_blood_remote": 0.83,
+    "sens_by_true_bin": [
+     0.541,
+     1.0,
+     1.0,
+     1.0
+    ],
+    "n_by_true_bin": [
+     37,
+     19,
+     17,
+     27
+    ],
+    "spill_share_sens": 0.0,
+    "fp_rate": 0.0093,
+    "fp_rate_blood_remote": 0.0046
    },
    "E-V|P-G": {
     "n": 77,
@@ -6004,13 +7304,13 @@
    "P-K": {
     "sens": 0.77,
     "sens_ci": [
-     0.698,
-     0.847
+     0.695,
+     0.845
     ],
     "spec": 0.557,
     "spec_ci": [
-     0.486,
-     0.636
+     0.487,
+     0.632
     ],
     "sens_blood_remote": 0.76,
     "sens_by_true_bin": [
@@ -6032,12 +7332,12 @@
    "P-G": {
     "sens": 0.72,
     "sens_ci": [
-     0.646,
-     0.8
+     0.648,
+     0.798
     ],
     "spec": 0.957,
     "spec_ci": [
-     0.911,
+     0.914,
      0.988
     ],
     "sens_blood_remote": 0.71,
@@ -6060,12 +7360,12 @@
    "P-J": {
     "sens": 0.55,
     "sens_ci": [
-     0.422,
+     0.43,
      0.667
     ],
     "spec": 0.983,
     "spec_ci": [
-     0.961,
+     0.963,
      1.0
     ],
     "sens_blood_remote": 0.55,
@@ -6084,6 +7384,34 @@
     "spill_share_sens": 0.0,
     "fp_rate": 0.017,
     "fp_rate_blood_remote": 0.0015
+   },
+   "P-J3": {
+    "sens": 0.75,
+    "sens_ci": [
+     0.676,
+     0.826
+    ],
+    "spec": 0.981,
+    "spec_ci": [
+     0.965,
+     0.994
+    ],
+    "sens_blood_remote": 0.7,
+    "sens_by_true_bin": [
+     0.405,
+     0.842,
+     1.0,
+     1.0
+    ],
+    "n_by_true_bin": [
+     37,
+     19,
+     17,
+     27
+    ],
+    "spill_share_sens": 0.067,
+    "fp_rate": 0.0185,
+    "fp_rate_blood_remote": 0.0046
    },
    "E-V|P-G": {
     "n": 72,
@@ -6151,12 +7479,12 @@
     "sens": 0.82,
     "sens_ci": [
      0.745,
-     0.898
+     0.892
     ],
     "spec": 0.603,
     "spec_ci": [
-     0.523,
-     0.675
+     0.526,
+     0.671
     ],
     "sens_blood_remote": 0.8,
     "sens_by_true_bin": [
@@ -6178,13 +7506,13 @@
    "P-G": {
     "sens": 0.65,
     "sens_ci": [
-     0.484,
-     0.788
+     0.495,
+     0.798
     ],
     "spec": 0.943,
     "spec_ci": [
-     0.909,
-     0.974
+     0.906,
+     0.975
     ],
     "sens_blood_remote": 0.62,
     "sens_by_true_bin": [
@@ -6206,8 +7534,8 @@
    "P-J": {
     "sens": 0.27,
     "sens_ci": [
-     0.136,
-     0.413
+     0.131,
+     0.42
     ],
     "spec": 0.965,
     "spec_ci": [
@@ -6230,6 +7558,34 @@
     "spill_share_sens": -0.037,
     "fp_rate": 0.0355,
     "fp_rate_blood_remote": 0.0494
+   },
+   "P-J3": {
+    "sens": 0.49,
+    "sens_ci": [
+     0.355,
+     0.625
+    ],
+    "spec": 0.991,
+    "spec_ci": [
+     0.98,
+     0.998
+    ],
+    "sens_blood_remote": 0.47,
+    "sens_by_true_bin": [
+     0.135,
+     0.421,
+     0.647,
+     0.926
+    ],
+    "n_by_true_bin": [
+     37,
+     19,
+     17,
+     27
+    ],
+    "spill_share_sens": 0.041,
+    "fp_rate": 0.0093,
+    "fp_rate_blood_remote": 0.0
    },
    "E-V|P-G": {
     "n": 65,
@@ -6296,12 +7652,12 @@
    "P-K": {
     "sens": 0.77,
     "sens_ci": [
-     0.691,
-     0.855
+     0.693,
+     0.85
     ],
     "spec": 0.434,
     "spec_ci": [
-     0.411,
+     0.413,
      0.463
     ],
     "sens_blood_remote": 0.75,
@@ -6324,8 +7680,8 @@
    "P-G": {
     "sens": 0.72,
     "sens_ci": [
-     0.646,
-     0.8
+     0.648,
+     0.802
     ],
     "spec": 1.0,
     "spec_ci": [
@@ -6352,12 +7708,12 @@
    "P-J": {
     "sens": 0.67,
     "sens_ci": [
-     0.592,
+     0.598,
      0.753
     ],
     "spec": 0.985,
     "spec_ci": [
-     0.964,
+     0.963,
      1.0
     ],
     "sens_blood_remote": 0.66,
@@ -6376,6 +7732,34 @@
     "spill_share_sens": 0.015,
     "fp_rate": 0.0154,
     "fp_rate_blood_remote": 0.0
+   },
+   "P-J3": {
+    "sens": 0.93,
+    "sens_ci": [
+     0.878,
+     0.978
+    ],
+    "spec": 0.986,
+    "spec_ci": [
+     0.972,
+     0.997
+    ],
+    "sens_blood_remote": 0.92,
+    "sens_by_true_bin": [
+     0.811,
+     1.0,
+     1.0,
+     1.0
+    ],
+    "n_by_true_bin": [
+     37,
+     19,
+     17,
+     27
+    ],
+    "spill_share_sens": 0.011,
+    "fp_rate": 0.0139,
+    "fp_rate_blood_remote": 0.0015
    },
    "E-V|P-G": {
     "n": 72,
@@ -6442,13 +7826,13 @@
    "P-K": {
     "sens": 0.85,
     "sens_ci": [
-     0.775,
+     0.779,
      0.917
     ],
     "spec": 0.532,
     "spec_ci": [
-     0.457,
-     0.601
+     0.462,
+     0.602
     ],
     "sens_blood_remote": 0.78,
     "sens_by_true_bin": [
@@ -6470,13 +7854,13 @@
    "P-G": {
     "sens": 0.54,
     "sens_ci": [
-     0.365,
-     0.692
+     0.383,
+     0.7
     ],
     "spec": 0.883,
     "spec_ci": [
-     0.804,
-     0.942
+     0.813,
+     0.944
     ],
     "sens_blood_remote": 0.46,
     "sens_by_true_bin": [
@@ -6498,8 +7882,8 @@
    "P-J": {
     "sens": 0.28,
     "sens_ci": [
-     0.174,
-     0.4
+     0.17,
+     0.396
     ],
     "spec": 0.972,
     "spec_ci": [
@@ -6522,6 +7906,34 @@
     "spill_share_sens": 0.286,
     "fp_rate": 0.0278,
     "fp_rate_blood_remote": 0.0216
+   },
+   "P-J3": {
+    "sens": 0.33,
+    "sens_ci": [
+     0.216,
+     0.45
+    ],
+    "spec": 0.988,
+    "spec_ci": [
+     0.977,
+     0.997
+    ],
+    "sens_blood_remote": 0.28,
+    "sens_by_true_bin": [
+     0.054,
+     0.158,
+     0.353,
+     0.815
+    ],
+    "n_by_true_bin": [
+     37,
+     19,
+     17,
+     27
+    ],
+    "spill_share_sens": 0.152,
+    "fp_rate": 0.0123,
+    "fp_rate_blood_remote": 0.0
    },
    "E-V|P-G": {
     "n": 54,
@@ -6588,13 +8000,13 @@
    "P-K": {
     "sens": 0.78,
     "sens_ci": [
-     0.702,
-     0.86
+     0.7,
+     0.863
     ],
     "spec": 0.556,
     "spec_ci": [
-     0.49,
-     0.628
+     0.489,
+     0.631
     ],
     "sens_blood_remote": 0.74,
     "sens_by_true_bin": [
@@ -6616,8 +8028,8 @@
    "P-G": {
     "sens": 0.69,
     "sens_ci": [
-     0.614,
-     0.772
+     0.61,
+     0.767
     ],
     "spec": 0.997,
     "spec_ci": [
@@ -6644,12 +8056,12 @@
    "P-J": {
     "sens": 0.66,
     "sens_ci": [
-     0.588,
-     0.74
+     0.582,
+     0.741
     ],
     "spec": 0.989,
     "spec_ci": [
-     0.974,
+     0.975,
      1.0
     ],
     "sens_blood_remote": 0.67,
@@ -6668,6 +8080,34 @@
     "spill_share_sens": -0.015,
     "fp_rate": 0.0108,
     "fp_rate_blood_remote": 0.0
+   },
+   "P-J3": {
+    "sens": 0.74,
+    "sens_ci": [
+     0.663,
+     0.819
+    ],
+    "spec": 0.988,
+    "spec_ci": [
+     0.977,
+     0.997
+    ],
+    "sens_blood_remote": 0.72,
+    "sens_by_true_bin": [
+     0.297,
+     1.0,
+     1.0,
+     1.0
+    ],
+    "n_by_true_bin": [
+     37,
+     19,
+     17,
+     27
+    ],
+    "spill_share_sens": 0.027,
+    "fp_rate": 0.0123,
+    "fp_rate_blood_remote": 0.0031
    },
    "E-V|P-G": {
     "n": 69,
@@ -6734,13 +8174,13 @@
    "P-K": {
     "sens": 0.78,
     "sens_ci": [
-     0.705,
-     0.862
+     0.699,
+     0.865
     ],
     "spec": 0.551,
     "spec_ci": [
      0.487,
-     0.626
+     0.619
     ],
     "sens_blood_remote": 0.76,
     "sens_by_true_bin": [
@@ -6762,8 +8202,8 @@
    "P-G": {
     "sens": 0.71,
     "sens_ci": [
-     0.632,
-     0.793
+     0.631,
+     0.79
     ],
     "spec": 0.997,
     "spec_ci": [
@@ -6790,12 +8230,12 @@
    "P-J": {
     "sens": 0.7,
     "sens_ci": [
-     0.623,
-     0.777
+     0.624,
+     0.78
     ],
     "spec": 0.981,
     "spec_ci": [
-     0.957,
+     0.959,
      0.997
     ],
     "sens_blood_remote": 0.7,
@@ -6814,6 +8254,34 @@
     "spill_share_sens": 0.0,
     "fp_rate": 0.0185,
     "fp_rate_blood_remote": 0.0
+   },
+   "P-J3": {
+    "sens": 0.71,
+    "sens_ci": [
+     0.633,
+     0.792
+    ],
+    "spec": 0.992,
+    "spec_ci": [
+     0.984,
+     0.998
+    ],
+    "sens_blood_remote": 0.71,
+    "sens_by_true_bin": [
+     0.216,
+     1.0,
+     1.0,
+     1.0
+    ],
+    "n_by_true_bin": [
+     37,
+     19,
+     17,
+     27
+    ],
+    "spill_share_sens": 0.0,
+    "fp_rate": 0.0077,
+    "fp_rate_blood_remote": 0.0015
    },
    "E-V|P-G": {
     "n": 71,
@@ -6880,13 +8348,13 @@
    "P-K": {
     "sens": 0.76,
     "sens_ci": [
-     0.683,
-     0.839
+     0.689,
+     0.835
     ],
     "spec": 0.531,
     "spec_ci": [
      0.471,
-     0.596
+     0.597
     ],
     "sens_blood_remote": 0.72,
     "sens_by_true_bin": [
@@ -6908,13 +8376,13 @@
    "P-G": {
     "sens": 0.66,
     "sens_ci": [
-     0.584,
-     0.75
+     0.586,
+     0.746
     ],
     "spec": 0.948,
     "spec_ci": [
-     0.891,
-     0.991
+     0.892,
+     0.989
     ],
     "sens_blood_remote": 0.64,
     "sens_by_true_bin": [
@@ -6936,12 +8404,12 @@
    "P-J": {
     "sens": 0.58,
     "sens_ci": [
-     0.48,
-     0.683
+     0.473,
+     0.686
     ],
     "spec": 0.978,
     "spec_ci": [
-     0.954,
+     0.953,
      0.997
     ],
     "sens_blood_remote": 0.57,
@@ -6960,6 +8428,34 @@
     "spill_share_sens": 0.017,
     "fp_rate": 0.0216,
     "fp_rate_blood_remote": 0.0
+   },
+   "P-J3": {
+    "sens": 0.66,
+    "sens_ci": [
+     0.587,
+     0.738
+    ],
+    "spec": 0.985,
+    "spec_ci": [
+     0.973,
+     0.995
+    ],
+    "sens_blood_remote": 0.62,
+    "sens_by_true_bin": [
+     0.162,
+     0.842,
+     1.0,
+     1.0
+    ],
+    "n_by_true_bin": [
+     37,
+     19,
+     17,
+     27
+    ],
+    "spill_share_sens": 0.061,
+    "fp_rate": 0.0154,
+    "fp_rate_blood_remote": 0.0031
    },
    "E-V|P-G": {
     "n": 66,
@@ -7027,12 +8523,12 @@
     "sens": 0.86,
     "sens_ci": [
      0.792,
-     0.927
+     0.926
     ],
     "spec": 0.557,
     "spec_ci": [
-     0.476,
-     0.629
+     0.475,
+     0.635
     ],
     "sens_blood_remote": 0.79,
     "sens_by_true_bin": [
@@ -7054,13 +8550,13 @@
    "P-G": {
     "sens": 0.58,
     "sens_ci": [
-     0.411,
-     0.734
+     0.404,
+     0.735
     ],
     "spec": 0.898,
     "spec_ci": [
-     0.839,
-     0.952
+     0.837,
+     0.951
     ],
     "sens_blood_remote": 0.51,
     "sens_by_true_bin": [
@@ -7082,7 +8578,7 @@
    "P-J": {
     "sens": 0.3,
     "sens_ci": [
-     0.167,
+     0.173,
      0.427
     ],
     "spec": 0.969,
@@ -7106,6 +8602,34 @@
     "spill_share_sens": 0.2,
     "fp_rate": 0.0309,
     "fp_rate_blood_remote": 0.0262
+   },
+   "P-J3": {
+    "sens": 0.43,
+    "sens_ci": [
+     0.292,
+     0.563
+    ],
+    "spec": 0.988,
+    "spec_ci": [
+     0.977,
+     0.997
+    ],
+    "sens_blood_remote": 0.36,
+    "sens_by_true_bin": [
+     0.108,
+     0.316,
+     0.529,
+     0.889
+    ],
+    "n_by_true_bin": [
+     37,
+     19,
+     17,
+     27
+    ],
+    "spill_share_sens": 0.163,
+    "fp_rate": 0.0123,
+    "fp_rate_blood_remote": 0.0
    },
    "E-V|P-G": {
     "n": 58,
@@ -7172,12 +8696,12 @@
    "P-K": {
     "sens": 0.77,
     "sens_ci": [
-     0.688,
-     0.854
+     0.687,
+     0.849
     ],
     "spec": 0.42,
     "spec_ci": [
-     0.405,
+     0.406,
      0.433
     ],
     "sens_blood_remote": 0.77,
@@ -7228,8 +8752,8 @@
    "P-J": {
     "sens": 0.66,
     "sens_ci": [
-     0.585,
-     0.743
+     0.586,
+     0.742
     ],
     "spec": 0.986,
     "spec_ci": [
@@ -7252,6 +8776,34 @@
     "spill_share_sens": 0.0,
     "fp_rate": 0.0139,
     "fp_rate_blood_remote": 0.0015
+   },
+   "P-J3": {
+    "sens": 0.93,
+    "sens_ci": [
+     0.878,
+     0.976
+    ],
+    "spec": 0.981,
+    "spec_ci": [
+     0.96,
+     0.998
+    ],
+    "sens_blood_remote": 0.9,
+    "sens_by_true_bin": [
+     0.811,
+     1.0,
+     1.0,
+     1.0
+    ],
+    "n_by_true_bin": [
+     37,
+     19,
+     17,
+     27
+    ],
+    "spill_share_sens": 0.032,
+    "fp_rate": 0.0185,
+    "fp_rate_blood_remote": 0.0
    },
    "E-V|P-G": {
     "n": 82,
@@ -7318,13 +8870,13 @@
    "P-K": {
     "sens": 0.86,
     "sens_ci": [
-     0.792,
-     0.919
+     0.793,
+     0.92
     ],
     "spec": 0.502,
     "spec_ci": [
-     0.429,
-     0.562
+     0.433,
+     0.563
     ],
     "sens_blood_remote": 0.8,
     "sens_by_true_bin": [
@@ -7346,13 +8898,13 @@
    "P-G": {
     "sens": 0.64,
     "sens_ci": [
-     0.49,
-     0.772
+     0.486,
+     0.776
     ],
     "spec": 0.836,
     "spec_ci": [
-     0.754,
-     0.913
+     0.756,
+     0.911
     ],
     "sens_blood_remote": 0.58,
     "sens_by_true_bin": [
@@ -7374,12 +8926,12 @@
    "P-J": {
     "sens": 0.25,
     "sens_ci": [
-     0.14,
-     0.367
+     0.139,
+     0.376
     ],
     "spec": 0.971,
     "spec_ci": [
-     0.922,
+     0.921,
      1.0
     ],
     "sens_blood_remote": 0.17,
@@ -7398,6 +8950,34 @@
     "spill_share_sens": 0.32,
     "fp_rate": 0.0293,
     "fp_rate_blood_remote": 0.0525
+   },
+   "P-J3": {
+    "sens": 0.37,
+    "sens_ci": [
+     0.258,
+     0.479
+    ],
+    "spec": 0.991,
+    "spec_ci": [
+     0.981,
+     1.0
+    ],
+    "sens_blood_remote": 0.32,
+    "sens_by_true_bin": [
+     0.054,
+     0.158,
+     0.412,
+     0.926
+    ],
+    "n_by_true_bin": [
+     37,
+     19,
+     17,
+     27
+    ],
+    "spill_share_sens": 0.135,
+    "fp_rate": 0.0093,
+    "fp_rate_blood_remote": 0.0
    },
    "E-V|P-G": {
     "n": 64,
@@ -7465,12 +9045,12 @@
     "sens": 0.8,
     "sens_ci": [
      0.714,
-     0.884
+     0.882
     ],
     "spec": 0.628,
     "spec_ci": [
-     0.555,
-     0.71
+     0.554,
+     0.711
     ],
     "sens_blood_remote": 0.75,
     "sens_by_true_bin": [
@@ -7492,12 +9072,12 @@
    "P-G": {
     "sens": 0.75,
     "sens_ci": [
-     0.67,
-     0.827
+     0.674,
+     0.835
     ],
     "spec": 0.991,
     "spec_ci": [
-     0.982,
+     0.98,
      0.998
     ],
     "sens_blood_remote": 0.72,
@@ -7520,8 +9100,8 @@
    "P-J": {
     "sens": 0.68,
     "sens_ci": [
-     0.602,
-     0.758
+     0.606,
+     0.76
     ],
     "spec": 0.985,
     "spec_ci": [
@@ -7544,6 +9124,34 @@
     "spill_share_sens": -0.015,
     "fp_rate": 0.0154,
     "fp_rate_blood_remote": 0.0046
+   },
+   "P-J3": {
+    "sens": 0.77,
+    "sens_ci": [
+     0.686,
+     0.853
+    ],
+    "spec": 0.988,
+    "spec_ci": [
+     0.977,
+     0.997
+    ],
+    "sens_blood_remote": 0.73,
+    "sens_by_true_bin": [
+     0.378,
+     1.0,
+     1.0,
+     1.0
+    ],
+    "n_by_true_bin": [
+     37,
+     19,
+     17,
+     27
+    ],
+    "spill_share_sens": 0.052,
+    "fp_rate": 0.0123,
+    "fp_rate_blood_remote": 0.0015
    },
    "E-V|P-G": {
     "n": 75,
@@ -7610,13 +9218,13 @@
    "P-K": {
     "sens": 0.82,
     "sens_ci": [
-     0.736,
-     0.9
+     0.737,
+     0.899
     ],
     "spec": 0.62,
     "spec_ci": [
      0.537,
-     0.712
+     0.706
     ],
     "sens_blood_remote": 0.79,
     "sens_by_true_bin": [
@@ -7638,8 +9246,8 @@
    "P-G": {
     "sens": 0.75,
     "sens_ci": [
-     0.676,
-     0.825
+     0.675,
+     0.826
     ],
     "spec": 0.994,
     "spec_ci": [
@@ -7666,12 +9274,12 @@
    "P-J": {
     "sens": 0.7,
     "sens_ci": [
-     0.627,
-     0.777
+     0.622,
+     0.779
     ],
     "spec": 0.988,
     "spec_ci": [
-     0.971,
+     0.973,
      1.0
     ],
     "sens_blood_remote": 0.7,
@@ -7690,6 +9298,34 @@
     "spill_share_sens": 0.0,
     "fp_rate": 0.0123,
     "fp_rate_blood_remote": 0.0031
+   },
+   "P-J3": {
+    "sens": 0.73,
+    "sens_ci": [
+     0.649,
+     0.816
+    ],
+    "spec": 0.994,
+    "spec_ci": [
+     0.986,
+     1.0
+    ],
+    "sens_blood_remote": 0.71,
+    "sens_by_true_bin": [
+     0.27,
+     1.0,
+     1.0,
+     1.0
+    ],
+    "n_by_true_bin": [
+     37,
+     19,
+     17,
+     27
+    ],
+    "spill_share_sens": 0.027,
+    "fp_rate": 0.0062,
+    "fp_rate_blood_remote": 0.0015
    },
    "E-V|P-G": {
     "n": 75,
@@ -7756,13 +9392,13 @@
    "P-K": {
     "sens": 0.78,
     "sens_ci": [
-     0.703,
-     0.862
+     0.701,
+     0.861
     ],
     "spec": 0.588,
     "spec_ci": [
-     0.513,
-     0.666
+     0.518,
+     0.668
     ],
     "sens_blood_remote": 0.74,
     "sens_by_true_bin": [
@@ -7784,13 +9420,13 @@
    "P-G": {
     "sens": 0.72,
     "sens_ci": [
-     0.653,
-     0.793
+     0.654,
+     0.795
     ],
     "spec": 0.924,
     "spec_ci": [
-     0.856,
-     0.981
+     0.854,
+     0.98
     ],
     "sens_blood_remote": 0.69,
     "sens_by_true_bin": [
@@ -7812,12 +9448,12 @@
    "P-J": {
     "sens": 0.59,
     "sens_ci": [
-     0.48,
-     0.688
+     0.482,
+     0.698
     ],
     "spec": 0.986,
     "spec_ci": [
-     0.968,
+     0.971,
      1.0
     ],
     "sens_blood_remote": 0.58,
@@ -7836,6 +9472,34 @@
     "spill_share_sens": 0.017,
     "fp_rate": 0.0139,
     "fp_rate_blood_remote": 0.0
+   },
+   "P-J3": {
+    "sens": 0.66,
+    "sens_ci": [
+     0.573,
+     0.743
+    ],
+    "spec": 0.985,
+    "spec_ci": [
+     0.973,
+     0.995
+    ],
+    "sens_blood_remote": 0.62,
+    "sens_by_true_bin": [
+     0.189,
+     0.789,
+     1.0,
+     1.0
+    ],
+    "n_by_true_bin": [
+     37,
+     19,
+     17,
+     27
+    ],
+    "spill_share_sens": 0.061,
+    "fp_rate": 0.0154,
+    "fp_rate_blood_remote": 0.0015
    },
    "E-V|P-G": {
     "n": 72,
@@ -7903,12 +9567,12 @@
     "sens": 0.86,
     "sens_ci": [
      0.793,
-     0.92
+     0.919
     ],
     "spec": 0.545,
     "spec_ci": [
-     0.467,
-     0.614
+     0.468,
+     0.61
     ],
     "sens_blood_remote": 0.79,
     "sens_by_true_bin": [
@@ -7930,13 +9594,13 @@
    "P-G": {
     "sens": 0.65,
     "sens_ci": [
-     0.49,
-     0.785
+     0.495,
+     0.782
     ],
     "spec": 0.856,
     "spec_ci": [
-     0.783,
-     0.923
+     0.785,
+     0.922
     ],
     "sens_blood_remote": 0.59,
     "sens_by_true_bin": [
@@ -7958,12 +9622,12 @@
    "P-J": {
     "sens": 0.27,
     "sens_ci": [
-     0.143,
-     0.409
+     0.146,
+     0.4
     ],
     "spec": 0.972,
     "spec_ci": [
-     0.919,
+     0.922,
      1.0
     ],
     "sens_blood_remote": 0.25,
@@ -7982,6 +9646,34 @@
     "spill_share_sens": 0.074,
     "fp_rate": 0.0278,
     "fp_rate_blood_remote": 0.037
+   },
+   "P-J3": {
+    "sens": 0.45,
+    "sens_ci": [
+     0.321,
+     0.575
+    ],
+    "spec": 0.988,
+    "spec_ci": [
+     0.975,
+     0.998
+    ],
+    "sens_blood_remote": 0.37,
+    "sens_by_true_bin": [
+     0.108,
+     0.316,
+     0.588,
+     0.926
+    ],
+    "n_by_true_bin": [
+     37,
+     19,
+     17,
+     27
+    ],
+    "spill_share_sens": 0.178,
+    "fp_rate": 0.0123,
+    "fp_rate_blood_remote": 0.0
    },
    "E-V|P-G": {
     "n": 65,
@@ -8048,13 +9740,13 @@
    "P-K": {
     "sens": 0.78,
     "sens_ci": [
-     0.696,
-     0.863
+     0.697,
+     0.861
     ],
     "spec": 0.418,
     "spec_ci": [
      0.405,
-     0.431
+     0.432
     ],
     "sens_blood_remote": 0.75,
     "sens_by_true_bin": [
@@ -8076,8 +9768,8 @@
    "P-G": {
     "sens": 0.72,
     "sens_ci": [
-     0.642,
-     0.798
+     0.64,
+     0.8
     ],
     "spec": 1.0,
     "spec_ci": [
@@ -8104,13 +9796,13 @@
    "P-J": {
     "sens": 0.67,
     "sens_ci": [
-     0.595,
-     0.75
+     0.598,
+     0.752
     ],
     "spec": 0.978,
     "spec_ci": [
      0.961,
-     0.994
+     0.992
     ],
     "sens_blood_remote": 0.67,
     "sens_by_true_bin": [
@@ -8127,6 +9819,34 @@
     ],
     "spill_share_sens": 0.0,
     "fp_rate": 0.0216,
+    "fp_rate_blood_remote": 0.0
+   },
+   "P-J3": {
+    "sens": 0.9,
+    "sens_ci": [
+     0.84,
+     0.959
+    ],
+    "spec": 0.983,
+    "spec_ci": [
+     0.965,
+     0.997
+    ],
+    "sens_blood_remote": 0.86,
+    "sens_by_true_bin": [
+     0.73,
+     1.0,
+     1.0,
+     1.0
+    ],
+    "n_by_true_bin": [
+     37,
+     19,
+     17,
+     27
+    ],
+    "spill_share_sens": 0.044,
+    "fp_rate": 0.017,
     "fp_rate_blood_remote": 0.0
    },
    "E-V|P-G": {
@@ -8194,13 +9914,13 @@
    "P-K": {
     "sens": 0.82,
     "sens_ci": [
-     0.733,
-     0.904
+     0.732,
+     0.897
     ],
     "spec": 0.511,
     "spec_ci": [
-     0.435,
-     0.584
+     0.434,
+     0.582
     ],
     "sens_blood_remote": 0.78,
     "sens_by_true_bin": [
@@ -8222,13 +9942,13 @@
    "P-G": {
     "sens": 0.51,
     "sens_ci": [
-     0.327,
-     0.674
+     0.333,
+     0.681
     ],
     "spec": 0.835,
     "spec_ci": [
-     0.751,
-     0.91
+     0.753,
+     0.913
     ],
     "sens_blood_remote": 0.44,
     "sens_by_true_bin": [
@@ -8250,12 +9970,12 @@
    "P-J": {
     "sens": 0.24,
     "sens_ci": [
-     0.139,
-     0.36
+     0.14,
+     0.354
     ],
     "spec": 0.974,
     "spec_ci": [
-     0.928,
+     0.929,
      1.0
     ],
     "sens_blood_remote": 0.17,
@@ -8274,6 +9994,34 @@
     "spill_share_sens": 0.292,
     "fp_rate": 0.0262,
     "fp_rate_blood_remote": 0.0201
+   },
+   "P-J3": {
+    "sens": 0.29,
+    "sens_ci": [
+     0.172,
+     0.414
+    ],
+    "spec": 0.992,
+    "spec_ci": [
+     0.983,
+     1.0
+    ],
+    "sens_blood_remote": 0.24,
+    "sens_by_true_bin": [
+     0.027,
+     0.105,
+     0.294,
+     0.778
+    ],
+    "n_by_true_bin": [
+     37,
+     19,
+     17,
+     27
+    ],
+    "spill_share_sens": 0.172,
+    "fp_rate": 0.0077,
+    "fp_rate_blood_remote": 0.0
    },
    "E-V|P-G": {
     "n": 51,
@@ -8340,13 +10088,13 @@
    "P-K": {
     "sens": 0.81,
     "sens_ci": [
-     0.722,
-     0.893
+     0.723,
+     0.895
     ],
     "spec": 0.631,
     "spec_ci": [
-     0.549,
-     0.716
+     0.547,
+     0.715
     ],
     "sens_blood_remote": 0.76,
     "sens_by_true_bin": [
@@ -8368,12 +10116,12 @@
    "P-G": {
     "sens": 0.7,
     "sens_ci": [
-     0.627,
+     0.621,
      0.781
     ],
     "spec": 0.991,
     "spec_ci": [
-     0.978,
+     0.979,
      1.0
     ],
     "sens_blood_remote": 0.69,
@@ -8396,8 +10144,8 @@
    "P-J": {
     "sens": 0.67,
     "sens_ci": [
-     0.594,
-     0.756
+     0.595,
+     0.755
     ],
     "spec": 0.995,
     "spec_ci": [
@@ -8420,6 +10168,34 @@
     "spill_share_sens": 0.03,
     "fp_rate": 0.0046,
     "fp_rate_blood_remote": 0.0046
+   },
+   "P-J3": {
+    "sens": 0.7,
+    "sens_ci": [
+     0.623,
+     0.777
+    ],
+    "spec": 0.988,
+    "spec_ci": [
+     0.975,
+     0.997
+    ],
+    "sens_blood_remote": 0.7,
+    "sens_by_true_bin": [
+     0.189,
+     1.0,
+     1.0,
+     1.0
+    ],
+    "n_by_true_bin": [
+     37,
+     19,
+     17,
+     27
+    ],
+    "spill_share_sens": 0.0,
+    "fp_rate": 0.0123,
+    "fp_rate_blood_remote": 0.0
    },
    "E-V|P-G": {
     "n": 70,
@@ -8486,13 +10262,13 @@
    "P-K": {
     "sens": 0.8,
     "sens_ci": [
-     0.718,
+     0.716,
      0.882
     ],
     "spec": 0.616,
     "spec_ci": [
-     0.529,
-     0.704
+     0.53,
+     0.702
     ],
     "sens_blood_remote": 0.77,
     "sens_by_true_bin": [
@@ -8514,7 +10290,7 @@
    "P-G": {
     "sens": 0.71,
     "sens_ci": [
-     0.629,
+     0.631,
      0.789
     ],
     "spec": 0.992,
@@ -8542,8 +10318,8 @@
    "P-J": {
     "sens": 0.67,
     "sens_ci": [
-     0.594,
-     0.752
+     0.595,
+     0.758
     ],
     "spec": 0.988,
     "spec_ci": [
@@ -8566,6 +10342,34 @@
     "spill_share_sens": 0.03,
     "fp_rate": 0.0123,
     "fp_rate_blood_remote": 0.0031
+   },
+   "P-J3": {
+    "sens": 0.72,
+    "sens_ci": [
+     0.64,
+     0.798
+    ],
+    "spec": 0.994,
+    "spec_ci": [
+     0.983,
+     1.0
+    ],
+    "sens_blood_remote": 0.72,
+    "sens_by_true_bin": [
+     0.243,
+     1.0,
+     1.0,
+     1.0
+    ],
+    "n_by_true_bin": [
+     37,
+     19,
+     17,
+     27
+    ],
+    "spill_share_sens": 0.0,
+    "fp_rate": 0.0062,
+    "fp_rate_blood_remote": 0.0
    },
    "E-V|P-G": {
     "n": 71,
@@ -8632,13 +10436,13 @@
    "P-K": {
     "sens": 0.76,
     "sens_ci": [
-     0.684,
-     0.844
+     0.681,
+     0.839
     ],
     "spec": 0.583,
     "spec_ci": [
-     0.503,
-     0.662
+     0.506,
+     0.663
     ],
     "sens_blood_remote": 0.76,
     "sens_by_true_bin": [
@@ -8660,13 +10464,13 @@
    "P-G": {
     "sens": 0.68,
     "sens_ci": [
-     0.604,
-     0.762
+     0.602,
+     0.76
     ],
     "spec": 0.937,
     "spec_ci": [
-     0.865,
-     0.986
+     0.867,
+     0.988
     ],
     "sens_blood_remote": 0.66,
     "sens_by_true_bin": [
@@ -8688,8 +10492,8 @@
    "P-J": {
     "sens": 0.63,
     "sens_ci": [
-     0.53,
-     0.721
+     0.529,
+     0.725
     ],
     "spec": 0.989,
     "spec_ci": [
@@ -8711,6 +10515,34 @@
     ],
     "spill_share_sens": 0.032,
     "fp_rate": 0.0108,
+    "fp_rate_blood_remote": 0.0
+   },
+   "P-J3": {
+    "sens": 0.66,
+    "sens_ci": [
+     0.579,
+     0.74
+    ],
+    "spec": 0.997,
+    "spec_ci": [
+     0.991,
+     1.0
+    ],
+    "sens_blood_remote": 0.64,
+    "sens_by_true_bin": [
+     0.162,
+     0.842,
+     1.0,
+     1.0
+    ],
+    "n_by_true_bin": [
+     37,
+     19,
+     17,
+     27
+    ],
+    "spill_share_sens": 0.03,
+    "fp_rate": 0.0031,
     "fp_rate_blood_remote": 0.0
    },
    "E-V|P-G": {
@@ -8778,13 +10610,13 @@
    "P-K": {
     "sens": 0.86,
     "sens_ci": [
-     0.776,
-     0.933
+     0.772,
+     0.936
     ],
     "spec": 0.529,
     "spec_ci": [
-     0.456,
-     0.589
+     0.459,
+     0.588
     ],
     "sens_blood_remote": 0.78,
     "sens_by_true_bin": [
@@ -8806,13 +10638,13 @@
    "P-G": {
     "sens": 0.64,
     "sens_ci": [
-     0.5,
-     0.778
+     0.484,
+     0.766
     ],
     "spec": 0.863,
     "spec_ci": [
-     0.801,
-     0.922
+     0.796,
+     0.921
     ],
     "sens_blood_remote": 0.53,
     "sens_by_true_bin": [
@@ -8834,12 +10666,12 @@
    "P-J": {
     "sens": 0.28,
     "sens_ci": [
-     0.158,
-     0.42
+     0.16,
+     0.413
     ],
     "spec": 0.974,
     "spec_ci": [
-     0.924,
+     0.925,
      1.0
     ],
     "sens_blood_remote": 0.23,
@@ -8858,6 +10690,34 @@
     "spill_share_sens": 0.179,
     "fp_rate": 0.0262,
     "fp_rate_blood_remote": 0.0231
+   },
+   "P-J3": {
+    "sens": 0.38,
+    "sens_ci": [
+     0.256,
+     0.5
+    ],
+    "spec": 0.988,
+    "spec_ci": [
+     0.976,
+     0.997
+    ],
+    "sens_blood_remote": 0.32,
+    "sens_by_true_bin": [
+     0.054,
+     0.211,
+     0.471,
+     0.889
+    ],
+    "n_by_true_bin": [
+     37,
+     19,
+     17,
+     27
+    ],
+    "spill_share_sens": 0.158,
+    "fp_rate": 0.0123,
+    "fp_rate_blood_remote": 0.0
    },
    "E-V|P-G": {
     "n": 64,
@@ -8924,13 +10784,13 @@
    "P-K": {
     "sens": 0.78,
     "sens_ci": [
-     0.697,
-     0.865
+     0.695,
+     0.86
     ],
     "spec": 0.418,
     "spec_ci": [
      0.405,
-     0.431
+     0.432
     ],
     "sens_blood_remote": 0.77,
     "sens_by_true_bin": [
@@ -8953,7 +10813,7 @@
     "sens": 0.82,
     "sens_ci": [
      0.748,
-     0.896
+     0.898
     ],
     "spec": 1.0,
     "spec_ci": [
@@ -8980,12 +10840,12 @@
    "P-J": {
     "sens": 0.67,
     "sens_ci": [
-     0.596,
-     0.756
+     0.598,
+     0.755
     ],
     "spec": 0.983,
     "spec_ci": [
-     0.968,
+     0.966,
      0.997
     ],
     "sens_blood_remote": 0.67,
@@ -9003,6 +10863,34 @@
     ],
     "spill_share_sens": 0.0,
     "fp_rate": 0.017,
+    "fp_rate_blood_remote": 0.0
+   },
+   "P-J3": {
+    "sens": 0.89,
+    "sens_ci": [
+     0.823,
+     0.952
+    ],
+    "spec": 0.985,
+    "spec_ci": [
+     0.966,
+     0.997
+    ],
+    "sens_blood_remote": 0.86,
+    "sens_by_true_bin": [
+     0.703,
+     1.0,
+     1.0,
+     1.0
+    ],
+    "n_by_true_bin": [
+     37,
+     19,
+     17,
+     27
+    ],
+    "spill_share_sens": 0.034,
+    "fp_rate": 0.0154,
     "fp_rate_blood_remote": 0.0
    },
    "E-V|P-G": {
@@ -9070,13 +10958,13 @@
    "P-K": {
     "sens": 0.84,
     "sens_ci": [
-     0.77,
-     0.91
+     0.773,
+     0.908
     ],
     "spec": 0.525,
     "spec_ci": [
-     0.449,
-     0.599
+     0.447,
+     0.598
     ],
     "sens_blood_remote": 0.79,
     "sens_by_true_bin": [
@@ -9098,13 +10986,13 @@
    "P-G": {
     "sens": 0.73,
     "sens_ci": [
-     0.621,
+     0.617,
      0.833
     ],
     "spec": 0.776,
     "spec_ci": [
-     0.691,
-     0.855
+     0.697,
+     0.854
     ],
     "sens_blood_remote": 0.58,
     "sens_by_true_bin": [
@@ -9126,12 +11014,12 @@
    "P-J": {
     "sens": 0.26,
     "sens_ci": [
-     0.156,
-     0.38
+     0.154,
+     0.378
     ],
     "spec": 0.971,
     "spec_ci": [
-     0.915,
+     0.921,
      1.0
     ],
     "sens_blood_remote": 0.18,
@@ -9150,6 +11038,34 @@
     "spill_share_sens": 0.308,
     "fp_rate": 0.0293,
     "fp_rate_blood_remote": 0.0247
+   },
+   "P-J3": {
+    "sens": 0.37,
+    "sens_ci": [
+     0.26,
+     0.474
+    ],
+    "spec": 0.988,
+    "spec_ci": [
+     0.977,
+     0.997
+    ],
+    "sens_blood_remote": 0.31,
+    "sens_by_true_bin": [
+     0.054,
+     0.158,
+     0.412,
+     0.926
+    ],
+    "n_by_true_bin": [
+     37,
+     19,
+     17,
+     27
+    ],
+    "spill_share_sens": 0.162,
+    "fp_rate": 0.0123,
+    "fp_rate_blood_remote": 0.0
    },
    "E-V|P-G": {
     "n": 73,
@@ -9216,13 +11132,13 @@
    "P-K": {
     "sens": 0.81,
     "sens_ci": [
-     0.726,
+     0.723,
      0.897
     ],
     "spec": 0.687,
     "spec_ci": [
-     0.601,
-     0.765
+     0.605,
+     0.767
     ],
     "sens_blood_remote": 0.77,
     "sens_by_true_bin": [
@@ -9244,12 +11160,12 @@
    "P-G": {
     "sens": 0.78,
     "sens_ci": [
-     0.695,
-     0.86
+     0.7,
+     0.864
     ],
     "spec": 0.98,
     "spec_ci": [
-     0.964,
+     0.963,
      0.994
     ],
     "sens_blood_remote": 0.75,
@@ -9273,11 +11189,11 @@
     "sens": 0.67,
     "sens_ci": [
      0.598,
-     0.75
+     0.753
     ],
     "spec": 0.989,
     "spec_ci": [
-     0.97,
+     0.968,
      1.0
     ],
     "sens_blood_remote": 0.67,
@@ -9296,6 +11212,34 @@
     "spill_share_sens": 0.0,
     "fp_rate": 0.0108,
     "fp_rate_blood_remote": 0.0015
+   },
+   "P-J3": {
+    "sens": 0.73,
+    "sens_ci": [
+     0.645,
+     0.81
+    ],
+    "spec": 0.989,
+    "spec_ci": [
+     0.978,
+     0.998
+    ],
+    "sens_blood_remote": 0.71,
+    "sens_by_true_bin": [
+     0.27,
+     1.0,
+     1.0,
+     1.0
+    ],
+    "n_by_true_bin": [
+     37,
+     19,
+     17,
+     27
+    ],
+    "spill_share_sens": 0.027,
+    "fp_rate": 0.0108,
+    "fp_rate_blood_remote": 0.0
    },
    "E-V|P-G": {
     "n": 78,
@@ -9362,13 +11306,13 @@
    "P-K": {
     "sens": 0.8,
     "sens_ci": [
-     0.718,
-     0.883
+     0.716,
+     0.884
     ],
     "spec": 0.659,
     "spec_ci": [
-     0.577,
-     0.743
+     0.579,
+     0.74
     ],
     "sens_blood_remote": 0.78,
     "sens_by_true_bin": [
@@ -9390,8 +11334,8 @@
    "P-G": {
     "sens": 0.76,
     "sens_ci": [
-     0.676,
-     0.844
+     0.673,
+     0.847
     ],
     "spec": 0.983,
     "spec_ci": [
@@ -9418,8 +11362,8 @@
    "P-J": {
     "sens": 0.7,
     "sens_ci": [
-     0.62,
-     0.784
+     0.623,
+     0.776
     ],
     "spec": 0.992,
     "spec_ci": [
@@ -9442,6 +11386,34 @@
     "spill_share_sens": -0.014,
     "fp_rate": 0.0077,
     "fp_rate_blood_remote": 0.0015
+   },
+   "P-J3": {
+    "sens": 0.72,
+    "sens_ci": [
+     0.642,
+     0.8
+    ],
+    "spec": 0.995,
+    "spec_ci": [
+     0.988,
+     1.0
+    ],
+    "sens_blood_remote": 0.72,
+    "sens_by_true_bin": [
+     0.243,
+     1.0,
+     1.0,
+     1.0
+    ],
+    "n_by_true_bin": [
+     37,
+     19,
+     17,
+     27
+    ],
+    "spill_share_sens": 0.0,
+    "fp_rate": 0.0046,
+    "fp_rate_blood_remote": 0.0
    },
    "E-V|P-G": {
     "n": 76,
@@ -9508,13 +11480,13 @@
    "P-K": {
     "sens": 0.78,
     "sens_ci": [
-     0.699,
-     0.853
+     0.7,
+     0.859
     ],
     "spec": 0.653,
     "spec_ci": [
      0.576,
-     0.733
+     0.727
     ],
     "sens_blood_remote": 0.76,
     "sens_by_true_bin": [
@@ -9536,12 +11508,12 @@
    "P-G": {
     "sens": 0.75,
     "sens_ci": [
-     0.673,
-     0.83
+     0.67,
+     0.831
     ],
     "spec": 0.974,
     "spec_ci": [
-     0.945,
+     0.944,
      0.995
     ],
     "sens_blood_remote": 0.73,
@@ -9564,8 +11536,8 @@
    "P-J": {
     "sens": 0.64,
     "sens_ci": [
-     0.537,
-     0.734
+     0.541,
+     0.729
     ],
     "spec": 0.997,
     "spec_ci": [
@@ -9588,6 +11560,34 @@
     "spill_share_sens": -0.016,
     "fp_rate": 0.0031,
     "fp_rate_blood_remote": 0.0015
+   },
+   "P-J3": {
+    "sens": 0.7,
+    "sens_ci": [
+     0.624,
+     0.776
+    ],
+    "spec": 0.998,
+    "spec_ci": [
+     0.995,
+     1.0
+    ],
+    "sens_blood_remote": 0.69,
+    "sens_by_true_bin": [
+     0.243,
+     0.895,
+     1.0,
+     1.0
+    ],
+    "n_by_true_bin": [
+     37,
+     19,
+     17,
+     27
+    ],
+    "spill_share_sens": 0.014,
+    "fp_rate": 0.0015,
+    "fp_rate_blood_remote": 0.0
    },
    "E-V|P-G": {
     "n": 75,
@@ -9655,11 +11655,11 @@
     "sens": 0.86,
     "sens_ci": [
      0.79,
-     0.928
+     0.93
     ],
     "spec": 0.557,
     "spec_ci": [
-     0.479,
+     0.478,
      0.632
     ],
     "sens_blood_remote": 0.8,
@@ -9682,13 +11682,13 @@
    "P-G": {
     "sens": 0.74,
     "sens_ci": [
-     0.617,
-     0.84
+     0.63,
+     0.843
     ],
     "spec": 0.807,
     "spec_ci": [
-     0.736,
-     0.873
+     0.737,
+     0.872
     ],
     "sens_blood_remote": 0.59,
     "sens_by_true_bin": [
@@ -9710,12 +11710,12 @@
    "P-J": {
     "sens": 0.27,
     "sens_ci": [
-     0.144,
-     0.411
+     0.143,
+     0.4
     ],
     "spec": 0.971,
     "spec_ci": [
-     0.916,
+     0.917,
      1.0
     ],
     "sens_blood_remote": 0.25,
@@ -9734,6 +11734,34 @@
     "spill_share_sens": 0.074,
     "fp_rate": 0.0293,
     "fp_rate_blood_remote": 0.0324
+   },
+   "P-J3": {
+    "sens": 0.44,
+    "sens_ci": [
+     0.33,
+     0.544
+    ],
+    "spec": 0.985,
+    "spec_ci": [
+     0.968,
+     0.998
+    ],
+    "sens_blood_remote": 0.36,
+    "sens_by_true_bin": [
+     0.081,
+     0.316,
+     0.529,
+     0.963
+    ],
+    "n_by_true_bin": [
+     37,
+     19,
+     17,
+     27
+    ],
+    "spill_share_sens": 0.182,
+    "fp_rate": 0.0154,
+    "fp_rate_blood_remote": 0.0
    },
    "E-V|P-G": {
     "n": 74,
@@ -9800,13 +11828,13 @@
    "P-K": {
     "sens": 0.794,
     "sens_ci": [
-     0.711,
-     0.874
+     0.712,
+     0.878
     ],
     "spec": 0.435,
     "spec_ci": [
      0.416,
-     0.46
+     0.462
     ],
     "sens_blood_remote": 0.784,
     "sens_by_true_bin": [
@@ -9828,8 +11856,8 @@
    "P-G": {
     "sens": 0.742,
     "sens_ci": [
-     0.664,
-     0.827
+     0.663,
+     0.825
     ],
     "spec": 1.0,
     "spec_ci": [
@@ -9856,12 +11884,12 @@
    "P-J": {
     "sens": 0.722,
     "sens_ci": [
-     0.644,
-     0.802
+     0.642,
+     0.806
     ],
     "spec": 0.983,
     "spec_ci": [
-     0.968,
+     0.967,
      0.995
     ],
     "sens_blood_remote": 0.722,
@@ -9880,6 +11908,34 @@
     "spill_share_sens": 0.0,
     "fp_rate": 0.0169,
     "fp_rate_blood_remote": 0.0
+   },
+   "P-J3": {
+    "sens": 0.969,
+    "sens_ci": [
+     0.933,
+     1.0
+    ],
+    "spec": 0.995,
+    "spec_ci": [
+     0.988,
+     1.0
+    ],
+    "sens_blood_remote": 0.969,
+    "sens_by_true_bin": [
+     0.912,
+     1.0,
+     1.0,
+     1.0
+    ],
+    "n_by_true_bin": [
+     34,
+     20,
+     16,
+     27
+    ],
+    "spill_share_sens": 0.0,
+    "fp_rate": 0.0046,
+    "fp_rate_blood_remote": 0.0031
    },
    "E-V|P-G": {
     "n": 72,
@@ -9946,13 +12002,13 @@
    "P-K": {
     "sens": 0.835,
     "sens_ci": [
-     0.769,
-     0.909
+     0.768,
+     0.903
     ],
     "spec": 0.462,
     "spec_ci": [
-     0.363,
-     0.568
+     0.359,
+     0.565
     ],
     "sens_blood_remote": 0.856,
     "sens_by_true_bin": [
@@ -9975,11 +12031,11 @@
     "sens": 0.247,
     "sens_ci": [
      0.108,
-     0.398
+     0.389
     ],
     "spec": 0.988,
     "spec_ci": [
-     0.97,
+     0.971,
      0.998
     ],
     "sens_blood_remote": 0.237,
@@ -10002,12 +12058,12 @@
    "P-J": {
     "sens": 0.258,
     "sens_ci": [
-     0.143,
-     0.385
+     0.15,
+     0.388
     ],
     "spec": 0.932,
     "spec_ci": [
-     0.849,
+     0.863,
      0.998
     ],
     "sens_blood_remote": 0.247,
@@ -10026,6 +12082,34 @@
     "spill_share_sens": 0.04,
     "fp_rate": 0.0676,
     "fp_rate_blood_remote": 0.1014
+   },
+   "P-J3": {
+    "sens": 0.268,
+    "sens_ci": [
+     0.126,
+     0.418
+    ],
+    "spec": 1.0,
+    "spec_ci": [
+     1.0,
+     1.0
+    ],
+    "sens_blood_remote": 0.268,
+    "sens_by_true_bin": [
+     0.059,
+     0.25,
+     0.375,
+     0.481
+    ],
+    "n_by_true_bin": [
+     34,
+     20,
+     16,
+     27
+    ],
+    "spill_share_sens": 0.0,
+    "fp_rate": 0.0,
+    "fp_rate_blood_remote": 0.0
    },
    "E-V|P-G": {
     "n": 24,
@@ -10092,13 +12176,13 @@
    "P-K": {
     "sens": 0.763,
     "sens_ci": [
-     0.677,
-     0.852
+     0.681,
+     0.85
     ],
     "spec": 0.407,
     "spec_ci": [
-     0.359,
-     0.455
+     0.354,
+     0.453
     ],
     "sens_blood_remote": 0.742,
     "sens_by_true_bin": [
@@ -10120,8 +12204,8 @@
    "P-G": {
     "sens": 0.588,
     "sens_ci": [
-     0.47,
-     0.684
+     0.473,
+     0.688
     ],
     "spec": 0.998,
     "spec_ci": [
@@ -10148,8 +12232,8 @@
    "P-J": {
     "sens": 0.629,
     "sens_ci": [
-     0.559,
-     0.705
+     0.558,
+     0.707
     ],
     "spec": 0.982,
     "spec_ci": [
@@ -10172,6 +12256,34 @@
     "spill_share_sens": 0.0,
     "fp_rate": 0.0184,
     "fp_rate_blood_remote": 0.0169
+   },
+   "P-J3": {
+    "sens": 0.732,
+    "sens_ci": [
+     0.647,
+     0.816
+    ],
+    "spec": 0.992,
+    "spec_ci": [
+     0.983,
+     1.0
+    ],
+    "sens_blood_remote": 0.722,
+    "sens_by_true_bin": [
+     0.294,
+     0.9,
+     1.0,
+     1.0
+    ],
+    "n_by_true_bin": [
+     34,
+     20,
+     16,
+     27
+    ],
+    "spill_share_sens": 0.014,
+    "fp_rate": 0.0077,
+    "fp_rate_blood_remote": 0.0077
    },
    "E-V|P-G": {
     "n": 57,
@@ -10238,8 +12350,8 @@
    "P-K": {
     "sens": 0.784,
     "sens_ci": [
-     0.704,
-     0.872
+     0.706,
+     0.863
     ],
     "spec": 0.395,
     "spec_ci": [
@@ -10266,8 +12378,8 @@
    "P-G": {
     "sens": 0.711,
     "sens_ci": [
-     0.63,
-     0.802
+     0.633,
+     0.796
     ],
     "spec": 0.997,
     "spec_ci": [
@@ -10294,8 +12406,8 @@
    "P-J": {
     "sens": 0.691,
     "sens_ci": [
-     0.619,
-     0.774
+     0.615,
+     0.773
     ],
     "spec": 0.98,
     "spec_ci": [
@@ -10318,6 +12430,34 @@
     "spill_share_sens": 0.03,
     "fp_rate": 0.02,
     "fp_rate_blood_remote": 0.0
+   },
+   "P-J3": {
+    "sens": 0.825,
+    "sens_ci": [
+     0.747,
+     0.9
+    ],
+    "spec": 0.986,
+    "spec_ci": [
+     0.971,
+     0.997
+    ],
+    "sens_blood_remote": 0.825,
+    "sens_by_true_bin": [
+     0.5,
+     1.0,
+     1.0,
+     1.0
+    ],
+    "n_by_true_bin": [
+     34,
+     20,
+     16,
+     27
+    ],
+    "spill_share_sens": 0.0,
+    "fp_rate": 0.0138,
+    "fp_rate_blood_remote": 0.0077
    },
    "E-V|P-G": {
     "n": 69,
@@ -10384,13 +12524,13 @@
    "P-K": {
     "sens": 0.773,
     "sens_ci": [
-     0.699,
-     0.847
+     0.702,
+     0.845
     ],
     "spec": 0.441,
     "spec_ci": [
-     0.37,
-     0.51
+     0.372,
+     0.509
     ],
     "sens_blood_remote": 0.773,
     "sens_by_true_bin": [
@@ -10412,8 +12552,8 @@
    "P-G": {
     "sens": 0.536,
     "sens_ci": [
-     0.426,
-     0.645
+     0.423,
+     0.642
     ],
     "spec": 0.989,
     "spec_ci": [
@@ -10440,8 +12580,8 @@
    "P-J": {
     "sens": 0.526,
     "sens_ci": [
-     0.417,
-     0.626
+     0.424,
+     0.622
     ],
     "spec": 0.98,
     "spec_ci": [
@@ -10464,6 +12604,34 @@
     "spill_share_sens": -0.02,
     "fp_rate": 0.02,
     "fp_rate_blood_remote": 0.0123
+   },
+   "P-J3": {
+    "sens": 0.691,
+    "sens_ci": [
+     0.594,
+     0.789
+    ],
+    "spec": 0.995,
+    "spec_ci": [
+     0.988,
+     1.0
+    ],
+    "sens_blood_remote": 0.67,
+    "sens_by_true_bin": [
+     0.265,
+     0.8,
+     1.0,
+     0.963
+    ],
+    "n_by_true_bin": [
+     34,
+     20,
+     16,
+     27
+    ],
+    "spill_share_sens": 0.03,
+    "fp_rate": 0.0046,
+    "fp_rate_blood_remote": 0.0046
    },
    "E-V|P-G": {
     "n": 52,
@@ -10530,8 +12698,8 @@
    "P-K": {
     "sens": 0.794,
     "sens_ci": [
-     0.713,
-     0.876
+     0.711,
+     0.877
     ],
     "spec": 0.418,
     "spec_ci": [
@@ -10558,8 +12726,8 @@
    "P-G": {
     "sens": 0.814,
     "sens_ci": [
-     0.729,
-     0.902
+     0.726,
+     0.9
     ],
     "spec": 1.0,
     "spec_ci": [
@@ -10586,8 +12754,8 @@
    "P-J": {
     "sens": 0.732,
     "sens_ci": [
-     0.653,
-     0.824
+     0.65,
+     0.82
     ],
     "spec": 0.995,
     "spec_ci": [
@@ -10610,6 +12778,34 @@
     "spill_share_sens": 0.014,
     "fp_rate": 0.0046,
     "fp_rate_blood_remote": 0.0
+   },
+   "P-J3": {
+    "sens": 0.969,
+    "sens_ci": [
+     0.931,
+     1.0
+    ],
+    "spec": 0.988,
+    "spec_ci": [
+     0.976,
+     0.997
+    ],
+    "sens_blood_remote": 0.959,
+    "sens_by_true_bin": [
+     0.912,
+     1.0,
+     1.0,
+     1.0
+    ],
+    "n_by_true_bin": [
+     34,
+     20,
+     16,
+     27
+    ],
+    "spill_share_sens": 0.011,
+    "fp_rate": 0.0123,
+    "fp_rate_blood_remote": 0.0061
    },
    "E-V|P-G": {
     "n": 79,
@@ -10676,13 +12872,13 @@
    "P-K": {
     "sens": 0.835,
     "sens_ci": [
-     0.767,
-     0.903
+     0.766,
+     0.905
     ],
     "spec": 0.539,
     "spec_ci": [
-     0.417,
-     0.65
+     0.418,
+     0.658
     ],
     "sens_blood_remote": 0.845,
     "sens_by_true_bin": [
@@ -10704,12 +12900,12 @@
    "P-G": {
     "sens": 0.371,
     "sens_ci": [
-     0.237,
-     0.505
+     0.234,
+     0.515
     ],
     "spec": 0.982,
     "spec_ci": [
-     0.958,
+     0.957,
      0.997
     ],
     "sens_blood_remote": 0.371,
@@ -10732,12 +12928,12 @@
    "P-J": {
     "sens": 0.216,
     "sens_ci": [
-     0.113,
-     0.347
+     0.106,
+     0.337
     ],
     "spec": 0.926,
     "spec_ci": [
-     0.848,
+     0.844,
      0.994
     ],
     "sens_blood_remote": 0.227,
@@ -10756,6 +12952,34 @@
     "spill_share_sens": -0.048,
     "fp_rate": 0.0737,
     "fp_rate_blood_remote": 0.1367
+   },
+   "P-J3": {
+    "sens": 0.227,
+    "sens_ci": [
+     0.107,
+     0.36
+    ],
+    "spec": 0.997,
+    "spec_ci": [
+     0.991,
+     1.0
+    ],
+    "sens_blood_remote": 0.227,
+    "sens_by_true_bin": [
+     0.0,
+     0.1,
+     0.25,
+     0.593
+    ],
+    "n_by_true_bin": [
+     34,
+     20,
+     16,
+     27
+    ],
+    "spill_share_sens": 0.0,
+    "fp_rate": 0.0031,
+    "fp_rate_blood_remote": 0.0
    },
    "E-V|P-G": {
     "n": 36,
@@ -10822,13 +13046,13 @@
    "P-K": {
     "sens": 0.784,
     "sens_ci": [
-     0.704,
-     0.87
+     0.695,
+     0.871
     ],
     "spec": 0.544,
     "spec_ci": [
-     0.475,
-     0.616
+     0.474,
+     0.617
     ],
     "sens_blood_remote": 0.753,
     "sens_by_true_bin": [
@@ -10850,8 +13074,8 @@
    "P-G": {
     "sens": 0.68,
     "sens_ci": [
-     0.602,
-     0.764
+     0.607,
+     0.765
     ],
     "spec": 0.994,
     "spec_ci": [
@@ -10879,7 +13103,7 @@
     "sens": 0.629,
     "sens_ci": [
      0.559,
-     0.707
+     0.705
     ],
     "spec": 0.98,
     "spec_ci": [
@@ -10902,6 +13126,34 @@
     "spill_share_sens": -0.016,
     "fp_rate": 0.02,
     "fp_rate_blood_remote": 0.0276
+   },
+   "P-J3": {
+    "sens": 0.742,
+    "sens_ci": [
+     0.663,
+     0.827
+    ],
+    "spec": 0.983,
+    "spec_ci": [
+     0.958,
+     1.0
+    ],
+    "sens_blood_remote": 0.732,
+    "sens_by_true_bin": [
+     0.294,
+     0.95,
+     1.0,
+     1.0
+    ],
+    "n_by_true_bin": [
+     34,
+     20,
+     16,
+     27
+    ],
+    "spill_share_sens": 0.014,
+    "fp_rate": 0.0169,
+    "fp_rate_blood_remote": 0.0061
    },
    "E-V|P-G": {
     "n": 66,
@@ -10968,13 +13220,13 @@
    "P-K": {
     "sens": 0.794,
     "sens_ci": [
-     0.714,
-     0.874
+     0.71,
+     0.879
     ],
     "spec": 0.502,
     "spec_ci": [
-     0.444,
-     0.564
+     0.447,
+     0.566
     ],
     "sens_blood_remote": 0.784,
     "sens_by_true_bin": [
@@ -10996,8 +13248,8 @@
    "P-G": {
     "sens": 0.722,
     "sens_ci": [
-     0.64,
-     0.804
+     0.637,
+     0.803
     ],
     "spec": 0.997,
     "spec_ci": [
@@ -11024,8 +13276,8 @@
    "P-J": {
     "sens": 0.67,
     "sens_ci": [
-     0.589,
-     0.761
+     0.592,
+     0.76
     ],
     "spec": 0.988,
     "spec_ci": [
@@ -11048,6 +13300,34 @@
     "spill_share_sens": 0.015,
     "fp_rate": 0.0123,
     "fp_rate_blood_remote": 0.0031
+   },
+   "P-J3": {
+    "sens": 0.845,
+    "sens_ci": [
+     0.763,
+     0.925
+    ],
+    "spec": 0.988,
+    "spec_ci": [
+     0.972,
+     0.997
+    ],
+    "sens_blood_remote": 0.825,
+    "sens_by_true_bin": [
+     0.559,
+     1.0,
+     1.0,
+     1.0
+    ],
+    "n_by_true_bin": [
+     34,
+     20,
+     16,
+     27
+    ],
+    "spill_share_sens": 0.024,
+    "fp_rate": 0.0123,
+    "fp_rate_blood_remote": 0.0046
    },
    "E-V|P-G": {
     "n": 70,
@@ -11114,13 +13394,13 @@
    "P-K": {
     "sens": 0.814,
     "sens_ci": [
-     0.731,
-     0.89
+     0.735,
+     0.886
     ],
     "spec": 0.607,
     "spec_ci": [
-     0.535,
-     0.684
+     0.533,
+     0.682
     ],
     "sens_blood_remote": 0.794,
     "sens_by_true_bin": [
@@ -11142,12 +13422,12 @@
    "P-G": {
     "sens": 0.66,
     "sens_ci": [
-     0.571,
+     0.581,
      0.75
     ],
     "spec": 0.983,
     "spec_ci": [
-     0.958,
+     0.959,
      0.998
     ],
     "sens_blood_remote": 0.66,
@@ -11170,8 +13450,8 @@
    "P-J": {
     "sens": 0.495,
     "sens_ci": [
-     0.384,
-     0.602
+     0.382,
+     0.598
     ],
     "spec": 0.983,
     "spec_ci": [
@@ -11194,6 +13474,34 @@
     "spill_share_sens": -0.021,
     "fp_rate": 0.0169,
     "fp_rate_blood_remote": 0.0184
+   },
+   "P-J3": {
+    "sens": 0.67,
+    "sens_ci": [
+     0.556,
+     0.787
+    ],
+    "spec": 0.994,
+    "spec_ci": [
+     0.985,
+     1.0
+    ],
+    "sens_blood_remote": 0.66,
+    "sens_by_true_bin": [
+     0.294,
+     0.75,
+     0.875,
+     0.963
+    ],
+    "n_by_true_bin": [
+     34,
+     20,
+     16,
+     27
+    ],
+    "spill_share_sens": 0.015,
+    "fp_rate": 0.0061,
+    "fp_rate_blood_remote": 0.0031
    },
    "E-V|P-G": {
     "n": 64,
@@ -11260,12 +13568,12 @@
    "P-K": {
     "sens": 0.794,
     "sens_ci": [
-     0.709,
-     0.874
+     0.712,
+     0.875
     ],
     "spec": 0.418,
     "spec_ci": [
-     0.4,
+     0.401,
      0.432
     ],
     "sens_blood_remote": 0.784,
@@ -11288,8 +13596,8 @@
    "P-G": {
     "sens": 0.742,
     "sens_ci": [
-     0.659,
-     0.824
+     0.667,
+     0.821
     ],
     "spec": 1.0,
     "spec_ci": [
@@ -11316,13 +13624,13 @@
    "P-J": {
     "sens": 0.691,
     "sens_ci": [
-     0.617,
-     0.774
+     0.611,
+     0.777
     ],
     "spec": 0.978,
     "spec_ci": [
-     0.958,
-     0.994
+     0.957,
+     0.995
     ],
     "sens_blood_remote": 0.68,
     "sens_by_true_bin": [
@@ -11339,6 +13647,34 @@
     ],
     "spill_share_sens": 0.015,
     "fp_rate": 0.0215,
+    "fp_rate_blood_remote": 0.0
+   },
+   "P-J3": {
+    "sens": 0.959,
+    "sens_ci": [
+     0.92,
+     0.99
+    ],
+    "spec": 0.992,
+    "spec_ci": [
+     0.981,
+     1.0
+    ],
+    "sens_blood_remote": 0.948,
+    "sens_by_true_bin": [
+     0.882,
+     1.0,
+     1.0,
+     1.0
+    ],
+    "n_by_true_bin": [
+     34,
+     20,
+     16,
+     27
+    ],
+    "spill_share_sens": 0.011,
+    "fp_rate": 0.0077,
     "fp_rate_blood_remote": 0.0
    },
    "E-V|P-G": {
@@ -11406,13 +13742,13 @@
    "P-K": {
     "sens": 0.876,
     "sens_ci": [
-     0.816,
-     0.935
+     0.815,
+     0.937
     ],
     "spec": 0.599,
     "spec_ci": [
-     0.495,
-     0.696
+     0.49,
+     0.7
     ],
     "sens_blood_remote": 0.845,
     "sens_by_true_bin": [
@@ -11434,13 +13770,13 @@
    "P-G": {
     "sens": 0.268,
     "sens_ci": [
-     0.129,
-     0.426
+     0.126,
+     0.423
     ],
     "spec": 0.959,
     "spec_ci": [
-     0.918,
-     0.989
+     0.917,
+     0.991
     ],
     "sens_blood_remote": 0.247,
     "sens_by_true_bin": [
@@ -11462,12 +13798,12 @@
    "P-J": {
     "sens": 0.216,
     "sens_ci": [
-     0.121,
+     0.128,
      0.326
     ],
     "spec": 0.971,
     "spec_ci": [
-     0.935,
+     0.933,
      1.0
     ],
     "sens_blood_remote": 0.134,
@@ -11486,6 +13822,34 @@
     "spill_share_sens": 0.381,
     "fp_rate": 0.0292,
     "fp_rate_blood_remote": 0.0661
+   },
+   "P-J3": {
+    "sens": 0.144,
+    "sens_ci": [
+     0.04,
+     0.267
+    ],
+    "spec": 0.997,
+    "spec_ci": [
+     0.991,
+     1.0
+    ],
+    "sens_blood_remote": 0.113,
+    "sens_by_true_bin": [
+     0.0,
+     0.05,
+     0.188,
+     0.37
+    ],
+    "n_by_true_bin": [
+     34,
+     20,
+     16,
+     27
+    ],
+    "spill_share_sens": 0.214,
+    "fp_rate": 0.0031,
+    "fp_rate_blood_remote": 0.0
    },
    "E-V|P-G": {
     "n": 26,
@@ -11552,13 +13916,13 @@
    "P-K": {
     "sens": 0.784,
     "sens_ci": [
-     0.699,
-     0.868
+     0.701,
+     0.87
     ],
     "spec": 0.564,
     "spec_ci": [
-     0.493,
-     0.644
+     0.497,
+     0.639
     ],
     "sens_blood_remote": 0.742,
     "sens_by_true_bin": [
@@ -11580,7 +13944,7 @@
    "P-G": {
     "sens": 0.598,
     "sens_ci": [
-     0.494,
+     0.491,
      0.703
     ],
     "spec": 0.997,
@@ -11608,8 +13972,8 @@
    "P-J": {
     "sens": 0.639,
     "sens_ci": [
-     0.559,
-     0.726
+     0.562,
+     0.722
     ],
     "spec": 0.985,
     "spec_ci": [
@@ -11632,6 +13996,34 @@
     "spill_share_sens": -0.048,
     "fp_rate": 0.0154,
     "fp_rate_blood_remote": 0.0154
+   },
+   "P-J3": {
+    "sens": 0.639,
+    "sens_ci": [
+     0.539,
+     0.742
+    ],
+    "spec": 0.994,
+    "spec_ci": [
+     0.981,
+     1.0
+    ],
+    "sens_blood_remote": 0.619,
+    "sens_by_true_bin": [
+     0.088,
+     0.85,
+     0.938,
+     1.0
+    ],
+    "n_by_true_bin": [
+     34,
+     20,
+     16,
+     27
+    ],
+    "spill_share_sens": 0.032,
+    "fp_rate": 0.0061,
+    "fp_rate_blood_remote": 0.0
    },
    "E-V|P-G": {
     "n": 58,
@@ -11698,13 +14090,13 @@
    "P-K": {
     "sens": 0.794,
     "sens_ci": [
-     0.714,
-     0.872
+     0.713,
+     0.869
     ],
     "spec": 0.492,
     "spec_ci": [
-     0.433,
-     0.559
+     0.432,
+     0.561
     ],
     "sens_blood_remote": 0.773,
     "sens_by_true_bin": [
@@ -11727,7 +14119,7 @@
     "sens": 0.711,
     "sens_ci": [
      0.628,
-     0.792
+     0.793
     ],
     "spec": 0.972,
     "spec_ci": [
@@ -11754,13 +14146,13 @@
    "P-J": {
     "sens": 0.67,
     "sens_ci": [
-     0.589,
-     0.747
+     0.6,
+     0.753
     ],
     "spec": 0.962,
     "spec_ci": [
-     0.909,
-     0.992
+     0.911,
+     0.994
     ],
     "sens_blood_remote": 0.68,
     "sens_by_true_bin": [
@@ -11778,6 +14170,34 @@
     "spill_share_sens": -0.015,
     "fp_rate": 0.0384,
     "fp_rate_blood_remote": 0.0031
+   },
+   "P-J3": {
+    "sens": 0.732,
+    "sens_ci": [
+     0.65,
+     0.811
+    ],
+    "spec": 0.96,
+    "spec_ci": [
+     0.892,
+     0.998
+    ],
+    "sens_blood_remote": 0.722,
+    "sens_by_true_bin": [
+     0.265,
+     0.95,
+     1.0,
+     1.0
+    ],
+    "n_by_true_bin": [
+     34,
+     20,
+     16,
+     27
+    ],
+    "spill_share_sens": 0.014,
+    "fp_rate": 0.0399,
+    "fp_rate_blood_remote": 0.0015
    },
    "E-V|P-G": {
     "n": 69,
@@ -11844,8 +14264,8 @@
    "P-K": {
     "sens": 0.814,
     "sens_ci": [
-     0.732,
-     0.892
+     0.737,
+     0.894
     ],
     "spec": 0.613,
     "spec_ci": [
@@ -11872,13 +14292,13 @@
    "P-G": {
     "sens": 0.567,
     "sens_ci": [
-     0.467,
-     0.67
+     0.463,
+     0.674
     ],
     "spec": 0.963,
     "spec_ci": [
-     0.922,
-     0.995
+     0.924,
+     0.992
     ],
     "sens_blood_remote": 0.536,
     "sens_by_true_bin": [
@@ -11900,13 +14320,13 @@
    "P-J": {
     "sens": 0.505,
     "sens_ci": [
-     0.394,
-     0.615
+     0.389,
+     0.616
     ],
     "spec": 0.978,
     "spec_ci": [
      0.962,
-     0.992
+     0.991
     ],
     "sens_blood_remote": 0.495,
     "sens_by_true_bin": [
@@ -11924,6 +14344,34 @@
     "spill_share_sens": 0.02,
     "fp_rate": 0.0215,
     "fp_rate_blood_remote": 0.0077
+   },
+   "P-J3": {
+    "sens": 0.495,
+    "sens_ci": [
+     0.357,
+     0.629
+    ],
+    "spec": 0.997,
+    "spec_ci": [
+     0.991,
+     1.0
+    ],
+    "sens_blood_remote": 0.454,
+    "sens_by_true_bin": [
+     0.029,
+     0.6,
+     0.75,
+     0.852
+    ],
+    "n_by_true_bin": [
+     34,
+     20,
+     16,
+     27
+    ],
+    "spill_share_sens": 0.083,
+    "fp_rate": 0.0031,
+    "fp_rate_blood_remote": 0.0
    },
    "E-V|P-G": {
     "n": 55,
@@ -11990,12 +14438,12 @@
    "P-K": {
     "sens": 0.794,
     "sens_ci": [
-     0.708,
-     0.879
+     0.711,
+     0.876
     ],
     "spec": 0.419,
     "spec_ci": [
-     0.401,
+     0.402,
      0.435
     ],
     "sens_blood_remote": 0.794,
@@ -12018,8 +14466,8 @@
    "P-G": {
     "sens": 0.835,
     "sens_ci": [
-     0.753,
-     0.906
+     0.759,
+     0.908
     ],
     "spec": 1.0,
     "spec_ci": [
@@ -12046,8 +14494,8 @@
    "P-J": {
     "sens": 0.68,
     "sens_ci": [
-     0.596,
-     0.768
+     0.604,
+     0.761
     ],
     "spec": 0.995,
     "spec_ci": [
@@ -12069,6 +14517,34 @@
     ],
     "spill_share_sens": -0.015,
     "fp_rate": 0.0046,
+    "fp_rate_blood_remote": 0.0
+   },
+   "P-J3": {
+    "sens": 0.938,
+    "sens_ci": [
+     0.883,
+     0.98
+    ],
+    "spec": 0.985,
+    "spec_ci": [
+     0.965,
+     1.0
+    ],
+    "sens_blood_remote": 0.938,
+    "sens_by_true_bin": [
+     0.824,
+     1.0,
+     1.0,
+     1.0
+    ],
+    "n_by_true_bin": [
+     34,
+     20,
+     16,
+     27
+    ],
+    "spill_share_sens": 0.0,
+    "fp_rate": 0.0154,
     "fp_rate_blood_remote": 0.0
    },
    "E-V|P-G": {
@@ -12136,13 +14612,13 @@
    "P-K": {
     "sens": 0.876,
     "sens_ci": [
-     0.815,
-     0.937
+     0.817,
+     0.936
     ],
     "spec": 0.616,
     "spec_ci": [
-     0.507,
-     0.719
+     0.508,
+     0.716
     ],
     "sens_blood_remote": 0.845,
     "sens_by_true_bin": [
@@ -12164,13 +14640,13 @@
    "P-G": {
     "sens": 0.443,
     "sens_ci": [
-     0.268,
-     0.618
+     0.286,
+     0.608
     ],
     "spec": 0.939,
     "spec_ci": [
-     0.89,
-     0.977
+     0.893,
+     0.978
     ],
     "sens_blood_remote": 0.351,
     "sens_by_true_bin": [
@@ -12192,8 +14668,8 @@
    "P-J": {
     "sens": 0.186,
     "sens_ci": [
-     0.093,
-     0.298
+     0.083,
+     0.301
     ],
     "spec": 0.98,
     "spec_ci": [
@@ -12216,6 +14692,34 @@
     "spill_share_sens": 0.278,
     "fp_rate": 0.02,
     "fp_rate_blood_remote": 0.129
+   },
+   "P-J3": {
+    "sens": 0.175,
+    "sens_ci": [
+     0.069,
+     0.286
+    ],
+    "spec": 0.997,
+    "spec_ci": [
+     0.991,
+     1.0
+    ],
+    "sens_blood_remote": 0.134,
+    "sens_by_true_bin": [
+     0.0,
+     0.05,
+     0.188,
+     0.481
+    ],
+    "n_by_true_bin": [
+     34,
+     20,
+     16,
+     27
+    ],
+    "spill_share_sens": 0.235,
+    "fp_rate": 0.0031,
+    "fp_rate_blood_remote": 0.0
    },
    "E-V|P-G": {
     "n": 43,
@@ -12282,13 +14786,13 @@
    "P-K": {
     "sens": 0.804,
     "sens_ci": [
-     0.718,
-     0.889
+     0.722,
+     0.89
     ],
     "spec": 0.668,
     "spec_ci": [
-     0.584,
-     0.755
+     0.579,
+     0.756
     ],
     "sens_blood_remote": 0.763,
     "sens_by_true_bin": [
@@ -12310,12 +14814,12 @@
    "P-G": {
     "sens": 0.66,
     "sens_ci": [
-     0.574,
-     0.75
+     0.577,
+     0.748
     ],
     "spec": 0.985,
     "spec_ci": [
-     0.96,
+     0.961,
      0.998
     ],
     "sens_blood_remote": 0.67,
@@ -12338,12 +14842,12 @@
    "P-J": {
     "sens": 0.649,
     "sens_ci": [
-     0.565,
-     0.735
+     0.57,
+     0.739
     ],
     "spec": 0.977,
     "spec_ci": [
-     0.95,
+     0.951,
      0.995
     ],
     "sens_blood_remote": 0.66,
@@ -12362,6 +14866,34 @@
     "spill_share_sens": -0.016,
     "fp_rate": 0.023,
     "fp_rate_blood_remote": 0.0799
+   },
+   "P-J3": {
+    "sens": 0.68,
+    "sens_ci": [
+     0.598,
+     0.763
+    ],
+    "spec": 0.995,
+    "spec_ci": [
+     0.986,
+     1.0
+    ],
+    "sens_blood_remote": 0.67,
+    "sens_by_true_bin": [
+     0.147,
+     0.9,
+     1.0,
+     1.0
+    ],
+    "n_by_true_bin": [
+     34,
+     20,
+     16,
+     27
+    ],
+    "spill_share_sens": 0.015,
+    "fp_rate": 0.0046,
+    "fp_rate_blood_remote": 0.0
    },
    "E-V|P-G": {
     "n": 64,
@@ -12428,13 +14960,13 @@
    "P-K": {
     "sens": 0.794,
     "sens_ci": [
-     0.712,
+     0.717,
      0.872
     ],
     "spec": 0.619,
     "spec_ci": [
-     0.537,
-     0.701
+     0.538,
+     0.704
     ],
     "sens_blood_remote": 0.784,
     "sens_by_true_bin": [
@@ -12456,8 +14988,8 @@
    "P-G": {
     "sens": 0.722,
     "sens_ci": [
-     0.636,
-     0.802
+     0.641,
+     0.804
     ],
     "spec": 0.983,
     "spec_ci": [
@@ -12484,8 +15016,8 @@
    "P-J": {
     "sens": 0.68,
     "sens_ci": [
-     0.604,
-     0.762
+     0.602,
+     0.763
     ],
     "spec": 0.988,
     "spec_ci": [
@@ -12508,6 +15040,34 @@
     "spill_share_sens": -0.03,
     "fp_rate": 0.0123,
     "fp_rate_blood_remote": 0.0338
+   },
+   "P-J3": {
+    "sens": 0.732,
+    "sens_ci": [
+     0.647,
+     0.811
+    ],
+    "spec": 0.994,
+    "spec_ci": [
+     0.983,
+     1.0
+    ],
+    "sens_blood_remote": 0.732,
+    "sens_by_true_bin": [
+     0.265,
+     0.95,
+     1.0,
+     1.0
+    ],
+    "n_by_true_bin": [
+     34,
+     20,
+     16,
+     27
+    ],
+    "spill_share_sens": 0.0,
+    "fp_rate": 0.0061,
+    "fp_rate_blood_remote": 0.0
    },
    "E-V|P-G": {
     "n": 70,
@@ -12574,13 +15134,13 @@
    "P-K": {
     "sens": 0.825,
     "sens_ci": [
-     0.747,
-     0.901
+     0.745,
+     0.906
     ],
     "spec": 0.674,
     "spec_ci": [
-     0.6,
-     0.754
+     0.599,
+     0.75
     ],
     "sens_blood_remote": 0.804,
     "sens_by_true_bin": [
@@ -12602,12 +15162,12 @@
    "P-G": {
     "sens": 0.66,
     "sens_ci": [
-     0.568,
-     0.75
+     0.564,
+     0.753
     ],
     "spec": 0.945,
     "spec_ci": [
-     0.899,
+     0.897,
      0.983
     ],
     "sens_blood_remote": 0.629,
@@ -12630,8 +15190,8 @@
    "P-J": {
     "sens": 0.515,
     "sens_ci": [
-     0.392,
-     0.632
+     0.394,
+     0.634
     ],
     "spec": 0.988,
     "spec_ci": [
@@ -12654,6 +15214,34 @@
     "spill_share_sens": 0.08,
     "fp_rate": 0.0123,
     "fp_rate_blood_remote": 0.0722
+   },
+   "P-J3": {
+    "sens": 0.557,
+    "sens_ci": [
+     0.438,
+     0.664
+    ],
+    "spec": 0.997,
+    "spec_ci": [
+     0.991,
+     1.0
+    ],
+    "sens_blood_remote": 0.515,
+    "sens_by_true_bin": [
+     0.088,
+     0.65,
+     0.812,
+     0.926
+    ],
+    "n_by_true_bin": [
+     34,
+     20,
+     16,
+     27
+    ],
+    "spill_share_sens": 0.074,
+    "fp_rate": 0.0031,
+    "fp_rate_blood_remote": 0.0
    },
    "E-V|P-G": {
     "n": 64,
@@ -12720,12 +15308,12 @@
    "P-K": {
     "sens": 0.804,
     "sens_ci": [
-     0.717,
-     0.892
+     0.723,
+     0.888
     ],
     "spec": 0.421,
     "spec_ci": [
-     0.409,
+     0.408,
      0.433
     ],
     "sens_blood_remote": 0.784,
@@ -12748,8 +15336,8 @@
    "P-G": {
     "sens": 0.753,
     "sens_ci": [
-     0.677,
-     0.833
+     0.676,
+     0.83
     ],
     "spec": 1.0,
     "spec_ci": [
@@ -12777,7 +15365,7 @@
     "sens": 0.67,
     "sens_ci": [
      0.588,
-     0.753
+     0.76
     ],
     "spec": 0.983,
     "spec_ci": [
@@ -12800,6 +15388,34 @@
     "spill_share_sens": 0.015,
     "fp_rate": 0.0169,
     "fp_rate_blood_remote": 0.0015
+   },
+   "P-J3": {
+    "sens": 0.918,
+    "sens_ci": [
+     0.852,
+     0.971
+    ],
+    "spec": 0.982,
+    "spec_ci": [
+     0.958,
+     1.0
+    ],
+    "sens_blood_remote": 0.897,
+    "sens_by_true_bin": [
+     0.765,
+     1.0,
+     1.0,
+     1.0
+    ],
+    "n_by_true_bin": [
+     34,
+     20,
+     16,
+     27
+    ],
+    "spill_share_sens": 0.022,
+    "fp_rate": 0.0184,
+    "fp_rate_blood_remote": 0.0
    },
    "E-V|P-G": {
     "n": 73,
@@ -12866,13 +15482,13 @@
    "P-K": {
     "sens": 0.876,
     "sens_ci": [
-     0.808,
-     0.944
+     0.804,
+     0.943
     ],
     "spec": 0.662,
     "spec_ci": [
-     0.584,
-     0.737
+     0.586,
+     0.739
     ],
     "sens_blood_remote": 0.856,
     "sens_by_true_bin": [
@@ -12894,13 +15510,13 @@
    "P-G": {
     "sens": 0.34,
     "sens_ci": [
-     0.187,
-     0.491
+     0.19,
+     0.5
     ],
     "spec": 0.932,
     "spec_ci": [
-     0.882,
-     0.971
+     0.886,
+     0.97
     ],
     "sens_blood_remote": 0.247,
     "sens_by_true_bin": [
@@ -12922,8 +15538,8 @@
    "P-J": {
     "sens": 0.175,
     "sens_ci": [
-     0.082,
-     0.287
+     0.08,
+     0.292
     ],
     "spec": 0.982,
     "spec_ci": [
@@ -12946,6 +15562,34 @@
     "spill_share_sens": 0.294,
     "fp_rate": 0.0184,
     "fp_rate_blood_remote": 0.0538
+   },
+   "P-J3": {
+    "sens": 0.124,
+    "sens_ci": [
+     0.022,
+     0.247
+    ],
+    "spec": 0.997,
+    "spec_ci": [
+     0.991,
+     1.0
+    ],
+    "sens_blood_remote": 0.103,
+    "sens_by_true_bin": [
+     0.0,
+     0.05,
+     0.062,
+     0.37
+    ],
+    "n_by_true_bin": [
+     34,
+     20,
+     16,
+     27
+    ],
+    "spill_share_sens": 0.167,
+    "fp_rate": 0.0031,
+    "fp_rate_blood_remote": 0.0
    },
    "E-V|P-G": {
     "n": 33,
@@ -13012,13 +15656,13 @@
    "P-K": {
     "sens": 0.794,
     "sens_ci": [
-     0.716,
-     0.88
+     0.71,
+     0.881
     ],
     "spec": 0.605,
     "spec_ci": [
-     0.532,
-     0.687
+     0.526,
+     0.686
     ],
     "sens_blood_remote": 0.742,
     "sens_by_true_bin": [
@@ -13040,8 +15684,8 @@
    "P-G": {
     "sens": 0.608,
     "sens_ci": [
-     0.506,
-     0.705
+     0.5,
+     0.71
     ],
     "spec": 0.985,
     "spec_ci": [
@@ -13069,11 +15713,11 @@
     "sens": 0.608,
     "sens_ci": [
      0.531,
-     0.69
+     0.691
     ],
     "spec": 0.98,
     "spec_ci": [
-     0.96,
+     0.959,
      0.994
     ],
     "sens_blood_remote": 0.598,
@@ -13092,6 +15736,34 @@
     "spill_share_sens": 0.017,
     "fp_rate": 0.02,
     "fp_rate_blood_remote": 0.0092
+   },
+   "P-J3": {
+    "sens": 0.588,
+    "sens_ci": [
+     0.469,
+     0.699
+    ],
+    "spec": 0.994,
+    "spec_ci": [
+     0.984,
+     1.0
+    ],
+    "sens_blood_remote": 0.588,
+    "sens_by_true_bin": [
+     0.059,
+     0.7,
+     0.875,
+     1.0
+    ],
+    "n_by_true_bin": [
+     34,
+     20,
+     16,
+     27
+    ],
+    "spill_share_sens": 0.0,
+    "fp_rate": 0.0061,
+    "fp_rate_blood_remote": 0.0
    },
    "E-V|P-G": {
     "n": 59,
@@ -13158,13 +15830,13 @@
    "P-K": {
     "sens": 0.804,
     "sens_ci": [
-     0.717,
-     0.888
+     0.726,
+     0.889
     ],
     "spec": 0.581,
     "spec_ci": [
-     0.516,
-     0.655
+     0.512,
+     0.654
     ],
     "sens_blood_remote": 0.784,
     "sens_by_true_bin": [
@@ -13186,7 +15858,7 @@
    "P-G": {
     "sens": 0.722,
     "sens_ci": [
-     0.64,
+     0.643,
      0.804
     ],
     "spec": 0.986,
@@ -13215,7 +15887,7 @@
     "sens": 0.66,
     "sens_ci": [
      0.598,
-     0.729
+     0.728
     ],
     "spec": 0.997,
     "spec_ci": [
@@ -13237,6 +15909,34 @@
     ],
     "spill_share_sens": 0.031,
     "fp_rate": 0.0031,
+    "fp_rate_blood_remote": 0.0
+   },
+   "P-J3": {
+    "sens": 0.722,
+    "sens_ci": [
+     0.643,
+     0.805
+    ],
+    "spec": 0.992,
+    "spec_ci": [
+     0.981,
+     1.0
+    ],
+    "sens_blood_remote": 0.711,
+    "sens_by_true_bin": [
+     0.206,
+     1.0,
+     1.0,
+     1.0
+    ],
+    "n_by_true_bin": [
+     34,
+     20,
+     16,
+     27
+    ],
+    "spill_share_sens": 0.014,
+    "fp_rate": 0.0077,
     "fp_rate_blood_remote": 0.0
    },
    "E-V|P-G": {
@@ -13304,13 +16004,13 @@
    "P-K": {
     "sens": 0.825,
     "sens_ci": [
-     0.753,
-     0.893
+     0.757,
+     0.89
     ],
     "spec": 0.665,
     "spec_ci": [
-     0.597,
-     0.734
+     0.601,
+     0.738
     ],
     "sens_blood_remote": 0.804,
     "sens_by_true_bin": [
@@ -13332,13 +16032,13 @@
    "P-G": {
     "sens": 0.66,
     "sens_ci": [
-     0.574,
-     0.75
+     0.576,
+     0.752
     ],
     "spec": 0.948,
     "spec_ci": [
-     0.898,
-     0.986
+     0.899,
+     0.988
     ],
     "sens_blood_remote": 0.619,
     "sens_by_true_bin": [
@@ -13360,8 +16060,8 @@
    "P-J": {
     "sens": 0.505,
     "sens_ci": [
-     0.382,
-     0.624
+     0.379,
+     0.627
     ],
     "spec": 0.997,
     "spec_ci": [
@@ -13384,6 +16084,34 @@
     "spill_share_sens": 0.082,
     "fp_rate": 0.0031,
     "fp_rate_blood_remote": 0.0061
+   },
+   "P-J3": {
+    "sens": 0.515,
+    "sens_ci": [
+     0.362,
+     0.667
+    ],
+    "spec": 0.992,
+    "spec_ci": [
+     0.98,
+     1.0
+    ],
+    "sens_blood_remote": 0.485,
+    "sens_by_true_bin": [
+     0.118,
+     0.65,
+     0.625,
+     0.852
+    ],
+    "n_by_true_bin": [
+     34,
+     20,
+     16,
+     27
+    ],
+    "spill_share_sens": 0.06,
+    "fp_rate": 0.0077,
+    "fp_rate_blood_remote": 0.0
    },
    "E-V|P-G": {
     "n": 64,
@@ -13451,11 +16179,11 @@
     "sens": 0.804,
     "sens_ci": [
      0.716,
-     0.892
+     0.889
     ],
     "spec": 0.433,
     "spec_ci": [
-     0.415,
+     0.416,
      0.456
     ],
     "sens_blood_remote": 0.794,
@@ -13478,8 +16206,8 @@
    "P-G": {
     "sens": 0.804,
     "sens_ci": [
-     0.728,
-     0.88
+     0.729,
+     0.876
     ],
     "spec": 1.0,
     "spec_ci": [
@@ -13507,7 +16235,7 @@
     "sens": 0.68,
     "sens_ci": [
      0.602,
-     0.765
+     0.761
     ],
     "spec": 0.989,
     "spec_ci": [
@@ -13529,6 +16257,34 @@
     ],
     "spill_share_sens": 0.0,
     "fp_rate": 0.0108,
+    "fp_rate_blood_remote": 0.0
+   },
+   "P-J3": {
+    "sens": 0.876,
+    "sens_ci": [
+     0.796,
+     0.948
+    ],
+    "spec": 0.982,
+    "spec_ci": [
+     0.957,
+     1.0
+    ],
+    "sens_blood_remote": 0.856,
+    "sens_by_true_bin": [
+     0.647,
+     1.0,
+     1.0,
+     1.0
+    ],
+    "n_by_true_bin": [
+     34,
+     20,
+     16,
+     27
+    ],
+    "spill_share_sens": 0.024,
+    "fp_rate": 0.0184,
     "fp_rate_blood_remote": 0.0
    },
    "E-V|P-G": {
@@ -13596,13 +16352,13 @@
    "P-K": {
     "sens": 0.876,
     "sens_ci": [
-     0.81,
-     0.941
+     0.809,
+     0.94
     ],
     "spec": 0.671,
     "spec_ci": [
-     0.595,
-     0.748
+     0.598,
+     0.747
     ],
     "sens_blood_remote": 0.856,
     "sens_by_true_bin": [
@@ -13624,12 +16380,12 @@
    "P-G": {
     "sens": 0.443,
     "sens_ci": [
-     0.277,
-     0.606
+     0.286,
+     0.607
     ],
     "spec": 0.903,
     "spec_ci": [
-     0.849,
+     0.848,
      0.948
     ],
     "sens_blood_remote": 0.361,
@@ -13652,12 +16408,12 @@
    "P-J": {
     "sens": 0.175,
     "sens_ci": [
-     0.084,
-     0.295
+     0.08,
+     0.286
     ],
     "spec": 0.978,
     "spec_ci": [
-     0.939,
+     0.94,
      1.0
     ],
     "sens_blood_remote": 0.144,
@@ -13676,6 +16432,34 @@
     "spill_share_sens": 0.176,
     "fp_rate": 0.0215,
     "fp_rate_blood_remote": 0.1152
+   },
+   "P-J3": {
+    "sens": 0.186,
+    "sens_ci": [
+     0.085,
+     0.301
+    ],
+    "spec": 0.997,
+    "spec_ci": [
+     0.991,
+     1.0
+    ],
+    "sens_blood_remote": 0.124,
+    "sens_by_true_bin": [
+     0.029,
+     0.05,
+     0.188,
+     0.481
+    ],
+    "n_by_true_bin": [
+     34,
+     20,
+     16,
+     27
+    ],
+    "spill_share_sens": 0.333,
+    "fp_rate": 0.0031,
+    "fp_rate_blood_remote": 0.0
    },
    "E-V|P-G": {
     "n": 43,
@@ -13742,13 +16526,13 @@
    "P-K": {
     "sens": 0.814,
     "sens_ci": [
-     0.729,
-     0.895
+     0.733,
+     0.899
     ],
     "spec": 0.722,
     "spec_ci": [
      0.642,
-     0.8
+     0.799
     ],
     "sens_blood_remote": 0.763,
     "sens_by_true_bin": [
@@ -13770,12 +16554,12 @@
    "P-G": {
     "sens": 0.691,
     "sens_ci": [
-     0.613,
-     0.777
+     0.614,
+     0.771
     ],
     "spec": 0.98,
     "spec_ci": [
-     0.951,
+     0.952,
      0.998
     ],
     "sens_blood_remote": 0.68,
@@ -13799,11 +16583,11 @@
     "sens": 0.629,
     "sens_ci": [
      0.543,
-     0.712
+     0.713
     ],
     "spec": 0.988,
     "spec_ci": [
-     0.973,
+     0.974,
      0.998
     ],
     "sens_blood_remote": 0.66,
@@ -13822,6 +16606,34 @@
     "spill_share_sens": -0.049,
     "fp_rate": 0.0123,
     "fp_rate_blood_remote": 0.0154
+   },
+   "P-J3": {
+    "sens": 0.639,
+    "sens_ci": [
+     0.55,
+     0.733
+    ],
+    "spec": 0.994,
+    "spec_ci": [
+     0.985,
+     1.0
+    ],
+    "sens_blood_remote": 0.629,
+    "sens_by_true_bin": [
+     0.059,
+     0.85,
+     1.0,
+     1.0
+    ],
+    "n_by_true_bin": [
+     34,
+     20,
+     16,
+     27
+    ],
+    "spill_share_sens": 0.016,
+    "fp_rate": 0.0061,
+    "fp_rate_blood_remote": 0.0
    },
    "E-V|P-G": {
     "n": 67,
@@ -13888,13 +16700,13 @@
    "P-K": {
     "sens": 0.814,
     "sens_ci": [
-     0.725,
-     0.898
+     0.724,
+     0.904
     ],
     "spec": 0.705,
     "spec_ci": [
-     0.62,
-     0.788
+     0.621,
+     0.783
     ],
     "sens_blood_remote": 0.784,
     "sens_by_true_bin": [
@@ -13916,12 +16728,12 @@
    "P-G": {
     "sens": 0.742,
     "sens_ci": [
-     0.663,
+     0.659,
      0.822
     ],
     "spec": 0.972,
     "spec_ci": [
-     0.944,
+     0.941,
      0.997
     ],
     "sens_blood_remote": 0.732,
@@ -13944,7 +16756,7 @@
    "P-J": {
     "sens": 0.701,
     "sens_ci": [
-     0.62,
+     0.618,
      0.784
     ],
     "spec": 0.978,
@@ -13968,6 +16780,34 @@
     "spill_share_sens": 0.0,
     "fp_rate": 0.0215,
     "fp_rate_blood_remote": 0.0061
+   },
+   "P-J3": {
+    "sens": 0.722,
+    "sens_ci": [
+     0.639,
+     0.806
+    ],
+    "spec": 0.994,
+    "spec_ci": [
+     0.985,
+     1.0
+    ],
+    "sens_blood_remote": 0.722,
+    "sens_by_true_bin": [
+     0.206,
+     1.0,
+     1.0,
+     1.0
+    ],
+    "n_by_true_bin": [
+     34,
+     20,
+     16,
+     27
+    ],
+    "spill_share_sens": 0.0,
+    "fp_rate": 0.0061,
+    "fp_rate_blood_remote": 0.0
    },
    "E-V|P-G": {
     "n": 72,
@@ -14034,13 +16874,13 @@
    "P-K": {
     "sens": 0.814,
     "sens_ci": [
-     0.74,
-     0.889
+     0.737,
+     0.888
     ],
     "spec": 0.705,
     "spec_ci": [
-     0.628,
-     0.786
+     0.627,
+     0.782
     ],
     "sens_blood_remote": 0.784,
     "sens_by_true_bin": [
@@ -14062,12 +16902,12 @@
    "P-G": {
     "sens": 0.722,
     "sens_ci": [
-     0.643,
-     0.794
+     0.649,
+     0.792
     ],
     "spec": 0.98,
     "spec_ci": [
-     0.953,
+     0.954,
      0.998
     ],
     "sens_blood_remote": 0.691,
@@ -14090,12 +16930,12 @@
    "P-J": {
     "sens": 0.577,
     "sens_ci": [
-     0.447,
-     0.698
+     0.443,
+     0.701
     ],
     "spec": 0.991,
     "spec_ci": [
-     0.98,
+     0.981,
      0.998
     ],
     "sens_blood_remote": 0.598,
@@ -14113,6 +16953,34 @@
     ],
     "spill_share_sens": -0.036,
     "fp_rate": 0.0092,
+    "fp_rate_blood_remote": 0.0
+   },
+   "P-J3": {
+    "sens": 0.649,
+    "sens_ci": [
+     0.557,
+     0.736
+    ],
+    "spec": 0.994,
+    "spec_ci": [
+     0.984,
+     1.0
+    ],
+    "sens_blood_remote": 0.639,
+    "sens_by_true_bin": [
+     0.118,
+     0.85,
+     1.0,
+     0.963
+    ],
+    "n_by_true_bin": [
+     34,
+     20,
+     16,
+     27
+    ],
+    "spill_share_sens": 0.016,
+    "fp_rate": 0.0061,
     "fp_rate_blood_remote": 0.0
    },
    "E-V|P-G": {

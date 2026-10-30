@@ -18,16 +18,23 @@ JA25–JA36, plus path A's JA15–JA24 for Stage A (JA25). This plan settles §7
 
 **Path B stays Kilo v2 + JA25–JA36. Round 3's evidence moves the plan's weight from the scar rule to the
 registration and the reference.**
-- **The scar rule:**
-  - on real hearts P-K fails on specificity and P-J on sensitivity;
-  - **P-G holds**, and its sensitivity is not spill (spill share ≤ 0.05 after registration). Spill costs
-    specificity instead;
-  - every rule is blind to most bin-1 scars, so pooled sensitivity follows the cohort's bin-1 share (E8, §4).
-- **Registration, not the rule, limits the Kim bin.** On exact borders, every extent measure is nearly right.
-  JA29's chain, which stops at R0 when QC passes and vetoes affine by QC, doubles the extent error against
-  always-affine registration, and the QC shares barely tell good registrations from bad ones. Golf proposes
-  always-affine with QC as reader flags (§8.2). That also brings whole-patient failure to the ≈ 2 % that the
-  specificity endpoint needs (§8.3).
+- **The scar rule** (shared benchmark + Golf E8, §4):
+  - **P-K is struck** on both;
+  - **P-J survives, but only on the 3 SD E-D voxel cut.** With the half-way cut, its sensitivity is ≤ 0.73;
+  - **P-G as JA30 defines it holds:** 0.75–0.81 / 0.98–1.00 after affine (E8). Its sensitivity is not spill
+    (≤ 0.05); spill costs specificity instead. The benchmark's P-G strike scored a P-G without its 1 mm exclusion,
+    and P-G passes there too with a 4 mm mask;
+  - **both P-J and P-G go to development**, where JA30's choice rule picks;
+  - JA30's P-G misses most bin-1 scars, so its pooled sensitivity follows the cohort's bin-1 share.
+- **Registration, not the rule, limits the Kim bin** (both runs agree). On exact borders, every extent measure is
+  nearly right. JA29's chain, which stops at R0 when QC passes and vetoes affine by QC, doubles the extent error
+  against always-affine (E8). On the benchmark, the 10 mm mask leaves 1.2 mm against 0.3 mm with 4 mm, and the QC
+  shares barely tell good registrations from bad ones. Golf proposes:
+  - always rigid → affine, with QC values as reader flags (§8.2);
+  - the mask margin set by the benchmark (4 mm);
+  - Juliet's `rim_dark` as the phase check (AUC 0.98–0.99).
+
+  That also brings whole-patient failure to the ≈ 2 % that the specificity endpoint needs (§8.3).
 - **The transmurality endpoint decides the study, and patients cannot buy it (E10, §5).** At 160 patients it needs
   the CT's Kim-bin agreement to at least equal the LGE readers' own. Golf proposes four things:
   - the anchor from every patient's double read;
@@ -101,11 +108,55 @@ Each is the rulings' recommendation, held until the lead answers.
   ([[Golf - On real hearts P-G is the only presence rule that holds, its sensitivity is not spill, and the registration chain, not the rule, limits the Kim bin]]).
   It adds the always-affine arm, the per-bin and spill tables, and E9's phase check.
 
-### 4.2 The benchmark's verdict
+### 4.2 The benchmark's verdict (`bench_lie` at `0cb2b11`, `scores.json`; posted on #179 at 13:01 UTC)
 
-*Pending: the benchmark's full run (24 hearts × 30 conditions) is due on #179 at about 12:30 UTC, after this PR
-opens. This section will then give its strike table, and say where E8 (§4.3) agrees or disagrees. Until then,
-§4.3–4.4 are Golf's cross-check and proposal, not the verdict.*
+21 hearts (3 skipped for no LV contrast) plus the phantom; 630 cases. Pre-registered rules, as agreed on #179
+before any result:
+
+| Candidate | JA29 chain as written (10 mm mask) | Chain with a 4 mm mask | 4 mm mask + `rim_dark` phase step |
+|---|---|---|---|
+| P-K | **struck** (scar-free specificity 0.006–0.32) | struck | struck |
+| P-J | **survives** (min sensitivity 0.761) | survives (0.773) | survives (0.888) |
+| P-G | **struck on specificity** (0.78–0.86, rigid motion; min sensitivity 0.955) | struck (0.90–0.92) | **survives** (min sensitivity 0.979) |
+| E-V | survives (bin agreement 0.90 vol / 0.94 depth) | survives (0.93 / 0.97) | survives |
+| E-D (3 SD voxel cut) | survives (0.89 / 0.93) | survives (0.91 / 0.95) | survives |
+
+Spill share on the chain is ≤ 0.08 for every candidate (≤ 0.13 with the 4 mm mask). No candidate is struck on spill.
+
+**Where E8 agrees:**
+- **P-K is struck.** Both find it collapses where there is no scar.
+- **Spill is not what limits any rule's sensitivity** (benchmark ≤ 0.08; E8 ≤ 0.05 for P-G).
+- **E-V and the 3 SD E-D are both sound extent measures** once the borders are right.
+- **The registration stage, not the rule, decides the result.** On the benchmark's static chest, the 10 mm mask
+  leaves rigid at 1.24 mm median TRE, against 0.30 mm with a 4 mm mask. With a 3 % scale, affine (1.26 mm) beats
+  rigid (2.19 mm), and the chain (1.69 mm) loses part of that gain. Both runs find the chain leaves accuracy on
+  the table.
+- **P-J with a 3 SD E-D is viable.** Re-scored that way, E8's P-J (`P-J3` in `lie_menu.json`) has sensitivity
+  0.86–0.96 on exact borders and 0.72–0.84 after affine, at specificity ≥ 0.98, against ≤ 0.73 with the half-way
+  cut. P-J's survival therefore depends on E-D's voxel cut being 3 SD (§11.1, reading 3).
+
+**Where E8 disagrees, and why: P-G.** The benchmark's P-G does not apply JA30's "ignoring 1 mm at the carried
+endocardium".
+- `menu.py` keeps `d_endo >= 1.0` with `d_endo = edt(~cav)`. Every wall voxel next to the cavity has `d_endo` = 1.0,
+  so no wall voxel is excluded.
+- The shipped `scar0.py`, E8 and Kilo E8 drop that first layer.
+- **Effect 1:** the benchmark's P-G detects 0.976 of nominal-15 %-depth segments on exact borders (from
+  `results.jsonl.gz`), against 0.41–0.53 (E8) and 0.03 (Kilo E8). Its min sensitivity of 0.955 is that of a rule
+  without the exclusion.
+- **Effect 2:** the first wall layer is where blood spill lands after a 1.2 mm residual, so the benchmark's
+  specificity strike on P-G is very likely the missing exclusion plus the 10 mm mask. With the exclusion, E8 has
+  P-G's specificity at 0.98–1.00 after affine.
+- Reported on #179 at once. A re-grade with `d_endo > 1.0` settles it; it needs no new registration.
+
+**Golf's reading for the judge:**
+- The pre-registered verdict stands as computed: P-K struck; P-J, E-V and E-D kept. P-G is struck on the chain as
+  written, and kept with a 4 mm mask and `rim_dark`.
+- But the P-G that was scored is not JA30's P-G. JA30's P-G, as `scar0.py` implements it, trades bin-1 sensitivity
+  for specificity: E8 has it at 0.75–0.81 / 0.98–1.00 after affine.
+- **Both P-J (3 SD E-D) and P-G should go to development**, and JA30's choice rule then picks on real LGE: the
+  highest sensitivity among candidates whose specificity lower bound is ≥ 0.95.
+- **The registration change matters more than the rule choice.** A 4 mm mask (benchmark) or always-affine (E8)
+  turns P-G from struck to kept.
 
 ### 4.3 Golf E8 (cross-check), and what it adds
 
@@ -115,12 +166,14 @@ CNR 5, 22 hearts, sensitivity / specificity:
 |---|---|---|---|
 | **P-K** | 0.77–0.80 / **0.42–0.43** | 0.80–0.86 / 0.54–0.71 | 0.77–0.82 / 0.56–0.71 |
 | **P-G** | 0.78–0.82 / 1.00 | 0.75–0.81 / 0.98–1.00 | 0.71–0.78 / 0.92–0.99 |
-| **P-J** | 0.66–0.72 / 0.98–1.00 | 0.69–0.70 / 0.97–0.99 | 0.45–0.66 / 0.98–1.00 |
+| **P-J** (half-way E-D) | 0.66–0.72 / 0.98–1.00 | 0.69–0.70 / 0.97–0.99 | 0.45–0.66 / 0.98–1.00 |
+| **P-J** (3 SD E-D, as `bench_lie`) | 0.86–0.96 / 0.98–0.99 | 0.72–0.84 / 0.98–1.00 | 0.66–0.75 / 0.98–1.00 |
 
 1. **P-K fails on specificity everywhere.** Its half-way threshold falls to noise where there is no scar. Kilo has
    withdrawn it.
-2. **P-J fails on sensitivity even on exact borders**, because τ (p99 of scar-free extent) sits above bin-1
-   extents.
+2. **P-J depends on E-D's voxel cut.** With the half-way cut, its sensitivity is ≤ 0.73 even on exact borders,
+   because τ (p99 of scar-free extent) sits above bin-1 extents. With the 3 SD cut (the benchmark's), it is
+   0.86–0.96 on exact borders and 0.72–0.84 after affine, at specificity ≥ 0.98 (§4.2).
 3. **P-G holds:** specificity ≥ 0.98 after affine, and sensitivity 0.75–0.81.
 4. **Sensitivity by true bin, every rule:** bins 2–4 ≈ 1.00; bin 1 0.41–0.53 (P-G, exact) and 0.08–0.24 (P-J).
    Pooled sensitivity ≈ 1 − bin-1 share × (1 − bin-1 sensitivity). E8 uses the pre-registered mix (depths 15 / 35 /
@@ -144,8 +197,8 @@ CNR 5, 22 hearts, sensitivity / specificity:
 | Item | Proposal | Why |
 |---|---|---|
 | P-K | **struck** | specificity 0.42 on exact borders (E8), 0.005 on scar-free hearts (Kilo E8); the benchmark's rule 1b |
-| P-J | keep only if the benchmark keeps it, with Kilo's τ (fitted on development, as JA30 says) | E8 sensitivity ≤ 0.73 on exact borders |
-| P-G | **the presence rule for development**; the first in the menu order if P-J is kept | the only rule with specificity ≥ 0.98 and sensitivity ≥ 0.75 after affine |
+| P-J | **kept, on the 3 SD E-D**; the first in the menu order (Kilo) | survives the benchmark; E8: 0.72–0.84 / ≥ 0.98 after affine with the 3 SD cut, ≤ 0.73 with the half-way cut |
+| P-G | **kept, as JA30 and `scar0.py` define it (1 mm excluded)**, against the benchmark's chain-as-written strike | the benchmark scored P-G without its exclusion (§4.2); E8: 0.75–0.81 / 0.98–1.00 after affine; kept on the benchmark too with a 4 mm mask and `rim_dark` |
 | E-V | kept; the primary under the read form's volume-share definition (§6.1) | best against volume truth |
 | E-D | **its voxel cut is remote + 3 SD** (E-D3), not the half-way cut | E-D3 beats half-way E-D against both truths; the half-way cut inherits P-K's collapse in scar-free segments |
 | Bin 1 | a reported per-bin sensitivity on development and the seal; Scar-1's first target if JA31 triggers | every rule misses most bin-1 scars |
@@ -387,10 +440,10 @@ check results, and nothing that identifies the patient. The summary counts (no i
 
   As a result, the chain's extent error SD is 0.09–0.15 against 0.06–0.09 for always-affine. By E10 (§5.3), that is
   the difference between an unpowerable transmurality endpoint and a powerable one.
-- **JA29's mask:** Juliet's partial benchmark run finds that the 10 mm mask lets a static chest pull rigid MI back
-  toward R0 (median residual 1.3 mm, against 0.34 mm with 4 mm). In E8's static motion, masked rigid reaches ASSD
+- **JA29's mask:** on the benchmark, the 10 mm mask lets a static chest pull rigid MI back toward R0 (median TRE
+  1.24 mm, against 0.30 mm with 4 mm). In E8's static motion, masked rigid reaches ASSD
   0.81–0.85 mm and affine 0.61–0.65 mm, while unmasked rigid stays at 1.77–1.79 mm. The mask matters, and its
-  margin should be taken from the benchmark's `rigid_m4` arm.
+  margin should be 4 mm.
 
 ### 8.2 Proposed registration rule and QC cuts (amends JA29 steps 1–4; for the judge)
 
@@ -402,22 +455,26 @@ check results, and nothing that identifies the patient. The summary counts (no i
 4. **How the cuts are set on development (40 patients):**
    - the reader check (JA29) is the reference;
    - each QC value's cut = its p95 over development registrations the reader passed;
-   - the mask margin (10 mm vs 4 mm) is chosen once, on the benchmark, before development;
+   - the mask margin is **4 mm** on the benchmark's evidence (static chest: rigid 0.30 mm vs 1.24 mm TRE); E8's
+     softer static model shows the mask matters (masked 0.81–0.85 mm vs unmasked 1.77–1.79 mm);
    - **logged for the record, never re-set on the seal.**
-5. **The phase check (truth-free), E9:** the heart-masked affine's **log-determinant**, which measures the heart's
-   volume change between the two scans.
+5. **The phase check (truth-free).** **Primary: Juliet's `rim_dark`**, the share of the carried cavity's 2 mm
+   inner rim reading myocardium-dark. On the benchmark it separates the 5 % phase change from rigid and non-rigid
+   motion with AUC 0.98–0.99 at every blood level. The JA29 QC shares reach only 0.07–0.56 there (`scores.json`,
+   `qc_auc`). E8 did not compute `rim_dark`. Secondary: E9's heart-masked affine **log-determinant**, which
+   measures the heart's volume change between the two scans.
    - On E8 it separates a 5 % phase change from breath-hold motion with AUC 0.86 (0.85–0.87 by blood level). A cut
      at 0.035 flags 76 % of phase cases with 17 % false flags; at 0.045, 52 % and 9 %. Breath-hold motion here
      includes a 3 % scale, so in phase-matched patients the false-flag rate should be lower.
    - **Kilo E8's** remote-segment endocardial half-maximum offset (|offset| > 0.6 mm flags 90–100 % of phase cases,
      0–10 % false flags) is stronger on Kilo's generator. Golf's all-segment version reached only AUC 0.66–0.75 (by blood level and
      stage), as scarred segments bias it.
-   - **Rule:** a patient is phase-flagged if **either** check exceeds its development p95 over phase-matched
-     patients. A flag on a patient whose phase match comes from DICOM moves the patient to the phase-unmatched
+   - **Rule:** a patient is phase-flagged if `rim_dark` exceeds its development p95 over phase-matched patients
+     (with the log-determinant and Kilo's offset reported beside it). A flag on a patient whose phase match comes from DICOM moves the patient to the phase-unmatched
      stratum only if the reader also marks "cavity size differs (phase)". A flag on a patient whose phase is
      **inferred** (§7.2) moves the patient regardless.
-   - The two checks, and Juliet's `rim_dark`, are compared on the shared benchmark's `phase` motion before
-     development; the weaker ones are dropped there.
+   - On the benchmark, `rim_dark` is the strongest of the four phase checks tested. The others stay as logged
+     numbers, not gates.
 
 ### 8.3 Failed registrations and the specificity endpoint (the PM's question on #179)
 
@@ -479,12 +536,12 @@ An update of the Round 2 ruling's §8, for #143. Path A's column is unchanged.
 |---|---|---|
 | Assumes | no reference for scar or ischaemia | a paired CCTA + same-session LIE + CMR LGE cohort the lead obtains (data requirements only, D31) |
 | Stage A | built and calibrated: specificity only (JA18) | **identical, one implementation** (JA25): harness, JM-0R v2, decision script, table writer and guard byte-identical on `dev` and both paths (§9) |
-| Scar grade | none | Scar-0 from a menu narrowed on one shared benchmark (§4); P-K struck (E8; Kilo withdrew it; the benchmark rules formally) |
+| Scar grade | none | Scar-0 from a menu narrowed on one shared benchmark (§4): P-K struck; P-J (3 SD E-D), P-G (with its 1 mm exclusion), E-V and E-D kept for development |
 | What limits the scar grade | — | **registration, not the rule** (E8): on exact borders the extent error is ≤ 0.08 of wall share; after the JA29 chain it is 0.09–0.15, and 0.06–0.09 with always-affine registration (§8.2) |
 | Reference standard | read-vs-read border agreement | the same, plus two CMR readers per segment, read on a fixed form (§6) |
 | Seal size | — | max(120; ≥ 270 scarred segments ≈ 120–130 patients at 70 % enrichment or ≈ 170–190 at 50 %; the sensitivity N) |
 | What decides pass/fail | — | **the transmurality endpoint**: it needs CT bin agreement ≥ the readers' own, which no number of patients buys (E10) |
-| Phase mismatch | — | recorded by the intake checker (§7); flagged without truth by the heart-masked affine's log-determinant (§8.2) |
+| Phase mismatch | — | recorded by the intake checker (§7); flagged without truth by `rim_dark` (benchmark AUC 0.98–0.99), with the affine log-determinant beside it (§8.2) |
 | Committed compute | ≈ 15 GPU-h (with LQ12) | the same + ≈ 3 GPU-h once the cohort exists; scar on CPU |
 | Extra reader time | none | form entry ≈ 4 h (measured by model); image review ≈ 55 CMR reader-hours (an assumption until timed on the mock-up) |
 | Main risk | flags with no measured sensitivity | **the cohort never arrives**; or registration residuals keep the transmurality endpoint out of reach and Scar-1 (or the voxel head, ≈ 55 GPU-h, ≥ 60 more patients) is needed |
@@ -507,7 +564,7 @@ JA35 items 1, 2, 4 and 6 are built and merged on this path: `src/janusm/scar/reg
 |---|---|---|---|
 | 1 | affine "lowers QC" = no QC value rises and their sum falls | **Confirm as a reading of JA29; propose replacing the rule** (§8.2: affine unless a sanity bound fails) | E8: the QC rule kept affine in 15–32 % of cases, though affine had the lower ASSD in 87.5 % |
 | 2 | development failure rate = patients not graded after two reader checks | **Confirm**, and use the same count for Kilo's yield endpoint (§8.3) | — |
-| 3 | E-D's voxel cut = the half-way (P-K) cut | **Correct to remote + 3 SD** (as `bench_lie` reads it) | E8: E-D3 beats half-way E-D against both truths after affine (0.76–0.85 / 0.83–0.92 vs 0.75–0.81 / 0.73–0.76); the half-way cut inherits P-K's collapse where there is no scar |
+| 3 | E-D's voxel cut = the half-way (P-K) cut | **Correct to remote + 3 SD** (as `bench_lie` reads it); P-J survives the benchmark only on this cut | E8: E-D3 beats half-way E-D against both truths after affine (0.76–0.85 / 0.83–0.92 vs 0.75–0.81 / 0.73–0.76); the half-way cut inherits P-K's collapse where there is no scar |
 | 4 | deepest u = the far edge of the deepest depth bin called scar in any E-D column | **Confirm**; report it per segment as the median over columns as well, since the "any column" maximum is set by one noisy column | — |
 | 5 | QC's blood median over the carried cavity core (1 voxel inside) | **Correct to ≥ 2–3 mm inside** (Juliet: 2 mm; E8: 3 mm erosion): one voxel inside still takes papillary muscle and partial volume | — |
 | 6 | reader forms out of scope | Specified here: §6 and `forms/` | — |
@@ -517,9 +574,9 @@ JA35 items 1, 2, 4 and 6 are built and merged on this path: `src/janusm/scar/reg
 1. **Registration module (#188), amendments if the judge takes §8.2:**
    - always rigid → affine; the sanity bound replaces the QC comparison;
    - QC values become logged flags with development cuts (`QCCuts` stays a required input);
-   - log the affine's log-determinant (it is already in the stage parameters) and Kilo's remote-segment
-     endocardial offset as phase flags;
-   - the mask margin as a parameter, chosen once on the benchmark's `rigid_m4` arm.
+   - `rim_dark` as the phase flag; the affine's log-determinant (already in the stage parameters) and Kilo's
+     remote-segment endocardial offset logged beside it;
+   - the mask margin as a parameter, 4 mm on the benchmark's evidence.
 2. **Scar-0 module (#188):** E-D's voxel cut to 3 SD (reading 3); P-K removed from the menu config if struck
    (kept in code for the record); sensitivity by true bin in `for_scoring()`'s report.
 3. **Power and scoring (#187):**

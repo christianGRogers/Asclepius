@@ -146,11 +146,31 @@ scar-dependent: a bright scar raises "brighter than blood" in a well-registered 
   profile, which is the likely difference.
 - dthick does not work.
 
+## Against the shared benchmark (`bench_lie` at `0cb2b11`, posted on #179 at 13:01 UTC)
+
+- **Agree:**
+  - P-K struck;
+  - spill does not limit sensitivity (benchmark ≤ 0.08);
+  - E-V and the 3 SD E-D are sound extent measures;
+  - the registration stage decides more than the rule. Benchmark: the 10 mm mask leaves 1.24 mm against 0.30 mm
+    with 4 mm.
+- **P-J with the benchmark's 3 SD E-D cut** (`P-J3` in `lie_menu.json`, added after the benchmark posted): 0.86–0.96
+  sensitivity on exact borders and 0.72–0.84 after affine, at specificity ≥ 0.98. With the half-way cut (above),
+  it is ≤ 0.73. P-J survives the benchmark on the 3 SD cut, and so it does here.
+- **P-G differs, for an implementation reason.** The benchmark's `menu.py` keeps `d_endo >= 1.0` with `d_endo =
+  edt(~cav)`, so the first wall layer, which JA30 excludes, is kept.
+  - Its P-G detects 0.976 of nominal-15 %-depth segments on exact borders, against 0.41–0.53 here and 0.03 in Kilo
+    E8.
+  - Its specificity strike (0.78–0.86 on the chain) is very likely that layer catching blood spill.
+  - The shipped `scar0.py` excludes the layer, as this run does.
+
+The note's title stands for P-K and for P-G as JA30 defines it. P-J, with the 3 SD cut, is a second viable rule.
+
 ## What it changes
 
-1. **Strike P-K** (specificity ≤ 0.74 everywhere). **P-J is not viable as written** (sensitivity ≤ 0.73 even on
-   exact borders, because τ = p99 of scar-free T sits above bin-1 extents). **P-G is the presence rule to take to
-   development.** The benchmark's pre-registered rules decide formally.
+1. **Strike P-K** (specificity ≤ 0.74 everywhere). **P-J is viable only on the 3 SD E-D** (with the half-way cut,
+   sensitivity ≤ 0.73 even on exact borders, because τ = p99 of scar-free T sits above bin-1 extents). **P-G and
+   P-J (3 SD) go to development.** The benchmark's pre-registered rules decide formally (see above).
 2. **The bin-1 blind spot is shared by every rule.** The JA32 sensitivity endpoint therefore depends on the
    cohort's bin-1 share. Development should report sensitivity by bin, and Scar-1's first job is bin 1.
 3. **Registration: always run masked rigid then affine; do not stop at R0, and do not let QC veto affine.** QC

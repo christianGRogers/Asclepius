@@ -9,7 +9,7 @@ The JA29 chain: R0 if it passes QC; else rigid, then affine kept only if it lowe
 (JA29 step 4); the result is the chain's geometry, scored whether or not it passed (a fail stays in, as the reader
 check would catch only part of it; the not-graded rule is reported separately as the QC-fail share).
 
-Presence: P-K pk >= 0.05; P-G pg >= 0.05; P-J ed >= tau.  Extent among called scar-positive segments:
+Presence: P-K pk >= 0.05; P-G pg >= 0.05; P-J ed >= tau; P-J3 ed3 >= tau3 (P-J on the 3 SD E-D, as bench_lie reads it).  Extent among called scar-positive segments:
 E-V (ev), E-D (ed), E-D3 (ed3), at least bin 1.  Truth presence: volume share > 0.5 %.
 Spill share of a presence rule = (sens - sens with blood set to remote) / sens, at the same registration and noise.
 Patient-cluster bootstrap over hearts (2000) for sensitivity and specificity.
@@ -71,7 +71,8 @@ def segtable(case, r, truth, tau):
         g = {k: np.array(v) for k, v in r[var].items()}
         t_v = tv if pos_ok else np.zeros(17)
         t_d = td if pos_ok else np.zeros(17)
-        out.append((var, t_v, t_d, {"P-K": g["pk"] >= 0.05, "P-G": g["pg"] >= 0.05, "P-J": g["ed"] >= tau},
+        out.append((var, t_v, t_d, {"P-K": g["pk"] >= 0.05, "P-G": g["pg"] >= 0.05, "P-J": g["ed"] >= tau[0],
+                                    "P-J3": g["ed3"] >= tau[1]},
                     {"E-V": g["ev"], "E-D": g["ed"], "E-D3": g["ed3"]}, g["ed"]))
     return out
 
@@ -105,9 +106,10 @@ def main(d):
                 continue
             tv = np.array(cases[c]["truth"][r["motion"]]["vol"])
             key = (f, r["blood"], r["cnr"], r["geom"])
-            vals = list(np.array(r["scar"]["ed"])[tv <= 0.005]) + list(r["noscar"]["ed"])
-            tau.setdefault(key, []).extend(vals)
-    tau = {k: float(np.percentile(v, 99)) for k, v in tau.items()}
+            for j, fld in enumerate(("ed", "ed3")):     # P-J on the half-way E-D and on the 3 SD E-D (bench_lie's)
+                vals = list(np.array(r["scar"][fld])[tv <= 0.005]) + list(r["noscar"][fld])
+                tau.setdefault(key, ([], []))[j].extend(vals)
+    tau = {k: (float(np.percentile(v[0], 99)), float(np.percentile(v[1], 99))) for k, v in tau.items()}
     # tau for the chain geometry: the stage the chain chose
     results, qc_rows, e9_rows = [], [], []
     for motion in ("chest", "static", "phase5"):
@@ -124,18 +126,18 @@ def main(d):
                         f = folds[c]
                         if gname == "chain":
                             r, ok, stage = chain(rr, cut[(f, blood, cnr)])
-                            t = tau.get((f, blood, cnr, stage), np.inf)
+                            t = tau.get((f, blood, cnr, stage), (np.inf, np.inf))
                             qc_rows.append({"case": c, "motion": motion, "blood": blood, "cnr": cnr, "stage": stage,
                                             "qc_pass": ok, "assd_endo": r["assd_endo"]})
                         else:
                             r = rr[gname]
-                            t = tau.get((f, blood, cnr, gname), tau.get((f, blood, cnr, "affine"), np.inf))
+                            t = tau.get((f, blood, cnr, gname), tau.get((f, blood, cnr, "affine"), (np.inf, np.inf)))
                         per_case[c] = (r, segtable(c, r, o["truth"][motion], t))
                     if not per_case:
                         continue
                     row = {"motion": motion, "blood": blood, "cnr": cnr, "geom": gname, "n_hearts": len(per_case),
                            "assd_endo_median": round(float(np.median([v[0]["assd_endo"] for v in per_case.values()])), 3)}
-                    for rule in ("P-K", "P-G", "P-J"):
+                    for rule in ("P-K", "P-G", "P-J", "P-J3"):
                         tp, P, tn, N, tp_nb, fp, fp_nb = [], [], [], [], [], [], []
                         bybin = np.zeros((2, 5))
                         for c, (r, tabs) in per_case.items():
@@ -196,7 +198,7 @@ def main(d):
     qc = qc_summary(qc_rows)
     out = {"n_hearts": len(cases), "folds": folds, "qc_cuts": {f"{k[0]}|{k[1]}|{k[2]}": np.round(v, 4).tolist()
                                                                for k, v in cut.items()},
-           "qc_keys": QC_KEYS, "tau_pj": {"|".join(map(str, k)): round(v, 4) for k, v in tau.items()},
+           "qc_keys": QC_KEYS, "tau_pj": {"|".join(map(str, k)): [round(v[0], 4), round(v[1], 4)] for k, v in tau.items()},
            "rows": results, "chain_qc": qc, "e9_phase_check": e9}
     (HERE / "lie_menu.json").write_text(json.dumps(out, indent=1) + "\n")
     return out

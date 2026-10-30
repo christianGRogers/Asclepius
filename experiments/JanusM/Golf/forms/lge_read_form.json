@@ -1,0 +1,53 @@
+{
+ "form": "janusm-lge-segment-read",
+ "version": "r3-golf-draft",
+ "rulings": ["JA32", "JA27", "JA26"],
+ "who": "a CMR reader in the janusm-readers group with the 'lge' read set; two independent readers per patient",
+ "blinding": "the reader sees the CMR series only: never a CT, a scar map, the other reader's read, or a clinical report",
+ "patient": [
+  {"id": "blind_attest", "type": "checkbox", "required": true,
+   "label": "I have not seen any CT, scar map, clinical report or other read for this patient"},
+  {"id": "lge_quality", "type": "choice", "required": true,
+   "options": ["diagnostic", "limited (segments marked below)", "non-diagnostic"],
+   "help": "non-diagnostic ends the read: every segment is 'not assessable'"},
+  {"id": "coverage", "type": "choice", "required": true,
+   "options": ["base to apex covered", "gaps (segments marked below)"]},
+  {"id": "artefact", "type": "multi", "options": ["none", "motion/breathing", "wrong inversion time", "arrhythmia", "device", "other"]},
+  {"id": "all_negative", "type": "button", "label": "No LGE in any segment",
+   "effect": "sets every assessable segment to presence = no; the reader still confirms the bull's-eye"}
+ ],
+ "segment": {
+  "repeat": "AHA segments 1-17 (Cerqueira 2002 model), shown as a bull's-eye and a list",
+  "fields": [
+   {"id": "presence", "type": "choice", "required": true, "options": ["no", "yes", "not assessable"]},
+   {"id": "pattern", "type": "choice", "required_if": "presence == yes",
+    "options": ["subendocardial (ischaemic)", "transmural (ischaemic)", "mid-wall (non-ischaemic)",
+                "epicardial (non-ischaemic)", "patchy / RV insertion (non-ischaemic)"]},
+   {"id": "kim_bin", "type": "choice", "required_if": "presence == yes",
+    "options": ["1: 1-25 %", "2: 26-50 %", "3: 51-75 %", "4: 76-100 %"],
+    "definition": "your estimate of the share of this segment's myocardium that is hyperenhanced, over all the short-axis slices that make up the segment (Kim 2000's 'percent of tissue'). It is a share of tissue, not the depth at the deepest point. See the example panel."}
+  ]
+ },
+ "kim_bin_examples": [
+  {"panel": "A", "picture": "thin bright rim along the whole endocardium of the segment, about 1/6 of the wall thick", "bin": 1},
+  {"panel": "B", "picture": "subendocardial scar to half the wall depth along the whole segment", "bin": 2,
+   "note": "the inner half of a curved wall holds a little less than half its tissue (about 45 % for a 10 mm wall around a 25 mm cavity radius); still bin 2"},
+  {"panel": "C", "picture": "transmural scar over half the segment's width, the other half normal", "bin": 2,
+   "note": "half the tissue; depth at its deepest point is 100 %, but the bin is set by the share"},
+  {"panel": "D", "picture": "scar to 3/4 depth along the whole segment", "bin": 3},
+  {"panel": "E", "picture": "transmural scar along the whole segment, a thin spared epicardial rim at most", "bin": 4},
+  {"panel": "F", "picture": "bright blood pool against a dark endocardium with no wall enhancement", "bin": 0,
+   "note": "blood is not scar; if the border cannot be told from the blood, mark the segment 'not assessable'"}
+ ],
+ "adjudication": {
+  "trigger": "any segment where the two readers differ on presence, or by >= 2 Kim bins (JA32)",
+  "who": "a third CMR reader, blind to CT",
+  "shows": "the CMR series and both reads of the flagged segments only",
+  "fields": "the same segment fields for each flagged segment; the adjudicated value is the reference"
+ },
+ "derived_not_entered": ["reference presence and bin per segment (agreeing reads, else adjudication)",
+                         "ischaemic-pattern flag per segment (the JA32 primary analysis set)",
+                         "inter-reader agreement on the Kim bin over scar-on-both segments (the JA32 anchor)"],
+ "never_entered": ["names, dates, accession numbers, free text that could identify the patient"],
+ "stored": "the restricted paired collection on the project's Girder, beside the pseudonym; never in the repository"
+}

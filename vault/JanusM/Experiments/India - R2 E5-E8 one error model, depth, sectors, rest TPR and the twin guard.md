@@ -107,7 +107,27 @@ reported, not a guard; thickness co-primary confirmed.
 
 ## E6: depth and sectors at 0.5 mm
 
-⟨E6⟩
+**Method** (`e6_depth_sectors.py`). On U's 0.5 mm reference walls: equal-thickness depth (JA2) and Yezzi–Prince depth
+(Laplace potential, then upwind fixed-point solves of T·∇L0 = 1 from the endocardium and −T·∇L1 = 1 from the
+epicardium; t = L0/(L0+L1)); fixed AHA sectors (JA3) and sectors proportional to the measured septal arc (the arc split
+between the two septal segments, the rest in four equal sectors; apical septal = the arc, the rest in three). Then
+two U perturbations (σ 0.5 mm, 8 mm) per case, re-deriving everything. **25 cases** (the first 25 that passed QC).
+
+| Quantity | Median (p10–p90) |
+|---|---|
+| Wall voxels in the same third, equal-thickness vs Yezzi–Prince | 98.2 % (98.1–98.3) |
+| Median \|Δt\| | 0.006 |
+| Third shares, equal thickness / Yezzi–Prince | 27.7 / 34.1 / 38.2 % vs 27.5 / 34.0 / 38.5 % |
+| Under U: subendo Dice, ET vs YP (50 runs) | 0.897 vs 0.898; YP better in 54 %, median +0.0002 |
+| Under U: STA, ET vs YP | 0.96 vs 0.95 |
+| Septal arc | 143° (131–151) |
+| Myocardium changing segment, fixed vs proportional | 18 % (10–27) |
+| Myocardium changing AHA-default territory | 10 % (5–15) |
+| Under U: mean segment Dice, fixed vs proportional | 0.891 vs 0.905; proportional better in 62 %, median +0.004 |
+| Under U: change of the measured arc | 3° (p90 9°) |
+
+**What it changes:** JA2's equal-thickness depth stays (Yezzi–Prince is the same at 0.5 mm). Fixed sectors stay
+primary; the septal segments are also reported under the proportional rule because one segment in five changes.
 
 ## E7: rest TPR phantom at 0.5 mm
 

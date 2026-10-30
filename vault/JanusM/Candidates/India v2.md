@@ -120,12 +120,23 @@ What this changes:
 
 ### 3.3 Item 3: depth, sectors, territories (E6, and JM-0 block B–D)
 
-**Depth.** ⟨E6 depth⟩ **JA2 stands: equal-thickness depth.** Yezzi–Prince is not adopted: on 0.5 mm it gives the same
-thirds as equal thickness to within ⟨E6 agree⟩ of wall voxels, is no more stable under border error, and costs a
+**Depth (E6, 25 cases at 0.5 mm).** Equal-thickness and Yezzi–Prince depth put **98.2 %** (p10–p90 98.1–98.3 %) of
+wall voxels in the same third; the median |Δdepth| is 0.006. Under U (σ 0.5 mm) the two are equally stable:
+subendocardial Dice 0.897 vs 0.898 (Yezzi–Prince better in 54 % of runs, median gain 0.0002), STA 0.96 vs 0.95.
+**JA2 stands: equal-thickness depth.** Yezzi–Prince is not adopted: it changes nothing measurable and costs a
 Laplace solve plus two upwind PDE solves per case. Laplace stays a reported alternative (JM-0 block B gives it on real
 CCTA).
 
-**Sectors.** ⟨E6 sectors⟩
+**Sectors (E6).** The measured septal (RV-contact) arc is **143°** (p10–p90 131–151°), not the 120° that fixed 60°
+sectors assume (India v1: 137°; Golf: 164°). Sectors proportional to that arc move **18 %** (10–27 %) of the
+myocardium to another segment and **10 %** (5–15 %) to another AHA-default territory. They are barely more
+reproducible under U: mean segment Dice 0.905 vs 0.891, better in 62 % of runs, median gain 0.004. The measured arc
+itself moves by a median 3° (p90 9°) under 0.5 mm border error.
+
+**Ruling: keep JA3's fixed sectors as the primary rule** (they are the published AHA convention, and a reader's
+bull's-eye means them); **report the two septal segments of each ring also under the proportional rule**, as a
+sensitivity column in the table, since one segment in five changes. The reproducibility gain is too small to justify
+leaving the standard. JM-0 block C repeats the measurement on ImageCAS.
 
 **Territories.** No open CT carries coronary labels with the heart, so this is measured on ImageCAS-X by JM-0 block D
 (reference trees, not Janus predictions; JA4). The rule is in §3.1.
@@ -340,7 +351,7 @@ python experiments/JanusM/India/fir/jm0_addon.py --cases $SCRATCH/janusm/m0_case
 |---|---|
 | JM-0 A: a median half-maximum offset > 0.5 mm on either border | Seeds are biased on that border: anchoring read per border; training reads requested at the first decision look |
 | JM-0 B: equal-thickness vs Laplace third agreement < 85 % on native CCTA | The depth choice matters on real walls: both are reported per segment and the lead is asked which is primary |
-| JM-0 C: proportional sectors change < 10 % of mass on ImageCAS | Keep JA3's fixed sectors (the change is immaterial) |
+| JM-0 C: proportional sectors change < 10 % of mass on ImageCAS | Drop the proportional sensitivity column (immaterial) |
 | JM-0 D: Euclidean vs geodesic disagree on ≥ 5 % of voxels | Both territories reported; the lead picks the primary |
 | JM-0 E: native rest TPR with the 1 mm guard has a median within 0.95–1.15 and < 10 % of segments < 0.99 | Rest TPR may be shown per segment (still "research"); otherwise it stays report-only |
 | JM-0 F: the 0.1th core percentile is > 0 HU | No fat output on ImageCAS (the window is not met); fat stays a research field |
@@ -350,7 +361,7 @@ python experiments/JanusM/India/fir/jm0_addon.py --cases $SCRATCH/janusm/m0_case
 ## 10. Changes to the master plan proposed by India v2
 
 1. **One error model U, indexed by realised ASSD** (§3.2), replacing all Round 1 simulations; STA computed in it.
-2. **Sectors:** ⟨sector proposal⟩ (§3.3).
+2. **Sectors:** fixed sectors stay primary; the septal segments are also reported under the arc-proportional rule (§3.3).
 3. **JM-0 add-on** (§3.1, §8): no GPU, closes items 1, 3 and 6 on real CCTA.
 4. **E8 margin and re-powering rule** as code (§3.5).
 5. **Border protocol and read-queue specification** (§3.4) for the JA13 issue.

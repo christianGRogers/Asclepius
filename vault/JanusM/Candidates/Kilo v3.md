@@ -410,6 +410,7 @@ guard (#180 → #183; synced by #185 and #186).
 | Development: phase-suspect share > 20 % | the LIE phase requirement is not being met; the lead is told before any seal patient is read |
 | Development: scarred segments per scar patient ≠ 3.25 | the ≥ 270 floor's N is recomputed by the engine |
 | JM-0R: first-pass endocardial half-maximum offset > 0.5 mm | the edge-offset null is re-centred on it (§7) |
+| Benchmark: with the heart moving against a static chest, rigid MI masked at 10 mm leaves > 1 mm residual where a 4 mm mask leaves < 0.5 mm (Juliet's early observation on #179) | propose JA29's mask at classes 1–4 dilated **4 mm**, with 10 mm as the fallback when the 4 mm stage fails QC; the judge rules |
 
 ## 10. Item 7: path B against path A, for the lead (updated)
 
@@ -444,6 +445,20 @@ a Kim bin that stays "research" unless CT extent proves as reproducible as the C
 3. **The intake checker** (JA35 item 3) as specified in §6.
 4. **The two forms** (JA35 item 5) as specified in §5, with automatic checks and adjudication routing, and
    claim-to-submit timestamps exported for §5.3.
+
+### 11.1 The six readings in #188 (registration and Scar-0 modules), confirmed or corrected
+
+| # | #188's reading | Kilo v3 | Why |
+|---|---|---|---|
+| 1 | Affine "lowers the QC values": no QC value rises and their sum falls | **Correct it:** sum the QC values **each divided by its cut**; affine is kept if no normalised value rises and the maximum falls, or if affine passes QC where rigid failed | The raw shares differ 5–50-fold with blood level (E8), so an unnormalised sum is dominated by whichever share is large for that patient. The edge offset (§7) is in mm and enters the same way |
+| 2 | The development failure rate counts patients who end up not graded (two failed reader checks) | **Confirm.** The yield endpoint (§4.3 item 3) uses the same definition. **Phase-suspect patients are not failures:** they go to the phase-unmatched stratum and are counted separately | A first-check fail that re-registers is the chain working; a phase mismatch is a data property, not a registration failure |
+| 3 | E-D's voxel cut is P-K's half-way cut (Juliet E6) | **Correct it:** E-D uses E-V's cut, remote + 3 SD | P-K's half-way cut is set by the brightest segment and is unstable (E8: it collapses on scar-free hearts). With one shared voxel cut, E-V and E-D differ only in aggregation (volume share vs depth extent), which is the question JA30 asks |
+| 4 | Deepest u = the far edge of the deepest E-D depth bin called scar in any column | **Confirm** | — |
+| 5 | QC's blood median over the carried cavity's core, one voxel inside | **Adjust:** ≥ 2 mm inside the carried cavity border, whatever the grid (fall back to 1 voxel if < 50 voxels remain) | At 1 mm voxels one voxel is inside the 1.5 mm smoothing kernel, so wall partial volume enters. E8 used 2 voxels (3 mm) |
+| 6 | Reader forms out of scope | **Confirm;** they are specified in §5 | — |
+
+Also noted: #188 implements Mattes MI and Powell in numpy/scipy. E8 used SimpleITK's regular-step gradient descent.
+The benchmark runs on #188's module, so its registration numbers, not E8's, are the ones that bind.
 
 ## 12. References
 

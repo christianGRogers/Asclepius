@@ -69,7 +69,7 @@ def test_protocol_is_not_segqueue14s():
     assert protocol.path(protocol.SUBMIT, read_id="x") == "janusm/read/x/submit"
 
 
-@pytest.mark.parametrize("sent", [None, "", "zero", 0])
+@pytest.mark.parametrize("sent", [None, "", "zero", 0, 2, 14, 16])  # 14, 16: SegQueue14
 def test_protocol_refuses_missing_or_old_client(sent):
     with pytest.raises(protocol.ProtocolError) as err:
         protocol.check_client_protocol(sent)

@@ -160,16 +160,22 @@ class ProtocolError(Exception):
 
 
 def check_client_protocol(client_protocol: Optional[Any]) -> None:
-    """Raise :class:`ProtocolError` unless the client speaks this protocol or newer."""
+    """Raise :class:`ProtocolError` unless the client speaks a version this server knows
+    (:data:`MIN_CLIENT_PROTOCOL` .. :data:`PROTOCOL_VERSION`).
+
+    A version above the server's is refused too: no Janus-M client is newer than its
+    server, and a SegQueue or SegQueue14 module sending its own number (14, 16) must
+    not pass for a Janus-M client.
+    """
     try:
         version = None if client_protocol in (None, "") else int(client_protocol)
     except (TypeError, ValueError):
         version = None
-    if version is None or version < MIN_CLIENT_PROTOCOL:
+    if version is None or not MIN_CLIENT_PROTOCOL <= version <= PROTOCOL_VERSION:
         shown = "nothing" if version is None else str(version)
         raise ProtocolError(
             ERR_CLIENT_TOO_OLD,
-            f"This client is too old for the Janus-M read server: the server speaks "
-            f"{PROTOCOL_NAME} protocol {PROTOCOL_VERSION} and the client sent {shown}. "
+            f"This client does not speak the Janus-M read protocol: the server speaks "
+            f"{PROTOCOL_NAME} {PROTOCOL_VERSION} and the client sent {shown}. "
             "A SegQueue or SegQueue14 module cannot read Janus-M cases.",
             {"minProtocol": MIN_CLIENT_PROTOCOL, "serverProtocol": PROTOCOL_VERSION})

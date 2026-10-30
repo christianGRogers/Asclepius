@@ -1,0 +1,21 @@
+{
+ "identical_rows": {
+  "cv_n": 0.0,
+  "thickness_median_mm": 7.731,
+  "R9_outcome": "the page prints the provisional 35 % (JA40): the detectable depth cannot be computed from these inputs (cv_n and sig_m are both 0: the population has no normal variation, so rule C has no scale and the detectable depth is undefined)",
+  "R9_missing": [],
+  "R9_depth": null,
+  "not_decidable_lines": []
+ },
+ "jittered_rows": {
+  "cv_n": 0.0905,
+  "thickness_median_mm": 7.731,
+  "R9_outcome": "the page prints a detectable depth of 30 % (cv_n 0.0905, F1 1.0 mm)",
+  "R9_missing": [],
+  "R9_depth": 0.3,
+  "not_decidable_lines": [],
+  "depth_if_median_mm_passed": 0.35
+ },
+ "lima_e7_inputs_cv0.088_rc1.0_median9.668": 0.35,
+ "lima_e7_inputs_cv0.088_rc1.0_median5.7": 0.45
+}

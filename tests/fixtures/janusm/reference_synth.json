@@ -1,6 +1,6 @@
 {
  "calibrate": "janusm.calibrate",
- "calibrate_version": "1.0.0",
+ "calibrate_version": "1.1.0",
  "cases_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
  "composite": {
   "needs_two_contiguous": false,
@@ -68,7 +68,7 @@
     "LCx": 0.9992,
     "RCA": 1.0014
    },
-   "false_flag": 0.027207107162687396,
+   "false_flag": 0.02547065337763012,
    "floor_mm": {
     "LAD": 0.0301,
     "LCx": 0.0301,
@@ -80,11 +80,16 @@
    "pass": true,
    "rc_terr_for_depth": 0.0301,
    "s3_wall_input": {
-    "median_mm": 0.9999
+    "measured_median_mm": 0.9999,
+    "phase_mix": {
+     "ED": 1.0,
+     "MD": 0.0,
+     "SYS": 0.0
+    }
    },
    "sens_range": [
-    0.8418604651162791,
-    0.873015873015873
+    0.8235294117647058,
+    0.8624338624338624
    ],
    "why": "depth 0.15 <= 0.5"
   },
@@ -96,7 +101,7 @@
     "LCx": 5.912,
     "RCA": 6.2487
    },
-   "false_flag": 0.011686143572621035,
+   "false_flag": 0.01001669449081803,
    "floor_mm": {
     "LAD": 0.4143,
     "LCx": 0.4143,
@@ -108,11 +113,11 @@
    "pass": true,
    "rc_terr_for_depth": 0.4143,
    "s3_wall_input": {
-    "median_mm": 5.9861
+    "measured_median_mm": 5.9861
    },
    "sens_range": [
-    0.8411214953271028,
-    0.9230769230769231
+    0.8317757009345794,
+    0.8956043956043956
    ],
    "why": "depth 0.25 <= 0.5"
   }

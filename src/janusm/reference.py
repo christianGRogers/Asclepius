@@ -627,25 +627,17 @@ def read_agreement(reads: List[dict], cfg: dict) -> dict:
 
 # --------------------------------------------------------------------------------------- gate
 #: JA60: hypoattenuation is a relative HU level, which phase does not scale.
-HYPO_PHASE_MIX = {"ED": 1.0}
+HYPO_PHASE_MIX = {"ED": 1.0, "MD": 0.0, "SYS": 0.0}  # every phase named: S3's sampler needs them
 
 
 def s3_wall_kwargs(sign: str, blk: dict) -> dict:
     """The wall input ``gate()`` gives S3 (JA60, R4-S10): ``measured_median_mm`` = this
-    population's median level and, for hypoattenuation, ``phase_mix={"ED": 1.0}``.
-
-    Until S3 takes ``measured_median_mm`` (R4-S1, Group A, #211) the same value goes to its old
-    ``median_mm``; the gate records which (``s3_wall_input``)."""
-    import inspect
-
-    params = inspect.signature(calibrate.detectable_depth).parameters
-    anykw = any(p.kind is inspect.Parameter.VAR_KEYWORD for p in params.values())
-    if anykw or "measured_median_mm" in params:
-        kw = {"measured_median_mm": float(blk["median_level"])}
-        if sign == "hypoattenuation" and (anykw or "phase_mix" in params):
-            kw["phase_mix"] = dict(HYPO_PHASE_MIX)
-        return kw
-    return {"median_mm": float(blk["median_level"])}  # pre-R4-S1 S3
+    population's median level and, for hypoattenuation (a relative HU level, which phase does
+    not scale), ``phase_mix={"ED": 1.0}``. Never ``median_mm``, which is E7's only."""
+    kw = {"measured_median_mm": float(blk["median_level"])}
+    if sign == "hypoattenuation":
+        kw["phase_mix"] = dict(HYPO_PHASE_MIX)
+    return kw
 
 
 def gate(sign: str, cfg: dict, agreement: dict, *, seed: int = SEED, sig_m: float = 0.0) -> dict:

@@ -10,7 +10,7 @@
 - **Shared segments:** majority share < 0.6
 - **Layers per segment:** 0 in thirds, 17 in halves
 - **Versions:** harness 1.1.0, geometry 1.0.0, features 1.1.0, report 1.1.0, guard 2
-- **Reference config sha256:** fcac15304c495831050cf7171228962248215baa738e97cef484e5575126e4b2
+- **Reference config sha256:** ad8f041269a6c841ffe24079875805ef621c26a5175080456ddde87964f7250a
 
 ## Table A: segments (numbers, never flags)
 
@@ -45,6 +45,6 @@
 ---
 
 Research output, not validated: no scar or perfusion reference.  
-Thinning: a territory is flagged only when its wall is thinner than the patient's other walls by more than this population's normal variation allows. In simulation, a territory thinned by ≥ 15 % is flagged in ≥ 80 % of cases. Thinner changes are usually not flagged. This is not a sensitivity for scar, which this table cannot measure.  
+Thinning: a territory is flagged only when its wall is thinner than the patient's other walls by more than this population's normal variation allows. In simulation, a territory thinned by ≥ 20 % is flagged in ≥ 80 % of cases. Thinner changes are usually not flagged. This is not a sensitivity for scar, which this table cannot measure.  
 Hypoattenuation: a territory is flagged only when its subendocardial attenuation is lower than the patient's other walls by more than this population's normal variation allows. In simulation, a territory with a relative subendocardial deficit of ≥ 15 % is flagged in ≥ 80 % of cases. Smaller changes are usually not flagged. This is not a sensitivity for scar, which this table cannot measure.  
 Population: this population, phase-uncertain.

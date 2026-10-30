@@ -120,6 +120,7 @@ def test_gate_equals_s3_detectable_depth_at_the_same_seed():
     want = C.detectable_depth(cfg["thinning"]["cv_n"], np.asarray(cfg["thinning"]["shape"]), rc,
                               seed=77, **R.s3_wall_kwargs("thinning", cfg["thinning"]))
     assert g["depth"] == want["depth"] and g["sens_range"] == want["sens_range"]
+    assert g["s3_wall_input"] == {"measured_median_mm": cfg["thinning"]["median_level"]}
     assert g["pass"] == (want["depth"] is not None and want["depth"] <= R.DEPTH_GATE)
 
 
@@ -488,25 +489,9 @@ def test_gate_gives_s3_the_measured_wall(monkeypatch, sign):
           "territory": {t: {"rc": 0.5} for t in R.TERRITORIES}}
     g = R.gate(sign, cfg, {sign: {"rc": rc}}, seed=3)
     assert seen["measured_median_mm"] == 5.9 and seen["median_mm"] is None
-    assert seen["phase_mix"] == ({"ED": 1.0} if sign == "hypoattenuation" else None)
+    assert seen["phase_mix"] == ({"ED": 1.0, "MD": 0.0, "SYS": 0.0} if sign == "hypoattenuation"
+                                 else None)
     assert g["s3_wall_input"]["measured_median_mm"] == 5.9 and g["pass"]
-
-
-def test_gate_falls_back_to_median_mm_on_a_pre_r4_s1_s3(monkeypatch):
-    """Until #211 lands, S3 has only ``median_mm``: the same value goes there, and is recorded."""
-    seen = {}
-
-    def s3(cv_n, shape, rc, *, sig_m=0.0, seed, median_mm=9.668):
-        seen["median_mm"] = median_mm
-        return {"depth": 0.3, "sens_range": [0.8, 0.9], "false_flag": 0.01}
-
-    monkeypatch.setattr(C, "detectable_depth", s3)
-    blk = {"cut": -2.0, "cv_n": 0.1, "shape": list(C.LIMA_SHAPE), "median_level": 5.9}
-    rc = {"status": "computed", "scale": "difference",
-          "territory": {t: {"rc": 0.5} for t in R.TERRITORIES}}
-    g = R.gate("hypoattenuation", {"hypoattenuation": blk}, {"hypoattenuation": {"rc": rc}},
-               seed=3)
-    assert seen["median_mm"] == 5.9 and g["s3_wall_input"] == {"median_mm": 5.9}
 
 
 # ------------------------------------------------------------------------------------ R4-S15

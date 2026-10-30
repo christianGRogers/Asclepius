@@ -1,0 +1,2143 @@
+{
+ "n_hearts": 13,
+ "n_rows": 3432,
+ "null_qc": {
+  "aligned": {
+   "below": {
+    "q_fat": [
+     0.004,
+     0.026,
+     0.055,
+     0.056
+    ],
+    "q_blood": [
+     0.126,
+     0.18,
+     0.25,
+     0.272
+    ],
+    "q_bright": [
+     0.104,
+     0.153,
+     0.217,
+     0.235
+    ],
+    "edge_offset_remote": [
+     -0.049,
+     0.004,
+     0.47,
+     0.524
+    ],
+    "edge_iqr": [
+     0.081,
+     0.19,
+     0.343,
+     0.417
+    ]
+   },
+   "equal": {
+    "q_fat": [
+     0.004,
+     0.026,
+     0.055,
+     0.056
+    ],
+    "q_blood": [
+     0.07,
+     0.1,
+     0.149,
+     0.16
+    ],
+    "q_bright": [
+     0.031,
+     0.05,
+     0.075,
+     0.081
+    ],
+    "edge_offset_remote": [
+     -0.036,
+     -0.006,
+     0.207,
+     0.288
+    ],
+    "edge_iqr": [
+     0.095,
+     0.225,
+     0.886,
+     0.974
+    ]
+   },
+   "above": {
+    "q_fat": [
+     0.004,
+     0.026,
+     0.055,
+     0.056
+    ],
+    "q_blood": [
+     0.009,
+     0.017,
+     0.032,
+     0.036
+    ],
+    "q_bright": [
+     0.0,
+     0.001,
+     0.004,
+     0.004
+    ],
+    "edge_offset_remote": [
+     -0.033,
+     -0.01,
+     0.124,
+     0.19
+    ],
+    "edge_iqr": [
+     0.091,
+     0.145,
+     0.237,
+     0.249
+    ]
+   }
+  },
+  "e5_after_rigid": {
+   "below": {
+    "q_fat": [
+     0.01,
+     0.042,
+     0.075,
+     0.08
+    ],
+    "q_blood": [
+     0.135,
+     0.187,
+     0.257,
+     0.285
+    ],
+    "q_bright": [
+     0.108,
+     0.153,
+     0.224,
+     0.237
+    ],
+    "edge_offset_remote": [
+     -0.463,
+     -0.028,
+     0.775,
+     0.925
+    ],
+    "edge_iqr": [
+     0.497,
+     0.796,
+     1.161,
+     1.306
+    ]
+   },
+   "equal": {
+    "q_fat": [
+     0.01,
+     0.043,
+     0.077,
+     0.082
+    ],
+    "q_blood": [
+     0.077,
+     0.104,
+     0.159,
+     0.166
+    ],
+    "q_bright": [
+     0.03,
+     0.048,
+     0.073,
+     0.084
+    ],
+    "edge_offset_remote": [
+     -0.528,
+     -0.152,
+     0.443,
+     0.497
+    ],
+    "edge_iqr": [
+     0.574,
+     0.861,
+     1.332,
+     1.491
+    ]
+   },
+   "above": {
+    "q_fat": [
+     0.01,
+     0.043,
+     0.079,
+     0.082
+    ],
+    "q_blood": [
+     0.016,
+     0.029,
+     0.046,
+     0.05
+    ],
+    "q_bright": [
+     0.001,
+     0.003,
+     0.007,
+     0.009
+    ],
+    "edge_offset_remote": [
+     -0.529,
+     -0.198,
+     0.29,
+     0.355
+    ],
+    "edge_iqr": [
+     0.455,
+     0.644,
+     1.017,
+     1.12
+    ]
+   }
+  }
+ },
+ "flag_rates": {
+  "below": {
+   "cuts": {
+    "q_fat": [
+     "hi",
+     0.075
+    ],
+    "q_blood": [
+     "hi",
+     0.257
+    ],
+    "q_bright": [
+     "hi",
+     0.224
+    ],
+    "edge_iqr": [
+     "hi",
+     1.161
+    ],
+    "edge_offset_remote": [
+     "two",
+     -0.486,
+     0.892
+    ],
+    "edge_abs_0.6mm": [
+     "abs",
+     0.6
+    ]
+   },
+   "unregistered_e5 (R0)": {
+    "q_fat": 0.385,
+    "q_blood": 0.462,
+    "q_bright": 0.231,
+    "edge_iqr": 0.962,
+    "edge_offset_remote": 0.462,
+    "edge_abs_0.6mm": 0.615,
+    "null_false_flag_edge_abs_0.6mm": 0.096,
+    "n": 52
+   },
+   "phase +5% (cavity smaller), aligned": {
+    "q_fat": 0.0,
+    "q_blood": 0.038,
+    "q_bright": 0.038,
+    "edge_iqr": 0.0,
+    "edge_offset_remote": 1.0,
+    "edge_abs_0.6mm": 0.981,
+    "null_false_flag_edge_abs_0.6mm": 0.096,
+    "n": 52
+   },
+   "phase -5% (cavity larger), aligned": {
+    "q_fat": 0.0,
+    "q_blood": 0.096,
+    "q_bright": 0.077,
+    "edge_iqr": 0.0,
+    "edge_offset_remote": 1.0,
+    "edge_abs_0.6mm": 1.0,
+    "null_false_flag_edge_abs_0.6mm": 0.096,
+    "n": 52
+   },
+   "phase +5%, e5 after rigid": {
+    "q_fat": 0.038,
+    "q_blood": 0.058,
+    "q_bright": 0.058,
+    "edge_iqr": 0.058,
+    "edge_offset_remote": 0.942,
+    "edge_abs_0.6mm": 0.904,
+    "null_false_flag_edge_abs_0.6mm": 0.096,
+    "n": 52
+   },
+   "phase -5%, e5 after rigid": {
+    "q_fat": 0.096,
+    "q_blood": 0.115,
+    "q_bright": 0.077,
+    "edge_iqr": 0.0,
+    "edge_offset_remote": 0.885,
+    "edge_abs_0.6mm": 1.0,
+    "null_false_flag_edge_abs_0.6mm": 0.096,
+    "n": 52
+   }
+  },
+  "equal": {
+   "cuts": {
+    "q_fat": [
+     "hi",
+     0.077
+    ],
+    "q_blood": [
+     "hi",
+     0.159
+    ],
+    "q_bright": [
+     "hi",
+     0.073
+    ],
+    "edge_iqr": [
+     "hi",
+     1.332
+    ],
+    "edge_offset_remote": [
+     "two",
+     -0.54,
+     0.476
+    ],
+    "edge_abs_0.6mm": [
+     "abs",
+     0.6
+    ]
+   },
+   "unregistered_e5 (R0)": {
+    "q_fat": 0.346,
+    "q_blood": 0.577,
+    "q_bright": 0.654,
+    "edge_iqr": 0.827,
+    "edge_offset_remote": 0.558,
+    "edge_abs_0.6mm": 0.519,
+    "null_false_flag_edge_abs_0.6mm": 0.0,
+    "n": 52
+   },
+   "phase +5% (cavity smaller), aligned": {
+    "q_fat": 0.0,
+    "q_blood": 0.019,
+    "q_bright": 0.096,
+    "edge_iqr": 0.019,
+    "edge_offset_remote": 1.0,
+    "edge_abs_0.6mm": 1.0,
+    "null_false_flag_edge_abs_0.6mm": 0.0,
+    "n": 52
+   },
+   "phase -5% (cavity larger), aligned": {
+    "q_fat": 0.0,
+    "q_blood": 0.269,
+    "q_bright": 0.308,
+    "edge_iqr": 0.0,
+    "edge_offset_remote": 1.0,
+    "edge_abs_0.6mm": 1.0,
+    "null_false_flag_edge_abs_0.6mm": 0.0,
+    "n": 52
+   },
+   "phase +5%, e5 after rigid": {
+    "q_fat": 0.058,
+    "q_blood": 0.038,
+    "q_bright": 0.096,
+    "edge_iqr": 0.135,
+    "edge_offset_remote": 1.0,
+    "edge_abs_0.6mm": 1.0,
+    "null_false_flag_edge_abs_0.6mm": 0.0,
+    "n": 52
+   },
+   "phase -5%, e5 after rigid": {
+    "q_fat": 0.058,
+    "q_blood": 0.231,
+    "q_bright": 0.25,
+    "edge_iqr": 0.0,
+    "edge_offset_remote": 1.0,
+    "edge_abs_0.6mm": 1.0,
+    "null_false_flag_edge_abs_0.6mm": 0.0,
+    "n": 52
+   }
+  },
+  "above": {
+   "cuts": {
+    "q_fat": [
+     "hi",
+     0.079
+    ],
+    "q_blood": [
+     "hi",
+     0.046
+    ],
+    "q_bright": [
+     "hi",
+     0.007
+    ],
+    "edge_iqr": [
+     "hi",
+     1.017
+    ],
+    "edge_offset_remote": [
+     "two",
+     -0.561,
+     0.336
+    ],
+    "edge_abs_0.6mm": [
+     "abs",
+     0.6
+    ]
+   },
+   "unregistered_e5 (R0)": {
+    "q_fat": 0.346,
+    "q_blood": 0.942,
+    "q_bright": 0.942,
+    "edge_iqr": 0.962,
+    "edge_offset_remote": 0.615,
+    "edge_abs_0.6mm": 0.615,
+    "null_false_flag_edge_abs_0.6mm": 0.0,
+    "n": 52
+   },
+   "phase +5% (cavity smaller), aligned": {
+    "q_fat": 0.0,
+    "q_blood": 0.0,
+    "q_bright": 0.0,
+    "edge_iqr": 0.0,
+    "edge_offset_remote": 1.0,
+    "edge_abs_0.6mm": 1.0,
+    "null_false_flag_edge_abs_0.6mm": 0.0,
+    "n": 52
+   },
+   "phase -5% (cavity larger), aligned": {
+    "q_fat": 0.0,
+    "q_blood": 0.981,
+    "q_bright": 0.923,
+    "edge_iqr": 0.0,
+    "edge_offset_remote": 1.0,
+    "edge_abs_0.6mm": 1.0,
+    "null_false_flag_edge_abs_0.6mm": 0.0,
+    "n": 52
+   },
+   "phase +5%, e5 after rigid": {
+    "q_fat": 0.058,
+    "q_blood": 0.019,
+    "q_bright": 0.0,
+    "edge_iqr": 0.0,
+    "edge_offset_remote": 1.0,
+    "edge_abs_0.6mm": 1.0,
+    "null_false_flag_edge_abs_0.6mm": 0.0,
+    "n": 52
+   },
+   "phase -5%, e5 after rigid": {
+    "q_fat": 0.058,
+    "q_blood": 0.962,
+    "q_bright": 0.981,
+    "edge_iqr": 0.0,
+    "edge_offset_remote": 1.0,
+    "edge_abs_0.6mm": 1.0,
+    "null_false_flag_edge_abs_0.6mm": 0.0,
+    "n": 52
+   }
+  }
+ },
+ "edge_vs_truth": {
+  "n": 1716,
+  "pearson_r": -0.801,
+  "slope": -0.643,
+  "intercept": -0.045
+ },
+ "edge_by_phase": {
+  "-0.05 none R0": {
+   "true_signed_mm": [
+    -1.451
+   ],
+   "edge_offset_p5_p50_p95": [
+    1.035,
+    1.173,
+    1.333
+   ],
+   "q_blood_p50": [
+    0.14
+   ],
+   "q_bright_p50": [
+    0.065
+   ]
+  },
+  "-0.05 e5 R3": {
+   "true_signed_mm": [
+    -1.418
+   ],
+   "edge_offset_p5_p50_p95": [
+    0.768,
+    1.0,
+    1.147
+   ],
+   "q_blood_p50": [
+    0.139
+   ],
+   "q_bright_p50": [
+    0.064
+   ]
+  },
+  "+0.00 none R0": {
+   "true_signed_mm": [
+    0.027
+   ],
+   "edge_offset_p5_p50_p95": [
+    -0.037,
+    -0.005,
+    0.323
+   ],
+   "q_blood_p50": [
+    0.099
+   ],
+   "q_bright_p50": [
+    0.05
+   ]
+  },
+  "+0.00 e5 R3": {
+   "true_signed_mm": [
+    0.053
+   ],
+   "edge_offset_p5_p50_p95": [
+    -0.52,
+    -0.103,
+    0.46
+   ],
+   "q_blood_p50": [
+    0.102
+   ],
+   "q_bright_p50": [
+    0.048
+   ]
+  },
+  "+0.05 none R0": {
+   "true_signed_mm": [
+    1.505
+   ],
+   "edge_offset_p5_p50_p95": [
+    -1.696,
+    -1.365,
+    -0.963
+   ],
+   "q_blood_p50": [
+    0.1
+   ],
+   "q_bright_p50": [
+    0.053
+   ]
+  },
+  "+0.05 e5 R3": {
+   "true_signed_mm": [
+    1.615
+   ],
+   "edge_offset_p5_p50_p95": [
+    -1.904,
+    -1.35,
+    -0.823
+   ],
+   "q_blood_p50": [
+    0.099
+   ],
+   "q_bright_p50": [
+    0.05
+   ]
+  }
+ },
+ "grading": {
+  "cnr5 phase+0.00 none/R0 blood-below": {
+   "P-K": {
+    "sens": [
+     0.962,
+     0.923,
+     0.992
+    ],
+    "spec_scarred_hearts": 1.0,
+    "spec_scar_free_hearts": [
+     0.005,
+     0.0,
+     0.014
+    ],
+    "tbin_scar_on_both": 0.968
+   },
+   "P-K*": {
+    "sens": [
+     0.962,
+     0.923,
+     0.992
+    ],
+    "spec_scarred_hearts": 1.0,
+    "spec_scar_free_hearts": [
+     1.0,
+     1.0,
+     1.0
+    ],
+    "tbin_scar_on_both": 0.968
+   },
+   "P-G": {
+    "sens": [
+     0.746,
+     0.715,
+     0.777
+    ],
+    "spec_scarred_hearts": 1.0,
+    "spec_scar_free_hearts": [
+     1.0,
+     1.0,
+     1.0
+    ],
+    "tbin_scar_on_both": 0.979
+   }
+  },
+  "cnr5 phase+0.00 none/R0 blood-equal": {
+   "P-K": {
+    "sens": [
+     0.985,
+     0.962,
+     1.0
+    ],
+    "spec_scarred_hearts": 1.0,
+    "spec_scar_free_hearts": [
+     0.005,
+     0.0,
+     0.014
+    ],
+    "tbin_scar_on_both": 0.969
+   },
+   "P-K*": {
+    "sens": [
+     0.985,
+     0.962,
+     1.0
+    ],
+    "spec_scarred_hearts": 1.0,
+    "spec_scar_free_hearts": [
+     0.978,
+     0.963,
+     0.993
+    ],
+    "tbin_scar_on_both": 0.969
+   },
+   "P-G": {
+    "sens": [
+     0.746,
+     0.715,
+     0.777
+    ],
+    "spec_scarred_hearts": 0.997,
+    "spec_scar_free_hearts": [
+     1.0,
+     1.0,
+     1.0
+    ],
+    "tbin_scar_on_both": 0.979
+   }
+  },
+  "cnr5 phase+0.00 none/R0 blood-above": {
+   "P-K": {
+    "sens": [
+     0.992,
+     0.977,
+     1.0
+    ],
+    "spec_scarred_hearts": 0.986,
+    "spec_scar_free_hearts": [
+     0.005,
+     0.0,
+     0.014
+    ],
+    "tbin_scar_on_both": 0.977
+   },
+   "P-K*": {
+    "sens": [
+     0.992,
+     0.977,
+     1.0
+    ],
+    "spec_scarred_hearts": 0.986,
+    "spec_scar_free_hearts": [
+     0.613,
+     0.561,
+     0.65
+    ],
+    "tbin_scar_on_both": 0.977
+   },
+   "P-G": {
+    "sens": [
+     0.746,
+     0.715,
+     0.777
+    ],
+    "spec_scarred_hearts": 0.997,
+    "spec_scar_free_hearts": [
+     1.0,
+     1.0,
+     1.0
+    ],
+    "tbin_scar_on_both": 0.969
+   }
+  },
+  "cnr5 phase+0.00 e5/R3 blood-below": {
+   "P-K": {
+    "sens": [
+     0.908,
+     0.862,
+     0.95
+    ],
+    "spec_scarred_hearts": 0.986,
+    "spec_scar_free_hearts": [
+     0.053,
+     0.01,
+     0.096
+    ],
+    "tbin_scar_on_both": 0.746
+   },
+   "P-K*": {
+    "sens": [
+     0.908,
+     0.862,
+     0.95
+    ],
+    "spec_scarred_hearts": 0.986,
+    "spec_scar_free_hearts": [
+     0.99,
+     0.983,
+     0.998
+    ],
+    "tbin_scar_on_both": 0.746
+   },
+   "P-G": {
+    "sens": [
+     0.715,
+     0.65,
+     0.769
+    ],
+    "spec_scarred_hearts": 0.993,
+    "spec_scar_free_hearts": [
+     1.0,
+     1.0,
+     1.0
+    ],
+    "tbin_scar_on_both": 0.742
+   }
+  },
+  "cnr5 phase+0.00 e5/R3 blood-equal": {
+   "P-K": {
+    "sens": [
+     0.954,
+     0.915,
+     0.985
+    ],
+    "spec_scarred_hearts": 0.836,
+    "spec_scar_free_hearts": [
+     0.154,
+     0.103,
+     0.208
+    ],
+    "tbin_scar_on_both": 0.782
+   },
+   "P-K*": {
+    "sens": [
+     0.954,
+     0.915,
+     0.985
+    ],
+    "spec_scarred_hearts": 0.836,
+    "spec_scar_free_hearts": [
+     0.654,
+     0.607,
+     0.697
+    ],
+    "tbin_scar_on_both": 0.782
+   },
+   "P-G": {
+    "sens": [
+     0.762,
+     0.708,
+     0.808
+    ],
+    "spec_scarred_hearts": 0.99,
+    "spec_scar_free_hearts": [
+     0.998,
+     0.993,
+     1.0
+    ],
+    "tbin_scar_on_both": 0.768
+   }
+  },
+  "cnr5 phase+0.00 e5/R3 blood-above": {
+   "P-K": {
+    "sens": [
+     0.985,
+     0.962,
+     1.0
+    ],
+    "spec_scarred_hearts": 0.476,
+    "spec_scar_free_hearts": [
+     0.209,
+     0.149,
+     0.268
+    ],
+    "tbin_scar_on_both": 0.781
+   },
+   "P-K*": {
+    "sens": [
+     0.985,
+     0.962,
+     1.0
+    ],
+    "spec_scarred_hearts": 0.476,
+    "spec_scar_free_hearts": [
+     0.377,
+     0.322,
+     0.434
+    ],
+    "tbin_scar_on_both": 0.781
+   },
+   "P-G": {
+    "sens": [
+     0.769,
+     0.723,
+     0.812
+    ],
+    "spec_scarred_hearts": 0.986,
+    "spec_scar_free_hearts": [
+     0.995,
+     0.988,
+     1.0
+    ],
+    "tbin_scar_on_both": 0.77
+   }
+  },
+  "cnr5 phase+0.05 none/R0 blood-below": {
+   "P-K": {
+    "sens": [
+     0.977,
+     0.946,
+     1.0
+    ],
+    "spec_scarred_hearts": 1.0,
+    "spec_scar_free_hearts": [
+     0.005,
+     0.0,
+     0.014
+    ],
+    "tbin_scar_on_both": 0.906
+   },
+   "P-K*": {
+    "sens": [
+     0.977,
+     0.946,
+     1.0
+    ],
+    "spec_scarred_hearts": 1.0,
+    "spec_scar_free_hearts": [
+     1.0,
+     1.0,
+     1.0
+    ],
+    "tbin_scar_on_both": 0.906
+   },
+   "P-G": {
+    "sens": [
+     0.746,
+     0.715,
+     0.777
+    ],
+    "spec_scarred_hearts": 1.0,
+    "spec_scar_free_hearts": [
+     1.0,
+     1.0,
+     1.0
+    ],
+    "tbin_scar_on_both": 0.928
+   }
+  },
+  "cnr5 phase+0.05 none/R0 blood-equal": {
+   "P-K": {
+    "sens": [
+     0.985,
+     0.962,
+     1.0
+    ],
+    "spec_scarred_hearts": 1.0,
+    "spec_scar_free_hearts": [
+     0.005,
+     0.0,
+     0.014
+    ],
+    "tbin_scar_on_both": 0.906
+   },
+   "P-K*": {
+    "sens": [
+     0.985,
+     0.962,
+     1.0
+    ],
+    "spec_scarred_hearts": 1.0,
+    "spec_scar_free_hearts": [
+     1.0,
+     1.0,
+     1.0
+    ],
+    "tbin_scar_on_both": 0.906
+   },
+   "P-G": {
+    "sens": [
+     0.746,
+     0.715,
+     0.777
+    ],
+    "spec_scarred_hearts": 1.0,
+    "spec_scar_free_hearts": [
+     1.0,
+     1.0,
+     1.0
+    ],
+    "tbin_scar_on_both": 0.928
+   }
+  },
+  "cnr5 phase+0.05 none/R0 blood-above": {
+   "P-K": {
+    "sens": [
+     0.985,
+     0.962,
+     1.0
+    ],
+    "spec_scarred_hearts": 1.0,
+    "spec_scar_free_hearts": [
+     0.005,
+     0.0,
+     0.014
+    ],
+    "tbin_scar_on_both": 0.914
+   },
+   "P-K*": {
+    "sens": [
+     0.985,
+     0.962,
+     1.0
+    ],
+    "spec_scarred_hearts": 1.0,
+    "spec_scar_free_hearts": [
+     0.897,
+     0.856,
+     0.934
+    ],
+    "tbin_scar_on_both": 0.914
+   },
+   "P-G": {
+    "sens": [
+     0.746,
+     0.715,
+     0.777
+    ],
+    "spec_scarred_hearts": 1.0,
+    "spec_scar_free_hearts": [
+     1.0,
+     1.0,
+     1.0
+    ],
+    "tbin_scar_on_both": 0.938
+   }
+  },
+  "cnr5 phase+0.05 e5/R3 blood-below": {
+   "P-K": {
+    "sens": [
+     0.938,
+     0.896,
+     0.977
+    ],
+    "spec_scarred_hearts": 0.993,
+    "spec_scar_free_hearts": [
+     0.012,
+     0.0,
+     0.031
+    ],
+    "tbin_scar_on_both": 0.721
+   },
+   "P-K*": {
+    "sens": [
+     0.938,
+     0.896,
+     0.977
+    ],
+    "spec_scarred_hearts": 0.993,
+    "spec_scar_free_hearts": [
+     0.998,
+     0.993,
+     1.0
+    ],
+    "tbin_scar_on_both": 0.721
+   },
+   "P-G": {
+    "sens": [
+     0.762,
+     0.708,
+     0.808
+    ],
+    "spec_scarred_hearts": 0.993,
+    "spec_scar_free_hearts": [
+     1.0,
+     1.0,
+     1.0
+    ],
+    "tbin_scar_on_both": 0.727
+   }
+  },
+  "cnr5 phase+0.05 e5/R3 blood-equal": {
+   "P-K": {
+    "sens": [
+     0.946,
+     0.915,
+     0.977
+    ],
+    "spec_scarred_hearts": 0.93,
+    "spec_scar_free_hearts": [
+     0.224,
+     0.135,
+     0.309
+    ],
+    "tbin_scar_on_both": 0.748
+   },
+   "P-K*": {
+    "sens": [
+     0.946,
+     0.915,
+     0.977
+    ],
+    "spec_scarred_hearts": 0.93,
+    "spec_scar_free_hearts": [
+     0.901,
+     0.855,
+     0.942
+    ],
+    "tbin_scar_on_both": 0.748
+   },
+   "P-G": {
+    "sens": [
+     0.762,
+     0.708,
+     0.808
+    ],
+    "spec_scarred_hearts": 0.997,
+    "spec_scar_free_hearts": [
+     1.0,
+     1.0,
+     1.0
+    ],
+    "tbin_scar_on_both": 0.747
+   }
+  },
+  "cnr5 phase+0.05 e5/R3 blood-above": {
+   "P-K": {
+    "sens": [
+     0.962,
+     0.931,
+     0.985
+    ],
+    "spec_scarred_hearts": 0.86,
+    "spec_scar_free_hearts": [
+     0.445,
+     0.32,
+     0.567
+    ],
+    "tbin_scar_on_both": 0.76
+   },
+   "P-K*": {
+    "sens": [
+     0.962,
+     0.931,
+     0.985
+    ],
+    "spec_scarred_hearts": 0.86,
+    "spec_scar_free_hearts": [
+     0.803,
+     0.76,
+     0.851
+    ],
+    "tbin_scar_on_both": 0.76
+   },
+   "P-G": {
+    "sens": [
+     0.769,
+     0.723,
+     0.812
+    ],
+    "spec_scarred_hearts": 0.99,
+    "spec_scar_free_hearts": [
+     1.0,
+     1.0,
+     1.0
+    ],
+    "tbin_scar_on_both": 0.77
+   }
+  },
+  "cnr5 phase-0.05 none/R0 blood-below": {
+   "P-K": {
+    "sens": [
+     0.764,
+     0.725,
+     0.807
+    ],
+    "spec_scarred_hearts": 1.0,
+    "spec_scar_free_hearts": [
+     0.005,
+     0.0,
+     0.014
+    ],
+    "tbin_scar_on_both": 0.753
+   },
+   "P-K*": {
+    "sens": [
+     0.764,
+     0.725,
+     0.807
+    ],
+    "spec_scarred_hearts": 1.0,
+    "spec_scar_free_hearts": [
+     0.95,
+     0.899,
+     0.989
+    ],
+    "tbin_scar_on_both": 0.753
+   },
+   "P-G": {
+    "sens": [
+     0.693,
+     0.617,
+     0.763
+    ],
+    "spec_scarred_hearts": 1.0,
+    "spec_scar_free_hearts": [
+     1.0,
+     1.0,
+     1.0
+    ],
+    "tbin_scar_on_both": 0.727
+   }
+  },
+  "cnr5 phase-0.05 none/R0 blood-equal": {
+   "P-K": {
+    "sens": [
+     0.992,
+     0.977,
+     1.0
+    ],
+    "spec_scarred_hearts": 0.024,
+    "spec_scar_free_hearts": [
+     0.005,
+     0.0,
+     0.014
+    ],
+    "tbin_scar_on_both": 0.675
+   },
+   "P-K*": {
+    "sens": [
+     0.992,
+     0.977,
+     1.0
+    ],
+    "spec_scarred_hearts": 0.024,
+    "spec_scar_free_hearts": [
+     0.01,
+     0.0,
+     0.029
+    ],
+    "tbin_scar_on_both": 0.675
+   },
+   "P-G": {
+    "sens": [
+     0.74,
+     0.686,
+     0.795
+    ],
+    "spec_scarred_hearts": 1.0,
+    "spec_scar_free_hearts": [
+     1.0,
+     1.0,
+     1.0
+    ],
+    "tbin_scar_on_both": 0.596
+   }
+  },
+  "cnr5 phase-0.05 none/R0 blood-above": {
+   "P-K": {
+    "sens": [
+     0.992,
+     0.977,
+     1.0
+    ],
+    "spec_scarred_hearts": 0.01,
+    "spec_scar_free_hearts": [
+     0.005,
+     0.0,
+     0.014
+    ],
+    "tbin_scar_on_both": 0.643
+   },
+   "P-K*": {
+    "sens": [
+     0.992,
+     0.977,
+     1.0
+    ],
+    "spec_scarred_hearts": 0.01,
+    "spec_scar_free_hearts": [
+     0.005,
+     0.0,
+     0.014
+    ],
+    "tbin_scar_on_both": 0.643
+   },
+   "P-G": {
+    "sens": [
+     0.748,
+     0.694,
+     0.802
+    ],
+    "spec_scarred_hearts": 0.997,
+    "spec_scar_free_hearts": [
+     1.0,
+     1.0,
+     1.0
+    ],
+    "tbin_scar_on_both": 0.558
+   }
+  },
+  "cnr5 phase-0.05 e5/R3 blood-below": {
+   "P-K": {
+    "sens": [
+     0.772,
+     0.734,
+     0.815
+    ],
+    "spec_scarred_hearts": 0.972,
+    "spec_scar_free_hearts": [
+     0.017,
+     0.0,
+     0.041
+    ],
+    "tbin_scar_on_both": 0.5
+   },
+   "P-K*": {
+    "sens": [
+     0.74,
+     0.681,
+     0.802
+    ],
+    "spec_scarred_hearts": 0.972,
+    "spec_scar_free_hearts": [
+     0.952,
+     0.911,
+     0.983
+    ],
+    "tbin_scar_on_both": 0.479
+   },
+   "P-G": {
+    "sens": [
+     0.622,
+     0.541,
+     0.685
+    ],
+    "spec_scarred_hearts": 1.0,
+    "spec_scar_free_hearts": [
+     1.0,
+     1.0,
+     1.0
+    ],
+    "tbin_scar_on_both": 0.38
+   }
+  },
+  "cnr5 phase-0.05 e5/R3 blood-equal": {
+   "P-K": {
+    "sens": [
+     0.984,
+     0.961,
+     1.0
+    ],
+    "spec_scarred_hearts": 0.059,
+    "spec_scar_free_hearts": [
+     0.012,
+     0.0,
+     0.036
+    ],
+    "tbin_scar_on_both": 0.616
+   },
+   "P-K*": {
+    "sens": [
+     0.969,
+     0.945,
+     0.992
+    ],
+    "spec_scarred_hearts": 0.156,
+    "spec_scar_free_hearts": [
+     0.111,
+     0.052,
+     0.176
+    ],
+    "tbin_scar_on_both": 0.61
+   },
+   "P-G": {
+    "sens": [
+     0.685,
+     0.594,
+     0.774
+    ],
+    "spec_scarred_hearts": 0.979,
+    "spec_scar_free_hearts": [
+     0.983,
+     0.966,
+     0.995
+    ],
+    "tbin_scar_on_both": 0.483
+   }
+  },
+  "cnr5 phase-0.05 e5/R3 blood-above": {
+   "P-K": {
+    "sens": [
+     1.0,
+     1.0,
+     1.0
+    ],
+    "spec_scarred_hearts": 0.017,
+    "spec_scar_free_hearts": [
+     0.012,
+     0.0,
+     0.031
+    ],
+    "tbin_scar_on_both": 0.528
+   },
+   "P-K*": {
+    "sens": [
+     1.0,
+     1.0,
+     1.0
+    ],
+    "spec_scarred_hearts": 0.024,
+    "spec_scar_free_hearts": [
+     0.019,
+     0.002,
+     0.038
+    ],
+    "tbin_scar_on_both": 0.528
+   },
+   "P-G": {
+    "sens": [
+     0.764,
+     0.685,
+     0.841
+    ],
+    "spec_scarred_hearts": 0.851,
+    "spec_scar_free_hearts": [
+     0.837,
+     0.785,
+     0.894
+    ],
+    "tbin_scar_on_both": 0.412
+   }
+  },
+  "cnr3 phase+0.00 none/R0 blood-below": {
+   "P-K": {
+    "sens": [
+     0.877,
+     0.838,
+     0.923
+    ],
+    "spec_scarred_hearts": 1.0,
+    "spec_scar_free_hearts": [
+     0.005,
+     0.0,
+     0.014
+    ],
+    "tbin_scar_on_both": 0.193
+   },
+   "P-K*": {
+    "sens": [
+     0.854,
+     0.808,
+     0.908
+    ],
+    "spec_scarred_hearts": 1.0,
+    "spec_scar_free_hearts": [
+     1.0,
+     1.0,
+     1.0
+    ],
+    "tbin_scar_on_both": 0.171
+   },
+   "P-G": {
+    "sens": [
+     0.623,
+     0.554,
+     0.685
+    ],
+    "spec_scarred_hearts": 1.0,
+    "spec_scar_free_hearts": [
+     1.0,
+     1.0,
+     1.0
+    ],
+    "tbin_scar_on_both": 0.074
+   }
+  },
+  "cnr3 phase+0.00 none/R0 blood-equal": {
+   "P-K": {
+    "sens": [
+     0.977,
+     0.946,
+     1.0
+    ],
+    "spec_scarred_hearts": 1.0,
+    "spec_scar_free_hearts": [
+     0.005,
+     0.0,
+     0.014
+    ],
+    "tbin_scar_on_both": 0.331
+   },
+   "P-K*": {
+    "sens": [
+     0.977,
+     0.946,
+     1.0
+    ],
+    "spec_scarred_hearts": 1.0,
+    "spec_scar_free_hearts": [
+     1.0,
+     1.0,
+     1.0
+    ],
+    "tbin_scar_on_both": 0.331
+   },
+   "P-G": {
+    "sens": [
+     0.631,
+     0.554,
+     0.692
+    ],
+    "spec_scarred_hearts": 1.0,
+    "spec_scar_free_hearts": [
+     1.0,
+     1.0,
+     1.0
+    ],
+    "tbin_scar_on_both": 0.146
+   }
+  },
+  "cnr3 phase+0.00 none/R0 blood-above": {
+   "P-K": {
+    "sens": [
+     0.992,
+     0.977,
+     1.0
+    ],
+    "spec_scarred_hearts": 0.99,
+    "spec_scar_free_hearts": [
+     0.005,
+     0.0,
+     0.014
+    ],
+    "tbin_scar_on_both": 0.357
+   },
+   "P-K*": {
+    "sens": [
+     0.985,
+     0.962,
+     1.0
+    ],
+    "spec_scarred_hearts": 0.99,
+    "spec_scar_free_hearts": [
+     0.993,
+     0.982,
+     1.0
+    ],
+    "tbin_scar_on_both": 0.352
+   },
+   "P-G": {
+    "sens": [
+     0.646,
+     0.569,
+     0.715
+    ],
+    "spec_scarred_hearts": 1.0,
+    "spec_scar_free_hearts": [
+     1.0,
+     1.0,
+     1.0
+    ],
+    "tbin_scar_on_both": 0.179
+   }
+  },
+  "cnr3 phase+0.00 e5/R3 blood-below": {
+   "P-K": {
+    "sens": [
+     0.877,
+     0.831,
+     0.919
+    ],
+    "spec_scarred_hearts": 0.986,
+    "spec_scar_free_hearts": [
+     0.01,
+     0.0,
+     0.029
+    ],
+    "tbin_scar_on_both": 0.158
+   },
+   "P-K*": {
+    "sens": [
+     0.769,
+     0.7,
+     0.831
+    ],
+    "spec_scarred_hearts": 0.993,
+    "spec_scar_free_hearts": [
+     0.998,
+     0.993,
+     1.0
+    ],
+    "tbin_scar_on_both": 0.06
+   },
+   "P-G": {
+    "sens": [
+     0.515,
+     0.427,
+     0.592
+    ],
+    "spec_scarred_hearts": 1.0,
+    "spec_scar_free_hearts": [
+     1.0,
+     1.0,
+     1.0
+    ],
+    "tbin_scar_on_both": 0.03
+   }
+  },
+  "cnr3 phase+0.00 e5/R3 blood-equal": {
+   "P-K": {
+    "sens": [
+     0.946,
+     0.908,
+     0.977
+    ],
+    "spec_scarred_hearts": 0.895,
+    "spec_scar_free_hearts": [
+     0.058,
+     0.014,
+     0.102
+    ],
+    "tbin_scar_on_both": 0.26
+   },
+   "P-K*": {
+    "sens": [
+     0.877,
+     0.823,
+     0.931
+    ],
+    "spec_scarred_hearts": 0.955,
+    "spec_scar_free_hearts": [
+     0.974,
+     0.957,
+     0.988
+    ],
+    "tbin_scar_on_both": 0.219
+   },
+   "P-G": {
+    "sens": [
+     0.546,
+     0.442,
+     0.642
+    ],
+    "spec_scarred_hearts": 1.0,
+    "spec_scar_free_hearts": [
+     1.0,
+     1.0,
+     1.0
+    ],
+    "tbin_scar_on_both": 0.085
+   }
+  },
+  "cnr3 phase+0.00 e5/R3 blood-above": {
+   "P-K": {
+    "sens": [
+     0.969,
+     0.946,
+     0.992
+    ],
+    "spec_scarred_hearts": 0.552,
+    "spec_scar_free_hearts": [
+     0.149,
+     0.095,
+     0.213
+    ],
+    "tbin_scar_on_both": 0.31
+   },
+   "P-K*": {
+    "sens": [
+     0.938,
+     0.9,
+     0.985
+    ],
+    "spec_scarred_hearts": 0.71,
+    "spec_scar_free_hearts": [
+     0.709,
+     0.662,
+     0.754
+    ],
+    "tbin_scar_on_both": 0.295
+   },
+   "P-G": {
+    "sens": [
+     0.569,
+     0.465,
+     0.669
+    ],
+    "spec_scarred_hearts": 0.997,
+    "spec_scar_free_hearts": [
+     0.998,
+     0.993,
+     1.0
+    ],
+    "tbin_scar_on_both": 0.149
+   }
+  },
+  "cnr3 phase+0.05 none/R0 blood-below": {
+   "P-K": {
+    "sens": [
+     0.962,
+     0.923,
+     0.992
+    ],
+    "spec_scarred_hearts": 1.0,
+    "spec_scar_free_hearts": [
+     0.005,
+     0.0,
+     0.014
+    ],
+    "tbin_scar_on_both": 0.248
+   },
+   "P-K*": {
+    "sens": [
+     0.946,
+     0.908,
+     0.977
+    ],
+    "spec_scarred_hearts": 1.0,
+    "spec_scar_free_hearts": [
+     1.0,
+     1.0,
+     1.0
+    ],
+    "tbin_scar_on_both": 0.236
+   },
+   "P-G": {
+    "sens": [
+     0.638,
+     0.562,
+     0.7
+    ],
+    "spec_scarred_hearts": 1.0,
+    "spec_scar_free_hearts": [
+     1.0,
+     1.0,
+     1.0
+    ],
+    "tbin_scar_on_both": 0.096
+   }
+  },
+  "cnr3 phase+0.05 none/R0 blood-equal": {
+   "P-K": {
+    "sens": [
+     0.969,
+     0.938,
+     1.0
+    ],
+    "spec_scarred_hearts": 1.0,
+    "spec_scar_free_hearts": [
+     0.005,
+     0.0,
+     0.014
+    ],
+    "tbin_scar_on_both": 0.262
+   },
+   "P-K*": {
+    "sens": [
+     0.962,
+     0.927,
+     0.992
+    ],
+    "spec_scarred_hearts": 1.0,
+    "spec_scar_free_hearts": [
+     1.0,
+     1.0,
+     1.0
+    ],
+    "tbin_scar_on_both": 0.256
+   },
+   "P-G": {
+    "sens": [
+     0.638,
+     0.562,
+     0.7
+    ],
+    "spec_scarred_hearts": 1.0,
+    "spec_scar_free_hearts": [
+     1.0,
+     1.0,
+     1.0
+    ],
+    "tbin_scar_on_both": 0.108
+   }
+  },
+  "cnr3 phase+0.05 none/R0 blood-above": {
+   "P-K": {
+    "sens": [
+     0.977,
+     0.946,
+     1.0
+    ],
+    "spec_scarred_hearts": 1.0,
+    "spec_scar_free_hearts": [
+     0.005,
+     0.0,
+     0.014
+    ],
+    "tbin_scar_on_both": 0.268
+   },
+   "P-K*": {
+    "sens": [
+     0.977,
+     0.946,
+     1.0
+    ],
+    "spec_scarred_hearts": 1.0,
+    "spec_scar_free_hearts": [
+     1.0,
+     1.0,
+     1.0
+    ],
+    "tbin_scar_on_both": 0.268
+   },
+   "P-G": {
+    "sens": [
+     0.638,
+     0.562,
+     0.7
+    ],
+    "spec_scarred_hearts": 1.0,
+    "spec_scar_free_hearts": [
+     1.0,
+     1.0,
+     1.0
+    ],
+    "tbin_scar_on_both": 0.108
+   }
+  },
+  "cnr3 phase+0.05 e5/R3 blood-below": {
+   "P-K": {
+    "sens": [
+     0.931,
+     0.888,
+     0.966
+    ],
+    "spec_scarred_hearts": 0.993,
+    "spec_scar_free_hearts": [
+     0.005,
+     0.0,
+     0.014
+    ],
+    "tbin_scar_on_both": 0.182
+   },
+   "P-K*": {
+    "sens": [
+     0.877,
+     0.819,
+     0.931
+    ],
+    "spec_scarred_hearts": 0.997,
+    "spec_scar_free_hearts": [
+     1.0,
+     1.0,
+     1.0
+    ],
+    "tbin_scar_on_both": 0.14
+   },
+   "P-G": {
+    "sens": [
+     0.585,
+     0.477,
+     0.673
+    ],
+    "spec_scarred_hearts": 1.0,
+    "spec_scar_free_hearts": [
+     1.0,
+     1.0,
+     1.0
+    ],
+    "tbin_scar_on_both": 0.039
+   }
+  },
+  "cnr3 phase+0.05 e5/R3 blood-equal": {
+   "P-K": {
+    "sens": [
+     0.931,
+     0.888,
+     0.966
+    ],
+    "spec_scarred_hearts": 0.955,
+    "spec_scar_free_hearts": [
+     0.041,
+     0.01,
+     0.078
+    ],
+    "tbin_scar_on_both": 0.215
+   },
+   "P-K*": {
+    "sens": [
+     0.885,
+     0.831,
+     0.946
+    ],
+    "spec_scarred_hearts": 0.972,
+    "spec_scar_free_hearts": [
+     0.988,
+     0.971,
+     1.0
+    ],
+    "tbin_scar_on_both": 0.183
+   },
+   "P-G": {
+    "sens": [
+     0.585,
+     0.477,
+     0.673
+    ],
+    "spec_scarred_hearts": 1.0,
+    "spec_scar_free_hearts": [
+     1.0,
+     1.0,
+     1.0
+    ],
+    "tbin_scar_on_both": 0.079
+   }
+  },
+  "cnr3 phase+0.05 e5/R3 blood-above": {
+   "P-K": {
+    "sens": [
+     0.946,
+     0.915,
+     0.969
+    ],
+    "spec_scarred_hearts": 0.874,
+    "spec_scar_free_hearts": [
+     0.192,
+     0.103,
+     0.278
+    ],
+    "tbin_scar_on_both": 0.236
+   },
+   "P-K*": {
+    "sens": [
+     0.915,
+     0.869,
+     0.954
+    ],
+    "spec_scarred_hearts": 0.906,
+    "spec_scar_free_hearts": [
+     0.913,
+     0.87,
+     0.952
+    ],
+    "tbin_scar_on_both": 0.21
+   },
+   "P-G": {
+    "sens": [
+     0.6,
+     0.515,
+     0.673
+    ],
+    "spec_scarred_hearts": 1.0,
+    "spec_scar_free_hearts": [
+     1.0,
+     1.0,
+     1.0
+    ],
+    "tbin_scar_on_both": 0.09
+   }
+  },
+  "cnr3 phase-0.05 none/R0 blood-below": {
+   "P-K": {
+    "sens": [
+     0.764,
+     0.725,
+     0.807
+    ],
+    "spec_scarred_hearts": 0.993,
+    "spec_scar_free_hearts": [
+     0.005,
+     0.0,
+     0.014
+    ],
+    "tbin_scar_on_both": 0.289
+   },
+   "P-K*": {
+    "sens": [
+     0.724,
+     0.66,
+     0.798
+    ],
+    "spec_scarred_hearts": 1.0,
+    "spec_scar_free_hearts": [
+     1.0,
+     1.0,
+     1.0
+    ],
+    "tbin_scar_on_both": 0.25
+   },
+   "P-G": {
+    "sens": [
+     0.417,
+     0.346,
+     0.496
+    ],
+    "spec_scarred_hearts": 1.0,
+    "spec_scar_free_hearts": [
+     1.0,
+     1.0,
+     1.0
+    ],
+    "tbin_scar_on_both": 0.057
+   }
+  },
+  "cnr3 phase-0.05 none/R0 blood-equal": {
+   "P-K": {
+    "sens": [
+     0.992,
+     0.977,
+     1.0
+    ],
+    "spec_scarred_hearts": 0.055,
+    "spec_scar_free_hearts": [
+     0.005,
+     0.0,
+     0.014
+    ],
+    "tbin_scar_on_both": 0.508
+   },
+   "P-K*": {
+    "sens": [
+     0.906,
+     0.851,
+     0.957
+    ],
+    "spec_scarred_hearts": 0.689,
+    "spec_scar_free_hearts": [
+     0.639,
+     0.489,
+     0.768
+    ],
+    "tbin_scar_on_both": 0.461
+   },
+   "P-G": {
+    "sens": [
+     0.394,
+     0.292,
+     0.504
+    ],
+    "spec_scarred_hearts": 1.0,
+    "spec_scar_free_hearts": [
+     1.0,
+     1.0,
+     1.0
+    ],
+    "tbin_scar_on_both": 0.14
+   }
+  },
+  "cnr3 phase-0.05 none/R0 blood-above": {
+   "P-K": {
+    "sens": [
+     0.992,
+     0.977,
+     1.0
+    ],
+    "spec_scarred_hearts": 0.01,
+    "spec_scar_free_hearts": [
+     0.005,
+     0.0,
+     0.014
+    ],
+    "tbin_scar_on_both": 0.508
+   },
+   "P-K*": {
+    "sens": [
+     0.992,
+     0.977,
+     1.0
+    ],
+    "spec_scarred_hearts": 0.01,
+    "spec_scar_free_hearts": [
+     0.01,
+     0.0,
+     0.029
+    ],
+    "tbin_scar_on_both": 0.508
+   },
+   "P-G": {
+    "sens": [
+     0.512,
+     0.407,
+     0.612
+    ],
+    "spec_scarred_hearts": 1.0,
+    "spec_scar_free_hearts": [
+     1.0,
+     1.0,
+     1.0
+    ],
+    "tbin_scar_on_both": 0.231
+   }
+  },
+  "cnr3 phase-0.05 e5/R3 blood-below": {
+   "P-K": {
+    "sens": [
+     0.764,
+     0.722,
+     0.807
+    ],
+    "spec_scarred_hearts": 0.965,
+    "spec_scar_free_hearts": [
+     0.01,
+     0.0,
+     0.024
+    ],
+    "tbin_scar_on_both": 0.258
+   },
+   "P-K*": {
+    "sens": [
+     0.654,
+     0.582,
+     0.712
+    ],
+    "spec_scarred_hearts": 0.993,
+    "spec_scar_free_hearts": [
+     0.998,
+     0.993,
+     1.0
+    ],
+    "tbin_scar_on_both": 0.133
+   },
+   "P-G": {
+    "sens": [
+     0.26,
+     0.16,
+     0.347
+    ],
+    "spec_scarred_hearts": 1.0,
+    "spec_scar_free_hearts": [
+     1.0,
+     1.0,
+     1.0
+    ],
+    "tbin_scar_on_both": 0.0
+   }
+  },
+  "cnr3 phase-0.05 e5/R3 blood-equal": {
+   "P-K": {
+    "sens": [
+     0.976,
+     0.945,
+     1.0
+    ],
+    "spec_scarred_hearts": 0.149,
+    "spec_scar_free_hearts": [
+     0.012,
+     0.0,
+     0.036
+    ],
+    "tbin_scar_on_both": 0.435
+   },
+   "P-K*": {
+    "sens": [
+     0.803,
+     0.724,
+     0.877
+    ],
+    "spec_scarred_hearts": 0.799,
+    "spec_scar_free_hearts": [
+     0.757,
+     0.671,
+     0.844
+    ],
+    "tbin_scar_on_both": 0.314
+   },
+   "P-G": {
+    "sens": [
+     0.15,
+     0.041,
+     0.252
+    ],
+    "spec_scarred_hearts": 1.0,
+    "spec_scar_free_hearts": [
+     1.0,
+     1.0,
+     1.0
+    ],
+    "tbin_scar_on_both": 0.053
+   }
+  },
+  "cnr3 phase-0.05 e5/R3 blood-above": {
+   "P-K": {
+    "sens": [
+     0.992,
+     0.977,
+     1.0
+    ],
+    "spec_scarred_hearts": 0.017,
+    "spec_scar_free_hearts": [
+     0.014,
+     0.0,
+     0.038
+    ],
+    "tbin_scar_on_both": 0.46
+   },
+   "P-K*": {
+    "sens": [
+     0.945,
+     0.899,
+     0.992
+    ],
+    "spec_scarred_hearts": 0.17,
+    "spec_scar_free_hearts": [
+     0.13,
+     0.072,
+     0.188
+    ],
+    "tbin_scar_on_both": 0.433
+   },
+   "P-G": {
+    "sens": [
+     0.354,
+     0.224,
+     0.486
+    ],
+    "spec_scarred_hearts": 0.99,
+    "spec_scar_free_hearts": [
+     0.99,
+     0.981,
+     1.0
+    ],
+    "tbin_scar_on_both": 0.222
+   }
+  }
+ },
+ "thr_k_sd": {
+  "scarred": [
+   1.49,
+   2.92,
+   4.252
+  ],
+  "scar_free": [
+   0.99,
+   1.33,
+   2.862
+  ]
+ }
+}

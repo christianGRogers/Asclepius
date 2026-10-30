@@ -34,3 +34,24 @@ python e6_power.py results_e6_power.json --sims 200 --boot 200
 ```
 `meta.csv` is `Totalsegmentator_dataset/meta.csv` inside the Zenodo zip (read by `fetch_ts_cardiac.py`; save a copy with
 `remotezip` to pass as `--meta`).
+
+## Round 3 (path `jm/paired-scar`, #179)
+
+Plan: `vault/JanusM/Candidates/Kilo v3.md`. Notes: `Kilo - E7 …`, `Kilo - E8 …`, `Kilo - E9 …`. The shared LIE benchmark
+(§7 item 1) is Juliet's `experiments/JanusM/bench_lie/`; it is not duplicated here.
+
+| File | What |
+|---|---|
+| `e7_power_ja32.py` → `results_e7_power_ja32.json`, `results_e7s_power_pooled_anchor.json` (`--only-s`) | E7: seal size at the JA32 bars with LGE reader noise, an adjudicated reference and the development anchor simulated (simulation, no image) |
+| `e8_qc_phase.py` → (raw output outside the repo) → `e8_summarise.py` → `results_e8_qc_phase_summary.json` | E8: registration QC values, the truth-free edge-offset phase check, and P-K / P-K\* / P-G on scarred and scar-free hearts (13 guard-allowed public hearts) |
+| `e9_engine_ja32.py` → `results_e9_engine_ja32.json` | E9: on the merged engine (`janusm.scar`): when transmurality binds; registration-failure handling |
+
+Reproduce (CPU; needs `src` on `PYTHONPATH` for `janusm.guard` and `janusm.scar`):
+```sh
+python e7_power_ja32.py results_e7_power_ja32.json --sims 300 --boot 300                         # ~10 min
+python e7_power_ja32.py results_e7s_power_pooled_anchor.json --sims 300 --boot 300 --only-s
+python fetch_ts_cardiac.py DATA 100                                                              # guard first
+python e8_qc_phase.py DATA/Totalsegmentator_dataset e8_raw.json --jobs 3 --reps 2                # ~1.5 h on 3 cores
+python e8_summarise.py e8_raw.json results_e8_qc_phase_summary.json
+python e9_engine_ja32.py results_e9_engine_ja32.json --sims 300 --boot 300                       # ~15 min
+```

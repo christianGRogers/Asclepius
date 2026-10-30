@@ -1,0 +1,19 @@
+{
+ "operators_s": {
+  "M": 1.35,
+  "P": 1.1,
+  "B": 0.1
+ },
+ "lge_entry_s": {
+  "negative_patient": 15.9,
+  "scarred_patient_mean_k": 60.7,
+  "scarred_patient_k7": 92.7,
+  "mean_k": 3.25
+ },
+ "reg_entry_s": {
+  "pass": 9.3,
+  "one_slice_fails": 14.6
+ },
+ "study_entry_hours_160pt_2readers": 3.8,
+ "note": "entry time only; image review (assumed 6-10 min per LGE study per reader) dominates and is measured on the mock-up"
+}

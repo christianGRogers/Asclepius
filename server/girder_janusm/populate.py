@@ -21,6 +21,16 @@ Runs on the server against the database::
 
 Idempotent by case name: a re-run creates only what is missing, and gives an
 existing blank case its check seed if it has none.
+
+``--backfill-check-seeds`` (JA76) does only that last step: every blank case already
+in the database with no ``checkSeedFileId`` (cases populated before #220) gets its
+check seed from ``--seeds-dir``, uploaded into ``JanusM/check-seeds``. It creates no
+case and needs no CT folder; the JA12 guard runs first, and a missing seed refuses
+the whole run before anything is written. ``janusm-check`` refuses a blank read with
+no check seed until this has run::
+
+    janusm-populate --backfill-check-seeds --seeds-dir /path/to/seeds --dry-run
+    janusm-populate --backfill-check-seeds --seeds-dir /path/to/seeds
 """
 
 import argparse
@@ -163,6 +173,48 @@ def populate(user, seedsDir=None, freezePath=None, ctFolderId=None, dryRun=False
     return {'create': len(creating), 'attach': len(attaching), 'problems': []}
 
 
+def backfillCheckSeeds(user, seedsDir, freezePath=None, dryRun=False, out=print):
+    """JA76: give every blank case with no ``checkSeedFileId`` its check seed. Returns
+    ``{'attach': n, 'cases': [...]}``; refuses the whole run on any problem."""
+    from girder.models.upload import Upload
+
+    from .models import JanusMCase
+    from .utils import checkSeedsFolder, ensureGroups
+
+    if not seedsDir:
+        raise SystemExit('REFUSED: --backfill-check-seeds needs --seeds-dir')
+    missing = sorted(JanusMCase().find({'blank': True, '$or': [
+        {'checkSeedFileId': None}, {'checkSeedFileId': {'$exists': False}}]}),
+        key=lambda c: c['name'])
+    holdout.refuse_read_cases([c['name'] for c in missing], readset.load_freeze(freezePath),
+                              what='janusm-populate --backfill-check-seeds')
+    problems = [f"{c['name']}: no check seed at "
+                f"{os.path.join(seedsDir, c['name'] + SEED_SUFFIX)}"
+                for c in missing
+                if not os.path.isfile(os.path.join(seedsDir, c['name'] + SEED_SUFFIX))]
+    for line in problems:
+        out(f'  PROBLEM {line}')
+    out(f"{'would attach' if dryRun else 'attaching'} check seeds to {len(missing)} blank "
+        f"cases; {len(problems)} problems")
+    if problems:
+        raise SystemExit('REFUSED: fix the problems above; nothing was written')
+    names = [c['name'] for c in missing]
+    if dryRun:
+        return {'attach': len(missing), 'cases': names}
+    ensureGroups(user)
+    folder = checkSeedsFolder(user)
+    for case in missing:
+        path = os.path.join(seedsDir, case['name'] + SEED_SUFFIX)
+        with open(path, 'rb') as handle:
+            fileId = Upload().uploadFromFile(
+                handle, size=os.path.getsize(path), name=os.path.basename(path),
+                parentType='folder', parent=folder, user=user)['_id']
+        JanusMCase().collection.update_one(
+            {'_id': case['_id'], 'blank': True}, {'$set': {'checkSeedFileId': fileId}})
+        out(f"  {case['name']}: check seed attached")
+    return {'attach': len(missing), 'cases': names}
+
+
 def main(argv=None):
     from girder.models.user import User
 
@@ -173,11 +225,16 @@ def main(argv=None):
     parser.add_argument('--no-hash', action='store_true')
     parser.add_argument('--admin', default=None)
     parser.add_argument('--dry-run', action='store_true')
+    parser.add_argument('--backfill-check-seeds', action='store_true',
+                        help='only give blank cases with no check seed theirs (JA76)')
     args = parser.parse_args(argv)
     user = (User().findOne({'login': args.admin}) if args.admin
             else User().findOne({'admin': True}))
     if user is None:
         parser.error('no admin user found')
+    if args.backfill_check_seeds:
+        backfillCheckSeeds(user, args.seeds_dir, freezePath=args.freeze, dryRun=args.dry_run)
+        return 0
     populate(user, seedsDir=args.seeds_dir, freezePath=args.freeze,
              ctFolderId=args.ct_folder, dryRun=args.dry_run, hashCts=not args.no_hash)
     return 0

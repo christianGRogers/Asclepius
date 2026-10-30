@@ -41,6 +41,14 @@ file id. Seal and decision cases are ImageCAS-X *train* cases only (JA5, JA6).
    case with no seed. Blank cases' seeds go to `JanusM/check-seeds` as their check
    seeds (JA66): no group may read that folder and no route serves it. Check the dry
    run's CT names (`c0001` is ImageCAS 2).
+
+   A server populated before #220 has blank cases with no check seed, and
+   `janusm-check` refuses their reads (could not be checked; JA76). Give them theirs
+   once, before the first wave (protocol §7):
+   ```sh
+   janusm-populate --backfill-check-seeds --seeds-dir /path/to/seeds --dry-run
+   janusm-populate --backfill-check-seeds --seeds-dir /path/to/seeds
+   ```
 4. Run the check worker beside Girder: `janusm-check --every 30`.
 5. Add readers to `janusm-readers` (Girder's group page). Being a SegQueue14
    annotator does not make anyone a reader.

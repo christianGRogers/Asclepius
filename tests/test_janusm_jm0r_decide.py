@@ -323,6 +323,9 @@ def test_r9_missing_median_is_not_decidable(dec):
     assert r["missing"] == ["thickness_median_mm"] and r["depth"] is None
     assert "provisional 45 %" in r["outcome"] and r["numbers_only"] is True
     assert "    NOT DECIDABLE: thickness_median_mm" in dec.lines(res)
+    # R5-S2 (JA74): the text matches the record: numbers only, and the provisional footer
+    assert "numbers only" in r["outcome"] and dec.PROVISIONAL_FOOTER in r["outcome"]
+    assert r["footer"] == dec.PROVISIONAL_FOOTER
 
 
 def test_r9_s3_refusal_prints_not_decidable(dec):
@@ -449,3 +452,32 @@ def test_main_fallback_and_no_input(dec, tmp_path, capsys, monkeypatch):
     text = capsys.readouterr().out
     assert "NOT DECIDABLE: n_usable" in text and "STOP" in text
     assert dec.main([]) == 2
+
+
+def test_r5_s2_r3_failure_and_s3_refusal_give_both_lines(dec):
+    """R5-S2 (JA74): R3 fails and cv_n = 0 (the shipped S3 refuses) -> the NOT DECIDABLE line
+    and R3's note."""
+    res = dec.decide({**base(), "cv_n": 0.0, "thickness_median_mm": 9.668})
+    r = {y["rule"]: y for y in res}
+    assert r["R3"]["f3_holds"] is False
+    assert r["R9"]["missing"][0].startswith("cv_n (S3 refused: ")
+    assert f"    NOT DECIDABLE: {r['R9']['missing'][0]}" in dec.lines(res)
+    assert r["R9"]["outcome"].endswith(dec.R3_NOTE) and r["R9"]["numbers_only"] is True
+
+
+def test_r5_s2_r3_failure_with_missing_median_gives_the_note(dec):
+    """R5-S2 (JA74): no thickness_median_mm -> R3 fails, S3 is not called, and R9 carries R3's
+    note."""
+    fn = fake_depth(0.35)
+    x = base()
+    del x["thickness_median_mm"]
+    r = {y["rule"]: y for y in dec.decide(x, depth_fn=fn)}
+    assert fn.calls == [] and r["R3"]["f3_holds"] is False
+    assert r["R9"]["outcome"].endswith(dec.R3_NOTE) and r["R9"]["numbers_only"] is True
+
+
+def test_r5_s2_r3_holding_adds_no_note(dec):
+    """R5-S2: R3's note is appended only when R3 fails."""
+    for depth in (0.35, None):
+        assert dec.R3_NOTE not in run(dec, depth=depth)["R9"]["outcome"]
+    assert dec.R3_NOTE not in run(dec, cv_n=0.0)["R9"]["outcome"]

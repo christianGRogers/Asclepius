@@ -377,8 +377,9 @@ def decide(x: dict, *, rc_terr_mm: float = F1_FLOOR_MM, sig_m: float = 0.0, dept
     depth, computed = None, False
     prov = (f"the page prints the provisional {int(round(100 * PROVISIONAL_DEPTH))} % "
             f"(footer: '{PROVISIONAL_FOOTER}')")
-    if m:
-        o9 = prov + " until it can be computed"
+    if m:  # JA74: no depth is computed, so the sign is numbers only (JA41 cannot be evaluated)
+        o9 = (prov + " until it can be computed; the thinning sign shows numbers only (JA41 "
+              "cannot be evaluated)")
     else:
         try:
             res = fn(x["cv_n"], x["segment_shape"], rc_terr_mm, sig_m=sig_m, seed=DEPTH_SEED,
@@ -399,8 +400,8 @@ def decide(x: dict, *, rc_terr_mm: float = F1_FLOOR_MM, sig_m: float = 0.0, dept
                       f"{x['thickness_median_mm']} mm)")
                 if depth > DEPTH_WARN:
                     o9 += f"; above {DEPTH_WARN:.2f}: the page says so, and nothing is loosened"
-            if not agree:
-                o9 += "; " + R3_NOTE
+    if not agree:  # JA74: R3's note in every branch, computed or not
+        o9 += "; " + R3_NOTE
     rule("R9", "JA43 R9; JA40, JA60", ["cv_n", "cv_n_robust_log", "segment_shape",
                                        "thickness_median_mm"], o9, m,
          depth=depth, rc_terr_mm=rc_terr_mm, sig_m=sig_m,

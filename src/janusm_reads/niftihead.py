@@ -101,6 +101,10 @@ def world_bounds(raw: bytes) -> Optional[Bounds]:
             [max(w[r] for w in world) for r in range(3)])
 
 
+class NoWorldBounds(ValueError):
+    """JA77: the CT's world box could not be read, so lesion points cannot be checked."""
+
+
 def contains(bounds: Optional[Sequence[Sequence[float]]], point: Sequence[float],
              tolerance_mm: float = 1.0) -> bool:
     """Whether ``point`` (RAS mm) is inside ``bounds`` widened by ``tolerance_mm``."""
@@ -113,10 +117,13 @@ def points_outside(lesion_points: Optional[Dict[str, Sequence[float]]],
                    bounds: Optional[Sequence[Sequence[float]]],
                    tolerance_mm: float = 1.0) -> List[str]:
     """JA67: one message per lesion point (world mm, RAS) outside the CT's world box
-    ``bounds`` widened by ``tolerance_mm``; empty when every point is inside, or when
-    there is no box to check against."""
+    ``bounds`` widened by ``tolerance_mm``; empty when every point is inside.
+
+    JA77: with no box to check against (``bounds`` None or empty) it raises
+    :class:`NoWorldBounds`; nothing is accepted unchecked."""
     if not bounds:
-        return []
+        raise NoWorldBounds("the CT's world box is unavailable; lesion points cannot be "
+                            "checked")
     out = []
     for vessel, point in sorted((lesion_points or {}).items()):
         try:

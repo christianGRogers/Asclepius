@@ -168,8 +168,16 @@ def world(girder_db, tmp_path_factory):
     crashCase = sets["decision"][1]           # R4-S17: a crash, then real failures
     planeless = sets["decision"][2]           # R4-S16: a read that could not be checked
     blankCase = next(c for c in readset.blank_cases(sets["seal"]) if c != sets["seal"][-1])
+    # Round 5 (#232): each test its own case, outside decision[3:9] (rule 2's waves).
+    afterReturn = sets["decision"][9]         # R5-S11: a genuine return, then plane-less
+    unreadMover = sets["decision"][10]        # R5-S9: an unread case moves wave
+    noBounds = sets["decision"][12]           # R5-S8: a CT header that cannot be parsed
+    competing = sets["decision"][13]          # R5-S11 / S21: a competing wave
+    noCheckSeed = next(c for c in readset.blank_cases(sets["seal"])
+                       if c not in (blankCase, sets["seal"][-1]))   # R5-S7
     hearts = {target: (heartCt, truth), crashCase: (heartCt, truth),
-              blankCase: (heartCt, truth), planeless: (plainCt, plain)}
+              blankCase: (heartCt, truth), planeless: (plainCt, plain),
+              afterReturn: (heartCt, truth)}
     tiny = np.zeros((8, 8, 8), np.int16)
     seedsDir = tmp / "seeds"
     seedsDir.mkdir()
@@ -196,6 +204,8 @@ def world(girder_db, tmp_path_factory):
     w.admin, w.people, w.tmp, w.sets, w.seedsDir = admin, people, tmp, sets, seedsDir
     w.truth, w.spacing, w.target = truth, spacing, target
     w.plain, w.crashCase, w.planeless, w.blankCase = plain, crashCase, planeless, blankCase
+    w.afterReturn, w.unreadMover, w.noBounds = afterReturn, unreadMover, noBounds
+    w.competing, w.noCheckSeed = competing, noCheckSeed
     w.db = JanusMCase().database
     w.before14 = _snapshot14(w)
     w.icxBefore = _icxSnapshot()
@@ -382,6 +392,9 @@ def test_two_independent_reads_and_the_read_check(world):
 
     api = _api()
     anna, bobby, cathy = (world.people[k] for k in ("anna", "bobby", "cathy"))
+    # JA78: waves are set before reading; a case that has been read never changes wave.
+    _as(world.admin)
+    assert api.adminWave(wave="1", cases=json.dumps([world.target]))["moved"] == [world.target]
     _as(anna)
     a = api.nextRead(clientProtocol=CP)
     assert a["caseName"] == world.target and a["hasSeed"]
@@ -602,6 +615,12 @@ def _reader(login):
     return User().load(user["_id"], force=True)
 
 
+def _user(login):
+    from girder.models.user import User
+
+    return User().findOne({"login": login})
+
+
 def _take(api, user, name):
     """Take ``name`` for ``user``, releasing whatever else comes first."""
     _as(user)
@@ -739,10 +758,15 @@ def test_r4s16_a_plane_less_read_is_returned_uncounted(world):
 # ----------------------------------------------------- waves and third reads
 
 
-def _report(wave, seeded, flagged=True):
-    """The parts of an anchoring report the third-read route reads."""
+def _report(wave, seeded, flagged=True, shares=None):
+    """The parts of an anchoring report the third-read route reads. Its seeded rows'
+    changed shares give rule 2's flag (JA78): ``shares`` (per read, for every case), or
+    1 % (following) when ``flagged`` and 20 % when not."""
+    if shares is None:
+        shares = [0.01, 0.01] if flagged else [0.2, 0.2]
     return json.dumps({"wave": wave, "rule2": {"flagged": flagged},
-                       "rows": [{"case": c, "blank": False} for c in seeded]})
+                       "rows": [{"case": c, "blank": False, "changedShare": list(shares)}
+                                for c in seeded]})
 
 
 def test_r4s18_third_reads_open_only_on_a_flagged_waves_draw(world):
@@ -794,7 +818,7 @@ def test_third_reads_are_blank_by_a_fresh_reader_and_never_reference(world):
     _as(world.people["anna"])
     assert _refusal(api.adminThirdReads, wave="1", report=report, cases=one).code == 403
     _as(world.admin)
-    api.adminWave(wave="1", cases=one)
+    assert api.adminWave(wave="1", cases=one)["moved"] == []      # the same wave again: 200
     # Wave 1 is the target alone: its draw is the target.
     assert api.adminThirdReads(wave="1", report=report, cases=one)["opened"] == [world.target]
     assert api.adminThirdReads(wave="1", report=report,
@@ -838,6 +862,13 @@ def test_export_feeds_the_anchoring_report(world):
     manifest = export(str(out), str(world.seedsDir), wave="1", out=lambda _: None)
     assert manifest["border_protocol"] == 1 and manifest["wave"] == "1"
     assert [c["case"] for c in manifest["cases"]] == [world.target]   # wave 1 only
+    # R5-S10 (JA78): the export carries the sha256 of the report that opened wave 1's
+    # third reads.
+    from girder_janusm.rest import reportSha256
+
+    assert manifest["anchoringReportSha256"] == reportSha256(
+        json.loads(_report("1", [world.target])))
+    assert len(manifest["anchoringReportSha256"]) == 64
     assert manifest["skippedReads"] == []
     row = manifest["cases"][0]
     records = row["readRecords"]
@@ -909,6 +940,291 @@ def test_r4s21_export_skips_and_lists_reads_not_under_border_protocol_1(world):
     assert manifest["cases"] == []          # one protocol-1 read left: not a double read
     assert manifest["skippedReads"] == [{"case": world.target, "read": str(read["_id"]),
                                          "border_protocol": None}]
+
+
+# ============================================== Round 5, Group D (#232; JA76-JA79)
+
+
+def test_r5s7_a_blank_case_with_no_check_seed_is_refused_and_alerted(world, caplog):
+    """JA76: ``check.py`` refuses a blank read whose case has no ``checkSeedFileId``
+    before checking (never fitting it to the read), alerts the PM, and counts a crash,
+    not a return. The reader is not told why."""
+    import logging
+
+    from girder_janusm.check import checkRead
+    from girder_janusm.models import JanusMCase, JanusMRead
+
+    api = _api()
+    case = JanusMCase().findOne({"name": world.noCheckSeed})
+    assert case["blank"] and case["checkSeedFileId"]
+    JanusMCase().collection.update_one({"_id": case["_id"]},
+                                       {"$set": {"checkSeedFileId": None}})
+    lena = _reader("lena")
+    got = _take(api, lena, world.noCheckSeed)
+    assert got["hasSeed"] is False
+    _submit(api, world, lena, got["readId"], world.truth)
+    with caplog.at_level(logging.ERROR, logger="girder_janusm.check"):
+        checkRead(JanusMRead().load(got["readId"], force=True))
+    stored = JanusMRead().load(got["readId"], force=True)
+    assert stored["state"] == "returned" and not stored["flagged"]
+    assert (stored["crashes"], stored["returns"], stored["attempts"]) == (1, 0, 1)
+    assert stored["check"]["couldNotBeChecked"]
+    assert "mitral" not in stored["check"]          # never checked, never fitted to the read
+    alerts = [r for r in caplog.records if r.levelno == logging.ERROR
+              and "COULD NOT BE CHECKED" in r.getMessage()
+              and world.noCheckSeed in r.getMessage()]
+    assert alerts and "checkSeedFileId" in alerts[0].getMessage()
+    _as(lena)
+    seen = json.dumps(api.listMine(), default=str)
+    assert "check seed" not in seen.lower() and "checkSeed" not in seen
+    world.noCheckSeedRead = got["readId"]
+
+
+def test_r5s7_backfill_sets_the_check_seed_and_it_is_still_never_served(world):
+    from girder.models.file import File
+    from girder.models.folder import Folder
+    from girder.models.item import Item
+    from girder_janusm import populate
+    from girder_janusm.models import JanusMCase
+
+    lines = []
+    dry = populate.backfillCheckSeeds(world.admin, str(world.seedsDir), dryRun=True,
+                                      out=lines.append)
+    assert dry == {"attach": 1, "cases": [world.noCheckSeed]}
+    assert not JanusMCase().findOne({"name": world.noCheckSeed})["checkSeedFileId"]
+    populate.main(["--backfill-check-seeds", "--seeds-dir", str(world.seedsDir)])
+    case = JanusMCase().findOne({"name": world.noCheckSeed})
+    assert case["checkSeedFileId"] and case["seedFileId"] is None
+    item = Item().load(File().load(case["checkSeedFileId"], force=True)["itemId"], force=True)
+    assert Folder().load(item["folderId"], force=True)["name"] == "check-seeds"
+    # Nothing left to backfill; the seed is still never served (404).
+    assert populate.backfillCheckSeeds(world.admin, str(world.seedsDir),
+                                       out=lambda _: None)["attach"] == 0
+    api = _api()
+    _as(_user("lena"))
+    assert _refusal(api.downloadSeed, readId=world.noCheckSeedRead).code == 404
+
+
+def test_r5s8_an_unparseable_ct_header_refuses_lesion_points_and_moves_no_counter(world,
+                                                                                 caplog):
+    """JA77: 409 ct_bounds_unavailable for a form with a point; the read stays open and
+    no counter moves; the PM is alerted. A form without points is accepted."""
+    import logging
+
+    from girder.models.folder import Folder
+    from girder_janusm.models import JanusMCase, JanusMRead
+
+    from janusm_reads import protocol
+
+    case = JanusMCase().findOne({"name": world.noBounds})
+    junkFolder = Folder().createFolder(world.admin, "not-a-ct", parentType="user",
+                                       creator=world.admin, reuseExisting=True)
+    junk = world.tmp / "not-a-ct.nii.gz"
+    junk.write_bytes(b"this is not a NIfTI header" * 40)
+    junkFile = _upload(junk, junkFolder, world.admin)
+    JanusMCase().collection.update_one(
+        {"_id": case["_id"]},
+        {"$set": {"ctFileId": junkFile["_id"]}, "$unset": {"ctWorldBounds": ""}})
+    try:
+        api = _api()
+        max_ = _reader("maxine")
+        got = _take(api, max_, world.noBounds)
+        before = JanusMRead().load(got["readId"], force=True)
+        with caplog.at_level(logging.ERROR, logger="girder_janusm.rest"):
+            refused = _refusal(_submit, api, world, max_, got["readId"], world.truth,
+                               points={"LAD": [1.5, 2.0, 30.0]})
+        assert refused.code == 409
+        assert refused.extra["code"] == protocol.ERR_CT_BOUNDS == "ct_bounds_unavailable"
+        after = JanusMRead().load(got["readId"], force=True)
+        assert after["state"] == before["state"] == "assigned"
+        for counter in ("attempts", "returns", "crashes", "seconds"):
+            assert after[counter] == before[counter], counter
+        assert after["fileId"] is None and after["lesionPoints"] == {}
+        assert any(r.levelno == logging.ERROR and world.noBounds in r.getMessage()
+                   for r in caplog.records)
+        # The same read without lesion points is accepted for checking.
+        done = _submit(api, world, max_, got["readId"], world.truth)
+        assert done["state"] == "submitted"
+        assert JanusMRead().load(got["readId"], force=True)["attempts"] == 1
+    finally:
+        JanusMCase().collection.update_one({"_id": case["_id"]},
+                                           {"$set": {"ctFileId": case["ctFileId"]}})
+
+
+def test_r5s9_a_case_with_an_accepted_read_in_wave_1_never_moves_to_wave_2(world):
+    from girder_janusm.models import JanusMCase
+
+    from janusm_reads import protocol
+
+    api = _api()
+    _as(world.admin)
+    target = JanusMCase().findOne({"name": world.target})
+    assert target["wave"] == "1" and target["acceptedCount"] == 2
+    refused = _refusal(api.adminWave, wave="2", cases=json.dumps([world.target]))
+    assert refused.code == 409 and refused.extra["code"] == protocol.ERR_WAVE_FROZEN
+    assert JanusMCase().findOne({"name": world.target})["wave"] == "1"   # nothing moved
+    assert api.adminWave(wave="1", cases=json.dumps([world.target]))["moved"] == []
+
+
+def test_r5s9_an_unread_case_moves(world, caplog):
+    import logging
+
+    from girder_janusm.models import JanusMCase
+
+    api = _api()
+    _as(world.admin)
+    with caplog.at_level(logging.WARNING, logger="girder_janusm.rest"):
+        assert api.adminWave(wave="w9", cases=json.dumps([world.unreadMover]))["moved"] == [
+            world.unreadMover]
+        assert api.adminWave(wave="w8", cases=json.dumps([world.unreadMover]))["moved"] == [
+            world.unreadMover]
+    assert JanusMCase().findOne({"name": world.unreadMover})["wave"] == "w8"
+    logged = [r.getMessage() for r in caplog.records if world.unreadMover in r.getMessage()]
+    assert any("'w9' -> 'w8' by admin" in m for m in logged), logged
+
+
+def test_r5s9_a_mixed_list_is_refused_and_nothing_moves(world):
+    from girder_janusm.models import JanusMCase
+
+    api = _api()
+    _as(world.admin)
+    names = [world.unreadMover, world.target]
+    before = {c["name"]: c["wave"] for c in JanusMCase().find({"name": {"$in": names}})}
+    assert _refusal(api.adminWave, wave="w7", cases=json.dumps(names)).code == 409
+    after = {c["name"]: c["wave"] for c in JanusMCase().find({"name": {"$in": names}})}
+    assert after == before == {world.unreadMover: "w8", world.target: "1"}
+    # A case with a third read wanted (and none accepted) is frozen too.
+    JanusMCase().collection.update_one({"name": world.unreadMover},
+                                       {"$set": {"thirdReadWanted": True}})
+    try:
+        assert _refusal(api.adminWave, wave="w7",
+                        cases=json.dumps([world.unreadMover])).code == 409
+    finally:
+        JanusMCase().collection.update_one({"name": world.unreadMover},
+                                           {"$set": {"thirdReadWanted": False}})
+
+
+def test_r5s10_a_flagged_report_whose_rows_do_not_flag_is_refused(world):
+    """JA78: rule2.flagged is recomputed from the report's seeded rows."""
+    from girder_janusm.models import JanusMCase, JanusMWave
+
+    from janusm_reads import readset
+
+    api = _api()
+    six = world.sets["decision"][3:9]
+    _as(world.admin)
+    api.adminWave(wave="w6", cases=json.dumps(six))
+    JanusMCase().collection.update_many({"name": {"$in": six}}, {"$set": {"acceptedCount": 2}})
+    try:
+        drawn = readset.third_read_cases("w6", six)
+        # flagged: true, but 2 of 12 reads change < 5 %: the rows do not flag.
+        rows = json.loads(_report("w6", six))
+        for i, row in enumerate(rows["rows"]):
+            row["changedShare"] = [0.01, 0.2] if i < 2 else [0.2, 0.2]
+        refused = _refusal(api.adminThirdReads, wave="w6", report=json.dumps(rows),
+                           cases=json.dumps(drawn))
+        assert refused.code == 400 and "its seeded rows give False" in str(refused)
+        # Exactly 5 % is not following either.
+        exact = _report("w6", six, flagged=True, shares=[0.05, 0.05])
+        assert _refusal(api.adminThirdReads, wave="w6", report=exact,
+                        cases=json.dumps(drawn)).code == 400
+        assert not JanusMCase().collection.count_documents(
+            {"name": {"$in": six}, "thirdReadWanted": True})
+        assert JanusMWave().reportHash("w6") is None      # nothing stored on a refusal
+    finally:
+        JanusMCase().collection.update_many({"name": {"$in": six}},
+                                            {"$set": {"acceptedCount": 0, "wave": None}})
+
+
+def test_r5s10_a_second_different_report_for_a_wave_is_refused(world):
+    from girder_janusm.models import JanusMWave
+    from girder_janusm.rest import reportSha256
+
+    api = _api()
+    one = json.dumps([world.target])
+    _as(world.admin)
+    held = JanusMWave().reportHash("1")
+    assert held == reportSha256(json.loads(_report("1", [world.target])))
+    other = _report("1", [world.target], shares=[0.02, 0.03])     # still flags; another report
+    refused = _refusal(api.adminThirdReads, wave="1", report=other, cases=one)
+    assert refused.code == 400 and "already has an anchoring report" in str(refused)
+    assert JanusMWave().reportHash("1") == held
+    # The same report again is not refused.
+    again = api.adminThirdReads(wave="1", report=_report("1", [world.target]), cases=one)
+    assert again["alreadyOpen"] == [world.target]
+
+
+def test_r5s11_r4s17_a_plane_less_read_after_a_genuine_return(world, caplog):
+    """R4-S17 in the Mongo job (JA79): a genuine failure (returns 1), then a plane-less
+    submission -> returned, unflagged, returns 1, crashes 1, and the PM's "COULD NOT BE
+    CHECKED" ERROR log."""
+    import logging
+
+    from girder_janusm.check import runOnce
+    from girder_janusm.models import JanusMCase, JanusMRead
+
+    from janusm_reads import phantom
+
+    api = _api()
+    nora = _reader("nora")
+    got = _take(api, nora, world.afterReturn)
+    _submit(api, world, nora, got["readId"], phantom.move_border(
+        world.truth, world.spacing, "epicardial", 2.0))
+    runOnce(out=lambda _: None)
+    stored = JanusMRead().load(got["readId"], force=True)
+    assert stored["state"] == "returned" and (stored["returns"], stored["crashes"]) == (1, 0)
+
+    # The case's reference loses its mitral gap: the next check has no plane to fit.
+    case = JanusMCase().findOne({"name": world.afterReturn})
+    planeless = JanusMCase().findOne({"name": world.planeless})
+    JanusMCase().collection.update_one({"_id": case["_id"]},
+                                       {"$set": {"seedFileId": planeless["seedFileId"]}})
+    try:
+        _submit(api, world, nora, got["readId"], world.truth)   # its own gap would fit
+        with caplog.at_level(logging.ERROR, logger="girder_janusm.check"):
+            runOnce(out=lambda _: None)
+    finally:
+        JanusMCase().collection.update_one({"_id": case["_id"]},
+                                           {"$set": {"seedFileId": case["seedFileId"]}})
+    stored = JanusMRead().load(got["readId"], force=True)
+    assert stored["state"] == "returned" and not stored["flagged"]
+    assert (stored["returns"], stored["crashes"], stored["attempts"]) == (1, 1, 2)
+    assert stored["check"]["couldNotBeChecked"]
+    assert stored["check"]["mitral"]["checked"] is False
+    assert stored["check"]["mitral"]["source"] is None             # never the read
+    assert any(r.levelno == logging.ERROR and "COULD NOT BE CHECKED" in r.getMessage()
+               and world.afterReturn in r.getMessage() for r in caplog.records)
+
+
+def test_r5s11_s21_export_excludes_a_competing_wave_with_accepted_reads(world):
+    from girder_janusm.export import export
+    from girder_janusm.models import JanusMCase, JanusMRead
+
+    api = _api()
+    _as(world.admin)
+    assert api.adminWave(wave="2", cases=json.dumps([world.competing]))["moved"] == [
+        world.competing]
+    competing = JanusMCase().findOne({"name": world.competing})
+    target = JanusMCase().findOne({"name": world.target})
+    for read in JanusMRead().find({"caseId": target["_id"], "state": "accepted",
+                                   "third": False}):
+        copy = {k: v for k, v in read.items() if k != "_id"}
+        copy["caseId"] = competing["_id"]
+        JanusMRead().collection.insert_one(copy)
+    JanusMCase().collection.update_one({"_id": competing["_id"]},
+                                       {"$set": {"acceptedCount": 2}})
+    # Wave 2 is a real double-read wave ...
+    two = export(str(world.tmp / "wave2"), str(world.seedsDir), wave="2",
+                 seedOffsets=False, out=lambda _: None)
+    assert [c["case"] for c in two["cases"]] == [world.competing]
+    # ... and --wave 1 excludes it.
+    one = export(str(world.tmp / "wave1-again"), str(world.seedsDir), wave="1",
+                 seedOffsets=False, out=lambda _: None)
+    assert [c["case"] for c in one["cases"]] == [world.target]
+    assert not any(world.competing in name
+                   for name in os.listdir(world.tmp / "wave1-again" / "reads"))
+    # And a read case never changes wave.
+    assert _refusal(api.adminWave, wave="1", cases=json.dumps([world.competing])).code == 409
 
 
 # ------------------------------------------------------------ SegQueue14 untouched

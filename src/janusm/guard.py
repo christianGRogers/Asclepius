@@ -111,6 +111,13 @@ PINNED: Dict[str, str] = {
 JANUSM_SEAL_RELPATH = sealed_r1.PATH
 JANUSM_SEAL_SHA256: Optional[str] = sealed_r1.SEALED_R1_SHA256
 
+#: The reference-population config (S6; Round 3 rest-ccta JA48 item 1), written once on Fir by
+#: ``tools/janusm/build_reference.py`` and committed by PR with its sha256 here. None until then:
+#: ``janusm.reference.load`` (and so the table writer) refuses an unpinned or changed file. It is
+#: not a held-out list, so :func:`load_guard` does not read it.
+REFERENCE_RELPATH = "configs/janusm/reference-r1.json"
+REFERENCE_SHA256: Optional[str] = None
+
 #: Purposes a caller declares. Only the Janus-M seal and decision lists depend on it; a coronary
 #: hold-out is refused for every purpose.
 ANY, SEAL_SCORING, DECISION_SCORING = "any", "seal_scoring", "decision_scoring"

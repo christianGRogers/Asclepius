@@ -1,10 +1,10 @@
-"""The half-maximum helper (Janus-M read protocol, section 3), free of Slicer.
+"""The half-maximum helper (Janus-M read protocol v1, section 3), free of Slicer.
 
-A border lies halfway between the plateaus on either side of it. The reader
-measures the plateaus once per case -- from small ROIs they place, or from the
-seed (or their own segments) -- and for each border the module sets the window
-level to that border's threshold with a narrow width, so the border is where the
-image turns from white to black.
+A border lies halfway between the plateaus on either side of it. The plateaus are
+measured from the seed when a case opens (a blank case: from ROIs the reader
+places), and for the border being drawn the module opens on the **border window**
+(Hotel v2 section 5.4, JA21): level = (p1 + p2) / 2, width = 1.5 x |p1 - p2|. A fixed
+800 / 300 window stays available, but is not the default.
 
 numpy only (Slicer bundles it). The erosions here are voxel steps, an
 approximation of the server's millimetre distances: this is a drawing aid, and
@@ -37,9 +37,14 @@ BORDERS: Dict[str, Tuple[str, str]] = {
     SEPTAL_RV: (RV_BLOOD, MYOCARDIUM),
 }
 
-#: The window width (HU) used at a border's threshold: narrow, so the border is a
-#: sharp white-to-black step.
-BORDER_WIDTH_HU = 50.0
+#: The border window's width, as a multiple of the gap between its two plateaus.
+BORDER_WIDTH_FACTOR = 1.5
+#: The narrowest border window (HU), for plateaus measured almost equal.
+MIN_BORDER_WIDTH_HU = 10.0
+#: The border a case opens on.
+DEFAULT_BORDER = "endocardial"
+#: The fixed window, available on request (never the default): width, level.
+FIXED_WINDOW = (800.0, 300.0)
 
 #: Epicardial fat is measured inside this HU window (JA11).
 FAT_WINDOW_HU = (-180.0, 0.0)
@@ -93,8 +98,47 @@ def warnings(plateaus: Dict[str, Optional[float]]) -> list:
 
 
 def window_for(border: str, plateaus: Dict[str, Optional[float]]) -> Tuple[float, float]:
-    """``(window, level)`` for drawing one border."""
-    return BORDER_WIDTH_HU, threshold(border, plateaus)
+    """``(window, level)`` for drawing one border: level at its half-maximum, width
+    1.5 x the gap between its plateaus."""
+    level = threshold(border, plateaus)
+    a, b = BORDERS[border]
+    width = BORDER_WIDTH_FACTOR * abs(float(plateaus[a]) - float(plateaus[b]))
+    return max(MIN_BORDER_WIDTH_HU, width), level
+
+
+# ------------------------------------------------------------ the profile
+
+
+#: The columns of :func:`profile_table`, in order.
+PROFILE_COLUMNS = ("signed distance (mm)", "median HU", "half-maximum", "plateau inside",
+                   "plateau outside")
+
+
+def profile_table(profile: Dict) -> np.ndarray:
+    """The plot of a returned read's border profile (``ReadInfo.check_profile[border]``):
+    HU against signed distance from the read's border (+ away from the region), with
+    the half level and both plateaus as flat lines. Columns: :data:`PROFILE_COLUMNS`."""
+    s = np.asarray(profile.get("s_mm") or [], dtype=float)
+    hu = np.asarray(profile.get("hu") or [], dtype=float)
+    if not s.size or s.size != hu.size:
+        raise ValueError("This border has no profile to show.")
+    pl = list(profile.get("plateausHU") or [])
+    pl = (pl + [None, None])[:2]
+    half = profile.get("thresholdHU")
+    cols = [s, hu]
+    for value in (half, pl[0], pl[1]):
+        cols.append(np.full(s.shape, np.nan if value is None else float(value)))
+    return np.stack(cols, axis=1)
+
+
+def profile_caption(border: str, profile: Dict) -> str:
+    """One line under the plot, in the canonical sign (JA44)."""
+    offset = profile.get("offsetMm")
+    if offset is None:
+        return "{}: no half-maximum crossing near your border.".format(border)
+    where = "past" if offset > 0 else "short of"
+    return "{}: your border is {:.2f} mm {} the half-maximum edge{}.".format(
+        border, abs(offset), where, " (this failed the check)" if profile.get("failed") else "")
 
 
 # ------------------------------------------------------------ morphology

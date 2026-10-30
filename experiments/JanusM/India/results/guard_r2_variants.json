@@ -1,0 +1,18 @@
+{
+ "ruling_rule": {
+  "refused_twins": 692,
+  "cardiac_v1_left": 23
+ },
+ "variant_same_scanner_v2_only": {
+  "refused_twins": 258,
+  "cardiac_v1_left": 52
+ },
+ "variant_age_pm2_v1": {
+  "refused_twins": 465,
+  "cardiac_v1_left": 49
+ },
+ "held_out_sex_missing": [],
+ "held_out_institutes_v1": [
+  "H"
+ ]
+}

@@ -1,0 +1,228 @@
+{
+ "n_cases": 22,
+ "shape": [
+  1.025,
+  1.312,
+  1.189,
+  1.045,
+  0.991,
+  1.036,
+  0.884,
+  1.148,
+  1.327,
+  1.067,
+  0.925,
+  0.992,
+  0.757,
+  0.795,
+  0.786,
+  0.791
+ ],
+ "cv_n_raw": 0.0527,
+ "lima_shape": [
+  1.015,
+  1.288,
+  1.171,
+  0.971,
+  0.982,
+  1.12,
+  0.91,
+  1.121,
+  1.276,
+  1.022,
+  0.916,
+  1.074,
+  0.777,
+  0.825,
+  0.756,
+  0.819
+ ],
+ "median_thickness_mm_public_labels": 8.99,
+ "sig_m_by_U_sigma": {
+  "0.25": 0.237,
+  "0.5": 0.432
+ },
+ "note": "U sigma 0.25 / 0.5 realise ASSD ~0.21 / ~0.36 mm (India R2 E5)",
+ "runs": {
+  "cv0.053 sigU0.25 mixed shape_measured": {
+   "depth_80": 0.25,
+   "false_flag_max": 0.036,
+   "false_flag_median": 0.0225
+  },
+  "cv0.053 sigU0.25 mixed shape_lima": {
+   "depth_80": 0.25,
+   "false_flag_max": 0.028,
+   "false_flag_median": 0.020999999999999998
+  },
+  "cv0.053 sigU0.25 all_ED shape_measured": {
+   "depth_80": 0.25,
+   "false_flag_max": 0.033,
+   "false_flag_median": 0.023
+  },
+  "cv0.053 sigU0.25 all_ED shape_lima": {
+   "depth_80": 0.25,
+   "false_flag_max": 0.026,
+   "false_flag_median": 0.022
+  },
+  "cv0.053 sigU0.5 mixed shape_measured": {
+   "depth_80": 0.3,
+   "false_flag_max": 0.036,
+   "false_flag_median": 0.027
+  },
+  "cv0.053 sigU0.5 mixed shape_lima": {
+   "depth_80": 0.3,
+   "false_flag_max": 0.032,
+   "false_flag_median": 0.028
+  },
+  "cv0.053 sigU0.5 all_ED shape_measured": {
+   "depth_80": 0.3,
+   "false_flag_max": 0.035,
+   "false_flag_median": 0.0265
+  },
+  "cv0.053 sigU0.5 all_ED shape_lima": {
+   "depth_80": 0.3,
+   "false_flag_max": 0.033,
+   "false_flag_median": 0.0275
+  },
+  "cv0.053 sigU0.0 mixed shape_measured": {
+   "depth_80": 0.2,
+   "false_flag_max": 0.02,
+   "false_flag_median": 0.0155
+  },
+  "cv0.053 sigU0.0 mixed shape_lima": {
+   "depth_80": 0.2,
+   "false_flag_max": 0.022,
+   "false_flag_median": 0.018
+  },
+  "cv0.053 sigU0.0 all_ED shape_measured": {
+   "depth_80": 0.2,
+   "false_flag_max": 0.02,
+   "false_flag_median": 0.0155
+  },
+  "cv0.053 sigU0.0 all_ED shape_lima": {
+   "depth_80": 0.2,
+   "false_flag_max": 0.022,
+   "false_flag_median": 0.018
+  },
+  "cv0.06 sigU0.25 mixed shape_measured": {
+   "depth_80": 0.25,
+   "false_flag_max": 0.035,
+   "false_flag_median": 0.0215
+  },
+  "cv0.06 sigU0.25 mixed shape_lima": {
+   "depth_80": 0.25,
+   "false_flag_max": 0.025,
+   "false_flag_median": 0.0215
+  },
+  "cv0.06 sigU0.25 all_ED shape_measured": {
+   "depth_80": 0.25,
+   "false_flag_max": 0.033,
+   "false_flag_median": 0.02
+  },
+  "cv0.06 sigU0.25 all_ED shape_lima": {
+   "depth_80": 0.25,
+   "false_flag_max": 0.026,
+   "false_flag_median": 0.021
+  },
+  "cv0.06 sigU0.5 mixed shape_measured": {
+   "depth_80": 0.3,
+   "false_flag_max": 0.034,
+   "false_flag_median": 0.0265
+  },
+  "cv0.06 sigU0.5 mixed shape_lima": {
+   "depth_80": 0.3,
+   "false_flag_max": 0.031,
+   "false_flag_median": 0.0235
+  },
+  "cv0.06 sigU0.5 all_ED shape_measured": {
+   "depth_80": 0.35,
+   "false_flag_max": 0.034,
+   "false_flag_median": 0.028
+  },
+  "cv0.06 sigU0.5 all_ED shape_lima": {
+   "depth_80": 0.3,
+   "false_flag_max": 0.028,
+   "false_flag_median": 0.025
+  },
+  "cv0.06 sigU0.0 mixed shape_measured": {
+   "depth_80": 0.2,
+   "false_flag_max": 0.021,
+   "false_flag_median": 0.016
+  },
+  "cv0.06 sigU0.0 mixed shape_lima": {
+   "depth_80": 0.2,
+   "false_flag_max": 0.022,
+   "false_flag_median": 0.0155
+  },
+  "cv0.06 sigU0.0 all_ED shape_measured": {
+   "depth_80": 0.2,
+   "false_flag_max": 0.021,
+   "false_flag_median": 0.016
+  },
+  "cv0.06 sigU0.0 all_ED shape_lima": {
+   "depth_80": 0.2,
+   "false_flag_max": 0.022,
+   "false_flag_median": 0.0155
+  },
+  "cv0.1 sigU0.25 mixed shape_measured": {
+   "depth_80": 0.35,
+   "false_flag_max": 0.019,
+   "false_flag_median": 0.015
+  },
+  "cv0.1 sigU0.25 mixed shape_lima": {
+   "depth_80": 0.35,
+   "false_flag_max": 0.02,
+   "false_flag_median": 0.016
+  },
+  "cv0.1 sigU0.25 all_ED shape_measured": {
+   "depth_80": 0.35,
+   "false_flag_max": 0.02,
+   "false_flag_median": 0.016
+  },
+  "cv0.1 sigU0.25 all_ED shape_lima": {
+   "depth_80": 0.35,
+   "false_flag_max": 0.02,
+   "false_flag_median": 0.016
+  },
+  "cv0.1 sigU0.5 mixed shape_measured": {
+   "depth_80": 0.4,
+   "false_flag_max": 0.035,
+   "false_flag_median": 0.0235
+  },
+  "cv0.1 sigU0.5 mixed shape_lima": {
+   "depth_80": 0.4,
+   "false_flag_max": 0.025,
+   "false_flag_median": 0.02
+  },
+  "cv0.1 sigU0.5 all_ED shape_measured": {
+   "depth_80": 0.4,
+   "false_flag_max": 0.033,
+   "false_flag_median": 0.024
+  },
+  "cv0.1 sigU0.5 all_ED shape_lima": {
+   "depth_80": 0.4,
+   "false_flag_max": 0.026,
+   "false_flag_median": 0.0215
+  },
+  "cv0.1 sigU0.0 mixed shape_measured": {
+   "depth_80": 0.35,
+   "false_flag_max": 0.014,
+   "false_flag_median": 0.0115
+  },
+  "cv0.1 sigU0.0 mixed shape_lima": {
+   "depth_80": 0.35,
+   "false_flag_max": 0.014,
+   "false_flag_median": 0.009999999999999998
+  },
+  "cv0.1 sigU0.0 all_ED shape_measured": {
+   "depth_80": 0.35,
+   "false_flag_max": 0.014,
+   "false_flag_median": 0.0115
+  },
+  "cv0.1 sigU0.0 all_ED shape_lima": {
+   "depth_80": 0.35,
+   "false_flag_max": 0.014,
+   "false_flag_median": 0.009999999999999998
+  }
+ }
+}

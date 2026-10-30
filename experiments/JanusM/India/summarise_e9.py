@@ -57,7 +57,7 @@ def verdict(table, est, mags=(0.5,), noise=(0.0,)):
 
 def main(d):
     sph = json.load(open(os.path.join(d, "spheres.json")))
-    real = [json.load(open(f)) for f in sorted(glob.glob(os.path.join(d, "s*.json")))]
+    real = [json.load(open(f)) for f in sorted(glob.glob(os.path.join(d, "s[0-9]*.json")))]
     real = [r for r in real if r.get("ok")]
     res = dict(n_spheres=len(sph), n_real=len(real), spheres=collect(sph, "sphere"), real=collect(real, "real"))
     res["verdicts"] = {}

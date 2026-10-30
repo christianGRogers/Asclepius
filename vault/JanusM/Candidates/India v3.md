@@ -22,9 +22,15 @@ India v3 changes nothing structural. It settles ruling R2 §7 items 2–5 and pr
 - **Item 1** becomes a script, `jm0r_rules.py`. It turns JM-0R's aggregates, or the three fallback add-ons', into
   the ten decisions the rulings pre-register, and it was written before any output exists.
 - **Item 2:** E9 tests every candidate implementation of ASSD, signed bias and segment thickness against exact truth
-  (spheres) and against continuum truth on 24 real 0.5 mm walls. ⟨E9 one-line⟩
+  (40 spheres) and against continuum truth on 24 real 0.5 mm walls. **The volume estimator (ΔV / A) passes JA16's
+  test**: a known 0.5 mm shift in each direction, on each border, recovered to within ±0.05 mm in ≥ 96 % of real
+  walls and all spheres. **So the signed-bias guard becomes 0.3 mm** (with an outward under-read of up to 0.05 mm
+  near 0.3 mm, disclosed). India R2's voxel-centre estimator fails it
+  everywhere and must not be used.
 - **Item 3:** E10 re-runs Lima's E3 unchanged, with a segment shape and cv_n measured on 0.5 mm walls and a
-  measurement error tied to JA8's acceptance edge. ⟨E10 one-line⟩ JM-0R's own `cv_n` and shape then replace these,
+  measurement error tied to JA8's acceptance edge. The measured shape matches Lima's (r = 0.97); cv_n = 0.053.
+  At the error of a model on JA8's edge, rule C finds 80 % of territories thinned by **≈ 30 %** (35–40 % if cv_n
+  is really 0.10), with ≤ 3.6 % of null patients flagged. JM-0R's own `cv_n` and shape then replace these,
   through R9 of the rules script.
 - **Item 4:** the table writer, the reference-population config and F1's RC per territory, specified as three
   `role:swe` issues (§6).
@@ -73,11 +79,76 @@ JA23 lists them.
 
 ## 4. Item 2: the JA15 estimators, validated (E9)
 
-⟨E9 section⟩
+**Set-up.** Each candidate implementation is run on binary masks only (as a read or a model gives them) and compared
+with a truth that does not depend on voxels:
+- **40 spheres** (pool radius 15–25 mm, wall 6–11 mm, random sub-voxel centre, 0.5 mm grid), one border moved by
+  ±0.3 or ±0.5 mm: the truth is exact;
+- **24 real walls** (public TotalSegmentator v1 shapes on JA15's 0.5 mm grid, after `janusm.guard.refuse`), one
+  border's SDF moved by ±0.3 or ±0.5 mm, alone or with independent random fields (RMS 0.25 mm, 8 mm) on both
+  borders. The truth is the **continuum** mean outward displacement of the zero level set (ΔV / A on the continuous
+  fields, by the coarea formula), because the zoomed SDF's slope is not 1 (median |∇| 1.05).
+
+**Signed bias, error = estimate − truth (mm), a 0.5 mm shift, no random field:**
+
+| Estimator | Spheres: worst median (share within ±0.05) | Real walls: endo in / out, epi in / out, median (share within ±0.05) |
+|---|---|---|
+| Voxel centres (India R2) | 0.12 (0 %) | −0.07 (0 %), −0.13 (0 %), −0.08 (0 %), −0.11 (0 %) |
+| Symmetrised voxel centres | 0.04 (100 %) | +0.01 (100 %), −0.05 (63 %), −0.01 (100 %), −0.02 (100 %) |
+| **Volume, ΔV / Ā** | **0.001 (100 %)** | **−0.02 (96 %), −0.03 (100 %), −0.02 (100 %), −0.01 (100 %)** |
+
+- **JA16's test, as written** ("recover a known 0.5 mm shift, in each direction, to within ±0.05 mm in the JA15
+  harness"): **the volume estimator passes.** The 0.3 mm guard applies, measured by it.
+- **Its residual error, disclosed.** On real walls the volume estimator reads consistently **0.01–0.09 mm too far
+  inward** (median error −0.006 to −0.029 at 0.5 mm; −0.04 to −0.09 at 0.3 mm; down to −0.08 with random error on
+  top). For the guard this means:
+  - an **outward** bias is read up to ≈ 0.05 mm low (worst medians: −0.047 endo, −0.041 epi at 0.3 mm), so a true
+    outward bias of up to ≈ 0.35 mm can pass a 0.3 mm guard;
+  - an **inward** bias is read up to 0.09 mm high, so the guard fires early, never late.
+
+  The guard is therefore stated as "0.3 mm, with ±0.05 mm at 0.5 mm shifts and up to 0.05 mm outward
+  under-reading near 0.3 mm", not as an exact bar.
+- **Realised vs nominal shifts.** A nominal 0.5 mm SDF shift realises 0.94–0.99 of itself on the endocardium and
+  0.84–0.90 on the epicardium (where 1.5 mm staircase labels meet the RV). E5's bias rows were nominal; JA15 already
+  indexes by realised ASSD, so no ruling changes.
+
+**ASSD.** Voxel-surface ASSD reads high by +0.04 mm (0.5 mm shift) and +0.06 mm (0.3 mm) on spheres; on real walls,
++0.04 to +0.09 mm at 0.5 mm. The surface-voxel convention costs about one-tenth of a voxel at every comparison. JA8 decides on
+d = model-vs-read − read-vs-read, in which this common offset largely cancels. **One implementation is chosen:
+`segtrain.metrics.surface_distances`**, the one `janusm_reads.anchoring` already uses. The myocardium-facing
+variant differs from it by ≤ 0.05 mm.
+
+**Segment thickness.** The JA2 thickness (d_endo + d_epi − h, median over the segment's voxels, then the median over
+segments 1–16) recovers sphere shifts within ±0.007 mm. On real walls it agrees with the approximate truth (the
+difference of the two continuum border shifts) within 0.07 mm at 0.5 mm and 0.11 mm at 0.3 mm. The mean-over-voxels
+and mid-wall variants are no better, so **JA8's definition stays**.
 
 ## 5. Item 3: Lima's E3 with a measured shape and cv_n (E10)
 
-⟨E10 section⟩
+**Measured on 22 public hearts, JA15's 0.5 mm walls** (`e10_detectable_depth.py`):
+- **Segment shape** (median thickness ÷ the heart's median, segments 1–16): r = 0.97 with Lima's 1.5 mm self-test
+  shape; the largest difference is 0.08.
+- **cv_n = 0.053** (robust SD of log relative thickness after the shape). Label error adds to it and model smoothing
+  removes from it, so it is neither bound; Lima swept 0.06–0.15.
+- **The measurement error at JA8's edge.** Under U, segment-thickness error SD is **0.24 mm** at a realised ASSD of
+  0.21 mm and **0.43 mm** at 0.36 mm. A model accepted by JA8 (d ≤ 0.25 mm over read-vs-read) sits around the second.
+
+**Lima's E3, unchanged, with these inputs** (mixed phase, prevalence 0.1, rule C, ≤ 5 % null patients flagged):
+
+| cv_n | sig_m 0 | sig_m 0.24 mm | sig_m 0.43 mm | Null false-flag rate (max over depths) |
+|---|---|---|---|---|
+| 0.053 (measured) | 20 % | 25 % | **30 %** | ≤ 3.6 % |
+| 0.06 | 20 % | 25 % | 30 % | ≤ 3.5 % |
+| 0.10 | 35 % | 35 % | 40 % | ≤ 3.5 % |
+
+(Depth: the relative thinning at which rule C finds ≥ 80 % of infarct territories. The measured and Lima's shapes
+give the same depths. All-end-diastolic gives the same as mixed phase: rule C cancels phase, as Lima found.)
+
+**What the page prints, provisionally:** "In simulation, this rule finds about 80 % of territories thinned by 30 %
+or more; it is not a sensitivity." JM-0R's `cv_n` and shape replace these inputs through R9 (§3), and the reads' RC
+replaces sig_m once the first 20 decision double reads exist (§6.3).
+
+**The composite pattern's population rate** needs seeds on the reference population (LQ12). None exist, so it is
+computed by the reference builder (§6.2) and printed there.
 
 ## 6. Item 4: the three `role:swe` specifications
 
@@ -87,17 +158,19 @@ These are written to be pasted into issues on this path (label `path:jm-rest-cct
 
 - **`janusm.measure`** (or inside `janusm.geometry`), pure numpy and scipy, one implementation used by the harness,
   the read checks, the anchoring report and the scorer:
-  - `assd(ref, test, spacing, border)` — symmetric surface-voxel ASSD on the myocardium-facing border (endocardial:
-    LV-pool voxels touching label 1; epicardial: label-1 voxels touching labels 0, 3 or 4);
-  - `signed_bias(ref, test, spacing, border)` — **⟨E9 winner⟩**;
-  - `segment_thickness(labels, spacing, affine)` — per AHA segment, ⟨E9 thickness winner⟩ of d_endo + d_epi − h; JA8's
+  - `assd(ref, test, spacing, border)` — `segtrain.metrics.surface_distances` on the border's object (endocardial:
+    label 2; epicardial: labels 1 + 2), as `janusm_reads.anchoring` already does;
+  - `signed_bias(ref, test, spacing, border)` — **ΔV / Ā**: the signed voxel-count change in a 2 mm band
+    around the myocardium-facing border, divided by the mean of the two borders' areas (marching cubes on each mask
+    smoothed by one voxel, the faces in the band);
+  - `segment_thickness(labels, spacing, affine)` — per AHA segment, the median over voxels of d_endo + d_epi − h; JA8's
     co-primary is the median over segments 1–16 of |model − mean read|.
 - **Tests** (from E9; tolerance ±0.05 mm unless stated):
   - spheres, r_p 15–25 mm, wall 6–11 mm, random sub-voxel centre, 0.5 mm grid, one border moved by ±0.3 and ±0.5:
-    `signed_bias` within ±0.05 (⟨E9 sphere numbers⟩); `segment_thickness` change within ±0.05; `assd` within
-    ⟨E9 assd tol⟩ of |b| (its known +0.04 voxel bias is documented, not hidden);
+    `signed_bias` within ±0.01 (E9: ≤ 0.002); `segment_thickness` change within ±0.02 (E9: ≤ 0.007);
+    `assd` within +0.08 of |b| (its known +0.04 to +0.06 surface-voxel offset is documented, not hidden);
   - `janusm_reads.phantom.heart` with `move_border(…, ±0.5)`: the same, both borders;
-  - a constant-shift and a random-field case from `harness_r2.py`'s U, with E9's continuum truth.
+  - two real walls from E9 (a ±0.5 mm shift per border), with E9's continuum truth: `signed_bias` within ±0.05.
 - **Version:** `GEOMETRY_VERSION` bumps when any of the three changes a number.
 
 ### 6.2 The reference-population config (JA18)
@@ -234,7 +307,7 @@ Unchanged from the ruling: JM-0 ≤ 1 GPU-h; JM-0R 0 GPU-h (CPU, ≤ 2 h); seeds
 | Result | Change |
 |---|---|
 | JM-0R arrives | `jm0r_rules.py` runs; its ten decisions replace the "undecided" rows; R9's depth goes on the page |
-| ⟨E9 change row⟩ | ⟨⟩ |
+| The JA15 module's `signed_bias` fails its fixture tests (§6.1) | The guard falls back to 0.5 mm (JA16) until it passes |
 | The first 20 decision double reads | §6.3 RC and κ, E8 seal size, then the reference config is built and pinned |
 | R2 fails | Thinning ships only after the hand-measurement alignment |
 

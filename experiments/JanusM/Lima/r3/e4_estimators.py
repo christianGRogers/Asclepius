@@ -129,6 +129,27 @@ def analytic(seed=0, n_offsets=6):
     return rows
 
 
+def sdf_rule_on_spheres(seed=1, n_offsets=3):
+    """What the JA15 harness's shift rule (S_ref - d < 0) actually realises, on exact spheres: the realised shift by
+    the exact estimator (volume_midarea) and the voxel ASSD, against the nominal d."""
+    rng = np.random.default_rng(seed)
+    rows = []
+    for R in (20.0, 12.0):
+        n = int(2 * (R + 4) / GRID)
+        ax = (np.arange(n) - n / 2) * GRID
+        X, Y, Z = np.meshgrid(ax, ax, ax, indexing="ij")
+        for _ in range(n_offsets):
+            c = rng.uniform(-GRID / 2, GRID / 2, 3)
+            Rr = np.sqrt((X - c[0]) ** 2 + (Y - c[1]) ** 2 + (Z - c[2]) ** 2)
+            ref = Rr < R
+            S = csdf(ref)
+            for d in (-0.5, -0.3, 0.3, 0.5):
+                pert = (S - d) < 0
+                rows.append({"r": R, "nominal": d, "realised": estimators(pert, ref, S)["volume_midarea"],
+                             "assd": assd(pert, ref)})
+    return rows
+
+
 # ------------------------------------------------------------------ B. real walls, JA15 shifts
 def real(case_dir):
     sid = os.path.basename(case_dir)
@@ -211,7 +232,17 @@ def summarise(rows):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("ts_dir"); ap.add_argument("out"); ap.add_argument("--jobs", type=int, default=4)
+    ap.add_argument("--sdf-rule-only", help="write only the sphere test of the harness shift rule to this JSON")
     a = ap.parse_args()
+    if a.sdf_rule_only:
+        r = sdf_rule_on_spheres()
+        summ = {str(d): {"realised": [round(min(x["realised"] for x in r if x["nominal"] == d), 3),
+                                      round(max(x["realised"] for x in r if x["nominal"] == d), 3)],
+                         "assd_median": round(float(np.median([x["assd"] for x in r if x["nominal"] == d])), 3)}
+                for d in (-0.5, -0.3, 0.3, 0.5)}
+        json.dump({"summary": summ, "rows": r}, open(a.sdf_rule_only, "w"), indent=1)
+        print(json.dumps(summ, indent=1))
+        return
     base = os.path.join(a.ts_dir, "Totalsegmentator_dataset")
     subj = sorted(s for s in os.listdir(base) if s.startswith("s"))
     refuse(subj, what="Lima R3 E4 case list", source="TotalSegmentator")  # the whole list first, then each case

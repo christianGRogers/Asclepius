@@ -23,7 +23,7 @@ its own rule. Lima v2 does that for each §7 item it can settle:
 - **Item 2: the harness's measurements, validated against exact truth** (E4):
   - thickness is exact to ±0.02 mm;
   - the voxel-surface ASSD (shared with the read queue) reads ≈ 0.04 mm high;
-  - the Round 2 bias estimator fails JA16's ±0.05 mm. A volume ÷ smoothed-area estimator ⟨E4verdict⟩.
+  - the Round 2 bias estimator fails JA16's ±0.05 mm. A volume ÷ smoothed-area estimator (the mean of the two borders' smoothed areas) is exact to ±0.005 mm, so JA16's 0.3 mm guard is met. E4 also finds that the harness's own "known" shift is not the shift it makes: S − d realises 0.64 mm for d = 0.5.
 - **Item 3: E3 re-run under the rule JA18 actually adopted** (E5). At the measured `cv_n` (0.088) the page line is
   *"a territory thinned by 45 % or more, found with 80 % probability, at 0.5 mm error"*. E5 also shows **JA18's κ ≥ 0.6
   gate fails on a decision set with few infarcts, at any error level**. Lima proposes a prevalence-free gate in its
@@ -56,7 +56,7 @@ The whole path plan: JA1–JA24 and Hotel v2, including:
 
 | # | Change | Evidence |
 |---|---|---|
-| L9 | **The signed-bias estimator** for JA16's guard is ⟨E4est⟩, not Lima R2's inner-boundary mean. JA16's condition for the 0.3 mm guard is then ⟨E4verdict2⟩ | E4: on exact spheres and the 23 real walls |
+| L9 | **The signed-bias estimator** for JA16's guard is **`volume_midarea`**: volume change ÷ the mean of the two borders' areas, each by marching cubes on the signed distance smoothed by 0.5 mm, not Lima R2's inner-boundary mean. JA16's condition for the 0.3 mm guard is then **met**: the bias guard is **0.3 mm**. The JA16 test is restated against exact shifts, because the harness rule S − d over-shifts by about 1.3× | E4: on exact spheres and the 23 real walls |
 | L10 | **JA18's κ ≥ 0.6 gate is replaced by a detectable-depth gate.** A sign shows as a flag only if its detectable depth, at the decision set's measured read error, is ≤ 50 %. κ and ICC are reported | E5: with no infarcts in the decision set, κ passes 1–5 % of the time even at 0.25 mm error, where the sign finds 95–98 % of 40 % thinning |
 | L11 | **F1's RC uses the upper 95 % confidence bound of the read-difference SD** (χ² on n − 1 df), not the point estimate | 20 double reads give the SD to about ×0.76–1.46; specificity first (JA18) |
 
@@ -100,7 +100,14 @@ per rule. Every rule was fixed in an earlier ruling, and none is re-tuned here:
 E4 (`r3/e4_estimators.py`) tests the three quantities against exact truth: spheres and shells whose perturbed border
 is the exact sphere of radius R + d. It also tests them on the 23 real walls, shifted the JA15 way.
 
-⟨E4table⟩
+| Quantity | Exact spheres (192 configurations) | Real walls (23, JA15 shift rule) |
+|---|---|---|
+| Thickness change | within ±0.02 mm of truth up to 1 mm | 0.58–0.62 mm for nominal 0.5 (the rule's realised shift, below) |
+| Voxel ASSD | 0.54 at a true 0.5 mm; 0.36 at 0.3 mm | 0.62 at nominal 0.5 |
+| Bias, Lima R2 `inner_boundary` | error up to **+0.13 mm** | unstable (worst case 1.8 mm) |
+| Bias, `two_way` | ±0.04 at 0.5 mm; **±0.06 at 0.3 mm** | — |
+| **Bias, `volume_midarea`** | **within ±0.005 mm**, every shift up to 1 mm, both directions, both borders | 0.644–0.654 for nominal 0.5; 0.40–0.42 for 0.3 |
+| The rule S − d < 0 itself, on exact spheres | realises **0.642–0.650 mm** for d = 0.5 and 0.414–0.420 for 0.3 (`e4_sdf_rule.json`) | the same, within 0.017 mm |
 
 **Verdicts:**
 - **Thickness** (`et_depth` median): exact to ±0.02 mm on analytic shells. Fit for the fixture.
@@ -109,7 +116,14 @@ is the exact sphere of radius R + d. It also tests them on the 23 real walls, sh
   the voxel-centre surface definition. For JA8's d it cancels, because both terms carry it. For the absolute
   ASSD ≤ 1.0 mm guard it is conservative. The fixture records it as the expected value: 0.54 ± 0.01 for a 0.5 mm
   shift on a sphere of radius 12–20 mm at 0.5 mm.
-- **Signed bias:** ⟨E4biasverdict⟩
+- **Signed bias:** **`volume_midarea` meets JA16** with ten-fold room (±0.005 mm against ±0.05 mm).
+  - Lima R2's estimator does not (+0.13 mm), and neither do the face-midpoint or binary-area estimators.
+  - `two_way` passes at 0.5 mm but fails at 0.3 mm.
+  - **So the bias guard is 0.3 mm (JA16), measured with `volume_midarea`.**
+  - **One correction to JA16's wording.** "A known 0.5 mm shift in the JA15 harness" is not a known shift: thresholding
+    the corrected signed distance at d moves a voxel border by about 1.3 d, because diagonal neighbours sit at 0.46 mm.
+    The fixture must use exact (analytic) shifts, and harness rows must state the realised shift. This also accounts
+    for Round 2's "0.5 mm bias costs 0.63 mm thickness": that row realised about 0.64 mm.
 
 ### Item 3 — E3 re-run with the measured `cv_n` and shape (E5)
 
@@ -245,11 +259,11 @@ No new lead question.
 
   The procedure's dry run is the acceptance test: it must print no NOT DECIDABLE on JM-0R's output.
 - **#170 JA15 fixture.** The analytic-sphere cases of E4 become its tests, with tolerances measured here:
-  - thickness change within ±0.03 mm of −d;
-  - voxel ASSD 0.54 ± 0.02 mm for |d| = 0.5;
-  - the signed-bias estimator within ±0.05 mm of d for |d| = 0.5, both directions, both borders.
+  - thickness change within ±0.02 mm of truth up to |d| = 1 mm;
+  - voxel ASSD 0.54 ± 0.01 mm at |d| = 0.5 and 0.36 ± 0.01 mm at |d| = 0.3;
+  - signed bias (`volume_midarea`) within ±0.01 mm of d up to |d| = 1 mm, both directions, both borders.
 
-  ⟨E4fixture⟩
+  Exact-shift generation is required: the harness rule S − d < 0 realises 1.28–1.40 × d (E4).
 - **#168 JA22.** No Lima specification. Lima's guard and the shared guard refuse the same 708 subjects (Round 2).
 
 ## 6. Held-out disclosure

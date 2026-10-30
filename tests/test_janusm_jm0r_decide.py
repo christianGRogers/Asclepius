@@ -52,8 +52,8 @@ def base():
 def fake_depth(value):
     calls = []
 
-    def fn(cv_n, shape, rc_terr_mm, *, sig_m, seed):
-        calls.append((cv_n, len(shape), rc_terr_mm, sig_m, seed))
+    def fn(cv_n, shape, rc_terr_mm, *, sig_m, seed, measured_median_mm):
+        calls.append((cv_n, len(shape), rc_terr_mm, sig_m, seed, measured_median_mm))
         return {"depth": value, "sens_range": None, "false_flag": None}
 
     fn.calls = calls
@@ -271,34 +271,87 @@ def test_r8_missing(dec):
 
 
 # ------------------------------------------------------------------------------- R9, R10
-def test_r9_calls_detectable_depth_with_cv_n_shape_and_the_f1_floor(dec):
+def test_r9_calls_detectable_depth_with_cv_n_shape_the_f1_floor_and_the_measured_wall(dec):
+    """R4-S2 (JA60): a recording depth_fn receives JM-0R's thickness_median_mm as the measured
+    wall."""
     fn = fake_depth(0.35)
     r = {x["rule"]: x for x in dec.decide(base(), depth_fn=fn)}["R9"]
-    assert fn.calls == [(0.088, 16, 1.0, 0.0, dec.DEPTH_SEED)]
-    assert r["depth"] == 0.35 and "35 %" in r["outcome"]
+    assert fn.calls == [(0.088, 16, 1.0, 0.0, dec.DEPTH_SEED, 6.1)]
+    assert r["depth"] == 0.35 and "35 %" in r["outcome"] and "wall 6.1 mm" in r["outcome"]
     assert "nothing is loosened" not in r["outcome"]
     assert r["inputs"]["cv_n_robust_log"] == 0.07  # reported beside it, never used
+    assert r["inputs"]["thickness_median_mm"] == 6.1
+    assert r["numbers_only"] is False and r["footer"] is None
+    assert dec.R3_NOTE not in r["outcome"]
+    fn = fake_depth(0.4)
+    dec.decide({**base(), "thickness_median_mm": 5.2}, depth_fn=fn)
+    assert fn.calls[0][-1] == 5.2
+
+
+def test_r9_default_is_the_shipped_s3(dec):
+    from janusm.calibrate import detectable_depth
+
+    assert dec.detectable_depth is detectable_depth
+    assert dec.DECIDE_VERSION == "2"
 
 
 def test_r9_above_0p40_says_so_and_none_is_not_demonstrated(dec):
     assert "nothing is loosened" in run(dec, depth=0.45)["R9"]["outcome"]
-    assert "not demonstrated" in run(dec, depth=None)["R9"]["outcome"]
+    r = run(dec, depth=None)["R9"]
+    assert "not demonstrated" in r["outcome"] and r["numbers_only"] is True
 
 
-def test_r9_without_s3_is_not_decidable(dec, monkeypatch):
-    monkeypatch.setattr(dec, "_detectable_depth", lambda: None)
-    r = {x["rule"]: x for x in dec.decide(base())}["R9"]
-    assert r["missing"] == ["janusm.calibrate.detectable_depth (S3)"]
-    assert "provisional 35 %" in r["outcome"] and r["depth"] is None
+def test_r9_provisional_print_reads_45_percent(dec):
+    """R4-S2 (JA60): the provisional print is 45 %, labelled as the placeholder."""
+    assert dec.PROVISIONAL_DEPTH == 0.45
+    r = run(dec, segment_shape=_DROP)["R9"]
+    assert "provisional 45 %" in r["outcome"] and "35 %" not in r["outcome"]
+    assert dec.PROVISIONAL_FOOTER in r["outcome"]
+    assert r["footer"] == "provisional (JA40), not computed on this population"
+    assert r["provisional_depth"] == 0.45
 
 
-def test_r9_prints_the_provisional_depth_when_s3_cannot_compute_it(dec):
-    def refuses(*a, **k):
-        raise ValueError("no normal variation")
+def test_r9_missing_median_is_not_decidable(dec):
+    """R4-S2 (JA60): no thickness_median_mm -> NOT DECIDABLE, S3 is not called, and the page
+    prints the provisional 45 %."""
+    fn = fake_depth(0.35)
+    x = base()
+    del x["thickness_median_mm"]
+    res = dec.decide(x, depth_fn=fn)
+    r = {y["rule"]: y for y in res}["R9"]
+    assert fn.calls == []
+    assert r["missing"] == ["thickness_median_mm"] and r["depth"] is None
+    assert "provisional 45 %" in r["outcome"] and r["numbers_only"] is True
+    assert "    NOT DECIDABLE: thickness_median_mm" in dec.lines(res)
 
-    r = {x["rule"]: x for x in dec.decide(base(), depth_fn=refuses)}["R9"]
-    assert r["missing"] == [] and r["depth"] is None
-    assert "provisional 35 %" in r["outcome"] and "no normal variation" in r["outcome"]
+
+def test_r9_s3_refusal_prints_not_decidable(dec):
+    """R4-S2 (JA60): cv_n = 0 (S3 refuses) prints ``NOT DECIDABLE: cv_n (S3 refused: ...)``; the
+    thinning sign shows numbers only and the footer is labelled provisional."""
+    res = dec.decide({**base(), "cv_n": 0.0})  # the shipped S3 refuses: no normal variation
+    r = {y["rule"]: y for y in res}["R9"]
+    assert len(r["missing"]) == 1
+    assert r["missing"][0].startswith("cv_n (S3 refused: ") and "no normal variation" in \
+        r["missing"][0]
+    nd = [ln for ln in dec.lines(res) if "NOT DECIDABLE" in ln]
+    assert nd == [f"    NOT DECIDABLE: {r['missing'][0]}"]
+    assert r["depth"] is None and r["numbers_only"] is True
+    assert r["footer"] == dec.PROVISIONAL_FOOTER and "provisional 45 %" in r["outcome"]
+    assert "numbers only until JM-0R is rerun" in r["outcome"]
+
+
+def test_r9_r3_failure_adds_the_note(dec):
+    """R4-S2 (JA60): R3 fails -> R9 still computes, and its line says the definition is
+    unaligned."""
+    for t in (9.668, 3.9):
+        fn = fake_depth(0.35)
+        res = {y["rule"]: y for y in dec.decide({**base(), "thickness_median_mm": t},
+                                                depth_fn=fn)}
+        assert res["R3"]["f3_holds"] is False
+        assert fn.calls and fn.calls[0][-1] == t
+        assert res["R9"]["depth"] == 0.35 and not res["R9"]["missing"]
+        assert res["R9"]["outcome"].endswith(dec.R3_NOTE)
+        assert "unaligned thickness definition" in res["R9"]["outcome"]
 
 
 def test_r9_missing_inputs(dec):
@@ -375,7 +428,7 @@ def test_merge_fallback_order_and_sources(dec):
 # ------------------------------------------------------------------------------- main
 def test_main_prints_one_line_per_rule_and_writes_decisions_json(dec, tmp_path, capsys,
                                                                  monkeypatch):
-    monkeypatch.setattr(dec, "_detectable_depth", lambda: fake_depth(0.35))
+    monkeypatch.setattr(dec, "detectable_depth", fake_depth(0.35))
     summ = tmp_path / "summary.json"
     summ.write_text(json.dumps({"provenance": {}, "decision_inputs": base()}))
     out = tmp_path / "decisions.json"
@@ -389,7 +442,7 @@ def test_main_prints_one_line_per_rule_and_writes_decisions_json(dec, tmp_path, 
 
 
 def test_main_fallback_and_no_input(dec, tmp_path, capsys, monkeypatch):
-    monkeypatch.setattr(dec, "_detectable_depth", lambda: None)
+    monkeypatch.setattr(dec, "detectable_depth", fake_depth(0.35))
     lima = tmp_path / "lima.json"
     lima.write_text(json.dumps({"n_cases": 40, "n_frame_ok": 40}))
     assert dec.main(["--lima", str(lima)]) == 0

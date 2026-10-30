@@ -1,17 +1,22 @@
 """``janusm-check``: the automatic read check (border protocol v1) on every submitted
 Janus-M read.
 
-Each submitted read, its case's CT and, on a seeded case, its seed (the mitral plane
-is fitted to it; JA46 (a)) are copied to a scratch directory and checked with
-``janusm_reads.checker`` (label conventions and the half-maximum rule).
+Each submitted read, its case's CT and its case's seed are copied to a scratch
+directory and checked with ``janusm_reads.checker`` (label conventions and the
+half-maximum rule). The seed is the served seed on a seeded case and the hidden
+**check seed** on a blank one (JA66): the mitral plane is fitted to it, so a blank
+read is never judged against a plane fitted to itself. Nothing of the check seed
+goes back to the reader but the verdict and the height.
 
 * A passed read is **accepted**.
 * A failed read is **returned** to its reader with the reasons and the half-maximum
-  profiles -- **once** (``protocol.MAX_RETURNS``, counted by ``attempts``).
-* A read that fails again is **accepted and flagged** (``flagged: true``, with
-  ``flagReasons``). A flagged read counts in every analysis, and the flag is reported.
-* A read the checker cannot run on at all goes back unflagged: that is not a failed
-  check.
+  profiles -- **once** (``protocol.MAX_RETURNS``, counted by ``returns``).
+* A read that fails again once it has been returned is **accepted and flagged**
+  (``flagged: true``, with ``flagReasons``). A flagged read counts in every analysis,
+  and the flag is reported.
+* A read the checker crashes on, or **could not check** (no mitral plane; JA66), goes
+  back unflagged and is counted in ``crashes``, never in ``returns`` (JA68): the
+  reader has not yet seen a real check. It is logged as an error for the PM.
 
 Nothing else is written. Runs on the server against the database::
 
@@ -21,6 +26,7 @@ Nothing else is written. Runs on the server against the database::
 
 import argparse
 import datetime
+import logging
 import os
 import tempfile
 import time
@@ -29,6 +35,11 @@ from girder.models.file import File
 from janusm_reads import protocol
 
 from .models import JanusMCase, JanusMRead
+
+logger = logging.getLogger(__name__)
+
+#: What ``decide`` says happened, for the counters.
+ACCEPTED, RETURNED, FLAGGED, CRASHED = 'accepted', 'returned', 'flagged', 'crashed'
 
 
 def _suffix(name):
@@ -47,16 +58,20 @@ def _copy(file, directory, stem):
     return path
 
 
-def decide(report, attempts, crashed=False):
-    """``(state, flagged, summary)`` for a check report on a read's ``attempts``-th
-    submission: return once, then accept and flag (Hotel v3 section 5.1 item 7)."""
+def decide(report, returns, crashed=False):
+    """``(state, flagged, summary, outcome)`` for a check report on a read already
+    returned ``returns`` times: return once, then accept and flag (Hotel v3 section 5.1
+    item 7). A crash or a read that could not be checked (``couldNotBeChecked``) goes
+    back unflagged and never spends the return (JA68)."""
+    if crashed or report.get('couldNotBeChecked'):
+        return protocol.RETURNED, False, report['summary'], CRASHED
     if report['passed']:
-        return protocol.ACCEPTED, False, report['summary']
-    if crashed or int(attempts or 0) <= protocol.MAX_RETURNS:
-        return protocol.RETURNED, False, report['summary']
+        return protocol.ACCEPTED, False, report['summary'], ACCEPTED
+    if int(returns or 0) < protocol.MAX_RETURNS:
+        return protocol.RETURNED, False, report['summary'], RETURNED
     return (protocol.ACCEPTED, True,
             'Accepted and flagged: the read failed the check again after being returned '
-            'once. ' + ' '.join(report.get('errors') or []))
+            'once. ' + ' '.join(report.get('errors') or []), FLAGGED)
 
 
 def checkRead(read, cfg=None):
@@ -66,8 +81,8 @@ def checkRead(read, cfg=None):
     case = JanusMCase().load(read['caseId'], force=True)
     ctFile = File().load(case['ctFileId'], force=True)
     readFile = File().load(read['fileId'], force=True)
-    seedFile = (File().load(case['seedFileId'], force=True)
-                if case.get('seedFileId') else None)
+    seedId = JanusMCase().checkSeedId(case)      # JA66: the check seed on a blank case
+    seedFile = File().load(seedId, force=True) if seedId else None
     crashed = False
     with tempfile.TemporaryDirectory(prefix='janusm-check-') as tmp:
         try:
@@ -80,9 +95,15 @@ def checkRead(read, cfg=None):
             report = {'passed': False, 'errors': [f'The read could not be checked: {exc}'],
                       'warnings': [], 'summary': f'Failed the Janus-M read check: {exc}',
                       'border_protocol': BORDER_PROTOCOL}
-    to, flagged, summary = decide(report, read.get('attempts'), crashed=crashed)
+    to, flagged, summary, outcome = decide(report, read.get('returns'), crashed=crashed)
+    if outcome == CRASHED:
+        # JA66 / JA68: the PM is alerted; the read goes back without spending its return.
+        logger.error('Janus-M read %s of case %s could not be checked: %s', read['_id'],
+                     case.get('name'), summary)
+    inc = {'crashes': 1} if outcome == CRASHED else {'returns': 1} if outcome == RETURNED \
+        else {}
     moved = JanusMRead().transition(
-        read, to, check=report, checkSummary=summary, flagged=flagged,
+        read, to, inc=inc, check=report, checkSummary=summary, flagged=flagged,
         flagReasons=list(report.get('errors') or []) if flagged else [],
         checkedAt=datetime.datetime.now(datetime.timezone.utc))
     if moved is not None and to == protocol.ACCEPTED:
@@ -97,6 +118,8 @@ def runOnce(out=print):
     done = 0
     for read in JanusMRead().submittedQueue():
         moved = checkRead(read)
+        if moved.get('crashes', 0) > read.get('crashes', 0):
+            out(f"{read['_id']}: COULD NOT BE CHECKED - tell the PM")
         out(f"{read['_id']}: {moved['state']} - {moved.get('checkSummary', '')}")
         done += 1
     return done

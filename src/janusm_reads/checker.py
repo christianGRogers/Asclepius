@@ -6,9 +6,10 @@ Two parts, both on the read's own grid (the CT's):
 **Label conventions (JA1, JA46).** Values only 0-4, all four classes present; the LV
 and RV pools touch over at most 0.5 % of the LV pool's surface (JA46 (b): the
 membranous septum may let them meet); the LV and LA pools never share a face (the
-mitral gap is 0 or 1); the LV pool reaches at most 3 mm above the mitral plane
-(JA46 (a)); papillary muscles and trabeculae are in the LV pool, so the pool has no
-enclosed holes; the myocardium is one piece.
+mitral gap is 0 or 1); the LV pool reaches at most 3 mm above the mitral plane over
+the plane's footprint (JA46 (a), JA66; a read whose plane cannot be fitted **could not
+be checked**, which is never a pass); papillary muscles and trabeculae are in the LV
+pool, so the pool has no enclosed holes; the myocardium is one piece.
 
 **Hotel's half-maximum rule.** A border lies halfway between the plateaus on
 either side of it. For each border the check measures the plateaus from the read's
@@ -83,6 +84,11 @@ class CheckConfig:
     #: and the LV pool may reach this far above it (towards the LA).
     mitral_gap_mm: float = 3.0
     max_pool_above_mitral_mm: float = 3.0
+    #: JA66: the footprint over which that limit is an error is max(fit radius + this,
+    #: the in-plane extent of label 4 between 0 and ``la_shadow_height_mm`` above the
+    #: plane). Outside it, the same height is a warning.
+    mitral_footprint_margin_mm: float = 3.0
+    la_shadow_height_mm: float = 10.0
     #: Fewest points a mitral-plane fit uses.
     min_plane_points: int = 10
     max_pool_hole_share: float = 0.002      # enclosed non-pool voxels / LV pool volume
@@ -124,8 +130,17 @@ class CheckReport:
     plateaus_hu: Dict[str, Optional[float]]
     borders: Dict[str, BorderResult]
     config: CheckConfig
+    #: Why the read **could not be checked** (JA66: no mitral plane). Such a read is
+    #: never passed; the queue takes it down its crash path (JA68): returned, not
+    #: counted as the read's one return.
+    unchecked: List[str] = field(default_factory=list)
+    #: The JA46 (a) mitral check: the plane's source and radius, the footprint, and
+    #: the heights measured inside and outside it (:func:`mitral_check`).
+    mitral: Dict[str, object] = field(default_factory=dict)
 
     def summary(self) -> str:
+        if self.unchecked:
+            return "The read could not be checked: " + " ".join(self.unchecked)
         if self.passed:
             parts = [f"{b.name} {b.offset_mm:+.2f} mm" for b in self.borders.values()
                      if b.offset_mm is not None]
@@ -144,6 +159,8 @@ class CheckReport:
             "summary": self.summary(),
             "border_protocol": BORDER_PROTOCOL,
             "offsetSign": OFFSET_SIGN,
+            "couldNotBeChecked": list(self.unchecked),
+            "mitral": dict(self.mitral),
         }
 
     def offsets(self) -> Dict[str, Optional[float]]:
@@ -302,9 +319,9 @@ def mitral_plane(read: np.ndarray, spacing, cfg: Optional[CheckConfig] = None,
     2. the read's label-2 voxels within ``mitral_gap_mm`` of label 4 (blank cases);
     3. ``hinge_points_mm``: annular hinge points (mm, array axis order).
 
-    ``radius`` is the largest in-plane distance of a fitted point from the centre: the
-    check looks above the plane only over that footprint (plus the gap), so the LV
-    outflow under the aortic valve is not measured against the mitral plane.
+    ``radius`` is the largest in-plane distance of a fitted point from the centre.
+    The check's footprint is wider (:func:`mitral_footprint_mm`, JA66); beyond it the
+    LV outflow under the aortic valve may rise above the plane, and only warns.
     """
     cfg = cfg or CheckConfig()
     la = read == L.LA_POOL
@@ -339,27 +356,95 @@ def mitral_plane(read: np.ndarray, spacing, cfg: Optional[CheckConfig] = None,
     return None
 
 
-def pool_above_mitral_mm(read: np.ndarray, spacing, plane) -> float:
-    """How far (mm) the LV pool reaches above the mitral plane, over its footprint."""
-    centre, normal, radius, _ = plane
-    pts = _physical(read == L.LV_POOL, spacing)
-    if not len(pts):
-        return 0.0
+def _height_and_inplane(pts: np.ndarray, plane):
+    centre, normal = plane[0], plane[1]
     rel = pts - centre
     height = rel @ normal
     inplane = np.sqrt(np.maximum(0.0, (rel ** 2).sum(axis=1) - height ** 2))
-    near = inplane <= radius
-    return float(max(0.0, height[near].max())) if near.any() else 0.0
+    return height, inplane
+
+
+def mitral_footprint_mm(plane, spacing, la_masks: Sequence[np.ndarray] = (),
+                        cfg: Optional[CheckConfig] = None) -> float:
+    """JA66's footprint: max(fit radius + ``mitral_footprint_margin_mm``, the largest
+    in-plane distance of a label-4 voxel lying 0 to ``la_shadow_height_mm`` above the
+    plane). ``la_masks`` are the LA masks to take that extent from (the read's and the
+    seed's)."""
+    cfg = cfg or CheckConfig()
+    footprint = float(plane[2]) + cfg.mitral_footprint_margin_mm
+    for la in la_masks:
+        if la is None or not la.any():
+            continue
+        height, inplane = _height_and_inplane(_physical(la, spacing), plane)
+        shadow = (height >= 0.0) & (height <= cfg.la_shadow_height_mm)
+        if shadow.any():
+            footprint = max(footprint, float(inplane[shadow].max()))
+    return footprint
+
+
+def mitral_heights(read: np.ndarray, spacing, plane, footprint_mm: float):
+    """``(inside, outside)``: how far (mm) the LV pool reaches above the mitral plane
+    within the footprint and beyond it (0 where it does not)."""
+    pts = _physical(read == L.LV_POOL, spacing)
+    if not len(pts):
+        return 0.0, 0.0
+    height, inplane = _height_and_inplane(pts, plane)
+    near = inplane <= footprint_mm
+    inside = float(max(0.0, height[near].max())) if near.any() else 0.0
+    outside = float(max(0.0, height[~near].max())) if (~near).any() else 0.0
+    return inside, outside
+
+
+def pool_above_mitral_mm(read: np.ndarray, spacing, plane,
+                         footprint_mm: Optional[float] = None) -> float:
+    """How far (mm) the LV pool reaches above the mitral plane over a footprint (by
+    default the fit radius + ``CheckConfig.mitral_footprint_margin_mm``)."""
+    if footprint_mm is None:
+        footprint_mm = float(plane[2]) + CheckConfig().mitral_footprint_margin_mm
+    return mitral_heights(read, spacing, plane, footprint_mm)[0]
+
+
+#: Why a read whose mitral plane cannot be fitted is not checked (JA66).
+NO_MITRAL_PLANE = ("The mitral plane could not be fitted (no mitral gap in the reference "
+                   "or the read, and no hinge points), so the LV pool's basal limit could "
+                   "not be checked.")
+
+
+def mitral_check(read: np.ndarray, spacing, cfg: Optional[CheckConfig] = None,
+                 seed: Optional[np.ndarray] = None,
+                 hinge_points_mm: Optional[Sequence[Sequence[float]]] = None) -> dict:
+    """JA46 (a) as JA66 rules it. A dict with ``checked`` (False: no plane), the
+    plane's ``source`` and ``radiusMm``, the ``footprintMm``, the heights above the
+    plane inside and outside the footprint, and a ``note`` in words."""
+    cfg = cfg or CheckConfig()
+    plane = mitral_plane(read, spacing, cfg, seed=seed, hinge_points_mm=hinge_points_mm)
+    if plane is None:
+        return {"checked": False, "source": None, "radiusMm": None, "footprintMm": None,
+                "aboveMm": None, "outsideAboveMm": None, "note": NO_MITRAL_PLANE}
+    las = [read == L.LA_POOL] + ([seed == L.LA_POOL] if seed is not None else [])
+    footprint = mitral_footprint_mm(plane, spacing, las, cfg)
+    inside, outside = mitral_heights(read, spacing, plane, footprint)
+    return {"checked": True, "source": plane[3], "radiusMm": round(float(plane[2]), 3),
+            "footprintMm": round(footprint, 3), "aboveMm": round(inside, 3),
+            "outsideAboveMm": round(outside, 3),
+            "note": f"Mitral plane fitted to the {plane[3]} (radius {plane[2]:.1f} mm; "
+                    f"footprint {footprint:.1f} mm)."}
 
 
 def check_conventions(read: np.ndarray, spacing, cfg: Optional[CheckConfig] = None,
                       seed: Optional[np.ndarray] = None,
                       hinge_points_mm: Optional[Sequence[Sequence[float]]] = None,
+                      mitral: Optional[dict] = None,
                       ) -> Tuple[List[str], List[str]]:
     """JA1 / JA46 label conventions. Returns ``(errors, warnings)``.
 
-    ``seed`` (on the read's grid) is the case's seed, from which the mitral plane is
-    fitted on seeded cases; on blank cases it is fitted to the read (JA46 (a)).
+    ``seed`` (on the read's grid) is the reference the mitral plane is fitted to: the
+    served seed on a seeded case, the server's hidden check seed on a blank one
+    (JA66). Only with no seed at all is the plane fitted to the read's own gap.
+
+    A read whose mitral plane cannot be fitted gets :data:`NO_MITRAL_PLANE` as an
+    error (it is never a pass); :func:`check_read` reports it as "could not be
+    checked". ``mitral``, if given, is filled with :func:`mitral_check`'s result.
     """
     cfg = cfg or CheckConfig()
     errors, warnings = [], []
@@ -394,18 +479,22 @@ def check_conventions(read: np.ndarray, spacing, cfg: Optional[CheckConfig] = No
         if faces:
             errors.append(f"The LV and LA blood pools share a face at {faces} voxels: "
                           "leave the mitral gap as background (0) or myocardium (1).")
-        plane = mitral_plane(read, spacing, cfg, seed=seed, hinge_points_mm=hinge_points_mm)
-        if plane is None:
-            warnings.append("The mitral plane could not be fitted (no mitral gap in the "
-                            "seed or the read, and no hinge points): the LV pool's basal "
-                            "limit was not checked.")
-        else:
-            above = pool_above_mitral_mm(read, spacing, plane)
-            if above > cfg.max_pool_above_mitral_mm:
-                errors.append(f"The LV blood pool reaches {above:.1f} mm above the mitral "
-                              f"plane (fitted to the {plane[3]}; limit "
-                              f"{cfg.max_pool_above_mitral_mm:g} mm): end the pool at the "
-                              "mitral annulus.")
+        result = mitral_check(read, spacing, cfg, seed=seed,
+                              hinge_points_mm=hinge_points_mm)
+        if mitral is not None:
+            mitral.update(result)
+        limit = cfg.max_pool_above_mitral_mm
+        if not result["checked"]:
+            errors.append(NO_MITRAL_PLANE)
+        elif result["aboveMm"] > limit:
+            # The reader is told the height, never where the plane came from (JA66).
+            errors.append(f"The LV blood pool reaches {result['aboveMm']:.1f} mm above the "
+                          f"mitral plane (limit {limit:g} mm): end the pool at the mitral "
+                          "annulus.")
+        if result["checked"] and result["outsideAboveMm"] > limit:
+            warnings.append(f"Away from the mitral valve, the LV blood pool reaches "
+                            f"{result['outsideAboveMm']:.1f} mm above the mitral plane "
+                            f"(warning above {limit:g} mm; the outflow tract may).")
 
     # Papillary muscles and trabeculae belong in the LV pool (JA1): no enclosed holes.
     filled = ndimage.binary_fill_holes(pool)
@@ -490,8 +579,11 @@ def check_read(read: np.ndarray, ct: np.ndarray, spacing: Sequence[float],
         shift = np.array([sl.start * float(sp) for sl, sp in zip(box, spacing)])
         hinge_points_mm = np.asarray(hinge_points_mm, dtype=np.float64) - shift
 
+    mitral: dict = {}
     errors, warnings = check_conventions(read, spacing, cfg, seed=seed,
-                                         hinge_points_mm=hinge_points_mm)
+                                         hinge_points_mm=hinge_points_mm, mitral=mitral)
+    unchecked = [e for e in errors if e == NO_MITRAL_PLANE]
+    errors = [e for e in errors if e != NO_MITRAL_PLANE]
     pl: Dict[str, Optional[float]] = {}
     borders: Dict[str, BorderResult] = {}
     if not any(e.startswith(("Label values", "These Janus-M")) for e in errors):
@@ -514,7 +606,12 @@ def check_read(read: np.ndarray, ct: np.ndarray, spacing: Sequence[float],
                         cfg, pair=pair)
             borders[name] = b
             if b.skipped:
-                warnings.append(f"The {name} border was not checked: {b.skipped}.")
+                if name == "endocardial":
+                    # R4-S22: the endocardium is always measurable on a usable read.
+                    errors.append(f"The endocardial border could not be measured: "
+                                  f"{b.skipped} (LV blood or core myocardium too thin).")
+                else:
+                    warnings.append(f"The {name} border was not checked: {b.skipped}.")
                 continue
             if b.offset_mm is None:
                 errors.append(f"The {name} border has no half-maximum crossing within "
@@ -530,8 +627,9 @@ def check_read(read: np.ndarray, ct: np.ndarray, spacing: Sequence[float],
                     warnings.append(f"Part of the {name} border ({sector}) is "
                                     f"{abs(value):.1f} mm {_side(value)} the half-maximum "
                                     f"edge (warning above {cfg.octant_warning_mm:g} mm).")
-    return CheckReport(passed=not errors, errors=errors, warnings=warnings,
-                       plateaus_hu=pl, borders=borders, config=cfg)
+    return CheckReport(passed=not errors and not unchecked, errors=errors,
+                       warnings=warnings, plateaus_hu=pl, borders=borders, config=cfg,
+                       unchecked=unchecked, mitral=mitral)
 
 
 def check_files(read_path, ct_path, cfg: Optional[CheckConfig] = None,
@@ -561,7 +659,8 @@ def main(argv=None) -> int:
     p = argparse.ArgumentParser(description="Check a Janus-M read (border protocol v1).")
     p.add_argument("read")
     p.add_argument("ct")
-    p.add_argument("--seed", help="the case's seed (the mitral plane is fitted to it)")
+    p.add_argument("--seed", help="the case's seed or check seed (the mitral plane is "
+                   "fitted to it)")
     p.add_argument("--tolerance-mm", type=float, default=CheckConfig.tolerance_mm)
     args = p.parse_args(argv)
     report = check_files(args.read, args.ct, CheckConfig(tolerance_mm=args.tolerance_mm),

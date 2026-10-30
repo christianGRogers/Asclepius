@@ -3,7 +3,7 @@
     xvfb-run -a Slicer --no-splash --no-main-window --python-script tests/slicer_selftest_janusm.py
 
 A phantom heart (``janusm_reads.phantom``: no patient data) is served by an
-in-process fake of ``/api/v1/janusm`` that speaks ``janusm-read`` 1 and runs the
+in-process fake of ``/api/v1/janusm`` that speaks ``janusm-read`` 2 and runs the
 real automatic check (``janusm_reads.checker``) on every upload. The module, run
 through its own logic and widget:
 
@@ -13,8 +13,11 @@ through its own logic and widget:
   level at the half-maximum, width 1.5 x |p1 - p2|; 800 / 300 only on request;
 * refuses an incomplete read form (CAD-RADS 2.0 per vessel) and overlapping classes
   before any upload;
+* offers each vessel only its own CAD-RADS 2.0 grades (JA67: LM has 4B, not 3 or 4A);
 * submits the uncorrected seed (its LV pool drawn 2 mm too big), which the check
   returns with the reasons and the half-maximum profile, which it plots;
+* closes and reopens the returned read: its read form comes back, and its reading
+  time keeps counting from where it stopped (R4-S21);
 * corrects the read and resubmits; the check accepts it, and the uploaded file and
   read form are the read voxel for voxel on the CT grid and the grades given;
 * takes a blank case, which opens on 800 / 300 with four empty segments, reaches its
@@ -109,7 +112,7 @@ class FakeQueue:
                 (headers or {}).get(protocol.PROTOCOL_HEADER) != self.version:
             return _refusal(426, protocol.ERR_CLIENT_TOO_OLD, "old client")
         if path == "janusm/project":
-            return _Response(body={"protocol": "janusm-read", "protocolVersion": 1,
+            return _Response(body={"protocol": "janusm-read", "protocolVersion": 2,
                                    "uploadFolderId": "F1", "maxOpen": 1})
         if path == "janusm/mine":
             return _Response(body=[self._info(r) for r in self.reads.values()])
@@ -162,13 +165,15 @@ class FakeQueue:
             values = self._array(data)
             report = check_read(values, case["ctArray"], case["spacing"])
             self.reports.append(report)
-            # Return once, then accept and flag -- as girder_janusm.check.decide does.
-            read["attempts"] = read.get("attempts", 0) + 1
+            # Return once, then accept and flag -- as girder_janusm.check.decide does,
+            # counting genuine returns only (JA68); seconds are summed over attempts.
+            read["seconds"] = read.get("seconds", 0.0) + float(meta.get("seconds") or 0)
             read["profile"] = {}
             if report.passed:
                 read["state"], read["flagged"] = protocol.ACCEPTED, False
                 read["summary"] = report.summary()
-            elif read["attempts"] <= protocol.MAX_RETURNS:
+            elif read.get("returns", 0) < protocol.MAX_RETURNS:
+                read["returns"] = read.get("returns", 0) + 1
                 read["state"], read["flagged"] = protocol.RETURNED, False
                 read["summary"] = report.summary()
                 read["profile"] = protocol.profile_for_reader(report.to_dict())
@@ -355,6 +360,15 @@ def run():
     check("an ROI in the LV pool measures the LV blood plateau", abs(measured - 420) < 5,
           measured)
 
+    if widget is not None:
+        from janusm_reads import protocol as P
+
+        offered = {v: [c.itemText(i) for i in range(c.count)]
+                   for v, c in widget.gradeCombos.items()}
+        check("each vessel offers only its own grades (JA67)",
+              offered["LM"] == [""] + list(P.grades_for("LM"))
+              and all(offered[v] == [""] + list(P.grades_for(v)) for v in ("LAD", "LCx", "RCA"))
+              and "3" not in offered["LM"] and "4B" not in offered["LAD"], offered)
     before = _uploads(server)
     try:
         logic.submit()
@@ -415,10 +429,29 @@ def run():
         widget._updateEnabled()
         check("and offers its profile", widget.profileButton.enabled)
 
+    # Close and reopen the returned read, as a reader does the next day (R4-S21).
+    returned = done
+    logic._openedAt -= 30.0                   # 30 s spent on the second attempt so far
+    logic.closeCase()
+    logic.openRead(returned)
+    if widget is not None:
+        widget._bindEditor()
+        widget._showReadForm()
+        shown = {v: c.currentText for v, c in widget.gradeCombos.items()}
+        check("the reopened read's grades are back in the panel", shown == FORM, shown)
+    check("the reopened read's form is restored",
+          logic.readForm()[0] == FORM and set(logic.readForm()[1]) == {"LAD"}
+          and np.allclose(logic.readForm()[1]["LAD"], lesion), logic.readForm())
+    check("and its clock kept counting", logic.elapsedSeconds() >= 30.0,
+          logic.elapsedSeconds())
     _draw(slicer, logic, truth)
     done = logic.submit()
     check("the corrected read is accepted", done.state == "accepted" and not done.flagged,
           done.check_summary)
+    check("its seconds are summed over both attempts",
+          server.reads[read.read_id]["seconds"] >= 30.0
+          and server.reads[read.read_id]["meta"]["seconds"] >= 30.0,
+          server.reads[read.read_id].get("seconds"))
     check("and what was uploaded is the corrected read",
           np.array_equal(server.reads[read.read_id]["uploaded"], truth))
 
@@ -483,7 +516,7 @@ def run():
 
     # -------------------------------------------------------- independence
     check("every Janus-M call carried the janusm-read protocol",
-          all(h.get("X-JanusM-Protocol") == "1" for (m, p), h in
+          all(h.get("X-JanusM-Protocol") == "2" for (m, p), h in
               zip(server.calls, server.headers) if p.startswith("janusm/")))
     check("and named this module", all(h.get("X-JanusM-Client", "").startswith("JanusMRead-")
                                        for h in server.headers))

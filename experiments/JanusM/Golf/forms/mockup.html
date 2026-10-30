@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Janus-M read forms mock-up</title>
+<style>
+:root{--bg:#fff;--fg:#1d1d1f;--mut:#666;--line:#ccc;--acc:#2b6cb0;--pos:#c53030}
+@media (prefers-color-scheme:dark){:root{--bg:#161616;--fg:#eee;--mut:#aaa;--line:#444;--acc:#63b3ed;--pos:#fc8181}}
+body{background:var(--bg);color:var(--fg);font:14px/1.4 system-ui,sans-serif;margin:0 auto;max-width:900px;padding:16px}
+h1{font-size:18px}h2{font-size:15px;margin-top:24px}fieldset{border:1px solid var(--line);margin:8px 0;padding:8px}
+.seg{display:grid;grid-template-columns:3em 1fr;gap:4px;align-items:center;border-top:1px solid var(--line);padding:4px 0}
+.opts label{margin-right:10px;white-space:nowrap}.hide{display:none}.mut{color:var(--mut)}
+button{background:var(--acc);color:#fff;border:0;padding:6px 12px;border-radius:4px;cursor:pointer}
+#timer{position:sticky;top:0;background:var(--bg);padding:4px 0;font-variant-numeric:tabular-nums}
+.tabs button{background:none;color:var(--acc);border:1px solid var(--acc)}.tabs button.on{background:var(--acc);color:#fff}
+</style></head><body>
+<h1>Janus-M read forms: mock-up (no data, no network)</h1>
+<p class="mut">For timing on the project's own readers. Press Start, review the case in the viewer, fill the form, press Submit:
+the page shows the elapsed time and nothing leaves the page. Spec: <code>lge_read_form.json</code>, <code>reg_check_form.json</code>.</p>
+<div class="tabs"><button id="t1" class="on">LGE segment read (JA32)</button> <button id="t2">Registration check (JA29)</button></div>
+<div id="timer">Elapsed: <span id="el">0.0</span> s <button id="start">Start</button></div>
+<form id="lge">
+<fieldset><legend>Patient</legend>
+<label><input type="checkbox" required> I have not seen any CT, scar map, clinical report or other read for this patient</label><br>
+Quality: <span class="opts"><label><input type="radio" name="q" required>diagnostic</label><label><input type="radio" name="q">limited</label><label><input type="radio" name="q">non-diagnostic</label></span><br>
+Coverage: <span class="opts"><label><input type="radio" name="c" required>base to apex</label><label><input type="radio" name="c">gaps</label></span><br>
+<button type="button" id="allneg">No LGE in any segment</button></fieldset>
+<fieldset><legend>Segments (Kim bin = share of the segment's myocardium that is hyperenhanced)</legend><div id="segs"></div></fieldset>
+<button type="submit">Submit</button></form>
+<form id="reg" class="hide"><fieldset><legend>Three short-axis slices, carried borders on first pass (left) and LIE (right)</legend><div id="slices"></div></fieldset>
+<button type="submit">Submit</button></form>
+<p id="out"></p>
+<script>
+const names=["basal anterior","basal anteroseptal","basal inferoseptal","basal inferior","basal inferolateral","basal anterolateral","mid anterior","mid anteroseptal","mid inferoseptal","mid inferior","mid inferolateral","mid anterolateral","apical anterior","apical septal","apical inferior","apical lateral","apex"];
+const pat=["subendocardial","transmural","mid-wall","epicardial","patchy / RV insertion"];
+const S=document.getElementById("segs");
+names.forEach((n,i)=>{const k=i+1,d=document.createElement("div");d.className="seg";
+d.innerHTML=`<b>${k}</b><div><span class="mut">${n}</span> <span class="opts">${["no","yes","not assessable"].map(o=>`<label><input type="radio" name="p${k}" value="${o}" required>${o}</label>`).join("")}</span>
+<div class="hide" id="x${k}">Pattern: <span class="opts">${pat.map(o=>`<label><input type="radio" name="t${k}">${o}</label>`).join("")}</span><br>
+Kim bin: <span class="opts">${["1-25 %","26-50 %","51-75 %","76-100 %"].map(o=>`<label><input type="radio" name="b${k}">${o}</label>`).join("")}</span></div></div>`;
+S.appendChild(d);d.querySelectorAll(`input[name=p${k}]`).forEach(r=>r.onchange=()=>{const y=r.value==="yes";const x=document.getElementById("x"+k);x.classList.toggle("hide",!y);x.querySelectorAll("input").forEach(e=>e.required=y)})});
+document.getElementById("allneg").onclick=()=>names.forEach((n,i)=>{const r=document.querySelector(`input[name=p${i+1}][value=no]`);r.checked=true;r.onchange()});
+const L=document.getElementById("slices");
+["basal","mid","apical"].forEach(s=>{const d=document.createElement("div");d.className="seg";
+d.innerHTML=`<b>${s}</b><div class="opts"><label><input type="radio" name="r${s}" required>pass</label><label><input type="radio" name="r${s}">fail</label>
+<span class="mut">reason if fail:</span> ${["shifted","rotated","cavity size differs (phase)","artefact","other"].map(o=>`<label><input type="checkbox">${o}</label>`).join("")}</div>`;L.appendChild(d)});
+let t0=null,iv=null;const el=document.getElementById("el");
+document.getElementById("start").onclick=()=>{t0=performance.now();clearInterval(iv);iv=setInterval(()=>el.textContent=((performance.now()-t0)/1000).toFixed(1),100)};
+document.querySelectorAll("form").forEach(f=>f.onsubmit=e=>{e.preventDefault();clearInterval(iv);
+document.getElementById("out").textContent=t0?`Submitted after ${((performance.now()-t0)/1000).toFixed(1)} s. Record this time on the timing sheet.`:"Press Start first."});
+const tab=(a,b,fa,fb)=>{a.classList.add("on");b.classList.remove("on");fa.classList.remove("hide");fb.classList.add("hide")};
+const T1=document.getElementById("t1"),T2=document.getElementById("t2"),F1=document.getElementById("lge"),F2=document.getElementById("reg");
+T1.onclick=()=>tab(T1,T2,F1,F2);T2.onclick=()=>tab(T2,T1,F2,F1);
+</script></body></html>

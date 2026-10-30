@@ -1,0 +1,26 @@
+{
+ "form": "janusm-lie-registration-check",
+ "version": "r3-golf-draft",
+ "rulings": ["JA29"],
+ "who": "any janusm-readers member with the 'lie-reg' read set (a border reader is enough; no CMR expertise needed)",
+ "blinding": "blind to LGE and to every scar output; the scar map is never drawn on these views",
+ "shows": {
+  "slices": ["basal", "mid", "apical"],
+  "chosen_by": "code: the short-axis planes at 25 %, 50 % and 75 % of the carried LV long axis (from the geometry module)",
+  "layout": "per slice: the first-pass CT (left) and the LIE (right), same plane, same zoom; the carried endocardial and epicardial borders drawn on both; a toggle shows the LIE without borders",
+  "window": "LIE window centred on the LIE blood median, width 3x (blood - remote); first-pass window from the read protocol"
+ },
+ "slice_fields": [
+  {"id": "pass", "type": "choice", "required": true, "options": ["pass", "fail"]},
+  {"id": "fail_reason", "type": "multi", "required_if": "pass == fail",
+   "options": ["borders shifted", "borders rotated", "cavity size differs (phase)", "wall cut by artefact", "other"]}
+ ],
+ "patient_result": "pass if all three slices pass; else fail",
+ "on_fail": {
+  "step": "the reader drags the LIE to a manual initial shift on the mid slice; the chain re-runs once from it (JA29)",
+  "second_check": "the same three-slice form",
+  "second_fail": "not graded: in the primary analysis every segment of the patient counts as wrong (JA29)"
+ },
+ "logged_by_code": ["chain stage that passed (R0 / rigid / affine)", "estimated shift (mm) and log-determinant of the transform",
+                    "QC values (fat-like, brighter-than-blood, blood-like shares)", "edge offsets (E9)", "reader decision and time"]
+}

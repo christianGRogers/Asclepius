@@ -233,7 +233,35 @@ none of it is written here (D31).
 
 ### 5.5 Size and power
 
-⟨E6⟩
+From **E6** ([[Golf - A paired LIE-vs-LGE seal needs about 120 patients, half with scar, and segment sensitivity is what sets the size]]).
+
+The study is a Monte Carlo of whole studies with patient-clustered errors and patient-bootstrap CIs. **Endpoints on
+the paired seal, one look, each judged on the lower 95 % bound:**
+
+| Endpoint | Bound | Expected (point) |
+|---|---|---|
+| **Segment sensitivity for scar presence** (ischaemic-pattern LGE) | ≥ 0.75 | ≈ 0.84 |
+| Segment specificity | ≥ 0.93 | ≈ 0.975 |
+| Linear-weighted kappa of the Kim bin, all segments | ≥ 0.60 | ≈ 0.85 |
+
+- **Sensitivity sets the size.** Specificity and kappa pass from 60 patients.
+- **Power to pass all three, at 50 % enrichment:** 0.62 at 60 patients, **0.80 at 80**, 0.87 at 100, **0.89 at 120**.
+- **Harder conditions:**
+  - small infarcts (λ 1.5): 0.79 at 120;
+  - 30 % enrichment: 0.78 at 120;
+  - strong within-patient clustering (τ 1.2): 0.57 at 120.
+
+**Required:**
+- **paired seal 120** (minimum 80; below 80, no seal claim);
+- **development ≥ 40**;
+- **target total ≈ 160 patients, about half with LGE scar and at least 30 % scar-free.**
+
+The seal size is **re-powered once from the development set** before any seal patient is graded:
+- the measured τ, segments per scar patient and bin mix are put into `cohort_power.py`;
+- the seal may grow, and never shrinks.
+
+The meta-analytic average study has about 38 patients (Gatti 2025: 526 / 14). Under these assumptions that is
+roughly a coin flip, which is why path B asks for three times that.
 
 ### 5.6 Validating the Stage A signs against LGE
 

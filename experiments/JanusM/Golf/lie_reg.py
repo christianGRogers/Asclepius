@@ -137,9 +137,8 @@ def img(a):
     return sitk.GetImageFromArray(np.ascontiguousarray(a.astype(np.float32)))
 
 
-def register(fixed, moving, mmask, kind):
-    if kind == "identity":
-        return sitk.Transform(3, sitk.sitkIdentity)
+def register_all(fixed, moving, mmask):
+    """identity, rigid, rigid+affine, rigid+affine+B-spline, each started from the previous one."""
     F, M = img(fixed), img(np.clip(moving, -200, 600))
     MM = sitk.Cast(img(mmask.astype(np.float32)), sitk.sitkUInt8)
 
@@ -161,14 +160,10 @@ def register(fixed, moving, mmask, kind):
     init = sitk.Euler3DTransform(init)
     init.SetTranslation((0, 0, 0))     # start from scanner coordinates; keep only the centre of rotation
     rig = run(init, gd)
-    if kind == "rigid":
-        return rig
     aff0 = sitk.AffineTransform(3)
     rr = sitk.Euler3DTransform(sitk.CompositeTransform(rig).GetNthTransform(0)) if isinstance(rig, sitk.CompositeTransform) else sitk.Euler3DTransform(rig)
     aff0.SetCenter(rr.GetCenter()); aff0.SetMatrix(rr.GetMatrix()); aff0.SetTranslation(rr.GetTranslation())
     aff = run(aff0, gd)
-    if kind == "affine":
-        return aff
     mesh = [max(int(s / 30), 1) for s in F.GetSize()]
     bs = sitk.BSplineTransformInitializer(F, mesh, order=3)
     comp = sitk.CompositeTransform(3); comp.AddTransform(aff); comp.AddTransform(bs)
@@ -184,7 +179,7 @@ def register(fixed, moving, mmask, kind):
     R.SetInitialTransform(bs, inPlace=True)
     R.Execute(F, M)
     comp = sitk.CompositeTransform(3); comp.AddTransform(aff); comp.AddTransform(bs)
-    return comp
+    return {"identity": sitk.Transform(3, sitk.sitkIdentity), "rigid": rig, "affine": aff, "bspline": comp}
 
 
 def resample(a, ref, tx, nearest=False):
@@ -251,8 +246,8 @@ def run_case(args):
         for cnr in CNRS:
             lie = make_lie(warp(ct, Y, 1), {"myo": myo_t}, scar_t, cnr, rng)
             # NB the LIE background is the real CT warped by Y; the first-pass CT is the moving image
-            for reg in (REGS if level != "none" else ["identity"]):
-                tx = register(lie, ct, mmask, reg)
+            txs = register_all(lie, ct, mmask) if level != "none" else {"identity": sitk.Transform(3, sitk.sitkIdentity)}
+            for reg, tx in txs.items():
                 myo_w = resample(myo.astype(np.float32), lie, tx) > 0.5
                 cav_w = resample(cav.astype(np.float32), lie, tx) > 0.5
                 seg_w = resample(seg.astype(np.float32), lie, tx, nearest=True).astype(np.uint8)

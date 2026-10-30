@@ -116,8 +116,8 @@ def test_known_d_and_transfer_verdict_on_exact_shift_phantom(phantom_out):
     assert row["assd_guard_pass_endo"] and row["assd_guard_pass_epi"]
     tc = out["transfer_check"]
     assert tc["passed"] is True and tc["transfer_bias_guard_mm"] == H.BIAS_GUARD_TIGHT_MM
-    # JA61: the open-base check failed (#212), so the guard in force is 0.5 mm all the same
-    assert tc["bias_guard_mm"] == H.BIAS_GUARD_VALIDATED_MM == 0.5
+    # JA71 passed (R5-S3), so the open-base check's guard is 0.3 mm and the transfer check decides
+    assert tc["bias_guard_mm"] == max(H.BIAS_GUARD_TIGHT_MM, H.BIAS_GUARD_VALIDATED_MM) == 0.3
     assert set(S.COMPARISONS) <= set(tc)
     json.loads(S.dumps(out))
 

@@ -35,7 +35,7 @@ the mean over the two reads of the model-vs-read pp ASSD minus the read-vs-read 
 **Transfer check** (JA37, JA62): ``harness.transfer_check`` on the first 20 complete cases, once
 for each comparison (model-vs-read 1, model-vs-read 2, read-vs-read). The guard is 0.5 mm if any of
 the three fails, else 0.3 mm, and never below ``harness.BIAS_GUARD_VALIDATED_MM`` (JA61's
-open-base check; 0.5 mm since it failed, #212). Fewer than 20 complete cases is an error, never a
+open-base check; 0.3 mm since JA71 passed, R5-S3). Fewer than 20 complete cases is an error, never a
 default. The count of cases over the limit is reported; no id is.
 
 **Output.** One anonymous JSON (``reads``, ``assd_pp``, ``transfer_check`` and the versions),

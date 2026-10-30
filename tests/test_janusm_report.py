@@ -25,24 +25,47 @@ GOLDEN = Path(__file__).parent / "fixtures/janusm"
 REGEN = os.environ.get("JANUSM_REGEN_GOLDEN") == "1"
 
 
-@pytest.fixture(scope="module")
-def ref(tmp_path_factory):
-    """A reference config built from a synthetic population around the normal phantom, pinned
-    for the module."""
+def _config(**table):
+    """A reference config built from a synthetic population around the normal phantom (with
+    the phantom's septal-arc values, so the column has percentiles)."""
     lab, ct, aff, cor = Y.heart()
     f0 = F.case_features(lab, ct, aff, cor)
     shape = np.array([f0["rel_thickness"][k] for k in range(1, 17)])
     pop = Y.population(400, shape=shape, median_mm=f0["median_wall_mm"], cv=0.04)
-    cfg = R.build_config(pop, Y.reads(pop), cases_sha="0" * 64, n_cases=400,
-                         rest_tpr_gate="fail", septal_arc_column=False, halves_note=True,
-                         model="synthetic phantom population", guard_mm=1.0)
-    text = R.dumps(cfg)
-    p = tmp_path_factory.mktemp("ref") / "reference-r1.json"
-    p.write_text(text)
+    rng = np.random.default_rng(12)
+    for f in pop:
+        f["septal_arc"] = {q: {k: float(f0["septal_arc"][q][k] * np.exp(rng.normal(0, 0.05)))
+                               for k in F.ARC_SEPTAL} for q in ("wall_mm", "rel_subendo_hu")}
+    kw = dict(septal_arc_column=True, halves_note=True, geodesic_shared=False)
+    kw.update(table)
+    return R.dumps(R.build_config(pop, Y.reads(pop), cases_sha="0" * 64, n_cases=400,
+                                  rest_tpr_gate="fail", model="synthetic phantom population",
+                                  guard_mm=1.0, **kw))
+
+
+def _pin(path, text, mp):
+    path.write_bytes(text.encode("utf-8"))
+    mp.setattr(guard, "REFERENCE_SHA256", hashlib.sha256(text.encode("utf-8")).hexdigest())
+    return path
+
+
+@pytest.fixture(scope="module")
+def ref_text():
+    return _config()
+
+
+@pytest.fixture(scope="module")
+def ref(tmp_path_factory, ref_text):
+    """The config pinned for the module (septal-arc column kept, R8 off)."""
     mp = pytest.MonkeyPatch()
-    mp.setattr(guard, "REFERENCE_SHA256", hashlib.sha256(text.encode()).hexdigest())
-    yield p
+    yield _pin(tmp_path_factory.mktemp("ref") / "reference-r1.json", ref_text, mp)
     mp.undo()
+
+
+@pytest.fixture(scope="module")
+def ref_geodesic():
+    """R8 on, septal-arc column dropped."""
+    return _config(geodesic_shared=True, septal_arc_column=False)
 
 
 CASES = {
@@ -129,6 +152,10 @@ def test_header_fields(reports):
               "aha_orientation", "septal_arc_deg", "territory_source", "spacing_mm"):
         assert h[k] is not None, k
     assert "JA44" in h["offset_sign"]
+    assert h["halves_note"] is True  # R4-S15
+    assert h["layers"]["thirds"] + h["layers"]["halves"] == 17
+    assert h["territory_map"] == "patient"
+    assert "Layers per segment" in P.render_markdown(reports["normal"])
 
 
 # ------------------------------------------------------------------------------------ phrases
@@ -209,3 +236,164 @@ def test_guard_hit_refuses_before_any_read(tmp_path, purpose):
     with pytest.raises(guard.HeldOutError):
         P.build(f"ImageCAS-X__{seal}", None, None, None, None, tmp_path / "nope.json",
                 purpose=purpose)
+
+
+# ------------------------------------------------------------------------------------ R4-S8
+def test_the_gate_and_the_report_produce_the_same_floor_for_the_same_e(monkeypatch):
+    """One floor function (JA64): gate() at the population's E and the report at the patient's
+    E call ``rc_floor_mm`` and agree when the two E are equal."""
+    calls = []
+    real = R.rc_floor_mm
+
+    def spy(rc, t, e):
+        calls.append((t, e))
+        return real(rc, t, e)
+
+    monkeypatch.setattr(R, "rc_floor_mm", spy)
+    monkeypatch.setattr(R.calibrate, "detectable_depth", lambda *a, **k: {
+        "depth": 0.3, "sens_range": [0.8, 0.8], "false_flag": 0.0})
+    rc = {"status": "computed", "scale": "relative",
+          "territory": {t: {"rc": 0.12} for t in R.TERRITORIES}}
+    blk = {"cut": -2.0, "cv_n": 0.1, "shape": [1.0] * 16, "median_level": 4.2, "status": "flag"}
+    g = R.gate("thinning", {"thinning": blk}, {"thinning": {"rc": rc}})
+    state = {"D": {t: 0.4 for t in R.TERRITORIES}, "E": {t: 4.2 for t in R.TERRITORIES},
+             "territory_rule_c": {t: True for t in R.TERRITORIES}, "map": "patient"}
+    cell = P.sign_decision("thinning", state, "LAD", {"rc": {"thinning": rc}, "thinning": blk})
+    assert g["floor_mm"]["LAD"] == pytest.approx(cell["floor"]) == pytest.approx(0.12 * 4.2)
+    assert ("LAD", 4.2) in calls and len([c for c in calls if c == ("LAD", 4.2)]) >= 2
+    assert cell["flag"] is False  # 0.4 <= 0.504
+
+
+# ------------------------------------------------------------------------------------ R4-S15
+def test_rule_c_and_gate_pass_with_d_at_most_rc_is_a_number():
+    rc = {"status": "computed", "scale": "difference",
+          "territory": {t: {"rc": 0.8} for t in R.TERRITORIES}}
+    cfg = {"rc": {"thinning": rc}, "thinning": {"status": "flag"}}
+    for d, flag in ((0.8, False), (0.81, True)):
+        state = {"D": {"LAD": d}, "E": {"LAD": 5.0}, "territory_rule_c": {"LAD": True}}
+        cell = P.sign_decision("thinning", state, "LAD", cfg)
+        assert cell["flag"] is flag and cell["shown"] == ("flag" if flag else "number")
+        assert cell["value"] == d
+
+
+# ------------------------------------------------------------------------------------ R4-S11
+@pytest.mark.parametrize("attr,mod", [("GEOMETRY_VERSION", "G"), ("FEATURES_VERSION", "F")])
+def test_a_version_mismatch_is_refused(ref, monkeypatch, attr, mod):
+    from janusm import geometry as G
+
+    monkeypatch.setattr({"G": G, "F": F}[mod], attr, "9.9.9")
+    lab, ct, aff, cor = Y.heart()
+    with pytest.raises(P.ReportError, match="running"):
+        P.build("Synthetic__normal", lab, ct, aff, cor, ref, purpose="any")
+
+
+# ------------------------------------------------------------------------------------ R4-S12
+def test_one_segment_is_shared_only_with_r8_on(ref_text, ref_geodesic, tmp_path, monkeypatch):
+    """A phantom whose segment 1 has a different geodesic majority: "shared" only when the
+    config's R8 verdict is on."""
+    real = F.case_features
+
+    def moved(*a, **k):
+        f = real(*a, **k)
+        f["segment_territory_geodesic"] = {**f["segment_territory_geodesic"], 1: "LCx"}
+        return f
+
+    monkeypatch.setattr(F, "case_features", moved)
+    lab, ct, aff, cor = Y.heart()
+    out = {}
+    for name, text in (("off", ref_text), ("on", ref_geodesic)):
+        path = _pin(tmp_path / f"{name}.json", text, monkeypatch)
+        out[name] = P.build("Synthetic__normal", lab, ct, aff, cor, path, purpose="any")
+    shared = {n: {r["segment"] for r in out[n]["table_a"] if r["shared"]} for n in out}
+    assert shared["on"] - shared["off"] == {1}  # only the moved segment changes
+    for name, want in (("off", False), ("on", True)):
+        rep = out[name]
+        assert rep["table_a"][0]["shared"] is want
+        assert (1 in _lad(rep)["shared_segments"]) is want
+        assert (1 in _lad(rep)["segments"]) is not want
+    assert "geodesic" in out["on"]["header"]["shared_rule"]
+
+
+# ------------------------------------------------------------------------------------ R4-S13
+def test_lm_feeds_lad_and_lcx():
+    g = {"LM": "4B", "LAD": "0", "LCx": "0", "RCA": "0"}
+    assert P.territory_grade(g, "LAD") == ("4B", "LM 4B")
+    assert P.territory_grade(g, "LCx") == ("4B", "LM 4B")
+    assert P.territory_grade(g, "RCA") == ("0", None)
+    assert [P.grade_class(P.territory_grade(g, t)[0]) for t in ("LAD", "LCx", "RCA")] == \
+        ["significant", "significant", "not_significant"]
+    assert P.territory_grade({"LM": "2", "LAD": "3"}, "LAD") == ("3", None)
+    assert P.territory_grade({"LM": "1", "LAD": "N"}, "LAD") == ("1", "LM 1")
+    assert P.territory_grade({"LM": "N", "LAD": "N"}, "LAD") == ("N", None)
+    assert P.territory_grade({"LM": "N"}, "LAD") == ("N", "LM N")
+    assert P.territory_grade({}, "LAD") == (None, None)
+
+
+def test_lm_grade_in_the_table(ref):
+    lab, ct, aff, cor = Y.heart()
+    rep = P.build("Synthetic__normal", lab, ct, aff, cor, ref,
+                  {"LM": "4B", "LAD": "0", "LCx": "0", "RCA": "0"}, purpose="any")
+    by = {r["territory"]: r for r in rep["table_b"]}
+    assert by["LAD"]["grade"] == by["LCx"]["grade"] == "4B"
+    assert by["LAD"]["grade_source"] == "LM 4B" and by["RCA"]["grade_source"] is None
+    assert by["LAD"]["grade_class"] == by["LCx"]["grade_class"] == "significant"
+    assert by["RCA"]["grade_class"] == "not_significant"
+    assert "| 4B (LM 4B) |" in P.render_markdown(rep)
+
+
+def test_grades_round_trip_from_an_export_record(ref):
+    """A read form as the client submits it and the export writes it, into Table B."""
+    from janusm_reads.protocol import ReadSubmission
+
+    sub = ReadSubmission(checksum="0" * 64, size_bytes=1,
+                         cadrads={"LM": "2", "LAD": "3", "LCx": "0", "RCA": "N"},
+                         lesion_points={"LAD": [1.0, 2.0, 3.0]})
+    wire = ReadSubmission.from_dict(sub.to_dict())
+    rec = {"reader": "r", "seeded": True, "blank": False, "third": False,  # export.readRecord
+           "cadrads": dict(wire.cadrads), "lesionPoints": dict(wire.lesion_points),
+           "border_protocol": 1}
+    grades = P.grades_from_read_record(rec)
+    assert grades == {"LM": "2", "LAD": "3", "LCx": "0", "RCA": "N",
+                      "lesion_point": {"LAD": [1.0, 2.0, 3.0]}}
+    lab, ct, aff, cor = Y.heart()
+    rep = P.build("Synthetic__normal", lab, ct, aff, cor, ref, grades, purpose="any")
+    by = {r["territory"]: r for r in rep["table_b"]}
+    assert (by["LAD"]["grade"], by["LCx"]["grade"], by["RCA"]["grade"]) == ("3", "2", "N")
+    assert by["LCx"]["grade_source"] == "LM 2"
+    assert by["LAD"]["mass_distal_note"] == P.DISTAL_NOTE
+    assert by["LCx"]["mass_distal_note"] is None and by["RCA"]["mass_distal_note"] is None
+
+
+def test_distal_mass_label(ref):
+    lab, ct, aff, cor = Y.heart()
+    rep = P.build("Synthetic__normal", lab, ct, aff, cor, ref,
+                  {"LM": "4B", "lesion_point": {"LM": [0.0, 0.0, 0.0]}}, purpose="any")
+    by = {r["territory"]: r for r in rep["table_b"]}
+    assert by["LAD"]["mass_distal_note"] == by["LCx"]["mass_distal_note"] == \
+        "distal mass: not computed (report v1)"
+    assert by["RCA"]["mass_distal_note"] is None and by["LAD"]["mass_distal_g"] is None
+    assert P.render_markdown(rep).count("distal mass: not computed (report v1)") == 2
+
+
+# ------------------------------------------------------------------------------------ R4-S14
+def test_septal_arc_column_filled_on_2_3_8_9(reports):
+    for rep in reports.values():
+        for row in rep["table_a"]:
+            v = row["septal_arc_value"]
+            if row["segment"] in (2, 3, 8, 9):
+                assert v["thickness_mm"] is not None and v["thickness_pctl"] is not None
+                assert v["rel_subendo_hu"] is not None
+            else:
+                assert v is None
+    md = P.render_markdown(reports["normal"])
+    assert "Septal arc: thickness mm; rel. subendo HU" in md
+    row1 = next(x for x in md.splitlines() if x.startswith("| 1 "))
+    assert row1.rstrip(" |").endswith("—")
+
+
+def test_septal_arc_column_omitted_when_r7_drops_it(ref_geodesic, tmp_path, monkeypatch):
+    path = _pin(tmp_path / "drop.json", ref_geodesic, monkeypatch)
+    lab, ct, aff, cor = Y.heart()
+    rep = P.build("Synthetic__normal", lab, ct, aff, cor, path, purpose="any")
+    assert all("septal_arc_value" not in r for r in rep["table_a"])
+    assert "Septal arc:" not in P.render_markdown(rep)

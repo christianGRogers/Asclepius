@@ -10,6 +10,9 @@ ADMIN_GROUP = "janusm-admins"
 #: Everything the queue writes lives in this collection. Private.
 COLLECTION_NAME = "JanusM"
 SEEDS_FOLDER = "seeds"
+#: Blank cases' seeds (JA66): used by the read check only. No group has any access to
+#: this folder and no route serves from it.
+CHECK_SEEDS_FOLDER = "check-seeds"
 INCOMING_FOLDER = "incoming"
 READS_FOLDER = "reads"
 

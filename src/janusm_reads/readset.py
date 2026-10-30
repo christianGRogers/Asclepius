@@ -161,3 +161,23 @@ def plan(read_sets: Mapping[str, Iterable[str]]) -> List[CasePlan]:
 def imagecas_number(case: str) -> int:
     """``c0001`` -> 2: the ImageCAS id, which is the tournament id plus one."""
     return int(check_case_id(case)[1:]) + 1
+
+
+# ------------------------------------------------- JA47 rule 2's third-read draw
+
+#: How many seeded cases of a flagged wave get a third read from blank, and the salt.
+THIRD_READ_CASES = 5
+THIRD_READ_SALT = "asclepius-janusm-third-read-r1:"
+
+
+def third_read_cases(wave: str, seeded_cases: Iterable[str], n: int = THIRD_READ_CASES,
+                     ) -> List[str]:
+    """Rule 2's draw (JA47, JA68): the ``n`` seeded cases of a wave with the lowest
+    ``sha256(salt + wave + ":" + case)``. Stable whatever order the cases come in.
+    Here, in the stdlib half, so the queue's web server enforces the same draw the
+    anchoring report prints."""
+
+    def key(case):
+        return hashlib.sha256(f"{THIRD_READ_SALT}{wave}:{case}".encode()).hexdigest()
+
+    return sorted(sorted(set(seeded_cases)), key=key)[:n]

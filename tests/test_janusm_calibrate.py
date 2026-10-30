@@ -47,14 +47,97 @@ def test_e7_every_replicate_reproduces(primary):
 
 
 def test_inputs_are_explicit_and_the_median_matters():
-    """The ruling's signature: ``seed`` has no default. The F1 floor is in mm, so the median
-    wall moves the result: E7's 0.35 at RC 1.0 needs Lima's measured 9.668 mm (the stub's
-    5.7 mm CT anchor gives 0.45)."""
+    """The ruling's signature: ``seed`` has no default. The F1 floor is in mm, so the wall moves
+    the result: E7's 0.35 at RC 1.0 needs the 9.668 mm anchor; the 5.7 mm anchor gives 0.45."""
     with pytest.raises(TypeError):
         C.detectable_depth(0.088, C.LIMA_SHAPE, 1.0)
     assert C.LIMA_MEDIAN_MM == 9.668 and C.E7_SEED == 31000
     thin = C.detectable_depth(0.088, C.LIMA_SHAPE, 1.0, seed=31000, median_mm=5.7)
     assert thin["depth"] == 0.45
+
+
+# ------------------------------------------------------------------------- JA60 (R4-S1)
+def test_ja60_default_anchor_is_the_ed_median_and_gives_the_provisional_45():
+    """R4-S1: with no wall the anchor is ED_MEDIAN_MM (5.7 mm), not 9.668 mm; JA40's procedure
+    there (cv_n 0.088, F1 1.0 mm, seed 31000) is JA60's provisional 45 %."""
+    r = C.detectable_depth(0.088, C.LIMA_SHAPE, 1.0, seed=31000)
+    assert r["depth"] == 0.45
+    assert r["inputs"]["anchor_mm"] == C.ED_MEDIAN_MM == 5.7
+    assert r["inputs"]["anchor_source"] == "ed_default"
+    assert r["inputs"]["measured_median_mm"] is None and r["inputs"]["median_mm"] is None
+    assert r["calibrate_version"] == C.CALIBRATE_VERSION == "1.1.0"
+    assert "above 40 %" in C.page_line(r)  # JA40's warning sentence
+
+
+def test_ja60_population_factor_at_limas_inputs():
+    """R4-S1: deterministic (200 000 hearts, seed 7); Lima G1: 1.1087."""
+    f = C.population_factor(C.PHASE_MIX, C.LIMA_SHAPE, C.LIMA_CV_N)
+    assert f == pytest.approx(1.109, abs=0.002)
+    assert C.population_factor(C.PHASE_MIX, C.LIMA_SHAPE, C.LIMA_CV_N) == f
+    assert (C.FACTOR_HEARTS, C.FACTOR_SEED) == (200000, 7)
+    # phase does not scale an ED-only population: its factor is the patient-scale median only
+    assert C.population_factor({"ED": 1.0}, C.LIMA_SHAPE, C.LIMA_CV_N) == pytest.approx(
+        1.0, abs=0.01
+    )
+
+
+def test_ja60_measured_median_is_the_simulated_median():
+    """R4-S1: at measured_median_mm=6.3 the simulated population's median wall is 6.3 +- 1 %
+    (an independent seed, not the factor's own)."""
+    anchor = C.anchor_mm(6.3, C.PHASE_MIX, C.LIMA_SHAPE, C.LIMA_CV_N)
+    meas, *_ = C.population(
+        200000,
+        0.0,
+        0.0,
+        C.LIMA_CV_N,
+        0.0,
+        C.PHASE_MIX,
+        np.random.default_rng(12345),
+        shape=C.LIMA_SHAPE,
+        median_mm=anchor,
+    )
+    assert float(np.median(np.median(meas, 1))) == pytest.approx(6.3, rel=0.01)
+
+
+def test_ja60_detectable_depth_simulates_on_the_anchor_of_the_measured_wall(monkeypatch):
+    """R4-S1: every population is simulated at measured / factor, in the phase mix passed, and
+    ``inputs`` records the measured wall, the anchor and the factor."""
+    seen = []
+
+    def rec(depth, cv_n, shape, rcs, seed, *, sig_m, median_mm, phase_mix):
+        seen.append((median_mm, dict(phase_mix)))
+        return {"k_mad": 3.0, **{rc: {"false_flag": 0.0, "sens": 1.0} for rc in rcs}}
+
+    monkeypatch.setattr(C, "simulate", rec)
+    r = C.detectable_depth(0.088, C.LIMA_SHAPE, 1.0, seed=1, measured_median_mm=6.3)
+    f = C.population_factor(C.PHASE_MIX, C.LIMA_SHAPE, 0.088)
+    assert len(seen) == 44 and all(m == pytest.approx(6.3 / f) for m, _ in seen)
+    assert r["inputs"]["measured_median_mm"] == 6.3
+    assert r["inputs"]["anchor_mm"] == pytest.approx(6.3 / f)
+    assert r["inputs"]["population_factor"] == f
+    assert r["inputs"]["anchor_source"] == "measured"
+    seen.clear()
+    r = C.detectable_depth(
+        0.088, C.LIMA_SHAPE, 1.0, seed=1, measured_median_mm=6.3, phase_mix={"ED": 1.0}
+    )
+    f_ed = C.population_factor({"ED": 1.0}, C.LIMA_SHAPE, 0.088)
+    assert seen[0] == (pytest.approx(6.3 / f_ed), {"ED": 1.0})
+    assert r["design"]["phase_mix"] == {"ED": 1.0}
+
+
+def test_ja60_both_walls_raise():
+    """R4-S1: measured_median_mm and median_mm together are an error, as is a bad wall."""
+    with pytest.raises(ValueError, match="not both"):
+        C.detectable_depth(0.088, C.LIMA_SHAPE, 1.0, seed=1, measured_median_mm=6.3, median_mm=5.7)
+    with pytest.raises(ValueError, match="not both"):
+        C.detectable_depths(
+            0.088, C.LIMA_SHAPE, [1.0], seed=1, measured_median_mm=6.3, median_mm=5.7
+        )
+    for bad in (0.0, -1.0, float("nan")):
+        with pytest.raises(ValueError):
+            C.detectable_depth(0.088, C.LIMA_SHAPE, 1.0, seed=1, measured_median_mm=bad)
+    with pytest.raises(ValueError, match="phase"):
+        C.detectable_depth(0.088, C.LIMA_SHAPE, 1.0, seed=1, phase_mix={"ED": 0.5})
 
 
 def test_no_depth_names_the_largest_tried():

@@ -102,12 +102,25 @@ def main():
     ap.add_argument("--hearts")
     ap.add_argument("--out", default=str(HERE / "results.jsonl"))
     ap.add_argument("--procs", type=int, default=4)
+    ap.add_argument("--resume", action="store_true", help="keep hearts already complete in --out; run the rest")
     a = ap.parse_args()
     ids = heart_list() + ["phantom"]                       # janusm.guard.refuse runs on the whole list here
     if a.hearts:
         ids = [i for i in a.hearts.split(",") if i in ids]
-    print(f"{len(ids)} hearts x {len(CONDS)} conditions", flush=True)
-    with Pool(a.procs) as p, open(a.out, "w") as f:
+    done = set()
+    if a.resume and Path(a.out).exists():
+        rows = [json.loads(line) for line in open(a.out)]
+        per = {}
+        for r in rows:
+            per.setdefault(r["heart"], []).append(r)
+        done = {h for h, rr in per.items() if any("skip" in r and "blood" not in r for r in rr) or len(rr) >= len(CONDS)}
+        with open(a.out, "w") as f:                        # drop partial hearts, keep complete ones
+            for h in done:
+                for r in per[h]:
+                    f.write(json.dumps(r) + "\n")
+        ids = [i for i in ids if i not in done]
+    print(f"{len(ids)} hearts x {len(CONDS)} conditions ({len(done)} already complete)", flush=True)
+    with Pool(a.procs) as p, open(a.out, "a" if a.resume else "w") as f:
         for rows in p.imap_unordered(one_heart, [(i, a.data_dir) for i in ids]):
             for r in rows:
                 f.write(json.dumps(r) + "\n")

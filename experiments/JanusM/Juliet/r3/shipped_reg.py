@@ -69,10 +69,22 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("data")
     ap.add_argument("--procs", type=int, default=4)
+    ap.add_argument("--resume-log", help="a previous run's stdout: its printed rows are kept, their hearts skipped")
     a = ap.parse_args()
     ids = heart_list() + ["phantom"]                       # guard on the whole list
+    prev = []
+    if a.resume_log:
+        import ast
+        prev = [ast.literal_eval(line) for line in open(a.resume_log) if line.startswith("{'heart'")]
+        per = {}
+        for r in prev:
+            per.setdefault(r["heart"], []).append(r)
+        full = {h for h, rr in per.items() if len(rr) >= len(CONDS)}
+        prev = [r for r in prev if r["heart"] in full]
+        ids = [i for i in ids if i not in full]
+        print(f"resume: {len(full)} hearts kept from the log", flush=True)
     with Pool(a.procs) as p:
-        rows = [r for rs in p.imap_unordered(one, [(i, a.data) for i in ids]) for r in rs]
+        rows = prev + [r for rs in p.imap_unordered(one, [(i, a.data) for i in ids]) for r in rs]
     out = {"module": "janusm.scar.registration at jm/paired-scar 1524550", "conds": CONDS, "rows": rows}
     summ = {}
     for blood, cnr, motion in CONDS:

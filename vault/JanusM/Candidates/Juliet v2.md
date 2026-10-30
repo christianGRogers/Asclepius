@@ -19,8 +19,8 @@ says so.
 | v1 | v2 (path B) |
 |---|---|
 | Scar is "Phase 3, needs data" | A **paired-cohort specification** in three tiers, with timing windows and sizes from a power simulation (E5, §8.1) |
-| Borders "transferred from the same session's CCTA" | A **registration method with a measured tolerance**: rigid mutual information inside a heart mask, a fat/blood QC gate, and fall-back rules (E6, §8.2) |
-| "Threshold rule calibrated against LGE" | A **two-stage scar head**: presence, then Kim bin on depth-binned transmural extent. A rule head first; a learned head only on stated conditions (E6–E7, §8.3) |
+| Borders "transferred from the same session's CCTA" | A **registration method with a measured tolerance** (≈ 0.5 mm): scanner coordinates, a fat/blood QC gate, then rigid mutual information inside a heart mask; phase matching as a data requirement (E6, §8.2) |
+| "Threshold rule calibrated against LGE" | A **two-stage rule scar head**: presence at a τ learned from LGE-negative segments, then the Kim bin of depth-binned transmural extent. A learned head only on stated conditions (E6–E7, §8.3) |
 | Stage A signs unvalidated | A **validation plan for the Stage A signs against LGE** in the same cohort (§8.4) |
 | — | Hotel's half-maximum edge offsets as an add-on to Job JM-0 (`fir/edges_m0.py`, §9 item 1) |
 
@@ -38,9 +38,16 @@ There are three reasons, each measured or cited.
 - **The borders must come from the first pass.** On LIE the blood pool is as bright as scar. An LIE-only reader
   scores chance-level Kim-bin accuracy (Golf R1 E3). The first-pass borders, on the other hand, are what Janus-M
   already learns.
-- **Registration is the new error, and it is tight.** An uncorrected 1 mm shift between the two scans already costs
-  [E6: bin accuracy] (§8.2). Rigid mutual information inside a heart mask brings it to [E6]. So path B's first
-  engineering requirement is the registration and its QC gate, not a new network.
+- **Registration is the new error, and it is tight.** An uncorrected 1 mm shift between the two scans drops
+  Kim-bin accuracy on scarred segments from 0.94 to 0.69. A 2 mm shift drops specificity to 0.63.
+  - Whole-field mutual information is pulled toward the static chest: a 5.2 mm residual at a 10 mm shift.
+  - Mutual information inside a heart mask lands at 0.26–0.56 mm at every shift up to 10 mm, with grading
+    0.98–1.00 at every shift > 0 (E6, §8.2).
+
+  So path B's first engineering requirement is the registration and its QC gate, not a new network.
+- **A cardiac-phase mismatch between the two scans is a data requirement, not a modelling problem.** A 5 % cavity
+  change halves bin accuracy on scarred segments, and no rigid method or truth-free QC catches it (E6). So the
+  cohort must record and match the phases (§8.1).
 - **The cohort, not the model, is what decides path B.** Sixty validation patients, half with a prior MI, give 93 %
   power to show segment-level agreement with LGE. Sensitivity is the endpoint that limits power (E5). So the plan
   is sized by data requirements, which the lead can obtain or not. Nothing in this repository asks for it (D31).
@@ -126,7 +133,7 @@ LGE reads happen inside the project, from images, never from the clinical report
   ResEnc, 0.5 mm, mirroring off) runs only if Janus-M 0 fails JA8.
 - **Metric (JA8):** border ASSD against inter-read, with thickness co-primary.
 - **Compute (JA10):** Job JM-0 ≤ 1 GPU-h, with commands as committed in Juliet v1 §7. Path B adds:
-  - **CPU only:** registration and the rule head, about 5 min per cohort patient (E6 timing);
+  - **CPU only:** registration and the rule head, a few minutes per cohort patient on one CPU (E6: about 1–2 min per registration on a 1 mm grid);
   - **GPU, conditional:** a learned head, about 20–30 GPU-h, only under §8.3's conditions.
 
 ## 8. Path B: the paired cohort, registration, scar head and validation
@@ -154,6 +161,9 @@ LGE reads happen inside the project, from images, never from the clinical report
   - energy mode recorded: single-energy, dual-energy or photon-counting;
   - **in the same DICOM frame of reference as the CCTA** (one frame-of-reference UID, same table position). §8.2's
     first step uses scanner coordinates.
+  - **at the same cardiac phase as a CCTA reconstruction.** Either the LIE's % R-R matches the CCTA's within 5 %,
+    or the CCTA raw data allow a reconstruction at the LIE's phase. A 5 % cavity change between the two halves
+    bin accuracy and is invisible to QC (E6).
   - Why 5–10 min:
     - CNR between infarct and remote myocardium was highest at 7 min (6.4 ± 2.5) and not different at 5 min, and
       5 min was recommended (Hamdy 2019, [10.1007/s10554-018-1513-z](https://doi.org/10.1007/s10554-018-1513-z),
@@ -217,11 +227,74 @@ LGE reads happen inside the project, from images, never from the clinical report
 
 ### 8.2 LIE-to-CCTA registration (E6)
 
-[E6 RESULTS AND METHOD — filled after the run]
+**Method, in order, per patient:**
+1. **Scanner coordinates (R0).** The LIE is resampled onto the CCTA grid through the shared frame of reference.
+2. **QC.** Smooth the resampled LIE (FWHM 1.5 mm). Compute the **fat-like share**: the share of CCTA-myocardium
+   voxels below 0 HU. Compute the **blood-like share** too.
+   - If both are at or below the calibration cuts, **keep R0.** Registering a scan that is already aligned can only
+     add error: R2 moved aligned phantom scans by 0.5 mm.
+3. **Otherwise, rigid mutual information inside the CCTA heart mask (R2).** The mask is LV wall + LV + RV + LA
+   labels, dilated by 10 mm. Settings: Mattes-style MI (Maes 1997, [10.1109/42.563664](https://doi.org/10.1109/42.563664)),
+   48 bins, two levels, 6 parameters, starting from R0. **Never over the whole field**: the spine, lungs and chest
+   wall do not move with the heart, and they pull the result back toward R0.
+4. **QC again.** Pass: grade. Fail: the patient is a **registration failure**. It is excluded from scoring and
+   counted. The failure rate is reported beside the result, and a failure rate > 10 % on calibration stops the
+   validation until the method is revised.
+
+**Evidence (E6, 3-D phantom, 4 seeds per cell):**
+
+| Shift between scans | 0.5 mm | 1 mm | 2 mm | 4 mm | 8 mm |
+|---|---|---|---|---|---|
+| No registration: bin accuracy, scarred segments | 0.94 | 0.69 | 0.54 | 0.40 | 0.19 |
+| Whole-field MI: residual (mm) | — | — | 0.81 | 1.70 | 4.00 |
+| **Heart-mask MI: residual (mm)** | — | — | **0.33** | **0.31** | **0.28** |
+| **Heart-mask MI: bin accuracy, all segments** | — | — | **0.99** | **1.00** | **1.00** |
+
+- **Tolerance:** about 0.5 mm.
+- **QC separation:** the fat-like share is ≤ 0.022 at ≤ 0.5 mm and ≥ 0.032 at ≥ 1 mm on the phantom. The real
+  cuts are set on the calibration third, from patients whose R2 and R0 agree within 0.5 mm.
+- **Non-rigid residuals** (cardiac phase, deformation) are prevented by the data requirement (§8.1), not by
+  registration. A deformable step is not proposed. It would also deform the scar, and the phantom gives no evidence
+  that it would help.
+- **Logged per patient:** R2's estimated shift. That distribution is the first measured breath-hold displacement
+  between the two scans for this project, and it replaces E6's assumed 0–10 mm range.
 
 ### 8.3 The scar head (E6–E7)
 
-[E7 — filled after the run]
+**Janus-M 0's scar head is a rule, not a network.** Per patient, on the registered LIE, inside the CCTA borders of
+class 1:
+
+1. **Smooth** the LIE (Gaussian, FWHM 1.5 mm; R1 E3).
+2. **Remote reference:** the mean of the darkest AHA segment.
+3. **Voxel threshold:** remote + ½ (myocardial 99th percentile − remote). This is the half-way rule that won R1 E3,
+   the CT analogue of FWHM on LGE (Amado 2004).
+4. **Transmural extent T per segment.** Depth u comes from the CCTA borders (JA2). Per 3° × 2 mm column, a depth bin
+   (of 10) is scar if most of its voxels are; T is the share of depth bins called scar, averaged over the segment's
+   columns. This measures transmural *extent*, as Kim's bins do; a volume share would read a 15 % scar as 8 %.
+5. **Presence:** T ≥ τ, where **τ = the 99th percentile of T in LGE-negative segments of the calibration third**.
+   It is set per scanner protocol when a protocol has ≥ 15 calibration patients, and pooled otherwise (E7).
+6. **Kim bin** of T when present (1–25 / 26–50 / 51–75 / 76–100 %), else 0.
+7. **Scar mass:** the scar voxels × 1.05 g/ml, report-only.
+
+**Why τ is learned, not fixed (E7).**
+- The scar-free floor (p99 of T in scar-free segments) is 0.02–0.05 at C 60 / noise 15 HU, and 0.10–0.17 at
+  C 40 / noise 20 HU.
+- A fixed 0.15 misses 6–25 % of the 1–25 % scars even when registration is perfect.
+- Given presence, the bins are right: MAE of T is 0.02–0.04 on scarred segments.
+
+**The learned head is conditional, and here are its conditions.** It is trained only if, on the calibration third:
+- the rule head's segment sensitivity is < 0.75, **or**
+- its bin accuracy on scarred segments is < 0.60, **with** registration QC passing.
+
+If triggered:
+- **Design:** a second output head inside class 1. Input is two channels: the registered LIE and the CCTA. Labels are
+  reader-drawn scar outlines on the registered LIE, never transferred from CMR. Training is on the calibration third
+  only.
+- **Recipe:** nnU-Net v2 ResEnc at 0.5 mm, as JA9; about 20–30 GPU-h.
+- **Scoring:** the same validation third, the same triple bound. The rule head stays the comparator.
+
+LGE is never used as a voxel label. It is a different scan, modality and phase, and its role is the per-segment
+reference.
 
 ### 8.4 Validating the Stage A signs against LGE (T1)
 
@@ -327,6 +400,7 @@ now.
 
 ## 13. Risks and unverified items
 
+- **R2 can move an already-aligned scan by about 0.5 mm** (E6), hence the QC-first order in §8.2.
 - **Everything in §8.2–8.3 is phantom evidence.** The phantom has homogeneous tissue, no microvascular obstruction,
   rigid heart motion and a known frame of reference. The calibration third is the first real test.
 - **Breath-hold displacement of the heart between the two scans is not sourced.** No abstract found gives a

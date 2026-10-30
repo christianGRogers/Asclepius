@@ -18,11 +18,12 @@ rule:
 
 - **P-K, my FWHM presence rule, fails on a heart with no scar** (E8, 13 hearts). Its threshold is set by the
   brightest segment, so on an LGE-negative heart it falls to a median 1.3 robust SD above remote and calls nearly
-  every segment: specificity 0.005. I withdraw it; a floored version (P-K\*) also fails once blood is bright. **The
-  surviving rules trade thin scars against scar-free hearts.** P-G is specific (≈ 1.00) but blind to bin-1 scar by
-  its 1 mm exclusion (bin-1 sensitivity 0.03), so its pooled sensitivity sits on the 0.75 bar. **P-J goes first in
-  the menu order, P-G second.** P-J's cut is learned from LGE-negative segments and it has no endocardial exclusion.
-  The shared benchmark (Juliet, `bench_lie/`) decides, by the rules agreed on #179.
+  every segment: specificity 0.005. I withdraw it; a floored version (P-K\*) also fails once blood is bright. **No
+  surviving rule sees thin scar.** P-G is specific (≈ 1.00) but blind to bin-1 scar by its 1 mm exclusion (bin-1
+  sensitivity 0.03, E8). Golf's interim cross-check finds P-J nearly as blind (bin 1: P-J 0.04–0.2, P-G 0.2–0.5). So
+  for every surviving rule, **pooled sensitivity ≈ 1 − (the LGE bin-1 share)**, and the 0.75 bar is met or missed by
+  the cohort's infarct mix, not by the rule. JA30's order (P-J, then P-G, once P-K is struck) and its choice step
+  stand. The shared benchmark (Juliet, `bench_lie/`) decides strikes, by the rules agreed on #179.
 - **A truth-free phase check exists** (E8). The LIE's half-way edge across the carried endocardium, averaged over the
   6 remote segments, moves by a median 1.0–1.4 mm with a 5 % phase change, in the right direction. |offset| > 0.6 mm
   flags 90–100 % of phase-mismatched patients, with 0–10 % false flags. The blood-like and bright-wall shares flag
@@ -88,7 +89,7 @@ path A's JA15–JA24 by reference (JA25), and path B adds only JA33's scoring of
 
 | Item | Settlement | Where |
 |---|---|---|
-| 1. One shared synthetic-LIE benchmark | Juliet builds it (`experiments/JanusM/bench_lie/`), Golf and I reuse it; strike rules agreed on #179 before any result, with my amendments 1a–1c (spill by Golf's counterfactual; specificity on LGE-negative hearts; no empty menu). My E8 adds the non-rigid E5 motion and LGE-negative hearts on my own 13. **Struck: P-K** (my own; E8: 0.005 specificity on scar-free hearts). P-G is specific but blind to bin 1, so I propose P-J first in the menu order. The benchmark's verdict on P-J, P-G, E-V and E-D: §3.3 | §3 |
+| 1. One shared synthetic-LIE benchmark | Juliet builds it (`experiments/JanusM/bench_lie/`), Golf and I reuse it; strike rules agreed on #179 before any result, with my amendments 1a–1c (spill by Golf's counterfactual; specificity on LGE-negative hearts; no empty menu). My E8 adds the non-rigid E5 motion and LGE-negative hearts on my own 13. **Struck: P-K** (my own; E8: 0.005 specificity on scar-free hearts). Every surviving rule misses most bin-1 scar (E8; Golf's interim cross-check), so pooled sensitivity ≈ 1 − bin-1 share. The benchmark's verdict on P-J, P-G, E-V and E-D: §3.3 | §3 |
 | 2. The merged power script at the JA32 bars | The engine is #187. E7 (my generator, reader noise and a noisy anchor) and E9 (the engine itself) agree once matched. **Seal = max(120, ≥ 270 scarred segments, 80 % power for presence); 70 % enrichment preferred (≈ 125–140 vs ≈ 170 at 50 %); growth capped at 240**. Three JA32 amendments | §4 |
 | 3. The LGE read form and the registration check form | Field-by-field, with automatic checks, adjudication and blinding, for the existing Janus-M queue's state machine. Entry time ≈ 1 min per LGE read (keystroke-level estimate); total read time is **not measured here**: no reader is in this session. It is measured from queue timestamps on the first 5 development patients | §5 |
 | 4. The JA27 intake checker | DICOM header fields that prove each requirement (tags checked against the DICOM data dictionary), and what a patient failing each becomes | §6 |
@@ -142,13 +143,16 @@ core rule).
   with blood below or equal to scar, and 0.38–0.65 with bright blood or a non-rigid residual.
 - **I withdraw P-K.** JA30's menu keeps P-J and P-G. I do not propose P-K\* as a new menu item: it fails the same
   strike rule.
-- **The trade-off that is left.** P-G cannot see bin 1, and P-K cannot be specific. P-G's pooled sensitivity equals
-  1 − (bin-1 share) at best: ≈ 0.75 here, where a quarter of scarred segments are bin 1. Golf's Round 2 cohort model
-  puts 30 % of LGE-positive segments in bin 1, which would leave P-G at ≈ 0.70 against a 0.75 bar.
-  - **So P-J goes first in the menu order** (JA30 breaks ties by order). It sees thin scar, and its cut is learned on
-    LGE-negative development segments, so its specificity is set by protocol rather than assumed.
-  - **What the development set must report** whichever rule wins: the LGE bin-1 share among positive segments, and
-    sensitivity by bin.
+- **What is left after P-K: no rule sees bin 1.** P-K was the only rule here that saw thin scar, and it cannot be
+  specific. P-G's pooled sensitivity ≈ 1 − (bin-1 share): ≈ 0.75 here, where a quarter of scarred segments are bin 1.
+  Golf's Round 2 cohort model puts 30 % of LGE-positive segments in bin 1, which would leave it at ≈ 0.70 against a
+  0.75 bar. **Correction to my 08:32 comment on #179:** I proposed P-J ahead of P-G on the grounds that it sees thin
+  scar. Golf's interim cross-check (bin-1 sensitivity 0.04–0.2) says it does not, and with P-K struck, JA30's order
+  already puts P-J first. I withdraw that proposal.
+  - **Consequence for JA32 (for the judge):** the presence bar is decided by the cohort's bin-1 share as much as by
+    the rule. The development set must report the LGE bin-1 share among positive segments and sensitivity by bin. If
+    that share is ≥ 25 %, Scar-1 (JA31) should be planned at once rather than waiting for a seal failure. Scar-1's
+    depth-profile input is the one step on the menu aimed at thin subendocardial signal.
 
 ### 3.3 The benchmark's verdict
 

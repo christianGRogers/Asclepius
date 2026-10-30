@@ -1,0 +1,115 @@
+{
+ "rule": "twin = same sex and institute as a held-out TotalSegmentator subject, |age diff| <= 5 y, any study type; blank field matches anything; applied to v1 and v2.0.1 meta.csv, union refused",
+ "held_out_ids": 16,
+ "held_out_category": {
+  "s0356": "seal reserve (A34)",
+  "s0368": "seal reserve (A34)",
+  "s0465": "coronary pool seal (D27/D32/D33)",
+  "s0655": "coronary pool seal (D27/D32/D33)",
+  "s0738": "seal reserve (A34)",
+  "s0839": "seal reserve (A34)",
+  "s0846": "seal reserve (A34)",
+  "s0871": "coronary pool seal (D27/D32/D33)",
+  "s0879": "seal reserve (A34)",
+  "s0936": "seal reserve (A34)",
+  "s0972": "coronary pool seal (D27/D32/D33)",
+  "s0980": "coronary pool seal (D27/D32/D33)",
+  "s1002": "seal reserve (A34)",
+  "s1097": "coronary pool seal (D27/D32/D33)",
+  "s1106": "coronary pool seal (D27/D32/D33)",
+  "s1345": "coronary pool seal (D27/D32/D33)"
+ },
+ "held_out_institutes_v1": [
+  "H"
+ ],
+ "subjects_v1": 1204,
+ "subjects_v2": 1228,
+ "twins_v1": 624,
+ "twins_v2": 659,
+ "twins_union": 695,
+ "cardiac_v1": 130,
+ "cardiac_held_out": 15,
+ "cardiac_twins_union": 92,
+ "cardiac_left": [
+  "s0032",
+  "s0085",
+  "s0230",
+  "s0391",
+  "s0403",
+  "s0414",
+  "s0435",
+  "s0452",
+  "s0488",
+  "s0653",
+  "s0702",
+  "s0832",
+  "s0877",
+  "s1018",
+  "s1022",
+  "s1083",
+  "s1262",
+  "s1277",
+  "s1305",
+  "s1310",
+  "s1326",
+  "s1327",
+  "s1332"
+ ],
+ "exact_match_age_sex_institute_studytype": {
+  "s0767": "s0846",
+  "s0717": "s0972",
+  "s0822": "s0972",
+  "s1073": "s0972",
+  "s1269": "s0972",
+  "s1280": "s1097",
+  "s0848": "s1106"
+ },
+ "round1_use": {
+  "Golf": {
+   "ids_in_file": 24,
+   "held_out": [],
+   "exact_matches": {
+    "s0767": "s0846",
+    "s1073": "s0972"
+   },
+   "twins_union": 20
+  },
+  "Hotel": {
+   "ids_in_file": 26,
+   "held_out": [],
+   "exact_matches": {
+    "s0767": "s0846",
+    "s0848": "s1106"
+   },
+   "twins_union": 20
+  },
+  "India": {
+   "ids_in_file": 64,
+   "held_out": [],
+   "exact_matches": {
+    "s0717": "s0972",
+    "s0767": "s0846",
+    "s0822": "s0972",
+    "s1073": "s0972",
+    "s1269": "s0972",
+    "s1280": "s1097"
+   },
+   "twins_union": 49
+  },
+  "Juliet": {
+   "ids_in_file": 12,
+   "held_out": [],
+   "exact_matches": {},
+   "twins_union": 9
+  },
+  "Kilo": {
+   "ids_in_file": 40,
+   "held_out": [],
+   "exact_matches": {
+    "s0767": "s0846",
+    "s0848": "s1106"
+   },
+   "twins_union": 31
+  }
+ }
+}

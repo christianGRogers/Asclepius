@@ -1,0 +1,8 @@
+{
+ "observed_exact_matches": 7,
+ "chance_mean": 4.81,
+ "chance_p95": 9,
+ "p_ge_observed": 0.239,
+ "n_sims": 2000,
+ "null": "16 non-held-out v1 subjects drawn with the held-out subjects' study types and institutes"
+}

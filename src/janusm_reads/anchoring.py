@@ -50,9 +50,18 @@ from segtrain.metrics import surface_distances
 from . import BORDER_PROTOCOL
 from . import labels as L
 
-# Rule 2's draw: how many seeded cases get a third read from blank, the hash salt, and
-# the draw itself. In the stdlib half, so the queue's server enforces the same draw.
-from .readset import THIRD_READ_CASES, THIRD_READ_SALT, third_read_cases  # noqa: F401
+# Rule 2's flag (a seeded read "follows" below RULE2_CHANGED_SHARE; a wave is flagged
+# when more than RULE2_READS_SHARE of its seeded reads do), how many seeded cases get a
+# third read from blank, the hash salt, and the draw itself. In the stdlib half, so the
+# queue's server recomputes the same flag (JA78) and enforces the same draw.
+from .readset import (  # noqa: F401
+    RULE2_CHANGED_SHARE,
+    RULE2_READS_SHARE,
+    THIRD_READ_CASES,
+    THIRD_READ_SALT,
+    rule2,
+    third_read_cases,
+)
 
 BORDERS = ("endocardial", "epicardial")
 
@@ -62,10 +71,6 @@ RULE1_MARGIN_MM = 0.2
 BOOTSTRAP_DRAWS = 2000
 BOOTSTRAP_SEED = 20261030
 BOUND_QUANTILE = 0.95
-#: Rule 2: a seeded read changing less than this share of seed voxels "follows" it,
-#: and a wave where more than half do is flagged.
-RULE2_CHANGED_SHARE = 0.05
-RULE2_READS_SHARE = 0.5
 
 
 def border_region(read: np.ndarray, border: str) -> np.ndarray:
@@ -259,21 +264,18 @@ def wave_report(wave: str, rows: Sequence[CaseAnchoring]) -> dict:
         }
 
     # Rule 2: do the seeded reads follow the seed?
-    seeded_changes = [v for r in seeded for v in r.changed if v is not None]
-    following = sum(1 for v in seeded_changes if v < RULE2_CHANGED_SHARE)
-    flagged = bool(seeded_changes) and following > RULE2_READS_SHARE * len(seeded_changes)
-    rule2 = {"seededReads": len(seeded_changes), "readsChangingUnder5pct": following,
-             "flagged": flagged, "thirdReadCases": [], "rule1OnThirdReads": None,
-             "thirdReadsDone": 0}
+    rule2_ = rule2(v for r in seeded for v in r.changed)
+    flagged = rule2_["flagged"]
+    rule2_.update({"thirdReadCases": [], "rule1OnThirdReads": None, "thirdReadsDone": 0})
     verdict = _verdict(rule1)
     if flagged:
         drawn = third_read_cases(wave, [r.case for r in seeded])
         done = [r for r in seeded if r.case in drawn and r.third_vs_seed is not None]
-        rule2["thirdReadCases"] = drawn
-        rule2["thirdReadsDone"] = len(done)
+        rule2_["thirdReadCases"] = drawn
+        rule2_["thirdReadsDone"] = len(done)
         if len(done) == len(drawn):
             third = _rule1(done, done, third=True)
-            rule2["rule1OnThirdReads"] = third
+            rule2_["rule1OnThirdReads"] = third
             v3 = _verdict(third)
             verdict = None if verdict is None or v3 is None else (verdict and v3)
         else:
@@ -286,7 +288,7 @@ def wave_report(wave: str, rows: Sequence[CaseAnchoring]) -> dict:
         "changedShareSeeded": _mean(v for r in seeded for v in r.changed),
         "changedShareBlank": _mean(v for r in blank for v in r.changed),
         "borders": borders,
-        "rule2": rule2,
+        "rule2": rule2_,
         "halfMaxOffsets": _offset_summary(rows),
         # JA47: seeded reads that fail Rule 1 (or Rule 1 on a flagged wave's third
         # reads) cannot accept a model. None: not evaluable yet.

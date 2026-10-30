@@ -127,14 +127,11 @@ def territory_grade(grades: dict, territory: str):
 def grades_from_read_record(rec: dict) -> dict:
     """An exported read record's form (``cadrads``, ``lesionPoints``; JA46 (d)) as
     :func:`build`'s ``reader_grades``: ``{"LM": "4B", "LAD": "0", ..., "lesion_point":
-    {vessel: [x, y, z]}}``."""
-    out = {str(k): _norm_grade(v) for k, v in (rec.get("cadrads") or {}).items()
-           if _norm_grade(v) is not None}
-    pts = {str(k): [float(c) for c in v] for k, v in (rec.get("lesionPoints") or {}).items()
-           if v is not None and len(v) == 3}
-    if pts:
-        out["lesion_point"] = pts
-    return out
+    {vessel: [x, y, z]}}``. The mapping is :mod:`janusm_reads.readform`'s, the one the export
+    writes the record with (R5-S6 S13)."""
+    from janusm_reads import readform
+
+    return readform.reader_grades(readform.read_form(rec))
 
 
 def sign_decision(sign: str, s: Optional[dict], territory: str, cfg: dict) -> dict:

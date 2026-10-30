@@ -142,10 +142,12 @@ order:
    seed the anchoring report compares blank reads against, held by the server and
    **never served** (`checkSeedFileId`; §5.2). The reader is told the verdict and
    the height, never the seed;
-2. to the **read's** own label-2 voxels within 3 mm of label 4, only when no seed
-   exists at all;
-3. to annular hinge points, a fallback kept in code only (the read form has no field
-   for them).
+2. to annular hinge points, a fallback kept in code only (the read form has no field
+   for them), behind the seed and never behind the read;
+3. to the **read's** own label-2 voxels within 3 mm of label 4 **only** in phantom
+   tests that pass no seed. The queue's check never uses the read's own gap (JA76): a
+   seed or check seed with no fittable 2–4 interface is **could not be checked**, and
+   a blank case with no check seed is refused before checking (§4.2, §7).
 
 The plane's normal points into the LA. Its **footprint** is the larger of the fit's
 radius + 3 mm (`mitral_footprint_margin_mm`) and the in-plane extent of label 4 (the
@@ -175,9 +177,11 @@ check report records the plane's source, its radius and the footprint (`mitral`)
   level marked; the failing border named). The reader module plots it.
 - **Second failure:** the read is **accepted and flagged** (`flagged: true`, with the
   reasons). A flagged read counts in every analysis, and the flag is reported.
-- A read the checker **crashes** on, or **could not check** (no mitral plane, §4.1),
-  goes back unflagged and is logged for the PM. It never spends the read's one return
-  (JA68): the reader has not yet seen a real check.
+- A read the checker **crashes** on, or **could not check** (no mitral plane, §4.1;
+  or a blank case with no check seed, JA76), goes back unflagged and is logged for the
+  PM as an ERROR ("COULD NOT BE CHECKED"). It never spends the read's one return
+  (JA68), whatever returns it has had: the reader has not yet seen a real check. The
+  reader is told only that the read could not be checked, never why.
 
 The return is counted by the read's `returns` (genuine failed checks only;
 `protocol.MAX_RETURNS` is 1): the first failure with `returns` 0 is returned, a
@@ -188,7 +192,8 @@ submission.
 ### 4.3 What is stored with every read
 
 Reader, seeded or blank, third read or not, seconds (summed over its submissions; the
-reader module keeps an attempt's clock running across reopening the case), attempts,
+reader module keeps an attempt's clock running across reopening the case, and pauses
+it while the server's check is pending), attempts,
 returns and crashes, the check report, flagged and its reasons, the read form, and
 `border_protocol: 1`.
 
@@ -207,7 +212,10 @@ marginals and the ramus → LCx; PDA and PLB → the dominant artery.
 
 Optionally the reader marks the worst lesion's point (world mm, RAS) on any vessel
 graded 1–5 (never 0 or N). The server refuses a point outside the CT's world
-bounding box. A read is not submitted until every vessel is graded. The form is
+bounding box. If it cannot read that box (the CT's header), it refuses a read that
+has points with **409** `ct_bounds_unavailable` and alerts the PM (JA77): the read
+stays open and unchanged, nothing is counted, and a read without points is not
+affected. A read is not submitted until every vessel is graded. The form is
 stored with the read for the export, and **never shown to the other reader** (LQ10
 (a)). The reader module keeps it with the draft, so a reopened case (a returned read)
 comes back with its form.
@@ -318,10 +326,34 @@ the cases are **exactly** `third_read_cases(wave, those cases)` (JA68). **Third 
 never enter the reference standard**: `janusm-export` writes them under `third/` with
 `reference: false`, never under `reads/`, and never counts them as a case's reads.
 
-**Waves.** An admin puts cases in a wave (`POST /janusm/admin/wave`). `janusm-export
+The server does not take `rule2.flagged` as sent (JA78): it recomputes the flag from
+the report's own seeded rows (`changedShare`, over seed voxels; < 5 %, more than
+half) and refuses on disagreement. It stores the report's **sha256** (canonical JSON:
+sorted keys, no spaces) on the wave and refuses a different report for that wave
+later; `janusm-export` records it as `anchoringReportSha256`.
+
+**Waves.** An admin puts cases in a wave (`POST /janusm/admin/wave`). A case that has
+an accepted read, a third read wanted, or an open third read **never changes wave**
+(JA78): the server answers 409 for the whole list, and nothing moves. Setting the same
+wave again is allowed, and every change is logged with the admin and the old and new
+waves. `janusm-export
 --wave <w>` writes that wave only and refuses a wave with no case; it skips (and
 lists, in `skippedReads`) any read not drawn under `border_protocol: 1`, and measures
 the seeds' half-maximum offsets by default.
+
+**Check seeds before the first wave (JA76).** Every blank case must have its check
+seed before it is read: `janusm-check` refuses a blank read without one (could not be
+checked; the PM is alerted). Blank cases populated before #220 have none; the lead
+gives them theirs once, on the server, with the Fir seed job's output:
+
+```bash
+janusm-populate --backfill-check-seeds --seeds-dir /path/to/seeds --dry-run   # expect: N cases, 0 problems
+janusm-populate --backfill-check-seeds --seeds-dir /path/to/seeds
+```
+
+It uploads only into `JanusM/check-seeds` (no reader can read it), creates no case,
+and refuses the whole run on a missing seed or a JA12 hit. The check seed is still
+never served (`seed` answers 404 on a blank case).
 
 `seededReadsMayAcceptModel` is false when Rule 1 fails (on the wave, or on a flagged
 wave's third reads), true when both pass, and empty while a sample is missing or a

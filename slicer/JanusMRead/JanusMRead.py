@@ -22,7 +22,8 @@ What a reader does:
   LCx, RCA: 0, 1, 2, 3, 4A, 5, N) -- and optionally its point. It goes to the server
   with the read and is never shown to another reader. It is kept on this computer
   with the draft, so a case reopened (a returned read, or after closing Slicer) comes
-  back with its form, and its reading time keeps counting from where it stopped.
+  back with its form, and its reading time keeps counting from where it stopped. The
+  clock is paused while the server's check is pending.
 * **Submit** refuses a read whose values are outside 0-4, whose classes overlap,
   with an empty class or an incomplete read form, before anything is uploaded. The
   server's automatic check is the authority. A read it returns comes back here with
@@ -52,7 +53,7 @@ from slicer.ScriptedLoadableModule import (
     ScriptedLoadableModuleWidget,
 )
 
-__version__ = "0.3.0"
+__version__ = "0.3.1"
 
 # The shared package, found two ways:
 #   checkout   <repo>/slicer/JanusMRead/JanusMRead.py  with  <repo>/src/janusm_reads
@@ -194,6 +195,7 @@ class JanusMReadLogic(ScriptedLoadableModuleLogic):
             if read.read_id == self.read.read_id:
                 self.read = read
                 break
+        self.syncClock()
         return self.read
 
     # --------------------------------------------------------------- cache
@@ -275,7 +277,8 @@ class JanusMReadLogic(ScriptedLoadableModuleLogic):
         self.openDefaultWindow()
         slicer.util.setSliceViewerLayers(background=self.volumeNode, fit=True)
         self._carriedSeconds = float(self._loadJson(TIMER_FILE).get("seconds") or 0.0)
-        self._openedAt = time.time()
+        self._openedAt = None
+        self.syncClock()
         return read
 
     # ------------------------------------------ kept with the draft (S5.8)
@@ -436,10 +439,27 @@ class JanusMReadLogic(ScriptedLoadableModuleLogic):
 
     def elapsedSeconds(self):
         """This attempt's reading time: what earlier openings of the case kept, plus
-        the time since it was opened now. The server sums it over the attempts."""
+        the time since it was opened now (while the clock runs). The server sums it
+        over the attempts."""
         if self._openedAt is None:
-            return 0.0
+            return self._carriedSeconds
         return self._carriedSeconds + max(0.0, time.time() - self._openedAt)
+
+    @property
+    def clockRunning(self):
+        return self._openedAt is not None
+
+    def syncClock(self):
+        """The reading clock runs only while the read is the reader's to work on
+        (assigned or returned). While a check is pending (submitted) or the read is
+        done, it is paused: waiting for the server is not reading time (R5-S11)."""
+        reading = self.read is not None and self.read.state in protocol.OPEN_STATES
+        if reading and self._openedAt is None:
+            self._openedAt = time.time()
+        elif not reading and self._openedAt is not None:
+            self._carriedSeconds = self.elapsedSeconds()
+            self._openedAt = None
+        return self.clockRunning
 
     def submit(self, note=""):
         """Check, export and upload the read and its form. Nothing is uploaded when a
@@ -456,9 +476,11 @@ class JanusMReadLogic(ScriptedLoadableModuleLogic):
         self.read = self.client.submit(self.read, path, {str(k): v for k, v in counts.items()},
                                        seconds=self.elapsedSeconds(), note=note,
                                        cadrads=cadrads, lesion_points=points)
-        # The next attempt (if the check returns it) is timed from now.
-        self._carriedSeconds, self._openedAt = 0.0, time.time()
+        # The next attempt (if the check returns it) starts at zero, and its clock
+        # starts only once the read is back: never while the check is pending.
+        self._carriedSeconds, self._openedAt = 0.0, None
         self._saveJson(TIMER_FILE, {"seconds": 0.0})
+        self.syncClock()
         return self.read
 
     # ----------------------------------------------------------- read form

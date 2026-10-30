@@ -73,6 +73,13 @@ ERR_CHECKSUM = "janusm_checksum_mismatch"
 ERR_MISSING_CLASS = "janusm_missing_class"
 ERR_HOLDOUT = "janusm_coronary_holdout"
 ERR_READ_FORM = "janusm_read_form"
+#: JA77: lesion points sent, but the CT's world box could not be read (409; the read
+#: stays open and unchanged).
+ERR_CT_BOUNDS = "ct_bounds_unavailable"
+#: JA78: a case that has been read never changes wave (409, all or none).
+ERR_WAVE_FROZEN = "janusm_wave_frozen"
+#: JA78: an anchoring report the server cannot accept for a wave (400).
+ERR_BAD_REPORT = "janusm_bad_anchoring_report"
 
 # ---------------------------------------------------------------- read form
 # JA46 (d): per vessel, the CAD-RADS 2.0 grade of the worst lesion, and an optional

@@ -35,11 +35,14 @@ the mean over the two reads of the model-vs-read pp ASSD minus the read-vs-read 
 **Transfer check** (JA37, JA62): ``harness.transfer_check`` on the first 20 complete cases, once
 for each comparison (model-vs-read 1, model-vs-read 2, read-vs-read). The guard is 0.5 mm if any of
 the three fails, else 0.3 mm, and never below ``harness.BIAS_GUARD_VALIDATED_MM`` (JA61's
-open-base check; 0.5 mm since it failed, #212). Fewer than 20 complete cases is an error, never a
-default. The count of cases over the limit is reported; no id is.
+open-base check; 0.3 mm since JA71 passed, R5-S3). Fewer than 20 complete cases is an error, never a
+default. Each comparison reports its own count of cases over the limit, and
+``transfer_check.n_cases_over_limit`` (JA72, R5-S12) is the union: the number of distinct cases of
+the first 20 with any comparison and either border over the limit. No id is reported.
 
 **Output.** One anonymous JSON (``reads``, ``assd_pp``, ``transfer_check`` and the versions),
-refused by :func:`janusm.reference.assert_anonymous` if any id appears, and its sha256.
+refused by :func:`janusm.reference.assert_anonymous` if any id appears, and its sha256. Each
+comparison carries JA70's band record (``band_kept_share_*``, ``band_forms_*``; R5-S3).
 ``tools/janusm/build_reference.py --reads`` takes it as the decision read records.
 
     python tools/janusm/score_decision.py                 # prints the Fir commands
@@ -69,7 +72,7 @@ from janusm import harness as H  # noqa: E402
 from janusm import reference as R  # noqa: E402
 from janusm import sealed_r1 as sealed_r1  # noqa: E402
 
-SCORE_VERSION = "1.0.0"
+SCORE_VERSION = "1.1.0"  # 1.1.0: transfer_check.n_cases_over_limit (JA72)
 PURPOSE = guard.DECISION_SCORING
 BORDER_PROTOCOL = 1
 SOURCE = guard.ICX_SOURCE
@@ -78,9 +81,12 @@ ROI = "ja37"
 ASSD_GUARD_MM = 1.0                     # JA8 / JA16
 BORDERS = ("endo", "epi")
 COMPARISONS = ("model_vs_read_1", "model_vs_read_2", "read_vs_read")
-#: compare() keys written per comparison (numbers only; no id).
+#: compare() keys written per comparison (no id). JA70's record of JA37's band, per border:
+#: ``band_kept_share_*`` (the share of JA61's band kept) and ``band_forms_*`` (the form used per
+#: opening, ``plane`` or ``normal``, comma-separated, empty if the pool has none).
 KEEP = tuple(f"{m}_{b}" for b in BORDERS
-             for m in ("assd_pp", "assd_voxel", "bias", "bias_pp", "mean_abs_d")) + (
+             for m in ("assd_pp", "assd_voxel", "bias", "bias_pp", "mean_abs_d",
+                       "band_kept_share", "band_forms")) + (
     "thick_err_median_mm", "thick_bias_median_mm", "n_segments", "dice_myo", "aha_failed", "sta")
 _READER_SALT = "asclepius-janusm-reader-order-r1:"
 JM0R = REPO / "experiments/JanusM/fir/jm0r_readout.py"
@@ -233,7 +239,17 @@ def transfer(rows: List[dict], transfer_fn: Callable) -> dict:
     out["open_base_bias_guard_mm"] = float(H.BIAS_GUARD_VALIDATED_MM)
     out["bias_guard_mm"] = max(guards + [float(H.BIAS_GUARD_VALIDATED_MM)])
     out["n_cases"] = N_TRANSFER
+    out["n_cases_over_limit"] = n_cases_over_limit(rows)
     return out
+
+
+def n_cases_over_limit(rows: List[dict], limit_mm: float = H.TRANSFER_LIMIT_MM) -> int:
+    """JA72's union count: of the first 20 cases, how many have any comparison and either border
+    with |``bias_*`` - ``bias_pp_*``| over ``limit_mm``. A count only; no id."""
+    return int(sum(
+        any(abs(float(r[k][f"bias_{b}"]) - float(r[k][f"bias_pp_{b}"])) > limit_mm
+            for k in COMPARISONS for b in BORDERS)
+        for r in rows[:N_TRANSFER]))
 
 
 def score(items: Iterable[Callable[[], tuple]], *, compare: Callable, transfer_fn: Callable,

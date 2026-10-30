@@ -31,11 +31,11 @@ import datetime
 
 from girder.constants import AccessType
 from girder.exceptions import ValidationException
-from girder.models.model_base import AccessControlledModel
+from girder.models.model_base import AccessControlledModel, Model
 from janusm_reads import BORDER_PROTOCOL, protocol, readset
 from pymongo import ReturnDocument
 
-from .constants import CASE_COLLECTION, READ_COLLECTION
+from .constants import CASE_COLLECTION, READ_COLLECTION, WAVE_COLLECTION
 
 
 def _now():
@@ -168,6 +168,17 @@ class JanusMCase(AccessControlledModel):
     def recordThirdAccepted(self, caseId):
         self.collection.update_one({'_id': caseId}, {'$set': {'thirdReadAccepted': True}})
 
+    # ------------------------------------------------------------------ waves
+
+    def frozenInWave(self, case):
+        """JA78: a case that has an accepted read, a third read wanted, or an open third
+        read never changes wave."""
+        if case.get('acceptedCount') or case.get('thirdReadWanted') \
+                or case.get('thirdReadTaken') or case.get('thirdReadAccepted'):
+            return True
+        return JanusMRead().collection.count_documents(
+            {'caseId': case['_id'], 'state': protocol.ACCEPTED}, limit=1) > 0
+
 
 class JanusMRead(AccessControlledModel):
     def initialize(self):
@@ -238,3 +249,34 @@ class JanusMRead(AccessControlledModel):
     def submittedQueue(self, limit=25):
         return list(self.find({'state': protocol.SUBMITTED}, limit=limit,
                               sort=[('submittedAt', 1)]))
+
+
+class JanusMWave(Model):
+    """One document per wave whose anchoring report opened third reads (JA78): the
+    report's sha256, so a different report for that wave is refused later, and the
+    export records which report the wave was judged on."""
+
+    def initialize(self):
+        self.name = WAVE_COLLECTION
+        self.ensureIndices([([('wave', 1)], {'unique': True})])
+
+    def validate(self, doc):
+        doc['wave'] = str(doc.get('wave') or '').strip()
+        if not doc['wave']:
+            raise ValidationException('A wave needs a name.', 'wave')
+        return doc
+
+    def reportHash(self, wave):
+        doc = self.findOne({'wave': str(wave)})
+        return doc.get('anchoringReportSha256') if doc else None
+
+    def recordReport(self, wave, sha256, user):
+        """Store ``sha256`` as the wave's report unless it has one. Returns the hash the
+        wave holds afterwards (a different one means the report was refused)."""
+        self.collection.update_one(
+            {'wave': str(wave)},
+            {'$setOnInsert': {'wave': str(wave), 'anchoringReportSha256': sha256,
+                              'recordedBy': user.get('login') if user else None,
+                              'recordedAt': _now()}},
+            upsert=True)
+        return self.reportHash(wave)

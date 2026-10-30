@@ -1,0 +1,28 @@
+{
+ "shipped_min_bins_6": {
+  "tol": 0.02,
+  "conditions": "CNR 5; motion none, rigid; blood below, equal, above (oracle geometry)",
+  "n_cases": 120,
+  "n_skipped": 3,
+  "n_pass": 62,
+  "scar_version": "1.1.0",
+  "max_abs_diff_ev": 0.00039525691699604515,
+  "max_abs_diff_ed": 0.1911502782931354,
+  "max_abs_diff_pg_share": 0.00147145379635083,
+  "hearts_all_pass": 2,
+  "n_hearts": 20
+ },
+ "min_bins_4": {
+  "tol": 0.02,
+  "conditions": "CNR 5; motion none, rigid; blood below, equal, above (oracle geometry)",
+  "n_cases": 120,
+  "n_skipped": 3,
+  "n_pass": 120,
+  "scar_version": "1.1.0",
+  "max_abs_diff_ev": 0.00039525691699604515,
+  "max_abs_diff_ed": 0.0007352941176470562,
+  "max_abs_diff_pg_share": 0.00147145379635083,
+  "hearts_all_pass": 20,
+  "n_hearts": 20
+ }
+}

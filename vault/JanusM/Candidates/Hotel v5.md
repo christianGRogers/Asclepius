@@ -29,7 +29,7 @@ this round is only Round 4 §8's items 2–3 (and item 1, if aggregates had been
 
 **Branch state checked.** `exp/jm-r5-rest-ccta-hotel` is `jm/rest-ccta` at `fe6e285`, merged with `origin/dev` at
 `e5d3c9a`, because PR #221 was not yet merged. That brings in #216–#220 (Groups A–E).
-- `pytest tests/test_janusm_*.py tests/test_segqueue_server_janusm.py`: TESTRESULT.
+- `pytest tests/test_janusm_*.py tests/test_segqueue_server_janusm.py`: 492 passed, 20 skipped (the Mongo-marked server tests; CI runs them in its MongoDB job).
 - `ruff check .`: clean.
 
 **New evidence this round** (CPU, synthetic only; code in `experiments/JanusM/Hotel/r5/`):

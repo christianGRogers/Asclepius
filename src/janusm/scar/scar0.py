@@ -1,6 +1,7 @@
-"""Scar-0 (JA30): a rule, no training, every candidate of the pre-registered menu.
+"""Scar-0 (JA30, final menu JA54): a rule, no training, every candidate of the pre-registered menu.
 
-Ruling: ``vault/JanusM/Judgements/Round 2 - paired-scar.md`` JA26 and JA30 (JA35 item 2).
+Rulings: ``vault/JanusM/Judgements/Round 2 - paired-scar.md`` JA26 and JA30 (JA35 item 2);
+``vault/JanusM/Judgements/Round 3 - paired-scar.md`` JA54 (PS3-S6), the final menu.
 
 Scar is a per-voxel call inside the **registered** class 1 on the LIE grid, aggregated per AHA
 segment 1-17 of :mod:`janusm.geometry` (JA26). The wall, segments, depth u and E-D columns come
@@ -10,22 +11,27 @@ from :mod:`janusm.scar.registration` (:class:`~janusm.scar.common.CarriedGeometr
 remote = the core voxels (one voxel inside both carried borders) of the 6 lowest-median segments,
 median and robust SD (1.4826 x MAD).
 
-**Presence candidates**
+**Presence candidates, in order** (JA54: :data:`PRESENCE`)
 
-- ``P-K`` (Kilo): >= 5 % of the segment's voxels above remote + 1/2 (p99 of the brightest
-  segment's core - remote);
 - ``P-J`` (Juliet): extent T (E-D) >= tau, tau the p99 of T over LGE-negative development segments
-  (:func:`tau_from_development`);
-- ``P-G`` (Golf): >= 5 % of the segment's voxels above remote + 3 SD after a 1-voxel opening,
-  ignoring 1 mm at the carried endocardium.
+  (:func:`tau_from_development`), fitted after the registration chain;
+- ``P-G`` (Golf): >= 5 % of the segment's wall at least 1 mm from the carried endocardium called,
+  the call being remote + 3 SD after a 1-voxel opening, ignoring 1 mm at the carried endocardium.
+  The denominator is that same >= 1 mm wall, as the benchmark scored it (JA54).
+
+**Diagnostic, never choosable** (JA54: :data:`DIAGNOSTIC`)
+
+- ``P-K`` (Kilo, struck): >= 5 % of the segment's voxels above remote + 1/2 (p99 of the brightest
+  segment's core - remote). Still computed (``share_pk``, :meth:`Scar0.diagnostic_presence`) for
+  the record.
 
 **Extent candidates**
 
 - ``E-V`` (Kilo, Golf): the share of the segment's voxels above remote + 3 SD;
 - ``E-D`` (Juliet): depth-binned transmural extent: per 3-degree x 2 mm column, 10 bins of u, a
   bin scar when most of its voxels pass, the column's extent the share of its bins that are scar
-  (columns with at least 6 bins), averaged over the segment. The voxel cut is the half-way cut of
-  P-K (Juliet E6's rule, which JA30 adopts for P-K).
+  (columns with at least 6 bins), averaged over the segment. The voxel cut is remote + 3 SD, the
+  same as E-V's (JA54; #188 reading 3, corrected), so E-V and E-D differ only in aggregation.
 
 **Choice** (:func:`choose_presence`, :func:`choose_extent`) is made once on development against
 the double LGE read; a present segment reads at least Kim bin 1. Development may change only the
@@ -34,15 +40,16 @@ output.
 
 **Outputs per segment** (:meth:`Scar0.table`): presence; Kim bin (0 / 1-25 / 26-50 / 51-75 /
 76-100 %); scar share; deepest depth u reached (the far edge of the deepest depth bin called scar
-in any E-D column, with the chosen extent's voxel cut); territory. Per territory: the share of
-its segments scar-present. Every output is labelled "research output, not validated" and carries
-the patient's registration status; a "not graded" patient gets no grade at all.
+in any E-D column, #188 reading 4) and, beside it, its median over the columns with scar (Golf,
+JA54); territory. Per territory: the share of its segments scar-present. Every output is labelled
+"research output, not validated" and carries the patient's registration status; a "not graded"
+patient gets no grade at all.
 """
 
 from __future__ import annotations
 
 from dataclasses import asdict, dataclass
-from typing import Dict, Iterable, Mapping, Optional, Tuple
+from typing import Dict, Iterable, Mapping, NamedTuple, Optional, Tuple
 
 import numpy as np
 from scipy import ndimage as ndi
@@ -66,7 +73,10 @@ from janusm.scar.common import (
     smooth,
 )
 
-PRESENCE = ("P-K", "P-J", "P-G")
+#: JA54: the presence menu, in order. P-K is struck.
+PRESENCE = ("P-J", "P-G")
+#: JA54: computed for the record under a diagnostic key, never choosable.
+DIAGNOSTIC = ("P-K",)
 EXTENT = ("E-V", "E-D")
 #: Kim bin edges in percent: 0 | 1-25 | 26-50 | 51-75 | 76-100.
 KIM_EDGES_PCT = (25.0, 50.0, 75.0)
@@ -93,6 +103,9 @@ class JA30Constants:
     brightest_percentile: float = 99.0
     sd_k: float = 3.0
     endo_ignore_mm: float = 1.0
+    #: P-G's share needs at least this many wall voxels >= endo_ignore_mm from the endocardium,
+    #: else it is NaN (absent): the benchmark's rule (``menu.grade``).
+    pg_min_denominator: int = 10
     depth_bins: int = 10
     depth_bin_majority: float = 0.5
     column_min_bins: int = 6
@@ -113,21 +126,24 @@ def _opened(mask):
     return ndi.binary_opening(mask, _FACE)
 
 
-
-def _columns(cut, u, column, sel, c: JA30Constants) -> Tuple[float, float]:
+def _columns(cut, u, column, sel, c: JA30Constants) -> Tuple[float, float, float]:
     """Juliet's depth-binned columns on the voxels ``sel`` of one segment.
 
     Per 3-degree x 2 mm column, u is cut into ``depth_bins`` bins; a bin is scar when more than
     half its voxels pass ``cut``. Only columns spanning at least ``column_min_bins`` bins count.
     Returns (E-D extent: the mean over columns of the share of their bins that are scar; deepest
-    depth u reached: the far edge of the deepest scar bin in any column), NaN when undefined.
+    depth u reached: the far edge of the deepest scar bin in any column; its median over the
+    columns with at least one scar bin), NaN when undefined.
     """
     nan = float("nan")
     col = column[sel]
-    b = np.clip(np.floor(u[sel] * c.depth_bins), 0, c.depth_bins - 1).astype(np.int64)
-    ok = col >= 0
+    uu = u[sel]
+    ok = (col >= 0) & np.isfinite(uu)
     if not ok.any():
-        return nan, nan
+        return nan, nan, nan
+    b = np.clip(np.floor(np.where(ok, uu, 0.0) * c.depth_bins), 0, c.depth_bins - 1).astype(
+        np.int64
+    )
     key = col[ok] * c.depth_bins + b[ok]
     uk, inv, cnt = np.unique(key, return_inverse=True, return_counts=True)
     scar_bin = (np.bincount(inv, weights=cut[sel][ok]) / cnt) > c.depth_bin_majority
@@ -135,11 +151,26 @@ def _columns(cut, u, column, sel, c: JA30Constants) -> Tuple[float, float]:
     _, cinv, ccnt = np.unique(cid, return_inverse=True, return_counts=True)
     good = ccnt >= c.column_min_bins
     if not good.any():
-        return nan, nan
+        return nan, nan, nan
     ext = np.bincount(cinv, weights=scar_bin) / ccnt
     deep = scar_bin & good[cinv]
-    deepest = float((kbin[deep].max() + 1) / c.depth_bins) if deep.any() else nan
-    return float(ext[good].mean()), deepest
+    if not deep.any():
+        return float(ext[good].mean()), nan, nan
+    deepest = float((kbin[deep].max() + 1) / c.depth_bins)
+    # per column: the far edge of its deepest scar bin (-1 where it has none)
+    per_col = np.full(len(ccnt), -1, np.int64)
+    np.maximum.at(per_col, cinv[deep], kbin[deep])
+    have = per_col >= 0
+    median = float(np.median((per_col[have] + 1) / c.depth_bins))
+    return float(ext[good].mean()), deepest, median
+
+
+class ScoringInput(NamedTuple):
+    """:meth:`Scar0.for_scoring`'s output: per-segment Kim bin (index 0 is segment 1;
+    :data:`janusm.scar.scoring.NOT_GRADED` when not graded) and scar share (NaN when not graded)."""
+
+    kim_bin: np.ndarray
+    share: np.ndarray
 
 
 @dataclass
@@ -162,8 +193,23 @@ class Scar0:
         return self.status != NOT_GRADED and self.ungradable is None
 
     def presence(self, candidate: str) -> Dict[int, Optional[bool]]:
+        """Per-segment presence for a menu candidate (:data:`PRESENCE`); P-K raises (JA54)."""
+        if candidate in DIAGNOSTIC:
+            raise ValueError(
+                f"{candidate} is struck (JA54) and cannot be chosen; "
+                "read it with diagnostic_presence()"
+            )
         if candidate not in PRESENCE:
             raise ValueError(f"presence candidate must be one of {PRESENCE}, not {candidate!r}")
+        return self._presence(candidate)
+
+    def diagnostic_presence(self, candidate: str = "P-K") -> Dict[int, Optional[bool]]:
+        """A struck candidate's per-segment call, for the record only (JA54)."""
+        if candidate not in DIAGNOSTIC:
+            raise ValueError(f"diagnostic candidates are {DIAGNOSTIC}, not {candidate!r}")
+        return self._presence(candidate)
+
+    def _presence(self, candidate: str) -> Dict[int, Optional[bool]]:
         if candidate == "P-J" and self.tau is None:
             raise ValueError("P-J needs tau, set on development (tau_from_development)")
         out = {}
@@ -173,16 +219,20 @@ class Scar0:
             elif candidate == "P-K":
                 out[s] = row["share_pk"] >= self.constants.presence_share
             elif candidate == "P-G":
-                out[s] = row["share_pg"] >= self.constants.presence_share
+                out[s] = bool(
+                    np.isfinite(row["share_pg"])
+                    and row["share_pg"] >= self.constants.presence_share
+                )
             else:
                 out[s] = bool(np.isfinite(row["extent_ed"]) and row["extent_ed"] >= self.tau)
         return out
 
-    def for_scoring(self, presence: str, extent: str) -> Tuple[np.ndarray, np.ndarray]:
-        """Kim bins and scar shares for segments 1-17 (index 0 is segment 1), as
-        :class:`janusm.scar.scoring.Patient` takes them: a segment not graded (patient not graded,
-        or too few carried voxels) is :data:`janusm.scar.scoring.NOT_GRADED`, share NaN. Only a
-        final registration status can be scored."""
+    def for_scoring(self, presence: str, extent: str) -> ScoringInput:
+        """The per-segment Kim bin and scar share for segments 1-17 (index 0 is segment 1), as
+        :class:`janusm.scar.scoring.Patient` takes them, so scoring can report sensitivity by LGE
+        Kim bin (JA54). A segment not graded (patient not graded, or too few carried voxels) is
+        :data:`janusm.scar.scoring.NOT_GRADED`, share NaN. Only a final registration status can be
+        scored. Returns :class:`ScoringInput` (unpacks as ``bins, shares``)."""
         from janusm.scar.scoring import NOT_GRADED as UNGRADED_BIN
 
         if self.status not in FINAL_STATUSES:
@@ -195,14 +245,16 @@ class Scar0:
             if r["graded"]:
                 bins[s - 1] = r["kim_bin"]
                 shares[s - 1] = np.nan if r["share"] is None else r["share"]
-        return bins, shares
+        return ScoringInput(kim_bin=bins, share=shares)
 
     def table(self, presence: str, extent: str) -> dict:
         """The JA26 per-segment and per-territory outputs for one (presence, extent) pair."""
         if extent not in EXTENT:
             raise ValueError(f"extent candidate must be one of {EXTENT}, not {extent!r}")
         pres = self.presence(presence)
+        diag = self.diagnostic_presence("P-K")
         key, deep = ("share_ev", "deepest_ev") if extent == "E-V" else ("extent_ed", "deepest_ed")
+        deep_med = deep + "_median"
         segs = {}
         for s in range(1, 18):
             row = self.segments.get(s)
@@ -213,7 +265,15 @@ class Scar0:
             }
             p = pres.get(s)
             if row is None or p is None:
-                out.update(graded=False, presence=None, kim_bin=None, share=None, deepest_u=None)
+                out.update(
+                    graded=False,
+                    presence=None,
+                    kim_bin=None,
+                    share=None,
+                    deepest_u=None,
+                    deepest_u_median=None,
+                    diagnostic_pk=None,
+                )
             else:
                 share = row[key]
                 out.update(
@@ -221,9 +281,11 @@ class Scar0:
                     presence=bool(p),
                     kim_bin=kim_bin(share, p),
                     share=None if not np.isfinite(share) else round(float(share), 4),
-                    deepest_u=round(float(row[deep]), 4)
-                    if p and np.isfinite(row[deep])
+                    deepest_u=round(float(row[deep]), 4) if p and np.isfinite(row[deep]) else None,
+                    deepest_u_median=round(float(row[deep_med]), 4)
+                    if p and np.isfinite(row[deep_med])
                     else None,
+                    diagnostic_pk=bool(diag.get(s)),
                 )
             segs[s] = out
         terr = {}
@@ -241,6 +303,8 @@ class Scar0:
             "graded": self.graded,
             "ungradable": self.ungradable,
             "presence_candidate": presence,
+            "presence_menu": list(PRESENCE),
+            "diagnostic_candidates": list(DIAGNOSTIC),
             "extent_candidate": extent,
             "tau": self.tau,
             "segments": segs,
@@ -318,7 +382,9 @@ def scar0(
     thr_sd = mu + c.sd_k * sd
     above_half = myo & (sm > thr_half)
     above_sd = myo & (sm > thr_sd)
-    pg = _opened(above_sd) & (carried.d_endo_mm() >= c.endo_ignore_mm)
+    off_endo = carried.d_endo_mm() >= c.endo_ignore_mm
+    pg = _opened(above_sd) & off_endo
+    pg_den = myo & off_endo
     rows = {}
     for s in range(1, 18):
         sel = myo & (seg == s)
@@ -326,17 +392,23 @@ def scar0(
         if n == 0:
             continue
         ok = n > c.min_segment_voxels
-        ext_ed, deep_ed = _columns(above_half, carried.u, carried.column, sel, c)
-        _, deep_ev = _columns(above_sd, carried.u, carried.column, sel, c)
+        # JA54: E-D's voxel cut is remote + 3 SD, E-V's; they differ only in aggregation, so the
+        # deepest u is the same call read through the same columns for both.
+        ext_ed, deep, deep_med = _columns(above_sd, carried.u, carried.column, sel, c)
+        den = pg_den & sel
+        n_den = int(den.sum())
         rows[s] = {
             "n_voxels": n,
             "graded": ok,
             "share_pk": float(above_half[sel].mean()),
-            "share_pg": float(pg[sel].sum() / n),
+            "share_pg": float(pg[den].mean()) if n_den >= c.pg_min_denominator else float("nan"),
+            "n_voxels_pg": n_den,
             "share_ev": float(above_sd[sel].mean()),
             "extent_ed": ext_ed,
-            "deepest_ev": deep_ev,
-            "deepest_ed": deep_ed,
+            "deepest_ev": deep,
+            "deepest_ed": deep,
+            "deepest_ev_median": deep_med,
+            "deepest_ed_median": deep_med,
         }
     return Scar0(
         status=status,
@@ -389,8 +461,11 @@ def tau_from_development(
 def choose_presence(dev: Mapping[str, Tuple[float, float]]) -> Optional[str]:
     """JA30: the presence candidate with the highest development segment sensitivity among those
     whose specificity lower bound (cluster bootstrap) is >= 0.95; ties go to the earlier in the
-    list. ``dev`` maps candidate -> (sensitivity, specificity lower bound); None if none
-    qualifies."""
+    list (P-J, then P-G: JA54). ``dev`` maps candidate -> (sensitivity, specificity lower bound);
+    None if none qualifies. A struck candidate (P-K) raises."""
+    struck = set(dev) & set(DIAGNOSTIC)
+    if struck:
+        raise ValueError(f"{sorted(struck)} struck (JA54); the presence menu is {PRESENCE}")
     bad = set(dev) - set(PRESENCE)
     if bad:
         raise ValueError(f"unknown presence candidates {sorted(bad)}")

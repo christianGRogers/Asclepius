@@ -31,8 +31,7 @@ measured RC) is <= 0.50. Fat: cut and RC.
 **Pin.** :func:`load` refuses a config whose sha256 is not :data:`janusm.guard.REFERENCE_SHA256`.
 Until the lead's run is committed that pin is None, and every load refuses.
 
-The detectable depth and rule C come from S3 (``janusm.calibrate``, #194). Until #194 merges they
-come from :mod:`janusm.calibrate_s3_stub`, a direct port of the same committed sources.
+The detectable depth and rule C come from S3 (``janusm.calibrate``, #194).
 """
 
 from __future__ import annotations
@@ -47,7 +46,7 @@ from typing import Dict, Iterable, List, Optional, Sequence
 
 import numpy as np
 
-from janusm import calibrate_s3_stub as calibrate  # S3 (#194): switch to janusm.calibrate
+from janusm import calibrate
 from janusm import features as F
 
 REFERENCE_VERSION = 1

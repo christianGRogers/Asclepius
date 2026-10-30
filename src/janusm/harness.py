@@ -15,14 +15,19 @@ never by the nominal value.
 **The measures (JA8, JA15).** Per border (endocardium = surface of the LV blood pool; epicardium =
 surface of blood pool plus myocardium):
 
-- ``surface_assd``: symmetric surface ASSD in mm between the two masks' surface voxels (Lima's and
-  India's unit, which JA8 decides on).
+- ``assd_pp``: Hotel E6's sub-voxel point-to-plane ASSD in mm (JA39). It scores JA8's d (both terms)
+  and the absolute ASSD guard.
+- ``surface_assd``: the voxel ASSD in mm between the two masks' surface voxels. Reported beside pp
+  (JA39); the read checks and JA21 anchoring keep it.
 - ``signed_bias``: mean signed normal displacement in mm, + outward. It is the volume change
   divided by the mean area of the two surfaces, the area taken from marching cubes on each mask
   smoothed by one voxel. For a uniform offset b of a smooth closed surface this is b to second
   order (the curvature terms cancel in the mean area). The Round 2 estimators sampled a voxel
   signed-distance map at surface voxels and read about 0.35-0.45 mm for a true 0.5 mm shift (Round
-  2 judgement section 1.3); ``validate_bias_estimator`` is JA16's check of this one.
+  2 judgement section 1.3); ``validate_bias_estimator`` is JA16's check of this one. It is the
+  guard's estimator (JA37).
+- ``signed_bias_pp``: Hotel E6's point-to-plane signed bias, same sign. Reported beside
+  ``signed_bias`` for JA37's transfer check (median |vol - pp| over the first decision reads).
 - ``segment_thickness`` / ``thickness_error``: the geometry module's wall thickness per AHA segment
   (``janusm.geometry.layers``: the median thickness of the segment's mid-wall voxels), and the
   error summarised as the **median over segments 1-16** (JA15).
@@ -35,6 +40,18 @@ surface of blood pool plus myocardium):
 each direction and on each border, to within 0.05 mm here; otherwise it stays 0.5 mm.
 ``validate_bias_estimator`` runs that check on analytic phantoms whose true offset is exact, and
 returns the guard it supports.
+
+**Known shifts are exact (JA38).** ``perturb``'s biases are nominal: the voxel signed-distance rule
+realises about 1.3x. ``run`` records the nominal and the realised bias side by side. A fixture
+that needs a known shift uses ``exact_shift_phantom``, whose borders are exact signed-distance
+level sets.
+
+**Point-to-plane (pp) surfaces.** Each mask is smoothed by a Gaussian of 0.7 voxel, its 0.5 level
+is found by linear interpolation along each grid axis, and each crossing is kept on its dominant
+normal axis, weighted by the area it stands for. A point's distance to the other surface is taken
+along that surface's normal at its nearest point (point to plane), both ways. Hotel E6 validated it
+within 0.03 mm of the truth up to 0.5 mm and 0.07 mm at 1.0 mm, on two grids, oblique and rough
+walls (JA39).
 """
 
 from __future__ import annotations
@@ -43,12 +60,13 @@ from typing import Dict, Optional, Sequence, Tuple
 
 import numpy as np
 from scipy import ndimage as ndi
+from scipy.spatial import cKDTree
 from skimage.measure import marching_cubes, mesh_surface_area
 
 from janusm import geometry as G
 
 #: Bump on any change that can move a reported number.
-HARNESS_VERSION = "1.0.0"
+HARNESS_VERSION = "1.1.0"
 
 GRID_MM = 0.5  # JA15: the native grid
 CORR_MM = 8.0  # JA15: primary correlation length
@@ -58,6 +76,11 @@ BIAS_CHECK_SHIFT_MM = 0.5  # JA16: the known shift the estimator must recover
 BIAS_CHECK_TOLERANCE_MM = 0.05
 BIAS_GUARD_VALIDATED_MM = 0.3
 BIAS_GUARD_FALLBACK_MM = 0.5
+
+PP_SMOOTH_VOX = 0.7  # Hotel E6: the Gaussian (voxels) whose 0.5 level is the sub-voxel surface
+#: JA39's fixture tolerances: |pp ASSD - truth| for displacements up to the key (mm). Stated to two
+#: decimals, as Hotel E6 measured them (its worst at 0.5 mm is 0.032).
+PP_ASSD_TOLERANCE_MM = {0.5: 0.03, 1.0: 0.07}
 
 TAUS = (0.15, 0.40, 0.65, 0.90)  # STA virtual-scar depths
 KIM = np.array([0.0, 0.25, 0.50, 0.75, 1.0001])
@@ -159,6 +182,95 @@ def surface_assd(a, b, spacing) -> float:
     da = ndi.distance_transform_edt(~sb, sampling=sp)[sa]
     db = ndi.distance_transform_edt(~sa, sampling=sp)[sb]
     return float((da.sum() + db.sum()) / (da.size + db.size))
+
+
+def _crop_pair(ref, test, roi, margin: int):
+    """The two masks (and ROI) cut to their joint bounding box plus ``margin`` voxels, clipped to
+    the array, so the pp surfaces of a small heart in a large volume cost what the heart costs.
+    The Gaussian sees the same values either way: outside the box the masks are empty."""
+    nz = np.argwhere(ref | test)
+    lo = np.maximum(nz.min(0) - margin, 0)
+    hi = np.minimum(nz.max(0) + margin + 1, ref.shape)
+    box = tuple(slice(a, b) for a, b in zip(lo, hi))
+    return ref[box], test[box], (None if roi is None else roi[box])
+
+
+def surface_points(mask, spacing, roi=None, smooth_vox: float = PP_SMOOTH_VOX):
+    """(points mm, outward unit normals, area weights mm^2) of a mask's sub-voxel surface (E6).
+
+    The surface is the 0.5 level of the mask smoothed by a Gaussian of ``smooth_vox`` voxels,
+    found by linear interpolation between grid neighbours along each axis. Each crossing is kept
+    only on its dominant normal axis and weighted by the area it stands for (the product of the
+    other two spacings over |n_axis|). ``roi`` (bool, same shape) keeps the crossings whose lower
+    voxel lies in it. Points are in mm from the array's first voxel corner."""
+    sp = _spacing(spacing)
+    phi = ndi.gaussian_filter(np.asarray(mask, bool).astype(np.float32), smooth_vox) - 0.5
+    gr = np.gradient(phi, *sp)
+    P, N, W = [], [], []
+    for a in range(3):
+        sl0 = [slice(None)] * 3
+        sl1 = [slice(None)] * 3
+        sl0[a], sl1[a] = slice(0, -1), slice(1, None)
+        sl0, sl1 = tuple(sl0), tuple(sl1)
+        p0, p1 = phi[sl0], phi[sl1]
+        cross = (p0 > 0) != (p1 > 0)
+        if roi is not None:
+            cross &= np.asarray(roi, bool)[sl0]
+        idx = np.argwhere(cross)
+        v0, v1 = p0[cross], p1[cross]
+        t = v0 / (v0 - v1)
+        g0 = np.stack([g[sl0][cross] for g in gr], 1)
+        g1 = np.stack([g[sl1][cross] for g in gr], 1)
+        g = g0 + t[:, None] * (g1 - g0)
+        n = -g / np.maximum(np.linalg.norm(g, axis=1, keepdims=True), 1e-9)  # phi > 0 inside
+        dom = np.argmax(np.abs(n), 1) == a
+        pos = (idx + 0.5).astype(float)
+        pos[:, a] += t
+        pos = pos * sp
+        o = [k for k in range(3) if k != a]
+        P.append(pos[dom])
+        N.append(n[dom])
+        W.append(sp[o[0]] * sp[o[1]] / np.abs(n[dom, a]))
+    return np.concatenate(P), np.concatenate(N), np.concatenate(W)
+
+
+def _pp(ref, test, spacing, roi=None) -> Tuple[float, float]:
+    """(signed bias, ASSD) in mm by symmetric point to plane; + = ``test`` outside ``ref``."""
+    ref, test = np.asarray(ref, bool), np.asarray(test, bool)
+    if ref.shape != test.shape:
+        raise ValueError(f"masks differ in shape: {ref.shape} vs {test.shape}")
+    if roi is not None:
+        roi = np.asarray(roi, bool)
+        if roi.shape != ref.shape:
+            raise ValueError("roi differs in shape from the masks")
+    sp = _spacing(spacing)
+    if not ref.any() or not test.any():
+        return float("nan"), float("nan")
+    ref, test, roi = _crop_pair(ref, test, roi, int(np.ceil(4 * PP_SMOOTH_VOX)) + 3)
+    pt, nt, wt = surface_points(test, sp, roi)
+    pr, nr, wr = surface_points(ref, sp, roi)
+    if not len(pt) or not len(pr):
+        return float("nan"), float("nan")
+    _, ir = cKDTree(pr).query(pt)
+    d_tr = np.einsum("ij,ij->i", pt - pr[ir], nr[ir])  # + : test's surface outside ref
+    _, it = cKDTree(pt).query(pr)
+    d_rt = np.einsum("ij,ij->i", pr - pt[it], nt[it])  # + : ref's surface outside test
+    bias = 0.5 * (np.average(d_tr, weights=wt) - np.average(d_rt, weights=wr))
+    assd = (np.sum(wt * np.abs(d_tr)) + np.sum(wr * np.abs(d_rt))) / (wt.sum() + wr.sum())
+    return float(bias), float(assd)
+
+
+def signed_bias_pp(ref, test, spacing, roi=None) -> float:
+    """Hotel E6's point-to-plane signed bias (mm, + = ``test`` lies outside ``ref``), symmetric:
+    half the difference of the area-weighted mean signed distances in the two directions. NaN if
+    either mask is empty. ``roi`` restricts both surfaces (for example, away from a valve plane)."""
+    return _pp(ref, test, spacing, roi)[0]
+
+
+def assd_pp(ref, test, spacing, roi=None) -> float:
+    """Hotel E6's point-to-plane ASSD (mm, JA39): the area-weighted mean |distance| of each
+    sub-voxel surface to the other's tangent plane, pooled both ways. NaN if either is empty."""
+    return _pp(ref, test, spacing, roi)[1]
 
 
 def surface_area(mask, spacing, smooth_vox: float = 1.0) -> float:
@@ -268,8 +380,16 @@ def _dice(a, b) -> float:
     return float(2 * (a & b).sum() / s) if s else float("nan")
 
 
-def compare(ref_labels, test_labels, spacing=None, affine=None, *, with_sta: bool = True) -> dict:
-    """Every JA15 measure between a reference and a test label map on the same grid."""
+def compare(
+    ref_labels, test_labels, spacing=None, affine=None, *, with_sta: bool = True, roi=None
+) -> dict:
+    """Every JA15 measure between a reference and a test label map on the same grid (JA45).
+
+    Per border (``endo``, ``epi``): ``assd_pp_*`` (JA39's scoring ASSD), ``assd_voxel_*``
+    (reported beside it), ``bias_*`` (``signed_bias``, the guard's estimator, JA37), ``bias_pp_*``
+    (JA37's transfer check) and ``mean_abs_d_*``. ``roi`` (bool, the grid's shape) restricts the
+    pp surfaces, for example to a band that leaves out the LA and aortic planes (JA37's region);
+    the volume and voxel measures use the whole masks."""
     ref, test = np.asarray(ref_labels), np.asarray(test_labels)
     if ref.shape != test.shape:
         raise ValueError(f"label maps differ in shape: {ref.shape} vs {test.shape}")
@@ -278,7 +398,8 @@ def compare(ref_labels, test_labels, spacing=None, affine=None, *, with_sta: boo
     cav_t, sol_t = borders(test)
     out = {"harness_version": HARNESS_VERSION, "geometry_version": G.GEOMETRY_VERSION}
     for name, a, b in (("endo", cav_r, cav_t), ("epi", sol_r, sol_t)):
-        out[f"assd_{name}"] = surface_assd(a, b, sp)
+        out[f"bias_pp_{name}"], out[f"assd_pp_{name}"] = _pp(a, b, sp, roi)
+        out[f"assd_voxel_{name}"] = surface_assd(a, b, sp)
         out[f"bias_{name}"] = signed_bias(a, b, sp)
         out[f"mean_abs_d_{name}"] = mean_abs_d(a, b, sp)
     walls_r, seg_r = segment_thickness(ref, affine=aff)
@@ -313,7 +434,9 @@ def run(
     with_sta: bool = True,
 ) -> dict:
     """One harness row: perturb with the JA15 model (the same ``sigma`` on both borders), then
-    measure. The nominal parameters are recorded beside what was realised."""
+    measure. The nominal parameters are recorded beside what was realised (JA38): the row holds
+    ``bias_{endo,epi}_nominal`` next to ``bias_{endo,epi}_realised`` (``signed_bias``) and
+    ``bias_pp_*``, and is to be indexed by the realised values."""
     aff, sp = G._affine(np.shape(ref_labels), None, affine)
     test = perturb(
         ref_labels,
@@ -327,7 +450,12 @@ def run(
     )
     row = compare(ref_labels, test, affine=aff, with_sta=with_sta)
     row.update(
-        sigma_nominal=sigma, corr_mm=corr_mm, bias_endo_nominal=bias_endo, bias_epi_nominal=bias_epi
+        sigma_nominal=sigma,
+        corr_mm=corr_mm,
+        bias_endo_nominal=bias_endo,
+        bias_epi_nominal=bias_epi,
+        bias_endo_realised=row["bias_endo"],
+        bias_epi_realised=row["bias_epi"],
     )
     return row
 
@@ -416,7 +544,7 @@ def phantom(
     move each wall surface outward by exactly that much; the base plane stays at z = 0, where the
     cavity opens into the LA, as a read's mitral plane does. The grid does not depend on the
     shifts; ``origin_offset_mm`` moves the phantom against it by a sub-voxel amount. (JA16's check
-    uses the closed surfaces themselves, which have no fixed plane.)"""
+    uses the closed surfaces, ``exact_shift_phantom``, which have no fixed plane.)"""
     cav, outer, la, rv, aff = _phantom_parts(
         spacing,
         endo_shift_mm,
@@ -434,6 +562,38 @@ def phantom(
     lab[outer | cav] = G.MYO
     lab[cav] = G.LV
     return lab, aff
+
+
+def exact_shift_phantom(
+    spacing: Sequence[float] = (GRID_MM,) * 3,
+    *,
+    endo_shift_mm: float = 0.0,
+    epi_shift_mm: float = 0.0,
+    origin_offset_mm: Sequence[float] = (0.0, 0.0, 0.0),
+    cavity_shift_mm: float = 0.0,
+    tilt_deg: float = 0.0,
+    rc: float = PHANTOM_RC,
+    wall: float = PHANTOM_WALL,
+) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """(cavity, outer, affine): the phantom's two borders as closed capsules, each an exact
+    signed-distance level set, so ``endo_shift_mm`` / ``epi_shift_mm`` move the whole closed
+    surface outward by exactly that much (JA38). This is the fixture for any test that needs a
+    known shift; ``validate_bias_estimator`` uses it. The grid does not depend on the shifts, so
+    two calls with the same ``spacing``, ``origin_offset_mm``, ``cavity_shift_mm`` and ``tilt_deg``
+    are on the same grid. ``outer`` is the epicardial capsule itself (not united with the
+    cavity), so each mask stays an exact level set; their flat tops share the plane z = 0."""
+    cav, outer, _, _, aff = _phantom_parts(
+        spacing,
+        endo_shift_mm,
+        epi_shift_mm,
+        origin_offset_mm,
+        cavity_shift_mm,
+        rc,
+        wall,
+        tilt_deg,
+        closed=True,
+    )
+    return np.ascontiguousarray(cav), np.ascontiguousarray(outer), aff
 
 
 # ---------------------------------------------------------------------------------- JA16 check
@@ -460,16 +620,21 @@ def validate_bias_estimator(
     rows = []
     for cs, tilt in shapes:
         for off in offsets:
-            cav_r, out_r, _, _, aff = _phantom_parts(
-                spacing, 0.0, 0.0, off, cs, PHANTOM_RC, PHANTOM_WALL, tilt
+            cav_r, out_r, aff = exact_shift_phantom(
+                spacing, origin_offset_mm=off, cavity_shift_mm=cs, tilt_deg=tilt
             )
             sp = np.linalg.norm(aff[:3, :3], axis=0)
             for border in ("endo", "epi"):
                 for sign in (+1.0, -1.0):
                     b = sign * shift_mm
                     shifts = (b, 0.0) if border == "endo" else (0.0, b)
-                    cav_t, out_t, *_ = _phantom_parts(
-                        spacing, *shifts, off, cs, PHANTOM_RC, PHANTOM_WALL, tilt
+                    cav_t, out_t, _ = exact_shift_phantom(
+                        spacing,
+                        endo_shift_mm=shifts[0],
+                        epi_shift_mm=shifts[1],
+                        origin_offset_mm=off,
+                        cavity_shift_mm=cs,
+                        tilt_deg=tilt,
                     )
                     a, t = (cav_r, cav_t) if border == "endo" else (out_r, out_t)
                     est = signed_bias(a, t, sp)

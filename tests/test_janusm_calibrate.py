@@ -65,7 +65,7 @@ def test_ja60_default_anchor_is_the_ed_median_and_gives_the_provisional_45():
     assert r["inputs"]["anchor_mm"] == C.ED_MEDIAN_MM == 5.7
     assert r["inputs"]["anchor_source"] == "ed_default"
     assert r["inputs"]["measured_median_mm"] is None and r["inputs"]["median_mm"] is None
-    assert r["calibrate_version"] == C.CALIBRATE_VERSION == "1.1.0"
+    assert r["calibrate_version"] == C.CALIBRATE_VERSION == "1.1.1"
     assert "above 40 %" in C.page_line(r)  # JA40's warning sentence
 
 
@@ -121,8 +121,55 @@ def test_ja60_detectable_depth_simulates_on_the_anchor_of_the_measured_wall(monk
         0.088, C.LIMA_SHAPE, 1.0, seed=1, measured_median_mm=6.3, phase_mix={"ED": 1.0}
     )
     f_ed = C.population_factor({"ED": 1.0}, C.LIMA_SHAPE, 0.088)
-    assert seen[0] == (pytest.approx(6.3 / f_ed), {"ED": 1.0})
-    assert r["design"]["phase_mix"] == {"ED": 1.0}
+    full = {"ED": 1.0, "MD": 0.0, "SYS": 0.0}  # JA73: the partial mix is passed on in full
+    assert seen[0] == (pytest.approx(6.3 / f_ed), full)
+    assert r["design"]["phase_mix"] == full and r["inputs"]["phase_mix"] == full
+
+
+def test_r5_s1_partial_phase_mix_equals_the_three_key_call():
+    """R5-S1 (JA73), unstubbed: ``{"ED": 1.0}`` reaches ``population()`` (no ``KeyError: 'MD'``)
+    and gives the same depth, table and record as the three-key mix for the same seed."""
+    kw = dict(seed=31000, measured_median_mm=6.3)
+    part = C.detectable_depth(0.088, C.LIMA_SHAPE, 1.0, phase_mix={"ED": 1.0}, **kw)
+    full = C.detectable_depth(
+        0.088, C.LIMA_SHAPE, 1.0, phase_mix={"ED": 1, "MD": 0, "SYS": 0}, **kw
+    )
+    assert part == full
+    assert part["inputs"]["phase_mix"] == {"ED": 1.0, "MD": 0.0, "SYS": 0.0}
+    assert part["calibrate_version"] == C.CALIBRATE_VERSION == "1.1.1"
+
+
+@pytest.mark.parametrize(
+    "bad",
+    [{"ED": 0.5}, {"XX": 1.0}, {"ED": -0.5, "MD": 1.5}, {"ED": float("nan")}, {"ED": "a"}, None],
+)
+def test_r5_s1_bad_phase_mix_raises_value_error_never_key_error(bad):
+    """R5-S1 (JA73): a bad mix is a ``ValueError`` at every entry point, never a ``KeyError``."""
+    calls = [
+        lambda: C.detectable_depth(0.088, C.LIMA_SHAPE, 1.0, seed=1, phase_mix=bad),
+        lambda: C.detectable_depths(0.088, C.LIMA_SHAPE, [1.0], seed=1, phase_mix=bad),
+        lambda: C.simulate(0.3, 0.088, C.LIMA_SHAPE, [0.0], 5, phase_mix=bad, n=50),
+        lambda: C.population(50, 0.1, 0.3, 0.088, 0.0, bad, np.random.default_rng(0)),
+        lambda: C.population_factor(bad),
+        lambda: C.anchor_mm(6.3, bad),
+    ]
+    for call in calls:
+        with pytest.raises(ValueError):
+            call()
+
+
+def test_r5_s1_partial_mix_at_every_entry_point():
+    """R5-S1 (JA73): ``population``, ``simulate`` and ``population_factor`` take a partial mix,
+    with the same draws as the full one."""
+    full = {"ED": 0.6, "MD": 0.4, "SYS": 0.0}
+    part = {"ED": 0.6, "MD": 0.4}
+    a = C.population(50, 0.1, 0.3, 0.088, 0.0, part, np.random.default_rng(0))
+    b = C.population(50, 0.1, 0.3, 0.088, 0.0, full, np.random.default_rng(0))
+    assert all(np.array_equal(x, y) for x, y in zip(a, b))
+    assert C.simulate(0.3, 0.088, C.LIMA_SHAPE, [0.0], 5, phase_mix=part, n=200) == C.simulate(
+        0.3, 0.088, C.LIMA_SHAPE, [0.0], 5, phase_mix=full, n=200
+    )
+    assert C.population_factor({"ED": 1.0}) == C.population_factor({"ED": 1, "MD": 0, "SYS": 0})
 
 
 def test_ja60_both_walls_raise():

@@ -35,7 +35,7 @@ import shutil
 import tempfile
 
 from girder.models.file import File
-from janusm_reads import BORDER_PROTOCOL, protocol
+from janusm_reads import BORDER_PROTOCOL, protocol, readform
 
 from .models import JanusMCase, JanusMRead, JanusMWave
 from .populate import SEED_SUFFIX
@@ -62,8 +62,8 @@ def readRecord(read, case):
         'crashes': int(read.get('crashes') or 0),
         'flagged': bool(read.get('flagged')),
         'flagReasons': list(read.get('flagReasons') or []),
-        'cadrads': dict(read.get('cadrads') or {}),
-        'lesionPoints': dict(read.get('lesionPoints') or {}),
+        # The read form, by the one mapping the table also reads it with (R5-S6 S13).
+        **readform.read_form(read),
         'halfMaxOffsetsMm': _offsets(read.get('check')),
         'offsetSign': 'canonical',
         # A read stored before border protocol v1 carries none: it was not read under v1.

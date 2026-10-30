@@ -1,0 +1,46 @@
+{
+ "exact": {
+  "endo": {
+   "n_points": 4000,
+   "n_with_edge": 3974,
+   "bias_median_mm": 0.001,
+   "bias_iqr_mm": [
+    -0.215,
+    0.227
+   ],
+   "step_median_hu": 338.0
+  },
+  "epi": {
+   "n_points": 4000,
+   "n_with_edge": 3978,
+   "bias_median_mm": 0.165,
+   "bias_iqr_mm": [
+    -0.147,
+    0.575
+   ],
+   "step_median_hu": 166.5
+  }
+ },
+ "epi_dilated_1mm": {
+  "endo": {
+   "n_points": 4000,
+   "n_with_edge": 3981,
+   "bias_median_mm": -0.007,
+   "bias_iqr_mm": [
+    -0.219,
+    0.225
+   ],
+   "step_median_hu": 337.6
+  },
+  "epi": {
+   "n_points": 4000,
+   "n_with_edge": 3819,
+   "bias_median_mm": 1.228,
+   "bias_iqr_mm": [
+    0.81,
+    1.525
+   ],
+   "step_median_hu": 104.7
+  }
+ }
+}

@@ -30,3 +30,50 @@ def refused_totalseg_ids():
 def check(case_id):
     if case_id in refused_totalseg_ids():
         raise SystemExit(f"refusing {case_id}: a held-out pool patient (seal / reserve / D35 / pool list)")
+
+
+# --- Round 2 (Kilo v2): the JA12 twin rule ---------------------------------------------------------------------
+# TotalSegmentator publishes no patient id, so one held-out patient could appear under a second s-number (another
+# study). JA12 (Round 1 ruling, section 4) refuses as a "twin" every public subject that matches a held-out subject
+# on sex and institute, with age within +-5 years, of any study type. It over-refuses on purpose.
+TWIN_AGE_YEARS = 5
+
+
+def _meta_rows(meta_text):
+    import csv, io
+    return list(csv.DictReader(io.StringIO(meta_text.lstrip("﻿")), delimiter=";"))
+
+
+def refused_with_twins(meta_text):
+    """Return (direct, twins): held-out s-numbers, and every other s-number refused under the JA12 twin rule.
+    meta_text is the public TotalSegmentator meta.csv (image_id;age;gender;institute;study_type;split)."""
+    direct = refused_totalseg_ids()
+    rows = {r["image_id"]: r for r in _meta_rows(meta_text)}
+    missing = sorted(direct - set(rows))
+    if missing:
+        raise RuntimeError(f"held-out ids missing from meta.csv: {missing}; refusing to go on")
+    keys = [(rows[s]["gender"].strip(), rows[s]["institute"].strip(), int(float(rows[s]["age"])))
+            for s in sorted(direct)]
+    twins = set()
+    for sid, r in rows.items():
+        if sid in direct:
+            continue
+        try:
+            age = int(float(r["age"]))
+        except ValueError:          # no age stated: cannot rule a twin out, so refuse on sex + institute alone
+            age = None
+        for g, inst, a in keys:
+            if r["gender"].strip() == g and r["institute"].strip() == inst and \
+                    (age is None or abs(age - a) <= TWIN_AGE_YEARS):
+                twins.add(sid)
+                break
+    return direct, twins
+
+
+def check_public(case_id, meta_text):
+    """Refuse a public TotalSegmentator case if it is held out or a JA12 twin of a held-out subject."""
+    direct, twins = refused_with_twins(meta_text)
+    if case_id in direct:
+        raise SystemExit(f"refusing {case_id}: a held-out pool patient (seal / reserve / D35 / pool list)")
+    if case_id in twins:
+        raise SystemExit(f"refusing {case_id}: a JA12 twin of a held-out pool patient")

@@ -3,9 +3,40 @@ aliases: [Janus-M master plan]
 tags: [janus-m, plans, master-plan]
 status: living
 updated: 2026-10-30
+path: jm/paired-scar
 ---
 
 # Janus-M master plan
+
+## On this path (`jm/paired-scar`): in force from Round 2 (2026-10-30)
+
+**[[Kilo v2]] with amendments JA25–JA36** ([[Janus-M Round 2 paired-scar]], `Judgements/Round 2 - paired-scar.md`),
+on top of the trunk below. No fork.
+
+- **Stage A is path A's.** `jm/rest-ccta`'s JA15–JA24 apply here as written (JA25): error model, final margins,
+  rest TPR, calibrated signs, Tables A and B, border protocol v1, twin rule, JM-0R.
+- **Scar is computed inside class 1 on the same-session LIE scan, never learned** (JA26). It is graded per AHA segment
+  (presence, then Kim bin) and scored against CMR LGE.
+- **Paired cohort, as data requirements only (D31; JA27–JA28):**
+  - tiers: T2 = CCTA + same-session LIE + LGE (primary); T1 = CCTA + LGE (Stage A validation); T3 = CTP + FFR
+    (report-only);
+  - LGE within 90 days of the CT; infarct ≥ 90 days old; LIE phase-matched within 5 % R-R; shared frame of
+    reference;
+  - development 40; seal ≥ 120 patients and ≥ 270 scarred segments; no claim below 80; split by batch-stable salted
+    hash; re-powered once on development.
+- **Registration (JA29):** scanner coordinates → QC → heart-masked rigid MI → affine. No B-spline. A reader check on
+  every patient. A failure counts as wrong.
+- **Scar-0 (JA30):** a rule chosen once on development from a pre-registered menu: presence P-K, P-J or P-G; extent
+  E-V or E-D. **Scar-1** (CPU segment-profile model), then a voxel head (≈ 55 GPU-h, ≥ 60 more patients), only if
+  each previous step fails (JA31).
+- **Acceptance on the paired seal, one look (JA32):** sensitivity lower bound ≥ 0.75; specificity ≥ 0.93;
+  transmurality agreement ≥ the LGE readers' own − 0.10. Two CMR readers per patient. κ is reported only.
+- **Path A's Stage A flags are scored against LGE (JA33).** Territories are decided against the culprit vessel.
+- **Compute (JA34):** ≈ 3 GPU-h (PB-0) once the cohort exists; scar steps on CPU; JM-0R serves both paths.
+- **Lead questions:** LQ13–LQ18 (cohort shape, single-energy LIE, windows, LGE reads, success rule, JM-0R), plus
+  LQ2–LQ12 carried.
+
+## The shared trunk
 
 **In force from Round 1 (2026-10-30):** [[Juliet v1]] with amendments JA1–JA14 ([[Janus-M Round 1]],
 `Judgements/Round 1.md`). The line forks at LQ1 into two paths, `jm/rest-ccta` and `jm/paired-scar` (M2). This page

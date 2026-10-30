@@ -382,9 +382,16 @@ def decide(x: dict, *, rc_terr_mm: float = F1_FLOOR_MM, sig_m: float = 0.0, dept
         o9 = (f"the page prints the provisional {int(round(100 * PROVISIONAL_DEPTH))} % (JA40) "
               "until it can be computed")
     else:
-        res = fn(x["cv_n"], x["segment_shape"], rc_terr_mm, sig_m=sig_m, seed=DEPTH_SEED)
+        try:
+            res = fn(x["cv_n"], x["segment_shape"], rc_terr_mm, sig_m=sig_m, seed=DEPTH_SEED)
+        except ValueError as e:  # inputs S3 cannot simulate (e.g. cv_n 0: no normal variation)
+            res = {"error": str(e)}
         depth = res.get("depth")
-        if depth is None:
+        if "error" in res:
+            o9 = (f"the page prints the provisional {int(round(100 * PROVISIONAL_DEPTH))} % "
+                  f"(JA40): the detectable depth cannot be computed from these inputs "
+                  f"({res['error']})")
+        elif depth is None:
             o9 = "the page prints: thinning detection not demonstrated at this measurement error"
         else:
             o9 = (f"the page prints a detectable depth of {int(round(100 * depth))} % "

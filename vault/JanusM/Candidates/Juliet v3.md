@@ -23,7 +23,7 @@ trunk (JA1–JA14) and path A's Stage A (JA15–JA24, by JA25). **Juliet v3 is t
 | 3. LGE read form and registration check form | §3, `experiments/JanusM/Juliet/r3/` | written for the Janus-M queue, with a synthetic LGE mock-up (5 patients with truth) and an example panel; form-entry time estimated, viewing time measured on the mock-up by the queue's own timestamps |
 | 4. JA27 intake checker | §4 | every JA27 requirement mapped to a DICOM attribute or a manifest field, with what a failing patient becomes |
 | 5. Registration QC cuts, and a phase check | §5, E8 | Cuts at the 95th percentile of aligned development cases, plus a new check, **`rim_dark`**. It catches phase mismatch (AUC 0.98–0.99, where the JA29 trio scores 0.07–0.56) and misregistration (0.988). With a **4 mm** MI mask, the 4 mm-shift residual falls from 1.33 to 0.30 mm (median) |
-| 6. JA25 hand-over | §6 | harness and JM-0R are on `dev` (#183); this branch has not synced `dev` yet; the table writer is not built; JM-0R has not run, so there are no numbers to apply |
+| 6. JA25 hand-over | §6 | **complete**: the harness, JM-0R v2, the decision script, `calibrate` and the table writer are all on `dev` and synced here (#222); this path runs `jm0r_decide.py` unchanged when the lead posts JM-0R; JM-0 has not run yet |
 | 7. Path summary for the lead | §7 | updated |
 
 ## 1. The shared synthetic-LIE benchmark (item 1)
@@ -281,29 +281,33 @@ DICOM at all.
 
 ## 6. The JA25 hand-over (item 6)
 
-| Shared Stage A code | Status (2026-10-30, 08:00 UTC) |
-|---|---|
-| JA15 harness `src/janusm/harness.py` + tests | **on `dev`** (#180, merged as #183) |
-| JM-0R `experiments/JanusM/fir/jm0r_readout.py` + tests | **on `dev`** (#183) |
-| The table writer (JA18, JA19) | **not built**: `jm/rest-ccta`'s Round 3 (#167, item 4) is specifying it |
-| On `jm/paired-scar` | **neither yet**: `dev` has not been merged into this branch since #183 |
-| JM-0R's numbers | **none**: Job JM-0 has not been run, so there is nothing to apply |
+| Shared Stage A code | On `dev` | On `jm/paired-scar` (checked 2026-10-30, 13:10 UTC) |
+|---|---|---|
+| JA15 harness `src/janusm/harness.py` + tests | yes (#180 → #183; point-to-plane API #198) | **yes** (dev sync #222) |
+| JM-0R v2 `experiments/JanusM/fir/jm0r_readout.py` (canonical half-max sign, `decision_inputs`) | yes (#193/#197) | **yes** |
+| The decision script `experiments/JanusM/fir/jm0r_decide.py` (rules R0–R10 of `jm/rest-ccta`'s JA43) | yes (#197) | **yes** |
+| `janusm.calibrate` (detectable depth) | yes (#198, #211) | **yes** |
+| The table writer `janusm.report` + `janusm.reference` (Tables A and B, JA18/JA19 as amended by JA48) | yes (#199) | **yes** |
+| JM-0R's numbers | **none**: Job JM-0 has not been run, so there is nothing to apply | — |
+
+**The hand-over is complete.** Both paths import one harness, one JM-0R, one decision script and one table writer.
+`jm/paired-scar` holds no copy or variant of any of them.
 
 **What this path does, pre-registered:**
-1. **The PM merges `dev` into `jm/paired-scar`** once #183 is in (a sync, not a candidate change). Both paths then
-   import one `janusm.harness` and one `jm0r_readout.py`. Juliet's `fir/edges_m0.py` stays unrun (LQ18).
-2. **The table writer** is built once, on `dev`, from `jm/rest-ccta`'s specification, and synced into both paths.
-   This path writes no variant (JA33 validates path A's table, not a variant of it).
-3. **JM-0R's numbers:** when the lead posts JM-0R's aggregate JSON on #142 and #143, this path applies **the same
-   decision procedure `jm/rest-ccta`'s Round 3 ruling adopts**, verbatim, with no path-B parameter. Path B adds no
-   Stage A rule (JA25).
+1. **JM-0R's numbers.** When the lead posts JM-0R's aggregate JSON (on #142 and #143), this path runs
+   `experiments/JanusM/fir/jm0r_decide.py` on it **unchanged**, records R0–R10 exactly as `jm/rest-ccta` does, and
+   adds no path-B parameter. Path B adds no Stage A rule (JA25). Juliet's `fir/edges_m0.py` stays unrun (LQ18).
+2. **Table writer.** Path B scores **path A's** Tables A and B against LGE (JA33): `janusm.report` run on the paired
+   cohort's first-pass CCTA with its recorded phase. No variant is written here.
+3. **Watch.** Any later change to these modules lands on `dev` and reaches this path by the PM's sync. A path-B
+   commit that edits one of them is a JA25 violation and should be refused in review.
 
 ## 7. Path summary for the lead (item 7, Round 2 §8 updated)
 
 | | Path A, `jm/rest-ccta` | Path B, `jm/paired-scar` (after Round 3) |
 |---|---|---|
 | Assumes | no reference for scar or ischaemia | the lead obtains a paired CCTA + same-session LIE + CMR LGE cohort (data requirements only, D31) |
-| Stage A | built and calibrated (JA15–JA24) | **identical** (JA25); the shared harness and JM-0R are on `dev` (#183) and reach this path when `dev` is synced |
+| Stage A | built and calibrated (JA15–JA24, JA37–JA49); shipped | **identical** (JA25); the same shipped code, synced from `dev` (#222) |
 | "Scarring" in the brief | inferred, from calibrated research flags | **measured**: presence and Kim bin on LIE against LGE, plus path A's flags against LGE |
 | What Round 3 settled | — | a shared benchmark: P-K struck; P-G struck unless registration is fixed; P-J, E-V, E-D go to development. A phase check (`rim_dark`). The forms, the mock-up, the intake checker. The seal size from the merged engine |
 | Seal size | — | 120–240 patients (#187; weak/strong clustering, 50–70 % scar), **if the registration-failure rate is ~0**. At 2 % failure, JA29's accounting needs > 320; the split accounting (§10 A1) needs 160–200 |

@@ -3,13 +3,15 @@ aliases: [Janus-M master plan]
 tags: [janus-m, plans, master-plan]
 status: living
 updated: 2026-10-30
+path: jm/rest-ccta
 ---
 
 # Janus-M master plan
 
-**In force from Round 1 (2026-10-30):** [[Juliet v1]] with amendments JA1–JA14 ([[Janus-M Round 1]],
-`Judgements/Round 1.md`). The line forks at LQ1 into two paths, `jm/rest-ccta` and `jm/paired-scar` (M2). This page
-is the shared trunk both paths start from. Each path's own plan lives on its branch.
+**On path `jm/rest-ccta`, in force from Round 2 (2026-10-30):** [[Juliet v1]] with JA1–JA14 ([[Janus-M Round 1]]),
+plus [[Hotel v2]] with amendments JA15–JA24 ([[Janus-M Round 2 rest-ccta]], `Judgements/Round 2 - rest-ccta.md`). The
+line forked at Round 1's LQ1 into `jm/rest-ccta` (this branch: option A, rest CCTA only) and `jm/paired-scar` (M2).
+Round 2 on this path makes **no fork**. Where JA15–JA24 change a Round 1 rule, the Round 2 text below governs.
 
 ## The plan in one paragraph
 
@@ -19,8 +21,9 @@ is the shared trunk both paths start from. Each path's own plan lives on its bra
 - the AHA 17 segments, from the RV insertion points and the mitral plane;
 - each segment's coronary territory, from Janus's LAD, LCx and RCA, with the AHA default beside it.
 
-The deliverable is a table of 17 segments × layers per patient, tagged by territory and placed beside Janus's
-stenosis in the same artery.
+The deliverable is a table of 17 segments × layers per patient (Table A) and a roll-up per Janus artery (Table B).
+Table B sits beside the **reader's CAD-RADS 2.0 grade** for that artery, because Janus grades no stenosis (JA19).
+Every sign is calibrated for specificity only, and every cell reads "research output, not validated" (JA18).
 
 ## What is learned, what is computed (JA1–JA4)
 
@@ -58,10 +61,17 @@ stenosis in the same artery.
   are read from blank; anchoring is reported each wave.
 - **Primary metric:** endocardial and epicardial ASSD, measured as model-vs-read minus read-vs-read.
 - **Co-primary:** median per-segment thickness error.
-- **Guards:** signed bias |·| ≤ 0.5 mm; ASSD ≤ 1.0 mm.
+- **Guards:** signed bias |·| ≤ **0.3 mm**, once the estimator is validated to ±0.05 mm in the JA15 harness (else
+  0.5 mm); ASSD ≤ 1.0 mm (JA16).
 - **Reported:** STA, Dice, AHA agreement, territory discordance.
-- **Acceptance on the seal:** the upper 95 % bound of d is ≤ 0.25 mm per border, and the thickness error is
-  ≤ read-vs-read + 0.5 mm. Both margins are provisional and are re-set once before any seal read.
+- **Units (JA15):** realised symmetric surface ASSD and signed bias, and median-over-segments thickness error, in one
+  error model (Golf's corrected SDF, 8 mm fields per border). Never a nominal σ.
+- **Acceptance on the seal, final before any read (JA16):** the upper 95 % bound of d is ≤ 0.25 mm per border, and
+  the thickness error is ≤ read-vs-read + 0.5 mm. The first 20 decision double reads set only the seal size, by
+  India's `e8_repower.py` (60 / 80 / 100 / 120). If 120 does not suffice, Janus-M 1 is triggered before any seal
+  read.
+- **Reads (JA21):** border protocol v1 (Hotel v2 §5.4 as amended): plateau-centred window, half-maximum check
+  (≤ 0.5 mm), LA appendage excluded, anchoring at +0.2 mm (blank vs seeded) and < 5 % voxels changed.
 
 ## Models and compute (JA9, JA10; Fir, `def-aso22`; the lead runs every job)
 
@@ -73,21 +83,31 @@ stenosis in the same artery.
 | Janus-M 1 | nnU-Net v2 ResEnc `3d_fullres`, 4 classes, 0.5 mm, mirroring off; **only if Janus-M 0 fails** | ≈ 12 (seeds) + ≈ 55 | Conditional |
 | Second seed | only if a seed claim is needed | ≈ 55 | Conditional |
 
-**Committed ≤ 3 GPU-h; conditional ≈ 67; ceiling ≈ 125.**
+| **Job JM-0R** (JA23) | One guarded CPU read-out on JM-0's 40 cases, replacing Hotel's, Lima's and India's add-ons. Aggregates only. 8 CPUs, ≤ 2 h | 0 | After JM-0 (LQ11) |
+| Reference population (JA18) | Janus-M 0 (or 1) on the 420 remaining training cases | ≈ 12 | After the decision-set look; committed on this path if the lead agrees (LQ12) |
 
-## Outputs (JA11)
+**Committed ≈ 15 GPU-h on this path (≤ 3 + 12, if LQ12 (a)); conditional ≈ 55; ceiling ≈ 125.**
 
-- **Stage A, rest CCTA, all labelled "research, not validated":**
-  - thickness and thinning (phase recorded; ImageCAS phase-uncertain; no CMR cut-off borrowed until calibrated);
-  - intramyocardial fat (core sample, −180 to 0 HU window, cut-off set on data);
-  - rest attenuation and TPR, report-only with a 1 mm guard band;
-  - mass per territory.
-- **Stage B:** late-enhancement transmurality inside first-pass borders, stress TPR and ECV. They need paired data.
-  **They are the fork:**
-  - `jm/rest-ccta` assumes none;
-  - `jm/paired-scar` assumes the lead pursues an institutional paired cohort (LQ1).
+## Outputs (JA11, JA17–JA19; Stage A only on this path)
 
-## Open questions for the lead (carried as assumptions; full text in the ruling, §5)
+- **Thinning:** flagged **per territory**, patient-relative (Lima's rule C), at ≤ 5 % of null patients. A flag also
+  needs to clear the read-noise floor (RC from the first 20 decision reads) and read-to-read κ ≥ 0.6. Per-segment
+  values are numbers with percentiles, never flags. No 5.5 mm cut.
+- **Subendocardial hypoattenuation and core fat:** the same procedure. The fat cut is the least strict (c, V) inside
+  −180..0 HU at which ≤ 5 % of null hearts carry a cluster.
+- **Composite "chronic-infarct-like geometry"** per territory, reported with its population rate.
+- **Rest TPR:** guard band max(1 mm, edge FWHM). It is shown per segment only if JM-0R gives an endocardial 10–90 %
+  edge ≤ 1.5 mm, an endocardial offset within ±0.25 mm (or snapped borders), and a guarded free-wall median of
+  0.99–1.15. Otherwise it stays in the research export only.
+- **Mass per territory:** patient-specific, with the AHA default beside it; "shared" segments where the share is
+  < 0.6.
+- **Reference population:** the 420 remaining ImageCAS-X training cases, labelled "this population,
+  phase-uncertain", frozen before any seal read.
+- **Depth, sectors, territories (JA20):** equal thickness; fixed sectors, with a septal-arc sensitivity column;
+  Euclidean territories primary.
+- **Stage B:** none on this path (option A).
+
+## Open questions for the lead (carried as assumptions; full text in the rulings, §5)
 
 | Question | Status |
 |---|---|
@@ -99,6 +119,10 @@ stenosis in the same artery.
 | LQ6 | MM-WHS |
 | LQ7 | Released coronary patients |
 | LQ8 | s0655 and D27 |
+| LQ9 | Round 1 twin disclosures (rec. a one-line note, no seal change) |
+| LQ10 | Stenosis column source (rec. the reader's CAD-RADS grade) |
+| LQ11 | One merged Fir CPU job, JM-0R (rec. yes) |
+| LQ12 | Reference-population seeds committed (rec. yes) |
 
 ## Shipping (JA13; `role:swe`, opened by the PM)
 
@@ -107,3 +131,8 @@ stenosis in the same artery.
 3. The seal freeze.
 4. The border read protocol and queue.
 5. The nnU-Net dataset builder (only if Janus-M 1 is triggered).
+6. **Path `jm/rest-ccta`, from Round 2:**
+   - the JA15 harness as the geometry module's fixture;
+   - the JM-0R read-out (JA23);
+   - the table writer and the reference-population config (JA18, JA19);
+   - the twin-list re-pin with blank-institute matching (JA22, on `dev`).

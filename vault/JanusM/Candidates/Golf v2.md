@@ -34,7 +34,26 @@ one thing path A cannot do.
 
 ## 2. Evidence this round (CPU; code in `experiments/JanusM/Golf/`; notes in `vault/JanusM/Experiments/`)
 
-⟨EVIDENCE⟩
+- **E4, the guard and the twin rule (§6 item 7).**
+  [[Golf - The JA12 twin rule refuses 707 of 1228 public TotalSegmentator subjects and 106 of 130 cardiac ones]]
+  - `guard_r2.py` refuses JA12's full list, plus twins.
+  - The ruling's twin rule refuses **707 of 1228** public subjects and **106 of 130** cardiac ids, not "a few".
+  - Path B does not need those cases, so the rule stands.
+- **E5, LIE-to-CCTA registration and the scar grade on real anatomy (§6 item 8).**
+  [[Golf - LIE registration leaves about 0.6 mm of border error, and that error, not the threshold, limits the scar grade]]
+  - Setup: 12 public hearts, a synthetic bright-blood LIE scan, a known misalignment, four registration methods,
+    five graders.
+  - Affine registration is the default (≈ 0.6 mm residual).
+  - A development-calibrated presence threshold is required: without it, half of scar-free segments read as scar.
+  - Calibrated sensitivity is 0.58–0.65, below E6's bound, so Scar-1 is planned.
+- **E6, paired-cohort power (§6 item 8).**
+  [[Golf - A paired LIE-vs-LGE seal needs about 120 patients, half with scar, and segment sensitivity is what sets the size]]
+  - Patient-clustered Monte Carlo with patient-bootstrap bounds.
+  - Seal 120 (minimum 80) + development ≥ 40; about half with LGE scar.
+- **E7, the shared perturbation harness (§6 item 2).**
+  [[Golf - The Round 1 layer simulations disagree because of how they built the signed distance, and agree on realised border error]]
+  - The Round 1 spread (0.909–0.975) is the signed-distance construction.
+  - On realised ASSD all four recipes agree: residual SD 0.007, against 0.032 on nominal RMS.
 
 **Held-out cases.** `guard_r2.py` (§3, E4) runs before any case is opened. No held-out case or twin was opened this
 round. One disclosure: 20 of the 24 public cases in Golf's **Round 1** E2 are refused as possible twins under the
@@ -202,11 +221,94 @@ TotalSegmentator data, so Golf keeps the rule as written. The shared guard (#138
 
 ### 5.2 Registration (LIE → first-pass CCTA)
 
-⟨E5REG⟩
+**Evidence: E5** ([[Golf - LIE registration leaves about 0.6 mm of border error, and that error, not the threshold, limits the scar grade]]).
+- **Data:** 12 public hearts, real anatomy and real CT.
+- **The late scan:** a synthetic LIE scan with bright blood as bright as scar, misaligned by a known transform at
+  three levels: none; typical (4 mm, 2°, 3 % scale, 1 mm non-rigid); large (8 mm, 4°, 6 %, 2 mm).
+- **What is scored:** the first-pass CT is registered to it by four methods, and the first-pass borders are carried
+  over and scored.
+
+**Method, fixed now:**
+
+1. **Start from scanner coordinates.** The CCTA and the LIE scan come from one session and share a frame of
+   reference (§5.4 requires the DICOM geometry). Identity alone leaves ≈ 2 mm of border error at the typical level,
+   so it is never used on its own.
+2. **Rigid, then affine.**
+   - Metric: Mattes mutual information, the first-pass CT moving and the LIE scan fixed.
+   - Moving mask: the first-pass heart (classes 1–4) dilated 10 mm.
+   - Three resolution levels.
+   - **Affine is the default.** It gave the smallest border error and the smallest signed bias at the typical level
+     (median ASSD ≈ 0.6 mm, bias ≈ +0.1 mm). It also absorbs the heart-rate / phase scale difference.
+3. **B-spline (30 mm control grid) is not the default.**
+   - At the typical level it was no better than affine, with a heavier tail and more outward bias.
+   - It helped only at the large level.
+   - It runs only for a case whose affine result fails the gate (point 5), and is kept only if it passes.
+4. **What is carried.** The myocardium and cavity are carried through their signed distances; the AHA map and the
+   depth u are carried by nearest neighbour. **Grading happens on the LIE grid**, so the LIE noise is never
+   resampled.
+5. **Gate, on the development set.**
+   - Each development patient's carried borders are read once, on the LIE scan and the first-pass scan side by side.
+   - Registration passes if the reader marks no segment with the carried endocardium visibly off the
+     blood–myocardium edge on the first-pass overlay.
+   - The share of failing patients is reported.
+   - **A failing patient gets no scar call.** It is not graded with bad borders.
+
+**Data requirement that follows.** Registration is the error that dominates the scar grade. The CCTA and the LIE
+scan should be **acquired at the same ECG phase and with the same breath-hold instruction** wherever the site's
+protocol allows (§5.4 records both).
 
 ### 5.3 The scar head inside class 1
 
-⟨E5HEAD⟩
+**Scar is graded inside class 1, never learned as a class.**
+
+There is no voxel-level scar reference on CT. LGE is read per segment, and CMR-to-CT voxel transfer would add its own
+error, so a voxel scar class would be trained on labels nobody has. The scar head is therefore a **segment-level
+grader** working on the carried borders.
+
+**Scar-0 (no training; the default):**
+
+1. **Remote reference:** the mid-wall third (u ∈ [1/3, 2/3)) of the 4 segments with the lowest median LIE.
+2. **Scar voxel:** LIE > remote mean + k·SD, with k = 3. Juliet's half-way rule is the alternative, and the
+   development set picks between them.
+3. **Fraction:** T = scar voxels / myocardial voxels, per segment and per third.
+4. **Presence first:** a segment is scar-present only if **T ≥ τ**. τ is **chosen on the development set** by
+   weighted kappa against LGE, from {0, 0.05, …, 0.30}. Otherwise the segment is bin 0.
+5. **Kim bin** from T.
+
+**Why presence comes first.**
+- With exact borders the plain fraction is excellent: Kim weighted kappa 0.96 at CNR 5, presence sensitivity and
+  specificity 1.0 (E5).
+- After registration, the ≈ 0.6 mm residual puts bright blood inside the carried wall. Without a presence threshold,
+  **half of scar-free segments are called scar** (specificity 0.47–0.64).
+- A τ chosen on half the hearts and scored once on the other half restores specificity to ≥ 0.98, with weighted
+  kappa 0.76–0.83 after rigid or affine registration at CNR 5.
+- This confirms Juliet R1 E3 (scar-free walls read 4–12 %) on real anatomy, and shows that **registration error,
+  not image noise, is what τ absorbs.**
+
+**What E5 also shows, and what Golf therefore plans for.**
+- In E5's half-split, Scar-0's calibrated **presence sensitivity is only 0.58–0.65**. τ that removes the false calls
+  also removes small (bin 1) scars.
+- That is below the 0.75 bound E6 sizes the seal for. **So Golf expects Scar-0 may fail on development, and plans
+  Scar-1 now rather than hoping.**
+
+**Scar-1 (only if Scar-0 fails the §5.5 endpoints on development; CPU):**
+- **Input per segment:** the LIE profile across the wall. That is the median LIE in 10 depth bins of u,
+  normalised as (LIE − remote) / (blood − remote). To it are added the segment's thickness and the registration's
+  local residual (the MI gradient magnitude at the carried endocardium).
+- **Model:** ordinal logistic regression over the 5 Kim bins. Gradient boosting is the fallback if the development
+  set is ≥ 60 patients.
+- **Training:** fitted on development LGE labels with **patient-grouped** 5-fold cross-validation. Never fitted on
+  the seal.
+- **Why profiles.** Blood spill from misregistration decays monotonically from the endocardium. Subendocardial scar
+  is a plateau with an edge at a depth. A profile model can tell them apart where a single τ cannot. This is a
+  hypothesis that only paired data can test, and Golf states it as one.
+
+**Outputs:**
+- per segment: presence, Kim bin and T;
+- per segment × third: T, report-only;
+- per territory (JA4): the share of its segments scar-present.
+
+All carry "research, not validated" until the paired seal passes.
 
 ### 5.4 The paired cohort, as data requirements (no request text, D31)
 
@@ -361,7 +463,7 @@ The cost is that border reads compete with LGE work for the same patients.
 | JM-0 (trunk; Juliet v1 §7 as committed) | ≤ 1 | Now |
 | Seeds on seal + decision (trunk) | ≈ 2 | After the freeze PR |
 | **PB-1: `heartchambers_highres` on the paired cohort's first-pass scans** | ≈ 0.02 per patient (≈ 1 min) → ≈ 3 for 150 | When the cohort is on Girder |
-| **PB-2: registration + Scar-0 on development** | 0 (CPU; ⟨E5TIME⟩) | After PB-1 |
+| **PB-2: registration + Scar-0 on development** | 0 (CPU; E5 took ≈ 15–45 CPU-min per patient for all four methods, ≈ 2 min for rigid + affine alone) | After PB-1 |
 | PB-3: Scar-1 (segment grader) | 0 (CPU) | Only if Scar-0 fails on development |
 | Janus-M 1 (conditional, trunk) | ≈ 55 | Only if Janus-M 0 fails |
 
@@ -374,8 +476,8 @@ written when the cohort's Girder layout is known. Golf will not guess paths for 
 |---|---|
 | The lead keeps path A | This branch is deleted; E4, E7 and §4 carry to the trunk unchanged |
 | The paired cohort is smaller than §5.5's minimum | Scar outputs stay research outputs; the cohort becomes development-only, and no seal claim is made |
-| Rigid registration fails the §5.2 gate on development | Affine, then B-spline, in that order; a case failing all three is graded from the LIE scan with **no** scar call and flagged |
-| Scar-0 fails on development | Scar-1 (§5.3) |
+| Affine registration fails the §5.2 gate in > 10 % of development patients | B-spline for the failing cases; if still > 10 %, the data requirement on same-phase, same-breath-hold acquisition becomes mandatory, and a failing patient gets no scar call |
+| Scar-0's calibrated sensitivity < 0.75 on development (E5 predicts it may be) | Scar-1 (§5.3) is fitted on development and replaces Scar-0 before the seal is graded |
 | LGE inter-reader kappa < 0.6 | The scar reference itself is too noisy for Kim bins; the endpoint drops to presence only |
 | A Stage A sign passes §5.6 | It loses the "not validated" label for LGE presence |
 | Twins: the lead wants public TotalSegmentator data back | A tighter twin rule (E4, item 3), by the lead's decision |

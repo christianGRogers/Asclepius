@@ -68,7 +68,15 @@ def auc(pos, neg):
 
 
 def load(path):
-    rows = [json.loads(l) for l in open(path)]
+    path = Path(path)
+    if not path.exists() and Path(str(path) + ".gz").exists():
+        path = Path(str(path) + ".gz")
+    if path.suffix == ".gz":
+        import gzip
+        fh = gzip.open(path, "rt")
+    else:
+        fh = open(path)
+    rows = [json.loads(l) for l in fh]
     return [r for r in rows if "skip" not in r], [r for r in rows if "skip" in r]
 
 
@@ -101,10 +109,10 @@ def fit_qc_cuts(rows):
     return {(1 - hh, b, c): {k: float(np.percentile(v, 95)) for k, v in d.items()} for (hh, b, c), d in acc.items()}
 
 
-def chain(r, cuts):
+def chain(r, cuts, keys=("fat_like", "above_blood", "blood_like")):
     cut = cuts.get((half(r["heart"]), r["blood"], r["cnr"]), {})
     q0 = r["arms"]["R0"]["scar"]["qc"]
-    if all(q0.get(k) is None or not np.isfinite(q0[k]) or q0[k] <= cut.get(k, np.inf) for k in ("fat_like", "above_blood", "blood_like")):
+    if all(q0.get(k) is None or not np.isfinite(q0[k]) or q0[k] <= cut.get(k, np.inf) for k in keys):
         return "R0"
     s = lambda a: r["arms"][a]["scar"]["qc"]["fat_like"] + r["arms"][a]["scar"]["qc"]["above_blood"]  # noqa: E731
     return "affine" if s("affine") < s("rigid") else "rigid"
@@ -115,21 +123,61 @@ def calls(rec, tau):
             "P-G": np.nan_to_num(arr(rec["pg_share"])) >= 0.05}
 
 
+def strike_on(out, arm):
+    res = {}
+    pres = [x for x in out["presence"] if x["arm"] == arm and x["cnr"] == 5 and x["motion"] in STRIKE_MOTIONS]
+    for p in PRES:
+        xs = [x for x in pres if x["rule"] == p]
+        why = [f"{x['blood']}/{x['motion']}: sens {x['sens']}" for x in xs if x["sens"] < 0.75] + \
+              [f"{x['blood']}/{x['motion']}: spec {x['spec']}" for x in xs if x["spec"] < 0.93] + \
+              [f"{x['blood']}/{x['motion']}: spill {x['spill_share']}" for x in xs
+               if x["spill_share"] is not None and x["spill_share"] > 0.25] + \
+              [f"{x['blood']}/{x['motion']}: spec on scar-free hearts {x['spec_scarfree_hearts']}" for x in xs
+               if x["spec_scarfree_hearts"] < 0.93]
+        res[p] = {"struck": bool(why), "why": why,
+                            "min_sens": min(x["sens"] for x in xs) if xs else None,
+                            "passes_both_spec": all(x["spec"] >= 0.93 and x["spec_scarfree_hearts"] >= 0.93
+                                                    for x in xs)}
+    if all(res[p]["struck"] for p in PRES):          # Kilo 1c: the menu never goes empty
+        ok = [p for p in PRES if res[p]["passes_both_spec"]] or list(PRES)
+        best = max(ok, key=lambda p: res[p]["min_sens"])
+        res["all_struck_rule_1c"] = {"to_development": best, "scar1": "expected, not conditional"}
+        for p in PRES:
+            res[p]["struck"] = False
+    ext = [x for x in out["extent"] if x["arm"] == arm and x["cnr"] == 5 and x["motion"] in STRIKE_MOTIONS]
+    surviving = [p for p in PRES if not res[p]["struck"]] or list(PRES)
+    for e in EXT:
+        pooled = {}
+        for p in surviving:
+            for t in ("vol", "depth"):
+                xs = [x for x in ext if x["extent"] == e and x["presence"] == p and x["truth"] == t and x["n_both"]]
+                n = sum(x["n_both"] for x in xs)
+                pooled[f"{p}|{t}"] = round(sum(x["exact_agreement"] * x["n_both"] for x in xs) / n, 3) if n else None
+        fail_all = all(all(pooled[f"{p}|{t}"] is not None and pooled[f"{p}|{t}"] < 0.60 for t in ("vol", "depth"))
+                       for p in surviving)
+        res[e] = {"struck": fail_all, "pooled_cnr5_none_rigid": pooled, "presence_rules": surviving}
+
+    return res
+
+
 def main(path=HERE / "results.jsonl"):
     rows, skips = load(path)
-    taus, cuts = fit_taus(rows), fit_qc_cuts(rows)
+    cuts = fit_qc_cuts(rows)
     for r in rows:
         r["chain_stage"] = chain(r, cuts)
         r["arms"]["chain"] = r["arms"][r["chain_stage"]]
-        # variant (proposed): R0 if QC passes, else rigid with the 4 mm mask
+        # variants (proposed, reported only): the 4 mm mask; and rim_dark added to the QC
         r["arms"]["chain_m4"] = r["arms"]["R0" if r["chain_stage"] == "R0" else "rigid_m4"]
+        r["chain_rim_stage"] = chain(r, cuts, ("fat_like", "above_blood", "blood_like", "rim_dark"))
+        r["arms"]["chain_m4_rim"] = r["arms"]["R0" if r["chain_rim_stage"] == "R0" else "rigid_m4"]
+    taus = fit_taus(rows)                        # after the chain arms exist, so each arm has its own tau
     out = {"n_cases": len(rows), "hearts": sorted({r["heart"] for r in rows}), "skipped": skips,
            "registration": [], "presence": [], "extent": [], "qc_auc": {}, "strike": {}}
     # 1. registration
     for m in MOTIONS:
         rr = [r for r in rows if r["motion"] == m]
         row = {"motion": m, "n": len(rr)}
-        for arm in ("R0", "rigid", "affine", "rigid_m4", "chain", "chain_m4"):
+        for arm in ("R0", "rigid", "affine", "rigid_m4", "chain", "chain_m4", "chain_m4_rim"):
             t = [r["arms"][arm].get("tre_mm") for r in rr if r["arms"][arm].get("tre_mm") is not None]
             row[f"{arm}_tre_median"] = round(float(np.median(t)), 3) if t else None
             row[f"{arm}_tre_p90"] = round(float(np.percentile(t, 90)), 3) if t else None
@@ -138,6 +186,7 @@ def main(path=HERE / "results.jsonl"):
                 v = [x for x in v if x is not None and np.isfinite(x)]
                 row[f"{arm}_{k}_median"] = round(float(np.median(v)), 4) if v else None
         row["chain_stages"] = {s: sum(r["chain_stage"] == s for r in rr) for s in ("R0", "rigid", "affine")}
+        row["chain_rim_R0_kept"] = sum(r["chain_rim_stage"] == "R0" for r in rr)
         row["affine_lowers_qc_share"] = round(float(np.mean([
             (r["arms"]["affine"]["scar"]["qc"]["fat_like"] + r["arms"]["affine"]["scar"]["qc"]["above_blood"]) <
             (r["arms"]["rigid"]["scar"]["qc"]["fat_like"] + r["arms"]["rigid"]["scar"]["qc"]["above_blood"])
@@ -146,7 +195,7 @@ def main(path=HERE / "results.jsonl"):
     # 2-3. presence and extent, per arm x blood x cnr x motion
     groups = defaultdict(list)
     for r in rows:
-        for arm in ("oracle", "chain", "chain_m4", "rigid", "affine", "rigid_m4", "R0"):
+        for arm in ("oracle", "chain", "chain_m4", "chain_m4_rim", "rigid", "affine", "rigid_m4", "R0"):
             groups[(arm, r["blood"], r["cnr"], r["motion"])].append(r)
     for (arm, b, c, m), rr in sorted(groups.items()):
         P = {p: {"tp": 0, "fn": 0, "tn": 0, "fp": 0, "spill_twin": 0, "tp_nb": 0, "free_tn": 0, "free_n": 0,
@@ -197,38 +246,9 @@ def main(path=HERE / "results.jsonl"):
         for (p, e, t), (k, n) in E.items():
             out["extent"].append({"arm": arm, "blood": b, "cnr": c, "motion": m, "presence": p, "extent": e,
                                   "truth": t, "exact_agreement": round(k / n, 3) if n else None, "n_both": n})
-    # 4. strike
-    pres = [x for x in out["presence"] if x["arm"] == "chain" and x["cnr"] == 5 and x["motion"] in STRIKE_MOTIONS]
-    for p in PRES:
-        xs = [x for x in pres if x["rule"] == p]
-        why = [f"{x['blood']}/{x['motion']}: sens {x['sens']}" for x in xs if x["sens"] < 0.75] + \
-              [f"{x['blood']}/{x['motion']}: spec {x['spec']}" for x in xs if x["spec"] < 0.93] + \
-              [f"{x['blood']}/{x['motion']}: spill {x['spill_share']}" for x in xs
-               if x["spill_share"] is not None and x["spill_share"] > 0.25] + \
-              [f"{x['blood']}/{x['motion']}: spec on scar-free hearts {x['spec_scarfree_hearts']}" for x in xs
-               if x["spec_scarfree_hearts"] < 0.93]
-        out["strike"][p] = {"struck": bool(why), "why": why,
-                            "min_sens": min(x["sens"] for x in xs) if xs else None,
-                            "passes_both_spec": all(x["spec"] >= 0.93 and x["spec_scarfree_hearts"] >= 0.93
-                                                    for x in xs)}
-    if all(out["strike"][p]["struck"] for p in PRES):          # Kilo 1c: the menu never goes empty
-        ok = [p for p in PRES if out["strike"][p]["passes_both_spec"]] or list(PRES)
-        best = max(ok, key=lambda p: out["strike"][p]["min_sens"])
-        out["strike"]["all_struck_rule_1c"] = {"to_development": best, "scar1": "expected, not conditional"}
-        for p in PRES:
-            out["strike"][p]["struck"] = False
-    ext = [x for x in out["extent"] if x["arm"] == "chain" and x["cnr"] == 5 and x["motion"] in STRIKE_MOTIONS]
-    surviving = [p for p in PRES if not out["strike"][p]["struck"]] or list(PRES)
-    for e in EXT:
-        pooled = {}
-        for p in surviving:
-            for t in ("vol", "depth"):
-                xs = [x for x in ext if x["extent"] == e and x["presence"] == p and x["truth"] == t and x["n_both"]]
-                n = sum(x["n_both"] for x in xs)
-                pooled[f"{p}|{t}"] = round(sum(x["exact_agreement"] * x["n_both"] for x in xs) / n, 3) if n else None
-        fail_all = all(all(pooled[f"{p}|{t}"] is not None and pooled[f"{p}|{t}"] < 0.60 for t in ("vol", "depth"))
-                       for p in surviving)
-        out["strike"][e] = {"struck": fail_all, "pooled_cnr5_none_rigid": pooled, "presence_rules": surviving}
+    # 4. strike: pre-registered on the JA29 chain; the same rules on other arms are reported, never striking
+    out["strike"] = strike_on(out, "chain")
+    out["strike_reported"] = {a: strike_on(out, a) for a in ("chain_m4", "chain_m4_rim", "oracle")}
     # 5. QC AUCs
     for k in QCS:
         mis = [r["arms"]["R0"]["scar"]["qc"].get(k) for r in rows if r["motion"] != "none"]

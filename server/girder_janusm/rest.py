@@ -14,6 +14,8 @@ purpose, as well as at populate time: a case the guard refuses later (a changed
 hold-out list) is retired, not served.
 """
 
+import hashlib
+import json
 import logging
 
 from girder.api import access
@@ -35,7 +37,7 @@ from janusm_reads import (
 from janusm_reads import labels as L
 
 from .constants import MAX_CLAIM_ATTEMPTS, SETTING_SEAL_OPEN
-from .models import JanusMCase, JanusMRead
+from .models import JanusMCase, JanusMRead, JanusMWave
 from .utils import (
     checkClientProtocol,
     ctWorldBounds,
@@ -65,6 +67,13 @@ def readInfo(read, case=None):
         check_summary=read.get('checkSummary', '') or '',
         flagged=bool(read.get('flagged')),
         check_profile=protocol.profile_for_reader(read.get('check')) if returned else {})
+
+
+def reportSha256(report):
+    """The sha256 of an anchoring report (JA78), over its canonical JSON: sorted keys,
+    no spaces, UTF-8. The export records it for the wave."""
+    text = json.dumps(report, sort_keys=True, separators=(',', ':'), ensure_ascii=False)
+    return hashlib.sha256(text.encode('utf-8')).hexdigest()
 
 
 def servableSets():
@@ -241,13 +250,17 @@ class JanusMResource(Resource):
                    missing=missing)
         problems = sub.form_problems()
         if not problems and sub.lesion_points:
-            # JA67: a lesion point lies inside the CT's world bounding box.
+            # JA67: a lesion point lies inside the CT's world bounding box. JA77: with no
+            # box, it fails closed -- 409, the read stays open and no counter moves.
             case = JanusMCase().load(read['caseId'], force=True)
-            bounds = ctWorldBounds(case)
-            if bounds is None:
-                logger.error('Janus-M case %s: the CT header could not be read; lesion '
-                             'points were not bounds-checked.', case.get('name'))
-            problems = niftihead.points_outside(sub.lesion_points, bounds)
+            try:
+                problems = niftihead.points_outside(sub.lesion_points, ctWorldBounds(case))
+            except niftihead.NoWorldBounds:
+                logger.error('Janus-M case %s: the CT header could not be read, so read %s '
+                             "was refused (lesion points cannot be checked) - tell the PM.",
+                             case.get('name'), read['_id'])
+                refuse(protocol.ERR_CT_BOUNDS, 'CT bounds unavailable; lesion points cannot '
+                       'be checked. Your read is kept: the PM has been told.', status=409)
         if problems:
             refuse(protocol.ERR_READ_FORM, ' '.join(problems), status=400, problems=problems)
         file = File().load(fileId, level=AccessType.WRITE, user=user)
@@ -356,6 +369,9 @@ class JanusMResource(Resource):
     @access.user
     @autoDescribeRoute(
         Description('Put cases in a read wave (admins); janusm-export writes one wave.')
+        .notes('JA78: a case with an accepted read, a third read wanted or an open third '
+               'read never changes wave (409, and nothing moves); the same wave again is '
+               'allowed. Every change is logged.')
         .param('wave', 'The wave, e.g. "1".')
         .jsonParam('cases', 'Case names, as a JSON list.', requireArray=True)
     )
@@ -365,13 +381,28 @@ class JanusMResource(Resource):
         if not wave:
             refuse(protocol.ERR_BAD_STATE, 'A wave needs a name.', status=400)
         names = [str(c) for c in cases]
-        found = {c['name'] for c in JanusMCase().find({'name': {'$in': names}})}
+        found = {c['name']: c for c in JanusMCase().find({'name': {'$in': names}})}
         unknown = [n for n in names if n not in found]
         if unknown or not names:
             refuse(protocol.ERR_BAD_STATE, 'No wave set: not Janus-M cases: '
                    + ', '.join(unknown or ['(none given)']), status=400, unknown=unknown)
-        JanusMCase().collection.update_many({'name': {'$in': names}}, {'$set': {'wave': wave}})
-        return {'wave': wave, 'cases': sorted(found)}
+        # JA78: a case that has been read never changes wave; all or none, no force.
+        moving = {n: c for n, c in found.items() if c.get('wave') != wave}
+        frozen = sorted(n for n, c in moving.items() if JanusMCase().frozenInWave(c))
+        if frozen:
+            refuse(protocol.ERR_WAVE_FROZEN, 'No wave set: these cases have been read and '
+                   'never change wave: ' + ', '.join(frozen), status=409, frozen=frozen)
+        admin = self.getCurrentUser()
+        for name, case in sorted(moving.items()):
+            # Only a case still in the wave it was checked in, and still unread, moves.
+            done = JanusMCase().collection.update_one(
+                {'_id': case['_id'], 'wave': case.get('wave'), 'acceptedCount': 0,
+                 'thirdReadWanted': {'$ne': True}}, {'$set': {'wave': wave}})
+            logger.warning('Janus-M case %s: wave %r -> %r by %s%s', name, case.get('wave'),
+                           wave, (admin or {}).get('login'),
+                           '' if done.modified_count else ' (changed under us; not moved)')
+        return {'wave': wave, 'cases': sorted(found),
+                'moved': sorted(moving)}
 
     def _seededDoubleRead(self, wave):
         """The wave's seeded cases whose two reference reads are both accepted: the
@@ -382,27 +413,44 @@ class JanusMResource(Resource):
     @access.user
     @autoDescribeRoute(
         Description("Open third reads from blank on a flagged wave's drawn cases (admins).")
-        .notes('JA47 rule 2, as JA68 rules it: refused unless the wave\'s anchoring report '
-               'has rule2.flagged and `cases` is exactly '
-               'anchoring.third_read_cases(wave, its seeded double-read cases). The third '
-               'read is served without the seed to a reader who has not read the case, '
-               'and never enters the reference standard.')
+        .notes('JA47 rule 2, as JA68 and JA78 rule it: refused unless the wave\'s '
+               'anchoring report has rule2.flagged, the flag recomputed from its seeded '
+               'rows agrees, it is the only report the wave has had (sha256), and `cases` '
+               'is exactly anchoring.third_read_cases(wave, its seeded double-read '
+               'cases). The third read is served without the seed to a reader who has '
+               'not read the case, and never enters the reference standard.')
         .param('wave', 'The flagged wave.')
         .jsonParam('report', "The wave's anchoring report (janusm_reads.anchoring).",
                    requireObject=True)
         .jsonParam('cases', 'Case names, as a JSON list.', requireArray=True)
     )
     def adminThirdReads(self, wave, report, cases):
-        requireAdmin(self.getCurrentUser())
+        admin = requireAdmin(self.getCurrentUser())
         wave = str(wave or '').strip()
         names = [str(c) for c in cases]
         seeded = self._seededDoubleRead(wave) if wave else []
         drawn = readset.third_read_cases(wave, seeded)
-        reported = {r.get('case') for r in report.get('rows') or [] if not r.get('blank')}
+        seededRows = [r for r in report.get('rows') or [] if not r.get('blank')]
+        reported = {r.get('case') for r in seededRows}
+        # JA78: the flag is recomputed from the report's own seeded rows (Rule 2, shares
+        # over seed voxels), never taken as sent.
+        recomputed = readset.rule2(v for r in seededRows
+                                   for v in (r.get('changedShare') or []))
+        sent = (report.get('rule2') or {}).get('flagged')
+        sha = reportSha256(report)
+        held = JanusMWave().reportHash(wave) if wave else None
         problems = []
         if not wave or str(report.get('wave', '')) != wave:
             problems.append(f'the report is for wave {report.get("wave")!r}, not {wave!r}')
-        elif not (report.get('rule2') or {}).get('flagged'):
+        elif held and held != sha:
+            problems.append(f'wave {wave} already has an anchoring report (sha256 {held}); '
+                            'a different one is refused')
+        elif bool(sent) != recomputed['flagged']:
+            problems.append(f'the report says rule2.flagged {sent!r}, but its seeded rows '
+                            f"give {recomputed['flagged']!r} "
+                            f"({recomputed['readsChangingUnder5pct']} of "
+                            f"{recomputed['seededReads']} reads change < 5 % of the seed)")
+        elif not recomputed['flagged']:
             problems.append(f'wave {wave} is not flagged by rule 2')
         elif reported != set(seeded):
             problems.append(f"the report's seeded cases are not wave {wave}'s "
@@ -411,8 +459,13 @@ class JanusMResource(Resource):
             problems.append(f'the cases are not wave {wave}\'s rule-2 draw '
                             f'({len(drawn)} cases: {", ".join(drawn)})')
         if problems:
-            refuse(protocol.ERR_BAD_STATE, 'No third read opened: ' + '; '.join(problems),
+            refuse(protocol.ERR_BAD_REPORT, 'No third read opened: ' + '; '.join(problems),
                    status=400, problems=problems)
+        if JanusMWave().recordReport(wave, sha, admin) != sha:      # lost a race
+            refuse(protocol.ERR_BAD_REPORT, f'No third read opened: wave {wave} already has '
+                   'a different anchoring report', status=400)
+        logger.warning('Janus-M wave %s: anchoring report sha256 %s accepted by %s', wave,
+                       sha, admin.get('login'))
         found = {c['name']: c for c in JanusMCase().find({'name': {'$in': names}})}
         opened = [name for name in names if JanusMCase().openThirdRead(found[name])]
         return {'opened': opened, 'alreadyOpen': [n for n in names if n not in opened]}

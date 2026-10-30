@@ -181,3 +181,23 @@ def third_read_cases(wave: str, seeded_cases: Iterable[str], n: int = THIRD_READ
         return hashlib.sha256(f"{THIRD_READ_SALT}{wave}:{case}".encode()).hexdigest()
 
     return sorted(sorted(set(seeded_cases)), key=key)[:n]
+
+
+# ------------------------------------------------------------ JA47 rule 2's flag
+
+#: Rule 2 (JA47, JA68): a seeded read changing **strictly less** than this share of
+#: seed voxels "follows" the seed, and a wave where **strictly more** than this share
+#: of its seeded reads follow is flagged.
+RULE2_CHANGED_SHARE = 0.05
+RULE2_READS_SHARE = 0.5
+
+
+def rule2(changed_shares: Iterable) -> Dict[str, object]:
+    """Rule 2 on a wave's seeded reads' changed shares (each over the seed's voxels;
+    None values are dropped): ``{"seededReads", "readsChangingUnder5pct",
+    "flagged"}``. Here, in the stdlib half, so the queue's server recomputes the flag
+    of an anchoring report with the same rule that printed it (JA78)."""
+    values = [float(v) for v in changed_shares if v is not None]
+    following = sum(1 for v in values if v < RULE2_CHANGED_SHARE)
+    return {"seededReads": len(values), "readsChangingUnder5pct": following,
+            "flagged": bool(values) and following > RULE2_READS_SHARE * len(values)}

@@ -543,7 +543,22 @@ def test_r4s21_the_reading_clock_is_kept_across_reopening():
     assert "self._carriedSeconds +" in _method("JanusMReadLogic", "elapsedSeconds")
     closed = _method("JanusMReadLogic", "closeCase")
     assert closed.index("self.saveTimer()") < closed.index("self._openedAt = None")
-    # A submission sends its attempt's time; the next attempt starts at zero.
+    # A submission sends its attempt's time; the next attempt starts at zero, paused.
     submit = _method("JanusMReadLogic", "submit")
     assert submit.index("seconds=self.elapsedSeconds()") < submit.index(
-        "self._carriedSeconds, self._openedAt = 0.0, time.time()")
+        "self._carriedSeconds, self._openedAt = 0.0, None")
+
+
+def test_r5s11_the_reading_clock_pauses_while_a_check_is_pending():
+    """Lima's note: the clock runs only while the read is open (assigned or returned).
+    The behaviour is self-tested inside Slicer (tests/slicer_selftest_janusm.py)."""
+    sync = _method("JanusMReadLogic", "syncClock")
+    assert "protocol.OPEN_STATES" in sync and "self._openedAt = None" in sync
+    assert "self.syncClock()" in _method("JanusMReadLogic", "refreshRead")
+    assert "self.syncClock()" in _method("JanusMReadLogic", "openRead")
+    submit = _method("JanusMReadLogic", "submit")
+    assert "time.time()" not in submit and "self.syncClock()" in submit
+    assert "return self._carriedSeconds\n" in _method("JanusMReadLogic", "elapsedSeconds")
+    selftest = (REPO / "tests" / "slicer_selftest_janusm.py").read_text(encoding="utf-8")
+    assert "the clock is paused while the check is pending" in selftest
+    assert "the summed seconds exceed the last attempt's alone" in selftest

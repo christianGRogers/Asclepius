@@ -1,0 +1,79 @@
+{
+ "pooled_n": [
+  {
+   "rho": 0.0,
+   "n_runs": 1927,
+   "coverage_shipped_n_values": 0.972,
+   "coverage_n_patients": 1.0,
+   "bound_ratio_patients_over_shipped": 1.198
+  },
+  {
+   "rho": 0.5,
+   "n_runs": 1942,
+   "coverage_shipped_n_values": 0.94,
+   "coverage_n_patients": 0.999,
+   "bound_ratio_patients_over_shipped": 1.198
+  },
+  {
+   "rho": 0.8,
+   "n_runs": 1992,
+   "coverage_shipped_n_values": 0.883,
+   "coverage_n_patients": 0.989,
+   "bound_ratio_patients_over_shipped": 1.198
+  }
+ ],
+ "log_branch": {
+  "thinning": {
+   "scale": "difference",
+   "spearman_rho_vs_meanD": 0.0791,
+   "share_cases_with_D_positive_both_reads": 0.317,
+   "decisions": [
+    "Spearman rho 0.079 <= 0.4: RC on differences"
+   ],
+   "spearman_rho_absdiff_vs_patient_level": 0.297,
+   "rc_on_D_over_level_point": 0.0954
+  },
+  "fat": {
+   "scale": "log",
+   "rc_log": 0.8333,
+   "rc_abs_as_report_calls_it_mm3": 1.301,
+   "true_sd_of_difference_mm3_at_level": {
+    "10": 3.5,
+    "50": 17.7,
+    "150": 53.0
+   }
+  }
+ },
+ "conversion": [
+  {
+   "rc_log": 0.05,
+   "up_e^rc-1": 0.0513,
+   "down_1-e^-rc": 0.0488,
+   "shipped_over_thinning_side": 1.0513
+  },
+  {
+   "rc_log": 0.1,
+   "up_e^rc-1": 0.1052,
+   "down_1-e^-rc": 0.0952,
+   "shipped_over_thinning_side": 1.1052
+  },
+  {
+   "rc_log": 0.2,
+   "up_e^rc-1": 0.2214,
+   "down_1-e^-rc": 0.1813,
+   "shipped_over_thinning_side": 1.2214
+  },
+  {
+   "rc_log": 0.3,
+   "up_e^rc-1": 0.3499,
+   "down_1-e^-rc": 0.2592,
+   "shipped_over_thinning_side": 1.3499
+  },
+  {
+   "rc_log": 0.5,
+   "up_e^rc-1": 0.6487,
+   "down_1-e^-rc": 0.3935,
+   "shipped_over_thinning_side": 1.6487
+  }
+ ]
+}

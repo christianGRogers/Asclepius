@@ -1,0 +1,26 @@
+{
+ "ids": {
+  "derived_reference_population": 360,
+  "seal_extension": 60,
+  "extension_refused_purpose_any": 60,
+  "extension_allowed_purpose_seal_scoring": 60
+ },
+ "sim": {
+  "360": {
+   "k_mean": 1.759,
+   "k_sd": 0.042,
+   "false_flag_mean": 0.014,
+   "false_flag_sd": 0.0038,
+   "false_flag_p95": 0.0183,
+   "cv_n_sd": 0.0016
+  },
+  "420": {
+   "k_mean": 1.76,
+   "k_sd": 0.034,
+   "false_flag_mean": 0.0133,
+   "false_flag_sd": 0.003,
+   "false_flag_p95": 0.0176,
+   "cv_n_sd": 0.0014
+  }
+ }
+}

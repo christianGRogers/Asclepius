@@ -1,0 +1,140 @@
+{
+ "phantom": "janusm_reads.phantom.heart(mitral_gap_mm=2.0), 0.5 mm",
+ "limit_mm": 3.0,
+ "exact_read": {
+  "seeded": {
+   "plane_source": "seed",
+   "plane_radius_mm": 5.7,
+   "pool_above_mm": 1.09,
+   "face_error": false,
+   "plane_error": false
+  },
+  "blank": {
+   "plane_source": "read",
+   "plane_radius_mm": 5.7,
+   "pool_above_mm": 1.09,
+   "face_error": false,
+   "plane_error": false
+  }
+ },
+ "overreach_inside_footprint": [
+  {
+   "height_mm": 2.0,
+   "voxels_added": 1245,
+   "seeded": {
+    "plane_source": "seed",
+    "plane_radius_mm": 5.7,
+    "pool_above_mm": 1.59,
+    "face_error": false,
+    "plane_error": false
+   },
+   "blank": {
+    "plane_source": "read",
+    "plane_radius_mm": 5.7,
+    "pool_above_mm": 0.91,
+    "face_error": false,
+    "plane_error": false
+   }
+  },
+  {
+   "height_mm": 4.0,
+   "voxels_added": 2929,
+   "seeded": {
+    "plane_source": "seed",
+    "plane_radius_mm": 5.7,
+    "pool_above_mm": 3.59,
+    "face_error": false,
+    "plane_error": true
+   },
+   "blank": {
+    "plane_source": "read",
+    "plane_radius_mm": 5.7,
+    "pool_above_mm": 1.1,
+    "face_error": false,
+    "plane_error": false
+   }
+  },
+  {
+   "height_mm": 6.0,
+   "voxels_added": 4613,
+   "seeded": {
+    "plane_source": "seed",
+    "plane_radius_mm": 5.7,
+    "pool_above_mm": 5.59,
+    "face_error": false,
+    "plane_error": true
+   },
+   "blank": {
+    "plane_source": "read",
+    "plane_radius_mm": 5.7,
+    "pool_above_mm": 1.83,
+    "face_error": false,
+    "plane_error": false
+   }
+  },
+  {
+   "height_mm": 10.0,
+   "voxels_added": 7981,
+   "seeded": {
+    "plane_source": "seed",
+    "plane_radius_mm": 5.7,
+    "pool_above_mm": 9.59,
+    "face_error": false,
+    "plane_error": true
+   },
+   "blank": {
+    "plane_source": "read",
+    "plane_radius_mm": 5.7,
+    "pool_above_mm": 3.66,
+    "face_error": false,
+    "plane_error": true
+   }
+  }
+ ],
+ "overreach_outside_footprint": [
+  {
+   "height_mm": 6.0,
+   "ring_mm": [
+    6.2,
+    11.7
+   ],
+   "voxels_added": 13576,
+   "seeded": {
+    "plane_source": "seed",
+    "plane_radius_mm": 5.7,
+    "pool_above_mm": 1.09,
+    "face_error": false,
+    "plane_error": false
+   },
+   "blank": {
+    "plane_source": "read",
+    "plane_radius_mm": 10.2,
+    "pool_above_mm": 2.55,
+    "face_error": false,
+    "plane_error": false
+   }
+  },
+  {
+   "height_mm": 10.0,
+   "ring_mm": [
+    6.2,
+    11.7
+   ],
+   "voxels_added": 16076,
+   "seeded": {
+    "plane_source": "seed",
+    "plane_radius_mm": 5.7,
+    "pool_above_mm": 1.09,
+    "face_error": false,
+    "plane_error": false
+   },
+   "blank": {
+    "plane_source": "read",
+    "plane_radius_mm": 8.63,
+    "pool_above_mm": 5.31,
+    "face_error": false,
+    "plane_error": true
+   }
+  }
+ ]
+}

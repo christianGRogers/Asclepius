@@ -12,6 +12,9 @@ It refuses, by patient, before any case is opened:
      and v2.0.1 (Zenodo 10047292) metadata, because institute letters are relabelled between versions. A blank sex
      matches either sex (over-refusal is the safe side).
 
+Superseded by the shared guard `src/janusm/guard.py` (#138), which `refuse` also calls when it is present. The
+shared twin list `configs/janusm/ts-twins-r1.json` holds the same 707 s-numbers as `guard_r2_twins.json`.
+
 The twin list is computed once by `python guard_r2.py --twins <meta_v1.csv> <meta_v2.csv>` and committed as
 `guard_r2_twins.json` (s-numbers only). The guard refuses to load without it.
 
@@ -81,6 +84,12 @@ def refuse(source, case):
     r = reason(source, case)
     if r:
         raise HeldOutError(f"REFUSING {r}")
+    try:                                    # the shared JA12 guard (#138), when present, is checked as well
+        sys.path.insert(0, str(ROOT / "src"))
+        from janusm.guard import refuse as shared_refuse
+    except ImportError:
+        return case
+    shared_refuse([f"{source}__{case}"], what="Golf R2")
     return case
 
 

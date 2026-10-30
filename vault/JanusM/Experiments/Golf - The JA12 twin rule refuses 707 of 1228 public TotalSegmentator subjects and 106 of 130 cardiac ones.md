@@ -83,5 +83,10 @@ ages.
    - But every tighter rule admits more true second studies, and TotalSegmentator publishes no patient id to check
      against.
    - Golf recommends keeping the rule as written, since nothing on path B depends on these cases.
-4. **The shared guard (#138) should take this rule and its sha-pinned twin list as they are.** Golf's `guard_r2.py`
-   is a stop-gap until #138 lands, and is replaced by it.
+4. **Independent check: the shared guard agrees.** The shared guard (#138, `src/janusm/guard.py`) landed on this path
+   while this round ran.
+   - Its pinned list `configs/janusm/ts-twins-r1.json` (built by `tools/janusm/build_ts_twins.py`) holds **the same
+     707 s-numbers**, with zero differences from `guard_r2_twins.json`.
+   - All 22 + 2 public cases Golf used this round pass it.
+   - `guard_r2.refuse` now calls the shared guard as well. `guard_r2.py` is kept only as the record of this
+     experiment.

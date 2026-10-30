@@ -53,6 +53,7 @@ from fetch import hearts as heart_list  # noqa: E402  (guard runs on the whole l
 from janusm.scar import registration as R  # noqa: E402
 from janusm.scar.common import remote, smooth  # noqa: E402
 
+sitk.ProcessObject.SetGlobalDefaultNumberOfThreads(1)    # one thread per worker; the pool gives the parallelism
 CONDS = [(b, c, m) for b in bench.BLOOD for c in bench.CNRS for m in bench.MOTIONS_V3]
 BSPLINE_CONDS = lambda motion, cnr: motion == "nonrigid" or (motion == "rigid" and cnr == 5)  # noqa: E731
 BSPLINE_GRID_MM = 20.0
@@ -128,11 +129,21 @@ def tre_points(tx, pts, n=4000):
 
 
 def one_heart(args):
-    hid, data_dir = args
+    hid, data_dir, part_dir = args
+    part = Path(part_dir) / f"{hid}.jsonl"
+    have = set()
+    if part.exists():
+        for line in open(part):
+            r = json.loads(line)
+            have.add((r.get("blood"), r.get("cnr"), r.get("motion")))
+    todo = [x for x in CONDS if x not in have]
+    if not todo:
+        return [json.loads(line) for line in open(part)]
     t0 = time.time()
     h = bench.load_heart(hid, data_dir)                  # janusm.guard.refuse inside, before any file is opened
     if "skip" in h:
         return [{"heart": hid, "skip": h["skip"]}]
+    rows = []
     geo = menu.fp_geometry(h)
     if geo is None:
         return [{"heart": hid, "skip": "AHA failed on the first-pass labels"}]
@@ -140,12 +151,16 @@ def one_heart(args):
                               fallback_mm=R.FALLBACK_MASK_MM, case_id=None if hid == "phantom" else hid)
     mask4 = ndi.distance_transform_edt(h["lab"] == 0) <= R.MASK_DILATION_MM       # Euclidean, full grid (B-spline)
     sp = np.ones(3)
-    rows = []
-    for blood, cnr, motion in CONDS:
+    def keep(row):
+        rows.append(row)
+        with open(part, "a") as fh:
+            fh.write(json.dumps(row) + "\n")
+
+    for blood, cnr, motion in todo:
         seed = int(hashlib.sha256(f"bench-lie-r3:{hid}:{blood}:{cnr}:{motion}".encode()).hexdigest()[:8], 16)
         c = bench.make_case(h, blood, cnr, motion, seed)
         if "skip" in c:
-            rows.append({"heart": hid, "blood": blood, "cnr": cnr, "motion": motion, "skip": c["skip"]})
+            keep({"heart": hid, "blood": blood, "cnr": cnr, "motion": motion, "skip": c["skip"]})
             continue
         lie = c["lie"]
         sm = smooth(lie, sp)
@@ -202,11 +217,11 @@ def one_heart(args):
                     # B-spline QC: shipped QC on menu's carried geometry has no column ids; log menu QC only
             rec["sec"] = round(time.time() - ta, 1)
             row["arms"][name] = rec
-        rows.append(row)
+        keep(row)
         print(hid, blood, cnr, motion, {k: v.get("tre_mm") for k, v in row["arms"].items()},
               round(time.time() - t0), flush=True)
     print(hid, "done", round(time.time() - t0), "s", flush=True)
-    return rows
+    return [json.loads(line) for line in open(part)]
 
 
 def main():
@@ -216,6 +231,7 @@ def main():
     ap.add_argument("--motions")
     ap.add_argument("--out", default=str(HERE / "results_v3.jsonl"))
     ap.add_argument("--procs", type=int, default=4)
+    ap.add_argument("--parts", default=str(HERE / "results_v3_parts"), help="per-heart files, written per case")
     ap.add_argument("--resume", action="store_true", help="keep hearts already complete in --out; run the rest")
     a = ap.parse_args()
     global CONDS
@@ -236,9 +252,10 @@ def main():
                 for r in per[h]:
                     f.write(json.dumps(r) + "\n")
         ids = [i for i in ids if i not in done]
+    Path(a.parts).mkdir(parents=True, exist_ok=True)
     print(f"{len(ids)} hearts x {len(CONDS)} conditions ({len(done)} already complete)", flush=True)
     with Pool(a.procs) as p, open(a.out, "a" if a.resume else "w") as f:
-        for rows in p.imap_unordered(one_heart, [(i, a.data_dir) for i in ids]):
+        for rows in p.imap_unordered(one_heart, [(i, a.data_dir, a.parts) for i in ids]):
             for r in rows:
                 f.write(json.dumps(r) + "\n")
             f.flush()

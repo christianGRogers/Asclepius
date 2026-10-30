@@ -1,0 +1,480 @@
+{
+ "dev": [
+  "s0032",
+  "s0391"
+ ],
+ "test": [
+  "s0230",
+  "s0403"
+ ],
+ "rows": [
+  {
+   "mis": "none",
+   "cnr": 3.0,
+   "reg": "identity",
+   "tau_dev": 0.0,
+   "dev": {
+    "kim_acc": 0.7941176470588235,
+    "wkappa": 0.6581352833638026,
+    "sens": 1.0,
+    "spec": 1.0
+   },
+   "test": {
+    "kim_acc": 0.7941176470588235,
+    "wkappa": 0.6672597864768683,
+    "sens": 1.0,
+    "spec": 1.0
+   },
+   "test_tau0": {
+    "kim_acc": 0.7941176470588235,
+    "wkappa": 0.6672597864768683,
+    "sens": 1.0,
+    "spec": 1.0
+   },
+   "n_dev_segments": 34,
+   "n_test_segments": 34
+  },
+  {
+   "mis": "none",
+   "cnr": 5.0,
+   "reg": "identity",
+   "tau_dev": 0.0,
+   "dev": {
+    "kim_acc": 0.9411764705882353,
+    "wkappa": 0.9479326186830015,
+    "sens": 1.0,
+    "spec": 1.0
+   },
+   "test": {
+    "kim_acc": 1.0,
+    "wkappa": 1.0,
+    "sens": 1.0,
+    "spec": 1.0
+   },
+   "test_tau0": {
+    "kim_acc": 1.0,
+    "wkappa": 1.0,
+    "sens": 1.0,
+    "spec": 1.0
+   },
+   "n_dev_segments": 34,
+   "n_test_segments": 34
+  },
+  {
+   "mis": "typical",
+   "cnr": 3.0,
+   "reg": "identity",
+   "tau_dev": 0.1,
+   "dev": {
+    "kim_acc": 0.7352941176470589,
+    "wkappa": 0.2719486081370449,
+    "sens": 0.4444444444444444,
+    "spec": 1.0
+   },
+   "test": {
+    "kim_acc": 0.7058823529411765,
+    "wkappa": 0.10526315789473673,
+    "sens": 0.2,
+    "spec": 1.0
+   },
+   "test_tau0": {
+    "kim_acc": 0.5588235294117647,
+    "wkappa": 0.04417670682730923,
+    "sens": 0.3,
+    "spec": 0.7916666666666666
+   },
+   "n_dev_segments": 34,
+   "n_test_segments": 34
+  },
+  {
+   "mis": "typical",
+   "cnr": 3.0,
+   "reg": "rigid",
+   "tau_dev": 0.05,
+   "dev": {
+    "kim_acc": 0.7352941176470589,
+    "wkappa": 0.5009784735812133,
+    "sens": 0.7777777777777778,
+    "spec": 1.0
+   },
+   "test": {
+    "kim_acc": 0.7647058823529411,
+    "wkappa": 0.6324324324324324,
+    "sens": 0.9,
+    "spec": 1.0
+   },
+   "test_tau0": {
+    "kim_acc": 0.6470588235294118,
+    "wkappa": 0.5443886097152428,
+    "sens": 1.0,
+    "spec": 0.7916666666666666
+   },
+   "n_dev_segments": 34,
+   "n_test_segments": 34
+  },
+  {
+   "mis": "typical",
+   "cnr": 3.0,
+   "reg": "affine",
+   "tau_dev": 0.05,
+   "dev": {
+    "kim_acc": 0.7352941176470589,
+    "wkappa": 0.5431861804222649,
+    "sens": 0.7777777777777778,
+    "spec": 1.0
+   },
+   "test": {
+    "kim_acc": 0.7647058823529411,
+    "wkappa": 0.6324324324324324,
+    "sens": 0.9,
+    "spec": 1.0
+   },
+   "test_tau0": {
+    "kim_acc": 0.5588235294117647,
+    "wkappa": 0.47734627831715204,
+    "sens": 1.0,
+    "spec": 0.6666666666666666
+   },
+   "n_dev_segments": 34,
+   "n_test_segments": 34
+  },
+  {
+   "mis": "typical",
+   "cnr": 3.0,
+   "reg": "bspline",
+   "tau_dev": 0.05,
+   "dev": {
+    "kim_acc": 0.7352941176470589,
+    "wkappa": 0.41140529531568226,
+    "sens": 0.7777777777777778,
+    "spec": 1.0
+   },
+   "test": {
+    "kim_acc": 0.7058823529411765,
+    "wkappa": 0.26086956521739124,
+    "sens": 0.3,
+    "spec": 1.0
+   },
+   "test_tau0": {
+    "kim_acc": 0.7058823529411765,
+    "wkappa": 0.40926640926640934,
+    "sens": 0.7,
+    "spec": 0.9583333333333334
+   },
+   "n_dev_segments": 34,
+   "n_test_segments": 34
+  },
+  {
+   "mis": "typical",
+   "cnr": 5.0,
+   "reg": "identity",
+   "tau_dev": 0.15,
+   "dev": {
+    "kim_acc": 0.7352941176470589,
+    "wkappa": 0.46456692913385833,
+    "sens": 0.4444444444444444,
+    "spec": 1.0
+   },
+   "test": {
+    "kim_acc": 0.7058823529411765,
+    "wkappa": 0.10526315789473673,
+    "sens": 0.2,
+    "spec": 1.0
+   },
+   "test_tau0": {
+    "kim_acc": 0.5294117647058824,
+    "wkappa": 0.023762376237623783,
+    "sens": 0.3,
+    "spec": 0.75
+   },
+   "n_dev_segments": 34,
+   "n_test_segments": 34
+  },
+  {
+   "mis": "typical",
+   "cnr": 5.0,
+   "reg": "rigid",
+   "tau_dev": 0.1,
+   "dev": {
+    "kim_acc": 0.7941176470588235,
+    "wkappa": 0.8010033444816054,
+    "sens": 0.7777777777777778,
+    "spec": 1.0
+   },
+   "test": {
+    "kim_acc": 0.9411764705882353,
+    "wkappa": 0.9497784342688331,
+    "sens": 0.9,
+    "spec": 1.0
+   },
+   "test_tau0": {
+    "kim_acc": 0.6176470588235294,
+    "wkappa": 0.7122395833333333,
+    "sens": 1.0,
+    "spec": 0.5
+   },
+   "n_dev_segments": 34,
+   "n_test_segments": 34
+  },
+  {
+   "mis": "typical",
+   "cnr": 5.0,
+   "reg": "affine",
+   "tau_dev": 0.15,
+   "dev": {
+    "kim_acc": 0.7941176470588235,
+    "wkappa": 0.8,
+    "sens": 0.7777777777777778,
+    "spec": 1.0
+   },
+   "test": {
+    "kim_acc": 0.9411764705882353,
+    "wkappa": 0.95,
+    "sens": 0.8,
+    "spec": 1.0
+   },
+   "test_tau0": {
+    "kim_acc": 0.7058823529411765,
+    "wkappa": 0.7774869109947644,
+    "sens": 1.0,
+    "spec": 0.5833333333333334
+   },
+   "n_dev_segments": 34,
+   "n_test_segments": 34
+  },
+  {
+   "mis": "typical",
+   "cnr": 5.0,
+   "reg": "bspline",
+   "tau_dev": 0.1,
+   "dev": {
+    "kim_acc": 0.7647058823529411,
+    "wkappa": 0.698581560283688,
+    "sens": 0.7777777777777778,
+    "spec": 1.0
+   },
+   "test": {
+    "kim_acc": 0.7647058823529411,
+    "wkappa": 0.4577861163227017,
+    "sens": 0.3,
+    "spec": 1.0
+   },
+   "test_tau0": {
+    "kim_acc": 0.7058823529411765,
+    "wkappa": 0.5326460481099656,
+    "sens": 0.7,
+    "spec": 0.875
+   },
+   "n_dev_segments": 34,
+   "n_test_segments": 34
+  },
+  {
+   "mis": "large",
+   "cnr": 3.0,
+   "reg": "identity",
+   "tau_dev": 0.0,
+   "dev": {
+    "kim_acc": 0.5294117647058824,
+    "wkappa": 0.25307557117750434,
+    "sens": 1.0,
+    "spec": 0.64
+   },
+   "test": {
+    "kim_acc": 0.6470588235294118,
+    "wkappa": 0.30740740740740746,
+    "sens": 0.9,
+    "spec": 0.7916666666666666
+   },
+   "test_tau0": {
+    "kim_acc": 0.6470588235294118,
+    "wkappa": 0.30740740740740746,
+    "sens": 0.9,
+    "spec": 0.7916666666666666
+   },
+   "n_dev_segments": 34,
+   "n_test_segments": 34
+  },
+  {
+   "mis": "large",
+   "cnr": 3.0,
+   "reg": "rigid",
+   "tau_dev": 0.05,
+   "dev": {
+    "kim_acc": 0.7352941176470589,
+    "wkappa": 0.2222222222222222,
+    "sens": 0.3333333333333333,
+    "spec": 1.0
+   },
+   "test": {
+    "kim_acc": 0.7058823529411765,
+    "wkappa": 0.26086956521739124,
+    "sens": 0.3,
+    "spec": 1.0
+   },
+   "test_tau0": {
+    "kim_acc": 0.5882352941176471,
+    "wkappa": 0.35443037974683544,
+    "sens": 0.8,
+    "spec": 0.7916666666666666
+   },
+   "n_dev_segments": 34,
+   "n_test_segments": 34
+  },
+  {
+   "mis": "large",
+   "cnr": 3.0,
+   "reg": "affine",
+   "tau_dev": 0.05,
+   "dev": {
+    "kim_acc": 0.7352941176470589,
+    "wkappa": 0.2222222222222222,
+    "sens": 0.3333333333333333,
+    "spec": 1.0
+   },
+   "test": {
+    "kim_acc": 0.6764705882352942,
+    "wkappa": 0.49442379182156126,
+    "sens": 0.7,
+    "spec": 0.9583333333333334
+   },
+   "test_tau0": {
+    "kim_acc": 0.6176470588235294,
+    "wkappa": 0.48484848484848475,
+    "sens": 1.0,
+    "spec": 0.75
+   },
+   "n_dev_segments": 34,
+   "n_test_segments": 34
+  },
+  {
+   "mis": "large",
+   "cnr": 3.0,
+   "reg": "bspline",
+   "tau_dev": 0.05,
+   "dev": {
+    "kim_acc": 0.7352941176470589,
+    "wkappa": 0.5009784735812133,
+    "sens": 0.7777777777777778,
+    "spec": 1.0
+   },
+   "test": {
+    "kim_acc": 0.7058823529411765,
+    "wkappa": 0.26086956521739124,
+    "sens": 0.3,
+    "spec": 1.0
+   },
+   "test_tau0": {
+    "kim_acc": 0.7058823529411765,
+    "wkappa": 0.40926640926640934,
+    "sens": 0.7,
+    "spec": 0.9583333333333334
+   },
+   "n_dev_segments": 34,
+   "n_test_segments": 34
+  },
+  {
+   "mis": "large",
+   "cnr": 5.0,
+   "reg": "identity",
+   "tau_dev": 0.0,
+   "dev": {
+    "kim_acc": 0.5,
+    "wkappa": 0.21212121212121215,
+    "sens": 0.8888888888888888,
+    "spec": 0.64
+   },
+   "test": {
+    "kim_acc": 0.6176470588235294,
+    "wkappa": 0.3249097472924187,
+    "sens": 1.0,
+    "spec": 0.75
+   },
+   "test_tau0": {
+    "kim_acc": 0.6176470588235294,
+    "wkappa": 0.3249097472924187,
+    "sens": 1.0,
+    "spec": 0.75
+   },
+   "n_dev_segments": 34,
+   "n_test_segments": 34
+  },
+  {
+   "mis": "large",
+   "cnr": 5.0,
+   "reg": "rigid",
+   "tau_dev": 0.05,
+   "dev": {
+    "kim_acc": 0.7941176470588235,
+    "wkappa": 0.3755102040816327,
+    "sens": 0.3333333333333333,
+    "spec": 1.0
+   },
+   "test": {
+    "kim_acc": 0.6764705882352942,
+    "wkappa": 0.4204545454545454,
+    "sens": 0.5,
+    "spec": 0.9583333333333334
+   },
+   "test_tau0": {
+    "kim_acc": 0.5882352941176471,
+    "wkappa": 0.45346869712351945,
+    "sens": 0.9,
+    "spec": 0.75
+   },
+   "n_dev_segments": 34,
+   "n_test_segments": 34
+  },
+  {
+   "mis": "large",
+   "cnr": 5.0,
+   "reg": "affine",
+   "tau_dev": 0.05,
+   "dev": {
+    "kim_acc": 0.7941176470588235,
+    "wkappa": 0.3755102040816327,
+    "sens": 0.3333333333333333,
+    "spec": 1.0
+   },
+   "test": {
+    "kim_acc": 0.8823529411764706,
+    "wkappa": 0.9004392386530015,
+    "sens": 1.0,
+    "spec": 0.9166666666666666
+   },
+   "test_tau0": {
+    "kim_acc": 0.7058823529411765,
+    "wkappa": 0.7655172413793103,
+    "sens": 1.0,
+    "spec": 0.6666666666666666
+   },
+   "n_dev_segments": 34,
+   "n_test_segments": 34
+  },
+  {
+   "mis": "large",
+   "cnr": 5.0,
+   "reg": "bspline",
+   "tau_dev": 0.1,
+   "dev": {
+    "kim_acc": 0.7941176470588235,
+    "wkappa": 0.8,
+    "sens": 0.7777777777777778,
+    "spec": 1.0
+   },
+   "test": {
+    "kim_acc": 0.7941176470588235,
+    "wkappa": 0.49907918968692444,
+    "sens": 0.3,
+    "spec": 1.0
+   },
+   "test_tau0": {
+    "kim_acc": 0.7058823529411765,
+    "wkappa": 0.4411764705882353,
+    "sens": 0.4,
+    "spec": 0.8333333333333334
+   },
+   "n_dev_segments": 34,
+   "n_test_segments": 34
+  }
+ ]
+}

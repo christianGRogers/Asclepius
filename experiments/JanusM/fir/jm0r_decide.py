@@ -24,9 +24,12 @@ endocardial value is negated by the fallback mapper.
 **Missing inputs.** A missing input prints ``NOT DECIDABLE: <key>`` and the rule takes its
 conservative branch, fixed below. No default value is ever substituted (Lima).
 
-**R9** calls S3's ``janusm.calibrate.detectable_depth`` (JA40). Until S3 is merged the import fails,
-and R9 prints ``NOT DECIDABLE: janusm.calibrate.detectable_depth (S3)`` with the provisional page
-figure.
+**R9** calls S3's ``janusm.calibrate.detectable_depth`` (JA40) on JM-0R's measured median wall
+(``measured_median_mm=thickness_median_mm``; JA60, Round 4). A missing median prints ``NOT
+DECIDABLE: thickness_median_mm``. If S3 refuses the inputs (e.g. cv_n 0: no normal variation), R9
+prints ``NOT DECIDABLE: cv_n (S3 refused: <reason>)``, the thinning sign shows numbers only until
+JM-0R is rerun, and the footer prints the provisional 45 % labelled as not computed on this
+population. If R3 fails, R9 still computes and says the definition is unaligned.
 
 Output: one line per rule (its number and its source in the rulings), the ``NOT DECIDABLE`` lines,
 and ``decisions.json`` (aggregates and decisions only)::
@@ -47,7 +50,9 @@ REPO = HERE.parents[2]
 if str(REPO / "src") not in sys.path:
     sys.path.insert(0, str(REPO / "src"))
 
-DECIDE_VERSION = "1"
+from janusm.calibrate import detectable_depth  # noqa: E402  (S3, JA40 / JA60)
+
+DECIDE_VERSION = "2"
 
 # The JA44 contract: every key of JM-0R's ``decision_inputs``.
 KEYS = (
@@ -85,7 +90,10 @@ GEO_SHARED = 0.10               # R8
 DEPTH_WARN = 0.40               # R9: the page says so above this (Hotel; JA40)
 F1_FLOOR_MM = 1.0               # R9: JA40's F1 floor until the reads exist (then JA42's RC)
 DEPTH_SEED = 20261030           # R9: fixed
-PROVISIONAL_DEPTH = 0.35        # R9: JA40's provisional print (cv_n 0.088, F1 1.0 mm; Hotel E7)
+PROVISIONAL_DEPTH = 0.45        # R9: JA60's provisional print (JA40's procedure at the 5.7 mm
+                                #     anchor, cv_n 0.088, F1 1.0 mm, seed 31000)
+PROVISIONAL_FOOTER = "provisional (JA40), not computed on this population"  # R9: JA60
+R3_NOTE = "on an unaligned thickness definition; no thinning flag ships before R3's alignment"
 
 ND = "NOT DECIDABLE"
 
@@ -220,15 +228,6 @@ def merge_fallback(lima=None, india=None, hotel=None, juliet=None) -> dict:
 
 
 # --------------------------------------------------------------------------------------- rules
-def _detectable_depth():
-    """S3's function, or None while S3 is not merged."""
-    try:
-        from janusm.calibrate import detectable_depth
-    except Exception:  # noqa: BLE001 -- not merged yet (or broken): R9 is NOT DECIDABLE
-        return None
-    return detectable_depth
-
-
 def decide(x: dict, *, rc_terr_mm: float = F1_FLOOR_MM, sig_m: float = 0.0, depth_fn=None):
     """Apply R0-R10 (JA43) to the JA44 inputs ``x``. Returns a list of rule records."""
     out = []
@@ -372,34 +371,42 @@ def decide(x: dict, *, rc_terr_mm: float = F1_FLOOR_MM, sig_m: float = 0.0, dept
             "goes to the research export" if shared else "; no segment marked 'shared'"),
          m, shared_marking=shared)
 
-    # R9 -- detectable depth (JA40, S3)
-    m = miss("cv_n", "segment_shape")
-    fn = depth_fn if depth_fn is not None else _detectable_depth()
-    depth = None
-    if fn is None:
-        m = m + ["janusm.calibrate.detectable_depth (S3)"]
+    # R9 -- detectable depth (JA40, S3), simulated on JM-0R's measured wall (JA60)
+    m = miss("cv_n", "segment_shape", "thickness_median_mm")
+    fn = depth_fn if depth_fn is not None else detectable_depth
+    depth, computed = None, False
+    prov = (f"the page prints the provisional {int(round(100 * PROVISIONAL_DEPTH))} % "
+            f"(footer: '{PROVISIONAL_FOOTER}')")
     if m:
-        o9 = (f"the page prints the provisional {int(round(100 * PROVISIONAL_DEPTH))} % (JA40) "
-              "until it can be computed")
+        o9 = prov + " until it can be computed"
     else:
         try:
-            res = fn(x["cv_n"], x["segment_shape"], rc_terr_mm, sig_m=sig_m, seed=DEPTH_SEED)
+            res = fn(x["cv_n"], x["segment_shape"], rc_terr_mm, sig_m=sig_m, seed=DEPTH_SEED,
+                     measured_median_mm=x["thickness_median_mm"])
         except ValueError as e:  # inputs S3 cannot simulate (e.g. cv_n 0: no normal variation)
-            res = {"error": str(e)}
-        depth = res.get("depth")
-        if "error" in res:
-            o9 = (f"the page prints the provisional {int(round(100 * PROVISIONAL_DEPTH))} % "
-                  f"(JA40): the detectable depth cannot be computed from these inputs "
-                  f"({res['error']})")
-        elif depth is None:
-            o9 = "the page prints: thinning detection not demonstrated at this measurement error"
+            m = [f"cv_n (S3 refused: {e})"]
+            o9 = (prov + "; the thinning sign shows numbers only until JM-0R is rerun (JA41 "
+                  "cannot be evaluated)")
         else:
-            o9 = (f"the page prints a detectable depth of {int(round(100 * depth))} % "
-                  f"(cv_n {x['cv_n']}, F1 {rc_terr_mm} mm)")
-            if depth > DEPTH_WARN:
-                o9 += f"; above {DEPTH_WARN:.2f}: the page says so, and nothing is loosened"
-    rule("R9", "JA43 R9; JA40", ["cv_n", "cv_n_robust_log", "segment_shape"], o9, m,
-         depth=depth, rc_terr_mm=rc_terr_mm, sig_m=sig_m)
+            computed = True
+            depth = res.get("depth")
+            if depth is None:
+                o9 = ("the page prints: thinning detection not demonstrated at this measurement "
+                      "error")
+            else:
+                o9 = (f"the page prints a detectable depth of {int(round(100 * depth))} % "
+                      f"(cv_n {x['cv_n']}, F1 {rc_terr_mm} mm, wall "
+                      f"{x['thickness_median_mm']} mm)")
+                if depth > DEPTH_WARN:
+                    o9 += f"; above {DEPTH_WARN:.2f}: the page says so, and nothing is loosened"
+            if not agree:
+                o9 += "; " + R3_NOTE
+    rule("R9", "JA43 R9; JA40, JA60", ["cv_n", "cv_n_robust_log", "segment_shape",
+                                       "thickness_median_mm"], o9, m,
+         depth=depth, rc_terr_mm=rc_terr_mm, sig_m=sig_m,
+         numbers_only=not computed or depth is None,
+         footer=None if computed else PROVISIONAL_FOOTER,
+         provisional_depth=None if computed else PROVISIONAL_DEPTH)
 
     # R10 -- equal thickness vs Laplace, reported only
     m = miss("et_laplace_third_agreement_median")

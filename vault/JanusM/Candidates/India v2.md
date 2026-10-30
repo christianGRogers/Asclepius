@@ -199,7 +199,30 @@ already near the margin, in which case Janus-M 1 is the better spend.
 
 ### 3.6 Item 6: rest TPR and the fat cut-off (E7, JM-0 blocks E–F)
 
-**Rest TPR.** ⟨E7 result⟩
+**Rest TPR (E7, a phantom on 24 real heart shapes at 0.5 mm).** Myocardium with a known transmural ratio (1.00, or
+1.08 as a normal endocardial gradient; Forte 2020), blood 450 HU, epicardial fat −90 HU, a Gaussian PSF (FWHM 0.6 mm
+for native CCTA; 1.5 mm for Round 1's grid), noise SD 25 HU. Error = measured − true per segment (384 segments):
+
+| PSF | Borders | No guard: median error | **1 mm guard: median error (p10–p90)** | 1 mm guard, truth 1.08: segments < 0.99 |
+|---|---|---|---|---|
+| 0.6 mm | true | +0.10 | **−0.01 (−0.03 to +0.01)** | 0 % |
+| 0.6 mm | random 0.5 mm (U) | +0.22 | **−0.01 (−0.03 to +0.02)** | 0.5 % |
+| 0.6 mm | endocardium 0.5 mm inward | +0.48 | **−0.01 (−0.03 to +0.01)** | 0 % |
+| 0.6 mm | endocardium 0.5 mm outward | +0.04 | **−0.01 (−0.04 to +0.01)** | 0 % |
+| 1.5 mm | endocardium 0.5 mm inward | +0.71 | +0.07 (+0.02 to +0.13) | 0 % |
+
+- **At native resolution a 1 mm guard band removes the blood-pool spill**, and the ratio then survives the border
+  errors JA8 accepts. Without it, the inner third reads +0.10 to +0.48 too high: exactly the Round 1 finding (rest
+  ratios of 1.9–2.25 at 1.5 mm).
+- **At a 1.5 mm PSF, 1 mm is not enough** (+0.07 under a 0.5 mm inward bias); 1.5 mm is. The guard band must scale
+  with the image's resolution: **guard = max(1 mm, PSF FWHM)**.
+- With a flat wall (truth 1.00), 21–24 % of segments read < 0.99 from noise alone. **The 0.99 stress-TPR cut is
+  inside the noise of a rest ratio**; rest TPR can only ever be a z-score against the normative reference (§3.8),
+  never a 0.99 threshold.
+
+**Rule.** Rest TPR moves from report-only to a per-segment research field **only if** JM-0 block E shows, on real
+ImageCAS with the 1 mm guard, a median within 0.95–1.15 and < 10 % of segments below 0.99 (§9). The phantom says it
+can; only real CCTA (motion, beam hardening, contrast timing) says whether it does.
 
 **Fat.** The cut-off cannot be set on public data here (no allowed public case is gated CCTA at native resolution with
 a fat label). It is set on JM-0 block F, as a fixed rule:

@@ -131,7 +131,32 @@ primary; the septal segments are also reported under the proportional rule becau
 
 ## E7: rest TPR phantom at 0.5 mm
 
-⟨E7⟩
+**Method** (`e7_tpr_phantom.py`). On U's 0.5 mm reference walls (24 cases), a synthetic image: blood (LV, RV, LA,
+aorta) 450 HU; myocardium with a linear transmural profile whose inner-third / outer-third mean ratio is R = 1.00 or
+1.08 (mean 120 HU); epicardial fat −90 HU in a 3 mm shell outside the free wall; 40 HU elsewhere. Blurred by a
+Gaussian PSF (FWHM 0.6 or 1.5 mm), plus correlated noise (SD 25 HU). The truth per segment is the ratio measured on
+the clean image on the true borders (R 1.00 → 1.000; R 1.08 → 1.077). TPR is then measured per AHA segment (1–16)
+on the true borders, on U-perturbed borders (σ 0.5 mm, 8 mm) and with a 0.5 mm endocardial bias in / out, with guard
+bands of 0, 0.5, 1.0, 1.5 mm (voxels nearer either border dropped). Full grid in `summary_r2.json` (E7).
+
+| PSF | Borders | Guard 0 | Guard 0.5 | **Guard 1.0** | Guard 1.5 |
+|---|---|---|---|---|---|
+| 0.6 | true | +0.10 | −0.00 | **−0.01** | −0.02 |
+| 0.6 | random 0.5 | +0.22 | +0.02 | **−0.01** | −0.02 |
+| 0.6 | endo in 0.5 | +0.48 | +0.04 | **−0.01** | −0.01 |
+| 0.6 | endo out 0.5 | +0.04 | −0.01 | **−0.01** | −0.02 |
+| 1.5 | true | +0.41 | +0.12 | **+0.01** | −0.01 |
+| 1.5 | random 0.5 | +0.39 | +0.13 | **+0.03** | −0.01 |
+| 1.5 | endo in 0.5 | +0.71 | +0.27 | **+0.07** | +0.01 |
+| 1.5 | endo out 0.5 | +0.26 | +0.07 | **−0.00** | −0.02 |
+
+(Median error, truth R = 1.08. At 0.6 mm with the 1 mm guard, p10–p90 is within −0.04 to +0.02 in every border
+condition, and ≤ 0.5 % of segments fall below 0.99. With R = 1.00, 21–24 % of segments fall below 0.99 at any guard:
+noise alone.)
+
+**What it changes:** the guard band is necessary and, at native resolution, sufficient: guard = max(1 mm, PSF FWHM).
+Rest TPR is a z-score against the normative reference, never the 0.99 stress cut. Whether it holds on real CCTA is
+JM-0 add-on block E.
 
 ## E8: the seal re-powering rule
 

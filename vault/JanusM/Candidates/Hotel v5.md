@@ -19,7 +19,7 @@ missing. But:
   passes JA61's 0.05 mm on every phantom.
 - **Two read-queue endpoints trust what they should check.** `POST admin/wave` can move a case with accepted reads
   to another wave. `adminThirdReads` takes `rule2.flagged` from the caller.
-- **Nine named tests check something weaker than the ruling's sentence.** None hides a wrong number today.
+- **Ten tests check something weaker than the ruling's sentence.** None hides a wrong number today.
 
 Each becomes a `role:swe` item (§6, H5-1 … H5-7), or a candidate amendment for the judge (§3, P5-1).
 

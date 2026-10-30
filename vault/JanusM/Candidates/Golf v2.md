@@ -77,7 +77,32 @@ The half-maximum offset needs code that is not in Juliet's `geometry_m0.py`. Gol
 
 ### 4.2 Item 2 — one shared perturbation harness
 
-⟨E7⟩
+**Settled by E7** ([[Golf - The Round 1 layer simulations disagree because of how they built the signed distance, and agree on realised border error]]).
+
+`harness.py` runs each advocate's own perturbation recipe on the same 6 public hearts.
+
+**Why the codes disagree.**
+- **Hotel and Kilo** use a signed distance `edt(~m) − edt(m)`. It jumps two voxels across the border, so it
+  halves a move or swallows it.
+  - Hotel's nominal "0.5 mm" moves the border **0.06 mm**.
+  - Kilo's moves it **0.2 mm**.
+- **Golf and India** move the border 0.32–0.34 mm.
+
+**Against the error each code realises, they all agree.** Subendocardial Dice = 1.00 − 0.31 × realised ASSD (mm).
+The residual SD is 0.007, against 0.032 when plotted against nominal RMS. Correlation length (6–10 mm) does not
+matter.
+
+**The shared harness, from Round 2 on:**
+- half-voxel signed distance on the analysis grid;
+- smooth normal field, correlation 8 mm;
+- every result reported against the **realised** ASSD;
+- STA computed in the same harness.
+
+India's reported 0.927 is not reproduced by its own recipe here (0.890), and that gap stays open.
+
+**What it means for JA8.** JA8's margins are realised ASSD between reads, so simulation and acceptance now share
+a unit. A margin of 0.15–0.35 mm (§4.5) corresponds to a subendocardial Dice of about 0.89–0.95, with Kim-bin flips
+≤ 3 %.
 
 ### 4.3 Item 3 — depth, sectors, territories
 

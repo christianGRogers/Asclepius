@@ -38,8 +38,10 @@ REPO = Path(__file__).resolve().parents[1]
 JULIET = REPO / "experiments/JanusM/Juliet/register_lie.py"
 KILO = REPO / "experiments/JanusM/Kilo/e5_lie_registration.py"
 V, N = 1.5, 96  # Juliet's 144 mm field at 1.5 mm
-LOOSE = R.QCCuts(max_fatlike=0.05, max_bloodlike=0.05, max_brighter_than_blood=0.05)
-NOTHING_PASSES = R.QCCuts(0.0, 0.0, 0.0)
+LOOSE = R.QCCuts(
+    max_fatlike=0.05, max_bloodlike=0.05, max_brighter_than_blood=0.05, max_rim_dark=0.3
+)
+NOTHING_PASSES = R.QCCuts(0.0, 0.0, 0.0, 0.0)
 
 
 def _load(path: Path, name: str):
@@ -109,8 +111,9 @@ def test_static_chest_masked_rigid_recovers_the_heart(juliet, moved):
     tre_r0 = np.linalg.norm(p - truth, axis=1).mean()
     assert tre_r0 > 6.0
     assert tre < 1.0, tre  # Juliet E6: heart-masked rigid 0.26-0.56 mm
-    # every QC value falls when the borders land on the wall
-    assert (reg.stages[1].qc.values() < reg.stages[0].qc.values()).all()
+    # the three wall shares fall when the borders land on the wall (rim_dark, a phase signal,
+    # need not: a carried cavity offset into the wall can read darker or brighter)
+    assert (reg.stages[1].qc.values()[:3] < reg.stages[0].qc.values()[:3]).all()
     # the logged shift is the heart's displacement between the scans
     true_shift = (truth - p).mean(0)
     assert np.linalg.norm(reg.shift_mm - true_shift) < 1.0
@@ -133,26 +136,29 @@ def test_affine_is_kept_only_if_it_lowers_qc(juliet, moved):
         juliet.first, lie, juliet.aff, NOTHING_PASSES, n_samples=10_000, maxfev=600
     )
     names = [s.name for s in reg.stages]
-    assert names == ["R0", "rigid", "affine"]
-    rig, aff = reg.stages[1], reg.stages[2]
-    assert aff.kept == R.affine_lowers_qc(aff.qc, rig.qc)
-    assert reg.final is (aff if aff.kept else rig)
+    assert names == ["R0", "rigid", "affine", "rigid10"]  # JA51: the 10 mm fallback runs last
+    rig, aff, fb = reg.stages[1], reg.stages[2], reg.stages[3]
+    assert aff.kept == R.affine_accepted(aff.transform.matrix, aff.qc, rig.qc, NOTHING_PASSES)
+    before = aff if aff.kept else rig
+    assert reg.final is (fb if fb.kept else before)
     assert not reg.qc_passed  # nothing passes these cuts; the reader check decides
 
 
 def test_affine_rule():
+    # JA51 step 4 (PS3-S3 has the full set): values over their cuts, none rises, the max falls
     def q(a, b, c):
-        return R.QC(a, b, c, 130.0, 85.0, 100)
+        return R.QC(a, b, c, 0.1, 130.0, 85.0, 100)
 
-    assert R.affine_lowers_qc(q(0.01, 0.02, 0.0), q(0.02, 0.02, 0.0))
-    assert not R.affine_lowers_qc(q(0.01, 0.03, 0.0), q(0.02, 0.02, 0.0))  # one value rose
-    assert not R.affine_lowers_qc(q(0.02, 0.02, 0.0), q(0.02, 0.02, 0.0))  # nothing fell
-    assert not R.affine_lowers_qc(q(np.nan, 0.0, 0.0), q(0.02, 0.02, 0.0))
+    eye = np.eye(3)
+    assert R.affine_accepted(eye, q(0.01, 0.01, 0.0), q(0.02, 0.02, 0.0), LOOSE)
+    assert not R.affine_accepted(eye, q(0.01, 0.03, 0.0), q(0.02, 0.02, 0.0), LOOSE)  # one rose
+    assert not R.affine_accepted(eye, q(0.02, 0.02, 0.0), q(0.02, 0.02, 0.0), LOOSE)  # none fell
+    assert not R.affine_accepted(eye, q(np.nan, 0.0, 0.0), q(0.02, 0.02, 0.0), LOOSE)
 
 
 def test_qc_fails_closed_and_cuts_have_no_default(juliet):
-    assert not R.QC(np.nan, 0.0, 0.0, 130.0, 85.0, 10).passes(LOOSE)
-    assert R.QC(0.05, 0.05, 0.05, 130.0, 85.0, 10).passes(LOOSE)
+    assert not R.QC(np.nan, 0.0, 0.0, 0.0, 130.0, 85.0, 10).passes(LOOSE)
+    assert R.QC(0.05, 0.05, 0.05, 0.3, 130.0, 85.0, 10).passes(LOOSE)
     with pytest.raises(TypeError):
         R.QCCuts()  # set on development; never defaulted
     with pytest.raises(TypeError, match="development"):
@@ -169,7 +175,9 @@ def test_reregistration_from_a_manual_shift(juliet, moved):
         juliet.first,
         lie,
         juliet.aff,
-        R.QCCuts(0.2, 0.2, 0.2),
+        # the shift is rounded to whole mm, which the JA52 edge offset can read as phase; the
+        # phase step is not under test here (PS3-S4 is)
+        R.QCCuts(0.2, 0.2, 0.2, 0.3, max_edge_offset_mm=10.0),
         initial_shift_mm=shift,
         attempt=2,
         previous_checks=[False],
@@ -193,6 +201,10 @@ def test_log_records_every_stage(moved):
         "max_fatlike": 0.05,
         "max_bloodlike": 0.05,
         "max_brighter_than_blood": 0.05,
+        "max_rim_dark": 0.3,
+        "gate": [True, True, True, True],
+        "max_rim_dark_phase": None,
+        "max_edge_offset_mm": 0.6,
     }
     for s in log["stages"]:
         assert set(s["qc"]) >= {"fatlike", "bloodlike", "brighter_than_blood"}
@@ -215,7 +227,7 @@ def test_scar0_inside_the_registered_wall_of_the_static_chest_phantom(juliet):
     seg = juliet.geo.aha.segments
     ref = np.array([(truth["scar"] & (seg == s)).sum() / (seg == s).sum() for s in range(1, 18)])
     # scar here is brighter than blood, so the blood-like shares are cut loosely
-    reg = R.register_lie(juliet.first, lie, juliet.aff, R.QCCuts(0.05, 0.2, 0.2))
+    reg = R.register_lie(juliet.first, lie, juliet.aff, R.QCCuts(0.05, 0.2, 0.2, 0.3))
     assert reg.final.name == "rigid"
     reg.record_reader_check(True)
     out = S.scar0(lie, reg.carried, status=reg.status)
@@ -275,7 +287,7 @@ def kilo_case(kilo, juliet):
 
 def test_kilo_case_rigid_reaches_the_non_rigid_floor(juliet, kilo_case):
     # Kilo's scar (150 HU) is brighter than its blood (110 HU): the blood-like cuts are loose
-    reg = R.register_lie(juliet.first, kilo_case.lie, juliet.aff, R.QCCuts(0.05, 0.2, 0.2))
+    reg = R.register_lie(juliet.first, kilo_case.lie, juliet.aff, R.QCCuts(0.05, 0.2, 0.2, 0.3))
     assert reg.final.name in ("rigid", "affine")
     wall = kilo_case.true_seg > 0
     ijk = np.argwhere(wall).astype(float)

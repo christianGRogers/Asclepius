@@ -153,3 +153,96 @@ def heart_r8(*, branch: bool = True, fat_mm: float = 0.0):
         ct[(np.sqrt((x - cx) ** 2 + (y - cy) ** 2 + (z + 7.0) ** 2) <= fat_mm)
            & (lab == G.MYO)] = -60.0
     return lab, ct, aff, cor
+
+
+# ------------------------------------------------------- PS3 (JA51-JA53): the static chest
+#: Juliet E6's phantom code (the heart, its labels and the LIE / first-pass intensities).
+JULIET_E6 = __import__("pathlib").Path(__file__).resolve().parents[1] / (
+    "experiments/JanusM/Juliet/register_lie.py"
+)
+
+
+class StaticChest:
+    """Juliet E6's heart in a static chest that hugs it (PS3-S1).
+
+    The heart (LV wall and cavity, 3 mm epicardial fat, RV, LA) moves between the scans; around it,
+    lung (-800 HU) fills everything farther than ``gap_mm`` from the pose-0 heart and never moves.
+    The static lung edge then lies within a 10 mm metric mask but outside a 4 mm one, which is the
+    pull E10 measured on the shipped module (a 10 mm mask stays near R0 after a 4 mm heart shift).
+    Grid: ``n`` voxels of ``v`` mm, world = (index + 0.5 - n/2) v. No case is opened.
+
+    - :meth:`lie`: the LIE for a heart motion ``(R, t)`` (heart frame; ``R`` may scale: ``R = I/s``
+      enlarges the heart by ``s``) and a phase change ``e`` (LIE cavity scaled by 1 - e: ``e > 0``
+      shrinks it, ``e < 0`` enlarges it; Juliet E6's convention).
+    - :meth:`true_lie_points`: the true map of first-pass points to their LIE position.
+    """
+
+    def __init__(self, gap_mm: float = 5.0, n: int = 96, v: float = 1.5, seed: int = 3):
+        import importlib.util
+
+        from scipy import ndimage as ndi
+
+        spec = importlib.util.spec_from_file_location(f"juliet_e6_static_chest_{id(self)}",
+                                                      JULIET_E6)
+        jr = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(jr)
+        jr.N, jr.V = n, v
+        self.jr, self.n, self.v, self.gap_mm = jr, n, v, gap_mm
+        ax = (np.arange(n) + 0.5) * v - n * v / 2
+        pw = np.stack([a.ravel() for a in np.meshgrid(ax, ax, ax, indexing="ij")])
+        heart0 = jr.heart_labels(pw, self.identity, 0.0)[0].reshape(n, n, n) > 0
+        dist = ndi.distance_transform_edt(~heart0, sampling=v)
+
+        def static_labels(p):
+            ijk = (p + n * v / 2) / v - 0.5
+            d = ndi.map_coordinates(dist, ijk, order=1, mode="nearest")
+            lab = np.zeros(p.shape[1], np.int8)
+            lab[d >= gap_mm] = 10  # lung
+            return lab
+
+        jr.static_labels = static_labels
+        self.affine = np.diag([v, v, v, 1.0])
+        self.affine[:3, 3] = (0.5 - n / 2) * v
+        fp, truth = jr.render(jr.FP, np.zeros(18), self.identity, 0.0, jr.FP["scar"], 30.0,
+                              np.random.default_rng(seed), True)
+        lab = truth["lab"].astype(np.int16)
+        lab[lab > 4] = 0  # fat and the static chest are background for JA1
+        self.first_pass, self.labels = fp, lab
+
+    identity = (np.eye(3), np.zeros(3))
+
+    def shift(self, d_mm: float, seed: int):
+        """Juliet E6's heart motion of ``d_mm`` (translation, rotation up to 0.4 d degrees)."""
+        return self.jr.motion_for(d_mm, np.random.default_rng(seed))
+
+    def scale(self, s: float):
+        """The heart enlarged by ``s`` about its centre, no other motion."""
+        return np.eye(3) / s, np.zeros(3)
+
+    def lie(self, motion=None, e: float = 0.0, seed: int = 21, sd: float = 15.0, tab=None):
+        jr = self.jr
+        img, _ = jr.render(jr.LIE if tab is None else tab, np.zeros(18),
+                           self.identity if motion is None else motion, e, 150.0, sd,
+                           np.random.default_rng(seed))
+        return img
+
+    def true_lie_points(self, motion, p_fp):
+        rm, t = motion
+        m = self.jr.R_HEART @ np.linalg.inv(rm).T @ self.jr.R_HEART.T
+        return (p_fp - self.jr.C_HEART) @ m.T + self.jr.C_HEART + t
+
+
+def bright_wall_cavity(radius_mm: float = 6.0, wall_mm: float = 6.0, blood: float = 130.0,
+                       wall: float = 400.0, n: int = 40, psf_fwhm_mm: float = 1.0):
+    """A 1 mm-grid ball of blood inside a bright wall shell (PS3-S2): (image, cavity, wall).
+    The image is blurred by a Gaussian PSF, so the wall spills into the cavity's outer voxels."""
+    from scipy import ndimage as ndi
+
+    idx = np.indices((n, n, n)) - (n - 1) / 2
+    r = np.sqrt((idx ** 2).sum(0))
+    cav = r <= radius_mm
+    shell = (r > radius_mm) & (r <= radius_mm + wall_mm)
+    img = np.zeros((n, n, n), np.float32)
+    img[cav], img[shell] = blood, wall
+    sig = psf_fwhm_mm / (2 * np.sqrt(2 * np.log(2)))
+    return ndi.gaussian_filter(img, sig), cav, shell

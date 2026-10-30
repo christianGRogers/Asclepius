@@ -8,15 +8,18 @@ path: jm/rest-ccta
 
 # Janus-M master plan
 
-**On path `jm/rest-ccta`, in force from Round 4 (2026-10-30):** [[Juliet v1]] with JA1–JA14 ([[Janus-M Round 1]]),
+**On path `jm/rest-ccta`, in force from Round 5 (2026-10-30):** [[Juliet v1]] with JA1–JA14 ([[Janus-M Round 1]]),
 plus [[Hotel v2]] with JA15–JA24 ([[Janus-M Round 2 rest-ccta]]), plus [[Hotel v3]] with JA37–JA49
 ([[Janus-M Round 3 rest-ccta]], `Judgements/Round 3 - rest-ccta.md`), plus JA60–JA69 ([[Janus-M Round 4 rest-ccta]],
-`Judgements/Round 4 - rest-ccta.md`; a check of the built Stage A, no new base). The line forked at Round 1's LQ1 into
-`jm/rest-ccta` (this branch: option A, rest CCTA only) and `jm/paired-scar` (M2). Rounds 2–4 on this path make
+`Judgements/Round 4 - rest-ccta.md`; a check of the built Stage A, no new base), plus JA70–JA79
+([[Janus-M Round 5 rest-ccta]], `Judgements/Round 5 - rest-ccta.md`; a test-by-test check of the Round 4 fixes, no
+new base). The line forked at Round 1's LQ1 into
+`jm/rest-ccta` (this branch: option A, rest CCTA only) and `jm/paired-scar` (M2). Rounds 2–5 on this path make
 **no fork**. Later rulings govern where they change an earlier rule.
 
-**Status: plan-complete. The path waits only on the lead's Job JM-0 / JM-0R and on Round 4's fixes** (R4-S1 …
-R4-S23; Round 4 §7, §8). Round 5 opens when JM-0 / JM-0R aggregates are posted (LQ34 (a)).
+**Status: plan-complete. The path waits only on the lead's Job JM-0 / JM-0R and on Round 5's fixes** (R5-S1 …
+R5-S12; Round 5 §7, §8). Round 4's fixes R4-S1 … R4-S23 all merged with their named tests (Round 5 §1). The next
+round opens when JM-0 / JM-0R aggregates are posted; no further build-check round is planned (LQ36 (a)).
 
 ## The plan in one paragraph
 
@@ -70,8 +73,14 @@ Every sign is calibrated for specificity only, and every cell reads "research ou
   exact phantoms; back to 0.5 mm if it disagrees with point-to-plane by a median > 0.05 mm on the first 20 decision
   read pairs); ASSD ≤ 1.0 mm (JA16).
   - **JA61:** the bias, pp ASSD and the guard are all evaluated in JA37's band: ±3 mm of the reference border, minus
-    ≤ 3 mm from the LA and from the LV pool's open (outflow) face. The guard stays 0.3 mm only if
-    `validate_bias_estimator(open_base=True)` passes at 0.05 mm; otherwise 0.5 mm.
+    ≤ 3 mm from the LA and from the LV pool's open (outflow) face.
+  - **The guard is 0.5 mm now:** R4-S4's open-base check failed (0.068 / 0.0504 mm; Round 5 §1.3).
+  - **JA70–JA71:** the band also excludes the cut cap (a plane per connected opening, 1.0 mm, reach 20 mm; India's
+    45° normal rule where an opening is not planar). The guard returns to 0.3 mm **only if** JA71's pre-registered
+    check passes (phantoms A–F, including a new one), merged before the first decision-scoring run; otherwise 0.5 mm
+    for the whole r1 seal.
+  - **JA72:** the transfer check runs per comparison (model-vs-read 1, model-vs-read 2, read-vs-read); any failure
+    sets 0.5 mm, and a union count of cases over 0.05 mm is reported. It stays the last word on real walls.
   - **JA62:** one lead-run tool, `tools/janusm/score_decision.py`, computes d, the guards and the transfer check, and
     writes the anonymous decision read records, in `sealed-r1.json` list order.
 - **Implementations (JA37–JA39):** ASSD in d and the 1.0 mm guard = sub-voxel point-to-plane (pp), the same for both
@@ -95,6 +104,13 @@ Every sign is calibrated for specificity only, and every cell reads "research ou
     and LCx in Table B; wire `PROTOCOL_VERSION` 2 refuses old clients at claim.
   - **JA68 (anchoring and returns):** Rule 2's share is over seed voxels; third reads only on the flagged wave's drawn
     5, exported apart; a checker crash never spends the return.
+  - **JA76 (mitral plane, final):** the read's own gap is never a plane source for a queued case; an unfittable seed,
+    or a blank case without a check seed, is "could not be checked".
+  - **JA77 (lesion points):** no readable CT box with lesion points → 409 at submit; the read stays open; the PM is
+    alerted.
+  - **JA78 (waves and third reads):** a case with any accepted read or third-read state never changes wave; the
+    server recomputes Rule 2's flag from the report and stores its sha256; the 2 mm phantom gap and protocol 2
+    (426 for 0.1.x / 0.2.x clients) are ratified.
 - **Half-maximum sign (JA44):** + = the region bounded by the border (LV pool; pool + myocardium) extends beyond the
   image half-maximum, everywhere.
 
@@ -124,7 +140,8 @@ Every sign is calibrated for specificity only, and every cell reads "research ou
   when measured on the table's own model), simulated on the **measured median wall** (JM-0R's `thickness_median_mm`,
   then the reference population's). Printed now: **45 %** (the 5.7 mm end-diastolic anchor), with the "above 40 %"
   sentence; replaced by JM-0R, then by the reference population. A missing wall or an S3 refusal prints NOT
-  DECIDABLE, and thinning shows as numbers only.
+  DECIDABLE, and thinning shows as numbers only (JA74: whenever no depth is computed; R3's note in every branch).
+  A partial phase mix such as `{"ED": 1.0}` reads omitted phases as 0 (JA73).
 - **F1's RC (JA42, JA63, JA64):** n = patients; each territory's own mean offset; fat on the patient map and always
   on differences (mm³); for depth signs, a relative RC on Δ ÷ the expected level when |Δ| grows with it.
 - **Subendocardial hypoattenuation and core fat:** the same procedure. The fat cut is the least strict (c, V) inside
@@ -167,6 +184,8 @@ Every sign is calibrated for specificity only, and every cell reads "research ou
 | LQ32 | Reference population 360, not 420 (rec. (a) 360) |
 | LQ33 | Accept that thinning will likely ship as a number, not a flag (rec. (a) accept) |
 | LQ34 | Pause rounds until JM-0 / JM-0R aggregates (rec. (a)) |
+| LQ35 | Path A with a 0.5 mm bias guard if JA71 or the transfer check fails (rec. (a) accept; d stays primary) |
+| LQ36 | No Round 6 build check; the PM checks R5-S items at merge (rec. (a)) |
 
 ## Shipping (JA13; `role:swe`, opened by the PM)
 
@@ -199,3 +218,12 @@ Every sign is calibrated for specificity only, and every cell reads "research ou
      R4-S22 checker boundaries and septal sign.
    - **E. Decision scoring:** R4-S23 `tools/janusm/score_decision.py`.
    - **Conditional:** R4-S24 `--model jm1`; R4-S25 seal scorer takes the frozen size; R4-S26 snap tool.
+9. **Path `jm/rest-ccta`, from Round 5** (Round 5 §7; consolidates Hotel H5, India SW5 and Lima L4 specs; on `dev`):
+   - **A. Depth:** R5-S1 partial phase mix (JA73); R5-S2 R9's record in every branch (JA74).
+   - **B. Harness** (block the first decision-scoring run): R5-S3 the cut-cap band and JA71's pre-registered check;
+     R5-S4 harness tests that can fail, and docstrings.
+   - **C. Reference and table:** R5-S5 fall-backs counted on every read; R5-S6 Group C tests end to end.
+   - **D. Read queue:** R5-S7 JA66 plane order, R5-S8 bounds fail closed, R5-S9 wave membership frozen, R5-S11 tests
+     that can fail and run (these four **block the first read wave**); R5-S10 `adminThirdReads` checks the report
+     (blocks opening any third read).
+   - **E. Decision scoring:** R5-S12 union count and tests that exercise d (blocks the first decision-scoring run).

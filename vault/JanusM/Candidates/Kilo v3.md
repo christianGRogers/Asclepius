@@ -16,12 +16,17 @@ issue: christianGRogers/Asclepius#179
 items 1–7 of the Round 2 ruling. Three of its findings change the ruling, and one of them is against my own Round 2
 rule:
 
-- **P-K, my FWHM presence rule, fails on a heart with no scar** (E8). Its threshold is set by the brightest segment, so
-  on an LGE-negative heart it falls to ≈ 1.2 robust SD above remote and calls every segment. P-K is struck. A floored
-  version (P-K\*) is not enough. **P-G (Golf's core rule) is the presence rule I carry forward**, with P-J as the
-  other candidate. The shared benchmark (Juliet, `bench_lie/`) decides, by the rules agreed on #179.
+- **P-K, my FWHM presence rule, fails on a heart with no scar** (E8, 13 hearts). Its threshold is set by the
+  brightest segment, so on an LGE-negative heart it falls to a median 1.3 robust SD above remote and calls nearly
+  every segment: specificity 0.005. I withdraw it; a floored version (P-K\*) also fails once blood is bright. **The
+  surviving rules trade thin scars against scar-free hearts.** P-G is specific (≈ 1.00) but blind to bin-1 scar by
+  its 1 mm exclusion (bin-1 sensitivity 0.03), so its pooled sensitivity sits on the 0.75 bar. **P-J goes first in
+  the menu order, P-G second.** P-J's cut is learned from LGE-negative segments and it has no endocardial exclusion.
+  The shared benchmark (Juliet, `bench_lie/`) decides, by the rules agreed on #179.
 - **A truth-free phase check exists** (E8). The LIE's half-way edge across the carried endocardium, averaged over the
-  6 remote segments, moves with a 5 % phase change by ⟨E8⟩ mm. The blood-like and bright-wall QC values do not see it.
+  6 remote segments, moves by a median 1.0–1.4 mm with a 5 % phase change, in the right direction. |offset| > 0.6 mm
+  flags 90–100 % of phase-mismatched patients, with 0–10 % false flags. The blood-like and bright-wall shares flag
+  0–10 % when the LIE cavity is the smaller one (Juliet's case).
   It becomes a JA29 step: a phase-suspect patient is not re-registered (registration cannot fix phase); it goes to
   the phase-unmatched stratum unless the CCTA can be re-reconstructed at the LIE's phase.
 - **The seal is sized by presence; transmurality is a claim the seal may not be able to power** (E7, E9 on the merged
@@ -44,7 +49,7 @@ rule:
 **New evidence this round** (CPU; code in `experiments/JanusM/Kilo/`; images outside the repository; no held-out case
 read, scored or trained on):
 - [[Kilo - E7 At the JA32 bars the transmurality endpoint passes only if CT grades extent about as well as the LGE readers]]
-- [[Kilo - E8 ⟨title⟩]]
+- [[Kilo - E8 A truth-free edge offset sees a 5 percent phase change that the QC shares miss, and P-K calls scar in every scar-free heart]]
 - [[Kilo - E9 On the merged engine, worst-case counting of registration failures sinks specificity, and a yield endpoint fixes it]]
 - The shared benchmark results for the JA30 menu (§3), from Juliet's `bench_lie/`.
 
@@ -83,7 +88,7 @@ path A's JA15–JA24 by reference (JA25), and path B adds only JA33's scoring of
 
 | Item | Settlement | Where |
 |---|---|---|
-| 1. One shared synthetic-LIE benchmark | Juliet builds it (`experiments/JanusM/bench_lie/`), Golf and I reuse it; strike rules agreed on #179 before any result, with my amendments 1a–1c (spill by Golf's counterfactual; specificity on LGE-negative hearts; no empty menu). My E8 adds the non-rigid E5 motion and LGE-negative hearts on my own 13. **Struck: P-K.** ⟨bench⟩ | §3 |
+| 1. One shared synthetic-LIE benchmark | Juliet builds it (`experiments/JanusM/bench_lie/`), Golf and I reuse it; strike rules agreed on #179 before any result, with my amendments 1a–1c (spill by Golf's counterfactual; specificity on LGE-negative hearts; no empty menu). My E8 adds the non-rigid E5 motion and LGE-negative hearts on my own 13. **Struck: P-K** (my own; E8: 0.005 specificity on scar-free hearts). P-G is specific but blind to bin 1, so I propose P-J first in the menu order. The benchmark's verdict on P-J, P-G, E-V and E-D: ⟨bench⟩ | §3 |
 | 2. The merged power script at the JA32 bars | The engine is #187. E7 (my generator, reader noise and a noisy anchor) and E9 (the engine itself) agree once matched. **Seal = max(120, ≥ 270 scarred segments, 80 % power for presence); 70 % enrichment preferred (≈ 125–140 vs ≈ 170 at 50 %); growth capped at 240**. Three JA32 amendments | §4 |
 | 3. The LGE read form and the registration check form | Field-by-field, with automatic checks, adjudication and blinding, for the existing Janus-M queue's state machine. Entry time ≈ 1 min per LGE read (keystroke-level estimate); total read time is **not measured here**: no reader is in this session. It is measured from queue timestamps on the first 5 development patients | §5 |
 | 4. The JA27 intake checker | DICOM header fields that prove each requirement (tags checked against the DICOM data dictionary), and what a patient failing each becomes | §6 |
@@ -110,16 +115,40 @@ path A's JA15–JA24 by reference (JA25), and path B adds only JA33's scoring of
 
 ### 3.2 My own check before the benchmark result: P-K fails on a heart with no scar (E8)
 
-⟨E8 table: P-K / P-K* / P-G sensitivity, specificity on scarred hearts, specificity on scar-free hearts, by blood
-level, CNR 5, aligned and after rigid⟩
+CNR 5, phase-matched; 13 hearts × 2 repetitions; heart-bootstrap 95 % CI.
+
+| Motion / registration | Blood vs scar | P-K sens | P-K spec, scar-free hearts | P-K\* spec, scar-free | P-G sens | P-G spec, scar-free |
+|---|---|---|---|---|---|---|
+| none / R0 | below | 0.96 | **0.005** | 1.00 | 0.75 [0.72, 0.78] | 1.00 |
+| none / R0 | above | 0.99 | **0.005** | 0.61 | 0.75 | 1.00 |
+| E5 / rigid | equal | 0.95 | **0.15** | 0.65 | 0.76 [0.71, 0.81] | 1.00 |
+| E5 / rigid | above | 0.99 | **0.21** | 0.38 | 0.77 [0.72, 0.81] | 1.00 |
+
+Sensitivity by true Kim bin (aligned / after E5 + rigid):
+
+| | Bin 1 | Bin 2 | Bins 3–4 |
+|---|---|---|---|
+| P-K | 0.92 / 0.79 | 1.00 / 1.00 | 1.00 |
+| P-G | **0.03 / 0.15** | 0.94 / 0.83 | 1.00 |
+
+P-G's rise in bin 1 after motion is blood spill carried by the registration (the Round 2 ruling's point about the
+core rule).
 
 - **Why.** P-K's threshold is remote + ½ (p99 of the brightest segment's core − remote). In a scarred heart, that is
-  ⟨E8⟩ robust SD above remote. In a scar-free heart, the brightest segment is noise and the threshold falls to
-  ⟨E8⟩ SD, so ≥ 5 % of every segment passes. My Round 2 E5 never tested it, because every heart there had 5 scarred
+  a median 2.9 robust SD above remote (5th–95th 1.5–4.3). In a scar-free heart, the brightest segment is noise, and
+  the threshold falls to 1.3 SD (1.0–2.9), so ≥ 5 % of every segment passes. My Round 2 E5 never tested it, because every heart there had 5 scarred
   segments.
-- **P-K\*** (a floor at remote + 3 SD) fixes noise but not spill: on scar-free hearts its specificity is ⟨E8⟩.
+- **P-K\*** (a floor at remote + 3 SD) fixes noise but not spill. On scar-free hearts its specificity is 0.98–1.00
+  with blood below or equal to scar, and 0.38–0.65 with bright blood or a non-rigid residual.
 - **I withdraw P-K.** JA30's menu keeps P-J and P-G. I do not propose P-K\* as a new menu item: it fails the same
   strike rule.
+- **The trade-off that is left.** P-G cannot see bin 1, and P-K cannot be specific. P-G's pooled sensitivity equals
+  1 − (bin-1 share) at best: ≈ 0.75 here, where a quarter of scarred segments are bin 1. Golf's Round 2 cohort model
+  puts 30 % of LGE-positive segments in bin 1, which would leave P-G at ≈ 0.70 against a 0.75 bar.
+  - **So P-J goes first in the menu order** (JA30 breaks ties by order). It sees thin scar, and its cut is learned on
+    LGE-negative development segments, so its specificity is set by protocol rather than assumed.
+  - **What the development set must report** whichever rule wins: the LGE bin-1 share among positive segments, and
+    sensitivity by bin.
 
 ### 3.3 The benchmark's verdict
 
@@ -286,7 +315,24 @@ reader (pattern, coverage).
 
 ### 7.1 What E8 shows
 
-⟨E8 results: null distributions; flag rates; edge offset vs truth⟩
+E8, on 13 hearts × 2 repetitions: 3 phases × 2 motions × 3 blood levels × 2 CNRs, after R0 and after
+heart-masked rigid. Shares flagged at the 95th-percentile cut of the phase-matched, registered null; the edge offset
+at |offset| > 0.6 mm:
+
+| Case (blood: below / equal / above scar) | Blood-like share | Bright-wall share | Offset IQR | \|Edge offset\| > 0.6 mm |
+|---|---|---|---|---|
+| Unregistered (E5 motion, R0) | 0.46 / 0.58 / 0.94 | 0.23 / 0.65 / 0.94 | **0.96 / 0.83 / 0.96** | 0.62 / 0.52 / 0.62 |
+| +5 % phase (LIE cavity smaller), after rigid | 0.06 / 0.04 / 0.02 | 0.06 / 0.10 / 0.00 | 0.06 / 0.13 / 0.00 | **0.90 / 1.00 / 1.00** |
+| −5 % phase (LIE cavity larger), after rigid | 0.12 / 0.23 / 0.96 | 0.08 / 0.25 / 0.98 | 0.00 | **1.00 / 1.00 / 1.00** |
+| False flags: phase-matched, after rigid | 0.05 by construction | 0.05 | 0.05 | 0.10 / 0.00 / 0.00 |
+
+- **The edge offset tracks the true border error** (r = −0.80 over all scarred rows; slope −0.64, from partial
+  volume and the PSF). Medians: +1.17 / −0.01 / −1.37 mm at −5 % / 0 / +5 % phase, aligned.
+- **The two shares are useful only relative to the patient's own blood contrast.** Their null medians move 5–50-fold
+  with blood level (blood-like 0.19 / 0.10 / 0.03; bright wall 0.15 / 0.05 / 0.003). The edge offset is in mm and its
+  null hardly moves.
+- **Fat-like share** flags 35–38 % of unregistered cases and ≤ 10 % of anything else. Here it is weak, because the
+  synthetic chest moves with the heart.
 
 ### 7.2 The procedure
 
@@ -297,7 +343,18 @@ reader (pattern, coverage).
      remote segments crosses half-way between blood and remote wall (E8);
    - the spread (IQR) of the per-segment edge offsets, which picks up residual translation.
 2. **Provisional cuts**, before development, from the benchmark's registered, phase-matched null, per blood level:
-   the 95th percentile (one-sided for the shares; two-sided 2.5–97.5 % for the edge offset). ⟨E8 / bench values⟩
+   the 95th percentile (one-sided for the shares; two-sided 2.5–97.5 % for the edge offset). From E8:
+
+   | Blood vs scar | Fat-like | Blood-like | Bright wall | Offset IQR (mm) | Edge offset band (mm) |
+   |---|---|---|---|---|---|
+   | below | 0.075 | 0.26 | 0.22 | 1.16 | −0.49 to +0.89 |
+   | equal | 0.077 | 0.16 | 0.07 | 1.33 | −0.54 to +0.48 |
+   | above | 0.079 | 0.05 | 0.007 | 1.02 | −0.56 to +0.34 |
+
+   The phase cut is |offset| > 0.6 mm at every blood level. The two shares' cuts are indexed by the patient's own
+   measured blood-to-remote contrast, (LIE blood median − remote) ÷ robust SD of remote. It needs no scar, so it works
+   on LGE-negative patients. On development the cuts are fitted as a function of it. The benchmark's own null replaces these values
+   when it is posted, since it has a static chest and v2.0.1 masks.
 3. **Development sets the cuts once.** The registration reader check (§5.2), blind to QC, is the arbiter.
    - For each QC value, the cut is the smallest that keeps ≥ 95 % of reader-passed development patients passing.
      This protects against false fails, since the reader check runs on every patient anyway.

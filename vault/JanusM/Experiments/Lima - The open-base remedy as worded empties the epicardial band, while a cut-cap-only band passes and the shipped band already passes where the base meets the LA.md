@@ -38,11 +38,17 @@ Phantoms:
 | Band | India open, epi | Cut capsule, epi | LA-capped, epi | LA-capped epi band kept | Endo, every phantom |
 |---|---|---|---|---|---|
 | shipped | 0.068 ✘ | 0.0504 ✘ | **0.017 ✔** | 100 % | ≤ 0.024 ✔ |
-| literal | **empty, 24 / 24 rows** | ⟨V_LIT⟩ | 0.052 ✘ | 18 % | ≤ 0.024 ✔ |
-| cap_plane | **0.016 ✔** | ⟨V_CAP⟩ | 0.017 ✔ | 100 % | ≤ 0.024 ✔ |
-| slab | 0.016 ✔ | ⟨V_SLAB⟩ | 0.017 ✔ | 100 % | ≤ 0.024 ✔ |
+| literal | **empty, 24 / 24 rows** | **NaN in 72 / 72 rows** | 0.052 ✘ | 18 % | ≤ 0.024 ✔ |
+| cap_plane | **0.016 ✔** | **0.0195 ✔** | 0.017 ✔ | 100 % | ≤ 0.024 ✔ |
+| slab | 0.016 ✔ | 0.0195 ✔ | 0.017 ✔ | 100 % | ≤ 0.024 ✔ |
 
-The shipped numbers reproduce #219 exactly (0.0678 and 0.05036).
+The shipped numbers reproduce #219 exactly (0.0678 and 0.05036). `cap_plane` and `slab` give the same 144 capsule
+rows: worst 0.0238 mm overall (endo), so `passed` and a supported guard of 0.3 mm.
+
+**Closed-shell control (E4, radii 12 and 21 mm, ±0.3 / ±0.5).** Shipped, `cap_plane` and `slab` are identical, within
+0.004 mm on both borders: nothing is open, so the cap rules do nothing. `literal` keeps only 3 % of the epicardial
+band, which has no faces left, so it gives NaN in 8 / 8 rows. It also trims 25–29 % of the endocardial band (the
+voxels within 3 mm of the epicardium), though the endo still passes.
 
 **What it changes.**
 - **The remedy as worded cannot be adopted.** On a read, label 0 includes fat, pericardium and aorta, so the

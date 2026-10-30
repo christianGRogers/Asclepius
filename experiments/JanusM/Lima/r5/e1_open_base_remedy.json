@@ -1,0 +1,3706 @@
+{
+ "harness_version": "1.2.0",
+ "tolerance_mm": 0.05,
+ "band_mm": 3.0,
+ "india_open_base": {
+  "summary": {
+   "shipped/endo": {
+    "n": 24,
+    "n_empty": 0,
+    "worst_abs_err": 0.015021312366340855,
+    "pass_005": true
+   },
+   "shipped/epi": {
+    "n": 24,
+    "n_empty": 0,
+    "worst_abs_err": 0.06781359985943075,
+    "pass_005": false
+   },
+   "literal/endo": {
+    "n": 24,
+    "n_empty": 0,
+    "worst_abs_err": 0.014998087117261083,
+    "pass_005": true
+   },
+   "literal/epi": {
+    "n": 24,
+    "n_empty": 24,
+    "worst_abs_err": null,
+    "pass_005": false
+   },
+   "cap_plane/endo": {
+    "n": 24,
+    "n_empty": 0,
+    "worst_abs_err": 0.014998087117261083,
+    "pass_005": true
+   },
+   "cap_plane/epi": {
+    "n": 24,
+    "n_empty": 0,
+    "worst_abs_err": 0.015838128777760363,
+    "pass_005": true
+   },
+   "slab/endo": {
+    "n": 24,
+    "n_empty": 0,
+    "worst_abs_err": 0.015040503166437125,
+    "pass_005": true
+   },
+   "slab/epi": {
+    "n": 24,
+    "n_empty": 0,
+    "worst_abs_err": 0.015831654350379865,
+    "pass_005": true
+   }
+  },
+  "rows": [
+   {
+    "phantom": "india",
+    "grid": [
+     0.5,
+     0.5,
+     0.5
+    ],
+    "wall": [
+     null,
+     false
+    ],
+    "border": "endo",
+    "shift": -0.5,
+    "variant": "shipped",
+    "err": 0.004056674976437691,
+    "kept_surface_vox": 35480
+   },
+   {
+    "phantom": "india",
+    "grid": [
+     0.5,
+     0.5,
+     0.5
+    ],
+    "wall": [
+     null,
+     false
+    ],
+    "border": "endo",
+    "shift": -0.5,
+    "variant": "literal",
+    "err": 0.004056674976437691,
+    "kept_surface_vox": 35480
+   },
+   {
+    "phantom": "india",
+    "grid": [
+     0.5,
+     0.5,
+     0.5
+    ],
+    "wall": [
+     null,
+     false
+    ],
+    "border": "endo",
+    "shift": -0.5,
+    "variant": "cap_plane",
+    "err": 0.004056674976437691,
+    "kept_surface_vox": 35480
+   },
+   {
+    "phantom": "india",
+    "grid": [
+     0.5,
+     0.5,
+     0.5
+    ],
+    "wall": [
+     null,
+     false
+    ],
+    "border": "endo",
+    "shift": -0.5,
+    "variant": "slab",
+    "err": 0.004056674976437691,
+    "kept_surface_vox": 35480
+   },
+   {
+    "phantom": "india",
+    "grid": [
+     0.5,
+     0.5,
+     0.5
+    ],
+    "wall": [
+     null,
+     false
+    ],
+    "border": "endo",
+    "shift": -0.3,
+    "variant": "shipped",
+    "err": 0.0007701802535627911,
+    "kept_surface_vox": 35480
+   },
+   {
+    "phantom": "india",
+    "grid": [
+     0.5,
+     0.5,
+     0.5
+    ],
+    "wall": [
+     null,
+     false
+    ],
+    "border": "endo",
+    "shift": -0.3,
+    "variant": "literal",
+    "err": 0.0007701802535627911,
+    "kept_surface_vox": 35480
+   },
+   {
+    "phantom": "india",
+    "grid": [
+     0.5,
+     0.5,
+     0.5
+    ],
+    "wall": [
+     null,
+     false
+    ],
+    "border": "endo",
+    "shift": -0.3,
+    "variant": "cap_plane",
+    "err": 0.0007701802535627911,
+    "kept_surface_vox": 35480
+   },
+   {
+    "phantom": "india",
+    "grid": [
+     0.5,
+     0.5,
+     0.5
+    ],
+    "wall": [
+     null,
+     false
+    ],
+    "border": "endo",
+    "shift": -0.3,
+    "variant": "slab",
+    "err": 0.0007701802535627911,
+    "kept_surface_vox": 35480
+   },
+   {
+    "phantom": "india",
+    "grid": [
+     0.5,
+     0.5,
+     0.5
+    ],
+    "wall": [
+     null,
+     false
+    ],
+    "border": "endo",
+    "shift": 0.3,
+    "variant": "shipped",
+    "err": -0.003485693872419371,
+    "kept_surface_vox": 35480
+   },
+   {
+    "phantom": "india",
+    "grid": [
+     0.5,
+     0.5,
+     0.5
+    ],
+    "wall": [
+     null,
+     false
+    ],
+    "border": "endo",
+    "shift": 0.3,
+    "variant": "literal",
+    "err": -0.003485693872419371,
+    "kept_surface_vox": 35480
+   },
+   {
+    "phantom": "india",
+    "grid": [
+     0.5,
+     0.5,
+     0.5
+    ],
+    "wall": [
+     null,
+     false
+    ],
+    "border": "endo",
+    "shift": 0.3,
+    "variant": "cap_plane",
+    "err": -0.003485693872419371,
+    "kept_surface_vox": 35480
+   },
+   {
+    "phantom": "india",
+    "grid": [
+     0.5,
+     0.5,
+     0.5
+    ],
+    "wall": [
+     null,
+     false
+    ],
+    "border": "endo",
+    "shift": 0.3,
+    "variant": "slab",
+    "err": -0.003485693872419371,
+    "kept_surface_vox": 35480
+   },
+   {
+    "phantom": "india",
+    "grid": [
+     0.5,
+     0.5,
+     0.5
+    ],
+    "wall": [
+     null,
+     false
+    ],
+    "border": "endo",
+    "shift": 0.5,
+    "variant": "shipped",
+    "err": 0.002745150628710835,
+    "kept_surface_vox": 35480
+   },
+   {
+    "phantom": "india",
+    "grid": [
+     0.5,
+     0.5,
+     0.5
+    ],
+    "wall": [
+     null,
+     false
+    ],
+    "border": "endo",
+    "shift": 0.5,
+    "variant": "literal",
+    "err": 0.002745150628710835,
+    "kept_surface_vox": 35480
+   },
+   {
+    "phantom": "india",
+    "grid": [
+     0.5,
+     0.5,
+     0.5
+    ],
+    "wall": [
+     null,
+     false
+    ],
+    "border": "endo",
+    "shift": 0.5,
+    "variant": "cap_plane",
+    "err": 0.002745150628710835,
+    "kept_surface_vox": 35480
+   },
+   {
+    "phantom": "india",
+    "grid": [
+     0.5,
+     0.5,
+     0.5
+    ],
+    "wall": [
+     null,
+     false
+    ],
+    "border": "endo",
+    "shift": 0.5,
+    "variant": "slab",
+    "err": 0.002745150628710835,
+    "kept_surface_vox": 35480
+   },
+   {
+    "phantom": "india",
+    "grid": [
+     0.5,
+     0.5,
+     0.5
+    ],
+    "wall": [
+     null,
+     false
+    ],
+    "border": "epi",
+    "shift": -0.5,
+    "variant": "shipped",
+    "err": 0.05738579484601164,
+    "kept_surface_vox": 76480
+   },
+   {
+    "phantom": "india",
+    "grid": [
+     0.5,
+     0.5,
+     0.5
+    ],
+    "wall": [
+     null,
+     false
+    ],
+    "border": "epi",
+    "shift": -0.5,
+    "variant": "literal",
+    "err": null,
+    "kept_surface_vox": 0
+   },
+   {
+    "phantom": "india",
+    "grid": [
+     0.5,
+     0.5,
+     0.5
+    ],
+    "wall": [
+     null,
+     false
+    ],
+    "border": "epi",
+    "shift": -0.5,
+    "variant": "cap_plane",
+    "err": 0.005446095169601706,
+    "kept_surface_vox": 62192
+   },
+   {
+    "phantom": "india",
+    "grid": [
+     0.5,
+     0.5,
+     0.5
+    ],
+    "wall": [
+     null,
+     false
+    ],
+    "border": "epi",
+    "shift": -0.5,
+    "variant": "slab",
+    "err": 0.005446095169601706,
+    "kept_surface_vox": 62192
+   },
+   {
+    "phantom": "india",
+    "grid": [
+     0.5,
+     0.5,
+     0.5
+    ],
+    "wall": [
+     null,
+     false
+    ],
+    "border": "epi",
+    "shift": -0.3,
+    "variant": "shipped",
+    "err": 0.0330717335280466,
+    "kept_surface_vox": 76480
+   },
+   {
+    "phantom": "india",
+    "grid": [
+     0.5,
+     0.5,
+     0.5
+    ],
+    "wall": [
+     null,
+     false
+    ],
+    "border": "epi",
+    "shift": -0.3,
+    "variant": "literal",
+    "err": null,
+    "kept_surface_vox": 0
+   },
+   {
+    "phantom": "india",
+    "grid": [
+     0.5,
+     0.5,
+     0.5
+    ],
+    "wall": [
+     null,
+     false
+    ],
+    "border": "epi",
+    "shift": -0.3,
+    "variant": "cap_plane",
+    "err": 0.0033994549391470064,
+    "kept_surface_vox": 62192
+   },
+   {
+    "phantom": "india",
+    "grid": [
+     0.5,
+     0.5,
+     0.5
+    ],
+    "wall": [
+     null,
+     false
+    ],
+    "border": "epi",
+    "shift": -0.3,
+    "variant": "slab",
+    "err": 0.0033994549391470064,
+    "kept_surface_vox": 62192
+   },
+   {
+    "phantom": "india",
+    "grid": [
+     0.5,
+     0.5,
+     0.5
+    ],
+    "wall": [
+     null,
+     false
+    ],
+    "border": "epi",
+    "shift": 0.3,
+    "variant": "shipped",
+    "err": -0.033808083757434326,
+    "kept_surface_vox": 76480
+   },
+   {
+    "phantom": "india",
+    "grid": [
+     0.5,
+     0.5,
+     0.5
+    ],
+    "wall": [
+     null,
+     false
+    ],
+    "border": "epi",
+    "shift": 0.3,
+    "variant": "literal",
+    "err": null,
+    "kept_surface_vox": 0
+   },
+   {
+    "phantom": "india",
+    "grid": [
+     0.5,
+     0.5,
+     0.5
+    ],
+    "wall": [
+     null,
+     false
+    ],
+    "border": "epi",
+    "shift": 0.3,
+    "variant": "cap_plane",
+    "err": 0.00019333732940318704,
+    "kept_surface_vox": 62192
+   },
+   {
+    "phantom": "india",
+    "grid": [
+     0.5,
+     0.5,
+     0.5
+    ],
+    "wall": [
+     null,
+     false
+    ],
+    "border": "epi",
+    "shift": 0.3,
+    "variant": "slab",
+    "err": 0.00019333732940318704,
+    "kept_surface_vox": 62192
+   },
+   {
+    "phantom": "india",
+    "grid": [
+     0.5,
+     0.5,
+     0.5
+    ],
+    "wall": [
+     null,
+     false
+    ],
+    "border": "epi",
+    "shift": 0.5,
+    "variant": "shipped",
+    "err": -0.05336833810057057,
+    "kept_surface_vox": 76480
+   },
+   {
+    "phantom": "india",
+    "grid": [
+     0.5,
+     0.5,
+     0.5
+    ],
+    "wall": [
+     null,
+     false
+    ],
+    "border": "epi",
+    "shift": 0.5,
+    "variant": "literal",
+    "err": null,
+    "kept_surface_vox": 0
+   },
+   {
+    "phantom": "india",
+    "grid": [
+     0.5,
+     0.5,
+     0.5
+    ],
+    "wall": [
+     null,
+     false
+    ],
+    "border": "epi",
+    "shift": 0.5,
+    "variant": "cap_plane",
+    "err": 0.00416303526713957,
+    "kept_surface_vox": 62192
+   },
+   {
+    "phantom": "india",
+    "grid": [
+     0.5,
+     0.5,
+     0.5
+    ],
+    "wall": [
+     null,
+     false
+    ],
+    "border": "epi",
+    "shift": 0.5,
+    "variant": "slab",
+    "err": 0.00416303526713957,
+    "kept_surface_vox": 62192
+   },
+   {
+    "phantom": "india",
+    "grid": [
+     0.5,
+     0.5,
+     0.5
+    ],
+    "wall": [
+     23,
+     false
+    ],
+    "border": "endo",
+    "shift": -0.5,
+    "variant": "shipped",
+    "err": 0.007799455122036947,
+    "kept_surface_vox": 33966
+   },
+   {
+    "phantom": "india",
+    "grid": [
+     0.5,
+     0.5,
+     0.5
+    ],
+    "wall": [
+     23,
+     false
+    ],
+    "border": "endo",
+    "shift": -0.5,
+    "variant": "literal",
+    "err": 0.007742339509034302,
+    "kept_surface_vox": 33949
+   },
+   {
+    "phantom": "india",
+    "grid": [
+     0.5,
+     0.5,
+     0.5
+    ],
+    "wall": [
+     23,
+     false
+    ],
+    "border": "endo",
+    "shift": -0.5,
+    "variant": "cap_plane",
+    "err": 0.007742339509034302,
+    "kept_surface_vox": 33949
+   },
+   {
+    "phantom": "india",
+    "grid": [
+     0.5,
+     0.5,
+     0.5
+    ],
+    "wall": [
+     23,
+     false
+    ],
+    "border": "endo",
+    "shift": -0.5,
+    "variant": "slab",
+    "err": 0.007709179004329048,
+    "kept_surface_vox": 33946
+   },
+   {
+    "phantom": "india",
+    "grid": [
+     0.5,
+     0.5,
+     0.5
+    ],
+    "wall": [
+     23,
+     false
+    ],
+    "border": "endo",
+    "shift": -0.3,
+    "variant": "shipped",
+    "err": 0.0037851768777960593,
+    "kept_surface_vox": 33966
+   },
+   {
+    "phantom": "india",
+    "grid": [
+     0.5,
+     0.5,
+     0.5
+    ],
+    "wall": [
+     23,
+     false
+    ],
+    "border": "endo",
+    "shift": -0.3,
+    "variant": "literal",
+    "err": 0.003800225866618101,
+    "kept_surface_vox": 33949
+   },
+   {
+    "phantom": "india",
+    "grid": [
+     0.5,
+     0.5,
+     0.5
+    ],
+    "wall": [
+     23,
+     false
+    ],
+    "border": "endo",
+    "shift": -0.3,
+    "variant": "cap_plane",
+    "err": 0.003800225866618101,
+    "kept_surface_vox": 33949
+   },
+   {
+    "phantom": "india",
+    "grid": [
+     0.5,
+     0.5,
+     0.5
+    ],
+    "wall": [
+     23,
+     false
+    ],
+    "border": "endo",
+    "shift": -0.3,
+    "variant": "slab",
+    "err": 0.0038104902415919684,
+    "kept_surface_vox": 33946
+   },
+   {
+    "phantom": "india",
+    "grid": [
+     0.5,
+     0.5,
+     0.5
+    ],
+    "wall": [
+     23,
+     false
+    ],
+    "border": "endo",
+    "shift": 0.3,
+    "variant": "shipped",
+    "err": -0.00027009658543020176,
+    "kept_surface_vox": 33966
+   },
+   {
+    "phantom": "india",
+    "grid": [
+     0.5,
+     0.5,
+     0.5
+    ],
+    "wall": [
+     23,
+     false
+    ],
+    "border": "endo",
+    "shift": 0.3,
+    "variant": "literal",
+    "err": -0.00024244203718792878,
+    "kept_surface_vox": 33949
+   },
+   {
+    "phantom": "india",
+    "grid": [
+     0.5,
+     0.5,
+     0.5
+    ],
+    "wall": [
+     23,
+     false
+    ],
+    "border": "endo",
+    "shift": 0.3,
+    "variant": "cap_plane",
+    "err": -0.00024244203718792878,
+    "kept_surface_vox": 33949
+   },
+   {
+    "phantom": "india",
+    "grid": [
+     0.5,
+     0.5,
+     0.5
+    ],
+    "wall": [
+     23,
+     false
+    ],
+    "border": "endo",
+    "shift": 0.3,
+    "variant": "slab",
+    "err": -0.0002347758563610025,
+    "kept_surface_vox": 33946
+   },
+   {
+    "phantom": "india",
+    "grid": [
+     0.5,
+     0.5,
+     0.5
+    ],
+    "wall": [
+     23,
+     false
+    ],
+    "border": "endo",
+    "shift": 0.5,
+    "variant": "shipped",
+    "err": 0.006343118395625846,
+    "kept_surface_vox": 33966
+   },
+   {
+    "phantom": "india",
+    "grid": [
+     0.5,
+     0.5,
+     0.5
+    ],
+    "wall": [
+     23,
+     false
+    ],
+    "border": "endo",
+    "shift": 0.5,
+    "variant": "literal",
+    "err": 0.006482678393494923,
+    "kept_surface_vox": 33949
+   },
+   {
+    "phantom": "india",
+    "grid": [
+     0.5,
+     0.5,
+     0.5
+    ],
+    "wall": [
+     23,
+     false
+    ],
+    "border": "endo",
+    "shift": 0.5,
+    "variant": "cap_plane",
+    "err": 0.006482678393494923,
+    "kept_surface_vox": 33949
+   },
+   {
+    "phantom": "india",
+    "grid": [
+     0.5,
+     0.5,
+     0.5
+    ],
+    "wall": [
+     23,
+     false
+    ],
+    "border": "endo",
+    "shift": 0.5,
+    "variant": "slab",
+    "err": 0.006534022015162844,
+    "kept_surface_vox": 33946
+   },
+   {
+    "phantom": "india",
+    "grid": [
+     0.5,
+     0.5,
+     0.5
+    ],
+    "wall": [
+     23,
+     false
+    ],
+    "border": "epi",
+    "shift": -0.5,
+    "variant": "shipped",
+    "err": 0.06015416486909897,
+    "kept_surface_vox": 68162
+   },
+   {
+    "phantom": "india",
+    "grid": [
+     0.5,
+     0.5,
+     0.5
+    ],
+    "wall": [
+     23,
+     false
+    ],
+    "border": "epi",
+    "shift": -0.5,
+    "variant": "literal",
+    "err": null,
+    "kept_surface_vox": 0
+   },
+   {
+    "phantom": "india",
+    "grid": [
+     0.5,
+     0.5,
+     0.5
+    ],
+    "wall": [
+     23,
+     false
+    ],
+    "border": "epi",
+    "shift": -0.5,
+    "variant": "cap_plane",
+    "err": 0.008957974029135896,
+    "kept_surface_vox": 59623
+   },
+   {
+    "phantom": "india",
+    "grid": [
+     0.5,
+     0.5,
+     0.5
+    ],
+    "wall": [
+     23,
+     false
+    ],
+    "border": "epi",
+    "shift": -0.5,
+    "variant": "slab",
+    "err": 0.008800921985423704,
+    "kept_surface_vox": 59914
+   },
+   {
+    "phantom": "india",
+    "grid": [
+     0.5,
+     0.5,
+     0.5
+    ],
+    "wall": [
+     23,
+     false
+    ],
+    "border": "epi",
+    "shift": -0.3,
+    "variant": "shipped",
+    "err": 0.03665995651725318,
+    "kept_surface_vox": 68162
+   },
+   {
+    "phantom": "india",
+    "grid": [
+     0.5,
+     0.5,
+     0.5
+    ],
+    "wall": [
+     23,
+     false
+    ],
+    "border": "epi",
+    "shift": -0.3,
+    "variant": "literal",
+    "err": null,
+    "kept_surface_vox": 0
+   },
+   {
+    "phantom": "india",
+    "grid": [
+     0.5,
+     0.5,
+     0.5
+    ],
+    "wall": [
+     23,
+     false
+    ],
+    "border": "epi",
+    "shift": -0.3,
+    "variant": "cap_plane",
+    "err": 0.00543177667017003,
+    "kept_surface_vox": 59623
+   },
+   {
+    "phantom": "india",
+    "grid": [
+     0.5,
+     0.5,
+     0.5
+    ],
+    "wall": [
+     23,
+     false
+    ],
+    "border": "epi",
+    "shift": -0.3,
+    "variant": "slab",
+    "err": 0.005384572310935476,
+    "kept_surface_vox": 59914
+   },
+   {
+    "phantom": "india",
+    "grid": [
+     0.5,
+     0.5,
+     0.5
+    ],
+    "wall": [
+     23,
+     false
+    ],
+    "border": "epi",
+    "shift": 0.3,
+    "variant": "shipped",
+    "err": -0.03506823628351563,
+    "kept_surface_vox": 68162
+   },
+   {
+    "phantom": "india",
+    "grid": [
+     0.5,
+     0.5,
+     0.5
+    ],
+    "wall": [
+     23,
+     false
+    ],
+    "border": "epi",
+    "shift": 0.3,
+    "variant": "literal",
+    "err": null,
+    "kept_surface_vox": 0
+   },
+   {
+    "phantom": "india",
+    "grid": [
+     0.5,
+     0.5,
+     0.5
+    ],
+    "wall": [
+     23,
+     false
+    ],
+    "border": "epi",
+    "shift": 0.3,
+    "variant": "cap_plane",
+    "err": -0.0024140109805437238,
+    "kept_surface_vox": 59623
+   },
+   {
+    "phantom": "india",
+    "grid": [
+     0.5,
+     0.5,
+     0.5
+    ],
+    "wall": [
+     23,
+     false
+    ],
+    "border": "epi",
+    "shift": 0.3,
+    "variant": "slab",
+    "err": -0.0023409424372363707,
+    "kept_surface_vox": 59914
+   },
+   {
+    "phantom": "india",
+    "grid": [
+     0.5,
+     0.5,
+     0.5
+    ],
+    "wall": [
+     23,
+     false
+    ],
+    "border": "epi",
+    "shift": 0.5,
+    "variant": "shipped",
+    "err": -0.057281106491071154,
+    "kept_surface_vox": 68162
+   },
+   {
+    "phantom": "india",
+    "grid": [
+     0.5,
+     0.5,
+     0.5
+    ],
+    "wall": [
+     23,
+     false
+    ],
+    "border": "epi",
+    "shift": 0.5,
+    "variant": "literal",
+    "err": null,
+    "kept_surface_vox": 0
+   },
+   {
+    "phantom": "india",
+    "grid": [
+     0.5,
+     0.5,
+     0.5
+    ],
+    "wall": [
+     23,
+     false
+    ],
+    "border": "epi",
+    "shift": 0.5,
+    "variant": "cap_plane",
+    "err": -0.002093297770251523,
+    "kept_surface_vox": 59623
+   },
+   {
+    "phantom": "india",
+    "grid": [
+     0.5,
+     0.5,
+     0.5
+    ],
+    "wall": [
+     23,
+     false
+    ],
+    "border": "epi",
+    "shift": 0.5,
+    "variant": "slab",
+    "err": -0.0019565509772504486,
+    "kept_surface_vox": 59914
+   },
+   {
+    "phantom": "india",
+    "grid": [
+     0.5,
+     0.5,
+     0.5
+    ],
+    "wall": [
+     11,
+     true
+    ],
+    "border": "endo",
+    "shift": -0.5,
+    "variant": "shipped",
+    "err": 0.01435145341226518,
+    "kept_surface_vox": 35528
+   },
+   {
+    "phantom": "india",
+    "grid": [
+     0.5,
+     0.5,
+     0.5
+    ],
+    "wall": [
+     11,
+     true
+    ],
+    "border": "endo",
+    "shift": -0.5,
+    "variant": "literal",
+    "err": 0.014201794829945324,
+    "kept_surface_vox": 35495
+   },
+   {
+    "phantom": "india",
+    "grid": [
+     0.5,
+     0.5,
+     0.5
+    ],
+    "wall": [
+     11,
+     true
+    ],
+    "border": "endo",
+    "shift": -0.5,
+    "variant": "cap_plane",
+    "err": 0.014201794829945324,
+    "kept_surface_vox": 35495
+   },
+   {
+    "phantom": "india",
+    "grid": [
+     0.5,
+     0.5,
+     0.5
+    ],
+    "wall": [
+     11,
+     true
+    ],
+    "border": "endo",
+    "shift": -0.5,
+    "variant": "slab",
+    "err": 0.014335836995334028,
+    "kept_surface_vox": 35525
+   },
+   {
+    "phantom": "india",
+    "grid": [
+     0.5,
+     0.5,
+     0.5
+    ],
+    "wall": [
+     11,
+     true
+    ],
+    "border": "endo",
+    "shift": -0.3,
+    "variant": "shipped",
+    "err": 0.00442920415035003,
+    "kept_surface_vox": 35528
+   },
+   {
+    "phantom": "india",
+    "grid": [
+     0.5,
+     0.5,
+     0.5
+    ],
+    "wall": [
+     11,
+     true
+    ],
+    "border": "endo",
+    "shift": -0.3,
+    "variant": "literal",
+    "err": 0.004350637292047932,
+    "kept_surface_vox": 35495
+   },
+   {
+    "phantom": "india",
+    "grid": [
+     0.5,
+     0.5,
+     0.5
+    ],
+    "wall": [
+     11,
+     true
+    ],
+    "border": "endo",
+    "shift": -0.3,
+    "variant": "cap_plane",
+    "err": 0.004350637292047932,
+    "kept_surface_vox": 35495
+   },
+   {
+    "phantom": "india",
+    "grid": [
+     0.5,
+     0.5,
+     0.5
+    ],
+    "wall": [
+     11,
+     true
+    ],
+    "border": "endo",
+    "shift": -0.3,
+    "variant": "slab",
+    "err": 0.004419846221120294,
+    "kept_surface_vox": 35525
+   },
+   {
+    "phantom": "india",
+    "grid": [
+     0.5,
+     0.5,
+     0.5
+    ],
+    "wall": [
+     11,
+     true
+    ],
+    "border": "endo",
+    "shift": 0.3,
+    "variant": "shipped",
+    "err": -0.0031010772711374535,
+    "kept_surface_vox": 35528
+   },
+   {
+    "phantom": "india",
+    "grid": [
+     0.5,
+     0.5,
+     0.5
+    ],
+    "wall": [
+     11,
+     true
+    ],
+    "border": "endo",
+    "shift": 0.3,
+    "variant": "literal",
+    "err": -0.0030364933421636042,
+    "kept_surface_vox": 35495
+   },
+   {
+    "phantom": "india",
+    "grid": [
+     0.5,
+     0.5,
+     0.5
+    ],
+    "wall": [
+     11,
+     true
+    ],
+    "border": "endo",
+    "shift": 0.3,
+    "variant": "cap_plane",
+    "err": -0.0030364933421636042,
+    "kept_surface_vox": 35495
+   },
+   {
+    "phantom": "india",
+    "grid": [
+     0.5,
+     0.5,
+     0.5
+    ],
+    "wall": [
+     11,
+     true
+    ],
+    "border": "endo",
+    "shift": 0.3,
+    "variant": "slab",
+    "err": -0.0030251355450605644,
+    "kept_surface_vox": 35525
+   },
+   {
+    "phantom": "india",
+    "grid": [
+     0.5,
+     0.5,
+     0.5
+    ],
+    "wall": [
+     11,
+     true
+    ],
+    "border": "endo",
+    "shift": 0.5,
+    "variant": "shipped",
+    "err": -0.0030813749881629104,
+    "kept_surface_vox": 35528
+   },
+   {
+    "phantom": "india",
+    "grid": [
+     0.5,
+     0.5,
+     0.5
+    ],
+    "wall": [
+     11,
+     true
+    ],
+    "border": "endo",
+    "shift": 0.5,
+    "variant": "literal",
+    "err": -0.002864964267350334,
+    "kept_surface_vox": 35495
+   },
+   {
+    "phantom": "india",
+    "grid": [
+     0.5,
+     0.5,
+     0.5
+    ],
+    "wall": [
+     11,
+     true
+    ],
+    "border": "endo",
+    "shift": 0.5,
+    "variant": "cap_plane",
+    "err": -0.002864964267350334,
+    "kept_surface_vox": 35495
+   },
+   {
+    "phantom": "india",
+    "grid": [
+     0.5,
+     0.5,
+     0.5
+    ],
+    "wall": [
+     11,
+     true
+    ],
+    "border": "endo",
+    "shift": 0.5,
+    "variant": "slab",
+    "err": -0.0028527845463252044,
+    "kept_surface_vox": 35525
+   },
+   {
+    "phantom": "india",
+    "grid": [
+     0.5,
+     0.5,
+     0.5
+    ],
+    "wall": [
+     11,
+     true
+    ],
+    "border": "epi",
+    "shift": -0.5,
+    "variant": "shipped",
+    "err": 0.06506570758098029,
+    "kept_surface_vox": 74894
+   },
+   {
+    "phantom": "india",
+    "grid": [
+     0.5,
+     0.5,
+     0.5
+    ],
+    "wall": [
+     11,
+     true
+    ],
+    "border": "epi",
+    "shift": -0.5,
+    "variant": "literal",
+    "err": null,
+    "kept_surface_vox": 0
+   },
+   {
+    "phantom": "india",
+    "grid": [
+     0.5,
+     0.5,
+     0.5
+    ],
+    "wall": [
+     11,
+     true
+    ],
+    "border": "epi",
+    "shift": -0.5,
+    "variant": "cap_plane",
+    "err": 0.015838128777760363,
+    "kept_surface_vox": 62170
+   },
+   {
+    "phantom": "india",
+    "grid": [
+     0.5,
+     0.5,
+     0.5
+    ],
+    "wall": [
+     11,
+     true
+    ],
+    "border": "epi",
+    "shift": -0.5,
+    "variant": "slab",
+    "err": 0.01553932011215009,
+    "kept_surface_vox": 62600
+   },
+   {
+    "phantom": "india",
+    "grid": [
+     0.5,
+     0.5,
+     0.5
+    ],
+    "wall": [
+     11,
+     true
+    ],
+    "border": "epi",
+    "shift": -0.3,
+    "variant": "shipped",
+    "err": 0.03787891101278451,
+    "kept_surface_vox": 74894
+   },
+   {
+    "phantom": "india",
+    "grid": [
+     0.5,
+     0.5,
+     0.5
+    ],
+    "wall": [
+     11,
+     true
+    ],
+    "border": "epi",
+    "shift": -0.3,
+    "variant": "literal",
+    "err": null,
+    "kept_surface_vox": 0
+   },
+   {
+    "phantom": "india",
+    "grid": [
+     0.5,
+     0.5,
+     0.5
+    ],
+    "wall": [
+     11,
+     true
+    ],
+    "border": "epi",
+    "shift": -0.3,
+    "variant": "cap_plane",
+    "err": 0.008487913909914213,
+    "kept_surface_vox": 62170
+   },
+   {
+    "phantom": "india",
+    "grid": [
+     0.5,
+     0.5,
+     0.5
+    ],
+    "wall": [
+     11,
+     true
+    ],
+    "border": "epi",
+    "shift": -0.3,
+    "variant": "slab",
+    "err": 0.008185366372209346,
+    "kept_surface_vox": 62600
+   },
+   {
+    "phantom": "india",
+    "grid": [
+     0.5,
+     0.5,
+     0.5
+    ],
+    "wall": [
+     11,
+     true
+    ],
+    "border": "epi",
+    "shift": 0.3,
+    "variant": "shipped",
+    "err": -0.036761160833617135,
+    "kept_surface_vox": 74894
+   },
+   {
+    "phantom": "india",
+    "grid": [
+     0.5,
+     0.5,
+     0.5
+    ],
+    "wall": [
+     11,
+     true
+    ],
+    "border": "epi",
+    "shift": 0.3,
+    "variant": "literal",
+    "err": null,
+    "kept_surface_vox": 0
+   },
+   {
+    "phantom": "india",
+    "grid": [
+     0.5,
+     0.5,
+     0.5
+    ],
+    "wall": [
+     11,
+     true
+    ],
+    "border": "epi",
+    "shift": 0.3,
+    "variant": "cap_plane",
+    "err": -0.005464209081861127,
+    "kept_surface_vox": 62170
+   },
+   {
+    "phantom": "india",
+    "grid": [
+     0.5,
+     0.5,
+     0.5
+    ],
+    "wall": [
+     11,
+     true
+    ],
+    "border": "epi",
+    "shift": 0.3,
+    "variant": "slab",
+    "err": -0.005546641195132818,
+    "kept_surface_vox": 62600
+   },
+   {
+    "phantom": "india",
+    "grid": [
+     0.5,
+     0.5,
+     0.5
+    ],
+    "wall": [
+     11,
+     true
+    ],
+    "border": "epi",
+    "shift": 0.5,
+    "variant": "shipped",
+    "err": -0.061464195095594865,
+    "kept_surface_vox": 74894
+   },
+   {
+    "phantom": "india",
+    "grid": [
+     0.5,
+     0.5,
+     0.5
+    ],
+    "wall": [
+     11,
+     true
+    ],
+    "border": "epi",
+    "shift": 0.5,
+    "variant": "literal",
+    "err": null,
+    "kept_surface_vox": 0
+   },
+   {
+    "phantom": "india",
+    "grid": [
+     0.5,
+     0.5,
+     0.5
+    ],
+    "wall": [
+     11,
+     true
+    ],
+    "border": "epi",
+    "shift": 0.5,
+    "variant": "cap_plane",
+    "err": -0.009012359490369326,
+    "kept_surface_vox": 62170
+   },
+   {
+    "phantom": "india",
+    "grid": [
+     0.5,
+     0.5,
+     0.5
+    ],
+    "wall": [
+     11,
+     true
+    ],
+    "border": "epi",
+    "shift": 0.5,
+    "variant": "slab",
+    "err": -0.008795322697812136,
+    "kept_surface_vox": 62600
+   },
+   {
+    "phantom": "india",
+    "grid": [
+     0.4,
+     0.4,
+     0.5
+    ],
+    "wall": [
+     null,
+     false
+    ],
+    "border": "endo",
+    "shift": -0.5,
+    "variant": "shipped",
+    "err": 0.0037561395965962086,
+    "kept_surface_vox": 43184
+   },
+   {
+    "phantom": "india",
+    "grid": [
+     0.4,
+     0.4,
+     0.5
+    ],
+    "wall": [
+     null,
+     false
+    ],
+    "border": "endo",
+    "shift": -0.5,
+    "variant": "literal",
+    "err": 0.0037561395965962086,
+    "kept_surface_vox": 43184
+   },
+   {
+    "phantom": "india",
+    "grid": [
+     0.4,
+     0.4,
+     0.5
+    ],
+    "wall": [
+     null,
+     false
+    ],
+    "border": "endo",
+    "shift": -0.5,
+    "variant": "cap_plane",
+    "err": 0.0037561395965962086,
+    "kept_surface_vox": 43184
+   },
+   {
+    "phantom": "india",
+    "grid": [
+     0.4,
+     0.4,
+     0.5
+    ],
+    "wall": [
+     null,
+     false
+    ],
+    "border": "endo",
+    "shift": -0.5,
+    "variant": "slab",
+    "err": 0.0037561395965962086,
+    "kept_surface_vox": 43184
+   },
+   {
+    "phantom": "india",
+    "grid": [
+     0.4,
+     0.4,
+     0.5
+    ],
+    "wall": [
+     null,
+     false
+    ],
+    "border": "endo",
+    "shift": -0.3,
+    "variant": "shipped",
+    "err": 0.004398562327350142,
+    "kept_surface_vox": 43184
+   },
+   {
+    "phantom": "india",
+    "grid": [
+     0.4,
+     0.4,
+     0.5
+    ],
+    "wall": [
+     null,
+     false
+    ],
+    "border": "endo",
+    "shift": -0.3,
+    "variant": "literal",
+    "err": 0.004398562327350142,
+    "kept_surface_vox": 43184
+   },
+   {
+    "phantom": "india",
+    "grid": [
+     0.4,
+     0.4,
+     0.5
+    ],
+    "wall": [
+     null,
+     false
+    ],
+    "border": "endo",
+    "shift": -0.3,
+    "variant": "cap_plane",
+    "err": 0.004398562327350142,
+    "kept_surface_vox": 43184
+   },
+   {
+    "phantom": "india",
+    "grid": [
+     0.4,
+     0.4,
+     0.5
+    ],
+    "wall": [
+     null,
+     false
+    ],
+    "border": "endo",
+    "shift": -0.3,
+    "variant": "slab",
+    "err": 0.004398562327350142,
+    "kept_surface_vox": 43184
+   },
+   {
+    "phantom": "india",
+    "grid": [
+     0.4,
+     0.4,
+     0.5
+    ],
+    "wall": [
+     null,
+     false
+    ],
+    "border": "endo",
+    "shift": 0.3,
+    "variant": "shipped",
+    "err": -4.1251720976631656e-05,
+    "kept_surface_vox": 43184
+   },
+   {
+    "phantom": "india",
+    "grid": [
+     0.4,
+     0.4,
+     0.5
+    ],
+    "wall": [
+     null,
+     false
+    ],
+    "border": "endo",
+    "shift": 0.3,
+    "variant": "literal",
+    "err": -4.1251720976631656e-05,
+    "kept_surface_vox": 43184
+   },
+   {
+    "phantom": "india",
+    "grid": [
+     0.4,
+     0.4,
+     0.5
+    ],
+    "wall": [
+     null,
+     false
+    ],
+    "border": "endo",
+    "shift": 0.3,
+    "variant": "cap_plane",
+    "err": -4.1251720976631656e-05,
+    "kept_surface_vox": 43184
+   },
+   {
+    "phantom": "india",
+    "grid": [
+     0.4,
+     0.4,
+     0.5
+    ],
+    "wall": [
+     null,
+     false
+    ],
+    "border": "endo",
+    "shift": 0.3,
+    "variant": "slab",
+    "err": -4.1251720976631656e-05,
+    "kept_surface_vox": 43184
+   },
+   {
+    "phantom": "india",
+    "grid": [
+     0.4,
+     0.4,
+     0.5
+    ],
+    "wall": [
+     null,
+     false
+    ],
+    "border": "endo",
+    "shift": 0.5,
+    "variant": "shipped",
+    "err": 0.004172067748456243,
+    "kept_surface_vox": 43184
+   },
+   {
+    "phantom": "india",
+    "grid": [
+     0.4,
+     0.4,
+     0.5
+    ],
+    "wall": [
+     null,
+     false
+    ],
+    "border": "endo",
+    "shift": 0.5,
+    "variant": "literal",
+    "err": 0.004172067748456243,
+    "kept_surface_vox": 43184
+   },
+   {
+    "phantom": "india",
+    "grid": [
+     0.4,
+     0.4,
+     0.5
+    ],
+    "wall": [
+     null,
+     false
+    ],
+    "border": "endo",
+    "shift": 0.5,
+    "variant": "cap_plane",
+    "err": 0.004172067748456243,
+    "kept_surface_vox": 43184
+   },
+   {
+    "phantom": "india",
+    "grid": [
+     0.4,
+     0.4,
+     0.5
+    ],
+    "wall": [
+     null,
+     false
+    ],
+    "border": "endo",
+    "shift": 0.5,
+    "variant": "slab",
+    "err": 0.004172067748456243,
+    "kept_surface_vox": 43184
+   },
+   {
+    "phantom": "india",
+    "grid": [
+     0.4,
+     0.4,
+     0.5
+    ],
+    "wall": [
+     null,
+     false
+    ],
+    "border": "epi",
+    "shift": -0.5,
+    "variant": "shipped",
+    "err": 0.05633765771614074,
+    "kept_surface_vox": 79608
+   },
+   {
+    "phantom": "india",
+    "grid": [
+     0.4,
+     0.4,
+     0.5
+    ],
+    "wall": [
+     null,
+     false
+    ],
+    "border": "epi",
+    "shift": -0.5,
+    "variant": "literal",
+    "err": null,
+    "kept_surface_vox": 0
+   },
+   {
+    "phantom": "india",
+    "grid": [
+     0.4,
+     0.4,
+     0.5
+    ],
+    "wall": [
+     null,
+     false
+    ],
+    "border": "epi",
+    "shift": -0.5,
+    "variant": "cap_plane",
+    "err": 0.003131143992547658,
+    "kept_surface_vox": 74160
+   },
+   {
+    "phantom": "india",
+    "grid": [
+     0.4,
+     0.4,
+     0.5
+    ],
+    "wall": [
+     null,
+     false
+    ],
+    "border": "epi",
+    "shift": -0.5,
+    "variant": "slab",
+    "err": 0.003131143992547658,
+    "kept_surface_vox": 74160
+   },
+   {
+    "phantom": "india",
+    "grid": [
+     0.4,
+     0.4,
+     0.5
+    ],
+    "wall": [
+     null,
+     false
+    ],
+    "border": "epi",
+    "shift": -0.3,
+    "variant": "shipped",
+    "err": 0.03350622743720577,
+    "kept_surface_vox": 79608
+   },
+   {
+    "phantom": "india",
+    "grid": [
+     0.4,
+     0.4,
+     0.5
+    ],
+    "wall": [
+     null,
+     false
+    ],
+    "border": "epi",
+    "shift": -0.3,
+    "variant": "literal",
+    "err": null,
+    "kept_surface_vox": 0
+   },
+   {
+    "phantom": "india",
+    "grid": [
+     0.4,
+     0.4,
+     0.5
+    ],
+    "wall": [
+     null,
+     false
+    ],
+    "border": "epi",
+    "shift": -0.3,
+    "variant": "cap_plane",
+    "err": 0.0021742985351667077,
+    "kept_surface_vox": 74160
+   },
+   {
+    "phantom": "india",
+    "grid": [
+     0.4,
+     0.4,
+     0.5
+    ],
+    "wall": [
+     null,
+     false
+    ],
+    "border": "epi",
+    "shift": -0.3,
+    "variant": "slab",
+    "err": 0.0021742985351667077,
+    "kept_surface_vox": 74160
+   },
+   {
+    "phantom": "india",
+    "grid": [
+     0.4,
+     0.4,
+     0.5
+    ],
+    "wall": [
+     null,
+     false
+    ],
+    "border": "epi",
+    "shift": 0.3,
+    "variant": "shipped",
+    "err": -0.0330600819574734,
+    "kept_surface_vox": 79608
+   },
+   {
+    "phantom": "india",
+    "grid": [
+     0.4,
+     0.4,
+     0.5
+    ],
+    "wall": [
+     null,
+     false
+    ],
+    "border": "epi",
+    "shift": 0.3,
+    "variant": "literal",
+    "err": null,
+    "kept_surface_vox": 0
+   },
+   {
+    "phantom": "india",
+    "grid": [
+     0.4,
+     0.4,
+     0.5
+    ],
+    "wall": [
+     null,
+     false
+    ],
+    "border": "epi",
+    "shift": 0.3,
+    "variant": "cap_plane",
+    "err": -0.0003486847951819083,
+    "kept_surface_vox": 74160
+   },
+   {
+    "phantom": "india",
+    "grid": [
+     0.4,
+     0.4,
+     0.5
+    ],
+    "wall": [
+     null,
+     false
+    ],
+    "border": "epi",
+    "shift": 0.3,
+    "variant": "slab",
+    "err": -0.0003486847951819083,
+    "kept_surface_vox": 74160
+   },
+   {
+    "phantom": "india",
+    "grid": [
+     0.4,
+     0.4,
+     0.5
+    ],
+    "wall": [
+     null,
+     false
+    ],
+    "border": "epi",
+    "shift": 0.5,
+    "variant": "shipped",
+    "err": -0.05380069488560146,
+    "kept_surface_vox": 79608
+   },
+   {
+    "phantom": "india",
+    "grid": [
+     0.4,
+     0.4,
+     0.5
+    ],
+    "wall": [
+     null,
+     false
+    ],
+    "border": "epi",
+    "shift": 0.5,
+    "variant": "literal",
+    "err": null,
+    "kept_surface_vox": 0
+   },
+   {
+    "phantom": "india",
+    "grid": [
+     0.4,
+     0.4,
+     0.5
+    ],
+    "wall": [
+     null,
+     false
+    ],
+    "border": "epi",
+    "shift": 0.5,
+    "variant": "cap_plane",
+    "err": 0.002701265997585356,
+    "kept_surface_vox": 74160
+   },
+   {
+    "phantom": "india",
+    "grid": [
+     0.4,
+     0.4,
+     0.5
+    ],
+    "wall": [
+     null,
+     false
+    ],
+    "border": "epi",
+    "shift": 0.5,
+    "variant": "slab",
+    "err": 0.002701265997585356,
+    "kept_surface_vox": 74160
+   },
+   {
+    "phantom": "india",
+    "grid": [
+     0.4,
+     0.4,
+     0.5
+    ],
+    "wall": [
+     23,
+     false
+    ],
+    "border": "endo",
+    "shift": -0.5,
+    "variant": "shipped",
+    "err": 0.0066977121948333385,
+    "kept_surface_vox": 36229
+   },
+   {
+    "phantom": "india",
+    "grid": [
+     0.4,
+     0.4,
+     0.5
+    ],
+    "wall": [
+     23,
+     false
+    ],
+    "border": "endo",
+    "shift": -0.5,
+    "variant": "literal",
+    "err": 0.006686694378976732,
+    "kept_surface_vox": 36223
+   },
+   {
+    "phantom": "india",
+    "grid": [
+     0.4,
+     0.4,
+     0.5
+    ],
+    "wall": [
+     23,
+     false
+    ],
+    "border": "endo",
+    "shift": -0.5,
+    "variant": "cap_plane",
+    "err": 0.006686694378976732,
+    "kept_surface_vox": 36223
+   },
+   {
+    "phantom": "india",
+    "grid": [
+     0.4,
+     0.4,
+     0.5
+    ],
+    "wall": [
+     23,
+     false
+    ],
+    "border": "endo",
+    "shift": -0.5,
+    "variant": "slab",
+    "err": 0.0066872491091449215,
+    "kept_surface_vox": 36226
+   },
+   {
+    "phantom": "india",
+    "grid": [
+     0.4,
+     0.4,
+     0.5
+    ],
+    "wall": [
+     23,
+     false
+    ],
+    "border": "endo",
+    "shift": -0.3,
+    "variant": "shipped",
+    "err": 0.0027544595828536966,
+    "kept_surface_vox": 36229
+   },
+   {
+    "phantom": "india",
+    "grid": [
+     0.4,
+     0.4,
+     0.5
+    ],
+    "wall": [
+     23,
+     false
+    ],
+    "border": "endo",
+    "shift": -0.3,
+    "variant": "literal",
+    "err": 0.00275131587721561,
+    "kept_surface_vox": 36223
+   },
+   {
+    "phantom": "india",
+    "grid": [
+     0.4,
+     0.4,
+     0.5
+    ],
+    "wall": [
+     23,
+     false
+    ],
+    "border": "endo",
+    "shift": -0.3,
+    "variant": "cap_plane",
+    "err": 0.00275131587721561,
+    "kept_surface_vox": 36223
+   },
+   {
+    "phantom": "india",
+    "grid": [
+     0.4,
+     0.4,
+     0.5
+    ],
+    "wall": [
+     23,
+     false
+    ],
+    "border": "endo",
+    "shift": -0.3,
+    "variant": "slab",
+    "err": 0.002748170297267538,
+    "kept_surface_vox": 36226
+   },
+   {
+    "phantom": "india",
+    "grid": [
+     0.4,
+     0.4,
+     0.5
+    ],
+    "wall": [
+     23,
+     false
+    ],
+    "border": "endo",
+    "shift": 0.3,
+    "variant": "shipped",
+    "err": 0.001019014920627337,
+    "kept_surface_vox": 36229
+   },
+   {
+    "phantom": "india",
+    "grid": [
+     0.4,
+     0.4,
+     0.5
+    ],
+    "wall": [
+     23,
+     false
+    ],
+    "border": "endo",
+    "shift": 0.3,
+    "variant": "literal",
+    "err": 0.001021389576952303,
+    "kept_surface_vox": 36223
+   },
+   {
+    "phantom": "india",
+    "grid": [
+     0.4,
+     0.4,
+     0.5
+    ],
+    "wall": [
+     23,
+     false
+    ],
+    "border": "endo",
+    "shift": 0.3,
+    "variant": "cap_plane",
+    "err": 0.001021389576952303,
+    "kept_surface_vox": 36223
+   },
+   {
+    "phantom": "india",
+    "grid": [
+     0.4,
+     0.4,
+     0.5
+    ],
+    "wall": [
+     23,
+     false
+    ],
+    "border": "endo",
+    "shift": 0.3,
+    "variant": "slab",
+    "err": 0.0010289214832291393,
+    "kept_surface_vox": 36226
+   },
+   {
+    "phantom": "india",
+    "grid": [
+     0.4,
+     0.4,
+     0.5
+    ],
+    "wall": [
+     23,
+     false
+    ],
+    "border": "endo",
+    "shift": 0.5,
+    "variant": "shipped",
+    "err": 0.0037460255712639112,
+    "kept_surface_vox": 36229
+   },
+   {
+    "phantom": "india",
+    "grid": [
+     0.4,
+     0.4,
+     0.5
+    ],
+    "wall": [
+     23,
+     false
+    ],
+    "border": "endo",
+    "shift": 0.5,
+    "variant": "literal",
+    "err": 0.003801181459882952,
+    "kept_surface_vox": 36223
+   },
+   {
+    "phantom": "india",
+    "grid": [
+     0.4,
+     0.4,
+     0.5
+    ],
+    "wall": [
+     23,
+     false
+    ],
+    "border": "endo",
+    "shift": 0.5,
+    "variant": "cap_plane",
+    "err": 0.003801181459882952,
+    "kept_surface_vox": 36223
+   },
+   {
+    "phantom": "india",
+    "grid": [
+     0.4,
+     0.4,
+     0.5
+    ],
+    "wall": [
+     23,
+     false
+    ],
+    "border": "endo",
+    "shift": 0.5,
+    "variant": "slab",
+    "err": 0.0038161031241725762,
+    "kept_surface_vox": 36226
+   },
+   {
+    "phantom": "india",
+    "grid": [
+     0.4,
+     0.4,
+     0.5
+    ],
+    "wall": [
+     23,
+     false
+    ],
+    "border": "epi",
+    "shift": -0.5,
+    "variant": "shipped",
+    "err": 0.05989169584574655,
+    "kept_surface_vox": 73819
+   },
+   {
+    "phantom": "india",
+    "grid": [
+     0.4,
+     0.4,
+     0.5
+    ],
+    "wall": [
+     23,
+     false
+    ],
+    "border": "epi",
+    "shift": -0.5,
+    "variant": "literal",
+    "err": null,
+    "kept_surface_vox": 0
+   },
+   {
+    "phantom": "india",
+    "grid": [
+     0.4,
+     0.4,
+     0.5
+    ],
+    "wall": [
+     23,
+     false
+    ],
+    "border": "epi",
+    "shift": -0.5,
+    "variant": "cap_plane",
+    "err": 0.008406129541522811,
+    "kept_surface_vox": 63388
+   },
+   {
+    "phantom": "india",
+    "grid": [
+     0.4,
+     0.4,
+     0.5
+    ],
+    "wall": [
+     23,
+     false
+    ],
+    "border": "epi",
+    "shift": -0.5,
+    "variant": "slab",
+    "err": 0.008432613118641075,
+    "kept_surface_vox": 63825
+   },
+   {
+    "phantom": "india",
+    "grid": [
+     0.4,
+     0.4,
+     0.5
+    ],
+    "wall": [
+     23,
+     false
+    ],
+    "border": "epi",
+    "shift": -0.3,
+    "variant": "shipped",
+    "err": 0.036412190197823435,
+    "kept_surface_vox": 73819
+   },
+   {
+    "phantom": "india",
+    "grid": [
+     0.4,
+     0.4,
+     0.5
+    ],
+    "wall": [
+     23,
+     false
+    ],
+    "border": "epi",
+    "shift": -0.3,
+    "variant": "literal",
+    "err": null,
+    "kept_surface_vox": 0
+   },
+   {
+    "phantom": "india",
+    "grid": [
+     0.4,
+     0.4,
+     0.5
+    ],
+    "wall": [
+     23,
+     false
+    ],
+    "border": "epi",
+    "shift": -0.3,
+    "variant": "cap_plane",
+    "err": 0.005221316257979669,
+    "kept_surface_vox": 63388
+   },
+   {
+    "phantom": "india",
+    "grid": [
+     0.4,
+     0.4,
+     0.5
+    ],
+    "wall": [
+     23,
+     false
+    ],
+    "border": "epi",
+    "shift": -0.3,
+    "variant": "slab",
+    "err": 0.0052123671881716405,
+    "kept_surface_vox": 63825
+   },
+   {
+    "phantom": "india",
+    "grid": [
+     0.4,
+     0.4,
+     0.5
+    ],
+    "wall": [
+     23,
+     false
+    ],
+    "border": "epi",
+    "shift": 0.3,
+    "variant": "shipped",
+    "err": -0.03557621240984882,
+    "kept_surface_vox": 73819
+   },
+   {
+    "phantom": "india",
+    "grid": [
+     0.4,
+     0.4,
+     0.5
+    ],
+    "wall": [
+     23,
+     false
+    ],
+    "border": "epi",
+    "shift": 0.3,
+    "variant": "literal",
+    "err": null,
+    "kept_surface_vox": 0
+   },
+   {
+    "phantom": "india",
+    "grid": [
+     0.4,
+     0.4,
+     0.5
+    ],
+    "wall": [
+     23,
+     false
+    ],
+    "border": "epi",
+    "shift": 0.3,
+    "variant": "cap_plane",
+    "err": -0.002849722903944474,
+    "kept_surface_vox": 63388
+   },
+   {
+    "phantom": "india",
+    "grid": [
+     0.4,
+     0.4,
+     0.5
+    ],
+    "wall": [
+     23,
+     false
+    ],
+    "border": "epi",
+    "shift": 0.3,
+    "variant": "slab",
+    "err": -0.0028444888147690084,
+    "kept_surface_vox": 63825
+   },
+   {
+    "phantom": "india",
+    "grid": [
+     0.4,
+     0.4,
+     0.5
+    ],
+    "wall": [
+     23,
+     false
+    ],
+    "border": "epi",
+    "shift": 0.5,
+    "variant": "shipped",
+    "err": -0.056714901192754574,
+    "kept_surface_vox": 73819
+   },
+   {
+    "phantom": "india",
+    "grid": [
+     0.4,
+     0.4,
+     0.5
+    ],
+    "wall": [
+     23,
+     false
+    ],
+    "border": "epi",
+    "shift": 0.5,
+    "variant": "literal",
+    "err": null,
+    "kept_surface_vox": 0
+   },
+   {
+    "phantom": "india",
+    "grid": [
+     0.4,
+     0.4,
+     0.5
+    ],
+    "wall": [
+     23,
+     false
+    ],
+    "border": "epi",
+    "shift": 0.5,
+    "variant": "cap_plane",
+    "err": -0.001805340503935493,
+    "kept_surface_vox": 63388
+   },
+   {
+    "phantom": "india",
+    "grid": [
+     0.4,
+     0.4,
+     0.5
+    ],
+    "wall": [
+     23,
+     false
+    ],
+    "border": "epi",
+    "shift": 0.5,
+    "variant": "slab",
+    "err": -0.001782217524353813,
+    "kept_surface_vox": 63825
+   },
+   {
+    "phantom": "india",
+    "grid": [
+     0.4,
+     0.4,
+     0.5
+    ],
+    "wall": [
+     11,
+     true
+    ],
+    "border": "endo",
+    "shift": -0.5,
+    "variant": "shipped",
+    "err": 0.015021312366340855,
+    "kept_surface_vox": 35634
+   },
+   {
+    "phantom": "india",
+    "grid": [
+     0.4,
+     0.4,
+     0.5
+    ],
+    "wall": [
+     11,
+     true
+    ],
+    "border": "endo",
+    "shift": -0.5,
+    "variant": "literal",
+    "err": 0.014998087117261083,
+    "kept_surface_vox": 35617
+   },
+   {
+    "phantom": "india",
+    "grid": [
+     0.4,
+     0.4,
+     0.5
+    ],
+    "wall": [
+     11,
+     true
+    ],
+    "border": "endo",
+    "shift": -0.5,
+    "variant": "cap_plane",
+    "err": 0.014998087117261083,
+    "kept_surface_vox": 35617
+   },
+   {
+    "phantom": "india",
+    "grid": [
+     0.4,
+     0.4,
+     0.5
+    ],
+    "wall": [
+     11,
+     true
+    ],
+    "border": "endo",
+    "shift": -0.5,
+    "variant": "slab",
+    "err": 0.015040503166437125,
+    "kept_surface_vox": 35617
+   },
+   {
+    "phantom": "india",
+    "grid": [
+     0.4,
+     0.4,
+     0.5
+    ],
+    "wall": [
+     11,
+     true
+    ],
+    "border": "endo",
+    "shift": -0.3,
+    "variant": "shipped",
+    "err": 0.00864120842706706,
+    "kept_surface_vox": 35634
+   },
+   {
+    "phantom": "india",
+    "grid": [
+     0.4,
+     0.4,
+     0.5
+    ],
+    "wall": [
+     11,
+     true
+    ],
+    "border": "endo",
+    "shift": -0.3,
+    "variant": "literal",
+    "err": 0.008636708746947386,
+    "kept_surface_vox": 35617
+   },
+   {
+    "phantom": "india",
+    "grid": [
+     0.4,
+     0.4,
+     0.5
+    ],
+    "wall": [
+     11,
+     true
+    ],
+    "border": "endo",
+    "shift": -0.3,
+    "variant": "cap_plane",
+    "err": 0.008636708746947386,
+    "kept_surface_vox": 35617
+   },
+   {
+    "phantom": "india",
+    "grid": [
+     0.4,
+     0.4,
+     0.5
+    ],
+    "wall": [
+     11,
+     true
+    ],
+    "border": "endo",
+    "shift": -0.3,
+    "variant": "slab",
+    "err": 0.008666105021499115,
+    "kept_surface_vox": 35617
+   },
+   {
+    "phantom": "india",
+    "grid": [
+     0.4,
+     0.4,
+     0.5
+    ],
+    "wall": [
+     11,
+     true
+    ],
+    "border": "endo",
+    "shift": 0.3,
+    "variant": "shipped",
+    "err": -0.0027607381699834566,
+    "kept_surface_vox": 35634
+   },
+   {
+    "phantom": "india",
+    "grid": [
+     0.4,
+     0.4,
+     0.5
+    ],
+    "wall": [
+     11,
+     true
+    ],
+    "border": "endo",
+    "shift": 0.3,
+    "variant": "literal",
+    "err": -0.002713896159796614,
+    "kept_surface_vox": 35617
+   },
+   {
+    "phantom": "india",
+    "grid": [
+     0.4,
+     0.4,
+     0.5
+    ],
+    "wall": [
+     11,
+     true
+    ],
+    "border": "endo",
+    "shift": 0.3,
+    "variant": "cap_plane",
+    "err": -0.002713896159796614,
+    "kept_surface_vox": 35617
+   },
+   {
+    "phantom": "india",
+    "grid": [
+     0.4,
+     0.4,
+     0.5
+    ],
+    "wall": [
+     11,
+     true
+    ],
+    "border": "endo",
+    "shift": 0.3,
+    "variant": "slab",
+    "err": -0.002734465924466578,
+    "kept_surface_vox": 35617
+   },
+   {
+    "phantom": "india",
+    "grid": [
+     0.4,
+     0.4,
+     0.5
+    ],
+    "wall": [
+     11,
+     true
+    ],
+    "border": "endo",
+    "shift": 0.5,
+    "variant": "shipped",
+    "err": -0.0008139802566285992,
+    "kept_surface_vox": 35634
+   },
+   {
+    "phantom": "india",
+    "grid": [
+     0.4,
+     0.4,
+     0.5
+    ],
+    "wall": [
+     11,
+     true
+    ],
+    "border": "endo",
+    "shift": 0.5,
+    "variant": "literal",
+    "err": -0.0007670523853746114,
+    "kept_surface_vox": 35617
+   },
+   {
+    "phantom": "india",
+    "grid": [
+     0.4,
+     0.4,
+     0.5
+    ],
+    "wall": [
+     11,
+     true
+    ],
+    "border": "endo",
+    "shift": 0.5,
+    "variant": "cap_plane",
+    "err": -0.0007670523853746114,
+    "kept_surface_vox": 35617
+   },
+   {
+    "phantom": "india",
+    "grid": [
+     0.4,
+     0.4,
+     0.5
+    ],
+    "wall": [
+     11,
+     true
+    ],
+    "border": "endo",
+    "shift": 0.5,
+    "variant": "slab",
+    "err": -0.0007988799411873804,
+    "kept_surface_vox": 35617
+   },
+   {
+    "phantom": "india",
+    "grid": [
+     0.4,
+     0.4,
+     0.5
+    ],
+    "wall": [
+     11,
+     true
+    ],
+    "border": "epi",
+    "shift": -0.5,
+    "variant": "shipped",
+    "err": 0.06781359985943075,
+    "kept_surface_vox": 78348
+   },
+   {
+    "phantom": "india",
+    "grid": [
+     0.4,
+     0.4,
+     0.5
+    ],
+    "wall": [
+     11,
+     true
+    ],
+    "border": "epi",
+    "shift": -0.5,
+    "variant": "literal",
+    "err": null,
+    "kept_surface_vox": 0
+   },
+   {
+    "phantom": "india",
+    "grid": [
+     0.4,
+     0.4,
+     0.5
+    ],
+    "wall": [
+     11,
+     true
+    ],
+    "border": "epi",
+    "shift": -0.5,
+    "variant": "cap_plane",
+    "err": 0.015671876548746078,
+    "kept_surface_vox": 63032
+   },
+   {
+    "phantom": "india",
+    "grid": [
+     0.4,
+     0.4,
+     0.5
+    ],
+    "wall": [
+     11,
+     true
+    ],
+    "border": "epi",
+    "shift": -0.5,
+    "variant": "slab",
+    "err": 0.015831654350379865,
+    "kept_surface_vox": 63543
+   },
+   {
+    "phantom": "india",
+    "grid": [
+     0.4,
+     0.4,
+     0.5
+    ],
+    "wall": [
+     11,
+     true
+    ],
+    "border": "epi",
+    "shift": -0.3,
+    "variant": "shipped",
+    "err": 0.042219696351407654,
+    "kept_surface_vox": 78348
+   },
+   {
+    "phantom": "india",
+    "grid": [
+     0.4,
+     0.4,
+     0.5
+    ],
+    "wall": [
+     11,
+     true
+    ],
+    "border": "epi",
+    "shift": -0.3,
+    "variant": "literal",
+    "err": null,
+    "kept_surface_vox": 0
+   },
+   {
+    "phantom": "india",
+    "grid": [
+     0.4,
+     0.4,
+     0.5
+    ],
+    "wall": [
+     11,
+     true
+    ],
+    "border": "epi",
+    "shift": -0.3,
+    "variant": "cap_plane",
+    "err": 0.010553506369280763,
+    "kept_surface_vox": 63032
+   },
+   {
+    "phantom": "india",
+    "grid": [
+     0.4,
+     0.4,
+     0.5
+    ],
+    "wall": [
+     11,
+     true
+    ],
+    "border": "epi",
+    "shift": -0.3,
+    "variant": "slab",
+    "err": 0.010690246379963853,
+    "kept_surface_vox": 63543
+   },
+   {
+    "phantom": "india",
+    "grid": [
+     0.4,
+     0.4,
+     0.5
+    ],
+    "wall": [
+     11,
+     true
+    ],
+    "border": "epi",
+    "shift": 0.3,
+    "variant": "shipped",
+    "err": -0.038734963590041305,
+    "kept_surface_vox": 78348
+   },
+   {
+    "phantom": "india",
+    "grid": [
+     0.4,
+     0.4,
+     0.5
+    ],
+    "wall": [
+     11,
+     true
+    ],
+    "border": "epi",
+    "shift": 0.3,
+    "variant": "literal",
+    "err": null,
+    "kept_surface_vox": 0
+   },
+   {
+    "phantom": "india",
+    "grid": [
+     0.4,
+     0.4,
+     0.5
+    ],
+    "wall": [
+     11,
+     true
+    ],
+    "border": "epi",
+    "shift": 0.3,
+    "variant": "cap_plane",
+    "err": -0.006414567516809189,
+    "kept_surface_vox": 63032
+   },
+   {
+    "phantom": "india",
+    "grid": [
+     0.4,
+     0.4,
+     0.5
+    ],
+    "wall": [
+     11,
+     true
+    ],
+    "border": "epi",
+    "shift": 0.3,
+    "variant": "slab",
+    "err": -0.006391527112572626,
+    "kept_surface_vox": 63543
+   },
+   {
+    "phantom": "india",
+    "grid": [
+     0.4,
+     0.4,
+     0.5
+    ],
+    "wall": [
+     11,
+     true
+    ],
+    "border": "epi",
+    "shift": 0.5,
+    "variant": "shipped",
+    "err": -0.06611671252594797,
+    "kept_surface_vox": 78348
+   },
+   {
+    "phantom": "india",
+    "grid": [
+     0.4,
+     0.4,
+     0.5
+    ],
+    "wall": [
+     11,
+     true
+    ],
+    "border": "epi",
+    "shift": 0.5,
+    "variant": "literal",
+    "err": null,
+    "kept_surface_vox": 0
+   },
+   {
+    "phantom": "india",
+    "grid": [
+     0.4,
+     0.4,
+     0.5
+    ],
+    "wall": [
+     11,
+     true
+    ],
+    "border": "epi",
+    "shift": 0.5,
+    "variant": "cap_plane",
+    "err": -0.011387639925941828,
+    "kept_surface_vox": 63032
+   },
+   {
+    "phantom": "india",
+    "grid": [
+     0.4,
+     0.4,
+     0.5
+    ],
+    "wall": [
+     11,
+     true
+    ],
+    "border": "epi",
+    "shift": 0.5,
+    "variant": "slab",
+    "err": -0.011578523063031254,
+    "kept_surface_vox": 63543
+   }
+  ]
+ },
+ "validate_open_base": {
+  "shipped": {
+   "worst_abs_error_mm": 0.05035540467855526,
+   "mean_error_mm": -0.0007229102437219607,
+   "passed": false,
+   "bias_guard_mm": 0.5,
+   "by_border": {
+    "endo_outward": {
+     "mean_mm": 0.39921376587842267,
+     "min_mm": 0.28108139871917376,
+     "max_mm": 0.5106049080884262,
+     "worst_abs_error_mm": 0.01891860128082623
+    },
+    "endo_inward": {
+     "mean_mm": -0.39807430648040726,
+     "min_mm": -0.5161617079730207,
+     "max_mm": -0.2762347525087625,
+     "worst_abs_error_mm": 0.023765247491237484
+    },
+    "epi_outward": {
+     "mean_mm": 0.3669890066249762,
+     "min_mm": 0.26524866776950107,
+     "max_mm": 0.46698903663060626,
+     "worst_abs_error_mm": 0.05035540467855526
+    },
+    "epi_inward": {
+     "mean_mm": -0.37102010699787946,
+     "min_mm": -0.4693352535650251,
+     "max_mm": -0.2596207861357491,
+     "worst_abs_error_mm": 0.04276051329862446
+    }
+   },
+   "n_rows": 144,
+   "n_nan": 0
+  },
+  "literal": {
+   "worst_abs_error_mm": NaN,
+   "mean_error_mm": NaN,
+   "passed": false,
+   "bias_guard_mm": 0.5,
+   "by_border": {
+    "endo_outward": {
+     "mean_mm": 0.3992130980408825,
+     "min_mm": 0.28108139871917376,
+     "max_mm": 0.5106049080884262,
+     "worst_abs_error_mm": 0.01891860128082623
+    },
+    "endo_inward": {
+     "mean_mm": -0.39811667402644174,
+     "min_mm": -0.5161617079730207,
+     "max_mm": -0.2762347525087625,
+     "worst_abs_error_mm": 0.023765247491237484
+    },
+    "epi_outward": {
+     "mean_mm": NaN,
+     "min_mm": NaN,
+     "max_mm": NaN,
+     "worst_abs_error_mm": NaN
+    },
+    "epi_inward": {
+     "mean_mm": NaN,
+     "min_mm": NaN,
+     "max_mm": NaN,
+     "worst_abs_error_mm": NaN
+    }
+   },
+   "n_rows": 144,
+   "n_nan": 72
+  },
+  "cap_plane": {
+   "worst_abs_error_mm": 0.023765247491237484,
+   "mean_error_mm": -0.00022928967727864463,
+   "passed": true,
+   "bias_guard_mm": 0.3,
+   "by_border": {
+    "endo_outward": {
+     "mean_mm": 0.3992130980408825,
+     "min_mm": 0.28108139871917376,
+     "max_mm": 0.5106049080884262,
+     "worst_abs_error_mm": 0.01891860128082623
+    },
+    "endo_inward": {
+     "mean_mm": -0.39811667402644174,
+     "min_mm": -0.5161617079730207,
+     "max_mm": -0.2762347525087625,
+     "worst_abs_error_mm": 0.023765247491237484
+    },
+    "epi_outward": {
+     "mean_mm": 0.3979043618490935,
+     "min_mm": 0.28776014134154054,
+     "max_mm": 0.5064412366241147,
+     "worst_abs_error_mm": 0.016607889434150203
+    },
+    "epi_inward": {
+     "mean_mm": -0.39991794457264884,
+     "min_mm": -0.5056425724244606,
+     "max_mm": -0.28088136429679184,
+     "worst_abs_error_mm": 0.019464580285566246
+    }
+   },
+   "n_rows": 144,
+   "n_nan": 0
+  },
+  "slab": {
+   "worst_abs_error_mm": 0.023765247491237484,
+   "mean_error_mm": -0.00023725798003401997,
+   "passed": true,
+   "bias_guard_mm": 0.3,
+   "by_border": {
+    "endo_outward": {
+     "mean_mm": 0.39921099643032837,
+     "min_mm": 0.28108139871917376,
+     "max_mm": 0.5106049080884262,
+     "worst_abs_error_mm": 0.01891860128082623
+    },
+    "endo_inward": {
+     "mean_mm": -0.39809889455367903,
+     "min_mm": -0.5161617079730207,
+     "max_mm": -0.2762347525087625,
+     "worst_abs_error_mm": 0.023765247491237484
+    },
+    "epi_outward": {
+     "mean_mm": 0.3979288477123648,
+     "min_mm": 0.28776014134154054,
+     "max_mm": 0.5064412366241147,
+     "worst_abs_error_mm": 0.016607889434150203
+    },
+    "epi_inward": {
+     "mean_mm": -0.39998998150915027,
+     "min_mm": -0.5056425724244606,
+     "max_mm": -0.28088136429679184,
+     "worst_abs_error_mm": 0.019464580285566246
+    }
+   },
+   "n_rows": 144,
+   "n_nan": 0
+  }
+ },
+ "e4_closed_shells": [
+  {
+   "radius": 12.0,
+   "border": "endo",
+   "variant": "shipped",
+   "band_vox": 94225,
+   "err": [
+    0.0016315353904589602,
+    -0.0024984353550843164,
+    -0.0038376924590086126,
+    0.0006142384664815648
+   ]
+  },
+  {
+   "radius": 12.0,
+   "border": "endo",
+   "variant": "literal",
+   "band_vox": 66992,
+   "err": [
+    0.0016315353904589602,
+    -0.0024984353550843164,
+    -0.0038376924590086126,
+    0.0006142384664815648
+   ]
+  },
+  {
+   "radius": 12.0,
+   "border": "endo",
+   "variant": "cap_plane",
+   "band_vox": 94225,
+   "err": [
+    0.0016315353904589602,
+    -0.0024984353550843164,
+    -0.0038376924590086126,
+    0.0006142384664815648
+   ]
+  },
+  {
+   "radius": 12.0,
+   "border": "endo",
+   "variant": "slab",
+   "band_vox": 94225,
+   "err": [
+    0.0016315353904589602,
+    -0.0024984353550843164,
+    -0.0038376924590086126,
+    0.0006142384664815648
+   ]
+  },
+  {
+   "radius": 12.0,
+   "border": "epi",
+   "variant": "shipped",
+   "band_vox": 186975,
+   "err": [
+    0.0033964984337064297,
+    -0.0010507479575828094,
+    -0.0008698385099681349,
+    0.0014478665338006902
+   ]
+  },
+  {
+   "radius": 12.0,
+   "border": "epi",
+   "variant": "literal",
+   "band_vox": 5451,
+   "err": [
+    null,
+    null,
+    null,
+    null
+   ]
+  },
+  {
+   "radius": 12.0,
+   "border": "epi",
+   "variant": "cap_plane",
+   "band_vox": 186975,
+   "err": [
+    0.0033964984337064297,
+    -0.0010507479575828094,
+    -0.0008698385099681349,
+    0.0014478665338006902
+   ]
+  },
+  {
+   "radius": 12.0,
+   "border": "epi",
+   "variant": "slab",
+   "band_vox": 186975,
+   "err": [
+    0.0033964984337064297,
+    -0.0010507479575828094,
+    -0.0008698385099681349,
+    0.0014478665338006902
+   ]
+  },
+  {
+   "radius": 21.0,
+   "border": "endo",
+   "variant": "shipped",
+   "band_vox": 284191,
+   "err": [
+    0.0018818208325694363,
+    0.000281694472631433,
+    -0.0008013235253622186,
+    0.00020796337107531482
+   ]
+  },
+  {
+   "radius": 21.0,
+   "border": "endo",
+   "variant": "literal",
+   "band_vox": 213053,
+   "err": [
+    0.0018818208325694363,
+    0.000281694472631433,
+    -0.0008013235253622186,
+    0.00020796337107531482
+   ]
+  },
+  {
+   "radius": 21.0,
+   "border": "endo",
+   "variant": "cap_plane",
+   "band_vox": 284191,
+   "err": [
+    0.0018818208325694363,
+    0.000281694472631433,
+    -0.0008013235253622186,
+    0.00020796337107531482
+   ]
+  },
+  {
+   "radius": 21.0,
+   "border": "endo",
+   "variant": "slab",
+   "band_vox": 284191,
+   "err": [
+    0.0018818208325694363,
+    0.000281694472631433,
+    -0.0008013235253622186,
+    0.00020796337107531482
+   ]
+  },
+  {
+   "radius": 21.0,
+   "border": "epi",
+   "variant": "shipped",
+   "band_vox": 434673,
+   "err": [
+    0.0014573092712424907,
+    -0.001229692553480155,
+    -0.001477868244850633,
+    -0.0008654964087360661
+   ]
+  },
+  {
+   "radius": 21.0,
+   "border": "epi",
+   "variant": "literal",
+   "band_vox": 12571,
+   "err": [
+    null,
+    null,
+    null,
+    null
+   ]
+  },
+  {
+   "radius": 21.0,
+   "border": "epi",
+   "variant": "cap_plane",
+   "band_vox": 434673,
+   "err": [
+    0.0014573092712424907,
+    -0.001229692553480155,
+    -0.001477868244850633,
+    -0.0008654964087360661
+   ]
+  },
+  {
+   "radius": 21.0,
+   "border": "epi",
+   "variant": "slab",
+   "band_vox": 434673,
+   "err": [
+    0.0014573092712424907,
+    -0.001229692553480155,
+    -0.001477868244850633,
+    -0.0008654964087360661
+   ]
+  }
+ ],
+ "la_capped_heart": [
+  {
+   "border": "endo",
+   "variant": "shipped",
+   "band_vox": 149660,
+   "share_of_shipped": 1.0
+  },
+  {
+   "border": "endo",
+   "variant": "literal",
+   "band_vox": 149660,
+   "share_of_shipped": 1.0
+  },
+  {
+   "border": "endo",
+   "variant": "cap_plane",
+   "band_vox": 149660,
+   "share_of_shipped": 1.0
+  },
+  {
+   "border": "endo",
+   "variant": "slab",
+   "band_vox": 149660,
+   "share_of_shipped": 1.0
+  },
+  {
+   "border": "epi",
+   "variant": "shipped",
+   "band_vox": 303392,
+   "share_of_shipped": 1.0
+  },
+  {
+   "border": "epi",
+   "variant": "literal",
+   "band_vox": 55156,
+   "share_of_shipped": 0.18179780613859298
+  },
+  {
+   "border": "epi",
+   "variant": "cap_plane",
+   "band_vox": 303392,
+   "share_of_shipped": 1.0
+  },
+  {
+   "border": "epi",
+   "variant": "slab",
+   "band_vox": 303392,
+   "share_of_shipped": 1.0
+  }
+ ],
+ "seconds": 1995.0
+}

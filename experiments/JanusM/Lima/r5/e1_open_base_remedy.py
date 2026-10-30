@@ -26,7 +26,8 @@ Each runs on the same phantoms as #219:
 
 Phantoms only; no case is opened.
 
-    python experiments/JanusM/Lima/r5/e1_open_base_remedy.py experiments/JanusM/Lima/r5/e1_open_base_remedy.json
+    python experiments/JanusM/Lima/r5/e1_open_base_remedy.py \
+        experiments/JanusM/Lima/r5/e1_open_base_remedy.json
 """
 import importlib.util
 import json
@@ -35,7 +36,6 @@ import time
 from pathlib import Path
 
 import numpy as np
-from scipy import ndimage as ndi
 from scipy.spatial import cKDTree
 
 HERE = Path(__file__).resolve().parent

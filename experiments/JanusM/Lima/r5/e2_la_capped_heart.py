@@ -8,7 +8,8 @@ Two grids x three walls (uniform; varying; varying and oblique) x two sub-voxel 
 borders x +-0.3 / +-0.5 mm, for each band of E1 (``e1_open_base_remedy.band_variant``).
 Phantoms only; no case is opened.
 
-    python experiments/JanusM/Lima/r5/e2_la_capped_heart.py experiments/JanusM/Lima/r5/e2_la_capped_heart.json
+    python experiments/JanusM/Lima/r5/e2_la_capped_heart.py \
+        experiments/JanusM/Lima/r5/e2_la_capped_heart.json
 """
 import importlib.util
 import json
@@ -48,16 +49,19 @@ def main(out):
                         for sign in (1.0, -1.0):
                             b = sign * size
                             sh = dict(endo_shift_mm=b) if border == "endo" else dict(epi_shift_mm=b)
-                            lt, _ = H.phantom(grid, origin_offset_mm=off, cavity_shift_mm=cs,
-                                              tilt_deg=tilt, **sh)
+                            lt, _ = H.phantom(
+                                grid, origin_offset_mm=off, cavity_shift_mm=cs, tilt_deg=tilt, **sh
+                            )
                             cav_t, sol_t = H.borders(lt)
                             a, t = (cav_r, cav_t) if border == "endo" else (sol_r, sol_t)
                             for v, band in bands.items():
-                                est = H.signed_bias(a, t, sp, roi=band) if band.any() else float("nan")
+                                est = (
+                                    H.signed_bias(a, t, sp, roi=band) if band.any() else np.nan
+                                )
                                 rows.append(dict(grid=list(grid), cs=cs, tilt=tilt, off=list(off),
                                                  border=border, true_mm=b, variant=v,
                                                  band_vox=int(band.sum()),
-                                                 err=None if not np.isfinite(est) else float(est - b)))
+                                                 err=float(est - b) if np.isfinite(est) else None))
                 print(grid, cs, tilt, off, flush=True)
     summ = {}
     for v in E1.VARIANTS:

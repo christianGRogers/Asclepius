@@ -191,9 +191,13 @@ both borders and ±0.3 / ±0.5 mm (48 rows per border), against the exact shift.
 | Band | India open, epi worst | Cut capsule, epi worst | LA-capped heart, epi worst | LA-capped epi band kept | Endo (all three) |
 |---|---|---|---|---|---|
 | shipped | 0.068 ✘ | 0.0504 ✘ | **0.017 ✔** | 100 % | ≤ 0.024 ✔ |
-| literal | **empty in 24 / 24 rows** (NaN) | ⟨V_LIT⟩ | 0.052 ✘ | **18 %** | ≤ 0.024 ✔ |
-| cap_plane | **0.016 ✔** | ⟨V_CAP⟩ | 0.017 ✔ | 100 % (no-op) | ≤ 0.024 ✔ |
-| slab | 0.016 ✔ | ⟨V_SLAB⟩ | 0.017 ✔ | 100 % (no-op) | ≤ 0.024 ✔ |
+| literal | **empty in 24 / 24 rows** (NaN) | **NaN in 72 / 72 rows** | 0.052 ✘ | **18 %** | ≤ 0.024 ✔ |
+| cap_plane | **0.016 ✔** | **0.0195 ✔** | 0.017 ✔ | 100 % (no-op) | ≤ 0.024 ✔ |
+| slab | 0.016 ✔ | 0.0195 ✔ | 0.017 ✔ | 100 % (no-op) | ≤ 0.024 ✔ |
+
+On the cut capsule, `cap_plane` and `slab` pass all 144 rows (worst 0.0238 mm, endo). On E4's closed shells:
+- shipped, `cap_plane` and `slab` are identical, within 0.004 mm on both borders;
+- `literal` keeps 3 % of the epicardial band and gives NaN in 8 / 8 rows.
 
 The phantom does not decide the case for or against the remedy. The labels do:
 1. **The remedy as worded cannot be adopted.** In JA1's labels, fat, pericardium and aorta are all label 0

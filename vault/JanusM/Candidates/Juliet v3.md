@@ -183,7 +183,9 @@ a mock-up, so this candidate supplies the mock-up, a measurement that needs no n
   | D | non-ischaemic mid-wall stripe |
   | E | small lateral bin-1 scars, plus an epicardial scar |
 
-  The images are drawn from geometry; no case is opened.
+  The images are drawn from geometry; no case is opened. The stacks are not committed (the repository ignores
+  `*.nii.gz`); `python lge_mockup.py` regenerates them byte for byte from a fixed seed. `truth.json` and the panel are
+  committed.
 - **The measurement.** The queue already stamps `assigned` and `submitted` per read (`src/janusm_reads/protocol.py`).
   Each CMR reader reads the five mock patients through the real `lge17` form before any cohort read. The median
   `submitted − assigned` per patient is the measured reader time, and agreement with `truth.json` is the reader's

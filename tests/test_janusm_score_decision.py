@@ -377,6 +377,47 @@ def test_an_id_in_the_output_is_refused():
         S.dumps({"x": "ImageCAS-X__" + ORDER[0]})
 
 
+@pytest.mark.slow
+def test_output_carries_ja70s_band_record_and_stays_anonymous(phantom_out):
+    """JA70 (R5-S3 follow-up): the scorer writes the share of JA61's band kept and the form per
+    opening into each comparison, and the output stays anonymous. On a read-like heart whose base
+    is open over 60 degrees each comparison takes the ``plane`` form. On the exact capsules the
+    record follows the reference read: where the pool's flat top is flush with the myocardium's
+    it opens (``plane``); where the epicardium has grown it does not, and the band is JA61's. On
+    the LA-capped heart nothing is open, so the band is JA61's and the form is empty."""
+    read_1, aff = H.phantom(cavity_shift_mm=2.3, la_gap_deg=H.JA71_C_LA_GAP_DEG)
+    read_2, _ = H.phantom(cavity_shift_mm=2.3, la_gap_deg=H.JA71_C_LA_GAP_DEG, epi_shift_mm=0.3)
+    model, _ = H.phantom(cavity_shift_mm=2.3, la_gap_deg=H.JA71_C_LA_GAP_DEG, endo_shift_mm=0.5)
+    items = [lambda: (model, read_1, read_2, None, aff, None)] * 20
+    out = S.score(items, compare=_memo(_compare), transfer_fn=_transfer,
+                  features_fn=_fake_features)
+    for row in out["assd_pp"]:
+        for k in S.COMPARISONS:
+            for b in S.BORDERS:
+                assert 0.5 <= row[k][f"band_kept_share_{b}"] < 1.0, (k, b)
+                assert row[k][f"band_forms_{b}"] == "plane", (k, b)
+    for row in phantom_out["assd_pp"]:
+        for k in S.COMPARISONS:
+            for b in S.BORDERS:
+                share, form = row[k][f"band_kept_share_{b}"], row[k][f"band_forms_{b}"]
+                assert form in ("", "plane") and 0.5 <= share <= 1.0, (k, b)
+                assert (share == 1.0) == (form == ""), (k, b)
+        # read 1 (flush top) is the reference here: open; read 2 (grown epicardium): closed
+        assert row["model_vs_read_1"]["band_forms_endo"] == "plane"
+        assert row["model_vs_read_2"]["band_forms_endo"] == ""
+    capped, aff_c = H.phantom()
+    kept = S._keep(_compare(capped, capped, affine=aff_c, roi=S.ROI))
+    for b in S.BORDERS:
+        assert kept[f"band_kept_share_{b}"] == 1.0 and kept[f"band_forms_{b}"] == ""
+    for o in (out, phantom_out):
+        R.assert_anonymous(o, "the decision scoring output")
+        assert json.loads(S.dumps(o)) == json.loads(json.dumps(o, default=float))
+    # the forms are drawn from JA70's two names only: nothing else can enter the output there
+    forms = {f for row in out["assd_pp"] for k in S.COMPARISONS for b in S.BORDERS
+             for f in row[k][f"band_forms_{b}"].split(",") if f}
+    assert forms <= {"plane", "normal"}
+
+
 def test_build_reference_accepts_the_output_and_refuses_mismatches(phantom_out):
     reads = B.load_decision_reads(json.loads(S.dumps(phantom_out)))
     assert len(reads) == 20 and reads[0]["read_1"]["features_version"] == F.FEATURES_VERSION

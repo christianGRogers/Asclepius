@@ -1,0 +1,159 @@
+{
+ "n_rows": 336,
+ "bias": {
+  "india_bias": {
+   "shift+0.5": {
+    "mean_err": -0.116,
+    "max_abs_err": 0.1286,
+    "n": 24
+   },
+   "shift-0.5": {
+    "mean_err": -0.0141,
+    "max_abs_err": 0.045,
+    "n": 24
+   },
+   "all_shifts_max_abs_err": 0.1499,
+   "all_shifts_mean_rel_err": -0.1164,
+   "fields_mean_err": -0.0522,
+   "fields_max_abs_err": 0.1058,
+   "by_grid_shift0.5_max_abs_err": {
+    "(0.4, 0.4, 0.5)": 0.1257,
+    "(0.5, 0.5, 0.5)": 0.1286
+   },
+   "meets_JA16": false
+  },
+  "lima_bias": {
+   "shift+0.5": {
+    "mean_err": 0.0168,
+    "max_abs_err": 0.0503,
+    "n": 24
+   },
+   "shift-0.5": {
+    "mean_err": 0.1234,
+    "max_abs_err": 0.1371,
+    "n": 24
+   },
+   "all_shifts_max_abs_err": 0.1955,
+   "all_shifts_mean_rel_err": -0.1182,
+   "fields_mean_err": 0.0543,
+   "fields_max_abs_err": 0.106,
+   "by_grid_shift0.5_max_abs_err": {
+    "(0.4, 0.4, 0.5)": 0.1371,
+    "(0.5, 0.5, 0.5)": 0.1358
+   },
+   "meets_JA16": false
+  },
+  "sym_bias": {
+   "shift+0.5": {
+    "mean_err": -0.0482,
+    "max_abs_err": 0.0669,
+    "n": 24
+   },
+   "shift-0.5": {
+    "mean_err": 0.0554,
+    "max_abs_err": 0.0787,
+    "n": 24
+   },
+   "all_shifts_max_abs_err": 0.1412,
+   "all_shifts_mean_rel_err": -0.1165,
+   "fields_mean_err": 0.0017,
+   "fields_max_abs_err": 0.0337,
+   "by_grid_shift0.5_max_abs_err": {
+    "(0.4, 0.4, 0.5)": 0.0787,
+    "(0.5, 0.5, 0.5)": 0.0543
+   },
+   "meets_JA16": false
+  },
+  "pp_bias": {
+   "shift+0.5": {
+    "mean_err": -0.0159,
+    "max_abs_err": 0.0247,
+    "n": 24
+   },
+   "shift-0.5": {
+    "mean_err": 0.0247,
+    "max_abs_err": 0.0322,
+    "n": 24
+   },
+   "all_shifts_max_abs_err": 0.067,
+   "all_shifts_mean_rel_err": -0.0358,
+   "fields_mean_err": 0.0034,
+   "fields_max_abs_err": 0.0322,
+   "by_grid_shift0.5_max_abs_err": {
+    "(0.4, 0.4, 0.5)": 0.0322,
+    "(0.5, 0.5, 0.5)": 0.03
+   },
+   "meets_JA16": true
+  },
+  "vol_bias": {
+   "shift+0.5": {
+    "mean_err": -0.0037,
+    "max_abs_err": 0.0121,
+    "n": 24
+   },
+   "shift-0.5": {
+    "mean_err": 0.0127,
+    "max_abs_err": 0.0194,
+    "n": 24
+   },
+   "all_shifts_max_abs_err": 0.0542,
+   "all_shifts_mean_rel_err": -0.0164,
+   "fields_mean_err": 0.004,
+   "fields_max_abs_err": 0.033,
+   "by_grid_shift0.5_max_abs_err": {
+    "(0.4, 0.4, 0.5)": 0.0194,
+    "(0.5, 0.5, 0.5)": 0.0183
+   },
+   "meets_JA16": true
+  }
+ },
+ "assd": {
+  "voxel_assd": {
+   "shifts_mean_err": 0.0111,
+   "shifts_max_abs_err": 0.0987,
+   "fields_mean_err": 0.0181,
+   "fields_max_abs_err": 0.0354,
+   "all_mean_err": 0.0131
+  },
+  "sdf_assd": {
+   "shifts_mean_err": -0.041,
+   "shifts_max_abs_err": 0.1389,
+   "fields_mean_err": -0.0199,
+   "fields_max_abs_err": 0.0515,
+   "all_mean_err": -0.035
+  },
+  "pp_assd": {
+   "shifts_mean_err": -0.0148,
+   "shifts_max_abs_err": 0.0669,
+   "fields_mean_err": -0.0085,
+   "fields_max_abs_err": 0.0283,
+   "all_mean_err": -0.013
+  }
+ },
+ "thickness": {
+  "endo_shift-0.50": {
+   "true": 0.5,
+   "mean": 0.4677,
+   "max_abs_err": 0.0568,
+   "n": 12
+  },
+  "endo_shift-0.25": {
+   "true": 0.25,
+   "mean": 0.2354,
+   "max_abs_err": 0.0325,
+   "n": 12
+  },
+  "endo_shift+0.25": {
+   "true": -0.25,
+   "mean": -0.2372,
+   "max_abs_err": 0.0322,
+   "n": 12
+  },
+  "endo_shift+0.50": {
+   "true": -0.5,
+   "mean": -0.4739,
+   "max_abs_err": 0.0541,
+   "n": 12
+  }
+ }
+}

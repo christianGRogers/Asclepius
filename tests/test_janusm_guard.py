@@ -188,6 +188,60 @@ def test_the_twin_list_matches_the_held_out_ids(g):
     assert not set(g.ts_twins) & set(g.ts_held_out)
 
 
+# ------------------------------------------------------------------ JA22 twin widening (#168)
+#: The JA12 twin list as first pinned (Round 1 §4), frozen to check JA22 only widens it.
+JA12_TWINS = REPO / "tests/fixtures/janusm/ts-twins-r1-ja12.json"
+JA12_TWINS_SHA256 = "6495ddda132b6bcaad687bcb21e71662c29b715d9c832ed2bd16205ddc7a07fa"
+
+
+def test_the_ja22_twin_list_is_a_superset_of_the_ja12_list(g):
+    import hashlib
+
+    raw = JA12_TWINS.read_bytes()
+    assert hashlib.sha256(raw).hexdigest() == JA12_TWINS_SHA256
+    old = json.loads(raw)["twins"]
+    new = json.loads((REPO / G.TWINS_RELPATH).read_text())["twins"]
+    assert set(old) <= set(new)
+    for k, held in old.items():        # every twin keeps every held-out subject it matched
+        assert set(held) <= set(new[k]), k
+    for k in old:
+        if k not in g.ts_held_out:
+            assert "twin" in g.reason(k, source="TotalSegmentator"), k
+
+
+def test_the_ja22_refused_counts(g):
+    """JA22 records 692 twins outside the held-out 16, 707 in the file and 708 refused before the
+    widening; the blank-institute match adds three v2.0.1 subjects (s1425, s1426, s1428)."""
+    tw = json.loads((REPO / G.TWINS_RELPATH).read_text())
+    assert tw["n_twins"] == len(tw["twins"]) == 710
+    assert tw["releases"]["v1.0"]["twins"] == 639 and tw["releases"]["v2.0.1"]["twins"] == 674
+    assert len(g.ts_twins) == 695
+    assert len(set(g.ts_twins) | set(g.ts_held_out)) == 711
+    added = set(tw["twins"]) - set(json.loads(JA12_TWINS.read_text())["twins"])
+    assert added == {"s1425", "s1426", "s1428"}
+    for s in added:
+        assert "twin" in g.reason(s, source="TotalSegmentator"), s
+
+
+def test_the_twin_rule_matches_a_blank_institute_on_either_side():
+    import build_ts_twins as B
+
+    def row(sid, age, sex, inst):
+        return {"image_id": sid, "age": str(age), "gender": sex, "institute": inst}
+
+    meta = {
+        "h1": row("h1", 60, "m", "A"),     # held out, institute A
+        "h2": row("h2", 40, "f", ""),      # held out, blank institute
+        "a": row("a", 62, "m", "A"),       # same institute: twin of h1
+        "b": row("b", 62, "m", "B"),       # other institute: no twin
+        "c": row("c", 58, "m", ""),        # blank institute: twin of h1 (JA22)
+        "d": row("d", 41, "f", "Z"),       # any institute matches blank h2 (JA22)
+        "e": row("e", 70, "m", ""),        # blank institute, age out of window
+        "f": row("f", 40, "m", "Z"),       # blank institute, other sex
+    }
+    assert B.twins_in(meta, {"h1", "h2"}) == {"a": ["h1"], "c": ["h1"], "d": ["h2"]}
+
+
 # ------------------------------------------------------------------ Round 1 prototypes
 def test_prototypes_refuse_nothing_the_guard_allows_except_trainable_lists():
     """Every Round 1 prototype, run as committed on its own inputs, against the guard. The guard

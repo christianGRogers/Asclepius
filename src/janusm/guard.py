@@ -14,8 +14,9 @@ Refused, by patient (``segtrain.pool_seal`` grouping, so every volume of a held-
 * PLOS-Peng2016 (any case);
 * every public copy of a held-out pool patient under its public id (TotalSegmentator s-numbers,
   ImageCAS ids, and any pool source named as the pool names it);
-* every TotalSegmentator "twin" of a held-out TotalSegmentator subject (Round 1 §4): the pinned
-  list ``configs/janusm/ts-twins-r1.json``, built by ``tools/janusm/build_ts_twins.py``;
+* every TotalSegmentator "twin" of a held-out TotalSegmentator subject (Round 1 §4, widened by
+  Round 2 JA22 to match a blank institute): the pinned list ``configs/janusm/ts-twins-r1.json``,
+  built by ``tools/janusm/build_ts_twins.py``;
 * once the JA6 freeze (#140) pins ``configs/janusm/sealed-r1.json``: Janus-M seal cases outside
   seal scoring, and decision cases outside decision scoring.
 
@@ -60,7 +61,8 @@ from segtrain import pool_seal
 from segtrain.pool_seal import _CHANNEL, _READ_SUFFIX, _patient_key, _stem, ingest_patient
 
 #: Bumped whenever what the guard refuses changes. Callers may record it beside their outputs.
-GUARD_VERSION = "1"
+#: v2: JA22 widens the twin rule (a blank institute matches any); 708 -> 711 refused.
+GUARD_VERSION = "2"
 
 #: Environment variable naming the repository checkout the guard reads (default: this checkout).
 ROOT_ENV = "JANUSM_REPO"
@@ -98,7 +100,7 @@ PINNED: Dict[str, str] = {
         "1a75fe41ffe44aa37c884b723c066a6b8cd3669164e0c670b6439028c2b966b1",
     "experiments/Foxtrot/r10/d35_proposal.json":
         "a588ad17f7e6f03e128627bfadec84b5b9cb277cd92234352f5b719d2a7cd514",
-    TWINS_RELPATH: "6495ddda132b6bcaad687bcb21e71662c29b715d9c832ed2bd16205ddc7a07fa",
+    TWINS_RELPATH: "ff3a1b78123e4382c4b8cf214c1766e49ac3abdf76503c7eb3f9e4e451daad95",
 }
 
 #: The Janus-M seal and decision set (JA6, #140), frozen in :mod:`janusm.sealed_r1`, which holds

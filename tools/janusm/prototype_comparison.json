@@ -1,6 +1,6 @@
 {
  "guard": {
-  "guard_version": "1",
+  "guard_version": "2",
   "pins": {
    "configs/segqueue14/sealed-pool-2026-10.json": "e71141b407acb79eeff912eee21029d34edb677d984172d871eb5f02cb1d0690",
    "experiments/Atlas/r10/decision_set_proposal.json": "bc47690cc1b0acb50037f19ea05ae0619444c1ed1396be592082371b022b6042",
@@ -10,7 +10,7 @@
    "experiments/Foxtrot/r10/d35_proposal.json": "a588ad17f7e6f03e128627bfadec84b5b9cb277cd92234352f5b719d2a7cd514",
    "trillium/icx4/sealed_test.json": "319cbc949161c1ee8738153b30405d881f91846200e0ddbfa3b11bcc4233055b",
    "trillium-results/icx14/results/splits.json": "a53bd426cddcf70e92555abe9c01a867736b1390782abaa0160b1da5fb2d9e17",
-   "configs/janusm/ts-twins-r1.json": "6495ddda132b6bcaad687bcb21e71662c29b715d9c832ed2bd16205ddc7a07fa",
+   "configs/janusm/ts-twins-r1.json": "ff3a1b78123e4382c4b8cf214c1766e49ac3abdf76503c7eb3f9e4e451daad95",
    "configs/janusm/sealed-r1.json": "fda078976d2411de0f3cfabd7a37d4f2c97f4c27a9bca0f15cabb5daa8fda216"
   },
   "pool_seal_patients": 170,
@@ -40,7 +40,7 @@
    "s1106",
    "s1345"
   ],
-  "ts_twins": 692,
+  "ts_twins": 695,
   "janusm_lists": {
    "seal": 60,
    "decision": 40,
@@ -95,10 +95,10 @@
    },
    "ts": {
     "n": 1228,
-    "same": 536,
+    "same": 533,
     "guard_stricter": {
      "twin": {
-      "n": 692,
+      "n": 695,
       "e.g.": [
        "s0001",
        "s0006",
@@ -168,10 +168,10 @@
    },
    "ts": {
     "n": 1228,
-    "same": 536,
+    "same": 533,
     "guard_stricter": {
      "twin": {
-      "n": 692,
+      "n": 695,
       "e.g.": [
        "s0001",
        "s0006",
@@ -187,10 +187,10 @@
   "India": {
    "ts": {
     "n": 1228,
-    "same": 536,
+    "same": 533,
     "guard_stricter": {
      "twin": {
-      "n": 692,
+      "n": 695,
       "e.g.": [
        "s0001",
        "s0006",
@@ -223,10 +223,10 @@
    },
    "ts": {
     "n": 1228,
-    "same": 536,
+    "same": 533,
     "guard_stricter": {
      "twin": {
-      "n": 692,
+      "n": 695,
       "e.g.": [
        "s0001",
        "s0006",
@@ -259,10 +259,10 @@
    },
    "ts": {
     "n": 1228,
-    "same": 536,
+    "same": 533,
     "guard_stricter": {
      "twin": {
-      "n": 692,
+      "n": 695,
       "e.g.": [
        "s0001",
        "s0006",

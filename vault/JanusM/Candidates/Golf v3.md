@@ -37,7 +37,8 @@ registration and the reference.**
 - **What the cohort needs is now concrete and checkable:** the LGE read form and the registration check form
   (§6, with a mock-up and entry times), the intake checker's DICOM fields and outcomes (§7), and a truth-free phase
   flag (§8.2).
-- **Stage A** is one implementation on `dev` (§9). The only step left is the PM's sync. Nothing on Stage A changes.
+- **Stage A** is one implementation (§9): the shared code is byte-identical on `dev` and both paths. Nothing on Stage
+  A changes; path A's Round 3 amendments arrive with the code.
 
 ## 2. Evidence this round (CPU; code in `experiments/JanusM/Golf/`; notes in `vault/JanusM/Experiments/`)
 
@@ -437,34 +438,38 @@ rules.
 
 ## 9. §7 item 6: the JA25 hand-over
 
-Checked on 2026-10-30 against the remote branches, by file and by `git diff` (no code run):
+Checked against the remote branches on 2026-10-30, after the PM's trunk syncs #202 and #204, by file and by
+`git diff` (no code run):
 
-| Shared Stage A code (JA25) | On `jm/rest-ccta` | On `dev` | On `jm/paired-scar` |
+| Shared Stage A code | On `dev` | `jm/rest-ccta` vs `dev` | `jm/paired-scar` vs `dev` |
 |---|---|---|---|
-| JA15 harness, `src/janusm/harness.py` + `tests/test_janusm_harness.py` | yes | **yes, byte-identical** (#180, merged as #183) | **not yet** |
-| JM-0R, `experiments/JanusM/fir/jm0r_readout.py` + `tests/test_janusm_jm0r_readout.py` | yes | **yes, byte-identical** (#183) | **not yet** |
-| Geometry module, `src/janusm/geometry.py` | yes | yes, identical | yes, identical |
-| #177's additions to `tests/test_janusm_geometry.py` | yes | yes, identical | **not yet** (24 lines behind `dev`) |
-| JA19 table writer (Tables A and B) | **not built** | no | no |
+| JA15 harness, `src/janusm/harness.py` + tests (#180/#183, then #198's point-to-plane API) | yes | identical | **identical** |
+| JM-0R v2, `experiments/JanusM/fir/jm0r_readout.py` + tests (#197; canonical sign, JA44) | yes | identical | **identical** |
+| JM-0R decision script, `experiments/JanusM/fir/jm0r_decide.py` (JA43) | yes | identical | **identical** |
+| Geometry module, `src/janusm/geometry.py` | yes | identical | **identical** |
+| Reference population and table writer, `src/janusm/reference.py`, `src/janusm/report.py` (#199; JA19 as amended by JA48) | yes | identical | **identical** |
+| Detectable depth, `src/janusm/calibrate.py` (#198, JA40) | yes | identical | **identical** |
+| Guard, `src/janusm/guard.py` | yes | identical | **identical** |
 
-- **One implementation is in place on the trunk.** Both pieces this path needs from path A are on `dev` with no
-  diff against `jm/rest-ccta`.
-- **What is left is a sync, not code:** the PM merges `dev` into `jm/paired-scar` (#180's acceptance says the PM
-  syncs into both paths). This PR does not do it: it would bring trunk changes into an advocate PR. Until then, no
-  path-B code may import `janusm.harness`.
-- **The table writer does not exist on either path yet** (JA19, a `role:swe` item on `jm/rest-ccta`). When it is
-  built there, it moves to `dev` the same way, and JA33 (§10) scores its output, not a path-B copy.
-- **JM-0R's numbers:** none exist yet. JM-0R runs after Job JM-0 (LQ11), and no JM-0 aggregate has been returned.
-  When it is, this path applies the same pre-registered decisions as `jm/rest-ccta`, with no path-B variant:
-  - JA17's three conditions decide whether rest TPR enters the table;
-  - JA18's fat cut is set provisionally, and Lima's detectable-depth simulation is re-run with the measured `cv_n`;
-  - JA20's septal-arc column is dropped if < 10 % of mass changes segment, and the geodesic-vs-Euclidean
-    disagreement is recorded. **On this path the territory method is then decided by JA33's culprit-vessel test**,
-    not by the ≥ 10 % rule (JA33).
+Across `src/janusm`, `tests` and `experiments/JanusM/fir`, the only difference between `jm/paired-scar` and `dev` is
+path B's own `src/janusm/scar/` and its three test files.
+
+- **One implementation is in place.** JA25 is met in code: both paths run the same harness, JM-0R, decision
+  script, table writer and guard.
+- **Path A's Round 3 amendments to Stage A** (JA37 onward on `jm/rest-ccta`, e.g. JA43 decision rules, JA44's sign,
+  JA48's tables) arrive here with the code. Golf reads JA25 as importing them too, because Stage A on this path *is*
+  path A's. The judge should state that, since JA25 names only JA15–JA24.
+- **JM-0R's numbers:** none exist. JM-0R runs after Job JM-0 (LQ11), and no JM-0 aggregate has been posted.
+  `jm0r_decide.py` runs once on its `summary.json`, and **this path applies its output as `jm/rest-ccta` does, with
+  no path-B variant**: rest TPR in or out of the table (JA17), the provisional fat cut (JA18), the septal-arc column
+  (JA20), and detectable depth (JA40).
+  - **Territories on this path** are then decided by JA33's culprit-vessel test, not by the ≥ 10 % rule (JA33).
   - **One path-B use:** JM-0R's endocardial half-maximum offset and 10–90 % edge width on first-pass CCTA set the
-    expected E9 offset spread on the paired cohort's first pass (§8.2), so a phase flag is judged against the
-    first pass's own edge width.
-- **Golf E7 (`Golf/harness.py`)** stays a test reference only, as JA25 says; it is not imported anywhere.
+    expected spread of the E9 / Kilo E8 edge offset on the paired cohort's first pass (§8.2). They are read in
+    JA44's canonical sign (+ = the region bounded by the border extends beyond the image half-maximum), which is
+    the opposite of the sign in Golf E9's code (+ = the LIE edge lies outward of the carried border, for the
+    endocardium). A §8.2 implementation must convert.
+- **Golf E7 (`Golf/harness.py`)** stays a test reference only (JA25); nothing imports it.
 
 ## 10. §7 item 7: path summary for the lead
 
@@ -473,7 +478,7 @@ An update of the Round 2 ruling's §8, for #143. Path A's column is unchanged.
 | | Path A, `jm/rest-ccta` | Path B, `jm/paired-scar` (after Round 3) |
 |---|---|---|
 | Assumes | no reference for scar or ischaemia | a paired CCTA + same-session LIE + CMR LGE cohort the lead obtains (data requirements only, D31) |
-| Stage A | built and calibrated: specificity only (JA18) | **identical, one implementation** (JA25): harness and JM-0R on `dev`, byte-identical; sync into this path pending; table writer not built on either path |
+| Stage A | built and calibrated: specificity only (JA18) | **identical, one implementation** (JA25): harness, JM-0R v2, decision script, table writer and guard byte-identical on `dev` and both paths (§9) |
 | Scar grade | none | Scar-0 from a menu narrowed on one shared benchmark (§4); P-K struck (E8; Kilo withdrew it; the benchmark rules formally) |
 | What limits the scar grade | — | **registration, not the rule** (E8): on exact borders the extent error is ≤ 0.08 of wall share; after the JA29 chain it is 0.09–0.15, and 0.06–0.09 with always-affine registration (§8.2) |
 | Reference standard | read-vs-read border agreement | the same, plus two CMR readers per segment, read on a fixed form (§6) |

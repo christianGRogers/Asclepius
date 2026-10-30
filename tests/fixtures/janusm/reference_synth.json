@@ -3601,10 +3601,24 @@
  },
  "rc": {
   "fat": {
+   "aha_fallback": {
+    "kappa_icc": {
+     "fell": 0,
+     "reads": 80
+    },
+    "rc": {
+     "fell": 0,
+     "reads": 40
+    },
+    "total": {
+     "fell": 0,
+     "reads": 80
+    }
+   },
    "aha_fallback_reads": 0,
    "decisions": [
     "fat: RC on differences, in mm³ (JA64)",
-    "0 of 40 reads fell back to the AHA default map (JA63)"
+    "AHA default-map fall-backs (JA63, JA75): RC 0 of 40 reads, κ / ICC 0 of 80 reads, total 0 of 80 reads"
    ],
    "n_cases": 20,
    "n_patients": 20,
@@ -3656,10 +3670,24 @@
    }
   },
   "hypoattenuation": {
+   "aha_fallback": {
+    "kappa_icc": {
+     "fell": 0,
+     "reads": 80
+    },
+    "rc": {
+     "fell": 0,
+     "reads": 40
+    },
+    "total": {
+     "fell": 0,
+     "reads": 80
+    }
+   },
    "aha_fallback_reads": 0,
    "decisions": [
     "Spearman rho(|Δ|, E) 0.174 <= 0.4: RC on differences",
-    "0 of 40 reads fell back to the AHA default map (JA63)"
+    "AHA default-map fall-backs (JA63, JA75): RC 0 of 40 reads, κ / ICC 0 of 80 reads, total 0 of 80 reads"
    ],
    "n_cases": 20,
    "n_patients": 20,
@@ -3711,10 +3739,24 @@
    }
   },
   "thinning": {
+   "aha_fallback": {
+    "kappa_icc": {
+     "fell": 0,
+     "reads": 80
+    },
+    "rc": {
+     "fell": 0,
+     "reads": 40
+    },
+    "total": {
+     "fell": 0,
+     "reads": 80
+    }
+   },
    "aha_fallback_reads": 0,
    "decisions": [
     "Spearman rho(|Δ|, E) -0.076 <= 0.4: RC on differences",
-    "0 of 40 reads fell back to the AHA default map (JA63)"
+    "AHA default-map fall-backs (JA63, JA75): RC 0 of 40 reads, κ / ICC 0 of 80 reads, total 0 of 80 reads"
    ],
    "n_cases": 20,
    "n_patients": 20,

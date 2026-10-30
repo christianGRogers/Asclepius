@@ -452,7 +452,8 @@ def test_a_forced_fallback_is_counted():
     ag = R.read_agreement(reads, cfg)
     for s in R.SIGNS:
         assert ag[s]["rc"]["aha_fallback_reads"] == 3
-        assert "3 of 40 reads fell back to the AHA default map (JA63)" in ag[s]["rc"]["decisions"]
+        assert ("AHA default-map fall-backs (JA63, JA75): RC 3 of 40 reads, κ / ICC 3 of 80 "
+                "reads, total 3 of 80 reads") in ag[s]["rc"]["decisions"]
     assert R.case_state(reads[5]["read_1"], cfg)["map"] == "patient"
 
 
@@ -598,3 +599,161 @@ def test_cli_run_without_geodesic_shared_is_refused(monkeypatch, tmp_path, capsy
     assert e.value.code == 2
     assert "--geodesic-shared" in capsys.readouterr().err
     assert "--geodesic-shared <R8: yes|no>" in _tool().FIR_COMMAND
+
+
+# ------------------------------------------------------------------------------------ R5-S5
+def test_r5s5_a_forced_fallback_on_read_25_is_counted():
+    """R5-S5 (JA75): a fall-back on read 25, which only κ / ICC use, is counted per use and in
+    total, in rc["aha_fallback"] and rc["decisions"]."""
+    pop = Y.population(60, seed=1)
+    cfg = R.pooled(pop)
+    reads = Y.reads(pop)
+    assert len(reads) == R.KAPPA_CASES
+    r = reads[24]["read_2"]  # read 25 of the draw: outside the RC's 20
+    r.pop("segment_territory")
+    r.pop("fat_clusters_mm3_patient")
+    ag = R.read_agreement(reads, cfg)
+    for s in R.SIGNS:
+        rc = ag[s]["rc"]
+        assert rc["aha_fallback"] == {"rc": {"fell": 0, "reads": 40},
+                                      "kappa_icc": {"fell": 1, "reads": 80},
+                                      "total": {"fell": 1, "reads": 80}}
+        assert rc["aha_fallback_reads"] == 1
+        assert ("AHA default-map fall-backs (JA63, JA75): RC 0 of 40 reads, κ / ICC 1 of 80 "
+                "reads, total 1 of 80 reads") in rc["decisions"]
+    # and one on read 5 as well: RC and κ / ICC both see it; the total counts it once
+    reads[4]["read_1"].pop("segment_territory")
+    reads[4]["read_1"].pop("fat_clusters_mm3_patient")
+    fb = R.read_agreement(reads, cfg)["thinning"]["rc"]["aha_fallback"]
+    assert (fb["rc"]["fell"], fb["kappa_icc"]["fell"], fb["total"]["fell"]) == (1, 2, 2)
+
+
+def test_r5s5_the_config_carries_the_counts(built):
+    cfg = json.loads(built[0])
+    for s in R.SIGNS:
+        rc = cfg["rc"][s]
+        assert set(rc["aha_fallback"]) == {"rc", "kappa_icc", "total"}
+        assert any(d.startswith("AHA default-map fall-backs (JA63, JA75)")
+                   for d in rc["decisions"])
+
+
+# ------------------------------------------------------------------------- R5-S6 (JA79): S7
+def _paired_positions(rng, n_patients, per, sd):
+    """``per`` positions per patient whose differences have SD exactly ``sd`` and mean 0."""
+    return _exact(rng, n_patients * per, sd)
+
+
+def test_r5s6_s7_n_t_counts_patients_not_positions():
+    """S7: 28 LAD positions on 14 patients is n_T 14 (< 15): pooled, however noisy LAD is. A
+    count of positions (28) would take LAD's own SD."""
+    rng = np.random.default_rng(21)
+    cases = [i // 2 for i in range(40)]           # 2 positions per patient, 20 patients
+    d1, d2 = {}, {}
+    a, b = _paired_positions(rng, 14, 2, 2.0)
+    d1["LAD"], d2["LAD"] = a + [None] * 12, b + [None] * 12
+    for t in ("LCx", "RCA"):
+        d1[t], d2[t] = _paired_positions(rng, 20, 2, 0.2)
+    rc = R.repeatability(d1, d2, cases=cases)
+    lad = rc["territory"]["LAD"]
+    assert lad["n_values"] == 28 and lad["n_territory"] == 14
+    assert lad["source"] == "pooled" and "n_T 14 < 15 patients" in lad["decision"]
+    assert rc["n_patients"] == 20 and rc["n_values"] == 108
+    # the same LAD on 15 patients (30 positions) takes its own SD
+    a, b = _paired_positions(rng, 15, 2, 2.0)
+    d1["LAD"], d2["LAD"] = a + [None] * 10, b + [None] * 10
+    lad = R.repeatability(d1, d2, cases=cases)["territory"]["LAD"]
+    assert lad["n_territory"] == 15 and lad["source"] == "territory"
+
+
+def test_r5s6_s7_a_lad_sd_between_the_values_and_patients_bounds_stays_pooled():
+    """S7: step 3's switch bound uses n = patients. 20 patients x 2 positions x 3 territories
+    is 120 values; a LAD SD above the bound at 120 but below the bound at 20 stays pooled."""
+    rng = np.random.default_rng(22)
+    cases = [i // 2 for i in range(40)]
+    d1, d2 = {}, {}
+    d1["LAD"], d2["LAD"] = _paired_positions(rng, 20, 2, 0.3)
+    for t in ("LCx", "RCA"):
+        d1[t], d2[t] = _paired_positions(rng, 20, 2, 0.2)
+    rc = R.repeatability(d1, d2, cases=cases)
+    assert rc["n_patients"] == 20 and rc["n_values"] == 120
+    sd_pool = rc["pooled"]["sd"]
+    sd_lad = float(np.std(np.subtract(d1["LAD"], d2["LAD"]), ddof=1))
+    values_bound = sd_pool * R._chi2_factor(120)
+    patients_bound = sd_pool * R._chi2_factor(20)
+    assert values_bound < sd_lad < patients_bound      # the fixture sits between the bounds
+    assert rc["pooled"]["sd_upper95"] == pytest.approx(patients_bound, abs=1e-3)
+    lad = rc["territory"]["LAD"]
+    assert lad["source"] == "pooled" and lad["decision"].startswith("SD_T within")
+    assert lad["rc"] == pytest.approx(1.96 * sd_pool * R._chi2_factor(20), abs=1e-3)
+
+
+# ------------------------------------------------------------------------- R5-S6 (JA79): S8
+def _scaled_reads(rng, n=20, *, multiplicative: bool):
+    """Read pairs as anonymous feature records whose wall level spans 1-30 mm; read noise is
+    proportional to the level (``multiplicative``) or a fixed 0.3 mm."""
+    shape = np.asarray(C.LIMA_SHAPE, float)
+    out = []
+    for lvl in np.exp(rng.uniform(np.log(1.0), np.log(30.0), n)):
+        true = np.r_[lvl * shape * np.exp(rng.normal(0, 0.03, 16)), lvl * 0.8]
+        sub = np.exp(rng.normal(0, 0.05, 16))
+        pair = {}
+        for r in ("read_1", "read_2"):
+            w = true * np.exp(rng.normal(0, 0.06, 17)) if multiplicative else \
+                true + rng.normal(0, 0.3, 17)
+            pair[r] = Y.feature_record(w, sub, rng)
+        out.append(pair)
+    return out
+
+
+@pytest.mark.parametrize("multiplicative,scale", [(True, "relative"), (False, "difference")])
+def test_r5s6_s8_the_relative_switch_with_d_and_e_from_case_state(multiplicative, scale):
+    """S8: D and E_T come from ``case_state`` on feature records (``read_agreement``), not built
+    by hand. Read noise proportional to the wall switches thinning's RC to "relative"; a fixed
+    0.3 mm noise stays on differences."""
+    pop = Y.population(200, seed=3)
+    cfg = R.pooled(pop)
+    reads = _scaled_reads(np.random.default_rng(8), multiplicative=multiplicative)
+    st = R.case_state(reads[0]["read_1"], cfg)["thinning"]
+    assert all(st["E"][t] > 0 for t in R.TERRITORIES)
+    rc = R.read_agreement(reads, cfg)["thinning"]["rc"]
+    assert rc["status"] == "computed" and rc["scale"] == scale
+    if multiplicative:
+        assert rc["spearman_rho"] > R.SPEARMAN_LOG
+        assert any("Δ / Ē" in d for d in rc["decisions"])
+        e = st["E"]["LAD"]
+        assert R.rc_floor_mm(rc, "LAD", e) == pytest.approx(rc["territory"]["LAD"]["rc"] * e)
+    else:
+        assert not rc["spearman_rho"] > R.SPEARMAN_LOG
+
+
+# ------------------------------------------------------------------------- R5-S6 (JA79): S9
+def test_r5s6_s9_case_features_puts_a_fat_cluster_in_its_patient_map_territory_and_d_moves():
+    """S9, value level, through the real ``features.case_features``: a 2 mm fat ball in segment
+    1's core goes to segment 1's patient-map territory (LAD; LCx once the cavity branch moves
+    segment 1), and fat's D moves with it. Rule C's fat flag stays on the AHA map (LAD)."""
+    from janusm import features as F
+    from janusm import geometry as G
+
+    pop = Y.population(60, seed=1)
+    cfg = R.pooled(pop)
+    cfg["fat"].update(c_hu=0, v_mm3=5)
+    out = {}
+    for branch in (False, True):
+        lab, ct, aff, cor = Y.heart_r8(branch=branch, fat_mm=2.0)
+        f = F.case_features(lab, ct, aff, cor)
+        geo = G.analyse(lab, affine=aff, coronary=cor)
+        core = (lab == G.MYO) & (geo.depth.d_endo >= 1.0) & (geo.depth.d_epi >= 1.0)
+        vol = round(float(((ct == -60.0) & core).sum() * np.prod(Y.SP)), 3)
+        assert vol >= 5.0 and f["segment_territory_share"][1] >= 0.6
+        out[branch] = (f, vol, R.case_state(f, cfg))
+    for branch, terr in ((False, "LAD"), (True, "LCx")):
+        f, vol, st = out[branch]
+        assert f["segment_territory"][1] == terr
+        assert f["fat_clusters_mm3"]["0"]["LAD"] == [vol]           # AHA map: always LAD
+        assert f["fat_clusters_mm3_patient"]["0"][terr] == [vol]    # patient map: segment 1's
+        others = [t for t in R.TERRITORIES if t != terr]
+        assert all(f["fat_clusters_mm3_patient"]["0"][t] == [] for t in others)
+        assert st["fat"]["map"] == "patient"
+        assert st["fat"]["D"] == {t: (vol if t == terr else 0.0) for t in R.TERRITORIES}
+        assert st["fat"]["territory_rule_c"] == {"LAD": True, "LCx": False, "RCA": False}
+    assert out[False][2]["fat"]["D"] != out[True][2]["fat"]["D"]

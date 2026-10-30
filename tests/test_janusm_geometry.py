@@ -508,3 +508,27 @@ def test_round1_thirds_match_golf_and_india(ph):
     golf = _proto("golf", "Golf/layers_ts.py")
     for theirs in (india.layers(t, myo), golf.thirds(golf.depth(myo, lv, w["sp"]), myo)):
         assert np.mean(theirs[myo] == ours[myo]) > 0.97
+
+
+# ------------------------------------------------------------------- JA15 harness as the fixture
+@pytest.mark.parametrize(
+    "border,shift", [("epi", 0.5), ("epi", -0.5), ("endo", 0.5), ("endo", -0.5)]
+)
+def test_segment_thickness_tracks_a_known_border_shift(border, shift):
+    """Geometry's per-segment wall, read through the JA15 harness, moves with an exact offset of
+    either border: + for the epicardium outward, - for the endocardium outward."""
+    from janusm import harness as H
+
+    ref, aff = H.phantom()
+    kw = {"epi_shift_mm": shift} if border == "epi" else {"endo_shift_mm": shift}
+    test, _ = H.phantom(**kw)
+    walls_r, seg_r = H.segment_thickness(ref, affine=aff)
+    assert seg_r is not None and len(walls_r) == 16
+    mid = [walls_r[k] for k in range(7, 13)]
+    assert np.median(mid) == pytest.approx(H.PHANTOM_WALL, abs=0.5)
+    walls_t, _ = H.segment_thickness(test, affine=aff)
+    th = H.thickness_error(walls_r, walls_t)
+    expect = shift if border == "epi" else -shift
+    assert th["n_segments"] == 16
+    assert th["median_signed_mm"] == pytest.approx(expect, abs=0.1)
+    assert th["median_abs_mm"] == pytest.approx(abs(expect), abs=0.1)

@@ -53,7 +53,88 @@ Each is the rulings' recommendation, held until the lead answers.
 
 ## 5. §7 item 2: the merged power study at the JA32 bars
 
-{{ITEM2}}
+**E10** (`Golf/power_ja32.py`, `power_ja32.json`, `power_ja32_sweep.json`; note
+[[Golf - At the JA32 bars the transmurality endpoint, not sensitivity, sets the paired seal, and it needs CT bin agreement at least equal to the readers']]).
+
+**The merged model** (the reference for #182):
+- Golf R2 E6's patient clustering and patient bootstrap;
+- Kilo R2 E6's continuous transmurality, territory-contiguous infarcts, and its separate detection and measurement
+  steps, calibrated to Gatti 2025's pooled 0.86 / 0.98;
+- **two simulated LGE readers**, so that JA32's third bar is anchored as JA32 says: development inter-reader
+  agreement minus 0.10, and report-only below 0.60.
+
+1000 studies per cell, 500 bootstrap draws; base: 50 % enrichment, clustering τ = 0.8, CT extent error 0.13,
+reader error 0.08 (reader bin agreement 0.69).
+
+### 5.1 The ≥ 270 scarred-segment floor (JA28)
+
+| Infarct size model | 50 % enrichment: median (p90) patients | 70 % enrichment |
+|---|---|---|
+| Kilo: 1 + Bin(n_territory − 1, 0.45) segments (mean 3.3) | **167 (187)** | **119 (130)** |
+| Golf R2: 1 + Poisson(3) (mean 4) | 135 (155) | 97 (108) |
+
+JA28's "about 135 at 50 %" holds for Golf's larger infarcts only. With Kilo's, **the floor alone needs ≈ 170–190
+patients at 50 % enrichment**. That makes the segment floor, not the 120-patient floor, the binding size at 50 %.
+
+### 5.2 Seal size under weak and strong clustering, per endpoint
+
+Power at the JA32 bars (lower 95 % bounds, one look), CT extent error 0.13:
+
+| | τ 0.4 (weak) | τ 0.8 (base) | τ 1.2 (strong) |
+|---|---|---|---|
+| Sensitivity ≥ 0.75, 50 % enrichment: N for power ≥ 0.80 | 80 (0.87) | 100 (0.83) | 200 (0.83; 0.77 at 160) |
+| Sensitivity, 70 % enrichment | 80 (0.94) | 80 (0.86) | 135 (0.84) |
+| Specificity ≥ 0.93 | ≥ 0.99 at every N | ≥ 0.99 | ≥ 0.99 |
+| **Transmurality, all three jointly** | **0.25 at 200** | **0.25 at 200** | **0.18 at 200** |
+
+- **Sensitivity sizes the seal exactly as in Round 2** (≈ 100 at base, ≈ 135–200 under strong clustering).
+  Specificity never binds.
+- **The transmurality endpoint does not respond to N.** At extent error 0.13 the CT's bin agreement with the
+  reference (0.60) sits 0.09 below the readers' own (0.69). Its lower bound clears "readers − 0.10" only by
+  chance, at any size.
+- A pipeline at the weak setting (sensitivity 0.75) fails at every N (power ≤ 0.007), as it should.
+
+### 5.3 What the transmurality endpoint needs, and a fix to its anchor
+
+Sweep over CT extent error × reader error (`power_ja32_sweep.json`; joint power, 1000 studies):
+
+| Gap = CT bin agreement − reader agreement (point) | N = 120, dev anchor | N = 160, dev anchor | N = 160, all-patient anchor |
+|---|---|---|---|
+| +0.07 | 0.83 | 0.91 | 0.93 |
+| +0.04 | 0.76 | 0.86 | 0.94 |
+| 0.00 | 0.61 | 0.71 | 0.79 |
+| −0.04 | 0.40 | 0.50 | 0.50 |
+| −0.09 | 0.17 | 0.20 | 0.11 |
+
+- **Finding 1: the −0.10 margin is not the margin you get.** The CT is compared with an adjudicated reference,
+  which is less noisy than a single reader, so the CT can match the readers. But to pass with 80 % power at 160
+  patients, **the CT's bin agreement must at least equal the readers' agreement**, not sit 0.10 below it. The
+  lower bound's width (≈ 0.07 with ~250 scar-on-both segments) and the development anchor's own noise (40
+  patients) use up the margin.
+- **Finding 2: the 0.60 floor rewards worse readers.** With reader error 0.12, reader agreement is ≈ 0.57. The
+  anchor is then below 0.60 in ~70 % of studies, the endpoint drops out (JA32), and joint power at extent error 0.13 rises from 0.17
+  (reader error 0.08) to 0.68–0.72 at 120. That is the opposite of what a reference standard should do.
+- **Finding 3: an anchor from every patient's double read discriminates better.** Every patient already has two
+  reads (JA32, LQ16). Reader agreement involves no CT value, so computing the anchor over development + seal
+  leaks nothing about the pipeline. It raises power for a good pipeline (0.93 vs 0.91; 0.79 vs 0.71 at gap 0) and
+  lowers it for one at the bar (0.11 vs 0.20 at gap −0.09). The development anchor passes a borderline pipeline
+  by luck more often.
+
+### 5.4 Proposed amendments (for the judge)
+
+1. **Anchor:** the JA32 transmurality anchor is the inter-reader agreement over **every paired patient's double
+   read** (development + seal), computed before any CT value of a seal patient is unblinded. Development keeps its
+   own estimate for re-powering (JA28).
+2. **Floor:** keep JA32's report-only rule below 0.60, but also report the endpoint against a fixed **0.60 − 0.10 =
+   0.50** bar in that case, so poor readers cannot make the scar grade look validated by default.
+3. **Size:** JA28's seal = max(120; the ≥ 270-segment N, ≈ 170–190 at 50 % or ≈ 120–130 at 70 % enrichment, by the
+   development infarct sizes; the sensitivity N). Of these, **70 % enrichment** is what keeps the seal near 130.
+   JA27's "50–70 %" should therefore target 70 %, with the ≥ 30 % LGE-negative floor unchanged.
+4. **Development go/no-go for extent (extends JA31's trigger):** if the chosen extent measure's development bin
+   agreement with the reference is more than **0.03 below** the development reader agreement (point estimates),
+   the third endpoint cannot be powered at any feasible N. Scar-1 is then triggered on extent before any seal
+   grading, even if presence passes. In E10's terms the CT extent error must be ≲ the readers' (here ≲ 0.08 of
+   wall share); E8 (§4) shows how far the Scar-0 extent measures are from that.
 
 ## 6. §7 item 3: the LGE read form and the registration check form
 

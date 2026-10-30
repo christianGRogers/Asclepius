@@ -49,6 +49,7 @@ from scipy import ndimage as ndi
 
 from janusm import geometry as G
 from janusm.scar import (
+    FINAL_STATUSES,
     NOT_GRADED,
     RESEARCH_LABEL,
     SCAR_VERSION,
@@ -176,6 +177,25 @@ class Scar0:
             else:
                 out[s] = bool(np.isfinite(row["extent_ed"]) and row["extent_ed"] >= self.tau)
         return out
+
+    def for_scoring(self, presence: str, extent: str) -> Tuple[np.ndarray, np.ndarray]:
+        """Kim bins and scar shares for segments 1-17 (index 0 is segment 1), as
+        :class:`janusm.scar.scoring.Patient` takes them: a segment not graded (patient not graded,
+        or too few carried voxels) is :data:`janusm.scar.scoring.NOT_GRADED`, share NaN. Only a
+        final registration status can be scored."""
+        from janusm.scar.scoring import NOT_GRADED as UNGRADED_BIN
+
+        if self.status not in FINAL_STATUSES:
+            raise ValueError(f"only a final registration status can be scored, not {self.status!r}")
+        segs = self.table(presence, extent)["segments"]
+        bins = np.full(17, UNGRADED_BIN, int)
+        shares = np.full(17, np.nan)
+        for s in range(1, 18):
+            r = segs[s]
+            if r["graded"]:
+                bins[s - 1] = r["kim_bin"]
+                shares[s - 1] = np.nan if r["share"] is None else r["share"]
+        return bins, shares
 
     def table(self, presence: str, extent: str) -> dict:
         """The JA26 per-segment and per-territory outputs for one (presence, extent) pair."""

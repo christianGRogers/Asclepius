@@ -426,6 +426,21 @@ def test_not_graded_patients_get_no_grade():
     assert all(r["presence"] is None and r["kim_bin"] is None for r in tab["segments"].values())
 
 
+def test_outputs_feed_the_scoring_harness():
+    from janusm.scar import scoring
+
+    lie, car = slab()
+    bins, shares = S.scar0(lie, car, status=SC.PASSED).for_scoring("P-K", "E-D")
+    ref = np.array([S.kim_bin(k / 10, k > 0) for k in SLAB_K])
+    assert np.array_equal(bins, ref)
+    scoring.Patient(ref=ref, ct=bins, ct_share=shares)
+    ng, ng_share = S.scar0(lie, car, status=SC.NOT_GRADED).for_scoring("P-K", "E-V")
+    assert (ng == scoring.NOT_GRADED).all() and np.isnan(ng_share).all()
+    scoring.Patient(ref=ref, ct=ng)
+    with pytest.raises(ValueError, match="final"):
+        S.scar0(lie, car, status=SC.AWAITING).for_scoring("P-K", "E-V")
+
+
 def test_menu_arguments_are_checked():
     lie, car = slab()
     out = S.scar0(lie, car, status=SC.PASSED)

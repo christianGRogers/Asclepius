@@ -1,12 +1,16 @@
 """Janus-M path B (``jm/paired-scar``): scar inside the registered wall on a late-iodine (LIE) scan.
 
-Ruling: ``vault/JanusM/Judgements/Round 2 - paired-scar.md``, JA26, JA29, JA30 (JA35 items 1-2).
+Ruling: ``vault/JanusM/Judgements/Round 2 - paired-scar.md``, JA26-JA32 (JA35 items 1, 2, 4, 6).
 
 - :mod:`janusm.scar.registration` (JA29): the first-pass CCTA (moving) onto the LIE scan (fixed):
   scanner frame, QC, heart-masked Mattes MI rigid, then affine; QC values, the reader-check status
   and a per-patient log.
 - :mod:`janusm.scar.scar0` (JA30): every Scar-0 menu candidate inside the registered class 1,
   aggregated per AHA segment 1-17 from :mod:`janusm.geometry` (JA26).
+- :mod:`janusm.scar.scoring` (JA27-JA32): the scoring harness (cluster bootstrap over patients,
+  intention-to-diagnose, JA27 strata, the JA32 rule).
+- :mod:`janusm.scar.power`: the one power script for the JA32 endpoints, scoring every simulated
+  study with that harness.
 
 Scar is never a learned class (JA26). Every output here is research output, not validated, until
 JA32 passes on the paired seal, and carries the patient's registration status.
@@ -23,8 +27,9 @@ SCAR_VERSION = "1.0.0"
 #: JA26: every scar output carries this until JA32 passes on the paired seal.
 RESEARCH_LABEL = "research output, not validated"
 
-# JA26 registration statuses. AWAITING is the state before the JA29 reader check; it is never a
-# final status and scoring must not take it.
+# JA26 registration statuses (strings). The scoring harness's per-segment code for a not-graded
+# segment is the integer janusm.scar.scoring.NOT_GRADED (-1). AWAITING is the state before the
+# JA29 reader check; it is never a final status and scoring must not take it.
 PASSED = "passed"
 REREGISTERED = "re-registered"
 NOT_GRADED = "not graded"

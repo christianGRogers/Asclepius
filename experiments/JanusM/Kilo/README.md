@@ -21,13 +21,13 @@ Reproduce E1–E3 (CPU, ~100 min on 4 cores, ~2 GB download):
 
 | File | What |
 |---|---|
-| `e4_twins.py` → `results_e4_twins.json` | E4: the JA12 twin rule on TotalSegmentator v1 `meta.csv` (16 held out, 624 twins, 18 open cardiac) |
+| `e4_twins.py` → `results_e4_twins.json` | E4: the JA12 twin rule on TotalSegmentator v1 `meta.csv` (v1-only: 16 held out, 624 twins; shared guard #145: 700 refused, 15 open cardiac) |
 | `e5_lie_registration.py` → `results_e5_lie_registration.json` | E5: first-pass → synthetic LIE registration (none / rigid / affine / heart-masked rigid / + B-spline) and scar grading inside the registered wall |
 | `e6_power.py` → `results_e6_power.json` | E6: paired CT–LGE cohort size for segment-level scar presence and transmurality agreement (simulation, no image) |
 
-Reproduce (CPU; E5 about 40 min on 4 cores, 225 MB download):
+Reproduce (CPU; E5 about 25 min on 4 cores, about 200 MB download; needs `pip install -e .` for `janusm.guard`):
 ```sh
-python fetch_ts_cardiac.py DATA 100          # refuses held-out and twins; fetches the 18 open cardiac cases
+python fetch_ts_cardiac.py DATA 100          # shared JA12 guard (#145) + own twin rule first; fetches the 15 open cardiac cases
 python e4_twins.py DATA/Totalsegmentator_dataset/../meta.csv results_e4_twins.json   # or any copy of meta.csv
 python e5_lie_registration.py DATA/Totalsegmentator_dataset results_e5_lie_registration.json --jobs 4 --reps 3 --meta META_CSV
 python e6_power.py results_e6_power.json --sims 200 --boot 200

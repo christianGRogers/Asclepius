@@ -32,27 +32,31 @@ rule fails.** Stage A is unchanged from the trunk. Path B adds four things:
 
 **New evidence this round** (CPU; code in `experiments/JanusM/Kilo/`; no held-out patient read):
 - [[Kilo - E4 The JA12 twin rule refuses 624 public subjects and leaves 18 open cardiac CTs]]. Ruling §6 item 7,
-  done. The guard refuses 16 held-out and 624 twin subjects, leaving 18 open cardiac CTs. **Disclosure:** 29 of my
-  Round 1 cases are twins. None is held out, and none is used here.
+  done. My v1-only rule refuses 16 held-out and 624 twin subjects. The shared guard (#145) applies the rule over
+  v1 ∪ v2 and refuses 700 v1 ids, leaving 15 open cardiac CTs (13 enhanced). Mine refuses nothing it allows.
+  **Disclosure:** 29 of my 40 Round 1 cases are twins (31 under the shared guard). None is held out, and none is used here.
 - [[Kilo - E5 Rigid registration puts first-pass borders within 0.8 mm of the late scan, and the scar rule then decides the error]].
-  Tested on 14 open contrast CTs, each with a synthetic LIE carrying known scars and known motion.
+  Tested on the 13 enhanced CTs the shared guard allows, each with a synthetic LIE carrying known scars and known
+  motion. **Disclosure:** a first run also opened s1237, a v2-only twin refused by #145 but missed by my rule. It is
+  not itself held out, and no coronary quantity was computed. It is deleted, and the run was repeated without it.
   - **Unregistered borders** sit 2.8 mm off the endocardium, and the scar calls collapse (transmurality agreement
     about 0.3).
-  - **Rigid registration** brings them to 0.79 mm, close to perfect alignment. Affine, heart-masking and B-spline add
+  - **Rigid registration** brings them to 0.80 mm, close to perfect alignment. Affine, heart-masking and B-spline add
     nothing; B-spline is 30× slower.
-  - **With perfect borders the error is the rule's.** A 3-SD rule calls blood spill scar (specificity 0.82). FWHM and
+  - **With perfect borders the error is the rule's.** A 3-SD rule calls blood spill scar (specificity 0.84). FWHM and
     5-SD are specific but understate transmurality by about 10 points.
   - **The two-threshold rule** (presence by FWHM, extent by 3 SD), after rigid registration: sensitivity 0.83
-    [0.78, 0.87], specificity 0.985 [0.97, 1.00], transmurality agreement 0.70 [0.62, 0.76].
+    [0.78, 0.88], specificity 0.986 [0.97, 1.00], transmurality agreement 0.70 [0.62, 0.76].
 - [[Kilo - E6 A paired CT-LGE cohort needs about 120 patients, and weighted kappa over all segments cannot size it]].
   Weighted κ over all 17 segments clears 0.61 at 20 patients whatever the grading error, so it cannot size the study.
   **Segment sensitivity** (lower bound > 0.75 at 95 % power) needs ≈ 120 patients. **Transmurality agreement
   among scarred segments** is the statistic that moves with grading error: 0.73 / 0.63 / 0.52 at error SD
   0.08 / 0.13 / 0.20.
 
-**Held-out cases.** The shared JA12 guard (#138) had not landed, so I used my Round 1 `heldout.py`, extended with
-the JA12 twin rule. It refuses in code, by s-number and twin, **before any public image is downloaded**: in the
-fetcher, again per case, and again for the whole run in E5. **No match was opened.** The only data read about a held-out
+**Held-out cases.** Every fetch and E5 case now calls the shared JA12 guard (`janusm.guard.refuse`, #145) first,
+then my Round 1 `heldout.py` with the twin rule as a second check. Both run **before any public image is
+downloaded or opened**: in the fetcher, again per case, and for the whole E5 run. **No held-out patient was opened.**
+One twin, s1237, was opened before #145 reached this branch (E5's disclosure). The only data read about a held-out
 subject is its row in the public `meta.csv`, which the twin rule needs, and no demographic of a held-out subject is written to any
 committed file.
 
@@ -78,7 +82,7 @@ wins** and v1's proposals are withdrawn.
 |---|---|---|
 | LQ1 | **B, paired scar data** (this path) | (this path is deleted) |
 | LQ2 | (a) four classes, no RV myocardium | none: scar is scored on the LV only (Kim 2000; Gatti 2025) |
-| LQ3 | (a) `heartchambers_highres` under its licence | S0 needs first-pass borders. Under (b) they come from a model trained on public TotalSegmentator, which E4 shows has only 18 open cardiac cases. Janus-M 1 then becomes a prerequisite of S0 |
+| LQ3 | (a) `heartchambers_highres` under its licence | S0 needs first-pass borders. Under (b) they come from a model trained on public TotalSegmentator, which E4 shows has only 15 open cardiac cases. Janus-M 1 then becomes a prerequisite of S0 |
 | LQ4 | (a) ImageCAS-X train for Stage A | none on the paired cohort, which is a separate population |
 | LQ5 | (a) 200 border double reads, after A39 | adds the LGE reads of §4.5, which are separate |
 | LQ6 | (a) MM-WHS, low priority | none |
@@ -90,12 +94,12 @@ wins** and v1's proposals are withdrawn.
 | Item | Settlement | Evidence |
 |---|---|---|
 | 1. Job JM-0's numbers | **Pending the lead's run.** What each result changes is pre-registered here (§8). Path B adds one read-out: the voxels-per-third at native ImageCAS sets the LIE reconstruction requirement (§4.2: LIE slice ≤ 1.0 mm, so a third keeps ≥ 2 voxels in a 6 mm wall) | — |
-| 2. One perturbation harness | **Trunk work (geometry module #139).** Path B contributes an error model measured from a real registration rather than assumed: the residual border error E5 finds after rigid registration (endocardial ASSD median 0.79 mm, 90th percentile 0.91 mm, for a 1.5 mm RMS non-rigid motion). The harness should carry it as its "LIE" error case | E5 |
+| 2. One perturbation harness | **Trunk work (geometry module #139).** Path B contributes an error model measured from a real registration rather than assumed: the residual border error E5 finds after rigid registration (endocardial ASSD median 0.80 mm, 90th percentile 0.91 mm, for a 1.5 mm RMS non-rigid motion). The harness should carry it as its "LIE" error case | E5 |
 | 3. Depth, sectors, territories | **Unchanged from JA2–JA4** (equal thickness, fixed 60°/90°, Euclidean). Path B's scar output does not depend on the choice: **Kim transmurality is a segment's scar volume share**, which no depth definition enters. The depth-based extent (the deepest u reached by scar) is reported beside it | Kim 2000 (bins on extent) |
 | 4. Border protocol | **JA7 unchanged.** Path B adds no border read: LIE borders are never drawn. They are the registered first-pass borders. A reader passes or fails each registration on three short-axis slices (§5.3) | E5; Golf E3 |
 | 5. Re-powering and margins | **JA8 unchanged for Stage A.** For path B, the paired seal is re-powered once on the 40 development patients (§4.4), by re-running `e6_power.py` with their observed sensitivity, clustering and LGE inter-reader agreement. It may only grow | E6 |
 | 6. Rest TPR and the fat cut | **Report-only, as JA11.** On path B both become testable: §7 scores rest hypoattenuation and fat against LGE on the paired cohort. That replaces the "near 1.06–1.12" condition with a direct check | §7 |
-| 7. The JA12 twin rule | **Done.** 16 held out, 624 twins, 18 open cardiac, on v1 `meta.csv`. The rule and its test are handed to #138 | E4 |
+| 7. The JA12 twin rule | **Done.** It is now the shared guard (#145), which refuses 700 v1 ids (twins over v1 ∪ v2), leaving 15 open cardiac CTs. My v1-only version refused 640 and is kept only as a second check | E4 |
 
 ## 3. Path B in one table
 
@@ -177,12 +181,12 @@ validation measures the pipeline as it would run.
 
 - **Direction:** the first-pass CT is the moving image and the LIE scan the fixed one. Janus-M 0's segment map
   (classes, segments, depth) is resampled into LIE space with nearest neighbour.
-- **Transform:** rigid (6 parameters). In E5, affine was no better than rigid (endocardial ASSD 0.78 vs 0.79 mm). A
-  masked B-spline stage was no better (0.81 mm) and took 100 s instead of 3 s.
+- **Transform:** rigid (6 parameters). In E5, affine was no better than rigid (endocardial ASSD 0.78 vs 0.80 mm). A
+  masked B-spline stage was no better (0.82 mm) and took 95 s instead of 3 s.
 - **Metric:** Mattes mutual information (Mattes 2003), 48 bins, 15 % random sampling, on the heart crop (wall and
   cavity plus 30 mm). Intensity mapping between CCTA and LIE is not linear (bright blood becomes grey), so MI is
   used.
-  - Restricting the metric to the first-pass heart (dilated 10 mm) made no difference in E5 (0.79 mm). E5's
+  - Restricting the metric to the first-pass heart (dilated 10 mm) made no difference in E5 (0.78 mm). E5's
     synthetic LIE moves the chest with the heart, which a second breath-hold need not do. **The masked variant
     is therefore the development-set arm (§8), not the default.**
 - **Levels and optimiser:** three levels (shrink 4/2/1, smoothing 2/1/0 voxels); regular-step gradient descent.
@@ -192,9 +196,9 @@ validation measures the pipeline as it would run.
 ### 5.2 Why not more
 
 - **The residual is already below the error the scar rule makes.** With perfect borders, the best rule's
-  transmurality agreement is 0.78. After rigid registration it is 0.70–0.73. Unregistered, it is 0.28–0.37.
+  transmurality agreement is 0.78. After rigid registration it is 0.70–0.73. Unregistered, it is 0.28–0.38.
 - **The non-rigid component is small when the LIE is phase-matched** (A2). E5 modelled a 1.5 mm RMS non-rigid field,
-  and rigid left 0.79 mm. A B-spline would chase noise in a low-CNR scan.
+  and rigid left 0.80 mm. A B-spline would chase noise in a low-CNR scan.
 - **The condition for this is A2:** the same gating mode and R-R phase. If the paired data cannot meet it, the
   B-spline arm is re-tested on development (§8).
 - **Limits.** E5's LIE is synthetic: real anatomy and real motion magnitudes, but label-assigned intensities (blood
@@ -228,9 +232,9 @@ validation measures the pipeline as it would run.
     present segment reads at least bin 1.
 - **Why two.**
   - A single 3-SD rule finds 96 % of scarred segments, but also calls blood-pool spill at the endocardium scar:
-    specificity 0.82 even with perfect borders, 0.82 after rigid registration.
-  - FWHM is specific (0.985) but understates transmurality by 10 points: agreement 0.55.
-  - Together, after rigid registration: sensitivity 0.83 [0.78, 0.87], specificity 0.985 [0.97, 1.00], transmurality
+    specificity 0.84 even with perfect borders, 0.84 after rigid registration.
+  - FWHM is specific (0.986) but understates transmurality by 10 points: agreement 0.57.
+  - Together, after rigid registration: sensitivity 0.83 [0.78, 0.88], specificity 0.986 [0.97, 1.00], transmurality
     agreement 0.70 [0.62, 0.76].
   - The rule's transmurality error SD, 0.12, is E6's middle scenario, so E6's size holds for it.
 - **Fixed before development:** the FWHM and 3-SD constants and the 5 % presence share. Development may re-set them
@@ -323,7 +327,7 @@ manifest, written when that manifest exists. Until then they would only be a tem
    geometry package, with E5's synthetic case as its test.
 2. The paired-cohort split and freeze: salted hash on de-identified keys, JA12 guard first; same pattern as JA6.
 3. A segment-level LGE read form in the JA7 read queue: presence, pattern, Kim bin per segment, blind to CT.
-4. The JA12 twin rule and its count test (16 / 624 / 18) for #138 (from E4).
+4. (Done by #145: the JA12 twin rule is in the shared guard.)
 
 ## 11. The lead's questions on this path
 

@@ -35,22 +35,38 @@ and the open cardiac ids, never a held-out subject's demographics.
   windows cover most of institute H. That is why the rule refuses about half the release. It is the conservative
   over-refusal the ruling asked for, and costs public training cases, not Janus-M's seal or decision set (JA5: those
   are ImageCAS-X train only).
-- Of the 18 open cardiac CTs, **14 have contrast in the LV blood pool** (median LV HU > 150) and are E5's cases. Four
-  are unenhanced.
+- Of the 18 open cardiac CTs, 14 have contrast in the LV blood pool (median LV HU > 150). Four are unenhanced.
 - Twins by study type: mostly non-cardiac studies (thorax-abdomen-pelvis 68, thorax-neck 48, head CTA 46, …).
 
+**The shared guard (#145) refuses more, and it binds.** `janusm.guard` pins its twins in
+`configs/janusm/ts-twins-r1.json`, applying the same rule within each release, v1 and v2.0.1 (707 twins in all).
+Ages differ between releases, so a subject can be a twin through its v2 metadata alone.
+
+| On v1 `meta.csv` | Kilo (v1 only) | Shared guard (#145) |
+|---|---|---|
+| ids refused (held out + twins) | 640 (16 + 624) | **700** (16 + 684) |
+| refused by Kilo but not the guard | 0 | — |
+| cardiac protocol, open | 18 | **15** (13 enhanced) |
+
+The three extra cardiac refusals are s0335, s0532 and s1237. **Disclosure:** s1237 was opened in E5's first run
+(its public CT and masks). It is a possible twin of held-out s0980, matched through v2 metadata only, and not itself a
+held-out patient. No coronary quantity was computed. The local copy is deleted, and E5 was re-run on the 13 enhanced
+cases the guard allows. s0335 and s0532 were downloaded but never opened (unenhanced; E5 skips them before reading the
+image). Reported on #143 and to the PM, who added s1237 to the lead's twin question.
+
 **Disclosure.** No held-out subject's image was opened, in Round 1 or here. But **29 of the 40 public cases my Round 1
-E1–E3 used are twins** under this rule; 11 remain open. Twins are not known to be held-out patients. The rule refuses
+E1–E3 used are twins** under this rule (31 under the shared guard); 11 (9) remain open. Twins are not known to be held-out patients. The rule refuses
 them because they cannot be ruled out. My Round 1 numbers (E1–E3) therefore rest mostly on cases the guard would now
-refuse. They stay on record. Nothing in Kilo v2 is computed on a twin, and E5 used only the 14 open contrast cases.
+refuse. They stay on record. Kilo v2's final numbers are computed on no twin. E5's first run opened one, s1237
+(above), and was re-run without it.
 None of these subjects can enter a coronary score.
 
 **What it changes.**
 - **Every Janus-M fetch of a public TotalSegmentator case must apply the twin rule before the first byte of an image.**
-  `fetch_ts_cardiac.py` now does this, and asserts it again per case. `e5_lie_registration.py` refuses the whole run if
-  a held-out or twin directory is on disk.
-- **The public TotalSegmentator cardiac set is too small to be Janus-M's evidence base.** 18 cases, 14 enhanced, are
+  `fetch_ts_cardiac.py` now does this (shared guard and its own rule), and asserts it again per case.
+  `e5_lie_registration.py` refuses the whole run if a held-out or twin directory is on disk.
+- **The public TotalSegmentator cardiac set is too small to be Janus-M's evidence base.** 15 cases, 13 enhanced, are
   enough for a CPU simulation. They are not enough for pretraining or as a report-only stratum. This strengthens JA5:
   Janus-M's data is ImageCAS-X train.
-- The JA12 module (#138) should carry this rule with the same test: 16 held out, 624 twins, 18 open cardiac, on v1
-  `meta.csv`.
+- The shared guard (#145) carries the rule. Kilo's code now calls `janusm.guard.refuse` first, and keeps its own
+  v1-only check only as a second layer.

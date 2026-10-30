@@ -10,7 +10,7 @@ updated: 2026-10-30
 # India v1: segment two borders, compute the layers
 
 **Advocate:** India. **Round:** 1 (issue #130). **Evidence:** [[India - E1-E4 LV wall geometry on open CT]]
-(code `experiments/JanusM/India/`), and the citations in §12, each with a DOI or arXiv id.
+(code `experiments/JanusM/India/`), and the citations in §13, each with a DOI or arXiv id.
 
 ## 1. The plan in one paragraph
 
@@ -52,11 +52,11 @@ provides**. They are staged behind a data decision for the lead (Q4), and are ne
 | 5 | Aorta (root to the arch) | LVOT and valve plane; it also links to Janus's ostia |
 
 - **LV only, not both ventricles.** The brief is stenosis and scar. Coronary infarct scar and stenosis-related
-  ischaemia are LV findings in practice; the AHA model, CT perfusion and the LIE literature are all LV (§12).
+  ischaemia are LV findings in practice; the AHA model, CT perfusion and the LIE literature are all LV (§13).
 - The RV free wall is 3–5 mm on CT. That is 2–3 voxels at the 1.5 mm label grid (E1 measures the LV wall; the
   RV wall is thinner still), so it cannot carry layers. RV classes are kept as blood pools for landmarks only.
 - This is the same structure set as TotalSegmentator's `heartchambers_highres` (myocardium, LA, LV, RA, RV,
-  aorta, PA; §12 [TS]), minus RA and PA. So Janus-M 0 can be that model with no change of schema.
+  aorta, PA; §13 [TS]), minus RA and PA. So Janus-M 0 can be that model with no change of schema.
 
 ### 2.2 What "layers" means (computed, not learned)
 
@@ -79,21 +79,21 @@ provides**. They are staged behind a data decision for the lead (Q4), and are ne
 
 Why compute rather than learn layers (evidence in [[India - E1-E4 LV wall geometry on open CT]]):
 - **E1, the voxels are not there.** On the 1.5 mm grid of the largest open CT myocardium label set (TotalSegmentator
-  v1), the median LV wall is **{E1_vox15} voxels across**, so a third is **{E1_third15} voxels**. On a 0.5 mm
-  CCTA-like grid a third is **{E1_third05} voxels**. A learned third on the open data would be a 1–2 voxel shell.
-- **E2, layers are a function of the borders.** Distance-based and Laplace thirds agree on {E2_agree} of wall
+  v1), the median LV wall is **6.3 (p10–p90 5.7–7.0) voxels across**, so a third is **2.1 voxels**. On a 0.5 mm
+  CCTA-like grid a third is **6.3 voxels**. A learned third on the open data would be a 1–2 voxel shell.
+- **E2, layers are a function of the borders.** Distance-based and Laplace thirds agree on 88 % (p10–p90 87–89 %; median |Δt| 0.044) of wall
   voxels; the coordinate choice is a minor term.
 
-  A smooth border error of SD 0.5 mm leaves the whole-myocardium Dice at {E2_myo05}, but the subendocardial third
-  falls to {E2_l1_05}. A systematic 0.5 mm inward shift of the endocardium (trabeculae counted as wall) costs that
-  third {E2_bias_endo} Dice, while the myocardium keeps {E2_bias_endo_myo}.
+  A smooth border error of SD 0.5 mm leaves the whole-myocardium Dice at 0.976, but the subendocardial third
+  falls to 0.927. A systematic 0.5 mm inward shift of the endocardium (trabeculae counted as wall) costs that
+  third 12 points (Dice 0.877) Dice, while the myocardium keeps 0.980.
 
   So a myocardium Dice says little about layers. The **borders** must be measured.
 - **E2, scar extent survives border error better than layer Dice does.** For synthetic subendocardial scar of
   known depth in the LAD segments:
-  - the segment transmurality read back on borders perturbed by SD 1.0 mm has median error **{E2_scar10}**
-    percentage points (p90 {E2_scar10_p90});
-  - it falls in the right 25-point bin **{E2_scarbin10}** of the time.
+  - the segment transmurality read back on borders perturbed by SD 1.0 mm has median error **2.6**
+    percentage points (p90 7.3);
+  - it falls in the right 25-point bin **85 %** of the time.
 
   The clinically used quantity is more robust than the layer masks. That is a reason to report transmurality,
   not third-by-third Dice.
@@ -103,8 +103,14 @@ Why compute rather than learn layers (evidence in [[India - E1-E4 LV wall geomet
 - **Transmural thirds as nnU-Net classes:** see E1 and E2. There is no reference standard either: no reader
   draws a mid-wall line (§6).
 - **AHA segments as learned classes:** a segment boundary is a geometric rule, not an image edge. E3 shows that
-  moving the RV-insertion reference by 10° reassigns **{E3_ref10}** of the myocardium to another segment. A
+  moving the RV-insertion reference by 10° reassigns **15 %** of the myocardium to another segment. A
   network would learn that rule's noise from the labels; computing it keeps one rule, reported with its error.
+  - E3 also shows the rule's main weakness. The measured septal (RV-contact) arc has a median of **137°**
+    (p10–p90 122–151°), not the 120° that fixed 60° sectors assume. So the inferoseptal–inferior boundary
+    misplaces part of the septum in most hearts.
+  - Round 2 tests septal sectors proportional to the measured arc. That is a change of rule, not of model.
+  - Other frame sensitivities: a 5° axis tilt moves 12 % of the mass to another segment (5 % to another default
+    territory); a 10° tilt moves 24 % (10 %); a 5 mm base shift moves 9 % (2.5 %).
 - **Both ventricles with layers:** the RV wall is too thin (above), and no stenosis or scar output needs it.
 
 ## 3. Clinical outputs, and how they tie to Janus's territories
@@ -121,14 +127,20 @@ Every output says which phase it came from. All of it is **report-only until its
    - The CT threshold is to be calibrated: CTA is often not end-diastolic, and E1 gives the wall thickness
      distribution of the open set by segment.
    - Normal mid-cavity thickness by CMR is 5.3 ± 0.9 mm in women and 6.3 ± 1.1 mm in men (Kawel 2012).
+   - **E1 is a warning here.** The open CT labels give a median mid-wall thickness of **9.5 mm** (subject
+     medians, p10–p90 8.5–10.5 mm). That is far above the CMR normals.
+     - Some of the gap is v1's known label offset and trabeculae counted as wall.
+     - Some is that CTA is often reconstructed in systole.
+   - A thinning threshold therefore cannot be borrowed from CMR. It must be set on project reads with the §6
+     convention and the reconstruction phase recorded.
 2. **Subendocardial hypo-attenuation (rest).** Mean HU and its z-score per segment × layer, and the
    subendocardial/subepicardial ratio, as in the transmural perfusion ratio of stress CTP (George 2009: TPR =
    subendocardial/subepicardial attenuation, abnormal < 0.99).
    - On rest CTA this is a scar and severe-ischaemia flag, not an ischaemia test:
      - Nikolaou 2005: rest defects from ischaemia were detected with sensitivity 50 %, "not reliably";
      - Busch 2011: hypo-enhancement on rest CTA for infarct, sens 90 % / spec 80 %; artefacts in 88 % of studies.
-   - **E4 adds a caution:** at 1.5 mm with open labels, **{E4_blood}** of subendocardial-third voxels are brighter
-     than half-way to the blood pool, and the rest subendo/subepi ratio is **{E4_tpr}** (median HU).
+   - **E4 adds a caution:** at 1.5 mm with open labels, **27 % (p10–p90 9–50 %)** of subendocardial-third voxels are brighter
+     than half-way to the blood pool, and the rest subendo/subepi ratio is **2.1 (p10–p90 1.5–3.8; never < 0.99)** (median HU).
    - The inner third is dominated by blood-pool partial volume and border placement, not by perfusion. So
      a layer attenuation output needs the 0.5 mm grid and a border convention that puts trabeculae in the
      cavity.
@@ -172,7 +184,7 @@ not planned.
 
 ## 5. Data
 
-### 5.1 Open data with myocardium labels (verified; §12)
+### 5.1 Open data with myocardium labels (verified; §13)
 
 | Set | CT with LV myocardium labels | Labels | Licence / access | Role in India v1 |
 |---|---|---|---|---|
@@ -233,7 +245,7 @@ Cost: about 1 GPU-minute per CT.
   extra low-weight samples.
 - E2 is the reason for 0.5 mm. A uniform voxel quantisation error has SD ≈ 0.29 voxel: about 0.43 mm at
   1.5 mm and 0.14 mm at 0.5 mm. On the E2 curve, 0.43 mm already costs the subendocardial third several Dice points
-  (σ = 0.5 mm gives {E2_l1_05}).
+  (σ = 0.5 mm gives 0.927).
 
 ### 7.3 Splits and the Janus-M seal (from the start)
 
@@ -263,8 +275,10 @@ Cost: about 1 GPU-minute per CT.
   epicardial border**, model vs each read, averaged over the two reads.
 - **Gate (acceptance on the Janus-M seal):** for each border, the upper 95 % CI bound of (model-vs-read ASSD −
   read-vs-read ASSD) ≤ **0.25 mm**.
-- Why 0.25 mm: E2 puts the subendocardial-third Dice cost of a 0.25 mm smooth error at about
-  {E2_l1_025_loss} points, and the scar-transmurality error stays within a few percentage points.
+- Why 0.25 mm: in E2 a smooth error of SD 0.25 mm costs the subendocardial third about 1 Dice point (0.989).
+  The p90 of the segment scar-transmurality error stays below 1 percentage point (0.8).
+- At SD 0.5 mm those become 0.927 and 3.2 points; at 1.0 mm, 0.823 and 7.3 points, with 15 % of segments in the
+  wrong transmurality bin.
 - **Report, not gated:**
   - myocardium Dice;
   - Dice of each third, derived;
@@ -275,8 +289,13 @@ Cost: about 1 GPU-minute per CT.
 Myocardium Dice is reported, not gated, for two reasons:
 - In E2 a 0.5 mm inward endocardial shift costs the myocardium only about 2 Dice points but the inner third
   about 15. Dice hides exactly the error that matters for layers.
-- Zreik 2018 reached Dice 91.4 % (MAD 0.7 mm) on LV myocardium in CCTA, so a Dice gate would be met by a model
-  whose layers are poor.
+- Published myocardium Dice on CT is 0.88 (MM-WHS winner, Payer 2017), 0.91 (Zreik 2018, MAD 0.7 mm) and 0.94
+  (TotalSegmentator v1 at 1.5 mm). On the E2 curve those correspond to smooth border errors of roughly 1.0–1.5 mm
+  SD (myocardium Dice 0.934 at 1.0 mm, 0.891 at 1.5 mm).
+- At that error the subendocardial third's Dice is 0.72–0.82. The segment scar-transmurality error has a p90 of
+  7–11 points, and 15–21 % of segments fall in the wrong 25-point bin.
+- The mapping is approximate: it is our error model on our shapes, not those papers' errors. But it shows that a
+  "state-of-the-art" myocardium Dice does not by itself give usable layers.
 
 ## 8. Compute (Fir, account `def-aso22`; the lead runs every job)
 
@@ -352,7 +371,35 @@ invented now.
    - *Recommended: confirm.* It keeps every coronary seal and D35 patient out by construction, at the cost of a
      smaller pool.
 
-## 11. Risks
+## 11. Held-out data: how Janus-M keeps the coronary seals apart (disclosure)
+
+The pool reuses public case numbers. The pool's 16 TotalSegmentator volumes (`TotalSegmentator-cardiac__sNNNN`,
+from v2.0.1) include sealed patients and two of Delta's D35 draw. **India's experiments never opened, downloaded,
+read or scored any of them.**
+
+How that is enforced:
+- `fetch_ts_cardiac.pool_subjects()` collects every TotalSegmentator id named by four sources:
+  - the pool list;
+  - the seal file;
+  - every Round 10 decision-set proposal (Atlas, Bridge, Delta);
+  - Delta's D35 draw.
+
+  It refuses to run with fewer than the 16 ids found today.
+- The fetcher skips and deletes those subjects. `lvgeom.load_subject` raises before reading one.
+- The first, unguarded fetch ran for a few minutes and stopped at s0111, below the first held-out id (s0356). No
+  held-out directory, log line or output exists.
+- India used TotalSegmentator **v1**. To check that an s-number names the same patient in both versions, India
+  compared the two `meta.csv` files (no images) over the 1204 shared ids:
+  - sex and study type agree for 1203;
+  - ages differ by at most 4 years (anonymisation jitter);
+  - institute letters are relabelled consistently (H→I, D→E, F→G…).
+
+  So refusing by s-number is refusing by patient. No other v1 subject shares a held-out subject's age, sex,
+  institute and study type.
+- No ImageCAS, ImageCHD or other pool-source data was used. The ImageCAS sealed list
+  (`trillium/icx4/sealed_test.json`) is therefore not touched, and §5.1 rules out ImageCAS-derived label sets.
+
+## 12. Risks
 
 - **The non-commercial licence** (Q1) may not fit the project. The fallback is a 1.5 mm-trained model, which E1
   says is poor for layers.
@@ -361,7 +408,7 @@ invented now.
 - **E1–E4 use open labels at 1.5 mm, upsampled.** The geometry sensitivities hold for any wall shape. The absolute
   numbers (thickness, E4's ratio) inherit v1's misaligned myocardium and are not normal values.
 
-## 12. Citations
+## 13. Citations
 
 Every entry was checked on a PubMed, PMC, publisher, arXiv or dataset page (number and location as cited).
 Numbers marked "abstract" are from the abstract.

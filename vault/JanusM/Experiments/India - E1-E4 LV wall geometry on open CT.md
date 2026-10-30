@@ -22,12 +22,18 @@ Used by [[India v1]]. Code: `experiments/JanusM/India/` (`lvgeom.py`, `exp_layer
 doi:10.1148/ryai.230024). Every study whose `meta.csv` type is a cardiac protocol: `ct heart`,
 `ct heart-thorakale aorta`, `ct aortic valve`, `ct coronary arteries`, `ct left artrium`. That gives 130 subjects.
 
-**Exclusion (the coronary seal):**
+**Exclusion (the coronary seal), enforced in code:**
 - All **16 TotalSegmentator subjects in the SegQueue14 pool** are excluded before download, and deleted if already
   present (`pool_subjects()` in `fetch_ts_cardiac.py`).
 - Several of them are in the D27 seal and two are in Delta's D35 draw.
-- No sealed, D35 or pool volume was read. 115 subjects were fetched (CT plus 6 masks each, by HTTP range
-  requests). Images stay in the session's scratch space and are never committed.
+- The ids come from the pool list, the seal file and every Round 10 decision-set proposal
+  (`pool_subjects()`). The loader refuses them before reading.
+- **s-numbers name the same patient in v1 and the pool's v2.0.1.** Over the 1204 shared ids, sex and study type agree
+  for 1203, ages differ by at most 4 years, and institute letters are relabelled consistently. This was checked on
+  the two `meta.csv` files only.
+- No sealed, D35 or pool volume was opened. The first, unguarded fetch stopped at s0111, below the first held-out id.
+- 115 subjects were fetched (CT plus 6 masks each, by HTTP range requests). Images stay in the session's scratch
+  space and are never committed.
 
 **Labels:**
 - Grid: 1.5 mm isotropic.
@@ -43,7 +49,7 @@ These are therefore **realistic LV shapes, not a border reference**.
 - crop does not touch the volume edge;
 - the long-axis frame is found.
 
-**Used:** {N_USED} of {N_SUBJ}. Excluded: {EXCL}.
+**Used:** **64** of 115. Excluded: 50 failed QC (mostly non-contrast or weak contrast; some crops touching the edge or cavities not enclosed), 1 had no LV label. Subject list: `results/summary.json`.
 
 ## Method
 
@@ -82,11 +88,102 @@ Per-subject values are pooled as the 10th / 50th / 90th percentile over subjects
 
 ## Results
 
-{RESULTS}
+All values: p10 / median / p90 over the 64 subjects.
+
+### E1: wall geometry
+
+| Quantity | p10 | median | p90 |
+|---|---|---|---|
+| Mid-wall thickness, 0.5 mm grid (subject median, mm) | 8.5 | 9.5 | 10.5 |
+| Same on the native 1.5 mm grid (mm) | 8.4 | 9.2 | 10.2 |
+| Voxels across the wall at 1.5 mm | 5.7 | 6.3 | 7.0 |
+| **Voxels per third at 1.5 mm** | 1.9 | **2.1** | 2.3 |
+| Voxels per third at 0.5 mm | 5.7 | 6.3 | 7.0 |
+| Share of mid-wall thinner than 4.5 mm | 1.8 % | 2.6 % | 5.6 % |
+
+By segment (median of subject medians, mm):
+
+| Segment | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14 | 15 | 16 | 17 |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| Thickness | 9.7 | 12.5 | 11.0 | 9.5 | 9.8 | 10.8 | 8.5 | 11.7 | 12.8 | 9.9 | 9.1 | 10.2 | 7.6 | 8.1 | 7.4 | 7.9 | 5.8 |
+
+The thicknesses are well above CMR normals (5.3/6.3 mm mid-cavity, Kawel 2012). This is consistent with v1's label
+offset, trabeculae counted as wall, and systolic reconstructions. The septal segments (2, 3, 8, 9) are thickest,
+which is the expected pattern, and the apex is thinnest.
+
+### E2: coordinate choice, and border error into layers and scar
+
+- **Laplace vs distance thirds:** they agree on 88 % of wall voxels (87–89 %). The median |Δt| is 0.044.
+
+**Border perturbation** (0.5 mm grid, correlation length 8 mm):
+
+| Perturbation | Dice myocardium | Dice subendo third | Dice mid | Dice subepi | Scar transmurality \|error\|, median (pts) | p90 (pts) | Same 25-pt bin |
+|---|---|---|---|---|---|---|---|
+| random, SD 0.25 mm | 0.996 | 0.989 | 0.988 | 0.988 | 0.1 | 0.8 | 98 % |
+| random, SD 0.5 mm | 0.976 | 0.927 | 0.936 | 0.934 | 1.0 | 3.2 | 94 % |
+| random, SD 1.0 mm | 0.934 | 0.823 | 0.846 | 0.827 | 2.6 | 7.3 | 85 % |
+| random, SD 1.5 mm | 0.891 | 0.716 | 0.759 | 0.721 | 4.0 | 10.5 | 79 % |
+| epicardium +0.5 mm (bias) | 0.970 | 0.968 | 0.917 | 0.886 | 2.3 | 4.9 | 84 % |
+| endocardium −0.5 mm into the cavity (bias) | 0.980 | **0.877** | 0.926 | 0.980 | 1.6 | 3.4 | 91 % |
+
+The scar columns pool, per subject, the 7 LAD segments × 9 scar depths (10–90 %). The table gives the median over
+subjects of each subject's median and p90.
+
+### E3: AHA frame
+
+- **Septal (RV-contact) arc, mid-ventricle:** p5 117°, p10 122°, **median 137°**, p90 151°, p95 154°. Fixed 60°
+  sectors assume 120°.
+
+**Myocardium reassigned to another segment / another AHA-default territory:**
+
+| Frame change | Segment | Territory |
+|---|---|---|
+| long axis tilted 5° | 11.9 % | 5.1 % |
+| long axis tilted 10° | 23.8 % | 10.3 % |
+| RV-insertion reference ±10° | 15.2 % | 7.8 % |
+| RV-insertion reference ±20° | 30.3 % | 15.7 % |
+| base plane ±5 mm | 9.1 % | 2.5 % |
+
+- **Segment volumes** (median, mL): 6.7–12.0 for segments 1–16, and 2.1 for the apex cap (17). The rule gives
+  balanced segments.
+
+### E4: rest attenuation by layer (native 1.5 mm, open labels)
+
+| Quantity | p10 | median | p90 |
+|---|---|---|---|
+| LV blood pool median HU | 237 | 339 | 509 |
+| Myocardium median HU | 73 | 95 | 142 |
+| Subendocardial third, median HU | 103 | 143 | 238 |
+| Mid-wall third, median HU | 72 | 98 | 141 |
+| Subepicardial third, median HU | 37 | 66 | 108 |
+| Subendo/subepi ratio (medians) | 1.52 | 2.13 | 3.78 |
+| Subendocardial voxels brighter than half-way to blood | 9 % | 27 % | 50 % |
+
+No subject has a ratio below 0.99. The ratio is not perfusion: the inner third is lifted by blood-pool partial
+volume, and the outer third is lowered by epicardial fat.
 
 ## What it implies (for [[India v1]])
 
-{IMPLIES}
+1. **Do not learn layers as classes.** On the only large open CT label grid, a third is about 2 voxels (E1).
+   Two reasonable coordinate definitions agree on 88 % of voxels (E2), so a learned third would mostly learn
+   label noise.
+2. **Gate on the borders in mm, not on myocardium Dice.**
+   - A 0.5 mm inward endocardial bias costs the myocardium 2 Dice points and the inner third 12 points.
+   - A smooth error matching published myocardium Dice (0.88–0.94, i.e. about 1.0–1.5 mm SD here) leaves the inner
+     third at 0.72–0.82 Dice. It puts 15–21 % of segments in the wrong scar-transmurality bin.
+   - An error of SD ≤ 0.25 mm keeps every layer Dice ≥ 0.98 and the scar error p90 below 1 point. That is the
+     basis of India v1's 0.25 mm gate on (model − inter-read) border ASSD.
+3. **Report transmurality, not third-by-third Dice.** The clinically used number, segment scar extent, degrades
+   more slowly than the layer masks: a 2.6-point median error at SD 1.0 mm.
+4. **Compute AHA segments, and fix the septal rule in Round 2.** The frame is sensitive: a 10° error in the RV
+   reference moves 15 % of the mass. The measured septal arc (median 137°) is wider than the 120° that fixed sectors
+   assume. Territory assignment is less sensitive than segment assignment (about half), which favours
+   patient-specific territories from Janus over the AHA default.
+5. **Rest layer attenuation needs real 0.5 mm borders with trabeculae in the cavity.** On the open labels the
+   subendo/subepi ratio is 2.1, so it measures partial volume, not tissue. India v1 keeps it report-only and makes
+   the border convention a question for the lead (Q3).
+6. **Do not borrow a CMR thinning threshold.** CT label thickness here is about 9.5 mm against CMR normals of
+   5–6 mm.
 
 ## Limits
 

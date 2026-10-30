@@ -1,0 +1,112 @@
+[
+ {
+  "case": "phantom",
+  "n_traced": 20000,
+  "n_untraced": 0,
+  "agree_equal_vs_yezzi": 0.9853,
+  "agree_equal_vs_laplace": 0.8623,
+  "agree_laplace_vs_yezzi": 0.8595,
+  "share_equal": [
+   0.2607,
+   0.3482,
+   0.3911
+  ],
+  "share_laplace": [
+   0.2046,
+   0.3227,
+   0.4727
+  ],
+  "share_yezzi": [
+   0.2659,
+   0.3407,
+   0.3933
+  ],
+  "n_thin": 3285,
+  "agree_equal_vs_yezzi_thin": 0.9796,
+  "thick_equal_median_thin": 6.27,
+  "thick_yezzi_median_thin": 6.1,
+  "share_equal_thin": [
+   0.277,
+   0.365,
+   0.357
+  ],
+  "share_yezzi_thin": [
+   0.283,
+   0.348,
+   0.369
+  ],
+  "n_thick": 6265,
+  "agree_equal_vs_yezzi_thick": 0.9912,
+  "thick_equal_median_thick": 13.07,
+  "thick_yezzi_median_thick": 13.0,
+  "share_equal_thick": [
+   0.234,
+   0.347,
+   0.419
+  ],
+  "share_yezzi_thick": [
+   0.236,
+   0.347,
+   0.416
+  ],
+  "thick_median_equal_yezzi": [
+   10.52,
+   10.5
+  ]
+ },
+ {
+  "case": "thinned_lateral_4mm",
+  "n_traced": 20000,
+  "n_untraced": 0,
+  "agree_equal_vs_yezzi": 0.9808,
+  "agree_equal_vs_laplace": 0.8408,
+  "agree_laplace_vs_yezzi": 0.836,
+  "share_equal": [
+   0.2549,
+   0.3492,
+   0.396
+  ],
+  "share_laplace": [
+   0.1939,
+   0.312,
+   0.4941
+  ],
+  "share_yezzi": [
+   0.2636,
+   0.3363,
+   0.4002
+  ],
+  "n_thin": 3627,
+  "agree_equal_vs_yezzi_thin": 0.9622,
+  "thick_equal_median_thin": 5.22,
+  "thick_yezzi_median_thin": 5.1,
+  "share_equal_thin": [
+   0.28,
+   0.372,
+   0.348
+  ],
+  "share_yezzi_thin": [
+   0.296,
+   0.336,
+   0.368
+  ],
+  "n_thick": 9544,
+  "agree_equal_vs_yezzi_thick": 0.9869,
+  "thick_equal_median_thick": 14.23,
+  "thick_yezzi_median_thick": 14.3,
+  "share_equal_thick": [
+   0.222,
+   0.349,
+   0.429
+  ],
+  "share_yezzi_thick": [
+   0.228,
+   0.343,
+   0.429
+  ],
+  "thick_median_equal_yezzi": [
+   11.73,
+   11.8
+  ]
+ }
+]

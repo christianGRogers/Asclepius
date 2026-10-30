@@ -18,7 +18,7 @@ trunk (JA1–JA14) and path A's Stage A (JA15–JA24, by JA25). **Juliet v3 is t
 
 | Ruling §7 item | Where | In one line |
 |---|---|---|
-| 1. One shared synthetic-LIE benchmark | §1, E8, `experiments/JanusM/bench_lie/` | 630 cases on 20 real hearts and the phantom, with rules pre-registered and agreed with Golf and Kilo. **P-K struck** (calls scar in scar-free hearts). **P-G struck under JA29's registration**, but clean once registration is fixed. **P-J, E-V and E-D survive.** P-G's spill share is 0.00–0.02 |
+| 1. One shared synthetic-LIE benchmark | §1, E8, `experiments/JanusM/bench_lie/` | 630 cases on 20 real hearts and the phantom, with rules pre-registered and agreed with Golf and Kilo. **P-K struck** (calls scar in scar-free hearts). **P-G: verdict open** until the v2 re-run (v1 lacked JA30's endocardial exclusion; disclosed on #179). **P-J, E-V and E-D survive.** P-G's spill share is 0.00–0.02 |
 | 2. The merged power script at the JA32 bars | §2, E9 | #187's run gives a 120–240-patient seal. But at a 2 % registration-failure rate, JA29's per-segment intention-to-diagnose keeps joint power below 0.80 at every N ≤ 320; a split accounting needs 160–200 |
 | 3. LGE read form and registration check form | §3, `experiments/JanusM/Juliet/r3/` | written for the Janus-M queue, with a synthetic LGE mock-up (5 patients with truth) and an example panel; form-entry time estimated, viewing time measured on the mock-up by the queue's own timestamps |
 | 4. JA27 intake checker | §4 | every JA27 requirement mapped to a DICOM attribute or a manifest field, with what a failing patient becomes |
@@ -54,7 +54,7 @@ generator). The full note is [[Juliet - On the shared LIE benchmark P-K and P-G 
 | Menu item | Verdict | Why |
 |---|---|---|
 | P-K | **struck** | specificity on scar-free hearts 0.006–0.31, and 0.006–0.056 even on true borders: its half-way threshold re-fits to noise when a heart has no scar |
-| P-G | **struck as JA29 stands** | specificity 0.78–0.86 when the heart moves, from registration. On true borders 0.99–1.00; with §5's registration ≥ 0.985 |
+| P-G | **open (v2 re-run)**. In v1, struck as JA29 stands | v1's P-G lacked JA30's 1 mm endocardial exclusion (a benchmark bug Golf found; disclosed on #179). v1, without the exclusion: specificity 0.78–0.86 when the heart moves, from registration; on true borders 0.99–1.00; with §5's registration ≥ 0.985. The v2 verdict replaces this line |
 | P-J | survives | sensitivity 0.76–0.84; both specificities ≥ 0.96. Its bin-1 sensitivity is 0.00–0.30 on the chain. With §5's registration, its sensitivity is ≥ 0.89 (bin 1: ≥ 0.60) |
 | E-V / E-D | both survive | exact bin agreement on scar-on-both 0.90 / 0.89 (volume truth), 0.94 / 0.93 (depth truth) |
 
@@ -358,8 +358,8 @@ Each is backed by a Round 3 experiment. All are for the judge to accept or rejec
 - **A2. Mask the registration metric to classes 1–4 dilated 4 mm (not 10 mm), and add `rim_dark` to the QC (E8).**
   - With both, the median residual after a 4 mm heart shift falls from 1.33 to 0.30 mm (p90 3.65 → 0.44), and no
     moved case passes QC at R0.
-  - **If A2 is adopted, P-G is reinstated to the menu.** Its strike was the registration's: with A2 it passes every
-    bar.
+  - **If P-G's v2 verdict is a strike under JA29's registration that A2 removes, P-G is reinstated** when A2 is
+    adopted. In v1, which lacked the exclusion, P-G passed every bar with A2.
 - **A3. `rim_dark` above its cut after registration routes a patient to the phase-unmatched stratum (E8, item 5).**
   It is the truth-free phase check Round 2 lacked (AUC 0.98–0.99).
 - **A4. The LGE reference rule (§3.1.4).** Agreement is the shared presence and the **lower** of two adjacent bins.

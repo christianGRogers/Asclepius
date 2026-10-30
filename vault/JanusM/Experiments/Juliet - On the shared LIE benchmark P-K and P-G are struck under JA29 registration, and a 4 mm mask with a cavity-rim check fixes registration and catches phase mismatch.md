@@ -81,6 +81,13 @@ pre-registered on #179 before any result,** with Kilo's 1a–1c and Golf's scar 
 
 ## Result
 
+> **Correction (13:28 UTC, Golf on #179).** In this run (**v1**), `menu.py`'s P-G kept wall voxels with
+> `edt ≥ 1.0` from the cavity. That drops no wall voxel, so **v1's P-G lacks JA30's 1 mm endocardial exclusion**.
+> Every P-G number below is "P-G without the exclusion". The fix uses `edt − 0.5 ≥ 1.0 mm`, from the surface. A full
+> re-run (**v2**, same seeds) is in progress, and §5 below will give v2's P-G verdict. P-K, P-J, E-V, E-D, the
+> registration and the QC results don't depend on it. v1's data stay committed as `results_v1.jsonl.gz` /
+> `scores_v1.json`.
+
 ### 1. Strikes (JA29 chain, CNR 5, motion none or rigid; ranges over the three blood levels)
 
 | | Sensitivity | Specificity | Specificity, scar-free hearts | Spill | Verdict |

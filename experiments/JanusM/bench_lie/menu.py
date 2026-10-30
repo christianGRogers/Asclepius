@@ -191,7 +191,10 @@ def grade(lie, car, fixed=None):
     else:
         med, rsd, thr_k = fixed
     hi3 = (sm > med + 3 * rsd) & myo
-    d_endo = ndi.distance_transform_edt(~car["cav"])
+    # JA30's P-G ignores 1 mm at the carried endocardium. The surface lies half a voxel beyond the last cavity voxel
+    # (as in janusm.geometry), so a wall voxel's distance from the surface is edt - 0.5. (v1 of this benchmark used
+    # edt >= 1.0, which drops no wall voxel; Golf found it on #179.)
+    d_endo = ndi.distance_transform_edt(~car["cav"]) - 0.5
     g_call = ndi.binary_opening(hi3) & (d_endo >= 1.0)
     g_den = myo & (d_endo >= 1.0)
     pk, pg = np.full(17, np.nan), np.full(17, np.nan)

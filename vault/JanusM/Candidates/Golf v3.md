@@ -306,7 +306,27 @@ Checked on 2026-10-30 against the remote branches, by file and by `git diff` (no
 
 ## 10. §7 item 7: path summary for the lead
 
-{{ITEM7}}
+An update of the Round 2 ruling's §8, for #143. Path A's column is unchanged.
+
+| | Path A, `jm/rest-ccta` | Path B, `jm/paired-scar` (after Round 3) |
+|---|---|---|
+| Assumes | no reference for scar or ischaemia | a paired CCTA + same-session LIE + CMR LGE cohort the lead obtains (data requirements only, D31) |
+| Stage A | built and calibrated: specificity only (JA18) | **identical, one implementation** (JA25): harness and JM-0R on `dev`, byte-identical; sync into this path pending; table writer not built on either path |
+| Scar grade | none | Scar-0 from a menu narrowed on one shared benchmark (§4); {{STRUCK}} struck |
+| What limits the scar grade | — | **registration, not the rule** (E8): on exact borders the extent error is ≤ 0.08 of wall share; after the JA29 chain it is {{CHAIN_SD}} |
+| Reference standard | read-vs-read border agreement | the same, plus two CMR readers per segment, read on a fixed form (§6) |
+| Seal size | — | max(120; ≥ 270 scarred segments ≈ 120–130 patients at 70 % enrichment or ≈ 170–190 at 50 %; the sensitivity N) |
+| What decides pass/fail | — | **the transmurality endpoint**: it needs CT bin agreement ≥ the readers' own, which no number of patients buys (E10) |
+| Phase mismatch | — | recorded by the intake checker (§7); flagged without truth by the heart-masked affine's log-determinant (§8.2) |
+| Committed compute | ≈ 15 GPU-h (with LQ12) | the same + ≈ 3 GPU-h once the cohort exists; scar on CPU |
+| Extra reader time | none | form entry ≈ 4 h (measured by model); image review ≈ 55 CMR reader-hours (an assumption until timed on the mock-up) |
+| Main risk | flags with no measured sensitivity | **the cohort never arrives**; or registration residuals keep the transmurality endpoint out of reach and Scar-1 (or the voxel head, ≈ 55 GPU-h, ≥ 60 more patients) is needed |
+| If the cohort never arrives | — | path B reduces to path A exactly; nothing built here is lost |
+
+**In short:** path B is path A plus one validation study. Round 3 shows the study is **feasible to specify and to
+read**, but its pass rests on the transmurality endpoint, and that endpoint is set by how well the late scan is
+registered, not by the rule or the patient count. The lead's question is unchanged: can a same-session LIE + LGE
+cohort of about 130–190 patients, enriched to about 70 % prior MI, be had?
 
 ## 11. Code that must ship (specs; built by `role:swe`, not in this PR)
 

@@ -1,0 +1,1426 @@
+{
+ "selection": {
+  "eligible": 103,
+  "selected": [
+   "s0424",
+   "s0877",
+   "s1230",
+   "s0935",
+   "s1190",
+   "s1018",
+   "s0452",
+   "s0349",
+   "s1248",
+   "s0338",
+   "s0439",
+   "s0834"
+  ],
+  "rule": "study_type in {ct heart, ct coronary arteries, ct aortic valve, ct heart-thorakale aorta}, not one of the 16 pool TotalSegmentator-cardiac ids, ranked by sha256('janusm-juliet-r1:'+id), first 12"
+ },
+ "subjects": [
+  {
+   "id": "s0424",
+   "usable": true,
+   "spacing_mm": [
+    1.5,
+    1.5,
+    1.5
+   ],
+   "lv_axis_mm": 95.9,
+   "n_myo_vox": 43017,
+   "segments": {
+    "1": {
+     "thick_mm": 10.48,
+     "thick_vox": 7.0,
+     "n_mid_vox": 1156,
+     "n_myo_vox": 3384
+    },
+    "2": {
+     "thick_mm": 12.88,
+     "thick_vox": 8.6,
+     "n_mid_vox": 669,
+     "n_myo_vox": 1899
+    },
+    "3": {
+     "thick_mm": 10.51,
+     "thick_vox": 7.0,
+     "n_mid_vox": 570,
+     "n_myo_vox": 1761
+    },
+    "4": {
+     "thick_mm": 9.91,
+     "thick_vox": 6.6,
+     "n_mid_vox": 894,
+     "n_myo_vox": 2673
+    },
+    "5": {
+     "thick_mm": 9.54,
+     "thick_vox": 6.4,
+     "n_mid_vox": 944,
+     "n_myo_vox": 3031
+    },
+    "6": {
+     "thick_mm": 10.35,
+     "thick_vox": 6.9,
+     "n_mid_vox": 1264,
+     "n_myo_vox": 3770
+    },
+    "7": {
+     "thick_mm": 7.47,
+     "thick_vox": 5.0,
+     "n_mid_vox": 949,
+     "n_myo_vox": 2817
+    },
+    "8": {
+     "thick_mm": 10.49,
+     "thick_vox": 7.0,
+     "n_mid_vox": 864,
+     "n_myo_vox": 2702
+    },
+    "9": {
+     "thick_mm": 11.99,
+     "thick_vox": 8.0,
+     "n_mid_vox": 698,
+     "n_myo_vox": 2210
+    },
+    "10": {
+     "thick_mm": 10.45,
+     "thick_vox": 7.0,
+     "n_mid_vox": 852,
+     "n_myo_vox": 2585
+    },
+    "11": {
+     "thick_mm": 8.86,
+     "thick_vox": 5.9,
+     "n_mid_vox": 842,
+     "n_myo_vox": 2784
+    },
+    "12": {
+     "thick_mm": 9.0,
+     "thick_vox": 6.0,
+     "n_mid_vox": 1038,
+     "n_myo_vox": 3295
+    },
+    "13": {
+     "thick_mm": 7.05,
+     "thick_vox": 4.7,
+     "n_mid_vox": 759,
+     "n_myo_vox": 2187
+    },
+    "14": {
+     "thick_mm": 6.83,
+     "thick_vox": 4.6,
+     "n_mid_vox": 439,
+     "n_myo_vox": 1336
+    },
+    "15": {
+     "thick_mm": 7.5,
+     "thick_vox": 5.0,
+     "n_mid_vox": 458,
+     "n_myo_vox": 1607
+    },
+    "16": {
+     "thick_mm": 7.37,
+     "thick_vox": 4.9,
+     "n_mid_vox": 689,
+     "n_myo_vox": 2270
+    }
+   },
+   "median_thick_mm": 9.24,
+   "p10_p90_thick_mm": [
+    6.67,
+    11.99
+   ],
+   "frac_mid_vox_thinner_than_5p5mm": 0.018,
+   "median_vox_per_third": 2.05,
+   "frac_myo_in_valve_band": 0.001
+  },
+  {
+   "id": "s0877",
+   "usable": true,
+   "spacing_mm": [
+    1.5,
+    1.5,
+    1.5
+   ],
+   "lv_axis_mm": 82.2,
+   "n_myo_vox": 29911,
+   "segments": {
+    "1": {
+     "thick_mm": 9.43,
+     "thick_vox": 6.3,
+     "n_mid_vox": 867,
+     "n_myo_vox": 2707
+    },
+    "2": {
+     "thick_mm": 10.87,
+     "thick_vox": 7.2,
+     "n_mid_vox": 558,
+     "n_myo_vox": 1681
+    },
+    "3": {
+     "thick_mm": 8.93,
+     "thick_vox": 6.0,
+     "n_mid_vox": 448,
+     "n_myo_vox": 1376
+    },
+    "4": {
+     "thick_mm": 7.58,
+     "thick_vox": 5.1,
+     "n_mid_vox": 554,
+     "n_myo_vox": 1756
+    },
+    "5": {
+     "thick_mm": 8.61,
+     "thick_vox": 5.7,
+     "n_mid_vox": 717,
+     "n_myo_vox": 2405
+    },
+    "6": {
+     "thick_mm": 8.89,
+     "thick_vox": 5.9,
+     "n_mid_vox": 824,
+     "n_myo_vox": 2689
+    },
+    "7": {
+     "thick_mm": 7.26,
+     "thick_vox": 4.8,
+     "n_mid_vox": 675,
+     "n_myo_vox": 2078
+    },
+    "8": {
+     "thick_mm": 8.93,
+     "thick_vox": 6.0,
+     "n_mid_vox": 475,
+     "n_myo_vox": 1472
+    },
+    "9": {
+     "thick_mm": 9.1,
+     "thick_vox": 6.1,
+     "n_mid_vox": 402,
+     "n_myo_vox": 1223
+    },
+    "10": {
+     "thick_mm": 7.49,
+     "thick_vox": 5.0,
+     "n_mid_vox": 572,
+     "n_myo_vox": 1768
+    },
+    "11": {
+     "thick_mm": 7.37,
+     "thick_vox": 4.9,
+     "n_mid_vox": 674,
+     "n_myo_vox": 2042
+    },
+    "12": {
+     "thick_mm": 8.22,
+     "thick_vox": 5.5,
+     "n_mid_vox": 637,
+     "n_myo_vox": 2326
+    },
+    "13": {
+     "thick_mm": 6.24,
+     "thick_vox": 4.2,
+     "n_mid_vox": 425,
+     "n_myo_vox": 1323
+    },
+    "14": {
+     "thick_mm": 6.42,
+     "thick_vox": 4.3,
+     "n_mid_vox": 267,
+     "n_myo_vox": 762
+    },
+    "15": {
+     "thick_mm": 5.74,
+     "thick_vox": 3.8,
+     "n_mid_vox": 312,
+     "n_myo_vox": 996
+    },
+    "16": {
+     "thick_mm": 6.35,
+     "thick_vox": 4.2,
+     "n_mid_vox": 459,
+     "n_myo_vox": 1470
+    }
+   },
+   "median_thick_mm": 7.97,
+   "p10_p90_thick_mm": [
+    6.0,
+    10.3
+   ],
+   "frac_mid_vox_thinner_than_5p5mm": 0.065,
+   "median_vox_per_third": 1.77,
+   "frac_myo_in_valve_band": 0.005
+  },
+  {
+   "id": "s1230",
+   "usable": true,
+   "spacing_mm": [
+    1.5,
+    1.5,
+    1.5
+   ],
+   "lv_axis_mm": 93.8,
+   "n_myo_vox": 43863,
+   "segments": {
+    "1": {
+     "thick_mm": 9.36,
+     "thick_vox": 6.2,
+     "n_mid_vox": 1096,
+     "n_myo_vox": 3375
+    },
+    "2": {
+     "thick_mm": 13.08,
+     "thick_vox": 8.7,
+     "n_mid_vox": 712,
+     "n_myo_vox": 1991
+    },
+    "3": {
+     "thick_mm": 11.26,
+     "thick_vox": 7.5,
+     "n_mid_vox": 665,
+     "n_myo_vox": 2036
+    },
+    "4": {
+     "thick_mm": 9.62,
+     "thick_vox": 6.4,
+     "n_mid_vox": 945,
+     "n_myo_vox": 2899
+    },
+    "5": {
+     "thick_mm": 9.62,
+     "thick_vox": 6.4,
+     "n_mid_vox": 937,
+     "n_myo_vox": 3034
+    },
+    "6": {
+     "thick_mm": 10.01,
+     "thick_vox": 6.7,
+     "n_mid_vox": 1165,
+     "n_myo_vox": 3550
+    },
+    "7": {
+     "thick_mm": 8.15,
+     "thick_vox": 5.4,
+     "n_mid_vox": 916,
+     "n_myo_vox": 3051
+    },
+    "8": {
+     "thick_mm": 11.12,
+     "thick_vox": 7.4,
+     "n_mid_vox": 947,
+     "n_myo_vox": 2904
+    },
+    "9": {
+     "thick_mm": 11.91,
+     "thick_vox": 7.9,
+     "n_mid_vox": 736,
+     "n_myo_vox": 2325
+    },
+    "10": {
+     "thick_mm": 9.5,
+     "thick_vox": 6.3,
+     "n_mid_vox": 808,
+     "n_myo_vox": 2556
+    },
+    "11": {
+     "thick_mm": 8.45,
+     "thick_vox": 5.6,
+     "n_mid_vox": 775,
+     "n_myo_vox": 2517
+    },
+    "12": {
+     "thick_mm": 9.43,
+     "thick_vox": 6.3,
+     "n_mid_vox": 988,
+     "n_myo_vox": 3142
+    },
+    "13": {
+     "thick_mm": 7.26,
+     "thick_vox": 4.8,
+     "n_mid_vox": 749,
+     "n_myo_vox": 2332
+    },
+    "14": {
+     "thick_mm": 8.36,
+     "thick_vox": 5.6,
+     "n_mid_vox": 536,
+     "n_myo_vox": 1738
+    },
+    "15": {
+     "thick_mm": 7.5,
+     "thick_vox": 5.0,
+     "n_mid_vox": 534,
+     "n_myo_vox": 1697
+    },
+    "16": {
+     "thick_mm": 7.49,
+     "thick_vox": 5.0,
+     "n_mid_vox": 609,
+     "n_myo_vox": 1995
+    }
+   },
+   "median_thick_mm": 9.31,
+   "p10_p90_thick_mm": [
+    6.99,
+    12.39
+   ],
+   "frac_mid_vox_thinner_than_5p5mm": 0.02,
+   "median_vox_per_third": 2.07,
+   "frac_myo_in_valve_band": 0.001
+  },
+  {
+   "id": "s0935",
+   "usable": true,
+   "spacing_mm": [
+    1.5,
+    1.5,
+    1.5
+   ],
+   "lv_axis_mm": 94.5,
+   "n_myo_vox": 60295,
+   "segments": {
+    "1": {
+     "thick_mm": 11.56,
+     "thick_vox": 7.7,
+     "n_mid_vox": 1663,
+     "n_myo_vox": 5176
+    },
+    "2": {
+     "thick_mm": 14.91,
+     "thick_vox": 9.9,
+     "n_mid_vox": 1423,
+     "n_myo_vox": 4233
+    },
+    "3": {
+     "thick_mm": 12.99,
+     "thick_vox": 8.7,
+     "n_mid_vox": 1083,
+     "n_myo_vox": 3380
+    },
+    "4": {
+     "thick_mm": 10.39,
+     "thick_vox": 6.9,
+     "n_mid_vox": 1031,
+     "n_myo_vox": 3108
+    },
+    "5": {
+     "thick_mm": 10.87,
+     "thick_vox": 7.2,
+     "n_mid_vox": 1263,
+     "n_myo_vox": 3877
+    },
+    "6": {
+     "thick_mm": 12.03,
+     "thick_vox": 8.0,
+     "n_mid_vox": 1666,
+     "n_myo_vox": 5148
+    },
+    "7": {
+     "thick_mm": 9.78,
+     "thick_vox": 6.5,
+     "n_mid_vox": 1311,
+     "n_myo_vox": 4155
+    },
+    "8": {
+     "thick_mm": 12.66,
+     "thick_vox": 8.4,
+     "n_mid_vox": 1350,
+     "n_myo_vox": 4193
+    },
+    "9": {
+     "thick_mm": 13.95,
+     "thick_vox": 9.3,
+     "n_mid_vox": 1179,
+     "n_myo_vox": 3663
+    },
+    "10": {
+     "thick_mm": 10.5,
+     "thick_vox": 7.0,
+     "n_mid_vox": 1036,
+     "n_myo_vox": 2996
+    },
+    "11": {
+     "thick_mm": 10.04,
+     "thick_vox": 6.7,
+     "n_mid_vox": 1134,
+     "n_myo_vox": 3478
+    },
+    "12": {
+     "thick_mm": 11.08,
+     "thick_vox": 7.4,
+     "n_mid_vox": 1474,
+     "n_myo_vox": 4497
+    },
+    "13": {
+     "thick_mm": 8.17,
+     "thick_vox": 5.4,
+     "n_mid_vox": 946,
+     "n_myo_vox": 3005
+    },
+    "14": {
+     "thick_mm": 8.65,
+     "thick_vox": 5.8,
+     "n_mid_vox": 672,
+     "n_myo_vox": 2286
+    },
+    "15": {
+     "thick_mm": 8.61,
+     "thick_vox": 5.7,
+     "n_mid_vox": 527,
+     "n_myo_vox": 1817
+    },
+    "16": {
+     "thick_mm": 8.41,
+     "thick_vox": 5.6,
+     "n_mid_vox": 746,
+     "n_myo_vox": 2374
+    }
+   },
+   "median_thick_mm": 10.68,
+   "p10_p90_thick_mm": [
+    7.74,
+    14.5
+   ],
+   "frac_mid_vox_thinner_than_5p5mm": 0.012,
+   "median_vox_per_third": 2.37,
+   "frac_myo_in_valve_band": 0.0
+  },
+  {
+   "id": "s1190",
+   "usable": true,
+   "spacing_mm": [
+    1.5,
+    1.5,
+    1.5
+   ],
+   "lv_axis_mm": 89.3,
+   "n_myo_vox": 44307,
+   "segments": {
+    "1": {
+     "thick_mm": 9.45,
+     "thick_vox": 6.3,
+     "n_mid_vox": 1040,
+     "n_myo_vox": 3178
+    },
+    "2": {
+     "thick_mm": 12.9,
+     "thick_vox": 8.6,
+     "n_mid_vox": 669,
+     "n_myo_vox": 1847
+    },
+    "3": {
+     "thick_mm": 10.04,
+     "thick_vox": 6.7,
+     "n_mid_vox": 607,
+     "n_myo_vox": 1839
+    },
+    "4": {
+     "thick_mm": 8.65,
+     "thick_vox": 5.8,
+     "n_mid_vox": 871,
+     "n_myo_vox": 2671
+    },
+    "5": {
+     "thick_mm": 11.61,
+     "thick_vox": 7.7,
+     "n_mid_vox": 1358,
+     "n_myo_vox": 4182
+    },
+    "6": {
+     "thick_mm": 10.99,
+     "thick_vox": 7.3,
+     "n_mid_vox": 1269,
+     "n_myo_vox": 3913
+    },
+    "7": {
+     "thick_mm": 7.72,
+     "thick_vox": 5.1,
+     "n_mid_vox": 880,
+     "n_myo_vox": 2707
+    },
+    "8": {
+     "thick_mm": 11.32,
+     "thick_vox": 7.5,
+     "n_mid_vox": 800,
+     "n_myo_vox": 2401
+    },
+    "9": {
+     "thick_mm": 11.76,
+     "thick_vox": 7.8,
+     "n_mid_vox": 722,
+     "n_myo_vox": 2283
+    },
+    "10": {
+     "thick_mm": 8.93,
+     "thick_vox": 6.0,
+     "n_mid_vox": 802,
+     "n_myo_vox": 2702
+    },
+    "11": {
+     "thick_mm": 9.62,
+     "thick_vox": 6.4,
+     "n_mid_vox": 1091,
+     "n_myo_vox": 3467
+    },
+    "12": {
+     "thick_mm": 9.5,
+     "thick_vox": 6.3,
+     "n_mid_vox": 1068,
+     "n_myo_vox": 3376
+    },
+    "13": {
+     "thick_mm": 7.05,
+     "thick_vox": 4.7,
+     "n_mid_vox": 649,
+     "n_myo_vox": 1946
+    },
+    "14": {
+     "thick_mm": 7.49,
+     "thick_vox": 5.0,
+     "n_mid_vox": 422,
+     "n_myo_vox": 1367
+    },
+    "15": {
+     "thick_mm": 6.24,
+     "thick_vox": 4.2,
+     "n_mid_vox": 485,
+     "n_myo_vox": 1464
+    },
+    "16": {
+     "thick_mm": 7.5,
+     "thick_vox": 5.0,
+     "n_mid_vox": 694,
+     "n_myo_vox": 2294
+    }
+   },
+   "median_thick_mm": 9.43,
+   "p10_p90_thick_mm": [
+    6.42,
+    12.36
+   ],
+   "frac_mid_vox_thinner_than_5p5mm": 0.039,
+   "median_vox_per_third": 2.1,
+   "frac_myo_in_valve_band": 0.003
+  },
+  {
+   "id": "s1018",
+   "usable": true,
+   "spacing_mm": [
+    1.5,
+    1.5,
+    1.5
+   ],
+   "lv_axis_mm": 78.4,
+   "n_myo_vox": 40494,
+   "segments": {
+    "1": {
+     "thick_mm": 9.11,
+     "thick_vox": 6.1,
+     "n_mid_vox": 865,
+     "n_myo_vox": 2733
+    },
+    "2": {
+     "thick_mm": 12.86,
+     "thick_vox": 8.6,
+     "n_mid_vox": 814,
+     "n_myo_vox": 2343
+    },
+    "3": {
+     "thick_mm": 11.74,
+     "thick_vox": 7.8,
+     "n_mid_vox": 822,
+     "n_myo_vox": 2495
+    },
+    "4": {
+     "thick_mm": 9.36,
+     "thick_vox": 6.2,
+     "n_mid_vox": 850,
+     "n_myo_vox": 2614
+    },
+    "5": {
+     "thick_mm": 10.24,
+     "thick_vox": 6.8,
+     "n_mid_vox": 931,
+     "n_myo_vox": 2769
+    },
+    "6": {
+     "thick_mm": 9.88,
+     "thick_vox": 6.6,
+     "n_mid_vox": 921,
+     "n_myo_vox": 2899
+    },
+    "7": {
+     "thick_mm": 8.41,
+     "thick_vox": 5.6,
+     "n_mid_vox": 791,
+     "n_myo_vox": 2568
+    },
+    "8": {
+     "thick_mm": 12.18,
+     "thick_vox": 8.1,
+     "n_mid_vox": 972,
+     "n_myo_vox": 2915
+    },
+    "9": {
+     "thick_mm": 12.53,
+     "thick_vox": 8.4,
+     "n_mid_vox": 872,
+     "n_myo_vox": 2688
+    },
+    "10": {
+     "thick_mm": 9.0,
+     "thick_vox": 6.0,
+     "n_mid_vox": 681,
+     "n_myo_vox": 2253
+    },
+    "11": {
+     "thick_mm": 9.18,
+     "thick_vox": 6.1,
+     "n_mid_vox": 776,
+     "n_myo_vox": 2422
+    },
+    "12": {
+     "thick_mm": 10.01,
+     "thick_vox": 6.7,
+     "n_mid_vox": 889,
+     "n_myo_vox": 2804
+    },
+    "13": {
+     "thick_mm": 7.26,
+     "thick_vox": 4.8,
+     "n_mid_vox": 652,
+     "n_myo_vox": 2125
+    },
+    "14": {
+     "thick_mm": 8.41,
+     "thick_vox": 5.6,
+     "n_mid_vox": 484,
+     "n_myo_vox": 1737
+    },
+    "15": {
+     "thick_mm": 7.49,
+     "thick_vox": 5.0,
+     "n_mid_vox": 456,
+     "n_myo_vox": 1540
+    },
+    "16": {
+     "thick_mm": 7.74,
+     "thick_vox": 5.2,
+     "n_mid_vox": 463,
+     "n_myo_vox": 1629
+    }
+   },
+   "median_thick_mm": 9.45,
+   "p10_p90_thick_mm": [
+    7.15,
+    12.86
+   ],
+   "frac_mid_vox_thinner_than_5p5mm": 0.017,
+   "median_vox_per_third": 2.1,
+   "frac_myo_in_valve_band": 0.0
+  },
+  {
+   "id": "s0452",
+   "usable": true,
+   "spacing_mm": [
+    1.5,
+    1.5,
+    1.5
+   ],
+   "lv_axis_mm": 88.8,
+   "n_myo_vox": 40295,
+   "segments": {
+    "1": {
+     "thick_mm": 9.11,
+     "thick_vox": 6.1,
+     "n_mid_vox": 889,
+     "n_myo_vox": 2758
+    },
+    "2": {
+     "thick_mm": 12.33,
+     "thick_vox": 8.2,
+     "n_mid_vox": 711,
+     "n_myo_vox": 2017
+    },
+    "3": {
+     "thick_mm": 11.04,
+     "thick_vox": 7.4,
+     "n_mid_vox": 657,
+     "n_myo_vox": 2028
+    },
+    "4": {
+     "thick_mm": 8.93,
+     "thick_vox": 6.0,
+     "n_mid_vox": 698,
+     "n_myo_vox": 2242
+    },
+    "5": {
+     "thick_mm": 10.65,
+     "thick_vox": 7.1,
+     "n_mid_vox": 1063,
+     "n_myo_vox": 3128
+    },
+    "6": {
+     "thick_mm": 10.18,
+     "thick_vox": 6.8,
+     "n_mid_vox": 1012,
+     "n_myo_vox": 3121
+    },
+    "7": {
+     "thick_mm": 7.79,
+     "thick_vox": 5.2,
+     "n_mid_vox": 722,
+     "n_myo_vox": 2334
+    },
+    "8": {
+     "thick_mm": 10.35,
+     "thick_vox": 6.9,
+     "n_mid_vox": 822,
+     "n_myo_vox": 2559
+    },
+    "9": {
+     "thick_mm": 11.37,
+     "thick_vox": 7.6,
+     "n_mid_vox": 840,
+     "n_myo_vox": 2623
+    },
+    "10": {
+     "thick_mm": 8.65,
+     "thick_vox": 5.8,
+     "n_mid_vox": 634,
+     "n_myo_vox": 2114
+    },
+    "11": {
+     "thick_mm": 9.45,
+     "thick_vox": 6.3,
+     "n_mid_vox": 814,
+     "n_myo_vox": 2594
+    },
+    "12": {
+     "thick_mm": 9.36,
+     "thick_vox": 6.2,
+     "n_mid_vox": 867,
+     "n_myo_vox": 2811
+    },
+    "13": {
+     "thick_mm": 7.15,
+     "thick_vox": 4.8,
+     "n_mid_vox": 566,
+     "n_myo_vox": 1675
+    },
+    "14": {
+     "thick_mm": 7.37,
+     "thick_vox": 4.9,
+     "n_mid_vox": 589,
+     "n_myo_vox": 1777
+    },
+    "15": {
+     "thick_mm": 7.26,
+     "thick_vox": 4.8,
+     "n_mid_vox": 602,
+     "n_myo_vox": 1956
+    },
+    "16": {
+     "thick_mm": 7.72,
+     "thick_vox": 5.1,
+     "n_mid_vox": 597,
+     "n_myo_vox": 1967
+    }
+   },
+   "median_thick_mm": 9.18,
+   "p10_p90_thick_mm": [
+    6.67,
+    11.56
+   ],
+   "frac_mid_vox_thinner_than_5p5mm": 0.017,
+   "median_vox_per_third": 2.04,
+   "frac_myo_in_valve_band": 0.001
+  },
+  {
+   "id": "s0349",
+   "usable": true,
+   "spacing_mm": [
+    1.5,
+    1.5,
+    1.5
+   ],
+   "lv_axis_mm": 95.5,
+   "n_myo_vox": 60188,
+   "segments": {
+    "1": {
+     "thick_mm": 10.86,
+     "thick_vox": 7.2,
+     "n_mid_vox": 1362,
+     "n_myo_vox": 4162
+    },
+    "2": {
+     "thick_mm": 12.99,
+     "thick_vox": 8.7,
+     "n_mid_vox": 1110,
+     "n_myo_vox": 3414
+    },
+    "3": {
+     "thick_mm": 14.53,
+     "thick_vox": 9.7,
+     "n_mid_vox": 942,
+     "n_myo_vox": 2595
+    },
+    "4": {
+     "thick_mm": 11.32,
+     "thick_vox": 7.5,
+     "n_mid_vox": 1232,
+     "n_myo_vox": 3738
+    },
+    "5": {
+     "thick_mm": 11.74,
+     "thick_vox": 7.8,
+     "n_mid_vox": 1453,
+     "n_myo_vox": 4507
+    },
+    "6": {
+     "thick_mm": 11.56,
+     "thick_vox": 7.7,
+     "n_mid_vox": 1437,
+     "n_myo_vox": 4346
+    },
+    "7": {
+     "thick_mm": 10.65,
+     "thick_vox": 7.1,
+     "n_mid_vox": 1250,
+     "n_myo_vox": 3728
+    },
+    "8": {
+     "thick_mm": 11.56,
+     "thick_vox": 7.7,
+     "n_mid_vox": 1152,
+     "n_myo_vox": 3613
+    },
+    "9": {
+     "thick_mm": 12.39,
+     "thick_vox": 8.3,
+     "n_mid_vox": 1321,
+     "n_myo_vox": 4107
+    },
+    "10": {
+     "thick_mm": 10.27,
+     "thick_vox": 6.8,
+     "n_mid_vox": 1401,
+     "n_myo_vox": 4222
+    },
+    "11": {
+     "thick_mm": 11.26,
+     "thick_vox": 7.5,
+     "n_mid_vox": 1365,
+     "n_myo_vox": 4270
+    },
+    "12": {
+     "thick_mm": 10.35,
+     "thick_vox": 6.9,
+     "n_mid_vox": 1161,
+     "n_myo_vox": 3514
+    },
+    "13": {
+     "thick_mm": 8.86,
+     "thick_vox": 5.9,
+     "n_mid_vox": 807,
+     "n_myo_vox": 2613
+    },
+    "14": {
+     "thick_mm": 8.41,
+     "thick_vox": 5.6,
+     "n_mid_vox": 780,
+     "n_myo_vox": 2692
+    },
+    "15": {
+     "thick_mm": 8.36,
+     "thick_vox": 5.6,
+     "n_mid_vox": 1002,
+     "n_myo_vox": 3186
+    },
+    "16": {
+     "thick_mm": 9.18,
+     "thick_vox": 6.1,
+     "n_mid_vox": 760,
+     "n_myo_vox": 2394
+    }
+   },
+   "median_thick_mm": 10.65,
+   "p10_p90_thick_mm": [
+    7.97,
+    14.04
+   ],
+   "frac_mid_vox_thinner_than_5p5mm": 0.015,
+   "median_vox_per_third": 2.37,
+   "frac_myo_in_valve_band": 0.0
+  },
+  {
+   "id": "s1248",
+   "usable": true,
+   "spacing_mm": [
+    1.5,
+    1.5,
+    1.5
+   ],
+   "lv_axis_mm": 84.9,
+   "n_myo_vox": 45611,
+   "segments": {
+    "1": {
+     "thick_mm": 10.35,
+     "thick_vox": 6.9,
+     "n_mid_vox": 1139,
+     "n_myo_vox": 3493
+    },
+    "2": {
+     "thick_mm": 14.63,
+     "thick_vox": 9.8,
+     "n_mid_vox": 977,
+     "n_myo_vox": 2840
+    },
+    "3": {
+     "thick_mm": 12.28,
+     "thick_vox": 8.2,
+     "n_mid_vox": 802,
+     "n_myo_vox": 2468
+    },
+    "4": {
+     "thick_mm": 9.18,
+     "thick_vox": 6.1,
+     "n_mid_vox": 815,
+     "n_myo_vox": 2472
+    },
+    "5": {
+     "thick_mm": 9.88,
+     "thick_vox": 6.6,
+     "n_mid_vox": 1070,
+     "n_myo_vox": 3307
+    },
+    "6": {
+     "thick_mm": 10.51,
+     "thick_vox": 7.0,
+     "n_mid_vox": 1263,
+     "n_myo_vox": 3862
+    },
+    "7": {
+     "thick_mm": 8.36,
+     "thick_vox": 5.6,
+     "n_mid_vox": 881,
+     "n_myo_vox": 2930
+    },
+    "8": {
+     "thick_mm": 10.82,
+     "thick_vox": 7.2,
+     "n_mid_vox": 819,
+     "n_myo_vox": 2607
+    },
+    "9": {
+     "thick_mm": 12.03,
+     "thick_vox": 8.0,
+     "n_mid_vox": 746,
+     "n_myo_vox": 2316
+    },
+    "10": {
+     "thick_mm": 9.0,
+     "thick_vox": 6.0,
+     "n_mid_vox": 636,
+     "n_myo_vox": 2084
+    },
+    "11": {
+     "thick_mm": 9.18,
+     "thick_vox": 6.1,
+     "n_mid_vox": 927,
+     "n_myo_vox": 2937
+    },
+    "12": {
+     "thick_mm": 9.88,
+     "thick_vox": 6.6,
+     "n_mid_vox": 1143,
+     "n_myo_vox": 3572
+    },
+    "13": {
+     "thick_mm": 7.47,
+     "thick_vox": 5.0,
+     "n_mid_vox": 748,
+     "n_myo_vox": 2320
+    },
+    "14": {
+     "thick_mm": 8.22,
+     "thick_vox": 5.5,
+     "n_mid_vox": 473,
+     "n_myo_vox": 1631
+    },
+    "15": {
+     "thick_mm": 7.24,
+     "thick_vox": 4.8,
+     "n_mid_vox": 483,
+     "n_myo_vox": 1548
+    },
+    "16": {
+     "thick_mm": 8.54,
+     "thick_vox": 5.7,
+     "n_mid_vox": 773,
+     "n_myo_vox": 2601
+    }
+   },
+   "median_thick_mm": 9.43,
+   "p10_p90_thick_mm": [
+    7.26,
+    13.35
+   ],
+   "frac_mid_vox_thinner_than_5p5mm": 0.017,
+   "median_vox_per_third": 2.1,
+   "frac_myo_in_valve_band": 0.0
+  },
+  {
+   "id": "s0338",
+   "usable": true,
+   "spacing_mm": [
+    1.5,
+    1.5,
+    1.5
+   ],
+   "lv_axis_mm": 86.0,
+   "n_myo_vox": 50442,
+   "segments": {
+    "1": {
+     "thick_mm": 10.97,
+     "thick_vox": 7.3,
+     "n_mid_vox": 1281,
+     "n_myo_vox": 3792
+    },
+    "2": {
+     "thick_mm": 13.35,
+     "thick_vox": 8.9,
+     "n_mid_vox": 1119,
+     "n_myo_vox": 3238
+    },
+    "3": {
+     "thick_mm": 11.85,
+     "thick_vox": 7.9,
+     "n_mid_vox": 821,
+     "n_myo_vox": 2493
+    },
+    "4": {
+     "thick_mm": 10.3,
+     "thick_vox": 6.9,
+     "n_mid_vox": 1080,
+     "n_myo_vox": 3327
+    },
+    "5": {
+     "thick_mm": 10.98,
+     "thick_vox": 7.3,
+     "n_mid_vox": 1214,
+     "n_myo_vox": 3645
+    },
+    "6": {
+     "thick_mm": 11.77,
+     "thick_vox": 7.8,
+     "n_mid_vox": 1264,
+     "n_myo_vox": 3891
+    },
+    "7": {
+     "thick_mm": 8.93,
+     "thick_vox": 6.0,
+     "n_mid_vox": 963,
+     "n_myo_vox": 3113
+    },
+    "8": {
+     "thick_mm": 12.03,
+     "thick_vox": 8.0,
+     "n_mid_vox": 1034,
+     "n_myo_vox": 3184
+    },
+    "9": {
+     "thick_mm": 12.73,
+     "thick_vox": 8.5,
+     "n_mid_vox": 968,
+     "n_myo_vox": 2904
+    },
+    "10": {
+     "thick_mm": 9.81,
+     "thick_vox": 6.5,
+     "n_mid_vox": 1000,
+     "n_myo_vox": 3193
+    },
+    "11": {
+     "thick_mm": 9.87,
+     "thick_vox": 6.6,
+     "n_mid_vox": 978,
+     "n_myo_vox": 3077
+    },
+    "12": {
+     "thick_mm": 10.18,
+     "thick_vox": 6.8,
+     "n_mid_vox": 1030,
+     "n_myo_vox": 3160
+    },
+    "13": {
+     "thick_mm": 7.5,
+     "thick_vox": 5.0,
+     "n_mid_vox": 685,
+     "n_myo_vox": 2270
+    },
+    "14": {
+     "thick_mm": 9.09,
+     "thick_vox": 6.1,
+     "n_mid_vox": 544,
+     "n_myo_vox": 1858
+    },
+    "15": {
+     "thick_mm": 7.72,
+     "thick_vox": 5.1,
+     "n_mid_vox": 614,
+     "n_myo_vox": 1995
+    },
+    "16": {
+     "thick_mm": 8.22,
+     "thick_vox": 5.5,
+     "n_mid_vox": 600,
+     "n_myo_vox": 1982
+    }
+   },
+   "median_thick_mm": 10.39,
+   "p10_p90_thick_mm": [
+    7.5,
+    13.3
+   ],
+   "frac_mid_vox_thinner_than_5p5mm": 0.014,
+   "median_vox_per_third": 2.31,
+   "frac_myo_in_valve_band": 0.002
+  },
+  {
+   "id": "s0439",
+   "usable": true,
+   "spacing_mm": [
+    1.5,
+    1.5,
+    1.5
+   ],
+   "lv_axis_mm": 85.5,
+   "n_myo_vox": 40715,
+   "segments": {
+    "1": {
+     "thick_mm": 10.24,
+     "thick_vox": 6.8,
+     "n_mid_vox": 1026,
+     "n_myo_vox": 3107
+    },
+    "2": {
+     "thick_mm": 13.51,
+     "thick_vox": 9.0,
+     "n_mid_vox": 853,
+     "n_myo_vox": 2551
+    },
+    "3": {
+     "thick_mm": 11.46,
+     "thick_vox": 7.6,
+     "n_mid_vox": 724,
+     "n_myo_vox": 2267
+    },
+    "4": {
+     "thick_mm": 9.43,
+     "thick_vox": 6.3,
+     "n_mid_vox": 908,
+     "n_myo_vox": 2853
+    },
+    "5": {
+     "thick_mm": 9.18,
+     "thick_vox": 6.1,
+     "n_mid_vox": 948,
+     "n_myo_vox": 2998
+    },
+    "6": {
+     "thick_mm": 9.88,
+     "thick_vox": 6.6,
+     "n_mid_vox": 1047,
+     "n_myo_vox": 3361
+    },
+    "7": {
+     "thick_mm": 7.97,
+     "thick_vox": 5.3,
+     "n_mid_vox": 788,
+     "n_myo_vox": 2545
+    },
+    "8": {
+     "thick_mm": 11.05,
+     "thick_vox": 7.4,
+     "n_mid_vox": 773,
+     "n_myo_vox": 2410
+    },
+    "9": {
+     "thick_mm": 11.72,
+     "thick_vox": 7.8,
+     "n_mid_vox": 626,
+     "n_myo_vox": 1964
+    },
+    "10": {
+     "thick_mm": 9.0,
+     "thick_vox": 6.0,
+     "n_mid_vox": 684,
+     "n_myo_vox": 2295
+    },
+    "11": {
+     "thick_mm": 8.61,
+     "thick_vox": 5.7,
+     "n_mid_vox": 856,
+     "n_myo_vox": 2743
+    },
+    "12": {
+     "thick_mm": 9.18,
+     "thick_vox": 6.1,
+     "n_mid_vox": 934,
+     "n_myo_vox": 3061
+    },
+    "13": {
+     "thick_mm": 7.24,
+     "thick_vox": 4.8,
+     "n_mid_vox": 593,
+     "n_myo_vox": 1843
+    },
+    "14": {
+     "thick_mm": 7.47,
+     "thick_vox": 5.0,
+     "n_mid_vox": 350,
+     "n_myo_vox": 1109
+    },
+    "15": {
+     "thick_mm": 6.35,
+     "thick_vox": 4.2,
+     "n_mid_vox": 423,
+     "n_myo_vox": 1157
+    },
+    "16": {
+     "thick_mm": 7.47,
+     "thick_vox": 5.0,
+     "n_mid_vox": 652,
+     "n_myo_vox": 2137
+    }
+   },
+   "median_thick_mm": 9.18,
+   "p10_p90_thick_mm": [
+    6.67,
+    12.47
+   ],
+   "frac_mid_vox_thinner_than_5p5mm": 0.015,
+   "median_vox_per_third": 2.04,
+   "frac_myo_in_valve_band": 0.004
+  },
+  {
+   "id": "s0834",
+   "usable": true,
+   "spacing_mm": [
+    1.5,
+    1.5,
+    1.5
+   ],
+   "lv_axis_mm": 81.9,
+   "n_myo_vox": 31227,
+   "segments": {
+    "1": {
+     "thick_mm": 8.41,
+     "thick_vox": 5.6,
+     "n_mid_vox": 583,
+     "n_myo_vox": 1935
+    },
+    "2": {
+     "thick_mm": 11.72,
+     "thick_vox": 7.8,
+     "n_mid_vox": 541,
+     "n_myo_vox": 1515
+    },
+    "3": {
+     "thick_mm": 10.5,
+     "thick_vox": 7.0,
+     "n_mid_vox": 679,
+     "n_myo_vox": 2070
+    },
+    "4": {
+     "thick_mm": 7.97,
+     "thick_vox": 5.3,
+     "n_mid_vox": 546,
+     "n_myo_vox": 1964
+    },
+    "5": {
+     "thick_mm": 8.93,
+     "thick_vox": 6.0,
+     "n_mid_vox": 695,
+     "n_myo_vox": 2231
+    },
+    "6": {
+     "thick_mm": 9.18,
+     "thick_vox": 6.1,
+     "n_mid_vox": 738,
+     "n_myo_vox": 2333
+    },
+    "7": {
+     "thick_mm": 7.24,
+     "thick_vox": 4.8,
+     "n_mid_vox": 576,
+     "n_myo_vox": 1785
+    },
+    "8": {
+     "thick_mm": 10.99,
+     "thick_vox": 7.3,
+     "n_mid_vox": 709,
+     "n_myo_vox": 2193
+    },
+    "9": {
+     "thick_mm": 11.15,
+     "thick_vox": 7.4,
+     "n_mid_vox": 721,
+     "n_myo_vox": 2273
+    },
+    "10": {
+     "thick_mm": 6.67,
+     "thick_vox": 4.4,
+     "n_mid_vox": 544,
+     "n_myo_vox": 1688
+    },
+    "11": {
+     "thick_mm": 7.72,
+     "thick_vox": 5.1,
+     "n_mid_vox": 600,
+     "n_myo_vox": 1886
+    },
+    "12": {
+     "thick_mm": 8.54,
+     "thick_vox": 5.7,
+     "n_mid_vox": 615,
+     "n_myo_vox": 2102
+    },
+    "13": {
+     "thick_mm": 6.35,
+     "thick_vox": 4.2,
+     "n_mid_vox": 370,
+     "n_myo_vox": 1198
+    },
+    "14": {
+     "thick_mm": 7.26,
+     "thick_vox": 4.8,
+     "n_mid_vox": 428,
+     "n_myo_vox": 1275
+    },
+    "15": {
+     "thick_mm": 6.0,
+     "thick_vox": 4.0,
+     "n_mid_vox": 470,
+     "n_myo_vox": 1391
+    },
+    "16": {
+     "thick_mm": 6.83,
+     "thick_vox": 4.6,
+     "n_mid_vox": 466,
+     "n_myo_vox": 1517
+    }
+   },
+   "median_thick_mm": 8.22,
+   "p10_p90_thick_mm": [
+    6.0,
+    11.64
+   ],
+   "frac_mid_vox_thinner_than_5p5mm": 0.058,
+   "median_vox_per_third": 1.83,
+   "frac_myo_in_valve_band": 0.002
+  }
+ ]
+}

@@ -12,6 +12,7 @@ The meta.csv files are fetched to a scratch folder with remotezip (two small ran
 """
 import collections
 import csv
+import hashlib
 import json
 import os
 import sys
@@ -34,6 +35,10 @@ def read(p):
     return rows
 
 
+def held_hash(ids):
+    return hashlib.sha256("\n".join(sorted(ids)).encode()).hexdigest()
+
+
 def match(a, b):
     if a["inst"] != b["inst"]:
         return False
@@ -52,7 +57,10 @@ def main(v1p, v2p):
     imap = {}
     for (a, b), n in pairs.most_common():
         imap.setdefault(a, b)
-    out = {"held_out": held, "age_tol_years": AGE_TOL, "per_release": {}, "refused_twins": []}
+    # the held-out ids themselves are not written here (they live in configs/): only their hash, so that no
+    # Janus-M result file names a held-out patient
+    out = {"held_out_sha256": held_hash(held), "n_held_out": len(held), "age_tol_years": AGE_TOL,
+           "per_release": {}, "refused_twins": []}
     twins = set()
     for name, rel in (("v1", v1), ("v2.0.1", v2)):
         tw, missing = {}, []
@@ -69,7 +77,7 @@ def main(v1p, v2p):
             twins |= set(t)
         out["per_release"][name] = {
             "n_subjects": len(rel), "held_out_without_row": missing,
-            "twins_per_held_out": {h: len(v) for h, v in tw.items()},
+            "twins_per_held_out_sorted": sorted(len(v) for v in tw.values()),
             "n_twins": len(set().union(*tw.values())) if tw else 0,
             "n_twins_cardiac_study": len({s for v in tw.values() for s in v
                                           if any(k in rel[s]["study"] for k in ("heart", "coronar", "aortic valve",
@@ -79,7 +87,7 @@ def main(v1p, v2p):
     out["n_refused_twins"] = len(twins)
     out["n_refused_total"] = len(twins | set(held))
     json.dump(out, open(os.path.join(HERE, "twins.json"), "w"), indent=1)
-    print(json.dumps({k: v for k, v in out.items() if k not in ("refused_twins", "held_out")}, indent=1))
+    print(json.dumps({k: v for k, v in out.items() if k != "refused_twins"}, indent=1))
 
 
 if __name__ == "__main__":

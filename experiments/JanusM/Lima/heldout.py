@@ -51,7 +51,8 @@ def twin_ids():
     if not os.path.exists(p):
         raise FileNotFoundError("twins.json missing: run twins.py (metadata only) first; refusing")
     d = json.load(open(p))
-    if set(d["held_out"]) != held_out_ids():
+    import hashlib
+    if d["held_out_sha256"] != hashlib.sha256("\n".join(sorted(held_out_ids())).encode()).hexdigest():
         raise RuntimeError("twins.json was built from a different held-out list; re-run twins.py; refusing")
     return set(d["refused_twins"])
 

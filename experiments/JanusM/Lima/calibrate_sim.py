@@ -37,10 +37,10 @@ RING = {1: [2, 6, 7], 2: [1, 3, 8], 3: [2, 4, 9], 4: [3, 5, 10], 5: [4, 6, 11], 
         12: [11, 7, 6, 16, 13], 13: [14, 16, 7, 8, 12], 14: [13, 15, 8, 9], 15: [14, 16, 9, 10, 11],
         16: [15, 13, 11, 12]}
 TERR16 = {t: [s for s in v if s <= 16] for t, v in AHA.items()}
-# Normal segment pattern (relative to the patient's median): septum thicker, apex thinner. Placeholder values in
-# the direction of CT/CMR normals; Job JM-0b measures the real pattern (rel_thickness_by_segment_mean_sd).
-SHAPE = np.array([1.00, 1.08, 1.10, 1.02, 0.98, 0.98, 1.00, 1.08, 1.10, 1.02, 0.98, 0.98,
-                  0.88, 0.92, 0.90, 0.88])
+# Normal segment pattern (relative to the patient's median), as measured by local_check.py on the 23 allowed public
+# hearts (1.5 mm model-made labels; local_check_summary.json). Job JM-0b measures it on native CCTA.
+SHAPE = np.array([1.015, 1.288, 1.171, 0.971, 0.982, 1.120, 0.910, 1.121, 1.276, 1.022, 0.916, 1.074,
+                  0.777, 0.825, 0.756, 0.819])  # Lima self-test: 23 public hearts, 1.5 mm model-made labels
 PHASES = {"ED": 1.00, "MD": 1.14, "SYS": 1.40}
 ED_MEDIAN_MM = 5.7  # Chen 2025, end-diastolic global mean on CT
 

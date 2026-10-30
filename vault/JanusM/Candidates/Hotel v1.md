@@ -22,14 +22,42 @@ plan judges models on border distance and segment thickness, not on a Dice of la
 
 New evidence this round (CPU; code in `experiments/JanusM/Hotel/`; no coronary-sealed, reserved or D35 case is used,
 with one disclosed exception in §12):
-- [[Hotel - Layers derived from two borders are stable only if the borders are within about 1 mm, and TotalSegmentator's borders are not]] (E1/E2)
+- [[Hotel - Layers computed from two borders hold only if the borders are within half a millimetre, and at 1.5 mm the blur swamps the layer HU]] (E1)
 - [[Hotel - After the coronary hold-outs the pool leaves Janus-M 41 volumes, none both HU-true and spacing-true at scale]] (E3)
 - Two verified citation lists: `experiments/JanusM/Hotel/citations_clinical.md` (37 entries) and
   `citations_segmentation.md` (28 entries). Every number below that comes from a paper carries its location there.
 
 ## 1. The plan in one paragraph
 
-E1_PARAGRAPH
+**What the model learns.** Janus-M 0 is an nnU-Net that segments four structures on the arterial-phase CCTA: LV
+cavity, LV myocardium, RV cavity and LA cavity.
+
+**What is computed from those borders, by versioned code that already runs:**
+- a Laplace transmural depth;
+- wall thickness;
+- three transmural layers (subendocardial, mid-wall, subepicardial);
+- the AHA 17 segments;
+- coronary territories from Janus's LAD, LCx and RCA.
+
+**What it reports.** Per segment × layer: thickness and thinning, rest hypoattenuation and TPR, and intramyocardial
+fat. Where a stress or late phase exists, the same grid gives stress TPR and late-enhancement transmurality. Everything
+is rolled up per Janus artery.
+
+**The bar for the borders, from E1.**
+- In E1's simulation, myocardium Dice 0.91 (the published CT level) corresponds to about 1.5 mm RMS border error. At that error the subendocardial layer drops
+  to Dice 0.73 and segment TPR moves 21%.
+- At 0.5 mm error, the layers hold (Dice ≥ 0.975, TPR 3%).
+- So border distance and segment thickness decide, not Dice.
+
+**Data.**
+- The pool, once the coronary hold-outs are respected, leaves 41 volumes (E3). Those 41 become the geometry pilot and a
+  13-patient Janus-M seal drawn now.
+- Training borders come from public TotalSegmentator heart CT (pretraining), reader-corrected
+  `heartchambers_highres` seeds under a half-maximum border rule, and MM-WHS/CARE if the lead obtains them.
+- Scar is validated only when the lead can obtain CCTA paired with CMR LGE. Until then, scar outputs are labelled
+  measurements, not diagnoses.
+
+**Compute.** Job M0 (≤ 1 GPU-h) runs now. Janus-M 0 and 1 cost about 30 GPU-h after the reads.
 
 ## 2. The class schema, and what "layers" means
 
@@ -130,7 +158,7 @@ Two design consequences:
 
 | Set | CT | Labels | Licence / access | Use |
 |---|---|---|---|---|
-| TotalSegmentator v1 (Zenodo 6802614) | 1204 (37 cardiac/coronary studies; 26 after the coronary hold-outs) | Model-made heart chambers and myocardium, 1.5 mm (Supplement S3) | CC BY 4.0, open | Pretraining and pipeline tests only. E1 shows its myocardium sits 1–2 mm outward. |
+| TotalSegmentator v1 (Zenodo 6802614) | 1204 (37 cardiac/coronary studies; 26 after the coronary hold-outs) | Model-made heart chambers and myocardium, 1.5 mm (Supplement S3) | CC BY 4.0, open | Pretraining and pipeline tests only. E1: its epicardium sits a median 0.86 mm out in the fat (endocardium unbiased). |
 | TotalSegmentator `heartchambers_highres` (model) | — | 7 heart classes, about 0.73 × 0.72 × 1.0 mm. 0.950 Dice is averaged over all classes. | Licence key (free non-commercial) | Seeds for reads (Job M0) |
 | MM-WHS | 20 train + 40 test (test labels withheld) | 7 structures, myocardium = 205 | Signed agreement, no dissemination; maintenance ended | Training borders, if the lead signs (M-Q3) |
 | CARE 2026 whole heart | 60 / 30 / 54 | Same labels as MM-WHS | Registration closed; no licence stated; gated | As MM-WHS |
@@ -176,7 +204,7 @@ labelled "unvalidated".
 | Ischaemia | Invasive FFR, or stress CTP / SPECT | — |
 
 **Why a half-maximum rule.** E1 measured TotalSegmentator's borders against the image's own half-maximum and found
-them shifted outward by 1–2 mm (E1_OFFSETS). Borders seeded from a model inherit its bias unless the protocol names
+them shifted outward at the epicardium (E1: the epicardium sits a median 0.86 mm into the fat, IQR 0.53–1.54; the endocardium is unbiased, +0.07 mm). Borders seeded from a model inherit its bias unless the protocol names
 where the border is. A physical definition makes two readers draw the same line, and it can be checked by code on
 every submitted read.
 
@@ -205,7 +233,14 @@ every submitted read.
 **Report only:** Dice of the myocardium and Dice of each third.
 
 Reasons, from E1:
-- E1_METRIC_REASON
+- Myocardium Dice hides layer error. At 1.5 mm RMS border error, myocardium Dice is still 0.909, but the subendocardial
+  third is at 0.729 and segment thickness is off by 0.64 mm.
+- At 0.5 mm RMS: thirds Dice ≥ 0.975, thickness error 0.10 mm, TPR error 3%.
+- At 1.0 mm RMS: thirds Dice 0.85–0.89, thickness error 0.42 mm, TPR error 12%. 12% is the whole normal spread
+  (George 2009: 1.12 ± 0.13).
+- Hence two gates:
+  - thickness and fat outputs ship at thickness MAE ≤ 0.5 mm and ASSD ≤ 1.0 mm;
+  - **per-segment TPR ships only at ASSD ≤ 0.5 mm.** Below that bar, TPR is reported per territory only.
 
 A model is adopted only if, on the Janus-M decision set:
 - segment-thickness MAE is ≤ 0.5 mm;
@@ -279,7 +314,7 @@ sbatch $SCRATCH/janusm/m0cpu.sh
 **Check:** `41` from the GPU job.
 
 **Send back on #130:** `m0_summary.json`, which holds numbers only and no image. It answers:
-1. Does `heartchambers_highres` keep TotalSegmentator's 1–2 mm outward bias at native resolution? This is the
+1. Does `heartchambers_highres` keep TotalSegmentator v1's 0.86 mm outward epicardial bias at native resolution? This is the
    endo/epi half-maximum offsets.
 2. Wall thickness per volume. A CCA200-HF heart near 20 mm flags a doubled header.
 3. Whether the AHA construction runs on all 41.
@@ -308,10 +343,10 @@ heart.
 | If | Then |
 |---|---|
 | M0 shows `heartchambers_highres` borders within 0.5 mm of the half-maximum at native resolution | The seed is nearly the reference. Reads become a light check, and Janus-M 0 may be the seed itself plus the geometry. |
-| M0 shows the 1–2 mm outward bias persists | Readers must move borders. Add an automatic half-maximum snap to the seed (a `role:swe` tool) before reads. |
+| M0 shows the outward epicardial bias (≥ 0.5 mm) persists | Readers must move borders. Add an automatic half-maximum snap to the seed (a `role:swe` tool) before reads. |
 | The lead obtains CCTA + CMR-LGE pairs (M-Q2) | Scar becomes supervised and validated. Add a per-segment-third scar head, trained on registered LGE, and keep the borders as they are. |
 | The lead obtains MM-WHS / CARE | They become the training borders; the 41 pool volumes become test only. |
-| E1's TPR noise floor on real 0.5 mm volumes is wider than the effect sizes in §3 (e.g. ±0.13, George's SD) | Drop rest TPR as a per-segment output and keep it per territory only. |
+| M0 shows the endocardial 10–90% edge width on native 0.5 mm CCTA is still ≳ 2 mm. At 1.5 mm, E1 measured 4.7 mm, and the endo/epi ratio was 2.15 even 2.25 mm inside the wall. | Rest TPR is partial volume, not perfusion. Drop it per segment; keep it per territory with a partial-volume correction, or drop it. Thickness and fat are unaffected. |
 | A rival plan learns layers as classes and shows a reference standard for them | Hotel's §2.3 is wrong. That plan's reference would need to be explained, because Hotel found none. |
 
 ## 10. The lead's decisions (proposed M2–M7, through the PM)
@@ -335,7 +370,7 @@ Corrections the literature pass made, so that no advocate repeats them:
 - **MM-WHS reports no numeric CT myocardium Dice.** It appears only as boxplots, in Fig. 4.
 - **TotalSegmentator v1 heart labels are model-made** (Supplement S3).
 - **No fat threshold of −10 or −30 HU was found in a source.** The verified window is −180 to 0 HU (Xu 2022).
-- **No rest-CCTA TPR accuracy study larger than about 250 patients was found.**
+- **No large accuracy study of rest-CCTA TPR was found.** The evidence is small studies: Osawa 2014 and 2016, Xiong 2015, and Han 2018 with 252 patients, using machine learning on resting CTP. Thomas 2015 is a 4-patient case series.
 - **Cerqueira 2002's body text was not opened** (the publisher returned 403). Its territory wording is not quoted.
 
 ## 12. Disclosure: one coronary-sealed volume was opened during development

@@ -129,7 +129,7 @@ def main(d):
                                             "qc_pass": ok, "assd_endo": r["assd_endo"]})
                         else:
                             r = rr[gname]
-                            t = tau.get((f, blood, cnr, gname), tau.get((f, blood, cnr, "affine")))
+                            t = tau.get((f, blood, cnr, gname), tau.get((f, blood, cnr, "affine"), np.inf))
                         per_case[c] = (r, segtable(c, r, o["truth"][motion], t))
                     if not per_case:
                         continue

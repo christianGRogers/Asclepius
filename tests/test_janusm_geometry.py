@@ -368,41 +368,63 @@ def test_analyse_report_is_versioned_and_complete(ph):
 
 
 def test_load_case_fails_closed_without_the_guard(tmp_path, monkeypatch):
-    """JA12: loading by name goes through the guard. Until #138 lands, there is no guard: refuse."""
+    """JA12: loading by name goes through the guard; no importable guard means no load."""
     import sys
 
+    import janusm
+
+    monkeypatch.delattr(janusm, "guard", raising=False)
     monkeypatch.setitem(sys.modules, "janusm.guard", None)
     with pytest.raises(RuntimeError, match="JA12"):
-        G.load_case("c0001", tmp_path / "x.nii.gz")
+        G.load_case("ImageCAS-X__c0001", tmp_path / "x.nii.gz")
+
+
+def test_load_case_refuses_held_out_cases_before_reading(tmp_path):
+    """The real guard (#138): its positive controls never reach the file system."""
+    from janusm.guard import HeldOutError
+
+    missing = tmp_path / "never-read.nii.gz"
+    with pytest.raises(HeldOutError):
+        G.load_case("TotalSegmentator-cardiac__s0655", missing)
+    with pytest.raises(HeldOutError):
+        G.load_case("s0655", missing, source="TotalSegmentator")
 
 
 def test_load_case_calls_the_guard_first(tmp_path, monkeypatch):
     import sys
     import types
 
+    import janusm
+
     nib = pytest.importorskip("nibabel")
     seen = []
     fake = types.ModuleType("janusm.guard")
 
-    def refuse(case_id):
-        seen.append(case_id)
-        if case_id == "TotalSegmentator-cardiac__s0655":
+    def refuse(names, what="", source=None, purpose="any"):
+        seen.append((list(names), source))
+        if "TotalSegmentator-cardiac__s0655" in names:
             raise PermissionError("held out")
+        return list(names)
 
     fake.refuse = refuse
     monkeypatch.setitem(sys.modules, "janusm.guard", fake)
+    monkeypatch.setattr(janusm, "guard", fake, raising=False)
     lab, aff, _ = phantom(sp=(1.0, 1.0, 1.0))
     p = tmp_path / "c.nii.gz"
     nib.save(nib.Nifti1Image(lab, aff), str(p))
     with pytest.raises(PermissionError):
         G.load_case("TotalSegmentator-cardiac__s0655", p)
-    got, gaff, cor = G.load_case("c0001", p)
-    assert seen == ["TotalSegmentator-cardiac__s0655", "c0001"]
+    got, gaff, cor = G.load_case("ImageCAS-X__c0001", p)
+    G.load_case("c0001", p, source="ImageCAS-X")
+    assert seen == [
+        (["TotalSegmentator-cardiac__s0655"], None),
+        (["ImageCAS-X__c0001"], None),
+        (["c0001"], "ImageCAS-X"),
+    ]
     assert np.array_equal(got, lab) and np.allclose(gaff, aff) and cor is None
 
 
-# -------------------------------------------------------------------------------------------
-# prototypes
+# ------------------------------------------------------------------------------------ prototypes
 PROTO = Path(__file__).resolve().parents[1] / "experiments" / "JanusM"
 
 

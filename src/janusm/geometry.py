@@ -788,30 +788,33 @@ def analyse(
 
 
 # --------------------------------------------------------------------------------------------- I/O
-def _refuse_if_held_out(case_id: str) -> None:
-    """JA12 GUARD CALL SITE (#138): the one place this module checks a case by name.
+def _refuse_if_held_out(case_id: str, source=None, purpose=None) -> None:
+    """JA12 GUARD CALL SITE: the one place this module checks a case by name.
 
-    Fails closed: until the guard package exists, loading by name is refused. Replace the call below
-    with the guard's public API once #138 posts it.
+    Calls :func:`janusm.guard.refuse`, which raises ``HeldOutError`` on a held-out case and
+    ``GuardInputError`` when a pinned list is missing or changed. Fails closed: if the guard cannot
+    be imported, loading is refused too.
     """
     try:
         from janusm import guard
-
-        check = guard.refuse  # TODO(#138): the guard's public entry point
-    except (ImportError, AttributeError) as e:
+    except ImportError as e:
         raise RuntimeError(
-            f"JA12 guard (janusm.guard, #138) unavailable; refusing to load {case_id!r}"
+            f"JA12 guard (janusm.guard) unavailable; refusing to load {case_id!r}"
         ) from e
-    check(case_id)
+    kw = {} if purpose is None else {"purpose": purpose}
+    guard.refuse([case_id], what="janusm.geometry.load_case", source=source, **kw)
 
 
-def load_case(case_id: str, labels_path, coronary_path=None):
+def load_case(case_id: str, labels_path, coronary_path=None, *, source=None, purpose=None):
     """Load a JA1 label map (and optionally a D25 coronary map) from NIfTI, after the JA12 guard.
 
-    Returns (labels, affine, coronary or None). The affine is kept as stored (no reorientation):
-    every function here works in world mm from it.
+    ``case_id`` is the pool name (``<Source>__<case>``), or a bare public id with ``source``
+    (for example ``"s0655"``, ``source="TotalSegmentator"``). ``purpose`` is passed to the guard
+    (its default allows no Janus-M seal or decision case). Returns (labels, affine, coronary or
+    None). The affine is kept as stored (no reorientation): every function here works in world mm
+    from it.
     """
-    _refuse_if_held_out(case_id)
+    _refuse_if_held_out(case_id, source=source, purpose=purpose)
     import nibabel as nib
 
     im = nib.load(str(labels_path))

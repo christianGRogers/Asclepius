@@ -1,0 +1,263 @@
+{
+ "guard": {
+  "guard_version": "1",
+  "pins": {
+   "configs/segqueue14/sealed-pool-2026-10.json": "e71141b407acb79eeff912eee21029d34edb677d984172d871eb5f02cb1d0690",
+   "experiments/Atlas/r10/decision_set_proposal.json": "bc47690cc1b0acb50037f19ea05ae0619444c1ed1396be592082371b022b6042",
+   "experiments/Bridge/r10/decision_set_proposal.json": "fb551a7eb4b45c7e858ccf287c9c72dedf517ba9a0a9816dfe66b3145b79b403",
+   "experiments/Crucible/r10/d35_proposal.json": "73effb061580089e2d3379405ade51dee756a23982c31807079cf9387d910429",
+   "experiments/Delta/r10/d35_decision_set_proposal.json": "1a75fe41ffe44aa37c884b723c066a6b8cd3669164e0c670b6439028c2b966b1",
+   "experiments/Foxtrot/r10/d35_proposal.json": "a588ad17f7e6f03e128627bfadec84b5b9cb277cd92234352f5b719d2a7cd514",
+   "trillium/icx4/sealed_test.json": "319cbc949161c1ee8738153b30405d881f91846200e0ddbfa3b11bcc4233055b",
+   "trillium-results/icx14/results/splits.json": "a53bd426cddcf70e92555abe9c01a867736b1390782abaa0160b1da5fb2d9e17",
+   "configs/janusm/ts-twins-r1.json": "6495ddda132b6bcaad687bcb21e71662c29b715d9c832ed2bd16205ddc7a07fa"
+  },
+  "pool_seal_patients": 170,
+  "pool_seal_volumes": 325,
+  "reserve_patient_keys": 103,
+  "d35_patient_keys": 237,
+  "icx": {
+   "a14_sealed": 100,
+   "icx_test": 160,
+   "val80": 80
+  },
+  "ts_held_out": [
+   "s0356",
+   "s0368",
+   "s0465",
+   "s0655",
+   "s0738",
+   "s0839",
+   "s0846",
+   "s0871",
+   "s0879",
+   "s0936",
+   "s0972",
+   "s0980",
+   "s1002",
+   "s1097",
+   "s1106",
+   "s1345"
+  ],
+  "ts_twins": 692,
+  "janusm_lists": {}
+ },
+ "inputs": {
+  "pool": 854,
+  "ts": 1228,
+  "icx": 1000
+ },
+ "explained": {
+  "twin": "JA12/§4 twin rule: the prototypes predate it (none refuses twins).",
+  "icx": "A14 sealed 100 / test 160 / val 80: only Golf checked ImageCAS, and only the sealed 100; JA12 adds the test split and val 80.",
+  "plos": "PLOS-Peng2016: JA12/JA5; only Kilo refused it.",
+  "d35": "Round 10 D35 draws: the guard reads all five draw files (every list except those marked trainable); Golf's glob missed Crucible's and Foxtrot's files, Hotel read only each file's drawn list, Kilo omitted Foxtrot.",
+  "proto_draw_text": "Golf reads every name anywhere in a draw file, including lists the draw marks as trainable (Atlas 'trainable_before_extension_decision', drawn by no other draw); the guard leaves those out (NOT_HELD_OUT_KEYS).",
+  "proto_pool_wide": "Not seen today: Kilo's and India's TotalSegmentator lists read the whole pool list, the guard only held-out patients (JA5 lets the rest in). All 16 pool TotalSegmentator subjects are held out now, so they agree."
+ },
+ "prototypes": {
+  "Golf": {
+   "pool": {
+    "n": 854,
+    "same": 825,
+    "guard_stricter": {
+     "plos": {
+      "n": 17,
+      "e.g.": [
+       "PLOS-Peng2016-CCTA-JPEG__P01",
+       "PLOS-Peng2016-CCTA-JPEG__P02",
+       "PLOS-Peng2016-CCTA-JPEG__P03",
+       "PLOS-Peng2016-CCTA-JPEG__P04",
+       "PLOS-Peng2016-CCTA-JPEG__P05"
+      ]
+     }
+    },
+    "prototype_stricter": [
+     "Taiwan-AICUP-CardiacCT__patient0013",
+     "Taiwan-AICUP-CardiacCT__patient0015",
+     "Taiwan-AICUP-CardiacCT__patient0020",
+     "Taiwan-AICUP-CardiacCT__patient0024",
+     "Taiwan-AICUP-CardiacCT__patient0029",
+     "Taiwan-AICUP-CardiacCT__patient0036",
+     "Taiwan-AICUP-CardiacCT__patient0042",
+     "Taiwan-AICUP-CardiacCT__patient0043",
+     "Taiwan-AICUP-CardiacCT__patient0067",
+     "Taiwan-AICUP-CardiacCT__patient0073",
+     "Taiwan-AICUP-CardiacCT__patient0079",
+     "Taiwan-AICUP-CardiacCT__patient0084"
+    ]
+   },
+   "ts": {
+    "n": 1228,
+    "same": 536,
+    "guard_stricter": {
+     "twin": {
+      "n": 692,
+      "e.g.": [
+       "s0001",
+       "s0006",
+       "s0010",
+       "s0013",
+       "s0014"
+      ]
+     }
+    },
+    "prototype_stricter": []
+   },
+   "icx": {
+    "n": 1000,
+    "same": 840,
+    "guard_stricter": {
+     "icx": {
+      "n": 160,
+      "e.g.": [
+       "c0001",
+       "c0021",
+       "c0024",
+       "c0038",
+       "c0039"
+      ]
+     }
+    },
+    "prototype_stricter": []
+   }
+  },
+  "Hotel": {
+   "pool": {
+    "n": 854,
+    "same": 807,
+    "guard_stricter": {
+     "d35": {
+      "n": 30,
+      "e.g.": [
+       "Figshare-EpicardialFat-CE__CE010",
+       "Figshare-EpicardialFat-CE__CE017",
+       "Figshare-EpicardialFat-CE__CE034",
+       "Kaggle-CAD-RandomSamples__case76",
+       "Mendeley-SDN-cy54ttk3fj__P16"
+      ]
+     },
+     "plos": {
+      "n": 17,
+      "e.g.": [
+       "PLOS-Peng2016-CCTA-JPEG__P01",
+       "PLOS-Peng2016-CCTA-JPEG__P02",
+       "PLOS-Peng2016-CCTA-JPEG__P03",
+       "PLOS-Peng2016-CCTA-JPEG__P04",
+       "PLOS-Peng2016-CCTA-JPEG__P05"
+      ]
+     }
+    },
+    "prototype_stricter": []
+   },
+   "ts": {
+    "n": 1228,
+    "same": 536,
+    "guard_stricter": {
+     "twin": {
+      "n": 692,
+      "e.g.": [
+       "s0001",
+       "s0006",
+       "s0010",
+       "s0013",
+       "s0014"
+      ]
+     }
+    },
+    "prototype_stricter": []
+   }
+  },
+  "India": {
+   "ts": {
+    "n": 1228,
+    "same": 536,
+    "guard_stricter": {
+     "twin": {
+      "n": 692,
+      "e.g.": [
+       "s0001",
+       "s0006",
+       "s0010",
+       "s0013",
+       "s0014"
+      ]
+     }
+    },
+    "prototype_stricter": []
+   }
+  },
+  "Juliet": {
+   "pool": {
+    "n": 854,
+    "same": 837,
+    "guard_stricter": {
+     "plos": {
+      "n": 17,
+      "e.g.": [
+       "PLOS-Peng2016-CCTA-JPEG__P01",
+       "PLOS-Peng2016-CCTA-JPEG__P02",
+       "PLOS-Peng2016-CCTA-JPEG__P03",
+       "PLOS-Peng2016-CCTA-JPEG__P04",
+       "PLOS-Peng2016-CCTA-JPEG__P05"
+      ]
+     }
+    },
+    "prototype_stricter": []
+   },
+   "ts": {
+    "n": 1228,
+    "same": 536,
+    "guard_stricter": {
+     "twin": {
+      "n": 692,
+      "e.g.": [
+       "s0001",
+       "s0006",
+       "s0010",
+       "s0013",
+       "s0014"
+      ]
+     }
+    },
+    "prototype_stricter": []
+   }
+  },
+  "Kilo": {
+   "pool": {
+    "n": 854,
+    "same": 846,
+    "guard_stricter": {
+     "d35": {
+      "n": 8,
+      "e.g.": [
+       "Taiwan-AICUP-CardiacCT__patient0001",
+       "Taiwan-AICUP-CardiacCT__patient0014",
+       "Taiwan-AICUP-CardiacCT__patient0032",
+       "Taiwan-AICUP-CardiacCT__patient0039",
+       "Taiwan-AICUP-CardiacCT__patient0055"
+      ]
+     }
+    },
+    "prototype_stricter": []
+   },
+   "ts": {
+    "n": 1228,
+    "same": 536,
+    "guard_stricter": {
+     "twin": {
+      "n": 692,
+      "e.g.": [
+       "s0001",
+       "s0006",
+       "s0010",
+       "s0013",
+       "s0014"
+      ]
+     }
+    },
+    "prototype_stricter": []
+   }
+  }
+ }
+}

@@ -13,15 +13,34 @@ REPO = os.path.abspath(os.path.join(HERE, "..", "..", ".."))
 POOL = os.path.join(REPO, "configs", "segqueue14", "pool-2026-10.txt")
 
 
-def pool_subjects():
-    """Every TotalSegmentator subject in the SegQueue14 pool (sealed, D35 or trainable). Janus-M never
-    reads any of them: the seal and the D35 set are drawn from this list, so the whole list is excluded."""
-    return set(re.findall(r"TotalSegmentator-cardiac__(s\d{4})", open(POOL).read()))
+HELD_OUT_SOURCES = ["configs/segqueue14/pool-2026-10.txt",            # every pool volume (seal, D35, reserve, train)
+                    "configs/segqueue14/sealed-pool-2026-10.json",     # the D27/D32/D33 seal
+                    "experiments/*/r10*/*decision_set*proposal*.json",  # every Round 10 D35 draw and reserve order
+                    "experiments/Delta/r10/d35_decision_set_proposal.json"]
 
-URL = "https://zenodo.org/records/6802614/files/Totalsegmentator_dataset.zip?download=1"
-CARDIAC = {"ct heart", "ct heart-thorakale aorta", "ct aortic valve", "ct coronary arteries", "ct left artrium"}
-MASKS = ["heart_myocardium", "heart_ventricle_left", "heart_ventricle_right", "heart_atrium_left",
-         "heart_atrium_right", "aorta"]
+
+def pool_subjects():
+    """Every TotalSegmentator subject named by the SegQueue14 pool, the pool seal or any Round 10 D35 draw.
+
+    Janus-M never reads any of them. TotalSegmentator s-numbers name the same patient in v1 (Zenodo 6802614,
+    used here) and v2.0.1 (the pool's source): over the 1204 shared ids, sex and study type agree for 1203,
+    ages differ by at most 4 years and institute letters are relabelled consistently (India E1-E4 note). So an
+    s-number match is a patient match. The pool list is a superset of the others; all are read anyway so that
+    a later change to any one of them is still refused."""
+    import glob
+    ids = set()
+    for pat in HELD_OUT_SOURCES:
+        for f in glob.glob(os.path.join(REPO, pat)):
+            ids |= set(re.findall(r"TotalSegmentator[A-Za-z_-]*__(s\d{4})", open(f).read()))
+    if len(ids) < 16:
+        raise RuntimeError(f"held-out TotalSegmentator list too short ({len(ids)}); refusing to run")
+    return ids
+
+
+def refuse_held_out(sid):
+    if sid in pool_subjects():
+        raise RuntimeError(f"{sid} is a held-out (pool, sealed or D35) TotalSegmentator subject: refused")
+
 
 def main(out):
     z = RemoteZip(URL)

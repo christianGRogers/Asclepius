@@ -26,7 +26,11 @@ MASKS = dict(myo="heart_myocardium", lv="heart_ventricle_left", rv="heart_ventri
 
 
 def load_subject(d, margin_mm=12.0):
-    """Load CT + masks of one TotalSegmentator subject folder, cropped to the LV (cavity + myocardium)."""
+    """Load CT + masks of one TotalSegmentator subject folder, cropped to the LV (cavity + myocardium).
+    Refuses any held-out (pool, sealed or D35) subject before reading a byte of it."""
+    import os
+    from fetch_ts_cardiac import refuse_held_out
+    refuse_held_out(os.path.basename(os.path.normpath(d)))
     ct = nib.load(f"{d}/ct.nii.gz")
     sp = np.array(ct.header.get_zooms()[:3], float)
     m = {k: np.asanyarray(nib.load(f"{d}/segmentations/{v}.nii.gz").dataobj) > 0 for k, v in MASKS.items()}

@@ -109,8 +109,11 @@ def accept(rule, rig, aff, cuts):
     raise ValueError(rule)
 
 
-def chain(r, cuts, rule):
-    """The JA51 chain under one affine rule. Returns the final stage name."""
+def chain(r, cuts, rule, fallback="lowers"):
+    """The JA51 chain under one affine rule. Returns the final stage name.
+
+    ``fallback`` (JA51 step 5): "lowers" as shipped (rigid10 kept if it passes QC or lowers the normalised maximum);
+    "pass" (kept only if it passes QC); "none" (no fallback). The last two are post-hoc, reported only."""
     a = r["arms"]
     passes = lambda arm: qc_of(a[arm]["shipped"]).passes(cuts)  # noqa: E731
     if passes("R0"):
@@ -118,7 +121,9 @@ def chain(r, cuts, rule):
     final = "rigid4"
     if not passes("rigid4") and accept(rule, a["rigid4"], a["affine4"], cuts):
         final = "affine4"
-    if not passes(final):
+    if not passes(final) and fallback != "none":
+        if fallback == "pass":
+            return "rigid10" if passes("rigid10") else final
         m_new = R.normalised_max(qc_of(a["rigid10"]["shipped"]), cuts)
         m_old = R.normalised_max(qc_of(a[final]["shipped"]), cuts)
         if passes("rigid10") or (np.isfinite(m_new) and np.isfinite(m_old) and m_new < m_old):
@@ -146,7 +151,7 @@ def fit_taus(rows, arms):
         free = (np.nan_to_num(arr(r["truth_depth"])) < 0.01) & (np.nan_to_num(arr(r["truth_vol"])) < 0.01)
         for arm in arms:
             rec = r["arms"].get(arm)
-            if rec is None:
+            if rec is None or "ungradable" in rec:
                 continue
             ed, tw = arr(rec["scar"]["ed"]), arr(rec["free_own"]["ed"])
             acc[(half(r["heart"]), arm, r["blood"], r["cnr"])] += list(ed[free & np.isfinite(ed)]) + \
@@ -166,13 +171,22 @@ def presence_table(rows, arm, taus, key=lambda r: (r["blood"], r["cnr"], r["moti
             groups[key(r)].append(r)
     out_p, out_e = [], []
     for k, rr in sorted(groups.items()):
-        P = {p: {"tp": 0, "fn": 0, "tn": 0, "fp": 0, "tp_nb": 0, "free_tn": 0, "free_n": 0,
+        P = {p: {"tp": 0, "fn": 0, "tn": 0, "fp": 0, "tp_nb": 0, "free_tn": 0, "free_n": 0, "ungradable": 0,
                  "bybin": np.zeros((5, 2), int)} for p in PRES}
         E = {(p, e, t): [0, 0] for p in PRES for e in EXT for t in ("vol", "depth")}
         for r in rr:
             rec = r["arms"][arm]
             tau = taus.get((half(r["heart"]), arm, r["blood"], r["cnr"]), 0.1)
             tv, td = np.nan_to_num(arr(r["truth_vol"])), np.nan_to_num(arr(r["truth_depth"]))
+            if "ungradable" in rec:          # no carried wall to grade: every scarred segment is a miss (JA55-like)
+                truth = (tv >= 0.01) | (td >= 0.01)
+                tbin = kim(td)
+                for p in PRES:
+                    P[p]["fn"] += int(truth.sum())
+                    P[p]["ungradable"] += 1
+                    for kb in range(1, 5):
+                        P[p]["bybin"][kb] += [0, int((truth & (tbin == kb)).sum())]
+                continue
             valid = np.isfinite(arr(rec["scar"]["pk_share"]))
             truth = ((tv >= 0.01) | (td >= 0.01))[valid]
             cs, cn, co = calls(rec["scar"], tau), calls(rec["noblood"], tau), calls(rec["free_own"], tau)
@@ -208,7 +222,8 @@ def presence_table(rows, arm, taus, key=lambda r: (r["blood"], r["cnr"], r["moti
                           "spill_share": round((sens - sens_nb) / sens, 3) if sens > 0 else None,
                           "sens_by_bin": {str(b): (round(d["bybin"][b][0] / d["bybin"][b][1], 3)
                                                    if d["bybin"][b][1] else None) for b in range(1, 5)},
-                          "n_scarred": d["tp"] + d["fn"], "n_free": d["tn"] + d["fp"]})
+                          "n_scarred": d["tp"] + d["fn"], "n_free": d["tn"] + d["fp"],
+                          "n_ungradable": d["ungradable"]})
         for (p, e, t), (kk, n) in E.items():
             out_e.append({"arm": arm, **base, "presence": p, "extent": e, "truth": t,
                           "exact_agreement": round(kk / n, 3) if n else None, "n_both": n})
@@ -258,6 +273,8 @@ def tre_stats(rows, arm, sel):
 def main(path=None):
     path = Path(path) if path else HERE / "results_v3.jsonl"
     rows, skips = load(path)
+    errors = [{k: r.get(k) for k in ("heart", "blood", "cnr", "motion", "case_error")} for r in rows if "arms" not in r]
+    rows = [r for r in rows if "arms" in r]
     cuts = fit_cuts(rows)
     stage_counts = {}
     for r in rows:
@@ -268,11 +285,18 @@ def main(path=None):
             r["stage"][rule] = st
             r["arms"][f"chain_{rule}"] = r["arms"][st]
         r["arms"]["chain"] = r["arms"]["chain_literal"]
-    chain_arms = [f"chain_{x}" for x in RULES]
+        for fb in ("pass", "none"):                   # post-hoc (after the first partial results), report only
+            st = chain(r, c, "literal", fb)
+            r["stage"][f"literal_fb_{fb}"] = st
+            r["arms"][f"chain_literal_fb_{fb}"] = r["arms"][st]
+    chain_arms = [f"chain_{x}" for x in RULES] + ["chain_literal_fb_pass", "chain_literal_fb_none"]
     arms = ["oracle", "R0", "rigid4", "affine4", "rigid10", "bspline"] + chain_arms
     taus = fit_taus(rows, arms)
     out = {"version": 3, "scar_version": R.SCAR_VERSION, "n_cases": len(rows),
-           "hearts": sorted({r["heart"] for r in rows}), "skipped": skips,
+           "hearts": sorted({r["heart"] for r in rows}), "skipped": skips, "case_errors": errors,
+           "ungradable_arms": sorted({f"{r['heart']}|{r['blood']}|{r['cnr']}|{r['motion']}|{a}"
+                                      for r in rows for a, v in r["arms"].items()
+                                      if "ungradable" in v and not a.startswith("chain")}),
            "qc_cuts": {f"{k[0]}|{k[1]}|{k[2]}": dict(zip(SHIP_QC, np.round(v.values(), 4).tolist()))
                        for k, v in sorted(cuts.items())},
            "taus": {f"{k[0]}|{k[1]}|{k[2]}|{k[3]}": round(v, 4) for k, v in sorted(taus.items())}}
@@ -284,7 +308,7 @@ def main(path=None):
         for arm in arms:
             row[arm] = tre_stats(rows, arm, lambda r, m=m: r["motion"] == m)
         row["stages"] = {rule: {s: sum(r["stage"][rule] == s for r in rr) for s in ("R0", "rigid4", "affine4", "rigid10")}
-                         for rule in RULES}
+                         for rule in list(RULES) + ["literal_fb_pass", "literal_fb_none"]}
         row["affine_sane"] = sum(bool(r["arms"]["affine4"]["shipped"]["sane"]) for r in rr)
         row["affine_better_tre"] = sum(r["arms"]["affine4"]["tre_mm"] < r["arms"]["rigid4"]["tre_mm"] for r in rr)
         row["R0_passes"] = sum(r["stage"]["literal"] == "R0" for r in rr)
@@ -321,6 +345,8 @@ def main(path=None):
             for b in ("below", "equal", "above"):
                 for c in (3, 5):
                     x, y = reg_bc[f"{rule}|{m}|{b}|{c}"], reg_bc[f"never|{m}|{b}|{c}"]
+                    if x is None or y is None:
+                        continue
                     if x["median"] > y["median"] + TOL_MM or x["p90"] > y["p90"] + TOL_MM:
                         worse.append(f"{m}/{b}/{c}: {x['median']}/{x['p90']} vs never {y['median']}/{y['p90']}")
         sr = out["strike"] if rule == "literal" else out["strike_reported"][f"chain_{rule}"]

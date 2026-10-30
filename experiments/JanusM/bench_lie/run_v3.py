@@ -129,6 +129,13 @@ def tre_points(tx, pts, n=4000):
 
 
 def one_heart(args):
+    try:
+        return _one_heart(args)
+    except Exception as e:  # noqa: BLE001  (a heart that cannot be set up is recorded, the pool keeps going)
+        return [{"heart": args[0], "skip": f"heart error: {type(e).__name__}: {e}"[:300]}]
+
+
+def _one_heart(args):
     hid, data_dir, part_dir = args
     part = Path(part_dir) / f"{hid}.jsonl"
     have = set()
@@ -150,18 +157,30 @@ def one_heart(args):
     fp = R.prepare_first_pass(h["ct"], h["lab"], bench.A_RAS, mask_mm=R.MASK_DILATION_MM,
                               fallback_mm=R.FALLBACK_MASK_MM, case_id=None if hid == "phantom" else hid)
     mask4 = ndi.distance_transform_edt(h["lab"] == 0) <= R.MASK_DILATION_MM       # Euclidean, full grid (B-spline)
-    sp = np.ones(3)
+
     def keep(row):
         rows.append(row)
         with open(part, "a") as fh:
             fh.write(json.dumps(row) + "\n")
 
     for blood, cnr, motion in todo:
+        try:
+            one_case(h, hid, geo, fp, mask4, blood, cnr, motion, keep, t0)
+        except Exception as e:  # noqa: BLE001  (recorded per case, never hidden; the pool keeps going)
+            keep({"heart": hid, "blood": blood, "cnr": cnr, "motion": motion,
+                  "case_error": f"{type(e).__name__}: {e}"[:300]})
+    print(hid, "done", round(time.time() - t0), "s", flush=True)
+    return [json.loads(line) for line in open(part)]
+
+
+def one_case(h, hid, geo, fp, mask4, blood, cnr, motion, keep, t0):
+    sp = np.ones(3)
+    if True:
         seed = int(hashlib.sha256(f"bench-lie-r3:{hid}:{blood}:{cnr}:{motion}".encode()).hexdigest()[:8], 16)
         c = bench.make_case(h, blood, cnr, motion, seed)
         if "skip" in c:
             keep({"heart": hid, "blood": blood, "cnr": cnr, "motion": motion, "skip": c["skip"]})
-            continue
+            return
         lie = c["lie"]
         sm = smooth(lie, sp)
         row = {"heart": hid, "blood": blood, "cnr": cnr, "motion": motion, "seed": seed, "v": 3,
@@ -201,11 +220,14 @@ def one_heart(args):
             ta = time.time()
             if car is None:
                 car = menu.carry(geo, tx, lie.shape)
-            g = menu.grade(lie, car)
-            fixed = (g["remote"], g["rsd"], g["thr_k"])
-            rec = {"scar": _pack(g),
-                   "free_own": _pack(menu.grade(c["lie_free"], car)),
-                   "noblood": _pack(menu.grade(c["lie_noblood"], car, fixed))}
+            try:
+                g = menu.grade(lie, car)
+                fixed = (g["remote"], g["rsd"], g["thr_k"])
+                rec = {"scar": _pack(g),
+                       "free_own": _pack(menu.grade(c["lie_free"], car)),
+                       "noblood": _pack(menu.grade(c["lie_noblood"], car, fixed))}
+            except (IndexError, ValueError) as e:      # carried wall too small to grade (gross misregistration)
+                rec = {"ungradable": f"{type(e).__name__}: {e}"[:200]}
             if ship is not None:
                 T, secs = ship
                 rec["reg_sec"] = round(secs, 1)
@@ -220,8 +242,6 @@ def one_heart(args):
         keep(row)
         print(hid, blood, cnr, motion, {k: v.get("tre_mm") for k, v in row["arms"].items()},
               round(time.time() - t0), flush=True)
-    print(hid, "done", round(time.time() - t0), "s", flush=True)
-    return [json.loads(line) for line in open(part)]
 
 
 def main():

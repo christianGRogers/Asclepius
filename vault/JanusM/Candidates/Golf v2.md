@@ -370,4 +370,30 @@ The path-B questions are numbered **PB-Q1 …**. LQ2–LQ8 are carried (§3).
 
 ## 11. References
 
-⟨REFS⟩
+Golf's Round 1 list (`experiments/JanusM/Golf/citations.md`, 54 entries) carries over. JA14's corrections bind:
+- Mushtaq 2023 is a **post-PCI** cohort;
+- Cerqueira 2002's territory figure is **unverified** (secondary sources only);
+- the MRI comparison is **Nieman 2008**;
+- Treibel 2015 is in *J Cardiovasc Comput Tomogr*;
+- no numeric MM-WHS CT myocardium Dice;
+- the −10 HU fat cut is unsourced (the −180…0 HU window is Xu 2022's).
+
+**New or newly relied on this round:**
+
+| Entry | Verified at | What is used |
+|---|---|---|
+| Gatti M, et al. Diagnostic accuracy of late iodine enhancement on cardiac CT for myocardial tissue characterization: systematic review and meta-analysis. *Eur Radiol* 2025;35:3054-3067. doi:10.1007/s00330-024-11283-5 | PubMed 39702631, abstract | 14 studies, 526 patients, 5758 segments; segment sensitivity 0.86 (0.79–0.91), specificity 0.98 (0.96–0.99); patient-level 0.96 / 0.95. The dual-energy segment sensitivity of 0.93 is from Golf's R1 reading of the same abstract |
+| Ingkanisorn WP, Rhoads KL, Aletras AH, Kellman P, Arai AE. Gadolinium delayed enhancement cardiovascular magnetic resonance correlates with clinical measures of myocardial infarction. *J Am Coll Cardiol* 2004;43:2253-2259. doi:10.1016/j.jacc.2004.02.046 | PubMed 15193689, abstract | Acute infarct size 16 ± 12 % → 11 ± 9 % on follow-up; chronic size reproducible, 11 ± 4 % vs 12 ± 7 %. Basis of the ≥ 90-day infarct-age requirement (§5.4) |
+| Kim RJ, et al. *N Engl J Med* 2000;343:1445-1453. doi:10.1056/NEJM200011163432003 | R1 | Kim bins |
+| Mahnken AH, et al. *Eur Radiol* 2010;20:2834-2843. doi:10.1007/s00330-010-1864-x | R1 | Fused CCTA + late-CT workflow; 10 / 96 segments territory-discordant |
+| Javadi MS, et al. *J Nucl Med* 2010;51:198-203. doi:10.2967/jnumed.109.067488 | R1 | 9.3 % of segments reassigned (§4.1) |
+| Forte E, et al. *Clin Physiol Funct Imaging* 2020;40:30-36. doi:10.1111/cpf.12598 | R1 (judge-confirmed) | Septal rest TPR 1.06 ± 0.06 (§4.6) |
+| Ichikawa Y, et al. *JACC Cardiovasc Imaging* 2009;2:548-555. doi:10.1016/j.jcmg.2009.01.010 | R1 (judge-confirmed) | Fat in 62 % after MI; 94 % subendocardial (§4.6) |
+| Kitagawa K, et al. *Radiology* 2010;256:111-118. doi:10.1148/radiol.10091399; So A, et al. *Med Phys* 2016;43:4821. doi:10.1118/1.4957389 | R1 | Beam-hardening correction before stress TPR (§5.7) |
+| Xu 2022 (fat window −180…0 HU) | Hotel R1, judge-confirmed | §4.6 bounds |
+| Yezzi AJ, Prince JL. An Eulerian PDE approach for computing tissue thickness. *IEEE Trans Med Imaging* 2003;22:1332-1339. doi:10.1109/TMI.2003.817775 | bibliographic record | The alternative depth named by JA2 (§4.3) |
+| TotalSegmentator v1 / v2.0.1 metadata: Zenodo 10.5281/zenodo.6802614 and 10.5281/zenodo.10047292 (`meta.csv`), CC BY 4.0 | read directly, sha256 in `guard_r2_twins.json` | E4 |
+
+**Not cited, on purpose.** The breath-hold misalignment levels in E5 (4 mm / 8 mm) are **assumptions**. Golf found
+diaphragm-position studies but could not open a primary source that measures heart position between breath-holds,
+so none is cited.

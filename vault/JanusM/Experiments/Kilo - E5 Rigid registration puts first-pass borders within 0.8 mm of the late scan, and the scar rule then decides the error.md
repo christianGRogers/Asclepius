@@ -30,7 +30,7 @@ refuses **s1237** as a possible twin of held-out s0980, which my rule missed.
 - What was read: s1237's public CT and masks, for the synthetic-LIE simulation. s1237 is not itself a held-out
   patient, and no coronary quantity was computed.
 - Clean-up: the local copy is deleted, and the run is repeated on the 13 allowed cases. The numbers below are the
-  re-run's. The first run's figures moved by ≤ 0.03.
+  re-run's. Against the first run, rates moved by ≤ 0.03 and border distances by ≤ 0.11 mm.
 - s0335 and s0532 are also refused by the shared guard. They were downloaded but never opened, because the run
   skips unenhanced cases before reading the image. Disclosed on #143.
 

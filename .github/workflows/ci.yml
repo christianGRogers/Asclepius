@@ -200,7 +200,10 @@ jobs:
         run: |
           set -o pipefail
           # test_d36_consolidate.py: the D36 janus consolidation steps (issue #124).
-          pytest -q -rs tests/test_segqueue_server.py tests/test_d36_consolidate.py --junitxml=junit.xml \
+          # test_segqueue_server_janusm.py: the Janus-M read queue, and SegQueue14 untouched
+          # by it (issue #141).
+          pytest -q -rs tests/test_segqueue_server.py tests/test_d36_consolidate.py \
+            tests/test_segqueue_server_janusm.py --junitxml=junit.xml \
             2>&1 | tee server-tests.log
       - name: Fail if these skipped
         # These tests skip themselves when Girder or MongoDB is missing, which

@@ -380,3 +380,92 @@ def test_client_side_modules_are_stdlib_only_and_py39(module):
             continue
         for root in roots:
             assert root in allowed, f"{module}.py imports {root}"
+
+
+# -------------------------------------------------------------------- client
+
+
+class _Response:
+    def __init__(self, status=200, body=None, content=b""):
+        self.status_code, self._body, self._content = status, body, content
+
+    def json(self):
+        if self._body is None:
+            raise ValueError("no JSON")
+        return self._body
+
+    def iter_content(self, chunk_size=1):
+        for i in range(0, len(self._content), chunk_size):
+            yield self._content[i:i + chunk_size]
+
+
+class _Session:
+    """Answers like the janusm plugin, and records every request."""
+
+    def __init__(self, ct=b"CT bytes", queue_empty=False):
+        self.calls, self.ct, self.queue_empty, self.chunks = [], ct, queue_empty, []
+
+    def request(self, method, url, headers=None, stream=False, **kw):
+        path = url.split("/api/v1/", 1)[1]
+        self.calls.append((method, path, headers, kw))
+        if path == "janusm/project":
+            return _Response(body={"uploadFolderId": "F1", "protocolVersion": 1})
+        if path == "janusm/next":
+            if self.queue_empty:
+                return _Response(404, {"message": "x", "extra": {
+                    "code": protocol.ERR_QUEUE_EMPTY, "message": "none"}})
+            return _Response(body={"readId": "R1", "caseName": "c0001", "state": "assigned",
+                                   "hasSeed": False,
+                                   "checksum": hashlib.sha256(self.ct).hexdigest()})
+        if path == "janusm/read/R1/ct":
+            return _Response(content=self.ct)
+        if path == "file":
+            return _Response(body={"_id": "U1"})
+        if path == "file/chunk":
+            self.chunks.append(kw["data"])
+            return _Response(body={"_id": "FILE1"})
+        if path == "janusm/read/R1/submit":
+            meta = json.loads(kw["params"]["meta"])
+            assert kw["params"]["fileId"] == "FILE1"
+            return _Response(body={"readId": "R1", "caseName": "c0001", "state": "submitted",
+                                   "hasSeed": False, "checkSummary": str(meta["sizeBytes"])})
+        if path == "janusm/read/R1/release":
+            return _Response(body={"readId": "R1", "state": "released", "hasSeed": False})
+        return _Response(426, {"message": "too old", "extra": {
+            "code": protocol.ERR_CLIENT_TOO_OLD, "message": "too old"}})
+
+
+def test_client_reads_a_case_end_to_end(tmp_path):
+    from janusm_reads.client import JanusMClient
+
+    session = _Session()
+    c = JanusMClient("https://janus.example/", session=session, token="T")
+    read = c.next_read()
+    assert read.case_name == "c0001" and not read.has_seed
+    assert c.download_seed(read, str(tmp_path / "seed.nii.gz")) is None   # blank case
+    c.download_ct(read, str(tmp_path / "ct.nii.gz"))
+    assert (tmp_path / "ct.nii.gz").read_bytes() == session.ct
+    label = tmp_path / "read.nii.gz"
+    label.write_bytes(b"label" * 10)
+    done = c.submit(read, str(label), {1: 5, 2: 5, 3: 5, 4: 5})
+    assert done.state == "submitted" and done.check_summary == "50"
+    assert b"".join(session.chunks) == label.read_bytes()
+    assert c.release(read).state == "released"
+    for _, _, headers, _ in session.calls:
+        assert headers[protocol.PROTOCOL_HEADER] == "1" and headers["Girder-Token"] == "T"
+
+
+def test_client_refuses_a_bad_download_and_reports_codes(tmp_path):
+    from janusm_reads.client import JanusMClient, JanusMError
+
+    session = _Session()
+    c = JanusMClient("https://janus.example/api/v1", session=session)
+    read = c.next_read()
+    session.ct = b"something else"
+    with pytest.raises(JanusMError) as err:
+        c.download_ct(read, str(tmp_path / "ct.nii.gz"))
+    assert err.value.code == protocol.ERR_CHECKSUM and not (tmp_path / "ct.nii.gz").exists()
+    assert JanusMClient("h", session=_Session(queue_empty=True)).next_read() is None
+    with pytest.raises(JanusMError) as err:
+        c._json("GET", "janusm/unknown")
+    assert err.value.status == 426 and err.value.code == protocol.ERR_CLIENT_TOO_OLD

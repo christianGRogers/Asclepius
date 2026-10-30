@@ -1,5 +1,5 @@
 {
- "rule": "twin = any public TotalSegmentator subject, other than the held-out subject itself, in the same release with the same institute, the same sex (a missing sex matches any), and age within +/-5 years; any study type (Round 1 §4, JA12)",
+ "rule": "twin = any public TotalSegmentator subject, other than the held-out subject itself, in the same release with the same institute (a blank institute on either side matches any), the same sex (a missing sex matches any), and age within +/-5 years; any study type (Round 1 §4, JA12; JA22)",
  "releases": {
   "v1.0": {
    "source": "zenodo 6802614",
@@ -47,7 +47,7 @@
     "s1106",
     "s1345"
    ],
-   "twins": 671
+   "twins": 674
   }
  },
  "held_out": [
@@ -68,7 +68,7 @@
   "s1106",
   "s1345"
  ],
- "n_twins": 707,
+ "n_twins": 710,
  "twins": {
   "s0001": [
    "s0356",
@@ -3695,6 +3695,35 @@
    "s0655",
    "s0846",
    "s1097"
+  ],
+  "s1425": [
+   "s0356",
+   "s0368",
+   "s0465",
+   "s0655",
+   "s0738",
+   "s0839",
+   "s0846",
+   "s0871",
+   "s0879",
+   "s0936",
+   "s0972",
+   "s0980",
+   "s1002",
+   "s1097",
+   "s1106",
+   "s1345"
+  ],
+  "s1426": [
+   "s0368",
+   "s0879",
+   "s0936",
+   "s1002"
+  ],
+  "s1428": [
+   "s0368",
+   "s0936",
+   "s1002"
   ]
  }
 }

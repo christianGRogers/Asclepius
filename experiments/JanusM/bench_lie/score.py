@@ -172,9 +172,9 @@ def main(path=HERE / "results.jsonl"):
                 P[p]["tp_nb"] += int((nb & truth).sum())
                 P[p]["free_tn"] += int((~co[p][vo]).sum())
                 P[p]["free_n"] += int(vo.sum())
-                for b in range(1, 5):
-                    m = truth & (tbin == b)
-                    P[p]["bybin"][b] += [int((s & m).sum()), int(m.sum())]
+                for kb in range(1, 5):
+                    mb = truth & (tbin == kb)
+                    P[p]["bybin"][kb] += [int((s & mb).sum()), int(mb.sum())]
                 both = s & truth
                 for e, key in (("E-V", "ev"), ("E-D", "ed")):
                     est = np.maximum(kim(arr(rec["scar"][key])[valid]), 1)

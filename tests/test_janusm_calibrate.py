@@ -119,6 +119,8 @@ def test_inputs_are_checked():
         C.detectable_depth(-0.1, C.LIMA_SHAPE, 1.0)
     with pytest.raises(ValueError):
         C.detectable_depth(0.088, C.LIMA_SHAPE, -1.0)
+    with pytest.raises(ValueError, match="no normal variation"):
+        C.detectable_depth(0.0, C.LIMA_SHAPE, 1.0)  # rule C would have no scale (0 / 0)
 
 
 def test_page_line_fills_the_depth_and_warns_above_forty_percent(primary):

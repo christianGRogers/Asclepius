@@ -216,6 +216,11 @@ def _check_inputs(cv_n, shape, rcs, sig_m):
         raise ValueError(f"bad cv_n {cv_n}")
     if sig_m < 0 or any((not np.isfinite(r)) or r < 0 for r in rcs):
         raise ValueError("sig_m and rc_terr_mm must be >= 0")
+    if cv_n == 0 and sig_m == 0:
+        raise ValueError(
+            "cv_n and sig_m are both 0: the population has no normal variation, so rule C has "
+            "no scale and the detectable depth is undefined"
+        )
     return shape
 
 

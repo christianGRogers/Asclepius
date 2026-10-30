@@ -1,0 +1,164 @@
+{
+ "salt": "asclepius-janusm-seal-r1:",
+ "rule": "rank patients by sha256(SALT + patient) within each source; take the first ceil(0.30 * n_source) as sealed and the next ceil(0.20 * n_source) as the decision set; the rest train. Every volume of a sealed patient is sealed. Nothing is frozen by this script: the judge rules and a role:swe PR freezes the file (sha256-pinned) before any read of these volumes.",
+ "sealed": {
+  "CCA200-HF__CCA_00": [
+   "CCA200-HF__CCA_00.nii.gz"
+  ],
+  "CCA200-HF__CCA_08": [
+   "CCA200-HF__CCA_08.nii.gz"
+  ],
+  "CCA200-HF__CCA_04": [
+   "CCA200-HF__CCA_04.nii.gz"
+  ],
+  "CCA200-HF__CCA_16": [
+   "CCA200-HF__CCA_16.nii.gz"
+  ],
+  "CCA200-HF__CCA_18": [
+   "CCA200-HF__CCA_18.nii.gz"
+  ],
+  "CCA200-HF__CCA_11": [
+   "CCA200-HF__CCA_11.nii.gz"
+  ],
+  "Figshare-EpicardialFat-CE__CE003": [
+   "Figshare-EpicardialFat-CE__CE003.nii.gz"
+  ],
+  "Figshare-EpicardialFat-CE__CE008": [
+   "Figshare-EpicardialFat-CE__CE008.nii.gz"
+  ],
+  "PLOS-Peng2016-CCTA-JPEG__P04": [
+   "PLOS-Peng2016-CCTA-JPEG__P04.nii.gz"
+  ],
+  "PLOS-Peng2016-CCTA-JPEG__P13": [
+   "PLOS-Peng2016-CCTA-JPEG__P13.nii.gz"
+  ],
+  "PLOS-Peng2016-CCTA-JPEG__P15": [
+   "PLOS-Peng2016-CCTA-JPEG__P15.nii.gz"
+  ],
+  "PLOS-Peng2016-CCTA-JPEG__P19": [
+   "PLOS-Peng2016-CCTA-JPEG__P19.nii.gz"
+  ],
+  "PLOS-Peng2016-CCTA-JPEG__P12": [
+   "PLOS-Peng2016-CCTA-JPEG__P12.nii.gz"
+  ]
+ },
+ "decision": {
+  "CCA200-HF__CCA_19": [
+   "CCA200-HF__CCA_19.nii.gz"
+  ],
+  "CCA200-HF__CCA_12": [
+   "CCA200-HF__CCA_12.nii.gz"
+  ],
+  "CCA200-HF__CCA_07": [
+   "CCA200-HF__CCA_07.nii.gz"
+  ],
+  "CCA200-HF__CCA_15": [
+   "CCA200-HF__CCA_15.nii.gz"
+  ],
+  "Figshare-EpicardialFat-CE__CE038": [
+   "Figshare-EpicardialFat-CE__CE038.nii.gz"
+  ],
+  "Figshare-EpicardialFat-CE__CE040": [
+   "Figshare-EpicardialFat-CE__CE040.nii.gz"
+  ],
+  "PLOS-Peng2016-CCTA-JPEG__P16": [
+   "PLOS-Peng2016-CCTA-JPEG__P16.nii.gz"
+  ],
+  "PLOS-Peng2016-CCTA-JPEG__P05": [
+   "PLOS-Peng2016-CCTA-JPEG__P05.nii.gz"
+  ],
+  "PLOS-Peng2016-CCTA-JPEG__P10": [
+   "PLOS-Peng2016-CCTA-JPEG__P10.nii.gz"
+  ]
+ },
+ "train": {
+  "CCA200-HF__CCA_03": [
+   "CCA200-HF__CCA_03.nii.gz"
+  ],
+  "CCA200-HF__CCA_10": [
+   "CCA200-HF__CCA_10.nii.gz"
+  ],
+  "CCA200-HF__CCA_17": [
+   "CCA200-HF__CCA_17.nii.gz"
+  ],
+  "CCA200-HF__CCA_05": [
+   "CCA200-HF__CCA_05.nii.gz"
+  ],
+  "CCA200-HF__CCA_14": [
+   "CCA200-HF__CCA_14.nii.gz"
+  ],
+  "CCA200-HF__CCA_01": [
+   "CCA200-HF__CCA_01.nii.gz"
+  ],
+  "CCA200-HF__CCA_02": [
+   "CCA200-HF__CCA_02.nii.gz"
+  ],
+  "CCA200-HF__CCA_06": [
+   "CCA200-HF__CCA_06.nii.gz"
+  ],
+  "CCA200-HF__CCA_09": [
+   "CCA200-HF__CCA_09.nii.gz"
+  ],
+  "CCA200-HF__CCA_13": [
+   "CCA200-HF__CCA_13.nii.gz"
+  ],
+  "Figshare-EpicardialFat-CE__CE019": [
+   "Figshare-EpicardialFat-CE__CE019.nii.gz"
+  ],
+  "Figshare-EpicardialFat-CE__CE015": [
+   "Figshare-EpicardialFat-CE__CE015.nii.gz"
+  ],
+  "PLOS-Peng2016-CCTA-JPEG__P06": [
+   "PLOS-Peng2016-CCTA-JPEG__P06.nii.gz"
+  ],
+  "PLOS-Peng2016-CCTA-JPEG__P09": [
+   "PLOS-Peng2016-CCTA-JPEG__P09.nii.gz"
+  ],
+  "PLOS-Peng2016-CCTA-JPEG__P03": [
+   "PLOS-Peng2016-CCTA-JPEG__P03.nii.gz"
+  ],
+  "PLOS-Peng2016-CCTA-JPEG__P01": [
+   "PLOS-Peng2016-CCTA-JPEG__P01.nii.gz"
+  ],
+  "PLOS-Peng2016-CCTA-JPEG__P08": [
+   "PLOS-Peng2016-CCTA-JPEG__P08.nii.gz"
+  ],
+  "PLOS-Peng2016-CCTA-JPEG__P07": [
+   "PLOS-Peng2016-CCTA-JPEG__P07.nii.gz"
+  ],
+  "Slicer-SampleData__PDA_CT": [
+   "Slicer-SampleData__PDA_CT.nii.gz"
+  ]
+ },
+ "per_source": {
+  "CCA200-HF": {
+   "patients": 20,
+   "sealed": 6,
+   "decision": 4,
+   "train": 10
+  },
+  "Figshare-EpicardialFat-CE": {
+   "patients": 6,
+   "sealed": 2,
+   "decision": 2,
+   "train": 2
+  },
+  "PLOS-Peng2016-CCTA-JPEG": {
+   "patients": 14,
+   "sealed": 5,
+   "decision": 3,
+   "train": 6
+  },
+  "Slicer-SampleData": {
+   "patients": 1,
+   "sealed": 0,
+   "decision": 0,
+   "train": 1
+  }
+ },
+ "counts": {
+  "sealed": 13,
+  "decision": 9,
+  "train": 19
+ }
+}

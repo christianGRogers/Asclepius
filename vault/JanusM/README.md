@@ -51,6 +51,31 @@ open and is exactly what Round 1 must settle with evidence, then bring to the le
   or scar label can have.
 - **The model, the metric and the compute** (Fir, as for Janus; account `def-aso22`).
 
+## Decision points: paths, not pauses (the lead, 2026-10-30, M2)
+
+The tournament **never pauses for the lead**. When a ruling reaches a question only the lead can answer and the
+options lead to materially different plans, the line **splits into paths**, one per option, and each is built out
+in parallel. The lead later picks one path; the others are deleted.
+
+- **The judge decides where to split.** Each ruling marks at most **one forking question** (the one whose options
+  change the plan's structure most) and names its options, 2 or 3. Every other open question is carried as an
+  assumption, using the judge's recommendation, and stays a question for the lead.
+- **A path is a branch.** Path `<p>` lives on the long-lived branch `jm/<p>` (e.g. `jm/lv-thirds`), created from
+  the ruling that forked it. Its candidates, rulings, experiment notes and code go there, under the same
+  `vault/JanusM/` and `experiments/JanusM/` paths, and its round PRs merge into `jm/<p>`, never into `dev`.
+  `dev` holds only the shared trunk (rounds before the first split). Deleting a path is deleting its branch,
+  which only the lead does.
+- **Each path has its own tournament.** Three advocates and a judge per path per round, drawn from Golf, Hotel,
+  India, Juliet, Kilo (and Lima, Mike, November, Oscar, Papa if more are needed); each path's file
+  `vault/JanusM/PATH.md` on its branch states the option it assumes and the fork it came from.
+- **A path may build.** Besides plans, a path may write the code its plan needs (data tooling, training configs,
+  Fir launchers) on its own branch, through `role:swe` issues labelled with the path. Nothing runs on Fir: jobs
+  stay exact commands for the lead.
+- **The cap.** At most **four paths are active** at once. A path's judge may split it again only while the cap
+  allows; otherwise it carries the question as an assumption. A path the lead has not chosen keeps iterating.
+- **Every path's summary** goes to the lead on the round issue: what the path assumes, what it has built, and how
+  it compares with its siblings.
+
 ## Binding from the project
 
 Every project-wide rule binds Janus-M: no credentials, tokens or patient data anywhere; never run SciNet or

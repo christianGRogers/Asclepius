@@ -8,10 +8,14 @@ path: jm/rest-ccta
 
 # Janus-M master plan
 
-**On path `jm/rest-ccta`, in force from Round 2 (2026-10-30):** [[Juliet v1]] with JA1–JA14 ([[Janus-M Round 1]]),
-plus [[Hotel v2]] with amendments JA15–JA24 ([[Janus-M Round 2 rest-ccta]], `Judgements/Round 2 - rest-ccta.md`). The
-line forked at Round 1's LQ1 into `jm/rest-ccta` (this branch: option A, rest CCTA only) and `jm/paired-scar` (M2).
-Round 2 on this path makes **no fork**. Where JA15–JA24 change a Round 1 rule, the Round 2 text below governs.
+**On path `jm/rest-ccta`, in force from Round 3 (2026-10-30):** [[Juliet v1]] with JA1–JA14 ([[Janus-M Round 1]]),
+plus [[Hotel v2]] with JA15–JA24 ([[Janus-M Round 2 rest-ccta]]), plus [[Hotel v3]] with JA37–JA49
+([[Janus-M Round 3 rest-ccta]], `Judgements/Round 3 - rest-ccta.md`). The line forked at Round 1's LQ1 into
+`jm/rest-ccta` (this branch: option A, rest CCTA only) and `jm/paired-scar` (M2). Rounds 2 and 3 on this path make
+**no fork**. Later rulings govern where they change an earlier rule.
+
+**Status: plan-complete pending the lead's Job JM-0 / JM-0R runs and answers** (Round 3 §8). Round 4 opens when
+JM-0 / JM-0R aggregates are posted (LQ22 (a)).
 
 ## The plan in one paragraph
 
@@ -61,8 +65,12 @@ Every sign is calibrated for specificity only, and every cell reads "research ou
   are read from blank; anchoring is reported each wave.
 - **Primary metric:** endocardial and epicardial ASSD, measured as model-vs-read minus read-vs-read.
 - **Co-primary:** median per-segment thickness error.
-- **Guards:** signed bias |·| ≤ **0.3 mm**, once the estimator is validated to ±0.05 mm in the JA15 harness (else
-  0.5 mm); ASSD ≤ 1.0 mm (JA16).
+- **Guards:** signed bias |·| ≤ **0.3 mm** (JA37: `janusm.harness.signed_bias`, volume ÷ mean area, validated on
+  exact phantoms; back to 0.5 mm if it disagrees with point-to-plane by a median > 0.05 mm on the first 20 decision
+  read pairs); ASSD ≤ 1.0 mm (JA16).
+- **Implementations (JA37–JA39):** ASSD in d and the 1.0 mm guard = sub-voxel point-to-plane (pp), the same for both
+  terms; voxel ASSD reported and kept for read checks and anchoring; thickness = `janusm.geometry`, median over
+  segments 1–16. Harness biases from `perturb()` are nominal (≈ 1.3× realised); known shifts are exact (JA38).
 - **Reported:** STA, Dice, AHA agreement, territory discordance.
 - **Units (JA15):** realised symmetric surface ASSD and signed bias, and median-over-segments thickness error, in one
   error model (Golf's corrected SDF, 8 mm fields per border). Never a nominal σ.
@@ -70,8 +78,13 @@ Every sign is calibrated for specificity only, and every cell reads "research ou
   the thickness error is ≤ read-vs-read + 0.5 mm. The first 20 decision double reads set only the seal size, by
   India's `e8_repower.py` (60 / 80 / 100 / 120). If 120 does not suffice, Janus-M 1 is triggered before any seal
   read.
-- **Reads (JA21):** border protocol v1 (Hotel v2 §5.4 as amended): plateau-centred window, half-maximum check
-  (≤ 0.5 mm), LA appendage excluded, anchoring at +0.2 mm (blank vs seeded) and < 5 % voxels changed.
+- **Reads (JA21, JA46, JA47):** border protocol v1 (Hotel v3 §5.1 as amended): border window level at the
+  half-maximum, width 1.5 × the plateau difference; whole-border half-maximum median ≤ 0.5 mm, returned once then
+  accepted and flagged; octants warn only; LA appendage excluded; mitral gap required, plane fitted to it; LV–RV
+  contact ≤ 0.5 %; per-vessel CAD-RADS 2.0 on the form. Anchoring: two-sample upper bound of (gap − seeded inter-read
+  ASSD) ≤ 0.2 mm; a wave with > half of reads changing < 5 % of seed voxels gets 5 third reads from blank.
+- **Half-maximum sign (JA44):** + = the region bounded by the border (LV pool; pool + myocardium) extends beyond the
+  image half-maximum, everywhere.
 
 ## Models and compute (JA9, JA10; Fir, `def-aso22`; the lead runs every job)
 
@@ -91,8 +104,11 @@ Every sign is calibrated for specificity only, and every cell reads "research ou
 ## Outputs (JA11, JA17–JA19; Stage A only on this path)
 
 - **Thinning:** flagged **per territory**, patient-relative (Lima's rule C), at ≤ 5 % of null patients. A flag also
-  needs to clear the read-noise floor (RC from the first 20 decision reads) and read-to-read κ ≥ 0.6. Per-segment
-  values are numbers with percentiles, never flags. No 5.5 mm cut.
+  needs to clear the read-noise floor F1 (JA42: upper 95 % bound of RC from the first 20 decision double reads) and
+  the depth gate (JA41: the sign's detectable depth ≤ 50 %; it replaces κ ≥ 0.6, and κ and ICC are reported).
+  Per-segment values are numbers with percentiles, never flags. No 5.5 mm cut.
+- **Detectable depth (JA40):** one procedure (Hotel E7 on Lima's simulator; cv_n = plain SD, no added error when
+  measured on the table's own model). Printed now: **35 %**; replaced by JM-0R, then by the reference population.
 - **Subendocardial hypoattenuation and core fat:** the same procedure. The fat cut is the least strict (c, V) inside
   −180..0 HU at which ≤ 5 % of null hearts carry a cluster.
 - **Composite "chronic-infarct-like geometry"** per territory, reported with its population rate.
@@ -123,6 +139,10 @@ Every sign is calibrated for specificity only, and every cell reads "research ou
 | LQ10 | Stenosis column source (rec. the reader's CAD-RADS grade) |
 | LQ11 | One merged Fir CPU job, JM-0R (rec. yes) |
 | LQ12 | Reference-population seeds committed (rec. yes) |
+| LQ19 | Hold JM-0R until JA44's fix merges (rec. run JM-0 now, JM-0R after S2) |
+| LQ20 | Reader time for anchoring third reads (rec. up to two flagged waves) |
+| LQ21 | Path A may ship with no flag (rec. accept) |
+| LQ22 | Pause this path's rounds until JM-0 / JM-0R report (rec. yes) |
 
 ## Shipping (JA13; `role:swe`, opened by the PM)
 
@@ -135,4 +155,9 @@ Every sign is calibrated for specificity only, and every cell reads "research ou
    - the JA15 harness as the geometry module's fixture;
    - the JM-0R read-out (JA23);
    - the table writer and the reference-population config (JA18, JA19);
-   - the twin-list re-pin with blank-institute matching (JA22, on `dev`).
+   - the twin-list re-pin with blank-institute matching (JA22, on `dev`; merged, 711 refused).
+7. **Path `jm/rest-ccta`, from Round 3** (on `dev`, synced to both paths; Round 3 §7):
+   - S1 harness API (pp ASSD and bias); S2 JM-0R v2 (canonical sign, `decision_inputs`);
+   - S3 detectable-depth function; S4 the one decision script, `experiments/JanusM/fir/jm0r_decide.py`;
+   - S5 read queue to protocol v1 (one consolidated list); S6 reference-population builder; S7 table writer;
+   - S8 snap tool, only if R4 fires.

@@ -8,5 +8,5 @@ inside the script.
 |---|---|---|
 | `e11_open_base_remedy.py OUT [--quick]` | E11: R4-S4's open-base check repeated with the #219 engineer's remedy (`literal`) and two label-only narrowings (`rim15`, `plane`), on three phantoms: India's open-base E6 phantom (A), the cut capsule of `validate_bias_estimator(open_base=True)` (B), and a read-like `harness.phantom()` with a 60° outflow opening (C) | `e11_open_base_remedy.json` (full run: two grids, three offsets) |
 
-Run it from the repository root, with the package installed (`pip install -e .`). The full run takes about 15 minutes
+Run it from the repository root, with the package installed (`pip install -e .`). The full run takes about 9 minutes
 on one CPU; `--quick` takes about 3 minutes.

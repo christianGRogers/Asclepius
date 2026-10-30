@@ -14,7 +14,7 @@ issue: christianGRogers/Asclepius#223
 missing. But:
 - **One fix crashes on an input the ruling prescribes.** `calibrate.population` raises `KeyError: 'MD'` on
   JA60's own hypoattenuation mix `{"ED": 1.0}`. The test that seems to cover it stubs the sampler.
-- **The #219 open-base remedy, taken literally, empties the epicardial band.** The label set has no aorta or
+- **The #219 open-base remedy, taken literally, leaves no epicardial surface in the band.** The label set has no aorta or
   pericardium, so the whole free epicardium adjoins label 0 (E11). A narrower form that excludes only the cut cap
   passes JA61's 0.05 mm on every phantom.
 - **Two read-queue endpoints trust what they should check.** `POST admin/wave` can move a case with accepted reads
@@ -241,17 +241,30 @@ cap. The cause #219 diagnosed is right. The fix has to name the cap, not every f
 - **C** — a read-like phantom: `harness.phantom()`, with the LA over the base and the RV over the septum, and the LA
   removed over a 60° sector so that the base is open there, as at the outflow. Tilt 0° and 23°.
 
-E11TABLE
+Worst |error| (mm) against the truth, per border. "—" = no surface left in the band, so the estimate is undefined in
+every row. *Keep* = the band's voxels as a share of the shipped band (epicardium). Full run: 104 configurations × 4
+variants, 547 s, `e11_open_base_remedy.json`.
+
+| Phantom (rows per border) | Border | shipped | literal | rim15 | plane | keep: literal / rim15 / plane |
+|---|---|---|---|---|---|---|
+| A — India E6 open base (24) | endo | 0.0150 | 0.0150 | 0.0150 | 0.0150 | — |
+| | epi | **0.0678** ✗ | — (24 of 24) | 0.0143 | 0.0155 | 2.9 % / 68 % / 85 % |
+| B — cut capsule (72) | endo | 0.0238 | 0.0238 | 0.0238 | 0.0238 | — |
+| | epi | **0.0504** ✗ | — (72 of 72) | 0.0154 | 0.0193 | 1.9 % / 65 % / 86 % |
+| C — read-like, 60° outflow (8) | endo | 0.0088 | 0.0088 | 0.0088 | 0.0088 | — |
+| | epi | 0.0146 | 0.0388 | 0.0128 | 0.0119 | 18 % / 88 % / 97 % |
+
+The shipped column reproduces #219's two numbers (0.068 and 0.0504 mm).
 
 **What E11 shows:**
-- **The literal remedy is not a fix.** On A and B it leaves no epicardial band at all: every epicardial row is
-  undefined. On C it keeps E11C_LIT_KEEP of the epicardial band: only the strip next to the RV and LA. That is a
+- **The literal remedy is not a fix.** On A and B it keeps 2–3 % of the epicardial band's voxels but none of the epicardial
+  surface, so every epicardial row (96 of 96) is undefined. On C it keeps 18 % of the epicardial band: only the strip next to the RV and LA. That is a
   biased sample of the wall, and on a real read it would be the septal side.
 - **The narrower forms pass.** `plane` and `rim15` bring every phantom within 0.05 mm on both borders: worst
-  E11_PLANE_WORST mm (`plane`) and E11_RIM_WORST mm (`rim15`), against 0.0504–0.068 mm shipped. Neither changes the
-  endocardium by more than 0.001 mm. `plane` keeps more of the band (A epicardium: E11A_PLANE_KEEP of the shipped
-  band, against E11A_RIM_KEEP for `rim15`).
-- **The shipped band already passes on the read-like phantom C** (worst E11C_SHIP_WORST mm). There, the LA covers
+  0.0193 mm (`plane`) and 0.0154 mm (`rim15`), against 0.0504–0.068 mm shipped. Neither changes the
+  endocardium by more than 0.0003 mm. `plane` keeps more of the band (A epicardium: 85 % of the shipped
+  band, against 68 % for `rim15`).
+- **The shipped band already passes on the read-like phantom C** (worst 0.0146 mm). There, the LA covers
   most of the base, so the cap left in the band is small. This supports #219's remark that "on real reads, most of
   the myocardial base adjoins LA". The fail comes from phantoms whose whole base is open.
 

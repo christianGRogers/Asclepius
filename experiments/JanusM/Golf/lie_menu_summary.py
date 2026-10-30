@@ -219,6 +219,12 @@ def phase_check(rows):
                     row["median_phase_" + k] = round(float(np.nanmedian([r[k] for r in ph])), 3) if ph else None
                     row["median_other_" + k] = round(float(np.nanmedian([r[k] for r in no])), 3) if no else None
                 row["auc_abs_logdet"] = auc([abs(r["logdet"] or 0) for r in ph], [abs(r["logdet"] or 0) for r in no])
+                # the transform maps LIE points to first-pass points: a smaller heart on the LIE (the simulated phase
+                # change) gives det > 1, so log det > 0 is phase-like
+                row["auc_pos_logdet"] = auc([(r["logdet"] or 0) for r in ph], [(r["logdet"] or 0) for r in no])
+                if geom == "affine":
+                    row["median_phase_logdet"] = round(float(np.median([r["logdet"] for r in ph])), 4) if ph else None
+                    row["median_other_logdet"] = round(float(np.median([r["logdet"] for r in no])), 4) if no else None
                 out.append(row)
     return out
 

@@ -51,6 +51,7 @@ RING = {
 }  # fmt: skip
 TERR16 = {t: [s for s in v if s <= 16] for t, v in AHA.items()}
 TERRITORIES = list(TERR16)
+TNAMES = TERRITORIES  # the column order of ``territory_flags`` and ``f1_deviation``
 
 #: Lima's self-test on 23 public hearts (1.5 mm model-made labels;
 #: ``experiments/JanusM/Lima/local_check_summary.json``): the only measured inputs before JM-0R.
@@ -59,10 +60,12 @@ LIMA_SHAPE = (
     1.276, 1.022, 0.916, 1.074, 0.777, 0.825, 0.756, 0.819,
 )  # fmt: skip
 LIMA_CV_N = 0.088
-LIMA_MEDIAN_MM = 9.668
+LIMA_MEDIAN_MM = 9.668  # the measured median wall; E7 (and so detectable_depth) uses it
+ED_MEDIAN_MM = 5.7  # Lima's anchor (Chen 2025, CT end-diastole): population()'s default
 
 PHASES = {"ED": 1.00, "MD": 1.14, "SYS": 1.40}
 PHASE_MIX = {"ED": 0.4, "MD": 0.4, "SYS": 0.2}  # JA40
+MIXED = PHASE_MIX
 SCALE_CV = 0.12
 PREVALENCE = 0.1  # JA40
 N_PER_POPULATION = 2000  # JA40
@@ -71,9 +74,11 @@ DEPTHS = tuple(round(0.10 + 0.05 * i, 2) for i in range(11))  # 0.10 .. 0.60
 SENSITIVITY_TARGET = 0.80
 FALSE_FLAG_TARGET = 0.05  # rule C's mirror-null calibration
 NULL_HEARTS = 20000
+NULL_PATIENTS = NULL_HEARTS
 RC_TERR_PROVISIONAL_MM = 1.0  # JA40: the F1 floor until the reads exist
 DEPTH_WARN = 0.40  # JA40: above this the page says so
-DEFAULT_SEED = 31000  # Hotel E7's first seed: its primary rows reproduce exactly
+E7_SEED = 31000  # Hotel E7's first seed: with it, E7's rows reproduce exactly
+DEFAULT_SEED = E7_SEED
 
 
 # ---------------------------------------------------------------------------------- population
@@ -87,10 +92,11 @@ def population(
     rng,
     *,
     shape: Sequence[float] = LIMA_SHAPE,
-    median_mm: float = LIMA_MEDIAN_MM,
+    median_mm: float = ED_MEDIAN_MM,
 ):
     """Lima's simulated population: (measured n x 16 mm, lesion n x 16, sick n, territory n,
-    phase n). The draws are made in Lima's order, so a seed gives Lima's and Hotel's hearts."""
+    phase n). The draws are made in Lima's order, so a seed gives Lima's and Hotel's hearts.
+    ``median_mm`` defaults to Lima's 5.7 mm; E7 (``detectable_depth``) passes 9.668 mm."""
     shape = np.asarray(shape, float)
     scale = median_mm * np.exp(rng.normal(0, SCALE_CV, n))
     ph_names = rng.choice(list(PHASES), size=n, p=[phase_mix[k] for k in PHASES])
@@ -119,7 +125,7 @@ def population(
 def territory_flags(flag) -> np.ndarray:
     """n x 16 segment flags -> n x 3 territory flags (LAD, RCA, LCx): two flagged, contiguous
     segments in the territory."""
-    flag = np.asarray(flag, bool)
+    flag = np.atleast_2d(np.asarray(flag, bool))
     out = np.zeros((flag.shape[0], 3), bool)
     for j, segs in enumerate(TERR16.values()):
         for s in segs:
@@ -155,15 +161,19 @@ def calibrate_c(z, target: float = FALSE_FLAG_TARGET, rng=None):
     return med - 6 * mad, 6.0
 
 
-def f1_deviation(meas, shape) -> np.ndarray:
-    """Hotel's F1 deviation, n x 3 (mm, + = thinner than expected): each territory's mean
-    shape-corrected thinning against the patient's remote level (the median of the segments
-    outside it, shape-corrected)."""
-    meas = np.asarray(meas, float)
+def f1_deviation(
+    meas, shape, territories: Optional[Mapping[str, Sequence[int]]] = None
+) -> np.ndarray:
+    """Hotel's F1 deviation, n x territories (mm, + = thinner than expected): each territory's
+    mean shape-corrected thinning against the patient's remote level (the median of the segments
+    outside it, shape-corrected). ``territories`` ({name: 1-based segments}) defaults to the AHA
+    map, in ``TNAMES`` order."""
+    meas = np.atleast_2d(np.asarray(meas, float))
     shape = np.asarray(shape, float)
-    out = np.zeros((meas.shape[0], 3))
-    for j, t in enumerate(TERRITORIES):
-        segs = [s - 1 for s in TERR16[t]]
+    terrs = TERR16 if territories is None else territories
+    out = np.zeros((meas.shape[0], len(terrs)))
+    for j, segs1 in enumerate(terrs.values()):
+        segs = [s - 1 for s in segs1]
         rem = [s for s in range(16) if s not in segs]
         level = np.median(meas[:, rem] / shape[rem], 1)
         out[:, j] = (level[:, None] * shape[segs] - meas[:, segs]).mean(1)
@@ -230,7 +240,7 @@ def detectable_depths(
     rc_terr_mm: Sequence[float],
     *,
     sig_m: float = 0.0,
-    seed: int = DEFAULT_SEED,
+    seed: int,
     median_mm: float = LIMA_MEDIAN_MM,
 ) -> Dict[float, dict]:
     """``detectable_depth`` for several F1 floors on the same populations (as E7 swept them):
@@ -260,6 +270,7 @@ def detectable_depths(
         first = hit[0] if hit else None
         out[rc] = {
             "depth": first["depth"] if first else None,  # None: not reached by 0.60
+            "exceeds": None if first else DEPTHS[-1],
             "sens_range": [min(first["sens"]), max(first["sens"])] if first else None,
             "false_flag": max(max(t["false_flag"]) for t in table),
             "inputs": {
@@ -290,50 +301,70 @@ def detectable_depth(
     rc_terr_mm: float,
     *,
     sig_m: float = 0.0,
-    seed: int = DEFAULT_SEED,
+    seed: int,
     median_mm: float = LIMA_MEDIAN_MM,
 ) -> dict:
     """JA40's detectable depth: the smallest relative thinning (0.10-0.60, 0.05 steps, so rounded
     up to 0.05) whose mean territory sensitivity over 4 populations of 2000 is >= 0.80.
 
-    Returns ``depth`` (None if 0.60 is not enough), ``sens_range`` (the replicates' min and max at
-    that depth), ``false_flag`` (the largest share of infarct-free hearts with a shown flag over
-    every depth and replicate), the inputs, the design and the per-depth table.
+    Returns ``depth`` (None if 0.60 is not enough; ``exceeds`` then names 0.60),
+    ``sens_range`` (the replicates' min and max at that depth), ``false_flag`` (the largest
+    share of infarct-free hearts with a shown flag over every depth and replicate), the inputs,
+    the design and the per-depth table.
 
     ``cv_n`` is the plain SD of thickness / shape; ``shape`` the 16 segment ratios;
     ``rc_terr_mm`` the F1 floor; ``sig_m`` the error to add (0 when ``cv_n`` was measured on the
-    borders of the model that fills the table, JA40); ``median_mm`` the population's median wall."""
+    borders of the model that fills the table, JA40); ``seed`` the first seed (``E7_SEED``
+    reproduces E7); ``median_mm`` the population's median wall, which the F1 floor (in mm) depends
+    on (Lima's measured 9.668 mm by default; E7 used it)."""
     return detectable_depths(
         cv_n, shape, [rc_terr_mm], sig_m=sig_m, seed=seed, median_mm=median_mm
     )[float(rc_terr_mm)]
 
 
-def page_line(result: dict | float | None) -> str:
-    """The page's thinning sentence (Hotel E7, adopted by JA40), with the depth filled in.
+_SUBJECT = {
+    "thinning": (
+        "Thinning",
+        "its wall is thinner than the patient's other walls",
+        "a territory thinned by",
+        "Thinner changes are usually not flagged.",
+    ),
+    "hypoattenuation": (
+        "Hypoattenuation",
+        "its subendocardial attenuation is lower than the patient's other walls",
+        "a territory with a relative subendocardial deficit of",
+        "Smaller changes are usually not flagged.",
+    ),
+}
+
+
+def page_line(result: dict | float | None, sign: str = "thinning") -> str:
+    """The page's sentence for a depth sign (Hotel E7, adopted by JA40), with the depth filled in.
 
     ``result`` is ``detectable_depth``'s dict, or the depth itself (None: not reached by 0.60).
-    Above 0.40 the sentence says so (JA40); no threshold is loosened."""
+    ``sign`` is ``thinning`` (Hotel's sentence) or ``hypoattenuation`` (the same sentence for
+    the relative subendocardial deficit, S7). Above 0.40 the sentence says so (JA40); no
+    threshold is loosened."""
+    name, what, how, smaller = _SUBJECT[sign]
     depth: Optional[float] = result.get("depth") if isinstance(result, dict) else result
     head = (
-        "Thinning: a territory is flagged only when its wall is thinner than the patient's other "
-        "walls by more than this population's normal variation allows."
+        f"{name}: a territory is flagged only when {what} by more than this population's "
+        "normal variation allows."
     )
-    tail = (
-        "Thinner changes are usually not flagged. This is not a sensitivity for scar, which this "
-        "table cannot measure."
-    )
+    tail = "This is not a sensitivity for scar, which this table cannot measure."
     if depth is None:
         top = int(round(100 * DEPTHS[-1]))
         mid = (
-            f"In simulation, no territory thinned by up to {top} % is flagged in >= 80 % of cases."
+            f"In simulation, no change up to {top} % is flagged in ≥ 80 % of cases; this sign is "
+            "shown as numbers only."
         )
         return f"{head} {mid} {tail}"
     pct = int(round(100 * float(depth)))
-    mid = f"In simulation, a territory thinned by >= {pct} % is flagged in >= 80 % of cases."
+    mid = f"In simulation, {how} ≥ {pct} % is flagged in ≥ 80 % of cases. {smaller}"
     line = f"{head} {mid} {tail}"
     if depth > DEPTH_WARN + 1e-9:
         line += (
-            f" This depth is above {int(round(100 * DEPTH_WARN))} %: moderate thinning is not "
-            "seen, and the flag's thresholds are not loosened to see it."
+            f" This depth is above {int(round(100 * DEPTH_WARN))} %: only large changes can be "
+            "flagged, and the flag's thresholds are not loosened to see more."
         )
     return line

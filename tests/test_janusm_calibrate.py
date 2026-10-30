@@ -20,7 +20,9 @@ E7_SCENARIO_STRIDE = 352
 @pytest.fixture(scope="module")
 def primary():
     """E7's primary rows: cv_n 0.088, Lima's shape and median, no added error, F1 swept."""
-    return C.detectable_depths(C.LIMA_CV_N, C.LIMA_SHAPE, [0.0, 0.35, 0.7, 1.0])
+    return C.detectable_depths(
+        0.088, C.LIMA_SHAPE, [0.0, 0.35, 0.7, 1.0], seed=31000, median_mm=9.668
+    )
 
 
 def test_e7_primary_rows_reproduce(primary):
@@ -44,8 +46,25 @@ def test_e7_every_replicate_reproduces(primary):
     assert [round(x, 4) for x in by0[0.25]["sens"]] == [0.7302, 0.6612, 0.7212, 0.657]
 
 
+def test_inputs_are_explicit_and_the_median_matters():
+    """The ruling's signature: ``seed`` has no default. The F1 floor is in mm, so the median
+    wall moves the result: E7's 0.35 at RC 1.0 needs Lima's measured 9.668 mm (the stub's
+    5.7 mm CT anchor gives 0.45)."""
+    with pytest.raises(TypeError):
+        C.detectable_depth(0.088, C.LIMA_SHAPE, 1.0)
+    assert C.LIMA_MEDIAN_MM == 9.668 and C.E7_SEED == 31000
+    thin = C.detectable_depth(0.088, C.LIMA_SHAPE, 1.0, seed=31000, median_mm=5.7)
+    assert thin["depth"] == 0.45
+
+
+def test_no_depth_names_the_largest_tried():
+    r = C.detectable_depth(0.30, C.LIMA_SHAPE, 1.0, seed=3, median_mm=9.668)
+    assert r["depth"] is None and r["exceeds"] == 0.60 and r["sens_range"] is None
+    assert "numbers only" in C.page_line(r)
+
+
 def test_the_single_function_matches_the_sweep(primary):
-    r = C.detectable_depth(C.LIMA_CV_N, C.LIMA_SHAPE, 1.0)
+    r = C.detectable_depth(0.088, C.LIMA_SHAPE, 1.0, seed=31000, median_mm=9.668)
     assert r["depth"] == primary[1.0]["depth"] and r["sens_range"] == primary[1.0]["sens_range"]
     assert r["false_flag"] == primary[1.0]["false_flag"]
     assert r["inputs"]["rc_terr_mm"] == 1.0 and r["inputs"]["sig_m"] == 0.0
@@ -65,8 +84,10 @@ def test_the_single_function_matches_the_sweep(primary):
 )
 def test_e7_lookup_rows_reproduce(scenario, cv_n, sig_m, expect):
     """E7's lookup on cv_n and its Lima-style sensitivity row, at E7's seeds."""
-    seed = C.DEFAULT_SEED + E7_SCENARIO_STRIDE * scenario
-    r = C.detectable_depths(cv_n, C.LIMA_SHAPE, list(expect), sig_m=sig_m, seed=seed)
+    seed = 31000 + E7_SCENARIO_STRIDE * scenario
+    r = C.detectable_depths(
+        cv_n, C.LIMA_SHAPE, list(expect), sig_m=sig_m, seed=seed, median_mm=9.668
+    )
     assert {rc: r[rc]["depth"] for rc in expect} == expect
 
 
@@ -114,22 +135,24 @@ def test_f1_deviation_reads_a_known_thinning():
 
 def test_inputs_are_checked():
     with pytest.raises(ValueError):
-        C.detectable_depth(0.088, C.LIMA_SHAPE[:15], 1.0)
+        C.detectable_depth(0.088, C.LIMA_SHAPE[:15], 1.0, seed=1)
     with pytest.raises(ValueError):
-        C.detectable_depth(-0.1, C.LIMA_SHAPE, 1.0)
+        C.detectable_depth(-0.1, C.LIMA_SHAPE, 1.0, seed=1)
     with pytest.raises(ValueError):
-        C.detectable_depth(0.088, C.LIMA_SHAPE, -1.0)
+        C.detectable_depth(0.088, C.LIMA_SHAPE, -1.0, seed=1)
     with pytest.raises(ValueError, match="no normal variation"):
-        C.detectable_depth(0.0, C.LIMA_SHAPE, 1.0)  # rule C would have no scale (0 / 0)
+        C.detectable_depth(0.0, C.LIMA_SHAPE, 1.0, seed=1)  # rule C would have no scale (0 / 0)
 
 
 def test_page_line_fills_the_depth_and_warns_above_forty_percent(primary):
     line = C.page_line(primary[1.0])
-    assert ">= 35 %" in line and "not a sensitivity for scar" in line
+    assert "≥ 35 %" in line and "not a sensitivity for scar" in line
     assert "above 40 %" not in line
     assert "above 40 %" not in C.page_line(0.40)
     assert "above 40 %" in C.page_line(0.45)
     assert "up to 60 %" in C.page_line(None)
+    hypo = C.page_line(0.30, "hypoattenuation")
+    assert hypo.startswith("Hypoattenuation:") and "≥ 30 %" in hypo
 
 
 def test_calibrate_opens_no_case():

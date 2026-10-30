@@ -186,6 +186,9 @@ def test_ps3_s7_ci_parity_test_on_the_bench_lie_phantom_heart(parity_module):
         assert r["pass"]
     s = M.summary(rows)
     assert s["n_pass"] == s["n_cases"] == 6
+    # the SimpleITK stub menu.py may need is never left behind for other tests to import
+    sitk = sys.modules.get("SimpleITK")
+    assert sitk is None or hasattr(sitk, "__file__")
 
 
 def test_ps3_s7_offline_script_guards_first(parity_module, monkeypatch, tmp_path):

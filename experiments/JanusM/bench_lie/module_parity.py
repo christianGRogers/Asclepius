@@ -43,7 +43,11 @@ KEYS = ("ev", "ed", "pg_share")
 
 
 def _menu():
-    # menu.py imports SimpleITK at the top for its registration; grade() is numpy and scipy only.
+    # menu.py imports SimpleITK at the top for its registration; grade() is numpy and scipy only. Without
+    # SimpleITK, a stub stands in for the import alone and is removed at once, so nothing else (an importorskip
+    # elsewhere in the test run) ever sees it.
+    if "menu" in sys.modules:
+        return sys.modules["menu"]
     try:
         import SimpleITK  # noqa: F401
     except ImportError:
@@ -52,6 +56,12 @@ def _menu():
         stub = types.ModuleType("SimpleITK")
         stub.__getattr__ = lambda name: None
         sys.modules["SimpleITK"] = stub
+        try:
+            import menu
+        finally:
+            if sys.modules.get("SimpleITK") is stub:
+                del sys.modules["SimpleITK"]
+        return menu
     import menu
 
     return menu

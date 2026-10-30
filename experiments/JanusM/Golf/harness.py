@@ -1,11 +1,15 @@
 """Golf R2 E7: one perturbation harness, and why the four Round 1 simulations disagree (ruling section 6 item 2).
 
 At a nominal 0.5 mm border error the Round 1 subendocardial-third Dice was 0.909 (Golf), 0.927 (India), 0.939 (Kilo)
-and 0.975 (Hotel). The four codes differ in three ways (read from the committed code):
-  - signed distance: Golf and India put the surface half-way between voxel centres (slope 1 across the border);
-    Hotel and Kilo use edt(~m) - edt(m), which jumps by two voxels across the border, so a displacement smaller than
-    about one voxel moves nothing (a dead band);
-  - grid: Golf 0.5 mm (interpolated); Kilo 0.5 mm; Hotel and India on the native 1.5 mm grid;
+and 0.975 (Hotel). The four codes differ in four ways (read from the committed code):
+  - signed distance: Golf (layers_ts.sdf) and India (lvgeom.perturb_borders) put the surface half-way between voxel
+    centres, so the distance has slope 1 across the border; Hotel (layers_from_borders.perturb) and Kilo
+    (exp_layers.sdf) use edt(~m) - edt(m), which jumps by two voxels across the border: there the field's effect is
+    halved, and a displacement under about one voxel can move nothing;
+  - where the distance is computed: Golf, India and Hotel on the analysis grid; Kilo on the native 1.5 mm grid, then
+    interpolated to 0.5 mm (so its border slope is 2 and every displacement is halved);
+  - grid: Golf 0.5 mm (masks through interpolated distances); India 0.5 mm (masks by trilinear interpolation);
+    Kilo 0.5 mm; Hotel 0.75 mm (1.5 mm upsampled x2);
   - correlation length of the smooth field: Hotel 6, Golf 8, India 8, Kilo 10 mm.
 This harness runs every combination on the same hearts, and reports the error each one actually *realises*
 (ASSD between the perturbed and the reference border), next to the nominal RMS. It also reports the Kim-bin flip
@@ -28,13 +32,14 @@ from guard_r2 import refuse  # noqa: E402
 from layers_ts import MYO, LV, depth, thirds, dice  # noqa: E402
 
 SIGMAS = [0.25, 0.5, 1.0]
-VARIANTS = [  # name, signed-distance kind, grid mm, correlation mm
-    ("half-voxel sdf, 0.5 mm, corr 8 (Golf)", "half", 0.5, 8.0),
-    ("half-voxel sdf, 0.5 mm, corr 6", "half", 0.5, 6.0),
-    ("half-voxel sdf, 0.5 mm, corr 10", "half", 0.5, 10.0),
-    ("half-voxel sdf, 1.5 mm, corr 8 (India)", "half", 1.5, 8.0),
-    ("plain sdf, 0.5 mm, corr 10 (Kilo)", "plain", 0.5, 10.0),
-    ("plain sdf, 1.5 mm, corr 6 (Hotel)", "plain", 1.5, 6.0),
+VARIANTS = [  # name, signed-distance kind, grid mm, correlation mm, mask resampling, distance computed on
+    ("Golf R1: half sdf, 0.5 mm, corr 8", "half", 0.5, 8.0, "sdf", "grid"),
+    ("India R1: half sdf, 0.5 mm trilinear masks, corr 8", "half", 0.5, 8.0, "trilinear", "grid"),
+    ("Kilo R1: plain sdf at 1.5 mm interpolated to 0.5 mm, corr 10", "plain", 0.5, 10.0, "sdf", "native"),
+    ("Hotel R1: plain sdf, 0.75 mm, corr 6", "plain", 0.75, 6.0, "sdf", "grid"),
+    ("control: half sdf, 0.5 mm, corr 6", "half", 0.5, 6.0, "sdf", "grid"),
+    ("control: half sdf, 0.5 mm, corr 10", "half", 0.5, 10.0, "sdf", "grid"),
+    ("control: plain sdf, 0.5 mm, corr 8", "plain", 0.5, 8.0, "sdf", "grid"),
 ]
 KIM_MID = [0.15, 0.35, 0.60, 0.90]
 
@@ -92,12 +97,13 @@ def run_case(args):
     sl = tuple(slice(max(a - m, 0), b + m + 1) for a, b in zip(nz.min(0), nz.max(0)))
     myo0, cav0 = myo0[sl], cav0[sl] & ~myo0[sl]
     out = {"case": case_dir.name, "rows": []}
-    for name, kind, g, corr in VARIANTS:
+    for name, kind, g, corr, resamp, where in VARIANTS:
         z = sp0 / g
         sp = np.full(3, g)
-        if g == 1.5 and np.allclose(sp0, 1.5):
-            cav, solid = cav0, myo0 | cav0
-        else:   # interpolate the reference surfaces to the grid (always with the half-voxel sdf, so the reference is fair)
+        if resamp == "trilinear":
+            cav = ndi.zoom(cav0.astype(np.float32), z, order=1) > 0.5
+            solid = ndi.zoom((myo0 | cav0).astype(np.float32), z, order=1) > 0.5
+        else:
             cav = ndi.zoom(sdf(cav0, sp0, "half").astype(np.float32), z, order=1) < 0
             solid = ndi.zoom(sdf(myo0 | cav0, sp0, "half").astype(np.float32), z, order=1) < 0
         myo = solid & ~cav
@@ -107,7 +113,11 @@ def run_case(args):
         tgt = np.zeros(19); tgt[1:] = rng.choice(KIM_MID, 18)
         scar = myo & (u < tgt[sec])
         tb = kim([scar[sec == k].sum() / max((sec == k).sum(), 1) for k in range(1, 19)])
-        s_c, s_s = sdf(cav, sp, kind), sdf(solid, sp, kind)
+        if where == "native":
+            s_c = ndi.zoom(sdf(cav0, sp0, kind).astype(np.float32), z, order=1)[tuple(slice(0, n) for n in cav.shape)]
+            s_s = ndi.zoom(sdf(myo0 | cav0, sp0, kind).astype(np.float32), z, order=1)[tuple(slice(0, n) for n in cav.shape)]
+        else:
+            s_c, s_s = sdf(cav, sp, kind), sdf(solid, sp, kind)
         for sg in SIGMAS:
             for rep in range(2):
                 cav2 = (s_c + field(cav.shape, sp, corr, sg, rng)) < 0

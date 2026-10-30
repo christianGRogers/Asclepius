@@ -1,0 +1,46 @@
+{
+ "K_sim_median_over_median_mm": 1.1093,
+ "cv_n": 0.088,
+ "rc_terr_mm": 1.0,
+ "seed": 20261030,
+ "rows": [
+  {
+   "jm0r_thickness_median_mm": 4.2,
+   "r9_as_shipped": 0.35,
+   "r9_median_passed": 0.6,
+   "r3_window_holds": true
+  },
+  {
+   "jm0r_thickness_median_mm": 5.0,
+   "r9_as_shipped": 0.35,
+   "r9_median_passed": 0.6,
+   "r3_window_holds": true
+  },
+  {
+   "jm0r_thickness_median_mm": 6.0,
+   "r9_as_shipped": 0.35,
+   "r9_median_passed": 0.45,
+   "r3_window_holds": true
+  },
+  {
+   "jm0r_thickness_median_mm": 7.0,
+   "r9_as_shipped": 0.35,
+   "r9_median_passed": 0.4,
+   "r3_window_holds": true
+  },
+  {
+   "jm0r_thickness_median_mm": 8.0,
+   "r9_as_shipped": 0.35,
+   "r9_median_passed": 0.4,
+   "r3_window_holds": true
+  },
+  {
+   "jm0r_thickness_median_mm": 9.668,
+   "r9_as_shipped": 0.35,
+   "r9_median_passed": 0.35,
+   "r3_window_holds": false
+  }
+ ],
+ "calibrate_version": "1.0.0",
+ "decide_version": "1"
+}

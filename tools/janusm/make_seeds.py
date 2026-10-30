@@ -8,8 +8,9 @@ to 2 mm and smoothed (``janusm_reads.seeds``), on the CT's grid.
 Seeds are written for the 10 blank cases too: they are never served to a reader,
 but the anchoring report compares blank reads with them.
 
-Refuses the whole run, before touching any file, if any case is a coronary hold-out
-(``janusm_reads.holdout``, the JA12 guard's adapter). Prints one aggregate JSON line
+Refuses the whole run, before touching any file, if the JA12 guard (``janusm.guard``,
+through ``janusm_reads.holdout``) refuses any case: seal cases are checked under
+``seal_scoring``, decision cases under ``decision_scoring``. Prints one aggregate JSON line
 and nothing per case; send back only that.
 
 Usage (from the repository root; see docs/JANUSM-READ-PROTOCOL.md section 5)::
@@ -82,7 +83,7 @@ def main(argv=None) -> int:
 
     sets = readset.load_freeze(args.freeze)
     cases = sets[readset.DECISION] + sets[readset.SEAL]
-    holdout.refuse(cases, what="the Janus-M seed job")  # JA12: first, before any file
+    holdout.refuse_read_cases(cases, sets, what="the Janus-M seed job")  # JA12, before any file
     cts = ct_paths(args.layout)
     missing = [c for c in cases if c not in cts]
     if missing:

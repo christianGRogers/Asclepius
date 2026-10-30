@@ -144,14 +144,16 @@ def report_from_manifest(manifest_path) -> dict:
                                   "seed": "seeds/c0001.janusm-seed.nii.gz",
                                   "reads": ["reads/c0001__a.nii.gz", "reads/c0001__b.nii.gz"]}]}
 
-    Paths are relative to the manifest. Every case goes through the hold-out guard
-    first, and the whole report is refused on any hit (JA12).
+    Paths are relative to the manifest. Every case must be a frozen Janus-M read case
+    and goes through the JA12 guard first, under its set's scoring purpose; the whole
+    report is refused on any hit.
     """
-    from . import holdout
+    from . import holdout, readset
 
     manifest_path = Path(manifest_path)
     data = json.loads(manifest_path.read_text(encoding="utf-8"))
-    holdout.refuse([c["case"] for c in data["cases"]], what="the anchoring report")
+    holdout.refuse_read_cases([c["case"] for c in data["cases"]], readset.load_freeze(),
+                              what="the anchoring report")
     base = manifest_path.parent
     rows = []
     for c in data["cases"]:

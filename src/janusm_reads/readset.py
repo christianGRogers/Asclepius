@@ -47,7 +47,7 @@ PRIORITY = {DECISION: 200, SEAL: 100}
 #: ImageCAS-X / tournament case ids: ``c0000`` .. ``c0999`` (ImageCAS id - 1).
 _CASE_ID = re.compile(r"^c\d{4}$")
 
-#: Repository-relative path of the JA6 freeze file (#140).
+#: Repository-relative path of the JA6 freeze file (#140); pinned in ``janusm.sealed_r1``.
 FREEZE_RELPATH = "configs/janusm/sealed-r1.json"
 
 
@@ -114,16 +114,18 @@ def parse_freeze(data: Mapping) -> Dict[str, List[str]]:
     return out
 
 
-def load_freeze(path) -> Dict[str, List[str]]:
-    path = Path(path)
-    if not path.is_file():
-        raise ReadSetError(
-            f"{path} does not exist. The Janus-M seal and decision set are frozen by "
-            f"the JA6 PR (#140); the read queue serves nothing before that.")
+def load_freeze(path=None) -> Dict[str, List[str]]:
+    """The frozen seal and decision lists, in freeze order, after the JA6 pin check
+    (``janusm.sealed_r1.load``: a missing or changed file is an error, never a pass)."""
+    from janusm import sealed_r1
+
+    path = Path(path) if path else sealed_r1.REPO / sealed_r1.PATH
     try:
-        data = json.loads(path.read_text(encoding="utf-8"))
-    except ValueError as exc:
-        raise ReadSetError(f"{path} is not JSON: {exc}") from exc
+        sealed_r1.load(path)
+    except sealed_r1.JanusMSealError as exc:
+        raise ReadSetError(f"{exc}. The read queue serves nothing without the JA6 freeze "
+                           "(#140).") from exc
+    data = json.loads(path.read_text(encoding="utf-8"))
     return parse_freeze(data)
 
 

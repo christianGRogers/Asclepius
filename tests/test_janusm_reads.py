@@ -110,7 +110,7 @@ def test_freeze_parsing_and_refusals():
 
 
 def test_missing_freeze_file_serves_nothing(tmp_path):
-    with pytest.raises(readset.ReadSetError, match="#140"):
+    with pytest.raises(readset.ReadSetError, match="missing"):
         readset.load_freeze(tmp_path / "sealed-r1.json")
 
 
@@ -137,27 +137,68 @@ def test_plan_serves_decision_first_two_reads_each():
 
 # ------------------------------------------------------------------- holdout
 
+A14 = json.loads((REPO / "trillium/icx4/sealed_test.json").read_text())
+POOL_SEAL = json.loads((REPO / "configs/segqueue14/sealed-pool-2026-10.json").read_text())
 
-def test_the_drawn_cases_are_clear_of_every_coronary_holdout():
+
+def test_the_committed_freeze_is_the_juliet_draw_and_passes_the_guard():
+    sets = readset.load_freeze()
     draw = juliet_draw()
-    holdout.refuse(draw["seal"] + draw["decision"], what="test")
+    assert {k: set(v) for k, v in sets.items()} == {k: set(v) for k, v in draw.items()}
+    purposes = holdout.refuse_read_cases(sets["seal"] + sets["decision"], sets, what="test")
+    assert {purposes[c] for c in sets["seal"]} == {holdout.SEAL_SCORING}
+    assert {purposes[c] for c in sets["decision"]} == {holdout.DECISION_SCORING}
 
 
-@pytest.mark.parametrize("name", ["c0002",          # A14 sealed 100
-                                  SPLITS["val"][0],  # val 80
-                                  SPLITS["test"][0],  # ImageCAS-X test
-                                  "imagecas_0003",
-                                  "TotalSegmentator-cardiac__s0655"])
-def test_holdout_refuses(name):
-    with pytest.raises(holdout.HoldoutError):
-        holdout.refuse(["c0000", name], what="test")
+def test_a_changed_freeze_file_is_refused(tmp_path):
+    draw = juliet_draw()
+    draw["decision"].reverse()
+    (tmp_path / "sealed-r1.json").write_text(json.dumps(draw))
+    with pytest.raises(readset.ReadSetError, match="pinned"):
+        readset.load_freeze(tmp_path / "sealed-r1.json")
 
 
-def test_holdout_names_the_pool_seal():
-    from segtrain import pool_seal
+def test_janusm_seal_and_decision_roles_come_from_the_guard():
+    sets = readset.load_freeze()
+    seal, decision = sets["seal"][0], sets["decision"][0]
+    holdout.refuse([seal], purpose=holdout.SEAL_SCORING)
+    holdout.refuse([decision], purpose=holdout.DECISION_SCORING)
+    for name, purpose in ((seal, holdout.ANY), (seal, holdout.DECISION_SCORING),
+                          (decision, holdout.ANY), (decision, holdout.SEAL_SCORING)):
+        with pytest.raises(holdout.HoldoutError, match="Janus-M"):
+            holdout.refuse([name], purpose=purpose)
 
-    sealed = sorted(pool_seal.load_pool_seal().volumes)[0]
-    assert "pool seal" in "; ".join(holdout.guard().reasons(sealed))
+
+@pytest.mark.parametrize("name,source,why", [
+    ("c0002", None, "A14 sealed 100"),
+    (SPLITS["val"][0], None, "val 80"),
+    (A14["open_icx_test"][0], None, "test split"),
+    ("TotalSegmentator-cardiac__s0655", None, "pool seal"),
+    (POOL_SEAL["primary"]["extension_order"][0], None, "reserve"),   # A34 reserve patient
+    ("s0356", "TotalSegmentator", "reserve"),
+    ("s0019", "TotalSegmentator", "twin"),                           # Round 1 §4 twin
+])
+def test_coronary_holdouts_are_refused_through_the_guard(name, source, why):
+    with pytest.raises(holdout.HoldoutError, match=why):
+        holdout.refuse([name], what="test", source=source)
+
+
+def test_cases_outside_the_freeze_are_refused():
+    sets = readset.load_freeze()
+    stranger = next(c for c in sorted(SPLITS["train"])
+                    if c not in sets["seal"] and c not in sets["decision"])
+    holdout.refuse([stranger])            # the guard alone would let it through
+    with pytest.raises(holdout.HoldoutError, match="not in the frozen"):
+        holdout.refuse_read_cases([stranger], sets)
+
+
+def test_no_guard_means_no_read(monkeypatch):
+    import janusm
+
+    monkeypatch.delattr(janusm, "guard", raising=False)
+    monkeypatch.setitem(sys.modules, "janusm.guard", None)   # import fails
+    with pytest.raises(holdout.HoldoutError, match="cannot be imported"):
+        holdout.refuse(["c0000"])
 
 
 # ------------------------------------------------------------------- checker
@@ -295,9 +336,10 @@ def test_anchoring_numbers_and_flag(heart):
     assert anchoring.wave_report("1", fine[:3])["seededReadsMayAcceptModel"] is None
 
 
-def test_anchoring_manifest_refuses_a_holdout(tmp_path):
+@pytest.mark.parametrize("case", ["c0002", "c0000"])   # A14 sealed; train but not frozen
+def test_anchoring_manifest_refuses_a_holdout(tmp_path, case):
     (tmp_path / "m.json").write_text(json.dumps(
-        {"wave": "1", "cases": [{"case": "c0002", "seed": "s", "reads": ["a", "b"]}]}))
+        {"wave": "1", "cases": [{"case": case, "seed": "s", "reads": ["a", "b"]}]}))
     with pytest.raises(holdout.HoldoutError):
         anchoring.report_from_manifest(tmp_path / "m.json")
 
@@ -305,17 +347,16 @@ def test_anchoring_manifest_refuses_a_holdout(tmp_path):
 # ------------------------------------------------------------- the seed job
 
 
-def test_seed_job_refuses_a_holdout_before_touching_anything(tmp_path):
+def test_seed_job_refuses_a_holdout_before_touching_anything(tmp_path, monkeypatch):
     sys.path.insert(0, str(REPO / "tools" / "janusm"))
     import make_seeds
 
     draw = juliet_draw()
     draw["decision"][0] = "c0002"   # an A14 sealed case
-    freeze = tmp_path / "sealed-r1.json"
-    freeze.write_text(json.dumps(draw))
+    monkeypatch.setattr(make_seeds.readset, "load_freeze", lambda path=None: draw)
     out = tmp_path / "seeds"
-    with pytest.raises(holdout.HoldoutError):
-        make_seeds.main(["--freeze", str(freeze), "--layout", str(tmp_path / "none.json"),
+    with pytest.raises(holdout.HoldoutError, match="A14"):
+        make_seeds.main(["--freeze", "unused", "--layout", str(tmp_path / "none.json"),
                          "--totalseg-dir", str(tmp_path / "hc"), "--out", str(out)])
     assert not out.exists() and not (tmp_path / "hc").exists()
 
@@ -329,7 +370,7 @@ STDLIB_ONLY = ("__init__", "labels", "protocol", "readset", "holdout")
 def test_client_side_modules_are_stdlib_only_and_py39(module):
     path = REPO / "src" / "janusm_reads" / f"{module}.py"
     tree = ast.parse(path.read_text(), feature_version=(3, 9))
-    allowed = set(sys.stdlib_module_names) | {"janusm_reads", "segtrain"}
+    allowed = set(sys.stdlib_module_names) | {"janusm_reads", "janusm"}
     for node in ast.walk(tree):
         if isinstance(node, ast.Import):
             roots = [a.name.split(".")[0] for a in node.names]
@@ -339,5 +380,3 @@ def test_client_side_modules_are_stdlib_only_and_py39(module):
             continue
         for root in roots:
             assert root in allowed, f"{module}.py imports {root}"
-    if module != "holdout":
-        assert "segtrain" not in path.read_text()

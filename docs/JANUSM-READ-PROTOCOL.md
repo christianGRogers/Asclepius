@@ -122,12 +122,12 @@ report (§7); they are never served.
 
 ### 5.3 The seed job on Fir (the lead runs it; JA10)
 
-Waits on the JA6 freeze (`configs/janusm/sealed-r1.json`, #140) being merged.
-About 2 GPU-h (JA10). Nobody but the lead runs it.
+The JA6 freeze (`configs/janusm/sealed-r1.json`, #140) is on `dev` and is
+sha256-checked on every load. About 2 GPU-h (JA10). Nobody but the lead runs it.
 
 ```sh
 module load StdEnv/2023 python/3.11.5
-cd $SCRATCH/asclepius/repo && git pull --ff-only      # a dev commit that has configs/janusm/sealed-r1.json
+cd $SCRATCH/asclepius/repo && git fetch origin && git checkout dev && git pull --ff-only   # dev has configs/janusm/sealed-r1.json
 source $HOME/icx4-tseg-venv/bin/activate
 export TOTALSEG_HOME_DIR=$SCRATCH/seedcal/totalseg     # Job S's folder, where the licence is set
 # only if TotalSegmentator asks for a licence:
@@ -189,12 +189,14 @@ anchored. **[Round 2] Anchoring thresholds**: this reading of JA7 and its thresh
 
 ## 8. Hold-outs (JA12)
 
-Every Janus-M step that names cases (the queue, the seed job, the anchoring
-report) calls `janusm_reads.holdout.refuse` first and stops the whole step on any
-hit. Until the JA12 guard (#138) merges, that is an interim check: the A14 sealed
-100 and the ImageCAS-X test split (`trillium/icx4/sealed_test.json`), anything
-outside the ImageCAS-X train list (so val 80 and test 160), and the coronary pool
-seal by patient (`segtrain.pool_seal`). When JA12 merges, the adapter calls it.
+Every Janus-M read step that names cases (the queue, the seed job, the anchoring
+report) calls the JA12 guard (`janusm.guard.refuse`, through
+`janusm_reads.holdout`) first and stops the whole step on any hit. Seal cases are
+checked under the guard's `seal_scoring` purpose and decision cases under
+`decision_scoring`. Reading the reference is part of scoring, and any other use of
+a seal or decision case is refused. A case outside the frozen seal and decision
+lists is refused before the guard is asked. If the guard cannot be imported or
+loaded, the step is refused (it fails closed).
 
 ## 9. Placeholders for Round 2
 

@@ -1,124 +1,85 @@
-"""The one place the Janus-M read queue asks "is this a coronary hold-out?".
+"""The Janus-M read tools' only door to the JA12 guard (``janusm.guard``, #138).
 
-JA12 makes a single Janus-M guard (issue #138) the thing every Janus-M fetch,
-loader and launcher calls first. Until it merges, this module is a conservative
-interim check, and the read queue, its populate tool and the seed launcher call
-:func:`refuse` and nothing else -- so wiring the JA12 guard in is a change here only.
+Every step here that names cases (the read queue, its populate tool, the seed job,
+the anchoring report) calls :func:`refuse` or :func:`refuse_read_cases` first, and
+the whole step stops on any hit. This module adds no rule of its own: what is
+refused is the guard's (pool seal, reserve, D35 draws, A14 sealed 100, ImageCAS-X
+test and val, PLOS-Peng2016, public copies, TotalSegmentator twins, and the Janus-M
+seal and decision roles).
 
-What the interim check refuses, for ImageCAS-X ids (``cNNNN``):
+It **fails closed**: if the guard cannot be imported or loaded, every call refuses.
 
-* the A14 sealed 100, the open ImageCAS-X test cases and the development cases
-  excluded from it (``trillium/icx4/sealed_test.json``);
-* anything not in the ImageCAS-X **train** list of the committed ``splits.json``
-  (so val 80 and test 160 are refused). Janus-M's seal and decision set are drawn
-  from train only (JA5, JA6);
-
-and for any other name, the coronary pool seal and its patients
-(``segtrain.pool_seal``, which refuses by patient). A name is refused, never
-silently dropped: the whole call fails, as JA12 asks.
+Purposes. Reading the Janus-M reference is part of scoring it, so a seal case is
+checked with the guard's ``seal_scoring`` purpose and a decision case with
+``decision_scoring`` (:func:`purpose_for`). Any other purpose refuses both.
 
 Stdlib only.
 """
 
 from __future__ import annotations
 
-import json
-import os
-import re
-from pathlib import Path
-from typing import Iterable, List, Optional, Set
+from typing import Dict, Iterable, List, Mapping, Optional
 
-#: Repository-relative inputs. Read, never written.
-SEALED_TEST_RELPATH = "trillium/icx4/sealed_test.json"
-SPLITS_RELPATH = "trillium-results/icx14/results/splits.json"
-#: Environment variable naming the repository root, for an installed package.
-ROOT_ENV = "JANUSM_REPO_ROOT"
+ANY, SEAL_SCORING, DECISION_SCORING = "any", "seal_scoring", "decision_scoring"
 
-_CASE_ID = re.compile(r"^c\d{4}$")
+#: Read set (``janusm_reads.readset``) -> the guard purpose its reads are checked under.
+PURPOSE_FOR_SET = {"seal": SEAL_SCORING, "decision": DECISION_SCORING}
 
 
 class HoldoutError(RuntimeError):
-    """A coronary hold-out was asked for. The whole step is refused."""
+    """The guard refused (or could not run). The whole step is refused."""
 
 
-def repo_root() -> Path:
-    env = os.environ.get(ROOT_ENV)
-    if env:
-        return Path(env)
-    here = Path(__file__).resolve()
-    for parent in here.parents:
-        if (parent / SEALED_TEST_RELPATH).is_file():
-            return parent
-    raise HoldoutError(
-        f"cannot find {SEALED_TEST_RELPATH}; set {ROOT_ENV} to an Asclepius checkout")
+def _guard():
+    try:
+        from janusm import guard
+    except Exception as exc:  # noqa: BLE001 - fail closed on any import problem
+        raise HoldoutError(
+            f"the JA12 guard (janusm.guard) cannot be imported ({exc}); refusing") from exc
+    return guard
 
 
-def _load(root: Path, rel: str):
-    path = root / rel
-    if not path.is_file():
-        raise HoldoutError(f"{path} is missing; refusing rather than guessing")
-    return json.loads(path.read_text(encoding="utf-8"))
+def purpose_for(read_set: str) -> str:
+    try:
+        return PURPOSE_FOR_SET[read_set]
+    except KeyError:
+        raise HoldoutError(f"{read_set!r} is not a Janus-M read set") from None
 
 
-class InterimGuard:
-    """The interim check, with its inputs loaded once."""
-
-    def __init__(self, root: Optional[Path] = None):
-        root = Path(root) if root else repo_root()
-        sealed = _load(root, SEALED_TEST_RELPATH)
-        self.sealed: Set[str] = set()
-        for key in ("sealed_icx_test", "open_icx_test", "excluded_dev_cases_in_test",
-                    "sealed_quality0", "excluded_dev_cases_in_quality0"):
-            value = sealed.get(key) or []
-            if isinstance(value, dict):
-                value = value.get("cases") or []
-            self.sealed.update(str(v) for v in value)
-        splits = _load(root, SPLITS_RELPATH)
-        self.train: Set[str] = set(splits["train"])
-        self.not_train: Set[str] = set(splits.get("val", [])) | set(splits.get("test", []))
-
-    def reasons(self, name: str) -> List[str]:
-        name = str(name).strip()
-        out = []
-        if _CASE_ID.match(name):
-            if name in self.sealed:
-                out.append("A14 sealed / ImageCAS-X test (sealed_test.json)")
-            if name in self.not_train:
-                out.append("ImageCAS-X val or test split")
-            elif name not in self.train:
-                out.append("not in the ImageCAS-X train list")
-            return out
-        from segtrain import pool_seal
-
-        if pool_seal.load_pool_seal().is_sealed(name):
-            out.append("coronary pool seal (D27/D32)")
-        else:
-            # Not an ImageCAS-X id and not sealed: still not a Janus-M read case.
-            out.append("not an ImageCAS-X case id")
-        return out
+def refuse(names: Iterable[str], what: str = "this Janus-M read step",
+           purpose: str = ANY, source: Optional[str] = None) -> List[str]:
+    """``names`` unchanged if the guard clears them all; :class:`HoldoutError` otherwise."""
+    guard = _guard()
+    try:
+        return guard.refuse(list(names), what=what, source=source, purpose=purpose)
+    except guard.HeldOutError as exc:
+        raise HoldoutError(str(exc)) from exc
+    except Exception as exc:  # noqa: BLE001 - a guard that cannot load refuses
+        raise HoldoutError(f"the JA12 guard could not run ({exc}); refusing {what}") from exc
 
 
-_GUARD: Optional[InterimGuard] = None
+def refuse_read_cases(cases: Iterable[str], read_sets: Mapping[str, Iterable[str]],
+                      what: str = "this Janus-M read step") -> Dict[str, str]:
+    """Check Janus-M read cases, each under its own set's purpose.
 
-
-def guard() -> InterimGuard:
-    global _GUARD
-    if _GUARD is None:
-        _GUARD = InterimGuard()
-    return _GUARD
-
-
-def refuse(names: Iterable[str], what: str = "this step") -> None:
-    """Raise :class:`HoldoutError` if any name is a coronary hold-out (or not a
-    Janus-M read case at all). Returns None when every name is clear."""
-    g = guard()
-    hits = []
-    for name in names:
-        why = g.reasons(name)
-        if why:
-            hits.append(f"{name}: {'; '.join(why)}")
-    if hits:
-        shown = "\n  ".join(hits[:10])
-        more = f"\n  ... and {len(hits) - 10} more" if len(hits) > 10 else ""
-        raise HoldoutError(f"{what} refused: {len(hits)} coronary hold-out(s) or "
-                           f"non-Janus-M case(s):\n  {shown}{more}")
+    ``read_sets`` is the frozen ``{'seal': [...], 'decision': [...]}``. A case in
+    neither is refused outright. Returns ``{case: purpose}``.
+    """
+    member = {}
+    for name, listed in read_sets.items():
+        for c in listed:
+            member[c] = name
+    out, strangers, by_purpose = {}, [], {}
+    for c in cases:
+        if c not in member:
+            strangers.append(c)
+            continue
+        p = purpose_for(member[c])
+        out[c] = p
+        by_purpose.setdefault(p, []).append(c)
+    if strangers:
+        raise HoldoutError(f"{what} refused: {len(strangers)} case(s) are not in the frozen "
+                           f"Janus-M seal or decision set: {strangers[:10]}")
+    for p, names in sorted(by_purpose.items()):
+        refuse(names, what=what, purpose=p)
+    return out

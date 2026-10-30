@@ -16,3 +16,6 @@ Every Janus-M plan version ever submitted, and what happened to it.
 | 1 | [[Hotel v1]] | Hotel | Lost; its seal (CCA200-HF, PLOS-Peng) not usable. Half-maximum border rule and the epicardial-bias finding adopted (JA7); s0655 disclosed (ruling §4) |
 | 1 | [[India v1]] | India | Lost; pool-after-#116 universe rejected. 0.5 mm with mirroring off and the v1/v2 s-number check adopted (JA9, JA12) |
 | 1 | [[Kilo v1]] | Kilo | Lost; Taiwan-20 seal not adopted. Allowed-list census as the external stratum, STA as a reported metric, P0 kept out of territories adopted (JA4, JA5, JA8) |
+| 2 (`jm/rest-ccta`) | [[Hotel v2]] | Hotel | **Path plan**, with JA15–JA24 ([[Janus-M Round 2 rest-ccta]]); tied with India on score, base on the tie-break (the deliverable and its limits). No fork |
+| 2 (`jm/rest-ccta`) | [[India v2]] | India | Lost on the tie-break. Error model U, E8 re-powering code, the adaptive rest-TPR guard band, the κ ≥ 0.6 reliability gate and the septal-arc column adopted (JA15–JA18, JA20); the E8 margin-loosening clause rejected |
+| 2 (`jm/rest-ccta`) | [[Lima v1]] | Lima | Lost. Per-territory patient-relative thinning (rule C), the reader's CAD-RADS column, the 0.3 mm bias guard (conditional) and the fat-cut procedure adopted (JA16, JA18, JA19); geodesic-primary rule and its Kurata/Ide citation rejected (JA20, JA24) |

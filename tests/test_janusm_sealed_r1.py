@@ -122,3 +122,27 @@ def test_no_drawn_case_is_refused_by_the_pool_seal_guard():
 def test_skipped_ranks_are_decision_or_jm0_cases():
     assert len(D["seal_extension_skipped"]) == 7
     assert set(D["seal_extension_skipped"]) <= set(D["decision"]) | set(D["jm0"])
+
+
+# ------------------------------------------------------------------ wired into the JA12 guard
+def test_the_guard_pins_and_refuses_the_frozen_file():
+    from janusm import guard as G
+
+    assert G.JANUSM_SEAL_RELPATH == sealed_r1.PATH
+    assert G.JANUSM_SEAL_SHA256 == sealed_r1.SEALED_R1_SHA256
+    g = G.load_guard()
+    src = "ImageCAS-X"
+    seal, ext, dec, jm0 = (D[k][0] for k in ("seal", "seal_extension", "decision", "jm0"))
+    for case in D["seal"] + D["seal_extension"]:
+        assert "seal case" in g.reason(case, src)
+        assert "seal case" in g.reason(case, src, purpose=G.DECISION_SCORING)
+        assert g.reason(case, src, purpose=G.SEAL_SCORING) is None
+    for case in D["decision"]:
+        assert "decision case" in g.reason(case, src)
+        assert "decision case" in g.reason(case, src, purpose=G.SEAL_SCORING)
+        assert g.reason(case, src, purpose=G.DECISION_SCORING) is None
+    assert not [c for c in D["jm0"] if g.reason(c, src)]     # JM-0 is not held out
+    with pytest.raises(G.HeldOutError, match="1 of 2"):
+        G.refuse([jm0, seal], what="a Janus-M training run", source=src)
+    assert G.refuse([seal, ext], source=src, purpose=G.SEAL_SCORING) == [seal, ext]
+    assert G.refuse([dec], source=src, purpose=G.DECISION_SCORING) == [dec]

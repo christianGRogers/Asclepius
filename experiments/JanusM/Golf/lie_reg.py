@@ -39,6 +39,8 @@ import numpy as np
 import SimpleITK as sitk
 from scipy import ndimage as ndi
 
+sitk.ProcessObject_SetGlobalDefaultNumberOfThreads(1)   # one thread per worker; parallelism is across cases
+
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 from guard_r2 import refuse  # noqa: E402
@@ -307,8 +309,13 @@ if __name__ == "__main__":
     if a.cases:
         ids = ids[:a.cases]
     jobs = [(a.ts_dir / i, n) for n, i in enumerate(ids)]
+    part = HERE / "lie_reg_partial.json"
+    res = json.loads(part.read_text()) if part.exists() else {}
+    jobs = [j for j in jobs if j[0].name not in res]
     with Pool(a.np) as p:
-        res = dict(p.map(run_case, jobs, chunksize=1))
+        for name, o in p.imap_unordered(run_case, jobs, chunksize=1):
+            res[name] = o
+            part.write_text(json.dumps(res) + "\n")       # resumable: a finished case is never recomputed
     s = summarise(res)
     (HERE / "lie_reg.json").write_text(json.dumps({"summary": s, "cases": res}, indent=1) + "\n")
     for r in s:

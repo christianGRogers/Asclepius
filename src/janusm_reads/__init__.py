@@ -16,10 +16,19 @@ Two halves, kept apart like ``src/segqueue``:
 """
 
 #: The Janus-M read protocol version. Its own number line, starting at 1: it is
-#: not SegQueue's or SegQueue14's, and is never compared with them.
-PROTOCOL_VERSION = 1
+#: not SegQueue's or SegQueue14's, and is never compared with them. 2 (JA67): the
+#: read form allows per-vessel grades only, so a version-1 client is refused at
+#: ``next``, before it can claim and draw a case.
+PROTOCOL_VERSION = 2
 
 #: The name a client and server use for this protocol in headers and refusals.
 PROTOCOL_NAME = "janusm-read"
 
-__all__ = ["PROTOCOL_VERSION", "PROTOCOL_NAME"]
+#: The **border protocol** a read was drawn and checked under: the reading rules of
+#: ``docs/JANUSM-READ-PROTOCOL.md`` ("protocol v1 (JA21, JA46)"). Not the wire
+#: protocol above: the wire can stay at 1 while the reading rules change, and every
+#: read record, check report and export carries this number as ``border_protocol``
+#: so such a change is visible in the data.
+BORDER_PROTOCOL = 1
+
+__all__ = ["PROTOCOL_VERSION", "PROTOCOL_NAME", "BORDER_PROTOCOL"]

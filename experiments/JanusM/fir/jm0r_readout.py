@@ -35,14 +35,19 @@ native grid:
 * **India:** equal-thickness vs Laplace thirds agreement, the septal arc, and territory
   discordance with the AHA default map.
 
-Sign conventions (mm). Each border has an axis s pointing into the labelled myocardium (endo:
-negative in the LV pool; epi: negative in the fat), with the label's border at s = 0. A half-maximum
-crossing at s = +x means the image edge lies x mm inside the labelled wall, i.e. the label puts the
-border x mm too far toward the blood (endo) or the fat (epi). JA17's ±0.25 mm is symmetric.
+Sign convention (mm; JA44, canonical, since ``SCRIPT_VERSION`` 2). For every half-maximum offset:
+**+ = the region bounded by that border extends beyond the image half-maximum.** That region is the
+LV pool for the endocardium, and pool + myocardium for the epicardium. So a label whose LV pool is
+grown 1 mm into the wall reads endocardium +1 mm, and a label whose epicardium sits 1 mm out in
+the fat reads epicardium +1 mm. (Internally each profile axis s points into the labelled
+myocardium, with the label's border at s = 0; the epicardial crossing is the canonical offset
+as it stands, and the endocardial one is negated. Version 1 reported the endocardium the other way round: JA44, JA49.)
+JA17's ±0.25 mm is symmetric, so no gate changes.
 
 Output (JA23: aggregates only): ``OUT/summary.json``, which is also the only thing printed on
 stdout, holds quantiles, counts, shares and one pooled histogram: no case id, no per-case value, no
-image, no path. ``OUT/cases.jsonl`` holds the per-case rows and **stays on Fir**. Progress lines
+image, no path. Its flat ``decision_inputs`` block (JA44) is what ``jm0r_decide.py`` reads
+(JA43). ``OUT/cases.jsonl`` holds the per-case rows and **stays on Fir**. Progress lines
 on stderr carry a counter only.
 
 Commands for the lead (Fir, account def-aso22; after Job JM-0 has finished; CPU only, 0 GPU-h).
@@ -90,7 +95,7 @@ for _p in (REPO / "src", REPO / "trillium/icx4/lib"):
 
 from janusm import geometry as G  # noqa: E402
 
-SCRIPT_VERSION = "1"
+SCRIPT_VERSION = "2"                  # 2: canonical endocardial sign, decision_inputs (JA44)
 ICX_SOURCE = "ImageCAS-X"
 HC_FALLBACK = {1: "heart_myocardium", 2: "heart_atrium_left", 3: "heart_ventricle_left",
                4: "heart_atrium_right", 5: "heart_ventricle_right", 6: "aorta",
@@ -288,61 +293,8 @@ def tpr_segments(ct, myo, dep, seg, guard_mm):
 
 
 # --------------------------------------------------------------------------------------- sectors
-def _theta(labels, aff, aha):
-    """The JA3 angle of every myocardial voxel (0 at the anterior insertion, + into the septum),
-    recomputed exactly as ``janusm.geometry.aha17`` does with its defaults."""
-    myo, lv, rv, la = (labels == c for c in (G.MYO, G.LV, G.RV, G.LA))
-    face = ndi.generate_binary_structure(3, 1)
-    world = lambda ijk: ijk @ aff[:3, :3].T + aff[:3, 3]  # noqa: E731
-    base = world(np.argwhere(lv & ndi.binary_dilation(la, face))).mean(0)
-    pidx = np.argwhere(myo)
-    p = world(pidx)
-    dist = np.linalg.norm(p - base, axis=1)
-    apex = p[dist >= dist.max() - 3.0].mean(0)
-    axis = (apex - base) / np.linalg.norm(apex - base)
-    s = (p - base) @ axis
-    cav = float(((world(np.argwhere(lv)) - base) @ axis).max())
-    helper = np.eye(3)[int(np.argmin(np.abs(axis)))]
-    e1 = helper - (helper @ axis) * axis
-    e1 /= np.linalg.norm(e1)
-    e2 = np.cross(axis, e1)
-    rel = p - base
-    ang = np.degrees(np.arctan2(rel @ e2, rel @ e1)) % 360.0
-    contact = ndi.binary_dilation(rv, face)[myo] & (s >= 0) & (s <= 2 / 3 * cav)
-    h = np.sort(ang[contact])
-    gaps = np.diff(np.concatenate([h, h[:1] + 360.0]))
-    g = int(np.argmax(gaps))
-    start, end = float(h[(g + 1) % len(h)]), float(h[g])
-
-    def direction(deg):
-        r = np.radians(deg)
-        return np.cos(r) * e1 + np.sin(r) * e2
-
-    ant = np.array([0.0, 1.0, 1.0]) / np.sqrt(2)
-    ref, sign = (start, 1.0) if direction(start) @ ant >= direction(end) @ ant else (end, -1.0)
-    return pidx, (sign * (ang - ref)) % 360.0
-
-
-def arc_segments(labels, aff, aha):
-    """Septal sectors proportional to the measured septal arc in the basal and mid rings (JA20:
-    the two septal segments of each ring); the apical ring and 17 stay as JA3 cuts them. Returns
-    (segments, agreement of the recomputed fixed sectors with JA3's), or (None, None)."""
-    pidx, theta = _theta(labels, aff, aha)
-    fixed = aha.segments[tuple(pidx.T)]
-    six = np.array([2, 3, 4, 5, 6, 1])
-    ring = np.isin(fixed, (1, 2, 3, 4, 5, 6)) | np.isin(fixed, (7, 8, 9, 10, 11, 12))
-    if not ring.any():
-        return None, None
-    recomputed = six[(theta // 60).astype(int) % 6] + np.where(fixed > 6, 6, 0)
-    agree = float(np.mean(recomputed[ring] == fixed[ring]))
-    arc = float(np.clip(aha.septal_arc_deg, 60.0, 240.0))
-    rest = (360.0 - arc) / 4
-    edges = [arc / 2, arc, arc + rest, arc + 2 * rest, arc + 3 * rest]
-    k = np.searchsorted(edges, theta, side="right")
-    new = six[np.clip(k, 0, 5)] + np.where(fixed > 6, 6, 0)
-    seg = aha.segments.copy()
-    seg[tuple(pidx[ring].T)] = new[ring]
-    return seg, agree
+#: JA69 (a): one implementation, in ``janusm.geometry``; JM-0R imports it.
+arc_segments = G.arc_segments
 
 
 _STD_CODE = np.zeros(18, np.uint8)
@@ -420,7 +372,9 @@ def measure(labels, ct, affine, cor=None, aorta=None, other=None, seed=0) -> dic
     sd_endo = np.where(lv, -d_lv_in, np.where(myo, dep.d_endo, np.nan))
     sd_epi = np.where(myo & ~near_other, dep.d_epi,
                       np.where(~solid & ~near_other & (d_out < 6.0), -d_out, np.nan))
-    r["endo_halfmax_mm"], r["endo_10_90_mm"] = _edge(_profile(ct, sd_endo), blood, myo_core)
+    # Canonical sign (JA44): the endocardial crossing is negated, the epicardial one is not.
+    endo_half, r["endo_10_90_mm"] = _edge(_profile(ct, sd_endo), blood, myo_core)
+    r["endo_halfmax_mm"] = None if endo_half is None else -endo_half
     r["epi_halfmax_mm"], r["epi_10_90_mm"] = _edge(_profile(ct, sd_epi), fat, myo_core)
     e = r["endo_10_90_mm"]
     fwhm = None if e is None else e / EDGE_TO_FWHM
@@ -638,8 +592,11 @@ def aggregate(rows) -> dict:
         "share_mass_changing_segment_case": q([r["arc_changed_ml"] / r["seg_ml"] for r in arc]),
         "share_mass_changing_aha_territory_pooled": _ratio(
             sum(r["arc_terr_changed_ml"] for r in arc), seg_ml)}
+    # JA69 (R4-S3): the pooled share is reported only. R7 (jm0r_decide) keeps or drops the
+    # septal-arc column on the **case median** (``decision_inputs.septal_arc_mass_changed_median``);
+    # where the two disagree, the case median decides.
     sh = lim["arc_sectors"]["share_mass_changing_segment_pooled"]
-    lim["ja20_septal_arc_column_kept"] = None if sh is None else sh >= 0.10
+    lim["ja20_septal_arc_column_kept_pooled_reported"] = None if sh is None else sh >= 0.10
     t = [r for r in fr if "terr_n_segments" in r]
     n_eu = sum(r["terr_n_segments"] for r in t)
     n_ge = sum(r["terr_n_segments_geodesic"] for r in t)
@@ -667,6 +624,44 @@ def aggregate(rows) -> dict:
                 sum(r.get("terr_discordant_euclid_arc", 0) for r in t), n_ar),
             "patients_with_any_discordant_euclid": _share(
                 [r["terr_discordant_euclid"] > 0 for r in t])}}
+
+    # JA44: the one flat block the decision script reads (JA43). Aggregates only; a quantity that
+    # cannot be measured is None, never a default.
+    p50 = lambda d: d.get("p50") if d else None  # noqa: E731
+    logres = np.log([x for x in resid if x > 0]) if resid else np.zeros(0)
+    s["decision_inputs"] = {
+        "n_cases": len(rows),
+        "n_usable": len(ok),
+        "aha_frame_fail_share": _ratio(sum(r.get("frame") != "ok" for r in ok), len(ok)),
+        "aha_orientation_fail_share": _ratio(
+            sum("orientation check failed" in r.get("aha_flags", ()) for r in fr), len(fr)),
+        "thickness_median_mm": p50(lim["median_thickness_mm"]),
+        "halves_segment_share": lim["share_segments_halves"],
+        "endo_halfmax_offset_mm_median": p50(hot["endo_halfmax_mm"]),
+        "epi_halfmax_offset_mm_median": p50(hot["epi_halfmax_mm"]),
+        "endo_edge_10_90_mm_median": p50(hot["endo_10_90_mm"]),
+        "tpr_guard1_freewall_median": p50(tpr["1"]["free_wall_segments"]),
+        "tpr_guard_adaptive_freewall_median": p50(tpr["adaptive"]["free_wall_segments"]),
+        "tpr_guard_adaptive_freewall_patient_median": p50(
+            tpr["adaptive"]["patient_median_free_wall"]),
+        "tpr_guard_adaptive_share_below_0p99": tpr["adaptive"]["share_free_wall_below_0p99"],
+        "fat_grid": ({f"{c},{v}": grid[f"c{c}_V{v}"]["share"] for c in FAT_CUTS for v in FAT_VOLS}
+                     if all(grid[f"c{c}_V{v}"].get("n") for c in FAT_CUTS for v in FAT_VOLS)
+                     else None),
+        "fat_patient_rule_share": lim["fat_hotel_candidate_share_hearts"].get("share"),
+        "septal_arc_mass_changed_median": p50(
+            lim["arc_sectors"]["share_mass_changing_segment_case"]),
+        "geodesic_segments_changed_share": ch,
+        "et_laplace_third_agreement_median": p50(s["india"]["thirds_agree_et_laplace"]),
+        "cv_n": lim["cv_n_shape_corrected_sd"],
+        # India's statistic (JA40: reported beside cv_n, never used): 1.4826 x MAD of
+        # log(relative thickness / segment shape), on the same residuals as cv_n.
+        "cv_n_robust_log": (round(float(1.4826 * np.median(np.abs(logres - np.median(logres)))),
+                                  4) if logres.size else None),
+        "segment_shape": ([round(shape[k], 4) for k in range(1, 17)]
+                          if all(k in shape for k in range(1, 17)) else None),
+        "rel_subendo_hu_sd": lim["rel_subendo_hu_sd"],
+        "script_version": SCRIPT_VERSION}
     return s
 
 

@@ -1,7 +1,7 @@
 """JanusMRead -- read one Janus-M case's borders in 3D Slicer and send the read back.
 
 Shown in Slicer as **Janus-M Read**. It talks only to the Janus-M read queue
-(``/api/v1/janusm``, protocol ``janusm-read`` 1; ``docs/JANUSM-READ-PROTOCOL.md``),
+(``/api/v1/janusm``, protocol ``janusm-read`` 2; ``docs/JANUSM-READ-PROTOCOL.md``),
 through ``janusm_reads.client``. It is not SegQueue14: its own module name, library
 (``JanusMReadLib``), settings (``JanusMRead/...``), cache (``~/.janusm-read``),
 archive (``JanusMRead-<v>-Slicer-<x.y>.zip``) and release tag (``janusm-read-v<v>``).
@@ -12,19 +12,29 @@ What a reader does:
 * **Get next case** takes a case, downloads its CT (checked against the case
   checksum) and, unless the case is read from blank, its seed, loaded into the four
   JA1 segments by label value. A blank case starts with the four segments empty.
-* The reader draws the four classes under the half-maximum rule. The
-  **Half-maximum** section measures the plateaus (from an ROI the reader places, or
-  from the current segments, which start as the seed) and sets the window level to
-  a border's threshold.
-* **Submit** refuses a read whose values are outside 0-4, whose classes overlap or
-  with an empty class, before anything is uploaded. The server's automatic check is
-  the authority; a read it returns comes back here with the reasons.
+* The reader draws the four classes under border protocol v1 (JA21, JA46). A
+  seeded case opens with its plateaus measured from the seed and on the **border
+  window** of the endocardium: level at the half-maximum, width 1.5 x the gap
+  between the plateaus. A blank case opens on 800 / 300 until the reader measures
+  the plateaus from ROIs. The reader may switch borders, or to 800 / 300.
+* The **read form** (JA46 (d), JA67): the CAD-RADS 2.0 grade of each main coronary's
+  worst lesion -- each row offers only its own grades (LM: 0, 1, 2, 4B, 5, N; LAD,
+  LCx, RCA: 0, 1, 2, 3, 4A, 5, N) -- and optionally its point. It goes to the server
+  with the read and is never shown to another reader. It is kept on this computer
+  with the draft, so a case reopened (a returned read, or after closing Slicer) comes
+  back with its form, and its reading time keeps counting from where it stopped.
+* **Submit** refuses a read whose values are outside 0-4, whose classes overlap,
+  with an empty class or an incomplete read form, before anything is uploaded. The
+  server's automatic check is the authority. A read it returns comes back here with
+  the reasons and the half-maximum profile plot; a read it returns once and fails
+  again is accepted and flagged.
 
 The reader is told only whether the case has a seed. Nothing in this module asks
 for, or could show, the case's read set, whether it is scored, or the other read:
 the read queue never sends them to a reader.
 """
 
+import json
 import os
 import shutil
 import sys
@@ -42,7 +52,7 @@ from slicer.ScriptedLoadableModule import (
     ScriptedLoadableModuleWidget,
 )
 
-__version__ = "0.1.0"
+__version__ = "0.3.0"
 
 # The shared package, found two ways:
 #   checkout   <repo>/slicer/JanusMRead/JanusMRead.py  with  <repo>/src/janusm_reads
@@ -70,13 +80,18 @@ CLIENT_NAME = "JanusMRead-" + __version__
 _SETTING_SERVER = "JanusMRead/serverUrl"
 _SETTING_CACHE = "JanusMRead/cacheRoot"
 
-#: The window to read a CT in when no border is being drawn.
+#: The fixed window: available, never the default (protocol v1, section 3).
 CT_WINDOW = 800
 CT_LEVEL = 300
+#: Markups point lists holding the read form's lesion points, one per vessel.
+LESION_NODE_PREFIX = "Janus-M lesion "
 
 CT_STEM = "ct"
 SEED_FILE = "seed.nii.gz"
 DRAFT_FILE = "draft.seg.nrrd"
+#: The read form and the reading time of the attempt in progress, kept beside the draft.
+FORM_FILE = "form.json"
+TIMER_FILE = "timer.json"
 READ_FILE = "read.nii.gz"
 
 
@@ -135,7 +150,13 @@ class JanusMReadLogic(ScriptedLoadableModuleLogic):
         self.resumedDraft = False
         self.seedClasses = 0
         self.plateaus = {name: None for name in halfmax.PLATEAUS}
+        self.border = halfmax.DEFAULT_BORDER
+        self.windowMode = "border"
+        self.cadrads = {}
+        self.lesionNodes = {}
+        self.profileChart = None
         self._openedAt = None
+        self._carriedSeconds = 0.0
 
     # ------------------------------------------------------------ session
 
@@ -245,10 +266,57 @@ class JanusMReadLogic(ScriptedLoadableModuleLogic):
             if seed:
                 self.seedClasses = self.importLabels(seed)
         self.plateaus = {name: None for name in halfmax.PLATEAUS}
-        self.resetWindow()
+        self.border, self.windowMode = halfmax.DEFAULT_BORDER, "border"
+        self.clearReadForm()
+        self.restoreReadForm()
+        if read.has_seed:
+            # Protocol v1: the plateaus come from the seed when the case opens.
+            self.measurePlateausFromSegments()
+        self.openDefaultWindow()
         slicer.util.setSliceViewerLayers(background=self.volumeNode, fit=True)
+        self._carriedSeconds = float(self._loadJson(TIMER_FILE).get("seconds") or 0.0)
         self._openedAt = time.time()
         return read
+
+    # ------------------------------------------ kept with the draft (S5.8)
+
+    def _loadJson(self, name):
+        if self.read is None:
+            return {}
+        try:
+            with open(os.path.join(self.caseDir(self.read.read_id), name)) as handle:
+                data = json.load(handle)
+            return data if isinstance(data, dict) else {}
+        except (OSError, ValueError):
+            return {}
+
+    def _saveJson(self, name, data):
+        if self.read is None:
+            return
+        path = os.path.join(self.caseDir(self.read.read_id), name)
+        with open(path + ".part", "w") as handle:
+            json.dump(data, handle)
+        os.replace(path + ".part", path)
+
+    def saveReadForm(self):
+        """Keep the read form beside the draft, so reopening the case restores it."""
+        cadrads, points = self.readForm()
+        self._saveJson(FORM_FILE, {"cadrads": cadrads, "lesionPoints": points})
+
+    def restoreReadForm(self):
+        """The read form this computer kept for the open read, if any."""
+        data = self._loadJson(FORM_FILE)
+        for vessel, grade in (data.get("cadrads") or {}).items():
+            if vessel in protocol.VESSELS and grade in protocol.grades_for(vessel):
+                self.cadrads[vessel] = grade
+        for vessel, ras in (data.get("lesionPoints") or {}).items():
+            if vessel in protocol.VESSELS and len(ras or []) == 3:
+                self.setLesionPoint(vessel, ras)
+
+    def saveTimer(self):
+        """Keep this attempt's reading time, so reopening the case continues it."""
+        if self.read is not None and self.read.state in protocol.OPEN_STATES:
+            self._saveJson(TIMER_FILE, {"seconds": self.elapsedSeconds()})
 
     def ensureSegments(self):
         """Exactly the four JA1 segments, named and coloured from ``janusm_reads.labels``."""
@@ -361,22 +429,99 @@ class JanusMReadLogic(ScriptedLoadableModuleLogic):
     def saveDraft(self):
         if self.segmentationNode is None or self.read is None:
             return False
+        self.saveReadForm()
+        self.saveTimer()
         return bool(slicer.util.saveNode(
             self.segmentationNode, os.path.join(self.caseDir(self.read.read_id), DRAFT_FILE)))
 
     def elapsedSeconds(self):
-        return 0.0 if self._openedAt is None else max(0.0, time.time() - self._openedAt)
+        """This attempt's reading time: what earlier openings of the case kept, plus
+        the time since it was opened now. The server sums it over the attempts."""
+        if self._openedAt is None:
+            return 0.0
+        return self._carriedSeconds + max(0.0, time.time() - self._openedAt)
 
     def submit(self, note=""):
-        """Check, export and upload the read. Nothing is uploaded when a check fails."""
+        """Check, export and upload the read and its form. Nothing is uploaded when a
+        check fails."""
         if self.read is None:
             raise RuntimeError("No case is open.")
+        cadrads, points = self.readForm()
+        formProblems = protocol.read_form_problems(cadrads, points)
+        if formProblems:
+            raise ReadRefused(formProblems)
         path = os.path.join(self.caseDir(self.read.read_id), READ_FILE)
         counts = self.exportRead(path)
         self.saveDraft()
         self.read = self.client.submit(self.read, path, {str(k): v for k, v in counts.items()},
-                                       seconds=self.elapsedSeconds(), note=note)
+                                       seconds=self.elapsedSeconds(), note=note,
+                                       cadrads=cadrads, lesion_points=points)
+        # The next attempt (if the check returns it) is timed from now.
+        self._carriedSeconds, self._openedAt = 0.0, time.time()
+        self._saveJson(TIMER_FILE, {"seconds": 0.0})
         return self.read
+
+    # ----------------------------------------------------------- read form
+
+    def setGrade(self, vessel, grade):
+        """One vessel's CAD-RADS 2.0 grade (empty: not graded yet)."""
+        if vessel not in protocol.VESSELS:
+            raise ValueError("Not a graded vessel: " + str(vessel))
+        grade = str(grade or "").strip().upper()
+        if grade:
+            self.cadrads[vessel] = grade
+        else:
+            self.cadrads.pop(vessel, None)
+        self.saveReadForm()
+
+    def lesionNode(self, vessel, create=True):
+        node = self.lesionNodes.get(vessel)
+        if node is not None and node.GetScene() is None:
+            node = None
+        if node is None and create:
+            node = slicer.mrmlScene.AddNewNodeByClass("vtkMRMLMarkupsFiducialNode",
+                                                      LESION_NODE_PREFIX + vessel)
+            node.SetMaximumNumberOfControlPoints(1)
+            self.lesionNodes[vessel] = node
+        return node
+
+    def setLesionPoint(self, vessel, ras):
+        """The worst lesion of ``vessel`` at ``ras`` (world mm), replacing any other."""
+        node = self.lesionNode(vessel)
+        node.RemoveAllControlPoints()
+        node.AddControlPointWorld(vtk.vtkVector3d(*[float(c) for c in ras]))
+        return node
+
+    def placeLesionPoint(self, vessel):
+        """Let the reader click the worst lesion of ``vessel`` in a view."""
+        node = self.lesionNode(vessel)
+        node.RemoveAllControlPoints()
+        slicer.modules.markups.logic().SetActiveList(node)
+        slicer.modules.markups.logic().StartPlaceMode(False)
+        return node
+
+    def clearLesionPoint(self, vessel):
+        node = self.lesionNode(vessel, create=False)
+        if node is not None:
+            node.RemoveAllControlPoints()
+
+    def readForm(self):
+        """``(cadrads, lesion points)`` as the read submits them."""
+        points = {}
+        for vessel in protocol.VESSELS:
+            node = self.lesionNode(vessel, create=False)
+            if node is not None and node.GetNumberOfControlPoints():
+                ras = [0.0, 0.0, 0.0]
+                node.GetNthControlPointPositionWorld(0, ras)
+                points[vessel] = [float(c) for c in ras]
+        return dict(self.cadrads), points
+
+    def clearReadForm(self):
+        self.cadrads = {}
+        for node in list(self.lesionNodes.values()):
+            if node is not None and node.GetScene() is not None:
+                slicer.mrmlScene.RemoveNode(node)
+        self.lesionNodes = {}
 
     def release(self):
         if self.read is None:
@@ -388,12 +533,18 @@ class JanusMReadLogic(ScriptedLoadableModuleLogic):
         return done
 
     def closeCase(self):
+        if self.read is not None and self.read.state in protocol.OPEN_STATES:
+            self.saveReadForm()
+            self.saveTimer()
+        self.clearReadForm()
+        self.clearProfile()
         for node in (self.segmentationNode, self.volumeNode):
             if node is not None and node.GetScene() is not None:
                 slicer.mrmlScene.RemoveNode(node)
         self.segmentationNode = self.volumeNode = None
         self.read = None
         self._openedAt = None
+        self._carriedSeconds = 0.0
 
     # ------------------------------------------------------- half-maximum
 
@@ -434,12 +585,61 @@ class JanusMReadLogic(ScriptedLoadableModuleLogic):
         display.SetWindowLevel(float(window), float(level))
 
     def applyBorderWindow(self, border):
+        """The border window: level at its half-maximum, width 1.5 x |p1 - p2|."""
         window, level = halfmax.window_for(border, self.plateaus)
         self.setWindow(window, level)
+        self.border, self.windowMode = border, "border"
         return window, level
 
-    def resetWindow(self):
+    def openDefaultWindow(self):
+        """The current border's window when its plateaus are known, else 800 / 300 (a
+        blank case before any ROI). Returns ``(window, level)``."""
+        if self.windowMode == "border" and self.border in halfmax.thresholds(self.plateaus):
+            window, level = halfmax.window_for(self.border, self.plateaus)
+            self.setWindow(window, level)
+            return window, level
         self.setWindow(CT_WINDOW, CT_LEVEL)
+        return CT_WINDOW, CT_LEVEL
+
+    def resetWindow(self):
+        """The fixed 800 / 300 window, on request."""
+        self.windowMode = "fixed"
+        self.setWindow(CT_WINDOW, CT_LEVEL)
+
+    # ----------------------------------------------------- returned reads
+
+    def showProfile(self, border=None):
+        """Plot a returned read's half-maximum profile: HU against signed distance from
+        the reader's border, with both plateaus and the half level. ``border``
+        defaults to the first that failed. Returns ``(border, chart node)``."""
+        profiles = (self.read.check_profile if self.read is not None else {}) or {}
+        if not profiles:
+            raise RuntimeError("The check sent no half-maximum profile for this read.")
+        if border is None:
+            failed = [b for b, p in profiles.items() if p.get("failed")]
+            border = (failed or sorted(profiles))[0]
+        table = halfmax.profile_table(profiles[border])
+        self.clearProfile()
+        chart = slicer.util.plot(table, xColumnIndex=0, columnNames=list(halfmax.PROFILE_COLUMNS),
+                                 title="Half-maximum profile: " + border, show=False)
+        self.profileChart = chart
+        layout = slicer.app.layoutManager()
+        if layout is not None:
+            slicer.modules.plots.logic().ShowChartInLayout(chart)
+        return border, chart
+
+    def clearProfile(self):
+        chart = self.profileChart
+        self.profileChart = None
+        if chart is None or chart.GetScene() is None:
+            return
+        for i in range(chart.GetNumberOfPlotSeriesNodes()):
+            series = chart.GetNthPlotSeriesNode(i)
+            table = series.GetTableNode() if series is not None else None
+            for node in (table, series):
+                if node is not None and node.GetScene() is not None:
+                    slicer.mrmlScene.RemoveNode(node)
+        slicer.mrmlScene.RemoveNode(chart)
 
 
 # =============================================================================
@@ -455,6 +655,7 @@ class JanusMReadWidget(ScriptedLoadableModuleWidget):
         self.editorNode = None
         self.roiNode = None
         self.plateauLabels = {}
+        self.gradeCombos = {}
         ScriptedLoadableModuleWidget.__init__(self, parent)
 
     def setup(self):
@@ -470,6 +671,7 @@ class JanusMReadWidget(ScriptedLoadableModuleWidget):
         self._buildReadSection()
         self._buildHalfMaxSection()
         self._buildEditorSection()
+        self._buildReadFormSection()
         self._buildSubmitSection()
         self.layout.addStretch(1)
         self._updateEnabled()
@@ -535,6 +737,12 @@ class JanusMReadWidget(ScriptedLoadableModuleWidget):
         row.addWidget(self.nextButton, 1)
         row.addWidget(self.refreshButton)
         layout.addLayout(row)
+        self.profileButton = qt.QPushButton("Show half-maximum profile")
+        self.profileButton.setToolTip(
+            "Plots the profile across the border the check returned: HU against distance "
+            "from your border, with both plateaus and the half level.")
+        self.profileButton.clicked.connect(self.onShowProfile)
+        layout.addWidget(self.profileButton)
         legend = qt.QHBoxLayout()
         for value, name in labels.CLASSES.items():
             r, g, b = (int(255 * c) for c in labels.COLORS[value])
@@ -578,12 +786,13 @@ class JanusMReadWidget(ScriptedLoadableModuleWidget):
         for border in halfmax.BORDERS:
             button = qt.QPushButton(border.capitalize())
             a, b = halfmax.BORDERS[border]
-            button.setToolTip("Level at ({} + {}) / 2, width {:.0f} HU.".format(
-                a, b, halfmax.BORDER_WIDTH_HU))
+            button.setToolTip("Level at ({} + {}) / 2, width {:g} x |{} - {}|.".format(
+                a, b, halfmax.BORDER_WIDTH_FACTOR, a, b))
             button.clicked.connect(lambda _=False, name=border: self.onBorderWindow(name))
             self.borderButtons[border] = button
             borders.addWidget(button)
-        self.resetWindowButton = qt.QPushButton("Reset")
+        self.resetWindowButton = qt.QPushButton("800 / 300")
+        self.resetWindowButton.setToolTip("The fixed window. The border window is the default.")
         self.resetWindowButton.clicked.connect(self.onResetWindow)
         borders.addWidget(self.resetWindowButton)
         form.addRow("Window at:", borders)
@@ -606,6 +815,37 @@ class JanusMReadWidget(ScriptedLoadableModuleWidget):
         self.editorNode = slicer.mrmlScene.AddNewNodeByClass("vtkMRMLSegmentEditorNode")
         self.editorWidget.setMRMLSegmentEditorNode(self.editorNode)
         layout.addWidget(self.editorWidget)
+
+    def _buildReadFormSection(self):
+        box = ctk.ctkCollapsibleButton()
+        box.text = "Read form"
+        self.layout.addWidget(box)
+        self.readFormBox = box
+        form = qt.QFormLayout(box)
+        note = qt.QLabel("CAD-RADS 2.0 grade of each vessel's worst lesion (N: "
+                         "non-diagnostic; LM >= 50 % is 4B). Optionally mark the lesion. "
+                         "Branches: diagonals with the LAD; obtuse marginals and ramus with "
+                         "the LCx; PDA and PLB with the dominant artery.")
+        note.setWordWrap(True)
+        form.addRow(note)
+        for vessel in protocol.VESSELS:
+            row = qt.QHBoxLayout()
+            combo = qt.QComboBox()
+            combo.addItem("")
+            for grade in protocol.grades_for(vessel):   # JA67: this row's grades only
+                combo.addItem(grade)
+            combo.currentTextChanged.connect(
+                lambda text, name=vessel: self.onGrade(name, text))
+            self.gradeCombos[vessel] = combo
+            mark = qt.QPushButton("Mark lesion")
+            mark.setToolTip("Click the worst lesion of this vessel in a view (optional).")
+            mark.clicked.connect(lambda _=False, name=vessel: self.onMarkLesion(name))
+            clear = qt.QPushButton("Clear")
+            clear.clicked.connect(lambda _=False, name=vessel: self.onClearLesion(name))
+            row.addWidget(combo, 1)
+            row.addWidget(mark)
+            row.addWidget(clear)
+            form.addRow(vessel + ":", row)
 
     def _buildSubmitSection(self):
         box = ctk.ctkCollapsibleButton()
@@ -647,11 +887,20 @@ class JanusMReadWidget(ScriptedLoadableModuleWidget):
         self.caseLabel.setText("<b>{}</b> -- {}<br>{}".format(
             _escape(read.case_name), _escape(read.state), start))
         if read.state == protocol.RETURNED:
+            lines = [halfmax.profile_caption(b, p) for b, p in
+                     sorted((read.check_profile or {}).items()) if p.get("failed")]
             self.checkLabel.setText(
-                "The automatic check returned this read. Fix it and submit again:<br>"
-                + _escape(read.check_summary or "(no reasons given)"))
+                "The automatic check returned this read. Fix it and submit again: a read "
+                "that fails again is accepted and flagged.<br>"
+                + _escape(read.check_summary or "(no reasons given)")
+                + "".join("<br>" + _escape(line) for line in lines))
         elif read.state == protocol.SUBMITTED:
             self.checkLabel.setText("Submitted: waiting for the automatic check.")
+        elif read.state == protocol.ACCEPTED and read.flagged:
+            summary = read.check_summary or ""
+            if not summary.startswith("Accepted and flagged"):
+                summary = "Accepted and flagged: " + summary
+            self.checkLabel.setText(_escape(summary))
         elif read.state == protocol.ACCEPTED:
             self.checkLabel.setText("Accepted by the automatic check.")
         else:
@@ -675,6 +924,10 @@ class JanusMReadWidget(ScriptedLoadableModuleWidget):
         self.nextButton.setEnabled(loggedIn and not editable)
         self.refreshButton.setEnabled(hasCase)
         self.halfMaxBox.setEnabled(hasCase)
+        self.readFormBox.setEnabled(editable)
+        self.profileButton.setEnabled(
+            hasCase and self.logic.read.state == protocol.RETURNED
+            and bool(self.logic.read.check_profile))
         self.saveButton.setEnabled(editable)
         self.submitButton.setEnabled(editable)
         self.releaseButton.setEnabled(editable)
@@ -736,11 +989,21 @@ class JanusMReadWidget(ScriptedLoadableModuleWidget):
         self._bindEditor()
         self._showRead()
         self._showPlateaus()
+        self._showReadForm()
         self._updateEnabled()
+
+    def _showReadForm(self):
+        for vessel, combo in self.gradeCombos.items():
+            combo.blockSignals(True)
+            index = combo.findText(self.logic.cadrads.get(vessel, ""))
+            combo.setCurrentIndex(max(0, index))
+            combo.blockSignals(False)
 
     def onRefresh(self):
         try:
-            self.logic.refreshRead()
+            read = self.logic.refreshRead()
+            if read is not None and read.state == protocol.RETURNED and read.check_profile:
+                self.logic.showProfile()
         except Exception as exc:
             slicer.util.errorDisplay(_explain(exc))
         self._showRead()
@@ -760,6 +1023,7 @@ class JanusMReadWidget(ScriptedLoadableModuleWidget):
             return
         try:
             self.logic.measurePlateauInRoi(self.plateauCombo.currentText, self.roiNode)
+            self.logic.openDefaultWindow()   # a blank case reaches its border window here
         except Exception as exc:
             slicer.util.errorDisplay(_explain(exc))
         self._showPlateaus()
@@ -767,6 +1031,7 @@ class JanusMReadWidget(ScriptedLoadableModuleWidget):
     def onPlateausFromSegments(self):
         with _busy():
             self.logic.measurePlateausFromSegments()
+            self.logic.openDefaultWindow()
         self._showPlateaus()
 
     def onBorderWindow(self, border):
@@ -777,6 +1042,23 @@ class JanusMReadWidget(ScriptedLoadableModuleWidget):
 
     def onResetWindow(self):
         self.logic.resetWindow()
+
+    def onGrade(self, vessel, text):
+        self.logic.setGrade(vessel, text)
+
+    def onMarkLesion(self, vessel):
+        if self.logic.read is None:
+            return
+        self.logic.placeLesionPoint(vessel)
+
+    def onClearLesion(self, vessel):
+        self.logic.clearLesionPoint(vessel)
+
+    def onShowProfile(self):
+        try:
+            self.logic.showProfile()
+        except Exception as exc:
+            slicer.util.errorDisplay(_explain(exc))
 
     def onSaveDraft(self):
         if self.logic.saveDraft():
@@ -795,6 +1077,11 @@ class JanusMReadWidget(ScriptedLoadableModuleWidget):
         self.noteEdit.setText("")
         self.submitLabel.setText("Submitted. The automatic check runs on the server; press "
                                  "Refresh status to see its result.")
+        if self.logic.read.state == protocol.RETURNED and self.logic.read.check_profile:
+            try:
+                self.logic.showProfile()
+            except Exception as exc:
+                slicer.util.errorDisplay(_explain(exc))
         self._showRead()
         self._updateEnabled()
 

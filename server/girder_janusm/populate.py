@@ -14,10 +14,13 @@ Runs on the server against the database::
    (``c0001`` is ImageCAS 2), and references it by file id. It reads that collection
    and never writes to it.
 4. Uploads each seeded case's seed (``<case>.janusm-seed.nii.gz`` from the Fir seed
-   job) into ``JanusM/seeds``. **Blank cases' seeds are never uploaded**, so they
-   cannot be served. A seeded case with no seed stops the run.
+   job) into ``JanusM/seeds``, and each **blank** case's seed into
+   ``JanusM/check-seeds`` as its ``checkSeedFileId`` (JA66): a folder no reader can
+   read, used only by the read check to fit the mitral plane. No route serves it. A
+   case with no seed stops the run.
 
-Idempotent by case name: a re-run creates only what is missing.
+Idempotent by case name: a re-run creates only what is missing, and gives an
+existing blank case its check seed if it has none.
 """
 
 import argparse
@@ -87,7 +90,7 @@ def populate(user, seedsDir=None, freezePath=None, ctFolderId=None, dryRun=False
     from girder.models.upload import Upload
 
     from .models import JanusMCase
-    from .utils import ensureGroups, hashStoredFile, seedsFolder
+    from .utils import checkSeedsFolder, ensureGroups, hashStoredFile, seedsFolder
 
     sets = readset.load_freeze(freezePath)
     plan = readset.plan(sets)
@@ -100,48 +103,64 @@ def populate(user, seedsDir=None, freezePath=None, ctFolderId=None, dryRun=False
 
     problems, rows = [], []
     for p in plan:
-        if JanusMCase().findOne({'name': p.name}):
-            rows.append((p, None, None, 'exists'))
+        seedPath = os.path.join(seedsDir or '', p.name + SEED_SUFFIX)
+        hasSeed = bool(seedsDir) and os.path.isfile(seedPath)
+        existing = JanusMCase().findOne({'name': p.name})
+        if existing:
+            if p.blank and not existing.get('checkSeedFileId'):
+                if not hasSeed:
+                    problems.append(f'{p.name}: no check seed at {seedPath}')
+                    continue
+                rows.append((p, existing, seedPath, 'attach'))
+            else:
+                rows.append((p, None, None, 'exists'))
             continue
         hits = [it for key in ctNames(p.name) for it in index.get(key, [])]
         if len(hits) != 1:
             problems.append(f'{p.name}: {len(hits)} CT items match (ImageCAS '
                             f'{readset.imagecas_number(p.name)})')
             continue
-        seedPath = None
-        if not p.blank:
-            seedPath = os.path.join(seedsDir or '', p.name + SEED_SUFFIX)
-            if not seedsDir or not os.path.isfile(seedPath):
-                problems.append(f'{p.name}: no seed at {seedPath}')
-                continue
+        if not hasSeed:
+            problems.append(f'{p.name}: no {"check " if p.blank else ""}seed at {seedPath}')
+            continue
         rows.append((p, hits[0], seedPath, 'create'))
     for line in problems:
         out(f'  PROBLEM {line}')
     creating = [r for r in rows if r[3] == 'create']
+    attaching = [r for r in rows if r[3] == 'attach']
     out(f"{'would create' if dryRun else 'creating'} {len(creating)} cases; "
         f"{len(rows) - len(creating)} exist; {len(problems)} problems; "
-        f"blank {sum(1 for r in creating if r[0].blank)}")
+        f"blank {sum(1 for r in creating if r[0].blank)}; "
+        f"check seeds to attach {len(attaching)}")
     for p, item, _, _ in creating:
         out(f'  {p.name} {p.read_set:8s} {"blank" if p.blank else "seeded"}  CT {item["name"]}')
     if problems:
         raise SystemExit('REFUSED: fix the problems above; nothing was written')
     if dryRun:
-        return {'create': len(creating), 'problems': problems}
+        return {'create': len(creating), 'attach': len(attaching), 'problems': problems}
 
     ensureGroups(user)
-    seeds = seedsFolder(user)
+    seeds, checkSeeds = seedsFolder(user), checkSeedsFolder(user)
+
+    def upload(path, folder):
+        with open(path, 'rb') as handle:
+            return Upload().uploadFromFile(
+                handle, size=os.path.getsize(path), name=os.path.basename(path),
+                parentType='folder', parent=folder, user=user)['_id']
+
     for p, item, seedPath, _ in creating:
         ctFile = _firstFile(item)
-        seedFileId = None
-        if seedPath:
-            with open(seedPath, 'rb') as handle:
-                seedFile = Upload().uploadFromFile(
-                    handle, size=os.path.getsize(seedPath), name=os.path.basename(seedPath),
-                    parentType='folder', parent=seeds, user=user)
-            seedFileId = seedFile['_id']
         checksum = hashStoredFile(ctFile) if hashCts else ''
-        JanusMCase().createCase(p, ctFile, checksum, seedFileId=seedFileId)
-    return {'create': len(creating), 'problems': []}
+        if p.blank:
+            JanusMCase().createCase(p, ctFile, checksum,
+                                    checkSeedFileId=upload(seedPath, checkSeeds))
+        else:
+            JanusMCase().createCase(p, ctFile, checksum, seedFileId=upload(seedPath, seeds))
+    for _p, case, seedPath, _ in attaching:
+        JanusMCase().collection.update_one(
+            {'_id': case['_id'], 'blank': True},
+            {'$set': {'checkSeedFileId': upload(seedPath, checkSeeds)}})
+    return {'create': len(creating), 'attach': len(attaching), 'problems': []}
 
 
 def main(argv=None):

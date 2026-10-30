@@ -532,6 +532,72 @@ def orientation_checks(segments: np.ndarray, labels: np.ndarray, affine) -> dict
     return out
 
 
+# ------------------------------------------------------------------------------- JA20 / JA69 (a)
+ARC_AGREEMENT_MIN = 0.995  # JM-0R's guard: below it the recomputed frame is not JA3's
+ARC_SEPTAL = (2, 3, 8, 9)  # the two septal segments of the basal and mid rings
+
+
+def _aha_theta(labels, aff, aha):
+    """The JA3 angle of every myocardial voxel (0 at the anterior insertion, + into the septum),
+    recomputed exactly as :func:`aha17` does with its defaults. Returns (voxel indices, angle)."""
+    myo, lv, rv, la = (labels == c for c in (MYO, LV, RV, LA))
+    base = _world(np.argwhere(lv & ndi.binary_dilation(la, _FACE)), aff).mean(0)
+    pidx = np.argwhere(myo)
+    p = _world(pidx, aff)
+    dist = np.linalg.norm(p - base, axis=1)
+    apex = p[dist >= dist.max() - 3.0].mean(0)
+    axis = (apex - base) / np.linalg.norm(apex - base)
+    s = (p - base) @ axis
+    cav = float(((_world(np.argwhere(lv), aff) - base) @ axis).max())
+    helper = np.eye(3)[int(np.argmin(np.abs(axis)))]
+    e1 = helper - (helper @ axis) * axis
+    e1 /= np.linalg.norm(e1)
+    e2 = np.cross(axis, e1)
+    rel = p - base
+    ang = np.degrees(np.arctan2(rel @ e2, rel @ e1)) % 360.0
+    contact = ndi.binary_dilation(rv, _FACE)[myo] & (s >= 0) & (s <= 2 / 3 * cav)
+    h = np.sort(ang[contact])
+    gaps = np.diff(np.concatenate([h, h[:1] + 360.0]))
+    g = int(np.argmax(gaps))
+    start, end = float(h[(g + 1) % len(h)]), float(h[g])
+
+    def direction(deg):
+        r = np.radians(deg)
+        return np.cos(r) * e1 + np.sin(r) * e2
+
+    ant = np.array([0.0, 1.0, 1.0]) / np.sqrt(2)
+    ref, sign = (start, 1.0) if direction(start) @ ant >= direction(end) @ ant else (end, -1.0)
+    return pidx, (sign * (ang - ref)) % 360.0
+
+
+def arc_segments(labels, aff, aha: AHA, *, arc_deg: Optional[float] = None):
+    """Septal sectors proportional to the measured septal arc in the basal and mid rings (JA20:
+    the two septal segments of each ring; JA69 (a): the one implementation, which JM-0R imports).
+    The apical ring and 17 stay as JA3 cuts them. ``labels``, ``aff`` and ``aha`` are the same
+    full-size grid :func:`analyse` returns. ``arc_deg`` overrides the measured arc (tests; 120
+    degrees reproduces the fixed sectors). Returns (segments, agreement of the recomputed fixed
+    sectors with JA3's), or (None, None)."""
+    if aha.segments is None or aha.septal_arc_deg is None and arc_deg is None:
+        return None, None
+    labels = np.asarray(labels)
+    aff = np.asarray(aff, float)
+    pidx, theta = _aha_theta(labels, aff, aha)
+    fixed = aha.segments[tuple(pidx.T)]
+    ring = np.isin(fixed, (1, 2, 3, 4, 5, 6)) | np.isin(fixed, (7, 8, 9, 10, 11, 12))
+    if not ring.any():
+        return None, None
+    recomputed = _SIX[(theta // 60).astype(int) % 6] + np.where(fixed > 6, 6, 0)
+    agree = float(np.mean(recomputed[ring] == fixed[ring]))
+    arc = float(np.clip(aha.septal_arc_deg if arc_deg is None else arc_deg, 60.0, 240.0))
+    rest = (360.0 - arc) / 4
+    edges = [arc / 2, arc, arc + rest, arc + 2 * rest, arc + 3 * rest]
+    k = np.searchsorted(edges, theta, side="right")
+    new = _SIX[np.clip(k, 0, 5)] + np.where(fixed > 6, 6, 0)
+    seg = aha.segments.copy()
+    seg[tuple(pidx[ring].T)] = new[ring]
+    return seg, agree
+
+
 # --------------------------------------------------------------------------------------------- JA4
 @dataclass
 class Territories:

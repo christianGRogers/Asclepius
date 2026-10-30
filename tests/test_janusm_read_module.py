@@ -224,7 +224,9 @@ def test_a_read_carries_nothing_but_what_a_reader_may_see():
     read = protocol.ReadInfo.from_dict({"readId": "R", "caseName": "c", "state": "assigned",
                                         "hasSeed": True, "readSet": "seal", "scored": True})
     assert set(vars(read)) == {"read_id", "case_name", "state", "has_seed", "checksum",
-                               "size_bytes", "check_summary"}
+                               "size_bytes", "check_summary", "flagged", "check_profile"}
+    # Nothing that says whether the read is a third read, or what the other reader graded.
+    assert not {"third", "cadrads", "lesion_points"} & set(vars(read))
 
 
 # --------------------------------------------------------- the workflow
@@ -273,13 +275,65 @@ def test_thresholds_are_halfway_between_plateaus():
     pl = {"LV blood": 420.0, "myocardium": 120.0, "RV blood": 380.0, "fat": -100.0}
     assert halfmax.thresholds(pl) == {"endocardial": 270.0, "epicardial": 10.0,
                                       "septal (RV side)": 250.0}
-    assert halfmax.window_for("endocardial", pl) == (50.0, 270.0)
+    # S5 point 1: width 1.5 x |p1 - p2| (Hotel v2 section 5.4, JA21), level at the half.
+    assert halfmax.BORDER_WIDTH_FACTOR == 1.5
+    assert halfmax.window_for("endocardial", pl) == (450.0, 270.0)
+    assert halfmax.window_for("epicardial", pl) == (330.0, 10.0)
+    assert halfmax.window_for("septal (RV side)", pl) == (390.0, 250.0)
+    assert halfmax.window_for("endocardial", {"LV blood": 121.0, "myocardium": 120.0}) == \
+        (halfmax.MIN_BORDER_WIDTH_HU, 120.5)
     assert halfmax.warnings(pl) == []
     with pytest.raises(ValueError, match="fat"):
         halfmax.threshold("epicardial", {"myocardium": 120.0})
     assert halfmax.thresholds({"LV blood": 420.0}) == {}
     bad = halfmax.warnings({"LV blood": 100.0, "myocardium": 120.0, "fat": 40.0})
     assert len(bad) == 2 and "LV blood" in bad[0] and "fat" in bad[1]
+
+
+def test_a_case_opens_on_the_border_window_and_800_300_is_only_on_request():
+    """S5 point 1: the border window is the default; 800 / 300 stays available."""
+    assert halfmax.DEFAULT_BORDER == "endocardial" and halfmax.FIXED_WINDOW == (800.0, 300.0)
+    opened = _method("JanusMReadLogic", "openRead")
+    assert "self.measurePlateausFromSegments()" in opened
+    assert "self.openDefaultWindow()" in opened and "self.resetWindow()" not in opened
+    assert opened.index("self.importLabels(seed)") < opened.index(
+        "self.measurePlateausFromSegments()") < opened.index("self.openDefaultWindow()")
+    default = _method("JanusMReadLogic", "openDefaultWindow")
+    assert "halfmax.window_for(self.border, self.plateaus)" in default
+    assert "CT_WINDOW, CT_LEVEL" in default            # a blank case before any ROI
+    assert 'self.windowMode = "fixed"' in _method("JanusMReadLogic", "resetWindow")
+    assert "openDefaultWindow" in _method("JanusMReadWidget", "onMeasureRoi")
+    assert '"800 / 300"' in _source() and 'QPushButton("Reset")' not in _source()
+
+
+def test_the_read_form_is_checked_before_anything_is_uploaded():
+    """S5 point 6: per-vessel CAD-RADS 2.0 and an optional lesion point (JA46 (d))."""
+    submit = _method("JanusMReadLogic", "submit")
+    assert submit.index("protocol.read_form_problems(") < submit.index("raise ReadRefused")
+    assert submit.index("raise ReadRefused") < submit.index("self.exportRead(")
+    assert "cadrads=cadrads, lesion_points=points" in submit
+    form = _method("JanusMReadWidget", "_buildReadFormSection")
+    assert "protocol.VESSELS" in form and "protocol.grades_for(vessel)" in form
+    assert "GetNthControlPointPositionWorld" in _method("JanusMReadLogic", "readForm")
+    assert "self.clearReadForm()" in _method("JanusMReadLogic", "openRead")
+
+
+def test_a_returned_read_plots_its_half_maximum_profile():
+    """S5 point 3: the profile plot goes with the return."""
+    shown = _method("JanusMReadLogic", "showProfile")
+    assert "halfmax.profile_table(" in shown and "slicer.util.plot(" in shown
+    assert "showProfile" in _method("JanusMReadWidget", "onSubmit")
+    assert "showProfile" in _method("JanusMReadWidget", "onRefresh")
+    assert "read.flagged" in _method("JanusMReadWidget", "_showRead")
+    profile = {"s_mm": [-1.0, 0.0, 1.0], "hu": [420.0, 270.0, 120.0], "thresholdHU": 270.0,
+               "plateausHU": [420.0, 120.0], "offsetMm": 0.8, "failed": True}
+    table = halfmax.profile_table(profile)
+    assert table.shape == (3, len(halfmax.PROFILE_COLUMNS))
+    assert (table[:, 2] == 270.0).all() and (table[:, 3] == 420.0).all()
+    assert "0.80 mm past" in halfmax.profile_caption("endocardial", profile)
+    assert "short of" in halfmax.profile_caption("endocardial", {**profile, "offsetMm": -0.6})
+    with pytest.raises(ValueError):
+        halfmax.profile_table({})
 
 
 def test_erosion_and_dilation_are_voxel_steps():
@@ -391,7 +445,7 @@ def test_the_archive_imports_with_nothing_from_the_repository(built, tmp_path):
             "print(janusm_reads.PROTOCOL_VERSION)")
     out = subprocess.run([sys.executable, "-I", "-c", code], capture_output=True, text=True)
     assert out.returncode == 0, out.stderr
-    assert out.stdout.strip() == "1"
+    assert out.stdout.strip() == "2"
 
 
 def _release(tag, asset):
@@ -460,3 +514,36 @@ def test_ci_builds_it_and_nothing_publishes_it():
         assert word not in workflow, word
     release = (REPO / ".github" / "workflows" / "segqueue-release.yml").read_text()
     assert "janusm" not in release.lower() and "JanusMRead" not in release
+
+
+# ------------------------------------------------- Round 4, Group D (#214)
+
+
+def test_r4s20_each_row_offers_only_its_vessels_grades():
+    """JA67: the LM row has 4B and no 3 or 4A; the others have 3 and 4A and no 4B."""
+    form = _method("JanusMReadWidget", "_buildReadFormSection")
+    assert "protocol.grades_for(vessel)" in form and "CADRADS_GRADES" not in form
+    restore = _method("JanusMReadLogic", "restoreReadForm")
+    assert "protocol.grades_for(vessel)" in restore     # a kept form never adds a bad grade
+
+
+def test_r4s21_a_reopened_read_gets_its_form_back():
+    opened = _method("JanusMReadLogic", "openRead")
+    assert opened.index("self.clearReadForm()") < opened.index("self.restoreReadForm()")
+    closed = _method("JanusMReadLogic", "closeCase")
+    assert closed.index("self.saveReadForm()") < closed.index("self.clearReadForm()")
+    assert "self.saveReadForm()" in _method("JanusMReadLogic", "setGrade")
+    assert "self.saveReadForm()" in _method("JanusMReadLogic", "saveDraft")
+    assert "FORM_FILE" in _method("JanusMReadLogic", "saveReadForm")
+
+
+def test_r4s21_the_reading_clock_is_kept_across_reopening():
+    opened = _method("JanusMReadLogic", "openRead")
+    assert "TIMER_FILE" in opened and "self._carriedSeconds" in opened
+    assert "self._carriedSeconds +" in _method("JanusMReadLogic", "elapsedSeconds")
+    closed = _method("JanusMReadLogic", "closeCase")
+    assert closed.index("self.saveTimer()") < closed.index("self._openedAt = None")
+    # A submission sends its attempt's time; the next attempt starts at zero.
+    submit = _method("JanusMReadLogic", "submit")
+    assert submit.index("seconds=self.elapsedSeconds()") < submit.index(
+        "self._carriedSeconds, self._openedAt = 0.0, time.time()")

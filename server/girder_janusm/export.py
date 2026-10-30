@@ -24,6 +24,15 @@ lesion points), the half-maximum offsets per border in the **canonical sign** (J
 (measured here on the case's CT, which is read and never copied out; off with
 ``--no-seed-offsets``).
 
+**Timing** (PS3-S11, JA58) goes in ``timing.json``, apart from the manifest, with no
+identifier: no reader, case, read or file id, and rows sorted by duration so their
+order follows no case or reader. One row per exported read (reference and third):
+``secondsToSubmit`` (claim to first submission, from the server's UTC
+``claimed_at`` and ``submitted_at``), ``secondsToEachSubmission`` (claim to every
+submission, for a returned read) and whether the read was seeded or a third read.
+Reads stored before PS3-S11 have no ``claimed_at``; they are counted in
+``untimedReads`` and given no row.
+
     janusm-export --out /tmp/wave1 --seeds-dir /path/to/seeds --wave 1
     python -m janusm_reads.anchoring /tmp/wave1/manifest.json --out wave1-anchoring.json
 """
@@ -71,6 +80,22 @@ def readRecord(read, case):
     }
 
 
+def timingRecords(reads):
+    """PS3-S11: each read's claim-to-submission time, with no identifier, sorted by
+    duration."""
+    rows, untimed = [], 0
+    for read in reads:
+        timing = protocol.read_timing(read)
+        if timing is None:
+            untimed += 1
+            continue
+        rows.append({**timing, 'seeded': bool(read.get('seeded')),
+                     'third': bool(read.get('third'))})
+    rows.sort(key=lambda r: (r['secondsToSubmit'], r['seeded'], r['third']))
+    return {'unit': 'seconds', 'clock': 'server UTC, claimed_at to submitted_at',
+            'reads': rows, 'untimedReads': untimed}
+
+
 def _download(fileId, path):
     with open(path, 'wb') as handle:
         for chunk in File().download(File().load(fileId, force=True), headers=False)():
@@ -106,7 +131,7 @@ def export(outDir, seedsDir, wave, seedOffsets=True, out=print):
                             'first (POST /janusm/admin/wave)')
     for sub in ('reads', 'third', 'seeds'):
         os.makedirs(os.path.join(outDir, sub), exist_ok=True)
-    rows, skipped, offProtocol = [], [], []
+    rows, skipped, offProtocol, timed = [], [], [], []
     for case in cases:
         accepted = list(JanusMRead().find({'caseId': case['_id'], 'state': protocol.ACCEPTED},
                                           sort=[('assignedAt', 1)]))
@@ -140,14 +165,20 @@ def export(outDir, seedsDir, wave, seedOffsets=True, out=print):
             # JA47: a third read is for rule 2 only, never the reference standard.
             row['thirdRead'] = rel
             row['thirdReadRecord'] = readRecord(thirds[0], case)
+        timed += reads + thirds[:1]
         rows.append(row)
     # JA78: the sha256 of the anchoring report that opened the wave's third reads, if
     # any; the server refuses a different report for this wave.
     manifest = {'wave': wave, 'border_protocol': BORDER_PROTOCOL, 'cases': rows,
                 'skippedReads': offProtocol,
                 'anchoringReportSha256': JanusMWave().reportHash(wave)}
+    timing = timingRecords(timed)
+    manifest['timing'] = {'file': 'timing.json', 'reads': len(timing['reads']),
+                          'untimedReads': timing['untimedReads']}
     with open(os.path.join(outDir, 'manifest.json'), 'w', encoding='utf-8') as handle:
         json.dump(manifest, handle, indent=1)
+    with open(os.path.join(outDir, 'timing.json'), 'w', encoding='utf-8') as handle:
+        json.dump({'wave': wave, **timing}, handle, indent=1)
     out(f'wave {wave}: {len(rows)} double-read cases exported; {len(skipped)} without a '
         f'seed: {skipped[:5]}; {len(offProtocol)} reads skipped (not border protocol '
         f'{BORDER_PROTOCOL}): {offProtocol[:5]}')

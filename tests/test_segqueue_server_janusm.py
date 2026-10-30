@@ -912,6 +912,85 @@ def test_export_feeds_the_anchoring_report(world):
     assert "seed" not in bare["cases"][0]["halfMaxOffsets"]
 
 
+def test_ps3s11_timing_round_trip_claim_submit_export_with_no_identifier(world):
+    """PS3-S11 (JA58), issue #246: every read records claimed_at and submitted_at (UTC)
+    on the server; a returned read keeps its first claimed_at and submitted_at and
+    records each attempt; the export writes the durations in timing.json with no
+    identifier."""
+    import datetime
+
+    from girder_janusm.export import export
+    from girder_janusm.models import JanusMCase, JanusMRead
+
+    from janusm_reads import protocol
+
+    case = JanusMCase().findOne({"name": world.target})
+    reads = list(JanusMRead().find({"caseId": case["_id"], "state": "accepted"}))
+    assert len(reads) == 3                                   # anna, bobby, the third read
+    for read in reads:
+        claimed, first = read["claimed_at"], read["submitted_at"]
+        assert isinstance(claimed, datetime.datetime) and isinstance(first, datetime.datetime)
+        # Stored as UTC: the claim is the first history entry, the same instant.
+        assert claimed == read["history"][0]["at"] and read["history"][0]["state"] == "assigned"
+        assert claimed <= first
+        attempts = read["submitted_at_attempts"]
+        assert len(attempts) == read["attempts"] and attempts[0] == first
+        assert attempts == sorted(attempts)
+    bobby = next(r for r in reads if r["userId"] == world.people["bobby"]["_id"])
+    # Returned once and resubmitted: the first claim and first submission are kept, and
+    # both submissions are recorded.
+    assert bobby["returns"] == 1 and len(bobby["submitted_at_attempts"]) == 2
+    assert bobby["submitted_at"] == bobby["submitted_at_attempts"][0]
+    assert bobby["submittedAt"] == bobby["submitted_at_attempts"][1]
+    submits = [h["at"] for h in bobby["history"] if h["state"] == "submitted"]
+    assert submits == bobby["submitted_at_attempts"]
+
+    out = world.tmp / "wave1-timing"
+    manifest = export(str(out), str(world.seedsDir), wave="1", seedOffsets=False,
+                      out=lambda _: None)
+    assert manifest["timing"] == {"file": "timing.json", "reads": 3, "untimedReads": 0}
+    text = (out / "timing.json").read_text()
+    timing = json.loads(text)
+    assert timing["unit"] == "seconds" and timing["untimedReads"] == 0
+    rows = timing["reads"]
+    expected = sorted(protocol.seconds_between(r["claimed_at"], r["submitted_at"])
+                      for r in reads)
+    assert [r["secondsToSubmit"] for r in rows] == pytest.approx(expected)
+    assert all(r["secondsToSubmit"] >= 0 for r in rows)
+    assert sorted(len(r["secondsToEachSubmission"]) for r in rows) == [1, 1, 2]
+    assert sum(r["third"] for r in rows) == 1 and sum(r["seeded"] for r in rows) == 2
+    # No identifier: only these keys, and no id, login or case name anywhere in the file.
+    assert set(timing) == {"wave", "unit", "clock", "reads", "untimedReads"}
+    assert all(set(r) == {"secondsToSubmit", "secondsToEachSubmission", "seeded", "third"}
+               for r in rows)
+    ids = {str(case["_id"]), world.target}
+    for read in reads:
+        ids |= {str(read["_id"]), str(read["userId"]), str(read["fileId"])}
+    ids |= {p["login"] for p in world.people.values()} | {str(p["_id"])
+                                                         for p in world.people.values()}
+    assert not [i for i in ids if i in text]
+    # The manifest holds no timing beyond the count: nothing to join the two on.
+    assert "secondsToSubmit" not in (out / "manifest.json").read_text()
+
+
+def test_ps3s11_a_read_stored_before_timing_is_counted_untimed_not_guessed(world):
+    """A read with no claimed_at (stored before PS3-S11) gets no timing row."""
+    from girder_janusm.export import export
+    from girder_janusm.models import JanusMCase, JanusMRead
+
+    case = JanusMCase().findOne({"name": world.target})
+    read = JanusMRead().findOne({"caseId": case["_id"], "state": "accepted",
+                                 "third": False})
+    JanusMRead().collection.update_one({"_id": read["_id"]}, {"$unset": {"claimed_at": ""}})
+    try:
+        manifest = export(str(world.tmp / "wave1-untimed"), str(world.seedsDir), wave="1",
+                          seedOffsets=False, out=lambda _: None)
+        assert manifest["timing"]["reads"] == 2 and manifest["timing"]["untimedReads"] == 1
+    finally:
+        JanusMRead().collection.update_one({"_id": read["_id"]},
+                                           {"$set": {"claimed_at": read["claimed_at"]}})
+
+
 def test_r4s21_export_refuses_an_empty_wave(world):
     from girder_janusm.export import ExportRefused, export
 

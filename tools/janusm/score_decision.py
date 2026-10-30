@@ -34,8 +34,9 @@ the mean over the two reads of the model-vs-read pp ASSD minus the read-vs-read 
 
 **Transfer check** (JA37, JA62): ``harness.transfer_check`` on the first 20 complete cases, once
 for each comparison (model-vs-read 1, model-vs-read 2, read-vs-read). The guard is 0.5 mm if any of
-the three fails, else 0.3 mm. Fewer than 20 complete cases is an error, never a default. The count
-of cases over the limit is reported; no id is.
+the three fails, else 0.3 mm, and never below ``harness.BIAS_GUARD_VALIDATED_MM`` (JA61's
+open-base check; 0.5 mm since it failed, #212). Fewer than 20 complete cases is an error, never a
+default. The count of cases over the limit is reported; no id is.
 
 **Output.** One anonymous JSON (``reads``, ``assd_pp``, ``transfer_check`` and the versions),
 refused by :func:`janusm.reference.assert_anonymous` if any id appears, and its sha256.
@@ -227,7 +228,10 @@ def transfer(rows: List[dict], transfer_fn: Callable) -> dict:
            for k in COMPARISONS}
     guards = [float(v["bias_guard_mm"]) for v in out.values()]
     out["passed"] = all(bool(v["passed"]) for v in out.values())
-    out["bias_guard_mm"] = max(guards)
+    # the guard in force is the worse of the transfer check's and JA61's open-base check's
+    out["transfer_bias_guard_mm"] = max(guards)
+    out["open_base_bias_guard_mm"] = float(H.BIAS_GUARD_VALIDATED_MM)
+    out["bias_guard_mm"] = max(guards + [float(H.BIAS_GUARD_VALIDATED_MM)])
     out["n_cases"] = N_TRANSFER
     return out
 

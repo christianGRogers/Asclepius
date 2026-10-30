@@ -292,6 +292,15 @@ def test_r9_without_s3_is_not_decidable(dec, monkeypatch):
     assert "provisional 35 %" in r["outcome"] and r["depth"] is None
 
 
+def test_r9_prints_the_provisional_depth_when_s3_cannot_compute_it(dec):
+    def refuses(*a, **k):
+        raise ValueError("no normal variation")
+
+    r = {x["rule"]: x for x in dec.decide(base(), depth_fn=refuses)}["R9"]
+    assert r["missing"] == [] and r["depth"] is None
+    assert "provisional 35 %" in r["outcome"] and "no normal variation" in r["outcome"]
+
+
 def test_r9_missing_inputs(dec):
     r = run(dec, segment_shape=_DROP)["R9"]
     assert r["missing"] == ["segment_shape"] and r["depth"] is None

@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import numpy as np
 
-from janusm import calibrate_s3_stub as C
+from janusm import calibrate as C
 from janusm import features as F
 from janusm import geometry as G
 from janusm import harness as H

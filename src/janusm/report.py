@@ -34,7 +34,7 @@ import json
 import re
 from typing import Dict, Optional
 
-from janusm import calibrate_s3_stub as calibrate  # S3 (#194): switch to janusm.calibrate
+from janusm import calibrate
 from janusm import features as F
 from janusm import geometry as G
 from janusm import reference as R

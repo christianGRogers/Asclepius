@@ -35,6 +35,9 @@ import layers_ts as L  # noqa: E402
 STANDARD = {**{s: 2 for s in (1, 2, 7, 8, 13, 14, 17)}, **{s: 4 for s in (3, 4, 9, 10, 15)},
             **{s: 3 for s in (5, 6, 11, 12, 16)}}
 NAME = {2: "LAD", 3: "LCx", 4: "RCA"}
+# AHA angle origin: the RV-insertion end pointing more anterior-superior (RAS +y +z), rule B of aha_check.py
+# (orientation checks passed 19/23 E2 cases against 17/23 for anterior-only).
+ANT_SUP = np.array([0.0, 1.0, 1.0]) / np.sqrt(2)
 
 
 def chamber_ids():
@@ -54,7 +57,7 @@ def territories(myo, cav, rv, la, art, sp, aff):
     if geom is None:
         return None, None, {"fail": diag.get("fail")}
     R = aff[:3, :3] / np.linalg.norm(aff[:3, :3], axis=0)
-    seg = L.aha_labels(myo, geom, R.T @ np.array([0.0, 1.0, 0.0]))
+    seg = L.aha_labels(myo, geom, R.T @ ANT_SUP)
     seeds = np.isin(art, (2, 3, 4))
     if not seeds.any():
         return seg, None, {"fail": "no LAD/LCx/RCA voxel"}
@@ -132,7 +135,7 @@ def selftest(ts_dir):
         la, myo, cav, rv = L.crop(la, myo, cav, rv, mask=myo | cav, margin=12)
         R = aff[:3, :3] / np.linalg.norm(aff[:3, :3], axis=0)
         geom, _ = L.aha(myo, cav, rv, la, sp)
-        seg = L.aha_labels(myo, geom, R.T @ np.array([0.0, 1.0, 0.0]))
+        seg = L.aha_labels(myo, geom, R.T @ ANT_SUP)
         # artery = a 1-voxel shell just outside the epicardium, labelled by the standard territory of the nearest segment
         shell = ndi.binary_dilation(myo | cav, iterations=2) & ~ndi.binary_dilation(myo | cav, iterations=1)
         _, idx = ndi.distance_transform_edt(seg == 0, return_indices=True)

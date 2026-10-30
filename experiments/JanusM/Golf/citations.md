@@ -1,5 +1,7 @@
 # Verified citations: segmenting LV myocardial layers on cardiac CT (perfusion, scar)
 
+Compiled for Golf v1 (Janus-M Round 1, #130) by a literature sub-agent; every entry was opened at the URL given. Golf's note: the Mendeley record cy54ttk3fj is **not** tabular-only. The project ingested it as DICOM diastolic and systolic CCTA (`tools/ccta/ingest_open.py sdn-perfusion`; 80 pool volumes).
+
 Verified 2026-10-30. Bibliographic data (authors, title, journal, year, vol:pages, DOI, PMID, PMCID) were pulled from the NCBI PubMed E-utilities record (`https://pubmed.ncbi.nlm.nih.gov/<PMID>/`), unless another URL is given. Numbers come from the **abstract** unless another location (table, section, figure) is named. Where a number is in the full text and I could not read it, the entry says so.
 
 Corrections to the brief:

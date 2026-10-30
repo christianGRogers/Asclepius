@@ -1,0 +1,379 @@
+{
+ "ok": {
+  "A_anterior": 17,
+  "B_anterior_superior": 19
+ },
+ "cases": {
+  "s1250": {
+   "A_anterior": {
+    "seg1_minus_seg4_anterior_mm": 14.429230525580756,
+    "seg1_minus_seg4_superior_mm": 50.410301411674936,
+    "septum_towards_rv": true,
+    "lateral_away": true,
+    "ok": true
+   },
+   "B_anterior_superior": {
+    "seg1_minus_seg4_anterior_mm": 14.429230525580756,
+    "seg1_minus_seg4_superior_mm": 50.410301411674936,
+    "septum_towards_rv": true,
+    "lateral_away": true,
+    "ok": true
+   }
+  },
+  "s1330": {
+   "A_anterior": {
+    "seg1_minus_seg4_anterior_mm": 3.7551729775807487,
+    "seg1_minus_seg4_superior_mm": -58.09375620139511,
+    "septum_towards_rv": true,
+    "lateral_away": true,
+    "ok": false
+   },
+   "B_anterior_superior": {
+    "seg1_minus_seg4_anterior_mm": -3.7630020879003254,
+    "seg1_minus_seg4_superior_mm": 58.09195860282668,
+    "septum_towards_rv": true,
+    "lateral_away": true,
+    "ok": false
+   }
+  },
+  "s1239": {
+   "A_anterior": {
+    "seg1_minus_seg4_anterior_mm": 7.180602888005019,
+    "seg1_minus_seg4_superior_mm": 62.510204323606715,
+    "septum_towards_rv": true,
+    "lateral_away": true,
+    "ok": true
+   },
+   "B_anterior_superior": {
+    "seg1_minus_seg4_anterior_mm": 7.180602888005019,
+    "seg1_minus_seg4_superior_mm": 62.510204323606715,
+    "septum_towards_rv": true,
+    "lateral_away": true,
+    "ok": true
+   }
+  },
+  "s0946": {
+   "A_anterior": {
+    "seg1_minus_seg4_anterior_mm": 22.408254763025447,
+    "seg1_minus_seg4_superior_mm": 52.86363432748006,
+    "septum_towards_rv": true,
+    "lateral_away": true,
+    "ok": true
+   },
+   "B_anterior_superior": {
+    "seg1_minus_seg4_anterior_mm": 22.408254763025447,
+    "seg1_minus_seg4_superior_mm": 52.86363432748006,
+    "septum_towards_rv": true,
+    "lateral_away": true,
+    "ok": true
+   }
+  },
+  "s0624": {
+   "A_anterior": {
+    "seg1_minus_seg4_anterior_mm": -2.2096165073976834,
+    "seg1_minus_seg4_superior_mm": -64.75928046600029,
+    "septum_towards_rv": true,
+    "lateral_away": true,
+    "ok": false
+   },
+   "B_anterior_superior": {
+    "seg1_minus_seg4_anterior_mm": 2.2034178814743512,
+    "seg1_minus_seg4_superior_mm": 64.75666706153729,
+    "septum_towards_rv": true,
+    "lateral_away": true,
+    "ok": true
+   }
+  },
+  "s0702": {
+   "A_anterior": {
+    "seg1_minus_seg4_anterior_mm": 15.797998583800329,
+    "seg1_minus_seg4_superior_mm": 37.28327984056803,
+    "septum_towards_rv": true,
+    "lateral_away": true,
+    "ok": true
+   },
+   "B_anterior_superior": {
+    "seg1_minus_seg4_anterior_mm": 15.797998583800329,
+    "seg1_minus_seg4_superior_mm": 37.28327984056803,
+    "septum_towards_rv": true,
+    "lateral_away": true,
+    "ok": true
+   }
+  },
+  "s0877": {
+   "A_anterior": {
+    "seg1_minus_seg4_anterior_mm": 18.001452840490153,
+    "seg1_minus_seg4_superior_mm": 44.127782570166524,
+    "septum_towards_rv": true,
+    "lateral_away": true,
+    "ok": true
+   },
+   "B_anterior_superior": {
+    "seg1_minus_seg4_anterior_mm": 18.001452840490153,
+    "seg1_minus_seg4_superior_mm": 44.127782570166524,
+    "septum_towards_rv": true,
+    "lateral_away": true,
+    "ok": true
+   }
+  },
+  "s1272": {
+   "A_anterior": {
+    "seg1_minus_seg4_anterior_mm": 9.061672012394684,
+    "seg1_minus_seg4_superior_mm": 56.40301237711116,
+    "septum_towards_rv": true,
+    "lateral_away": true,
+    "ok": true
+   },
+   "B_anterior_superior": {
+    "seg1_minus_seg4_anterior_mm": 9.061672012394684,
+    "seg1_minus_seg4_superior_mm": 56.40301237711116,
+    "septum_towards_rv": true,
+    "lateral_away": true,
+    "ok": true
+   }
+  },
+  "s0684": {
+   "A_anterior": {
+    "seg1_minus_seg4_anterior_mm": -6.333496522518736,
+    "seg1_minus_seg4_superior_mm": -13.839385171790234,
+    "septum_towards_rv": true,
+    "lateral_away": true,
+    "ok": false
+   },
+   "B_anterior_superior": {
+    "seg1_minus_seg4_anterior_mm": 6.333496522518736,
+    "seg1_minus_seg4_superior_mm": 13.839385171790234,
+    "septum_towards_rv": true,
+    "lateral_away": true,
+    "ok": true
+   }
+  },
+  "s0767": {
+   "A_anterior": {
+    "seg1_minus_seg4_anterior_mm": 2.596439480290911,
+    "seg1_minus_seg4_superior_mm": -47.74500549371516,
+    "septum_towards_rv": true,
+    "lateral_away": true,
+    "ok": false
+   },
+   "B_anterior_superior": {
+    "seg1_minus_seg4_anterior_mm": -2.606194620693323,
+    "seg1_minus_seg4_superior_mm": 47.74148159526269,
+    "septum_towards_rv": true,
+    "lateral_away": true,
+    "ok": false
+   }
+  },
+  "s0531": {
+   "A_anterior": {
+    "seg1_minus_seg4_anterior_mm": 19.21221880237,
+    "seg1_minus_seg4_superior_mm": 55.55920076870615,
+    "septum_towards_rv": true,
+    "lateral_away": true,
+    "ok": true
+   },
+   "B_anterior_superior": {
+    "seg1_minus_seg4_anterior_mm": 19.21221880237,
+    "seg1_minus_seg4_superior_mm": 55.55920076870615,
+    "septum_towards_rv": true,
+    "lateral_away": true,
+    "ok": true
+   }
+  },
+  "s0184": {
+   "A_anterior": {
+    "seg1_minus_seg4_anterior_mm": 6.173988581817838,
+    "seg1_minus_seg4_superior_mm": 64.8064853277693,
+    "septum_towards_rv": true,
+    "lateral_away": true,
+    "ok": true
+   },
+   "B_anterior_superior": {
+    "seg1_minus_seg4_anterior_mm": 6.173988581817838,
+    "seg1_minus_seg4_superior_mm": 64.8064853277693,
+    "septum_towards_rv": true,
+    "lateral_away": true,
+    "ok": true
+   }
+  },
+  "s0189": {
+   "A_anterior": {
+    "seg1_minus_seg4_anterior_mm": 11.554446474250703,
+    "seg1_minus_seg4_superior_mm": 33.9085471209105,
+    "septum_towards_rv": true,
+    "lateral_away": true,
+    "ok": true
+   },
+   "B_anterior_superior": {
+    "seg1_minus_seg4_anterior_mm": 11.554446474250703,
+    "seg1_minus_seg4_superior_mm": 33.9085471209105,
+    "septum_towards_rv": true,
+    "lateral_away": true,
+    "ok": true
+   }
+  },
+  "s0919": {
+   "A_anterior": {
+    "seg1_minus_seg4_anterior_mm": 15.16850731219489,
+    "seg1_minus_seg4_superior_mm": 12.317361270637356,
+    "septum_towards_rv": false,
+    "lateral_away": true,
+    "ok": false
+   },
+   "B_anterior_superior": {
+    "seg1_minus_seg4_anterior_mm": 15.16850731219489,
+    "seg1_minus_seg4_superior_mm": 12.317361270637356,
+    "septum_towards_rv": false,
+    "lateral_away": true,
+    "ok": false
+   }
+  },
+  "s0671": {
+   "A_anterior": {
+    "seg1_minus_seg4_anterior_mm": 6.441773998130692,
+    "seg1_minus_seg4_superior_mm": 53.725639315509504,
+    "septum_towards_rv": true,
+    "lateral_away": true,
+    "ok": true
+   },
+   "B_anterior_superior": {
+    "seg1_minus_seg4_anterior_mm": 6.441773998130692,
+    "seg1_minus_seg4_superior_mm": 53.725639315509504,
+    "septum_towards_rv": true,
+    "lateral_away": true,
+    "ok": true
+   }
+  },
+  "s0901": {
+   "A_anterior": {
+    "seg1_minus_seg4_anterior_mm": 13.796252525185082,
+    "seg1_minus_seg4_superior_mm": 49.20155817737093,
+    "septum_towards_rv": true,
+    "lateral_away": true,
+    "ok": true
+   },
+   "B_anterior_superior": {
+    "seg1_minus_seg4_anterior_mm": 13.796252525185082,
+    "seg1_minus_seg4_superior_mm": 49.20155817737093,
+    "septum_towards_rv": true,
+    "lateral_away": true,
+    "ok": true
+   }
+  },
+  "s1073": {
+   "A_anterior": {
+    "seg1_minus_seg4_anterior_mm": 12.390630699527811,
+    "seg1_minus_seg4_superior_mm": 53.16959797967856,
+    "septum_towards_rv": true,
+    "lateral_away": true,
+    "ok": true
+   },
+   "B_anterior_superior": {
+    "seg1_minus_seg4_anterior_mm": 12.390630699527811,
+    "seg1_minus_seg4_superior_mm": 53.16959797967856,
+    "septum_towards_rv": true,
+    "lateral_away": true,
+    "ok": true
+   }
+  },
+  "s0270": {
+   "A_anterior": {
+    "seg1_minus_seg4_anterior_mm": 11.094990231779384,
+    "seg1_minus_seg4_superior_mm": 55.2677237337288,
+    "septum_towards_rv": true,
+    "lateral_away": true,
+    "ok": true
+   },
+   "B_anterior_superior": {
+    "seg1_minus_seg4_anterior_mm": 11.094990231779384,
+    "seg1_minus_seg4_superior_mm": 55.2677237337288,
+    "septum_towards_rv": true,
+    "lateral_away": true,
+    "ok": true
+   }
+  },
+  "s0403": {
+   "A_anterior": {
+    "seg1_minus_seg4_anterior_mm": 25.5247427188983,
+    "seg1_minus_seg4_superior_mm": 44.25967060575044,
+    "septum_towards_rv": true,
+    "lateral_away": true,
+    "ok": true
+   },
+   "B_anterior_superior": {
+    "seg1_minus_seg4_anterior_mm": 25.5247427188983,
+    "seg1_minus_seg4_superior_mm": 44.25967060575044,
+    "septum_towards_rv": true,
+    "lateral_away": true,
+    "ok": true
+   }
+  },
+  "s1049": {
+   "A_anterior": {
+    "seg1_minus_seg4_anterior_mm": 16.233419502316597,
+    "seg1_minus_seg4_superior_mm": 57.46957803863468,
+    "septum_towards_rv": true,
+    "lateral_away": true,
+    "ok": true
+   },
+   "B_anterior_superior": {
+    "seg1_minus_seg4_anterior_mm": 16.233419502316597,
+    "seg1_minus_seg4_superior_mm": 57.46957803863468,
+    "septum_towards_rv": true,
+    "lateral_away": true,
+    "ok": true
+   }
+  },
+  "s0597": {
+   "fail": "no LV myocardium / blood-pool label"
+  },
+  "s0653": {
+   "A_anterior": {
+    "seg1_minus_seg4_anterior_mm": NaN,
+    "seg1_minus_seg4_superior_mm": NaN,
+    "septum_towards_rv": false,
+    "lateral_away": false,
+    "ok": false
+   },
+   "B_anterior_superior": {
+    "seg1_minus_seg4_anterior_mm": NaN,
+    "seg1_minus_seg4_superior_mm": NaN,
+    "septum_towards_rv": false,
+    "lateral_away": false,
+    "ok": false
+   }
+  },
+  "s1133": {
+   "A_anterior": {
+    "seg1_minus_seg4_anterior_mm": 18.908857917917864,
+    "seg1_minus_seg4_superior_mm": 44.65803536963211,
+    "septum_towards_rv": true,
+    "lateral_away": true,
+    "ok": true
+   },
+   "B_anterior_superior": {
+    "seg1_minus_seg4_anterior_mm": 18.908857917917864,
+    "seg1_minus_seg4_superior_mm": 44.65803536963211,
+    "septum_towards_rv": true,
+    "lateral_away": true,
+    "ok": true
+   }
+  },
+  "s0665": {
+   "A_anterior": {
+    "seg1_minus_seg4_anterior_mm": 10.064829603725684,
+    "seg1_minus_seg4_superior_mm": 49.59946577783755,
+    "septum_towards_rv": true,
+    "lateral_away": true,
+    "ok": true
+   },
+   "B_anterior_superior": {
+    "seg1_minus_seg4_anterior_mm": 10.064829603725684,
+    "seg1_minus_seg4_superior_mm": 49.59946577783755,
+    "septum_towards_rv": true,
+    "lateral_away": true,
+    "ok": true
+   }
+  }
+ }
+}

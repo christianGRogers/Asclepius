@@ -299,12 +299,28 @@ def main():
     ap.add_argument("--cases", type=int, default=24)
     ap.add_argument("--sigmas", default="0.25,0.5,1.0")
     ap.add_argument("--reps", type=int, default=2)
+    ap.add_argument("--part", default="0/1", help="i/n: run every n-th case from i (parallel runs), merged by --merge")
+    ap.add_argument("--merge", action="store_true", help="merge layers_ts.part*.json into layers_ts.json and stop")
     a = ap.parse_args()
     here = Path(__file__).parent
     ids = list(json.loads((here / "ts_cases.json").read_text()))[: a.cases]
     sig = [float(x) for x in a.sigmas.split(",")]
     res = {}
     outp = here / "layers_ts.json"
+    if a.merge:
+        for f in sorted(here.glob("layers_ts.part*.json")):
+            res.update(json.loads(f.read_text())["cases"])
+        if outp.exists():
+            res = {**json.loads(outp.read_text()).get("cases", {}), **res}
+        res = {i: res[i] for i in ids if i in res}
+        outp.write_text(json.dumps({"sigmas": sig, "reps": a.reps, "cases": res}, indent=1))
+        print("merged", len(res), "cases")
+        return
+    done = json.loads(outp.read_text()).get("cases", {}) if outp.exists() else {}
+    k, n = map(int, a.part.split("/"))
+    if n > 1:
+        ids = [i for j, i in enumerate(ids) if j % n == k and i not in done]
+        outp = here / f"layers_ts.part{k}.json"
     if outp.exists():
         res = json.loads(outp.read_text()).get("cases", {})
     for i in ids:

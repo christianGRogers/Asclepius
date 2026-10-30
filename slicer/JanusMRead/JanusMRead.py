@@ -1,7 +1,7 @@
 """JanusMRead -- read one Janus-M case's borders in 3D Slicer and send the read back.
 
 Shown in Slicer as **Janus-M Read**. It talks only to the Janus-M read queue
-(``/api/v1/janusm``, protocol ``janusm-read`` 1; ``docs/JANUSM-READ-PROTOCOL.md``),
+(``/api/v1/janusm``, protocol ``janusm-read`` 2; ``docs/JANUSM-READ-PROTOCOL.md``),
 through ``janusm_reads.client``. It is not SegQueue14: its own module name, library
 (``JanusMReadLib``), settings (``JanusMRead/...``), cache (``~/.janusm-read``),
 archive (``JanusMRead-<v>-Slicer-<x.y>.zip``) and release tag (``janusm-read-v<v>``).
@@ -17,9 +17,12 @@ What a reader does:
   window** of the endocardium: level at the half-maximum, width 1.5 x the gap
   between the plateaus. A blank case opens on 800 / 300 until the reader measures
   the plateaus from ROIs. The reader may switch borders, or to 800 / 300.
-* The **read form** (JA46 (d)): the CAD-RADS 2.0 grade of each main coronary's worst
-  lesion, and optionally its point. It goes to the server with the read and is never
-  shown to another reader.
+* The **read form** (JA46 (d), JA67): the CAD-RADS 2.0 grade of each main coronary's
+  worst lesion -- each row offers only its own grades (LM: 0, 1, 2, 4B, 5, N; LAD,
+  LCx, RCA: 0, 1, 2, 3, 4A, 5, N) -- and optionally its point. It goes to the server
+  with the read and is never shown to another reader. It is kept on this computer
+  with the draft, so a case reopened (a returned read, or after closing Slicer) comes
+  back with its form, and its reading time keeps counting from where it stopped.
 * **Submit** refuses a read whose values are outside 0-4, whose classes overlap,
   with an empty class or an incomplete read form, before anything is uploaded. The
   server's automatic check is the authority. A read it returns comes back here with
@@ -31,6 +34,7 @@ for, or could show, the case's read set, whether it is scored, or the other read
 the read queue never sends them to a reader.
 """
 
+import json
 import os
 import shutil
 import sys
@@ -48,7 +52,7 @@ from slicer.ScriptedLoadableModule import (
     ScriptedLoadableModuleWidget,
 )
 
-__version__ = "0.2.0"
+__version__ = "0.3.0"
 
 # The shared package, found two ways:
 #   checkout   <repo>/slicer/JanusMRead/JanusMRead.py  with  <repo>/src/janusm_reads
@@ -85,6 +89,9 @@ LESION_NODE_PREFIX = "Janus-M lesion "
 CT_STEM = "ct"
 SEED_FILE = "seed.nii.gz"
 DRAFT_FILE = "draft.seg.nrrd"
+#: The read form and the reading time of the attempt in progress, kept beside the draft.
+FORM_FILE = "form.json"
+TIMER_FILE = "timer.json"
 READ_FILE = "read.nii.gz"
 
 
@@ -149,6 +156,7 @@ class JanusMReadLogic(ScriptedLoadableModuleLogic):
         self.lesionNodes = {}
         self.profileChart = None
         self._openedAt = None
+        self._carriedSeconds = 0.0
 
     # ------------------------------------------------------------ session
 
@@ -260,13 +268,55 @@ class JanusMReadLogic(ScriptedLoadableModuleLogic):
         self.plateaus = {name: None for name in halfmax.PLATEAUS}
         self.border, self.windowMode = halfmax.DEFAULT_BORDER, "border"
         self.clearReadForm()
+        self.restoreReadForm()
         if read.has_seed:
             # Protocol v1: the plateaus come from the seed when the case opens.
             self.measurePlateausFromSegments()
         self.openDefaultWindow()
         slicer.util.setSliceViewerLayers(background=self.volumeNode, fit=True)
+        self._carriedSeconds = float(self._loadJson(TIMER_FILE).get("seconds") or 0.0)
         self._openedAt = time.time()
         return read
+
+    # ------------------------------------------ kept with the draft (S5.8)
+
+    def _loadJson(self, name):
+        if self.read is None:
+            return {}
+        try:
+            with open(os.path.join(self.caseDir(self.read.read_id), name)) as handle:
+                data = json.load(handle)
+            return data if isinstance(data, dict) else {}
+        except (OSError, ValueError):
+            return {}
+
+    def _saveJson(self, name, data):
+        if self.read is None:
+            return
+        path = os.path.join(self.caseDir(self.read.read_id), name)
+        with open(path + ".part", "w") as handle:
+            json.dump(data, handle)
+        os.replace(path + ".part", path)
+
+    def saveReadForm(self):
+        """Keep the read form beside the draft, so reopening the case restores it."""
+        cadrads, points = self.readForm()
+        self._saveJson(FORM_FILE, {"cadrads": cadrads, "lesionPoints": points})
+
+    def restoreReadForm(self):
+        """The read form this computer kept for the open read, if any."""
+        data = self._loadJson(FORM_FILE)
+        for vessel, grade in (data.get("cadrads") or {}).items():
+            if vessel in protocol.VESSELS and grade in protocol.grades_for(vessel):
+                self.cadrads[vessel] = grade
+        for vessel, ras in (data.get("lesionPoints") or {}).items():
+            if vessel in protocol.VESSELS and len(ras or []) == 3:
+                self.setLesionPoint(vessel, ras)
+
+    def saveTimer(self):
+        """Keep this attempt's reading time, so reopening the case continues it."""
+        if self.read is not None and self.read.state in protocol.OPEN_STATES:
+            self._saveJson(TIMER_FILE, {"seconds": self.elapsedSeconds()})
 
     def ensureSegments(self):
         """Exactly the four JA1 segments, named and coloured from ``janusm_reads.labels``."""
@@ -379,11 +429,17 @@ class JanusMReadLogic(ScriptedLoadableModuleLogic):
     def saveDraft(self):
         if self.segmentationNode is None or self.read is None:
             return False
+        self.saveReadForm()
+        self.saveTimer()
         return bool(slicer.util.saveNode(
             self.segmentationNode, os.path.join(self.caseDir(self.read.read_id), DRAFT_FILE)))
 
     def elapsedSeconds(self):
-        return 0.0 if self._openedAt is None else max(0.0, time.time() - self._openedAt)
+        """This attempt's reading time: what earlier openings of the case kept, plus
+        the time since it was opened now. The server sums it over the attempts."""
+        if self._openedAt is None:
+            return 0.0
+        return self._carriedSeconds + max(0.0, time.time() - self._openedAt)
 
     def submit(self, note=""):
         """Check, export and upload the read and its form. Nothing is uploaded when a
@@ -400,6 +456,9 @@ class JanusMReadLogic(ScriptedLoadableModuleLogic):
         self.read = self.client.submit(self.read, path, {str(k): v for k, v in counts.items()},
                                        seconds=self.elapsedSeconds(), note=note,
                                        cadrads=cadrads, lesion_points=points)
+        # The next attempt (if the check returns it) is timed from now.
+        self._carriedSeconds, self._openedAt = 0.0, time.time()
+        self._saveJson(TIMER_FILE, {"seconds": 0.0})
         return self.read
 
     # ----------------------------------------------------------- read form
@@ -413,6 +472,7 @@ class JanusMReadLogic(ScriptedLoadableModuleLogic):
             self.cadrads[vessel] = grade
         else:
             self.cadrads.pop(vessel, None)
+        self.saveReadForm()
 
     def lesionNode(self, vessel, create=True):
         node = self.lesionNodes.get(vessel)
@@ -473,6 +533,9 @@ class JanusMReadLogic(ScriptedLoadableModuleLogic):
         return done
 
     def closeCase(self):
+        if self.read is not None and self.read.state in protocol.OPEN_STATES:
+            self.saveReadForm()
+            self.saveTimer()
         self.clearReadForm()
         self.clearProfile()
         for node in (self.segmentationNode, self.volumeNode):
@@ -481,6 +544,7 @@ class JanusMReadLogic(ScriptedLoadableModuleLogic):
         self.segmentationNode = self.volumeNode = None
         self.read = None
         self._openedAt = None
+        self._carriedSeconds = 0.0
 
     # ------------------------------------------------------- half-maximum
 
@@ -759,14 +823,16 @@ class JanusMReadWidget(ScriptedLoadableModuleWidget):
         self.readFormBox = box
         form = qt.QFormLayout(box)
         note = qt.QLabel("CAD-RADS 2.0 grade of each vessel's worst lesion (N: "
-                         "non-diagnostic). Optionally mark the lesion.")
+                         "non-diagnostic; LM >= 50 % is 4B). Optionally mark the lesion. "
+                         "Branches: diagonals with the LAD; obtuse marginals and ramus with "
+                         "the LCx; PDA and PLB with the dominant artery.")
         note.setWordWrap(True)
         form.addRow(note)
         for vessel in protocol.VESSELS:
             row = qt.QHBoxLayout()
             combo = qt.QComboBox()
             combo.addItem("")
-            for grade in protocol.CADRADS_GRADES:
+            for grade in protocol.grades_for(vessel):   # JA67: this row's grades only
                 combo.addItem(grade)
             combo.currentTextChanged.connect(
                 lambda text, name=vessel: self.onGrade(name, text))

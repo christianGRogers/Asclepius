@@ -10,11 +10,11 @@ The Janus-M read queue is its own Girder plugin, beside SegQueue14 in the same G
 | Python distribution | `girder-segqueue14` | `girder-janusm` (`server/girder_janusm/`) |
 | Girder plugin name | `segqueue14` | `janusm` |
 | REST prefix | `/api/v1/segqueue14` | `/api/v1/janusm` |
-| Girder collection | `SegQueue` | `JanusM` (`seeds/`, `incoming/`, `reads/`) |
+| Girder collection | `SegQueue` | `JanusM` (`seeds/`, `check-seeds/`, `incoming/`, `reads/`) |
 | Mongo collections | `segqueue14_*` | `janusm_case`, `janusm_read` |
 | Settings | `segqueue14.*` | `janusm.sealOpen`, `janusm.maxOpen` |
 | Groups | `segqueue14-annotators`, `segqueue14-reviewers` | `janusm-readers`, `janusm-admins` |
-| Wire protocol | SegQueue14 (16) | `janusm-read` 1 |
+| Wire protocol | SegQueue14 (16) | `janusm-read` 2 (JanusMRead 0.3.0 or later) |
 | Worker | `segqueue14-score` | `janusm-check` |
 
 What it **reads** and never writes: the CT files in `ImageCAS-X/cases` (D22), by
@@ -38,7 +38,9 @@ file id. Seal and decision cases are ImageCAS-X *train* cases only (JA5, JA6).
    janusm-populate --seeds-dir /path/to/seeds
    ```
    It refuses the whole run on any JA12 guard hit, a CT it cannot match uniquely, or a
-   seeded case with no seed. Check the dry run's CT names (`c0001` is ImageCAS 2).
+   case with no seed. Blank cases' seeds go to `JanusM/check-seeds` as their check
+   seeds (JA66): no group may read that folder and no route serves it. Check the dry
+   run's CT names (`c0001` is ImageCAS 2).
 4. Run the check worker beside Girder: `janusm-check --every 30`.
 5. Add readers to `janusm-readers` (Girder's group page). Being a SegQueue14
    annotator does not make anyone a reader.
@@ -46,12 +48,17 @@ file id. Seal and decision cases are ImageCAS-X *train* cases only (JA5, JA6).
    the first 20 double-read decision cases (JA6); then an admin calls
    `POST /api/v1/janusm/admin/seal/open`.
 
-Per wave, for the anchoring report (protocol §7):
+Per wave, for the anchoring report (protocol §7): an admin puts the wave's cases in
+it (`POST /api/v1/janusm/admin/wave` with `wave` and `cases`), then
 
 ```sh
 janusm-export --out /tmp/wave1 --seeds-dir /path/to/seeds --wave 1
 python -m janusm_reads.anchoring /tmp/wave1/manifest.json --out wave1-anchoring.json
 ```
+
+If that report has `rule2.flagged`, the admin opens the drawn third reads with
+`POST /api/v1/janusm/admin/third-reads` (`wave`, the report, and exactly its
+`rule2.thirdReadCases`); anything else is refused.
 
 ## Rollback
 

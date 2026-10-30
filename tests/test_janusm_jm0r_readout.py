@@ -195,7 +195,8 @@ def test_aggregate_holds_no_case_id_and_no_per_case_value(case, jm0r):
     assert "_core_sample" not in text and "id" not in s
     gate = s["ja17_rest_tpr_gate"]
     assert gate["passes"] is not None
-    assert s["lima"]["ja20_septal_arc_column_kept"] is False
+    assert s["lima"]["ja20_septal_arc_column_kept_pooled_reported"] is False
+    assert "ja20_septal_arc_column_kept" not in s["lima"]
     assert len(s["hotel"]["core1_hist_pooled"]) == len(jm0r.HIST_EDGES) - 1
     assert s["lima"]["fat_grid_le_5pct_hearts"]  # no fat in the phantom
 
@@ -237,20 +238,74 @@ def test_decision_inputs_marks_what_is_not_measured_as_none(case, jm0r):
     assert d["aha_frame_fail_share"] is None and d["cv_n"] is None and d["fat_grid"] is None
 
 
+def _jittered(r, n, seed=20261030, sd=0.09):
+    """``n`` copies of the phantom's row with seeded per-segment jitter of the relative wall (a
+    lognormal factor, SD ``sd``), so cv_n is not 0 and S3 can simulate a population."""
+    rng = np.random.default_rng(seed)
+    rows = []
+    for _ in range(n):
+        x = dict(r)
+        x["rel_thickness"] = {k: v * float(np.exp(rng.normal(0, sd)))
+                              for k, v in r["rel_thickness"].items()}
+        rows.append(x)
+    return rows
+
+
 def test_the_decision_script_on_the_synthetic_summary_is_decidable(case, jm0r, capsys):
-    """JA44's acceptance (Lima's test): the JA43 script, run on JM-0R's synthetic output, prints
-    no NOT DECIDABLE, except R9 while S3 (janusm.calibrate) is not merged."""
+    """JA44's acceptance (Lima's test), rebuilt by JA60 (R4-S2): the JA43 script, run on JM-0R's
+    synthetic output with jittered rows, prints no NOT DECIDABLE, and R9 computes a depth with
+    the shipped S3 on the measured wall."""
     *_, r = case
-    rows = [dict(r) for _ in range(40)]
-    summary = {"provenance": {"script_version": jm0r.SCRIPT_VERSION}, **jm0r.aggregate(rows)}
+    summary = {"provenance": {"script_version": jm0r.SCRIPT_VERSION},
+               **jm0r.aggregate(_jittered(r, 40))}
     dec = _decide_module()
-    res = dec.decide(dec.from_jm0r(json.loads(json.dumps(summary))))
-    assert [x["rule"] for x in res] == [f"R{i}" for i in range(11)]
+    x = dec.from_jm0r(json.loads(json.dumps(summary)))
+    assert x["cv_n"] > 0.05 and x["thickness_median_mm"] > 0
+    res = dec.decide(x)
+    assert [y["rule"] for y in res] == [f"R{i}" for i in range(11)]
     assert res[0]["outcome"] == "proceed"
+    assert [ln for ln in dec.lines(res) if "NOT DECIDABLE" in ln] == []
+    r9 = res[9]
+    assert r9["rule"] == "R9" and r9["depth"] is not None
+    assert r9["inputs"]["thickness_median_mm"] == x["thickness_median_mm"]
+
+
+def test_the_decision_script_on_identical_rows_prints_s3s_refusal(case, jm0r):
+    """JA60: 40 identical rows give cv_n = 0. S3 refuses, and R9 prints the NOT DECIDABLE line
+    (it used to pass silently)."""
+    *_, r = case
+    summary = {"provenance": {}, **jm0r.aggregate([dict(r) for _ in range(40)])}
+    dec = _decide_module()
+    x = dec.from_jm0r(json.loads(json.dumps(summary)))
+    assert x["cv_n"] == 0
+    res = dec.decide(x)
     nd = [ln for ln in dec.lines(res) if "NOT DECIDABLE" in ln]
-    s3_pending = dec._detectable_depth() is None
-    assert nd == (["    NOT DECIDABLE: janusm.calibrate.detectable_depth (S3)"] if s3_pending
-                  else [])
+    assert len(nd) == 1 and nd[0].startswith("    NOT DECIDABLE: cv_n (S3 refused: ")
+    assert res[9]["depth"] is None and res[9]["numbers_only"] is True
+    assert "provisional 45 %" in res[9]["outcome"]
+
+
+def test_septal_arc_pooled_flag_is_reported_and_r7_follows_the_case_median(case, jm0r):
+    """R4-S3 (JA69): pooled and case-median shares straddling 0.10. The pooled flag is renamed
+    ``..._pooled_reported``; ``decision_inputs`` (and so R7) follows the case median."""
+    *_, r = case
+    small = {**r, "arc_changed_ml": 0.02 * r["seg_ml"]}
+    big = {**r, "arc_changed_ml": 0.60 * r["seg_ml"], "seg_ml": r["seg_ml"]}
+    s = jm0r.aggregate([small, small, big])  # pooled 0.213 >= 0.10; case median 0.02 < 0.10
+    lim = s["lima"]
+    assert lim["arc_sectors"]["share_mass_changing_segment_pooled"] >= 0.10
+    assert lim["ja20_septal_arc_column_kept_pooled_reported"] is True
+    d = s["decision_inputs"]
+    assert d["septal_arc_mass_changed_median"] == pytest.approx(0.02, abs=1e-3)
+    r7 = {y["rule"]: y for y in _decide_module().decide(d)}["R7"]
+    assert r7["column_kept"] is False
+    # and the other way round: pooled below, case median above
+    s = jm0r.aggregate([{**r, "arc_changed_ml": 0.12 * r["seg_ml"]}] * 2
+                       + [{**r, "arc_changed_ml": 0.0, "seg_ml": 20 * r["seg_ml"]}])
+    assert s["lima"]["ja20_septal_arc_column_kept_pooled_reported"] is False
+    assert s["decision_inputs"]["septal_arc_mass_changed_median"] >= 0.10
+    r7 = {y["rule"]: y for y in _decide_module().decide(s["decision_inputs"])}["R7"]
+    assert r7["column_kept"] is True
 
 
 # ------------------------------------------------------------------------------- guard

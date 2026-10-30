@@ -12,7 +12,6 @@ import inspect
 import numpy as np
 import pytest
 from scipy import ndimage as ndi
-from scipy.spatial.transform import Rotation
 
 from janusm import geometry as G
 from janusm import harness as H
@@ -215,8 +214,9 @@ def test_a_constant_model_bias_costs_about_its_own_size_in_thickness(ref):
 
 
 # ------------------------------------------------------------------------------- JA45 API
-def test_harness_version_is_1_2():
-    assert H.HARNESS_VERSION == "1.2.0"
+def test_harness_version_is_1_3():
+    """R5-S3: JA70's band moves reported numbers."""
+    assert H.HARNESS_VERSION == "1.3.0"
 
 
 def test_exact_shift_phantom_moves_the_closed_surface_by_the_shift():
@@ -271,41 +271,19 @@ def test_e4_exact_shells_signed_bias_within_a_hundredth(radius):
 
 
 # E6 (Hotel R3): Hotel's ellipsoid LV, two grids, axis-aligned or oblique, smooth or rough walls.
-E6_BOX = np.array([84.0, 84.0, 76.0])
+# The phantom is JA71's phantom A and lives in the harness (``H.e6_open_phantom``).
+E6_BOX = H.E6_BOX_MM
 
 
 def _e6_phantom(sp, rot_seed, rough):
-    """Hotel E6's phantom: (cavity F, solid F, base-plane coordinate, ROI), F a continuous signed
-    distance (Sampson) to a truncated ellipsoid, + outside; the ROI leaves out 6 mm at the base."""
-    sp = np.asarray(sp, float)
-    n = np.ceil(E6_BOX / sp).astype(int)
-    X = [(np.arange(k) + 0.5) * s - b / 2 for k, s, b in zip(n, sp, E6_BOX)]
-    P = np.stack(np.meshgrid(*X, indexing="ij"), -1).reshape(-1, 3)
-    R = Rotation.random(random_state=rot_seed).as_matrix() if rot_seed is not None else np.eye(3)
-    Q = P @ R
-    qx, qy, zz = Q[:, 0], Q[:, 1], 30.0 - Q[:, 2]
-
-    def ell(x0, a, c):
-        q = ((qx - x0) / a) ** 2 + (qy / a) ** 2 + (zz / c) ** 2
-        g = 2 * np.sqrt(((qx - x0) / a**2) ** 2 + (qy / a**2) ** 2 + (zz / c**2) ** 2)
-        return (q - 1) / np.maximum(g, 1e-9)
-
-    Fs, Fc = ell(0.0, 32.0, 56.0).reshape(n), ell(4.0, 22.0, 48.0).reshape(n)
-    if rough:
-        rng = np.random.default_rng(1000 + (rot_seed or 0))
-        for F in (Fs, Fc):
-            f = ndi.gaussian_filter(rng.standard_normal(n), 3.0 / sp)
-            F += 0.6 * f / f.std()
-    base = (-zz).reshape(n)
-    return Fc.astype(np.float32), Fs.astype(np.float32), base, base < -6.0
+    """(cavity F, solid F, base-plane coordinate, ROI); the ROI leaves out 6 mm at the base."""
+    Fc, Fs, base = H.e6_open_phantom(sp, rot_seed, rough)
+    return Fc, Fs, base, base < -6.0
 
 
 def _e6_truth(F, s, sp, roi):
     """True mean signed and absolute normal displacement of the level-set shift F - s < 0."""
-    band = (np.abs(F) < 0.5 * float(np.min(sp))) & roi
-    gm = np.sqrt(sum(g * g for g in np.gradient(F, *sp)))[band]
-    d = s / np.maximum(gm, 1e-6)
-    return float(d.mean()), float(np.abs(d).mean())
+    return H.e6_truth(F, s, sp, roi)
 
 
 def _ja39_tolerance(shift):
@@ -434,16 +412,22 @@ def _small_open_lv():
 
 
 def test_ja37_band_excludes_label_4_and_open_pool_faces():
-    """R4-S4: the band holds no voxel within 3 mm of label 4 or of an open LV-pool face, and keeps
-    the rest of +-3 mm about the border."""
+    """R4-S4: JA61's band holds no voxel within 3 mm of label 4 or of an open LV-pool face, and
+    keeps the rest of +-3 mm about the border. JA70's band is JA61's less 3 mm about cap faces."""
     from scipy.spatial import cKDTree
 
     lab = _small_open_lv()
     faces = _open_pool_face_centres(lab)
     assert len(faces)  # the outflow half of the base is open
     la = np.argwhere(lab == G.LA) * SP
+    cap, _ = H.cut_cap_faces(lab, SP)
+    assert len(cap)
     for border in ("endo", "epi"):
-        band = H.ja37_band(lab, SP, border)
+        b70 = H.ja37_band(lab, SP, border)
+        band = H.ja37_band(lab, SP, border, cut_cap=False)
+        assert not (b70 & ~band).any()
+        gone = np.argwhere(band & ~b70) * SP
+        assert cKDTree(cap).query(gone)[0].max() <= 3.0 + 1e-9
         pts = np.argwhere(band) * SP
         assert len(pts)
         assert cKDTree(la).query(pts)[0].min() > 3.0
@@ -490,87 +474,272 @@ def test_signed_bias_roi_restricts_volume_and_area():
 
 @pytest.mark.slow
 @pytest.mark.parametrize("radius", [12.0, 21.0])
-def test_e4_closed_shells_stay_within_a_hundredth_in_the_band(radius):
-    """R4-S4: E4's exact shells (a pool in a myocardial shell, nothing open) within +-0.01 mm."""
-    rng = np.random.default_rng(int(radius) + 1)
-    n = int(2 * (radius + 9) / H.GRID_MM)
-    ax = (np.arange(n) - n / 2) * H.GRID_MM
-    X, Y, Z = np.meshgrid(ax, ax, ax, indexing="ij", sparse=True)
-    c = rng.uniform(-H.GRID_MM / 2, H.GRID_MM / 2, 3)
-    R = np.sqrt((X - c[0]) ** 2 + (Y - c[1]) ** 2 + (Z - c[2]) ** 2)
-    ref = R < radius
-    lab = np.zeros(ref.shape, np.int16)
-    lab[R < radius + 5] = G.MYO
-    lab[ref] = G.LV
-    band = H.ja37_band(lab, SP, "endo")
-    assert band.any()
-    for d in (-0.5, -0.3, 0.3, 0.5):
-        assert H.signed_bias(ref, R < radius + d, SP, roi=band) == pytest.approx(d, abs=0.01), d
+@pytest.mark.parametrize("jitter_seed", [0, 1])
+def test_e4_closed_shells_stay_within_a_hundredth_in_the_band(radius, jitter_seed):
+    """R4-S4, R5-S4 (JA79): E4's exact shells (a pool in a myocardial shell, nothing open) within
+    +-0.01 mm in the band, on both borders, at two sub-voxel centre jitters."""
+    lab, R = H.e4_shell(radius, int(radius) + 1 + 100 * jitter_seed)
+    for border, r0 in (("endo", radius), ("epi", radius + 5.0)):
+        band = H.ja37_band(lab, SP, border)
+        assert band.any()
+        assert np.array_equal(band, H.ja37_band(lab, SP, border, cut_cap=False))
+        ref = R < r0
+        for d in (-0.5, -0.3, 0.3, 0.5):
+            est = H.signed_bias(ref, R < r0 + d, SP, roi=band)
+            assert est == pytest.approx(d, abs=0.01), (border, d)
 
 
 def _e6_labels(Fc, Fs, base):
-    cav, sol = (Fc < 0) & (base < 0), (Fs < 0) & (base < 0)
-    lab = np.zeros(cav.shape, np.int16)
-    lab[sol | cav] = G.MYO
-    lab[cav] = G.LV
-    return lab
+    return H.e6_labels(Fc, Fs, base)
 
 
 @pytest.fixture(scope="module")
 def india_open_base():
     """R4-S4 / JA61: India's open-base phantom (E6's, cut at the base plane, pool open to label 0):
-    two grids, three walls, both borders, +-0.3 / +-0.5 mm; ``signed_bias`` in JA37's band
-    against the true mean normal displacement in the band."""
+    two grids, three walls, both borders, +-0.3 / +-0.5 mm; ``signed_bias`` in JA61's band and in
+    JA70's, against the true mean normal displacement in each band."""
     rows = []
     for sp in [(0.5, 0.5, 0.5), (0.4, 0.4, 0.5)]:
         for rot, rough in [(None, False), (23, False), (11, True)]:
             Fc, Fs, base, _ = _e6_phantom(sp, rot, rough)
             lab = _e6_labels(Fc, Fs, base)
             for border, F in (("endo", Fc), ("epi", Fs)):
-                band = H.ja37_band(lab, sp, border)
+                bands = {
+                    "ja61": H.ja37_band(lab, sp, border, cut_cap=False),
+                    "ja70": H.ja37_band(lab, sp, border),
+                }
                 ref = (F < 0) & (base < 0)
                 for shift in (-0.5, -0.3, 0.3, 0.5):
                     test = ((F - shift) < 0) & (base < 0)
-                    tb, _ = _e6_truth(F, shift, sp, band)
-                    err = H.signed_bias(ref, test, sp, roi=band) - tb
                     whole = H.signed_bias(ref, test, sp) - _e6_truth(F, shift, sp, base < 0)[0]
-                    rows.append(dict(border=border, shift=shift, err=err, whole=whole))
+                    row = dict(border=border, shift=shift, whole=whole)
+                    for k, band in bands.items():
+                        tb, _ = _e6_truth(F, shift, sp, band)
+                        row[k] = H.signed_bias(ref, test, sp, roi=band) - tb
+                    rows.append(row)
     return rows
 
 
 @pytest.mark.slow
 def test_open_base_india_phantom_with_the_band(india_open_base):
-    """R4-S4's open-base check. The band brings the endocardium within 0.05 mm (and both borders
-    at +-0.3 mm), and helps everywhere against the whole mask; at +-0.5 mm the epicardium misses
-    0.05 mm (the cut myocardial cap stays in the band as JA61 rules it). So the check fails and
-    the guard in force is 0.5 mm (JA61)."""
+    """R4-S4's open-base check, and R5-S4's pins as R5-S3 replaces them. JA61's band fails: its
+    epicardial +-0.5 mm rows all lie in (0.05, 0.075], worst 0.068 +- 0.003 mm (the cut cap stays
+    in the band). JA70's band brings every row within 0.05 mm (phantom A of JA71)."""
     rows = india_open_base
     assert len(rows) == 2 * 3 * 2 * 4
     for r in rows:
-        assert abs(r["err"]) < abs(r["whole"]), r
+        assert abs(r["ja61"]) < abs(r["whole"]), r
         if r["border"] == "endo" or abs(r["shift"]) == 0.3:
-            assert abs(r["err"]) <= 0.05, r
-    worst = max(abs(r["err"]) for r in rows)
-    passed = worst <= 0.05
-    assert not passed  # recorded: R4-S4's open-base validation FAILS (worst ~0.068 mm, epi)
-    assert H.BIAS_GUARD_VALIDATED_MM == (0.3 if passed else 0.5) == H.BIAS_GUARD_FALLBACK_MM
+            assert abs(r["ja61"]) <= 0.05, r
+        else:
+            assert 0.05 < abs(r["ja61"]) <= 0.075, r
+    assert max(abs(r["ja61"]) for r in rows) == pytest.approx(0.068, abs=0.003)
+    worst70 = max(abs(r["ja70"]) for r in rows)
+    assert worst70 <= H.BIAS_CHECK_TOLERANCE_MM
+    assert worst70 == pytest.approx(JA71_WORST_MM["A"], abs=0.005)
+
+
+# ------------------------------------------------------------------------------- JA70 / JA71
+#: JA71's worst |error| per phantom at the validator's defaults (R5-S3's run), pinned +-0.005 mm.
+JA71_WORST_MM = {"A": 0.0155, "B": 0.0238, "C": 0.0115, "E": 0.0224}
+
+
+@pytest.fixture(scope="module")
+def ja71():
+    """JA71's pre-registered check, at its defaults, as R5-S3 ran it once."""
+    return H.validate_bias_estimator(open_base=True)
 
 
 @pytest.mark.slow
-def test_validate_bias_estimator_open_base():
-    """JA61's ``validate_bias_estimator(open_base=True)``: the capsule cut at the base plane, in
-    the band, two grids, three walls, both borders, +-0.3 / +-0.5 mm."""
-    r = H.validate_bias_estimator(open_base=True, n_offsets=1)
-    assert r["open_base"] and r["shifts_mm"] == [0.3, 0.5]
-    assert len(r["rows"]) == 2 * 3 * 2 * 4
-    assert {tuple(x["grid_mm"]) for x in r["rows"]} == {(0.5, 0.5, 0.5), (0.4, 0.4, 0.5)}
-    assert {(x["border"], x["true_mm"]) for x in r["rows"]} == {
-        (b, s) for b in ("endo", "epi") for s in (-0.5, -0.3, 0.3, 0.5)
+def test_ja71_rows_a_to_f_and_the_verdict(ja71):
+    """R5-S3: JA71's rows A-F; the verdict; the worst error per phantom to +-0.005 mm."""
+    r = ja71
+    assert r["open_base"] and r["band"] == "ja70" and r["tolerance_mm"] == 0.05
+    assert r["phantoms"] == ["A", "B", "C", "D", "E", "F"]
+    assert r["shifts_mm"] == [0.3, 0.5]
+    count = {p: sum(x["phantom"] == p for x in r["rows"]) for p in "ABCDEF"}
+    assert count == {"A": 48, "B": 144, "C": 16, "D": 0, "E": 32, "F": 0}
+    for p in "ABCE":
+        sel = [x for x in r["rows"] if x["phantom"] == p]
+        assert {(x["border"], x["true_mm"]) for x in sel} == {
+            (b, s) for b in ("endo", "epi") for s in (-0.5, -0.3, 0.3, 0.5)
+        }
+        assert all(np.isfinite(x["error_mm"]) for x in sel)
+        worst = max(abs(x["error_mm"]) for x in sel)
+        assert worst == r["by_phantom"][p]["worst_abs_error_mm"]
+        assert worst == pytest.approx(JA71_WORST_MM[p], abs=0.005), p
+        assert worst <= 0.05
+    assert {tuple(x["grid_mm"]) for x in r["rows"] if x["phantom"] in "ABE"} == {
+        (0.5, 0.5, 0.5),
+        (0.4, 0.4, 0.5),
     }
-    assert r["by_border"]["endo_outward"]["worst_abs_error_mm"] <= 0.03
-    assert r["by_border"]["endo_inward"]["worst_abs_error_mm"] <= 0.03
-    assert r["worst_abs_error_mm"] <= 0.06
-    assert r["bias_guard_mm"] == (0.3 if r["passed"] else 0.5)
+    assert {x["variant"] for x in r["rows"] if x["phantom"] == "C"} == {"0.0", "23.0"}
+    assert {x["variant"] for x in r["rows"] if x["phantom"] == "E"} == {"False", "True"}
+    # D and F: JA70's band is JA61's, bit for bit, on every map and border
+    assert r["by_phantom"]["D"]["unchanged"] and r["by_phantom"]["F"]["unchanged"]
+    assert len([u for u in r["unchanged"] if u["phantom"] == "D"]) == 3 * 2
+    assert len([u for u in r["unchanged"] if u["phantom"] == "F"]) == 2 * 2
+    for p in "ABCDEF":
+        assert r["by_phantom"][p]["min_epi_kept_share"] >= 0.5, p
+    assert "normal" in r["by_phantom"]["E"]["forms"]
+    assert r["checks"] == {
+        "errors_within_tolerance": True,
+        "D_unchanged": True,
+        "F_unchanged": True,
+        "epi_share_at_least_half": True,
+        "nonplanar_branch_on_E": True,
+    }
+    # the verdict: JA71 passes
+    assert r["passed"] is True and r["bias_guard_mm"] == 0.3
+
+
+@pytest.mark.slow
+def test_bias_guard_constant_follows_the_ja71_verdict(ja71):
+    """R5-S3 / JA79: the constant is set from the verdict computed here at the default settings."""
+    verdict = ja71["passed"]
+    assert H.BIAS_GUARD_VALIDATED_MM == (0.3 if verdict else 0.5)
+
+
+@pytest.mark.slow
+def test_validate_bias_estimator_open_base(ja71):
+    """R5-S4 (JA79): the capsule test runs at the default 3 offsets and asserts the verdict that
+    sets the constant; B's worst is pinned (it was 0.0504 mm on JA61's band, R5-S3 replaces it)."""
+    rows = [x for x in ja71["rows"] if x["phantom"] == "B"]
+    assert len(rows) == 2 * 3 * 3 * 2 * 4  # grids x shapes x 3 offsets x borders x shifts
+    assert len({tuple(x["origin_offset_mm"]) for x in rows}) == 2 * 3
+    assert {(x["cavity_shift_mm"], x["tilt_deg"]) for x in rows} == {
+        (0.0, 0.0),
+        (2.3, 0.0),
+        (2.3, 23.0),
+    }
+    worst = max(abs(x["error_mm"]) for x in rows)
+    assert worst == pytest.approx(JA71_WORST_MM["B"], abs=0.005)
+    assert ja71["passed"] is True
+    assert H.BIAS_GUARD_VALIDATED_MM == (0.3 if ja71["passed"] else 0.5) == 0.3
+
+
+def test_validate_bias_estimator_refuses_unknown_phantoms():
+    with pytest.raises(ValueError):
+        H.validate_bias_estimator(open_base=True, phantoms=("G",))
+    with pytest.raises(ValueError):
+        H.validate_bias_estimator(phantoms=("A",))
+
+
+def test_d_band_is_bit_identical_to_ja61():
+    """R5-S3 (JA70 step 5): the LA-capped heart has no opening, so the band is JA61's."""
+    for cs, tilt in ((0.0, 0.0), (2.3, 0.0), (2.3, 23.0)):
+        lab, aff = H.phantom(cavity_shift_mm=cs, tilt_deg=tilt)
+        for border in ("endo", "epi"):
+            band, rec = H.ja37_band(lab, SP, border, return_record=True)
+            assert np.array_equal(band, H.ja37_band(lab, SP, border, cut_cap=False))
+            assert rec["openings"] == [] and rec["kept_share"] == 1.0
+
+
+@pytest.fixture(scope="module")
+def phantom_e_curved():
+    return H.outflow_phantom(curved=True)[0]
+
+
+def test_on_e_an_opening_takes_the_normal_form(phantom_e_curved):
+    """R5-S3: E's curved outflow is not planar, so JA70's 45 degree / 20 mm rule runs."""
+    _, rec = H.ja37_band(phantom_e_curved, SP, "epi", return_record=True)
+    assert [o["form"] for o in rec["openings"]] == ["normal"]
+    assert rec["openings"][0]["rms_mm"] > H.CAP_PLANE_RMS_MM
+    assert rec["openings"][0]["n_cap_faces"] > 0
+    flat = H.outflow_phantom(curved=False)[0]
+    _, rec = H.ja37_band(flat, SP, "epi", return_record=True)
+    assert [o["form"] for o in rec["openings"]] == ["plane"]
+    assert 0.5 <= rec["kept_share"] < 1.0
+
+
+def test_ja70_parameters_are_the_ruling():
+    assert (H.CAP_PLANE_RMS_MM, H.CAP_PLANE_MM, H.CAP_REACH_MM, H.CAP_ANGLE_DEG) == (
+        1.0,
+        1.0,
+        20.0,
+        45.0,
+    )
+
+
+@pytest.mark.parametrize("which", ["E-curved", "E-flat", "C"])
+def test_a_lateral_epicardial_face_far_from_any_opening_is_never_removed(which, phantom_e_curved):
+    """R5-S3: an epicardial face on label 0 more than 20 mm from every opening is no cap face, so
+    no band voxel more than 20 + 3 mm from every open pool face is removed."""
+    from scipy.spatial import cKDTree
+
+    if which == "E-curved":
+        lab = phantom_e_curved
+    elif which == "E-flat":
+        lab = H.outflow_phantom()[0]
+    else:
+        lab = H.phantom(cavity_shift_mm=2.3, la_gap_deg=H.JA71_C_LA_GAP_DEG)[0]
+    cav, sol = H.borders(lab)
+    pool = cKDTree(H._faces_to_zero(cav, lab)[0] * SP)
+    cap, _ = H.cut_cap_faces(lab, SP)
+    assert len(cap) and pool.query(cap)[0].max() <= H.CAP_REACH_MM + 1e-9
+    # lateral epicardial faces on label 0 far from every opening exist here
+    sf = H._faces_to_zero(sol, lab)[0] * SP
+    assert (pool.query(sf)[0] > H.CAP_REACH_MM).sum() > 1000
+    b61 = H.ja37_band(lab, SP, "epi", cut_cap=False)
+    b70 = H.ja37_band(lab, SP, "epi")
+    far = np.zeros(lab.shape, bool)
+    idx = np.argwhere(b61)
+    far[tuple(idx[pool.query(idx * SP)[0] > H.CAP_REACH_MM + H.JA37_BAND_MM].T)] = True
+    assert far.sum() > 1000
+    assert np.array_equal(b70[far], b61[far])
+
+
+def _literal_band(lab, sp, border):
+    """#219's remedy as worded (rejected by JA70): JA61's band less 3 mm about every solid face
+    adjoining label 0."""
+    sp = np.asarray(sp, float)
+    _, sol = H.borders(lab)
+    faces, _ = H._faces_to_zero(sol, lab)
+    band = H.ja37_band(lab, sp, border, cut_cap=False)
+    return H._drop_near(band, faces * sp, sp, H.JA37_BAND_MM)
+
+
+@pytest.mark.slow
+def test_the_literal_remedy_empties_the_epicardial_band():
+    """R5-S3 (JA70): why the remedy as worded was not taken. With no aorta, pericardium or fat
+    label the free epicardium adjoins label 0 everywhere, and no epicardial surface is left in
+    the band on phantom A (every grid and wall): the estimate is undefined. JA70's keeps it."""
+    for sp in H.OPEN_BASE_GRIDS:
+        for rot, rough in H.E6_WALLS:
+            Fc, Fs, base = H.e6_open_phantom(sp, rot, rough)
+            lab = H.e6_labels(Fc, Fs, base)
+            ref, test = (Fs < 0) & (base < 0), ((Fs - 0.5) < 0) & (base < 0)
+            lit = _literal_band(lab, sp, "epi")
+            assert H.surface_area(ref, sp, roi=lit) == 0.0
+            assert np.isnan(H.signed_bias(ref, test, sp, roi=lit))
+            assert H.surface_area(ref, sp, roi=H.ja37_band(lab, sp, "epi")) > 0
+
+
+def test_compare_ja37_records_the_kept_share_and_the_forms():
+    """JA70's record: the share of JA61's band kept and the form per opening, per border."""
+    lab, aff = H.phantom()
+    r = H.compare(lab, lab, affine=aff, with_sta=False, roi="ja37")
+    assert r["band_kept_share_endo"] == 1.0 and r["band_forms_epi"] == ""
+    lab = H.phantom(cavity_shift_mm=2.3, la_gap_deg=H.JA71_C_LA_GAP_DEG)[0]
+    r = H.compare(lab, lab, affine=aff, with_sta=False, roi="ja37")
+    assert r["band_forms_endo"] == r["band_forms_epi"] == "plane"
+    assert 0.5 < r["band_kept_share_epi"] < 1.0
+    assert "band_kept_share_epi" not in H.compare(lab, lab, affine=aff, with_sta=False)
+
+
+# ------------------------------------------------------------------------------- JA79 docstrings
+def test_signed_bias_docstring_carries_ja37s_disclosure():
+    """R5-S4 (JA79)."""
+    assert "0.09" in H.signed_bias.__doc__
+    doc = " ".join(H.signed_bias.__doc__.split())
+    assert "up to 0.05 mm low outward and 0.09 mm high inward near 0.3 mm (India E9)" in doc
+    assert "is not known" not in doc.split("India E9")[0]
+
+
+def test_module_states_the_0035_tolerance():
+    """R5-S4 (JA65, JA79): the module says 0.035 mm, not 0.03 mm."""
+    doc = " ".join(H.__doc__.split())
+    assert "0.035 mm" in doc and "0.03 mm" not in doc
 
 
 # ------------------------------------------------------------------------------- JA37 transfer
@@ -587,8 +756,8 @@ def test_transfer_check_median_under_the_limit_keeps_0_3():
     assert t["median_abs_diff_mm"]["endo"] == pytest.approx(0.04)
     assert t["median_abs_diff_mm"]["epi"] == pytest.approx(0.04)
     assert t["passed"] and t["bias_guard_mm"] == 0.3 and t["n_over_limit"] == 0
-    # the open-base check failed, so 0.5 mm is what applies (JA61)
-    assert t["bias_guard_applied_mm"] == H.BIAS_GUARD_VALIDATED_MM == 0.5
+    # JA71 passed, so the open-base check no longer raises the guard
+    assert t["bias_guard_applied_mm"] == H.BIAS_GUARD_VALIDATED_MM == 0.3
 
 
 def test_transfer_check_median_over_the_limit_gives_0_5():
@@ -620,3 +789,25 @@ def test_transfer_check_ignores_row_21():
     assert t == base
     nanrow = {"bias_endo": float("nan")}
     assert H.transfer_check(_transfer_rows(0.04, extra=[nanrow])) == base
+
+
+def test_transfer_check_mixed_borders_fail_to_half_mm():
+    """R5-S4 (JA79): endocardium within the limit, epicardium over it: the check fails."""
+    rows = [
+        {"bias_endo": 0.04, "bias_pp_endo": 0.0, "bias_epi": 0.06, "bias_pp_epi": 0.0}
+        for _ in range(20)
+    ]
+    t = H.transfer_check(rows)
+    assert t["median_abs_diff_mm"] == {"endo": pytest.approx(0.04), "epi": pytest.approx(0.06)}
+    assert not t["passed"] and t["bias_guard_mm"] == 0.5 and t["bias_guard_applied_mm"] == 0.5
+
+
+def test_transfer_check_median_of_exactly_the_limit_passes():
+    """R5-S4 (JA79): a median of exactly 0.05 mm passes (<=)."""
+    rows = [
+        {"bias_endo": 0.05, "bias_pp_endo": 0.0, "bias_epi": -0.05, "bias_pp_epi": 0.0}
+        for _ in range(20)
+    ]
+    t = H.transfer_check(rows)
+    assert t["median_abs_diff_mm"] == {"endo": 0.05, "epi": 0.05}
+    assert t["passed"] and t["bias_guard_mm"] == 0.3 and t["n_over_limit"] == 0

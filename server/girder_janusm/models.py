@@ -24,7 +24,12 @@ checked under), apart from the wire protocol version.
 A read counts its submissions (``attempts``), its genuine returns (``returns``: a
 check that ran and failed) and the checks that crashed or could not be checked
 (``crashes``). Only ``returns`` spends the one return (JA68). ``seconds`` is the sum
-over its submissions.
+over its submissions, as the client reported them.
+
+PS3-S11 (JA58): every read also records, server-side and in UTC, ``claimed_at`` (set
+once at claim, never moved), ``submitted_at`` (the first submission, set once) and
+``submitted_at_attempts`` (every submission, in order). ``janusm-export`` writes the
+time between them in ``timing.json``, with no identifier.
 """
 
 import datetime
@@ -194,7 +199,8 @@ class JanusMRead(AccessControlledModel):
         self.exposeFields(level=AccessType.SITE_ADMIN, fields={
             'fileId', 'checksum', 'voxelCounts', 'check', 'checkedAt', 'attempts',
             'returns', 'crashes', 'history', 'seconds', 'clientVersion', 'note',
-            'flagReasons', 'third', 'cadrads', 'lesionPoints', 'border_protocol'})
+            'flagReasons', 'third', 'cadrads', 'lesionPoints', 'border_protocol',
+            protocol.CLAIMED_AT, protocol.SUBMITTED_AT, protocol.SUBMITTED_AT_ATTEMPTS})
 
     def validate(self, doc):
         if doc.get('state') not in protocol.ALL_STATES:
@@ -208,6 +214,9 @@ class JanusMRead(AccessControlledModel):
             'caseId': case['_id'], 'userId': user['_id'], 'state': protocol.ASSIGNED,
             'seeded': bool(case.get('seedFileId')) and not third, 'third': bool(third),
             'assignedAt': now,
+            # PS3-S11: set once here; a returned and resubmitted read keeps it.
+            protocol.CLAIMED_AT: now, protocol.SUBMITTED_AT: None,
+            protocol.SUBMITTED_AT_ATTEMPTS: [],
             'submittedAt': None, 'fileId': None, 'checksum': '', 'voxelCounts': {},
             'check': None, 'checkSummary': '', 'checkedAt': None, 'attempts': 0,
             'returns': 0, 'crashes': 0, 'seconds': 0.0,
@@ -230,11 +239,20 @@ class JanusMRead(AccessControlledModel):
         if to == protocol.SUBMITTED:
             counters['attempts'] = counters.get('attempts', 0) + 1
             update['$set']['submittedAt'] = now
+            # PS3-S11: every submission's time, and the first one once.
+            update['$push'][protocol.SUBMITTED_AT_ATTEMPTS] = now
         if counters:
             update['$inc'] = counters
-        return self.collection.find_one_and_update(
+        moved = self.collection.find_one_and_update(
             {'_id': read['_id'], 'state': read['state']}, update,
             return_document=ReturnDocument.AFTER)
+        if moved is not None and to == protocol.SUBMITTED \
+                and moved.get(protocol.SUBMITTED_AT) is None:
+            self.collection.update_one(
+                {'_id': moved['_id'], protocol.SUBMITTED_AT: None},
+                {'$set': {protocol.SUBMITTED_AT: now}})
+            moved = self.collection.find_one({'_id': moved['_id']})
+        return moved
 
     def openForUser(self, userId):
         return list(self.find({'userId': userId, 'state': {'$in': sorted(protocol.OPEN_STATES)}},

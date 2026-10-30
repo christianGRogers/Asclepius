@@ -27,6 +27,7 @@ Stdlib only, Python 3.9.
 
 from __future__ import annotations
 
+import datetime
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional, Sequence
 
@@ -170,6 +171,64 @@ TRANSITIONS: Dict[str, frozenset] = {
 
 def can_move(state: str, to: str) -> bool:
     return to in TRANSITIONS.get(state, frozenset())
+
+
+# ------------------------------------------------------------------- timing
+# PS3-S11 (JA58): every read records when it was claimed and when it was submitted,
+# in UTC, server-side. The export writes the time between them with no identifier.
+#
+# * ``claimed_at`` is set once, when the read is claimed, and never changes. A
+#   returned read that is resubmitted keeps it; a released read is finished, and a new
+#   claim is a new read with its own ``claimed_at``.
+# * ``submitted_at`` is the first submission, set once.
+# * ``submitted_at_attempts`` lists every submission's time, first to last, so a
+#   returned read's later attempts are recorded too.
+#
+# These are server records only: they are not in :class:`ReadInfo`, and the wire
+# protocol is unchanged.
+
+CLAIMED_AT = "claimed_at"
+SUBMITTED_AT = "submitted_at"
+SUBMITTED_AT_ATTEMPTS = "submitted_at_attempts"
+
+
+def as_utc(when: Any) -> Optional[datetime.datetime]:
+    """``when`` as an aware UTC datetime, or None. A naive datetime is UTC (pymongo
+    returns stored datetimes naive, in UTC); an ISO 8601 string is parsed."""
+    if when is None or when == "":
+        return None
+    if isinstance(when, str):
+        try:
+            when = datetime.datetime.fromisoformat(when.replace("Z", "+00:00"))
+        except ValueError:
+            return None
+    if not isinstance(when, datetime.datetime):
+        return None
+    if when.tzinfo is None:
+        return when.replace(tzinfo=datetime.timezone.utc)
+    return when.astimezone(datetime.timezone.utc)
+
+
+def seconds_between(claimed: Any, submitted: Any) -> Optional[float]:
+    """Seconds from ``claimed`` to ``submitted``; None if either is missing or the
+    second is before the first."""
+    start, end = as_utc(claimed), as_utc(submitted)
+    if start is None or end is None or end < start:
+        return None
+    return (end - start).total_seconds()
+
+
+def read_timing(read: dict) -> Optional[Dict[str, Any]]:
+    """One read's timing, with no identifier: seconds from claim to first submission,
+    and from claim to each submission. None for a read with no ``claimed_at`` or no
+    submission (stored before PS3-S11, or never submitted)."""
+    first = seconds_between(read.get(CLAIMED_AT), read.get(SUBMITTED_AT))
+    if first is None:
+        return None
+    attempts = [seconds_between(read.get(CLAIMED_AT), at)
+                for at in (read.get(SUBMITTED_AT_ATTEMPTS) or [])]
+    return {"secondsToSubmit": first,
+            "secondsToEachSubmission": [s for s in attempts if s is not None]}
 
 
 # ---------------------------------------------------------------- responses

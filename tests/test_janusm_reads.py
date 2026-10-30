@@ -1387,3 +1387,46 @@ def test_r5s11_s19_a_shared_draw_through_the_implementation_is_another_bound(mon
     assert shared["upper95"] != pytest.approx(shipped["upper95"], abs=1e-6)
     assert shipped["upper95"] == pytest.approx(_r5_bootstrap(blank, seeded, inter),
                                                abs=1e-12)
+
+
+# ------------------------------------------------------------------ PS3-S11 timing
+
+
+def test_ps3s11_seconds_between_is_utc_and_refuses_what_it_cannot_time():
+    import datetime as dt
+
+    utc = dt.timezone.utc
+    claimed = dt.datetime(2026, 10, 30, 12, 0, 0, tzinfo=utc)
+    # A naive datetime (as pymongo returns one) is UTC; another zone is converted.
+    assert protocol.seconds_between(claimed.replace(tzinfo=None),
+                                    dt.datetime(2026, 10, 30, 12, 7, 30)) == 450.0
+    plus2 = dt.timezone(dt.timedelta(hours=2))
+    assert protocol.seconds_between(claimed, dt.datetime(2026, 10, 30, 14, 1, 0,
+                                                         tzinfo=plus2)) == 60.0
+    assert protocol.seconds_between("2026-10-30T12:00:00Z", "2026-10-30T12:00:05Z") == 5.0
+    assert protocol.as_utc("2026-10-30T12:00:00Z").tzinfo == utc
+    for bad in ((None, claimed), (claimed, None), ("", claimed), ("not a time", claimed),
+                (claimed, claimed - dt.timedelta(seconds=1)), (3, claimed)):
+        assert protocol.seconds_between(*bad) is None
+
+
+def test_ps3s11_read_timing_carries_no_identifier():
+    import datetime as dt
+
+    t0 = dt.datetime(2026, 10, 30, 9, 0, 0)
+    read = {"_id": "r1", "userId": "u1", "caseId": "c1",
+            "claimed_at": t0, "submitted_at": t0 + dt.timedelta(minutes=20),
+            "submitted_at_attempts": [t0 + dt.timedelta(minutes=20),
+                                      t0 + dt.timedelta(minutes=31)]}
+    timing = protocol.read_timing(read)
+    assert timing == {"secondsToSubmit": 1200.0, "secondsToEachSubmission": [1200.0, 1860.0]}
+    assert not {"_id", "userId", "caseId", "reader", "case"} & set(timing)
+    assert protocol.read_timing({"submitted_at": t0}) is None           # stored before S11
+    assert protocol.read_timing({"claimed_at": t0, "submitted_at": None}) is None
+
+
+def test_ps3s11_timing_is_not_on_the_wire():
+    # The wire contract is unchanged: a reader's ReadInfo carries no timing.
+    info = protocol.ReadInfo(read_id="r", case_name="n", state="accepted", has_seed=True)
+    assert not {"claimed_at", "submitted_at", "claimedAt"} & set(info.to_dict())
+    assert PROTOCOL_VERSION == 2

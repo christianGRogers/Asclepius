@@ -203,10 +203,10 @@ jobs:
           # test_segqueue_server_janusm.py: the Janus-M read queue, and SegQueue14 untouched
           # by it (issue #141).
           # test_janusm_reads.py -k "r4s17 or r5s": the read queue's named tests (JA79),
-          # here too so they run in a job that refuses skips (#232).
+          # here too so they run in a job that refuses skips (#232); and PS3-S11's (#246).
           pytest -q -rs tests/test_segqueue_server.py tests/test_d36_consolidate.py \
             tests/test_segqueue_server_janusm.py tests/test_janusm_reads.py \
-            -k "not test_janusm_reads or r4s17 or r5s" --junitxml=junit.xml \
+            -k "not test_janusm_reads or r4s17 or r5s or ps3s11" --junitxml=junit.xml \
             2>&1 | tee server-tests.log
       - name: Fail if these skipped
         # These tests skip themselves when Girder or MongoDB is missing, which

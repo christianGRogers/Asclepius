@@ -4,14 +4,16 @@ Shaped like ``segqueue14.protocol`` but shares no name, path, header or number w
 it, so the two can never be confused in a log or at a proxy:
 
 * every route is ``/api/v1/janusm/...``;
-* the protocol version is :data:`janusm_reads.PROTOCOL_VERSION` (1), on its own
-  number line; a missing or older version is refused (426);
+* the protocol version is :data:`janusm_reads.PROTOCOL_VERSION` (2), on its own
+  number line; a missing or older version is refused (426), at ``next`` before any
+  case is claimed;
 * one asset only, the **seed** (JA7: ``heartchambers_highres`` coarsened to 2 mm and
   smoothed). A blank case has none, and says so (``hasSeed: false``);
 * the other read of a case is never served to a reader: reads are independent;
-* a read carries a **read form** (JA46 (d)): the CAD-RADS 2.0 grade of each main
-  coronary's worst lesion and, optionally, a lesion point. The server keeps it for
-  the export only; it is never shown to another reader;
+* a read carries a **read form** (JA46 (d), JA67): the CAD-RADS 2.0 grade of each
+  main coronary's worst lesion (LM: 0, 1, 2, 4B, 5, N; LAD, LCx, RCA: 0, 1, 2, 3, 4A,
+  5, N) and, optionally, a lesion point inside the CT. The server keeps it for the
+  export only; it is never shown to another reader;
 * a read the check fails is **returned once**; a second failure is accepted and
   **flagged**, with its reasons (Hotel v3 section 5.1 item 7). A returned read
   carries the half-maximum profiles, so the reader can see why.
@@ -51,6 +53,7 @@ ADMIN_READS = "admin/case/{case_id}/reads"
 ADMIN_OPEN_SEAL = "admin/seal/open"
 ADMIN_CHECK = "admin/read/{read_id}/check"
 ADMIN_THIRD_READS = "admin/third-reads"
+ADMIN_WAVE = "admin/wave"
 
 
 def path(template: str, **kwargs: Any) -> str:
@@ -80,8 +83,21 @@ ERR_READ_FORM = "janusm_read_form"
 VESSELS = ("LM", "LAD", "LCx", "RCA")
 #: CAD-RADS 2.0 categories (Cury et al., 2022); N = non-diagnostic.
 CADRADS_GRADES = ("0", "1", "2", "3", "4A", "4B", "5", "N")
-#: Grades that name a lesion, so a lesion point may be given.
+#: JA67: the grades each row allows. LM >= 50 % is 4B in CAD-RADS 2.0, so 3 and 4A are
+#: not LM grades; on LAD, LCx and RCA 4B is patient-level, so it is not offered.
+VESSEL_GRADES: Dict[str, tuple] = {
+    "LM": ("0", "1", "2", "4B", "5", "N"),
+    "LAD": ("0", "1", "2", "3", "4A", "5", "N"),
+    "LCx": ("0", "1", "2", "3", "4A", "5", "N"),
+    "RCA": ("0", "1", "2", "3", "4A", "5", "N"),
+}
+#: Grades that name a lesion, so a lesion point may be given (1-5; never 0 or N).
 LESION_GRADES = frozenset({"1", "2", "3", "4A", "4B", "5"})
+
+
+def grades_for(vessel: str) -> tuple:
+    """The CAD-RADS 2.0 grades the read form offers on ``vessel``'s row (JA67)."""
+    return VESSEL_GRADES[vessel]
 
 #: A read the check fails is returned this many times; the next failure is accepted
 #: and flagged (Hotel v3 section 5.1 item 7).
@@ -103,6 +119,9 @@ def read_form_problems(cadrads: Dict[str, str],
         elif grade and grade not in CADRADS_GRADES:
             out.append("{}: {!r} is not a CAD-RADS 2.0 grade ({}).".format(
                 vessel, grade, ", ".join(CADRADS_GRADES)))
+        elif grade and grade not in VESSEL_GRADES[vessel]:
+            out.append("{}: {!r} is not a grade on this vessel ({}).".format(
+                vessel, grade, ", ".join(VESSEL_GRADES[vessel])))
     for vessel, point in (lesion_points or {}).items():
         if vessel not in VESSELS:
             out.append(f"A lesion point names {vessel!r}, which is not a graded vessel.")
@@ -114,9 +133,10 @@ def read_form_problems(cadrads: Dict[str, str],
         if not ok:
             out.append(f"{vessel}: a lesion point is three numbers in mm.")
         elif cadrads.get(vessel) not in LESION_GRADES:
-            out.append("{}: a lesion point needs a grade that names a lesion (1-5), not "
-                       "{!r}.".format(vessel, cadrads.get(vessel) or "none"))
+            out.append("{}: a lesion point needs a grade that names a lesion (1-5; not 0 "
+                       "or N), not {!r}.".format(vessel, cadrads.get(vessel) or "none"))
     return out
+
 
 # ------------------------------------------------------------------- states
 # A read is one reader's slot on one case. Deliberately smaller than SegQueue's

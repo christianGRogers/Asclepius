@@ -22,12 +22,14 @@ HU = {L.BACKGROUND: -100.0, L.LV_MYO: 120.0, L.LV_POOL: 420.0, L.RV_POOL: 380.0,
 
 def heart(shape: Tuple[int, int, int] = (96, 96, 96), spacing: float = 0.5,
           pool_mm: float = 12.0, wall_mm: float = 7.0, papillary: bool = False,
-          mitral_gap_mm: Optional[float] = None):
+          mitral_gap_mm: Optional[float] = 2.0):
     """``(labels, spacing)``: the true labels of the phantom (uint8).
 
-    By default the LA sits against the myocardium, far (5 mm) from the LV pool. With
-    ``mitral_gap_mm`` the LA cuts into the wall at the base, and only that much
-    myocardium (label 1) separates it from the LV pool: a mitral gap (JA46 (a)).
+    The LA cuts into the wall at the base, and only ``mitral_gap_mm`` of myocardium
+    (label 1) separates it from the LV pool: a mitral gap (JA46 (a)), so the mitral
+    plane can be fitted. With ``mitral_gap_mm=None`` the LA sits against the
+    myocardium, far (5 mm) from the LV pool, and no plane can be fitted (JA66: such a
+    read could not be checked).
     """
     z, y, x = np.indices(shape, dtype=np.float32) * spacing
     c = np.array(shape, dtype=np.float32) * spacing / 2.0
@@ -71,6 +73,8 @@ def move_border(truth: np.ndarray, spacing, border: str, mm: float,
 
     ``endocardial``: the LV pool grows into (or shrinks out of) the myocardium.
     ``epicardial``: the myocardium grows into (or shrinks out of) the fat.
+    ``septal``: the myocardium grows into the RV pool (or the RV pool into it): the
+    septal RV-side border, whose region is pool + myocardium (canonical sign, JA44).
     ``octant`` limits the move to one octant about the LV pool's centre.
     """
     read = truth.copy()
@@ -80,12 +84,20 @@ def move_border(truth: np.ndarray, spacing, border: str, mm: float,
     elif border == "epicardial":
         region = np.isin(truth, (L.LV_MYO, L.LV_POOL))
         grow_into, shrink_to, value = L.BACKGROUND, L.BACKGROUND, L.LV_MYO
+    elif border == "septal":
+        region = np.isin(truth, (L.LV_MYO, L.LV_POOL))
+        grow_into, shrink_to, value = L.RV_POOL, L.RV_POOL, L.LV_MYO
     else:
         raise ValueError(border)
     if mm >= 0:
         dist = ndimage.distance_transform_edt(~region, sampling=spacing)
         change = (~region) & (dist <= mm) & (truth == grow_into)
         new = value
+    elif border == "septal":
+        # Only the septum gives way: myocardium within |mm| of the RV pool.
+        dist = ndimage.distance_transform_edt(truth != L.RV_POOL, sampling=spacing)
+        change = (truth == L.LV_MYO) & (dist <= -mm)
+        new = shrink_to
     else:
         dist = ndimage.distance_transform_edt(region, sampling=spacing)
         change = region & (dist <= -mm) & (truth == value)

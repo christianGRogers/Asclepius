@@ -313,7 +313,7 @@ def test_the_read_form_is_checked_before_anything_is_uploaded():
     assert submit.index("raise ReadRefused") < submit.index("self.exportRead(")
     assert "cadrads=cadrads, lesion_points=points" in submit
     form = _method("JanusMReadWidget", "_buildReadFormSection")
-    assert "protocol.VESSELS" in form and "protocol.CADRADS_GRADES" in form
+    assert "protocol.VESSELS" in form and "protocol.grades_for(vessel)" in form
     assert "GetNthControlPointPositionWorld" in _method("JanusMReadLogic", "readForm")
     assert "self.clearReadForm()" in _method("JanusMReadLogic", "openRead")
 
@@ -445,7 +445,7 @@ def test_the_archive_imports_with_nothing_from_the_repository(built, tmp_path):
             "print(janusm_reads.PROTOCOL_VERSION)")
     out = subprocess.run([sys.executable, "-I", "-c", code], capture_output=True, text=True)
     assert out.returncode == 0, out.stderr
-    assert out.stdout.strip() == "1"
+    assert out.stdout.strip() == "2"
 
 
 def _release(tag, asset):
@@ -514,3 +514,36 @@ def test_ci_builds_it_and_nothing_publishes_it():
         assert word not in workflow, word
     release = (REPO / ".github" / "workflows" / "segqueue-release.yml").read_text()
     assert "janusm" not in release.lower() and "JanusMRead" not in release
+
+
+# ------------------------------------------------- Round 4, Group D (#214)
+
+
+def test_r4s20_each_row_offers_only_its_vessels_grades():
+    """JA67: the LM row has 4B and no 3 or 4A; the others have 3 and 4A and no 4B."""
+    form = _method("JanusMReadWidget", "_buildReadFormSection")
+    assert "protocol.grades_for(vessel)" in form and "CADRADS_GRADES" not in form
+    restore = _method("JanusMReadLogic", "restoreReadForm")
+    assert "protocol.grades_for(vessel)" in restore     # a kept form never adds a bad grade
+
+
+def test_r4s21_a_reopened_read_gets_its_form_back():
+    opened = _method("JanusMReadLogic", "openRead")
+    assert opened.index("self.clearReadForm()") < opened.index("self.restoreReadForm()")
+    closed = _method("JanusMReadLogic", "closeCase")
+    assert closed.index("self.saveReadForm()") < closed.index("self.clearReadForm()")
+    assert "self.saveReadForm()" in _method("JanusMReadLogic", "setGrade")
+    assert "self.saveReadForm()" in _method("JanusMReadLogic", "saveDraft")
+    assert "FORM_FILE" in _method("JanusMReadLogic", "saveReadForm")
+
+
+def test_r4s21_the_reading_clock_is_kept_across_reopening():
+    opened = _method("JanusMReadLogic", "openRead")
+    assert "TIMER_FILE" in opened and "self._carriedSeconds" in opened
+    assert "self._carriedSeconds +" in _method("JanusMReadLogic", "elapsedSeconds")
+    closed = _method("JanusMReadLogic", "closeCase")
+    assert closed.index("self.saveTimer()") < closed.index("self._openedAt = None")
+    # A submission sends its attempt's time; the next attempt starts at zero.
+    submit = _method("JanusMReadLogic", "submit")
+    assert submit.index("seconds=self.elapsedSeconds()") < submit.index(
+        "self._carriedSeconds, self._openedAt = 0.0, time.time()")

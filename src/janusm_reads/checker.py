@@ -308,16 +308,22 @@ def _face_neighbours(mask: np.ndarray, other: np.ndarray) -> np.ndarray:
 
 def mitral_plane(read: np.ndarray, spacing, cfg: Optional[CheckConfig] = None,
                  seed: Optional[np.ndarray] = None,
-                 hinge_points_mm: Optional[Sequence[Sequence[float]]] = None):
+                 hinge_points_mm: Optional[Sequence[Sequence[float]]] = None,
+                 queued: bool = False):
     """The JA46 (a) mitral plane: ``(centre, unit normal towards the LA, radius, source)``,
     or None when there is nothing to fit it to.
 
-    Fitted by least squares (SVD) to, in order of preference:
+    Fitted by least squares (SVD) to, in order of preference (JA76):
 
     1. ``seed``: its 2-4 interface (LV-pool voxels sharing a face with the LA), or,
        if the seed has a mitral gap, its label-2 voxels within ``mitral_gap_mm`` of 4;
-    2. the read's label-2 voxels within ``mitral_gap_mm`` of label 4 (blank cases);
-    3. ``hinge_points_mm``: annular hinge points (mm, array axis order).
+    2. ``hinge_points_mm``: annular hinge points (mm, array axis order), a code-only
+       fall-back behind the seed;
+    3. the read's label-2 voxels within ``mitral_gap_mm`` of label 4 -- **only** when
+       ``seed`` is None and the read is not ``queued``: phantom tests that pass
+       ``seed=None`` explicitly. A seed (or check seed) with no fittable 2-4 interface
+       never falls through to the read, and a queued read (``janusm-check``) never
+       uses its own gap: either gives None, "could not be checked".
 
     ``radius`` is the largest in-plane distance of a fitted point from the centre.
     The check's footprint is wider (:func:`mitral_footprint_mm`, JA66); beyond it the
@@ -333,11 +339,12 @@ def mitral_plane(read: np.ndarray, spacing, cfg: Optional[CheckConfig] = None,
             if face.sum() < cfg.min_plane_points:
                 face = s_pool & (_edt(s_la, spacing) <= cfg.mitral_gap_mm)
             sources.append(("seed", _physical(face, spacing)))
-    if la.any():
-        gap = (read == L.LV_POOL) & (_edt(la, spacing) <= cfg.mitral_gap_mm)
-        sources.append(("read", _physical(gap, spacing)))
     if hinge_points_mm is not None and len(hinge_points_mm):
         sources.append(("hinge points", np.asarray(hinge_points_mm, dtype=np.float64)))
+    if seed is None and not queued and la.any():
+        # JA76: the read's own gap, for phantom tests only; never behind a seed.
+        gap = (read == L.LV_POOL) & (_edt(la, spacing) <= cfg.mitral_gap_mm)
+        sources.append(("read", _physical(gap, spacing)))
     for source, pts in sources:
         need = 3 if source == "hinge points" else cfg.min_plane_points
         if len(pts) < need:
@@ -405,19 +412,22 @@ def pool_above_mitral_mm(read: np.ndarray, spacing, plane,
 
 
 #: Why a read whose mitral plane cannot be fitted is not checked (JA66).
-NO_MITRAL_PLANE = ("The mitral plane could not be fitted (no mitral gap in the reference "
-                   "or the read, and no hinge points), so the LV pool's basal limit could "
+NO_MITRAL_PLANE = ("The mitral plane could not be fitted (no fittable mitral gap in the "
+                   "reference, and no hinge points), so the LV pool's basal limit could "
                    "not be checked.")
 
 
 def mitral_check(read: np.ndarray, spacing, cfg: Optional[CheckConfig] = None,
                  seed: Optional[np.ndarray] = None,
-                 hinge_points_mm: Optional[Sequence[Sequence[float]]] = None) -> dict:
-    """JA46 (a) as JA66 rules it. A dict with ``checked`` (False: no plane), the
-    plane's ``source`` and ``radiusMm``, the ``footprintMm``, the heights above the
-    plane inside and outside the footprint, and a ``note`` in words."""
+                 hinge_points_mm: Optional[Sequence[Sequence[float]]] = None,
+                 queued: bool = False) -> dict:
+    """JA46 (a) as JA66 and JA76 rule it. A dict with ``checked`` (False: no plane),
+    the plane's ``source`` and ``radiusMm``, the ``footprintMm``, the heights above
+    the plane inside and outside the footprint, and a ``note`` in words. ``queued``
+    (the read queue's check) removes the read's own gap as a plane source."""
     cfg = cfg or CheckConfig()
-    plane = mitral_plane(read, spacing, cfg, seed=seed, hinge_points_mm=hinge_points_mm)
+    plane = mitral_plane(read, spacing, cfg, seed=seed, hinge_points_mm=hinge_points_mm,
+                         queued=queued)
     if plane is None:
         return {"checked": False, "source": None, "radiusMm": None, "footprintMm": None,
                 "aboveMm": None, "outsideAboveMm": None, "note": NO_MITRAL_PLANE}
@@ -434,13 +444,14 @@ def mitral_check(read: np.ndarray, spacing, cfg: Optional[CheckConfig] = None,
 def check_conventions(read: np.ndarray, spacing, cfg: Optional[CheckConfig] = None,
                       seed: Optional[np.ndarray] = None,
                       hinge_points_mm: Optional[Sequence[Sequence[float]]] = None,
-                      mitral: Optional[dict] = None,
+                      mitral: Optional[dict] = None, queued: bool = False,
                       ) -> Tuple[List[str], List[str]]:
     """JA1 / JA46 label conventions. Returns ``(errors, warnings)``.
 
     ``seed`` (on the read's grid) is the reference the mitral plane is fitted to: the
     served seed on a seeded case, the server's hidden check seed on a blank one
-    (JA66). Only with no seed at all is the plane fitted to the read's own gap.
+    (JA66). Only with no seed at all, and not ``queued``, is the plane fitted to the
+    read's own gap (JA76).
 
     A read whose mitral plane cannot be fitted gets :data:`NO_MITRAL_PLANE` as an
     error (it is never a pass); :func:`check_read` reports it as "could not be
@@ -480,7 +491,7 @@ def check_conventions(read: np.ndarray, spacing, cfg: Optional[CheckConfig] = No
             errors.append(f"The LV and LA blood pools share a face at {faces} voxels: "
                           "leave the mitral gap as background (0) or myocardium (1).")
         result = mitral_check(read, spacing, cfg, seed=seed,
-                              hinge_points_mm=hinge_points_mm)
+                              hinge_points_mm=hinge_points_mm, queued=queued)
         if mitral is not None:
             mitral.update(result)
         limit = cfg.max_pool_above_mitral_mm
@@ -557,12 +568,14 @@ def _half(a: Optional[float], b: Optional[float]) -> Optional[float]:
 
 def check_read(read: np.ndarray, ct: np.ndarray, spacing: Sequence[float],
                cfg: Optional[CheckConfig] = None, seed: Optional[np.ndarray] = None,
-               hinge_points_mm: Optional[Sequence[Sequence[float]]] = None) -> CheckReport:
+               hinge_points_mm: Optional[Sequence[Sequence[float]]] = None,
+               queued: bool = False) -> CheckReport:
     """Check one read against the half-maximum rule and the JA1 / JA46 conventions.
 
     ``read``, ``ct`` and ``seed`` (optional) are on the same grid; ``spacing`` is in
     mm, in array axis order; ``ct`` is in HU. ``hinge_points_mm`` are in mm in array
-    axis order, relative to the uncropped array's first voxel.
+    axis order, relative to the uncropped array's first voxel. ``queued``: the read
+    queue's check, where the plane comes from the seed (or hinge points) only (JA76).
     """
     cfg = cfg or CheckConfig()
     if read.shape != ct.shape:
@@ -581,7 +594,8 @@ def check_read(read: np.ndarray, ct: np.ndarray, spacing: Sequence[float],
 
     mitral: dict = {}
     errors, warnings = check_conventions(read, spacing, cfg, seed=seed,
-                                         hinge_points_mm=hinge_points_mm, mitral=mitral)
+                                         hinge_points_mm=hinge_points_mm, mitral=mitral,
+                                         queued=queued)
     unchecked = [e for e in errors if e == NO_MITRAL_PLANE]
     errors = [e for e in errors if e != NO_MITRAL_PLANE]
     pl: Dict[str, Optional[float]] = {}
@@ -633,9 +647,9 @@ def check_read(read: np.ndarray, ct: np.ndarray, spacing: Sequence[float],
 
 
 def check_files(read_path, ct_path, cfg: Optional[CheckConfig] = None,
-                seed_path=None) -> CheckReport:
+                seed_path=None, queued: bool = False) -> CheckReport:
     """:func:`check_read` on NIfTI files (read, CT and optionally the seed), which must
-    share one grid."""
+    share one grid. ``queued``: see :func:`check_read`."""
     import nibabel as nib
 
     ci = nib.load(str(ct_path))
@@ -650,7 +664,7 @@ def check_files(read_path, ct_path, cfg: Optional[CheckConfig] = None,
     seed = on_grid(seed_path) if seed_path else None
     ct = np.asarray(ci.dataobj, dtype=np.float32)
     spacing = ci.header.get_zooms()[:3]
-    return check_read(read, ct, spacing, cfg, seed=seed)
+    return check_read(read, ct, spacing, cfg, seed=seed, queued=queued)
 
 
 def main(argv=None) -> int:

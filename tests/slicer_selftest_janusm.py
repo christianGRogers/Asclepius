@@ -38,6 +38,7 @@ import json
 import os
 import sys
 import tempfile
+import time
 import traceback
 
 OUT = os.environ.get("JANUSM_SELFTEST_OUT", os.path.abspath("selftest-janusm.txt"))
@@ -87,6 +88,9 @@ class FakeQueue:
         self.reads, self.uploads, self.files = {}, {}, {}
         self.reports = []
         self.calls, self.headers = [], []
+        #: When set, a submission waits as "submitted" until :meth:`runPending` (the
+        #: server's check runs every 30 s; R5-S11's clock test needs that wait).
+        self.pending = False
 
     def _info(self, read):
         case = read["case"]
@@ -101,7 +105,6 @@ class FakeQueue:
     def request(self, method, url, headers=None, stream=False, **kw):
         from janusm_reads import labels as L
         from janusm_reads import protocol
-        from janusm_reads.checker import check_read
 
         path = url.split("/api/v1/", 1)[1]
         self.calls.append((method, path))
@@ -163,27 +166,46 @@ class FakeQueue:
             if problems:
                 return _refusal(400, protocol.ERR_READ_FORM, " ".join(problems))
             values = self._array(data)
-            report = check_read(values, case["ctArray"], case["spacing"])
-            self.reports.append(report)
-            # Return once, then accept and flag -- as girder_janusm.check.decide does,
-            # counting genuine returns only (JA68); seconds are summed over attempts.
+            # Seconds are summed over attempts, as the server does.
             read["seconds"] = read.get("seconds", 0.0) + float(meta.get("seconds") or 0)
-            read["profile"] = {}
-            if report.passed:
-                read["state"], read["flagged"] = protocol.ACCEPTED, False
-                read["summary"] = report.summary()
-            elif read.get("returns", 0) < protocol.MAX_RETURNS:
-                read["returns"] = read.get("returns", 0) + 1
-                read["state"], read["flagged"] = protocol.RETURNED, False
-                read["summary"] = report.summary()
-                read["profile"] = protocol.profile_for_reader(report.to_dict())
-            else:
-                read["state"], read["flagged"] = protocol.ACCEPTED, True
-                read["summary"] = "Accepted and flagged: " + " ".join(report.errors)
             read["uploaded"] = values
             read["meta"] = meta
+            if self.pending:
+                read["state"], read["summary"], read["profile"] = protocol.SUBMITTED, "", {}
+            else:
+                self._check(read)
             return _Response(body=self._info(read))
         return _refusal(404, None, "no route " + path)
+
+    def runPending(self):
+        """The server's check, on every read waiting for it."""
+        from janusm_reads import protocol
+
+        for read in self.reads.values():
+            if read["state"] == protocol.SUBMITTED:
+                self._check(read)
+
+    def _check(self, read):
+        from janusm_reads import protocol
+        from janusm_reads.checker import check_read
+
+        case = read["case"]
+        report = check_read(read["uploaded"], case["ctArray"], case["spacing"])
+        self.reports.append(report)
+        # Return once, then accept and flag -- as janusm_reads.outcome.decide does,
+        # counting genuine returns only (JA68).
+        read["profile"] = {}
+        if report.passed:
+            read["state"], read["flagged"] = protocol.ACCEPTED, False
+            read["summary"] = report.summary()
+        elif read.get("returns", 0) < protocol.MAX_RETURNS:
+            read["returns"] = read.get("returns", 0) + 1
+            read["state"], read["flagged"] = protocol.RETURNED, False
+            read["summary"] = report.summary()
+            read["profile"] = protocol.profile_for_reader(report.to_dict())
+        else:
+            read["state"], read["flagged"] = protocol.ACCEPTED, True
+            read["summary"] = "Accepted and flagged: " + " ".join(report.errors)
 
     def _array(self, data):
         path = os.path.join(self.tmp, "uploaded-%d.nii.gz" % len(self.calls))
@@ -398,7 +420,24 @@ def run():
           and len([c for c in server.calls if c[1] == "file"]) == before, refused)
     _draw(slicer, logic, seedLabels)
 
-    done = logic.submit()
+    # R5-S11 (Lima's note): the clock is paused while the server's check is pending.
+    logic._openedAt -= 20.0                   # 20 s spent on the first attempt
+    server.pending = True
+    waiting = logic.submit()
+    first = server.reads[read.read_id]["meta"]["seconds"]
+    check("the first attempt sent its own seconds", first >= 20.0, first)
+    paused = logic.elapsedSeconds()
+    time.sleep(1.0)
+    check("the clock is paused while the check is pending",
+          waiting.state == "submitted" and not logic.clockRunning
+          and logic.elapsedSeconds() == paused == 0.0, (waiting.state, paused,
+                                                        logic.elapsedSeconds()))
+    server.pending = False
+    server.runPending()
+    done = logic.refreshRead()
+    check("and starts again, from zero, when the read comes back",
+          done.state == "returned" and logic.clockRunning and logic.elapsedSeconds() < 1.0,
+          (done.state, logic.elapsedSeconds()))
     check("the uncorrected seed is returned by the check", done.state == "returned",
           done.state)
     check("with its reasons", "endocardial" in done.check_summary, done.check_summary)
@@ -448,10 +487,12 @@ def run():
     done = logic.submit()
     check("the corrected read is accepted", done.state == "accepted" and not done.flagged,
           done.check_summary)
+    last = server.reads[read.read_id]["meta"]["seconds"]
+    total = server.reads[read.read_id]["seconds"]
     check("its seconds are summed over both attempts",
-          server.reads[read.read_id]["seconds"] >= 30.0
-          and server.reads[read.read_id]["meta"]["seconds"] >= 30.0,
-          server.reads[read.read_id].get("seconds"))
+          last >= 30.0 and total == first + last, (first, last, total))
+    check("the summed seconds exceed the last attempt's alone", total > last + 19.0,
+          (total, last))
     check("and what was uploaded is the corrected read",
           np.array_equal(server.reads[read.read_id]["uploaded"], truth))
 

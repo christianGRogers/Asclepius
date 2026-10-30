@@ -23,6 +23,20 @@ As amended by JA48:
 * **Footer:** the research-output sentence, each depth sign's page line (S3's ``page_line``,
   filled from the config), and the population label.
 
+As amended by Round 4 (``jm/rest-ccta`` JA63, JA64, JA67, JA69; R4-S8 to R4-S14):
+
+* the config's ``geometry_version`` and ``features_version`` must equal the running ones
+  (:class:`ReportError` otherwise);
+* F1's floor is :func:`janusm.reference.rc_floor_mm` at the patient's own E_T, the one function
+  the gate also uses; no level of 1.0 remains;
+* a fall-back to the AHA default map is printed in the header, never silent;
+* "shared" also marks a segment whose Euclidean and geodesic majorities differ, when the config's
+  R8 verdict says so;
+* Table B's grade: LAD and LCx take the worse of their own and LM's (:func:`territory_grade`),
+  noted "LM <grade>"; :func:`grades_from_read_record` maps an exported read form; a row with a
+  lesion point prints "distal mass: not computed (report v1)";
+* the septal-arc column (R7 kept) holds the arc-proportional values of segments 2, 3, 8 and 9.
+
 Never printed outside the fixed footer sentences: a sensitivity, scar, ischaemia, 5.5 mm,
 -10 HU, or 0.99 as a cut (:data:`FORBIDDEN`).
 """
@@ -39,11 +53,15 @@ from janusm import features as F
 from janusm import geometry as G
 from janusm import reference as R
 
-REPORT_VERSION = "1.0.0"
+REPORT_VERSION = "1.1.0"
 TERRITORIES = F.TERRITORIES
 SIGNIFICANT = ("3", "4A", "4B", "5")           # CAD-RADS 2.0, >= 50 %
 NOT_SIGNIFICANT = ("0", "1", "2")
 NOT_GRADED = "not graded"
+#: CAD-RADS 2.0 order for "the worse of" (JA67); N and absent rank below every grade.
+GRADE_ORDER = ("0", "1", "2", "3", "4A", "4B", "5")
+LM_FEEDS = ("LAD", "LCx")
+DISTAL_NOTE = "distal mass: not computed (report v1)"
 #: Hotel v2 §3.3, exact; chosen by Lima v2 §3 item 4c's table.
 PHRASES = {
     "pattern_significant": "Territory shows chronic-infarct-like geometry",
@@ -81,12 +99,86 @@ def grade_class(grade) -> str:
     return "not_graded"
 
 
+def _norm_grade(g) -> Optional[str]:
+    if g is None:
+        return None
+    g = str(g).strip().upper()
+    return g or None
+
+
+def territory_grade(grades: dict, territory: str):
+    """JA67: (grade, ``grade_source`` note) for a Table B row. LAD and LCx take the worse of
+    their own grade and LM's (0 < 1 < 2 < 3 < 4A < 4B < 5); the note reads "LM <grade>" when LM
+    is the source. N only if both are N or absent. RCA is its own."""
+    grades = grades or {}
+    own = _norm_grade(grades.get(territory))
+    if territory not in LM_FEEDS:
+        return own, None
+    lm = _norm_grade(grades.get("LM"))
+    rank = {g: i for i, g in enumerate(GRADE_ORDER)}
+    ro, rl = rank.get(own), rank.get(lm)
+    if rl is not None and (ro is None or rl > ro):
+        return lm, f"LM {lm}"
+    if ro is None and rl is None and own is None and lm == "N":
+        return lm, "LM N"
+    return own, None
+
+
+def grades_from_read_record(rec: dict) -> dict:
+    """An exported read record's form (``cadrads``, ``lesionPoints``; JA46 (d)) as
+    :func:`build`'s ``reader_grades``: ``{"LM": "4B", "LAD": "0", ..., "lesion_point":
+    {vessel: [x, y, z]}}``."""
+    out = {str(k): _norm_grade(v) for k, v in (rec.get("cadrads") or {}).items()
+           if _norm_grade(v) is not None}
+    pts = {str(k): [float(c) for c in v] for k, v in (rec.get("lesionPoints") or {}).items()
+           if v is not None and len(v) == 3}
+    if pts:
+        out["lesion_point"] = pts
+    return out
+
+
+def sign_decision(sign: str, s: Optional[dict], territory: str, cfg: dict) -> dict:
+    """One Table B sign cell (JA41): a flag only if rule C's territory flag (AHA default map),
+    F1 (D > the floor of :func:`janusm.reference.rc_floor_mm` at the patient's E_T) and the
+    sign's gate passed; else the number."""
+    if s is None:
+        return {"shown": "number", "value": None, "flag": False, "note": "not measured"}
+    d = s["D"][territory]
+    e = (s.get("E") or {}).get(territory)
+    ok_c = bool(s["territory_rule_c"][territory])
+    rc = cfg["rc"][sign]
+    floor = None
+    if rc.get("status") == "computed":
+        floor = R.rc_floor_mm(rc, territory, e)
+    ok_f1 = d is not None and floor is not None and d > floor
+    ok_gate = cfg[sign].get("status") == "flag"
+    flag = bool(ok_c and ok_f1 and ok_gate)
+    return {"shown": "flag" if flag else "number", "flag": flag,
+            "value": _r(d, 2 if sign != "fat" else 1), "units": UNITS[sign],
+            "floor": _r(floor, 3), "expected": _r(e, 3), "map": s.get("map")}
+
+
 def phrase(pattern: bool, any_flag: bool, grade) -> str:
     """Lima v2 §3 item 4c: exactly one phrase per territory."""
     if pattern:
         return PHRASES["pattern_significant" if grade_class(grade) == "significant"
                        else "pattern_other"]
     return PHRASES["flags" if any_flag else "none"]
+
+
+def _arc_value(feat: dict, pct: dict, k: int) -> Optional[dict]:
+    """JA69 (a): segment ``k``'s arc-proportional wall and relative subendocardial HU with their
+    population percentiles; None outside segments 2, 3, 8 and 9 or below the frame guard."""
+    if k not in F.ARC_SEPTAL:
+        return None
+    arc = feat.get("septal_arc") or {}
+    w, h = _get(arc.get("wall_mm"), k), _get(arc.get("rel_subendo_hu"), k)
+    if w is None and h is None:
+        return None
+    tab = pct.get("septal_arc") or {}
+    return {"thickness_mm": _r(w), "rel_subendo_hu": _r(h),
+            "thickness_pctl": R.percentile_of(w, _get(tab.get("wall_mm"), k)),
+            "rel_subendo_pctl": R.percentile_of(h, _get(tab.get("rel_subendo_hu"), k))}
 
 
 def _contiguous_pair(segs) -> bool:
@@ -107,6 +199,12 @@ def build(case_id, labels, ct, affine, coronary, reference=None, reader_grades=N
     guard.refuse([case_id], what="Janus-M report (S7)", purpose=purpose, root=root)  # first
     ref = R.load(reference, root=root)
     cfg = ref.data
+    for key, running in (("geometry_version", G.GEOMETRY_VERSION),
+                         ("features_version", F.FEATURES_VERSION)):
+        if cfg.get(key) != running:
+            raise ReportError(f"the reference config's {key} {cfg.get(key)!r} is not the running "
+                              f"{running!r}: the population and the page would measure a case "
+                              "differently (JA48)")
     header = dict(header or {})
     grades = dict(reader_grades or {})
     feat = F.case_features(labels, ct, affine, coronary, guard_mm=float(cfg["guard_mm"]))
@@ -114,6 +212,18 @@ def build(case_id, labels, ct, affine, coronary, reference=None, reader_grades=N
         raise ReportError("AHA frame failed: no segment table (JA43 R1)")
     pct = cfg["percentiles"]
     st = R.case_state(feat, cfg, "patient")
+    geo_shared = bool(cfg["table"].get("geodesic_shared"))
+    terr_e = feat.get("segment_territory") or {}
+    terr_g = feat.get("segment_territory_geodesic") or {}
+
+    def shared(k) -> bool:
+        sh = _get(feat.get("segment_territory_share"), k)
+        if sh is not None and sh < F.SHARED_BELOW:
+            return True
+        if geo_shared:  # JA43 R8: the two majorities differ
+            a, b = _get(terr_e, k), _get(terr_g, k)
+            return a is not None and b is not None and a != b
+        return False
 
     # ---------------------------------------------------------------- header
     phase = header.get("phase")
@@ -132,6 +242,9 @@ def build(case_id, labels, ct, affine, coronary, reference=None, reader_grades=N
                            else "fail",
         "septal_arc_deg": feat.get("septal_arc_deg"),
         "territory_source": coronary_source if coronary is not None else "AHA default map only",
+        "territory_map": st["map"],
+        "shared_rule": ("majority share < 0.6, or Euclidean and geodesic majorities differ (R8)"
+                        if geo_shared else "majority share < 0.6"),
         "layers": {"thirds": 17 - len(halves), "halves": len(halves)},
         "halves_note": bool(cfg["table"]["halves_note"]),
         "harness_version": harness.HARNESS_VERSION,
@@ -166,7 +279,7 @@ def build(case_id, labels, ct, affine, coronary, reference=None, reader_grades=N
             "rel_subendo_pctl": R.percentile_of(sub, _get(pct["rel_subendo_hu"], k)),
             "core_fat_mm3": (_r(_get(fat_seg, k) or 0.0, 1) if fat_seg is not None else None),
             "territory": t, "territory_share": _r(sh),
-            "shared": bool(sh is not None and sh < F.SHARED_BELOW),
+            "shared": shared(k),
             "aha_territory": G.AHA_STANDARD[k],
         }
         x = _get(feat.get("tpr"), k)
@@ -177,32 +290,15 @@ def build(case_id, labels, ct, affine, coronary, reference=None, reader_grades=N
             row["rest_tpr_note"] = (f"not shown: rest TPR gate {tpr['gate']}"
                                     if tpr["gate"] != "pass" else "not measured")
         if cfg["table"]["septal_arc_column"]:
-            row["septal_arc_value"] = None  # arc-proportional sectors: S7 follow-up (JA20)
+            row["septal_arc_value"] = _arc_value(feat, pct, k)
         rows.append(row)
 
     # ---------------------------------------------------------------- Table B
     tmap = F.territory_segments(feat, "patient")
     tb = []
     for t in TERRITORIES:
-        signs: Dict[str, dict] = {}
-        for sign in R.SIGNS:
-            s = st.get(sign)
-            if s is None:
-                signs[sign] = {"shown": "number", "value": None, "flag": False,
-                               "note": "not measured"}
-                continue
-            d = s["D"][t]
-            ok_c = bool(s["territory_rule_c"][t])
-            rc = cfg["rc"][sign]
-            if rc.get("status") == "computed" and d is not None:
-                level = s.get("level", 1.0) if sign != "fat" else 1.0
-                ok_f1 = d > R.rc_abs(rc, t, level)
-            else:
-                ok_f1 = False
-            ok_gate = cfg[sign].get("status") == "flag"
-            flag = ok_c and ok_f1 and ok_gate
-            signs[sign] = {"shown": "flag" if flag else "number", "flag": flag,
-                           "value": _r(d, 2 if sign != "fat" else 1), "units": UNITS[sign]}
+        signs: Dict[str, dict] = {sign: sign_decision(sign, st.get(sign), t, cfg)
+                                  for sign in R.SIGNS}
         th, hy = st.get("thinning"), st.get("hypoattenuation")
         sub_flag = signs["hypoattenuation"]["flag"] or signs["fat"]["flag"]
         composite = signs["thinning"]["flag"] and sub_flag
@@ -212,26 +308,30 @@ def build(case_id, labels, ct, affine, coronary, reference=None, reader_grades=N
                           or (fat_seg is not None and (_get(fat_seg, k) or 0) > 0))]
             composite = _contiguous_pair(tsegs)
         any_flag = any(v["flag"] for v in signs.values())
-        g = grades.get(t)
+        g, g_src = territory_grade(grades, t)
+        points = grades.get("lesion_point") or {}
+        has_point = bool(points.get(t) or (t in LM_FEEDS and points.get("LM")))
         segs = tmap.get(t, [])
         tb.append({
             "territory": t,
             "grade": str(g) if g not in (None, "") else NOT_GRADED,
-            "grade_class": grade_class(g),
+            "grade_class": grade_class(g), "grade_source": g_src,
             "mass_g": _r(_get(feat.get("mass_g"), t), 1),
             "mass_share": _r(_get(feat.get("mass_share"), t), 3),
             "aha_mass_g": _r(feat["mass_g_aha"][t], 1),
-            "segments": [k for k in segs if not (_get(share, k) or 1) < F.SHARED_BELOW],
-            "shared_segments": [k for k in segs if (_get(share, k) or 1) < F.SHARED_BELOW],
+            "segments": [k for k in segs if not shared(k)],
+            "shared_segments": [k for k in segs if shared(k)],
             "signs": signs, "composite": bool(composite),
             "phrase": phrase(bool(composite), any_flag, g),
             "mass_distal_g": None,
-            "mass_distal_note": ("unvalidated column; not computed in report v1"
-                                 if (grades.get("lesion_point") or {}).get(t) else None),
+            "mass_distal_note": DISTAL_NOTE if has_point else None,
         })
 
     footer = [FOOTER_RESEARCH] + [cfg["page_line"][s] for s in R.DEPTH_SIGNS
                                   if s in cfg.get("page_line", {})] + [FOOTER_POPULATION]
+    if st["map"] == "aha_fallback":
+        hd["territory_map_note"] = ("D on the AHA default map: no patient-specific map "
+                                    "(fall-back, JA63)")
     return {"report_version": REPORT_VERSION, "header": hd, "table_a": rows, "table_b": tb,
             "statuses": {s: cfg[s].get("status") for s in R.SIGNS}, "footer": footer}
 
@@ -267,6 +367,9 @@ def _header_lines(h: dict) -> list:
         ("AHA orientation", f"{h['aha_orientation']}; septal arc "
                             f"{_fmt(h['septal_arc_deg'], 1)}°"),
         ("Territory source", h["territory_source"]),
+        ("Territory map", "patient-specific" if h.get("territory_map") == "patient" else
+         h.get("territory_map_note") or str(h.get("territory_map"))),
+        ("Shared segments", h.get("shared_rule", "majority share < 0.6")),
     ]
     if h["halves_note"]:
         lines.append(("Layers per segment", f"{h['layers']['thirds']} in thirds, "
@@ -282,7 +385,7 @@ def _table_a(rows) -> tuple:
     cols = ["Segment", "Layers", "Thickness mm", "Rel. thickness", "Rel. subendo HU",
             "Core fat mm³", "Rest TPR z", "Territory (share)", "AHA default"]
     if rows and "septal_arc_value" in rows[0]:
-        cols.append("Septal arc value")
+        cols.append("Septal arc: thickness mm; rel. subendo HU")
     body = []
     for r in rows:
         terr = "—" if r["territory"] is None else (
@@ -296,7 +399,10 @@ def _table_a(rows) -> tuple:
                  _fmt(r["rest_tpr_z"]) if r["rest_tpr_z"] is not None else r["rest_tpr_note"],
                  terr, r["aha_territory"]]
         if "septal_arc_value" in r:
-            cells.append(_fmt(r["septal_arc_value"]))
+            a = r["septal_arc_value"]
+            cells.append("—" if a is None else
+                         f"{_fmt(a['thickness_mm'])}{_pct(a['thickness_pctl'])}; "
+                         f"{_fmt(a['rel_subendo_hu'])}{_pct(a['rel_subendo_pctl'])}")
         body.append(cells)
     return cols, body
 
@@ -314,7 +420,8 @@ def _table_b(rows) -> tuple:
             "Mass distal to marked lesion (unvalidated)", "Concordance"]
     body = []
     for r in rows:
-        body.append([r["territory"], r["grade"],
+        grade = r["grade"] + (f" ({r['grade_source']})" if r.get("grade_source") else "")
+        body.append([r["territory"], grade,
                      f"{_fmt(r['mass_g'], 1)} ({_fmt(r['mass_share'], 3)})",
                      _fmt(r["aha_mass_g"], 1),
                      ", ".join(map(str, r["segments"])) or "—",
@@ -372,4 +479,5 @@ def forbidden_hits(text: str, footer) -> list:
 
 
 __all__ = ["build", "render_markdown", "render_html", "dumps", "phrase", "grade_class",
-           "PHRASES", "FORBIDDEN", "forbidden_hits", "ReportError"]
+           "PHRASES", "FORBIDDEN", "forbidden_hits", "ReportError", "territory_grade",
+           "grades_from_read_record", "sign_decision"]

@@ -293,61 +293,8 @@ def tpr_segments(ct, myo, dep, seg, guard_mm):
 
 
 # --------------------------------------------------------------------------------------- sectors
-def _theta(labels, aff, aha):
-    """The JA3 angle of every myocardial voxel (0 at the anterior insertion, + into the septum),
-    recomputed exactly as ``janusm.geometry.aha17`` does with its defaults."""
-    myo, lv, rv, la = (labels == c for c in (G.MYO, G.LV, G.RV, G.LA))
-    face = ndi.generate_binary_structure(3, 1)
-    world = lambda ijk: ijk @ aff[:3, :3].T + aff[:3, 3]  # noqa: E731
-    base = world(np.argwhere(lv & ndi.binary_dilation(la, face))).mean(0)
-    pidx = np.argwhere(myo)
-    p = world(pidx)
-    dist = np.linalg.norm(p - base, axis=1)
-    apex = p[dist >= dist.max() - 3.0].mean(0)
-    axis = (apex - base) / np.linalg.norm(apex - base)
-    s = (p - base) @ axis
-    cav = float(((world(np.argwhere(lv)) - base) @ axis).max())
-    helper = np.eye(3)[int(np.argmin(np.abs(axis)))]
-    e1 = helper - (helper @ axis) * axis
-    e1 /= np.linalg.norm(e1)
-    e2 = np.cross(axis, e1)
-    rel = p - base
-    ang = np.degrees(np.arctan2(rel @ e2, rel @ e1)) % 360.0
-    contact = ndi.binary_dilation(rv, face)[myo] & (s >= 0) & (s <= 2 / 3 * cav)
-    h = np.sort(ang[contact])
-    gaps = np.diff(np.concatenate([h, h[:1] + 360.0]))
-    g = int(np.argmax(gaps))
-    start, end = float(h[(g + 1) % len(h)]), float(h[g])
-
-    def direction(deg):
-        r = np.radians(deg)
-        return np.cos(r) * e1 + np.sin(r) * e2
-
-    ant = np.array([0.0, 1.0, 1.0]) / np.sqrt(2)
-    ref, sign = (start, 1.0) if direction(start) @ ant >= direction(end) @ ant else (end, -1.0)
-    return pidx, (sign * (ang - ref)) % 360.0
-
-
-def arc_segments(labels, aff, aha):
-    """Septal sectors proportional to the measured septal arc in the basal and mid rings (JA20:
-    the two septal segments of each ring); the apical ring and 17 stay as JA3 cuts them. Returns
-    (segments, agreement of the recomputed fixed sectors with JA3's), or (None, None)."""
-    pidx, theta = _theta(labels, aff, aha)
-    fixed = aha.segments[tuple(pidx.T)]
-    six = np.array([2, 3, 4, 5, 6, 1])
-    ring = np.isin(fixed, (1, 2, 3, 4, 5, 6)) | np.isin(fixed, (7, 8, 9, 10, 11, 12))
-    if not ring.any():
-        return None, None
-    recomputed = six[(theta // 60).astype(int) % 6] + np.where(fixed > 6, 6, 0)
-    agree = float(np.mean(recomputed[ring] == fixed[ring]))
-    arc = float(np.clip(aha.septal_arc_deg, 60.0, 240.0))
-    rest = (360.0 - arc) / 4
-    edges = [arc / 2, arc, arc + rest, arc + 2 * rest, arc + 3 * rest]
-    k = np.searchsorted(edges, theta, side="right")
-    new = six[np.clip(k, 0, 5)] + np.where(fixed > 6, 6, 0)
-    seg = aha.segments.copy()
-    seg[tuple(pidx[ring].T)] = new[ring]
-    return seg, agree
+#: JA69 (a): one implementation, in ``janusm.geometry``; JM-0R imports it.
+arc_segments = G.arc_segments
 
 
 _STD_CODE = np.zeros(18, np.uint8)

@@ -8,6 +8,54 @@ path: jm/paired-scar
 
 # Janus-M master plan
 
+## On this path (`jm/paired-scar`): amended in Round 3 (2026-10-30)
+
+**[[Kilo v2]] with JA25–JA36 and JA50–JA59** ([[Janus-M Round 3 paired-scar]], `Judgements/Round 3 - paired-scar.md`).
+Round 3's highest score: [[Juliet v3]] (18/20). No fork. Where JA50–JA59 and the Round 2 summary below differ, Round
+3 governs.
+
+- **Stage A tracks path A as it stands** (JA50): JA37–JA49, JA60–JA71 and later, through the shared code on `dev`;
+  bias guard 0.3 mm (JA71). The hand-over is complete.
+- **Registration (JA51, replaces JA29 steps 1–4):**
+  1. R0;
+  2. QC on four values (fat-like, blood-like, brighter-than-blood, **`rim_dark`**; blood median ≥ 2 mm inside);
+  3. rigid Mattes MI masked to classes 1–4 dilated **4 mm** (Euclidean);
+  4. affine kept only if it passes a sanity bound (|log det| ≤ 0.15, ± 15 %) **and** lowers the cut-normalised QC
+     maximum;
+  5. one 10 mm fallback;
+  6. the phase step;
+  7. a reader check on every patient.
+- **Phase (JA52):** `rim_dark` primary; the signed edge offset catches a larger LIE cavity; the log-det is logged. A
+  flagged patient goes to the phase-unmatched stratum, is not re-registered, and is not a failure.
+- **QC cuts (JA53):** p95 over reader-passed development patients, the shares indexed by blood-to-remote contrast;
+  provisional cuts from `bench_lie`. **B-spline** becomes a development arm only on a stated trigger.
+- **Scar-0 menu (JA54):**
+  - presence **P-J, then P-G** (P-G only under JA51's chain); **P-K struck**;
+  - extent **E-V, E-D with the 3 SD voxel cut**;
+  - P-J's τ fitted after registration is frozen;
+  - sensitivity by LGE bin and the bin-1 share reported.
+- **Failed registration (JA55):** LGE-positive segments are misses; LGE-negative segments leave specificity; a
+  deciding **yield** bar (not-graded share, upper bound ≤ 0.10).
+- **Two claims, fixed order (JA56):**
+  - **presence** on sensitivity ≥ 0.75, specificity ≥ 0.93 and yield;
+  - **the Kim bin** only after that, against an anchor from every double-read patient; anchor < 0.60 means the bin
+    cannot be validated.
+- **Size (JA57):** max(120; ≥ 270 scarred segments; 80 % power on presence), from development numbers, capped at
+  240. Enrichment target 70 %. Planning figure ≈ 40 + 160 (≈ 200 at 50 %). Scar-1 is triggered on extent if
+  development CT bin agreement is > 0.03 below the readers'.
+- **Forms (JA58):**
+  - the `lge17` read, with share-of-tissue Kim bins and a six-panel synthetic example;
+  - a third blind CMR read on every presence or bin disagreement;
+  - the `regcheck` form;
+  - read timing.
+- **Intake (JA59):** guard → split → de-identification gate (batch quarantine) → header checks, with stated
+  outcomes.
+- **Lead questions:** LQ25 (failed registrations), LQ26 (two claims), LQ27 (enrichment and size), LQ28 (adjudication
+  and mock timing). LQ2–LQ18 carried.
+- **Shipping:** PS3-S1–S12 (ruling §9).
+- **Round 4:** run the shipped chain through the benchmark; re-run the power engine. Otherwise the path waits on
+  LQ1 / cohort access and on JM-0.
+
 ## On this path (`jm/paired-scar`): in force from Round 2 (2026-10-30)
 
 **[[Kilo v2]] with amendments JA25–JA36** ([[Janus-M Round 2 paired-scar]], `Judgements/Round 2 - paired-scar.md`),

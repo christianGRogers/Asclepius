@@ -137,11 +137,15 @@ def main(d):
                            "assd_endo_median": round(float(np.median([v[0]["assd_endo"] for v in per_case.values()])), 3)}
                     for rule in ("P-K", "P-G", "P-J"):
                         tp, P, tn, N, tp_nb, fp, fp_nb = [], [], [], [], [], [], []
+                        bybin = np.zeros((2, 5))
                         for c, (r, tabs) in per_case.items():
                             T = {v[0]: v for v in tabs}
                             pos = T["scar"][1] > 0.005
                             tp.append((T["scar"][3][rule] & pos).sum()); P.append(pos.sum())
                             tp_nb.append((T["scar_nb"][3][rule] & pos).sum())
+                            tb = kim(T["scar"][1])
+                            for b in range(1, 5):
+                                bybin[0, b] += (T["scar"][3][rule] & (tb == b)).sum(); bybin[1, b] += (tb == b).sum()
                             neg_calls = np.concatenate([T["scar"][3][rule][~pos], T["noscar"][3][rule]])
                             neg_nb = np.concatenate([T["scar_nb"][3][rule][~pos], T["noscar_nb"][3][rule]])
                             tn.append((~neg_calls).sum()); N.append(len(neg_calls))
@@ -151,6 +155,9 @@ def main(d):
                         row[rule] = {"sens": round(sens, 3), "sens_ci": boot_ci(tp, P, rng),
                                      "spec": round(spec, 3), "spec_ci": boot_ci(tn, N, rng),
                                      "sens_blood_remote": round(sens_nb, 3),
+                                     "sens_by_true_bin": [round(bybin[0, b] / bybin[1, b], 3) if bybin[1, b] else None
+                                                          for b in range(1, 5)],
+                                     "n_by_true_bin": bybin[1, 1:].astype(int).tolist(),
                                      "spill_share_sens": round((sens - sens_nb) / sens, 3) if sens > 0 else None,
                                      "fp_rate": round(sum(fp) / max(sum(N), 1), 4),
                                      "fp_rate_blood_remote": round(sum(fp_nb) / max(sum(N), 1), 4)}

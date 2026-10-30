@@ -1,6 +1,6 @@
 {
  "calibrate": "janusm.calibrate",
- "calibrate_version": "1.1.0",
+ "calibrate_version": "1.1.1",
  "cases_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
  "composite": {
   "needs_two_contiguous": false,

@@ -18,12 +18,14 @@ rule:
 
 - **P-K, my FWHM presence rule, fails on a heart with no scar** (E8, 13 hearts). Its threshold is set by the
   brightest segment, so on an LGE-negative heart it falls to a median 1.3 robust SD above remote and calls nearly
-  every segment: specificity 0.005. I withdraw it; a floored version (P-K\*) also fails once blood is bright. **No
-  surviving rule sees thin scar.** P-G is specific (≈ 1.00) but blind to bin-1 scar by its 1 mm exclusion (bin-1
-  sensitivity 0.03, E8). Golf's interim cross-check finds P-J nearly as blind (bin 1: P-J 0.04–0.2, P-G 0.2–0.5). So
-  for every surviving rule, **pooled sensitivity ≈ 1 − (the LGE bin-1 share)**, and the 0.75 bar is met or missed by
-  the cohort's infarct mix, not by the rule. JA30's order (P-J, then P-G, once P-K is struck) and its choice step
-  stand. The shared benchmark (Juliet, `bench_lie/`) decides strikes, by the rules agreed on #179.
+  every segment: specificity 0.005. I withdraw it; a floored version (P-K\*) also fails once blood is bright. **The shared
+  benchmark** (Juliet, `bench_lie/` at 0cb2b11: 21 hearts × 30 conditions) **strikes P-K and, on the chain as
+  written, P-G; P-J, E-V and E-D survive** (§3.3). P-G's failure is registration: JA29's 10 mm mask leaves 1.24 mm
+  against a static chest, and blood spills into the wall (specificity 0.78–0.86). With a 4 mm mask (0.30 mm) P-G
+  passes. **Thin (bin-1) scar is lost to coarse voxels and to registration residual, not to the rules themselves.**
+  On the benchmark's 1 mm grid with exact borders, P-G finds 0.95–1.00 of bin-1 segments and P-J 0.55–1.00. E8's
+  0.03 was a 1.5 mm-grid effect, and on the 10 mm chain P-J's bin 1 falls to 0.0–0.3. So I propose the 4 mm mask,
+  and JA27's LIE slice ≤ 1.0 mm stays a hard requirement.
 - **A truth-free phase check exists** (E8). The LIE's half-way edge across the carried endocardium, averaged over the
   6 remote segments, moves by a median 1.0–1.4 mm with a 5 % phase change, in the right direction. |offset| > 0.6 mm
   flags 90–100 % of phase-mismatched patients, with 0–10 % false flags. The blood-like and bright-wall shares flag
@@ -89,7 +91,7 @@ path A's JA15–JA24 by reference (JA25), and path B adds only JA33's scoring of
 
 | Item | Settlement | Where |
 |---|---|---|
-| 1. One shared synthetic-LIE benchmark | Juliet builds it (`experiments/JanusM/bench_lie/`), Golf and I reuse it; strike rules agreed on #179 before any result, with my amendments 1a–1c (spill by Golf's counterfactual; specificity on LGE-negative hearts; no empty menu). My E8 adds the non-rigid E5 motion and LGE-negative hearts on my own 13. **Struck: P-K** (my own; E8: 0.005 specificity on scar-free hearts). Every surviving rule misses most bin-1 scar (E8; Golf's interim cross-check), so pooled sensitivity ≈ 1 − bin-1 share. The benchmark's verdict on P-J, P-G, E-V and E-D: §3.3 | §3 |
+| 1. One shared synthetic-LIE benchmark | Juliet builds it (`experiments/JanusM/bench_lie/`), Golf and I reuse it; strike rules agreed on #179 before any result, with my amendments 1a–1c (spill by Golf's counterfactual; specificity on LGE-negative hearts; no empty menu). My E8 adds the non-rigid E5 motion and LGE-negative hearts on my own 13. **Struck: P-K** (my own; E8: 0.005 specificity on scar-free hearts). **Benchmark verdict** (0cb2b11; §3.3): P-K and P-G struck on the chain as written; P-J, E-V and E-D survive. With a 4 mm mask (+ `rim_dark`), P-G also survives. Bin-1 loss comes from voxel size and registration residual | §3 |
 | 2. The merged power script at the JA32 bars | The engine is #187. E7 (my generator, reader noise and a noisy anchor) and E9 (the engine itself) agree once matched. **Seal = max(120, ≥ 270 scarred segments, 80 % power for presence); 70 % enrichment preferred (≈ 125–140 vs ≈ 170 at 50 %); growth capped at 240**. Three JA32 amendments | §4 |
 | 3. The LGE read form and the registration check form | Field-by-field, with automatic checks, adjudication and blinding, for the existing Janus-M queue's state machine. Entry time ≈ 1 min per LGE read (keystroke-level estimate); total read time is **not measured here**: no reader is in this session. It is measured from queue timestamps on the first 5 development patients | §5 |
 | 4. The JA27 intake checker | DICOM header fields that prove each requirement (tags checked against the DICOM data dictionary), and what a patient failing each becomes | §6 |
@@ -143,26 +145,87 @@ core rule).
   with blood below or equal to scar, and 0.38–0.65 with bright blood or a non-rigid residual.
 - **I withdraw P-K.** JA30's menu keeps P-J and P-G. I do not propose P-K\* as a new menu item: it fails the same
   strike rule.
-- **What is left after P-K: no rule sees bin 1.** P-K was the only rule here that saw thin scar, and it cannot be
-  specific. P-G's pooled sensitivity ≈ 1 − (bin-1 share): ≈ 0.75 here, where a quarter of scarred segments are bin 1.
-  Golf's Round 2 cohort model puts 30 % of LGE-positive segments in bin 1, which would leave it at ≈ 0.70 against a
-  0.75 bar. **Correction to my 08:32 comment on #179:** I proposed P-J ahead of P-G on the grounds that it sees thin
-  scar. Golf's interim cross-check (bin-1 sensitivity 0.04–0.2) says it does not, and with P-K struck, JA30's order
-  already puts P-J first. I withdraw that proposal.
-  - **Consequence for JA32 (for the judge):** the presence bar is decided by the cohort's bin-1 share as much as by
-    the rule. The development set must report the LGE bin-1 share among positive segments and sensitivity by bin. If
-    that share is ≥ 25 %, Scar-1 (JA31) should be planned at once rather than waiting for a seal failure. Scar-1's
-    depth-profile input is the one step on the menu aimed at thin subendocardial signal.
+- **What E8 said about bin 1, and what the benchmark corrects.** On E8's 1.5 mm grid, P-G found 0.03 of bin-1
+  segments: its 1-voxel opening and 1 mm exclusion remove a scar 1–1.5 mm deep. On the benchmark's 1 mm grid it finds
+  0.95–1.00 with exact borders. **E8's "P-G is blind to bin 1" was a voxel-size result, not a property of the rule.**
+  (My 12:47 note on #179, based on Golf's interim numbers, over-generalised it to every rule.) Two requirements
+  follow, and §3.3 shows the second:
+  - JA27's LIE slice ≤ 1.0 mm is a hard requirement for presence, not a preference: at 1.5 mm, P-G loses bin 1;
+  - registration residual, not the rule, is what loses thin scar.
 
 ### 3.3 The benchmark's verdict
 
-**Pending at the time of writing.** Juliet's full run (23 hearts × 24 conditions; about 4 h on 4 CPUs) had not posted
-when this PR opened. This section is updated in the same PR when it does. Until then:
-- the strike rules of §3.1 stand as agreed;
-- P-K is withdrawn regardless of the result (§3.2);
-- my expectation, stated before seeing it: **P-G sits at ≈ 0.75 pooled sensitivity**, because Golf's pre-registered
-  mix makes a quarter of scarred segments bin 1, and P-G's bin-1 sensitivity is ≈ 0 (E8). **P-J is decided by how
-  well τ separates bin 1 from scar-free segments.** E-V passes at CNR 5.
+**Source:** `experiments/JanusM/bench_lie/scores.json` at 0cb2b11 on `exp/jm-r3-paired-scar-juliet` (Juliet; 630
+cases = 21 hearts × 30 conditions; 3 hearts skipped for no LV contrast; every heart passed `janusm.guard.refuse`
+first). It used the strike rules of §3.1 as agreed before any result. I re-read the verdicts from the file. Numbers
+are CNR 5 unless stated.
+
+**Strikes on JA29's chain as written (10 mm mask):**
+
+| Rule | Struck? | Why (striking conditions) | Min sensitivity |
+|---|---|---|---|
+| P-K | **struck** | specificity on scar-free hearts 0.006–0.31; on scarred hearts 0.61–0.70 with blood at or above scar after rigid | 0.94 |
+| P-G | **struck** | specificity after rigid 0.78–0.86; on scar-free hearts 0.81–0.90 | 0.96 |
+| P-J | survives | — | 0.76 |
+| E-V | survives | exact-bin agreement 0.90 (volume truth) / 0.94 (depth truth) with P-J | — |
+| E-D | survives | 0.89 / 0.93 | — |
+
+**Spill share** (blood → remote, Kilo 1a) is ≤ 0.08 for P-J and P-G in every striking condition. No rule is struck
+for spill. That contradicts the Round 2 ruling's worry about the core rule, on this generator.
+
+**Reported, not striking:**
+
+| Arm | P-K | P-G | P-J | Rigid TRE, heart moved 4 mm against a static chest |
+|---|---|---|---|---|
+| Chain, 10 mm mask (JA29) | struck | struck | survives (min sens 0.76) | 1.24 mm (chain 1.33) |
+| Chain, 4 mm mask | struck | struck (spec 0.90–0.92) | survives (0.77) | 0.30 mm (chain 0.32) |
+| Chain, 4 mm mask + `rim_dark` phase check | struck | **survives** (0.98) | survives (0.89) | 0.30 mm |
+| Exact borders (oracle) | struck | survives (0.99) | survives (0.89) | — |
+
+**Bin 1** (1–25 %), sensitivity, blood below / equal / above scar:
+
+| Arm, motion | P-J | P-G |
+|---|---|---|
+| Oracle, none | 1.00 / 1.00 / 0.60 | 0.95 / 1.00 / 1.00 |
+| Chain 10 mm, rigid | 0.18 / 0.22 / 0.30 | 0.82 / 1.00 / 0.85 |
+| Chain 4 mm + rim, rigid | 1.00 / 1.00 / 0.65 | 1.00 / 1.00 / 0.90 |
+
+P-J's τ is fitted on registered scar-free segments. On the 10 mm chain, misregistration widens their distribution,
+τ rises, and bin 1 is lost. With good borders it isn't.
+
+**My non-rigid motion (E5's; reported only).** After every stage the residual is 1.6–1.8 mm, because no rigid or
+affine transform removes a 1.5 mm-RMS smooth field.
+- On the 10 mm chain, P-G's specificity falls to 0.64–0.85 and P-K's to 0.53–0.97.
+- P-J holds at 0.95–1.00.
+- On the 4 mm chain, P-J falls to 0.62–0.82.
+
+The ruling's B-spline exclusion (JA29) is right for typical motion. A real non-rigid residual of this size is what
+the reader check (§5.2) and the QC cuts must catch, and the patient becomes not graded. This differs from E8, where
+masked rigid after the same field left P-G's scar-free specificity ≈ 1.00. E8 used a 1.5 mm grid with the whole
+chest moving, so the mask had nothing static to pull against. The benchmark is the harder case and it binds.
+
+**Phase:**
+- `rim_dark` (the share of the carried cavity's 2 mm inner rim reading myocardium-dark) detects the 5 % phase change
+  with AUC 0.98–0.99 at every blood level, after rigid or non-rigid motion.
+- The fat-like, blood-like and above-blood shares sit at 0.07–0.56, i.e. chance or worse.
+- This is the same finding as E8's edge offset (90–100 % flagged, 0–10 % false flags), by a simpler statistic.
+- The benchmark's phase case only shrinks the cavity. E8 shows the edge offset also catches the opposite sign (a
+  larger LIE cavity), which `rim_dark` by its definition cannot. **I propose both**, as §7's phase step: `rim_dark`
+  as the primary flag (simpler, validated on the shared generator), and the signed edge offset as the second flag
+  for a larger LIE cavity.
+
+**Extent.** On the chain, E-V and E-D differ from each other by ≤ 0.06 in every condition. Both read the depth
+truth 0.00–0.08 better than the volume truth. Under phase change, agreement falls to 0.79–0.92. The JA30 choice between
+them is left to development, as written.
+
+**What it changes in this plan:**
+1. **JA29's mask: classes 1–4 dilated 4 mm**, with 10 mm only as a fallback when the 4 mm stage fails QC (§9's row,
+   now confirmed: 1.24 → 0.30 mm, and it rescues P-G).
+2. **Presence menu for development: P-J and P-G** (P-G conditional on the 4 mm mask). JA30's order and choice rule
+   stand.
+3. **Phase step:** `rim_dark` first, edge offset second (§7).
+4. **LIE ≤ 1.0 mm stays hard** (§3.2).
+5. **Spill is not a reason to strike anything** on this generator.
 
 ## 4. Item 2: sizing at the JA32 bars, and three amendments to JA32
 
@@ -371,8 +434,9 @@ at |offset| > 0.6 mm:
    - The share of reader-failed patients each cut catches is reported.
    - A QC value that catches < 50 % of reader fails is dropped from the chain, but stays reported.
    - The cuts are frozen in the freeze PR with the development numbers (JA30's freeze).
-4. **Phase is a separate branch, not a registration step.** If |edge offset| exceeds its cut after rigid (and affine,
-   if kept), the patient is phase-suspect: no further registration, the reader sees the flag only after the reader's
+4. **Phase is a separate branch, not a registration step.** If `rim_dark` (Juliet; benchmark AUC 0.98–0.99, §3.3)
+   or |edge offset| (E8; it also catches a larger LIE cavity) exceeds its cut after rigid (and affine, if kept), the
+   patient is phase-suspect: no further registration, the reader sees the flag only after the reader's
    own check, and the patient goes to the phase-unmatched stratum unless a CCTA reconstruction at the LIE's phase
    exists. Registration cannot fix a phase change (Juliet E6), so re-registering would only hide it.
 5. **The edge offset needs blood ≠ remote wall on LIE.** If |blood − remote| < 2 robust SD of remote, it is "not
@@ -414,7 +478,7 @@ guard (#180 → #183; synced by #185 and #186).
 | Development: phase-suspect share > 20 % | the LIE phase requirement is not being met; the lead is told before any seal patient is read |
 | Development: scarred segments per scar patient ≠ 3.25 | the ≥ 270 floor's N is recomputed by the engine |
 | JM-0R: first-pass endocardial half-maximum offset > 0.5 mm | the edge-offset null is re-centred on it (§7) |
-| Benchmark: with the heart moving against a static chest, rigid MI masked at 10 mm leaves > 1 mm residual where a 4 mm mask leaves < 0.5 mm (Juliet's early observation on #179) | propose JA29's mask at classes 1–4 dilated **4 mm**, with 10 mm as the fallback when the 4 mm stage fails QC; the judge rules |
+| **Confirmed by the benchmark** (§3.3): rigid MI masked at 10 mm leaves 1.24 mm against a static chest, 4 mm leaves 0.30 mm | JA29's mask at classes 1–4 dilated **4 mm**, with 10 mm as the fallback when the 4 mm stage fails QC; the judge rules |
 
 ## 10. Item 7: path B against path A, for the lead (updated)
 
@@ -436,7 +500,8 @@ a Kim bin that stays "research" unless CT extent proves as reproducible as the C
 
 ## 11. Code that must ship (`role:swe`; the PM opens them; I don't build them in this PR)
 
-1. **#181 (registration + Scar-0) additions:** the edge offset and its per-segment spread as QC outputs (E8's
+1. **#181 (registration + Scar-0) additions:** `rim_dark` (from `bench_lie/menu.py`), the 4 mm mask with a 10 mm
+   fallback (§3.3), the edge offset and its per-segment spread as QC outputs (E8's
    `edge_offset`, `nearest_segment`, half-voxel-corrected signed distance); a "phase-suspect" status beside passed /
    re-registered / not graded; P-K removed from the menu.
 2. **#182 / #187 (power + scoring) additions:**

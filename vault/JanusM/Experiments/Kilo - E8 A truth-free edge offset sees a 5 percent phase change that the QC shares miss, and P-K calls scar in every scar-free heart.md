@@ -183,6 +183,17 @@ the carried wall contains blood. P-G holds (0.85–1.00). Exact-bin agreement (E
 5. **CNR 3 is not gradeable for extent** by E-V (bias −0.15). The JA27 LIE protocol fields (dose, kV, energy mode) and
    the measured CNR become a stratum, and development measures CNR.
 
+**Read against the shared benchmark** (`bench_lie/scores.json` at 0cb2b11; Kilo v3 §3.3):
+- **Agrees:**
+  - P-K is struck (scar-free specificity 0.006–0.31);
+  - the QC shares do not see phase (AUC 0.07–0.56), and a rim or edge statistic does (`rim_dark` AUC 0.98–0.99).
+- **Disagrees on bin 1.** On the benchmark's 1 mm grid, P-G finds 0.95–1.00 of bin-1 segments with exact borders, so
+  this note's 0.03 is a **1.5 mm-grid effect**: the 1-voxel opening plus the 1 mm exclusion remove a 1–1.5 mm scar.
+  The "blind to bin 1" headline above holds only at 1.5 mm voxels.
+- **Disagrees on the non-rigid motion.** Against the benchmark's static chest, masked rigid after the same field
+  leaves 1.6–1.8 mm, and P-G's specificity falls to 0.64–0.85. Here the whole chest moved and P-G stayed at ≈ 1.00.
+  The benchmark is the harder case and it binds.
+
 **Limits.**
 - Synthetic LIE with label-assigned intensities on 1.5 mm model-made masks.
 - The phase change is an endocardial shift with the epicardium fixed, which is Juliet's model in real anatomy. A real

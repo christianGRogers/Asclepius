@@ -88,7 +88,7 @@ path A's JA15–JA24 by reference (JA25), and path B adds only JA33's scoring of
 
 | Item | Settlement | Where |
 |---|---|---|
-| 1. One shared synthetic-LIE benchmark | Juliet builds it (`experiments/JanusM/bench_lie/`), Golf and I reuse it; strike rules agreed on #179 before any result, with my amendments 1a–1c (spill by Golf's counterfactual; specificity on LGE-negative hearts; no empty menu). My E8 adds the non-rigid E5 motion and LGE-negative hearts on my own 13. **Struck: P-K** (my own; E8: 0.005 specificity on scar-free hearts). P-G is specific but blind to bin 1, so I propose P-J first in the menu order. The benchmark's verdict on P-J, P-G, E-V and E-D: ⟨bench⟩ | §3 |
+| 1. One shared synthetic-LIE benchmark | Juliet builds it (`experiments/JanusM/bench_lie/`), Golf and I reuse it; strike rules agreed on #179 before any result, with my amendments 1a–1c (spill by Golf's counterfactual; specificity on LGE-negative hearts; no empty menu). My E8 adds the non-rigid E5 motion and LGE-negative hearts on my own 13. **Struck: P-K** (my own; E8: 0.005 specificity on scar-free hearts). P-G is specific but blind to bin 1, so I propose P-J first in the menu order. The benchmark's verdict on P-J, P-G, E-V and E-D: §3.3 | §3 |
 | 2. The merged power script at the JA32 bars | The engine is #187. E7 (my generator, reader noise and a noisy anchor) and E9 (the engine itself) agree once matched. **Seal = max(120, ≥ 270 scarred segments, 80 % power for presence); 70 % enrichment preferred (≈ 125–140 vs ≈ 170 at 50 %); growth capped at 240**. Three JA32 amendments | §4 |
 | 3. The LGE read form and the registration check form | Field-by-field, with automatic checks, adjudication and blinding, for the existing Janus-M queue's state machine. Entry time ≈ 1 min per LGE read (keystroke-level estimate); total read time is **not measured here**: no reader is in this session. It is measured from queue timestamps on the first 5 development patients | §5 |
 | 4. The JA27 intake checker | DICOM header fields that prove each requirement (tags checked against the DICOM data dictionary), and what a patient failing each becomes | §6 |
@@ -152,7 +152,13 @@ core rule).
 
 ### 3.3 The benchmark's verdict
 
-⟨bench⟩
+**Pending at the time of writing.** Juliet's full run (23 hearts × 24 conditions; about 4 h on 4 CPUs) had not posted
+when this PR opened. This section is updated in the same PR when it does. Until then:
+- the strike rules of §3.1 stand as agreed;
+- P-K is withdrawn regardless of the result (§3.2);
+- my expectation, stated before seeing it: **P-G sits at ≈ 0.75 pooled sensitivity**, because Golf's pre-registered
+  mix makes a quarter of scarred segments bin 1, and P-G's bin-1 sensitivity is ≈ 0 (E8). **P-J is decided by how
+  well τ separates bin 1 from scar-free segments.** E-V passes at CNR 5.
 
 ## 4. Item 2: sizing at the JA32 bars, and three amendments to JA32
 

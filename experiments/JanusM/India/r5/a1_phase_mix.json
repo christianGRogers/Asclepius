@@ -1,0 +1,17 @@
+{
+ "calibrate_version": "1.1.0",
+ "population_factor_ED_only": {
+  "ok": true,
+  "value": 0.9952264942672097
+ },
+ "detectable_depth_ED_only": {
+  "ok": false,
+  "error": "KeyError: 'MD'"
+ },
+ "detectable_depth_ED_full_keys": {
+  "ok": true,
+  "value": {
+   "depth": 0.45
+  }
+ }
+}

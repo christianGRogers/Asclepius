@@ -55,6 +55,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Dict, FrozenSet, Iterable, List, Optional, Tuple
 
+from janusm import sealed_r1
 from segtrain import pool_seal
 from segtrain.pool_seal import _CHANNEL, _READ_SUFFIX, _patient_key, _stem, ingest_patient
 
@@ -100,13 +101,13 @@ PINNED: Dict[str, str] = {
     TWINS_RELPATH: "6495ddda132b6bcaad687bcb21e71662c29b715d9c832ed2bd16205ddc7a07fa",
 }
 
-#: The Janus-M seal and decision set (JA6, #140). The freeze PR commits the file and sets the pin.
-#: The guard reads these keys, each a list of ImageCAS-X case ids (``c0000`` form):
-#: ``seal`` and ``extension`` (refused outside seal scoring), ``decision`` (refused outside
-#: decision scoring). Other keys are ignored. File present but unpinned, or pinned but missing,
-#: is an error.
-JANUSM_SEAL_RELPATH = "configs/janusm/sealed-r1.json"
-JANUSM_SEAL_SHA256: Optional[str] = None
+#: The Janus-M seal and decision set (JA6, #140), frozen in :mod:`janusm.sealed_r1`, which holds
+#: the one pin. The guard reads these keys, each a list of ImageCAS-X case ids (``c0000`` form):
+#: ``seal`` and ``seal_extension`` (refused outside seal scoring), ``decision`` (refused outside
+#: decision scoring). ``jm0`` and other keys are ignored. File present but unpinned, or pinned
+#: but missing, is an error.
+JANUSM_SEAL_RELPATH = sealed_r1.PATH
+JANUSM_SEAL_SHA256: Optional[str] = sealed_r1.SEALED_R1_SHA256
 
 #: Purposes a caller declares. Only the Janus-M seal and decision lists depend on it; a coronary
 #: hold-out is refused for every purpose.
@@ -396,7 +397,8 @@ def _load_janusm_seal(root: Path, pins: dict) -> Dict[str, FrozenSet[str]]:
                                   "JANUSM_SEAL_SHA256 does not pin it")
         return {}
     data = json.loads(_read_pinned(root, JANUSM_SEAL_RELPATH, JANUSM_SEAL_SHA256).decode("utf-8"))
-    out = {k: frozenset(data[k]) for k in ("seal", "extension", "decision") if k in data}
+    out = {k: frozenset(data[k]) for k in ("seal", "decision") if k in data}
+    out["extension"] = frozenset(data.get("seal_extension", ()))
     if not out.get("seal") or not out.get("decision"):
         raise GuardInputError(f"{JANUSM_SEAL_RELPATH}: no seal or decision list")
     pins[JANUSM_SEAL_RELPATH] = JANUSM_SEAL_SHA256

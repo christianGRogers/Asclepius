@@ -45,6 +45,8 @@ EXPLAINED = {
     "twin": "JA12/§4 twin rule: the prototypes predate it (none refuses twins).",
     "icx": "A14 sealed 100 / test 160 / val 80: only Golf checked ImageCAS, and only the sealed "
            "100; JA12 adds the test split and val 80.",
+    "janusm": "Janus-M seal, extension and decision cases (JA6, configs/janusm/sealed-r1.json): "
+              "frozen after the prototypes were written, so none refuses them.",
     "plos": "PLOS-Peng2016: JA12/JA5; only Kilo refused it.",
     "d35": "Round 10 D35 draws: the guard reads all five draw files (every list except those "
            "marked trainable); Golf's glob missed Crucible's and Foxtrot's files, Hotel read only "
@@ -71,8 +73,9 @@ def _load(path: Path, name: str):
 
 def _kind(reason: str) -> str:
     r = reason or ""
-    for key, word in (("twin", "twin"), ("plos", "PLOS"), ("icx", "ImageCAS-X"),
-                      ("d35", "D35"), ("reserve", "reserve"), ("seal", "seal")):
+    for key, word in (("twin", "twin"), ("plos", "PLOS"), ("janusm", "Janus-M"),
+                      ("icx", "ImageCAS-X"), ("d35", "D35"), ("reserve", "reserve"),
+                      ("seal", "seal")):
         if word in r:
             return key
     return "other"

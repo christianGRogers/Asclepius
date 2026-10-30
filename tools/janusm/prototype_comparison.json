@@ -10,7 +10,8 @@
    "experiments/Foxtrot/r10/d35_proposal.json": "a588ad17f7e6f03e128627bfadec84b5b9cb277cd92234352f5b719d2a7cd514",
    "trillium/icx4/sealed_test.json": "319cbc949161c1ee8738153b30405d881f91846200e0ddbfa3b11bcc4233055b",
    "trillium-results/icx14/results/splits.json": "a53bd426cddcf70e92555abe9c01a867736b1390782abaa0160b1da5fb2d9e17",
-   "configs/janusm/ts-twins-r1.json": "6495ddda132b6bcaad687bcb21e71662c29b715d9c832ed2bd16205ddc7a07fa"
+   "configs/janusm/ts-twins-r1.json": "6495ddda132b6bcaad687bcb21e71662c29b715d9c832ed2bd16205ddc7a07fa",
+   "configs/janusm/sealed-r1.json": "fda078976d2411de0f3cfabd7a37d4f2c97f4c27a9bca0f15cabb5daa8fda216"
   },
   "pool_seal_patients": 170,
   "pool_seal_volumes": 325,
@@ -40,7 +41,11 @@
    "s1345"
   ],
   "ts_twins": 692,
-  "janusm_lists": {}
+  "janusm_lists": {
+   "seal": 60,
+   "decision": 40,
+   "extension": 60
+  }
  },
  "inputs": {
   "pool": 854,
@@ -50,6 +55,7 @@
  "explained": {
   "twin": "JA12/§4 twin rule: the prototypes predate it (none refuses twins).",
   "icx": "A14 sealed 100 / test 160 / val 80: only Golf checked ImageCAS, and only the sealed 100; JA12 adds the test split and val 80.",
+  "janusm": "Janus-M seal, extension and decision cases (JA6, configs/janusm/sealed-r1.json): frozen after the prototypes were written, so none refuses them.",
   "plos": "PLOS-Peng2016: JA12/JA5; only Kilo refused it.",
   "d35": "Round 10 D35 draws: the guard reads all five draw files (every list except those marked trainable); Golf's glob missed Crucible's and Foxtrot's files, Hotel read only each file's drawn list, Kilo omitted Foxtrot.",
   "proto_draw_text": "Golf reads every name anywhere in a draw file, including lists the draw marks as trainable (Atlas 'trainable_before_extension_decision', drawn by no other draw); the guard leaves those out (NOT_HELD_OUT_KEYS).",
@@ -106,7 +112,7 @@
    },
    "icx": {
     "n": 1000,
-    "same": 840,
+    "same": 680,
     "guard_stricter": {
      "icx": {
       "n": 160,
@@ -116,6 +122,16 @@
        "c0024",
        "c0038",
        "c0039"
+      ]
+     },
+     "janusm": {
+      "n": 160,
+      "e.g.": [
+       "c0003",
+       "c0004",
+       "c0006",
+       "c0007",
+       "c0014"
       ]
      }
     },

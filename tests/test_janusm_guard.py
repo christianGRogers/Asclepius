@@ -103,7 +103,7 @@ def test_allowed_cases_pass(g):
 
 
 def test_refuse_stops_the_whole_run_and_names_every_hit():
-    ok = ["c0000", "c0003"]
+    ok = ["c0000", "c0005"]                              # train, in no Janus-M held-out list
     assert refuse(ok, source="ImageCAS-X") == ok
     with pytest.raises(HeldOutError) as e:
         refuse(["c0000", "c0002", "c0001"], what="a test run", source="ImageCAS-X")
@@ -119,14 +119,14 @@ def test_cli_exit_code(capsys):
 
 # ------------------------------------------------------------------ pins
 def _copy_root(tmp_path):
-    for rel in list(G.PINNED) + ["configs/segqueue14/pool-2026-10.txt"]:
+    for rel in list(G.PINNED) + ["configs/segqueue14/pool-2026-10.txt", G.JANUSM_SEAL_RELPATH]:
         dst = tmp_path / rel
         dst.parent.mkdir(parents=True, exist_ok=True)
         shutil.copyfile(REPO / rel, dst)
     return tmp_path
 
 
-@pytest.mark.parametrize("rel", sorted(G.PINNED))
+@pytest.mark.parametrize("rel", sorted(G.PINNED) + [G.JANUSM_SEAL_RELPATH])
 def test_a_changed_input_list_fails_loudly(tmp_path, rel):
     root = _copy_root(tmp_path)
     load_guard(root)                                     # the copy loads
@@ -149,8 +149,9 @@ def test_a_missing_input_or_a_new_draw_file_fails(tmp_path):
         load_guard(root)
 
 
-def test_an_unpinned_janusm_seal_file_fails(tmp_path):
+def test_an_unpinned_janusm_seal_file_fails(tmp_path, monkeypatch):
     root = _copy_root(tmp_path)
+    monkeypatch.setattr(G, "JANUSM_SEAL_SHA256", None)
     (root / G.JANUSM_SEAL_RELPATH).write_text("{}")
     with pytest.raises(GuardInputError, match="does not pin it"):
         load_guard(root)
@@ -162,7 +163,7 @@ def test_janusm_seal_cases_are_refused_outside_their_scoring_path(tmp_path, monk
     import hashlib
 
     root = _copy_root(tmp_path)
-    raw = json.dumps({"seal": ["c0000"], "extension": ["c0003"], "decision": ["c0004"],
+    raw = json.dumps({"seal": ["c0000"], "seal_extension": ["c0003"], "decision": ["c0004"],
                       "jm0": ["c0005"]}).encode()
     (root / G.JANUSM_SEAL_RELPATH).write_bytes(raw)
     monkeypatch.setattr(G, "JANUSM_SEAL_SHA256", hashlib.sha256(raw).hexdigest())

@@ -1,0 +1,18 @@
+{
+ "eligible": 103,
+ "selected": [
+  "s0424",
+  "s0877",
+  "s1230",
+  "s0935",
+  "s1190",
+  "s1018",
+  "s0452",
+  "s0349",
+  "s1248",
+  "s0338",
+  "s0439",
+  "s0834"
+ ],
+ "rule": "study_type in {ct heart, ct coronary arteries, ct aortic valve, ct heart-thorakale aorta}, not one of the 16 pool TotalSegmentator-cardiac ids, ranked by sha256('janusm-juliet-r1:'+id), first 12"
+}

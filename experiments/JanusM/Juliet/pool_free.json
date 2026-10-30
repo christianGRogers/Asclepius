@@ -1,0 +1,51 @@
+{
+ "strict": {
+  "excluded_patient_keys": 320,
+  "pool_volumes": 675,
+  "free_volumes": 149,
+  "free_by_source": {
+   "CCA200-HF": 20,
+   "HOCMvalvesSeg": 24,
+   "ImageALCAPA": 30,
+   "ImageCHD": 63,
+   "Taiwan-AICUP-CardiacCT": 12
+  }
+ },
+ "after_q1": {
+  "excluded_patient_keys": 284,
+  "pool_volumes": 675,
+  "free_volumes": 193,
+  "free_by_source": {
+   "CCA200-HF": 20,
+   "Figshare-EpicardialFat-CE": 4,
+   "HOCMvalvesSeg": 24,
+   "ImageALCAPA": 30,
+   "ImageCHD": 63,
+   "Kaggle-CAD-RandomSamples": 1,
+   "Mendeley-SDN-cy54ttk3fj": 16,
+   "Taiwan-AICUP-CardiacCT": 34,
+   "VMR-Coronary": 1
+  }
+ },
+ "after_a35": {
+  "excluded_patient_keys": 206,
+  "pool_volumes": 675,
+  "free_volumes": 299,
+  "free_by_source": {
+   "CCA200-HF": 20,
+   "Figshare-CardiacCT15": 6,
+   "Figshare-EpicardialFat-CE": 15,
+   "HOCMvalvesSeg": 24,
+   "IDC-rider_lung_pet_ct": 23,
+   "ImageALCAPA": 30,
+   "ImageCHD": 63,
+   "Kaggle-CAD-RandomSamples": 12,
+   "Kaggle-HeartSR": 4,
+   "Mendeley-SDN-cy54ttk3fj": 34,
+   "SLAWT2016-CT": 3,
+   "Taiwan-AICUP-CardiacCT": 46,
+   "TotalSegmentator-cardiac": 6,
+   "VMR-Coronary": 13
+  }
+ }
+}

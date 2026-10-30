@@ -25,8 +25,6 @@ for i, f in enumerate((0.2, 0.45, 0.7)):
     ax[0, i].imshow(plane(g["ct"], g, fr, s, order=1), cmap="gray", vmin=-100, vmax=500)
     ax[1, i].imshow(plane(seg, g, fr, s), cmap="tab20", vmin=0, vmax=19, interpolation="nearest")
     ax[2, i].imshow(plane(L, g, fr, s), cmap="viridis", vmin=0, vmax=3, interpolation="nearest")
-    for k, m in enumerate(np.unique(plane(seg, g, fr, s))):
-        pass
     ax[0, i].set_title(f"{f:.2f} of base-apex; arc {fr['septal_arc_deg']:.0f}")
 for a in ax.flat: a.axis("off")
 plt.tight_layout(); plt.savefig(out, dpi=70)

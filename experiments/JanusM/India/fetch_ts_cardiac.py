@@ -13,6 +13,11 @@ REPO = os.path.abspath(os.path.join(HERE, "..", "..", ".."))
 POOL = os.path.join(REPO, "configs", "segqueue14", "pool-2026-10.txt")
 
 
+URL = "https://zenodo.org/records/6802614/files/Totalsegmentator_dataset.zip?download=1"
+CARDIAC = {"ct heart", "ct heart-thorakale aorta", "ct aortic valve", "ct coronary arteries", "ct left artrium"}
+MASKS = ["heart_myocardium", "heart_ventricle_left", "heart_ventricle_right", "heart_atrium_left",
+         "heart_atrium_right", "aorta"]
+
 HELD_OUT_SOURCES = ["configs/segqueue14/pool-2026-10.txt",            # every pool volume (seal, D35, reserve, train)
                     "configs/segqueue14/sealed-pool-2026-10.json",     # the D27/D32/D33 seal
                     "experiments/*/r10*/*decision_set*proposal*.json",  # every Round 10 D35 draw and reserve order
@@ -59,7 +64,7 @@ def main(out):
         files = [base + "ct.nii.gz"] + [base + f"segmentations/{m}.nii.gz" for m in MASKS]
         for f in files:
             if f in names and not os.path.exists(os.path.join(out, f)):
-                for attempt in range(4):  # a dropped connection leaves a partial file: remove it and retry
+                for _attempt in range(4):  # a dropped connection leaves a partial file: remove it and retry
                     try:
                         z.extract(f, out)
                         break

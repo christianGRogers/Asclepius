@@ -55,6 +55,11 @@ REMOTE = 90.0
 BLOOD = {"below": REMOTE + C_SCAR / 2, "equal": REMOTE + C_SCAR, "above": REMOTE + 1.5 * C_SCAR}
 CNRS = (3, 5)
 MOTIONS = ("none", "rigid", "scale", "phase", "nonrigid")
+#: v3 (Round 4, #251 item 1) adds two motions; the v2 motions and their seeds are unchanged.
+#:   phase_neg: rigid + the LIE cavity grown by 5 % of its equivalent radius (a larger LIE cavity, thinner wall);
+#:   aniso:     rigid + an anisotropic scale 3 % / 3 % / 6 % in a random orthonormal frame, random sign per case.
+MOTIONS_V3 = MOTIONS + ("phase_neg", "aniso")
+ANISO = (0.03, 0.03, 0.06)
 TS = (0.15, 0.35, 0.60, 0.90)
 SHELL_MM = 4.0
 A_RAS = np.eye(4)
@@ -139,7 +144,12 @@ def motion_params(motion, rng):
     v = rng.normal(0, 1, 3) * np.array([0.35, 0.35, 1.0])
     t = v / np.linalg.norm(v) * 4.0
     R = _rot(rng.normal(0, 1, 3), 2.0)
-    return R, t, (1.03 if motion == "scale" else 1.0), (0.05 if motion == "phase" else 0.0)
+    if motion == "aniso":                         # v3: draws after the v2 draws, so v2 motions are unchanged
+        Q, _ = np.linalg.qr(rng.normal(0, 1, (3, 3)))
+        sign = 1.0 if rng.random() < 0.5 else -1.0
+        return R, t, Q @ np.diag(1.0 + sign * np.asarray(ANISO)) @ Q.T, 0.0
+    e = {"phase": 0.05, "phase_neg": -0.05}.get(motion, 0.0)
+    return R, t, (1.03 if motion == "scale" else 1.0), e
 
 
 def _columns(lab, aha):
@@ -208,6 +218,11 @@ def make_case(heart: dict, blood: str, cnr: int, motion: str, seed: int):
     R, t, sc, e = motion_params(motion, rng)
     # LIE heart at pose 0, with any phase change (cavity shrinks, wall thickens)
     lab_l = lab0.copy()
+    if e < 0:                                     # v3 phase_neg: the cavity grows into the myocardial wall
+        cav = lab0 == G.LV
+        req = (3 * cav.sum() / (4 * np.pi)) ** (1 / 3)
+        grow = (lab0 == G.MYO) & (ndi.distance_transform_edt(~cav) <= -e * req)
+        lab_l[grow] = G.LV
     if e > 0:
         cav = lab0 == G.LV
         req = (3 * cav.sum() / (4 * np.pi)) ** (1 / 3)
@@ -248,7 +263,10 @@ def make_case(heart: dict, blood: str, cnr: int, motion: str, seed: int):
     # motion: x0(x) = the pose-0 point imaged at LIE voxel x
     c = np.argwhere(heartmask).mean(0)
     idx = np.indices(shape).reshape(3, -1).astype(np.float32)
-    x0 = (R.T @ (idx - (c + t)[:, None])) / sc + c[:, None]
+    if np.ndim(sc) == 2:                         # v3 aniso: x = R S (x0 - c) + c + t
+        x0 = np.linalg.inv(sc) @ (R.T @ (idx - (c + t)[:, None])) + c[:, None]
+    else:
+        x0 = (R.T @ (idx - (c + t)[:, None])) / sc + c[:, None]
     whole = motion == "nonrigid"                 # Kilo E5: the whole image moves (chest too), plus a smooth field
     if whole:
         x0 = x0 - _smooth_field(shape, 1.5, 20.0, rng).reshape(3, -1)

@@ -1,0 +1,24 @@
+{
+ "column_min_bins=6": {
+  "tol": 0.02,
+  "conditions": "CNR 5; motion none, rigid; blood below, equal, above (oracle geometry)",
+  "n_cases": 18,
+  "n_skipped": 0,
+  "n_pass": 0,
+  "scar_version": "1.1.0",
+  "max_abs_diff_ev": 0.00039525691699604515,
+  "max_abs_diff_ed": 0.1911502782931354,
+  "max_abs_diff_pg_share": 0.0
+ },
+ "column_min_bins=4": {
+  "tol": 0.02,
+  "conditions": "CNR 5; motion none, rigid; blood below, equal, above (oracle geometry)",
+  "n_cases": 18,
+  "n_skipped": 0,
+  "n_pass": 18,
+  "scar_version": "1.1.0",
+  "max_abs_diff_ev": 0.00039525691699604515,
+  "max_abs_diff_ed": 0.0006250000000000144,
+  "max_abs_diff_pg_share": 0.0
+ }
+}

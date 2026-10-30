@@ -38,14 +38,17 @@ of 40 are drawn now, before any model or read exists.
 
 ## 2. Evidence this round (CPU; code in `experiments/JanusM/Golf/`; no sealed case opened)
 
-- **E1:** [[Golf - The coronary seal, D35 draws and reserve leave Janus-M 164 of 675 pool volumes, so its adult data is ImageCAS]]
-  - Only 164 pool volumes are open to Janus-M.
-  - Of the SDN normal-perfusion cohort, 1 patient is open; of the epicardial-fat set and the TotalSegmentator pool
-    cases, none.
+- **E1:** [[Golf - The coronary seal, D35 draws and reserve leave Janus-M 137 of 675 pool volumes, so its adult data is ImageCAS]]
+  - Only 137 pool volumes are open to Janus-M, all congenital, suspect-spacing or windowed.
+  - Of the SDN normal-perfusion cohort, the epicardial-fat set and the TotalSegmentator pool cases, none is open.
+  - `heldout.py` refuses, in code and by real patient, every pool-seal, reserve, D35-draw and A14 case. Every Golf
+    script calls it before opening a case. Golf opened no held-out case.
+  - The one gap no guard can close: TotalSegmentator does not link s-numbers to patients.
   - ImageCAS has 900 cases open.
   - Proposed Janus-M seal: `janusm_seal_proposal.json`.
 - **E2:** [[Golf - Layers derived from two borders on real CT, and what a border error costs each layer]]
-  - Data: 24 TotalSegmentator contrast cardiac CTs that are outside the pool, with their CC BY 4.0 myocardium labels.
+  - Data: 24 TotalSegmentator contrast cardiac CTs that are outside the pool and pass the guard, with their
+    CC BY 4.0 myocardium labels.
   - Wall thickness, voxels per third, Laplace versus equal-thickness thirds, automatic AHA segments.
   - The same border error costs a third more Dice than it costs the whole myocardium.
 - **E3:** [[Golf - On late-enhancement CT the scar's endocardial border must come from the first-pass scan]]
@@ -105,25 +108,42 @@ because it orients the AHA model. An RV myocardium class can be added later with
 
    | Border error (RMS) | Myocardium Dice | Subendocardial-third Dice | Subepicardial-third Dice | Mid-wall-third Dice |
    |---|---|---|---|---|
-   | 0.25 mm | «E2_025_myo» | «E2_025_t1» | «E2_025_t3» | «E2_025_t2» |
-   | 0.5 mm | «E2_05_myo» | «E2_05_t1» | «E2_05_t3» | «E2_05_t2» |
-   | 1.0 mm | «E2_1_myo» | «E2_1_t1» | «E2_1_t3» | «E2_1_t2» |
+   | 0.25 mm | 0.982 | 0.952 | 0.954 | 0.956 |
+   | 0.5 mm | 0.963 | 0.909 | 0.903 | 0.916 |
+   | 1.0 mm | 0.921 | 0.808 | 0.799 | 0.832 |
 
-   Every layer error is already set by the border error. Scoring the layers adds no information beyond the borders.
-   Scoring the borders in millimetres (§7.3) does.
+   These are medians over 23 cases × 2 draws. The layer Dice falls about twice as fast as the myocardium Dice.
+   A systematic 0.5 mm outward epicardial bias leaves the myocardium at 0.967, puts the subepicardial third at
+   0.881 and thickens the wall by 0.40 mm. Every layer error is set by the border error, so scoring the layers adds
+   no information beyond the borders. Scoring the borders in millimetres (§7.3) does, and it must catch **bias**:
+   random border error moved the median thickness by only 0.04–0.10 mm.
 3. **The definition must be fixed in the protocol, because the choice matters.** On the same 24 myocardia, thirds
    by Laplace potential (the classic "transmural coordinate", [[#Jones2000]], [[#Bayer2018]]) and thirds by equal
-   thickness agree on only «E2_agree» of voxels. The Laplace thirds hold «E2_lap» of the myocardial volume
-   (subendocardial / mid / subepicardial). The equal-thickness thirds hold «E2_eq». [[#Schuler2021]] reports that
+   thickness agree on only 88 % (median 0.878) of voxels. The Laplace thirds hold 21 / 34 / 45 % of the myocardial volume
+   (subendocardial / mid / subepicardial). The equal-thickness thirds hold 25 / 37 / 37 %. [[#Schuler2021]] reports that
    normalised distances are more linear than Laplace solutions. The clinical definitions are fractions of
    thickness. So Golf fixes **equal thickness** (lead Q2).
 4. **Derivation is auditable and cheap to change.** If the lead wants halves instead of thirds, or a different base
    rule, the table is recomputed from the stored borders without retraining.
 
 **Feasibility on real CT (E2, 24 cases, 1.5 mm):**
-- the AHA derivation succeeded in «E2_aha_ok» of 24 cases, with all 17 segments non-empty in «E2_aha_full»;
-- the orientation checks (septum towards the RV, segment 1 anterior to segment 4) passed in «E2_orient» of 24;
-- the median septal arc was «E2_arc»° (expected about 120°: two of six 60° sectors).
+- One case (s0597) has no LV label in the release.
+- In the other 23, the AHA derivation ran in 23, with all 17 segments non-empty in 22.
+- The orientation checks (septum towards the RV, segment 1 anterior to segment 4) passed in 19 of 23.
+- Orientation rule B (anterior insertion = the end pointing anterior-**superior**, `aha_check.py`) passed a stricter
+  check in 19 of 23, against 17 of 23 for anterior-only. Two of its four misses place segment 1 about 50 mm
+  superior but 3 mm posterior, which is plausible in a vertical heart. `territories.py` uses rule B.
+- **The septal arc is too wide:** median 164°, against AHA's 120° (two of six 60° sectors). A 3 mm RV-contact band
+  wraps past the insertions, so the septal segments are oversized: mean share 8 % against about 5 % for the
+  others. Before any table ships, the rule changes to six fixed 60° sectors from the anterior insertion, as the
+  AHA statement places them ([[#Cerqueira2002]]). This is listed in §9.
+- **Thickness:** median wall 9.7 mm [IQR 8.9–10.0] on the 1.5 mm grid, after a one-voxel correction for summing
+  two centre-to-centre distance maps; 9.9 mm on the 0.5 mm grid. This is far above the 5.7 mm end-diastolic
+  normal ([[#Chen2025]]). These are older aortic-valve, TAVI and aorta patients (aged 47–84) of unknown cardiac
+  phase, and the label convention may include trabeculae. **So a model trained on any one label source inherits
+  its thickness convention.** Hence §7.3 decides on thickness against team reads, and lead Q3 sets the convention.
+- **Resolution:** a third holds 2.2 voxels at 1.5 mm (TotalSegmentator's released grid). At a 9.7 mm wall that
+  is about 4.6 voxels at 0.7 mm, which is enough for derived thirds. Blood–myocardium CNR is median 5.7.
 
 ## 4. Clinical outputs, and how they tie to the coronary tree
 
@@ -189,7 +209,7 @@ are [[#Javadi2010]] and the CCTA Voronoi mass shares of [[#Stalikas2025]]: LAD 4
 | TotalSegmentator dataset, cardiac cases outside the pool (114) | External, report-only test of LV myocardium at 1.5 mm | CC BY 4.0 (Zenodo 10.5281/zenodo.10047292) | Used in E2 |
 | ImageCHD, non-sealed (63) | Myocardium labels (label 5) at about 0.25 × 0.25 × 0.5 mm; congenital, aged 1 month to 40 years ([[#Xu2020]]) | CC BY-NC 4.0 | Report-only paediatric stratum, **never decisive** |
 | MM-WHS CT (60; 20 with labels) | Expert myocardium labels on adult CT, 0.78 mm in-plane ([[#Zhuang2019]]) | **Gated:** signed agreement, no redistribution | Lead Q7; Golf stops here (D31) |
-| SDN normal-perfusion cohort (Mendeley cy54ttk3fj) | Normal rest TPR reference ([[#Forte2020]]) | CC BY 4.0 | **36 sealed, 24 in D35 draws, 18 reserve; 1 patient open.** The reference values come from the paper, not the images |
+| SDN normal-perfusion cohort (Mendeley cy54ttk3fj) | Normal rest TPR reference ([[#Forte2020]]) | CC BY 4.0 | **Of its 80 pool volumes, 36 are sealed, 24 are in D35 draws, 18 are in the reserve and 2 are refused by the guard: none is open.** The reference values come from the paper, not the images |
 | CT perfusion or LIE with labels | S3, S4, C4 | **None openly downloadable.** Five Monzino records on Zenodo and the Penso 2023 record are restricted | Golf says so and stops (D31) |
 | The lead's own institution (CCTA + CTP/LIE + CMR + FFR) | The only route to tier B and to validating tier A | Lead's call (D19) | Lead Q7 |
 
@@ -302,7 +322,7 @@ If the prediction file names in `$SCRATCH/icx4/predictions` are not `c0000.nii.g
 | Janus-M 0 passes §7.3 on the decision set | No training. Janus-M 0 is the model; M3 is never run |
 | Janus-M 0 fails | M3 (Janus-M 1); re-decide on the same decision set |
 | Blank reads differ from seeded reads by more than the inter-read difference | Seeded reads cannot accept a model. All 60 seal reads go from blank (about 3× the reading time) |
-| M2: AHA derivation fails in > 5 % of cases | Fix the base and insertion rules before any table ships (E2 sets the rule on 24 cases) |
+| M2: AHA derivation fails in > 5 % of cases, or orientation checks fail in > 5 % | Fix the base and insertion rules before any table ships. E2: derivation ran in 23/23, all 17 segments in 22/23, orientation correct in 19/23. The septal arc rule is replaced by fixed 60° sectors in any case |
 | M2: reassignment ≪ Javadi's 9.3 % of segments | The territory output is redundant with the standard mapping. Keep it as a report |
 | The lead obtains an institutional CTP/LIE + CMR + FFR cohort | Tier B opens: S3, S4, C4, C5; a scar reference; tier A validated against it. A new round plans it |
 | The lead declines tier B | Janus-M stays a CCTA myocardium model with research outputs; the brief's "scarring" is met only by C1–C3 |

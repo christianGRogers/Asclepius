@@ -25,7 +25,7 @@ on first-pass CCTA and LIE scar is graded inside its borders after registration.
 ## Method
 
 The simulation is synthetic and runs on CPU in about 1 minute. Each AHA segment is modelled as 150 transmural
-profiles of a wall 8 or 11 mm thick; E2 measured 9.1–12.9 mm on real CT. Subendocardial scar fills 0, 15, 35, 60
+profiles of a wall 8 or 11 mm thick; E2 measured 8.1–11.6 mm on real CT. Subendocardial scar fills 0, 15, 35, 60
 or 90 % of the wall, which puts each case in the middle of a Kim bin, with ±5 % jitter across the segment.
 
 **Intensities,** in units of the scar–remote contrast:

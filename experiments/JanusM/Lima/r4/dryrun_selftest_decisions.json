@@ -1,0 +1,224 @@
+{
+ "decide_version": "1",
+ "input_script_version": null,
+ "sources": {
+  "n_cases": "lima",
+  "aha_frame_fail_share": "lima",
+  "aha_orientation_fail_share": "lima",
+  "thickness_median_mm": "lima",
+  "halves_segment_share": "lima",
+  "endo_halfmax_offset_mm_median": "lima",
+  "epi_halfmax_offset_mm_median": "lima",
+  "fat_grid": "lima",
+  "septal_arc_mass_changed_median": "lima",
+  "geodesic_segments_changed_share": "lima",
+  "et_laplace_third_agreement_median": "lima",
+  "cv_n": "lima",
+  "segment_shape": "lima"
+ },
+ "decisions": [
+  {
+   "rule": "R0",
+   "basis": "JA43 R0; Hotel v3 \u00a75.1",
+   "inputs": {
+    "n_cases": 23,
+    "n_usable": null
+   },
+   "missing": [
+    "n_usable"
+   ],
+   "outcome": "STOP: fewer than 36 usable cases; no rule is applied",
+   "applied": true,
+   "from": [
+    "lima"
+   ]
+  },
+  {
+   "rule": "R1",
+   "basis": "JA43 R1; JA3",
+   "inputs": {
+    "aha_frame_fail_share": 0.0,
+    "aha_orientation_fail_share": 0.0
+   },
+   "missing": [],
+   "outcome": "NOT APPLIED (R0 stopped); would be: failing cases show 'AHA frame failed' and no segment table",
+   "frame_fix": false,
+   "applied": false,
+   "from": [
+    "lima"
+   ]
+  },
+  {
+   "rule": "R2",
+   "basis": "JA43 R2; JA2",
+   "inputs": {
+    "halves_segment_share": 0.016
+   },
+   "missing": [],
+   "outcome": "NOT APPLIED (R0 stopped); would be: JA2 per segment, as the module computes; Table A's header unchanged (never halves everywhere)",
+   "header_note": false,
+   "applied": false,
+   "from": [
+    "lima"
+   ]
+  },
+  {
+   "rule": "R3",
+   "basis": "JA43 R3; Hotel v2 \u00a74.4, F3",
+   "inputs": {
+    "thickness_median_mm": 9.668
+   },
+   "missing": [],
+   "outcome": "NOT APPLIED (R0 stopped); would be: readers hand-measure 3 mid-ventricular segments on the first 20 decision cases; the definition is aligned before the reference population; no thinning flag ships before that",
+   "f3_holds": false,
+   "applied": false,
+   "from": [
+    "lima"
+   ]
+  },
+  {
+   "rule": "R4",
+   "basis": "JA43 R4; JA17, JA44",
+   "inputs": {
+    "endo_halfmax_offset_mm_median": -0.451,
+    "epi_halfmax_offset_mm_median": 0.64
+   },
+   "missing": [],
+   "outcome": "NOT APPLIED (R0 stopped); would be: the snap tool (S8) runs on the seeds before any read; rest TPR needs snapped borders; printed, not acted on: the seed is expected to fail the 0.3 mm guard",
+   "snap_before_reads": true,
+   "snap_for_tpr": true,
+   "seed_expected_to_fail_bias_guard": true,
+   "applied": false,
+   "from": [
+    "lima"
+   ]
+  },
+  {
+   "rule": "R5",
+   "basis": "JA43 R5; JA17",
+   "inputs": {
+    "endo_edge_10_90_mm_median": null,
+    "endo_halfmax_offset_mm_median": -0.451,
+    "tpr_guard_adaptive_freewall_median": null,
+    "tpr_guard1_freewall_median": null,
+    "tpr_guard_adaptive_freewall_patient_median": null,
+    "tpr_guard_adaptive_share_below_0p99": null
+   },
+   "missing": [
+    "endo_edge_10_90_mm_median"
+   ],
+   "outcome": "NOT APPLIED (R0 stopped); would be: not shown",
+   "tpr_from": "tpr_guard_adaptive_freewall_median",
+   "applied": false,
+   "from": [
+    "lima"
+   ]
+  },
+  {
+   "rule": "R6",
+   "basis": "JA43 R6; JA18",
+   "inputs": {
+    "fat_grid": {
+     "0,5": 1.0,
+     "0,20": 1.0,
+     "0,50": 0.957,
+     "-30,5": 1.0,
+     "-30,20": 0.957,
+     "-30,50": 0.957,
+     "-50,5": 0.957,
+     "-50,20": 0.957,
+     "-50,50": 0.913,
+     "-100,5": 0.913,
+     "-100,20": 0.87,
+     "-100,50": 0.783
+    },
+    "fat_patient_rule_share": null
+   },
+   "missing": [
+    "fat_patient_rule_share"
+   ],
+   "outcome": "NOT APPLIED (R0 stopped); would be: no grid cell or patient rule passes: fat is a number only. Provisional; fixed on the reference population",
+   "cut": null,
+   "applied": false,
+   "from": [
+    "lima"
+   ]
+  },
+  {
+   "rule": "R7",
+   "basis": "JA43 R7; JA20",
+   "inputs": {
+    "septal_arc_mass_changed_median": 0.14
+   },
+   "missing": [],
+   "outcome": "NOT APPLIED (R0 stopped); would be: column kept (a sensitivity column)",
+   "column_kept": true,
+   "applied": false,
+   "from": [
+    "lima"
+   ]
+  },
+  {
+   "rule": "R8",
+   "basis": "JA43 R8; JA20, JA24",
+   "inputs": {
+    "geodesic_segments_changed_share": 0.0
+   },
+   "missing": [],
+   "outcome": "NOT APPLIED (R0 stopped); would be: Euclidean is primary; no segment marked 'shared'",
+   "shared_marking": false,
+   "applied": false,
+   "from": [
+    "lima"
+   ]
+  },
+  {
+   "rule": "R9",
+   "basis": "JA43 R9; JA40",
+   "inputs": {
+    "cv_n": 0.088,
+    "cv_n_robust_log": null,
+    "segment_shape": [
+     1.015,
+     1.288,
+     1.171,
+     0.971,
+     0.982,
+     1.12,
+     0.91,
+     1.121,
+     1.276,
+     1.022,
+     0.916,
+     1.074,
+     0.777,
+     0.825,
+     0.756,
+     0.819
+    ]
+   },
+   "missing": [],
+   "outcome": "NOT APPLIED (R0 stopped); would be: the page prints a detectable depth of 35 % (cv_n 0.088, F1 1.0 mm)",
+   "depth": 0.35,
+   "rc_terr_mm": 1.0,
+   "sig_m": 0.0,
+   "applied": false,
+   "from": [
+    "lima"
+   ]
+  },
+  {
+   "rule": "R10",
+   "basis": "JA43 R10",
+   "inputs": {
+    "et_laplace_third_agreement_median": 0.884
+   },
+   "missing": [],
+   "outcome": "NOT APPLIED (R0 stopped); would be: reported only",
+   "applied": false,
+   "from": [
+    "lima"
+   ]
+  }
+ ]
+}

@@ -9,15 +9,18 @@ through its own logic and widget:
 
 * logs in, takes a seeded case, and loads the seed into the four JA1 segments by
   value (each segment exactly its class's voxels);
-* measures the plateaus from the segments and sets the window level to a border's
-  half-maximum threshold;
-* refuses overlapping classes before any upload;
+* opens on the endocardial border window (protocol v1): plateaus from the seed,
+  level at the half-maximum, width 1.5 x |p1 - p2|; 800 / 300 only on request;
+* refuses an incomplete read form (CAD-RADS 2.0 per vessel) and overlapping classes
+  before any upload;
 * submits the uncorrected seed (its LV pool drawn 2 mm too big), which the check
-  returns, and shows the reasons;
-* corrects the read and resubmits; the check accepts it, and the uploaded file is
-  the read voxel for voxel on the CT grid;
-* takes a blank case, which starts with four empty segments and is refused before
-  upload until every class is drawn;
+  returns with the reasons and the half-maximum profile, which it plots;
+* corrects the read and resubmits; the check accepts it, and the uploaded file and
+  read form are the read voxel for voxel on the CT grid and the grades given;
+* takes a blank case, which opens on 800 / 300 with four empty segments, reaches its
+  border window from an ROI, and is refused before upload until every class is drawn;
+* submits a wrong read twice: returned once, then accepted and flagged (Hotel v3
+  section 5.1 item 7);
 * never shows the read set or whether a case is scored, even though this fake
   server sends both.
 
@@ -79,6 +82,7 @@ class FakeQueue:
         self.slicer, self.cases, self.tmp = slicer, list(cases), tmp
         self.version = str(PROTOCOL_VERSION)
         self.reads, self.uploads, self.files = {}, {}, {}
+        self.reports = []
         self.calls, self.headers = [], []
 
     def _info(self, read):
@@ -87,6 +91,7 @@ class FakeQueue:
                 "hasSeed": case["seed"] is not None,
                 "checksum": hashlib.sha256(case["ct"]).hexdigest(),
                 "sizeBytes": len(case["ct"]), "checkSummary": read.get("summary", ""),
+                "flagged": bool(read.get("flagged")), "checkProfile": read.get("profile", {}),
                 # A reader's tool must drop these: a server that leaked them is tested.
                 "readSet": case["set"], "scored": True, "otherRead": "R-other"}
 
@@ -151,10 +156,25 @@ class FakeQueue:
             missing = L.missing_required(meta["voxelCounts"])
             if missing:
                 return _refusal(400, protocol.ERR_MISSING_CLASS, L.missing_message(missing))
+            problems = protocol.ReadSubmission.from_dict(meta).form_problems()
+            if problems:
+                return _refusal(400, protocol.ERR_READ_FORM, " ".join(problems))
             values = self._array(data)
             report = check_read(values, case["ctArray"], case["spacing"])
-            read["state"] = protocol.ACCEPTED if report.passed else protocol.RETURNED
-            read["summary"] = report.summary()
+            self.reports.append(report)
+            # Return once, then accept and flag -- as girder_janusm.check.decide does.
+            read["attempts"] = read.get("attempts", 0) + 1
+            read["profile"] = {}
+            if report.passed:
+                read["state"], read["flagged"] = protocol.ACCEPTED, False
+                read["summary"] = report.summary()
+            elif read["attempts"] <= protocol.MAX_RETURNS:
+                read["state"], read["flagged"] = protocol.RETURNED, False
+                read["summary"] = report.summary()
+                read["profile"] = protocol.profile_for_reader(report.to_dict())
+            else:
+                read["state"], read["flagged"] = protocol.ACCEPTED, True
+                read["summary"] = "Accepted and flagged: " + " ".join(report.errors)
             read["uploaded"] = values
             read["meta"] = meta
             return _Response(body=self._info(read))
@@ -197,6 +217,26 @@ def _draw(slicer, logic, values):
         slicer.util.updateSegmentBinaryLabelmapFromArray(
             (values == value).astype(np.uint8), logic.segmentationNode,
             logic.segmentIdFor(value), logic.volumeNode)
+
+
+FORM = {"LM": "0", "LAD": "3", "LCx": "1", "RCA": "N"}
+
+
+def _grade(widget, logic, form):
+    """Fill the read form, through the panel's combos when there is a panel (reset
+    first, as opening a case resets them)."""
+    if widget is not None:
+        widget._showReadForm()
+    for vessel, grade in form.items():
+        if widget is not None:
+            combo = widget.gradeCombos[vessel]
+            combo.setCurrentIndex(combo.findText(grade))
+        else:
+            logic.setGrade(vessel, grade)
+
+
+def _uploads(server):
+    return len([c for c in server.calls if c[1] == "file"])
 
 
 def run():
@@ -243,6 +283,8 @@ def run():
          "ctArray": ct, "spacing": spacing},
         {"name": "phantom-blank", "set": "seal", "ct": ctBytes, "seed": None,
          "ctArray": ct, "spacing": spacing},
+        {"name": "phantom-again", "set": "decision", "ct": ctBytes, "seed": seedBytes,
+         "ctArray": ct, "spacing": spacing},
     ]
     server = FakeQueue(slicer, cases, tmp)
 
@@ -280,12 +322,24 @@ def run():
         logic.segmentIdFor(L.LV_POOL)).GetColor()
     check("with the JA1 colours", np.allclose(colour, L.COLORS[L.LV_POOL], atol=1e-3), colour)
 
+    display = logic.volumeNode.GetDisplayNode()
+    opened = dict(logic.plateaus)
+    check("the plateaus were measured from the seed when the case opened",
+          opened[halfmax.LV_BLOOD] is not None and abs(opened[halfmax.LV_BLOOD] - 420) < 10,
+          opened)
+    want = halfmax.window_for(halfmax.ENDOCARDIAL, opened)
+    check("it opened on the endocardial border window (width 1.5 x |p1 - p2|)",
+          abs(display.GetWindow() - want[0]) < 0.5 and abs(display.GetLevel() - want[1]) < 0.5
+          and abs(want[0] - 1.5 * abs(opened[halfmax.LV_BLOOD] - opened[halfmax.MYOCARDIUM]))
+          < 0.5, (display.GetWindow(), display.GetLevel(), want))
+    logic.resetWindow()
+    check("800 / 300 is there on request", abs(display.GetWindow() - 800) < 0.5
+          and abs(display.GetLevel() - 300) < 0.5, (display.GetWindow(), display.GetLevel()))
     plateaus = logic.measurePlateausFromSegments()
     check("plateaus from the segments", abs(plateaus[halfmax.LV_BLOOD] - 420) < 10
           and abs(plateaus[halfmax.MYOCARDIUM] - 120) < 25
           and abs(plateaus[halfmax.FAT] + 100) < 15, plateaus)
     window, level = logic.applyBorderWindow(halfmax.ENDOCARDIAL)
-    display = logic.volumeNode.GetDisplayNode()
     check("the endocardial window is at its half-maximum level",
           abs(display.GetLevel() - level) < 0.5 and abs(display.GetWindow() - window) < 0.5
           and abs(level - (plateaus[halfmax.LV_BLOOD] + plateaus[halfmax.MYOCARDIUM]) / 2)
@@ -300,6 +354,20 @@ def run():
     measured = logic.measurePlateauInRoi(halfmax.LV_BLOOD, roi)
     check("an ROI in the LV pool measures the LV blood plateau", abs(measured - 420) < 5,
           measured)
+
+    before = _uploads(server)
+    try:
+        logic.submit()
+        refused = None
+    except module.ReadRefused as exc:
+        refused = exc.problems
+    check("an ungraded read form is refused before any upload",
+          refused and "not graded" in refused[0] and _uploads(server) == before, refused)
+    _grade(widget, logic, FORM)
+    lesion = (-12.5, 30.0, 52.25)
+    logic.setLesionPoint("LAD", lesion)
+    check("the read form holds the grades and the lesion point",
+          logic.readForm() == (FORM, {"LAD": list(lesion)}), logic.readForm())
 
     before = len([c for c in server.calls if c[1] == "file"])
     myo = logic.classMask(L.LV_MYO)
@@ -320,20 +388,37 @@ def run():
     check("the uncorrected seed is returned by the check", done.state == "returned",
           done.state)
     check("with its reasons", "endocardial" in done.check_summary, done.check_summary)
+    profile = done.check_profile.get("endocardial") or {}
+    check("and the half-maximum profile of the failing border",
+          profile.get("failed") is True and len(profile.get("s_mm") or []) > 10
+          and profile.get("offsetMm", 0) > 1.0, {k: profile.get(k) for k in
+                                                ("failed", "offsetMm", "thresholdHU")})
+    try:
+        border, chart = logic.showProfile()
+        series = chart.GetNumberOfPlotSeriesNodes() if chart is not None else 0
+        check("which the module plots", border == "endocardial" and series >= 2,
+              (border, series))
+    except Exception:
+        check("which the module plots", False, traceback.format_exc())
     sent = server.reads[read.read_id]
     check("the upload is the read, voxel for voxel on the CT grid",
           np.array_equal(sent["uploaded"], seedLabels))
     check("its voxel counts were declared", {int(k): v for k, v in
                                               sent["meta"]["voxelCounts"].items()} == expected)
+    check("its read form was sent", sent["meta"]["cadrads"] == FORM
+          and np.allclose(sent["meta"]["lesionPoints"]["LAD"], lesion), sent["meta"])
     if widget is not None:
         widget._showRead()
         shown = widget.checkLabel.text
         check("the panel shows the returned read's reasons",
-              "returned" in shown and "endocardial" in shown, shown)
+              "returned" in shown and "endocardial" in shown and "mm past" in shown, shown)
+        widget._updateEnabled()
+        check("and offers its profile", widget.profileButton.enabled)
 
     _draw(slicer, logic, truth)
     done = logic.submit()
-    check("the corrected read is accepted", done.state == "accepted", done.check_summary)
+    check("the corrected read is accepted", done.state == "accepted" and not done.flagged,
+          done.check_summary)
     check("and what was uploaded is the corrected read",
           np.array_equal(server.reads[read.read_id]["uploaded"], truth))
 
@@ -344,6 +429,21 @@ def run():
         widget._bindEditor()
         widget._showRead()
     check("a blank case says it has no seed", not blank.has_seed)
+    display = logic.volumeNode.GetDisplayNode()
+    check("and opens on 800 / 300, with no plateaus yet",
+          abs(display.GetWindow() - 800) < 0.5 and abs(display.GetLevel() - 300) < 0.5
+          and all(v is None for v in logic.plateaus.values()), logic.plateaus)
+    check("with an empty read form", logic.readForm() == ({}, {}), logic.readForm())
+    logic.measurePlateauInRoi(halfmax.LV_BLOOD, roi)
+    roi.SetXYZ(*ijkToRas.MultiplyPoint(_wall_ijk(truth, L) + (1.0,))[:3])
+    roi.SetRadiusXYZ(0.75, 0.75, 0.75)
+    logic.measurePlateauInRoi(halfmax.MYOCARDIUM, roi)
+    want = logic.openDefaultWindow()
+    check("ROIs bring it to its border window", abs(display.GetLevel() - want[1]) < 0.5
+          and abs(want[1] - (logic.plateaus[halfmax.LV_BLOOD]
+                             + logic.plateaus[halfmax.MYOCARDIUM]) / 2) < 0.5
+          and abs(display.GetWindow() - 800) > 1, (display.GetWindow(), display.GetLevel()))
+    _grade(widget, logic, FORM)
     check("and starts with four empty segments",
           all(n == 0 for n in _counts(logic, L).values()), _counts(logic, L))
     check("no seed was asked for", not any(p.endswith("/seed") and p.startswith(
@@ -361,6 +461,26 @@ def run():
     done = logic.submit()
     check("the drawn blank read is accepted", done.state == "accepted", done.check_summary)
 
+    # -------------------------------------------- return once, then flag
+    again = logic.takeNext()
+    logic.openRead(again)
+    if widget is not None:
+        widget._bindEditor()
+    _grade(widget, logic, FORM)
+    wrong = phantom.move_border(truth, spacing, "epicardial", 2.0)
+    _draw(slicer, logic, wrong)
+    first = logic.submit()
+    check("a wrong read is returned once", first.state == "returned" and not first.flagged,
+          first.state)
+    second = logic.submit()
+    check("and accepted and flagged when it fails again",
+          second.state == "accepted" and second.flagged and "epicardial" in
+          second.check_summary, (second.state, second.check_summary))
+    if widget is not None:
+        widget._showRead()
+        check("the panel says it is flagged", "flagged" in widget.checkLabel.text,
+              widget.checkLabel.text)
+
     # -------------------------------------------------------- independence
     check("every Janus-M call carried the janusm-read protocol",
           all(h.get("X-JanusM-Protocol") == "1" for (m, p), h in
@@ -369,13 +489,25 @@ def run():
                                        for h in server.headers))
     check("no admin route was called", not any("admin" in p for _m, p in server.calls))
     check("the reads it holds carry no read set", not any(
-        hasattr(r, "read_set") or hasattr(r, "scored") for r in (read, blank, done)))
+        hasattr(r, "read_set") or hasattr(r, "scored") for r in (read, blank, done, second)))
     if widget is not None:
         texts = " ".join(str(w.text) for w in (widget.caseLabel, widget.checkLabel,
                                                  widget.submitLabel, widget.statusLabel))
         check("the panel never shows the read set or scoring",
               not any(word.lower() in texts.lower() for word in HIDDEN), texts)
     check("the queue is now empty", logic.takeNext() is None)
+
+
+def _wall_ijk(truth, L):
+    """(i, j, k) of the voxel midway through the phantom's wall, along +i from the
+    LV pool's centre."""
+    import numpy as np
+
+    k, j, i = (int(round(c)) for c in np.argwhere(truth == L.LV_POOL).mean(axis=0))
+    line = truth[k, j, i:]
+    start = i + int(np.argmax(line == L.LV_MYO))
+    end = start + int(np.argmax(truth[k, j, start:] != L.LV_MYO))
+    return (float((start + end - 1) // 2), float(j), float(k))
 
 
 def vtk_matrix(slicer, volume):

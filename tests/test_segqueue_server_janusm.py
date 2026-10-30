@@ -9,7 +9,8 @@ Run with::
 A miniature world: SegQueue14 with a case, an assignment, its groups and settings,
 and an ``ImageCAS-X`` collection holding a CT for every frozen Janus-M case plus an
 A14-sealed one. Then the Janus-M queue end to end -- populate, serve order, two
-independent reads, blank cases, the read check, release, the JA12 guard, export --
+independent reads, blank cases, the read form, the read check (return once, then
+accept and flag), release, the JA12 guard, third reads (JA47 rule 2), export --
 and, at the end, every SegQueue14 document compared with what it was before.
 """
 
@@ -239,7 +240,10 @@ def _api():
     return JanusMResource()
 
 
-def _submit(api, world, user, readId, array, checksum=None):
+FORM = {"LM": "0", "LAD": "2", "LCx": "0", "RCA": "1"}
+
+
+def _submit(api, world, user, readId, array, checksum=None, form=FORM, points=None):
     import numpy as np
     from girder.models.upload import Upload
     from girder_janusm.utils import incomingFolder
@@ -252,7 +256,8 @@ def _submit(api, world, user, readId, array, checksum=None):
                                      user=user)
     counts = {str(v): int((array == v).sum()) for v in range(1, 5)}
     meta = {"checksum": checksum or _sha(path), "sizeBytes": os.path.getsize(path),
-            "voxelCounts": counts, "clientVersion": "test"}
+            "voxelCounts": counts, "clientVersion": "test", "seconds": 61.5,
+            "cadrads": form or {}, "lesionPoints": points or {}}
     _as(user)
     return api.submit(readId=readId, fileId=str(up["_id"]), meta=json.dumps(meta),
                       clientProtocol=1)
@@ -315,7 +320,10 @@ def test_only_readers_and_only_janusm_clients(world):
         assert _refusal(api.nextRead, clientProtocol=sent).code == 426
     project = api.getProject(clientProtocol=1)
     assert project["protocol"] == "janusm-read"
+    assert project["protocolVersion"] == 1 and project["border_protocol"] == 1
     assert [x["value"] for x in project["labels"]] == [1, 2, 3, 4]
+    assert project["readForm"]["vessels"] == ["LM", "LAD", "LCx", "RCA"]
+    assert "4B" in project["readForm"]["cadrads"]
 
 
 def test_two_independent_reads_and_the_read_check(world):
@@ -345,37 +353,74 @@ def test_two_independent_reads_and_the_read_check(world):
     api.downloadCt(readId=a["readId"])
     api.downloadSeed(readId=a["readId"])
 
-    # Refusals at submit: a missing class, a wrong checksum.
+    # Refusals at submit: a missing class, a wrong checksum, an incomplete read form.
     empty_la = world.truth.copy()
     empty_la[empty_la == 4] = 0
     assert _refusal(_submit, api, world, anna, a["readId"], empty_la).code == 400
     assert _refusal(_submit, api, world, anna, a["readId"], world.truth,
                     checksum="0" * 64).code == 400
+    assert _refusal(_submit, api, world, anna, a["readId"], world.truth,
+                    form={"LM": "0"}).code == 400
+    assert _refusal(_submit, api, world, anna, a["readId"], world.truth,
+                    points={"LM": [1.0, 2.0, 3.0]}).code == 400   # LM graded 0
 
     # Anna's read is right; Bobby's epicardium spills 2 mm into the fat.
     from girder_janusm.check import runOnce
+    from girder_janusm.models import JanusMRead
 
-    _submit(api, world, anna, a["readId"], world.truth)
+    _submit(api, world, anna, a["readId"], world.truth, points={"LAD": [1.5, -2.0, 30.0]})
     off = phantom.move_border(world.truth, world.spacing, "epicardial", 2.0)
     _submit(api, world, bobby, b["readId"], off)
     assert runOnce(out=lambda _: None) == 2
     _as(anna)
     mine = {r["readId"]: r for r in api.listMine()}
-    assert mine[a["readId"]]["state"] == "accepted"
+    assert mine[a["readId"]]["state"] == "accepted" and not mine[a["readId"]]["flagged"]
+    assert mine[a["readId"]]["checkProfile"] == {}          # profiles go with a return only
     _as(bobby)
     mine = {r["readId"]: r for r in api.listMine()}
-    assert mine[b["readId"]]["state"] == "returned"
-    assert "epicardial" in mine[b["readId"]]["checkSummary"]
+    first = mine[b["readId"]]
+    assert first["state"] == "returned" and not first["flagged"]
+    assert "epicardial" in first["checkSummary"]
+    # The return carries the half-maximum profiles, the failing border marked.
+    prof = first["checkProfile"]
+    assert prof["epicardial"]["failed"] and not prof["endocardial"]["failed"]
+    assert prof["epicardial"]["offsetMm"] == pytest.approx(2.0, abs=0.4)   # canonical
+    assert len(prof["epicardial"]["s_mm"]) == len(prof["epicardial"]["hu"]) > 10
+    assert prof["epicardial"]["thresholdHU"] is not None
 
-    # Returned to Bobby, who fixes it.
-    _submit(api, world, bobby, b["readId"], world.truth)
+    # Returned once. Bobby resubmits it still wrong: accepted, and flagged with reasons.
+    _submit(api, world, bobby, b["readId"], off)
     runOnce(out=lambda _: None)
+    mine = {r["readId"]: r for r in api.listMine()}
+    assert mine[b["readId"]]["state"] == "accepted" and mine[b["readId"]]["flagged"]
+    assert "flagged" in mine[b["readId"]]["checkSummary"]
+    stored = JanusMRead().load(b["readId"], force=True)
+    assert stored["attempts"] == 2 and stored["flagged"] is True
+    assert any("epicardial" in r for r in stored["flagReasons"])
+    assert stored["border_protocol"] == 1 and stored["check"]["border_protocol"] == 1
+    assert stored["cadrads"] == FORM
     case = JanusMCase().findOne({"name": world.target})
     assert case["acceptedCount"] == 2 and case["slotsTaken"] == 2
     assert len(set(case["assignedUserIds"])) == 2
+    stored = JanusMRead().load(a["readId"], force=True)
+    assert stored["lesionPoints"] == {"LAD": [1.5, -2.0, 30.0]} and stored["attempts"] == 1
     _as(cathy)
     api.release(readId=c["readId"])
     assert np.asarray(world.truth).any()
+
+
+def test_a_returned_read_fixed_on_its_second_try_is_accepted_unflagged(world):
+    from girder_janusm.check import decide
+
+    from janusm_reads import protocol
+
+    failed = {"passed": False, "errors": ["The epicardial border is 2.00 mm past ..."],
+              "summary": "Failed"}
+    assert decide(failed, 1)[:2] == (protocol.RETURNED, False)
+    assert decide(failed, 2)[:2] == (protocol.ACCEPTED, True)
+    assert "epicardial" in decide(failed, 2)[2]
+    assert decide(failed, 2, crashed=True)[:2] == (protocol.RETURNED, False)
+    assert decide({"passed": True, "summary": "Passed"}, 2)[:2] == (protocol.ACCEPTED, False)
 
 
 def test_release_frees_the_slot_for_someone_else_only(world):
@@ -489,17 +534,89 @@ def test_a_case_the_guard_refuses_later_is_retired_not_served(world, monkeypatch
 # ---------------------------------------------------------------------- export
 
 
+def test_third_reads_are_blank_by_a_fresh_reader_and_never_reference(world):
+    """S5 point 5 (JA47 rule 2): an admin opens a flagged wave's third reads."""
+    from girder.models.group import Group
+    from girder.models.user import User
+    from girder_janusm.check import runOnce
+    from girder_janusm.models import JanusMCase, JanusMRead
+
+    api = _api()
+    blank = JanusMCase().findOne({"blank": True})
+    _as(world.people["anna"])
+    assert _refusal(api.adminThirdReads, cases=json.dumps([world.target])).code == 403
+    _as(world.admin)
+    # Only seeded cases whose two reads are both accepted.
+    assert _refusal(api.adminThirdReads, cases=json.dumps([blank["name"]])).code == 400
+    other = json.dumps([world.sets["decision"][1]])
+    assert _refusal(api.adminThirdReads, cases=other).code == 400
+    one = json.dumps([world.target])
+    assert api.adminThirdReads(cases=one)["opened"] == [world.target]
+    assert api.adminThirdReads(cases=one)["alreadyOpen"] == [world.target]
+
+    # Anna and Bobby read it: the third read goes to someone else.
+    target = JanusMCase().findOne({"name": world.target})
+    for login in ("anna", "bobby"):
+        assert world.people[login]["_id"] in target["assignedUserIds"]
+    gus = User().createUser("gustav", "password1", "Gus", "X", "gus@example.org")
+    Group().addUser(Group().findOne({"name": "janusm-readers"}), gus)
+    gus = User().load(gus["_id"], force=True)
+    _as(gus)
+    third = api.nextRead(clientProtocol=1)
+    assert third["caseName"] == world.target and third["hasSeed"] is False
+    assert _refusal(api.downloadSeed, readId=third["readId"]).code == 404   # from blank
+    assert "third" not in third                                            # reader-blind
+    _submit(api, world, gus, third["readId"], world.truth)
+    runOnce(out=lambda _: None)
+    after = JanusMCase().findOne({"name": world.target})
+    assert after["acceptedCount"] == 2 and after["thirdReadAccepted"] is True
+    stored = JanusMRead().load(third["readId"], force=True)
+    assert stored["third"] and not stored["seeded"] and stored["state"] == "accepted"
+    # No second third read on the case.
+    _as(world.people["cathy"])
+    try:
+        got = api.nextRead(clientProtocol=1)
+        assert got["caseName"] != world.target
+        api.release(readId=got["readId"])
+    except Exception as exc:  # noqa: BLE001 - nothing left for cathy is fine too
+        assert getattr(exc, "code", None) == 404
+
+
 def test_export_feeds_the_anchoring_report(world):
+    """S5 point 8: a record per read, offsets in the canonical sign, border_protocol."""
     from girder_janusm.export import export
 
     from janusm_reads import anchoring
 
     out = world.tmp / "wave1"
-    manifest = export(str(out), str(world.seedsDir), wave="1", out=lambda _: None)
+    manifest = export(str(out), str(world.seedsDir), wave="1", seedOffsets=True,
+                      out=lambda _: None)
+    assert manifest["border_protocol"] == 1
     assert [c["case"] for c in manifest["cases"]] == [world.target]
+    row = manifest["cases"][0]
+    records = row["readRecords"]
+    assert len(records) == 2 and not any(r["third"] for r in records)
+    for rec in records:
+        assert set(rec) >= {"reader", "seeded", "blank", "seconds", "attempts", "flagged",
+                            "flagReasons", "halfMaxOffsetsMm", "border_protocol", "cadrads"}
+        assert rec["border_protocol"] == 1 and rec["seeded"] and not rec["blank"]
+        assert rec["seconds"] == pytest.approx(61.5) and rec["offsetSign"] == "canonical"
+    byFlag = {r["flagged"]: r for r in records}
+    assert byFlag[True]["attempts"] == 2 and byFlag[True]["flagReasons"]
+    assert byFlag[True]["halfMaxOffsetsMm"]["epicardial"] == pytest.approx(2.0, abs=0.4)
+    assert byFlag[False]["attempts"] == 1
+    assert abs(byFlag[False]["halfMaxOffsetsMm"]["endocardial"]) < 0.5
+    assert {r["reader"] for r in records} == {str(world.people[k]["_id"])
+                                              for k in ("anna", "bobby")}
+    # The third read is exported apart, never as a reference read.
+    assert row["thirdRead"].endswith("__third.nii.gz") and row["thirdReadRecord"]["third"]
+    assert set(row["halfMaxOffsets"]["seed"]) == {"endocardial", "epicardial", "septal_rv"}
+
     report = anchoring.report_from_manifest(out / "manifest.json")
     assert report["cases"] == 1 and report["seededCases"] == 1
     assert report["borders"]["endocardial"]["interReadSeeded"] == pytest.approx(0.0)
+    assert report["rows"][0]["thirdReadVsSeed"]["endocardial"] is not None
+    assert "seedMedian" in report["halfMaxOffsets"]["endocardial"]
 
 
 # ------------------------------------------------------------ SegQueue14 untouched

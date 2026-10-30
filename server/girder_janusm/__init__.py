@@ -27,7 +27,7 @@ from girder.plugin import GirderPlugin
 
 logger = logging.getLogger(__name__)
 
-__version__ = '0.1.0'
+__version__ = '0.2.0'
 
 #: Set to keep the plugin installed but not mounted.
 DISABLE_ENV = 'JANUSM_DISABLE'

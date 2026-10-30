@@ -44,7 +44,7 @@ SEAL_SALT = "asclepius-janusm-seal-r1:"
 N_EXTENSION = 60
 
 #: sha256 of ``configs/janusm/sealed-r1.json``. Changing the file means changing this, by PR.
-SEALED_R1_SHA256 = "5e6e83ac44ad9c7f0ca142b863ffc6fed8001672972ce5e91eecba6902f0e544"
+SEALED_R1_SHA256 = "fda078976d2411de0f3cfabd7a37d4f2c97f4c27a9bca0f15cabb5daa8fda216"
 
 
 class JanusMSealError(RuntimeError):
@@ -115,9 +115,13 @@ def build(repo: Path = REPO) -> dict:
     if set(ranked[:len(seal)]) != set(seal):
         raise JanusMSealError("the draw script's seal is not the first cases by the seal salt")
     extension = [c for c in ranked[len(seal):] if c not in taken][:N_EXTENSION]
+    last = ranked.index(extension[-1])
+    skipped = [c for c in ranked[len(seal):last + 1] if c in taken]
     return {
         "what": "Janus-M Round 1 seal and decision set, frozen (JA6, issue #140). Never shrinks "
-                "after a read; the seal grows only from the front of seal_extension, by PR.",
+                "after a read; the seal grows only from the front of seal_extension, by PR. A case "
+                "is in exactly one Janus-M set, so seal-salt ranks already drawn as decision or "
+                "JM-0 cases are skipped by the extension (listed in seal_extension_skipped).",
         "draw_script": DRAW_SCRIPT,
         "draw_script_sha256": _sha256(script),
         "splits": SPLITS,
@@ -132,6 +136,7 @@ def build(repo: Path = REPO) -> dict:
         "seal_extension_rule": "the next training cases by sha256(seal salt + case), in rank "
                                "order, after the seal's 60, skipping any decision or JM-0 case",
         "seal_extension": extension,
+        "seal_extension_skipped": skipped,
     }
 
 

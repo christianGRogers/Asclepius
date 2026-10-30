@@ -1,5 +1,5 @@
 {
- "what": "Janus-M Round 1 seal and decision set, frozen (JA6, issue #140). Never shrinks after a read; the seal grows only from the front of seal_extension, by PR.",
+ "what": "Janus-M Round 1 seal and decision set, frozen (JA6, issue #140). Never shrinks after a read; the seal grows only from the front of seal_extension, by PR. A case is in exactly one Janus-M set, so seal-salt ranks already drawn as decision or JM-0 cases are skipped by the extension (listed in seal_extension_skipped).",
  "draw_script": "experiments/JanusM/Juliet/fir/draw_m0.py",
  "draw_script_sha256": "704e4ab20ef2ce6389ca801b0773fd981d8b3627b9bdff222dab2ae15609fa56",
  "splits": "trillium-results/icx14/results/splits.json",
@@ -219,5 +219,14 @@
   "c0330",
   "c0659",
   "c0091"
+ ],
+ "seal_extension_skipped": [
+  "c0692",
+  "c0830",
+  "c0600",
+  "c0232",
+  "c0916",
+  "c0687",
+  "c0880"
  ]
 }

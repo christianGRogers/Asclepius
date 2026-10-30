@@ -117,3 +117,8 @@ def test_no_drawn_case_is_in_the_pool_seal_reserve_or_a_d35_draw(rel):
 def test_no_drawn_case_is_refused_by_the_pool_seal_guard():
     seal = load_pool_seal()
     assert not [c for c in DRAWN if seal.is_sealed(c)]
+
+
+def test_skipped_ranks_are_decision_or_jm0_cases():
+    assert len(D["seal_extension_skipped"]) == 7
+    assert set(D["seal_extension_skipped"]) <= set(D["decision"]) | set(D["jm0"])

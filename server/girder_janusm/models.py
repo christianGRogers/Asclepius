@@ -2,7 +2,12 @@
 
 A **case** is one frozen Janus-M case (seal or decision) with two read slots
 (JA7). Its CT is referenced by file id in the ``ImageCAS-X`` collection and never
-copied or changed; its seed, if it has one, is in ``JanusM/seeds``.
+copied or changed; its seed, if it has one, is in ``JanusM/seeds``. A **blank** case
+has no seed (``seedFileId`` is None) but a **check seed** (``checkSeedFileId``, in
+``JanusM/check-seeds``): the same model seed, which only the read check uses to fit
+the mitral plane (JA66). It is never served, and nothing a reader receives names it.
+A case's **wave** (``wave``) is set by an admin and selects what ``janusm-export``
+writes.
 
 A **read** is one reader's slot on one case, from claim to acceptance. The claim
 is one atomic Mongo update, as SegQueue's is: the case gives a slot only while
@@ -15,6 +20,11 @@ reader who has not read the case, and never counts as a reference read.
 
 Every read record carries ``border_protocol`` (the reading rules it was drawn and
 checked under), apart from the wire protocol version.
+
+A read counts its submissions (``attempts``), its genuine returns (``returns``: a
+check that ran and failed) and the checks that crashed or could not be checked
+(``crashes``). Only ``returns`` spends the one return (JA68). ``seconds`` is the sum
+over its submissions.
 """
 
 import datetime
@@ -45,8 +55,8 @@ class JanusMCase(AccessControlledModel):
         self.exposeFields(level=AccessType.READ, fields={'_id', 'name'})
         self.exposeFields(level=AccessType.SITE_ADMIN, fields={
             'readSet', 'blank', 'priority', 'serveOrder', 'readsWanted', 'slotsTaken',
-            'acceptedCount', 'retired', 'ctFileId', 'seedFileId', 'created',
-            'thirdReadWanted', 'thirdReadTaken', 'thirdReadAccepted'})
+            'acceptedCount', 'retired', 'ctFileId', 'seedFileId', 'checkSeedFileId',
+            'wave', 'created', 'thirdReadWanted', 'thirdReadTaken', 'thirdReadAccepted'})
 
     def validate(self, doc):
         doc['name'] = readset.check_case_id(doc.get('name') or '')
@@ -57,6 +67,11 @@ class JanusMCase(AccessControlledModel):
             raise ValidationException('A blank case must not have a seed (JA7).', 'seedFileId')
         if doc['blank'] and doc['readSet'] != readset.SEAL:
             raise ValidationException('Only seal cases are read from blank (JA7).', 'blank')
+        if doc.get('checkSeedFileId') and not doc['blank']:
+            raise ValidationException('Only a blank case has a check seed (JA66); a seeded '
+                                      "case's seed is its check seed.", 'checkSeedFileId')
+        wave = doc.get('wave')
+        doc['wave'] = None if wave in (None, '') else str(wave)
         for key in ('readsWanted', 'slotsTaken', 'acceptedCount', 'priority', 'serveOrder'):
             doc[key] = int(doc.get(key, 0))
         if doc['readsWanted'] < 1 or doc['slotsTaken'] < 0:
@@ -70,8 +85,9 @@ class JanusMCase(AccessControlledModel):
                                       'thirdReadWanted')
         return doc
 
-    def createCase(self, plan, ctFile, checksum, seedFileId=None):
-        """``plan`` is a ``janusm_reads.readset.CasePlan``."""
+    def createCase(self, plan, ctFile, checksum, seedFileId=None, checkSeedFileId=None):
+        """``plan`` is a ``janusm_reads.readset.CasePlan``. A blank case keeps only its
+        ``checkSeedFileId``; a seeded case only its ``seedFileId``."""
         return self.save({
             'name': plan.name, 'readSet': plan.read_set, 'blank': plan.blank,
             'priority': plan.priority, 'serveOrder': plan.serve_order,
@@ -79,8 +95,14 @@ class JanusMCase(AccessControlledModel):
             'ctFileId': ctFile['_id'], 'ctChecksum': (checksum or '').lower(),
             'ctSizeBytes': int(ctFile.get('size', 0)),
             'seedFileId': None if plan.blank else seedFileId,
-            'assignedUserIds': [], 'retired': False, 'created': _now(),
+            'checkSeedFileId': checkSeedFileId if plan.blank else None,
+            'wave': None, 'assignedUserIds': [], 'retired': False, 'created': _now(),
         })
+
+    def checkSeedId(self, case):
+        """The seed the read check fits the mitral plane to (JA66): the served seed on a
+        seeded case, the hidden check seed on a blank one. Server-side only."""
+        return case.get('seedFileId') or case.get('checkSeedFileId')
 
     def _servable(self, userId, readSets):
         return {
@@ -160,8 +182,8 @@ class JanusMRead(AccessControlledModel):
             'checkSummary', 'flagged'})
         self.exposeFields(level=AccessType.SITE_ADMIN, fields={
             'fileId', 'checksum', 'voxelCounts', 'check', 'checkedAt', 'attempts',
-            'history', 'seconds', 'clientVersion', 'note', 'flagReasons', 'third',
-            'cadrads', 'lesionPoints', 'border_protocol'})
+            'returns', 'crashes', 'history', 'seconds', 'clientVersion', 'note',
+            'flagReasons', 'third', 'cadrads', 'lesionPoints', 'border_protocol'})
 
     def validate(self, doc):
         if doc.get('state') not in protocol.ALL_STATES:
@@ -177,23 +199,28 @@ class JanusMRead(AccessControlledModel):
             'assignedAt': now,
             'submittedAt': None, 'fileId': None, 'checksum': '', 'voxelCounts': {},
             'check': None, 'checkSummary': '', 'checkedAt': None, 'attempts': 0,
+            'returns': 0, 'crashes': 0, 'seconds': 0.0,
             'flagged': False, 'flagReasons': [], 'cadrads': {}, 'lesionPoints': {},
             'border_protocol': BORDER_PROTOCOL,
             'history': [{'state': protocol.ASSIGNED, 'at': now}],
         })
 
-    def transition(self, read, to, **fields):
-        """Move ``read`` to ``to`` if that is legal from the state it is in *now*.
-        Returns the updated read, or None if it moved under us."""
+    def transition(self, read, to, inc=None, **fields):
+        """Move ``read`` to ``to`` if that is legal from the state it is in *now*, adding
+        ``inc`` (``{field: amount}``) to its counters. Returns the updated read, or None
+        if it moved under us."""
         if not protocol.can_move(read['state'], to):
             raise ValidationException(f"A read cannot go from {read['state']} to {to}.",
                                       'state')
         now = _now()
         update = {'$set': {'state': to, **fields},
                   '$push': {'history': {'state': to, 'at': now}}}
+        counters = dict(inc or {})
         if to == protocol.SUBMITTED:
-            update['$inc'] = {'attempts': 1}
+            counters['attempts'] = counters.get('attempts', 0) + 1
             update['$set']['submittedAt'] = now
+        if counters:
+            update['$inc'] = counters
         return self.collection.find_one_and_update(
             {'_id': read['_id'], 'state': read['state']}, update,
             return_document=ReturnDocument.AFTER)

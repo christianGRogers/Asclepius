@@ -4,27 +4,31 @@ For every double-read case of a wave, per border (endocardial, epicardial):
 
 * **seed-vs-read ASSD**, for each of the two reads (voxel ASSD, as JA39 keeps it);
 * **inter-read ASSD**, between the two reads;
-* **share of voxels changed** from the seed, per read: voxels whose class differs
-  from the seed's, over voxels labelled in either;
+* **share of seed voxels changed**, per read: voxels (within seed or read) whose
+  class differs from the seed's, over the seed's foreground voxels (JA68);
 * the **half-maximum offsets** (canonical sign, JA44) of the seed and of each read,
   when the manifest gives them or the CT to measure them on.
 
 Blank cases (10 seal cases read with no seed) still have a seed -- it is computed for
 every case and simply not served -- so the same numbers exist for them.
 
-**Rule 1 (JA47).** Per border,
+**Rule 1 (JA47, JA68).** Per border,
 
     gap = mean seed-vs-read ASSD on blank-case reads - the same on seeded-case reads
 
-and seeded reads **cannot accept a model** if the upper 95 % bound of
-``gap - mean seeded inter-read ASSD`` exceeds :data:`RULE1_MARGIN_MM` (0.2 mm) on
-either border. The bound is a **two-sample** bootstrap: blank and seeded cases are
-resampled independently (no case has both a blank and a seeded read), 2 000 draws,
-fixed seed.
+with both means taken over **reads** (the report's ``seedVsReadBlank`` and
+``seedVsReadSeeded``), and seeded reads **cannot accept a model** if the upper 95 %
+bound of ``gap - mean seeded inter-read ASSD`` exceeds :data:`RULE1_MARGIN_MM`
+(0.2 mm) on either border. The bound is a **two-sample** bootstrap **by case**: blank
+and seeded cases are resampled independently (no case has both a blank and a seeded
+read; two separate draws from one generator, blank first), 2 000 draws, seed
+:data:`BOOTSTRAP_SEED`, the 0.95 quantile; each draw recomputes the read-level means
+over the cases it drew.
 
-**Rule 2 (JA47).** If more than half of a wave's seeded reads change less than 5 % of
-seed voxels, the wave is **flagged**. Then 5 of its seeded cases, drawn by salted hash,
-get a third read from blank by a reader who has not read them, and Rule 1 is
+**Rule 2 (JA47, JA68).** If more than half of a wave's seeded reads change less than
+5 % of seed voxels, the wave is **flagged** (exactly half is not). Then 5 of its
+seeded cases, drawn by salted hash, get a third read from blank by a reader who has
+not read them, and Rule 1 is
 evaluated on them: the third reads take the blank side, the same cases' seeded reads
 the seeded side. Third reads never enter the reference standard.
 
@@ -37,7 +41,7 @@ from __future__ import annotations
 import json
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Dict, Iterable, List, Optional, Sequence
+from typing import Dict, Iterable, List, Optional, Sequence, Tuple
 
 import numpy as np
 
@@ -45,6 +49,10 @@ from segtrain.metrics import surface_distances
 
 from . import BORDER_PROTOCOL
 from . import labels as L
+
+# Rule 2's draw: how many seeded cases get a third read from blank, the hash salt, and
+# the draw itself. In the stdlib half, so the queue's server enforces the same draw.
+from .readset import THIRD_READ_CASES, THIRD_READ_SALT, third_read_cases  # noqa: F401
 
 BORDERS = ("endocardial", "epicardial")
 
@@ -58,9 +66,6 @@ BOUND_QUANTILE = 0.95
 #: and a wave where more than half do is flagged.
 RULE2_CHANGED_SHARE = 0.05
 RULE2_READS_SHARE = 0.5
-#: Rule 2: how many seeded cases get a third read from blank, and the hash salt.
-THIRD_READ_CASES = 5
-THIRD_READ_SALT = "asclepius-janusm-third-read-r1:"
 
 
 def border_region(read: np.ndarray, border: str) -> np.ndarray:
@@ -80,10 +85,12 @@ def assd(a: np.ndarray, b: np.ndarray, spacing) -> Optional[float]:
 
 
 def changed_share(seed: np.ndarray, read: np.ndarray) -> Optional[float]:
-    either = (seed > 0) | (read > 0)
-    n = int(either.sum())
+    """JA68: voxels whose class differs from the seed's (within seed or read), over
+    the seed's foreground voxels. None for an empty seed."""
+    n = int((seed > 0).sum())
     if n == 0:
         return None
+    either = (seed > 0) | (read > 0)
     return float(((seed != read) & either).sum() / n)
 
 
@@ -139,50 +146,66 @@ def _mean(values: Iterable[Optional[float]]) -> Optional[float]:
 
 
 def _case_values(row: CaseAnchoring, border: str, third: bool = False):
-    """One case's (mean seed-vs-read ASSD, inter-read ASSD) on a border; None if missing."""
+    """One case's (seed-vs-read ASSDs of its reads, inter-read ASSD) on a border."""
     if third:
         svr = [None if row.third_vs_seed is None else row.third_vs_seed.get(border)]
     else:
         svr = row.seed_vs_read[border]
-    vals = [v for v in svr if v is not None]
-    return (float(np.mean(vals)) if vals else None, row.inter_read[border])
+    return [v for v in svr if v is not None], row.inter_read[border]
 
 
-def rule1_bound(blank_svr: Sequence[float], seeded_svr: Sequence[float],
-                seeded_inter: Sequence[float], draws: int = BOOTSTRAP_DRAWS,
-                seed: int = BOOTSTRAP_SEED) -> Optional[dict]:
-    """JA47 Rule 1 on one border: the statistic, and its upper 95 % bound from a
-    two-sample bootstrap (blank and seeded cases resampled independently; each seeded
-    case keeps its own seed-vs-read and inter-read values together). None when either
-    sample is empty."""
-    b = np.asarray([v for v in blank_svr if v is not None], dtype=float)
-    pairs = [(s, i) for s, i in zip(seeded_svr, seeded_inter) if s is not None and i is not None]
-    if not b.size or not pairs:
+def _reads_of(value) -> List[float]:
+    """A case's read values: a list (None dropped), or a bare number for one read."""
+    if value is None:
+        return []
+    items = value if isinstance(value, (list, tuple)) else [value]
+    return [float(x) for x in items if x is not None]
+
+
+def _sums(rows: Sequence[List[float]]) -> Tuple[np.ndarray, np.ndarray]:
+    return (np.asarray([sum(r) for r in rows], dtype=float),
+            np.asarray([len(r) for r in rows], dtype=float))
+
+
+def rule1_bound(blank_svr: Sequence, seeded_svr: Sequence, seeded_inter: Sequence,
+                draws: int = BOOTSTRAP_DRAWS, seed: int = BOOTSTRAP_SEED) -> Optional[dict]:
+    """JA47 Rule 1 on one border, as JA68 pins it.
+
+    ``blank_svr`` and ``seeded_svr`` hold, per case, the seed-vs-read ASSDs of its reads
+    (a list; a bare number is one read; None values are dropped, and a case with none
+    left is not in the sample). ``seeded_inter`` is each seeded case's inter-read
+    ASSD, in the same order (None: the case adds nothing to the inter-read mean).
+
+    ``gap`` = read-level mean of the blank values - read-level mean of the seeded
+    values, so it equals the report's ``seedVsReadBlank - seedVsReadSeeded``. The
+    bound is a two-sample bootstrap by case: ``default_rng(seed)`` draws the blank
+    cases' indices, then, independently, the seeded cases' (each seeded case keeps its
+    reads and its inter-read value together); each draw recomputes the read-level
+    means and the inter-read mean; ``upper95`` is the 0.95 quantile. None when either
+    sample is empty or no seeded case has an inter-read value.
+    """
+    b_sum, b_n = _sums([r for r in map(_reads_of, blank_svr) if r])
+    seeded = [(_reads_of(v), i) for v, i in zip(seeded_svr, seeded_inter)]
+    seeded = [(r, i) for r, i in seeded if r]
+    s_sum, s_n = _sums([r for r, _ in seeded])
+    has = np.asarray([i is not None for _, i in seeded], dtype=float)
+    i_val = np.asarray([0.0 if i is None else float(i) for _, i in seeded], dtype=float)
+    if not b_sum.size or not s_sum.size or not has.any():
         return None
-    s = np.asarray([p[0] for p in pairs], dtype=float)
-    i = np.asarray([p[1] for p in pairs], dtype=float)
-    gap = float(b.mean() - s.mean())
-    stat = gap - float(i.mean())
+    gap = float(b_sum.sum() / b_n.sum() - s_sum.sum() / s_n.sum())
+    inter_mean = float(i_val.sum() / has.sum())
+    stat = gap - inter_mean
     rng = np.random.default_rng(seed)
-    bi = rng.integers(0, b.size, size=(draws, b.size))
-    si = rng.integers(0, s.size, size=(draws, s.size))
-    boot = b[bi].mean(axis=1) - s[si].mean(axis=1) - i[si].mean(axis=1)
-    upper = float(np.quantile(boot, BOUND_QUANTILE))
-    return {"gap": gap, "interReadSeeded": float(i.mean()), "statistic": stat,
-            "upper95": upper, "blankCases": int(b.size), "seededCases": int(s.size),
+    bi = rng.integers(0, b_sum.size, size=(draws, b_sum.size))
+    si = rng.integers(0, s_sum.size, size=(draws, s_sum.size))
+    with np.errstate(invalid="ignore", divide="ignore"):
+        boot = (b_sum[bi].sum(axis=1) / b_n[bi].sum(axis=1)
+                - s_sum[si].sum(axis=1) / s_n[si].sum(axis=1)
+                - i_val[si].sum(axis=1) / has[si].sum(axis=1))
+    upper = float(np.nanquantile(boot, BOUND_QUANTILE))
+    return {"gap": gap, "interReadSeeded": inter_mean, "statistic": stat,
+            "upper95": upper, "blankCases": int(b_sum.size), "seededCases": int(s_sum.size),
             "exceeds": bool(upper > RULE1_MARGIN_MM)}
-
-
-def third_read_cases(wave: str, seeded_cases: Iterable[str], n: int = THIRD_READ_CASES,
-                     ) -> List[str]:
-    """Rule 2's draw: the ``n`` seeded cases of a wave with the lowest
-    ``sha256(salt + wave + ":" + case)``. Stable whatever order the cases come in."""
-    import hashlib
-
-    def key(case):
-        return hashlib.sha256(f"{THIRD_READ_SALT}{wave}:{case}".encode()).hexdigest()
-
-    return sorted(sorted(set(seeded_cases)), key=key)[:n]
 
 
 def _rule1(blank_rows, seeded_rows, third=False) -> Dict[str, Optional[dict]]:

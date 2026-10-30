@@ -12,7 +12,7 @@ Mongo collections      ``segqueue14_*``            ``janusm_case``, ``janusm_rea
 settings               ``segqueue14.*``            ``janusm.*``
 groups                 ``segqueue14-annotators``   ``janusm-readers``,
                        ``segqueue14-reviewers``    ``janusm-admins``
-wire protocol          SegQueue14 (16)             ``janusm-read`` 1
+wire protocol          SegQueue14 (16)             ``janusm-read`` 2
 =====================  ==========================  ==============================
 
 The CTs it serves are the ImageCAS-X train cases in the ``ImageCAS-X`` collection,
@@ -27,7 +27,7 @@ from girder.plugin import GirderPlugin
 
 logger = logging.getLogger(__name__)
 
-__version__ = '0.2.0'
+__version__ = '0.3.0'
 
 #: Set to keep the plugin installed but not mounted.
 DISABLE_ENV = 'JANUSM_DISABLE'

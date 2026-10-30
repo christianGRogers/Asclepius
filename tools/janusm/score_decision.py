@@ -36,7 +36,9 @@ the mean over the two reads of the model-vs-read pp ASSD minus the read-vs-read 
 for each comparison (model-vs-read 1, model-vs-read 2, read-vs-read). The guard is 0.5 mm if any of
 the three fails, else 0.3 mm, and never below ``harness.BIAS_GUARD_VALIDATED_MM`` (JA61's
 open-base check; 0.3 mm since JA71 passed, R5-S3). Fewer than 20 complete cases is an error, never a
-default. The count of cases over the limit is reported; no id is.
+default. Each comparison reports its own count of cases over the limit, and
+``transfer_check.n_cases_over_limit`` (JA72, R5-S12) is the union: the number of distinct cases of
+the first 20 with any comparison and either border over the limit. No id is reported.
 
 **Output.** One anonymous JSON (``reads``, ``assd_pp``, ``transfer_check`` and the versions),
 refused by :func:`janusm.reference.assert_anonymous` if any id appears, and its sha256.
@@ -69,7 +71,7 @@ from janusm import harness as H  # noqa: E402
 from janusm import reference as R  # noqa: E402
 from janusm import sealed_r1 as sealed_r1  # noqa: E402
 
-SCORE_VERSION = "1.0.0"
+SCORE_VERSION = "1.1.0"  # 1.1.0: transfer_check.n_cases_over_limit (JA72)
 PURPOSE = guard.DECISION_SCORING
 BORDER_PROTOCOL = 1
 SOURCE = guard.ICX_SOURCE
@@ -233,7 +235,17 @@ def transfer(rows: List[dict], transfer_fn: Callable) -> dict:
     out["open_base_bias_guard_mm"] = float(H.BIAS_GUARD_VALIDATED_MM)
     out["bias_guard_mm"] = max(guards + [float(H.BIAS_GUARD_VALIDATED_MM)])
     out["n_cases"] = N_TRANSFER
+    out["n_cases_over_limit"] = n_cases_over_limit(rows)
     return out
+
+
+def n_cases_over_limit(rows: List[dict], limit_mm: float = H.TRANSFER_LIMIT_MM) -> int:
+    """JA72's union count: of the first 20 cases, how many have any comparison and either border
+    with |``bias_*`` - ``bias_pp_*``| over ``limit_mm``. A count only; no id."""
+    return int(sum(
+        any(abs(float(r[k][f"bias_{b}"]) - float(r[k][f"bias_pp_{b}"])) > limit_mm
+            for k in COMPARISONS for b in BORDERS)
+        for r in rows[:N_TRANSFER]))
 
 
 def score(items: Iterable[Callable[[], tuple]], *, compare: Callable, transfer_fn: Callable,

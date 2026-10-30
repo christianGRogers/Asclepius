@@ -648,7 +648,7 @@ def test_seed_job_refuses_a_holdout_before_touching_anything(tmp_path, monkeypat
 
 # ---------------------------------------------------------------- portability
 
-STDLIB_ONLY = ("__init__", "labels", "protocol", "readset", "holdout")
+STDLIB_ONLY = ("__init__", "labels", "protocol", "readset", "holdout", "outcome")
 
 
 @pytest.mark.parametrize("module", STDLIB_ONLY)
@@ -891,13 +891,9 @@ def test_r4s16_a_plane_less_read_could_not_be_checked_and_never_passes():
 
 
 def test_r4s17_a_crash_or_an_unchecked_read_never_spends_the_return():
-    """JA68 (decide; the Mongo test runs it through the queue)."""
-    import importlib.util
-
-    if importlib.util.find_spec("girder") is None:
-        pytest.skip("girder is not installed")
-    sys.path.insert(0, str(REPO / "server"))
-    from girder_janusm.check import CRASHED, FLAGGED, RETURNED, decide
+    """JA68 (decide; the Mongo test runs it through the queue). R5-S11: ``decide`` is
+    girder-free now, so this runs -- and cannot skip -- in every job."""
+    from janusm_reads.outcome import CRASHED, FLAGGED, RETURNED, decide
 
     failed = {"passed": False, "errors": ["The epicardial border is 2.00 mm past"],
               "summary": "Failed"}
@@ -1192,3 +1188,202 @@ def test_r4s16_no_reader_route_touches_the_check_seed():
         assert "checkSeed" not in body and "checkSeedId" not in body, name
     check = (REPO / "server" / "girder_janusm" / "check.py").read_text(encoding="utf-8")
     assert "JanusMCase().checkSeedId(case)" in check
+
+
+# ===================================================== Round 5, Group D (#232)
+# R5-S7 .. R5-S11 of vault/JanusM/Judgements/Round 5 - rest-ccta.md (JA76-JA79). The
+# Mongo halves are in tests/test_segqueue_server_janusm.py.
+
+
+# ------------------------------------------- R5-S7: JA66's plane order, final (JA76)
+
+
+def test_r5s7_a_seed_without_label_4_could_not_be_checked_never_source_read():
+    from janusm_reads.outcome import CRASHED, decide
+
+    truth, spacing = phantom.heart()                 # the read has a 2 mm mitral gap
+    ct = phantom.ct_from(truth, spacing)
+    no_la = truth.copy()
+    no_la[no_la == L.LA_POOL] = L.BACKGROUND        # a seed with no fittable 2-4 interface
+    # What the shipped code fell through to: the read's own gap fits a plane.
+    assert checker.mitral_plane(truth, spacing, seed=None)[3] == "read"
+    for queued in (True, False):
+        assert checker.mitral_plane(truth, spacing, seed=no_la, queued=queued) is None
+        report = checker.check_read(truth, ct, spacing, seed=no_la, queued=queued)
+        out = report.to_dict()
+        assert not report.passed and out["couldNotBeChecked"] == [checker.NO_MITRAL_PLANE]
+        assert out["mitral"]["checked"] is False and out["mitral"]["source"] != "read"
+        assert decide(out, 0)[3] == decide(out, 1)[3] == CRASHED
+    # queued=True removes the read source even with no seed at all.
+    assert checker.mitral_plane(truth, spacing, seed=None, queued=True) is None
+    assert checker.mitral_check(truth, spacing, seed=None, queued=True)["checked"] is False
+    # Hinge points stay behind the seed, never behind the read.
+    centre = np.argwhere(truth == L.LV_POOL).mean(axis=0) * np.asarray(spacing)
+    hinges = [centre + d for d in ([5, 0, 0], [0, 5, 0], [-5, 0, 0], [0, -5, 0])]
+    assert checker.mitral_plane(truth, spacing, hinge_points_mm=hinges)[3] == "hinge points"
+    assert checker.mitral_plane(truth, spacing, seed=truth,
+                                hinge_points_mm=hinges)[3] == "seed"
+
+
+# ------------------------------------------ R5-S8: the bounds check fails closed (JA77)
+
+
+@pytest.mark.parametrize("bounds", [None, ()])
+def test_r5s8_points_outside_without_a_box_raises(bounds):
+    from janusm_reads import niftihead
+
+    with pytest.raises(niftihead.NoWorldBounds):
+        niftihead.points_outside({"LAD": [1.0, 2.0, 3.0]}, bounds)
+    assert issubclass(niftihead.NoWorldBounds, ValueError)
+    assert protocol.ERR_CT_BOUNDS == "ct_bounds_unavailable"
+
+
+# ------------------------------------- R5-S10: the server's Rule 2 is anchoring's (JA78)
+
+
+def test_r5s10_the_servers_rule2_is_the_reports():
+    """The server recomputes the flag with ``readset.rule2``; the report prints it."""
+    rows = _following(5, 8)
+    report = anchoring.wave_report("1", rows)
+    shares = [v for r in report["rows"] if not r["blank"] for v in r["changedShare"]]
+    assert readset.rule2(shares)["flagged"] is report["rule2"]["flagged"] is True
+    assert anchoring.rule2 is readset.rule2
+    assert anchoring.RULE2_CHANGED_SHARE == readset.RULE2_CHANGED_SHARE == 0.05
+    assert readset.rule2([0.01, 0.01, 0.2, 0.2])["flagged"] is False     # exactly half
+    assert readset.rule2([0.05, 0.05, 0.05])["flagged"] is False         # exactly 5 %
+    assert readset.rule2([None, 0.01])["seededReads"] == 1
+
+
+# ------------------------------------- R5-S11: tests that can fail and that run (JA79)
+
+
+def test_r5s11_s16_the_footprint_is_the_la_shadow_when_it_is_wider():
+    """A phantom whose LA shadow (label 4 0-10 mm above the plane) reaches beyond the
+    fit radius + 3 mm: ``footprintMm`` is the shadow. Deleting the shadow term from
+    ``mitral_footprint_mm`` gives radius + 3 and fails this."""
+    from scipy import ndimage
+
+    truth, spacing = phantom.heart()
+    plane = checker.mitral_plane(truth, spacing, seed=truth)
+    h, ip = _plane_geometry(truth, spacing, plane)
+    near_pool = ndimage.binary_dilation(truth == L.LV_POOL, iterations=3)
+    wide = ((truth == L.BACKGROUND) & (h > 4.0) & (h <= 7.0)
+            & (ip <= plane[2] + 9.0) & ~near_pool)
+    shadowed = truth.copy()
+    shadowed[wide] = L.LA_POOL
+    result = checker.mitral_check(shadowed, spacing, seed=shadowed)
+    assert result["checked"] and result["source"] == "seed"
+    fitted = checker.mitral_plane(shadowed, spacing, seed=shadowed)
+    hh, iip = _plane_geometry(shadowed, spacing, fitted)
+    la = shadowed == L.LA_POOL
+    shadow = float(iip[la & (hh >= 0.0) & (hh <= 10.0)].max())
+    assert shadow > fitted[2] + 3.0 + 1.0, (shadow, fitted[2])
+    assert result["footprintMm"] == pytest.approx(shadow, abs=1e-3)
+    assert result["footprintMm"] > result["radiusMm"] + 3.0 + 1.0
+
+
+def _r5_seed_and_reads():
+    """A seed of 1000 voxels, and reads changing 52 (5.2 % of the seed, 4.94 % of the
+    union), exactly 50 (5 %) and 10 (1 %) voxels."""
+    seed = np.zeros((40, 40, 40), np.uint8)
+    seed.reshape(-1)[:1000] = L.LV_MYO
+
+    def changed(n):
+        read = seed.copy()
+        read.reshape(-1)[1000:1000 + n] = L.LV_MYO
+        return read
+
+    return seed, changed(52), changed(50), changed(10)
+
+
+def _r5_rows(seed, wrong, follows):
+    """Two seeded cases: one whose reads are ``wrong``, one whose reads follow."""
+    rows = []
+    for case, read in (("c0001", wrong), ("c0002", follows)):
+        share = anchoring.changed_share(seed, read)
+        rows.append(_row(case, False, changed=(share, share)))
+    return rows
+
+
+def test_r5s11_s18_5p2_pct_of_the_seed_is_not_following_through_wave_report():
+    seed, over, _, follows = _r5_seed_and_reads()
+    assert 52 / 1052 < 0.05 < anchoring.changed_share(seed, over)   # union / seed
+    report = anchoring.wave_report("1", _r5_rows(seed, over, follows))
+    # Over the union, all four reads would follow (flagged); over the seed, two do.
+    assert report["rule2"]["readsChangingUnder5pct"] == 2
+    assert report["rule2"]["seededReads"] == 4
+    assert report["rule2"]["flagged"] is False
+
+
+def test_r5s11_s18_exactly_5_pct_is_not_following_through_wave_report():
+    seed, _, exact, follows = _r5_seed_and_reads()
+    assert anchoring.changed_share(seed, exact) == 0.05
+    report = anchoring.wave_report("1", _r5_rows(seed, exact, follows))
+    # With <= instead of <, all four reads would follow and the wave would flag.
+    assert report["rule2"]["readsChangingUnder5pct"] == 2
+    assert report["rule2"]["flagged"] is False
+
+
+def _r5_bootstrap(blank, seeded, inter, read_weighted=True):
+    """Rule 1's two-sample bootstrap, by hand, draw by draw."""
+    rng = np.random.default_rng(anchoring.BOOTSTRAP_SEED)
+    bi = rng.integers(0, len(blank), size=(anchoring.BOOTSTRAP_DRAWS, len(blank)))
+    si = rng.integers(0, len(seeded), size=(anchoring.BOOTSTRAP_DRAWS, len(seeded)))
+
+    def mean(cases):
+        if read_weighted:
+            return float(np.mean([v for c in cases for v in c]))
+        return float(np.mean([np.mean(c) for c in cases]))
+
+    boot = []
+    for b, s_ in zip(bi, si):
+        draws = [inter[k] for k in s_ if inter[k] is not None]
+        inter_mean = float(np.mean(draws)) if draws else float("nan")   # as shipped
+        boot.append(mean([blank[k] for k in b]) - mean([seeded[k] for k in s_])
+                    - inter_mean)
+    return float(np.nanquantile(boot, anchoring.BOUND_QUANTILE))
+
+
+def test_r5s11_s19_the_shipped_bound_is_read_weighted_not_case_weighted():
+    blank = [[1.2], [0.4, 0.6], [0.9, 1.1], [0.3]]
+    seeded = [[0.3], [0.5, 0.7], [0.2, 0.4], [0.9], [0.45, 0.55]]
+    inter = [None, 0.25, 0.15, None, 0.2]
+    got = anchoring.rule1_bound([list(b) for b in blank],
+                                [list(s_) for s_ in seeded], inter)
+    read_w = _r5_bootstrap(blank, seeded, inter, read_weighted=True)
+    case_w = _r5_bootstrap(blank, seeded, inter, read_weighted=False)
+    assert abs(read_w - case_w) > 1e-3                 # the two weightings differ here
+    assert got["upper95"] == pytest.approx(read_w, abs=1e-12)
+    assert got["upper95"] != pytest.approx(case_w, abs=1e-6)
+
+
+def test_r5s11_s19_a_shared_draw_through_the_implementation_is_another_bound(monkeypatch):
+    """The contrast calls ``rule1_bound`` itself, with a generator stub that hands the
+    seeded sample the blank sample's indices: a different bound from the shipped one."""
+    rng = np.random.default_rng(7)
+    blank = [list(0.8 + rng.normal(0, 0.2, 2)) for _ in range(12)]
+    seeded = [list(0.5 + rng.normal(0, 0.2, 2)) for _ in range(12)]
+    inter = list(0.2 + rng.normal(0, 0.05, 12))
+    shipped = anchoring.rule1_bound(blank, seeded, inter)
+
+    real = np.random.default_rng
+    calls = []
+
+    class SharedIndices:
+        def __init__(self, seed):
+            self.inner, self.first = real(seed), None
+
+        def integers(self, low, high, size):
+            calls.append(size)
+            if self.first is None:
+                self.first = self.inner.integers(low, high, size=size)
+            return self.first
+
+    monkeypatch.setattr(anchoring.np.random, "default_rng", SharedIndices)
+    shared = anchoring.rule1_bound(blank, seeded, inter)
+    monkeypatch.setattr(anchoring.np.random, "default_rng", real)
+    assert len(calls) == 2                               # both samples were drawn
+    assert shared["gap"] == pytest.approx(shipped["gap"], abs=1e-12)
+    assert shared["upper95"] != pytest.approx(shipped["upper95"], abs=1e-6)
+    assert shipped["upper95"] == pytest.approx(_r5_bootstrap(blank, seeded, inter),
+                                               abs=1e-12)

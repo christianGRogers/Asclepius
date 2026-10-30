@@ -19,6 +19,8 @@ READS_FOLDER = "reads"
 #: Mongo collections.
 CASE_COLLECTION = "janusm_case"
 READ_COLLECTION = "janusm_read"
+#: One document per wave that has had an anchoring report (JA78: its sha256).
+WAVE_COLLECTION = "janusm_wave"
 
 #: Settings.
 SETTING_SEAL_OPEN = "janusm.sealOpen"

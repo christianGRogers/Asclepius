@@ -50,6 +50,12 @@ image, no path. Its flat ``decision_inputs`` block (JA44) is what ``jm0r_decide.
 (JA43). ``OUT/cases.jsonl`` holds the per-case rows and **stays on Fir**. Progress lines
 on stderr carry a counter only.
 
+The septal-arc column (JA69, R4-S3; moved here from a comment by JA74): the pooled share of mass
+changing segment (``arc_sectors.share_mass_changing_segment_pooled``, and its flag
+``ja20_septal_arc_column_kept_pooled_reported``) is reported only. R7 (``jm0r_decide.py``) keeps
+or drops the column on the **case median** (``decision_inputs.septal_arc_mass_changed_median``);
+where the two disagree, the case median decides.
+
 Commands for the lead (Fir, account def-aso22; after Job JM-0 has finished; CPU only, 0 GPU-h).
 Nobody but the lead runs this on Fir::
 
@@ -592,9 +598,7 @@ def aggregate(rows) -> dict:
         "share_mass_changing_segment_case": q([r["arc_changed_ml"] / r["seg_ml"] for r in arc]),
         "share_mass_changing_aha_territory_pooled": _ratio(
             sum(r["arc_terr_changed_ml"] for r in arc), seg_ml)}
-    # JA69 (R4-S3): the pooled share is reported only. R7 (jm0r_decide) keeps or drops the
-    # septal-arc column on the **case median** (``decision_inputs.septal_arc_mass_changed_median``);
-    # where the two disagree, the case median decides.
+    # JA69: see the module docstring ("The septal-arc column").
     sh = lim["arc_sectors"]["share_mass_changing_segment_pooled"]
     lim["ja20_septal_arc_column_kept_pooled_reported"] = None if sh is None else sh >= 0.10
     t = [r for r in fr if "terr_n_segments" in r]

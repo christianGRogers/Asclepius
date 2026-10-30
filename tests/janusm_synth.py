@@ -84,11 +84,11 @@ def _world(lab, aff):
     return w[..., 0], w[..., 1], w[..., 2]
 
 
-def coronary(lab, aff):
+def coronary(lab, aff, vessels=None):
     x, y, z = _world(lab, aff)
     re = H.PHANTOM_RC + H.PHANTOM_WALL
     cor = np.zeros(lab.shape, np.int16)
-    for cls, ang in VESSELS.items():
+    for cls, ang in (VESSELS if vessels is None else vessels).items():
         cx, cy = (re + 1.5) * np.cos(np.radians(ang)), (re + 1.5) * np.sin(np.radians(ang))
         tube = (np.hypot(x - cx, y - cy) < 1.0) & (z < 0) & (z > -H.PHANTOM_CYL)
         cor[tube & ((lab == 0) | (lab == G.RV))] = cls
@@ -121,3 +121,35 @@ def heart(*, thin: float = 0.0, subendo_hu: float = None, segs=THINNED):
         sel = np.isin(geo.aha.segments, segs) & (lab == G.MYO) & (geo.depth.u < 1 / 3)
         ct[sel] = subendo_hu
     return lab, ct, aff, coronary(lab, aff)
+
+
+# ------------------------------------------------------------------- R8 (R5-S6 S12) and S9
+#: Vessels centred on segment pairs (LAD over 6 and 1, RCA over 2 and 3, LCx over 4 and 5), so
+#: every basal and mid segment has a clear majority on both maps.
+ALIGNED = {G.LAD: 62.0, G.LCX: 302.0, G.RCA: 182.0}
+#: The cavity branch: an LCx arc 0.8 mm inside the anterior endocardium (r 11.3 mm), 92 +/- 15°,
+#: z -10 .. -5 mm (segment 1's middle). Nearest in a straight line for most of segment 1, but it
+#: touches no epicardial myocardium within 5 mm, so the geodesic map never seeds from it.
+BRANCH = {"cls": G.LCX, "r_mm": 11.3, "angle": 92.0, "half_deg": 15.0, "z_mm": (-10.0, -5.0)}
+
+
+def heart_r8(*, branch: bool = True, fat_mm: float = 0.0):
+    """(labels, ct, affine, coronary) for R8: the normal phantom with :data:`ALIGNED` vessels
+    and, with ``branch``, :data:`BRANCH` in the cavity. The real Euclidean majority of segment
+    1 is then LCx (share ~0.8) while the geodesic one stays LAD; no other segment differs.
+    ``fat_mm``: radius of a -60 HU ball in segment 1's mid-wall core (92°, r 16 mm, z -7 mm)."""
+    lab, aff = H.phantom(SP)
+    cor = coronary(lab, aff, ALIGNED)
+    x, y, z = _world(lab, aff)
+    r, ph = np.hypot(x, y), np.degrees(np.arctan2(y, x)) % 360
+    if branch:
+        b = BRANCH
+        sel = ((np.abs(r - b["r_mm"]) < 0.5) & (np.abs(ph - b["angle"]) < b["half_deg"])
+               & (z > b["z_mm"][0]) & (z < b["z_mm"][1]) & (lab == G.LV))
+        cor[sel] = b["cls"]
+    ct = ct_of(lab)
+    if fat_mm:
+        cx, cy = 16.0 * np.cos(np.radians(92.0)), 16.0 * np.sin(np.radians(92.0))
+        ct[(np.sqrt((x - cx) ** 2 + (y - cy) ** 2 + (z + 7.0) ** 2) <= fat_mm)
+           & (lab == G.MYO)] = -60.0
+    return lab, ct, aff, cor

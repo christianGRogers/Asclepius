@@ -50,7 +50,7 @@ from typing import Dict, Mapping, Optional, Sequence, Tuple
 import numpy as np
 
 #: Bump on any change that can move a reported number.
-CALIBRATE_VERSION = "1.1.0"
+CALIBRATE_VERSION = "1.1.1"
 
 # AHA default territories and bullseye adjacency (Lima's calibrate_sim)
 AHA = {"LAD": [1, 2, 7, 8, 13, 14, 17], "RCA": [3, 4, 9, 10, 15], "LCx": [5, 6, 11, 12, 16]}
@@ -112,10 +112,12 @@ def population(
     """Lima's simulated population: (measured n x 16 mm, lesion n x 16, sick n, territory n,
     phase n). The draws are made in Lima's order, so a seed gives Lima's and Hotel's hearts.
     ``median_mm`` is the end-diastolic anchor (Lima's 5.7 mm by default); each heart's wall is
-    also scaled by its phase, so the population's median wall is ``population_factor`` x it."""
+    also scaled by its phase, so the population's median wall is ``population_factor`` x it.
+    ``phase_mix`` may be partial: an omitted phase is 0 (JA73); a bad mix raises ``ValueError``."""
     shape = np.asarray(shape, float)
+    mix = dict(_phase_key(phase_mix))  # JA73: an omitted phase is 0
     scale = median_mm * np.exp(rng.normal(0, SCALE_CV, n))
-    ph_names = rng.choice(list(PHASES), size=n, p=[phase_mix[k] for k in PHASES])
+    ph_names = rng.choice(list(PHASES), size=n, p=[mix[k] for k in PHASES])
     ph = np.array([PHASES[k] for k in ph_names])
     true = scale[:, None] * ph[:, None] * shape[None, :] * np.exp(rng.normal(0, cv_n, (n, 16)))
     sick = rng.random(n) < prev
@@ -139,9 +141,16 @@ def population(
 
 
 def _phase_key(phase_mix: Mapping[str, float]) -> Tuple[Tuple[str, float], ...]:
-    if set(phase_mix) - set(PHASES):
+    """The full mix, one (phase, share) per phase in ``PHASES`` order (JA73): an omitted phase is
+    0. ``ValueError`` (never ``KeyError``) on an unknown phase, a negative or non-finite share, or
+    shares that do not sum to 1."""
+    try:
+        keys = set(phase_mix)
+        p = tuple((k, float(phase_mix.get(k, 0.0))) for k in PHASES)
+    except (AttributeError, TypeError, ValueError) as e:
+        raise ValueError(f"phase_mix must be a mapping of phase to share, got {phase_mix!r}") from e
+    if keys - set(PHASES):
         raise ValueError(f"unknown phase in {dict(phase_mix)}; phases are {list(PHASES)}")
-    p = tuple((k, float(phase_mix.get(k, 0.0))) for k in PHASES)
     if any((not np.isfinite(v)) or v < 0 for _, v in p) or not np.isclose(sum(v for _, v in p), 1):
         raise ValueError(f"phase_mix must be shares summing to 1, got {dict(phase_mix)}")
     return p
@@ -335,7 +344,7 @@ def detectable_depths(
     {rc: result}. Each population is simulated once and read at every floor."""
     rcs = [float(r) for r in np.atleast_1d(rc_terr_mm)]
     shape = _check_inputs(cv_n, shape, rcs, sig_m)
-    _phase_key(phase_mix)
+    phase_mix = dict(_phase_key(phase_mix))  # JA73: normalised once; the full mix is passed on
     anchor, factor, source = _anchor(measured_median_mm, median_mm, phase_mix, shape, cv_n)
     rows = []
     s = seed
@@ -386,6 +395,7 @@ def detectable_depths(
                 "anchor_mm": float(anchor),
                 "anchor_source": source,
                 "population_factor": factor,
+                "phase_mix": dict(phase_mix),
                 "seed": int(seed),
             },
             "design": {
@@ -431,7 +441,8 @@ def detectable_depth(
     cv_n)``. ``median_mm`` is an anchor used as is, for E7's regression rows only. Passing both
     raises; with neither the anchor is ``ED_MEDIAN_MM`` (5.7 mm). ``phase_mix`` is the
     population's phase mix (JA40's mix by default; ``{"ED": 1.0}`` for hypoattenuation, which
-    phase does not scale). ``inputs`` records the measured wall, the anchor and the factor."""
+    phase does not scale); it may be partial, an omitted phase being 0 (JA73), and ``inputs``
+    records the full mix. ``inputs`` records the measured wall, the anchor and the factor."""
     return detectable_depths(
         cv_n,
         shape,

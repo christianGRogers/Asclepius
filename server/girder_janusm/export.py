@@ -9,6 +9,9 @@ writes both reads (``reads/``), any accepted third read (``third/``, JA47 rule 2
 ``manifest.json`` that ``python -m janusm_reads.anchoring`` reads. Seeds come from
 ``--seeds-dir`` (the Fir seed job's output).
 
+The manifest records ``anchoringReportSha256``: the sha256 of the anchoring report
+that opened the wave's third reads (JA78; None if none has).
+
 A read without ``border_protocol: 1`` was not drawn under protocol v1: it is skipped
 and listed in the manifest's ``skippedReads``, and its case is not exported.
 
@@ -32,9 +35,9 @@ import shutil
 import tempfile
 
 from girder.models.file import File
-from janusm_reads import BORDER_PROTOCOL, protocol
+from janusm_reads import BORDER_PROTOCOL, protocol, readform
 
-from .models import JanusMCase, JanusMRead
+from .models import JanusMCase, JanusMRead, JanusMWave
 from .populate import SEED_SUFFIX
 
 
@@ -59,8 +62,8 @@ def readRecord(read, case):
         'crashes': int(read.get('crashes') or 0),
         'flagged': bool(read.get('flagged')),
         'flagReasons': list(read.get('flagReasons') or []),
-        'cadrads': dict(read.get('cadrads') or {}),
-        'lesionPoints': dict(read.get('lesionPoints') or {}),
+        # The read form, by the one mapping the table also reads it with (R5-S6 S13).
+        **readform.read_form(read),
         'halfMaxOffsetsMm': _offsets(read.get('check')),
         'offsetSign': 'canonical',
         # A read stored before border protocol v1 carries none: it was not read under v1.
@@ -138,8 +141,11 @@ def export(outDir, seedsDir, wave, seedOffsets=True, out=print):
             row['thirdRead'] = rel
             row['thirdReadRecord'] = readRecord(thirds[0], case)
         rows.append(row)
+    # JA78: the sha256 of the anchoring report that opened the wave's third reads, if
+    # any; the server refuses a different report for this wave.
     manifest = {'wave': wave, 'border_protocol': BORDER_PROTOCOL, 'cases': rows,
-                'skippedReads': offProtocol}
+                'skippedReads': offProtocol,
+                'anchoringReportSha256': JanusMWave().reportHash(wave)}
     with open(os.path.join(outDir, 'manifest.json'), 'w', encoding='utf-8') as handle:
         json.dump(manifest, handle, indent=1)
     out(f'wave {wave}: {len(rows)} double-read cases exported; {len(skipped)} without a '

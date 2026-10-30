@@ -412,3 +412,9 @@ def test_end_to_end_on_synthetic_nifti(tmp_path, jm0r, monkeypatch, capsys):
     rows = [json.loads(x) for x in (out / "cases.jsonl").read_text().splitlines()]
     assert [r["id"] for r in rows] == names  # the per-case file (stays on Fir) has them
     assert s["provenance"]["script_sha256"] == hashlib.sha256(SCRIPT.read_bytes()).hexdigest()
+
+
+def test_r5_s2_ja69_precedence_is_in_the_module_docstring(jm0r):
+    """R5-S2 (JA74): JA69's precedence note is in the module docstring, not a comment."""
+    assert "case median" in jm0r.__doc__
+    assert "R7" in jm0r.__doc__ and "pooled" in jm0r.__doc__

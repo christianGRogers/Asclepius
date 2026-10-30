@@ -41,7 +41,8 @@ default. Each comparison reports its own count of cases over the limit, and
 the first 20 with any comparison and either border over the limit. No id is reported.
 
 **Output.** One anonymous JSON (``reads``, ``assd_pp``, ``transfer_check`` and the versions),
-refused by :func:`janusm.reference.assert_anonymous` if any id appears, and its sha256.
+refused by :func:`janusm.reference.assert_anonymous` if any id appears, and its sha256. Each
+comparison carries JA70's band record (``band_kept_share_*``, ``band_forms_*``; R5-S3).
 ``tools/janusm/build_reference.py --reads`` takes it as the decision read records.
 
     python tools/janusm/score_decision.py                 # prints the Fir commands
@@ -80,9 +81,12 @@ ROI = "ja37"
 ASSD_GUARD_MM = 1.0                     # JA8 / JA16
 BORDERS = ("endo", "epi")
 COMPARISONS = ("model_vs_read_1", "model_vs_read_2", "read_vs_read")
-#: compare() keys written per comparison (numbers only; no id).
+#: compare() keys written per comparison (no id). JA70's record of JA37's band, per border:
+#: ``band_kept_share_*`` (the share of JA61's band kept) and ``band_forms_*`` (the form used per
+#: opening, ``plane`` or ``normal``, comma-separated, empty if the pool has none).
 KEEP = tuple(f"{m}_{b}" for b in BORDERS
-             for m in ("assd_pp", "assd_voxel", "bias", "bias_pp", "mean_abs_d")) + (
+             for m in ("assd_pp", "assd_voxel", "bias", "bias_pp", "mean_abs_d",
+                       "band_kept_share", "band_forms")) + (
     "thick_err_median_mm", "thick_bias_median_mm", "n_segments", "dice_myo", "aha_failed", "sta")
 _READER_SALT = "asclepius-janusm-reader-order-r1:"
 JM0R = REPO / "experiments/JanusM/fir/jm0r_readout.py"

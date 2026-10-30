@@ -249,6 +249,7 @@ def main():
     ap.add_argument("data_dir")
     ap.add_argument("--hearts")
     ap.add_argument("--motions")
+    ap.add_argument("--cnrs", help="e.g. 5: run only these CNRs (Round 4 run-time cut, disclosed on #251)")
     ap.add_argument("--out", default=str(HERE / "results_v3.jsonl"))
     ap.add_argument("--procs", type=int, default=4)
     ap.add_argument("--parts", default=str(HERE / "results_v3_parts"), help="per-heart files, written per case")
@@ -257,6 +258,8 @@ def main():
     global CONDS
     if a.motions:
         CONDS = [x for x in CONDS if x[2] in a.motions.split(",")]
+    if a.cnrs:
+        CONDS = [x for x in CONDS if str(x[1]) in a.cnrs.split(",")]
     ids = heart_list() + ["phantom"]                       # janusm.guard.refuse runs on the whole list here
     if a.hearts:
         ids = [i for i in a.hearts.split(",") if i in ids]

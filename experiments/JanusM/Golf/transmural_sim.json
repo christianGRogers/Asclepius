@@ -1,0 +1,2882 @@
+[
+ {
+  "psf_fwhm_mm": 0.6,
+  "voxel_mm": 0.5,
+  "cnr_per_voxel": 1.5,
+  "blood": "bright",
+  "k_sd": 2,
+  "borders": "G",
+  "mae_pp": 27.9,
+  "kim_bin_accuracy": 0.2
+ },
+ {
+  "psf_fwhm_mm": 0.6,
+  "voxel_mm": 0.5,
+  "cnr_per_voxel": 1.5,
+  "blood": "bright",
+  "k_sd": 2,
+  "borders": "S",
+  "mae_pp": 26.1,
+  "kim_bin_accuracy": 0.2
+ },
+ {
+  "psf_fwhm_mm": 0.6,
+  "voxel_mm": 0.5,
+  "cnr_per_voxel": 1.5,
+  "blood": "bright",
+  "k_sd": 3,
+  "borders": "G",
+  "mae_pp": 37.5,
+  "kim_bin_accuracy": 0.4
+ },
+ {
+  "psf_fwhm_mm": 0.6,
+  "voxel_mm": 0.5,
+  "cnr_per_voxel": 1.5,
+  "blood": "bright",
+  "k_sd": 3,
+  "borders": "S",
+  "mae_pp": 36.7,
+  "kim_bin_accuracy": 0.2
+ },
+ {
+  "psf_fwhm_mm": 0.6,
+  "voxel_mm": 0.5,
+  "cnr_per_voxel": 1.5,
+  "blood": "bright",
+  "k_sd": 5,
+  "borders": "G",
+  "mae_pp": 40.0,
+  "kim_bin_accuracy": 0.2
+ },
+ {
+  "psf_fwhm_mm": 0.6,
+  "voxel_mm": 0.5,
+  "cnr_per_voxel": 1.5,
+  "blood": "bright",
+  "k_sd": 5,
+  "borders": "S",
+  "mae_pp": 40.0,
+  "kim_bin_accuracy": 0.2
+ },
+ {
+  "psf_fwhm_mm": 0.6,
+  "voxel_mm": 0.5,
+  "cnr_per_voxel": 1.5,
+  "blood": "dark",
+  "k_sd": 2,
+  "borders": "G",
+  "mae_pp": 27.8,
+  "kim_bin_accuracy": 0.2
+ },
+ {
+  "psf_fwhm_mm": 0.6,
+  "voxel_mm": 0.5,
+  "cnr_per_voxel": 1.5,
+  "blood": "dark",
+  "k_sd": 2,
+  "borders": "S",
+  "mae_pp": 29.6,
+  "kim_bin_accuracy": 0.2
+ },
+ {
+  "psf_fwhm_mm": 0.6,
+  "voxel_mm": 0.5,
+  "cnr_per_voxel": 1.5,
+  "blood": "dark",
+  "k_sd": 3,
+  "borders": "G",
+  "mae_pp": 37.7,
+  "kim_bin_accuracy": 0.4
+ },
+ {
+  "psf_fwhm_mm": 0.6,
+  "voxel_mm": 0.5,
+  "cnr_per_voxel": 1.5,
+  "blood": "dark",
+  "k_sd": 3,
+  "borders": "S",
+  "mae_pp": 38.1,
+  "kim_bin_accuracy": 0.375
+ },
+ {
+  "psf_fwhm_mm": 0.6,
+  "voxel_mm": 0.5,
+  "cnr_per_voxel": 1.5,
+  "blood": "dark",
+  "k_sd": 5,
+  "borders": "G",
+  "mae_pp": 40.0,
+  "kim_bin_accuracy": 0.2
+ },
+ {
+  "psf_fwhm_mm": 0.6,
+  "voxel_mm": 0.5,
+  "cnr_per_voxel": 1.5,
+  "blood": "dark",
+  "k_sd": 5,
+  "borders": "S",
+  "mae_pp": 40.0,
+  "kim_bin_accuracy": 0.2
+ },
+ {
+  "psf_fwhm_mm": 0.6,
+  "voxel_mm": 0.5,
+  "cnr_per_voxel": 2.0,
+  "blood": "bright",
+  "k_sd": 2,
+  "borders": "G",
+  "mae_pp": 19.6,
+  "kim_bin_accuracy": 0.2
+ },
+ {
+  "psf_fwhm_mm": 0.6,
+  "voxel_mm": 0.5,
+  "cnr_per_voxel": 2.0,
+  "blood": "bright",
+  "k_sd": 2,
+  "borders": "S",
+  "mae_pp": 22.1,
+  "kim_bin_accuracy": 0.2
+ },
+ {
+  "psf_fwhm_mm": 0.6,
+  "voxel_mm": 0.5,
+  "cnr_per_voxel": 2.0,
+  "blood": "bright",
+  "k_sd": 3,
+  "borders": "G",
+  "mae_pp": 33.8,
+  "kim_bin_accuracy": 0.4
+ },
+ {
+  "psf_fwhm_mm": 0.6,
+  "voxel_mm": 0.5,
+  "cnr_per_voxel": 2.0,
+  "blood": "bright",
+  "k_sd": 3,
+  "borders": "S",
+  "mae_pp": 32.7,
+  "kim_bin_accuracy": 0.2
+ },
+ {
+  "psf_fwhm_mm": 0.6,
+  "voxel_mm": 0.5,
+  "cnr_per_voxel": 2.0,
+  "blood": "bright",
+  "k_sd": 5,
+  "borders": "G",
+  "mae_pp": 39.9,
+  "kim_bin_accuracy": 0.2
+ },
+ {
+  "psf_fwhm_mm": 0.6,
+  "voxel_mm": 0.5,
+  "cnr_per_voxel": 2.0,
+  "blood": "bright",
+  "k_sd": 5,
+  "borders": "S",
+  "mae_pp": 39.9,
+  "kim_bin_accuracy": 0.2
+ },
+ {
+  "psf_fwhm_mm": 0.6,
+  "voxel_mm": 0.5,
+  "cnr_per_voxel": 2.0,
+  "blood": "dark",
+  "k_sd": 2,
+  "borders": "G",
+  "mae_pp": 20.3,
+  "kim_bin_accuracy": 0.2
+ },
+ {
+  "psf_fwhm_mm": 0.6,
+  "voxel_mm": 0.5,
+  "cnr_per_voxel": 2.0,
+  "blood": "dark",
+  "k_sd": 2,
+  "borders": "S",
+  "mae_pp": 23.2,
+  "kim_bin_accuracy": 0.2
+ },
+ {
+  "psf_fwhm_mm": 0.6,
+  "voxel_mm": 0.5,
+  "cnr_per_voxel": 2.0,
+  "blood": "dark",
+  "k_sd": 3,
+  "borders": "G",
+  "mae_pp": 34.4,
+  "kim_bin_accuracy": 0.4
+ },
+ {
+  "psf_fwhm_mm": 0.6,
+  "voxel_mm": 0.5,
+  "cnr_per_voxel": 2.0,
+  "blood": "dark",
+  "k_sd": 3,
+  "borders": "S",
+  "mae_pp": 35.5,
+  "kim_bin_accuracy": 0.4
+ },
+ {
+  "psf_fwhm_mm": 0.6,
+  "voxel_mm": 0.5,
+  "cnr_per_voxel": 2.0,
+  "blood": "dark",
+  "k_sd": 5,
+  "borders": "G",
+  "mae_pp": 39.8,
+  "kim_bin_accuracy": 0.2
+ },
+ {
+  "psf_fwhm_mm": 0.6,
+  "voxel_mm": 0.5,
+  "cnr_per_voxel": 2.0,
+  "blood": "dark",
+  "k_sd": 5,
+  "borders": "S",
+  "mae_pp": 40.0,
+  "kim_bin_accuracy": 0.2
+ },
+ {
+  "psf_fwhm_mm": 0.6,
+  "voxel_mm": 0.5,
+  "cnr_per_voxel": 3.0,
+  "blood": "bright",
+  "k_sd": 2,
+  "borders": "G",
+  "mae_pp": 6.4,
+  "kim_bin_accuracy": 0.6
+ },
+ {
+  "psf_fwhm_mm": 0.6,
+  "voxel_mm": 0.5,
+  "cnr_per_voxel": 3.0,
+  "blood": "bright",
+  "k_sd": 2,
+  "borders": "S",
+  "mae_pp": 22.2,
+  "kim_bin_accuracy": 0.2
+ },
+ {
+  "psf_fwhm_mm": 0.6,
+  "voxel_mm": 0.5,
+  "cnr_per_voxel": 3.0,
+  "blood": "bright",
+  "k_sd": 3,
+  "borders": "G",
+  "mae_pp": 20.2,
+  "kim_bin_accuracy": 0.35
+ },
+ {
+  "psf_fwhm_mm": 0.6,
+  "voxel_mm": 0.5,
+  "cnr_per_voxel": 3.0,
+  "blood": "bright",
+  "k_sd": 3,
+  "borders": "S",
+  "mae_pp": 29.8,
+  "kim_bin_accuracy": 0.2
+ },
+ {
+  "psf_fwhm_mm": 0.6,
+  "voxel_mm": 0.5,
+  "cnr_per_voxel": 3.0,
+  "blood": "bright",
+  "k_sd": 5,
+  "borders": "G",
+  "mae_pp": 39.2,
+  "kim_bin_accuracy": 0.2
+ },
+ {
+  "psf_fwhm_mm": 0.6,
+  "voxel_mm": 0.5,
+  "cnr_per_voxel": 3.0,
+  "blood": "bright",
+  "k_sd": 5,
+  "borders": "S",
+  "mae_pp": 38.8,
+  "kim_bin_accuracy": 0.225
+ },
+ {
+  "psf_fwhm_mm": 0.6,
+  "voxel_mm": 0.5,
+  "cnr_per_voxel": 3.0,
+  "blood": "dark",
+  "k_sd": 2,
+  "borders": "G",
+  "mae_pp": 6.8,
+  "kim_bin_accuracy": 0.55
+ },
+ {
+  "psf_fwhm_mm": 0.6,
+  "voxel_mm": 0.5,
+  "cnr_per_voxel": 3.0,
+  "blood": "dark",
+  "k_sd": 2,
+  "borders": "S",
+  "mae_pp": 12.0,
+  "kim_bin_accuracy": 0.4
+ },
+ {
+  "psf_fwhm_mm": 0.6,
+  "voxel_mm": 0.5,
+  "cnr_per_voxel": 3.0,
+  "blood": "dark",
+  "k_sd": 3,
+  "borders": "G",
+  "mae_pp": 22.2,
+  "kim_bin_accuracy": 0.4
+ },
+ {
+  "psf_fwhm_mm": 0.6,
+  "voxel_mm": 0.5,
+  "cnr_per_voxel": 3.0,
+  "blood": "dark",
+  "k_sd": 3,
+  "borders": "S",
+  "mae_pp": 25.7,
+  "kim_bin_accuracy": 0.4
+ },
+ {
+  "psf_fwhm_mm": 0.6,
+  "voxel_mm": 0.5,
+  "cnr_per_voxel": 3.0,
+  "blood": "dark",
+  "k_sd": 5,
+  "borders": "G",
+  "mae_pp": 39.2,
+  "kim_bin_accuracy": 0.2
+ },
+ {
+  "psf_fwhm_mm": 0.6,
+  "voxel_mm": 0.5,
+  "cnr_per_voxel": 3.0,
+  "blood": "dark",
+  "k_sd": 5,
+  "borders": "S",
+  "mae_pp": 39.3,
+  "kim_bin_accuracy": 0.2
+ },
+ {
+  "psf_fwhm_mm": 0.6,
+  "voxel_mm": 0.5,
+  "cnr_per_voxel": 5.0,
+  "blood": "bright",
+  "k_sd": 2,
+  "borders": "G",
+  "mae_pp": 2.4,
+  "kim_bin_accuracy": 0.8
+ },
+ {
+  "psf_fwhm_mm": 0.6,
+  "voxel_mm": 0.5,
+  "cnr_per_voxel": 5.0,
+  "blood": "bright",
+  "k_sd": 2,
+  "borders": "S",
+  "mae_pp": 36.6,
+  "kim_bin_accuracy": 0.2
+ },
+ {
+  "psf_fwhm_mm": 0.6,
+  "voxel_mm": 0.5,
+  "cnr_per_voxel": 5.0,
+  "blood": "bright",
+  "k_sd": 3,
+  "borders": "G",
+  "mae_pp": 1.7,
+  "kim_bin_accuracy": 0.875
+ },
+ {
+  "psf_fwhm_mm": 0.6,
+  "voxel_mm": 0.5,
+  "cnr_per_voxel": 5.0,
+  "blood": "bright",
+  "k_sd": 3,
+  "borders": "S",
+  "mae_pp": 39.2,
+  "kim_bin_accuracy": 0.2
+ },
+ {
+  "psf_fwhm_mm": 0.6,
+  "voxel_mm": 0.5,
+  "cnr_per_voxel": 5.0,
+  "blood": "bright",
+  "k_sd": 5,
+  "borders": "G",
+  "mae_pp": 21.8,
+  "kim_bin_accuracy": 0.4
+ },
+ {
+  "psf_fwhm_mm": 0.6,
+  "voxel_mm": 0.5,
+  "cnr_per_voxel": 5.0,
+  "blood": "bright",
+  "k_sd": 5,
+  "borders": "S",
+  "mae_pp": 39.5,
+  "kim_bin_accuracy": 0.2
+ },
+ {
+  "psf_fwhm_mm": 0.6,
+  "voxel_mm": 0.5,
+  "cnr_per_voxel": 5.0,
+  "blood": "dark",
+  "k_sd": 2,
+  "borders": "G",
+  "mae_pp": 2.2,
+  "kim_bin_accuracy": 0.8
+ },
+ {
+  "psf_fwhm_mm": 0.6,
+  "voxel_mm": 0.5,
+  "cnr_per_voxel": 5.0,
+  "blood": "dark",
+  "k_sd": 2,
+  "borders": "S",
+  "mae_pp": 4.6,
+  "kim_bin_accuracy": 0.8
+ },
+ {
+  "psf_fwhm_mm": 0.6,
+  "voxel_mm": 0.5,
+  "cnr_per_voxel": 5.0,
+  "blood": "dark",
+  "k_sd": 3,
+  "borders": "G",
+  "mae_pp": 2.3,
+  "kim_bin_accuracy": 1.0
+ },
+ {
+  "psf_fwhm_mm": 0.6,
+  "voxel_mm": 0.5,
+  "cnr_per_voxel": 5.0,
+  "blood": "dark",
+  "k_sd": 3,
+  "borders": "S",
+  "mae_pp": 5.6,
+  "kim_bin_accuracy": 0.675
+ },
+ {
+  "psf_fwhm_mm": 0.6,
+  "voxel_mm": 0.5,
+  "cnr_per_voxel": 5.0,
+  "blood": "dark",
+  "k_sd": 5,
+  "borders": "G",
+  "mae_pp": 23.4,
+  "kim_bin_accuracy": 0.4
+ },
+ {
+  "psf_fwhm_mm": 0.6,
+  "voxel_mm": 0.5,
+  "cnr_per_voxel": 5.0,
+  "blood": "dark",
+  "k_sd": 5,
+  "borders": "S",
+  "mae_pp": 25.0,
+  "kim_bin_accuracy": 0.4
+ },
+ {
+  "psf_fwhm_mm": 0.6,
+  "voxel_mm": 1.0,
+  "cnr_per_voxel": 1.5,
+  "blood": "bright",
+  "k_sd": 2,
+  "borders": "G",
+  "mae_pp": 27.7,
+  "kim_bin_accuracy": 0.2
+ },
+ {
+  "psf_fwhm_mm": 0.6,
+  "voxel_mm": 1.0,
+  "cnr_per_voxel": 1.5,
+  "blood": "bright",
+  "k_sd": 2,
+  "borders": "S",
+  "mae_pp": 27.0,
+  "kim_bin_accuracy": 0.2
+ },
+ {
+  "psf_fwhm_mm": 0.6,
+  "voxel_mm": 1.0,
+  "cnr_per_voxel": 1.5,
+  "blood": "bright",
+  "k_sd": 3,
+  "borders": "G",
+  "mae_pp": 37.2,
+  "kim_bin_accuracy": 0.375
+ },
+ {
+  "psf_fwhm_mm": 0.6,
+  "voxel_mm": 1.0,
+  "cnr_per_voxel": 1.5,
+  "blood": "bright",
+  "k_sd": 3,
+  "borders": "S",
+  "mae_pp": 36.6,
+  "kim_bin_accuracy": 0.2
+ },
+ {
+  "psf_fwhm_mm": 0.6,
+  "voxel_mm": 1.0,
+  "cnr_per_voxel": 1.5,
+  "blood": "bright",
+  "k_sd": 5,
+  "borders": "G",
+  "mae_pp": 40.0,
+  "kim_bin_accuracy": 0.2
+ },
+ {
+  "psf_fwhm_mm": 0.6,
+  "voxel_mm": 1.0,
+  "cnr_per_voxel": 1.5,
+  "blood": "bright",
+  "k_sd": 5,
+  "borders": "S",
+  "mae_pp": 39.8,
+  "kim_bin_accuracy": 0.2
+ },
+ {
+  "psf_fwhm_mm": 0.6,
+  "voxel_mm": 1.0,
+  "cnr_per_voxel": 1.5,
+  "blood": "dark",
+  "k_sd": 2,
+  "borders": "G",
+  "mae_pp": 28.0,
+  "kim_bin_accuracy": 0.2
+ },
+ {
+  "psf_fwhm_mm": 0.6,
+  "voxel_mm": 1.0,
+  "cnr_per_voxel": 1.5,
+  "blood": "dark",
+  "k_sd": 2,
+  "borders": "S",
+  "mae_pp": 29.2,
+  "kim_bin_accuracy": 0.2
+ },
+ {
+  "psf_fwhm_mm": 0.6,
+  "voxel_mm": 1.0,
+  "cnr_per_voxel": 1.5,
+  "blood": "dark",
+  "k_sd": 3,
+  "borders": "G",
+  "mae_pp": 38.0,
+  "kim_bin_accuracy": 0.325
+ },
+ {
+  "psf_fwhm_mm": 0.6,
+  "voxel_mm": 1.0,
+  "cnr_per_voxel": 1.5,
+  "blood": "dark",
+  "k_sd": 3,
+  "borders": "S",
+  "mae_pp": 38.0,
+  "kim_bin_accuracy": 0.375
+ },
+ {
+  "psf_fwhm_mm": 0.6,
+  "voxel_mm": 1.0,
+  "cnr_per_voxel": 1.5,
+  "blood": "dark",
+  "k_sd": 5,
+  "borders": "G",
+  "mae_pp": 40.0,
+  "kim_bin_accuracy": 0.2
+ },
+ {
+  "psf_fwhm_mm": 0.6,
+  "voxel_mm": 1.0,
+  "cnr_per_voxel": 1.5,
+  "blood": "dark",
+  "k_sd": 5,
+  "borders": "S",
+  "mae_pp": 40.0,
+  "kim_bin_accuracy": 0.2
+ },
+ {
+  "psf_fwhm_mm": 0.6,
+  "voxel_mm": 1.0,
+  "cnr_per_voxel": 2.0,
+  "blood": "bright",
+  "k_sd": 2,
+  "borders": "G",
+  "mae_pp": 20.1,
+  "kim_bin_accuracy": 0.2
+ },
+ {
+  "psf_fwhm_mm": 0.6,
+  "voxel_mm": 1.0,
+  "cnr_per_voxel": 2.0,
+  "blood": "bright",
+  "k_sd": 2,
+  "borders": "S",
+  "mae_pp": 23.9,
+  "kim_bin_accuracy": 0.2
+ },
+ {
+  "psf_fwhm_mm": 0.6,
+  "voxel_mm": 1.0,
+  "cnr_per_voxel": 2.0,
+  "blood": "bright",
+  "k_sd": 3,
+  "borders": "G",
+  "mae_pp": 34.3,
+  "kim_bin_accuracy": 0.4
+ },
+ {
+  "psf_fwhm_mm": 0.6,
+  "voxel_mm": 1.0,
+  "cnr_per_voxel": 2.0,
+  "blood": "bright",
+  "k_sd": 3,
+  "borders": "S",
+  "mae_pp": 33.5,
+  "kim_bin_accuracy": 0.2
+ },
+ {
+  "psf_fwhm_mm": 0.6,
+  "voxel_mm": 1.0,
+  "cnr_per_voxel": 2.0,
+  "blood": "bright",
+  "k_sd": 5,
+  "borders": "G",
+  "mae_pp": 40.0,
+  "kim_bin_accuracy": 0.2
+ },
+ {
+  "psf_fwhm_mm": 0.6,
+  "voxel_mm": 1.0,
+  "cnr_per_voxel": 2.0,
+  "blood": "bright",
+  "k_sd": 5,
+  "borders": "S",
+  "mae_pp": 40.0,
+  "kim_bin_accuracy": 0.2
+ },
+ {
+  "psf_fwhm_mm": 0.6,
+  "voxel_mm": 1.0,
+  "cnr_per_voxel": 2.0,
+  "blood": "dark",
+  "k_sd": 2,
+  "borders": "G",
+  "mae_pp": 21.8,
+  "kim_bin_accuracy": 0.2
+ },
+ {
+  "psf_fwhm_mm": 0.6,
+  "voxel_mm": 1.0,
+  "cnr_per_voxel": 2.0,
+  "blood": "dark",
+  "k_sd": 2,
+  "borders": "S",
+  "mae_pp": 23.4,
+  "kim_bin_accuracy": 0.2
+ },
+ {
+  "psf_fwhm_mm": 0.6,
+  "voxel_mm": 1.0,
+  "cnr_per_voxel": 2.0,
+  "blood": "dark",
+  "k_sd": 3,
+  "borders": "G",
+  "mae_pp": 34.2,
+  "kim_bin_accuracy": 0.4
+ },
+ {
+  "psf_fwhm_mm": 0.6,
+  "voxel_mm": 1.0,
+  "cnr_per_voxel": 2.0,
+  "blood": "dark",
+  "k_sd": 3,
+  "borders": "S",
+  "mae_pp": 35.4,
+  "kim_bin_accuracy": 0.375
+ },
+ {
+  "psf_fwhm_mm": 0.6,
+  "voxel_mm": 1.0,
+  "cnr_per_voxel": 2.0,
+  "blood": "dark",
+  "k_sd": 5,
+  "borders": "G",
+  "mae_pp": 40.1,
+  "kim_bin_accuracy": 0.2
+ },
+ {
+  "psf_fwhm_mm": 0.6,
+  "voxel_mm": 1.0,
+  "cnr_per_voxel": 2.0,
+  "blood": "dark",
+  "k_sd": 5,
+  "borders": "S",
+  "mae_pp": 40.0,
+  "kim_bin_accuracy": 0.2
+ },
+ {
+  "psf_fwhm_mm": 0.6,
+  "voxel_mm": 1.0,
+  "cnr_per_voxel": 3.0,
+  "blood": "bright",
+  "k_sd": 2,
+  "borders": "G",
+  "mae_pp": 7.4,
+  "kim_bin_accuracy": 0.575
+ },
+ {
+  "psf_fwhm_mm": 0.6,
+  "voxel_mm": 1.0,
+  "cnr_per_voxel": 3.0,
+  "blood": "bright",
+  "k_sd": 2,
+  "borders": "S",
+  "mae_pp": 28.3,
+  "kim_bin_accuracy": 0.2
+ },
+ {
+  "psf_fwhm_mm": 0.6,
+  "voxel_mm": 1.0,
+  "cnr_per_voxel": 3.0,
+  "blood": "bright",
+  "k_sd": 3,
+  "borders": "G",
+  "mae_pp": 20.8,
+  "kim_bin_accuracy": 0.375
+ },
+ {
+  "psf_fwhm_mm": 0.6,
+  "voxel_mm": 1.0,
+  "cnr_per_voxel": 3.0,
+  "blood": "bright",
+  "k_sd": 3,
+  "borders": "S",
+  "mae_pp": 32.5,
+  "kim_bin_accuracy": 0.25
+ },
+ {
+  "psf_fwhm_mm": 0.6,
+  "voxel_mm": 1.0,
+  "cnr_per_voxel": 3.0,
+  "blood": "bright",
+  "k_sd": 5,
+  "borders": "G",
+  "mae_pp": 39.1,
+  "kim_bin_accuracy": 0.225
+ },
+ {
+  "psf_fwhm_mm": 0.6,
+  "voxel_mm": 1.0,
+  "cnr_per_voxel": 3.0,
+  "blood": "bright",
+  "k_sd": 5,
+  "borders": "S",
+  "mae_pp": 38.5,
+  "kim_bin_accuracy": 0.2
+ },
+ {
+  "psf_fwhm_mm": 0.6,
+  "voxel_mm": 1.0,
+  "cnr_per_voxel": 3.0,
+  "blood": "dark",
+  "k_sd": 2,
+  "borders": "G",
+  "mae_pp": 7.3,
+  "kim_bin_accuracy": 0.6
+ },
+ {
+  "psf_fwhm_mm": 0.6,
+  "voxel_mm": 1.0,
+  "cnr_per_voxel": 3.0,
+  "blood": "dark",
+  "k_sd": 2,
+  "borders": "S",
+  "mae_pp": 10.8,
+  "kim_bin_accuracy": 0.4
+ },
+ {
+  "psf_fwhm_mm": 0.6,
+  "voxel_mm": 1.0,
+  "cnr_per_voxel": 3.0,
+  "blood": "dark",
+  "k_sd": 3,
+  "borders": "G",
+  "mae_pp": 20.7,
+  "kim_bin_accuracy": 0.4
+ },
+ {
+  "psf_fwhm_mm": 0.6,
+  "voxel_mm": 1.0,
+  "cnr_per_voxel": 3.0,
+  "blood": "dark",
+  "k_sd": 3,
+  "borders": "S",
+  "mae_pp": 24.1,
+  "kim_bin_accuracy": 0.275
+ },
+ {
+  "psf_fwhm_mm": 0.6,
+  "voxel_mm": 1.0,
+  "cnr_per_voxel": 3.0,
+  "blood": "dark",
+  "k_sd": 5,
+  "borders": "G",
+  "mae_pp": 39.1,
+  "kim_bin_accuracy": 0.2
+ },
+ {
+  "psf_fwhm_mm": 0.6,
+  "voxel_mm": 1.0,
+  "cnr_per_voxel": 3.0,
+  "blood": "dark",
+  "k_sd": 5,
+  "borders": "S",
+  "mae_pp": 39.4,
+  "kim_bin_accuracy": 0.2
+ },
+ {
+  "psf_fwhm_mm": 0.6,
+  "voxel_mm": 1.0,
+  "cnr_per_voxel": 5.0,
+  "blood": "bright",
+  "k_sd": 2,
+  "borders": "G",
+  "mae_pp": 3.6,
+  "kim_bin_accuracy": 0.8
+ },
+ {
+  "psf_fwhm_mm": 0.6,
+  "voxel_mm": 1.0,
+  "cnr_per_voxel": 5.0,
+  "blood": "bright",
+  "k_sd": 2,
+  "borders": "S",
+  "mae_pp": 36.5,
+  "kim_bin_accuracy": 0.2
+ },
+ {
+  "psf_fwhm_mm": 0.6,
+  "voxel_mm": 1.0,
+  "cnr_per_voxel": 5.0,
+  "blood": "bright",
+  "k_sd": 3,
+  "borders": "G",
+  "mae_pp": 2.7,
+  "kim_bin_accuracy": 0.925
+ },
+ {
+  "psf_fwhm_mm": 0.6,
+  "voxel_mm": 1.0,
+  "cnr_per_voxel": 5.0,
+  "blood": "bright",
+  "k_sd": 3,
+  "borders": "S",
+  "mae_pp": 39.8,
+  "kim_bin_accuracy": 0.2
+ },
+ {
+  "psf_fwhm_mm": 0.6,
+  "voxel_mm": 1.0,
+  "cnr_per_voxel": 5.0,
+  "blood": "bright",
+  "k_sd": 5,
+  "borders": "G",
+  "mae_pp": 21.6,
+  "kim_bin_accuracy": 0.4
+ },
+ {
+  "psf_fwhm_mm": 0.6,
+  "voxel_mm": 1.0,
+  "cnr_per_voxel": 5.0,
+  "blood": "bright",
+  "k_sd": 5,
+  "borders": "S",
+  "mae_pp": 39.8,
+  "kim_bin_accuracy": 0.2
+ },
+ {
+  "psf_fwhm_mm": 0.6,
+  "voxel_mm": 1.0,
+  "cnr_per_voxel": 5.0,
+  "blood": "dark",
+  "k_sd": 2,
+  "borders": "G",
+  "mae_pp": 3.4,
+  "kim_bin_accuracy": 0.8
+ },
+ {
+  "psf_fwhm_mm": 0.6,
+  "voxel_mm": 1.0,
+  "cnr_per_voxel": 5.0,
+  "blood": "dark",
+  "k_sd": 2,
+  "borders": "S",
+  "mae_pp": 4.1,
+  "kim_bin_accuracy": 0.8
+ },
+ {
+  "psf_fwhm_mm": 0.6,
+  "voxel_mm": 1.0,
+  "cnr_per_voxel": 5.0,
+  "blood": "dark",
+  "k_sd": 3,
+  "borders": "G",
+  "mae_pp": 2.5,
+  "kim_bin_accuracy": 0.975
+ },
+ {
+  "psf_fwhm_mm": 0.6,
+  "voxel_mm": 1.0,
+  "cnr_per_voxel": 5.0,
+  "blood": "dark",
+  "k_sd": 3,
+  "borders": "S",
+  "mae_pp": 5.0,
+  "kim_bin_accuracy": 0.75
+ },
+ {
+  "psf_fwhm_mm": 0.6,
+  "voxel_mm": 1.0,
+  "cnr_per_voxel": 5.0,
+  "blood": "dark",
+  "k_sd": 5,
+  "borders": "G",
+  "mae_pp": 23.0,
+  "kim_bin_accuracy": 0.4
+ },
+ {
+  "psf_fwhm_mm": 0.6,
+  "voxel_mm": 1.0,
+  "cnr_per_voxel": 5.0,
+  "blood": "dark",
+  "k_sd": 5,
+  "borders": "S",
+  "mae_pp": 25.9,
+  "kim_bin_accuracy": 0.4
+ },
+ {
+  "psf_fwhm_mm": 0.6,
+  "voxel_mm": 1.5,
+  "cnr_per_voxel": 1.5,
+  "blood": "bright",
+  "k_sd": 2,
+  "borders": "G",
+  "mae_pp": 27.3,
+  "kim_bin_accuracy": 0.2
+ },
+ {
+  "psf_fwhm_mm": 0.6,
+  "voxel_mm": 1.5,
+  "cnr_per_voxel": 1.5,
+  "blood": "bright",
+  "k_sd": 2,
+  "borders": "S",
+  "mae_pp": 25.2,
+  "kim_bin_accuracy": 0.2
+ },
+ {
+  "psf_fwhm_mm": 0.6,
+  "voxel_mm": 1.5,
+  "cnr_per_voxel": 1.5,
+  "blood": "bright",
+  "k_sd": 3,
+  "borders": "G",
+  "mae_pp": 37.4,
+  "kim_bin_accuracy": 0.375
+ },
+ {
+  "psf_fwhm_mm": 0.6,
+  "voxel_mm": 1.5,
+  "cnr_per_voxel": 1.5,
+  "blood": "bright",
+  "k_sd": 3,
+  "borders": "S",
+  "mae_pp": 36.0,
+  "kim_bin_accuracy": 0.225
+ },
+ {
+  "psf_fwhm_mm": 0.6,
+  "voxel_mm": 1.5,
+  "cnr_per_voxel": 1.5,
+  "blood": "bright",
+  "k_sd": 5,
+  "borders": "G",
+  "mae_pp": 40.0,
+  "kim_bin_accuracy": 0.2
+ },
+ {
+  "psf_fwhm_mm": 0.6,
+  "voxel_mm": 1.5,
+  "cnr_per_voxel": 1.5,
+  "blood": "bright",
+  "k_sd": 5,
+  "borders": "S",
+  "mae_pp": 40.0,
+  "kim_bin_accuracy": 0.2
+ },
+ {
+  "psf_fwhm_mm": 0.6,
+  "voxel_mm": 1.5,
+  "cnr_per_voxel": 1.5,
+  "blood": "dark",
+  "k_sd": 2,
+  "borders": "G",
+  "mae_pp": 28.3,
+  "kim_bin_accuracy": 0.2
+ },
+ {
+  "psf_fwhm_mm": 0.6,
+  "voxel_mm": 1.5,
+  "cnr_per_voxel": 1.5,
+  "blood": "dark",
+  "k_sd": 2,
+  "borders": "S",
+  "mae_pp": 29.3,
+  "kim_bin_accuracy": 0.2
+ },
+ {
+  "psf_fwhm_mm": 0.6,
+  "voxel_mm": 1.5,
+  "cnr_per_voxel": 1.5,
+  "blood": "dark",
+  "k_sd": 3,
+  "borders": "G",
+  "mae_pp": 37.1,
+  "kim_bin_accuracy": 0.35
+ },
+ {
+  "psf_fwhm_mm": 0.6,
+  "voxel_mm": 1.5,
+  "cnr_per_voxel": 1.5,
+  "blood": "dark",
+  "k_sd": 3,
+  "borders": "S",
+  "mae_pp": 38.0,
+  "kim_bin_accuracy": 0.35
+ },
+ {
+  "psf_fwhm_mm": 0.6,
+  "voxel_mm": 1.5,
+  "cnr_per_voxel": 1.5,
+  "blood": "dark",
+  "k_sd": 5,
+  "borders": "G",
+  "mae_pp": 40.0,
+  "kim_bin_accuracy": 0.2
+ },
+ {
+  "psf_fwhm_mm": 0.6,
+  "voxel_mm": 1.5,
+  "cnr_per_voxel": 1.5,
+  "blood": "dark",
+  "k_sd": 5,
+  "borders": "S",
+  "mae_pp": 40.1,
+  "kim_bin_accuracy": 0.2
+ },
+ {
+  "psf_fwhm_mm": 0.6,
+  "voxel_mm": 1.5,
+  "cnr_per_voxel": 2.0,
+  "blood": "bright",
+  "k_sd": 2,
+  "borders": "G",
+  "mae_pp": 20.4,
+  "kim_bin_accuracy": 0.2
+ },
+ {
+  "psf_fwhm_mm": 0.6,
+  "voxel_mm": 1.5,
+  "cnr_per_voxel": 2.0,
+  "blood": "bright",
+  "k_sd": 2,
+  "borders": "S",
+  "mae_pp": 25.0,
+  "kim_bin_accuracy": 0.2
+ },
+ {
+  "psf_fwhm_mm": 0.6,
+  "voxel_mm": 1.5,
+  "cnr_per_voxel": 2.0,
+  "blood": "bright",
+  "k_sd": 3,
+  "borders": "G",
+  "mae_pp": 34.0,
+  "kim_bin_accuracy": 0.4
+ },
+ {
+  "psf_fwhm_mm": 0.6,
+  "voxel_mm": 1.5,
+  "cnr_per_voxel": 2.0,
+  "blood": "bright",
+  "k_sd": 3,
+  "borders": "S",
+  "mae_pp": 30.9,
+  "kim_bin_accuracy": 0.2
+ },
+ {
+  "psf_fwhm_mm": 0.6,
+  "voxel_mm": 1.5,
+  "cnr_per_voxel": 2.0,
+  "blood": "bright",
+  "k_sd": 5,
+  "borders": "G",
+  "mae_pp": 39.9,
+  "kim_bin_accuracy": 0.2
+ },
+ {
+  "psf_fwhm_mm": 0.6,
+  "voxel_mm": 1.5,
+  "cnr_per_voxel": 2.0,
+  "blood": "bright",
+  "k_sd": 5,
+  "borders": "S",
+  "mae_pp": 39.9,
+  "kim_bin_accuracy": 0.2
+ },
+ {
+  "psf_fwhm_mm": 0.6,
+  "voxel_mm": 1.5,
+  "cnr_per_voxel": 2.0,
+  "blood": "dark",
+  "k_sd": 2,
+  "borders": "G",
+  "mae_pp": 22.0,
+  "kim_bin_accuracy": 0.2
+ },
+ {
+  "psf_fwhm_mm": 0.6,
+  "voxel_mm": 1.5,
+  "cnr_per_voxel": 2.0,
+  "blood": "dark",
+  "k_sd": 2,
+  "borders": "S",
+  "mae_pp": 22.2,
+  "kim_bin_accuracy": 0.2
+ },
+ {
+  "psf_fwhm_mm": 0.6,
+  "voxel_mm": 1.5,
+  "cnr_per_voxel": 2.0,
+  "blood": "dark",
+  "k_sd": 3,
+  "borders": "G",
+  "mae_pp": 35.2,
+  "kim_bin_accuracy": 0.4
+ },
+ {
+  "psf_fwhm_mm": 0.6,
+  "voxel_mm": 1.5,
+  "cnr_per_voxel": 2.0,
+  "blood": "dark",
+  "k_sd": 3,
+  "borders": "S",
+  "mae_pp": 34.7,
+  "kim_bin_accuracy": 0.35
+ },
+ {
+  "psf_fwhm_mm": 0.6,
+  "voxel_mm": 1.5,
+  "cnr_per_voxel": 2.0,
+  "blood": "dark",
+  "k_sd": 5,
+  "borders": "G",
+  "mae_pp": 40.0,
+  "kim_bin_accuracy": 0.2
+ },
+ {
+  "psf_fwhm_mm": 0.6,
+  "voxel_mm": 1.5,
+  "cnr_per_voxel": 2.0,
+  "blood": "dark",
+  "k_sd": 5,
+  "borders": "S",
+  "mae_pp": 40.0,
+  "kim_bin_accuracy": 0.2
+ },
+ {
+  "psf_fwhm_mm": 0.6,
+  "voxel_mm": 1.5,
+  "cnr_per_voxel": 3.0,
+  "blood": "bright",
+  "k_sd": 2,
+  "borders": "G",
+  "mae_pp": 7.8,
+  "kim_bin_accuracy": 0.6
+ },
+ {
+  "psf_fwhm_mm": 0.6,
+  "voxel_mm": 1.5,
+  "cnr_per_voxel": 3.0,
+  "blood": "bright",
+  "k_sd": 2,
+  "borders": "S",
+  "mae_pp": 30.6,
+  "kim_bin_accuracy": 0.2
+ },
+ {
+  "psf_fwhm_mm": 0.6,
+  "voxel_mm": 1.5,
+  "cnr_per_voxel": 3.0,
+  "blood": "bright",
+  "k_sd": 3,
+  "borders": "G",
+  "mae_pp": 21.9,
+  "kim_bin_accuracy": 0.375
+ },
+ {
+  "psf_fwhm_mm": 0.6,
+  "voxel_mm": 1.5,
+  "cnr_per_voxel": 3.0,
+  "blood": "bright",
+  "k_sd": 3,
+  "borders": "S",
+  "mae_pp": 33.1,
+  "kim_bin_accuracy": 0.225
+ },
+ {
+  "psf_fwhm_mm": 0.6,
+  "voxel_mm": 1.5,
+  "cnr_per_voxel": 3.0,
+  "blood": "bright",
+  "k_sd": 5,
+  "borders": "G",
+  "mae_pp": 39.4,
+  "kim_bin_accuracy": 0.25
+ },
+ {
+  "psf_fwhm_mm": 0.6,
+  "voxel_mm": 1.5,
+  "cnr_per_voxel": 3.0,
+  "blood": "bright",
+  "k_sd": 5,
+  "borders": "S",
+  "mae_pp": 38.3,
+  "kim_bin_accuracy": 0.225
+ },
+ {
+  "psf_fwhm_mm": 0.6,
+  "voxel_mm": 1.5,
+  "cnr_per_voxel": 3.0,
+  "blood": "dark",
+  "k_sd": 2,
+  "borders": "G",
+  "mae_pp": 7.8,
+  "kim_bin_accuracy": 0.6
+ },
+ {
+  "psf_fwhm_mm": 0.6,
+  "voxel_mm": 1.5,
+  "cnr_per_voxel": 3.0,
+  "blood": "dark",
+  "k_sd": 2,
+  "borders": "S",
+  "mae_pp": 10.8,
+  "kim_bin_accuracy": 0.375
+ },
+ {
+  "psf_fwhm_mm": 0.6,
+  "voxel_mm": 1.5,
+  "cnr_per_voxel": 3.0,
+  "blood": "dark",
+  "k_sd": 3,
+  "borders": "G",
+  "mae_pp": 23.0,
+  "kim_bin_accuracy": 0.375
+ },
+ {
+  "psf_fwhm_mm": 0.6,
+  "voxel_mm": 1.5,
+  "cnr_per_voxel": 3.0,
+  "blood": "dark",
+  "k_sd": 3,
+  "borders": "S",
+  "mae_pp": 26.1,
+  "kim_bin_accuracy": 0.325
+ },
+ {
+  "psf_fwhm_mm": 0.6,
+  "voxel_mm": 1.5,
+  "cnr_per_voxel": 3.0,
+  "blood": "dark",
+  "k_sd": 5,
+  "borders": "G",
+  "mae_pp": 39.2,
+  "kim_bin_accuracy": 0.2
+ },
+ {
+  "psf_fwhm_mm": 0.6,
+  "voxel_mm": 1.5,
+  "cnr_per_voxel": 3.0,
+  "blood": "dark",
+  "k_sd": 5,
+  "borders": "S",
+  "mae_pp": 39.2,
+  "kim_bin_accuracy": 0.2
+ },
+ {
+  "psf_fwhm_mm": 0.6,
+  "voxel_mm": 1.5,
+  "cnr_per_voxel": 5.0,
+  "blood": "bright",
+  "k_sd": 2,
+  "borders": "G",
+  "mae_pp": 3.8,
+  "kim_bin_accuracy": 0.8
+ },
+ {
+  "psf_fwhm_mm": 0.6,
+  "voxel_mm": 1.5,
+  "cnr_per_voxel": 5.0,
+  "blood": "bright",
+  "k_sd": 2,
+  "borders": "S",
+  "mae_pp": 34.6,
+  "kim_bin_accuracy": 0.2
+ },
+ {
+  "psf_fwhm_mm": 0.6,
+  "voxel_mm": 1.5,
+  "cnr_per_voxel": 5.0,
+  "blood": "bright",
+  "k_sd": 3,
+  "borders": "G",
+  "mae_pp": 3.4,
+  "kim_bin_accuracy": 1.0
+ },
+ {
+  "psf_fwhm_mm": 0.6,
+  "voxel_mm": 1.5,
+  "cnr_per_voxel": 5.0,
+  "blood": "bright",
+  "k_sd": 3,
+  "borders": "S",
+  "mae_pp": 39.8,
+  "kim_bin_accuracy": 0.2
+ },
+ {
+  "psf_fwhm_mm": 0.6,
+  "voxel_mm": 1.5,
+  "cnr_per_voxel": 5.0,
+  "blood": "bright",
+  "k_sd": 5,
+  "borders": "G",
+  "mae_pp": 22.8,
+  "kim_bin_accuracy": 0.4
+ },
+ {
+  "psf_fwhm_mm": 0.6,
+  "voxel_mm": 1.5,
+  "cnr_per_voxel": 5.0,
+  "blood": "bright",
+  "k_sd": 5,
+  "borders": "S",
+  "mae_pp": 39.9,
+  "kim_bin_accuracy": 0.2
+ },
+ {
+  "psf_fwhm_mm": 0.6,
+  "voxel_mm": 1.5,
+  "cnr_per_voxel": 5.0,
+  "blood": "dark",
+  "k_sd": 2,
+  "borders": "G",
+  "mae_pp": 3.0,
+  "kim_bin_accuracy": 0.8
+ },
+ {
+  "psf_fwhm_mm": 0.6,
+  "voxel_mm": 1.5,
+  "cnr_per_voxel": 5.0,
+  "blood": "dark",
+  "k_sd": 2,
+  "borders": "S",
+  "mae_pp": 5.2,
+  "kim_bin_accuracy": 0.8
+ },
+ {
+  "psf_fwhm_mm": 0.6,
+  "voxel_mm": 1.5,
+  "cnr_per_voxel": 5.0,
+  "blood": "dark",
+  "k_sd": 3,
+  "borders": "G",
+  "mae_pp": 2.9,
+  "kim_bin_accuracy": 0.925
+ },
+ {
+  "psf_fwhm_mm": 0.6,
+  "voxel_mm": 1.5,
+  "cnr_per_voxel": 5.0,
+  "blood": "dark",
+  "k_sd": 3,
+  "borders": "S",
+  "mae_pp": 6.2,
+  "kim_bin_accuracy": 0.725
+ },
+ {
+  "psf_fwhm_mm": 0.6,
+  "voxel_mm": 1.5,
+  "cnr_per_voxel": 5.0,
+  "blood": "dark",
+  "k_sd": 5,
+  "borders": "G",
+  "mae_pp": 23.4,
+  "kim_bin_accuracy": 0.375
+ },
+ {
+  "psf_fwhm_mm": 0.6,
+  "voxel_mm": 1.5,
+  "cnr_per_voxel": 5.0,
+  "blood": "dark",
+  "k_sd": 5,
+  "borders": "S",
+  "mae_pp": 28.1,
+  "kim_bin_accuracy": 0.35
+ },
+ {
+  "psf_fwhm_mm": 1.0,
+  "voxel_mm": 0.5,
+  "cnr_per_voxel": 1.5,
+  "blood": "bright",
+  "k_sd": 2,
+  "borders": "G",
+  "mae_pp": 28.1,
+  "kim_bin_accuracy": 0.2
+ },
+ {
+  "psf_fwhm_mm": 1.0,
+  "voxel_mm": 0.5,
+  "cnr_per_voxel": 1.5,
+  "blood": "bright",
+  "k_sd": 2,
+  "borders": "S",
+  "mae_pp": 25.8,
+  "kim_bin_accuracy": 0.2
+ },
+ {
+  "psf_fwhm_mm": 1.0,
+  "voxel_mm": 0.5,
+  "cnr_per_voxel": 1.5,
+  "blood": "bright",
+  "k_sd": 3,
+  "borders": "G",
+  "mae_pp": 37.6,
+  "kim_bin_accuracy": 0.4
+ },
+ {
+  "psf_fwhm_mm": 1.0,
+  "voxel_mm": 0.5,
+  "cnr_per_voxel": 1.5,
+  "blood": "bright",
+  "k_sd": 3,
+  "borders": "S",
+  "mae_pp": 37.4,
+  "kim_bin_accuracy": 0.2
+ },
+ {
+  "psf_fwhm_mm": 1.0,
+  "voxel_mm": 0.5,
+  "cnr_per_voxel": 1.5,
+  "blood": "bright",
+  "k_sd": 5,
+  "borders": "G",
+  "mae_pp": 40.0,
+  "kim_bin_accuracy": 0.2
+ },
+ {
+  "psf_fwhm_mm": 1.0,
+  "voxel_mm": 0.5,
+  "cnr_per_voxel": 1.5,
+  "blood": "bright",
+  "k_sd": 5,
+  "borders": "S",
+  "mae_pp": 40.0,
+  "kim_bin_accuracy": 0.2
+ },
+ {
+  "psf_fwhm_mm": 1.0,
+  "voxel_mm": 0.5,
+  "cnr_per_voxel": 1.5,
+  "blood": "dark",
+  "k_sd": 2,
+  "borders": "G",
+  "mae_pp": 28.9,
+  "kim_bin_accuracy": 0.2
+ },
+ {
+  "psf_fwhm_mm": 1.0,
+  "voxel_mm": 0.5,
+  "cnr_per_voxel": 1.5,
+  "blood": "dark",
+  "k_sd": 2,
+  "borders": "S",
+  "mae_pp": 30.3,
+  "kim_bin_accuracy": 0.2
+ },
+ {
+  "psf_fwhm_mm": 1.0,
+  "voxel_mm": 0.5,
+  "cnr_per_voxel": 1.5,
+  "blood": "dark",
+  "k_sd": 3,
+  "borders": "G",
+  "mae_pp": 37.4,
+  "kim_bin_accuracy": 0.375
+ },
+ {
+  "psf_fwhm_mm": 1.0,
+  "voxel_mm": 0.5,
+  "cnr_per_voxel": 1.5,
+  "blood": "dark",
+  "k_sd": 3,
+  "borders": "S",
+  "mae_pp": 37.8,
+  "kim_bin_accuracy": 0.4
+ },
+ {
+  "psf_fwhm_mm": 1.0,
+  "voxel_mm": 0.5,
+  "cnr_per_voxel": 1.5,
+  "blood": "dark",
+  "k_sd": 5,
+  "borders": "G",
+  "mae_pp": 39.9,
+  "kim_bin_accuracy": 0.2
+ },
+ {
+  "psf_fwhm_mm": 1.0,
+  "voxel_mm": 0.5,
+  "cnr_per_voxel": 1.5,
+  "blood": "dark",
+  "k_sd": 5,
+  "borders": "S",
+  "mae_pp": 40.0,
+  "kim_bin_accuracy": 0.2
+ },
+ {
+  "psf_fwhm_mm": 1.0,
+  "voxel_mm": 0.5,
+  "cnr_per_voxel": 2.0,
+  "blood": "bright",
+  "k_sd": 2,
+  "borders": "G",
+  "mae_pp": 20.9,
+  "kim_bin_accuracy": 0.2
+ },
+ {
+  "psf_fwhm_mm": 1.0,
+  "voxel_mm": 0.5,
+  "cnr_per_voxel": 2.0,
+  "blood": "bright",
+  "k_sd": 2,
+  "borders": "S",
+  "mae_pp": 22.7,
+  "kim_bin_accuracy": 0.2
+ },
+ {
+  "psf_fwhm_mm": 1.0,
+  "voxel_mm": 0.5,
+  "cnr_per_voxel": 2.0,
+  "blood": "bright",
+  "k_sd": 3,
+  "borders": "G",
+  "mae_pp": 34.8,
+  "kim_bin_accuracy": 0.4
+ },
+ {
+  "psf_fwhm_mm": 1.0,
+  "voxel_mm": 0.5,
+  "cnr_per_voxel": 2.0,
+  "blood": "bright",
+  "k_sd": 3,
+  "borders": "S",
+  "mae_pp": 32.2,
+  "kim_bin_accuracy": 0.2
+ },
+ {
+  "psf_fwhm_mm": 1.0,
+  "voxel_mm": 0.5,
+  "cnr_per_voxel": 2.0,
+  "blood": "bright",
+  "k_sd": 5,
+  "borders": "G",
+  "mae_pp": 40.0,
+  "kim_bin_accuracy": 0.2
+ },
+ {
+  "psf_fwhm_mm": 1.0,
+  "voxel_mm": 0.5,
+  "cnr_per_voxel": 2.0,
+  "blood": "bright",
+  "k_sd": 5,
+  "borders": "S",
+  "mae_pp": 39.9,
+  "kim_bin_accuracy": 0.2
+ },
+ {
+  "psf_fwhm_mm": 1.0,
+  "voxel_mm": 0.5,
+  "cnr_per_voxel": 2.0,
+  "blood": "dark",
+  "k_sd": 2,
+  "borders": "G",
+  "mae_pp": 21.0,
+  "kim_bin_accuracy": 0.2
+ },
+ {
+  "psf_fwhm_mm": 1.0,
+  "voxel_mm": 0.5,
+  "cnr_per_voxel": 2.0,
+  "blood": "dark",
+  "k_sd": 2,
+  "borders": "S",
+  "mae_pp": 24.4,
+  "kim_bin_accuracy": 0.2
+ },
+ {
+  "psf_fwhm_mm": 1.0,
+  "voxel_mm": 0.5,
+  "cnr_per_voxel": 2.0,
+  "blood": "dark",
+  "k_sd": 3,
+  "borders": "G",
+  "mae_pp": 34.3,
+  "kim_bin_accuracy": 0.4
+ },
+ {
+  "psf_fwhm_mm": 1.0,
+  "voxel_mm": 0.5,
+  "cnr_per_voxel": 2.0,
+  "blood": "dark",
+  "k_sd": 3,
+  "borders": "S",
+  "mae_pp": 35.3,
+  "kim_bin_accuracy": 0.4
+ },
+ {
+  "psf_fwhm_mm": 1.0,
+  "voxel_mm": 0.5,
+  "cnr_per_voxel": 2.0,
+  "blood": "dark",
+  "k_sd": 5,
+  "borders": "G",
+  "mae_pp": 39.9,
+  "kim_bin_accuracy": 0.2
+ },
+ {
+  "psf_fwhm_mm": 1.0,
+  "voxel_mm": 0.5,
+  "cnr_per_voxel": 2.0,
+  "blood": "dark",
+  "k_sd": 5,
+  "borders": "S",
+  "mae_pp": 39.9,
+  "kim_bin_accuracy": 0.2
+ },
+ {
+  "psf_fwhm_mm": 1.0,
+  "voxel_mm": 0.5,
+  "cnr_per_voxel": 3.0,
+  "blood": "bright",
+  "k_sd": 2,
+  "borders": "G",
+  "mae_pp": 7.1,
+  "kim_bin_accuracy": 0.675
+ },
+ {
+  "psf_fwhm_mm": 1.0,
+  "voxel_mm": 0.5,
+  "cnr_per_voxel": 3.0,
+  "blood": "bright",
+  "k_sd": 2,
+  "borders": "S",
+  "mae_pp": 23.5,
+  "kim_bin_accuracy": 0.2
+ },
+ {
+  "psf_fwhm_mm": 1.0,
+  "voxel_mm": 0.5,
+  "cnr_per_voxel": 3.0,
+  "blood": "bright",
+  "k_sd": 3,
+  "borders": "G",
+  "mae_pp": 20.4,
+  "kim_bin_accuracy": 0.325
+ },
+ {
+  "psf_fwhm_mm": 1.0,
+  "voxel_mm": 0.5,
+  "cnr_per_voxel": 3.0,
+  "blood": "bright",
+  "k_sd": 3,
+  "borders": "S",
+  "mae_pp": 30.4,
+  "kim_bin_accuracy": 0.2
+ },
+ {
+  "psf_fwhm_mm": 1.0,
+  "voxel_mm": 0.5,
+  "cnr_per_voxel": 3.0,
+  "blood": "bright",
+  "k_sd": 5,
+  "borders": "G",
+  "mae_pp": 39.2,
+  "kim_bin_accuracy": 0.2
+ },
+ {
+  "psf_fwhm_mm": 1.0,
+  "voxel_mm": 0.5,
+  "cnr_per_voxel": 3.0,
+  "blood": "bright",
+  "k_sd": 5,
+  "borders": "S",
+  "mae_pp": 38.8,
+  "kim_bin_accuracy": 0.25
+ },
+ {
+  "psf_fwhm_mm": 1.0,
+  "voxel_mm": 0.5,
+  "cnr_per_voxel": 3.0,
+  "blood": "dark",
+  "k_sd": 2,
+  "borders": "G",
+  "mae_pp": 8.0,
+  "kim_bin_accuracy": 0.425
+ },
+ {
+  "psf_fwhm_mm": 1.0,
+  "voxel_mm": 0.5,
+  "cnr_per_voxel": 3.0,
+  "blood": "dark",
+  "k_sd": 2,
+  "borders": "S",
+  "mae_pp": 11.2,
+  "kim_bin_accuracy": 0.4
+ },
+ {
+  "psf_fwhm_mm": 1.0,
+  "voxel_mm": 0.5,
+  "cnr_per_voxel": 3.0,
+  "blood": "dark",
+  "k_sd": 3,
+  "borders": "G",
+  "mae_pp": 22.3,
+  "kim_bin_accuracy": 0.4
+ },
+ {
+  "psf_fwhm_mm": 1.0,
+  "voxel_mm": 0.5,
+  "cnr_per_voxel": 3.0,
+  "blood": "dark",
+  "k_sd": 3,
+  "borders": "S",
+  "mae_pp": 25.2,
+  "kim_bin_accuracy": 0.35
+ },
+ {
+  "psf_fwhm_mm": 1.0,
+  "voxel_mm": 0.5,
+  "cnr_per_voxel": 3.0,
+  "blood": "dark",
+  "k_sd": 5,
+  "borders": "G",
+  "mae_pp": 39.3,
+  "kim_bin_accuracy": 0.2
+ },
+ {
+  "psf_fwhm_mm": 1.0,
+  "voxel_mm": 0.5,
+  "cnr_per_voxel": 3.0,
+  "blood": "dark",
+  "k_sd": 5,
+  "borders": "S",
+  "mae_pp": 39.4,
+  "kim_bin_accuracy": 0.2
+ },
+ {
+  "psf_fwhm_mm": 1.0,
+  "voxel_mm": 0.5,
+  "cnr_per_voxel": 5.0,
+  "blood": "bright",
+  "k_sd": 2,
+  "borders": "G",
+  "mae_pp": 2.5,
+  "kim_bin_accuracy": 0.8
+ },
+ {
+  "psf_fwhm_mm": 1.0,
+  "voxel_mm": 0.5,
+  "cnr_per_voxel": 5.0,
+  "blood": "bright",
+  "k_sd": 2,
+  "borders": "S",
+  "mae_pp": 36.0,
+  "kim_bin_accuracy": 0.2
+ },
+ {
+  "psf_fwhm_mm": 1.0,
+  "voxel_mm": 0.5,
+  "cnr_per_voxel": 5.0,
+  "blood": "bright",
+  "k_sd": 3,
+  "borders": "G",
+  "mae_pp": 2.2,
+  "kim_bin_accuracy": 0.85
+ },
+ {
+  "psf_fwhm_mm": 1.0,
+  "voxel_mm": 0.5,
+  "cnr_per_voxel": 5.0,
+  "blood": "bright",
+  "k_sd": 3,
+  "borders": "S",
+  "mae_pp": 39.6,
+  "kim_bin_accuracy": 0.2
+ },
+ {
+  "psf_fwhm_mm": 1.0,
+  "voxel_mm": 0.5,
+  "cnr_per_voxel": 5.0,
+  "blood": "bright",
+  "k_sd": 5,
+  "borders": "G",
+  "mae_pp": 23.2,
+  "kim_bin_accuracy": 0.4
+ },
+ {
+  "psf_fwhm_mm": 1.0,
+  "voxel_mm": 0.5,
+  "cnr_per_voxel": 5.0,
+  "blood": "bright",
+  "k_sd": 5,
+  "borders": "S",
+  "mae_pp": 39.9,
+  "kim_bin_accuracy": 0.2
+ },
+ {
+  "psf_fwhm_mm": 1.0,
+  "voxel_mm": 0.5,
+  "cnr_per_voxel": 5.0,
+  "blood": "dark",
+  "k_sd": 2,
+  "borders": "G",
+  "mae_pp": 2.0,
+  "kim_bin_accuracy": 0.8
+ },
+ {
+  "psf_fwhm_mm": 1.0,
+  "voxel_mm": 0.5,
+  "cnr_per_voxel": 5.0,
+  "blood": "dark",
+  "k_sd": 2,
+  "borders": "S",
+  "mae_pp": 4.6,
+  "kim_bin_accuracy": 0.8
+ },
+ {
+  "psf_fwhm_mm": 1.0,
+  "voxel_mm": 0.5,
+  "cnr_per_voxel": 5.0,
+  "blood": "dark",
+  "k_sd": 3,
+  "borders": "G",
+  "mae_pp": 3.0,
+  "kim_bin_accuracy": 1.0
+ },
+ {
+  "psf_fwhm_mm": 1.0,
+  "voxel_mm": 0.5,
+  "cnr_per_voxel": 5.0,
+  "blood": "dark",
+  "k_sd": 3,
+  "borders": "S",
+  "mae_pp": 5.4,
+  "kim_bin_accuracy": 0.775
+ },
+ {
+  "psf_fwhm_mm": 1.0,
+  "voxel_mm": 0.5,
+  "cnr_per_voxel": 5.0,
+  "blood": "dark",
+  "k_sd": 5,
+  "borders": "G",
+  "mae_pp": 24.1,
+  "kim_bin_accuracy": 0.4
+ },
+ {
+  "psf_fwhm_mm": 1.0,
+  "voxel_mm": 0.5,
+  "cnr_per_voxel": 5.0,
+  "blood": "dark",
+  "k_sd": 5,
+  "borders": "S",
+  "mae_pp": 26.7,
+  "kim_bin_accuracy": 0.4
+ },
+ {
+  "psf_fwhm_mm": 1.0,
+  "voxel_mm": 1.0,
+  "cnr_per_voxel": 1.5,
+  "blood": "bright",
+  "k_sd": 2,
+  "borders": "G",
+  "mae_pp": 28.2,
+  "kim_bin_accuracy": 0.2
+ },
+ {
+  "psf_fwhm_mm": 1.0,
+  "voxel_mm": 1.0,
+  "cnr_per_voxel": 1.5,
+  "blood": "bright",
+  "k_sd": 2,
+  "borders": "S",
+  "mae_pp": 25.9,
+  "kim_bin_accuracy": 0.2
+ },
+ {
+  "psf_fwhm_mm": 1.0,
+  "voxel_mm": 1.0,
+  "cnr_per_voxel": 1.5,
+  "blood": "bright",
+  "k_sd": 3,
+  "borders": "G",
+  "mae_pp": 37.2,
+  "kim_bin_accuracy": 0.4
+ },
+ {
+  "psf_fwhm_mm": 1.0,
+  "voxel_mm": 1.0,
+  "cnr_per_voxel": 1.5,
+  "blood": "bright",
+  "k_sd": 3,
+  "borders": "S",
+  "mae_pp": 36.8,
+  "kim_bin_accuracy": 0.2
+ },
+ {
+  "psf_fwhm_mm": 1.0,
+  "voxel_mm": 1.0,
+  "cnr_per_voxel": 1.5,
+  "blood": "bright",
+  "k_sd": 5,
+  "borders": "G",
+  "mae_pp": 40.0,
+  "kim_bin_accuracy": 0.2
+ },
+ {
+  "psf_fwhm_mm": 1.0,
+  "voxel_mm": 1.0,
+  "cnr_per_voxel": 1.5,
+  "blood": "bright",
+  "k_sd": 5,
+  "borders": "S",
+  "mae_pp": 39.9,
+  "kim_bin_accuracy": 0.2
+ },
+ {
+  "psf_fwhm_mm": 1.0,
+  "voxel_mm": 1.0,
+  "cnr_per_voxel": 1.5,
+  "blood": "dark",
+  "k_sd": 2,
+  "borders": "G",
+  "mae_pp": 27.5,
+  "kim_bin_accuracy": 0.2
+ },
+ {
+  "psf_fwhm_mm": 1.0,
+  "voxel_mm": 1.0,
+  "cnr_per_voxel": 1.5,
+  "blood": "dark",
+  "k_sd": 2,
+  "borders": "S",
+  "mae_pp": 30.0,
+  "kim_bin_accuracy": 0.2
+ },
+ {
+  "psf_fwhm_mm": 1.0,
+  "voxel_mm": 1.0,
+  "cnr_per_voxel": 1.5,
+  "blood": "dark",
+  "k_sd": 3,
+  "borders": "G",
+  "mae_pp": 37.8,
+  "kim_bin_accuracy": 0.3
+ },
+ {
+  "psf_fwhm_mm": 1.0,
+  "voxel_mm": 1.0,
+  "cnr_per_voxel": 1.5,
+  "blood": "dark",
+  "k_sd": 3,
+  "borders": "S",
+  "mae_pp": 38.3,
+  "kim_bin_accuracy": 0.3
+ },
+ {
+  "psf_fwhm_mm": 1.0,
+  "voxel_mm": 1.0,
+  "cnr_per_voxel": 1.5,
+  "blood": "dark",
+  "k_sd": 5,
+  "borders": "G",
+  "mae_pp": 40.0,
+  "kim_bin_accuracy": 0.2
+ },
+ {
+  "psf_fwhm_mm": 1.0,
+  "voxel_mm": 1.0,
+  "cnr_per_voxel": 1.5,
+  "blood": "dark",
+  "k_sd": 5,
+  "borders": "S",
+  "mae_pp": 40.0,
+  "kim_bin_accuracy": 0.2
+ },
+ {
+  "psf_fwhm_mm": 1.0,
+  "voxel_mm": 1.0,
+  "cnr_per_voxel": 2.0,
+  "blood": "bright",
+  "k_sd": 2,
+  "borders": "G",
+  "mae_pp": 20.4,
+  "kim_bin_accuracy": 0.2
+ },
+ {
+  "psf_fwhm_mm": 1.0,
+  "voxel_mm": 1.0,
+  "cnr_per_voxel": 2.0,
+  "blood": "bright",
+  "k_sd": 2,
+  "borders": "S",
+  "mae_pp": 25.2,
+  "kim_bin_accuracy": 0.2
+ },
+ {
+  "psf_fwhm_mm": 1.0,
+  "voxel_mm": 1.0,
+  "cnr_per_voxel": 2.0,
+  "blood": "bright",
+  "k_sd": 3,
+  "borders": "G",
+  "mae_pp": 34.2,
+  "kim_bin_accuracy": 0.375
+ },
+ {
+  "psf_fwhm_mm": 1.0,
+  "voxel_mm": 1.0,
+  "cnr_per_voxel": 2.0,
+  "blood": "bright",
+  "k_sd": 3,
+  "borders": "S",
+  "mae_pp": 31.8,
+  "kim_bin_accuracy": 0.2
+ },
+ {
+  "psf_fwhm_mm": 1.0,
+  "voxel_mm": 1.0,
+  "cnr_per_voxel": 2.0,
+  "blood": "bright",
+  "k_sd": 5,
+  "borders": "G",
+  "mae_pp": 39.9,
+  "kim_bin_accuracy": 0.2
+ },
+ {
+  "psf_fwhm_mm": 1.0,
+  "voxel_mm": 1.0,
+  "cnr_per_voxel": 2.0,
+  "blood": "bright",
+  "k_sd": 5,
+  "borders": "S",
+  "mae_pp": 39.9,
+  "kim_bin_accuracy": 0.2
+ },
+ {
+  "psf_fwhm_mm": 1.0,
+  "voxel_mm": 1.0,
+  "cnr_per_voxel": 2.0,
+  "blood": "dark",
+  "k_sd": 2,
+  "borders": "G",
+  "mae_pp": 22.2,
+  "kim_bin_accuracy": 0.2
+ },
+ {
+  "psf_fwhm_mm": 1.0,
+  "voxel_mm": 1.0,
+  "cnr_per_voxel": 2.0,
+  "blood": "dark",
+  "k_sd": 2,
+  "borders": "S",
+  "mae_pp": 23.0,
+  "kim_bin_accuracy": 0.2
+ },
+ {
+  "psf_fwhm_mm": 1.0,
+  "voxel_mm": 1.0,
+  "cnr_per_voxel": 2.0,
+  "blood": "dark",
+  "k_sd": 3,
+  "borders": "G",
+  "mae_pp": 34.7,
+  "kim_bin_accuracy": 0.4
+ },
+ {
+  "psf_fwhm_mm": 1.0,
+  "voxel_mm": 1.0,
+  "cnr_per_voxel": 2.0,
+  "blood": "dark",
+  "k_sd": 3,
+  "borders": "S",
+  "mae_pp": 35.6,
+  "kim_bin_accuracy": 0.4
+ },
+ {
+  "psf_fwhm_mm": 1.0,
+  "voxel_mm": 1.0,
+  "cnr_per_voxel": 2.0,
+  "blood": "dark",
+  "k_sd": 5,
+  "borders": "G",
+  "mae_pp": 39.9,
+  "kim_bin_accuracy": 0.2
+ },
+ {
+  "psf_fwhm_mm": 1.0,
+  "voxel_mm": 1.0,
+  "cnr_per_voxel": 2.0,
+  "blood": "dark",
+  "k_sd": 5,
+  "borders": "S",
+  "mae_pp": 39.9,
+  "kim_bin_accuracy": 0.2
+ },
+ {
+  "psf_fwhm_mm": 1.0,
+  "voxel_mm": 1.0,
+  "cnr_per_voxel": 3.0,
+  "blood": "bright",
+  "k_sd": 2,
+  "borders": "G",
+  "mae_pp": 6.5,
+  "kim_bin_accuracy": 0.65
+ },
+ {
+  "psf_fwhm_mm": 1.0,
+  "voxel_mm": 1.0,
+  "cnr_per_voxel": 3.0,
+  "blood": "bright",
+  "k_sd": 2,
+  "borders": "S",
+  "mae_pp": 29.7,
+  "kim_bin_accuracy": 0.2
+ },
+ {
+  "psf_fwhm_mm": 1.0,
+  "voxel_mm": 1.0,
+  "cnr_per_voxel": 3.0,
+  "blood": "bright",
+  "k_sd": 3,
+  "borders": "G",
+  "mae_pp": 21.2,
+  "kim_bin_accuracy": 0.375
+ },
+ {
+  "psf_fwhm_mm": 1.0,
+  "voxel_mm": 1.0,
+  "cnr_per_voxel": 3.0,
+  "blood": "bright",
+  "k_sd": 3,
+  "borders": "S",
+  "mae_pp": 33.0,
+  "kim_bin_accuracy": 0.275
+ },
+ {
+  "psf_fwhm_mm": 1.0,
+  "voxel_mm": 1.0,
+  "cnr_per_voxel": 3.0,
+  "blood": "bright",
+  "k_sd": 5,
+  "borders": "G",
+  "mae_pp": 39.0,
+  "kim_bin_accuracy": 0.225
+ },
+ {
+  "psf_fwhm_mm": 1.0,
+  "voxel_mm": 1.0,
+  "cnr_per_voxel": 3.0,
+  "blood": "bright",
+  "k_sd": 5,
+  "borders": "S",
+  "mae_pp": 39.0,
+  "kim_bin_accuracy": 0.2
+ },
+ {
+  "psf_fwhm_mm": 1.0,
+  "voxel_mm": 1.0,
+  "cnr_per_voxel": 3.0,
+  "blood": "dark",
+  "k_sd": 2,
+  "borders": "G",
+  "mae_pp": 8.0,
+  "kim_bin_accuracy": 0.45
+ },
+ {
+  "psf_fwhm_mm": 1.0,
+  "voxel_mm": 1.0,
+  "cnr_per_voxel": 3.0,
+  "blood": "dark",
+  "k_sd": 2,
+  "borders": "S",
+  "mae_pp": 10.8,
+  "kim_bin_accuracy": 0.4
+ },
+ {
+  "psf_fwhm_mm": 1.0,
+  "voxel_mm": 1.0,
+  "cnr_per_voxel": 3.0,
+  "blood": "dark",
+  "k_sd": 3,
+  "borders": "G",
+  "mae_pp": 24.6,
+  "kim_bin_accuracy": 0.4
+ },
+ {
+  "psf_fwhm_mm": 1.0,
+  "voxel_mm": 1.0,
+  "cnr_per_voxel": 3.0,
+  "blood": "dark",
+  "k_sd": 3,
+  "borders": "S",
+  "mae_pp": 25.0,
+  "kim_bin_accuracy": 0.325
+ },
+ {
+  "psf_fwhm_mm": 1.0,
+  "voxel_mm": 1.0,
+  "cnr_per_voxel": 3.0,
+  "blood": "dark",
+  "k_sd": 5,
+  "borders": "G",
+  "mae_pp": 39.4,
+  "kim_bin_accuracy": 0.2
+ },
+ {
+  "psf_fwhm_mm": 1.0,
+  "voxel_mm": 1.0,
+  "cnr_per_voxel": 3.0,
+  "blood": "dark",
+  "k_sd": 5,
+  "borders": "S",
+  "mae_pp": 39.3,
+  "kim_bin_accuracy": 0.2
+ },
+ {
+  "psf_fwhm_mm": 1.0,
+  "voxel_mm": 1.0,
+  "cnr_per_voxel": 5.0,
+  "blood": "bright",
+  "k_sd": 2,
+  "borders": "G",
+  "mae_pp": 3.7,
+  "kim_bin_accuracy": 0.8
+ },
+ {
+  "psf_fwhm_mm": 1.0,
+  "voxel_mm": 1.0,
+  "cnr_per_voxel": 5.0,
+  "blood": "bright",
+  "k_sd": 2,
+  "borders": "S",
+  "mae_pp": 34.9,
+  "kim_bin_accuracy": 0.2
+ },
+ {
+  "psf_fwhm_mm": 1.0,
+  "voxel_mm": 1.0,
+  "cnr_per_voxel": 5.0,
+  "blood": "bright",
+  "k_sd": 3,
+  "borders": "G",
+  "mae_pp": 2.8,
+  "kim_bin_accuracy": 0.925
+ },
+ {
+  "psf_fwhm_mm": 1.0,
+  "voxel_mm": 1.0,
+  "cnr_per_voxel": 5.0,
+  "blood": "bright",
+  "k_sd": 3,
+  "borders": "S",
+  "mae_pp": 39.8,
+  "kim_bin_accuracy": 0.2
+ },
+ {
+  "psf_fwhm_mm": 1.0,
+  "voxel_mm": 1.0,
+  "cnr_per_voxel": 5.0,
+  "blood": "bright",
+  "k_sd": 5,
+  "borders": "G",
+  "mae_pp": 23.3,
+  "kim_bin_accuracy": 0.4
+ },
+ {
+  "psf_fwhm_mm": 1.0,
+  "voxel_mm": 1.0,
+  "cnr_per_voxel": 5.0,
+  "blood": "bright",
+  "k_sd": 5,
+  "borders": "S",
+  "mae_pp": 39.8,
+  "kim_bin_accuracy": 0.2
+ },
+ {
+  "psf_fwhm_mm": 1.0,
+  "voxel_mm": 1.0,
+  "cnr_per_voxel": 5.0,
+  "blood": "dark",
+  "k_sd": 2,
+  "borders": "G",
+  "mae_pp": 2.8,
+  "kim_bin_accuracy": 0.8
+ },
+ {
+  "psf_fwhm_mm": 1.0,
+  "voxel_mm": 1.0,
+  "cnr_per_voxel": 5.0,
+  "blood": "dark",
+  "k_sd": 2,
+  "borders": "S",
+  "mae_pp": 4.7,
+  "kim_bin_accuracy": 0.8
+ },
+ {
+  "psf_fwhm_mm": 1.0,
+  "voxel_mm": 1.0,
+  "cnr_per_voxel": 5.0,
+  "blood": "dark",
+  "k_sd": 3,
+  "borders": "G",
+  "mae_pp": 3.1,
+  "kim_bin_accuracy": 0.975
+ },
+ {
+  "psf_fwhm_mm": 1.0,
+  "voxel_mm": 1.0,
+  "cnr_per_voxel": 5.0,
+  "blood": "dark",
+  "k_sd": 3,
+  "borders": "S",
+  "mae_pp": 5.0,
+  "kim_bin_accuracy": 0.75
+ },
+ {
+  "psf_fwhm_mm": 1.0,
+  "voxel_mm": 1.0,
+  "cnr_per_voxel": 5.0,
+  "blood": "dark",
+  "k_sd": 5,
+  "borders": "G",
+  "mae_pp": 26.7,
+  "kim_bin_accuracy": 0.4
+ },
+ {
+  "psf_fwhm_mm": 1.0,
+  "voxel_mm": 1.0,
+  "cnr_per_voxel": 5.0,
+  "blood": "dark",
+  "k_sd": 5,
+  "borders": "S",
+  "mae_pp": 26.7,
+  "kim_bin_accuracy": 0.4
+ },
+ {
+  "psf_fwhm_mm": 1.0,
+  "voxel_mm": 1.5,
+  "cnr_per_voxel": 1.5,
+  "blood": "bright",
+  "k_sd": 2,
+  "borders": "G",
+  "mae_pp": 28.3,
+  "kim_bin_accuracy": 0.2
+ },
+ {
+  "psf_fwhm_mm": 1.0,
+  "voxel_mm": 1.5,
+  "cnr_per_voxel": 1.5,
+  "blood": "bright",
+  "k_sd": 2,
+  "borders": "S",
+  "mae_pp": 26.4,
+  "kim_bin_accuracy": 0.2
+ },
+ {
+  "psf_fwhm_mm": 1.0,
+  "voxel_mm": 1.5,
+  "cnr_per_voxel": 1.5,
+  "blood": "bright",
+  "k_sd": 3,
+  "borders": "G",
+  "mae_pp": 37.4,
+  "kim_bin_accuracy": 0.35
+ },
+ {
+  "psf_fwhm_mm": 1.0,
+  "voxel_mm": 1.5,
+  "cnr_per_voxel": 1.5,
+  "blood": "bright",
+  "k_sd": 3,
+  "borders": "S",
+  "mae_pp": 36.2,
+  "kim_bin_accuracy": 0.2
+ },
+ {
+  "psf_fwhm_mm": 1.0,
+  "voxel_mm": 1.5,
+  "cnr_per_voxel": 1.5,
+  "blood": "bright",
+  "k_sd": 5,
+  "borders": "G",
+  "mae_pp": 40.0,
+  "kim_bin_accuracy": 0.2
+ },
+ {
+  "psf_fwhm_mm": 1.0,
+  "voxel_mm": 1.5,
+  "cnr_per_voxel": 1.5,
+  "blood": "bright",
+  "k_sd": 5,
+  "borders": "S",
+  "mae_pp": 39.9,
+  "kim_bin_accuracy": 0.2
+ },
+ {
+  "psf_fwhm_mm": 1.0,
+  "voxel_mm": 1.5,
+  "cnr_per_voxel": 1.5,
+  "blood": "dark",
+  "k_sd": 2,
+  "borders": "G",
+  "mae_pp": 28.7,
+  "kim_bin_accuracy": 0.2
+ },
+ {
+  "psf_fwhm_mm": 1.0,
+  "voxel_mm": 1.5,
+  "cnr_per_voxel": 1.5,
+  "blood": "dark",
+  "k_sd": 2,
+  "borders": "S",
+  "mae_pp": 30.1,
+  "kim_bin_accuracy": 0.2
+ },
+ {
+  "psf_fwhm_mm": 1.0,
+  "voxel_mm": 1.5,
+  "cnr_per_voxel": 1.5,
+  "blood": "dark",
+  "k_sd": 3,
+  "borders": "G",
+  "mae_pp": 37.5,
+  "kim_bin_accuracy": 0.325
+ },
+ {
+  "psf_fwhm_mm": 1.0,
+  "voxel_mm": 1.5,
+  "cnr_per_voxel": 1.5,
+  "blood": "dark",
+  "k_sd": 3,
+  "borders": "S",
+  "mae_pp": 38.2,
+  "kim_bin_accuracy": 0.3
+ },
+ {
+  "psf_fwhm_mm": 1.0,
+  "voxel_mm": 1.5,
+  "cnr_per_voxel": 1.5,
+  "blood": "dark",
+  "k_sd": 5,
+  "borders": "G",
+  "mae_pp": 40.0,
+  "kim_bin_accuracy": 0.2
+ },
+ {
+  "psf_fwhm_mm": 1.0,
+  "voxel_mm": 1.5,
+  "cnr_per_voxel": 1.5,
+  "blood": "dark",
+  "k_sd": 5,
+  "borders": "S",
+  "mae_pp": 40.0,
+  "kim_bin_accuracy": 0.2
+ },
+ {
+  "psf_fwhm_mm": 1.0,
+  "voxel_mm": 1.5,
+  "cnr_per_voxel": 2.0,
+  "blood": "bright",
+  "k_sd": 2,
+  "borders": "G",
+  "mae_pp": 19.9,
+  "kim_bin_accuracy": 0.2
+ },
+ {
+  "psf_fwhm_mm": 1.0,
+  "voxel_mm": 1.5,
+  "cnr_per_voxel": 2.0,
+  "blood": "bright",
+  "k_sd": 2,
+  "borders": "S",
+  "mae_pp": 25.7,
+  "kim_bin_accuracy": 0.2
+ },
+ {
+  "psf_fwhm_mm": 1.0,
+  "voxel_mm": 1.5,
+  "cnr_per_voxel": 2.0,
+  "blood": "bright",
+  "k_sd": 3,
+  "borders": "G",
+  "mae_pp": 35.0,
+  "kim_bin_accuracy": 0.375
+ },
+ {
+  "psf_fwhm_mm": 1.0,
+  "voxel_mm": 1.5,
+  "cnr_per_voxel": 2.0,
+  "blood": "bright",
+  "k_sd": 3,
+  "borders": "S",
+  "mae_pp": 31.3,
+  "kim_bin_accuracy": 0.2
+ },
+ {
+  "psf_fwhm_mm": 1.0,
+  "voxel_mm": 1.5,
+  "cnr_per_voxel": 2.0,
+  "blood": "bright",
+  "k_sd": 5,
+  "borders": "G",
+  "mae_pp": 40.0,
+  "kim_bin_accuracy": 0.2
+ },
+ {
+  "psf_fwhm_mm": 1.0,
+  "voxel_mm": 1.5,
+  "cnr_per_voxel": 2.0,
+  "blood": "bright",
+  "k_sd": 5,
+  "borders": "S",
+  "mae_pp": 39.9,
+  "kim_bin_accuracy": 0.2
+ },
+ {
+  "psf_fwhm_mm": 1.0,
+  "voxel_mm": 1.5,
+  "cnr_per_voxel": 2.0,
+  "blood": "dark",
+  "k_sd": 2,
+  "borders": "G",
+  "mae_pp": 22.0,
+  "kim_bin_accuracy": 0.2
+ },
+ {
+  "psf_fwhm_mm": 1.0,
+  "voxel_mm": 1.5,
+  "cnr_per_voxel": 2.0,
+  "blood": "dark",
+  "k_sd": 2,
+  "borders": "S",
+  "mae_pp": 23.0,
+  "kim_bin_accuracy": 0.2
+ },
+ {
+  "psf_fwhm_mm": 1.0,
+  "voxel_mm": 1.5,
+  "cnr_per_voxel": 2.0,
+  "blood": "dark",
+  "k_sd": 3,
+  "borders": "G",
+  "mae_pp": 34.7,
+  "kim_bin_accuracy": 0.4
+ },
+ {
+  "psf_fwhm_mm": 1.0,
+  "voxel_mm": 1.5,
+  "cnr_per_voxel": 2.0,
+  "blood": "dark",
+  "k_sd": 3,
+  "borders": "S",
+  "mae_pp": 34.6,
+  "kim_bin_accuracy": 0.375
+ },
+ {
+  "psf_fwhm_mm": 1.0,
+  "voxel_mm": 1.5,
+  "cnr_per_voxel": 2.0,
+  "blood": "dark",
+  "k_sd": 5,
+  "borders": "G",
+  "mae_pp": 39.8,
+  "kim_bin_accuracy": 0.2
+ },
+ {
+  "psf_fwhm_mm": 1.0,
+  "voxel_mm": 1.5,
+  "cnr_per_voxel": 2.0,
+  "blood": "dark",
+  "k_sd": 5,
+  "borders": "S",
+  "mae_pp": 39.9,
+  "kim_bin_accuracy": 0.2
+ },
+ {
+  "psf_fwhm_mm": 1.0,
+  "voxel_mm": 1.5,
+  "cnr_per_voxel": 3.0,
+  "blood": "bright",
+  "k_sd": 2,
+  "borders": "G",
+  "mae_pp": 9.5,
+  "kim_bin_accuracy": 0.425
+ },
+ {
+  "psf_fwhm_mm": 1.0,
+  "voxel_mm": 1.5,
+  "cnr_per_voxel": 3.0,
+  "blood": "bright",
+  "k_sd": 2,
+  "borders": "S",
+  "mae_pp": 32.0,
+  "kim_bin_accuracy": 0.2
+ },
+ {
+  "psf_fwhm_mm": 1.0,
+  "voxel_mm": 1.5,
+  "cnr_per_voxel": 3.0,
+  "blood": "bright",
+  "k_sd": 3,
+  "borders": "G",
+  "mae_pp": 21.1,
+  "kim_bin_accuracy": 0.4
+ },
+ {
+  "psf_fwhm_mm": 1.0,
+  "voxel_mm": 1.5,
+  "cnr_per_voxel": 3.0,
+  "blood": "bright",
+  "k_sd": 3,
+  "borders": "S",
+  "mae_pp": 34.3,
+  "kim_bin_accuracy": 0.25
+ },
+ {
+  "psf_fwhm_mm": 1.0,
+  "voxel_mm": 1.5,
+  "cnr_per_voxel": 3.0,
+  "blood": "bright",
+  "k_sd": 5,
+  "borders": "G",
+  "mae_pp": 39.5,
+  "kim_bin_accuracy": 0.2
+ },
+ {
+  "psf_fwhm_mm": 1.0,
+  "voxel_mm": 1.5,
+  "cnr_per_voxel": 3.0,
+  "blood": "bright",
+  "k_sd": 5,
+  "borders": "S",
+  "mae_pp": 37.7,
+  "kim_bin_accuracy": 0.275
+ },
+ {
+  "psf_fwhm_mm": 1.0,
+  "voxel_mm": 1.5,
+  "cnr_per_voxel": 3.0,
+  "blood": "dark",
+  "k_sd": 2,
+  "borders": "G",
+  "mae_pp": 8.5,
+  "kim_bin_accuracy": 0.525
+ },
+ {
+  "psf_fwhm_mm": 1.0,
+  "voxel_mm": 1.5,
+  "cnr_per_voxel": 3.0,
+  "blood": "dark",
+  "k_sd": 2,
+  "borders": "S",
+  "mae_pp": 9.5,
+  "kim_bin_accuracy": 0.45
+ },
+ {
+  "psf_fwhm_mm": 1.0,
+  "voxel_mm": 1.5,
+  "cnr_per_voxel": 3.0,
+  "blood": "dark",
+  "k_sd": 3,
+  "borders": "G",
+  "mae_pp": 24.5,
+  "kim_bin_accuracy": 0.4
+ },
+ {
+  "psf_fwhm_mm": 1.0,
+  "voxel_mm": 1.5,
+  "cnr_per_voxel": 3.0,
+  "blood": "dark",
+  "k_sd": 3,
+  "borders": "S",
+  "mae_pp": 22.8,
+  "kim_bin_accuracy": 0.2
+ },
+ {
+  "psf_fwhm_mm": 1.0,
+  "voxel_mm": 1.5,
+  "cnr_per_voxel": 3.0,
+  "blood": "dark",
+  "k_sd": 5,
+  "borders": "G",
+  "mae_pp": 39.4,
+  "kim_bin_accuracy": 0.2
+ },
+ {
+  "psf_fwhm_mm": 1.0,
+  "voxel_mm": 1.5,
+  "cnr_per_voxel": 3.0,
+  "blood": "dark",
+  "k_sd": 5,
+  "borders": "S",
+  "mae_pp": 39.3,
+  "kim_bin_accuracy": 0.2
+ },
+ {
+  "psf_fwhm_mm": 1.0,
+  "voxel_mm": 1.5,
+  "cnr_per_voxel": 5.0,
+  "blood": "bright",
+  "k_sd": 2,
+  "borders": "G",
+  "mae_pp": 4.7,
+  "kim_bin_accuracy": 0.8
+ },
+ {
+  "psf_fwhm_mm": 1.0,
+  "voxel_mm": 1.5,
+  "cnr_per_voxel": 5.0,
+  "blood": "bright",
+  "k_sd": 2,
+  "borders": "S",
+  "mae_pp": 33.8,
+  "kim_bin_accuracy": 0.2
+ },
+ {
+  "psf_fwhm_mm": 1.0,
+  "voxel_mm": 1.5,
+  "cnr_per_voxel": 5.0,
+  "blood": "bright",
+  "k_sd": 3,
+  "borders": "G",
+  "mae_pp": 3.5,
+  "kim_bin_accuracy": 0.9
+ },
+ {
+  "psf_fwhm_mm": 1.0,
+  "voxel_mm": 1.5,
+  "cnr_per_voxel": 5.0,
+  "blood": "bright",
+  "k_sd": 3,
+  "borders": "S",
+  "mae_pp": 39.7,
+  "kim_bin_accuracy": 0.2
+ },
+ {
+  "psf_fwhm_mm": 1.0,
+  "voxel_mm": 1.5,
+  "cnr_per_voxel": 5.0,
+  "blood": "bright",
+  "k_sd": 5,
+  "borders": "G",
+  "mae_pp": 22.4,
+  "kim_bin_accuracy": 0.4
+ },
+ {
+  "psf_fwhm_mm": 1.0,
+  "voxel_mm": 1.5,
+  "cnr_per_voxel": 5.0,
+  "blood": "bright",
+  "k_sd": 5,
+  "borders": "S",
+  "mae_pp": 39.8,
+  "kim_bin_accuracy": 0.2
+ },
+ {
+  "psf_fwhm_mm": 1.0,
+  "voxel_mm": 1.5,
+  "cnr_per_voxel": 5.0,
+  "blood": "dark",
+  "k_sd": 2,
+  "borders": "G",
+  "mae_pp": 3.4,
+  "kim_bin_accuracy": 0.8
+ },
+ {
+  "psf_fwhm_mm": 1.0,
+  "voxel_mm": 1.5,
+  "cnr_per_voxel": 5.0,
+  "blood": "dark",
+  "k_sd": 2,
+  "borders": "S",
+  "mae_pp": 5.3,
+  "kim_bin_accuracy": 0.775
+ },
+ {
+  "psf_fwhm_mm": 1.0,
+  "voxel_mm": 1.5,
+  "cnr_per_voxel": 5.0,
+  "blood": "dark",
+  "k_sd": 3,
+  "borders": "G",
+  "mae_pp": 3.1,
+  "kim_bin_accuracy": 1.0
+ },
+ {
+  "psf_fwhm_mm": 1.0,
+  "voxel_mm": 1.5,
+  "cnr_per_voxel": 5.0,
+  "blood": "dark",
+  "k_sd": 3,
+  "borders": "S",
+  "mae_pp": 4.1,
+  "kim_bin_accuracy": 0.8
+ },
+ {
+  "psf_fwhm_mm": 1.0,
+  "voxel_mm": 1.5,
+  "cnr_per_voxel": 5.0,
+  "blood": "dark",
+  "k_sd": 5,
+  "borders": "G",
+  "mae_pp": 27.1,
+  "kim_bin_accuracy": 0.4
+ },
+ {
+  "psf_fwhm_mm": 1.0,
+  "voxel_mm": 1.5,
+  "cnr_per_voxel": 5.0,
+  "blood": "dark",
+  "k_sd": 5,
+  "borders": "S",
+  "mae_pp": 26.5,
+  "kim_bin_accuracy": 0.4
+ }
+]

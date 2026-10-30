@@ -151,8 +151,10 @@ class JanusMClient:
 
     def submit(self, read: protocol.ReadInfo, label_path: str,
                voxel_counts: Dict[str, int], seconds: float = 0.0,
-               note: str = "") -> protocol.ReadInfo:
-        """Upload the read's label volume and submit it for the automatic check."""
+               note: str = "", cadrads: Optional[Dict[str, str]] = None,
+               lesion_points: Optional[Dict[str, List[float]]] = None) -> protocol.ReadInfo:
+        """Upload the read's label volume and read form, and submit them for the
+        automatic check."""
         import json
 
         folder = self.project()["uploadFolderId"]
@@ -160,7 +162,9 @@ class JanusMClient:
         meta = protocol.ReadSubmission(
             checksum=sha256_file(label_path), size_bytes=os.path.getsize(label_path),
             voxel_counts={str(k): int(v) for k, v in voxel_counts.items()},
-            seconds=seconds, client_version=CLIENT_VERSION, note=note)
+            seconds=seconds, client_version=CLIENT_VERSION, note=note,
+            cadrads=dict(cadrads or {}),
+            lesion_points={k: [float(c) for c in v] for k, v in (lesion_points or {}).items()})
         data = self._json("POST", protocol.path(protocol.SUBMIT, read_id=read.read_id),
                           params={"fileId": file["_id"], "meta": json.dumps(meta.to_dict()),
                                   "clientProtocol": PROTOCOL_VERSION})

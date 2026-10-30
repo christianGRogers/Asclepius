@@ -108,14 +108,16 @@ def test_expected_scar_segments_and_the_270_rule():
     assert P.patients_for_segments(270, 0.7, 3.0) in (96, 97)
 
 
-def test_seal_size_takes_the_largest_requirement():
+def test_seal_size_from_curve_takes_the_largest_requirement():
     curve = {60: 0.5, 80: 0.81, 100: 0.79, 120: 0.85, 140: 0.9}
-    s = P.seal_size(curve, enrich=0.5, lam=3.0)
+    s = P.seal_size_from_curve(curve, enrich=0.5, lam=3.0)
     assert s["n_power"] == 120  # 80 does not stay above 0.80
     assert s["seal"] == max(120, s["n_segments_270"])
-    s = P.seal_size({60: 0.9, 80: 0.95}, enrich=0.7, lam=3.0)
+    s = P.seal_size_from_curve({60: 0.9, 80: 0.95}, enrich=0.7, lam=3.0)
     assert s["n_power"] == 60 and s["seal"] == 120
-    assert P.seal_size({60: 0.1, 80: 0.2}, enrich=0.5, lam=3.0)["seal"] is None
+    assert P.seal_size_from_curve({60: 0.1, 80: 0.2}, enrich=0.5, lam=3.0)["seal"] is None
+    capped = P.seal_size_from_curve({60: 0.1, 80: 0.2}, enrich=0.5, lam=3.0, cap=240)
+    assert capped["seal"] == 240 and capped["capped"] is True
 
 
 def test_power_from_ignores_reported_only_endpoints():

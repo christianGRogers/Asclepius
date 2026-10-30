@@ -14,10 +14,18 @@ Inputs, per patient (:class:`Patient`), one entry per AHA segment (index 0 is se
 
 Patients carry no identifier: the harness never needs one, so none can leak into its output.
 
-**Intention-to-diagnose (JA29).** A not-graded segment counts as wrong: a miss if LGE-positive, a
-false call (read as bin 1) if LGE-negative. It therefore never enters the scar-on-both set of the
-transmurality endpoint. The graded-only analysis drops not-graded segments instead, and is
-reported, never deciding.
+**Intention-to-diagnose (JA55, amending JA29).** How a not-graded segment counts is
+:data:`ITD_MODES`; the primary analysis is ``"split"`` (Juliet A1):
+
+* ``"split"``: an LGE-positive segment of a not-graded patient is a miss; its LGE-negative segments
+  leave the specificity denominator. A fourth deciding endpoint, **yield** (the not-graded patient
+  share), must have its patient-bootstrap upper 95 % bound <= 0.10 (:func:`yield_upper_bound`);
+* ``"worst"`` (JA29 as written): a miss if LGE-positive, a false call (read as bin 1) if negative;
+* ``"nocall"``: "not graded" reads as no scar: a miss if LGE-positive, correct if negative;
+* ``"graded"``: not-graded segments are dropped (and a patient with none left).
+
+The last three are reported beside the primary, never deciding. A not-graded segment never enters
+the scar-on-both set of the transmurality endpoint under any mode.
 
 **Primary analysis (JA32).** Seal patients outside every primary-excluding stratum (acute,
 non-ischaemic pattern, phase-unmatched; prior CABG stays in, JA27), and within them the LGE-negative
@@ -26,9 +34,17 @@ patients (the cluster), and each bar is judged on a lower bound, one look:
 
 * segment sensitivity for presence >= 0.75;
 * segment specificity >= 0.93;
-* transmurality agreement (exact Kim bin, segments scar on both) >= the development LGE inter-reader
-  agreement on the same statistic (:func:`reader_agreement`) - 0.10. If that anchor is < 0.60 the
-  endpoint is reported only and the decision rests on presence.
+* yield: not-graded patient share, upper bound <= 0.10 (JA55).
+
+**Two claims in a fixed order (JA56, amending JA32's joint pass)**, :func:`decide`:
+
+1. **presence** (sensitivity, specificity, yield): ``presence_validated``;
+2. **the Kim bin**, evaluated only if presence passes: transmurality agreement (exact Kim bin,
+   segments scar on both) >= the reader anchor - 0.10. The anchor is reader 1 against reader 2, the
+   same statistic, on the two *unadjudicated* reads of **every double-read patient** (development
+   and seal; :func:`reader_agreement`), computed before any seal CT value is unblinded. An anchor
+   < 0.60 gives ``kim_bin_validated = False``, and the endpoint is also reported against a fixed
+   0.50 bar.
 
 **Reported, never deciding:** linear- and quadratic-weighted kappa over all segments, patient-level
 sensitivity and specificity, Bland-Altman of scar share (when shares are given), per-territory and
@@ -42,7 +58,7 @@ the seal are scored by one implementation.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Dict, Iterable, List, Mapping, Optional, Sequence
+from typing import Dict, Iterable, List, Mapping, Optional, Sequence, Tuple
 
 import numpy as np
 
@@ -57,7 +73,13 @@ EXCLUDED_FROM_PRIMARY = frozenset({"acute", "non_ischaemic", "phase_unmatched"})
 SENS_BAR = 0.75
 SPEC_BAR = 0.93
 TBIN_MARGIN = 0.10
-MIN_ANCHOR = 0.60  # below this the transmurality endpoint is reported only
+MIN_ANCHOR = 0.60  # below this the Kim bin cannot be validated (JA56)
+FIXED_TBIN_BAR = 0.50  # reported beside an anchor < 0.60 (JA56)
+YIELD_BAR = 0.10  # upper 95 % bound of the not-graded patient share (JA55)
+
+#: JA55 accountings of a not-graded segment; the first is the primary analysis.
+ITD_MODES = ("split", "worst", "nocall", "graded")
+DEFAULT_ITD = "split"
 
 #: Standard AHA 17-segment coronary map (Cerqueira 2002, secondary sources only, JA14), 0-based.
 TERRITORIES: Dict[str, List[int]] = {
@@ -128,6 +150,60 @@ def intention_to_diagnose(ref: np.ndarray, ct: np.ndarray) -> np.ndarray:
     ref = np.asarray(ref)
     ct = np.asarray(ct)
     return np.where(ct == NOT_GRADED, np.where(ref > 0, 0, 1), ct)
+
+
+def resolve(
+    ref: np.ndarray, ct: np.ndarray, mask: Optional[np.ndarray] = None, mode: str = DEFAULT_ITD
+):
+    """Resolve not-graded segments by a JA55 accounting: returns ``(ct, mask, keep)``.
+
+    ``ct`` holds no NOT_GRADED after this; ``mask`` is the counted segments; ``keep`` the patients
+    that stay in this analysis's bootstrap (every patient with a counted segment before resolving,
+    except under ``"graded"``, which drops a patient with no graded segment left).
+    """
+    if mode not in ITD_MODES:
+        raise ValueError(f"itd_mode must be one of {ITD_MODES}, not {mode!r}")
+    ref = np.atleast_2d(np.asarray(ref, int))
+    ct = np.atleast_2d(np.asarray(ct, int))
+    m = np.ones(ref.shape, bool) if mask is None else np.atleast_2d(np.asarray(mask, bool))
+    keep = m.any(1)
+    ng = ct == NOT_GRADED
+    if mode == "worst":
+        return intention_to_diagnose(ref, ct), m, keep
+    ct0 = np.where(ng, 0, ct)  # an LGE-positive not-graded segment is a miss in every other mode
+    if mode == "nocall":
+        return ct0, m, keep
+    if mode == "split":
+        return ct0, m & ~(ng & (ref == 0)), keep
+    m = m & ~ng  # graded
+    return ct0, m, keep & m.any(1)
+
+
+def yield_upper_bound(
+    not_graded: np.ndarray,
+    n_boot: int = 2000,
+    rng: Optional[np.random.Generator] = None,
+    weights: Optional[np.ndarray] = None,
+    alpha: float = 0.05,
+) -> Dict[str, float]:
+    """The JA55 yield endpoint: not-graded patient share, point and patient-bootstrap upper bound.
+
+    ``not_graded`` is one bool per patient. ``weights`` (n_boot, n) reuses the replicates of the
+    accuracy bootstrap; otherwise they are drawn from ``rng``. The upper bound is the
+    ``1 - alpha / 2`` percentile, the same two-sided 95 % interval as every other endpoint.
+    """
+    x = np.asarray(not_graded, float).ravel()
+    n = x.size
+    if n == 0:
+        return {"point": float("nan"), "upper": float("nan"), "patients_not_graded": 0}
+    if weights is None:
+        weights = bootstrap_weights(n, n_boot, rng if rng is not None else np.random.default_rng())
+    boot = weights @ x / n
+    return {
+        "point": float(x.mean()),
+        "upper": float(np.percentile(boot, 100 - 50 * alpha)),
+        "patients_not_graded": int(x.sum()),
+    }
 
 
 def patient_stats(ref: np.ndarray, ct: np.ndarray, mask: Optional[np.ndarray] = None) -> np.ndarray:
@@ -211,15 +287,23 @@ def bootstrap_weights(n: int, n_boot: int, rng: np.random.Generator) -> np.ndarr
 
 
 def cluster_bootstrap(
-    stats: np.ndarray, n_boot: int, rng: np.random.Generator, alpha: float = 0.05
+    stats: np.ndarray,
+    n_boot: int,
+    rng: np.random.Generator,
+    alpha: float = 0.05,
+    weights: Optional[np.ndarray] = None,
 ) -> Dict[str, Dict[str, float]]:
-    """Point estimate and percentile CI of every endpoint, resampling patients (rows of stats)."""
+    """Point estimate and percentile CI of every endpoint, resampling patients (rows of stats).
+
+    ``weights`` (n_boot, n) supplies the replicates (e.g. shared with :func:`yield_upper_bound`).
+    """
     nan = float("nan")
     n = stats.shape[0]
     if n == 0:
         return {k: {"point": nan, "lower": nan, "upper": nan} for k in ENDPOINTS}
     point = endpoints(stats.sum(0))
-    boot = endpoints(bootstrap_weights(n, n_boot, rng) @ stats)
+    w = bootstrap_weights(n, n_boot, rng) if weights is None else weights
+    boot = endpoints(w @ stats)
     out = {}
     for k in ENDPOINTS:
         b = boot[k][~np.isnan(boot[k])]
@@ -233,37 +317,83 @@ def cluster_bootstrap(
 
 
 def reader_agreement(read1: np.ndarray, read2: np.ndarray) -> Dict[str, float]:
-    """The development anchor: exact Kim-bin agreement of two LGE readers, segments both call scar.
+    """The JA56 anchor: exact Kim-bin agreement of two LGE readers, segments both call scar.
 
-    It is the same statistic as the transmurality endpoint (``tbin``), so the bar compares like
-    with like (JA32). Arrays are (N, S) or (S,) Kim bins.
+    Pass the two *unadjudicated* reads of every double-read patient (development and seal). It is
+    the same statistic as the Kim-bin endpoint (``tbin``), so the bar compares like with like.
+    Arrays are (N, S) or (S,) Kim bins; no CT value enters it.
     """
     a = np.asarray(read1, int).ravel()
     b = np.asarray(read2, int).ravel()
+    if a.shape != b.shape:
+        raise ValueError("the two reads must cover the same patients and segments")
     both = (a > 0) & (b > 0)
     n = int(both.sum())
     agreement = float((a[both] == b[both]).mean()) if n else float("nan")
     return {"agreement": agreement, "segments": n}
 
 
+def _anchor_ok(anchor: Optional[float]) -> bool:
+    return anchor is not None and not np.isnan(anchor) and anchor >= MIN_ANCHOR
+
+
 def bars(anchor: Optional[float]) -> Dict[str, Optional[float]]:
-    """JA32 lower-bound bars; ``tbin`` is None (reported only) if the anchor is absent or < 0.60."""
-    deciding = anchor is not None and not np.isnan(anchor) and anchor >= MIN_ANCHOR
-    tbin = (anchor - TBIN_MARGIN) if deciding else None
+    """Lower-bound bars; ``tbin`` is None (cannot be validated) if the anchor is absent or < 0.60.
+
+    Yield is an upper-bound bar (:data:`YIELD_BAR`) and is applied separately.
+    """
+    tbin = (anchor - TBIN_MARGIN) if _anchor_ok(anchor) else None
     return {"sens": SENS_BAR, "spec": SPEC_BAR, "tbin": tbin}
 
 
+def _clears(lower: float, bar: float) -> bool:
+    return bool(lower is not None and not np.isnan(lower) and lower >= bar)
+
+
 def decide(
-    ci: Mapping[str, Mapping[str, float]], bar: Mapping[str, Optional[float]]
+    ci: Mapping[str, Mapping[str, float]],
+    anchor: Optional[float],
+    yield_upper: float,
 ) -> Dict[str, object]:
-    """Pass or fail per deciding endpoint, and overall (all deciding endpoints pass)."""
-    per = {}
-    for k, b in bar.items():
-        if b is None:
-            continue
-        lo = ci[k]["lower"]
-        per[k] = bool(not np.isnan(lo) and lo >= b)
-    return {"per_endpoint": per, "passed": bool(per) and all(per.values())}
+    """The JA56 decision: two claims in a fixed order.
+
+    ``ci`` holds the primary analysis's ``sens``, ``spec`` and ``tbin`` (each with ``lower``);
+    ``anchor`` the all-double-read reader agreement; ``yield_upper`` the not-graded share's upper
+    bound (:func:`yield_upper_bound`).
+
+    * ``presence_validated``: sensitivity and specificity lower bounds clear 0.75 / 0.93, and the
+      yield upper bound is <= 0.10;
+    * ``kim_bin_validated``: evaluated only when presence passes; the tbin lower bound clears
+      anchor - 0.10. An anchor < 0.60 (or none) gives False, and the 0.50-bar result is reported.
+    """
+    y_ok = bool(yield_upper is not None and not np.isnan(yield_upper) and yield_upper <= YIELD_BAR)
+    presence = {
+        "sens": _clears(ci["sens"]["lower"], SENS_BAR),
+        "spec": _clears(ci["spec"]["lower"], SPEC_BAR),
+        "yield": y_ok,
+    }
+    presence_ok = all(presence.values())
+    lo = ci["tbin"]["lower"]
+    anchor_ok = _anchor_ok(anchor)
+    bar = (anchor - TBIN_MARGIN) if anchor_ok else None
+    kim = {
+        "evaluated": presence_ok,
+        "anchor": anchor,
+        "anchor_deciding": anchor_ok,
+        "bar_lower95": bar,
+        "lower": lo,
+        "passed_anchor_bar": _clears(lo, bar) if anchor_ok else None,
+        # JA56: below a 0.60 anchor the endpoint is also reported against a fixed 0.50 bar
+        "fixed_bar_lower95": None if anchor_ok else FIXED_TBIN_BAR,
+        "passed_fixed_bar": None if anchor_ok else _clears(lo, FIXED_TBIN_BAR),
+    }
+    kim_ok = bool(presence_ok and anchor_ok and kim["passed_anchor_bar"])
+    return {
+        "presence": {"per_endpoint": presence, "yield_upper": yield_upper},
+        "presence_validated": presence_ok,
+        "kim_bin": kim,
+        "kim_bin_validated": kim_ok,
+    }
 
 
 # -------------------------------------------------------------------------------------------------
@@ -281,15 +411,12 @@ def _stack(patients: Sequence[Patient]):
     return ref, ct, isch
 
 
-def _analysis(ref, ct, mask, n_boot, rng, graded_only=False):
-    if graded_only:
-        mask = mask & (ct != NOT_GRADED)
-        ct = np.where(ct == NOT_GRADED, 0, ct)
-    else:
-        ct = intention_to_diagnose(ref, ct)
-    keep = mask.any(1)  # a patient with no counted segment is not in this analysis's bootstrap
+def _analysis(ref, ct, mask, n_boot, rng, mode=DEFAULT_ITD, weights=None):
+    ct, mask, keep = resolve(ref, ct, mask, mode)
+    # a patient with no counted segment is not in this analysis's bootstrap
     st = patient_stats(ref[keep], ct[keep], mask[keep])
-    res = cluster_bootstrap(st, n_boot, rng)
+    w = weights[:, keep] if weights is not None else None
+    res = cluster_bootstrap(st, n_boot, rng, weights=w)
     tot = st.sum(0)
     res["counts"] = {
         "patients": int(len(st)),
@@ -323,39 +450,59 @@ def _bland_altman(patients: Sequence[Patient], keep: np.ndarray) -> Optional[Dic
 
 def score(
     patients: Sequence[Patient],
-    anchor: Optional[float],
+    anchor: Optional[float] = None,
     n_boot: int = 2000,
     seed: int = 20261030,
     territories: Optional[Mapping[str, Iterable[int]]] = None,
+    itd_mode: str = DEFAULT_ITD,
+    double_reads: Optional[Tuple[np.ndarray, np.ndarray]] = None,
 ) -> Dict[str, object]:
-    """Score a seal (or a development set) by JA32: the decision plus everything reported beside it.
+    """Score a seal (or a development set): the JA56 decision plus everything reported beside it.
 
-    ``anchor`` is the development LGE inter-reader agreement (:func:`reader_agreement`). The output
-    is plain JSON-ready data with counts and estimates only, never a per-patient row.
+    The anchor is either ``double_reads``, the two unadjudicated LGE reads (each (P, S)) of every
+    double-read patient, development and seal (JA56), from which :func:`reader_agreement` computes
+    it; or a precomputed ``anchor``. Not both. ``itd_mode`` is the primary accounting (JA55,
+    ``"split"``); the others are reported under ``accountings``. The output is plain JSON-ready
+    data with counts and estimates only, never a per-patient row.
     """
+    if double_reads is not None:
+        if anchor is not None:
+            raise ValueError("give the anchor or the double reads, not both")
+        anchor_info = {**reader_agreement(*double_reads), "source": "double reads, unadjudicated"}
+        anchor = anchor_info["agreement"]
+    else:
+        anchor_info = {"agreement": anchor, "segments": None, "source": "given"}
     rng = np.random.default_rng(seed)
     ref, ct, isch = _stack(patients)
     n, s = ref.shape
     excluded = np.array([bool(p.strata & EXCLUDED_FROM_PRIMARY) for p in patients], bool)
     seg_primary = (ref == 0) | isch  # LGE-negative, or LGE-positive with an ischaemic pattern
     primary_mask = seg_primary & ~excluded[:, None]
-
-    primary = _analysis(ref, ct, primary_mask, n_boot, rng)
-    bar = bars(anchor)
     graded = ct != NOT_GRADED
     keep = ~excluded
+
+    # one set of patient replicates for the primary accuracy endpoints and yield (JA55)
+    w = bootstrap_weights(n, n_boot, rng)
+    primary = _analysis(ref, ct, primary_mask, n_boot, rng, itd_mode, weights=w)
+    yld = yield_upper_bound((~graded).all(1)[keep], weights=w[:, keep])
+    bar = bars(anchor)
     report = {
         "rule": {
             "bars_lower95": bar,
-            "anchor": anchor,
+            "yield_bar_upper95": YIELD_BAR,
+            "anchor": anchor_info,
             "tbin_margin": TBIN_MARGIN,
             "tbin_deciding": bar["tbin"] is not None,
+            "itd_mode": itd_mode,
             "n_boot": n_boot,
             "seed": seed,
         },
         "primary": primary,
-        "decision": decide(primary, bar),
-        "graded_only": _analysis(ref, ct, primary_mask, n_boot, rng, graded_only=True),
+        "yield": yld,
+        "decision": decide(primary, anchor, yld["upper"]),
+        "accountings": {
+            m: _analysis(ref, ct, primary_mask, n_boot, rng, m) for m in ITD_MODES if m != itd_mode
+        },
         "not_graded": {
             "segment_rate": float((~graded[keep]).mean()) if keep.any() else float("nan"),
             "patients_not_graded": int((~graded).all(1)[keep].sum()),
@@ -371,12 +518,12 @@ def score(
         if inn.any():
             # a stratum is scored on all its segments, whatever the LGE pattern
             every = np.ones((int(inn.sum()), s), bool)
-            report["strata"][st] = _analysis(ref[inn], ct[inn], every, n_boot, rng)
+            report["strata"][st] = _analysis(ref[inn], ct[inn], every, n_boot, rng, itd_mode)
     for proto in sorted({p.protocol for p in patients}):
         inn = np.array([p.protocol == proto for p in patients], bool) & keep
         if inn.any():
             report["by_protocol"][proto] = _analysis(
-                ref[inn], ct[inn], primary_mask[inn], n_boot, rng
+                ref[inn], ct[inn], primary_mask[inn], n_boot, rng, itd_mode
             )
     terr = TERRITORIES if territories is None else territories
     cabg = np.array(["prior_cabg" in p.strata for p in patients], bool)  # scar yes, territory no
@@ -384,5 +531,7 @@ def score(
         segs = [i for i in segs if i < s]
         tm = np.zeros((n, s), bool)
         tm[np.ix_(~cabg, segs)] = True
-        report["by_territory"][name] = _analysis(ref, ct, primary_mask & tm, n_boot, rng)
+        report["by_territory"][name] = _analysis(
+            ref, ct, primary_mask & tm, n_boot, rng, itd_mode
+        )
     return report

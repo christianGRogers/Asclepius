@@ -1,0 +1,539 @@
+{
+ "n_cases": 14,
+ "rules": {
+  "G3": [
+   "G3",
+   "G3"
+  ],
+  "GF": [
+   "GF",
+   "GF"
+  ],
+  "G5": [
+   "G5",
+   "G5"
+  ],
+  "hybrid_GFpresence_G3extent": [
+   "GF",
+   "G3"
+  ]
+ },
+ "by_method": {
+  "oracle": {
+   "G3": {
+    "sens": [
+     0.971,
+     0.933,
+     1.0
+    ],
+    "spec": [
+     0.819,
+     0.714,
+     0.909
+    ],
+    "transmurality_agreement": [
+     0.776,
+     0.696,
+     0.843
+    ],
+    "transmurality_error_mean_sd": [
+     0.029,
+     0.105
+    ]
+   },
+   "GF": {
+    "sens": [
+     0.821,
+     0.789,
+     0.856
+    ],
+    "spec": [
+     1.0,
+     1.0,
+     1.0
+    ],
+    "transmurality_agreement": [
+     0.612,
+     0.537,
+     0.68
+    ],
+    "transmurality_error_mean_sd": [
+     -0.094,
+     0.071
+    ]
+   },
+   "G5": {
+    "sens": [
+     0.816,
+     0.707,
+     0.907
+    ],
+    "spec": [
+     0.98,
+     0.962,
+     0.996
+    ],
+    "transmurality_agreement": [
+     0.615,
+     0.422,
+     0.775
+    ],
+    "transmurality_error_mean_sd": [
+     -0.091,
+     0.147
+    ]
+   },
+   "hybrid_GFpresence_G3extent": {
+    "sens": [
+     0.821,
+     0.787,
+     0.856
+    ],
+    "spec": [
+     1.0,
+     1.0,
+     1.0
+    ],
+    "transmurality_agreement": [
+     0.776,
+     0.682,
+     0.851
+    ],
+    "transmurality_error_mean_sd": [
+     0.023,
+     0.111
+    ]
+   }
+  },
+  "R0_none": {
+   "G3": {
+    "sens": [
+     0.517,
+     0.343,
+     0.695
+    ],
+    "spec": [
+     0.773,
+     0.648,
+     0.881
+    ],
+    "transmurality_agreement": [
+     0.327,
+     0.224,
+     0.402
+    ],
+    "transmurality_error_mean_sd": [
+     -0.09,
+     0.286
+    ]
+   },
+   "GF": {
+    "sens": [
+     0.903,
+     0.866,
+     0.938
+    ],
+    "spec": [
+     0.608,
+     0.5,
+     0.717
+    ],
+    "transmurality_agreement": [
+     0.374,
+     0.319,
+     0.435
+    ],
+    "transmurality_error_mean_sd": [
+     -0.029,
+     0.331
+    ]
+   },
+   "G5": {
+    "sens": [
+     0.333,
+     0.181,
+     0.505
+    ],
+    "spec": [
+     0.937,
+     0.899,
+     0.97
+    ],
+    "transmurality_agreement": [
+     0.333,
+     0.163,
+     0.5
+    ],
+    "transmurality_error_mean_sd": [
+     -0.222,
+     0.227
+    ]
+   },
+   "hybrid_GFpresence_G3extent": {
+    "sens": [
+     0.903,
+     0.868,
+     0.942
+    ],
+    "spec": [
+     0.608,
+     0.498,
+     0.714
+    ],
+    "transmurality_agreement": [
+     0.283,
+     0.223,
+     0.34
+    ],
+    "transmurality_error_mean_sd": [
+     -0.266,
+     0.345
+    ]
+   }
+  },
+  "R1_rigid": {
+   "G3": {
+    "sens": [
+     0.957,
+     0.919,
+     0.986
+    ],
+    "spec": [
+     0.824,
+     0.745,
+     0.898
+    ],
+    "transmurality_agreement": [
+     0.732,
+     0.663,
+     0.787
+    ],
+    "transmurality_error_mean_sd": [
+     0.007,
+     0.118
+    ]
+   },
+   "GF": {
+    "sens": [
+     0.826,
+     0.784,
+     0.871
+    ],
+    "spec": [
+     0.985,
+     0.971,
+     0.996
+    ],
+    "transmurality_agreement": [
+     0.55,
+     0.482,
+     0.62
+    ],
+    "transmurality_error_mean_sd": [
+     -0.105,
+     0.088
+    ]
+   },
+   "G5": {
+    "sens": [
+     0.768,
+     0.657,
+     0.868
+    ],
+    "spec": [
+     0.972,
+     0.95,
+     0.991
+    ],
+    "transmurality_agreement": [
+     0.478,
+     0.308,
+     0.628
+    ],
+    "transmurality_error_mean_sd": [
+     -0.129,
+     0.158
+    ]
+   },
+   "hybrid_GFpresence_G3extent": {
+    "sens": [
+     0.826,
+     0.783,
+     0.871
+    ],
+    "spec": [
+     0.985,
+     0.972,
+     0.996
+    ],
+    "transmurality_agreement": [
+     0.696,
+     0.621,
+     0.761
+    ],
+    "transmurality_error_mean_sd": [
+     0.0,
+     0.124
+    ]
+   }
+  },
+  "R2_affine": {
+   "G3": {
+    "sens": [
+     0.942,
+     0.898,
+     0.985
+    ],
+    "spec": [
+     0.83,
+     0.747,
+     0.909
+    ],
+    "transmurality_agreement": [
+     0.713,
+     0.633,
+     0.784
+    ],
+    "transmurality_error_mean_sd": [
+     -0.009,
+     0.126
+    ]
+   },
+   "GF": {
+    "sens": [
+     0.826,
+     0.783,
+     0.873
+    ],
+    "spec": [
+     0.985,
+     0.969,
+     0.996
+    ],
+    "transmurality_agreement": [
+     0.55,
+     0.476,
+     0.632
+    ],
+    "transmurality_error_mean_sd": [
+     -0.109,
+     0.088
+    ]
+   },
+   "G5": {
+    "sens": [
+     0.734,
+     0.608,
+     0.844
+    ],
+    "spec": [
+     0.972,
+     0.95,
+     0.991
+    ],
+    "transmurality_agreement": [
+     0.461,
+     0.306,
+     0.606
+    ],
+    "transmurality_error_mean_sd": [
+     -0.151,
+     0.186
+    ]
+   },
+   "hybrid_GFpresence_G3extent": {
+    "sens": [
+     0.826,
+     0.784,
+     0.871
+    ],
+    "spec": [
+     0.985,
+     0.971,
+     0.996
+    ],
+    "transmurality_agreement": [
+     0.684,
+     0.602,
+     0.756
+    ],
+    "transmurality_error_mean_sd": [
+     -0.017,
+     0.132
+    ]
+   }
+  },
+  "R3_rigid_heartmask": {
+   "G3": {
+    "sens": [
+     0.952,
+     0.912,
+     0.986
+    ],
+    "spec": [
+     0.791,
+     0.685,
+     0.889
+    ],
+    "transmurality_agreement": [
+     0.706,
+     0.621,
+     0.769
+    ],
+    "transmurality_error_mean_sd": [
+     0.006,
+     0.123
+    ]
+   },
+   "GF": {
+    "sens": [
+     0.816,
+     0.778,
+     0.86
+    ],
+    "spec": [
+     0.983,
+     0.967,
+     0.996
+    ],
+    "transmurality_agreement": [
+     0.533,
+     0.46,
+     0.603
+    ],
+    "transmurality_error_mean_sd": [
+     -0.107,
+     0.088
+    ]
+   },
+   "G5": {
+    "sens": [
+     0.768,
+     0.667,
+     0.872
+    ],
+    "spec": [
+     0.961,
+     0.926,
+     0.987
+    ],
+    "transmurality_agreement": [
+     0.491,
+     0.312,
+     0.648
+    ],
+    "transmurality_error_mean_sd": [
+     -0.136,
+     0.182
+    ]
+   },
+   "hybrid_GFpresence_G3extent": {
+    "sens": [
+     0.816,
+     0.776,
+     0.859
+    ],
+    "spec": [
+     0.983,
+     0.965,
+     0.996
+    ],
+    "transmurality_agreement": [
+     0.68,
+     0.593,
+     0.759
+    ],
+    "transmurality_error_mean_sd": [
+     -0.0,
+     0.129
+    ]
+   }
+  },
+  "R4_heartmask_bspline": {
+   "G3": {
+    "sens": [
+     0.947,
+     0.909,
+     0.98
+    ],
+    "spec": [
+     0.795,
+     0.672,
+     0.904
+    ],
+    "transmurality_agreement": [
+     0.699,
+     0.617,
+     0.774
+    ],
+    "transmurality_error_mean_sd": [
+     -0.007,
+     0.122
+    ]
+   },
+   "GF": {
+    "sens": [
+     0.826,
+     0.793,
+     0.865
+    ],
+    "spec": [
+     0.987,
+     0.974,
+     0.998
+    ],
+    "transmurality_agreement": [
+     0.52,
+     0.448,
+     0.59
+    ],
+    "transmurality_error_mean_sd": [
+     -0.114,
+     0.088
+    ]
+   },
+   "G5": {
+    "sens": [
+     0.754,
+     0.62,
+     0.871
+    ],
+    "spec": [
+     0.961,
+     0.922,
+     0.989
+    ],
+    "transmurality_agreement": [
+     0.474,
+     0.292,
+     0.643
+    ],
+    "transmurality_error_mean_sd": [
+     -0.138,
+     0.158
+    ]
+   },
+   "hybrid_GFpresence_G3extent": {
+    "sens": [
+     0.826,
+     0.794,
+     0.862
+    ],
+    "spec": [
+     0.987,
+     0.974,
+     0.998
+    ],
+    "transmurality_agreement": [
+     0.667,
+     0.577,
+     0.744
+    ],
+    "transmurality_error_mean_sd": [
+     -0.013,
+     0.126
+    ]
+   }
+  }
+ }
+}

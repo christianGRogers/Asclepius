@@ -66,8 +66,8 @@ All of #220's check runs are green.
   includes the whole epicardium, so it empties the epicardial band.
   - **Scoped to the cut cap, it passes JA61's check with margin.** A cap face is a solid face on label 0
     that faces the same way as the nearest open pool face.
-  - **The numbers:** E6-open worst falls from **0.068** to **CAPWORST_E6** mm, and the cut capsule from
-    **0.0504** to **CAPWORST_CAPS** mm. Closed shells and the label-4 phantom are unchanged.
+  - **The numbers:** E6-open worst falls from **0.068** to **0.015** mm, and the cut capsule from
+    **0.0504** to **0.024** mm. Closed shells and the label-4 phantom are unchanged.
   - **Proposed as an amendment (§3.5).** It would return the guard to 0.3 mm at the freeze PR, still subject
     to the transfer check on real reads.
 - **Item 3: of the eleven judgement calls, nine are accepted, one is accepted with a fix and one is rejected**
@@ -338,7 +338,7 @@ The remedy as worded: "also exclude ≤ 3 mm of any pool or myocardium face that
 - **What `b1` measures (the `literal` band):**
   - on E6-open, the capsule and both E4 shells, no usable epicardial band remains. The few voxels left hold no
     surface, so the truth and the estimate are undefined;
-  - on the label-4 phantom, it removes LITERAL_L4 of the epicardial band, though that phantom has no open cap
+  - on the label-4 phantom, it removes 82 % of the epicardial band (303 392 → 55 156 voxels), though that phantom has no open cap
     at all.
 - **The remedy needs a qualifier:** which solid faces on label 0 are the cut cap?
 
@@ -364,15 +364,52 @@ conditions:
 
 ### 3.4 Results (the same phantoms the shipped tests use; JA61's pass is |error| ≤ 0.05 mm on every row)
 
-ITEM2_TABLE
+| Phantom set | Rows | Shipped band (JA61) | Remedy as worded | Cap-scoped remedy |
+|---|---|---|---|---|
+| E6-open, endocardium ±0.3 / ±0.5 | 12 / 12 | 0.0086 / 0.0150 | 0.0086 / 0.0150 | 0.0086 / 0.0150 |
+| E6-open, epicardium ±0.3 / ±0.5 | 12 / 12 | 0.0422 / **0.0678** | no usable band | 0.0103 / 0.0146 |
+| **E6-open, verdict** | 48 | **FAIL** (0.0678) | **cannot be scored** | **PASS** (0.0150) |
+| Cut capsule, endocardium ±0.3 / ±0.5 | 36 / 36 | 0.0238 / 0.0196 | 0.0238 / 0.0196 | 0.0238 / 0.0196 |
+| Cut capsule, epicardium ±0.3 / ±0.5 | 36 / 36 | 0.0404 / **0.0504** | no usable band | 0.0192 / 0.0116 |
+| **Cut capsule, verdict** (3 offsets, as the validator's default) | 144 | **FAIL** (0.0504) | **cannot be scored** | **PASS** (0.0238) |
+| E4 closed shells r 12 / r 21, both borders | 8 / 8 | 0.0038 / 0.0019 | epicardium empty | 0.0038 / 0.0019 (identical) |
+| Label-4 phantom (`harness.phantom`), band voxels | endo / epi | 149 660 / 303 392 | 149 660 / **55 156** | identical to shipped (bit for bit) |
+
+All cells give the worst |error| in mm. The shipped column reproduces #219's numbers exactly (0.068 and 0.0504).
+- **Remedy as worded:** a few voxels survive, 1–4 % of the shipped epicardial band, but none of them lies on the
+  surface, so neither the truth nor the estimate is defined.
+- **Cap-scoped remedy, what it costs:**
+  - it keeps 83–85 % of the shipped epicardial band on the upright walls, and 59–74 % on the 23° oblique and
+    rough walls;
+  - it keeps ≥ 98 % of the endocardial band;
+  - I did not isolate which extra faces the oblique and rough walls lose. Accuracy is unaffected (every row
+    passes), but SW5-B1 should report the kept share.
 
 **Sensitivity (`b2`).** The scoped remedy's two free parameters were varied: reach 12 / 20 / 30 mm and angle
 30 / 45 / 60°. The table gives the worst |error| on E6-open (0.5 mm grid, three walls) and the capsule (0.5 mm
 grid, three walls), and the smallest share of the shipped epicardial band each setting keeps:
 
-SENS_TABLE
+| Reach (mm) | Angle | E6-open worst | Capsule worst | Epicardial band kept (min) |
+|---|---|---|---|---|
+| 12 | 30° | 0.0430 | 0.0238 | 0.897 |
+| 12 | 45° | 0.0145 | 0.0238 | 0.785 |
+| 12 | 60° | 0.0142 | 0.0238 | 0.761 |
+| 20 | 30° | 0.0390 | 0.0238 | 0.845 |
+| **20** | **45°** | **0.0145** | **0.0238** | **0.622** |
+| 20 | 60° | 0.0142 | 0.0238 | 0.547 |
+| 30 | 30° | 0.0391 | 0.0238 | 0.843 |
+| 30 | 45° | 0.0152 | 0.0238 | 0.561 |
+| 30 | 60° | 0.0149 | 0.0238 | 0.399 |
 
-SENS_NOTE
+- **Every setting passes at 0.05 mm,** so the verdict does not depend on a tuned value.
+- **The angle matters more than the reach.** At 30°, part of the oblique cap escapes, and the E6 worst rises to
+  ≈ 0.04 mm, which is inside the tolerance but with little margin. At 45° and 60° it is ≈ 0.015 mm.
+- **A wider angle or reach gives up more band for no gain.**
+- **The proposed setting is 20 mm / 45°.**
+  - 45° is the smallest angle with full margin.
+  - 20 mm is the reach that covers a cap on any LV wall.
+  - 12 mm does as well here only because the phantom walls are ≤ 14 mm, and the outer edge of the cap matters
+    little.
 
 ### 3.5 Proposed amendment (for the Round 5 judge, from JA70)
 

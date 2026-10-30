@@ -138,14 +138,13 @@ def carry(geo, tx, shape):
             "phi": rs(geo["phi"], sitk.sitkNearestNeighbor, 0.0), "s": rs(geo["s"], sitk.sitkNearestNeighbor, 0.0)}
 
 
-def tre(tx, motion, truth_myo):
-    """Mean distance (mm) over the truth wall on the LIE grid between the estimated and the true LIE->FP map."""
+def tre(tx, pts):
+    """Mean distance (mm) between the estimated and the true LIE -> first-pass map, over (LIE point, true point)
+    pairs sampled on the truth wall (bench.make_case's `tre_pts`)."""
     A, c, t = matrix_of(tx)
-    x = np.argwhere(truth_myo).astype(float)
+    x, x0 = pts
     est = (x - c) @ A.T + c + t
-    m = motion
-    true = ((x - (m["c"] + m["t"])) @ m["R"]) / m["s"] + m["c"]    # R^T (x - c - t) / s + c, row-wise
-    return float(np.linalg.norm(est - true, axis=1).mean())
+    return float(np.linalg.norm(est - x0, axis=1).mean())
 
 
 def _remote(sm, core, seg):
@@ -176,13 +175,21 @@ def qc(sm, car, remote):
     return out
 
 
-def grade(lie, car):
-    """All menu values per segment 1-17 on one LIE image with carried geometry."""
+def grade(lie, car, fixed=None):
+    """All menu values per segment 1-17 on one LIE image with carried geometry.
+
+    fixed: the (remote, robust SD, P-K threshold) of another image. The scar-free twin is graded with the scarred
+    image's constants, so the twin differs from the scarred image only by the scar signal: a twin call is then a call
+    made by blood spill or noise, not by a re-fitted threshold (the spill share).
+    """
     sm = ndi.gaussian_filter(lie, SM)
     myo, seg = car["myo"], car["seg"]
     core = ndi.binary_erosion(myo)
-    med, rsd, bright = _remote(sm, core, seg)
-    thr_k = med + 0.5 * (np.percentile(sm[core & (seg == bright)], 99) - med)
+    if fixed is None:
+        med, rsd, bright = _remote(sm, core, seg)
+        thr_k = med + 0.5 * (np.percentile(sm[core & (seg == bright)], 99) - med)
+    else:
+        med, rsd, thr_k = fixed
     hi3 = (sm > med + 3 * rsd) & myo
     d_endo = ndi.distance_transform_edt(~car["cav"])
     g_call = ndi.binary_opening(hi3) & (d_endo >= 1.0)
@@ -197,7 +204,7 @@ def grade(lie, car):
     return {"pk_share": pk, "pg_share": pg,
             "ev": volume_share(hi3, myo, seg),
             "ed": depth_extent(hi3, myo, seg, car["u"], car["phi"], car["s"]),
-            "remote": med, "rsd": rsd, "qc": qc(sm, car, med)}
+            "remote": med, "rsd": rsd, "thr_k": float(thr_k), "qc": qc(sm, car, med)}
 
 
 def kim(x):

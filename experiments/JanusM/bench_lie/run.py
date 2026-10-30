@@ -2,6 +2,7 @@
 JA30 menu value on the scarred LIE and on its scar-free twin. Writes one JSON line per case (results.jsonl);
 score.py turns them into the tables.
 
+Images per case (same noise): the full LIE; its scar-free twin; and the LIE with blood set to remote.
 Arms per case:
   oracle  the truth geometry on the LIE grid (isolates the rule's own error);
   R0      scanner coordinates (identity);
@@ -76,9 +77,17 @@ def one_heart(args):
             ta = time.time()
             if car is None:
                 car = menu.carry(geo, tx, c["lie"].shape)
-            rec = {"scar": _pack(menu.grade(c["lie"], car)), "free": _pack(menu.grade(c["lie_free"], car))}
+            g = menu.grade(c["lie"], car)
+            fixed = (g["remote"], g["rsd"], g["thr_k"])
+            rec = {"scar": _pack(g),
+                   # scar-free heart, graded as a real LGE-negative patient would be (own constants): Kilo 1b
+                   "free_own": _pack(menu.grade(c["lie_free"], car)),
+                   # scar removed, the scarred image's constants kept: calls made by spill or noise (reported)
+                   "free_fixed": _pack(menu.grade(c["lie_free"], car, fixed)),
+                   # blood set to remote, scar and constants kept: Golf's spill counterfactual (striking, 1a)
+                   "noblood": _pack(menu.grade(c["lie_noblood"], car, fixed))}
             if tx is not None:
-                rec["tre_mm"] = round(menu.tre(tx, c["motion"], c["lab_t"] == bench.G.MYO), 3)
+                rec["tre_mm"] = round(menu.tre(tx, c["tre_pts"]), 3)
             rec["sec"] = round(time.time() - ta, 1)
             row["arms"][name] = rec
         rows.append(row)

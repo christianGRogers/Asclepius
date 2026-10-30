@@ -19,7 +19,7 @@ trunk (JA1–JA14) and path A's Stage A (JA15–JA24, by JA25). **Juliet v3 is t
 | Ruling §7 item | Where | In one line |
 |---|---|---|
 | 1. One shared synthetic-LIE benchmark | §1, `experiments/JanusM/bench_lie/` | [BENCH-ONE-LINE] |
-| 2. The merged power script at the JA32 bars | §2 | [POWER-ONE-LINE] |
+| 2. The merged power script at the JA32 bars | §2, E9 | #187's run gives a 120–240-patient seal. But at a 2 % registration-failure rate, JA29's per-segment intention-to-diagnose keeps joint power below 0.80 at every N ≤ 320; a split accounting needs 160–200 |
 | 3. LGE read form and registration check form | §3, `experiments/JanusM/Juliet/r3/` | written for the Janus-M queue, with a synthetic LGE mock-up (5 patients with truth) and an example panel; form-entry time estimated, viewing time measured on the mock-up by the queue's own timestamps |
 | 4. JA27 intake checker | §4 | every JA27 requirement mapped to a DICOM attribute or a manifest field, with what a failing patient becomes |
 | 5. Registration QC cuts, and a phase check | §5 | [QC-ONE-LINE] |
@@ -32,7 +32,30 @@ trunk (JA1–JA14) and path A's Stage A (JA15–JA24, by JA25). **Juliet v3 is t
 
 ## 2. The merged power script (item 2)
 
-[POWER SECTION]
+**The script is #182 (PR #187, `janusm.scar.power` on `janusm.scar.scoring`), not merged at the time of writing.**
+#187 already ran it at the JA32 bars (400 × 400, Golf's cohort, anchors 0.6–0.8). Its seal sizes, with no
+registration failures, are:
+
+| Clustering (patient logit SD) | 50 % of patients scarred | 70 % scarred |
+|---|---|---|
+| weak (0.7) | **136** (the ≥ 270-segment rule binds; power alone needs 100–120) | **120** (the floor) |
+| strong (1.2) | **240** | **160** |
+
+≥ 270 scarred segments needs 136 patients at 50 % scar and 97 at 70 %. This candidate does not re-run that table: it
+would reproduce #187's own numbers. The table is #187's, and it is re-run when #187 merges.
+
+**What this candidate adds is E9**
+([[Juliet - At a 2 percent registration-failure rate, counting a failed patient's scar-free segments as false calls sinks the JA32 study at any size]]):
+#187's engine, imported unchanged, under two accountings of a not-graded patient.
+
+| Weak clustering | p_fail 0 | **p_fail 0.02** | p_fail 0.05 |
+|---|---|---|---|
+| JA29 as written (every LGE-negative segment of a not-graded patient is a false call) | N 120 | **no N ≤ 320** (0.79 at 320) | none |
+| Split (LGE-positive segments missed; LGE-negative segments leave specificity; not-graded rate upper 95 % ≤ 0.10 as its own bar) | N 120 | **N 200** (50 % scar), **160** (70 %) | none |
+
+**The failure rate decides the size more than clustering or enrichment do.** So:
+- the JA28 re-powering must feed development's measured registration-failure rate into `seal_size()`;
+- §10 proposes the split accounting as an amendment.
 
 ## 3. The LGE read form and the registration check form (item 3)
 

@@ -54,7 +54,7 @@ C_SCAR = 60.0
 REMOTE = 90.0
 BLOOD = {"below": REMOTE + C_SCAR / 2, "equal": REMOTE + C_SCAR, "above": REMOTE + 1.5 * C_SCAR}
 CNRS = (3, 5)
-MOTIONS = ("none", "rigid", "scale", "phase")
+MOTIONS = ("none", "rigid", "scale", "phase", "nonrigid")
 TS = (0.15, 0.35, 0.60, 0.90)
 SHELL_MM = 4.0
 A_RAS = np.eye(4)
@@ -132,6 +132,10 @@ def _rot(axis, deg):
 def motion_params(motion, rng):
     if motion == "none":
         return np.eye(3), np.zeros(3), 1.0, 0.0
+    if motion == "nonrigid":                      # Kilo R2 E5: whole image, rot N(0, 3 deg) per axis, trans N(0, 4 mm)
+        ang = rng.normal(0, 3.0, 3)
+        R = _rot([1, 0, 0], ang[0]) @ _rot([0, 1, 0], ang[1]) @ _rot([0, 0, 1], ang[2])
+        return R, rng.normal(0, 4.0, 3), 1.0, 0.0
     v = rng.normal(0, 1, 3) * np.array([0.35, 0.35, 1.0])
     t = v / np.linalg.norm(v) * 4.0
     R = _rot(rng.normal(0, 1, 3), 2.0)
@@ -184,7 +188,19 @@ def volume_share(call, myo, seg):
     return out
 
 
+def _smooth_field(shape, rms_mm, corr_mm, rng):
+    """A smooth random displacement field (3, *shape), each component with the given RMS (mm), Gaussian correlation."""
+    f = np.empty((3,) + tuple(shape), np.float32)
+    for k in range(3):
+        g = ndi.gaussian_filter(rng.standard_normal(shape).astype(np.float32), corr_mm / V)
+        f[k] = g / (g.std() + 1e-9) * rms_mm
+    return f
+
+
 def make_case(heart: dict, blood: str, cnr: int, motion: str, seed: int):
+    """One benchmark case. Returns the first-pass CT and labels, three LIE images with the same noise (full;
+    scar-free twin; blood set to remote), and the truth on the LIE grid. `tre_pts` holds (LIE point, true first-pass
+    point) pairs over the truth wall, for any registration's residual."""
     rng = np.random.default_rng(seed)
     ct0, lab0, ob = heart["ct"], heart["lab"], heart["ob"]
     shape = lab0.shape
@@ -195,7 +211,8 @@ def make_case(heart: dict, blood: str, cnr: int, motion: str, seed: int):
     if e > 0:
         cav = lab0 == G.LV
         req = (3 * cav.sum() / (4 * np.pi)) ** (1 / 3)
-        shrink = cav & (ndi.distance_transform_edt(cav) <= e * req)
+        # shrink away from the myocardial walls only, so the cavity keeps its contact with the LA (mitral plane)
+        shrink = cav & (ndi.distance_transform_edt(cav | (lab0 == G.LA)) <= e * req)
         lab_l[shrink] = G.MYO
     aha_l = G.aha17(lab_l, affine=A_RAS)
     if aha_l.segments is None:
@@ -203,42 +220,54 @@ def make_case(heart: dict, blood: str, cnr: int, motion: str, seed: int):
     seg_l = np.nan_to_num(aha_l.segments).astype(np.int16)
     u_l = G.depth(lab_l, affine=A_RAS).u
     phi_l, s_l = _columns(lab_l, aha_l)
-    # scar
+    # scar (Golf's mix, agreed on #179): every segment of one territory draws a Kim-bin midpoint with equal weight
     terr = rng.choice(["LAD", "LCx", "RCA"])
-    pool = [k for k, v in G.AHA_STANDARD.items() if v == terr and k != 17]
-    patch = rng.choice(pool, size=int(rng.integers(2, 5)), replace=False)
     Tseg = np.zeros(18)
-    for i, k in enumerate(patch):
-        Tseg[k] = TS[(i + rng.integers(4)) % 4]
+    for k in [k for k, v in G.AHA_STANDARD.items() if v == terr and k != 17]:
+        Tseg[k] = rng.choice((0.0,) + TS)
     wob = ndi.gaussian_filter(rng.standard_normal(shape).astype(np.float32), 3)
     wob /= wob.std() + 1e-9
     myo_l = lab_l == G.MYO
-    scar0 = myo_l & (Tseg[np.clip(seg_l, 0, 17)] > 0) & (np.nan_to_num(u_l, nan=9) < Tseg[np.clip(seg_l, 0, 17)]
-                                                        + 0.04 * wob)
-    # heart values at pose 0
+    tsg = Tseg[np.clip(seg_l, 0, 17)]
+    scar0 = myo_l & (tsg > 0) & (np.nan_to_num(u_l, nan=9) < tsg + 0.04 * wob)
+    # pose-0 intensities: full, scar-free, and blood set to remote (Golf's spill counterfactual)
     heartmask = lab_l > 0
     region0 = ndi.binary_dilation(heartmask, iterations=int(SHELL_MM / V))
-    late = _remap_late(ct0, bl)
-    hv = late.copy()
-    hv[myo_l] = REMOTE
-    hv[np.isin(lab_l, (G.LV, G.RV, G.LA)) | ob] = bl
-    hv_free = hv.copy()
-    hv[scar0] = REMOTE + C_SCAR
-    bg = late.copy()
-    bg[region0] = 30.0
-    # move the heart: LIE voxel x <- pose-0 point x0 = c + R^T (x - c - t) / s
+    blood_mask = np.isin(lab_l, (G.LV, G.RV, G.LA)) | ob
+
+    def pose0(blood_level, with_scar):
+        late = _remap_late(ct0, blood_level)
+        hv = late.copy()
+        hv[myo_l] = REMOTE
+        hv[blood_mask] = blood_level
+        if with_scar:
+            hv[scar0] = REMOTE + C_SCAR
+        return late, hv
+
+    variants = {"lie": pose0(bl, True), "lie_free": pose0(bl, False), "lie_noblood": pose0(REMOTE, True)}
+    # motion: x0(x) = the pose-0 point imaged at LIE voxel x
     c = np.argwhere(heartmask).mean(0)
     idx = np.indices(shape).reshape(3, -1).astype(np.float32)
     x0 = (R.T @ (idx - (c + t)[:, None])) / sc + c[:, None]
+    whole = motion == "nonrigid"                 # Kilo E5: the whole image moves (chest too), plus a smooth field
+    if whole:
+        x0 = x0 - _smooth_field(shape, 1.5, 20.0, rng).reshape(3, -1)
 
     def mv(a, order):
-        return ndi.map_coordinates(a, x0, order=order, mode="constant", cval=0).reshape(shape)
+        return ndi.map_coordinates(a, x0, order=order, mode="nearest").reshape(shape)
 
-    reg_m = mv(region0.astype(np.float32), 1) > 0.5
     noise = rng.normal(0, C_SCAR / cnr, shape).astype(np.float32)
     psf = 1.0 / 2.355 / V
-    lie = ndi.gaussian_filter(np.where(reg_m, mv(hv, 1), bg), psf) + noise
-    lie_free = ndi.gaussian_filter(np.where(reg_m, mv(hv_free, 1), bg), psf) + noise
+    out = {}
+    reg_m = mv(region0.astype(np.float32), 1) > 0.5
+    for name, (late, hv) in variants.items():
+        if whole:
+            img = mv(np.where(region0, hv, late), 1)
+        else:
+            bg = late.copy()
+            bg[region0] = 30.0
+            img = np.where(reg_m, mv(hv, 1), bg)
+        out[name] = (ndi.gaussian_filter(img, psf) + noise).astype(np.float32)
     lab_t = mv(lab_l.astype(np.float32), 0).astype(np.int8)
     scar_t = mv(scar0.astype(np.float32), 0) > 0.5
     seg_t = mv(seg_l.astype(np.float32), 0).astype(np.int16)
@@ -246,9 +275,12 @@ def make_case(heart: dict, blood: str, cnr: int, motion: str, seed: int):
     u_t[lab_t != G.MYO] = np.nan
     phi_t, s_t = mv(phi_l, 0), mv(s_l, 0)
     myo_t = lab_t == G.MYO
+    sel = np.flatnonzero(myo_t.ravel())
+    sel = sel[rng.permutation(len(sel))[:20000]]
     truth = {"vol": volume_share(scar_t, myo_t, seg_t), "depth": depth_extent(scar_t, myo_t, seg_t, u_t, phi_t, s_t),
              "T_nominal": Tseg[1:].tolist(), "territory": str(terr)}
-    return {"fp": ct0, "lab_fp": lab0, "lie": lie.astype(np.float32), "lie_free": lie_free.astype(np.float32),
+    return {"fp": ct0, "lab_fp": lab0, **out,
             "lab_t": lab_t, "seg_t": seg_t, "u_t": u_t, "phi_t": phi_t, "s_t": s_t, "scar_t": scar_t, "truth": truth,
-            "motion": {"R": R, "t": t, "s": sc, "e": e, "c": c}, "blood": bl, "cnr": cnr,
+            "tre_pts": (idx[:, sel].T.astype(float), x0[:, sel].T.astype(float)),
+            "motion": {"R": R, "t": t, "s": sc, "e": e, "c": c, "whole_image": whole}, "blood": bl, "cnr": cnr,
             "aha_flags": aha_l.flags}

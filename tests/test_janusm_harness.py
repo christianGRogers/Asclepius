@@ -122,7 +122,7 @@ def test_ja16_the_estimator_recovers_a_known_half_millimetre_shift(ja16):
     }
     assert any(r["tilt_deg"] for r in rows) and any(r["cavity_shift_mm"] for r in rows)
     assert ja16["worst_abs_error_mm"] <= 0.05
-    assert ja16["passed"] and ja16["bias_guard_mm"] == H.BIAS_GUARD_VALIDATED_MM == 0.3
+    assert ja16["passed"] and ja16["bias_guard_mm"] == H.BIAS_GUARD_TIGHT_MM == 0.3
 
 
 def test_ja16_guard_falls_back_when_the_check_fails():
@@ -215,8 +215,8 @@ def test_a_constant_model_bias_costs_about_its_own_size_in_thickness(ref):
 
 
 # ------------------------------------------------------------------------------- JA45 API
-def test_harness_version_is_1_1():
-    assert H.HARNESS_VERSION == "1.1.0"
+def test_harness_version_is_1_2():
+    assert H.HARNESS_VERSION == "1.2.0"
 
 
 def test_exact_shift_phantom_moves_the_closed_surface_by_the_shift():
@@ -312,14 +312,18 @@ def _ja39_tolerance(shift):
     return min(t for d, t in H.PP_ASSD_TOLERANCE_MM.items() if abs(shift) <= d)
 
 
+def test_ja65_tolerances_are_0035_and_007():
+    assert H.PP_ASSD_TOLERANCE_MM == {0.5: 0.035, 1.0: 0.07}
+    assert _ja39_tolerance(0.5) == 0.035 and _ja39_tolerance(-1.0) == 0.07
+
+
 @pytest.mark.slow
 @pytest.mark.parametrize("sp", [(0.5, 0.5, 0.5), (0.4, 0.4, 0.5)])
 @pytest.mark.parametrize("rot, rough", [(None, False), (23, False), (11, True)])
 def test_e6_pp_within_ja39_tolerances(sp, rot, rough):
-    """JA39: pp ASSD within 0.03 mm of the truth up to 0.5 mm and 0.07 mm at 1.0 mm, both grids,
-    oblique and rough walls; the pp bias to the same bounds. JA39 states them to two decimals,
-    as E6 measured them (its worst at 0.5 mm is 0.032 on the 0.4 mm grid's rough oblique
-    endocardium), so the error is compared at that precision."""
+    """JA39 as JA65 restates it: pp ASSD within 0.035 mm of the truth up to 0.5 mm and 0.07 mm at
+    1.0 mm, both grids, oblique and rough walls; the pp bias to the same bounds. Compared
+    unrounded (E6's worst at 0.5 mm is 0.032, Lima E7's 0.0322)."""
     Fc, Fs, base, roi = _e6_phantom(sp, rot, rough)
     for F in (Fc, Fs):
         ref = (F < 0) & (base < 0)
@@ -329,8 +333,8 @@ def test_e6_pp_within_ja39_tolerances(sp, rot, rough):
             bias = H.signed_bias_pp(ref, test, sp, roi)
             assd = H.assd_pp(ref, test, sp, roi)
             tol = _ja39_tolerance(shift)
-            assert round(abs(assd - ta), 2) <= tol, (shift, assd, ta)
-            assert round(abs(bias - tb), 2) <= tol, (shift, bias, tb)
+            assert abs(assd - ta) <= tol, (shift, assd, ta)
+            assert abs(bias - tb) <= tol, (shift, bias, tb)
 
 
 @pytest.mark.slow
@@ -345,17 +349,274 @@ def test_e6_pp_on_a_smooth_random_field():
     assert H.signed_bias_pp(ref, test, sp, roi) == pytest.approx(tb, abs=0.03)
 
 
-def test_compare_restricts_pp_to_the_roi():
+def test_compare_restricts_pp_and_the_guard_to_the_roi():
+    """JA61: an ROI restricts ``signed_bias`` as well as pp; the voxel measures stay whole."""
     lab, aff = H.phantom()
     test = H.phantom(endo_shift_mm=0.5)[0]
     roi = np.zeros(lab.shape, bool)
     full = H.compare(lab, test, affine=aff, with_sta=False)
     none = H.compare(lab, test, affine=aff, with_sta=False, roi=roi)
     assert full["bias_pp_endo"] > 0.3 and np.isnan(none["bias_pp_endo"])
-    assert none["bias_endo"] == full["bias_endo"]  # the guard's estimator ignores the ROI
+    assert full["bias_endo"] > 0.3 and np.isnan(none["bias_endo"])
+    assert none["assd_voxel_endo"] == full["assd_voxel_endo"]
+    assert full["roi"] == "none" and none["roi"] == "array"
+    with pytest.raises(ValueError):
+        H.compare(lab, test, affine=aff, with_sta=False, roi="band")
+
+
+def test_compare_ja37_builds_the_band_per_border():
+    lab, aff = H.phantom()
+    test = H.phantom(endo_shift_mm=0.5)[0]
+    r = H.compare(lab, test, affine=aff, with_sta=False, roi="ja37")
+    assert r["roi"] == "ja37"
+    cav, _ = H.borders(lab)
+    cav_t, _ = H.borders(test)
+    band = H.ja37_band(lab, SP, "endo")
+    assert r["bias_endo"] == H.signed_bias(cav, cav_t, SP, roi=band)
+    assert r["bias_pp_endo"] == H.signed_bias_pp(cav, cav_t, SP, band)
+    assert r["assd_pp_endo"] == H.assd_pp(cav, cav_t, SP, band)
+    assert r["assd_voxel_endo"] == H.surface_assd(cav, cav_t, SP)  # voxel ASSD on whole masks
+    # the shift is exact on the wall; the band leaves out the LA plane, which does not move
+    assert r["bias_endo"] == pytest.approx(0.5, abs=0.05)
+    assert r["bias_epi"] == 0.0 and r["bias_pp_epi"] == 0.0
 
 
 def test_the_harness_opens_no_case():
     src = inspect.getsource(H)
     for word in ("nibabel", "load_case", "open(", "glob"):
         assert word not in src, word
+
+
+# ------------------------------------------------------------------------------- JA65 voxel ASSD
+def test_surface_assd_is_segtrains():
+    """R4-S6: one voxel ASSD, ``segtrain.metrics.surface_distances``, on the phantom."""
+    from segtrain.metrics import surface_distances
+
+    lab, _ = H.phantom()
+    cav, _ = H.borders(lab)
+    cav5, _ = H.borders(H.phantom(endo_shift_mm=0.5)[0])
+    da, db = surface_distances(cav, cav5, SP)
+    want = (da.sum() + db.sum()) / (da.size + db.size)
+    assert H.surface_assd(cav, cav5, SP) == want
+    assert want == pytest.approx(0.47283, abs=5e-6)
+    assert "surface_distances" in inspect.getsource(H.surface_assd)
+
+
+# ------------------------------------------------------------------------------- JA61 band
+def _open_pool_face_centres(lab):
+    """Centres (mm) of every LV-pool face adjoining label 0 or the array's edge, by brute force."""
+    cav = lab == G.LV
+    out = []
+    for p in np.argwhere(cav):
+        for a in range(3):
+            for st in (-1, 1):
+                q = p.copy()
+                q[a] += st
+                if (q < 0).any() or (q >= lab.shape).any() or lab[tuple(q)] == 0:
+                    c = p.astype(float)
+                    c[a] += 0.5 * st
+                    out.append(c)
+    return np.array(out) * SP
+
+
+def _small_open_lv():
+    """A small LV: a pool in a 4 mm myocardium, with LA over half the base and the other half of
+    the base open to label 0 (the outflow)."""
+    n = 56
+    ax = (np.arange(n) - n / 2 + 0.5) * H.GRID_MM
+    X, Y, Z = np.meshgrid(ax, ax, ax, indexing="ij")
+    r = np.hypot(X, Y)
+    lab = np.zeros((n, n, n), np.int16)
+    lab[(r < 9) & (Z < 4) & (Z > -10)] = G.MYO
+    lab[(r < 5) & (Z < 4) & (Z > -6)] = G.LV
+    lab[(r < 9) & (Z >= 4) & (Z < 8) & (X < 0)] = G.LA
+    return lab
+
+
+def test_ja37_band_excludes_label_4_and_open_pool_faces():
+    """R4-S4: the band holds no voxel within 3 mm of label 4 or of an open LV-pool face, and keeps
+    the rest of +-3 mm about the border."""
+    from scipy.spatial import cKDTree
+
+    lab = _small_open_lv()
+    faces = _open_pool_face_centres(lab)
+    assert len(faces)  # the outflow half of the base is open
+    la = np.argwhere(lab == G.LA) * SP
+    for border in ("endo", "epi"):
+        band = H.ja37_band(lab, SP, border)
+        pts = np.argwhere(band) * SP
+        assert len(pts)
+        assert cKDTree(la).query(pts)[0].min() > 3.0
+        assert cKDTree(faces).query(pts)[0].min() > 3.0
+        # what is left out is only for those reasons, or because it is > 3 mm off the border
+        cav, sol = H.borders(lab)
+        m = cav if border == "endo" else sol
+        near = np.abs(H.corrected_sdf(m, SP)) <= 3.0
+        cand = np.argwhere(near & ~band) * SP
+        why = np.minimum(cKDTree(la).query(cand)[0], cKDTree(faces).query(cand)[0])
+        assert (why <= 3.0 + 1e-9).all()
+        assert not (band & ~near).any()
+    with pytest.raises(ValueError):
+        H.ja37_band(lab, SP, "both")
+
+
+def test_a_change_within_3mm_of_label_4_moves_the_banded_bias_by_nothing():
+    """R4-S4: grow the pool only within 3 mm of the LA; the bias in the band is 0 +- 0.01."""
+    lab, _ = H.phantom()
+    la = lab == G.LA
+    near_la = ndi.distance_transform_edt(~la, sampling=SP) <= 3.0
+    cav, sol = H.borders(lab)
+    grown = cav | (ndi.binary_dilation(cav, iterations=2) & near_la & sol)
+    assert (grown & ~cav).sum() > 100  # a change was made
+    band = H.ja37_band(lab, SP, "endo")
+    assert H.signed_bias(cav, grown, SP, roi=band) == pytest.approx(0.0, abs=0.01)
+    assert H.signed_bias(cav, grown, SP) > 0.01  # the whole-mask estimator sees it
+
+
+def test_signed_bias_roi_restricts_volume_and_area():
+    cav, *_ = H.exact_shift_phantom(SP, origin_offset_mm=(0.1, 0.2, 0.3))
+    cav5, *_ = H.exact_shift_phantom(SP, endo_shift_mm=0.5, origin_offset_mm=(0.1, 0.2, 0.3))
+    every = np.ones(cav.shape, bool)
+    assert H.signed_bias(cav, cav5, SP, roi=every) == pytest.approx(H.signed_bias(cav, cav5, SP))
+    assert H.surface_area(cav, SP, roi=every) == pytest.approx(H.surface_area(cav, SP))
+    lower = np.zeros(cav.shape, bool)
+    lower[:, :, : cav.shape[2] // 2] = True
+    a_lo = H.surface_area(cav, SP, roi=lower)
+    assert 0 < a_lo < H.surface_area(cav, SP)
+    assert a_lo + H.surface_area(cav, SP, roi=~lower) == pytest.approx(H.surface_area(cav, SP))
+    with pytest.raises(ValueError):
+        H.signed_bias(cav, cav5, SP, roi=lower[:-1])
+
+
+@pytest.mark.slow
+@pytest.mark.parametrize("radius", [12.0, 21.0])
+def test_e4_closed_shells_stay_within_a_hundredth_in_the_band(radius):
+    """R4-S4: E4's exact shells (a pool in a myocardial shell, nothing open) within +-0.01 mm."""
+    rng = np.random.default_rng(int(radius) + 1)
+    n = int(2 * (radius + 9) / H.GRID_MM)
+    ax = (np.arange(n) - n / 2) * H.GRID_MM
+    X, Y, Z = np.meshgrid(ax, ax, ax, indexing="ij", sparse=True)
+    c = rng.uniform(-H.GRID_MM / 2, H.GRID_MM / 2, 3)
+    R = np.sqrt((X - c[0]) ** 2 + (Y - c[1]) ** 2 + (Z - c[2]) ** 2)
+    ref = R < radius
+    lab = np.zeros(ref.shape, np.int16)
+    lab[R < radius + 5] = G.MYO
+    lab[ref] = G.LV
+    band = H.ja37_band(lab, SP, "endo")
+    assert band.any()
+    for d in (-0.5, -0.3, 0.3, 0.5):
+        assert H.signed_bias(ref, R < radius + d, SP, roi=band) == pytest.approx(d, abs=0.01), d
+
+
+def _e6_labels(Fc, Fs, base):
+    cav, sol = (Fc < 0) & (base < 0), (Fs < 0) & (base < 0)
+    lab = np.zeros(cav.shape, np.int16)
+    lab[sol | cav] = G.MYO
+    lab[cav] = G.LV
+    return lab
+
+
+@pytest.fixture(scope="module")
+def india_open_base():
+    """R4-S4 / JA61: India's open-base phantom (E6's, cut at the base plane, pool open to label 0):
+    two grids, three walls, both borders, +-0.3 / +-0.5 mm; ``signed_bias`` in JA37's band
+    against the true mean normal displacement in the band."""
+    rows = []
+    for sp in [(0.5, 0.5, 0.5), (0.4, 0.4, 0.5)]:
+        for rot, rough in [(None, False), (23, False), (11, True)]:
+            Fc, Fs, base, _ = _e6_phantom(sp, rot, rough)
+            lab = _e6_labels(Fc, Fs, base)
+            for border, F in (("endo", Fc), ("epi", Fs)):
+                band = H.ja37_band(lab, sp, border)
+                ref = (F < 0) & (base < 0)
+                for shift in (-0.5, -0.3, 0.3, 0.5):
+                    test = ((F - shift) < 0) & (base < 0)
+                    tb, _ = _e6_truth(F, shift, sp, band)
+                    err = H.signed_bias(ref, test, sp, roi=band) - tb
+                    whole = H.signed_bias(ref, test, sp) - _e6_truth(F, shift, sp, base < 0)[0]
+                    rows.append(dict(border=border, shift=shift, err=err, whole=whole))
+    return rows
+
+
+@pytest.mark.slow
+def test_open_base_india_phantom_with_the_band(india_open_base):
+    """R4-S4's open-base check. The band brings the endocardium within 0.05 mm (and both borders
+    at +-0.3 mm), and helps everywhere against the whole mask; at +-0.5 mm the epicardium misses
+    0.05 mm (the cut myocardial cap stays in the band as JA61 rules it). So the check fails and
+    the guard in force is 0.5 mm (JA61)."""
+    rows = india_open_base
+    assert len(rows) == 2 * 3 * 2 * 4
+    for r in rows:
+        assert abs(r["err"]) < abs(r["whole"]), r
+        if r["border"] == "endo" or abs(r["shift"]) == 0.3:
+            assert abs(r["err"]) <= 0.05, r
+    worst = max(abs(r["err"]) for r in rows)
+    passed = worst <= 0.05
+    assert not passed  # recorded: R4-S4's open-base validation FAILS (worst ~0.068 mm, epi)
+    assert H.BIAS_GUARD_VALIDATED_MM == (0.3 if passed else 0.5) == H.BIAS_GUARD_FALLBACK_MM
+
+
+@pytest.mark.slow
+def test_validate_bias_estimator_open_base():
+    """JA61's ``validate_bias_estimator(open_base=True)``: the capsule cut at the base plane, in
+    the band, two grids, three walls, both borders, +-0.3 / +-0.5 mm."""
+    r = H.validate_bias_estimator(open_base=True, n_offsets=1)
+    assert r["open_base"] and r["shifts_mm"] == [0.3, 0.5]
+    assert len(r["rows"]) == 2 * 3 * 2 * 4
+    assert {tuple(x["grid_mm"]) for x in r["rows"]} == {(0.5, 0.5, 0.5), (0.4, 0.4, 0.5)}
+    assert {(x["border"], x["true_mm"]) for x in r["rows"]} == {
+        (b, s) for b in ("endo", "epi") for s in (-0.5, -0.3, 0.3, 0.5)
+    }
+    assert r["by_border"]["endo_outward"]["worst_abs_error_mm"] <= 0.03
+    assert r["by_border"]["endo_inward"]["worst_abs_error_mm"] <= 0.03
+    assert r["worst_abs_error_mm"] <= 0.06
+    assert r["bias_guard_mm"] == (0.3 if r["passed"] else 0.5)
+
+
+# ------------------------------------------------------------------------------- JA37 transfer
+def _transfer_rows(diff, n=20, extra=()):
+    rows = [
+        {"bias_endo": 0.1 + diff, "bias_pp_endo": 0.1, "bias_epi": -0.2, "bias_pp_epi": -0.2 - diff}
+        for _ in range(n)
+    ]
+    return rows + list(extra)
+
+
+def test_transfer_check_median_under_the_limit_keeps_0_3():
+    t = H.transfer_check(_transfer_rows(0.04))
+    assert t["median_abs_diff_mm"]["endo"] == pytest.approx(0.04)
+    assert t["median_abs_diff_mm"]["epi"] == pytest.approx(0.04)
+    assert t["passed"] and t["bias_guard_mm"] == 0.3 and t["n_over_limit"] == 0
+    # the open-base check failed, so 0.5 mm is what applies (JA61)
+    assert t["bias_guard_applied_mm"] == H.BIAS_GUARD_VALIDATED_MM == 0.5
+
+
+def test_transfer_check_median_over_the_limit_gives_0_5():
+    t = H.transfer_check(_transfer_rows(0.06))
+    assert not t["passed"] and t["bias_guard_mm"] == 0.5 and t["n_over_limit"] == 20
+    rows = _transfer_rows(0.01)
+    for r in rows[:8]:
+        r["bias_endo"] += 0.2
+    t = H.transfer_check(rows)
+    assert t["passed"] and t["n_over_limit"] == 8  # the median holds; the count is reported
+
+
+def test_transfer_check_refuses_fewer_than_20_rows():
+    with pytest.raises(ValueError):
+        H.transfer_check(_transfer_rows(0.01, n=19))
+    bad = _transfer_rows(0.01)
+    bad[3]["bias_pp_epi"] = float("nan")
+    with pytest.raises(ValueError):
+        H.transfer_check(bad)
+    del bad[3]["bias_pp_epi"]
+    with pytest.raises(ValueError):
+        H.transfer_check(bad)
+
+
+def test_transfer_check_ignores_row_21():
+    far = {"bias_endo": 9.0, "bias_pp_endo": 0.0, "bias_epi": 9.0, "bias_pp_epi": 0.0}
+    base = H.transfer_check(_transfer_rows(0.04))
+    t = H.transfer_check(_transfer_rows(0.04, extra=[far] * 30))
+    assert t == base
+    nanrow = {"bias_endo": float("nan")}
+    assert H.transfer_check(_transfer_rows(0.04, extra=[nanrow])) == base

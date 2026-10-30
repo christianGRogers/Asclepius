@@ -36,10 +36,14 @@ surface of blood pool plus myocardium):
 - ``mean_abs_d``: Hotel's mean |d| (changed volume / mean area). Reported beside ASSD, never in its
   place (JA15).
 
-**JA16.** The signed-bias guard is 0.3 mm only if the estimator recovers a known 0.5 mm shift, in
-each direction and on each border, to within 0.05 mm here; otherwise it stays 0.5 mm.
+**JA16, JA61.** The signed-bias guard is 0.3 mm only if the estimator recovers a known 0.5 mm
+shift, in each direction and on each border, to within 0.05 mm here; otherwise it stays 0.5 mm.
 ``validate_bias_estimator`` runs that check on analytic phantoms whose true offset is exact, and
-returns the guard it supports.
+returns the guard it supports. JA61 adds the open-base check (``open_base=True``): masks cut at a
+base plane, as real ones are, measured in JA37's band (``ja37_band``: +-3 mm of the border, less
+3 mm around label 4 and the open LV-pool faces). That check, on India's E6-style phantom, misses
+0.05 mm on the epicardium, so the guard in force (``BIAS_GUARD_VALIDATED_MM``) is 0.5 mm.
+``transfer_check`` is JA37's check on the first 20 decision reads (JA62).
 
 **Known shifts are exact (JA38).** ``perturb``'s biases are nominal: the voxel signed-distance rule
 realises about 1.3x. ``run`` records the nominal and the realised bias side by side. A fixture
@@ -64,9 +68,10 @@ from scipy.spatial import cKDTree
 from skimage.measure import marching_cubes, mesh_surface_area
 
 from janusm import geometry as G
+from segtrain.metrics import surface_distances
 
 #: Bump on any change that can move a reported number.
-HARNESS_VERSION = "1.1.0"
+HARNESS_VERSION = "1.2.0"
 
 GRID_MM = 0.5  # JA15: the native grid
 CORR_MM = 8.0  # JA15: primary correlation length
@@ -74,19 +79,32 @@ CORR_SENSITIVITY_MM = (4.0, 16.0)
 
 BIAS_CHECK_SHIFT_MM = 0.5  # JA16: the known shift the estimator must recover
 BIAS_CHECK_TOLERANCE_MM = 0.05
-BIAS_GUARD_VALIDATED_MM = 0.3
+BIAS_GUARD_TIGHT_MM = 0.3  # JA16: the guard a check supports when it passes
 BIAS_GUARD_FALLBACK_MM = 0.5
+#: The guard from the freeze PR on (JA61, R4-S4). It was 0.3 mm. JA61's open-base check, on India's
+#: E6-style phantom with JA37's band (two grids, three walls, both borders, +-0.3 / +-0.5 mm),
+#: misses 0.05 mm on the epicardium at +-0.5 mm (worst 0.068 mm; the endocardium is within
+#: 0.015 mm), and ``validate_bias_estimator(open_base=True)`` on the cut capsule misses it narrowly
+#: (worst 0.0504 mm, epicardium; endocardium 0.024 mm). The band as ruled keeps the cut myocardial
+#: base cap, which adjoins label 0 but is no LV-pool face, so it enters the area and not the
+#: volume change. JA61: the guard is 0.5 mm.
+BIAS_GUARD_VALIDATED_MM = BIAS_GUARD_FALLBACK_MM
 
 PP_SMOOTH_VOX = 0.7  # Hotel E6: the Gaussian (voxels) whose 0.5 level is the sub-voxel surface
-#: JA39's fixture tolerances: |pp ASSD - truth| for displacements up to the key (mm). Stated to two
-#: decimals, as Hotel E6 measured them (its worst at 0.5 mm is 0.032).
-PP_ASSD_TOLERANCE_MM = {0.5: 0.03, 1.0: 0.07}
+#: JA39's fixture tolerances as JA65 restates them: |pp ASSD - truth| (and |pp bias - truth|) for
+#: displacements up to the key (mm), compared unrounded as ``abs(err) <= tol``. Hotel E6's worst is
+#: 0.032 at 0.5 mm and 0.067 at 1.0 mm; Lima E7's is 0.0322 at 0.5 mm.
+PP_ASSD_TOLERANCE_MM = {0.5: 0.035, 1.0: 0.07}
+
+#: JA37 / JA61: the band is +-3 mm of the border, less 3 mm around label 4 and the open pool faces.
+JA37_BAND_MM = 3.0
+#: JA62 / R4-S5: the transfer check runs on the first 20 decision cases, limit 0.05 mm.
+TRANSFER_N_FIRST = 20
+TRANSFER_LIMIT_MM = 0.05
 
 TAUS = (0.15, 0.40, 0.65, 0.90)  # STA virtual-scar depths
 KIM = np.array([0.0, 0.25, 0.50, 0.75, 1.0001])
 MIN_SEGMENT_VOXELS = 50
-
-_FACE = ndi.generate_binary_structure(3, 1)
 
 
 # ---------------------------------------------------------------------------------- error model
@@ -168,19 +186,12 @@ def perturb(
 
 
 # ---------------------------------------------------------------------------------- measures
-def _surface(m: np.ndarray) -> np.ndarray:
-    return m & ~ndi.binary_erosion(m, _FACE, border_value=0)
-
-
 def surface_assd(a, b, spacing) -> float:
     """Symmetric surface ASSD (mm) between the surface voxels of two masks; NaN if one is empty."""
     a, b = np.asarray(a, bool), np.asarray(b, bool)
-    sp = _spacing(spacing)
-    sa, sb = _surface(a), _surface(b)
-    if not sa.any() or not sb.any():
+    da, db = surface_distances(a, b, _spacing(spacing))  # segtrain's, one voxel ASSD (JA65)
+    if not da.size or not db.size:
         return float("nan")
-    da = ndi.distance_transform_edt(~sb, sampling=sp)[sa]
-    db = ndi.distance_transform_edt(~sa, sampling=sp)[sb]
     return float((da.sum() + db.sum()) / (da.size + db.size))
 
 
@@ -273,33 +284,109 @@ def assd_pp(ref, test, spacing, roi=None) -> float:
     return _pp(ref, test, spacing, roi)[1]
 
 
-def surface_area(mask, spacing, smooth_vox: float = 1.0) -> float:
+def surface_area(mask, spacing, smooth_vox: float = 1.0, roi=None) -> float:
     """Surface area (mm^2) of a mask: marching cubes at 0.5 on the mask smoothed by a Gaussian of
-    ``smooth_vox`` voxels, which removes most of the staircase's excess area."""
+    ``smooth_vox`` voxels, which removes most of the staircase's excess area. ``roi`` (bool, the
+    mask's shape) counts only the faces whose centroids lie in it (nearest voxel; JA61)."""
     m = np.asarray(mask, bool)
     sp = _spacing(spacing)
     if not m.any():
         return 0.0
     pad = int(np.ceil(4 * smooth_vox)) + 2
     nz = np.argwhere(m)
-    box = tuple(slice(lo, hi + 1) for lo, hi in zip(nz.min(0), nz.max(0)))
+    lo = nz.min(0)
+    box = tuple(slice(a, b + 1) for a, b in zip(lo, nz.max(0)))
     f = np.pad(m[box].astype(np.float32), pad)
     if smooth_vox > 0:
         f = ndi.gaussian_filter(f, smooth_vox)
     v, faces, _, _ = marching_cubes(f, 0.5, spacing=tuple(sp))
-    return float(mesh_surface_area(v, faces))
+    if roi is None:
+        return float(mesh_surface_area(v, faces))
+    roi = np.asarray(roi, bool)
+    if roi.shape != m.shape:
+        raise ValueError("roi differs in shape from the mask")
+    c = v[faces].mean(1) / sp  # face centroids, padded-box voxel index
+    ijk = np.rint(c).astype(int) - pad + lo
+    ok = ((ijk >= 0) & (ijk < np.array(m.shape))).all(1)
+    keep = np.zeros(len(faces), bool)
+    keep[ok] = roi[tuple(ijk[ok].T)]
+    return float(mesh_surface_area(v, faces[keep])) if keep.any() else 0.0
 
 
-def signed_bias(ref, test, spacing, smooth_vox: float = 1.0) -> float:
+def signed_bias(ref, test, spacing, smooth_vox: float = 1.0, roi=None) -> float:
     """Mean signed displacement (mm, + = ``test`` lies outside ``ref``) of one border: the volume
-    change over the mean area of the two surfaces. NaN if either mask is empty."""
+    change over the mean area of the two surfaces. NaN if either mask is empty.
+
+    ``roi`` (bool, the masks' shape; JA61) restricts both terms: the volume change counts only
+    the voxels in it, and each marching-cubes area only the faces whose centroids lie in it.
+    The guard passes JA37's band (``ja37_band``). On whole masks that are open (cut at a base
+    plane, as every real LV mask is) the fixed cap enters the area but not the volume change, and
+    the estimate under-reads by about 24 % (India IG1, JA61's record).
+
+    Disclosed error (JA37): on exact closed shells the estimator is within 0.01 mm (E4) and on
+    JA16's phantoms within 0.05 mm; in the band on open-base phantoms it is checked by
+    ``validate_bias_estimator(open_base=True)``. On real walls JA37 disclosed that the error is
+    not known from phantoms alone; the transfer check (``transfer_check``) measures how far it
+    sits from the point-to-plane estimator on the first 20 decision reads before any seal read."""
     ref, test = np.asarray(ref, bool), np.asarray(test, bool)
+    if ref.shape != test.shape:
+        raise ValueError(f"masks differ in shape: {ref.shape} vs {test.shape}")
     sp = _spacing(spacing)
-    area = 0.5 * (surface_area(ref, sp, smooth_vox) + surface_area(test, sp, smooth_vox))
-    if not ref.any() or not test.any() or area <= 0:
+    if not ref.any() or not test.any():
         return float("nan")
-    dv = (int(test.sum()) - int(ref.sum())) * float(np.prod(sp))
-    return float(dv / area)
+    if roi is not None:
+        roi = np.asarray(roi, bool)
+        if roi.shape != ref.shape:
+            raise ValueError("roi differs in shape from the masks")
+    area = 0.5 * (surface_area(ref, sp, smooth_vox, roi) + surface_area(test, sp, smooth_vox, roi))
+    if area <= 0:
+        return float("nan")
+    if roi is None:
+        dv = int(test.sum()) - int(ref.sum())
+    else:
+        dv = int((test & roi).sum()) - int((ref & roi).sum())
+    return float(dv * float(np.prod(sp)) / area)
+
+
+def ja37_band(ref_labels, spacing, border: str, width_mm: float = JA37_BAND_MM) -> np.ndarray:
+    """JA37's band (JA61) for one border of the reference read: the voxels within +-``width_mm``
+    of that border, less the voxels within ``width_mm`` of label 4 (LA) and of any LV-pool face
+    adjoining label 0 (the outflow and the aortic opening, which the labels mark only by being
+    open; the array's edge counts as label 0). No aorta label is needed.
+
+    Distances: to the border by Golf's corrected signed distance (the border half a voxel beyond
+    the last inside voxel centre); to label 4 from voxel centre to voxel centre; to an open pool
+    face from the voxel centre to the face's centre."""
+    if border not in ("endo", "epi"):
+        raise ValueError(f"border must be 'endo' or 'epi', not {border!r}")
+    lab = np.asarray(ref_labels)
+    sp = _spacing(spacing)
+    cav, sol = borders(lab)
+    m = cav if border == "endo" else sol
+    if not m.any():
+        return np.zeros(lab.shape, bool)
+    band = np.abs(corrected_sdf(m, sp)) <= width_mm
+    la = lab == G.LA
+    if la.any():
+        band &= ndi.distance_transform_edt(~la, sampling=sp) > width_mm
+    # open pool faces: a pool voxel and a face neighbour of label 0 (padding = label 0)
+    pool = np.pad(cav, 1)
+    bg = np.pad(lab == 0, 1, constant_values=True)
+    centres = []
+    for a in range(3):
+        for step in (1, -1):
+            nb = np.roll(bg, -step, axis=a)  # nb[i] = bg[i + step]
+            idx = np.argwhere(pool & nb).astype(float)
+            idx[:, a] += 0.5 * step
+            centres.append(idx)
+    c = np.concatenate(centres)
+    if len(c):
+        c = (c - 1.0) * sp  # unpad, mm
+        cand = np.argwhere(band)
+        d, _ = cKDTree(c).query(cand * sp, distance_upper_bound=width_mm + 1e-9)
+        near = np.isfinite(d) & (d <= width_mm)
+        band[tuple(cand[near].T)] = False
+    return band
 
 
 def mean_abs_d(ref, test, spacing, smooth_vox: float = 1.0) -> float:
@@ -387,20 +474,27 @@ def compare(
 
     Per border (``endo``, ``epi``): ``assd_pp_*`` (JA39's scoring ASSD), ``assd_voxel_*``
     (reported beside it), ``bias_*`` (``signed_bias``, the guard's estimator, JA37), ``bias_pp_*``
-    (JA37's transfer check) and ``mean_abs_d_*``. ``roi`` (bool, the grid's shape) restricts the
-    pp surfaces, for example to a band that leaves out the LA and aortic planes (JA37's region);
-    the volume and voxel measures use the whole masks."""
+    (JA37's transfer check) and ``mean_abs_d_*``.
+
+    ``roi="ja37"`` builds JA37's band per border from the reference (``ja37_band``, JA61) and
+    passes it to ``signed_bias``, ``signed_bias_pp`` and ``assd_pp``; the scorer uses it. A bool
+    array (the grid's shape) is used as given for both borders. The voxel ASSD, mean |d|,
+    thickness and STA always use the whole masks."""
     ref, test = np.asarray(ref_labels), np.asarray(test_labels)
     if ref.shape != test.shape:
         raise ValueError(f"label maps differ in shape: {ref.shape} vs {test.shape}")
     aff, sp = G._affine(ref.shape, spacing, affine)
     cav_r, sol_r = borders(ref)
     cav_t, sol_t = borders(test)
+    if isinstance(roi, str) and roi != "ja37":
+        raise ValueError(f"roi must be None, 'ja37' or a bool array, not {roi!r}")
     out = {"harness_version": HARNESS_VERSION, "geometry_version": G.GEOMETRY_VERSION}
+    out["roi"] = "ja37" if isinstance(roi, str) else ("none" if roi is None else "array")
     for name, a, b in (("endo", cav_r, cav_t), ("epi", sol_r, sol_t)):
-        out[f"bias_pp_{name}"], out[f"assd_pp_{name}"] = _pp(a, b, sp, roi)
+        band = ja37_band(ref, sp, name) if isinstance(roi, str) else roi
+        out[f"bias_pp_{name}"], out[f"assd_pp_{name}"] = _pp(a, b, sp, band)
         out[f"assd_voxel_{name}"] = surface_assd(a, b, sp)
-        out[f"bias_{name}"] = signed_bias(a, b, sp)
+        out[f"bias_{name}"] = signed_bias(a, b, sp, roi=band)
         out[f"mean_abs_d_{name}"] = mean_abs_d(a, b, sp)
     walls_r, seg_r = segment_thickness(ref, affine=aff)
     walls_t, seg_t = segment_thickness(test, affine=aff)
@@ -597,6 +691,24 @@ def exact_shift_phantom(
 
 
 # ---------------------------------------------------------------------------------- JA16 check
+OPEN_BASE_GRIDS = ((GRID_MM,) * 3, (0.4, 0.4, 0.5))  # JA61: two grids
+OPEN_BASE_SHIFTS_MM = (0.3, 0.5)  # JA61: +-0.3 and +-0.5 mm
+
+
+def _open_base_parts(spacing, endo, epi, off, cs, tilt):
+    """(cavity, solid, labels, affine): ``exact_shift_phantom``'s borders cut by the fixed base
+    plane z = 0, which the shifts do not move (JA61). The pool is open to label 0 at the base."""
+    cav, outer, _, _, aff = _phantom_parts(
+        spacing, endo, epi, off, cs, PHANTOM_RC, PHANTOM_WALL, tilt, closed=False
+    )
+    cav = np.ascontiguousarray(cav)
+    sol = np.ascontiguousarray(outer | cav)
+    lab = np.zeros(cav.shape, np.int16)
+    lab[sol] = G.MYO
+    lab[cav] = G.LV
+    return cav, sol, lab, aff
+
+
 def validate_bias_estimator(
     shift_mm: float = BIAS_CHECK_SHIFT_MM,
     tolerance_mm: float = BIAS_CHECK_TOLERANCE_MM,
@@ -605,74 +717,147 @@ def validate_bias_estimator(
     shapes: Sequence[Tuple[float, float]] = ((0.0, 0.0), (2.3, 0.0), (2.3, 23.0)),
     seed: int = 20261030,
     spacing: Sequence[float] = (GRID_MM,) * 3,
+    open_base: bool = False,
+    grids: Optional[Sequence[Sequence[float]]] = None,
+    shifts_mm: Optional[Sequence[float]] = None,
 ) -> dict:
-    """JA16's check: does ``signed_bias`` recover a known ``shift_mm``, in each direction, on each
+    """JA16's check: does ``signed_bias`` recover a known shift, in each direction, on each
     border, to within ``tolerance_mm``?
 
     The truth is exact: the reference and the shifted phantom are voxelisations of exact signed
-    distances offset by ``shift_mm`` on the same grid. It is repeated over ``n_offsets`` random
+    distances offset by the shift on the same grid. It is repeated over ``n_offsets`` random
     sub-voxel positions of the phantom against the grid and over ``shapes``, each a (cavity shift,
     tilt degrees) pair: a uniform wall, a varying wall, and a varying wall whose base plane is
-    oblique to the grid. Returns every reading, the worst error, the verdict and the
-    guard it supports (0.3 mm if it passes, else 0.5 mm)."""
+    oblique to the grid.
+
+    ``open_base=False`` (JA16): closed capsules, whole masks, ``shift_mm`` on ``spacing``.
+    ``open_base=True`` (JA61): the capsules cut by a fixed base plane, so the pool opens to label 0
+    as a real mask does at the outflow; the estimate is taken in JA37's band (``ja37_band``) of
+    the reference; two grids (``OPEN_BASE_GRIDS``) and +-0.3 / +-0.5 mm (``OPEN_BASE_SHIFTS_MM``)
+    unless ``grids`` / ``shifts_mm`` say otherwise. The wall moves by exactly the shift; the cut
+    does not move.
+
+    Returns every reading, the worst error, the verdict and the guard this check supports
+    (``BIAS_GUARD_TIGHT_MM`` if it passes, else ``BIAS_GUARD_FALLBACK_MM``). The guard in force
+    is ``BIAS_GUARD_VALIDATED_MM``."""
+    if grids is None:
+        grids = OPEN_BASE_GRIDS if open_base else (tuple(spacing),)
+    if shifts_mm is None:
+        shifts_mm = OPEN_BASE_SHIFTS_MM if open_base else (shift_mm,)
     rng = np.random.default_rng(seed)
-    offsets = rng.uniform(0.0, float(np.max(spacing)), size=(n_offsets, 3))
     rows = []
-    for cs, tilt in shapes:
-        for off in offsets:
-            cav_r, out_r, aff = exact_shift_phantom(
-                spacing, origin_offset_mm=off, cavity_shift_mm=cs, tilt_deg=tilt
-            )
-            sp = np.linalg.norm(aff[:3, :3], axis=0)
-            for border in ("endo", "epi"):
-                for sign in (+1.0, -1.0):
-                    b = sign * shift_mm
-                    shifts = (b, 0.0) if border == "endo" else (0.0, b)
-                    cav_t, out_t, _ = exact_shift_phantom(
-                        spacing,
-                        endo_shift_mm=shifts[0],
-                        epi_shift_mm=shifts[1],
-                        origin_offset_mm=off,
-                        cavity_shift_mm=cs,
-                        tilt_deg=tilt,
+    for grid in grids:
+        offsets = rng.uniform(0.0, float(np.max(grid)), size=(n_offsets, 3))
+        for cs, tilt in shapes:
+            for off in offsets:
+                if open_base:
+                    cav_r, sol_r, lab_r, aff = _open_base_parts(grid, 0.0, 0.0, off, cs, tilt)
+                    sp = np.linalg.norm(aff[:3, :3], axis=0)
+                    bands = {b: ja37_band(lab_r, sp, b) for b in ("endo", "epi")}
+                else:
+                    cav_r, sol_r, aff = exact_shift_phantom(
+                        grid, origin_offset_mm=off, cavity_shift_mm=cs, tilt_deg=tilt
                     )
-                    a, t = (cav_r, cav_t) if border == "endo" else (out_r, out_t)
-                    est = signed_bias(a, t, sp)
-                    rows.append(
-                        {
-                            "border": border,
-                            "true_mm": b,
-                            "estimate_mm": est,
-                            "error_mm": est - b,
-                            "cavity_shift_mm": float(cs),
-                            "tilt_deg": float(tilt),
-                            "origin_offset_mm": [float(v) for v in off],
-                        }
-                    )
+                    sp = np.linalg.norm(aff[:3, :3], axis=0)
+                    bands = {"endo": None, "epi": None}
+                for border in ("endo", "epi"):
+                    for size in shifts_mm:
+                        for sign in (+1.0, -1.0):
+                            b = sign * size
+                            sh = (b, 0.0) if border == "endo" else (0.0, b)
+                            if open_base:
+                                cav_t, sol_t, _, _ = _open_base_parts(grid, *sh, off, cs, tilt)
+                            else:
+                                cav_t, sol_t, _ = exact_shift_phantom(
+                                    grid,
+                                    endo_shift_mm=sh[0],
+                                    epi_shift_mm=sh[1],
+                                    origin_offset_mm=off,
+                                    cavity_shift_mm=cs,
+                                    tilt_deg=tilt,
+                                )
+                            a, t = (cav_r, cav_t) if border == "endo" else (sol_r, sol_t)
+                            est = signed_bias(a, t, sp, roi=bands[border])
+                            rows.append(
+                                {
+                                    "border": border,
+                                    "true_mm": b,
+                                    "estimate_mm": est,
+                                    "error_mm": est - b,
+                                    "grid_mm": [float(v) for v in grid],
+                                    "cavity_shift_mm": float(cs),
+                                    "tilt_deg": float(tilt),
+                                    "origin_offset_mm": [float(v) for v in off],
+                                }
+                            )
     err = np.array([r["error_mm"] for r in rows])
     worst = float(np.max(np.abs(err)))
     passed = bool(worst <= tolerance_mm)
     by = {}
     for border in ("endo", "epi"):
         for sign, key in ((+1, "outward"), (-1, "inward")):
-            e = [
-                r["estimate_mm"]
-                for r in rows
-                if r["border"] == border and np.sign(r["true_mm"]) == sign
-            ]
+            sel = [r for r in rows if r["border"] == border and np.sign(r["true_mm"]) == sign]
+            e = [r["estimate_mm"] for r in sel]
             by[f"{border}_{key}"] = {
                 "mean_mm": float(np.mean(e)),
                 "min_mm": float(np.min(e)),
                 "max_mm": float(np.max(e)),
+                "worst_abs_error_mm": float(max(abs(r["error_mm"]) for r in sel)),
             }
     return {
         "harness_version": HARNESS_VERSION,
-        "shift_mm": shift_mm,
+        "open_base": bool(open_base),
+        "shift_mm": shift_mm if not open_base else None,
+        "shifts_mm": [float(v) for v in shifts_mm],
         "tolerance_mm": tolerance_mm,
         "worst_abs_error_mm": worst,
         "mean_error_mm": float(err.mean()),
         "passed": passed,
-        "bias_guard_mm": BIAS_GUARD_VALIDATED_MM if passed else BIAS_GUARD_FALLBACK_MM,
+        "bias_guard_mm": BIAS_GUARD_TIGHT_MM if passed else BIAS_GUARD_FALLBACK_MM,
         "by_border": by,
         "rows": rows,
+    }
+
+
+# ---------------------------------------------------------------------------------- JA37 transfer
+def transfer_check(
+    rows, *, n_first: int = TRANSFER_N_FIRST, limit_mm: float = TRANSFER_LIMIT_MM
+) -> dict:
+    """JA37's transfer check (JA62, R4-S5) on ``compare(..., roi="ja37")`` rows in the decision
+    list's order: the median |``bias_*`` - ``bias_pp_*``| per border over the first ``n_first``
+    rows. Rows after the ``n_first``-th are ignored; fewer is a ``ValueError``, never a default,
+    as is a missing or non-finite value among the first ``n_first``.
+
+    Returns ``median_abs_diff_mm`` per border, ``passed`` (every border's median <= ``limit_mm``),
+    ``bias_guard_mm`` (0.3 if passed, else 0.5), ``n_over_limit`` (rows where either border is
+    over the limit; no ids) and ``bias_guard_applied_mm``, the larger of this check's guard and
+    ``BIAS_GUARD_VALIDATED_MM`` (the open-base check's, JA61)."""
+    rows = list(rows)
+    if len(rows) < n_first:
+        raise ValueError(f"the transfer check needs {n_first} rows, got {len(rows)}")
+    first = rows[:n_first]
+    diffs = {}
+    for border in ("endo", "epi"):
+        try:
+            d = np.array(
+                [abs(float(r[f"bias_{border}"]) - float(r[f"bias_pp_{border}"])) for r in first]
+            )
+        except KeyError as e:
+            raise ValueError(f"a row lacks {e.args[0]}") from None
+        if not np.isfinite(d).all():
+            raise ValueError(f"non-finite bias_{border} or bias_pp_{border} among the first rows")
+        diffs[border] = d
+    med = {b: float(np.median(d)) for b, d in diffs.items()}
+    passed = all(v <= limit_mm for v in med.values())
+    guard = BIAS_GUARD_TIGHT_MM if passed else BIAS_GUARD_FALLBACK_MM
+    over = (diffs["endo"] > limit_mm) | (diffs["epi"] > limit_mm)
+    return {
+        "harness_version": HARNESS_VERSION,
+        "n_first": n_first,
+        "limit_mm": limit_mm,
+        "median_abs_diff_mm": med,
+        "passed": bool(passed),
+        "bias_guard_mm": guard,
+        "n_over_limit": int(over.sum()),
+        "bias_guard_applied_mm": max(guard, BIAS_GUARD_VALIDATED_MM),
     }

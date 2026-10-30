@@ -6,7 +6,8 @@ Golf E3: an LIE-only reader scores 0.20 Kim-bin accuracy). This asks, on real an
   2. what that costs the per-segment scar call and its Kim bin (0; 1-25; 26-50; 51-75; 76-100 %).
 
 Data: the open public TotalSegmentator v1 cardiac CTs (Zenodo 6802614, CC BY 4.0; model-made heart masks at 1.5 mm).
-Every case passes heldout.check_public (held-out pool patients and JA12 twins refused) before any file is opened.
+Every case passes the shared JA12 guard (janusm.guard.refuse, #145; twins over v1 and v2) and then
+heldout.check_public, before any file is opened. The whole run is refused if any case on disk is refused.
 
 Per case:
   * first pass = the real CT and its masks. Scars are placed in 5 segments of 1-16 (depth tau in 0.15, 0.40, 0.65,
@@ -181,7 +182,9 @@ def grade(lie_s, wall_seg, n_sd):
 def run_case(args):
     case, reps = args
     from heldout import check_public
-    check_public(pathlib.Path(case).name, META_TEXT)          # refuse before any file of the case is opened
+    from janusm.guard import refuse
+    refuse([pathlib.Path(case).name], what="Kilo E5 case", source="TotalSegmentator")   # JA12 guard (#145) first
+    check_public(pathlib.Path(case).name, META_TEXT)          # then Kilo's own check; both before any file is opened
     case = pathlib.Path(case)
     rng = np.random.default_rng(int(case.name[1:]) + 5)
     rd = lambda k: np.asanyarray(nib.load(case / f"segmentations/{k}.nii.gz").dataobj) > 0
@@ -302,6 +305,8 @@ def main():
     from heldout import refused_with_twins
     direct, twins = refused_with_twins(meta)
     cases = sorted(p for p in pathlib.Path(a.data).glob("s[0-9][0-9][0-9][0-9]") if p.is_dir())
+    from janusm.guard import refuse
+    refuse([c.name for c in cases], what="Kilo E5 run", source="TotalSegmentator")   # whole run refused on any hit
     bad = [c.name for c in cases if c.name in direct | twins]
     if bad:
         raise SystemExit(f"refusing the whole run: held-out or twin cases present on disk: {bad}")

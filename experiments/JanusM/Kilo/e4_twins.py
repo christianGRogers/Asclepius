@@ -22,5 +22,13 @@ out = {"rule": f"same sex and institute as a held-out subject, age within +-{TWI
        "twins_by_study_type": dict(collections.Counter(r["study_type"].strip() for r in rows
                                                        if r["image_id"] in twins).most_common()),
        "open_cardiac_ids": open_card}
+# The shared JA12 guard (#145) pins its twins over v1 and v2 ages; count what it refuses among the v1 ids.
+from janusm.guard import load_guard  # noqa: E402
+g = load_guard()
+shared = {r["image_id"] for r in rows if g.reason(r["image_id"], source="TotalSegmentator")}
+out["shared_guard_145"] = {"v1_ids_refused": len(shared), "kilo_v1_refused_not_in_shared": len((direct | twins) - shared),
+                           "shared_refused_not_in_kilo_v1": len(shared - (direct | twins)),
+                           "cardiac_open": sorted(c for c in open_card if c not in shared),
+                           "cardiac_refused_by_shared_only": sorted(c for c in open_card if c in shared)}
 json.dump(out, open(sys.argv[2], "w"), indent=1)
 print({k: v for k, v in out.items() if k not in ("open_cardiac_ids", "twins_by_study_type")})

@@ -31,8 +31,12 @@ def main(out, n):
     with RemoteZip(URL) as z:
         meta = z.read("Totalsegmentator_dataset/meta.csv").decode("utf-8-sig")
         direct, twins = excluded_ids(meta)
-        bad = direct | twins
-        print(f"excluding {len(direct)} held-out pool ids and {len(twins)} JA12 twins")
+        from janusm.guard import load_guard                  # the shared JA12 guard (#145): twins over v1 and v2
+        g = load_guard()
+        shared = {r["image_id"] for r in csv.DictReader(io.StringIO(meta), delimiter=";")
+                  if g.reason(r["image_id"], source="TotalSegmentator")}
+        bad = direct | twins | shared
+        print(f"excluding {len(direct)} held-out pool ids, {len(twins)} v1 twins, {len(bad)} in all with the shared guard")
         rows = [r for r in csv.DictReader(io.StringIO(meta), delimiter=";")
                 if r["study_type"].strip() in STUDY and r["image_id"] not in bad]
         rows.sort(key=lambda r: r["image_id"])

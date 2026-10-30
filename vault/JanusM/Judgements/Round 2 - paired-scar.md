@@ -49,7 +49,7 @@ membership and count only; no list is reproduced here.
 | Kilo | E6: P(sens lb > 0.75) 0.95 at 120, 0.72 at 60 (sd_s 0.13); transmurality agreement 0.73 / 0.63 / 0.52 | `results_e6_power.json` | yes |
 | Juliet | E5: pass rate 0.93 at 60 (f_MI 0.5); weak pipeline 0.02–0.05 | `e5_cohort_power.json` | yes (0.927) |
 | Juliet | E6: heart-masked MI residual 0.26–0.56 mm; whole-field 5.2 mm at d = 10 | `e6_registration.json` | yes (table values) |
-| Golf | E5 typical, affine: ASSD 0.61 mm; rule P 0.87 / 0.84 / 0.75 / 0.99; plain T specificity 0.45 | `lie_reg.json` | yes |
+| Golf | E5 typical, affine (12 hearts, 204 segments, after #176): ASSD 0.63 mm; rule P κ 0.85, sens 0.75, spec 0.99; plain T specificity 0.45 | `lie_reg.json` | yes (11-heart values 0.61 / 0.84 / 0.75 / 0.99 move ≤ 0.02) |
 | Golf | E6: power all three 0.80 at 80, 0.89 at 120 (base) | `cohort_power.json` | yes |
 
 ### 1.2 The PM's points, verified
@@ -59,11 +59,11 @@ advocate built a different synthetic late scan**, so the numbers do not transfer
 
 | | Kilo E5 | Juliet E6 | Golf E5 |
 |---|---|---|---|
-| Hearts | 13 real (TS v1, 1.5 mm masks) | 1 idealised 3-D phantom, 4 seeds | 11 real (TS v2.0.1), 1 mm |
+| Hearts | 13 real (TS v1, 1.5 mm masks) | 1 idealised 3-D phantom, 4 seeds | 12 real (TS v2.0.1), 1 mm |
 | Blood vs scar on LIE | blood 110 < scar 150 (easy) | 130 vs 150 (C 60), **130 = 130** (C 40) | **blood = scar** (hard) |
 | What moves | the **whole image**, incl. chest | **the heart only**; spine, lungs static | the whole image |
 | Motion | rigid + 1.5 mm RMS non-rigid | translation + rotation; one 5 % phase case | translation, rotation, **3–6 % scale**, 1–2 mm non-rigid |
-| Best method, residual | rigid 0.80 mm (floor set by the non-rigid field) | heart-masked rigid 0.26–0.56 mm | affine 0.61 mm |
+| Best method, residual | rigid 0.80 mm (floor set by the non-rigid field) | heart-masked rigid 0.26–0.56 mm | affine 0.63 mm |
 
 - **Kilo's "rigid is enough" and "masking adds nothing"** hold only when the chest moves with the heart, which Kilo
   says. Its 0.78–0.82 mm floor across all methods is the non-rigid field that no rigid or affine transform can
@@ -109,9 +109,9 @@ differ on each step:
 | Juliet | depth-binned extent T ≥ τ, **τ = p99 of T in LGE-negative development segments**, per protocol | half-way threshold, **depth-binned transmural extent** | darkest segment |
 | Golf | **core rule**: ≥ 5 % after opening, ignoring 1 mm at the endocardium | remote + 3 SD, volume share | mid-wall third of 4 darkest segments |
 
-**One finding none of them states.** Golf's core rule has sensitivity **0.69 with exact borders** and **0.75 after
+**One finding none of them states.** Golf's core rule has sensitivity **0.70 with exact borders** and **0.75 after
 affine registration** (`lie_reg.json`). It does better with registration error than without: the 1 mm exclusion
-removes thin bin-1 scars by construction, and the residual outward bias (+0.22 mm) carries blood signal into the
+removes thin bin-1 scars by construction, and the residual outward bias (+0.19 mm) carries blood signal into the
 core. **Its 0.75 is partly spill.** That is one more reason the rule must be chosen on real LGE (JA30).
 
 **Which quantity a Kim bin is.** Kilo and Golf grade the scar's volume share of a segment. Juliet grades
@@ -137,8 +137,8 @@ the CT measure that agrees best with that read is chosen on development (JA30).
   matched to. That pairing reveals that the two share sex and institute and are within 5 years of age. These are
   public metadata, but from now on notes say "a twin" without naming the held-out partner (JA36).
 - **Juliet** opened no case (all synthetic). Its `guard_r2.gate()` runs first, and its output scan found 0 ids.
-- **Golf s0832** (#176): its E5 numbers already include it (`lie_reg.json` note "11 of 12"; the 12th passes the
-  guard). No conclusion here depends on it.
+- **Golf s0832** (#176, merged): E5 now has 12 hearts and 204 segments; s0832 passes the guard. The core-rule figures
+  move by ≤ 0.01 (κ 0.84 → 0.85). No conclusion here changes.
 
 **(5) The asks for the lead,** merged in §5:
 - Kilo PB1–PB4;
@@ -230,7 +230,7 @@ Scale 1–5, as in Round 1:
 | | Score | Why |
 |---|---|---|
 | (a) Reasoning | **4** | Plans for Scar-0 to fail instead of hoping. Scar-1 is a segment-level model trained on the reference itself (development LGE), with no voxel labels and no GPU. The 80-patient floor for any seal claim. The culprit vessel as the only territory reference in the project. Deducted: §4.5's margin clip(0.5 r̃, 0.15, 0.35) loosens with noisy reads, the flaw `jm/rest-ccta` rejected (JA16); the core rule's sensitivity is partly spill (§1.2) and this is not noticed; the phase match is "where the protocol allows" |
-| (b) Evidence | **4** | 11 (12) real hearts, the hard bright-blood case, four registration methods, a half-split τ, two CNRs; E7 independently reproduces the harness `jm/rest-ccta` adopted (JA15); E4 matches the shared guard id for id. Numbers match. Deducted: assumed misalignment levels; Ingkanisorn cited for a number its abstract lacks |
+| (b) Evidence | **4** | 12 real hearts (s0832 added by #176), the hard bright-blood case, four registration methods, a half-split τ, two CNRs; E7 independently reproduces the harness `jm/rest-ccta` adopted (JA15); E4 matches the shared guard id for id. Numbers match. Deducted: assumed misalignment levels; Ingkanisorn cited for a number its abstract lacks |
 | (c) Fit | **4** | ~160 patients, all with LIE. Most of §4 (Stage A margins, TPR, fat) is superseded by path A's JA16–JA18 |
 | (d) Risk / cost | **5** | ≈ 3 GPU-h committed; Scar-0 and Scar-1 both CPU; the cheapest conditional route |
 

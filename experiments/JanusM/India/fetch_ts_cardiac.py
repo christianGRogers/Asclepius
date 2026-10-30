@@ -40,7 +40,19 @@ def main(out):
         files = [base + "ct.nii.gz"] + [base + f"segmentations/{m}.nii.gz" for m in MASKS]
         for f in files:
             if f in names and not os.path.exists(os.path.join(out, f)):
-                z.extract(f, out)
+                for attempt in range(4):  # a dropped connection leaves a partial file: remove it and retry
+                    try:
+                        z.extract(f, out)
+                        break
+                    except Exception as e:
+                        print("retry", f, type(e).__name__, flush=True)
+                        try:
+                            os.remove(os.path.join(out, f))
+                        except OSError:
+                            pass
+                        z = RemoteZip(URL)
+                else:
+                    raise RuntimeError(f"could not fetch {f}")
         print(s, flush=True)
 
 if __name__ == "__main__":

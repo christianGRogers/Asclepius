@@ -81,10 +81,10 @@ pre-registered on #179 before any result,** with Kilo's 1a–1c and Golf's scar 
 
 ## Result
 
-> **Correction (13:28 UTC, Golf on #179).** In this run (**v1**), `menu.py`'s P-G kept wall voxels with
-> `edt ≥ 1.0` from the cavity. That drops no wall voxel, so **v1's P-G lacks JA30's 1 mm endocardial exclusion**.
-> Every P-G number below is "P-G without the exclusion". The fix uses `edt − 0.5 ≥ 1.0 mm`, from the surface. A full
-> re-run (**v2**, same seeds) is in progress, and §5 below will give v2's P-G verdict. P-K, P-J, E-V, E-D, the
+> **Correction (13:28 UTC, Golf on #179).** In the first run (**v1**), `menu.py`'s P-G kept wall voxels with
+> `edt ≥ 1.0` from the cavity. That drops no wall voxel, so **v1's P-G lacked JA30's 1 mm endocardial exclusion**.
+> P-G numbers in §1–§4 are v1's. The fix uses `edt − 0.5 ≥ 1.0 mm`, from the surface. **§5 gives v2's P-G (final):
+> the verdict is unchanged.** P-K, P-J, E-V, E-D, the
 > registration and the QC results don't depend on it. v1's data stay committed as `results_v1.jsonl.gz` /
 > `scores_v1.json`.
 
@@ -158,6 +158,32 @@ smoothed LIE.
   - with oracle borders, P-G and P-J are clean (specificity ≥ 0.96).
 - **Phase-mismatched patients,** even after the best registration, lose bin-1 sensitivity: 0.0–0.5 for P-G. This is
   why JA27 keeps them out of the primary analysis.
+
+### 5. v2: P-G with JA30's endocardial exclusion (the re-run, final)
+
+**The re-run.** Same 630 cases and seeds. It was interrupted once by a container restart and resumed heart by heart.
+Every non-P-G number reproduces v1:
+- no pooled sensitivity or specificity moves;
+- scar-free specificity moves by ≤ 0.003;
+- the only per-case differences are SimpleITK's multithreaded affine stage, in 18 of 630 cases (median 0.002 mm,
+  max 0.2 mm).
+
+`scores.json` / `results.jsonl.gz` are v2; v1 is kept as `*_v1`.
+
+**P-G, v2, at CNR 5 with motion none or rigid:**
+
+| Arm | Sensitivity | Specificity | Scar-free specificity | Bin-1 sensitivity | Spill | Verdict |
+|---|---|---|---|---|---|---|
+| **JA29 chain** | 0.875–0.979 | **0.80–1.00** (0.80–0.88 under motion) | **0.84–1.00** | 0.55–0.90 | 0.00–0.03 | **struck** (specificity under motion) |
+| chain, 4 mm + rim_dark | 0.915–0.989 | ≥ 0.985 | 1.00 | 0.60–0.94 | 0.00 | passes |
+| true borders | 0.921–0.979 | ≥ 0.989 | 1.00 | 0.72–0.90 | 0.00 | passes |
+
+- **The exclusion does not change the verdict.** It lifts specificity under motion a little (0.78–0.86 in v1, 0.80–0.88
+  in v2) and costs thin-scar sensitivity: bin 1 falls from 0.82–1.00 to 0.55–0.90 on the chain at CNR 5, and to
+  0.25–0.67 at CNR 3 (0.19–0.42 with A2's registration or true borders).
+- **The strike is still the registration's.** On true borders, and with A2's registration, P-G passes every bar.
+- Golf's own E8 reports 0.75–0.81 sensitivity after affine, on a different generator and scar mix. The benchmark's
+  numbers decide, as agreed on #179.
 
 ## What it changes
 

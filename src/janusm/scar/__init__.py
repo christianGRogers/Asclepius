@@ -22,7 +22,7 @@ guard first, and fails closed.
 from __future__ import annotations
 
 #: Bump on any change that can move a reported number.
-SCAR_VERSION = "1.0.0"
+SCAR_VERSION = "1.1.0"
 
 #: JA26: every scar output carries this until JA32 passes on the paired seal.
 RESEARCH_LABEL = "research output, not validated"
@@ -34,7 +34,11 @@ PASSED = "passed"
 REREGISTERED = "re-registered"
 NOT_GRADED = "not graded"
 AWAITING = "awaiting reader check"
-STATUSES = (PASSED, REREGISTERED, NOT_GRADED, AWAITING)
+# JA52: flagged by the phase step. Not a registration failure (left out of failure_rate), never
+# re-registered; its stratum is decided downstream with the reader's phase mark. Not a final
+# grading status here: scoring a phase-suspect patient is decided by the phase-unmatched stratum.
+PHASE_SUSPECT = "phase suspect"
+STATUSES = (PASSED, REREGISTERED, NOT_GRADED, AWAITING, PHASE_SUSPECT)
 FINAL_STATUSES = (PASSED, REREGISTERED, NOT_GRADED)
 
 
@@ -63,6 +67,7 @@ __all__ = [
     "REREGISTERED",
     "NOT_GRADED",
     "AWAITING",
+    "PHASE_SUSPECT",
     "STATUSES",
     "FINAL_STATUSES",
     "guard_case",

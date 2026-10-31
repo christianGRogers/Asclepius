@@ -1,5 +1,7 @@
 """Janus-M path B, PS3-S1 to PS3-S5: the JA51 registration chain, the JA52 phase step and the JA53
-QC cuts (``vault/JanusM/Judgements/Round 3 - paired-scar.md`` §9, ``registration.py``).
+QC cuts (``vault/JanusM/Judgements/Round 3 - paired-scar.md`` §9, ``registration.py``), and PS4-S10
+(``Round 4 - paired-scar (JA82 addendum).md`` §7, JA88: the 4 mm-only phase report and the pinned
+default).
 
 Each item's test is the one §9 names. Phantoms only (``tests/janusm_synth.py``): the static-chest
 phantom (Juliet E6's heart in a chest whose lung hugs it), a 1 mm-grid bright-wall cavity, and
@@ -184,6 +186,99 @@ def test_ps3_s1_fallback_runs_only_when_the_4mm_stage_fails_qc(mocked):
     # no fallback reached: no 4 mm check is logged
     reg, _ = mocked([BAD, OK])
     assert reg.phase_4mm is None and reg.stage_4mm is None
+
+
+
+# ------------------------------------------------------------------------------ PS4-S10 (JA88)
+def _phase(flag):
+    return R.PhaseCheck(True, 8.0, 0.1, 0.2, 1.0 if flag else 0.0, 0.6, 0.1, None, 0.0,
+                        routing_flags=["edge_offset"] if flag else [])
+
+
+@pytest.fixture
+def ps4_s10_regs(mocked, monkeypatch):
+    """Three mocked registrations whose fallback is kept, with the phase step mocked too: its first
+    call is the 4 mm check, its second the final stage's."""
+
+    def run(flag_4mm, flag_final):
+        seq = iter([_phase(flag_4mm), _phase(flag_final)])
+        monkeypatch.setattr(R, "phase_step", lambda *a, **k: next(seq))
+        reg, _ = mocked([BAD, BAD, BAD, OK])
+        assert reg.final.name == R.STAGE_FALLBACK and reg.phase_4mm.suspect is flag_4mm
+        assert reg.phase_flag is flag_final
+        return reg
+
+    counted = run(True, False)  # 4 mm flag, fallback kept, no final flag
+    both = run(True, True)  # 4 mm flag and a final flag: routed
+    neither = run(False, False)  # no 4 mm flag
+    return counted, both, neither
+
+
+def test_ps4_s10_phase_4mm_only_counts_the_unrouted_fallback_patient(ps4_s10_regs):
+    """PS4-S10: 4 mm flag, fallback kept, no final flag -> counted; a final flag, or no 4 mm flag
+    -> not counted."""
+    counted, both, neither = ps4_s10_regs
+    assert R.phase_4mm_only(counted)
+    assert not R.phase_4mm_only(both)
+    assert not R.phase_4mm_only(neither)
+    # the fallback must be the final stage
+    counted.final = counted.stage_4mm
+    assert not R.phase_4mm_only(counted)
+
+
+def test_ps4_s10_report_on_three_counts_one_with_an_upper_bound_above_the_share(ps4_s10_regs):
+    """PS4-S10: the report on the three gives count == 1, n == 3 and an exact upper bound above the
+    share; the counted patients' reader-check outcomes are status counts. No threshold."""
+    counted, both, neither = ps4_s10_regs
+    for r in ps4_s10_regs:
+        r.record_reader_check(True)
+    rep = R.phase_4mm_only_report([counted, both, neither])
+    assert rep["count"] == 1 and rep["n"] == 3
+    assert rep["share"] == pytest.approx(1 / 3)
+    assert rep["upper"] > rep["share"]
+    # Clopper-Pearson, one-sided 95 %: 1 of 3 -> the 0.95 quantile of Beta(2, 2)
+    from scipy.stats import beta
+    assert rep["upper"] == pytest.approx(beta.ppf(0.95, 2, 2))
+    assert rep["status"] == {SC.PASSED: 1, SC.REREGISTERED: 0, SC.NOT_GRADED: 0,
+                             SC.PHASE_SUSPECT: 0}
+    assert R.clopper_pearson_upper(0, 3) == pytest.approx(1 - 0.05 ** (1 / 3))
+    assert R.clopper_pearson_upper(3, 3) == 1.0
+    with pytest.raises(ValueError, match="no patients"):
+        R.phase_4mm_only_report([])
+
+
+def test_ps4_s10_phase_check_before_fallback_defaults_to_false():
+    """PS4-S10 / JA88: ``register_lie``'s skip switch is off by default, and both docstrings name
+    JA88."""
+    import inspect
+
+    assert inspect.signature(R.register_lie).parameters["phase_check_before_fallback"].default \
+        is False
+    assert "JA88" in R.__doc__ and "JA88" in R.register_lie.__doc__
+
+
+def _bytes(reg):
+    lg = reg.log()
+    for st in lg["stages"]:
+        st.pop("seconds")
+    b = json.dumps(lg, sort_keys=True).encode()
+    for st in reg.stages:
+        b += st.transform.matrix.tobytes() + st.transform.translation.tobytes()
+    return b
+
+
+def test_ps4_s10_default_path_results_are_byte_identical(chest, tight, shifted):
+    """PS4-S10: the default path's results are byte-identical: the 4 mm shift phantom through the
+    whole chain (step 5 reached) gives the same bytes with the switch left out or passed as
+    ``False``, and the report reads a registration without changing it."""
+    motion, lie, reg = shifted
+    assert reg.phase_4mm is not None and not reg.step5_skipped
+    before = _bytes(reg)
+    R.phase_4mm_only_report([reg])
+    assert _bytes(reg) == before
+    again = R.register_lie(chest.first, lie, chest.affine, tight,
+                           phase_check_before_fallback=False, **FAST)
+    assert _bytes(again) == before
 
 
 # ------------------------------------------------------------------------------ PS3-S2

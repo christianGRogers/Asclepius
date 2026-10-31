@@ -679,9 +679,11 @@ AFFINE_VARIANTS = (None, "scaled")
 #: affine that follows (the shipped optimiser steps both in units of 0.01, with the translations).
 VARIANT_SCALE_STEP = 0.01
 VARIANT_LINEAR_STEP = 0.002
-#: PS4-S7 ``scaled``: penalty (in MI nats) per unit squared Frobenius distance of the linear part
-#: from the scale stage's. 0 is no penalty.
-VARIANT_RIGID_PENALTY = 0.0
+#: PS4-S7 ``scaled``: penalty (in MI nats) per unit squared Frobenius distance of the full affine's
+#: linear part from the scale stage's. On the static-chest phantom (seed 22) 0 lets the full affine
+#: drift on a pure 4 mm shift (TRE 0.50 mm against rigid 0.22); 10 holds it (0.26) and keeps the
+#: 3 % scale fix (0.24 against rigid 1.29); 100 loses the scale fix (0.56).
+VARIANT_RIGID_PENALTY = 10.0
 
 
 def _affine_scaled(

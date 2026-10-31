@@ -40,7 +40,8 @@ Round 4 moves three things: the affine rule, how the phase step flags, and what 
 - **Item 2, the affine rule (§4).**
   - **Pre-registered pick: rule (g)** (sanity bound; normalised maximum does not rise; and affine passes QC or
     |log det| ≥ 0.02). It is Golf's own candidate, so I state the margin: it beat (b) by 0.035 mm of p90, just
-    outside the 0.02 mm tie margin.
+    outside the 0.02 mm tie margin. Under Kilo's pre-registered criterion, on the same rows, (g) also leads: 2.91 against
+    (b)'s 2.98, with no harmful keeps on rigid motion (§4.2).
   - **Independent of the pick, (g) also keeps the correct affine on the PS3-S3 phantom; (b) does not.** The
     PS3-S3 test has a sign error of its own: it expects log det > +0.03, and the correct value is −0.081.
   - (c) and always-affine re-strike both P-J and P-G on rigid motion.
@@ -71,7 +72,9 @@ Round 4 moves three things: the affine rule, how the phase step flags, and what 
 ## 2. What was run, and what I disclosed on #251 before results
 
 - **The shared benchmark v3** (`bench_lie/run_v3.py`, `score_v3.py`), proposed and pre-registered in Golf's first #251
-  comment (2026-10-30, before the run started), and run once by Golf for all three advocates.
+  comment (2026-10-30, before the run started). Our three claims crossed and three runs started within ten minutes.
+  On #251, Juliet and Kilo agreed that **Golf's run is the canonical v3** and theirs are replications. Kilo found every
+  stage TRE identical on the 96 cases his rows share with Golf's.
   - Same hearts, guard first on the whole list and per heart. The v2 conditions keep v2's seed string, so their
     images are v2's.
   - **New motions:**
@@ -255,7 +258,31 @@ What the table shows about the shipped chain:
 - **Why (c) fails.** On rigid-only motion the 4 mm affine often finds a spurious |log det| ≥ 0.02 (E10's overshoot).
   Letting the sanity bound decide alone keeps it.
 
-### 4.2 Proposed rule (replaces JA51 4(b); for the judge)
+### 4.2 The same rows under Kilo's and Juliet's pre-registered criteria
+
+On #251, Kilo and Juliet agreed that Golf's run is the canonical v3 and theirs are replications. Kilo reports that
+every stage TRE on the 96 cases his rows share with Golf's agrees exactly. Each of us pre-registered a different way
+to choose the affine rule. (g) was not in their candidate sets, so I scored it under Kilo's criterion on the same
+rows. That criterion is the lowest pooled p90 over `rigid`, `scale` and `aniso` at CNR 5, eligible only if ≤ 10 %
+of rigid cases keep an affine that is worse by > 0.25 mm.
+
+| Rule | Pooled p90 (median), CNR 5, rigid + scale + aniso | Harmful keeps on rigid (affine kept, worse by > 0.25 mm) |
+|---|---|---|
+| JA51 literal / (a) | 3.53 (1.74) | 0 / 63 |
+| (b) | 2.98 (1.12) | 0 / 63 |
+| (c), \|log det\| ≥ 0.02 | 3.46 (0.51) | 7 / 63 |
+| **(g)** | **2.91** (0.93) | **0 / 63** |
+| never / always | 4.11 (1.89) / 3.46 (0.64) | 0 / 63; 13 / 63 |
+
+- **My literal, (b) and (c) values match Kilo's table on #251** (3.53, 2.98, 3.46). So the scorers agree.
+- **(g) leads under Kilo's criterion too.**
+- **Juliet's criterion** (pooled p90 over rigid, scale, aniso3, aniso6 on her rows) picked (c). Both Kilo and I find
+  that (c) keeps overshooting affines on rigid motion and re-strikes P-G.
+- **What all three criteria agree on:** the literal rule should go; (c) is unsafe; the answer is (b) or (g). (g)
+  differs from (b) by also requiring that a kept affine either passes QC or shows a scale. That clause is what
+  removes (b)'s 8 rigid-motion keeps and keeps the PS3-S3 phantom's correct affine.
+
+### 4.3 Proposed rule (replaces JA51 4(b); for the judge)
 
 > **4. Affine from rigid, with the same mask, is kept only if all hold:**
 > - (a) the sanity bound (unchanged): |log det A| ≤ 0.15, and every scale and shear term within ± 15 %;

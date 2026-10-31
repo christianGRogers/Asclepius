@@ -105,8 +105,10 @@ def test_ps4_s2_phase_suspect_rigid10_registration_is_graded_on_its_rigid_stage(
         out = S.scar0_registered(lie, reg, tau=0.05)
         ref = S.scar0(lie, good, status=SC.PHASE_SUSPECT, phase_route=route, tau=0.05)
         wrong = S.scar0(lie, bad, status=SC.PHASE_SUSPECT, phase_route=route, tau=0.05)
-        assert out.segments == ref.segments and out.remote == ref.remote
-        assert out.segments != wrong.segments  # the fallback's geometry is not the one graded
+        seg = out.table("P-J", "E-D")["segments"]  # JSON-ready: NaN shares read None
+        assert seg == ref.table("P-J", "E-D")["segments"] and out.remote == ref.remote
+        # the fallback's geometry is not the one graded
+        assert seg != wrong.table("P-J", "E-D")["segments"]
         got = out.for_scoring("P-J", "E-D")
         assert got.strata >= {"phase_unmatched"} and got.phase_route == route
         bins, shares = got  # still unpacks as before

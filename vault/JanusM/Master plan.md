@@ -2,11 +2,43 @@
 aliases: [Janus-M master plan]
 tags: [janus-m, plans, master-plan]
 status: living
-updated: 2026-10-30
+updated: 2026-10-31
 path: jm/paired-scar
 ---
 
 # Janus-M master plan
+
+## On this path (`jm/paired-scar`): amended in Round 4 (2026-10-31)
+
+**[[Kilo v2]] with JA25–JA36, JA50–JA59 and JA80–JA87** ([[Janus-M Round 4 paired-scar]],
+`Judgements/Round 4 - paired-scar.md`). Golf v4 and Kilo v4 tie at 18/20; Juliet v4 17. No fork. Where JA80–JA87 and the
+Round 3 summary below differ, Round 4 governs.
+
+- **Menu, final (JA80):** presence **P-J then P-G** (P-G survived the shipped chain: ≥ 0.915 / 0.985 / 0.989); **P-K
+  struck**; extent **E-V, E-D** (3 SD), with E-D keeping columns of **≥ 4 depth bins**, as the benchmark does.
+- **Affine rule (JA81, replaces JA51 4(b)):** kept iff sane (4(a)), the normalised QC maximum does not rise, **and**
+  either it passes QC or |log det A| ≥ 0.02 (Golf's (g)). The PS3-S3 test's log-det sign is corrected.
+- **Fallback (JA82):** the edge offset is checked on the last 4 mm stage; a flag skips the 10 mm fallback. This ships
+  only if a replay on the v3 rows meets PS4-S5's numbers.
+- **QC cuts (JA83):** provisional cuts come from **registered** benchmark cases (`scores_v3.json` →
+  `qc_cuts_registered`), in a file that declares its QC definitions. B-spline is not opened as configured.
+- **Phase (JA84–JA85):**
+  - the **edge offset routes**; `rim_dark` is advisory;
+  - a confirmed mismatch (DICOM, or the reader's mark) goes to the `phase_unmatched` stratum, outside the claim and
+    outside yield;
+  - an inferred-phase patient routed on the flag alone is charged to yield;
+  - an unconfirmed DICOM-matched flag is an ordinary patient;
+  - stratum patients are graded on their last 4 mm stage, and a put-back analysis is reported.
+- **Seal (JA86):**
+  - the rule is unchanged, cap 240;
+  - 2 000 sims, with N80 and its MC band logged;
+  - power on analysed patients, enrolment inflated by the phase share;
+  - `power_at_seal` is stated; **below 0.80 at the cap, no seal grading until the lead answers LQ40**;
+  - planning **≈ 40 + 160 at 70 %** (≈ 200 at 50 %). The seal tolerates ≈ 3 % failure at 240.
+- **Lead questions:** **LQ40** (an unpowerable seal). LQ2–LQ18 and LQ25–LQ28 carried (LQ27 updated).
+- **Shipping:** PS4-S1–S9 (ruling §9).
+- **Next:** no Round 5 (JA87). The path waits only on the lead: LQ1 (a paired cohort and access), Job JM-0 / JM-0R, and
+  LQ40 once development numbers exist.
 
 ## On this path (`jm/paired-scar`): amended in Round 3 (2026-10-30)
 

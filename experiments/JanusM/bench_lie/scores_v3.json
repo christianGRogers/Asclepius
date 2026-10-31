@@ -145341,6 +145341,110 @@
      "P-G|depth": 0.947
     }
    }
+  },
+  "chain_g_ja82": {
+   "P-K": {
+    "struck": true,
+    "why": [
+     "above/rigid: spec 0.881",
+     "above/none: spec on scar-free hearts 0.051",
+     "above/rigid: spec on scar-free hearts 0.115",
+     "below/none: spec on scar-free hearts 0.006",
+     "below/rigid: spec on scar-free hearts 0.087",
+     "equal/none: spec on scar-free hearts 0.006",
+     "equal/rigid: spec on scar-free hearts 0.104"
+    ],
+    "min_sens": 0.977,
+    "min_spec": 0.881,
+    "min_spec_scarfree": 0.006,
+    "max_spill": 0.064
+   },
+   "P-J": {
+    "struck": false,
+    "why": [],
+    "min_sens": 0.865,
+    "min_spec": 0.95,
+    "min_spec_scarfree": 0.961,
+    "max_spill": 0.078
+   },
+   "P-G": {
+    "struck": false,
+    "why": [],
+    "min_sens": 0.915,
+    "min_spec": 0.985,
+    "min_spec_scarfree": 0.992,
+    "max_spill": 0
+   },
+   "E-V": {
+    "struck": false,
+    "pooled_cnr5_none_rigid": {
+     "P-J|vol": 0.921,
+     "P-J|depth": 0.957,
+     "P-G|vol": 0.92,
+     "P-G|depth": 0.957
+    }
+   },
+   "E-D": {
+    "struck": false,
+    "pooled_cnr5_none_rigid": {
+     "P-J|vol": 0.905,
+     "P-J|depth": 0.942,
+     "P-G|vol": 0.906,
+     "P-G|depth": 0.943
+    }
+   }
+  },
+  "chain_g_fb_pass": {
+   "P-K": {
+    "struck": true,
+    "why": [
+     "above/rigid: spec 0.885",
+     "above/none: spec on scar-free hearts 0.051",
+     "above/rigid: spec on scar-free hearts 0.115",
+     "below/none: spec on scar-free hearts 0.008",
+     "below/rigid: spec on scar-free hearts 0.096",
+     "equal/none: spec on scar-free hearts 0.006",
+     "equal/rigid: spec on scar-free hearts 0.104"
+    ],
+    "min_sens": 0.977,
+    "min_spec": 0.885,
+    "min_spec_scarfree": 0.006,
+    "max_spill": 0.064
+   },
+   "P-J": {
+    "struck": false,
+    "why": [],
+    "min_sens": 0.865,
+    "min_spec": 0.95,
+    "min_spec_scarfree": 0.961,
+    "max_spill": 0.078
+   },
+   "P-G": {
+    "struck": false,
+    "why": [],
+    "min_sens": 0.91,
+    "min_spec": 0.985,
+    "min_spec_scarfree": 0.992,
+    "max_spill": 0
+   },
+   "E-V": {
+    "struck": false,
+    "pooled_cnr5_none_rigid": {
+     "P-J|vol": 0.921,
+     "P-J|depth": 0.957,
+     "P-G|vol": 0.919,
+     "P-G|depth": 0.957
+    }
+   },
+   "E-D": {
+    "struck": false,
+    "pooled_cnr5_none_rigid": {
+     "P-J|vol": 0.907,
+     "P-J|depth": 0.944,
+     "P-G|vol": 0.907,
+     "P-G|depth": 0.945
+    }
+   }
   }
  },
  "affine_rule": {
@@ -148007,5 +148111,264 @@
     "n_free": 157
    }
   ]
+ },
+ "qc_definitions": "janusm.scar.registration 1.1.0",
+ "ja82_replay": {
+  "ruling": "Round 4 - paired-scar, JA82 / PS4-S5 (report only)",
+  "criteria": {
+   "phase_p90_max_mm": 1.2,
+   "nonrigid_ref_p90_mm": 2.23,
+   "nonrigid_tol_mm": 0.3
+  },
+  "chain": "JA81 (g); 4 mm edge offset evaluable and |offset| > 0.6 mm skips step 5; else step 5 as shipped",
+  "cuts": "qc_cuts (the same as chain)",
+  "cnr": 5,
+  "tre_by_motion": {
+   "none": {
+    "chain_g": {
+     "n": 63,
+     "median": 0.0,
+     "p90": 0.273,
+     "max": 0.446
+    },
+    "chain_g_ja82": {
+     "n": 63,
+     "median": 0.0,
+     "p90": 0.28,
+     "max": 1.491
+    },
+    "chain_g_fb_pass": {
+     "n": 63,
+     "median": 0.0,
+     "p90": 0.413,
+     "max": 1.491
+    },
+    "skipped_step5": 1,
+    "stages": {
+     "R0": 34,
+     "rigid4": 21,
+     "affine4": 1,
+     "rigid10": 7
+    }
+   },
+   "rigid": {
+    "chain_g": {
+     "n": 63,
+     "median": 0.267,
+     "p90": 1.108,
+     "max": 2.702
+    },
+    "chain_g_ja82": {
+     "n": 63,
+     "median": 0.267,
+     "p90": 1.108,
+     "max": 2.702
+    },
+    "chain_g_fb_pass": {
+     "n": 63,
+     "median": 0.26,
+     "p90": 1.139,
+     "max": 2.702
+    },
+    "skipped_step5": 2,
+    "stages": {
+     "R0": 0,
+     "rigid4": 60,
+     "affine4": 0,
+     "rigid10": 3
+    }
+   },
+   "scale": {
+    "chain_g": {
+     "n": 63,
+     "median": 1.825,
+     "p90": 2.655,
+     "max": 8.447
+    },
+    "chain_g_ja82": {
+     "n": 63,
+     "median": 1.825,
+     "p90": 2.818,
+     "max": 8.447
+    },
+    "chain_g_fb_pass": {
+     "n": 63,
+     "median": 1.829,
+     "p90": 2.877,
+     "max": 8.447
+    },
+    "skipped_step5": 10,
+    "stages": {
+     "R0": 0,
+     "rigid4": 40,
+     "affine4": 11,
+     "rigid10": 12
+    }
+   },
+   "aniso": {
+    "chain_g": {
+     "n": 63,
+     "median": 0.859,
+     "p90": 4.283,
+     "max": 5.104
+    },
+    "chain_g_ja82": {
+     "n": 63,
+     "median": 0.859,
+     "p90": 3.952,
+     "max": 5.118
+    },
+    "chain_g_fb_pass": {
+     "n": 63,
+     "median": 0.679,
+     "p90": 3.894,
+     "max": 5.637
+    },
+    "skipped_step5": 9,
+    "stages": {
+     "R0": 0,
+     "rigid4": 18,
+     "affine4": 38,
+     "rigid10": 7
+    }
+   },
+   "phase": {
+    "chain_g": {
+     "n": 63,
+     "median": 1.199,
+     "p90": 3.682,
+     "max": 4.435
+    },
+    "chain_g_ja82": {
+     "n": 63,
+     "median": 0.27,
+     "p90": 1.201,
+     "max": 4.325
+    },
+    "chain_g_fb_pass": {
+     "n": 63,
+     "median": 0.255,
+     "p90": 0.966,
+     "max": 1.911
+    },
+    "skipped_step5": 50,
+    "stages": {
+     "R0": 0,
+     "rigid4": 58,
+     "affine4": 0,
+     "rigid10": 5
+    }
+   },
+   "phase_neg": {
+    "chain_g": {
+     "n": 63,
+     "median": 0.324,
+     "p90": 0.941,
+     "max": 6.976
+    },
+    "chain_g_ja82": {
+     "n": 63,
+     "median": 0.307,
+     "p90": 0.967,
+     "max": 6.976
+    },
+    "chain_g_fb_pass": {
+     "n": 63,
+     "median": 0.307,
+     "p90": 1.025,
+     "max": 6.976
+    },
+    "skipped_step5": 42,
+    "stages": {
+     "R0": 0,
+     "rigid4": 56,
+     "affine4": 6,
+     "rigid10": 1
+    }
+   },
+   "nonrigid": {
+    "chain_g": {
+     "n": 63,
+     "median": 1.644,
+     "p90": 2.229,
+     "max": 2.517
+    },
+    "chain_g_ja82": {
+     "n": 63,
+     "median": 1.669,
+     "p90": 2.543,
+     "max": 3.35
+    },
+    "chain_g_fb_pass": {
+     "n": 63,
+     "median": 1.841,
+     "p90": 2.866,
+     "max": 3.35
+    },
+    "skipped_step5": 16,
+    "stages": {
+     "R0": 0,
+     "rigid4": 23,
+     "affine4": 3,
+     "rigid10": 37
+    }
+   }
+  },
+  "strike_verdicts": {
+   "P-K": {
+    "chain_literal": true,
+    "chain_g": true,
+    "chain_g_ja82": true
+   },
+   "P-J": {
+    "chain_literal": false,
+    "chain_g": false,
+    "chain_g_ja82": false
+   },
+   "P-G": {
+    "chain_literal": false,
+    "chain_g": false,
+    "chain_g_ja82": false
+   },
+   "E-V": {
+    "chain_literal": false,
+    "chain_g": false,
+    "chain_g_ja82": false
+   },
+   "E-D": {
+    "chain_literal": false,
+    "chain_g": false,
+    "chain_g_ja82": false
+   }
+  },
+  "strike_minima_chain_g_ja82": {
+   "P-K": {
+    "min_sens": 0.977,
+    "min_spec": 0.881,
+    "min_spec_scarfree": 0.006,
+    "max_spill": 0.064
+   },
+   "P-J": {
+    "min_sens": 0.865,
+    "min_spec": 0.95,
+    "min_spec_scarfree": 0.961,
+    "max_spill": 0.078
+   },
+   "P-G": {
+    "min_sens": 0.915,
+    "min_spec": 0.985,
+    "min_spec_scarfree": 0.992,
+    "max_spill": 0
+   }
+  },
+  "acceptance": {
+   "strike_verdicts_unchanged": true,
+   "phase_p90_mm": 1.201,
+   "phase_ok": false,
+   "nonrigid_p90_mm": 2.543,
+   "nonrigid_shipped_chain_p90_mm": 2.229,
+   "nonrigid_ok": false,
+   "pass": false
+  }
  }
 }

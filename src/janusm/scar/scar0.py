@@ -58,6 +58,7 @@ from janusm import geometry as G
 from janusm.scar import (
     FINAL_STATUSES,
     NOT_GRADED,
+    PHASE_SUSPECT,
     RESEARCH_LABEL,
     SCAR_VERSION,
     STATUSES,
@@ -165,12 +166,30 @@ def _columns(cut, u, column, sel, c: JA30Constants) -> Tuple[float, float, float
     return float(ext[good].mean()), deepest, median
 
 
-class ScoringInput(NamedTuple):
-    """:meth:`Scar0.for_scoring`'s output: per-segment Kim bin (index 0 is segment 1;
-    :data:`janusm.scar.scoring.NOT_GRADED` when not graded) and scar share (NaN when not graded)."""
+#: JA27 / JA85: the stratum a phase-suspect patient is scored in.
+PHASE_STRATUM = "phase_unmatched"
+#: JA85 routes (``janusm.scar.registration.PHASE_ROUTES``).
+PHASE_ROUTES = ("confirmed", "flag_only")
 
+
+class _Bins(NamedTuple):
     kim_bin: np.ndarray
     share: np.ndarray
+
+
+class ScoringInput(_Bins):
+    """:meth:`Scar0.for_scoring`'s output: per-segment Kim bin (index 0 is segment 1;
+    :data:`janusm.scar.scoring.NOT_GRADED` when not graded) and scar share (NaN when not graded).
+
+    It unpacks as ``bins, shares``, and also carries ``strata`` (the patient's JA27 strata, with
+    ``phase_unmatched`` for a phase-suspect patient) and ``phase_route`` (JA85: ``confirmed``,
+    ``flag_only``, or ``None``)."""
+
+    def __new__(cls, kim_bin, share, strata=frozenset(), phase_route=None):
+        out = super().__new__(cls, kim_bin, share)
+        out.strata = frozenset(strata)
+        out.phase_route = phase_route
+        return out
 
 
 @dataclass
@@ -187,6 +206,13 @@ class Scar0:
     territory_source: str
     case_id: Optional[str] = None
     ungradable: Optional[str] = None
+    #: JA85: the route of a phase-suspect patient (``confirmed`` or ``flag_only``); else None.
+    phase_route: Optional[str] = None
+
+    @property
+    def strata(self) -> frozenset:
+        """JA27 strata this module knows of: ``phase_unmatched`` for a phase-suspect patient."""
+        return frozenset({PHASE_STRATUM}) if self.status == PHASE_SUSPECT else frozenset()
 
     @property
     def graded(self) -> bool:
@@ -232,7 +258,8 @@ class Scar0:
         :class:`janusm.scar.scoring.Patient` takes them, so scoring can report sensitivity by LGE
         Kim bin (JA54). A segment not graded (patient not graded, or too few carried voxels) is
         :data:`janusm.scar.scoring.NOT_GRADED`, share NaN. Only a final registration status can be
-        scored. Returns :class:`ScoringInput` (unpacks as ``bins, shares``)."""
+        scored; a phase-suspect patient carries ``strata >= {"phase_unmatched"}`` and its
+        ``phase_route`` (JA85). Returns :class:`ScoringInput` (unpacks as ``bins, shares``)."""
         from janusm.scar.scoring import NOT_GRADED as UNGRADED_BIN
 
         if self.status not in FINAL_STATUSES:
@@ -245,7 +272,7 @@ class Scar0:
             if r["graded"]:
                 bins[s - 1] = r["kim_bin"]
                 shares[s - 1] = np.nan if r["share"] is None else r["share"]
-        return ScoringInput(kim_bin=bins, share=shares)
+        return ScoringInput(bins, shares, strata=self.strata, phase_route=self.phase_route)
 
     def table(self, presence: str, extent: str) -> dict:
         """The JA26 per-segment and per-territory outputs for one (presence, extent) pair."""
@@ -300,6 +327,8 @@ class Scar0:
         return {
             "label": RESEARCH_LABEL,
             "registration_status": self.status,
+            "phase_route": self.phase_route,
+            "strata": sorted(self.strata),
             "graded": self.graded,
             "ungradable": self.ungradable,
             "presence_candidate": presence,
@@ -329,11 +358,15 @@ def scar0(
     territory: Optional[Mapping[int, str]] = None,
     constants: JA30Constants = JA30,
     case_id=None,
+    phase_route: Optional[str] = None,
 ) -> Scar0:
     """Compute every Scar-0 candidate inside the carried wall of one patient.
 
     ``status`` is the JA26 registration status
-    (:func:`~janusm.scar.registration.status_from_checks`).
+    (:func:`~janusm.scar.registration.status_from_checks`). A ``phase suspect`` patient needs its
+    JA85 ``phase_route``, and ``carried`` must then be its last 4 mm stage's geometry
+    (:attr:`~janusm.scar.registration.Registration.graded_carried`; :func:`scar0_registered`
+    passes it).
     ``tau`` is P-J's development cut (per protocol); without it P-J is not available.
     ``territory`` maps segment -> artery (from :func:`janusm.geometry.territories`); without it the
     standard AHA map is used, and the output says so.
@@ -341,6 +374,10 @@ def scar0(
     guard_case(case_id, "janusm.scar.scar0")
     if status not in STATUSES:
         raise ValueError(f"status must be one of {STATUSES}, not {status!r}")
+    if status == PHASE_SUSPECT and phase_route not in PHASE_ROUTES:
+        raise ValueError(f"JA85: a phase-suspect patient needs its route {PHASE_ROUTES}")
+    if status != PHASE_SUSPECT and phase_route is not None:
+        raise ValueError(f"only a phase-suspect patient has a phase route, not {status!r}")
     c = constants
     if territory is None:
         terr, source = dict(G.AHA_STANDARD), "standard AHA map"
@@ -355,6 +392,7 @@ def scar0(
         territory=terr,
         territory_source=source,
         case_id=None if case_id is None else str(case_id),
+        phase_route=phase_route,
     )
     if status == NOT_GRADED:
         return Scar0(status=status, segments={}, remote=None, thresholds={}, **base)
@@ -423,6 +461,17 @@ def scar0(
         thresholds={"half_way": round(thr_half, 4), "sd": round(thr_sd, 4)},
         **base,
     )
+
+
+def scar0_registered(lie, registration, **kw) -> Scar0:
+    """:func:`scar0` on a :class:`~janusm.scar.registration.Registration`: its status and JA85
+    route, graded on its ``graded_carried`` geometry, which for a phase-suspect patient is the last
+    4 mm stage, never the 10 mm fallback (JA85, PS4-S2). ``kw`` goes to :func:`scar0` (``tau``,
+    ``territory``, ``constants``, ``case_id``)."""
+    status = registration.status
+    route = registration.phase_route if status == PHASE_SUSPECT else None
+    kw.setdefault("case_id", registration.case_id)
+    return scar0(lie, registration.graded_carried, status=status, phase_route=route, **kw)
 
 
 # ---------------------------------------------------------------------------------- development

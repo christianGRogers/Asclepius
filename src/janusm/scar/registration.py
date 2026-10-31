@@ -23,22 +23,32 @@ PS3-S5 (§9).
      development, :func:`load_provisional_qc_cuts` reads the benchmark's until then). Any NaN fails;
   3. ``rigid``: Mattes MI, the metric masked to classes 1-4 dilated by 4 mm (Euclidean,
      ``edt <= margin``; :data:`MASK_DILATION_MM`, a parameter of :func:`prepare_first_pass`);
-  4. ``affine`` with the same mask, kept only if :func:`affine_accepted`: a sanity bound
-     (|log det A| <= 0.15; every singular value and shear term within +/- 15 % of identity) and the
-     normalised QC rule (each value divided by its cut; none rises and their maximum falls);
-  5. ``rigid10``: if the result still fails QC, one rigid run from R0 with a 10 mm Euclidean mask
+  4. ``affine`` with the same mask, kept only if :func:`affine_accepted` (JA81, rule (g)): a sanity
+     bound (|log det A| <= 0.15; every singular value and shear term within +/- 15 % of identity),
+     the normalised QC maximum (each gated value divided by its cut) no higher than rigid's, and
+     either affine passes QC or |log det A| >= 0.02 (:data:`AFFINE_SCALE_LOG_DET`). The result
+     after this step is the **last 4 mm stage** (``Registration.stage_4mm``);
+  5. ``rigid10``: if the result still fails QC, the phase step is run on the last 4 mm stage and
+     logged (``phase_4mm``); then one rigid run from R0 with a 10 mm Euclidean mask
      (:data:`FALLBACK_MASK_MM`). It replaces the result only if it passes QC or lowers the
-     normalised maximum. It is logged as its own stage either way;
-  6. the phase step (JA52, :func:`phase_step`): ``rim_dark`` above its phase cut (primary), the
-     signed endocardial edge offset over the 6 remote segments beyond +/- 0.6 mm (secondary); the
-     affine log-determinant and the edge offset's per-segment IQR are logged only. A flagged
-     patient is ``phase suspect``: not re-registered, not a registration failure.
+     normalised maximum. It is logged as its own stage either way. JA82's skip (a routing flag on
+     the 4 mm stage skips step 5) is built but **off by default**
+     (``phase_check_before_fallback``): its PS4-S5 acceptance replay missed (see
+     ``bench_lie/scores_v3.json`` -> ``ja82_replay``), so step 5 ships as JA51 states;
+  6. the phase step (JA52 as amended by JA84, :func:`phase_step`) on the final stage: the signed
+     endocardial edge offset over the 6 remote segments beyond +/- 0.6 mm is the **routing** flag;
+     ``rim_dark`` above its phase cut is **advisory** (logged, shown to the reader after the
+     decision, routes no patient); the affine log-determinant and the edge offset's per-segment
+     IQR are logged only.
 
   B-spline is not in the pipeline (JA53).
 - **Reader check** (every patient, blind to LGE): :func:`status_from_checks` turns the pass/fail
-  record into the JA26 status (passed, re-registered, not graded), or ``phase suspect`` (JA52). A
-  fail is re-registered once from a manual initial shift (:func:`register_lie` with
-  ``initial_shift_mm`` and ``attempt=2``), never after a phase flag.
+  record, the routing flag, the phase source (JA59) and the reader's phase mark into the JA26
+  status (passed, re-registered, not graded) or ``phase suspect``, with its JA85 route
+  (``confirmed`` or ``flag_only``). A fail is re-registered once from a manual initial shift
+  (:func:`register_lie` with ``initial_shift_mm`` and ``attempt=2``), never a phase-suspect
+  patient. A phase-suspect patient is graded on its last 4 mm stage (``graded_stage``), never on
+  the 10 mm fallback (JA85).
 - **Logged per patient** (:meth:`Registration.log`): the estimated shift of the heart between the
   scans, every stage's parameters, QC values and MI, and the phase step.
 - **Development stop:** :func:`seal_grading_allowed` (a not-graded rate above 10 %, phase-suspect
@@ -108,7 +118,10 @@ MIN_RIM_VOXELS = 50
 MAX_ABS_LOG_DET = 0.15
 MAX_SCALE_SHEAR_DEV = 0.15
 
-#: JA52: provisional secondary flag, |edge offset| above this (mm).
+#: JA81 (c'): affine that fails QC is still kept when |log det A| reaches this (a scale is found).
+AFFINE_SCALE_LOG_DET = 0.02
+
+#: JA52 / JA84: the routing phase flag, |edge offset| above this (mm).
 EDGE_OFFSET_FLAG_MM = 0.6
 #: JA52: phase is not evaluable when (blood median - remote) is under this many robust SD of remote.
 MIN_PHASE_CONTRAST_SD = 2.0
@@ -126,6 +139,24 @@ STAGE_R0 = "R0"
 STAGE_RIGID = "rigid"
 STAGE_AFFINE = "affine"
 STAGE_FALLBACK = "rigid10"
+
+#: JA59 / JA85: where a patient's phase information comes from.
+PHASE_DICOM_UNMATCHED = "dicom_unmatched"
+PHASE_DICOM_MATCHED = "dicom_matched"
+PHASE_INFERRED = "inferred"
+PHASE_SOURCES = (PHASE_DICOM_UNMATCHED, PHASE_DICOM_MATCHED, PHASE_INFERRED)
+#: JA85 routes into the ``phase_unmatched`` stratum: confirmed (outside yield) or on the flag alone
+#: (charged to yield).
+ROUTE_CONFIRMED = "confirmed"
+ROUTE_FLAG_ONLY = "flag_only"
+PHASE_ROUTES = (ROUTE_CONFIRMED, ROUTE_FLAG_ONLY)
+
+#: JA83: the SCAR_VERSION at which the shipped QC definitions (:func:`qc`,
+#: :class:`QCDefinitions`) last changed. Bump it, with SCAR_VERSION, on any change that moves a QC
+#: value; a cut file declaring another is refused.
+QC_DEFINITIONS_SINCE = "1.1.0"
+#: JA83: what a cut file must declare under ``qc_definitions`` (:func:`load_provisional_qc_cuts`).
+QC_DEFINITIONS = f"janusm.scar.registration {QC_DEFINITIONS_SINCE}"
 
 #: The four QC values, in the order of :meth:`QC.values` and :meth:`QCCuts.values`.
 QC_NAMES = ("fatlike", "bloodlike", "brighter_than_blood", "rim_dark")
@@ -150,8 +181,9 @@ class QCCuts:
 
     - ``gate``: which values stop R0 (JA53's drop rule marks a weak value ``False``; it stays
       logged). At least one value must be gated.
-    - ``max_rim_dark_phase``: ``rim_dark``'s phase cut (JA52); ``None`` uses ``max_rim_dark``.
-    - ``max_edge_offset_mm``: JA52's provisional secondary flag.
+    - ``max_rim_dark_phase``: ``rim_dark``'s phase cut (JA52; advisory under JA84); ``None`` uses
+      ``max_rim_dark``.
+    - ``max_edge_offset_mm``: the routing phase flag's cut (JA52, JA84).
     """
 
     max_fatlike: float
@@ -320,18 +352,45 @@ def affine_sanity(matrix: np.ndarray) -> dict:
 
 
 def qc_rule_accepts(new: QC, old: QC, cuts: QCCuts) -> bool:
-    """JA51 step 4(b): the QC values divided by their cuts show no rise, and their maximum falls.
-    Any NaN rejects."""
+    """JA51 step 4(b) as first written: the QC values divided by their cuts show no rise, and their
+    maximum falls. Any NaN rejects. **Superseded by JA81** (:func:`affine_accepted`); kept because
+    the Round 4 benchmark scorers replay it as the ``literal`` rule."""
     a, r = normalised(new, cuts), normalised(old, cuts)
     if not (np.isfinite(a).all() and np.isfinite(r).all()):
         return False
     return bool((a <= r).all() and a.max() < r.max())
 
 
+def affine_rule(matrix: np.ndarray, affine_qc: QC, rigid_qc: QC, cuts: QCCuts) -> dict:
+    """JA81's three clauses, each logged: (a) the sanity bound; (b') the normalised QC maximum for
+    affine is no higher than for rigid; (c') affine passes QC, or |log det A| >= 0.02. Any NaN
+    (in the gated QC values or the log det) fails its clause. ``kept`` is all three."""
+    san = affine_sanity(matrix)
+    m_aff, m_rig = normalised_max(affine_qc, cuts), normalised_max(rigid_qc, cuts)
+    max_ok = bool(np.isfinite(m_aff) and np.isfinite(m_rig) and m_aff <= m_rig)
+    ld = san["log_det"]
+    scaled = bool(np.isfinite(ld) and abs(ld) >= AFFINE_SCALE_LOG_DET)
+    passes_or_scaled = bool(affine_qc.passes(cuts) or scaled)
+    return {
+        "sanity": bool(san["ok"]),
+        "max_not_raised": max_ok,
+        "passes_or_scaled": passes_or_scaled,
+        "normalised_max_affine": None if not np.isfinite(m_aff) else round(m_aff, 5),
+        "normalised_max_rigid": None if not np.isfinite(m_rig) else round(m_rig, 5),
+        "kept": bool(san["ok"] and max_ok and passes_or_scaled),
+    }
+
+
 def affine_accepted(matrix: np.ndarray, affine_qc: QC, rigid_qc: QC, cuts: QCCuts) -> bool:
-    """JA51 step 4: affine is kept iff the sanity bound and the normalised QC rule both hold. This
-    replaces #188's reading 1 (raw sums) and the benchmark's two-value sum."""
-    return affine_sanity(matrix)["ok"] and qc_rule_accepts(affine_qc, rigid_qc, cuts)
+    """JA81 (rule (g); replaces JA51 4(b)): affine is kept iff all hold:
+
+    - (a) ``affine_sanity(matrix)["ok"]`` (unchanged);
+    - (b') ``normalised_max(affine) <= normalised_max(rigid)``;
+    - (c') ``affine_qc.passes(cuts)`` or ``abs(log_det) >= AFFINE_SCALE_LOG_DET`` (0.02).
+
+    Any NaN rejects. (c') reads |log det| and does not depend on its sign (see
+    :class:`Transform` for the sign convention)."""
+    return affine_rule(matrix, affine_qc, rigid_qc, cuts)["kept"]
 
 
 # ---------------------------------------------------------------------------------- first pass
@@ -470,7 +529,12 @@ def _rot(deg: Sequence[float]) -> np.ndarray:
 
 @dataclass
 class Transform:
-    """p_moving = matrix (p_fixed - centre) + centre + translation (world mm)."""
+    """p_moving = matrix (p_fixed - centre) + centre + translation (world mm).
+
+    The transform maps the fixed LIE to the moving first pass. **Sign (JA81):** a LIE heart larger
+    than the first pass by a factor s is mapped back by ``matrix ~ I / s``, so
+    ``log det(matrix) ~ -3 log s`` (a 3 % enlargement reads about -0.089). JA81's (c') reads
+    |log det| and does not depend on the sign."""
 
     matrix: np.ndarray
     translation: np.ndarray
@@ -567,13 +631,16 @@ def _metric(
     return _Metric(fixed_levels, lie_aff, moving_vals, pts, bins)
 
 
-def _optimise(metric: _Metric, make, x0, step, maxfev) -> np.ndarray:
+def _optimise(metric: _Metric, make, x0, step, maxfev, penalty=None) -> np.ndarray:
+    """Powell over the smoothing levels. ``penalty(q)``, when given, is added to the cost (the
+    PS4-S7 variant only; the shipped stages pass none)."""
     x = np.asarray(x0, float)
     for level in range(len(metric.fixed_levels)):
         fr, mr = metric.ranges(level, make(x))
 
         def cost(q, level=level, fr=fr, mr=mr):
-            return metric.cost(level, make(q), fr, mr)
+            c = metric.cost(level, make(q), fr, mr)
+            return c if penalty is None else c + penalty(q)
 
         res = optimize.minimize(
             cost,
@@ -602,6 +669,63 @@ def _affine_from(metric, rig: Transform, maxfev) -> Transform:
         return Transform(m, np.asarray(q[9:]), rig.centre)
 
     q = _optimise(metric, make, [0] * 9 + list(rig.translation), [1] * 9 + [1, 1, 1], maxfev)
+    return make(q)
+
+
+#: PS4-S7 (report only): the affine optimiser variants :func:`register_lie` can take. ``None`` is
+#: the shipped optimiser (:func:`_affine_from`), byte-identical to SCAR_VERSION 1.1.0.
+AFFINE_VARIANTS = (None, "scaled")
+#: PS4-S7 ``scaled``: Powell's initial step on each log-scale, and on each linear entry of the full
+#: affine that follows (the shipped optimiser steps both in units of 0.01, with the translations).
+VARIANT_SCALE_STEP = 0.01
+VARIANT_LINEAR_STEP = 0.002
+#: PS4-S7 ``scaled``: penalty (in MI nats) per unit squared Frobenius distance of the full affine's
+#: linear part from the scale stage's. On the static-chest phantom (seed 22) 0 lets the full affine
+#: drift on a pure 4 mm shift (TRE 0.50 mm against rigid 0.22); 10 holds it (0.26) and keeps the
+#: 3 % scale fix (0.24 against rigid 1.29); 100 loses the scale fix (0.56).
+VARIANT_RIGID_PENALTY = 10.0
+
+
+def _affine_scaled(
+    metric, rig: Transform, maxfev, *, rigid_penalty: float = VARIANT_RIGID_PENALTY
+) -> Transform:
+    """PS4-S7 variant (engineering, report only; not used unless asked for): a scale-only stage,
+    then the full affine with its own, smaller steps for the linear part.
+
+    1. three log-scales along the rigid frame's axes plus the translation (the rotation is held);
+    2. the full affine from there, the nine linear entries stepped in units of
+       :data:`VARIANT_LINEAR_STEP` (translation in mm, as before), optionally penalised toward the
+       scale stage's linear part by ``rigid_penalty``.
+
+    Adoption needs a later ruling with a v3 replay (PS4-S7)."""
+    r0 = rig.matrix
+
+    def make_s(q):
+        return Transform(r0 @ np.diag(np.exp(np.asarray(q[:3]))), np.asarray(q[3:6]), rig.centre)
+
+    qs = _optimise(
+        metric,
+        make_s,
+        [0.0, 0.0, 0.0, *rig.translation],
+        [VARIANT_SCALE_STEP] * 3 + [1.0, 1.0, 1.0],
+        maxfev,
+    )
+    sc = make_s(qs)
+    m0 = sc.matrix
+
+    def make(q):
+        m = m0 + VARIANT_LINEAR_STEP * np.asarray(q[:9]).reshape(3, 3)
+        return Transform(m, np.asarray(q[9:]), rig.centre)
+
+    pen = None
+    if rigid_penalty > 0:
+
+        def pen(q):
+            return rigid_penalty * float(np.sum((VARIANT_LINEAR_STEP * np.asarray(q[:9])) ** 2))
+
+    q = _optimise(
+        metric, make, [0] * 9 + list(sc.translation), [1] * 9 + [1, 1, 1], maxfev, penalty=pen
+    )
     return make(q)
 
 
@@ -722,7 +846,9 @@ def edge_offset(
 
 @dataclass
 class PhaseCheck:
-    """JA52 on the final stage. ``flags`` lists what fired; ``suspect`` routes the patient out."""
+    """JA52 as amended by JA84. ``routing_flags`` holds the edge offset only and is what
+    ``suspect`` reads; ``advisory_flags`` holds ``rim_dark``, which is logged and shown to the
+    reader after the decision but routes no patient. ``flags`` lists both (routing first)."""
 
     evaluable: bool
     contrast: float
@@ -736,11 +862,17 @@ class PhaseCheck:
     #: log det of the affine stage's matrix (logged only; None when affine did not run)
     log_det_affine: Optional[float]
     log_det_final: float
-    flags: List[str] = field(default_factory=list)
+    routing_flags: List[str] = field(default_factory=list)
+    advisory_flags: List[str] = field(default_factory=list)
+
+    @property
+    def flags(self) -> List[str]:
+        return list(self.routing_flags) + list(self.advisory_flags)
 
     @property
     def suspect(self) -> bool:
-        return bool(self.flags)
+        """JA84: the routing flag (the edge offset) fired. ``rim_dark`` alone never sets this."""
+        return bool(self.routing_flags)
 
     def summary(self) -> dict:
         def r(x):
@@ -757,8 +889,10 @@ class PhaseCheck:
             "edge_offset_iqr_mm": r(self.edge_offset_iqr_mm),
             "log_det_affine": r(self.log_det_affine),
             "log_det_final": r(self.log_det_final),
-            "flags": list(self.flags),
-            "phase_suspect": self.suspect,
+            "flags": self.flags,
+            "routing_flags": list(self.routing_flags),
+            "advisory_flags": list(self.advisory_flags),
+            "phase_flag": self.suspect,
         }
 
 
@@ -772,13 +906,14 @@ def phase_step(
     log_det_final: float = 0.0,
     defs: QCDefinitions = DEFAULT_QC_DEFINITIONS,
 ) -> PhaseCheck:
-    """JA52 after the final stage.
+    """JA52 as amended by JA84, on one stage's carried geometry.
 
     - **Not evaluable** when (blood median - remote) < 2 robust SD of remote: no flag (phase then
       rests on the DICOM fields and the reader).
-    - **Primary flag** ``rim_dark``: above its phase cut (``cuts.rim_dark_phase``).
-    - **Secondary flag** ``edge_offset``: |edge offset| above ``cuts.max_edge_offset_mm``; it
-      catches a larger LIE cavity, which ``rim_dark`` cannot see.
+    - **Routing flag** ``edge_offset``: |edge offset| above ``cuts.max_edge_offset_mm``. It sees a
+      larger and a smaller LIE cavity alike.
+    - **Advisory flag** ``rim_dark``: above its phase cut (``cuts.rim_dark_phase``). It marks
+      misregistration in general, so on its own it routes no patient (JA84).
     - **Logged only:** the affine log-determinant and the edge offset's per-segment IQR.
     """
     sm = smooth(lie, carried.spacing, defs.smooth_fwhm_mm)
@@ -790,12 +925,12 @@ def phase_step(
     per = np.array([edge_offset(sm, carried, [s]) for s in range(1, 17)])
     per = per[np.isfinite(per)]
     iqr = float(np.subtract(*np.percentile(per, [75, 25]))) if per.size >= 2 else float("nan")
-    flags = []
+    routing, advisory = [], []
     if evaluable:
-        if np.isfinite(q.rim_dark) and q.rim_dark > cuts.rim_dark_phase:
-            flags.append("rim_dark")
         if np.isfinite(off) and abs(off) > cuts.max_edge_offset_mm:
-            flags.append("edge_offset")
+            routing.append("edge_offset")
+        if np.isfinite(q.rim_dark) and q.rim_dark > cuts.rim_dark_phase:
+            advisory.append("rim_dark")
     return PhaseCheck(
         evaluable=evaluable,
         contrast=contrast,
@@ -806,7 +941,8 @@ def phase_step(
         edge_offset_iqr_mm=iqr,
         log_det_affine=log_det_affine,
         log_det_final=float(log_det_final),
-        flags=flags,
+        routing_flags=routing,
+        advisory_flags=advisory,
     )
 
 
@@ -837,25 +973,74 @@ class Stage:
         }
 
 
-def status_from_checks(checks: Sequence[bool], phase_suspect: bool = False) -> str:
-    """JA29 reader check -> JA26 status: pass first time -> passed; fail, then pass after the one
-    re-registration -> re-registered; two fails -> not graded. Before a check (or between the fail
-    and the re-registration's check) the status is "awaiting reader check".
+class RoutedStatus(str):
+    """A JA26 status string that also carries its JA85 ``route`` (``confirmed``, ``flag_only``, or
+    ``None`` for a patient not routed to the ``phase_unmatched`` stratum). It compares and prints
+    as the status itself."""
 
-    JA52: a phase-flagged patient is ``phase suspect`` whatever the reader check says (the check
-    is still recorded); it is never re-registered."""
+    route: Optional[str]
+
+    def __new__(cls, status: str, route: Optional[str] = None):
+        if route is not None and route not in PHASE_ROUTES:
+            raise ValueError(f"route must be one of {PHASE_ROUTES} or None, not {route!r}")
+        out = super().__new__(cls, status)
+        out.route = route
+        return out
+
+    @property
+    def status(self) -> str:
+        return str(self)
+
+
+def status_from_checks(
+    checks: Sequence[bool],
+    *,
+    phase_flag: bool = False,
+    phase_source: Optional[str] = None,
+    reader_phase_mark: bool = False,
+) -> RoutedStatus:
+    """JA29 reader check -> JA26 status, routed by JA85. Returns a :class:`RoutedStatus` (the status
+    string, with ``.route``).
+
+    Reader check: pass first time -> passed; fail, then pass after the one re-registration ->
+    re-registered; two fails -> not graded. Before a check (or between the fail and the
+    re-registration's check) the status is "awaiting reader check".
+
+    JA85, with ``phase_flag`` the routing flag (the edge offset, JA84), ``phase_source`` one of
+    :data:`PHASE_SOURCES` (JA59) and ``reader_phase_mark`` the reader's "cavity size differs
+    (phase)":
+
+    ===================  =========  ===========  ===================================================
+    phase source         edge flag  reader mark  status, route
+    ===================  =========  ===========  ===================================================
+    ``dicom_unmatched``  any        any          ``phase suspect``, ``confirmed`` (outside yield)
+    matched / inferred   any        yes          ``phase suspect``, ``confirmed`` (outside yield)
+    ``inferred``         yes        no           ``phase suspect``, ``flag_only`` (charged to yield)
+    ``dicom_matched``    yes        no           ordinary: the reader check decides (route None)
+    any                  no         no           ordinary (route None)
+    ===================  =========  ===========  ===================================================
+
+    A flagged patient whose phase source is not recorded cannot be routed and stays "awaiting
+    reader check" (fails closed: it cannot be scored)."""
     checks = [bool(c) for c in checks]
     if len(checks) > 2 or (len(checks) == 2 and checks[0]):
         raise ValueError(f"JA29 allows one check, or a fail and one re-check: {checks}")
-    if phase_suspect:
-        return PHASE_SUSPECT
+    if phase_source is not None and phase_source not in PHASE_SOURCES:
+        raise ValueError(f"phase_source must be one of {PHASE_SOURCES}, not {phase_source!r}")
+    if phase_source == PHASE_DICOM_UNMATCHED or reader_phase_mark:
+        return RoutedStatus(PHASE_SUSPECT, ROUTE_CONFIRMED)
+    if phase_flag:
+        if phase_source == PHASE_INFERRED:
+            return RoutedStatus(PHASE_SUSPECT, ROUTE_FLAG_ONLY)
+        if phase_source is None:
+            return RoutedStatus(AWAITING)
     if not checks:
-        return AWAITING
+        return RoutedStatus(AWAITING)
     if checks[0]:
-        return PASSED
+        return RoutedStatus(PASSED)
     if len(checks) == 1:
-        return AWAITING
-    return REREGISTERED if checks[1] else NOT_GRADED
+        return RoutedStatus(AWAITING)
+    return RoutedStatus(REREGISTERED if checks[1] else NOT_GRADED)
 
 
 @dataclass
@@ -876,6 +1061,18 @@ class Registration:
     mask_mm: float = MASK_DILATION_MM
     fallback_mm: Optional[float] = FALLBACK_MASK_MM
     protocol: Optional[str] = None
+    #: The last 4 mm stage (the result after JA51 step 4) and its carried geometry; ``None`` means
+    #: the final stage is that stage.
+    stage_4mm: Optional[Stage] = None
+    carried_4mm: Optional[CarriedGeometry] = None
+    #: The phase step on the last 4 mm stage, when step 5 was reached (JA82); else ``None``.
+    phase_4mm: Optional[PhaseCheck] = None
+    #: JA82: whether the 4 mm routing flag skipped step 5 (only with
+    #: ``phase_check_before_fallback``).
+    step5_skipped: bool = False
+    #: JA59 / JA85: the phase source (:data:`PHASE_SOURCES`) and the reader's phase mark.
+    phase_source: Optional[str] = None
+    reader_phase_mark: bool = False
 
     @property
     def transform(self) -> Transform:
@@ -886,25 +1083,63 @@ class Registration:
         return self.final.qc_passed
 
     @property
-    def phase_suspect(self) -> bool:
-        return self.phase is not None and self.phase.suspect
+    def phase_flag(self) -> bool:
+        """JA84's routing flag on the final stage (under JA82's skip, the final stage is the 4 mm
+        stage that flagged)."""
+        return bool(self.phase is not None and self.phase.suspect)
 
     @property
-    def reregistration_allowed(self) -> bool:
-        """JA51 step 6: only a first attempt that failed its reader check and was not flagged by
-        the phase step (JA52: registration cannot fix phase)."""
-        return self.attempt == 1 and self.reader_checks == [False] and not self.phase_suspect
+    def routed_status(self) -> RoutedStatus:
+        return status_from_checks(
+            self.reader_checks,
+            phase_flag=self.phase_flag,
+            phase_source=self.phase_source,
+            reader_phase_mark=self.reader_phase_mark,
+        )
 
     @property
     def status(self) -> str:
-        return status_from_checks(self.reader_checks, self.phase_suspect)
+        return str(self.routed_status)
 
-    def record_reader_check(self, passed: bool) -> str:
-        """Record this attempt's reader check; returns the status."""
+    @property
+    def phase_route(self) -> Optional[str]:
+        """JA85: ``confirmed``, ``flag_only``, or ``None`` (not in the phase-unmatched stratum)."""
+        return self.routed_status.route
+
+    @property
+    def phase_suspect(self) -> bool:
+        return self.status == PHASE_SUSPECT
+
+    @property
+    def graded_stage(self) -> Stage:
+        """The stage scar is graded on: the final stage, except that a phase-suspect patient is
+        graded on its last 4 mm stage, never on the 10 mm fallback (JA85)."""
+        if self.phase_suspect and self.stage_4mm is not None:
+            return self.stage_4mm
+        return self.final
+
+    @property
+    def graded_carried(self) -> CarriedGeometry:
+        """The carried geometry of :attr:`graded_stage`."""
+        if self.graded_stage is self.final or self.carried_4mm is None:
+            return self.carried
+        return self.carried_4mm
+
+    @property
+    def reregistration_allowed(self) -> bool:
+        """JA51 step 6: only a first attempt that failed its reader check and is not phase suspect
+        (JA52: registration cannot fix phase). A DICOM-matched patient whose flag the reader does
+        not confirm is an ordinary patient (JA85) and can be re-registered."""
+        return self.attempt == 1 and self.reader_checks == [False] and not self.phase_suspect
+
+    def record_reader_check(self, passed: bool, *, phase_mark: bool = False) -> str:
+        """Record this attempt's reader check, and the reader's "cavity size differs (phase)" mark
+        (JA85); returns the status."""
         expect = 1 if self.attempt == 1 else 2
         if len(self.reader_checks) != expect - 1:
             raise ValueError(f"attempt {self.attempt} already has its reader check")
         self.reader_checks.append(bool(passed))
+        self.reader_phase_mark = bool(self.reader_phase_mark or phase_mark)
         return self.status
 
     def log(self) -> dict:
@@ -927,10 +1162,16 @@ class Registration:
             "qc_passed": self.qc_passed,
             "qc_cuts": cuts,
             "phase": None if self.phase is None else self.phase.summary(),
+            "phase_4mm": None if self.phase_4mm is None else self.phase_4mm.summary(),
+            "step5_skipped": self.step5_skipped,
+            "graded_stage": self.graded_stage.name,
+            "phase_source": self.phase_source,
+            "reader_phase_mark": self.reader_phase_mark,
             "estimated_shift_mm": np.round(self.shift_mm, 3).tolist(),
             "estimated_shift_norm_mm": round(float(np.linalg.norm(self.shift_mm)), 3),
             "reader_checks": list(self.reader_checks),
             "status": self.status,
+            "phase_route": self.phase_route,
             "geometry_flags": list(self.geometry_flags),
         }
 
@@ -958,6 +1199,9 @@ def register_lie(
     attempt: int = 1,
     previous_checks: Sequence[bool] = (),
     previous_phase_suspect: bool = False,
+    phase_source: Optional[str] = None,
+    phase_check_before_fallback: bool = False,
+    affine_variant: Optional[str] = None,
     case_id=None,
     levels_mm: Sequence[float] = (2.0, 0.0),
     n_samples: int = 30_000,
@@ -965,7 +1209,7 @@ def register_lie(
     maxfev: int = 2000,
     seed: int = 0,
 ) -> Registration:
-    """Run the JA51 chain and the JA52 phase step on one patient.
+    """Run the JA51 chain (affine rule JA81) and the JA52 / JA84 phase step on one patient.
 
     ``cuts`` is a :class:`QCCuts`, or :class:`FittedQCCuts` from :func:`fit_qc_cuts` (then
     ``protocol`` picks the key, and the shares' cuts are read at the patient's own
@@ -975,8 +1219,23 @@ def register_lie(
     displacement from the first pass to the LIE, world mm); pass it with ``attempt=2`` and the
     first attempt's ``previous_checks`` (``[False]``). A first attempt flagged by the phase step
     (``previous_phase_suspect``) is never re-registered.
+
+    ``phase_source`` is the patient's JA59 phase source (:data:`PHASE_SOURCES`), used by the JA85
+    routing in :attr:`Registration.status`.
+
+    ``phase_check_before_fallback`` turns on JA82's skip: when step 5 would run and the last 4 mm
+    stage's routing flag fires (evaluable, |edge offset| above its cut), step 5 is skipped and the
+    4 mm stage is final. **Off by default:** its PS4-S5 acceptance replay missed, so JA51 step 5
+    ships unchanged (JA82). The 4 mm phase check is computed and logged either way.
+
+    ``affine_variant`` (PS4-S7, report only): ``None`` is the shipped optimiser; ``"scaled"`` runs
+    :func:`_affine_scaled`. Not used by default; adoption needs a later ruling.
     """
     guard_case(case_id, "janusm.scar.registration.register_lie")
+    if phase_source is not None and phase_source not in PHASE_SOURCES:
+        raise ValueError(f"phase_source must be one of {PHASE_SOURCES}, not {phase_source!r}")
+    if affine_variant not in AFFINE_VARIANTS:
+        raise ValueError(f"affine_variant must be one of {AFFINE_VARIANTS}, not {affine_variant!r}")
     if not isinstance(cuts, (QCCuts, FittedQCCuts)):
         raise TypeError("cuts must be a QCCuts set on development (JA53); there is no default")
     if attempt not in (1, 2):
@@ -1019,17 +1278,45 @@ def register_lie(
         final, final_car = s_r, car_r
         if not s_r.qc_passed:
             tic = time.time()
-            aff = _affine_from(metric, rig, maxfev)
+            if affine_variant is None:
+                aff = _affine_from(metric, rig, maxfev)
+            else:
+                aff = _affine_scaled(metric, rig, maxfev)
             s_a, car_a = stage(STAGE_AFFINE, aff, time.time() - tic)
             sanity = affine_sanity(aff.matrix)
-            rule = qc_rule_accepts(s_a.qc, s_r.qc, cuts)
-            s_a.kept = bool(sanity["ok"] and rule)
-            s_a.info = {"sanity": sanity, "normalised_qc_rule": rule}
+            rule = affine_rule(aff.matrix, s_a.qc, s_r.qc, cuts)
+            s_a.kept = rule["kept"]
+            s_a.info = {
+                "sanity": sanity,
+                "affine_rule": "JA81 (g)",
+                "normalised_qc_rule": bool(rule["max_not_raised"] and rule["passes_or_scaled"]),
+                **{k: rule[k] for k in ("max_not_raised", "passes_or_scaled")},
+                "normalised_max_affine": rule["normalised_max_affine"],
+                "normalised_max_rigid": rule["normalised_max_rigid"],
+            }
+            if affine_variant is not None:
+                s_a.info["optimiser_variant"] = affine_variant
             log_det_affine = sanity["log_det"]
             stages.append(s_a)
             if s_a.kept:
                 final, final_car = s_a, car_a
-        if not final.qc_passed and first_pass.fallback_mask is not None:
+    stage_4mm, carried_4mm = final, final_car
+    phase_4mm = None
+    step5_skipped = False
+    if not final.qc_passed and first_pass.fallback_mask is not None:
+        # JA82: the phase step on the last 4 mm stage, logged; with the switch on, a routing flag
+        # here skips step 5.
+        phase_4mm = phase_step(
+            lie,
+            final_car,
+            cuts,
+            final_qc=final.qc,
+            log_det_affine=log_det_affine,
+            log_det_final=_log_det(final.transform.matrix),
+            defs=defs,
+        )
+        step5_skipped = bool(phase_check_before_fallback and phase_4mm.suspect)
+        if not step5_skipped:
             met10 = _metric(
                 first_pass, lie, lie_aff, lie_sp, levels_mm, n_samples, bins, seed,
                 mask=first_pass.fallback_mask,
@@ -1049,15 +1336,18 @@ def register_lie(
             stages.append(s_f)
             if s_f.kept:
                 final, final_car = s_f, car_f
-    phase = phase_step(
-        lie,
-        final_car,
-        cuts,
-        final_qc=final.qc,
-        log_det_affine=log_det_affine,
-        log_det_final=_log_det(final.transform.matrix),
-        defs=defs,
-    )
+    if step5_skipped:
+        phase = phase_4mm  # the 4 mm stage is final: the same check
+    else:
+        phase = phase_step(
+            lie,
+            final_car,
+            cuts,
+            final_qc=final.qc,
+            log_det_affine=log_det_affine,
+            log_det_final=_log_det(final.transform.matrix),
+            defs=defs,
+        )
     reg = Registration(
         stages=stages,
         final=final,
@@ -1073,6 +1363,11 @@ def register_lie(
         mask_mm=first_pass.mask_mm,
         fallback_mm=first_pass.fallback_mm,
         protocol=protocol,
+        stage_4mm=None if stage_4mm is final else stage_4mm,
+        carried_4mm=None if stage_4mm is final else carried_4mm,
+        phase_4mm=phase_4mm,
+        step5_skipped=step5_skipped,
+        phase_source=phase_source,
     )
     log.info(
         "JA51 %s attempt %d: final %s, QC %s, phase %s, shift %.2f mm",
@@ -1146,14 +1441,11 @@ BAND_MAX_BINS = 10
 POOLED = "pooled"
 #: The three shares fitted against contrast (JA53); rim_dark is a plain p95.
 BANDED = QC_NAMES[:3]
-#: The benchmark's names (``bench_lie/score.py`` QCS) for the four values.
-BENCH_NAMES = {
-    "fat_like": "fatlike",
-    "blood_like": "bloodlike",
-    "above_blood": "brighter_than_blood",
-    "rim_dark": "rim_dark",
-}
-BENCH_SCORES = Path(__file__).resolve().parents[3] / "experiments/JanusM/bench_lie/scores.json"
+#: JA83: the provisional cuts' source, the v3 benchmark's registered-case cuts.
+BENCH_SCORES = Path(__file__).resolve().parents[3] / "experiments/JanusM/bench_lie/scores_v3.json"
+#: ... the key they sit under (shipped QC names, keyed ``half|blood|cnr``); rim_dark phase cuts:
+BENCH_CUTS_KEY = "qc_cuts_registered"
+BENCH_PHASE_KEY = "rim_dark_phase_cuts_ja53"
 
 
 def _pav(y: np.ndarray, w: np.ndarray) -> np.ndarray:
@@ -1413,25 +1705,41 @@ def load_qc_cuts(path) -> FittedQCCuts:
 def load_provisional_qc_cuts(
     path=BENCH_SCORES, *, blood: str, cnr: int, half: Optional[int] = None
 ) -> QCCuts:
-    """JA53's provisional cuts until development: the benchmark's ``qc_cuts``
-    (``bench_lie/scores.json``, keys ``half|blood|cnr``) at the matching blood level and CNR.
+    """JA83's provisional cuts until development: p95 of the **shipped** QC over **registered**
+    benchmark cases (``bench_lie/scores_v3.json`` -> ``qc_cuts_registered``: rigid4 with TRE < 1 mm
+    on motions none and rigid, other half, keyed ``half|blood|cnr``) at the matching blood level and
+    CNR. ``max_rim_dark_phase`` is ``rim_dark_phase_cuts_ja53`` (advisory only, JA84).
+
+    The file must declare ``qc_definitions`` equal to :data:`QC_DEFINITIONS`; any other file
+    (v2's ``scores.json``, measured with v2's QC on aligned images, has none) is refused.
 
     ``half`` picks one of the benchmark's two cross-fitted halves; ``None`` takes each value's
     larger cut over the halves."""
-    d = json.loads(Path(path).read_text())["qc_cuts"]
-    rows = [
-        v for k, v in d.items()
-        if k.split("|")[1:] == [str(blood), str(cnr)]
-        and (half is None or k.split("|")[0] == str(half))
-    ]
-    if not rows:
+    d = json.loads(Path(path).read_text())
+    declared = d.get("qc_definitions")
+    if declared != QC_DEFINITIONS:
+        raise ValueError(
+            f"{path}: QC cuts declare qc_definitions {declared!r}, not {QC_DEFINITIONS!r} "
+            "(JA83: a cut file must be measured with the shipped QC definitions)"
+        )
+    if BENCH_CUTS_KEY not in d or BENCH_PHASE_KEY not in d:
+        raise ValueError(f"{path}: no {BENCH_CUTS_KEY!r} / {BENCH_PHASE_KEY!r} (JA83)")
+
+    def pick(table):
+        return [
+            v for k, v in table.items()
+            if k.split("|")[1:] == [str(blood), str(cnr)]
+            and (half is None or k.split("|")[0] == str(half))
+        ]
+
+    rows, phase = pick(d[BENCH_CUTS_KEY]), pick(d[BENCH_PHASE_KEY])
+    if not rows or not phase:
         raise KeyError(f"no benchmark QC cuts for blood {blood!r}, CNR {cnr}, half {half}")
-    cut = {
-        ours: max(float(r[theirs]) for r in rows) for theirs, ours in BENCH_NAMES.items()
-    }
+    cut = {n: max(float(r[n]) for r in rows) for n in QC_NAMES}
     return QCCuts(
         max_fatlike=cut["fatlike"],
         max_bloodlike=cut["bloodlike"],
         max_brighter_than_blood=cut["brighter_than_blood"],
         max_rim_dark=cut["rim_dark"],
+        max_rim_dark_phase=max(float(v) for v in phase),
     )

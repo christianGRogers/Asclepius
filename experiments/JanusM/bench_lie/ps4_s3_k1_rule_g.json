@@ -1,0 +1,153 @@
+{
+ "ruling": "Round 4 - paired-scar, PS4-S3 (offline, report only)",
+ "source": "experiments/JanusM/Kilo/r4/k1_phantom_rules.json",
+ "rule": "JA81 (g)",
+ "affine_scale_log_det": 0.02,
+ "rows": [
+  {
+   "motion": "scale_+3",
+   "seed": 0,
+   "tre_rigid": 1.358,
+   "tre_affine": 0.231,
+   "log_det": -0.0797,
+   "sanity_ok": true,
+   "g": true,
+   "ja51": false,
+   "b": true
+  },
+  {
+   "motion": "scale_+3",
+   "seed": 1,
+   "tre_rigid": 1.31,
+   "tre_affine": 0.185,
+   "log_det": -0.0791,
+   "sanity_ok": true,
+   "g": true,
+   "ja51": false,
+   "b": false
+  },
+  {
+   "motion": "scale_+3",
+   "seed": 2,
+   "tre_rigid": 1.343,
+   "tre_affine": 0.296,
+   "log_det": -0.0775,
+   "sanity_ok": true,
+   "g": true,
+   "ja51": false,
+   "b": false
+  },
+  {
+   "motion": "scale_-3",
+   "seed": 0,
+   "tre_rigid": 1.272,
+   "tre_affine": 0.228,
+   "log_det": 0.1019,
+   "sanity_ok": true,
+   "g": true,
+   "ja51": false,
+   "b": false
+  },
+  {
+   "motion": "scale_-3",
+   "seed": 1,
+   "tre_rigid": 1.297,
+   "tre_affine": 0.344,
+   "log_det": 0.102,
+   "sanity_ok": true,
+   "g": true,
+   "ja51": false,
+   "b": false
+  },
+  {
+   "motion": "scale_-3",
+   "seed": 2,
+   "tre_rigid": 1.319,
+   "tre_affine": 0.183,
+   "log_det": 0.1009,
+   "sanity_ok": true,
+   "g": true,
+   "ja51": false,
+   "b": true
+  },
+  {
+   "motion": "shift_4mm",
+   "seed": 0,
+   "tre_rigid": 0.243,
+   "tre_affine": 0.303,
+   "log_det": 0.0153,
+   "sanity_ok": true,
+   "g": false,
+   "ja51": false,
+   "b": false
+  },
+  {
+   "motion": "shift_4mm",
+   "seed": 1,
+   "tre_rigid": 0.239,
+   "tre_affine": 0.398,
+   "log_det": 0.0117,
+   "sanity_ok": true,
+   "g": false,
+   "ja51": false,
+   "b": false
+  },
+  {
+   "motion": "shift_4mm",
+   "seed": 2,
+   "tre_rigid": 0.205,
+   "tre_affine": 0.753,
+   "log_det": 0.0177,
+   "sanity_ok": true,
+   "g": false,
+   "ja51": false,
+   "b": false
+  },
+  {
+   "motion": "uniaxial_+6",
+   "seed": 0,
+   "tre_rigid": 1.221,
+   "tre_affine": 0.505,
+   "log_det": -0.0499,
+   "sanity_ok": true,
+   "g": true,
+   "ja51": false,
+   "b": true
+  },
+  {
+   "motion": "uniaxial_+6",
+   "seed": 1,
+   "tre_rigid": 1.363,
+   "tre_affine": 0.458,
+   "log_det": -0.0467,
+   "sanity_ok": true,
+   "g": true,
+   "ja51": false,
+   "b": true
+  },
+  {
+   "motion": "uniaxial_+6",
+   "seed": 2,
+   "tre_rigid": 1.537,
+   "tre_affine": 0.844,
+   "log_det": -0.0476,
+   "sanity_ok": true,
+   "g": true,
+   "ja51": false,
+   "b": true
+  }
+ ],
+ "summary": {
+  "correct_scale_fixes": 9,
+  "kept_g": 9,
+  "kept_b": 5,
+  "kept_ja51": 0,
+  "shift_worse_affines": 3,
+  "shift_worse_kept_g": 0,
+  "by_motion": {
+   "scale_+3": "3/3",
+   "scale_-3": "3/3",
+   "uniaxial_+6": "3/3"
+  }
+ }
+}

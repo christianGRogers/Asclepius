@@ -145,14 +145,15 @@ def test_affine_is_kept_only_if_it_lowers_qc(juliet, moved):
 
 
 def test_affine_rule():
-    # JA51 step 4 (PS3-S3 has the full set): values over their cuts, none rises, the max falls
+    # JA81 rule (g) (PS3-S3 / PS4-S3 have the full set): sane, the normalised maximum does not
+    # rise, and affine passes QC or |log det| >= 0.02
     def q(a, b, c):
         return R.QC(a, b, c, 0.1, 130.0, 85.0, 100)
 
     eye = np.eye(3)
     assert R.affine_accepted(eye, q(0.01, 0.01, 0.0), q(0.02, 0.02, 0.0), LOOSE)
-    assert not R.affine_accepted(eye, q(0.01, 0.03, 0.0), q(0.02, 0.02, 0.0), LOOSE)  # one rose
-    assert not R.affine_accepted(eye, q(0.02, 0.02, 0.0), q(0.02, 0.02, 0.0), LOOSE)  # none fell
+    assert not R.affine_accepted(eye, q(0.01, 0.03, 0.0), q(0.02, 0.02, 0.0), LOOSE)  # max rose
+    assert R.affine_accepted(eye, q(0.02, 0.02, 0.0), q(0.02, 0.02, 0.0), LOOSE)  # flat, passes
     assert not R.affine_accepted(eye, q(np.nan, 0.0, 0.0), q(0.02, 0.02, 0.0), LOOSE)
 
 

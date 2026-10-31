@@ -146,10 +146,10 @@ def mocked(chest, monkeypatch):
                                                                          rig.translation,
                                                                          rig.centre))
 
-    def run(seq):
+    def run(seq, **kw):
         mq = _MockQC(seq)
         monkeypatch.setattr(R, "qc", mq)
-        reg = R.register_lie(chest.first, chest.aligned, chest.affine, CUTS, n_samples=2000)
+        reg = R.register_lie(chest.first, chest.aligned, chest.affine, CUTS, n_samples=2000, **kw)
         return reg, list(masks)
 
     return run
@@ -173,6 +173,17 @@ def test_ps3_s1_fallback_runs_only_when_the_4mm_stage_fails_qc(mocked):
     # the fallback fails QC but lowers the normalised maximum: kept
     reg, _ = mocked([WORSE, WORSE, WORSE, BAD])
     assert reg.stages[-1].kept and reg.final.name == "rigid10" and not reg.qc_passed
+    # PS4-S5: a mocked whole-image-motion case (no routing flag on the 4 mm stage) still runs the
+    # fallback with JA82's skip on; the 4 mm phase check is logged either way
+    for on in (False, True):
+        reg, masks = mocked([BAD, BAD, BAD, OK], phase_check_before_fallback=on)
+        assert [s.name for s in reg.stages] == ["R0", "rigid", "affine", "rigid10"]
+        assert masks[-2:] == ["4mm", "10mm"] and reg.final.name == "rigid10"
+        assert reg.phase_4mm is not None and not reg.phase_4mm.suspect and not reg.step5_skipped
+        assert reg.stage_4mm.name == "rigid" and reg.graded_stage is reg.final
+    # no fallback reached: no 4 mm check is logged
+    reg, _ = mocked([BAD, OK])
+    assert reg.phase_4mm is None and reg.stage_4mm is None
 
 
 # ------------------------------------------------------------------------------ PS3-S2
@@ -220,42 +231,56 @@ def test_ps3_s2_small_cavity_falls_back_to_one_voxel_and_nan_fails_closed():
 
 # ------------------------------------------------------------------------------ PS3-S3
 def test_ps3_s3_affine_rule_units():
-    """PS3-S3 unit cases: sanity bound violated; one normalised value rises; maximum falls."""
+    """PS3-S3 unit cases, amended by PS4-S3 for JA81 (rule (g)): sanity bound violated; then one
+    case per clause (the normalised maximum rises; flat but fails QC with log det 0.01; flat with
+    log det 0.03; fails QC on rigid but passes after affine with log det 0)."""
     cuts = R.QCCuts(0.01, 0.5, 0.5, 0.5)
-    rig = _q((0.009, 0.3, 0.1, 0.1))  # normalised (0.9, 0.6, 0.2, 0.2)
-    better = _q((0.005, 0.2, 0.1, 0.1))
+    rig = _q((0.02, 0.3, 0.1, 0.1))  # normalised (2.0, 0.6, 0.2, 0.2): fails QC
+    assert not rig.passes(cuts)
+    passing = _q((0.005, 0.2, 0.1, 0.1))  # normalised max 0.5: passes QC
+    flat = _q((0.02, 0.2, 0.1, 0.1))  # normalised max 2.0, as rigid's: fails QC
     eye = np.eye(3)
-    assert R.affine_accepted(eye, better, rig, cuts)  # maximum falls, nothing rises
+
+    def scaled(log_det):
+        return np.eye(3) * np.exp(log_det / 3.0)
+
+    assert R.AFFINE_SCALE_LOG_DET == 0.02
     # sanity bound violated, with a QC that would pass
     for m in (np.diag([1.2, 1.0, 1.0]),  # a scale beyond 15 %
               np.diag([1.1, 1.1, 1.1]),  # |log det| = 0.29 > 0.15, every scale within 15 %
               np.array([[1.0, 0.2, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]])):  # shear 0.2
         assert not R.affine_sanity(m)["ok"], m
-        assert not R.affine_accepted(m, better, rig, cuts)
+        assert not R.affine_accepted(m, passing, rig, cuts)
     # rotation is not penalised: the bound reads scale and shear only
     rot = R._rot([10.0, -5.0, 20.0])
     assert R.affine_sanity(rot @ np.diag([1.05, 0.97, 1.0]))["ok"]
-    # one normalised value rises
-    assert not R.affine_accepted(eye, _q((0.005, 0.2, 0.1, 0.11)), rig, cuts)
-    # values fall but the maximum does not: raw sums would keep it, the normalised rule rejects
-    flat_max = _q((0.009, 0.05, 0.05, 0.05))
-    assert flat_max.values().sum() < rig.values().sum()
-    assert not R.affine_accepted(eye, flat_max, rig, cuts)
+    # (b') the maximum rises -> reject, even with a scale found
+    assert not R.affine_accepted(scaled(0.03), _q((0.03, 0.2, 0.1, 0.1)), rig, cuts)
+    # (c') the maximum is flat, fails QC and log det 0.01 -> reject
+    assert not R.affine_accepted(scaled(0.01), flat, rig, cuts)
+    # (c') the maximum is flat and log det 0.03 -> keep; the sign does not matter
+    assert R.affine_accepted(scaled(0.03), flat, rig, cuts)
+    assert R.affine_accepted(scaled(-0.03), flat, rig, cuts)
+    # fails QC on rigid but passes after affine, log det 0 -> keep
+    assert R.affine_accepted(eye, passing, rig, cuts)
+    # (g) keeps by design what JA51 4(b) rejected: one normalised value rises, the maximum falls,
+    # affine passes QC
+    one_rises = _q((0.005, 0.2, 0.1, 0.11))
+    assert not R.qc_rule_accepts(one_rises, rig, cuts)
+    assert R.affine_accepted(eye, one_rises, rig, cuts)
+    # the clauses are logged one by one
+    r = R.affine_rule(scaled(0.01), flat, rig, cuts)
+    assert r["sanity"] and r["max_not_raised"] and not r["passes_or_scaled"] and not r["kept"]
     # NaN rejects
     assert not R.affine_accepted(eye, _q((np.nan, 0.2, 0.1, 0.1)), rig, cuts)
+    assert not R.affine_accepted(scaled(0.03), flat, _q((np.nan, 0.3, 0.1, 0.1)), cuts)
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason=(
-        "JA51 4(b) as written rejects the correct affine on a 3 % scale: rigid leaves some QC "
-        "shares below their aligned level (rim_dark when the LIE heart is larger; blood-like and "
-        "brighter-than-blood when it is smaller), so fixing the scale makes them rise. Affine TRE "
-        "0.19-0.23 mm against rigid 1.25-1.29 mm on this phantom. Raised for the lead (#243)."
-    ),
-)
 def test_ps3_s3_a_3_percent_scale_keeps_affine(chest, tight):
-    """PS3-S3: a phantom with a 3 % scale keeps affine."""
+    """PS3-S3: a phantom with a 3 % scale keeps affine. PS4-S3: no longer a strict xfail (#243):
+    JA81's rule (g) keeps it, and the last line asserts the sign the convention implies
+    (``Transform`` maps the fixed LIE to the moving first pass, so a 3 % larger LIE heart reads
+    log det ~ -3 log 1.03 = -0.089)."""
     motion = chest.scale(1.03)
     lie = chest.lie(motion, seed=23)
     reg = R.register_lie(chest.first, lie, chest.affine, tight, **FAST)
@@ -264,7 +289,7 @@ def test_ps3_s3_a_3_percent_scale_keeps_affine(chest, tight):
     assert aff.info["sanity"]["ok"] and aff.info["normalised_qc_rule"]
     assert reg.final.name in ("affine", "rigid10")
     assert _tre(chest, aff, motion) < _tre(chest, _stage(reg, "rigid"), motion)
-    assert aff.info["sanity"]["log_det"] > 0.03  # the scale is found (3 x log 1.03 = 0.089)
+    assert aff.info["sanity"]["log_det"] < -0.03  # the 3 % enlargement, with its correct sign
 
 
 def test_ps3_s3_affine_that_increases_tre_is_rejected(chest, shifted):
@@ -289,9 +314,9 @@ def test_ps3_s4_phase_mismatch_is_flagged(chest, phase_cuts):
     assert aligned.evaluable and not aligned.suspect, aligned.summary()
     assert abs(aligned.edge_offset_mm) < R.EDGE_OFFSET_FLAG_MM
     shrunk = R.phase_step(chest.lie(e=0.05), chest.r0, phase_cuts)  # LIE cavity 5 % smaller
-    assert "rim_dark" in shrunk.flags and shrunk.suspect
+    assert "rim_dark" in shrunk.flags and "rim_dark" in shrunk.advisory_flags  # JA84: advisory
     larger = R.phase_step(chest.lie(e=-0.05), chest.r0, phase_cuts)  # LIE cavity 5 % larger
-    assert "edge_offset" in larger.flags and larger.suspect
+    assert larger.routing_flags == ["edge_offset"] and larger.suspect  # JA84: routing
     assert "rim_dark" not in larger.flags  # rim_dark cannot see a larger LIE cavity
     # JA44's canonical sign: the larger LIE cavity reads negative, the smaller one positive
     assert larger.edge_offset_mm < -R.EDGE_OFFSET_FLAG_MM
@@ -316,9 +341,10 @@ def test_ps3_s4_failure_rate_ignores_phase_suspect():
     st = [SC.PASSED] * 9 + [SC.NOT_GRADED]
     assert R.failure_rate(st + [SC.PHASE_SUSPECT] * 5) == pytest.approx(0.1)
     assert R.seal_grading_allowed(st + [SC.PHASE_SUSPECT] * 50)
-    assert R.status_from_checks([], phase_suspect=True) == SC.PHASE_SUSPECT
-    assert R.status_from_checks([False], phase_suspect=True) == SC.PHASE_SUSPECT
-    assert R.status_from_checks([True], phase_suspect=True) == SC.PHASE_SUSPECT
+    # a routed patient is phase suspect whatever the check says (JA85; PS4-S4 has every row)
+    for checks in ([], [False], [True]):
+        assert R.status_from_checks(checks, phase_flag=True,
+                                    phase_source=R.PHASE_INFERRED) == SC.PHASE_SUSPECT
     # JA52 stop rule: a phase-suspect share above 20 % goes to the lead
     assert not R.phase_suspect_needs_report([SC.PASSED] * 8 + [SC.PHASE_SUSPECT] * 2)
     assert R.phase_suspect_needs_report([SC.PASSED] * 7 + [SC.PHASE_SUSPECT] * 3)
@@ -327,18 +353,20 @@ def test_ps3_s4_failure_rate_ignores_phase_suspect():
 
 
 def test_ps3_s4_phase_suspect_stops_further_registration(chest, phase_cuts, monkeypatch):
-    lie = chest.lie(e=0.05)
+    lie = chest.lie(e=-0.05)  # PS4-S4: the edge offset routes (rim_dark is advisory)
     cuts = R.QCCuts(1.0, 1.0, 1.0, 1.0, max_rim_dark_phase=phase_cuts.rim_dark_phase)
-    reg = R.register_lie(chest.first, lie, chest.affine, cuts, n_samples=2000)
+    reg = R.register_lie(chest.first, lie, chest.affine, cuts, n_samples=2000,
+                         phase_source=R.PHASE_INFERRED)
     assert [s.name for s in reg.stages] == ["R0"]  # QC passes these loose cuts
     assert reg.phase_suspect and reg.status == SC.PHASE_SUSPECT
+    assert reg.phase_route == R.ROUTE_FLAG_ONLY
     assert reg.record_reader_check(False) == SC.PHASE_SUSPECT
     assert not reg.reregistration_allowed
     with pytest.raises(ValueError, match="phase"):
         R.register_lie(chest.first, lie, chest.affine, cuts, attempt=2, initial_shift_mm=[1, 0, 0],
                        previous_checks=[False], previous_phase_suspect=True)
     log = json.loads(json.dumps(reg.log()))
-    assert log["status"] == SC.PHASE_SUSPECT and log["phase"]["phase_suspect"]
+    assert log["status"] == SC.PHASE_SUSPECT and log["phase"]["phase_flag"]
     assert log["phase"]["log_det_final"] == 0.0 and log["phase"]["log_det_affine"] is None
 
 
@@ -428,7 +456,7 @@ def test_ps3_s5_a_non_guarded_id_raises():
 
 def test_ps3_s5_frozen_json_and_provisional_cuts(tmp_path):
     """PS3-S5 output: a frozen JSON for ``configs/janusm/paired-r2.json``; provisional cuts from
-    ``bench_lie/scores.json``."""
+    ``bench_lie/scores_v3.json`` (PS4-S6; v2's ``scores.json`` is refused)."""
     f = R.fit_qc_cuts(_records(fails=100))
     path = R.save_qc_cuts(f, tmp_path / "paired-r2.json")
     text = path.read_text()
@@ -440,11 +468,11 @@ def test_ps3_s5_frozen_json_and_provisional_cuts(tmp_path):
     g = R.load_qc_cuts(path)
     for key, c in (("A", 3.3), ("B", 7.1), ("C", 5.0)):
         assert g.cuts_for(key, c) == f.cuts_for(key, c)
-    # provisional: the benchmark's qc_cuts at the matching blood level
-    bench = json.loads(R.BENCH_SCORES.read_text())["qc_cuts"]["0|equal|5"]
+    # provisional (PS4-S6, JA83): the v3 benchmark's registered-case cuts at the matching blood
+    bench = json.loads(R.BENCH_SCORES.read_text())["qc_cuts_registered"]["0|equal|5"]
     p = R.load_provisional_qc_cuts(blood="equal", cnr=5, half=0)
     assert (p.max_fatlike, p.max_bloodlike, p.max_brighter_than_blood, p.max_rim_dark) == (
-        bench["fat_like"], bench["blood_like"], bench["above_blood"], bench["rim_dark"])
+        bench["fatlike"], bench["bloodlike"], bench["brighter_than_blood"], bench["rim_dark"])
     both = R.load_provisional_qc_cuts(blood="equal", cnr=5)
     assert both.max_fatlike >= p.max_fatlike
     with pytest.raises(KeyError):

@@ -29,9 +29,17 @@ is the canonical v3** in `bench_lie/` (it launched first). Kilo agreed. Kilo's r
 same seeds, so my runner, scorer and generator additions live in `experiments/JanusM/Juliet/r4/`, and **this PR does
 not touch `bench_lie/`**. Every number in this note is from my rows, scored by my pre-registered rules (#251, 19:00
 UTC, before any result).
-**Golf's canonical rows were not yet pushed when this note was written.** Under JA54 and #179 the deciding strike
-numbers are his. §1 will be checked against them case by case on the v2 motions (same seeds, same module), and the
-result added on #251 and to this PR.
+**Against Golf's canonical rows** (`bench_lie/results_v3.jsonl.gz`, added after #254; `Juliet/r4/golf_compare.py`):
+- **The registration is deterministic across containers.** On the 315 cases both runs share (none, rigid, scale,
+  phase, nonrigid; CNR 5; 3 blood levels; 21 hearts), seeds are equal and every stage's TRE, edge offset and four QC
+  values agree to ≤ 0.0001.
+- **The menu values differ only through the carried geometry.** R0 is identical. On the moved stages, per-segment
+  ev / ed / pg_share differ by p95 0.03–0.04 (max 0.155) because Golf grades on the benchmark's `menu.carry`
+  (SimpleITK resampling, as v2) and I on the module's own `carry`.
+- **The deciding verdicts agree.** Golf's `scores_v3.json`: P-G survives (min sensitivity 0.915), P-J survives
+  (0.888), P-K struck. My pre-registered scorer on his rows (`scores_on_golf_rows.json`): the same three verdicts
+  with the same minima, and the same item-2 pick, rule (c), with pooled p90 2.31 mm over `rigid`, `scale` and his
+  `aniso` (L 3.28, b 2.91, N 3.44).
 
 ---
 
@@ -384,4 +392,4 @@ stays near 2 %.
   - My QC cuts are the pre-registered aligned-R0 p95, not JA53's development cuts; the registered-patient cuts and
     every chain variant in `explore_v3.json` are **exploratory**, chosen after reading the pre-registered results.
   - The item-2 rule pick uses my rows' `aniso3` / `aniso6`; on Golf's canonical rows the mapping pre-registered on
-    #251 (his `aniso`) applies. Golf's rows had not landed when this was written (see §0).
+    #251 (his `aniso`) applies. On Golf's rows, (c) is again the pick (§0).

@@ -1,0 +1,442 @@
+{
+ "note": "Juliet's replication vs the canonical v3 (Golf); Juliet's pre-registered scorer on Golf's rows",
+ "determinism": {
+  "n_matched": 315,
+  "seed_equal": 315,
+  "per_stage": {
+   "R0": {
+    "tre": {
+     "identical_share": 1.0,
+     "max_abs": 0.0,
+     "p95_abs": 0.0
+    },
+    "qc": {
+     "identical_share": 1.0,
+     "max_abs": 0.0001,
+     "p95_abs": 0.0001
+    },
+    "edge": {
+     "identical_share": 1.0,
+     "max_abs": 0.0,
+     "p95_abs": 0.0
+    },
+    "menu": {
+     "identical_share": 1.0,
+     "max_abs": 0.0,
+     "p95_abs": 0.0
+    }
+   },
+   "rigid": {
+    "tre": {
+     "identical_share": 1.0,
+     "max_abs": 0.0,
+     "p95_abs": 0.0
+    },
+    "qc": {
+     "identical_share": 1.0,
+     "max_abs": 0.0001,
+     "p95_abs": 0.0001
+    },
+    "edge": {
+     "identical_share": 1.0,
+     "max_abs": 0.0,
+     "p95_abs": 0.0
+    },
+    "menu": {
+     "identical_share": 0.102,
+     "max_abs": 0.122,
+     "p95_abs": 0.0293
+    }
+   },
+   "affine": {
+    "tre": {
+     "identical_share": 1.0,
+     "max_abs": 0.0,
+     "p95_abs": 0.0
+    },
+    "qc": {
+     "identical_share": 1.0,
+     "max_abs": 0.0001,
+     "p95_abs": 0.0001
+    },
+    "edge": {
+     "identical_share": 1.0,
+     "max_abs": 0.0,
+     "p95_abs": 0.0
+    },
+    "menu": {
+     "identical_share": 0.029,
+     "max_abs": 0.101,
+     "p95_abs": 0.036
+    }
+   },
+   "rigid10": {
+    "tre": {
+     "identical_share": 1.0,
+     "max_abs": 0.0,
+     "p95_abs": 0.0
+    },
+    "qc": {
+     "identical_share": 1.0,
+     "max_abs": 0.0001,
+     "p95_abs": 0.0001
+    },
+    "edge": {
+     "identical_share": 1.0,
+     "max_abs": 0.0,
+     "p95_abs": 0.0
+    },
+    "menu": {
+     "identical_share": 0.349,
+     "max_abs": 0.155,
+     "p95_abs": 0.038
+    }
+   }
+  },
+  "tre_differs_by_more_than_0.05mm": 0,
+  "examples": []
+ },
+ "on_golf_rows": {
+  "strike": {
+   "P-K": {
+    "struck": true,
+    "min_sens": 0.977,
+    "why": [
+     "above/rigid: spec 0.885",
+     "above/none: spec on scar-free hearts 0.017",
+     "above/rigid: spec on scar-free hearts 0.115",
+     "below/none: spec on scar-free hearts 0.006",
+     "below/rigid: spec on scar-free hearts 0.087",
+     "equal/none: spec on scar-free hearts 0.006",
+     "equal/rigid: spec on scar-free hearts 0.104"
+    ]
+   },
+   "P-J": {
+    "struck": false,
+    "min_sens": 0.888,
+    "why": []
+   },
+   "P-G": {
+    "struck": false,
+    "min_sens": 0.915,
+    "why": []
+   }
+  },
+  "affine_rule_choice": {
+   "criterion": "lowest pooled p90 decision TRE over rigid, scale, aniso; ties -> fewer keeps (pre-registered on #251)",
+   "pooled": {
+    "L": {
+     "pooled_p90": 3.277,
+     "keeps": 19,
+     "n": 189
+    },
+    "a": {
+     "pooled_p90": 3.277,
+     "keeps": 19,
+     "n": 189
+    },
+    "b": {
+     "pooled_p90": 2.906,
+     "keeps": 58,
+     "n": 189
+    },
+    "c": {
+     "pooled_p90": 2.312,
+     "keeps": 136,
+     "n": 189
+    },
+    "d": {
+     "pooled_p90": 2.881,
+     "keeps": 62,
+     "n": 189
+    },
+    "S": {
+     "pooled_p90": 2.312,
+     "keeps": 175,
+     "n": 189
+    },
+    "N": {
+     "pooled_p90": 3.44,
+     "keeps": 0,
+     "n": 189
+    }
+   },
+   "chosen": "c"
+  },
+  "registration": [
+   {
+    "motion": "none",
+    "n": 63,
+    "R0_tre_median": 0.0,
+    "R0_tre_p90": 0.0,
+    "rigid_tre_median": 0.289,
+    "rigid_tre_p90": 0.565,
+    "affine_tre_median": 0.434,
+    "affine_tre_p90": 1.705,
+    "rigid10_tre_median": 0.112,
+    "rigid10_tre_p90": 0.18,
+    "shipped_tre_median": 0.0,
+    "shipped_tre_p90": 0.273,
+    "chain_a_tre_median": 0.0,
+    "chain_a_tre_p90": 0.273,
+    "chain_b_tre_median": 0.0,
+    "chain_b_tre_p90": 0.273,
+    "chain_c_tre_median": 0.0,
+    "chain_c_tre_p90": 0.251,
+    "chain_d_tre_median": 0.0,
+    "chain_d_tre_p90": 0.273,
+    "chain_S_tre_median": 0.0,
+    "chain_S_tre_p90": 0.23,
+    "chain_N_tre_median": 0.0,
+    "chain_N_tre_p90": 0.273,
+    "shipped_final": {
+     "R0": 34,
+     "rigid": 21,
+     "affine": 0,
+     "rigid10": 8
+    },
+    "shipped_reached_affine": 29,
+    "shipped_ran_fallback": 29,
+    "affine_helps_by_0.1mm": 0,
+    "affine_helps_but_a_qc_value_rises": 0,
+    "affine_sanity_ok": 63,
+    "affine_log_det_median": -0.02
+   },
+   {
+    "motion": "rigid",
+    "n": 63,
+    "R0_tre_median": 4.171,
+    "R0_tre_p90": 4.569,
+    "rigid_tre_median": 0.26,
+    "rigid_tre_p90": 1.139,
+    "affine_tre_median": 0.419,
+    "affine_tre_p90": 1.991,
+    "rigid10_tre_median": 3.444,
+    "rigid10_tre_p90": 4.344,
+    "shipped_tre_median": 0.267,
+    "shipped_tre_p90": 1.108,
+    "chain_a_tre_median": 0.267,
+    "chain_a_tre_p90": 1.108,
+    "chain_b_tre_median": 0.267,
+    "chain_b_tre_p90": 1.108,
+    "chain_c_tre_median": 0.304,
+    "chain_c_tre_p90": 2.744,
+    "chain_d_tre_median": 0.267,
+    "chain_d_tre_p90": 1.108,
+    "chain_S_tre_median": 0.419,
+    "chain_S_tre_p90": 2.744,
+    "chain_N_tre_median": 0.267,
+    "chain_N_tre_p90": 1.108,
+    "shipped_final": {
+     "R0": 0,
+     "rigid": 56,
+     "affine": 3,
+     "rigid10": 4
+    },
+    "shipped_reached_affine": 63,
+    "shipped_ran_fallback": 63,
+    "affine_helps_by_0.1mm": 0,
+    "affine_helps_but_a_qc_value_rises": 0,
+    "affine_sanity_ok": 63,
+    "affine_log_det_median": -0.011
+   },
+   {
+    "motion": "scale",
+    "n": 63,
+    "R0_tre_median": 4.225,
+    "R0_tre_p90": 4.716,
+    "rigid_tre_median": 2.027,
+    "rigid_tre_p90": 2.988,
+    "affine_tre_median": 0.532,
+    "affine_tre_p90": 1.93,
+    "rigid10_tre_median": 3.482,
+    "rigid10_tre_p90": 4.342,
+    "shipped_tre_median": 1.892,
+    "shipped_tre_p90": 2.701,
+    "chain_a_tre_median": 1.892,
+    "chain_a_tre_p90": 2.701,
+    "chain_b_tre_median": 1.825,
+    "chain_b_tre_p90": 2.655,
+    "chain_c_tre_median": 1.449,
+    "chain_c_tre_p90": 3.232,
+    "chain_d_tre_median": 1.825,
+    "chain_d_tre_p90": 2.655,
+    "chain_S_tre_median": 1.449,
+    "chain_S_tre_p90": 3.232,
+    "chain_N_tre_median": 1.971,
+    "chain_N_tre_p90": 2.818,
+    "shipped_final": {
+     "R0": 0,
+     "rigid": 45,
+     "affine": 3,
+     "rigid10": 15
+    },
+    "shipped_reached_affine": 60,
+    "shipped_ran_fallback": 60,
+    "affine_helps_by_0.1mm": 59,
+    "affine_helps_but_a_qc_value_rises": 56,
+    "affine_sanity_ok": 56,
+    "affine_log_det_median": -0.105
+   },
+   {
+    "motion": "aniso",
+    "n": 63,
+    "R0_tre_median": 4.477,
+    "R0_tre_p90": 5.11,
+    "rigid_tre_median": 2.659,
+    "rigid_tre_p90": 4.149,
+    "affine_tre_median": 0.389,
+    "affine_tre_p90": 2.479,
+    "rigid10_tre_median": 4.094,
+    "rigid10_tre_p90": 5.016,
+    "shipped_tre_median": 2.801,
+    "shipped_tre_p90": 4.655,
+    "chain_a_tre_median": 2.801,
+    "chain_a_tre_p90": 4.655,
+    "chain_b_tre_median": 1.44,
+    "chain_b_tre_p90": 4.415,
+    "chain_c_tre_median": 0.481,
+    "chain_c_tre_p90": 4.27,
+    "chain_d_tre_median": 0.859,
+    "chain_d_tre_p90": 4.283,
+    "chain_S_tre_median": 0.481,
+    "chain_S_tre_p90": 4.27,
+    "chain_N_tre_median": 3.121,
+    "chain_N_tre_p90": 4.782,
+    "shipped_final": {
+     "R0": 0,
+     "rigid": 32,
+     "affine": 12,
+     "rigid10": 19
+    },
+    "shipped_reached_affine": 63,
+    "shipped_ran_fallback": 63,
+    "affine_helps_by_0.1mm": 59,
+    "affine_helps_but_a_qc_value_rises": 46,
+    "affine_sanity_ok": 56,
+    "affine_log_det_median": -0.108
+   },
+   {
+    "motion": "phase",
+    "n": 63,
+    "R0_tre_median": 4.178,
+    "R0_tre_p90": 4.615,
+    "rigid_tre_median": 0.255,
+    "rigid_tre_p90": 0.966,
+    "affine_tre_median": 0.42,
+    "affine_tre_p90": 2.011,
+    "rigid10_tre_median": 3.38,
+    "rigid10_tre_p90": 4.36,
+    "shipped_tre_median": 1.199,
+    "shipped_tre_p90": 3.682,
+    "chain_a_tre_median": 1.199,
+    "chain_a_tre_p90": 3.682,
+    "chain_b_tre_median": 1.199,
+    "chain_b_tre_p90": 3.682,
+    "chain_c_tre_median": 1.371,
+    "chain_c_tre_p90": 3.89,
+    "chain_d_tre_median": 1.199,
+    "chain_d_tre_p90": 3.682,
+    "chain_S_tre_median": 1.409,
+    "chain_S_tre_p90": 3.89,
+    "chain_N_tre_median": 1.199,
+    "chain_N_tre_p90": 3.682,
+    "shipped_final": {
+     "R0": 0,
+     "rigid": 29,
+     "affine": 2,
+     "rigid10": 32
+    },
+    "shipped_reached_affine": 63,
+    "shipped_ran_fallback": 63,
+    "affine_helps_by_0.1mm": 1,
+    "affine_helps_but_a_qc_value_rises": 1,
+    "affine_sanity_ok": 63,
+    "affine_log_det_median": -0.012
+   },
+   {
+    "motion": "phase_neg",
+    "n": 63,
+    "R0_tre_median": 4.119,
+    "R0_tre_p90": 4.635,
+    "rigid_tre_median": 0.294,
+    "rigid_tre_p90": 1.025,
+    "affine_tre_median": 0.492,
+    "affine_tre_p90": 2.554,
+    "rigid10_tre_median": 3.468,
+    "rigid10_tre_p90": 4.352,
+    "shipped_tre_median": 0.298,
+    "shipped_tre_p90": 0.941,
+    "chain_a_tre_median": 0.298,
+    "chain_a_tre_p90": 0.941,
+    "chain_b_tre_median": 0.327,
+    "chain_b_tre_p90": 0.941,
+    "chain_c_tre_median": 0.333,
+    "chain_c_tre_p90": 1.637,
+    "chain_d_tre_median": 0.33,
+    "chain_d_tre_p90": 0.941,
+    "chain_S_tre_median": 0.366,
+    "chain_S_tre_p90": 1.929,
+    "chain_N_tre_median": 0.301,
+    "chain_N_tre_p90": 0.941,
+    "shipped_final": {
+     "R0": 0,
+     "rigid": 56,
+     "affine": 2,
+     "rigid10": 5
+    },
+    "shipped_reached_affine": 49,
+    "shipped_ran_fallback": 49,
+    "affine_helps_by_0.1mm": 0,
+    "affine_helps_but_a_qc_value_rises": 0,
+    "affine_sanity_ok": 61,
+    "affine_log_det_median": -0.015
+   },
+   {
+    "motion": "nonrigid",
+    "n": 63,
+    "R0_tre_median": 6.833,
+    "R0_tre_p90": 10.219,
+    "rigid_tre_median": 1.843,
+    "rigid_tre_p90": 2.909,
+    "affine_tre_median": 1.864,
+    "affine_tre_p90": 3.166,
+    "rigid10_tre_median": 1.644,
+    "rigid10_tre_p90": 2.216,
+    "shipped_tre_median": 1.644,
+    "shipped_tre_p90": 2.281,
+    "chain_a_tre_median": 1.644,
+    "chain_a_tre_p90": 2.281,
+    "chain_b_tre_median": 1.621,
+    "chain_b_tre_p90": 2.229,
+    "chain_c_tre_median": 1.621,
+    "chain_c_tre_p90": 2.161,
+    "chain_d_tre_median": 1.621,
+    "chain_d_tre_p90": 2.229,
+    "chain_S_tre_median": 1.62,
+    "chain_S_tre_p90": 2.161,
+    "chain_N_tre_median": 1.654,
+    "chain_N_tre_p90": 2.281,
+    "shipped_final": {
+     "R0": 0,
+     "rigid": 12,
+     "affine": 1,
+     "rigid10": 50
+    },
+    "shipped_reached_affine": 63,
+    "shipped_ran_fallback": 63,
+    "affine_helps_by_0.1mm": 23,
+    "affine_helps_but_a_qc_value_rises": 21,
+    "affine_sanity_ok": 63,
+    "affine_log_det_median": -0.051
+   }
+  ],
+  "phase_auc": {
+   "edge_offset_neg_phase_neg_vs_rigid": 0.993,
+   "abs_edge_offset_phase_neg_vs_rigid": 0.99,
+   "rim_dark_phase_vs_rigid": 0.999,
+   "rim_dark_phase_neg_vs_rigid": 0.027
+  },
+  "n_cases": 441
+ }
+}

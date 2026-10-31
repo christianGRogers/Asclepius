@@ -22,7 +22,7 @@ guard first, and fails closed.
 from __future__ import annotations
 
 #: Bump on any change that can move a reported number.
-SCAR_VERSION = "1.1.0"
+SCAR_VERSION = "1.2.0"
 
 #: JA26: every scar output carries this until JA32 passes on the paired seal.
 RESEARCH_LABEL = "research output, not validated"

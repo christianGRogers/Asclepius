@@ -115,6 +115,12 @@ def test_ps4_s2_phase_suspect_rigid10_registration_is_graded_on_its_rigid_stage(
         assert np.array_equal(bins, ref.for_scoring("P-J", "E-D").kim_bin)
         table = out.table("P-J", "E-D")
         assert table["phase_route"] == route and table["strata"] == ["phase_unmatched"]
+        # scoring takes the stratum and the route as for_scoring gives them (#262, PS4-S9)
+        from janusm.scar import scoring
+
+        pat = scoring.Patient(ref=np.zeros(17, int), ct=got.kim_bin, strata=got.strata,
+                              phase_route=got.phase_route)
+        assert pat.phase_route == route and "phase_unmatched" in pat.strata
     # an ordinary patient is graded on its final stage, with no stratum and no route
     reg, _, bad = _synthetic_registration(chest, phase_source=R.PHASE_DICOM_MATCHED, flag=True)
     reg.record_reader_check(True)

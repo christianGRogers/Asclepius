@@ -63,9 +63,14 @@ judge holds them to that.
 - **All three scorers agree.** Kilo's `scores_kilo_on_golf_v3.json` gives the same verdicts and the same minima.
   Juliet's replication (`scores_v3_juliet.json`) gives P-G 0.915 / 0.985 / 0.989 and P-J 0.865 (sensitivity) on her own
   rows.
-- **Determinism.** Kilo reports identical stage TREs on the 96 cases his rows share with Golf's. The judge did not
-  repeat that row-by-row match. The chain TREs Golf and Juliet report for `rigid`, `scale`, `phase` and `nonrigid` agree
-  to the third decimal, which is consistent with it.
+- **Determinism.**
+  - Kilo reports identical stage TREs on the 96 cases his rows share with Golf's. The judge did not repeat that
+    row-by-row match.
+  - Juliet's follow-up (#259, branch commit `722aca3`, `Juliet/r4/golf_compare.json`) matches 315 shared cases. Every
+    stage's TRE and edge offset agree exactly, and QC agrees to ≤ 0.0001. Her menu values differ only through the
+    carry used for grading (`menu.carry` against the module's `carry`).
+  - Her pre-registered scorer on Golf's rows (`scores_on_golf_rows.json`) gives the same strike verdicts and minima:
+    P-G 0.915, P-J 0.888, P-K struck.
 - **The replay is the module.** Golf's `chain_parity.json` (9 / 9) and Juliet's `replay_check.json` (16 / 16) run
   `register_lie` end to end and land on the assembled chain's final stage with identical TRE. Kilo: 11 / 11.
 - **One ungradable arm** in 518 cases (a diverged B-spline arm, CNR 3). It is disclosed on #251 and touches no striking
@@ -139,7 +144,8 @@ cuts. A rule is ineligible if it keeps a worse affine (by > 0.25 mm) on > 10 % o
 - **On her rows the pick is (c)**: 1.996 mm, tied with S (sanity only), against L 2.377 and (b) 2.303. Confirmed in
   her note's table.
 - **On Golf's rows, under her pre-registered mapping, the pick is also (c).** Judge's re-tabulation: (c) and always
-  2.31, (g) 2.88, (b) 2.91, literal 3.28, never 3.44.
+  2.31, (g) 2.88, (b) 2.91, literal 3.28, never 3.44. Juliet's own scorer on Golf's rows (#259,
+  `scores_on_golf_rows.json` → `affine_rule_choice`) gives the same figures: (c) 2.312, (b) 2.906, L 3.277, N 3.440.
 - **Her criterion has no harm screen,** and (c) is what it buys. (c) keeps 17 of 23 worse affines on rigid motion and
   raises the rigid p90 from 1.14 to 1.99 mm (Juliet's own number). It re-strikes P-G under Golf's constraint, and
   under Kilo's scorer at the provisional cuts (specificity 0.929).
@@ -240,7 +246,7 @@ Scale 1–5:
 | | Score | Why |
 |---|---|---|
 | (a) Reasoning | **4** | Found the fallback mechanism ("a misregistered heart can have a lower normalised maximum") and proposed reading phase before step 5. Named a likely cause of the overshoot (matrix entries and translation share one Powell step). The strongest argument against an unconfirmed-flag back door around JA55. Deducted: the pre-registered criterion has no harm screen, and the proposal departs from its own pick (0.05, post-hoc) |
-| (b) Evidence | **4** | 504 cases, replay 16 / 16, 42 exploratory variants labelled as such; every number re-reads. Deducted: the note was written before the canonical rows existed, and never checked against them; the 50 % figure (200) sits one grid step above the other two (noise, §1.6) |
+| (b) Evidence | **4** | 504 cases, replay 16 / 16, 42 exploratory variants labelled as such; every number re-reads. Deducted: the note was written before the canonical rows existed, and the check against them came only in a follow-up (#259: 315 cases identical); the 50 % figure (200) sits one grid step above the other two (noise, §1.6) |
 | (c) Fit | **5** | Confirmed-only routing, a bounded stratum, a put-back analysis and `seal_size` sized on analysed patients all fit JA27, JA52 and JA55 |
 | (d) Risk / cost | **4** | Suspending affine would give up scale correction the safe rules already deliver |
 
@@ -393,7 +399,8 @@ Kilo v2 + JA25–JA36 + JA50–JA59, now amended by JA80–JA87.
       agree (3.46);
     - the motion names `phase` and `phase_neg` mean a **smaller** and a **larger** LIE cavity. Notes disagree on the ±
       label, so later notes say "smaller" or "larger";
-    - Juliet v4 was written before the canonical rows existed; its strike numbers are a replication;
+    - Juliet v4 was written before the canonical rows existed; its strike numbers are a replication. #259 checks it
+      against them: identical registration on 315 shared cases, the same verdicts, and (c) again as her pick;
     - JA36's held-out rule was kept by every note this round.
 
 ---

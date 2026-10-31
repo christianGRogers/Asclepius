@@ -30,7 +30,7 @@ median and robust SD (1.4826 x MAD).
 - ``E-V`` (Kilo, Golf): the share of the segment's voxels above remote + 3 SD;
 - ``E-D`` (Juliet): depth-binned transmural extent: per 3-degree x 2 mm column, 10 bins of u, a
   bin scar when most of its voxels pass, the column's extent the share of its bins that are scar
-  (columns with at least 6 bins), averaged over the segment. The voxel cut is remote + 3 SD, the
+  (columns with at least 4 bins), averaged over the segment. The voxel cut is remote + 3 SD, the
   same as E-V's (JA54; #188 reading 3, corrected), so E-V and E-D differ only in aggregation.
 
 **Choice** (:func:`choose_presence`, :func:`choose_extent`) is made once on development against
@@ -108,7 +108,7 @@ class JA30Constants:
     pg_min_denominator: int = 10
     depth_bins: int = 10
     depth_bin_majority: float = 0.5
-    column_min_bins: int = 6
+    column_min_bins: int = 4
 
 
 JA30 = JA30Constants()

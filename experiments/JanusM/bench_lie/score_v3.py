@@ -27,6 +27,11 @@ Pre-registered on #251 before any v3 result (Golf's posts of 2026-10-30).
 5. **Phase step (JA52)** on each chain's final stage: flag rates by motion (rim_dark above its cut; |edge offset|
    > 0.6 mm), only when evaluable (contrast >= 2 SD). And presence with the flagged cases in / out.
 6. **B-spline (JA53, report only)**: TRE and presence on nonrigid, and on rigid at CNR 5 (harm check).
+7. **PS4-S5 acceptance replay (JA82, report only; added after the Round 4 ruling).** `chain_g_ja82`: JA81 (g) with
+   JA82's skip -- after step 4 the logged edge offset of the 4 mm result is read; if it is evaluable (contrast >= 2 SD)
+   and |offset| > 0.6 mm, step 5 is skipped and the 4 mm result is final; otherwise step 5 runs as shipped. Same cuts
+   as `chain`. Written to `ja82_replay` with the PS4-S5 acceptance check (CNR 5: the #179 verdicts unchanged; `phase`
+   p90 <= 1.2 mm; `nonrigid` p90 within 0.3 mm of the shipped chain's 2.23 mm). Nothing else in the file moves.
 
 Usage: python experiments/JanusM/bench_lie/score_v3.py [results_v3.jsonl[.gz]]
 """
@@ -147,6 +152,59 @@ def chain(r, cuts, rule, fallback="lowers"):
         if passes("rigid10") or (np.isfinite(m_new) and np.isfinite(m_old) and m_new < m_old):
             final = "rigid10"
     return final
+
+
+def chain_ja82(r, cuts, rule="g"):
+    """PS4-S5 (JA82): the chain under ``rule`` with the phase check before the fallback. Returns (final stage, whether
+    the 4 mm edge offset skipped step 5). Uses the logged per-stage edge offset and contrast only."""
+    a = r["arms"]
+    passes = lambda arm: qc_of(a[arm]["shipped"]).passes(cuts)  # noqa: E731
+    if passes("R0"):
+        return "R0", False
+    four = "rigid4"
+    if not passes("rigid4") and accept(rule, a["rigid4"], a["affine4"], cuts):
+        four = "affine4"
+    if passes(four):
+        return four, False
+    s = a[four]["shipped"]
+    evaluable = s.get("contrast") is not None and s["contrast"] >= R.MIN_PHASE_CONTRAST_SD
+    off = s.get("edge_offset_mm")
+    if evaluable and off is not None and abs(off) > cuts.max_edge_offset_mm:
+        return four, True
+    return chain(r, cuts, rule), False
+
+
+JA82_ACCEPT = {"phase_p90_max_mm": 1.2, "nonrigid_ref_p90_mm": 2.23, "nonrigid_tol_mm": 0.3}
+
+
+def ja82_replay(rows, out):
+    """PS4-S5's acceptance numbers for ``chain_g_ja82`` against ``chain_g`` (JA81 (g), shipped step 5)."""
+    cnr5 = [r for r in rows if r["cnr"] == 5]
+    tre = {}
+    for m in MOTIONS:
+        sel = lambda r, m=m: r["motion"] == m and r["cnr"] == 5  # noqa: E731
+        tre[m] = {arm: tre_stats(rows, arm, sel) for arm in ("chain_g", "chain_g_ja82", "chain_g_fb_pass")}
+        rr = [r for r in cnr5 if r["motion"] == m]
+        tre[m]["skipped_step5"] = sum(r["ja82_skip"] for r in rr)
+        tre[m]["stages"] = {s: sum(r["stage"]["g_ja82"] == s for r in rr) for s in ("R0", "rigid4", "affine4", "rigid10")}
+    sr = out["strike_reported"]
+    verdicts = {k: {"chain_literal": out["strike"][k]["struck"], "chain_g": sr["chain_g"][k]["struck"],
+                    "chain_g_ja82": sr["chain_g_ja82"][k]["struck"]} for k in out["strike"]}
+    minima = {p: {k: sr["chain_g_ja82"][p][k] for k in ("min_sens", "min_spec", "min_spec_scarfree", "max_spill")}
+              for p in PRES}
+    unchanged = all(v["chain_g_ja82"] == v["chain_literal"] for v in verdicts.values())
+    phase_p90 = tre["phase"]["chain_g_ja82"]["p90"]
+    nonrigid_p90 = tre["nonrigid"]["chain_g_ja82"]["p90"]
+    acc = {"strike_verdicts_unchanged": unchanged,
+           "phase_p90_mm": phase_p90, "phase_ok": phase_p90 <= JA82_ACCEPT["phase_p90_max_mm"],
+           "nonrigid_p90_mm": nonrigid_p90,
+           "nonrigid_shipped_chain_p90_mm": tre["nonrigid"]["chain_g"]["p90"],
+           "nonrigid_ok": abs(nonrigid_p90 - JA82_ACCEPT["nonrigid_ref_p90_mm"]) <= JA82_ACCEPT["nonrigid_tol_mm"]}
+    acc["pass"] = bool(acc["strike_verdicts_unchanged"] and acc["phase_ok"] and acc["nonrigid_ok"])
+    return {"ruling": "Round 4 - paired-scar, JA82 / PS4-S5 (report only)", "criteria": JA82_ACCEPT,
+            "chain": "JA81 (g); 4 mm edge offset evaluable and |offset| > 0.6 mm skips step 5; else step 5 as shipped",
+            "cuts": "qc_cuts (the same as chain)", "cnr": 5, "tre_by_motion": tre, "strike_verdicts": verdicts,
+            "strike_minima_chain_g_ja82": minima, "acceptance": acc}
 
 
 def fit_phase_cuts(rows, rule="literal"):
@@ -328,10 +386,15 @@ def main(path=None):
             st = chain(r, c, "literal", fb)
             r["stage"][f"literal_fb_{fb}"] = st
             r["arms"][f"chain_literal_fb_{fb}"] = r["arms"][st]
+        st, r["ja82_skip"] = chain_ja82(r, c)          # PS4-S5 acceptance replay (after the ruling), report only
+        r["stage"]["g_ja82"] = st
+        r["arms"]["chain_g_ja82"] = r["arms"][st]
+        r["arms"]["chain_g_fb_pass"] = r["arms"][chain(r, c, "g", "pass")]
     chain_arms = [f"chain_{x}" for x in RULES] + ["chain_literal_fb_pass", "chain_literal_fb_none",
                                                   "chain_literal_regcuts", "chain_b_regcuts", "chain_never_regcuts"]
     arms = ["oracle", "R0", "rigid4", "affine4", "rigid10", "bspline"] + chain_arms
-    taus = fit_taus(rows, arms)
+    ja82_arms = ["chain_g_ja82", "chain_g_fb_pass"]
+    taus = fit_taus(rows, arms + ja82_arms)
     out = {"version": 3, "scar_version": R.SCAR_VERSION, "n_cases": len(rows),
            "hearts": sorted({r["heart"] for r in rows}), "skipped": skips, "case_errors": errors,
            "ungradable_arms": sorted({f"{r['heart']}|{r['blood']}|{r['cnr']}|{r['motion']}|{a}"
@@ -341,7 +404,8 @@ def main(path=None):
                        for k, v in sorted(cuts.items())},
            "qc_cuts_registered": {f"{k[0]}|{k[1]}|{k[2]}": dict(zip(SHIP_QC, np.round(v.values(), 4).tolist()))
                                   for k, v in sorted(cuts_reg.items())},
-           "taus": {f"{k[0]}|{k[1]}|{k[2]}|{k[3]}": round(v, 4) for k, v in sorted(taus.items())}}
+           "taus": {f"{k[0]}|{k[1]}|{k[2]}|{k[3]}": round(v, 4) for k, v in sorted(taus.items())
+                    if k[1] not in ja82_arms}}
     # 1-2. registration: TRE per arm / chain and motion; stage counts
     reg = []
     for m in MOTIONS:
@@ -377,6 +441,9 @@ def main(path=None):
                            [x for x in ext if x["arm"] == "chain_literal"])
     out["strike_reported"] = {a: strike([x for x in pres if x["arm"] == a], [x for x in ext if x["arm"] == a])
                               for a in arms if a not in ("chain_literal", "bspline")}
+    for a in ja82_arms:                              # PS4-S5 replay (report only): kept out of every pre-registered key
+        p, e = presence_table(rows, a, taus)
+        out["strike_reported"][a] = strike(p, e)
     # 2. the pre-registered affine-rule pick
     pick = {}
     never = out["strike_reported"]["chain_never"]
@@ -468,6 +535,10 @@ def main(path=None):
             st[f"{m}|{label}"] = [{k: x[k] for k in ("key", "rule", "n_cases", "sens", "spec", "spec_scarfree_hearts",
                                                     "n_scarred", "n_free")} for x in p if x["rule"] != "P-K"]
     out["phase_stratum_presence"] = st
+    # JA83 / PS4-S6: the QC definitions every cut in this file was measured with
+    out["qc_definitions"] = R.QC_DEFINITIONS
+    # 7. PS4-S5 acceptance replay (report only)
+    out["ja82_replay"] = ja82_replay(rows, out)
     (HERE / "scores_v3.json").write_text(json.dumps(out, indent=1) + "\n")
     return out
 
@@ -481,3 +552,4 @@ if __name__ == "__main__":
               "aff<rig", r["affine_better_tre"])
     print(json.dumps(o["strike"], indent=1))
     print(json.dumps(o["affine_rule"], indent=1))
+    print(json.dumps(o["ja82_replay"]["acceptance"], indent=1))

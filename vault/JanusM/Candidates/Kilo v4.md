@@ -16,7 +16,8 @@ issue: christianGRogers/Asclepius#251
 
 - **Item 1: the shipped chain through the shared benchmark.**
   - **P-G survives** the #179 strike rules under JA51's chain as shipped (§1.3). P-J survives, and P-K stays
-    struck. ⟨canonical numbers⟩
+    struck. This holds on my rows and on Juliet's full replication (504 cases), each scored under my
+    pre-registered rules. Golf's canonical rows decide (§1.3).
   - The shipped module fails parity on 58 of 120 real-heart cases, on **E-D only**. The cause is one constant:
     `column_min_bins` 6 against the benchmark's 4 (§1.5, PS4-K1).
   - **The phase check is the weak link (§1.4).** Both the provisional cuts and cuts fitted on aligned (`none`)
@@ -29,6 +30,8 @@ issue: christianGRogers/Asclepius#251
   - (c) is ineligible: it keeps a worse affine on 8 of 10 rigid cases (p90 TRE 3.7 mm).
   - My own (k) does no better than JA51 as written, so I withdraw it.
   - Every QC rule still rejects most of the affines that fix a 6 % stretch. The QC values cannot see a scale well.
+  - JA51's 10 mm fallback stays: it rescues non-rigid cases. Its one bad case, a phase change, is handled by
+    grading phase-unmatched patients on the 4 mm stage.
 - **Item 3: the power re-run (§3).**
   - At 2 % failure and weak clustering, the seal is **140 at 70 % and 180 at 50 %** (Golf's infarct size), or 160
     and 220 (Kilo's).
@@ -84,7 +87,10 @@ changed nothing under `src/`. No image is committed, and nothing here is a reque
 ### 1.3 The strike (P-G under JA54)
 
 **Deciding, under the #179 rules (CNR 5; none and rigid; every blood level), on Golf's canonical `chain`:**
-⟨canonical⟩.
+- Golf's rows were not on his branch when this was written (05:30 UTC, 31 October).
+- `golf_rows.py` scores them with the same code, and I post the result on #251 when they land.
+- The three replications already agree (below, and Juliet on #251: P-G minimum sensitivity 0.915, specificity
+  ≥ 0.985, scar-free ≥ 0.989).
 
 **On my rows, `chain_ja51_prov` (the deciding arm of my pre-registration):**
 
@@ -99,9 +105,11 @@ changed nothing under `src/`. No image is committed, and nothing here is a reque
   - (a), (b) and (k) at both cut sets;
   - the 4 mm rigid stage alone;
   - oracle.
-- **The exception is (c), at both cut sets: P-K is not struck there.** That isn't P-K getting better. Under (c)
-  the chain keeps bad affines, which lowers every rule's specificity on scarred hearts, and rule 1c then applies.
-  It is reported, not striking.
+- **The exception is (c), and it is a second reason not to adopt it.** Under (c) the chain keeps bad affines on
+  rigid motion. On my rows that strikes **P-G** (specificity 0.87–0.91), P-J (sensitivity 0.65) and P-K together.
+  Rule 1c ("the menu never goes empty") then sends P-J to development with Scar-1 expected. On Juliet's rows, (c)
+  strikes P-G at specificity 0.929, at both cut sets. It is reported, not striking, but adopting (c) would undo
+  JA54's P-G.
 - **P-G's numbers are close to oracle's.** Oracle gives 0.921–0.980 sensitivity and specificity ≥ 0.978. The
   shipped 4 mm chain loses at most 0.04 sensitivity against exact borders.
 - **P-J's τ re-fitted under the shipped chain** (p99 of E-D on scar-free segments, other half, none + rigid): 0.074–0.077
@@ -117,7 +125,7 @@ changed nothing under `src/`. No image is committed, and nothing here is a reque
 
 | Motion | R0 | rigid 4 mm | affine 4 mm | rigid 10 mm | chain JA51, prov | chain (b), fit |
 |---|---|---|---|---|---|---|
-| none | 0 / 0 | 0.29 / 0.57 | 0.43 / 1.71 | 0.11 / 0.18 | 0 / 0.14 | ⟨⟩ |
+| none | 0 / 0 | 0.29 / 0.57 | 0.43 / 1.71 | 0.11 / 0.18 | 0 / 0.14 | 0 / 0.27 |
 | rigid (11 hearts) | 4.21 / 4.57 | 0.27 / 1.14 | 0.37 / 1.99 | 3.73 / 4.41 | 0.27 / 1.14 | 0.27 / 1.14 |
 | aniso3 | 4.18 / 4.66 | 0.82 / 1.48 | 0.45 / 2.07 | 3.06 / 4.18 | 0.78 / 1.24 | 0.75 / 1.24 |
 | aniso6 | 4.30 / 4.90 | 1.86 / 2.96 | 0.50 / 1.97 | 3.73 / 4.41 | 1.71 / 2.76 | 1.47 / 2.90 |
@@ -127,15 +135,18 @@ What the table says:
 - **4 mm rigid recovers a 4 mm heart shift** (0.27 mm median), as E10 found.
 - **Affine at 4 mm overshoots when there is no scale** (p90 2.0 mm against 1.1). **It wins clearly when there is
   one:** 6 % uniaxial, 0.50 against 1.86 mm.
-- **The 10 mm fallback is worse on average whenever the heart moved** (3–4 mm), but **not when the chain picks
-  it.**
+- **The 10 mm fallback is worse on average whenever the heart moved** (3–4 mm), but **mostly not when the chain
+  picks it.**
   - It replaces a result almost always through "lowers the normalised maximum", not through "passes": 0–1 of 1–14
     replacements per motion pass QC.
-  - Those are mostly cases where the 4 mm result was itself bad. Allowing it in only when it passes would make the
-    p90 worse on `aniso3` (1.24 → 1.47 mm) and on `none` at the fitted cuts (0.27 → 0.41 mm). It would be better
-    only on `phase_m5` (1.06–1.21 → 0.97 mm).
-  - So **JA51 step 5 stays as written.** Golf's post-hoc "fallback only if it passes" is not supported by these
-    rows.
+  - Most of those are cases where the 4 mm result was itself bad. On my rows, allowing it in only when it passes
+    would make the p90 worse on `aniso3` (1.24 → 1.47 mm) and on `none` at the fitted cuts (0.27 → 0.41 mm), and
+    better on `phase_m5` (1.06–1.21 → 0.97 mm).
+  - Juliet's rows add `scale`, `phase` and `nonrigid`. There it rescues `nonrigid` (2.75 → 2.23 mm) but badly
+    hurts `phase` (+5 %): it replaces a good 0.26 mm rigid result in about half the cases, p90 0.97 → 3.68 mm.
+    Juliet and Golf saw the same.
+  - So JA51 step 5 stays as written. The phase cost is handled where it arises: phase-unmatched patients are
+    graded on their last 4 mm stage (§2.3, §4).
 - On `none`, rigid10 beats rigid4 (0.11 against 0.29 mm). The static chest anchors it when nothing moved, which
   is not the case that matters.
 
@@ -157,7 +168,10 @@ What the table says:
     problem.
 - **Re-cut on the truth after motion** (post-hoc, reported only): p95 of the oracle's `rim_dark` over rigid,
   aniso3 and aniso6 is 0.037–0.050. At that cut, rigid-motion false flags fall from 100 % to **18 %**.
-  ⟨canonical: rim_dark detection of `phase` (+5 %) at that cut⟩
+  - On Juliet's rows, which have the +5 % `phase` motion, that cut flags **100 % of `phase`**, 14–24 % of `rigid`
+    and 5–14 % of `none`.
+  - It also flags **100 % of `nonrigid`**. So `rim_dark` detects misregistration of the cavity border in general,
+    not phase in particular. Juliet reached the same reading on #251.
 - **The edge offset works as JA52 hoped.**
   - Median −1.01 to −1.03 mm on `phase_m5`, against −0.18 to −0.21 mm on rigid.
   - AUC 0.99–1.00 for the larger LIE cavity against rigid.
@@ -190,9 +204,13 @@ What the table says:
   worse:**
   - TRE median / p90 1.74 / 4.59 mm, against 0.27 / 1.14 for 4 mm rigid;
   - P-G specificity 0.40–0.88, against ≥ 0.97 on the chain.
-- ⟨canonical: nonrigid⟩.
-- **My reading:** B-spline stays out of the chain. JA53's development trigger stands only if the canonical non-rigid
-  numbers show a gain. ⟨⟩
+- **On `nonrigid`** (Juliet's rows; Golf's B-spline set-up: from rigid4, 20 mm, 4 mm mask), it is worse than the
+  chain:
+  - TRE 2.13 / 3.81 mm, against the chain's 1.64 / 2.28;
+  - P-J specificity 0.33–0.75 and P-G 0.45–0.80, against the chain's 0.71–0.83 and 0.74–0.90.
+- **My reading:** B-spline stays out of the chain, and JA53's development arm should not be opened on its current
+  trigger. A non-rigid residual is left to the reader check and the yield bar, as JA53 already says for the
+  non-rigid case.
 
 ---
 
@@ -214,8 +232,7 @@ Every rule includes 4(a), the sanity bound, and every NaN rejects. "Normalised" 
 
 ### 2.2 Results
 
-**My rows** (`scale` is not in them; it is pooled on the canonical rows). Pooled p90 is over rigid, aniso3 and
-aniso6:
+**My rows** (`scale` is not in them; Juliet's rows add it below). Pooled p90 is over rigid, aniso3 and aniso6:
 
 | Rule | pooled p90, fit (prov) | rigid: affine kept when worse | aniso6: kept when better | aniso6 final TRE median / p90 | wrong decisions (fit) |
 |---|---|---|---|---|---|
@@ -225,7 +242,17 @@ aniso6:
 | (c) | 3.02 (2.79), **ineligible** | **8 / 10** | 56 / 57 | 0.72 / 2.76 | 40 |
 | (k) | 2.49 (2.38) | 0 / 10 | 9 / 57 | 1.69 / 2.90 | 82 |
 
-⟨canonical rows: the same table, with `scale` and Golf's `aniso`⟩
+**Juliet's 504 rows** (with `scale`; pooled over rigid, scale, aniso3, aniso6):
+
+| Rule | pooled p90, fit (prov) | rigid: kept when worse | wrong decisions (fit) |
+|---|---|---|---|
+| JA51 as written | 2.40 (2.38) | 0 % | 152 |
+| (a) | 2.40 (2.38) | 0 % | 152 |
+| **(b)** | **2.35 (2.30)** | 0 % | 126 |
+| (c) | 2.86 (2.78), **ineligible** | 61 % (59 % prov) | 78 |
+| (k) | 2.38 (2.36) | 0 % | 141 |
+
+**The choice is (b) on both row sets, at both cut sets.** Golf's canonical rows are pending (§1.3).
 
 - **(a) = JA51 on every case here.** `rim_dark` is not what blocks affine on these hearts. The wall shares are.
 - **(b) is the best eligible rule at both cut sets,** and it never keeps a worse affine on rigid motion. It still
@@ -233,7 +260,7 @@ aniso6:
 - **(c) is what the scale cases want, but not the rigid ones.**
   - Under rigid motion the 4 mm affine often finds a spurious |log det| ≥ 0.03, so (c) keeps it 8 times in 10 when
     it is worse (rigid p90 3.68 mm).
-  - That is E10's overshoot, and why (c) fails eligibility.
+  - That is E10's overshoot, and why (c) fails eligibility. It would also strike P-G (§1.3).
   - On `phase_m5` it keeps a worse affine 8–9 times. Registration cannot fix phase, and (c) tries.
 - **(k) adds nothing over JA51 here,** so I withdraw it. Correcting a misregistration does not, on these hearts,
   push a value back up to its aligned level while staying under its cut. That was the case (k) was written for
@@ -255,12 +282,19 @@ aniso6:
 ### 2.3 Proposal
 
 1. **JA51 4(b) becomes (b):** the normalised maximum falls, and no value newly crosses its cut, plus 4(a).
-2. **JA51 step 5 (the 10 mm fallback) stays as written.** "Only if it passes" was tested on the replay (§1.4). It
-   makes p90 TRE worse on `aniso3` and `none`, and better only on `phase_m5`, which is routed out anyway.
+2. **JA51 step 5 (the 10 mm fallback) stays as written.** On Juliet's full motion set, "only if it passes" makes the
+   p90 worse on `nonrigid` (2.23 → 2.75 mm), `scale` (2.66 → 2.88), `aniso3` (1.24 → 1.47) and `none` (0.27 →
+   0.41). It is better only on `phase` (3.68 → 0.97 mm), and phase patients are routed out (§4). So instead, **a
+   patient routed to the phase-unmatched stratum is graded on its last 4 mm stage, never on the fallback**
+   (PS4-K4).
 3. **The scale gap stays open, and is said so.** No truth-free QC rule here keeps more than a third of the affines
    that fix a 6 % stretch. The reader check is what catches it, so JA51's reader check on every patient stays.
-4. **PS3-S3's test becomes:** a 3 % scale keeps affine under (b) on the phantom at JA53-style cuts, not the
-   1.2 × tight cuts; and a rigid 4 mm shift rejects it. ⟨verify⟩
+4. **PS3-S3's test becomes:**
+   - a rigid 4 mm shift rejects affine;
+   - the 3 % scale keeps it on at least the seeds where (b) does in K1, at the tests' own tight cuts.
+
+   Under those cuts (b) is seed-dependent (5 of 9 in K1), so the test should fix its seeds. Pinning a phantom test
+   on a rule the cuts make fragile is the engineer's call; I say so rather than claim it passes.
 
 ---
 
@@ -355,8 +389,10 @@ yield" fits a property of the data that the method did not cause.
    **A flag on a DICOM-matched patient that the reader does not confirm is a false flag.** The patient follows
    its reader check like any other (passed, re-registered, not graded) and stays in the primary analysis. The flag
    is logged.
-2. **Grading.** A stratum patient is graded on its final registration stage. It is never re-registered (JA52). It
-   produces CT bins, and `scar0` labels it `phase_unmatched`.
+2. **Grading.** A stratum patient is graded on its last 4 mm stage (rigid, or affine if kept), **never on the 10 mm
+   fallback**: on a phase change the fallback replaces a 0.26 mm rigid result with a 3–4 mm one in about half of
+   Juliet's `phase` cases (§1.4). It is never re-registered (JA52). It produces CT bins, and `scar0` labels it
+   `phase_unmatched`.
 3. **Scoring.**
    - **Primary claims (JA56):** the stratum is excluded, as `scoring` already does.
    - **Yield (JA55):** it is **not** in the yield numerator or denominator. Yield measures registration failure, and
@@ -398,7 +434,7 @@ yield" fits a property of the data that the method did not cause.
   - **100 %** on rigid motion at either benchmark cut set: the cuts were fitted on un-resampled aligned cases
     (§1.4);
   - still **18 %** at a cut referenced to the true geometry after motion;
-  - ⟨canonical: its detection of `phase` (+5 %)⟩.
+  - 100 % detection of `phase` (+5 %), but also 100 % of `nonrigid` misregistration (Juliet's rows, §1.4).
 
 So a `rim_dark` flag alone is not reliable enough to route an *inferred*-phase patient out without a reader:
 1. **For phase inferred from text, only the edge-offset flag routes alone.** A `rim_dark` flag needs the reader's
@@ -447,11 +483,12 @@ offline scripts that call the guard first.
     fix a 6 % stretch.
   - **Correct:** rule (b): affine is kept iff 4(a) holds, the normalised maximum falls, and no value that was ≤ its
     cut at rigid is > its cut at affine. Any NaN rejects.
-  - The PS3-S3 strict xfail becomes a pass at JA53-style cuts.
   - **Test:**
-    - the phantom 3 % scale keeps affine (both signs);
-    - the 4 mm rigid shift rejects it;
-    - unit cases for each clause.
+    - unit cases for each clause;
+    - the 4 mm rigid shift rejects affine;
+    - PS3-S3's 3 % scale: under the tests' tight cuts, (b) keeps affine on 5 of 9 seeded cases (K1). So the test
+      fixes its seeds to ones where (b) keeps it, or the engineer loosens the phantom's cuts toward a JA53-style
+      p95. The strict xfail is lifted only with that choice made and written down (§2.3 item 4).
 - **PS4-K3 — Provisional cuts measured on the shipped QC** (`registration.load_provisional_qc_cuts`; JA53).
   - **Wrong:** the loader reads `bench_lie/scores.json` `qc_cuts`. Those were measured with the benchmark's QC
     definitions: an erosion rim, and the blood median inside a 2-iteration erosion. The module's are a 2 mm
@@ -475,7 +512,7 @@ offline scripts that call the guard first.
       "inferred"}` and the reader's "cavity size differs (phase)" mark;
     - `phase suspect` is a final status only when §4.2's routing holds; otherwise a flag is logged and the reader
       check decides;
-    - `scar0` grades a `phase suspect` patient on its final stage. `for_scoring` returns its bins with
+    - `scar0` grades a `phase suspect` patient on its last 4 mm stage, not the 10 mm fallback. `for_scoring` returns its bins with
       `strata={"phase_unmatched"}`;
     - `scoring` reports the stratum (§4.2 item 3) and the guarded sensitivity analysis (§4.2 item 4);
     - `failure_rate` and the yield ignore the stratum, as they already ignore `phase suspect`.
@@ -492,7 +529,7 @@ offline scripts that call the guard first.
 |---|---|
 | `run_shipped.py`, `bench_kilo_r4.py` → `results_kilo_r4.jsonl.gz` | The replication: the shipped chain with every stage forced, plus oracle QC and one live check per heart |
 | `score_shipped.py` → `scores_kilo_r4.json` | Kilo's pre-registered scoring: strike, the five affine rules × two cut sets, phase flags |
-| `golf_rows.py` → `scores_kilo_on_golf_v3.json` | The same scoring on Golf's canonical v3 rows |
+| `golf_rows.py` → `scores_kilo_on_golf_v3.json`, `scores_kilo_on_juliet_v3.json` | The same scoring on Golf's canonical v3 rows (when pushed) and on Juliet's replication rows (`main_juliet`) |
 | `k1_phantom_rules.py` → `k1_phantom_rules.json` | The affine rules on the shipped tests' phantom |
 | `k2_parity_columns.py` → `k2_parity_columns4.json` | `module_parity` with `column_min_bins = 4` (in-process) |
 | `module_parity_replication.json` | `bench_lie/module_parity.py` run unchanged (replicates Golf's canonical file) |

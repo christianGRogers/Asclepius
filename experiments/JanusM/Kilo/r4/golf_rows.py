@@ -52,3 +52,35 @@ if __name__ == "__main__":
     o = main(*sys.argv[1:3])
     print("cases", o["n_cases"], {k: v["struck"] for k, v in o["strike"].items() if isinstance(v, dict)})
     print("choice", o["item2"]["choice_prov"], o["item2"]["choice_fit"])
+
+
+# ---- Juliet's replication rows (Juliet/r4/results_v3_juliet.jsonl.gz): arms R0, rigid, affine, rigid10 with
+# ``qc`` (the four shipped values), ``contrast``, ``edge_offset_mm``, ``tre_mm`` and, for affine, ``sanity``; the
+# oracle arm carries the shipped QC on the true geometry. Her aniso3 / aniso6 are scored as Kilo's.
+def convert_juliet(r):
+    if "skip" in r:
+        return r
+    out = {k: v for k, v in r.items() if k != "arms"}
+    out["arms"], out["stages"] = {}, {}
+    for k in ("R0", "rigid", "affine", "rigid10"):
+        a = r["arms"][k]
+        st = {"qc": {q: a["qc"][q] for q in K.QN} | {"contrast": a["contrast"]}, "tre_mm": a["tre_mm"],
+              "edge_offset_mm": a["edge_offset_mm"]}
+        if k == "affine":
+            st["sanity"] = {"ok": a["sanity"]["ok"], "log_det": a["sanity"]["log_det"]}
+        out["stages"][k] = st
+        out["arms"][k] = a
+    o = r["arms"]["oracle"]
+    out["arms"]["oracle"] = o
+    out["oracle_qc"] = {q: o["qc"][q] for q in K.QN} | {"edge_offset_mm": o["edge_offset_mm"]}
+    if "bspline" in r["arms"]:
+        out["arms"]["bspline"] = r["arms"]["bspline"]
+        out["bspline"] = {"from": "rigid", "tre_mm": r["arms"]["bspline"].get("tre_mm")}
+    return out
+
+
+def main_juliet(path, out_path=HERE / "scores_kilo_on_juliet_v3.json"):
+    op = gzip.open if str(path).endswith(".gz") else open
+    rows = [convert_juliet(json.loads(line)) for line in op(path, "rt")]
+    return K.main(rows=rows, out_path=out_path, choice_motions=K.CHOICE_MOTIONS,
+                  source=f"Juliet's replication rows ({Path(path).name}), mapped by golf_rows.convert_juliet")

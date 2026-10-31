@@ -4,7 +4,8 @@ MI rigid, affine under a sanity bound and the normalised QC rule, a 10 mm fallba
 Rulings: ``vault/JanusM/Judgements/Round 2 - paired-scar.md`` JA29 (direction, carried quantities,
 reader check, logging), and ``vault/JanusM/Judgements/Round 3 - paired-scar.md`` JA51 (the chain,
 which replaces JA29's steps 1-4), JA52 (the phase step) and JA53 (QC cuts); shipped as PS3-S1 to
-PS3-S5 (§9).
+PS3-S5 (§9). ``vault/JanusM/Judgements/Round 4 - paired-scar (JA82 addendum).md`` JA88 keeps
+JA51 step 5 as shipped (PS4-S10, §7).
 
 - **Direction.** The first-pass CT is moving and the LIE is fixed: grading happens on the LIE grid,
   so LIE noise is never resampled (Golf). A transform here maps a fixed (LIE) world point, in mm,
@@ -33,8 +34,11 @@ PS3-S5 (§9).
      (:data:`FALLBACK_MASK_MM`). It replaces the result only if it passes QC or lowers the
      normalised maximum. It is logged as its own stage either way. JA82's skip (a routing flag on
      the 4 mm stage skips step 5) is built but **off by default**
-     (``phase_check_before_fallback``): its PS4-S5 acceptance replay missed (see
-     ``bench_lie/scores_v3.json`` -> ``ja82_replay``), so step 5 ships as JA51 states;
+     (``phase_check_before_fallback``) and stays off: JA88 did not adopt it (its PS4-S5
+     acceptance replay missed, ``bench_lie/scores_v3.json`` -> ``ja82_replay``, and the
+     non-rigid cost is not noise), so step 5 ships as JA51 states. No pipeline, script or
+     development run sets it to ``True``; it is kept for tests and the committed replay. The 4 mm
+     phase check routes no patient (JA84, JA88);
   6. the phase step (JA52 as amended by JA84, :func:`phase_step`) on the final stage: the signed
      endocardial edge offset over the 6 remote segments beyond +/- 0.6 mm is the **routing** flag;
      ``rim_dark`` above its phase cut is **advisory** (logged, shown to the reader after the
@@ -53,6 +57,10 @@ PS3-S5 (§9).
   scans, every stage's parameters, QC values and MI, and the phase step.
 - **Development stop:** :func:`seal_grading_allowed` (a not-graded rate above 10 %, phase-suspect
   patients excluded); :func:`phase_suspect_needs_report` (JA52: a phase-suspect share above 20 %).
+- **Development report** (JA88, PS4-S10; decides nothing): :func:`phase_4mm_only_report` counts the
+  patients whose 4 mm phase check flagged but who end unrouted on the fallback
+  (:func:`phase_4mm_only`), with an exact upper bound and their reader-check outcomes. No
+  threshold.
 
 Mattes MI is implemented here (cubic B-spline Parzen windows on a joint histogram, Mattes 2003),
 with a Powell search over two smoothing levels, so the module needs numpy and scipy only. The MI
@@ -1225,8 +1233,11 @@ def register_lie(
 
     ``phase_check_before_fallback`` turns on JA82's skip: when step 5 would run and the last 4 mm
     stage's routing flag fires (evaluable, |edge offset| above its cut), step 5 is skipped and the
-    4 mm stage is final. **Off by default:** its PS4-S5 acceptance replay missed, so JA51 step 5
-    ships unchanged (JA82). The 4 mm phase check is computed and logged either way.
+    4 mm stage is final. **Off by default, and it stays off (JA88):** its PS4-S5 acceptance
+    replay missed and JA88 did not adopt the skip, so JA51 step 5 ships unchanged. No pipeline,
+    script or development run sets it to ``True``; it remains only for tests and the committed
+    replay. The 4 mm phase check is computed and logged either way, and routes no patient
+    (:func:`phase_4mm_only_report` counts the unrouted ones it flags).
 
     ``affine_variant`` (PS4-S7, report only): ``None`` is the shipped optimiser; ``"scaled"`` runs
     :func:`_affine_scaled`. Not used by default; adoption needs a later ruling.
@@ -1425,6 +1436,66 @@ def phase_suspect_needs_report(development_statuses: Iterable[str]) -> bool:
     """JA52 stop rule: a development phase-suspect share above 20 % is reported to the lead before
     any seal patient is read."""
     return phase_suspect_share(development_statuses) > PHASE_SUSPECT_REPORT_SHARE
+
+
+#: PS4-S10: the reader-check outcomes counted by :func:`phase_4mm_only_report`.
+PHASE_4MM_ONLY_STATUSES = (PASSED, REREGISTERED, NOT_GRADED, PHASE_SUSPECT)
+#: PS4-S10: the one-sided level of the exact (Clopper-Pearson) upper bound.
+PHASE_4MM_ONLY_CONFIDENCE = 0.95
+
+
+def phase_4mm_only(reg: Registration) -> bool:
+    """JA88 / PS4-S10: the 4 mm phase check flagged, the final stage did not (so the patient is not
+    routed), and the 10 mm fallback is the final stage. This is the case JA82's skip was meant for;
+    it is reported, never acted on."""
+    return bool(
+        reg.phase_4mm is not None
+        and reg.phase_4mm.suspect
+        and not reg.phase_flag
+        and reg.final.name == STAGE_FALLBACK
+    )
+
+
+def clopper_pearson_upper(
+    count: int, n: int, confidence: float = PHASE_4MM_ONLY_CONFIDENCE
+) -> float:
+    """Exact (Clopper-Pearson) one-sided upper bound on a binomial share: the ``confidence``
+    quantile of Beta(count + 1, n - count); 1 when ``count == n``."""
+    from scipy.stats import beta
+
+    if not 0 <= count <= n or n < 1:
+        raise ValueError(f"need 0 <= count <= n and n >= 1, not count={count}, n={n}")
+    if count == n:
+        return 1.0
+    return float(beta.ppf(confidence, count + 1, n - count))
+
+
+def phase_4mm_only_report(registrations: Iterable[Registration]) -> dict:
+    """JA88 / PS4-S10 development report: how many patients :func:`phase_4mm_only` counts.
+
+    Returns ``n`` (patients), ``count``, ``share``, ``upper`` (the exact one-sided 95 % upper bound
+    on the share, :func:`clopper_pearson_upper`) and ``status``: the counted patients' reader-check
+    outcomes, keyed by :data:`PHASE_4MM_ONLY_STATUSES` (any other status, such as one still
+    awaiting its check, under its own key). **Report only:** there is no threshold, and it gates
+    nothing; a later ruling may read it (JA88)."""
+    regs = list(registrations)
+    if not regs:
+        raise ValueError("no patients")
+    counted = [r for r in regs if phase_4mm_only(r)]
+    status = {s: 0 for s in PHASE_4MM_ONLY_STATUSES}
+    for r in counted:
+        status[r.status] = status.get(r.status, 0) + 1
+    n, count = len(regs), len(counted)
+    return {
+        "n": n,
+        "count": count,
+        "share": count / n,
+        "upper": clopper_pearson_upper(count, n),
+        "confidence": PHASE_4MM_ONLY_CONFIDENCE,
+        "method": "Clopper-Pearson, one-sided",
+        "status": status,
+        "ruling": "JA88 (PS4-S10): report only, no threshold, gates nothing",
+    }
 
 
 # ---------------------------------------------------------------------------------- QC cuts (JA53)

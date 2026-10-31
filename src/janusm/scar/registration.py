@@ -1395,9 +1395,23 @@ def failure_rate(statuses: Iterable[str]) -> float:
     return sum(s == NOT_GRADED for s in st) / len(st)
 
 
-def seal_grading_allowed(development_statuses: Iterable[str]) -> bool:
-    """JA29: a development failure rate above 10 % stops seal grading."""
-    return failure_rate(development_statuses) <= MAX_FAILURE_RATE
+def seal_grading_allowed(
+    development_statuses: Iterable[str],
+    *,
+    underpowered: bool = False,
+    lead_override: bool = False,
+) -> bool:
+    """Whether seal patients may be graded.
+
+    * JA29: a development failure rate above 10 % stops seal grading. This is the hard floor; no
+      override lifts it.
+    * JA86: when :func:`janusm.scar.power.seal_size` returns ``underpowered`` (power at the seal
+      < 0.80, the 240 cap binding), no seal patient is graded until the lead has answered LQ40.
+      ``lead_override`` records that answer.
+    """
+    if failure_rate(development_statuses) > MAX_FAILURE_RATE:
+        return False
+    return not (underpowered and not lead_override)
 
 
 def phase_suspect_share(statuses: Iterable[str]) -> float:

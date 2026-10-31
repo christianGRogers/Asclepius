@@ -10,7 +10,9 @@ Inputs, per patient (:class:`Patient`), one entry per AHA segment (index 0 is se
 * ``ct``: the CT Kim bin, or :data:`NOT_GRADED` when registration failed twice (JA29);
 * ``ischaemic``: whether an LGE-positive segment's pattern is ischaemic (subendocardial or
   transmural);
-* ``strata``: the patient's JA27 strata (:data:`STRATA`).
+* ``strata``: the patient's JA27 strata (:data:`STRATA`);
+* ``phase_route``: how a ``phase_unmatched`` patient got there (JA85, :data:`PHASE_ROUTES`), as
+  ``Registration.for_scoring()`` returns it (#260): ``"confirmed"`` or ``"flag_only"``, else None.
 
 Patients carry no identifier: the harness never needs one, so none can leak into its output.
 
@@ -51,6 +53,15 @@ sensitivity and specificity, Bland-Altman of scar share (when shares are given),
 per-protocol results (prior-CABG patients are left out of territories, JA27), the not-graded rate,
 the graded-only analysis and every JA27 stratum.
 
+**The phase-unmatched stratum (JA85).** A ``confirmed`` patient (DICOM phases differ, or the reader
+marks the cavity size as differing) leaves primary accuracy and yield. A ``flag_only`` patient
+(phase inferred from text, edge-offset flag, no reader mark) leaves primary accuracy but is charged
+to yield: it counts as not graded in the yield numerator and stays in its denominator. Reported,
+never deciding (``score()["phase_unmatched"]``): the stratum's share with a patient-bootstrap upper
+95 % bound, its LGE-positive share against the primary set, its own JA55 accuracy, the primary
+endpoints with the stratum put back as not graded under split accounting, and the development flags
+for the lead (a flag-only share > 3 %; a phase share > 20 %, JA52).
+
 The same per-patient sufficient statistics drive :mod:`janusm.scar.power`, so the power script and
 the seal are scored by one implementation.
 """
@@ -68,6 +79,13 @@ N_BINS = 5  # Kim bin 0 (no scar) and 1-4
 #: JA27 strata. Each is reported on its own; the first three are never pooled into the primary.
 STRATA = ("acute", "non_ischaemic", "phase_unmatched", "prior_cabg")
 EXCLUDED_FROM_PRIMARY = frozenset({"acute", "non_ischaemic", "phase_unmatched"})
+
+#: JA85 routes into the ``phase_unmatched`` stratum. ``flag_only`` is charged to yield.
+PHASE_ROUTES = ("confirmed", "flag_only")
+#: JA85: a development flag-only share above this is reported to the lead (Golf E12b).
+FLAG_ONLY_REPORT_SHARE = 0.03
+#: JA52: a development phase share above this is reported to the lead.
+PHASE_REPORT_SHARE = 0.20
 
 #: JA32 bars on the 95 % lower bound.
 SENS_BAR = 0.75
@@ -116,6 +134,7 @@ class Patient:
     protocol: str = ""
     ref_share: Optional[np.ndarray] = None  # LGE scar share per segment, 0-1 (Bland-Altman only)
     ct_share: Optional[np.ndarray] = None
+    phase_route: Optional[str] = None  # JA85: "confirmed" or "flag_only" (PHASE_ROUTES)
 
     def __post_init__(self):
         ref = np.asarray(self.ref, dtype=int)
@@ -129,6 +148,11 @@ class Patient:
         unknown = set(self.strata) - set(STRATA)
         if unknown:
             raise ValueError(f"unknown strata {sorted(unknown)}; known: {STRATA}")
+        if self.phase_route is not None:
+            if self.phase_route not in PHASE_ROUTES:
+                raise ValueError(f"phase_route must be one of {PHASE_ROUTES} or None")
+            if "phase_unmatched" not in self.strata:
+                raise ValueError("a phase_route needs the phase_unmatched stratum (JA85)")
         if self.ischaemic is None:
             isch = np.ones(ref.shape, bool)
         else:
@@ -448,6 +472,46 @@ def _bland_altman(patients: Sequence[Patient], keep: np.ndarray) -> Optional[Dic
     }
 
 
+def _phase_report(patients, ref, ct, seg_primary, keep, w, n_boot, rng, strata):
+    """JA85's reported-only view of the ``phase_unmatched`` stratum (never in :func:`decide`)."""
+    n = len(patients)
+    phase = np.array(["phase_unmatched" in p.strata for p in patients], bool)
+    routes = [p.phase_route for p in patients]
+    n_flag = sum(r == "flag_only" for r in routes)
+    share = yield_upper_bound(phase, weights=w)
+    lge_pos = (ref > 0).any(1)
+
+    def _pos_share(sel):
+        return float(lge_pos[sel].mean()) if sel.any() else None
+
+    # put back: the stratum rejoins the primary set, each of its patients as not graded (split)
+    other = np.array(
+        [bool(p.strata & (EXCLUDED_FROM_PRIMARY - {"phase_unmatched"})) for p in patients], bool
+    )
+    back = ~other
+    ct_back = np.where(phase[:, None], NOT_GRADED, ct)
+    back_primary = _analysis(ref, ct_back, seg_primary & back[:, None], n_boot, rng, "split", w)
+    back_yield = yield_upper_bound((ct_back == NOT_GRADED).all(1)[back], weights=w[:, back])
+    flag_share = n_flag / n
+    return {
+        "patients": int(phase.sum()),
+        "routes": {
+            "confirmed": sum(r == "confirmed" for r in routes),
+            "flag_only": n_flag,
+            "unrouted": int(phase.sum()) - sum(r is not None for r in routes),
+        },
+        "share": {"point": share["point"], "upper": share["upper"]},
+        "flag_only_share": flag_share,
+        "lge_positive_share": {"stratum": _pos_share(phase), "primary": _pos_share(keep)},
+        "accuracy": strata.get("phase_unmatched"),
+        "put_back": {"itd_mode": "split", "primary": back_primary, "yield": back_yield},
+        "report_to_lead": {
+            "flag_only_share_over_3pct": bool(flag_share > FLAG_ONLY_REPORT_SHARE),
+            "phase_share_over_20pct": bool(share["point"] > PHASE_REPORT_SHARE),
+        },
+    }
+
+
 def score(
     patients: Sequence[Patient],
     anchor: Optional[float] = None,
@@ -480,11 +544,16 @@ def score(
     primary_mask = seg_primary & ~excluded[:, None]
     graded = ct != NOT_GRADED
     keep = ~excluded
+    flag_only = np.array([p.phase_route == "flag_only" for p in patients], bool)
 
     # one set of patient replicates for the primary accuracy endpoints and yield (JA55)
     w = bootstrap_weights(n, n_boot, rng)
     primary = _analysis(ref, ct, primary_mask, n_boot, rng, itd_mode, weights=w)
-    yld = yield_upper_bound((~graded).all(1)[keep], weights=w[:, keep])
+    # JA85: a flag-only phase patient stays in the yield denominator, counted as not graded
+    in_yield = keep | flag_only
+    not_graded = (~graded).all(1) | flag_only
+    yld = yield_upper_bound(not_graded[in_yield], weights=w[:, in_yield])
+    yld["patients_flag_only"] = int(flag_only.sum())
     bar = bars(anchor)
     report = {
         "rule": {
@@ -510,6 +579,7 @@ def score(
         },
         "bland_altman_scar_share": _bland_altman(patients, keep),
         "strata": {},
+        "phase_unmatched": None,
         "by_protocol": {},
         "by_territory": {},
     }
@@ -519,6 +589,9 @@ def score(
             # a stratum is scored on all its segments, whatever the LGE pattern
             every = np.ones((int(inn.sum()), s), bool)
             report["strata"][st] = _analysis(ref[inn], ct[inn], every, n_boot, rng, itd_mode)
+    report["phase_unmatched"] = _phase_report(
+        patients, ref, ct, seg_primary, keep, w, n_boot, rng, report["strata"]
+    )
     for proto in sorted({p.protocol for p in patients}):
         inn = np.array([p.protocol == proto for p in patients], bool) & keep
         if inn.any():

@@ -1,0 +1,1447 @@
+{
+ "sims": 1000,
+ "boot": 400,
+ "settings": "golf_cohort, q 0.25, spec 0.98, bin_tau 1.0, split",
+ "rows": [
+  {
+   "clustering": "weak",
+   "enrich": 0.5,
+   "infarct_size": "golf",
+   "p_fail": 0.005,
+   "n": 160,
+   "power_claim1": 0.928,
+   "power_sens_only": 0.928,
+   "sens_point_median": 0.839
+  },
+  {
+   "clustering": "weak",
+   "enrich": 0.5,
+   "infarct_size": "golf",
+   "p_fail": 0.005,
+   "n": 200,
+   "power_claim1": 0.969,
+   "power_sens_only": 0.969,
+   "sens_point_median": 0.8366
+  },
+  {
+   "clustering": "weak",
+   "enrich": 0.5,
+   "infarct_size": "golf",
+   "p_fail": 0.005,
+   "n": 240,
+   "power_claim1": 0.979,
+   "power_sens_only": 0.979,
+   "sens_point_median": 0.8381
+  },
+  {
+   "clustering": "weak",
+   "enrich": 0.5,
+   "infarct_size": "golf",
+   "p_fail": 0.01,
+   "n": 160,
+   "power_claim1": 0.86,
+   "power_sens_only": 0.86,
+   "sens_point_median": 0.8341
+  },
+  {
+   "clustering": "weak",
+   "enrich": 0.5,
+   "infarct_size": "golf",
+   "p_fail": 0.01,
+   "n": 200,
+   "power_claim1": 0.928,
+   "power_sens_only": 0.928,
+   "sens_point_median": 0.8341
+  },
+  {
+   "clustering": "weak",
+   "enrich": 0.5,
+   "infarct_size": "golf",
+   "p_fail": 0.01,
+   "n": 240,
+   "power_claim1": 0.956,
+   "power_sens_only": 0.956,
+   "sens_point_median": 0.8322
+  },
+  {
+   "clustering": "weak",
+   "enrich": 0.5,
+   "infarct_size": "golf",
+   "p_fail": 0.015,
+   "n": 160,
+   "power_claim1": 0.828,
+   "power_sens_only": 0.828,
+   "sens_point_median": 0.829
+  },
+  {
+   "clustering": "weak",
+   "enrich": 0.5,
+   "infarct_size": "golf",
+   "p_fail": 0.015,
+   "n": 200,
+   "power_claim1": 0.885,
+   "power_sens_only": 0.885,
+   "sens_point_median": 0.8285
+  },
+  {
+   "clustering": "weak",
+   "enrich": 0.5,
+   "infarct_size": "golf",
+   "p_fail": 0.015,
+   "n": 240,
+   "power_claim1": 0.933,
+   "power_sens_only": 0.933,
+   "sens_point_median": 0.8286
+  },
+  {
+   "clustering": "weak",
+   "enrich": 0.5,
+   "infarct_size": "golf",
+   "p_fail": 0.02,
+   "n": 160,
+   "power_claim1": 0.756,
+   "power_sens_only": 0.756,
+   "sens_point_median": 0.827
+  },
+  {
+   "clustering": "weak",
+   "enrich": 0.5,
+   "infarct_size": "golf",
+   "p_fail": 0.02,
+   "n": 200,
+   "power_claim1": 0.834,
+   "power_sens_only": 0.834,
+   "sens_point_median": 0.8265
+  },
+  {
+   "clustering": "weak",
+   "enrich": 0.5,
+   "infarct_size": "golf",
+   "p_fail": 0.02,
+   "n": 240,
+   "power_claim1": 0.878,
+   "power_sens_only": 0.878,
+   "sens_point_median": 0.825
+  },
+  {
+   "clustering": "weak",
+   "enrich": 0.5,
+   "infarct_size": "golf",
+   "p_fail": 0.03,
+   "n": 160,
+   "power_claim1": 0.622,
+   "power_sens_only": 0.628,
+   "sens_point_median": 0.8171
+  },
+  {
+   "clustering": "weak",
+   "enrich": 0.5,
+   "infarct_size": "golf",
+   "p_fail": 0.03,
+   "n": 200,
+   "power_claim1": 0.729,
+   "power_sens_only": 0.729,
+   "sens_point_median": 0.8184
+  },
+  {
+   "clustering": "weak",
+   "enrich": 0.5,
+   "infarct_size": "golf",
+   "p_fail": 0.03,
+   "n": 240,
+   "power_claim1": 0.776,
+   "power_sens_only": 0.776,
+   "sens_point_median": 0.8188
+  },
+  {
+   "clustering": "weak",
+   "enrich": 0.5,
+   "infarct_size": "golf",
+   "p_fail": 0.04,
+   "n": 160,
+   "power_claim1": 0.503,
+   "power_sens_only": 0.517,
+   "sens_point_median": 0.81
+  },
+  {
+   "clustering": "weak",
+   "enrich": 0.5,
+   "infarct_size": "golf",
+   "p_fail": 0.04,
+   "n": 200,
+   "power_claim1": 0.568,
+   "power_sens_only": 0.574,
+   "sens_point_median": 0.8095
+  },
+  {
+   "clustering": "weak",
+   "enrich": 0.5,
+   "infarct_size": "golf",
+   "p_fail": 0.04,
+   "n": 240,
+   "power_claim1": 0.637,
+   "power_sens_only": 0.64,
+   "sens_point_median": 0.81
+  },
+  {
+   "clustering": "weak",
+   "enrich": 0.5,
+   "infarct_size": "kilo",
+   "p_fail": 0.005,
+   "n": 160,
+   "power_claim1": 0.889,
+   "power_sens_only": 0.889,
+   "sens_point_median": 0.8378
+  },
+  {
+   "clustering": "weak",
+   "enrich": 0.5,
+   "infarct_size": "kilo",
+   "p_fail": 0.005,
+   "n": 200,
+   "power_claim1": 0.943,
+   "power_sens_only": 0.943,
+   "sens_point_median": 0.8368
+  },
+  {
+   "clustering": "weak",
+   "enrich": 0.5,
+   "infarct_size": "kilo",
+   "p_fail": 0.005,
+   "n": 240,
+   "power_claim1": 0.966,
+   "power_sens_only": 0.966,
+   "sens_point_median": 0.8392
+  },
+  {
+   "clustering": "weak",
+   "enrich": 0.5,
+   "infarct_size": "kilo",
+   "p_fail": 0.01,
+   "n": 160,
+   "power_claim1": 0.842,
+   "power_sens_only": 0.842,
+   "sens_point_median": 0.8349
+  },
+  {
+   "clustering": "weak",
+   "enrich": 0.5,
+   "infarct_size": "kilo",
+   "p_fail": 0.01,
+   "n": 200,
+   "power_claim1": 0.905,
+   "power_sens_only": 0.905,
+   "sens_point_median": 0.8344
+  },
+  {
+   "clustering": "weak",
+   "enrich": 0.5,
+   "infarct_size": "kilo",
+   "p_fail": 0.01,
+   "n": 240,
+   "power_claim1": 0.934,
+   "power_sens_only": 0.934,
+   "sens_point_median": 0.8329
+  },
+  {
+   "clustering": "weak",
+   "enrich": 0.5,
+   "infarct_size": "kilo",
+   "p_fail": 0.015,
+   "n": 160,
+   "power_claim1": 0.757,
+   "power_sens_only": 0.757,
+   "sens_point_median": 0.8269
+  },
+  {
+   "clustering": "weak",
+   "enrich": 0.5,
+   "infarct_size": "kilo",
+   "p_fail": 0.015,
+   "n": 200,
+   "power_claim1": 0.842,
+   "power_sens_only": 0.842,
+   "sens_point_median": 0.8288
+  },
+  {
+   "clustering": "weak",
+   "enrich": 0.5,
+   "infarct_size": "kilo",
+   "p_fail": 0.015,
+   "n": 240,
+   "power_claim1": 0.907,
+   "power_sens_only": 0.907,
+   "sens_point_median": 0.8296
+  },
+  {
+   "clustering": "weak",
+   "enrich": 0.5,
+   "infarct_size": "kilo",
+   "p_fail": 0.02,
+   "n": 160,
+   "power_claim1": 0.7,
+   "power_sens_only": 0.7,
+   "sens_point_median": 0.8246
+  },
+  {
+   "clustering": "weak",
+   "enrich": 0.5,
+   "infarct_size": "kilo",
+   "p_fail": 0.02,
+   "n": 200,
+   "power_claim1": 0.798,
+   "power_sens_only": 0.798,
+   "sens_point_median": 0.8265
+  },
+  {
+   "clustering": "weak",
+   "enrich": 0.5,
+   "infarct_size": "kilo",
+   "p_fail": 0.02,
+   "n": 240,
+   "power_claim1": 0.857,
+   "power_sens_only": 0.857,
+   "sens_point_median": 0.8264
+  },
+  {
+   "clustering": "weak",
+   "enrich": 0.5,
+   "infarct_size": "kilo",
+   "p_fail": 0.03,
+   "n": 160,
+   "power_claim1": 0.575,
+   "power_sens_only": 0.578,
+   "sens_point_median": 0.817
+  },
+  {
+   "clustering": "weak",
+   "enrich": 0.5,
+   "infarct_size": "kilo",
+   "p_fail": 0.03,
+   "n": 200,
+   "power_claim1": 0.678,
+   "power_sens_only": 0.679,
+   "sens_point_median": 0.8168
+  },
+  {
+   "clustering": "weak",
+   "enrich": 0.5,
+   "infarct_size": "kilo",
+   "p_fail": 0.03,
+   "n": 240,
+   "power_claim1": 0.741,
+   "power_sens_only": 0.741,
+   "sens_point_median": 0.817
+  },
+  {
+   "clustering": "weak",
+   "enrich": 0.5,
+   "infarct_size": "kilo",
+   "p_fail": 0.04,
+   "n": 160,
+   "power_claim1": 0.443,
+   "power_sens_only": 0.463,
+   "sens_point_median": 0.8099
+  },
+  {
+   "clustering": "weak",
+   "enrich": 0.5,
+   "infarct_size": "kilo",
+   "p_fail": 0.04,
+   "n": 200,
+   "power_claim1": 0.537,
+   "power_sens_only": 0.542,
+   "sens_point_median": 0.8088
+  },
+  {
+   "clustering": "weak",
+   "enrich": 0.5,
+   "infarct_size": "kilo",
+   "p_fail": 0.04,
+   "n": 240,
+   "power_claim1": 0.579,
+   "power_sens_only": 0.582,
+   "sens_point_median": 0.8076
+  },
+  {
+   "clustering": "weak",
+   "enrich": 0.7,
+   "infarct_size": "golf",
+   "p_fail": 0.005,
+   "n": 160,
+   "power_claim1": 0.976,
+   "power_sens_only": 0.976,
+   "sens_point_median": 0.8374
+  },
+  {
+   "clustering": "weak",
+   "enrich": 0.7,
+   "infarct_size": "golf",
+   "p_fail": 0.005,
+   "n": 200,
+   "power_claim1": 0.988,
+   "power_sens_only": 0.988,
+   "sens_point_median": 0.8376
+  },
+  {
+   "clustering": "weak",
+   "enrich": 0.7,
+   "infarct_size": "golf",
+   "p_fail": 0.005,
+   "n": 240,
+   "power_claim1": 1.0,
+   "power_sens_only": 1.0,
+   "sens_point_median": 0.8373
+  },
+  {
+   "clustering": "weak",
+   "enrich": 0.7,
+   "infarct_size": "golf",
+   "p_fail": 0.01,
+   "n": 160,
+   "power_claim1": 0.954,
+   "power_sens_only": 0.954,
+   "sens_point_median": 0.833
+  },
+  {
+   "clustering": "weak",
+   "enrich": 0.7,
+   "infarct_size": "golf",
+   "p_fail": 0.01,
+   "n": 200,
+   "power_claim1": 0.977,
+   "power_sens_only": 0.977,
+   "sens_point_median": 0.8335
+  },
+  {
+   "clustering": "weak",
+   "enrich": 0.7,
+   "infarct_size": "golf",
+   "p_fail": 0.01,
+   "n": 240,
+   "power_claim1": 0.992,
+   "power_sens_only": 0.992,
+   "sens_point_median": 0.8341
+  },
+  {
+   "clustering": "weak",
+   "enrich": 0.7,
+   "infarct_size": "golf",
+   "p_fail": 0.015,
+   "n": 160,
+   "power_claim1": 0.932,
+   "power_sens_only": 0.932,
+   "sens_point_median": 0.8296
+  },
+  {
+   "clustering": "weak",
+   "enrich": 0.7,
+   "infarct_size": "golf",
+   "p_fail": 0.015,
+   "n": 200,
+   "power_claim1": 0.946,
+   "power_sens_only": 0.946,
+   "sens_point_median": 0.8295
+  },
+  {
+   "clustering": "weak",
+   "enrich": 0.7,
+   "infarct_size": "golf",
+   "p_fail": 0.015,
+   "n": 240,
+   "power_claim1": 0.987,
+   "power_sens_only": 0.987,
+   "sens_point_median": 0.8291
+  },
+  {
+   "clustering": "weak",
+   "enrich": 0.7,
+   "infarct_size": "golf",
+   "p_fail": 0.02,
+   "n": 160,
+   "power_claim1": 0.857,
+   "power_sens_only": 0.857,
+   "sens_point_median": 0.8252
+  },
+  {
+   "clustering": "weak",
+   "enrich": 0.7,
+   "infarct_size": "golf",
+   "p_fail": 0.02,
+   "n": 200,
+   "power_claim1": 0.916,
+   "power_sens_only": 0.916,
+   "sens_point_median": 0.825
+  },
+  {
+   "clustering": "weak",
+   "enrich": 0.7,
+   "infarct_size": "golf",
+   "p_fail": 0.02,
+   "n": 240,
+   "power_claim1": 0.961,
+   "power_sens_only": 0.961,
+   "sens_point_median": 0.826
+  },
+  {
+   "clustering": "weak",
+   "enrich": 0.7,
+   "infarct_size": "golf",
+   "p_fail": 0.03,
+   "n": 160,
+   "power_claim1": 0.733,
+   "power_sens_only": 0.739,
+   "sens_point_median": 0.8171
+  },
+  {
+   "clustering": "weak",
+   "enrich": 0.7,
+   "infarct_size": "golf",
+   "p_fail": 0.03,
+   "n": 200,
+   "power_claim1": 0.829,
+   "power_sens_only": 0.829,
+   "sens_point_median": 0.8172
+  },
+  {
+   "clustering": "weak",
+   "enrich": 0.7,
+   "infarct_size": "golf",
+   "p_fail": 0.03,
+   "n": 240,
+   "power_claim1": 0.869,
+   "power_sens_only": 0.869,
+   "sens_point_median": 0.8156
+  },
+  {
+   "clustering": "weak",
+   "enrich": 0.7,
+   "infarct_size": "golf",
+   "p_fail": 0.04,
+   "n": 160,
+   "power_claim1": 0.604,
+   "power_sens_only": 0.621,
+   "sens_point_median": 0.8086
+  },
+  {
+   "clustering": "weak",
+   "enrich": 0.7,
+   "infarct_size": "golf",
+   "p_fail": 0.04,
+   "n": 200,
+   "power_claim1": 0.694,
+   "power_sens_only": 0.703,
+   "sens_point_median": 0.8087
+  },
+  {
+   "clustering": "weak",
+   "enrich": 0.7,
+   "infarct_size": "golf",
+   "p_fail": 0.04,
+   "n": 240,
+   "power_claim1": 0.756,
+   "power_sens_only": 0.76,
+   "sens_point_median": 0.8077
+  },
+  {
+   "clustering": "weak",
+   "enrich": 0.7,
+   "infarct_size": "kilo",
+   "p_fail": 0.005,
+   "n": 160,
+   "power_claim1": 0.97,
+   "power_sens_only": 0.97,
+   "sens_point_median": 0.8369
+  },
+  {
+   "clustering": "weak",
+   "enrich": 0.7,
+   "infarct_size": "kilo",
+   "p_fail": 0.005,
+   "n": 200,
+   "power_claim1": 0.986,
+   "power_sens_only": 0.986,
+   "sens_point_median": 0.8373
+  },
+  {
+   "clustering": "weak",
+   "enrich": 0.7,
+   "infarct_size": "kilo",
+   "p_fail": 0.005,
+   "n": 240,
+   "power_claim1": 0.997,
+   "power_sens_only": 0.997,
+   "sens_point_median": 0.8381
+  },
+  {
+   "clustering": "weak",
+   "enrich": 0.7,
+   "infarct_size": "kilo",
+   "p_fail": 0.01,
+   "n": 160,
+   "power_claim1": 0.932,
+   "power_sens_only": 0.932,
+   "sens_point_median": 0.8335
+  },
+  {
+   "clustering": "weak",
+   "enrich": 0.7,
+   "infarct_size": "kilo",
+   "p_fail": 0.01,
+   "n": 200,
+   "power_claim1": 0.975,
+   "power_sens_only": 0.975,
+   "sens_point_median": 0.8326
+  },
+  {
+   "clustering": "weak",
+   "enrich": 0.7,
+   "infarct_size": "kilo",
+   "p_fail": 0.01,
+   "n": 240,
+   "power_claim1": 0.991,
+   "power_sens_only": 0.991,
+   "sens_point_median": 0.8342
+  },
+  {
+   "clustering": "weak",
+   "enrich": 0.7,
+   "infarct_size": "kilo",
+   "p_fail": 0.015,
+   "n": 160,
+   "power_claim1": 0.888,
+   "power_sens_only": 0.888,
+   "sens_point_median": 0.8296
+  },
+  {
+   "clustering": "weak",
+   "enrich": 0.7,
+   "infarct_size": "kilo",
+   "p_fail": 0.015,
+   "n": 200,
+   "power_claim1": 0.934,
+   "power_sens_only": 0.934,
+   "sens_point_median": 0.8295
+  },
+  {
+   "clustering": "weak",
+   "enrich": 0.7,
+   "infarct_size": "kilo",
+   "p_fail": 0.015,
+   "n": 240,
+   "power_claim1": 0.952,
+   "power_sens_only": 0.952,
+   "sens_point_median": 0.8283
+  },
+  {
+   "clustering": "weak",
+   "enrich": 0.7,
+   "infarct_size": "kilo",
+   "p_fail": 0.02,
+   "n": 160,
+   "power_claim1": 0.831,
+   "power_sens_only": 0.831,
+   "sens_point_median": 0.8243
+  },
+  {
+   "clustering": "weak",
+   "enrich": 0.7,
+   "infarct_size": "kilo",
+   "p_fail": 0.02,
+   "n": 200,
+   "power_claim1": 0.895,
+   "power_sens_only": 0.895,
+   "sens_point_median": 0.8259
+  },
+  {
+   "clustering": "weak",
+   "enrich": 0.7,
+   "infarct_size": "kilo",
+   "p_fail": 0.02,
+   "n": 240,
+   "power_claim1": 0.928,
+   "power_sens_only": 0.928,
+   "sens_point_median": 0.8242
+  },
+  {
+   "clustering": "weak",
+   "enrich": 0.7,
+   "infarct_size": "kilo",
+   "p_fail": 0.03,
+   "n": 160,
+   "power_claim1": 0.723,
+   "power_sens_only": 0.726,
+   "sens_point_median": 0.8169
+  },
+  {
+   "clustering": "weak",
+   "enrich": 0.7,
+   "infarct_size": "kilo",
+   "p_fail": 0.03,
+   "n": 200,
+   "power_claim1": 0.806,
+   "power_sens_only": 0.806,
+   "sens_point_median": 0.8175
+  },
+  {
+   "clustering": "weak",
+   "enrich": 0.7,
+   "infarct_size": "kilo",
+   "p_fail": 0.03,
+   "n": 240,
+   "power_claim1": 0.86,
+   "power_sens_only": 0.86,
+   "sens_point_median": 0.8175
+  },
+  {
+   "clustering": "weak",
+   "enrich": 0.7,
+   "infarct_size": "kilo",
+   "p_fail": 0.04,
+   "n": 160,
+   "power_claim1": 0.557,
+   "power_sens_only": 0.565,
+   "sens_point_median": 0.8076
+  },
+  {
+   "clustering": "weak",
+   "enrich": 0.7,
+   "infarct_size": "kilo",
+   "p_fail": 0.04,
+   "n": 200,
+   "power_claim1": 0.635,
+   "power_sens_only": 0.644,
+   "sens_point_median": 0.8085
+  },
+  {
+   "clustering": "weak",
+   "enrich": 0.7,
+   "infarct_size": "kilo",
+   "p_fail": 0.04,
+   "n": 240,
+   "power_claim1": 0.721,
+   "power_sens_only": 0.727,
+   "sens_point_median": 0.8093
+  },
+  {
+   "clustering": "strong",
+   "enrich": 0.5,
+   "infarct_size": "golf",
+   "p_fail": 0.005,
+   "n": 160,
+   "power_claim1": 0.636,
+   "power_sens_only": 0.636,
+   "sens_point_median": 0.8142
+  },
+  {
+   "clustering": "strong",
+   "enrich": 0.5,
+   "infarct_size": "golf",
+   "p_fail": 0.005,
+   "n": 200,
+   "power_claim1": 0.698,
+   "power_sens_only": 0.698,
+   "sens_point_median": 0.8138
+  },
+  {
+   "clustering": "strong",
+   "enrich": 0.5,
+   "infarct_size": "golf",
+   "p_fail": 0.005,
+   "n": 240,
+   "power_claim1": 0.775,
+   "power_sens_only": 0.775,
+   "sens_point_median": 0.814
+  },
+  {
+   "clustering": "strong",
+   "enrich": 0.5,
+   "infarct_size": "golf",
+   "p_fail": 0.01,
+   "n": 160,
+   "power_claim1": 0.514,
+   "power_sens_only": 0.516,
+   "sens_point_median": 0.8088
+  },
+  {
+   "clustering": "strong",
+   "enrich": 0.5,
+   "infarct_size": "golf",
+   "p_fail": 0.01,
+   "n": 200,
+   "power_claim1": 0.597,
+   "power_sens_only": 0.597,
+   "sens_point_median": 0.8081
+  },
+  {
+   "clustering": "strong",
+   "enrich": 0.5,
+   "infarct_size": "golf",
+   "p_fail": 0.01,
+   "n": 240,
+   "power_claim1": 0.712,
+   "power_sens_only": 0.712,
+   "sens_point_median": 0.8093
+  },
+  {
+   "clustering": "strong",
+   "enrich": 0.5,
+   "infarct_size": "golf",
+   "p_fail": 0.015,
+   "n": 160,
+   "power_claim1": 0.497,
+   "power_sens_only": 0.497,
+   "sens_point_median": 0.8073
+  },
+  {
+   "clustering": "strong",
+   "enrich": 0.5,
+   "infarct_size": "golf",
+   "p_fail": 0.015,
+   "n": 200,
+   "power_claim1": 0.546,
+   "power_sens_only": 0.546,
+   "sens_point_median": 0.8054
+  },
+  {
+   "clustering": "strong",
+   "enrich": 0.5,
+   "infarct_size": "golf",
+   "p_fail": 0.015,
+   "n": 240,
+   "power_claim1": 0.609,
+   "power_sens_only": 0.609,
+   "sens_point_median": 0.8059
+  },
+  {
+   "clustering": "strong",
+   "enrich": 0.5,
+   "infarct_size": "golf",
+   "p_fail": 0.02,
+   "n": 160,
+   "power_claim1": 0.403,
+   "power_sens_only": 0.404,
+   "sens_point_median": 0.8007
+  },
+  {
+   "clustering": "strong",
+   "enrich": 0.5,
+   "infarct_size": "golf",
+   "p_fail": 0.02,
+   "n": 200,
+   "power_claim1": 0.501,
+   "power_sens_only": 0.501,
+   "sens_point_median": 0.8026
+  },
+  {
+   "clustering": "strong",
+   "enrich": 0.5,
+   "infarct_size": "golf",
+   "p_fail": 0.02,
+   "n": 240,
+   "power_claim1": 0.548,
+   "power_sens_only": 0.548,
+   "sens_point_median": 0.8013
+  },
+  {
+   "clustering": "strong",
+   "enrich": 0.5,
+   "infarct_size": "golf",
+   "p_fail": 0.03,
+   "n": 160,
+   "power_claim1": 0.324,
+   "power_sens_only": 0.326,
+   "sens_point_median": 0.7943
+  },
+  {
+   "clustering": "strong",
+   "enrich": 0.5,
+   "infarct_size": "golf",
+   "p_fail": 0.03,
+   "n": 200,
+   "power_claim1": 0.383,
+   "power_sens_only": 0.384,
+   "sens_point_median": 0.7953
+  },
+  {
+   "clustering": "strong",
+   "enrich": 0.5,
+   "infarct_size": "golf",
+   "p_fail": 0.03,
+   "n": 240,
+   "power_claim1": 0.388,
+   "power_sens_only": 0.388,
+   "sens_point_median": 0.792
+  },
+  {
+   "clustering": "strong",
+   "enrich": 0.5,
+   "infarct_size": "golf",
+   "p_fail": 0.04,
+   "n": 160,
+   "power_claim1": 0.233,
+   "power_sens_only": 0.236,
+   "sens_point_median": 0.7874
+  },
+  {
+   "clustering": "strong",
+   "enrich": 0.5,
+   "infarct_size": "golf",
+   "p_fail": 0.04,
+   "n": 200,
+   "power_claim1": 0.245,
+   "power_sens_only": 0.247,
+   "sens_point_median": 0.7838
+  },
+  {
+   "clustering": "strong",
+   "enrich": 0.5,
+   "infarct_size": "golf",
+   "p_fail": 0.04,
+   "n": 240,
+   "power_claim1": 0.287,
+   "power_sens_only": 0.288,
+   "sens_point_median": 0.7877
+  },
+  {
+   "clustering": "strong",
+   "enrich": 0.5,
+   "infarct_size": "kilo",
+   "p_fail": 0.005,
+   "n": 160,
+   "power_claim1": 0.565,
+   "power_sens_only": 0.566,
+   "sens_point_median": 0.8138
+  },
+  {
+   "clustering": "strong",
+   "enrich": 0.5,
+   "infarct_size": "kilo",
+   "p_fail": 0.005,
+   "n": 200,
+   "power_claim1": 0.637,
+   "power_sens_only": 0.637,
+   "sens_point_median": 0.8136
+  },
+  {
+   "clustering": "strong",
+   "enrich": 0.5,
+   "infarct_size": "kilo",
+   "p_fail": 0.005,
+   "n": 240,
+   "power_claim1": 0.713,
+   "power_sens_only": 0.713,
+   "sens_point_median": 0.8123
+  },
+  {
+   "clustering": "strong",
+   "enrich": 0.5,
+   "infarct_size": "kilo",
+   "p_fail": 0.01,
+   "n": 160,
+   "power_claim1": 0.515,
+   "power_sens_only": 0.516,
+   "sens_point_median": 0.8104
+  },
+  {
+   "clustering": "strong",
+   "enrich": 0.5,
+   "infarct_size": "kilo",
+   "p_fail": 0.01,
+   "n": 200,
+   "power_claim1": 0.595,
+   "power_sens_only": 0.595,
+   "sens_point_median": 0.8107
+  },
+  {
+   "clustering": "strong",
+   "enrich": 0.5,
+   "infarct_size": "kilo",
+   "p_fail": 0.01,
+   "n": 240,
+   "power_claim1": 0.642,
+   "power_sens_only": 0.642,
+   "sens_point_median": 0.8095
+  },
+  {
+   "clustering": "strong",
+   "enrich": 0.5,
+   "infarct_size": "kilo",
+   "p_fail": 0.015,
+   "n": 160,
+   "power_claim1": 0.44,
+   "power_sens_only": 0.44,
+   "sens_point_median": 0.8048
+  },
+  {
+   "clustering": "strong",
+   "enrich": 0.5,
+   "infarct_size": "kilo",
+   "p_fail": 0.015,
+   "n": 200,
+   "power_claim1": 0.535,
+   "power_sens_only": 0.536,
+   "sens_point_median": 0.8081
+  },
+  {
+   "clustering": "strong",
+   "enrich": 0.5,
+   "infarct_size": "kilo",
+   "p_fail": 0.015,
+   "n": 240,
+   "power_claim1": 0.548,
+   "power_sens_only": 0.548,
+   "sens_point_median": 0.8032
+  },
+  {
+   "clustering": "strong",
+   "enrich": 0.5,
+   "infarct_size": "kilo",
+   "p_fail": 0.02,
+   "n": 160,
+   "power_claim1": 0.395,
+   "power_sens_only": 0.396,
+   "sens_point_median": 0.8031
+  },
+  {
+   "clustering": "strong",
+   "enrich": 0.5,
+   "infarct_size": "kilo",
+   "p_fail": 0.02,
+   "n": 200,
+   "power_claim1": 0.459,
+   "power_sens_only": 0.459,
+   "sens_point_median": 0.8025
+  },
+  {
+   "clustering": "strong",
+   "enrich": 0.5,
+   "infarct_size": "kilo",
+   "p_fail": 0.02,
+   "n": 240,
+   "power_claim1": 0.519,
+   "power_sens_only": 0.519,
+   "sens_point_median": 0.8018
+  },
+  {
+   "clustering": "strong",
+   "enrich": 0.5,
+   "infarct_size": "kilo",
+   "p_fail": 0.03,
+   "n": 160,
+   "power_claim1": 0.301,
+   "power_sens_only": 0.302,
+   "sens_point_median": 0.7953
+  },
+  {
+   "clustering": "strong",
+   "enrich": 0.5,
+   "infarct_size": "kilo",
+   "p_fail": 0.03,
+   "n": 200,
+   "power_claim1": 0.325,
+   "power_sens_only": 0.325,
+   "sens_point_median": 0.7925
+  },
+  {
+   "clustering": "strong",
+   "enrich": 0.5,
+   "infarct_size": "kilo",
+   "p_fail": 0.03,
+   "n": 240,
+   "power_claim1": 0.365,
+   "power_sens_only": 0.365,
+   "sens_point_median": 0.7937
+  },
+  {
+   "clustering": "strong",
+   "enrich": 0.5,
+   "infarct_size": "kilo",
+   "p_fail": 0.04,
+   "n": 160,
+   "power_claim1": 0.199,
+   "power_sens_only": 0.201,
+   "sens_point_median": 0.7836
+  },
+  {
+   "clustering": "strong",
+   "enrich": 0.5,
+   "infarct_size": "kilo",
+   "p_fail": 0.04,
+   "n": 200,
+   "power_claim1": 0.23,
+   "power_sens_only": 0.233,
+   "sens_point_median": 0.7841
+  },
+  {
+   "clustering": "strong",
+   "enrich": 0.5,
+   "infarct_size": "kilo",
+   "p_fail": 0.04,
+   "n": 240,
+   "power_claim1": 0.267,
+   "power_sens_only": 0.267,
+   "sens_point_median": 0.7851
+  },
+  {
+   "clustering": "strong",
+   "enrich": 0.7,
+   "infarct_size": "golf",
+   "p_fail": 0.005,
+   "n": 160,
+   "power_claim1": 0.762,
+   "power_sens_only": 0.762,
+   "sens_point_median": 0.814
+  },
+  {
+   "clustering": "strong",
+   "enrich": 0.7,
+   "infarct_size": "golf",
+   "p_fail": 0.005,
+   "n": 200,
+   "power_claim1": 0.844,
+   "power_sens_only": 0.844,
+   "sens_point_median": 0.8154
+  },
+  {
+   "clustering": "strong",
+   "enrich": 0.7,
+   "infarct_size": "golf",
+   "p_fail": 0.005,
+   "n": 240,
+   "power_claim1": 0.889,
+   "power_sens_only": 0.889,
+   "sens_point_median": 0.8144
+  },
+  {
+   "clustering": "strong",
+   "enrich": 0.7,
+   "infarct_size": "golf",
+   "p_fail": 0.01,
+   "n": 160,
+   "power_claim1": 0.669,
+   "power_sens_only": 0.669,
+   "sens_point_median": 0.8091
+  },
+  {
+   "clustering": "strong",
+   "enrich": 0.7,
+   "infarct_size": "golf",
+   "p_fail": 0.01,
+   "n": 200,
+   "power_claim1": 0.751,
+   "power_sens_only": 0.751,
+   "sens_point_median": 0.8094
+  },
+  {
+   "clustering": "strong",
+   "enrich": 0.7,
+   "infarct_size": "golf",
+   "p_fail": 0.01,
+   "n": 240,
+   "power_claim1": 0.832,
+   "power_sens_only": 0.832,
+   "sens_point_median": 0.8095
+  },
+  {
+   "clustering": "strong",
+   "enrich": 0.7,
+   "infarct_size": "golf",
+   "p_fail": 0.015,
+   "n": 160,
+   "power_claim1": 0.605,
+   "power_sens_only": 0.607,
+   "sens_point_median": 0.8068
+  },
+  {
+   "clustering": "strong",
+   "enrich": 0.7,
+   "infarct_size": "golf",
+   "p_fail": 0.015,
+   "n": 200,
+   "power_claim1": 0.679,
+   "power_sens_only": 0.679,
+   "sens_point_median": 0.8064
+  },
+  {
+   "clustering": "strong",
+   "enrich": 0.7,
+   "infarct_size": "golf",
+   "p_fail": 0.015,
+   "n": 240,
+   "power_claim1": 0.76,
+   "power_sens_only": 0.76,
+   "sens_point_median": 0.8062
+  },
+  {
+   "clustering": "strong",
+   "enrich": 0.7,
+   "infarct_size": "golf",
+   "p_fail": 0.02,
+   "n": 160,
+   "power_claim1": 0.506,
+   "power_sens_only": 0.507,
+   "sens_point_median": 0.8012
+  },
+  {
+   "clustering": "strong",
+   "enrich": 0.7,
+   "infarct_size": "golf",
+   "p_fail": 0.02,
+   "n": 200,
+   "power_claim1": 0.614,
+   "power_sens_only": 0.614,
+   "sens_point_median": 0.802
+  },
+  {
+   "clustering": "strong",
+   "enrich": 0.7,
+   "infarct_size": "golf",
+   "p_fail": 0.02,
+   "n": 240,
+   "power_claim1": 0.67,
+   "power_sens_only": 0.67,
+   "sens_point_median": 0.8015
+  },
+  {
+   "clustering": "strong",
+   "enrich": 0.7,
+   "infarct_size": "golf",
+   "p_fail": 0.03,
+   "n": 160,
+   "power_claim1": 0.385,
+   "power_sens_only": 0.387,
+   "sens_point_median": 0.7936
+  },
+  {
+   "clustering": "strong",
+   "enrich": 0.7,
+   "infarct_size": "golf",
+   "p_fail": 0.03,
+   "n": 200,
+   "power_claim1": 0.447,
+   "power_sens_only": 0.448,
+   "sens_point_median": 0.7933
+  },
+  {
+   "clustering": "strong",
+   "enrich": 0.7,
+   "infarct_size": "golf",
+   "p_fail": 0.03,
+   "n": 240,
+   "power_claim1": 0.528,
+   "power_sens_only": 0.528,
+   "sens_point_median": 0.7945
+  },
+  {
+   "clustering": "strong",
+   "enrich": 0.7,
+   "infarct_size": "golf",
+   "p_fail": 0.04,
+   "n": 160,
+   "power_claim1": 0.28,
+   "power_sens_only": 0.284,
+   "sens_point_median": 0.7863
+  },
+  {
+   "clustering": "strong",
+   "enrich": 0.7,
+   "infarct_size": "golf",
+   "p_fail": 0.04,
+   "n": 200,
+   "power_claim1": 0.306,
+   "power_sens_only": 0.309,
+   "sens_point_median": 0.7858
+  },
+  {
+   "clustering": "strong",
+   "enrich": 0.7,
+   "infarct_size": "golf",
+   "p_fail": 0.04,
+   "n": 240,
+   "power_claim1": 0.346,
+   "power_sens_only": 0.346,
+   "sens_point_median": 0.7843
+  },
+  {
+   "clustering": "strong",
+   "enrich": 0.7,
+   "infarct_size": "kilo",
+   "p_fail": 0.005,
+   "n": 160,
+   "power_claim1": 0.709,
+   "power_sens_only": 0.711,
+   "sens_point_median": 0.8135
+  },
+  {
+   "clustering": "strong",
+   "enrich": 0.7,
+   "infarct_size": "kilo",
+   "p_fail": 0.005,
+   "n": 200,
+   "power_claim1": 0.766,
+   "power_sens_only": 0.766,
+   "sens_point_median": 0.8127
+  },
+  {
+   "clustering": "strong",
+   "enrich": 0.7,
+   "infarct_size": "kilo",
+   "p_fail": 0.005,
+   "n": 240,
+   "power_claim1": 0.82,
+   "power_sens_only": 0.82,
+   "sens_point_median": 0.8146
+  },
+  {
+   "clustering": "strong",
+   "enrich": 0.7,
+   "infarct_size": "kilo",
+   "p_fail": 0.01,
+   "n": 160,
+   "power_claim1": 0.607,
+   "power_sens_only": 0.608,
+   "sens_point_median": 0.8101
+  },
+  {
+   "clustering": "strong",
+   "enrich": 0.7,
+   "infarct_size": "kilo",
+   "p_fail": 0.01,
+   "n": 200,
+   "power_claim1": 0.706,
+   "power_sens_only": 0.706,
+   "sens_point_median": 0.8092
+  },
+  {
+   "clustering": "strong",
+   "enrich": 0.7,
+   "infarct_size": "kilo",
+   "p_fail": 0.01,
+   "n": 240,
+   "power_claim1": 0.794,
+   "power_sens_only": 0.794,
+   "sens_point_median": 0.8097
+  },
+  {
+   "clustering": "strong",
+   "enrich": 0.7,
+   "infarct_size": "kilo",
+   "p_fail": 0.015,
+   "n": 160,
+   "power_claim1": 0.548,
+   "power_sens_only": 0.549,
+   "sens_point_median": 0.8061
+  },
+  {
+   "clustering": "strong",
+   "enrich": 0.7,
+   "infarct_size": "kilo",
+   "p_fail": 0.015,
+   "n": 200,
+   "power_claim1": 0.633,
+   "power_sens_only": 0.633,
+   "sens_point_median": 0.8065
+  },
+  {
+   "clustering": "strong",
+   "enrich": 0.7,
+   "infarct_size": "kilo",
+   "p_fail": 0.015,
+   "n": 240,
+   "power_claim1": 0.708,
+   "power_sens_only": 0.708,
+   "sens_point_median": 0.8056
+  },
+  {
+   "clustering": "strong",
+   "enrich": 0.7,
+   "infarct_size": "kilo",
+   "p_fail": 0.02,
+   "n": 160,
+   "power_claim1": 0.487,
+   "power_sens_only": 0.488,
+   "sens_point_median": 0.8015
+  },
+  {
+   "clustering": "strong",
+   "enrich": 0.7,
+   "infarct_size": "kilo",
+   "p_fail": 0.02,
+   "n": 200,
+   "power_claim1": 0.546,
+   "power_sens_only": 0.546,
+   "sens_point_median": 0.8005
+  },
+  {
+   "clustering": "strong",
+   "enrich": 0.7,
+   "infarct_size": "kilo",
+   "p_fail": 0.02,
+   "n": 240,
+   "power_claim1": 0.614,
+   "power_sens_only": 0.614,
+   "sens_point_median": 0.8007
+  },
+  {
+   "clustering": "strong",
+   "enrich": 0.7,
+   "infarct_size": "kilo",
+   "p_fail": 0.03,
+   "n": 160,
+   "power_claim1": 0.358,
+   "power_sens_only": 0.359,
+   "sens_point_median": 0.7935
+  },
+  {
+   "clustering": "strong",
+   "enrich": 0.7,
+   "infarct_size": "kilo",
+   "p_fail": 0.03,
+   "n": 200,
+   "power_claim1": 0.407,
+   "power_sens_only": 0.408,
+   "sens_point_median": 0.7923
+  },
+  {
+   "clustering": "strong",
+   "enrich": 0.7,
+   "infarct_size": "kilo",
+   "p_fail": 0.03,
+   "n": 240,
+   "power_claim1": 0.46,
+   "power_sens_only": 0.46,
+   "sens_point_median": 0.7929
+  },
+  {
+   "clustering": "strong",
+   "enrich": 0.7,
+   "infarct_size": "kilo",
+   "p_fail": 0.04,
+   "n": 160,
+   "power_claim1": 0.265,
+   "power_sens_only": 0.267,
+   "sens_point_median": 0.7862
+  },
+  {
+   "clustering": "strong",
+   "enrich": 0.7,
+   "infarct_size": "kilo",
+   "p_fail": 0.04,
+   "n": 200,
+   "power_claim1": 0.263,
+   "power_sens_only": 0.263,
+   "sens_point_median": 0.7839
+  },
+  {
+   "clustering": "strong",
+   "enrich": 0.7,
+   "infarct_size": "kilo",
+   "p_fail": 0.04,
+   "n": 240,
+   "power_claim1": 0.339,
+   "power_sens_only": 0.34,
+   "sens_point_median": 0.7853
+  }
+ ]
+}

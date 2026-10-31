@@ -1,0 +1,424 @@
+{
+ "n": 16,
+ "n_match": 16,
+ "rows": [
+  {
+   "heart": "phantom",
+   "motion": "none",
+   "module_final": "R0",
+   "module_stages": [
+    "R0"
+   ],
+   "replay_final": "R0",
+   "replay_stages": [
+    "R0"
+   ],
+   "module_tre": 0.0,
+   "replay_tre": 0.0,
+   "module_phase_flags": [],
+   "replay_phase_flags": [],
+   "match": true
+  },
+  {
+   "heart": "phantom",
+   "motion": "rigid",
+   "module_final": "rigid10",
+   "module_stages": [
+    "R0",
+    "rigid",
+    "affine",
+    "rigid10"
+   ],
+   "replay_final": "rigid10",
+   "replay_stages": [
+    "R0",
+    "rigid",
+    "affine",
+    "rigid10"
+   ],
+   "module_tre": 0.181,
+   "replay_tre": 0.181,
+   "module_phase_flags": [
+    "rim_dark"
+   ],
+   "replay_phase_flags": [
+    "rim_dark"
+   ],
+   "match": true
+  },
+  {
+   "heart": "phantom",
+   "motion": "scale",
+   "module_final": "rigid",
+   "module_stages": [
+    "R0",
+    "rigid"
+   ],
+   "replay_final": "rigid",
+   "replay_stages": [
+    "R0",
+    "rigid"
+   ],
+   "module_tre": 1.316,
+   "replay_tre": 1.316,
+   "module_phase_flags": [
+    "edge_offset"
+   ],
+   "replay_phase_flags": [
+    "edge_offset"
+   ],
+   "match": true
+  },
+  {
+   "heart": "phantom",
+   "motion": "aniso3",
+   "module_final": "rigid",
+   "module_stages": [
+    "R0",
+    "rigid",
+    "affine",
+    "rigid10"
+   ],
+   "replay_final": "rigid",
+   "replay_stages": [
+    "R0",
+    "rigid",
+    "affine",
+    "rigid10"
+   ],
+   "module_tre": 0.542,
+   "replay_tre": 0.542,
+   "module_phase_flags": [
+    "rim_dark"
+   ],
+   "replay_phase_flags": [
+    "rim_dark"
+   ],
+   "match": true
+  },
+  {
+   "heart": "phantom",
+   "motion": "aniso6",
+   "module_final": "rigid10",
+   "module_stages": [
+    "R0",
+    "rigid",
+    "affine",
+    "rigid10"
+   ],
+   "replay_final": "rigid10",
+   "replay_stages": [
+    "R0",
+    "rigid",
+    "affine",
+    "rigid10"
+   ],
+   "module_tre": 1.316,
+   "replay_tre": 1.316,
+   "module_phase_flags": [
+    "rim_dark"
+   ],
+   "replay_phase_flags": [
+    "rim_dark"
+   ],
+   "match": true
+  },
+  {
+   "heart": "phantom",
+   "motion": "phase",
+   "module_final": "rigid10",
+   "module_stages": [
+    "R0",
+    "rigid",
+    "affine",
+    "rigid10"
+   ],
+   "replay_final": "rigid10",
+   "replay_stages": [
+    "R0",
+    "rigid",
+    "affine",
+    "rigid10"
+   ],
+   "module_tre": 0.383,
+   "replay_tre": 0.383,
+   "module_phase_flags": [
+    "rim_dark"
+   ],
+   "replay_phase_flags": [
+    "rim_dark"
+   ],
+   "match": true
+  },
+  {
+   "heart": "phantom",
+   "motion": "phase_neg",
+   "module_final": "rigid",
+   "module_stages": [
+    "R0",
+    "rigid"
+   ],
+   "replay_final": "rigid",
+   "replay_stages": [
+    "R0",
+    "rigid"
+   ],
+   "module_tre": 0.158,
+   "replay_tre": 0.158,
+   "module_phase_flags": [
+    "edge_offset"
+   ],
+   "replay_phase_flags": [
+    "edge_offset"
+   ],
+   "match": true
+  },
+  {
+   "heart": "phantom",
+   "motion": "nonrigid",
+   "module_final": "rigid",
+   "module_stages": [
+    "R0",
+    "rigid",
+    "affine",
+    "rigid10"
+   ],
+   "replay_final": "rigid",
+   "replay_stages": [
+    "R0",
+    "rigid",
+    "affine",
+    "rigid10"
+   ],
+   "module_tre": 1.511,
+   "replay_tre": 1.511,
+   "module_phase_flags": [
+    "rim_dark"
+   ],
+   "replay_phase_flags": [
+    "rim_dark"
+   ],
+   "match": true
+  },
+  {
+   "heart": "s0230",
+   "motion": "none",
+   "module_final": "rigid",
+   "module_stages": [
+    "R0",
+    "rigid",
+    "affine",
+    "rigid10"
+   ],
+   "replay_final": "rigid",
+   "replay_stages": [
+    "R0",
+    "rigid",
+    "affine",
+    "rigid10"
+   ],
+   "module_tre": 0.107,
+   "replay_tre": 0.107,
+   "module_phase_flags": [
+    "rim_dark"
+   ],
+   "replay_phase_flags": [
+    "rim_dark"
+   ],
+   "match": true
+  },
+  {
+   "heart": "s0230",
+   "motion": "rigid",
+   "module_final": "rigid",
+   "module_stages": [
+    "R0",
+    "rigid",
+    "affine",
+    "rigid10"
+   ],
+   "replay_final": "rigid",
+   "replay_stages": [
+    "R0",
+    "rigid",
+    "affine",
+    "rigid10"
+   ],
+   "module_tre": 0.093,
+   "replay_tre": 0.093,
+   "module_phase_flags": [
+    "rim_dark"
+   ],
+   "replay_phase_flags": [
+    "rim_dark"
+   ],
+   "match": true
+  },
+  {
+   "heart": "s0230",
+   "motion": "scale",
+   "module_final": "rigid",
+   "module_stages": [
+    "R0",
+    "rigid",
+    "affine",
+    "rigid10"
+   ],
+   "replay_final": "rigid",
+   "replay_stages": [
+    "R0",
+    "rigid",
+    "affine",
+    "rigid10"
+   ],
+   "module_tre": 2.627,
+   "replay_tre": 2.627,
+   "module_phase_flags": [
+    "rim_dark",
+    "edge_offset"
+   ],
+   "replay_phase_flags": [
+    "rim_dark",
+    "edge_offset"
+   ],
+   "match": true
+  },
+  {
+   "heart": "s0230",
+   "motion": "aniso3",
+   "module_final": "rigid",
+   "module_stages": [
+    "R0",
+    "rigid",
+    "affine",
+    "rigid10"
+   ],
+   "replay_final": "rigid",
+   "replay_stages": [
+    "R0",
+    "rigid",
+    "affine",
+    "rigid10"
+   ],
+   "module_tre": 0.83,
+   "replay_tre": 0.83,
+   "module_phase_flags": [
+    "rim_dark"
+   ],
+   "replay_phase_flags": [
+    "rim_dark"
+   ],
+   "match": true
+  },
+  {
+   "heart": "s0230",
+   "motion": "aniso6",
+   "module_final": "rigid",
+   "module_stages": [
+    "R0",
+    "rigid",
+    "affine",
+    "rigid10"
+   ],
+   "replay_final": "rigid",
+   "replay_stages": [
+    "R0",
+    "rigid",
+    "affine",
+    "rigid10"
+   ],
+   "module_tre": 1.724,
+   "replay_tre": 1.724,
+   "module_phase_flags": [
+    "rim_dark"
+   ],
+   "replay_phase_flags": [
+    "rim_dark"
+   ],
+   "match": true
+  },
+  {
+   "heart": "s0230",
+   "motion": "phase",
+   "module_final": "rigid10",
+   "module_stages": [
+    "R0",
+    "rigid",
+    "affine",
+    "rigid10"
+   ],
+   "replay_final": "rigid10",
+   "replay_stages": [
+    "R0",
+    "rigid",
+    "affine",
+    "rigid10"
+   ],
+   "module_tre": 3.784,
+   "replay_tre": 3.784,
+   "module_phase_flags": [
+    "rim_dark",
+    "edge_offset"
+   ],
+   "replay_phase_flags": [
+    "rim_dark",
+    "edge_offset"
+   ],
+   "match": true
+  },
+  {
+   "heart": "s0230",
+   "motion": "phase_neg",
+   "module_final": "rigid10",
+   "module_stages": [
+    "R0",
+    "rigid",
+    "affine",
+    "rigid10"
+   ],
+   "replay_final": "rigid10",
+   "replay_stages": [
+    "R0",
+    "rigid",
+    "affine",
+    "rigid10"
+   ],
+   "module_tre": 0.527,
+   "replay_tre": 0.527,
+   "module_phase_flags": [
+    "edge_offset"
+   ],
+   "replay_phase_flags": [
+    "edge_offset"
+   ],
+   "match": true
+  },
+  {
+   "heart": "s0230",
+   "motion": "nonrigid",
+   "module_final": "affine",
+   "module_stages": [
+    "R0",
+    "rigid",
+    "affine",
+    "rigid10"
+   ],
+   "replay_final": "affine",
+   "replay_stages": [
+    "R0",
+    "rigid",
+    "affine",
+    "rigid10"
+   ],
+   "module_tre": 1.48,
+   "replay_tre": 1.48,
+   "module_phase_flags": [
+    "rim_dark"
+   ],
+   "replay_phase_flags": [
+    "rim_dark"
+   ],
+   "match": true
+  }
+ ]
+}

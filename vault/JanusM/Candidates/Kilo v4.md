@@ -16,8 +16,8 @@ issue: christianGRogers/Asclepius#251
 
 - **Item 1: the shipped chain through the shared benchmark.**
   - **P-G survives** the #179 strike rules under JA51's chain as shipped (§1.3). P-J survives, and P-K stays
-    struck. This holds on my rows and on Juliet's full replication (504 cases), each scored under my
-    pre-registered rules. Golf's canonical rows decide (§1.3).
+    struck. This holds on Golf's canonical rows (441 cases at CNR 5; P-G worst sensitivity 0.915, specificity
+    0.985), and on my rows and Juliet's replication. The three runs agree case by case (§1.3).
   - The shipped module fails parity on 58 of 120 real-heart cases, on **E-D only**. The cause is one constant:
     `column_min_bins` 6 against the benchmark's 4 (§1.5, PS4-K1).
   - **The phase check is the weak link (§1.4).** Both the provisional cuts and cuts fitted on aligned (`none`)
@@ -87,10 +87,22 @@ changed nothing under `src/`. No image is committed, and nothing here is a reque
 ### 1.3 The strike (P-G under JA54)
 
 **Deciding, under the #179 rules (CNR 5; none and rigid; every blood level), on Golf's canonical `chain`:**
-- Golf's rows were not on his branch when this was written (05:30 UTC, 31 October).
-- `golf_rows.py` scores them with the same code, and I post the result on #251 when they land.
-- The three replications already agree (below, and Juliet on #251: P-G minimum sensitivity 0.915, specificity
-  ≥ 0.985, scar-free ≥ 0.989).
+- **P-G is not struck. P-J is not struck. P-K is struck.** Golf's rows (`bench_lie/results_v3.jsonl.gz` at 370fbbd)
+  give 441 cases at CNR 5. Golf's own scorer and my `golf_rows.py` agree.
+
+  | Rule | worst sensitivity | worst specificity | worst scar-free specificity | worst spill |
+  |---|---|---|---|---|
+  | P-G | 0.915 | 0.985 | 0.989 | 0.012 |
+  | P-J | 0.888 | 0.958 | 0.972 | 0.125 |
+  | P-K | struck: specificity 0.885 (above/rigid); scar-free specificity 0.006–0.115 | | | |
+
+- **The same verdict holds** on my `chain_ja51_prov` and `chain_ja51_fit`, on (a), (b) and (k) at both cut sets,
+  and on oracle.
+- **Under (c) at the provisional cuts, P-G *is* struck** (specificity 0.929, below/rigid). At the fit cuts the
+  whole menu fails, so rule 1c applies.
+- **Determinism.** On the 96 cases my rows share with Golf's, every stage TRE agrees exactly and the QC values agree
+  to 5 × 10⁻⁵. Golf's chain TREs on the v2 motions equal Juliet's to the third decimal. The three containers
+  produce the same benchmark.
 
 **On my rows, `chain_ja51_prov` (the deciding arm of my pre-registration):**
 
@@ -252,7 +264,19 @@ Every rule includes 4(a), the sanity bound, and every NaN rejects. "Normalised" 
 | (c) | 2.86 (2.78), **ineligible** | 61 % (59 % prov) | 78 |
 | (k) | 2.38 (2.36) | 0 % | 141 |
 
-**The choice is (b) on both row sets, at both cut sets.** Golf's canonical rows are pending (§1.3).
+**Golf's canonical rows** (pooled over rigid, scale and Golf's `aniso` (3 / 3 / 6 %, random sign), as
+pre-registered):
+
+| Rule | pooled p90, fit (prov) | rigid: kept when worse | wrong decisions (fit) |
+|---|---|---|---|
+| JA51 as written | 3.53 (3.53) | 0 % | 109 |
+| (a) | 3.53 (3.53) | 0 % | 109 |
+| **(b)** | **2.98 (2.98)** | 0 % | **75** |
+| (c) | 3.46 (3.46), **ineligible** | 61 % (59 % prov) | 69 |
+| (k) | 3.06 (3.06) | 0 % | 86 |
+
+**The choice is (b) on all three row sets, at both cut sets.** On Golf's `aniso`, (b) halves the chain's median
+TRE (1.44 against JA51's 2.80 mm).
 
 - **(a) = JA51 on every case here.** `rim_dark` is not what blocks affine on these hearts. The wall shares are.
 - **(b) is the best eligible rule at both cut sets,** and it never keeps a worse affine on rigid motion. It still
@@ -529,7 +553,7 @@ offline scripts that call the guard first.
 |---|---|
 | `run_shipped.py`, `bench_kilo_r4.py` → `results_kilo_r4.jsonl.gz` | The replication: the shipped chain with every stage forced, plus oracle QC and one live check per heart |
 | `score_shipped.py` → `scores_kilo_r4.json` | Kilo's pre-registered scoring: strike, the five affine rules × two cut sets, phase flags |
-| `golf_rows.py` → `scores_kilo_on_golf_v3.json`, `scores_kilo_on_juliet_v3.json` | The same scoring on Golf's canonical v3 rows (when pushed) and on Juliet's replication rows (`main_juliet`) |
+| `golf_rows.py` → `scores_kilo_on_golf_v3.json`, `scores_kilo_on_juliet_v3.json` | The same scoring on Golf's canonical v3 rows (370fbbd) and on Juliet's replication rows (`main_juliet`) |
 | `k1_phantom_rules.py` → `k1_phantom_rules.json` | The affine rules on the shipped tests' phantom |
 | `k2_parity_columns.py` → `k2_parity_columns4.json` | `module_parity` with `column_min_bins = 4` (in-process) |
 | `module_parity_replication.json` | `bench_lie/module_parity.py` run unchanged (replicates Golf's canonical file) |

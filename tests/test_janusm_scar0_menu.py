@@ -216,3 +216,74 @@ def test_ps3_s7_offline_script_guards_first(parity_module, monkeypatch, tmp_path
         M.main()
     assert calls == ["guard"]
     assert not (tmp_path / "module_parity.json").exists()
+
+
+# ------------------------------------------------------------------------------------------ PS4-S1
+def thin_wall_phantom(scar_layers, *, thin=5, thick=10, ny=24, per=4, noise=5.0, seed=0):
+    """A flat wall along x, the cavity below it, with oracle geometry for both menu.grade and scar0.
+
+    Along y the wall is ``thin`` voxels thick in the first half of the lines and ``thick`` in the
+    rest, so a thin column spans ``thin`` depth bins of u and a thick one 10. Segment s is a strip
+    along z; its scar fills the first ``scar_layers[s - 1]`` layers from the endocardium (capped at
+    the wall). A column is 2 y-lines (phi, 3 degrees each) x 2 z-lines (s, 1 mm each), the same
+    column for the benchmark (phi, s) and the module (its column id from phi, s as in
+    ``module_parity.oracle_geometry``). Spacing 1 mm."""
+    nx, x0 = thick + 6, 3
+    nz = 17 * per
+    i, j, k = np.meshgrid(np.arange(nx), np.arange(ny), np.arange(nz), indexing="ij")
+    wall = np.where(j < ny // 2, thin, thick)
+    myo = (i >= x0) & (i < x0 + wall)
+    cav = i < x0
+    seg = np.where(myo, k // per + 1, 0).astype(np.int16)
+    u = np.where(myo, (i - x0 + 0.5) / wall, np.nan).astype(np.float32)
+    phi = (3.0 * (j // 2) + 1.5).astype(np.float32)
+    s = (k + 0.5).astype(np.float32)
+    col = np.full(myo.shape, -1, np.int64)
+    col[myo] = np.floor(phi[myo] / 3).astype(np.int64) * 1_000_000 + (
+        np.floor(s[myo] / 2).astype(np.int64) + 100_000
+    )
+    depth = np.array([0] + list(scar_layers))[seg]
+    lie = np.full(myo.shape, 85.0, np.float32)
+    lie[myo & (i - x0 < depth)] = 150.0
+    lie += np.random.default_rng(seed).normal(0, noise, myo.shape).astype(np.float32)
+    car = CarriedGeometry(myo, cav, seg, u, col, np.full(3, 1.0), np.eye(4))
+    oracle = {"myo": myo, "cav": cav, "seg": seg, "u": u, "phi": phi, "s": s}
+    return lie, car, oracle, j < ny // 2
+
+
+def test_ps4_s1_thin_wall_phantom_e_d_parity_with_column_min_4(parity_module):
+    """JA80: the module's E-D column minimum is the benchmark's, 4 depth bins. On a wall whose thin
+    columns span 5 bins (counted at 4, dropped at 6), the minimum changes E-D, and with 4 the module
+    and menu.grade agree within 0.02 on ev, ed and pg_share in every segment."""
+    M = parity_module
+    assert S.JA30.column_min_bins == 4
+    k = [0] * 11 + [3, 5, 2, 0, 0, 0]
+    lie, car, oracle, thin = thin_wall_phantom(k)
+
+    # the phantom is thin where it must be: those columns span 4-5 depth bins
+    myo = car.myo
+    for side, want in ((thin, {5}), (~thin, {10})):
+        sel = myo & side
+        cid = car.column[sel]
+        b = np.clip(np.floor(car.u[sel] * 10), 0, 9).astype(np.int64)
+        per_col = {c: len(set(b[cid == c])) for c in np.unique(cid)}
+        assert set(per_col.values()) == want
+
+    mod4 = M.module_values(lie, car)
+    six = dataclasses.replace(S.JA30, column_min_bins=6)
+    out6 = S.scar0(lie, car, status=SC.PASSED, constants=six)
+    ed6 = np.full(17, np.nan)
+    for s_, row in out6.segments.items():
+        if row["graded"]:
+            ed6[s_ - 1] = row["extent_ed"]
+    scarred = [i for i, d in enumerate(k) if d]
+    # 4 and 6 give different E-D on the scarred segments (6 drops the thin, more transmural columns)
+    assert np.all(np.abs(mod4["ed"][scarred] - ed6[scarred]) > 0.05), (mod4["ed"], ed6)
+
+    g = M._menu().grade(lie, oracle)
+    res = M.compare({key: g[key] for key in M.KEYS}, mod4)
+    for key, r in res.items():
+        assert r["n"] == 17 and r["n_one_sided"] == 0, (key, r)
+        assert r["max_abs_diff"] <= M.TOL, (key, r)
+    # and the benchmark disagrees with the old minimum
+    assert np.nanmax(np.abs(g["ed"][scarred] - ed6[scarred])) > M.TOL

@@ -31,7 +31,10 @@ it within Monte-Carlo error.
 **Seal size** (:func:`seal_size`, JA57, Round 3 ruling): max(120; N for >= 270 scarred segments;
 N for >= 80 % power on claim 1, and on claim 2 too if development's CT bin agreement is within
 0.03 of its anchor), capped at 240, from development's measured inputs. Round 3's cells (Juliet E9,
-Kilo E9, Golf E10, #187) are reproduced in ``tests/test_janusm_scar_ps3_power.py``.
+Kilo E9, Golf E10, #187) are reproduced in ``tests/test_janusm_scar_ps3_power.py``. JA86 (Round 4)
+adds 2 000 sims per N, the interpolated N80 and its MC band, enrolment inflated by the phase share,
+and the power the seal delivers (``power_at_seal``, ``underpowered``); its checks are in
+``tests/test_janusm_scar_ps4_power.py``.
 
 Usage::
 
@@ -44,12 +47,15 @@ from __future__ import annotations
 
 import argparse
 import json
+import logging
 import math
 from typing import Callable, Dict, Iterable, List, Mapping, Optional, Sequence
 
 import numpy as np
 
 from janusm.scar import scoring as S
+
+log = logging.getLogger(__name__)
 
 # -------------------------------------------------------------------------------------------------
 # Cohort generators. Each returns (ref, ct): (N, segments) Kim bins; ct may hold S.NOT_GRADED.
@@ -393,6 +399,38 @@ SEAL_FLOOR = 120
 SEAL_SEGMENTS = 270
 CLAIM2_GAP = -0.03  # development CT bin agreement - development anchor must be >= this
 SEAL_N_GRID = (120, 140, 160, 180, 200, 220, 240)
+#: JA86: simulated studies per N; 300-400 move the grid N by 20-40 between seeds (Kilo).
+SEAL_SIMS = 2000
+
+
+def interp_n80(
+    curve: Mapping[int, float], target: float = 0.80, shift: float = 0.0, sims: Optional[int] = None
+) -> Optional[float]:
+    """Interpolated N80 (Golf R4 E12, ``Golf/r4/power_r4_table.py``): the first upward crossing of
+    ``target``, linear between the two grid points that bracket it.
+
+    With ``shift`` and ``sims``, every grid power first moves by ``shift`` Monte-Carlo SE
+    (sqrt(p(1 - p) / sims)); +2 and -2 give the ends of the MC band. The grid's first N if power is
+    already at the target there; None if the curve never reaches it.
+    """
+    ns = sorted(int(k) for k in curve)
+    if not ns:
+        return None
+    p = []
+    for n in ns:
+        v = float(curve[n])
+        se = math.sqrt(max(v * (1 - v), 1e-9) / sims) if sims else 0.0
+        p.append(v + shift * se)
+    if p[0] >= target:
+        return float(ns[0])
+    for i in range(1, len(ns)):
+        if p[i] >= target and p[i - 1] < target:
+            return ns[i - 1] + (target - p[i - 1]) / (p[i] - p[i - 1]) * (ns[i] - ns[i - 1])
+    return None
+
+
+def _round1(x: Optional[float]) -> Optional[float]:
+    return None if x is None else round(float(x), 1)
 
 
 def seal_size(
@@ -409,26 +447,45 @@ def seal_size(
     dev_ct_agreement: Optional[float] = None,
     dev_anchor: Optional[float] = None,
     previous: Optional[int] = None,
+    phase_share: float = 0.0,
     n_grid: Iterable[int] = SEAL_N_GRID,
-    sims: int = 400,
+    sims: int = SEAL_SIMS,
     boot: int = 400,
     seed: int = 57,
     target: float = 0.80,
     cap: int = SEAL_CAP,
 ) -> Dict[str, object]:
-    """JA57's seal size: max(120; N for >= 270 scarred segments; N for >= 80 % power), capped.
+    """JA57's seal size, with JA86's stability, phase share and stated power.
 
-    Every input is a development measurement: the not-graded rate ``p_fail``, the mean scarred
-    segments per scar patient, the bin-error rate ``extent_error`` (scalar or per LGE bin 1-4),
-    sensitivity by bin, the bin shares ``bin_w`` (bin-1 share first), clustering ``tau`` and the
-    target ``enrich``. Studies are simulated with Golf's cohort (K = 1 + Poisson(mean - 1)) and
-    scored with JA55's split accounting and yield bar.
+    **Rule (JA57).** max(120; N for >= 270 scarred segments; N for >= 80 % power), capped at 240,
+    and it only grows. Every input is a development measurement: the not-graded rate ``p_fail``,
+    the mean scarred segments per scar patient, the bin-error rate ``extent_error`` (scalar or per
+    LGE bin 1-4), sensitivity by bin, the bin shares ``bin_w`` (bin-1 share first), clustering
+    ``tau`` and the target ``enrich``. Studies are simulated with Golf's cohort (K = 1 +
+    Poisson(mean - 1)) and scored with JA55's split accounting and yield bar.
 
     The power target is claim 1 (presence). Claim 2 (the Kim bin) enters it only if
     ``dev_ct_agreement - dev_anchor >= -0.03`` and the anchor can validate (>= 0.60); if the gap is
     larger, ``scar1_triggered`` is True (JA57 extends JA31's trigger) and the size stays on
-    presence. The size is capped at 240 and only grows: it is at least ``previous``.
+    presence.
+
+    **Stability (JA86).** ``sims`` defaults to 2 000 studies per N. Beside the grid N
+    (``n_power``), ``n80_interp`` is the interpolated N80 of the sizing curve and ``n80_mc_band``
+    its +/- 2 MC-SE band (:func:`interp_n80`); both are logged.
+
+    **Phase share (JA86).** Power, the floor and the 270 segments are on **analysed** patients
+    (``seal_analysed``). Enrolment is ``seal_enrolled = ceil(analysed / (1 - phase_share))``, with
+    ``phase_share`` development's phase-unmatched share; the 240 cap and ``previous`` apply to
+    enrolment. ``seal`` is the enrolment; with ``phase_share = 0`` it is JA57's seal unchanged.
+
+    **Stated power (JA86).** ``power_at_seal`` is the sizing claim's power at the analysed
+    patients the (capped) enrolment delivers, ``floor(seal_enrolled * (1 - phase_share))``; it is
+    read off the curve when that N is on the grid and simulated (same settings) otherwise.
+    ``underpowered`` is ``power_at_seal < target``; then no seal patient is graded until the lead
+    has answered LQ40 (:func:`janusm.scar.registration.seal_grading_allowed`).
     """
+    if not 0.0 <= phase_share < 1.0:
+        raise ValueError(f"phase_share must be in [0, 1), not {phase_share!r}")
     lam = max(segs_per_scar_patient - 1.0, 0.0)
     n_seg = patients_for_scarred_segments(SEAL_SEGMENTS, enrich, segs_per_scar_patient)
     gap = (
@@ -449,10 +506,15 @@ def seal_size(
         bin_tau=bin_tau,
         p_fail=p_fail,
     )
+
+    def _claims(n: int, sd: int) -> Dict[str, Optional[float]]:
+        st = simulate_studies(golf_cohort, n, sims, boot, sd, itd_mode="split", **params)
+        return claim_power(st, dev_anchor if claim2 else None)
+
+    grid = sorted(n_grid)
     curve_presence, curve_kim = {}, {}
-    for i, n in enumerate(sorted(n_grid)):
-        st = simulate_studies(golf_cohort, n, sims, boot, seed + i, itd_mode="split", **params)
-        cp = claim_power(st, dev_anchor if claim2 else None)
+    for i, n in enumerate(grid):
+        cp = _claims(n, seed + i)
         curve_presence[n] = cp["presence"]
         if claim2:
             curve_kim[n] = cp["kim_bin"]
@@ -460,10 +522,37 @@ def seal_size(
     n_kim = _first_n_staying_above(curve_kim, target) if claim2 else None
     powered = [n_presence] + ([n_kim] if claim2 else [])
     need = None if None in powered else max([SEAL_FLOOR, n_seg] + powered)
-    capped = need is None or need > cap
-    seal = cap if capped else need
+
+    # JA86: the sizing curve is claim 2's joint power when claim 2 is powered (it implies claim 1)
+    curve = curve_kim if claim2 else curve_presence
+    n80 = interp_n80(curve, target)
+    band = [_round1(interp_n80(curve, target, sh, sims)) for sh in (+2, -2)]
+
+    keep = 1.0 - phase_share
+    enrol_need = None if need is None else int(math.ceil(need / keep - 1e-9))
+    capped = enrol_need is None or enrol_need > cap
+    enrolled = cap if capped else enrol_need
     if previous is not None:
-        seal = min(max(seal, previous), cap)
+        enrolled = min(max(enrolled, previous), cap)
+    analysed_at_seal = int(math.floor(enrolled * keep + 1e-9))
+    if analysed_at_seal in curve:
+        power_at_seal, power_source = float(curve[analysed_at_seal]), "grid"
+    else:
+        cp = _claims(analysed_at_seal, seed + len(grid))
+        power_at_seal = float(cp["kim_bin"] if claim2 else cp["presence"])
+        power_source = "simulated"
+    underpowered = bool(power_at_seal < target)
+    log.info(
+        "seal_size: grid N80 %s, interpolated N80 %s (MC band %s), seal %d enrolled / %d analysed, "
+        "power at seal %.3f%s",
+        n_kim if claim2 else n_presence,
+        _round1(n80),
+        band,
+        enrolled,
+        analysed_at_seal,
+        power_at_seal,
+        " (underpowered)" if underpowered else "",
+    )
     return {
         "inputs": {
             "p_fail": p_fail,
@@ -475,6 +564,7 @@ def seal_size(
             "tau": tau,
             "dev_ct_agreement": dev_ct_agreement,
             "dev_anchor": dev_anchor,
+            "phase_share": phase_share,
         },
         "n_segments_270": n_seg,
         "n_floor": SEAL_FLOOR,
@@ -485,10 +575,20 @@ def seal_size(
         "n_power_kim_bin": n_kim,
         "power_presence": {str(k): v for k, v in curve_presence.items()},
         "power_kim_bin": {str(k): v for k, v in curve_kim.items()},
+        "sizing_claim": "kim_bin" if claim2 else "presence",
+        "n80_grid": n_kim if claim2 else n_presence,
+        "n80_interp": _round1(n80),
+        "n80_mc_band": band,
         "n_required": need,
+        "seal_analysed": need,
+        "seal_enrolled": int(enrolled),
+        "analysed_at_seal": analysed_at_seal,
         "cap": cap,
         "capped": capped,
-        "seal": int(seal),
+        "seal": int(enrolled),
+        "power_at_seal": power_at_seal,
+        "power_at_seal_source": power_source,
+        "underpowered": underpowered,
         "sims": sims,
         "boot": boot,
     }

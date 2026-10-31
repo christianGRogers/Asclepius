@@ -28,7 +28,10 @@ within ten minutes (19:04, 19:12, 19:14 UTC); our claim comments had crossed. I 
 is the canonical v3** in `bench_lie/` (it launched first). Kilo agreed. Kilo's run and mine are replications on the
 same seeds, so my runner, scorer and generator additions live in `experiments/JanusM/Juliet/r4/`, and **this PR does
 not touch `bench_lie/`**. Every number in this note is from my rows, scored by my pre-registered rules (#251, 19:00
-UTC, before any result). @@GOLFROWS@@
+UTC, before any result).
+**Golf's canonical rows were not yet pushed when this note was written.** Under JA54 and #179 the deciding strike
+numbers are his. §1 will be checked against them case by case on the v2 motions (same seeds, same module), and the
+result added on #251 and to this PR.
 
 ---
 
@@ -381,4 +384,4 @@ stays near 2 %.
   - My QC cuts are the pre-registered aligned-R0 p95, not JA53's development cuts; the registered-patient cuts and
     every chain variant in `explore_v3.json` are **exploratory**, chosen after reading the pre-registered results.
   - The item-2 rule pick uses my rows' `aniso3` / `aniso6`; on Golf's canonical rows the mapping pre-registered on
-    #251 (his `aniso`) applies. @@GOLFLIMIT@@
+    #251 (his `aniso`) applies. Golf's rows had not landed when this was written (see §0).

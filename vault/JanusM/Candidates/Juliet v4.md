@@ -53,7 +53,9 @@ UTC, before any result). @@GOLFROWS@@
   `QC.passes`, `qc_rule_accepts`, `normalised_max` and logged `affine_sanity`. **QC cuts** (pre-registered): p95 of the
   module's R0 QC on `none` cases of the other half of hearts, per blood level. `rim_dark`'s phase cut = its gate cut;
   edge offset 0.6 mm.
-- **Replay check** (`replay_check.py`): `register_lie` run end to end on @@REPLAY@@.
+- **Replay check** (`replay_check.py`): `register_lie` run end to end on the phantom and one heart, 8 motions each, blood
+  equal, with the same cuts and seeds: **16 of 16 match** the replay (final stage, stages run, TRE to 0.001 mm, and
+  phase flags), including one `phase` case that the module itself sends to rigid10 at 3.78 mm.
 
 ### 1.2 Strike (#179's rules, unchanged; JA54)
 

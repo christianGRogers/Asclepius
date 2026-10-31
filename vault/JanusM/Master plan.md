@@ -20,6 +20,7 @@ Round 3 summary below differ, Round 4 governs.
   either it passes QC or |log det A| ≥ 0.02 (Golf's (g)). The PS3-S3 test's log-det sign is corrected.
 - **Fallback (JA82):** the edge offset is checked on the last 4 mm stage; a flag skips the 10 mm fallback. This ships
   only if a replay on the v3 rows meets PS4-S5's numbers.
+- **Fallback, settled (JA88, [[Janus-M Round 4 paired-scar JA82 addendum]], #266):** the replay missed, so JA51 step 5 ships as is, the skip stays off, routing reads the final stage only, and PS4-S10 reports unrouted 4 mm flags on development.
 - **QC cuts (JA83):** provisional cuts come from **registered** benchmark cases (`scores_v3.json` →
   `qc_cuts_registered`), in a file that declares its QC definitions. B-spline is not opened as configured.
 - **Phase (JA84–JA85):**

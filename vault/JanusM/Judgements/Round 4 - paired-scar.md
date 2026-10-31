@@ -66,7 +66,7 @@ judge holds them to that.
 - **Determinism.**
   - Kilo reports identical stage TREs on the 96 cases his rows share with Golf's. The judge did not repeat that
     row-by-row match.
-  - Juliet's follow-up (#259, branch commit `722aca3`, `Juliet/r4/golf_compare.json`) matches 315 shared cases. Every
+  - Juliet's follow-up (#259, merged; `Juliet/r4/golf_compare.json`) matches 315 shared cases. Every
     stage's TRE and edge offset agree exactly, and QC agrees to ≤ 0.0001. Her menu values differ only through the
     carry used for grading (`menu.carry` against the module's `carry`).
   - Her pre-registered scorer on Golf's rows (`scores_on_golf_rows.json`) gives the same strike verdicts and minima:

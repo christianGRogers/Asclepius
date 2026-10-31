@@ -79,6 +79,24 @@ def fit_cuts(rows):
     return cuts
 
 
+def fit_cuts_registered(rows, tre_pass=1.0):
+    """JA53's development definition, emulated (post-hoc, reported only): p95 of each shipped QC value over
+    *registered, phase-matched, reader-passed* cases -- rigid4 on motions none and rigid with TRE < 1 mm standing in
+    for the reader's pass -- from the other half of the hearts, per blood x CNR. rim_dark's phase cut is the same p95.
+    """
+    acc = defaultdict(lambda: defaultdict(list))
+    for r in rows:
+        a = r["arms"]["rigid4"]
+        if r["motion"] in STRIKE_MOTIONS and a.get("tre_mm") is not None and a["tre_mm"] < tre_pass:
+            for k in SHIP_QC:
+                if a["shipped"].get(k) is not None:
+                    acc[(half(r["heart"]), r["blood"], r["cnr"])][k].append(a["shipped"][k])
+    cuts = {}
+    for (hh, b, c), d in acc.items():
+        cuts[(1 - hh, b, c)] = R.QCCuts(*[float(np.percentile(d[k], 95)) for k in SHIP_QC])
+    return cuts
+
+
 def accept(rule, rig, aff, cuts):
     """Whether affine4 replaces rigid4 under one candidate rule (rigid4 has already failed QC)."""
     # the sanity numbers are R.affine_sanity's, logged by run_v3 on the shipped affine matrix
@@ -131,12 +149,26 @@ def chain(r, cuts, rule, fallback="lowers"):
     return final
 
 
-def phase_flags(rec, cuts):
+def fit_phase_cuts(rows, rule="literal"):
+    """JA53's phase cut for rim_dark: p95 of the *final-stage* rim_dark over phase-matched cases (motions none and
+    rigid), from the other half of the hearts, per blood x CNR. Post-hoc, reported beside the shipped default
+    (QCCuts.max_rim_dark_phase None = the R0 QC cut), which is what `load_provisional_qc_cuts` gives."""
+    acc = defaultdict(list)
+    for r in rows:
+        if r["motion"] in STRIKE_MOTIONS:
+            v = r["arms"][f"chain_{rule}"]["shipped"].get("rim_dark")
+            if v is not None:
+                acc[(half(r["heart"]), r["blood"], r["cnr"])].append(v)
+    return {(1 - hh, b, c): float(np.percentile(v, 95)) for (hh, b, c), v in acc.items()}
+
+
+def phase_flags(rec, cuts, rim_cut=None):
     s = rec["shipped"]
+    rim_cut = cuts.rim_dark_phase if rim_cut is None else rim_cut
     ev = s.get("contrast") is not None and s["contrast"] >= R.MIN_PHASE_CONTRAST_SD
     f = []
     if ev:
-        if s.get("rim_dark") is not None and s["rim_dark"] > cuts.rim_dark_phase:
+        if s.get("rim_dark") is not None and s["rim_dark"] > rim_cut:
             f.append("rim_dark")
         if s.get("edge_offset_mm") is not None and abs(s["edge_offset_mm"]) > cuts.max_edge_offset_mm:
             f.append("edge_offset")
@@ -276,6 +308,7 @@ def main(path=None):
     errors = [{k: r.get(k) for k in ("heart", "blood", "cnr", "motion", "case_error")} for r in rows if "arms" not in r]
     rows = [r for r in rows if "arms" in r]
     cuts = fit_cuts(rows)
+    cuts_reg = fit_cuts_registered(rows)
     stage_counts = {}
     for r in rows:
         c = cuts[(half(r["heart"]), r["blood"], r["cnr"])]
@@ -285,11 +318,18 @@ def main(path=None):
             r["stage"][rule] = st
             r["arms"][f"chain_{rule}"] = r["arms"][st]
         r["arms"]["chain"] = r["arms"]["chain_literal"]
+        c2 = cuts_reg.get((half(r["heart"]), r["blood"], r["cnr"]))
+        if c2 is not None:                           # post-hoc: JA53-style registered cuts, report only
+            for rule in ("literal", "b", "never"):
+                st = chain(r, c2, rule)
+                r["stage"][f"{rule}_regcuts"] = st
+                r["arms"][f"chain_{rule}_regcuts"] = r["arms"][st]
         for fb in ("pass", "none"):                   # post-hoc (after the first partial results), report only
             st = chain(r, c, "literal", fb)
             r["stage"][f"literal_fb_{fb}"] = st
             r["arms"][f"chain_literal_fb_{fb}"] = r["arms"][st]
-    chain_arms = [f"chain_{x}" for x in RULES] + ["chain_literal_fb_pass", "chain_literal_fb_none"]
+    chain_arms = [f"chain_{x}" for x in RULES] + ["chain_literal_fb_pass", "chain_literal_fb_none",
+                                                  "chain_literal_regcuts", "chain_b_regcuts", "chain_never_regcuts"]
     arms = ["oracle", "R0", "rigid4", "affine4", "rigid10", "bspline"] + chain_arms
     taus = fit_taus(rows, arms)
     out = {"version": 3, "scar_version": R.SCAR_VERSION, "n_cases": len(rows),
@@ -299,6 +339,8 @@ def main(path=None):
                                       if "ungradable" in v and not a.startswith("chain")}),
            "qc_cuts": {f"{k[0]}|{k[1]}|{k[2]}": dict(zip(SHIP_QC, np.round(v.values(), 4).tolist()))
                        for k, v in sorted(cuts.items())},
+           "qc_cuts_registered": {f"{k[0]}|{k[1]}|{k[2]}": dict(zip(SHIP_QC, np.round(v.values(), 4).tolist()))
+                                  for k, v in sorted(cuts_reg.items())},
            "taus": {f"{k[0]}|{k[1]}|{k[2]}|{k[3]}": round(v, 4) for k, v in sorted(taus.items())}}
     # 1-2. registration: TRE per arm / chain and motion; stage counts
     reg = []
@@ -308,7 +350,8 @@ def main(path=None):
         for arm in arms:
             row[arm] = tre_stats(rows, arm, lambda r, m=m: r["motion"] == m)
         row["stages"] = {rule: {s: sum(r["stage"][rule] == s for r in rr) for s in ("R0", "rigid4", "affine4", "rigid10")}
-                         for rule in list(RULES) + ["literal_fb_pass", "literal_fb_none"]}
+                         for rule in list(RULES) + ["literal_fb_pass", "literal_fb_none", "literal_regcuts",
+                                                    "b_regcuts", "never_regcuts"] if rule in rr[0]["stage"]}
         row["affine_sane"] = sum(bool(r["arms"]["affine4"]["shipped"]["sane"]) for r in rr)
         row["affine_better_tre"] = sum(r["arms"]["affine4"]["tre_mm"] < r["arms"]["rigid4"]["tre_mm"] for r in rr)
         row["R0_passes"] = sum(r["stage"]["literal"] == "R0" for r in rr)
@@ -365,15 +408,26 @@ def main(path=None):
     out["affine_rule"] = {"candidates": pick, "pick": chosen}
     # 5. phase step on each chain's final stage
     ph = {}
-    for rule in ("literal", chosen):
+    pcut = fit_phase_cuts(rows)
+    out["rim_dark_phase_cuts_ja53"] = {f"{k[0]}|{k[1]}|{k[2]}": round(v, 4) for k, v in sorted(pcut.items())}
+    for rule in ("literal", chosen, "literal_ja53cut", "literal_regcuts"):
         for m in MOTIONS:
             rr = [r for r in rows if r["motion"] == m]
             n_ev = n_any = n_rim = n_edge = 0
             offs = []
             for r in rr:
-                c = cuts[(half(r["heart"]), r["blood"], r["cnr"])]
-                rec = r["arms"][f"chain_{rule}"]
-                ev, f = phase_flags(rec, c)
+                key = (half(r["heart"]), r["blood"], r["cnr"])
+                c = cuts[key]
+                if rule == "literal_regcuts":
+                    c = cuts_reg[key]
+                    rec = r["arms"]["chain_literal_regcuts"]
+                    ev, f = phase_flags(rec, c)
+                elif rule == "literal_ja53cut":
+                    rec = r["arms"]["chain_literal"]
+                    ev, f = phase_flags(rec, c, pcut.get(key))
+                else:
+                    rec = r["arms"][f"chain_{rule}"]
+                    ev, f = phase_flags(rec, c)
                 n_ev += ev
                 n_any += bool(f)
                 n_rim += "rim_dark" in f
@@ -402,9 +456,13 @@ def main(path=None):
             clean([r["arms"]["chain_literal"]["shipped"].get("rim_dark") for r in rows if r["motion"] == "rigid"]))}
     # item 4: presence in the phase motions, flagged cases in / out (CNR 5, chain literal)
     st = {}
-    for m in ("phase", "phase_neg", "rigid"):
+    for m in ("phase", "phase_neg", "rigid", "none", "scale", "aniso"):
         for label, sel in (("all", lambda r: True), ("unflagged", lambda r: not r["phase_suspect"]["literal"]),
-                           ("flagged", lambda r: r["phase_suspect"]["literal"])):
+                           ("flagged", lambda r: r["phase_suspect"]["literal"]),
+                           ("unflagged_ja53cut", lambda r: not r["phase_suspect"]["literal_ja53cut"]),
+                           ("flagged_ja53cut", lambda r: r["phase_suspect"]["literal_ja53cut"]),
+                           ("unflagged_regcuts", lambda r: not r["phase_suspect"]["literal_regcuts"]),
+                           ("flagged_regcuts", lambda r: r["phase_suspect"]["literal_regcuts"])):
             p, _ = presence_table(rows, "chain_literal", taus, key=lambda r: r["blood"],
                                   select=lambda r, m=m, sel=sel: r["motion"] == m and r["cnr"] == 5 and sel(r))
             st[f"{m}|{label}"] = [{k: x[k] for k in ("key", "rule", "n_cases", "sens", "spec", "spec_scarfree_hearts",

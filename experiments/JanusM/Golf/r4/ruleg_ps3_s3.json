@@ -1,0 +1,20 @@
+{
+ "what": "PS3-S3 tests on the static-chest phantom with JA51 4(b) swapped for a candidate rule (ruleg_plugin.py), --runxfail",
+ "scar_version": "1.1.0",
+ "shipped_literal": {
+  "affine_rule_units": "pass",
+  "3_percent_scale_keeps_affine": "xfail (as shipped)",
+  "affine_that_increases_tre_is_rejected": "pass"
+ },
+ "rule_g": {
+  "affine_rule_units": "fail (the unit test encodes the literal rule)",
+  "3_percent_scale_keeps_affine": "fail on its last assertion only: log_det -0.081 > 0.03; aff.kept, normalised_qc_rule, final stage and TRE < rigid all pass",
+  "affine_that_increases_tre_is_rejected": "pass"
+ },
+ "rule_b": {
+  "affine_rule_units": "fail (literal rule)",
+  "3_percent_scale_keeps_affine": "fail at its first assertion: aff.kept False (normalised_qc_rule False); b rejects the correct affine on this phantom",
+  "affine_that_increases_tre_is_rejected": "pass"
+ },
+ "sign": "the module's transform maps the fixed LIE to the moving first pass, so a LIE heart 3 % larger gives det < 1 (log det -0.08); the test expects +0.089. It should assert abs(log_det) > 0.03."
+}

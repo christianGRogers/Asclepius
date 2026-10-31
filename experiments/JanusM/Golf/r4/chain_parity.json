@@ -1,0 +1,185 @@
+{
+ "n": 9,
+ "n_match": 9,
+ "max_abs_tre_diff_mm_when_match": 0.0,
+ "cases": [
+  {
+   "heart": "phantom",
+   "blood": "equal",
+   "cnr": 5,
+   "motion": "rigid",
+   "register_lie_final": "rigid10",
+   "assembled_final": "rigid10",
+   "match": true,
+   "register_lie_tre_mm": 0.181,
+   "assembled_tre_mm": 0.181,
+   "stages_run": [
+    "R0",
+    "rigid",
+    "affine",
+    "rigid10"
+   ],
+   "phase_flags": [
+    "rim_dark"
+   ]
+  },
+  {
+   "heart": "phantom",
+   "blood": "equal",
+   "cnr": 5,
+   "motion": "aniso",
+   "register_lie_final": "rigid4",
+   "assembled_final": "rigid4",
+   "match": true,
+   "register_lie_tre_mm": 2.583,
+   "assembled_tre_mm": 2.583,
+   "stages_run": [
+    "R0",
+    "rigid",
+    "affine",
+    "rigid10"
+   ],
+   "phase_flags": [
+    "rim_dark",
+    "edge_offset"
+   ]
+  },
+  {
+   "heart": "phantom",
+   "blood": "equal",
+   "cnr": 5,
+   "motion": "phase_neg",
+   "register_lie_final": "rigid4",
+   "assembled_final": "rigid4",
+   "match": true,
+   "register_lie_tre_mm": 0.158,
+   "assembled_tre_mm": 0.158,
+   "stages_run": [
+    "R0",
+    "rigid"
+   ],
+   "phase_flags": [
+    "edge_offset"
+   ]
+  },
+  {
+   "heart": "s0391",
+   "blood": "equal",
+   "cnr": 5,
+   "motion": "rigid",
+   "register_lie_final": "rigid4",
+   "assembled_final": "rigid4",
+   "match": true,
+   "register_lie_tre_mm": 0.31,
+   "assembled_tre_mm": 0.31,
+   "stages_run": [
+    "R0",
+    "rigid",
+    "affine",
+    "rigid10"
+   ],
+   "phase_flags": [
+    "rim_dark"
+   ]
+  },
+  {
+   "heart": "s0391",
+   "blood": "equal",
+   "cnr": 5,
+   "motion": "aniso",
+   "register_lie_final": "rigid4",
+   "assembled_final": "rigid4",
+   "match": true,
+   "register_lie_tre_mm": 2.774,
+   "assembled_tre_mm": 2.774,
+   "stages_run": [
+    "R0",
+    "rigid",
+    "affine",
+    "rigid10"
+   ],
+   "phase_flags": [
+    "rim_dark"
+   ]
+  },
+  {
+   "heart": "s0391",
+   "blood": "equal",
+   "cnr": 5,
+   "motion": "phase_neg",
+   "register_lie_final": "rigid4",
+   "assembled_final": "rigid4",
+   "match": true,
+   "register_lie_tre_mm": 0.327,
+   "assembled_tre_mm": 0.327,
+   "stages_run": [
+    "R0",
+    "rigid",
+    "affine",
+    "rigid10"
+   ],
+   "phase_flags": [
+    "edge_offset"
+   ]
+  },
+  {
+   "heart": "s1083",
+   "blood": "equal",
+   "cnr": 5,
+   "motion": "rigid",
+   "register_lie_final": "rigid4",
+   "assembled_final": "rigid4",
+   "match": true,
+   "register_lie_tre_mm": 0.156,
+   "assembled_tre_mm": 0.156,
+   "stages_run": [
+    "R0",
+    "rigid",
+    "affine",
+    "rigid10"
+   ],
+   "phase_flags": [
+    "rim_dark"
+   ]
+  },
+  {
+   "heart": "s1083",
+   "blood": "equal",
+   "cnr": 5,
+   "motion": "aniso",
+   "register_lie_final": "rigid4",
+   "assembled_final": "rigid4",
+   "match": true,
+   "register_lie_tre_mm": 1.836,
+   "assembled_tre_mm": 1.836,
+   "stages_run": [
+    "R0",
+    "rigid",
+    "affine",
+    "rigid10"
+   ],
+   "phase_flags": [
+    "rim_dark",
+    "edge_offset"
+   ]
+  },
+  {
+   "heart": "s1083",
+   "blood": "equal",
+   "cnr": 5,
+   "motion": "phase_neg",
+   "register_lie_final": "rigid4",
+   "assembled_final": "rigid4",
+   "match": true,
+   "register_lie_tre_mm": 0.193,
+   "assembled_tre_mm": 0.193,
+   "stages_run": [
+    "R0",
+    "rigid"
+   ],
+   "phase_flags": [
+    "edge_offset"
+   ]
+  }
+ ]
+}

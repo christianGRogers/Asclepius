@@ -73,7 +73,7 @@ class Submission14(AccessControlledModel):
         return doc
 
     def createSubmission(self, assignment, meta, fileId, warnings=(), needsReview=True,
-                         author=None, revisionOf=None):
+                         author=None, revisionOf=None, geometry=None):
         """Store one accepted upload.
 
         ``meta`` is a ``segqueue.protocol.SubmissionMeta``. The checksum stored
@@ -106,6 +106,9 @@ class Submission14(AccessControlledModel):
             'sizeBytes': meta.size_bytes,
             'annotationSeconds': meta.annotation_seconds,
             'voxelCounts': meta.voxel_counts,
+            # As the client reported it (source and segmentation grids). Recorded
+            # for scoring and audit only; nothing refuses a mismatch (#270).
+            'geometry': dict(geometry) if geometry else None,
             'slicerVersion': meta.slicer_version,
             'extensionVersion': meta.extension_version,
             'annotatorNote': meta.annotator_note,

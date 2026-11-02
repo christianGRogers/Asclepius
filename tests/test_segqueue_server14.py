@@ -475,16 +475,26 @@ def _readyProject(world):
     prelabels.runAttach(str(_predictions(world, "v1")), "v1", world.admin, out=lambda _: None)
 
 
-def _submit(world, queue, user, info, array, counts=None):
+def _submit(world, queue, user, info, array, counts=None, geometry=None):
     """Upload ``array`` as Slicer can store it -- an NRRD with the slice order
     reversed against the CT, same physical positions -- and submit it."""
+    _as(user)
+    queue.downloadCase(caseId=info["caseId"])      # ASSIGNED -> DOWNLOADED
+    fileDoc, meta = _uploadSeg(world, user, info["caseName"], array, counts)
+    _as(user)
+    extra = {} if geometry is None else {"geometry": json.dumps(geometry)}
+    return queue.submit(assignmentId=info["assignmentId"], fileId=str(fileDoc["_id"]),
+                        meta=json.dumps(meta), clientProtocol=16, **extra)
+
+
+def _uploadSeg(world, user, caseName, array, counts=None):
+    """Write ``array`` as a ``.seg.nrrd`` on ``caseName``'s CT grid and upload it
+    as ``user``. Returns ``(file document, SubmissionMeta dict)``."""
     import numpy as np
     import SimpleITK as sitk
     from girder_segqueue14.utils import incomingFolder
 
-    _as(user)
-    queue.downloadCase(caseId=info["caseId"])      # ASSIGNED -> DOWNLOADED
-    ct = sitk.ReadImage(str(world.data / f"{info['caseName']}.nii.gz"))
+    ct = sitk.ReadImage(str(world.data / f"{caseName}.nii.gz"))
     nz = ct.GetSize()[2]
     image = sitk.GetImageFromArray(np.ascontiguousarray(array.transpose(2, 1, 0)[::-1]))
     image.SetSpacing(ct.GetSpacing())
@@ -492,7 +502,7 @@ def _submit(world, queue, user, info, array, counts=None):
     d = list(ct.GetDirection())
     d[2], d[5], d[8] = -d[2], -d[5], -d[8]
     image.SetDirection(d)
-    path = world.data / f"{info['caseName']}_{user['login']}.seg.nrrd"
+    path = world.data / f"{caseName}_{user['login']}_{uuid.uuid4().hex[:6]}.seg.nrrd"
     sitk.WriteImage(image, str(path), True)
     fileDoc = _upload(path, incomingFolder(world.admin), user)
     from segqueue14 import scoring as sq
@@ -501,9 +511,7 @@ def _submit(world, queue, user, info, array, counts=None):
             "annotationSeconds": 300.0,
             "voxelCounts": counts if counts is not None else sq.voxel_counts(array),
             "extensionVersion": "test"}
-    _as(user)
-    return queue.submit(assignmentId=info["assignmentId"], fileId=str(fileDoc["_id"]),
-                        meta=json.dumps(meta), clientProtocol=16)
+    return fileDoc, meta
 
 
 def test_the_protocol_is_checked_at_login_next_and_submit(world):
@@ -547,7 +555,7 @@ def test_next_serves_trainval_first_and_test_last(world):
     assert "kind" not in queue.listMine(includeFinished=True)[0]
 
 
-def test_a_read_missing_a_required_class_is_refused_and_a_good_one_is_scored(world):
+def test_a_good_read_is_scored(world):
     import numpy as np
     from girder_segqueue14 import scoring
     from girder_segqueue14.models import Assignment14, Case14, Submission14
@@ -566,12 +574,6 @@ def test_a_read_missing_a_required_class_is_refused_and_a_good_one_is_scored(wor
     assert _refusal(queue.downloadAsset, caseId=info["caseId"], kind="reference").code == 400
 
     truth = _tree(np)
-    noLcx = truth.copy()
-    noLcx[noLcx == 3] = 0
-    err = _refusal(_submit, world, queue, world.people["anna"], info, noLcx)
-    assert err.extra["segqueueError"] == "missing_required"
-    assert err.extra["missing"] == ["LCx"]
-
     response = _submit(world, queue, world.people["anna"], info, truth)
     submission = Submission14().load(response["submissionId"], force=True)
     assert submission["prelabelVersion"] == "v1"
@@ -587,6 +589,121 @@ def test_a_read_missing_a_required_class_is_refused_and_a_good_one_is_scored(wor
     assert assignment["state"] == "approved"
     assert Case14().load(submission["caseId"], force=True)["approvedCount"] == 1
     assert _liveSnapshot(world) == before
+
+
+# #270 (project lead, 2026-11-02): nothing about the segmentation is checked on
+# submit or revise. Each read below would once have been refused.
+_GEOMETRY = {"source": {"size": [24, 24, 24], "spacing": [0.5, 0.5, 0.5],
+                        "origin": [0.0, 0.0, 0.0]},
+             "segmentation": {"size": [20, 24, 24], "spacing": [0.5, 0.5, 0.5],
+                              "origin": [1.0, 0.0, 0.0]}}
+
+
+def _unchecked(np, case):
+    """``(array, voxelCounts or None)`` for each read #270 says must go through."""
+    read = _tree(np)
+    if case in ("LAD", "LCx", "RCA"):
+        read[read == {"LAD": 2, "LCx": 3, "RCA": 4}[case]] = 0
+        return read, None
+    if case == "overlap":
+        # A labelmap holds one value per voxel, so classes that overlapped in the
+        # editor reach the server as counts that add up to more than the file
+        # holds. Recorded as sent.
+        return read, {"LM": 64, "LAD": 128, "LCx": 128, "RCA": 64}
+    assert case == "empty"
+    return np.zeros_like(read), None
+
+
+@pytest.mark.parametrize("case", ["LAD", "LCx", "RCA", "overlap", "empty"])
+def test_a_submit_is_never_refused_for_its_segmentation(world, case):
+    import numpy as np
+    from girder_segqueue14 import scoring
+    from girder_segqueue14.models import Assignment14, Submission14
+
+    from segqueue14 import scoring as sq
+
+    _readyProject(world)
+    queue = _resource()
+    anna = world.people["anna"]
+    _as(anna)
+    info = queue.nextCase(clientProtocol=16)
+    read, counts = _unchecked(np, case)
+    response = _submit(world, queue, anna, info, read, counts=counts, geometry=_GEOMETRY)
+
+    submission = Submission14().load(response["submissionId"], force=True)
+    assert submission["voxelCounts"] == (counts or sq.voxel_counts(read))
+    assert submission["geometry"] == _GEOMETRY     # recorded, not enforced
+    assignment = Assignment14().load(submission["assignmentId"], force=True)
+    assert assignment["state"] == "submitted"
+
+    # The worker still scores it; an empty required class is a review flag only.
+    scoring.runOnce()
+    submission = Submission14().load(response["submissionId"], force=True)
+    missing = submission["autoScore"]["missingRequired"]
+    if case in ("LAD", "LCx", "RCA"):
+        assert missing == [case] and submission["needsReview"] is True
+    elif case == "empty":
+        assert missing == ["LAD", "LCx", "RCA"] and submission["needsReview"] is True
+    else:
+        assert missing == []
+
+
+@pytest.mark.parametrize("case", ["LAD", "LCx", "RCA", "overlap", "empty"])
+def test_a_revision_is_never_refused_for_its_segmentation(world, case):
+    import numpy as np
+    from girder_segqueue14 import scoring
+    from girder_segqueue14.models import Assignment14, Submission14
+
+    _readyProject(world)
+    queue = _resource()
+    bobby, revy = world.people["bobby"], world.people["revy"]
+    _as(bobby)
+    info = queue.nextCase(clientProtocol=16)
+    poor = _tree(np)
+    poor[poor == 4] = 3             # poor enough to need a reviewer
+    original = _submit(world, queue, bobby, info, poor)["submissionId"]
+    scoring.runOnce()
+    assert Submission14().load(original, force=True)["needsReview"] is True
+
+    read, counts = _unchecked(np, case)
+    _as(revy)
+    fileDoc, meta = _uploadSeg(world, revy, info["caseName"], read, counts)
+    _as(revy)
+    result = queue.revise(submissionId=original, fileId=str(fileDoc["_id"]),
+                          meta=json.dumps(meta))
+    assert result["state"] == "approved"
+    revision = Submission14().load(result["submissionId"], force=True)
+    assert revision["voxelCounts"] == meta["voxelCounts"]
+    assert revision["authorRole"] == "reviewer"
+    assert Assignment14().load(revision["assignmentId"], force=True)["state"] == "approved"
+
+
+def test_the_kept_checks_still_refuse_a_submit(world):
+    """What #270 keeps: role, ownership, the protocol gate and the checksum."""
+    import numpy as np
+
+    _readyProject(world)
+    queue = _resource()
+    anna, bobby = world.people["anna"], world.people["bobby"]
+    _as(anna)
+    info = queue.nextCase(clientProtocol=16)
+    queue.downloadCase(caseId=info["caseId"])
+    fileDoc, meta = _uploadSeg(world, anna, info["caseName"], np.zeros((24, 24, 24), np.uint8))
+    args = dict(assignmentId=info["assignmentId"], fileId=str(fileDoc["_id"]))
+
+    _as(anna)
+    assert _refusal(queue.submit, meta=json.dumps(meta), clientProtocol=15, **args).code == 426
+    bad = dict(meta, checksum="0" * 64)
+    err = _refusal(queue.submit, meta=json.dumps(bad), clientProtocol=16, **args)
+    assert err.extra["segqueueError"] == "checksum_mismatch"
+    _as(bobby)                       # an annotator, but not this assignment's
+    assert _refusal(queue.submit, meta=json.dumps(meta), clientProtocol=16, **args).code in (
+        403, 404)
+    outsider = world.people["revy"]  # a reviewer, not an annotator
+    _as(outsider)
+    assert _refusal(queue.submit, meta=json.dumps(meta), clientProtocol=16, **args).code == 403
+    _as(anna)
+    assert queue.submit(meta=json.dumps(meta), clientProtocol=16, **args)["submissionId"]
 
 
 def test_a_poor_read_goes_to_review_with_per_class_reasons(world):

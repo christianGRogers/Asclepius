@@ -13,11 +13,18 @@ Decisions (vault/Plans/Human decisions.md):
   ``icx14_to_four`` (``ICX14_TO_4``, and "Other" to the nearest LAD/LCx).
 * D8, D12 -- the lumen is ImageCAS-X's; annotators may freely redraw the outline
   to the contrast-filled lumen.
-* D13 -- LAD, LCx and RCA must be non-empty to submit; LM is optional (some
+* D13 -- LAD, LCx and RCA are expected to be non-empty; LM is optional (some
   patients have separate LAD and LCx ostia and no left main).
 * D26 -- on a seeded case every class starts as a full copy of the vessel seed,
   hidden; the annotator shows one class at a time and cuts it down to that
-  vessel. A case is refused while any voxel is in two classes.
+  vessel, so that no voxel is in two classes.
+
+The project lead's instruction of 2026-11-02 (#270) removed submit-time
+enforcement of D13 and D26: neither the module nor the server refuses a
+submission or a reviewer's revision for an empty or overlapping class.
+``missing_required`` is still used by the scoring worker, which flags an empty
+required class for review; ``missing_required_message`` and ``overlap_message``
+are no longer shown at submit.
 """
 
 from __future__ import annotations
@@ -47,7 +54,7 @@ NAMES: List[str] = [row[1] for row in _TABLE]
 #: ``{name: label value}``.
 LABEL_VALUES: Dict[str, int] = {row[1]: row[0] for row in _TABLE}
 
-#: The classes that must be non-empty to submit (D13).
+#: The classes expected to be non-empty (D13); flagged for review, not refused.
 REQUIRED: List[str] = [row[1] for row in _TABLE if row[3]]
 
 #: What annotators are told (D25, D26, D12). Shown in the SegQueue14 panel and served

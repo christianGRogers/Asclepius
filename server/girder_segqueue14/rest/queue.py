@@ -10,7 +10,10 @@ Adapted from ``girder_segqueue.rest.queue``. The differences:
   it records which model version the read starts from; pooled new-dataset cases
   ship their own binary vessel ``seed`` instead (D23), a guide that is never
   submitted;
-* ``/submit`` refuses a read whose LAD, LCx or RCA is empty (D13);
+* ``/submit`` checks nothing about the segmentation (#270, project lead
+  2026-11-02): only login, role, ownership, state, protocol and the upload's
+  size and checksum. An empty LAD, LCx or RCA (D13) or overlapping classes (D26)
+  are accepted; voxel counts and geometry are recorded with the submission;
 * every write -- and ``/project``, which the module calls at login -- checks the
   SegQueue14 protocol version, so an out-of-date module is told to update before
   it can do anything.
@@ -27,8 +30,8 @@ from girder.models.item import Item
 from segqueue import policy as pol
 from segqueue import states as st
 from segqueue.checksum import matches
-from segqueue14 import labels, protocol
 from segqueue14 import plan as sqplan
+from segqueue14 import protocol
 
 from ..constants import MAX_ASSIGN_ATTEMPTS, QUOTA_FIELD
 from ..models import Assignment14, Case14, Note14, Submission14
@@ -249,7 +252,9 @@ class QueueResource14(Resource):
         Description('Submit a corrected segmentation for one of my cases.')
         .notes('Upload the label volume through Girder\'s chunked upload API into '
                'the SegQueue14 incoming folder first, then call this with its file '
-               'id. LAD, LCx and RCA must be non-empty (D13).')
+               'id. Nothing about the segmentation is checked (#270): empty or '
+               'overlapping classes are accepted, and voxel counts and geometry '
+               'are recorded, not enforced.')
         .param('assignmentId', 'The assignment being submitted.', paramType='path')
         .param('fileId', 'Girder file id of the uploaded label volume.')
         .jsonParam('meta', 'SubmissionMeta as JSON.', requireObject=True)
@@ -257,7 +262,7 @@ class QueueResource14(Resource):
                    requireObject=True, required=False)
         .param('clientProtocol', 'SegQueue14 protocol version the client speaks.',
                dataType='integer', required=False)
-        .errorResponse('A required class is empty, or the upload is corrupt.', 400)
+        .errorResponse('The upload is corrupt.', 400)
         .errorResponse('This assignment cannot be submitted in its current state.', 409)
         .errorResponse('The SegQueue14 module is out of date.', 426)
     )
@@ -272,15 +277,10 @@ class QueueResource14(Resource):
                    'If you already submitted it, you are done.',
                    status=409, state=assignment['state'])
 
+        # Nothing about the segmentation is checked (#270, project lead
+        # 2026-11-02): an empty LAD, LCx or RCA (D13) or overlapping classes
+        # (D26) are accepted. The voxel counts and geometry are recorded only.
         submissionMeta = protocol.SubmissionMeta.from_dict(meta)
-        missing = labels.missing_required(submissionMeta.voxel_counts)
-        if missing:
-            # The client checks this first; this is for a client that is old or
-            # patched. The worker checks the actual file as well.
-            refuse(protocol.ERR_MISSING_REQUIRED,
-                   labels.missing_required_message(missing), status=400,
-                   missing=missing)
-
         file = File().load(fileId, level=AccessType.WRITE, user=user)
         if file is None:
             refuse('no_such_file', 'That upload could not be found.', status=404)
@@ -298,7 +298,8 @@ class QueueResource14(Resource):
         needsReview = pol.review_needed(record, policy, roll, kind=pol.NORMAL)
 
         submission = Submission14().createSubmission(
-            assignment, submissionMeta, file['_id'], needsReview=needsReview)
+            assignment, submissionMeta, file['_id'], needsReview=needsReview,
+            geometry=geometry)
         assignment = Assignment14().transition(
             assignment, st.SUBMIT,
             submissionId=submission['_id'], needsReview=needsReview, reviewRoll=roll)

@@ -98,9 +98,12 @@ def test_the_instructions_are_the_project_leads_text():
                    "cut it down", "contrast-filled lumen",
                    "takes the class of the vessel it comes off",
                    "A ramus intermedius is always LCx",
-                   "cannot be submitted while any voxel is in two classes",
+                   "erase everything that belongs to another class",
                    "Note anything unusual."):
         assert phrase in text
+    # D38: the overlap requirement is no longer stated.
+    assert "cannot be submitted" not in text
+    assert "two classes" not in text
 
 
 def test_the_overlap_refusal_names_every_pair():

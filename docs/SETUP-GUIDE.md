@@ -142,8 +142,8 @@ check your internet connection and the server address.
    are LAD. Obtuse marginals are LCx. A ramus intermedius is always LCx. A PDA or
    posterolateral branch belongs to whichever artery it arises from.
 5. Click **Submit case**. Nothing checks what you drew before it is sent (project
-   lead, 2026-11-02): an empty LAD, LCx or RCA, or a voxel in two classes, no
-   longer blocks the submit, so check each class yourself first.
+   lead, 2026-11-02): an empty LAD, LCx or RCA no longer blocks the
+   submit, so check each class yourself first.
 
 Other buttons you will see:
 

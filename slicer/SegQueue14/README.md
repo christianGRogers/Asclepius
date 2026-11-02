@@ -22,8 +22,7 @@ and continues its version numbers (D24): same server, its own routes
    nothing about the segmentation is checked at submit: an empty class, classes
    sharing voxels and an empty scene all go through, and the reviewer sees them.
 3. **Cut each class down** in the Segment Editor: show one class at a time (the eye
-   in the segment list) and erase everything that is not that vessel, so that no voxel
-   is in two classes. Nothing refuses an untrimmed copy at submit (#270), so check.
+   in the segment list) and erase everything that is not that vessel.
    Every side branch takes the class of the vessel it comes off (D1): diagonals and
    septals are LAD; obtuse marginals are LCx; a PDA or posterolateral branch is the
    class of the artery it arises from. A ramus intermedius is always LCx (D1b). Add

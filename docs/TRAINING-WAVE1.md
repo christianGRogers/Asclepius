@@ -40,7 +40,9 @@ On the cluster (`$SCRATCH/wave1` here), after moving the export there (`segtrain
 
 ```sh
 segtrain index   --root $SCRATCH/wave1 --layout nested
-segtrain convert --task 716 --zenodo-root $SCRATCH/wave1      # refuses on any A14- or D27-sealed read
+segtrain convert --task 716 --zenodo-root $SCRATCH/wave1      # refuses on any A14- or D27-sealed read,
+                                                              # and lists (does not convert) reads whose
+                                                              # classes overlap (D39, #275)
 segtrain plan    --task 716 --zenodo-root $SCRATCH/wave1 \
                  --plans-from $SCRATCH/icx4/nnunet_preprocessed/Dataset715_ICX4/nnUNetResEncUNetPlans_60G_iso05.json
 segtrain preprocess --task 716

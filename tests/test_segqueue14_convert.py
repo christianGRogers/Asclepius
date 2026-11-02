@@ -143,3 +143,75 @@ def test_absent_optional_classes_are_reported_missing_not_dropped(tmp_path):
     assert report.ok, report.render()
     got = np.asarray(nib.load(str(raw / "labelsTr" / "imagecas_0011.nii.gz")).dataobj)
     assert np.array_equal(got, truth)
+
+
+# ------------------------------------------------- D39 (#275): class-stack submissions
+
+
+def _write_stack_case(sitk, ex, folder, classes, affine):
+    """Write a CT and its class-stack submission, then export the stack as the server does."""
+    from segqueue14 import labelfile
+
+    (folder / "segmentations").mkdir(parents=True)
+    shape = next(iter(classes.values())).shape
+    nib.save(nib.Nifti1Image(np.full(shape, 300, dtype=np.int16), affine),
+             str(folder / "ct.nii.gz"))
+    ct = sitk.ReadImage(str(folder / "ct.nii.gz"))
+    d, sp, o = ct.GetDirection(), ct.GetSpacing(), ct.GetOrigin()
+    ijk = [[d[3 * r + c] * sp[c] for c in range(3)] + [o[r]] for r in range(3)]
+    stack = folder.parent / f"{folder.name}.seg.nrrd"
+    labelfile.write_class_stack(
+        str(stack), [np.ascontiguousarray(classes[n].transpose(2, 1, 0)) for n in labels.NAMES],
+        labels.NAMES, ijk)
+    for name, (mask, grid) in ex.splitClassStack(str(stack), labels.segment_specs()).items():
+        ex._writeMask(mask, grid, str(folder / "segmentations" / f"{name}.nii.gz"))
+    stack.unlink()
+
+
+def test_a_class_stack_without_overlaps_exports_and_converts_unchanged(tmp_path):
+    sitk = pytest.importorskip("SimpleITK")
+    ex = _exporter()
+    root = tmp_path / "export"
+    truth = _read(seed=7)
+    classes = {name: (truth == labels.LABEL_VALUES[name]).astype(np.uint8)
+               for name in labels.NAMES}
+    _write_stack_case(sitk, ex, root / "imagecas_0003", classes, np.diag([0.5, 0.5, 0.6, 1.0]))
+    report, raw = _convert(tmp_path, root)
+    assert report.ok, report.render()
+    got = np.asarray(nib.load(str(raw / "labelsTr" / "imagecas_0003.nii.gz")).dataobj)
+    assert np.array_equal(got, truth)
+
+
+def test_overlapping_classes_are_exported_whole_and_refused_by_convert(tmp_path):
+    """#275: the export keeps every class whole; convert under 'refuse' (task 716) picks no
+    class for a shared voxel -- the case is reported, named, and not converted."""
+    sitk = pytest.importorskip("SimpleITK")
+    ex = _exporter()
+    root = tmp_path / "export"
+    tree = (_read(seed=2) > 0).astype(np.uint8)
+    classes = {name: tree.copy() for name in labels.NAMES}          # untouched seeded case
+    _write_stack_case(sitk, ex, root / "imagecas_0004", classes, np.diag([0.5, 0.5, 0.6, 1.0]))
+    for name in labels.NAMES:
+        mask = np.asarray(nib.load(str(root / "imagecas_0004" / "segmentations"
+                                       / f"{name}.nii.gz")).dataobj)
+        assert np.array_equal(mask > 0, tree > 0), name
+
+    rows = build_rows(scan(root), val_fraction=0.0, test_fraction=0.0, seed=1)
+    write_meta(root / "meta.csv", rows)
+    cfg, task = _config(tmp_path, root), _task()
+    cfg.overlap_policy = "refuse"
+    report = convert_dataset(cfg, task, read_meta(root / "meta.csv"))
+    assert not report.ok
+    [failure] = report.failures
+    assert "classes overlap" in failure.error and "LM/LAD" in failure.error
+    assert "#275" in failure.error
+    assert not (task.raw_dir(cfg) / "labelsTr" / "imagecas_0004.nii.gz").exists()
+
+
+def test_task_716_refuses_overlapping_reads():
+    from segtrain.config import load_task
+    from segtrain.plans import task_extras
+
+    task = load_task(716, tasks_dir=REPO / "configs" / "tasks",
+                     labels_dir=REPO / "configs" / "labels")
+    assert task_extras(task)["overlap_policy"] == "refuse"

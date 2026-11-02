@@ -263,9 +263,11 @@ def test_a_seeded_case_starts_with_the_seed_in_every_class_hidden():
 def test_nothing_about_the_segmentation_is_checked_before_the_upload(method):
     # #270 (project lead, 2026-11-02): no D13, D26 or empty-scene refusal.
     body = ast.get_source_segment(_source(), _method("SegQueue14Logic", method))
-    assert body.index("self.exportLabelmap(") < body.index("uploadFile")
+    assert body.index("self.exportSubmission(") < body.index("uploadFile")
     for gone in ("classOverlaps", "missing_required", "overlap_message", "_exportChecked"):
         assert gone not in body
+    # D39 (#275): the upload says it is a class stack, every class whole.
+    assert "labelFormat=labelfile.FORMAT_CLASS_STACK" in body
 
 
 def test_a_reopened_draft_keeps_its_label_values():
@@ -276,8 +278,20 @@ def test_a_reopened_draft_keeps_its_label_values():
 
 
 def test_an_empty_scene_is_still_written():
-    body = ast.get_source_segment(_source(), _method("SegQueue14Logic", "exportLabelmap"))
-    assert "_fillWithBackground(" in body and "return empty" not in body
+    # An empty class is an all-zero channel on the CT grid, never a refusal.
+    body = ast.get_source_segment(_source(), _method("SegQueue14Logic", "_classMask"))
+    assert "np.zeros(shape, np.uint8)" in body
+
+
+def test_every_class_is_exported_whole_on_the_ct_grid():
+    # D39 (#275): no single label volume (one class per voxel) is written; each
+    # class is read against the CT, by name, and written as its own channel.
+    body = ast.get_source_segment(_source(), _method("SegQueue14Logic", "exportSubmission"))
+    assert "logic().ExportSegmentsToLabelmapNode(" not in body
+    assert "labelfile.write_class_stack(" in body
+    mask = ast.get_source_segment(_source(), _method("SegQueue14Logic", "_classMask"))
+    assert "arrayFromSegmentBinaryLabelmap(" in mask and "self.volumeNode" in mask
+    assert "exportLabelmap" not in _source()
 
 
 def test_there_is_no_instructions_panel_and_help_is_a_link():
@@ -324,12 +338,13 @@ def test_the_archive_is_the_segqueue_extension_and_is_self_sufficient(tmp_path):
     code = ("import sys; sys.path[:] = [p for p in sys.path if 'src' not in p]; "
             f"sys.path.insert(0, {str(path)!r}); "
             # SegQueue14Lib itself needs `requests`, which Slicer bundles.
-            "import segqueue14.protocol, segqueue14.labels, segqueue14.plan; "
+            "import segqueue14.protocol, segqueue14.labels, segqueue14.plan, "
+            "segqueue14.labelfile; "
             "assert segqueue14.__file__.startswith(sys.path[0]); "
             "print(segqueue14.PROTOCOL_VERSION)")
     out = subprocess.run([sys.executable, "-I", "-c", code], capture_output=True, text=True)
     assert out.returncode == 0, out.stderr
-    assert out.stdout.strip() == "16"
+    assert out.stdout.strip() == "17"
 
 
 def test_a_half_downloaded_helper_is_never_a_cache_hit(tmp_path):

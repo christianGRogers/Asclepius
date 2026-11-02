@@ -8,9 +8,12 @@ segments fills only the first -- found in 5.8 while writing this), that trimming
 one copy leaves the others whole, that a saved draft keeps them, that the classes
 start hidden, that a draft saved with the copies still overlapping reopens with
 every class readable (the false "empty" of #270), that overlapping classes and
-an empty scene are uploaded rather than refused (#270), that a trimmed case
-exports one class per voxel, and that the reviewer's ImageCAS-X reference is
-shown in the four classes (#68).
+an empty scene are uploaded rather than refused (#270), that the reviewer's
+ImageCAS-X reference is shown in the four classes (#68), and D39 (#275): that an
+untouched seeded case -- four identical full copies -- is submitted as four whole
+classes (not as all RCA), reopens for a reviewer with all four whole and named,
+and round-trips through a reviewer's revision the same way; and that a partly
+trimmed case keeps every class's own voxels.
 
 With ``SEGQUEUE_SELFTEST_INSTALLED=<folder>`` it tests the module Slicer loaded
 from that installed folder instead of the checkout.
@@ -52,21 +55,42 @@ class _Assignment:
 
 
 class _RecordingClient:
-    """Takes uploads and hand-overs without a server, and remembers them."""
+    """Takes uploads and hand-overs without a server, and remembers them.
+
+    Each upload is read back as the server's scoring worker reads it (no Slicer):
+    ``self.files`` holds ``{class name: voxels}`` per uploaded file, from the file.
+    """
 
     def __init__(self):
         self.calls = []
+        self.files = []
+        self.formats = []
+        self.kept = []
 
     def uploadFile(self, path, *args, **kwargs):
         self.calls.append(("upload", os.path.isfile(path)))
+        from segqueue14 import labelfile
+
+        if os.path.isfile(path):
+            data = labelfile.read_class_stack(path)
+            self.files.append(labelfile.voxel_counts(data["masks"], data["names"]))
+            import shutil
+
+            # Outside the case folder, which submit purges.
+            keep = os.path.join(tempfile.mkdtemp(), "uploaded.seg.nrrd")
+
+            shutil.copy(path, keep)
+            self.kept.append(keep)
         return {"_id": "file"}
 
-    def submit(self, assignmentId, meta, fileId, geometry=None):
+    def submit(self, assignmentId, meta, fileId, geometry=None, labelFormat=None):
         self.calls.append(("submit", dict(meta.voxel_counts)))
+        self.formats.append(labelFormat)
         return {"submissionId": "s1"}
 
-    def reviseSubmission(self, submissionId, meta, fileId):
+    def reviseSubmission(self, submissionId, meta, fileId, labelFormat=None):
         self.calls.append(("revise", dict(meta.voxel_counts)))
+        self.formats.append(labelFormat)
         return {"submissionId": "s2"}
 
 
@@ -171,6 +195,47 @@ def run():
           [c[0] for c in logic.client.calls] == ["upload", "revise"]
           and logic.client.calls[0][1], logic.client.calls)
 
+    # D39 (#275): the untouched seeded case, submitted. The uploaded file holds all
+    # four classes whole -- not the one class a label volume kept (all RCA) -- and
+    # the counts say so.
+    whole = {name: nSeed for name in TUBES}
+    untouched = os.path.join(tmp, "untouched.seg.nrrd")
+    counts, _source, _segmentation = logic.exportSubmission(untouched)
+    from segqueue14 import labelfile
+
+    stored = labelfile.read_class_stack(untouched)
+    check("an untouched seeded case is saved as four whole classes (#275)",
+          counts == whole and stored["names"] == labels.NAMES
+          and all(np.array_equal(m, (seed > 0).astype(np.uint8)) for m in stored["masks"]),
+          (counts, [int(m.sum()) for m in stored["masks"]]))
+    check("the saved case is on the CT grid, not Slicer's cropped extent",
+          stored["masks"].shape[1:] == SHAPE
+          and tuple(round(v, 4) for v in stored["spacing"]) == (0.5, 0.5, 0.6),
+          (stored["masks"].shape, stored["spacing"], stored["origin"]))
+
+    # The reviewer opens it (onOpenReview: loadSegmentation, then applyProjectNames).
+    review = module.SegQueue14Logic(cacheRoot=os.path.join(tmp, "cache"))
+    review.project = logic.project
+    review.volumeNode = volume
+    review.segmentationNode = slicer.util.loadSegmentation(untouched)
+    review.applyProjectNames()
+    opened = _counts(slicer, labels, review.segmentationNode, volume, review.segmentIdFor)
+    check("a reviewer opens all four classes whole (#275)", opened == whole, opened)
+    review.showSubmissionIn3d()
+    shownDisplay = review.segmentationNode.GetDisplayNode()
+    check("and all four are shown", all(
+        shownDisplay.GetSegmentVisibility(review.segmentIdFor(n)) for n in TUBES))
+
+    # ... and saves it as their revision: the same four whole classes go back.
+    review.client = _RecordingClient()
+    review.reviseSubmission("s1")
+    check("a revision round-trips the four whole classes (#275)",
+          review.client.calls == [("upload", True), ("revise", whole)]
+          and review.client.files == [whole]
+          and review.client.formats == [labelfile.FORMAT_CLASS_STACK],
+          (review.client.calls, review.client.files))
+    slicer.mrmlScene.RemoveNode(review.segmentationNode)
+
     for name, (lo, hi) in TUBES.items():
         segmentId = logic.segmentIdFor(name)
         array = slicer.util.arrayFromSegmentBinaryLabelmap(
@@ -191,9 +256,25 @@ def run():
     lad[5:35, 30:33, 30:33] = 0
     slicer.util.updateSegmentBinaryLabelmapFromArray(lad, logic.segmentationNode, segmentId, volume)
 
-    counts, _source, _segmentation = logic.exportLabelmap(os.path.join(tmp, "out.seg.nrrd"))
-    check("the export has one class per voxel",
+    counts, _source, _segmentation = logic.exportSubmission(os.path.join(tmp, "out.seg.nrrd"))
+    check("a trimmed case exports each class's own tube",
           counts == {name: TUBE_VOXELS for name in TUBES}, counts)
+
+    # A partly trimmed case: LAD still holds the LCx tube. Every class keeps its own
+    # voxels in the file -- LAD both tubes, LCx its tube -- nothing given to one class.
+    lad[5:35, 30:33, 30:33] = 1
+    slicer.util.updateSegmentBinaryLabelmapFromArray(lad, logic.segmentationNode, segmentId, volume)
+    partly = os.path.join(tmp, "partly.seg.nrrd")
+    counts, _source, _segmentation = logic.exportSubmission(partly)
+    stored = labelfile.read_class_stack(partly)
+    byName = dict(zip(stored["names"], stored["masks"]))
+    lo, hi = TUBES["LCx"]
+    check("a partly trimmed case keeps every class's own voxels (#275)",
+          counts == dict({name: TUBE_VOXELS for name in TUBES}, LAD=2 * TUBE_VOXELS)
+          and int(byName["LAD"][5:35, lo:hi, lo:hi].sum()) == TUBE_VOXELS
+          and int(byName["LCx"][5:35, lo:hi, lo:hi].sum()) == TUBE_VOXELS, counts)
+    lad[5:35, 30:33, 30:33] = 0
+    slicer.util.updateSegmentBinaryLabelmapFromArray(lad, logic.segmentationNode, segmentId, volume)
 
     # #68: the reviewer's ImageCAS-X reference is in ImageCAS-X's 14 values. The
     # LAD tube is drawn as D1 (4), the RCA as 9, and an "Other" (14) stub sits at
@@ -249,21 +330,19 @@ def run():
     check("and into existing classes", filled == 4 and got == {
         name: TUBE_VOXELS for name in TUBES}, got)
 
-    # Without SetLabelValue in the import, a submission still carries the project's
-    # values: exportLabelmap numbers the classes by project order (1 LM ... 4 RCA).
+    # Without SetLabelValue in the import, a submission still has each class in its
+    # own channel: exportSubmission reads the classes by name, in project order.
     logic.segmentationNode = fresh
-    counts, _source, _segmentation = logic.exportLabelmap(os.path.join(tmp, "pre.seg.nrrd"))
-    exported = slicer.util.loadLabelVolume(os.path.join(tmp, "pre.seg.nrrd"))
-    array = slicer.util.arrayFromVolume(exported)
-    slicer.mrmlScene.RemoveNode(exported)
-    byValue = {}
-    for name, (lo, hi) in TUBES.items():
-        found = np.unique(array[5:35, lo:hi, lo:hi])
-        byValue[name] = [int(v) for v in found]
-    check("an imported prelabel exports under the project's label values",
+    counts, _source, _segmentation = logic.exportSubmission(os.path.join(tmp, "pre.seg.nrrd"))
+    stored = labelfile.read_class_stack(os.path.join(tmp, "pre.seg.nrrd"))
+    byChannel = {}
+    for name, mask in zip(stored["names"], stored["masks"]):
+        byChannel[name] = [other for other, (lo, hi) in TUBES.items()
+                           if mask[5:35, lo:hi, lo:hi].any()]
+    check("an imported prelabel exports each class in its own channel",
           counts == {name: TUBE_VOXELS for name in TUBES}
-          and byValue == {name: [labels.LABEL_VALUES[name]] for name in TUBES},
-          (counts, byValue))
+          and byChannel == {name: [name] for name in TUBES},
+          (counts, byChannel))
 
     # #270: an empty scene is submitted, as an all-background file on the CT grid.
     empty = slicer.mrmlScene.AddNewNodeByClass("vtkMRMLSegmentationNode", "empty")
@@ -275,8 +354,45 @@ def run():
     logic.submit()
     check("an empty scene is uploaded and handed over (#270)",
           logic.client.calls == [("upload", True),
-                                 ("submit", {name: 0 for name in TUBES})],
+                                 ("submit", {name: 0 for name in TUBES})]
+          and logic.client.formats == [labelfile.FORMAT_CLASS_STACK],
           logic.client.calls)
+
+    # D39 (#275), end to end as an annotator does it: a fresh seeded case, prefilled,
+    # touched by nobody, submitted. Last, because submit closes the case.
+    ct2 = slicer.mrmlScene.AddNewNodeByClass("vtkMRMLScalarVolumeNode", "ct2")
+    slicer.util.updateVolumeFromArray(ct2, ct)
+    ct2.CopyOrientation(volume)
+    annotator = module.SegQueue14Logic(cacheRoot=os.path.join(tmp, "cache2"))
+    annotator.project = logic.project
+    annotator.volumeNode = ct2
+    annotator._loadOrCreateSegmentation({})
+    os.makedirs(annotator.cache.caseDir("a2"), exist_ok=True)
+    seedNode = slicer.mrmlScene.AddNewNodeByClass("vtkMRMLLabelMapVolumeNode", "seed2")
+    slicer.util.updateVolumeFromArray(seedNode, seed)
+    seedNode.CopyOrientation(volume)
+    seedPath2 = os.path.join(annotator.cache.caseDir("a2"), "seed.nii.gz")
+    slicer.util.saveNode(seedNode, seedPath2)
+    slicer.mrmlScene.RemoveNode(seedNode)
+    annotator.seedSegmentId = annotator._importHelper(
+        seedPath2, SEED_NAME, (0.95, 0.85, 0.2), 0.25)
+    seeded = _Assignment(assignment_id="a2", case_name="seeded", attempt=1,
+                         has_seed=True, has_prelabel=False)
+    annotator._prefillClassesFromSeed(seeded)
+    annotator.assignment = seeded
+    annotator._sessionStart = time.time()
+    annotator.client = _RecordingClient()
+    annotator.submit()
+    whole = {name: nSeed for name in TUBES}
+    check("an untouched seeded case is submitted with every class whole (#275)",
+          annotator.client.calls == [("upload", True), ("submit", whole)]
+          and annotator.client.files == [whole]
+          and annotator.client.formats == [labelfile.FORMAT_CLASS_STACK],
+          (annotator.client.calls, annotator.client.files))
+    reopened = slicer.util.loadSegmentation(annotator.client.kept[0])
+    again = _counts(slicer, labels, reopened, volume,
+                    lambda name: module._segmentIdIn(reopened, name))
+    check("and reopens for a reviewer with all four whole (#275)", again == whole, again)
 
 
 try:

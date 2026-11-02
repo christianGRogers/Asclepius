@@ -128,6 +128,10 @@ reader_writer: NibabelIOWithReorient
 #                 thin structures are not eroded by bulky neighbours (default)
 #   label_order   higher label index wins; alphabetical, so anatomically
 #                 arbitrary. Provided only for comparison.
+#   refuse        no rule: a case whose masks overlap is reported and not
+#                 converted. A task file may set its own policy; task 716
+#                 (SegQueue14 reads, whose classes are kept whole: D39, #275)
+#                 sets this one.
 overlap_policy: smaller_wins
 
 # Running on a SciNet cluster via SLURM. Defaults target Trillium's GPU

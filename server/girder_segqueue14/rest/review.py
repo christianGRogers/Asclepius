@@ -36,12 +36,15 @@ from ..models import submission as sub
 from ..models.review import APPROVE
 from ..settings import getPolicy, getReference
 from ..utils import (
+    checkClientProtocol,
+    checkLabelFormat,
     fileForCase,
     fullName,
     hashStoredFile,
     isAnnotator,
     refuse,
     requireReviewer,
+    storedLabelFormat,
     submissionsFolder,
 )
 
@@ -459,9 +462,19 @@ class ReviewResource14(Resource):
         .param('submissionId', 'The submission being corrected.', paramType='path')
         .param('fileId', 'Girder file id of the uploaded .seg.nrrd.')
         .jsonParam('meta', 'Submission metadata.', requireObject=True)
+        .param('labelFormat', 'What the uploaded file is, as on submit. Missing '
+               'means "labelmap".', required=False)
+        .param('clientProtocol', 'SegQueue14 protocol version the client speaks '
+               '(else the request header).', dataType='integer', required=False)
+        .errorResponse('The labelFormat is unknown.', 400)
         .errorResponse('That case has already been decided.', 409)
+        .errorResponse('The SegQueue14 module is out of date.', 426)
     )
-    def revise(self, submissionId, fileId, meta):
+    def revise(self, submissionId, fileId, meta, labelFormat, clientProtocol):
+        # A revision is a submission too: a module older than protocol 17 would
+        # save it as one label volume and lose overlapping classes (#275).
+        checkClientProtocol(clientProtocol)
+        labelFormat = checkLabelFormat(labelFormat)
         user = requireReviewer(self.getCurrentUser())
         original = self._loadSubmission(submissionId)
         assignment = self._assignmentFor(original)
@@ -483,6 +496,7 @@ class ReviewResource14(Resource):
                    'was corrupted in transit. Nothing has been recorded.',
                    status=400, expected=submissionMeta.checksum, actual=actual)
         submissionMeta.checksum = actual
+        labelFormat = storedLabelFormat(file)
 
         item = Item().load(file['itemId'], force=True)
         if item is not None:
@@ -491,6 +505,7 @@ class ReviewResource14(Resource):
         revision = Submission().createSubmission(
             assignment, submissionMeta, file['_id'],
             needsReview=False, author=user, revisionOf=original['_id'],
+            labelFormat=labelFormat,
         )
 
         Review().createReview(revision, user, APPROVE,
@@ -740,6 +755,7 @@ class ReviewResource14(Resource):
             },
             'annotationSeconds': submission.get('annotationSeconds'),
             'voxelCounts': submission.get('voxelCounts', {}),
+            'labelFormat': submission.get('labelFormat') or protocol.LABEL_FORMAT_LABELMAP,
             'annotatorNote': submission.get('annotatorNote', ''),
             'warnings': submission.get('warnings', []),
             'submittedAt': _iso(assignment.get('submittedAt')),

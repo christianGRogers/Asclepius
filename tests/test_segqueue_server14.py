@@ -484,7 +484,7 @@ def _submit(world, queue, user, info, array, counts=None, geometry=None):
     _as(user)
     extra = {} if geometry is None else {"geometry": json.dumps(geometry)}
     return queue.submit(assignmentId=info["assignmentId"], fileId=str(fileDoc["_id"]),
-                        meta=json.dumps(meta), clientProtocol=16, **extra)
+                        meta=json.dumps(meta), clientProtocol=17, **extra)
 
 
 def _uploadSeg(world, user, caseName, array, counts=None):
@@ -518,16 +518,16 @@ def test_the_protocol_is_checked_at_login_next_and_submit(world):
     _readyProject(world)
     queue = _resource()
     _as(world.people["anna"])
-    for bad in (None, 1, 14, 15):
+    for bad in (None, 1, 14, 15, 16):
         sent = {} if bad is None else {"clientProtocol": bad}
         err = _refusal(queue.getProject, **sent)
         assert err.code == 426 and err.extra["segqueueError"] == "client_too_old"
         assert "Update the SegQueue14 module" in err.extra["message"]
         assert _refusal(queue.nextCase, **sent).code == 426
-    project = queue.getProject(clientProtocol=16)
+    project = queue.getProject(clientProtocol=17)
     assert [s["name"] for s in project["segments"]][:3] == ["LM", "LAD", "LCx"]
     assert [s["name"] for s in project["segments"]] == ["LM", "LAD", "LCx", "RCA"]
-    assert project["protocolVersion"] == 16
+    assert project["protocolVersion"] == 17
     assert "starts as a full copy of the vessel seed" in project["instructions"]
 
 
@@ -542,7 +542,7 @@ def test_next_serves_trainval_first_and_test_last(world):
         for login in ("anna", "bobby", "cathy"):
             _as(world.people[login])
             try:
-                info = queue.nextCase(clientProtocol=16)
+                info = queue.nextCase(clientProtocol=17)
             except Exception:
                 continue
             served.append(info["caseName"])
@@ -564,7 +564,7 @@ def test_a_good_read_is_scored(world):
     before = _liveSnapshot(world)
     queue = _resource()
     _as(world.people["anna"])
-    info = queue.nextCase(clientProtocol=16)
+    info = queue.nextCase(clientProtocol=17)
     assert info["hasPrelabel"] and info["prelabelVersion"] == "v1"
     assert not info["hasSeed"] and info["hasRegion"]
     queue.downloadCase(caseId=info["caseId"])
@@ -626,7 +626,7 @@ def test_a_submit_is_never_refused_for_its_segmentation(world, case):
     queue = _resource()
     anna = world.people["anna"]
     _as(anna)
-    info = queue.nextCase(clientProtocol=16)
+    info = queue.nextCase(clientProtocol=17)
     read, counts = _unchecked(np, case)
     response = _submit(world, queue, anna, info, read, counts=counts, geometry=_GEOMETRY)
 
@@ -658,7 +658,7 @@ def test_a_revision_is_never_refused_for_its_segmentation(world, case):
     queue = _resource()
     bobby, revy = world.people["bobby"], world.people["revy"]
     _as(bobby)
-    info = queue.nextCase(clientProtocol=16)
+    info = queue.nextCase(clientProtocol=17)
     poor = _tree(np)
     poor[poor == 4] = 3             # poor enough to need a reviewer
     original = _submit(world, queue, bobby, info, poor)["submissionId"]
@@ -670,7 +670,7 @@ def test_a_revision_is_never_refused_for_its_segmentation(world, case):
     fileDoc, meta = _uploadSeg(world, revy, info["caseName"], read, counts)
     _as(revy)
     result = queue.revise(submissionId=original, fileId=str(fileDoc["_id"]),
-                          meta=json.dumps(meta))
+                          meta=json.dumps(meta), clientProtocol=17)
     assert result["state"] == "approved"
     revision = Submission14().load(result["submissionId"], force=True)
     assert revision["voxelCounts"] == meta["voxelCounts"]
@@ -686,24 +686,24 @@ def test_the_kept_checks_still_refuse_a_submit(world):
     queue = _resource()
     anna, bobby = world.people["anna"], world.people["bobby"]
     _as(anna)
-    info = queue.nextCase(clientProtocol=16)
+    info = queue.nextCase(clientProtocol=17)
     queue.downloadCase(caseId=info["caseId"])
     fileDoc, meta = _uploadSeg(world, anna, info["caseName"], np.zeros((24, 24, 24), np.uint8))
     args = dict(assignmentId=info["assignmentId"], fileId=str(fileDoc["_id"]))
 
     _as(anna)
-    assert _refusal(queue.submit, meta=json.dumps(meta), clientProtocol=15, **args).code == 426
+    assert _refusal(queue.submit, meta=json.dumps(meta), clientProtocol=16, **args).code == 426
     bad = dict(meta, checksum="0" * 64)
-    err = _refusal(queue.submit, meta=json.dumps(bad), clientProtocol=16, **args)
+    err = _refusal(queue.submit, meta=json.dumps(bad), clientProtocol=17, **args)
     assert err.extra["segqueueError"] == "checksum_mismatch"
     _as(bobby)                       # an annotator, but not this assignment's
-    assert _refusal(queue.submit, meta=json.dumps(meta), clientProtocol=16, **args).code in (
+    assert _refusal(queue.submit, meta=json.dumps(meta), clientProtocol=17, **args).code in (
         403, 404)
     outsider = world.people["revy"]  # a reviewer, not an annotator
     _as(outsider)
-    assert _refusal(queue.submit, meta=json.dumps(meta), clientProtocol=16, **args).code == 403
+    assert _refusal(queue.submit, meta=json.dumps(meta), clientProtocol=17, **args).code == 403
     _as(anna)
-    assert queue.submit(meta=json.dumps(meta), clientProtocol=16, **args)["submissionId"]
+    assert queue.submit(meta=json.dumps(meta), clientProtocol=17, **args)["submissionId"]
 
 
 def test_a_poor_read_goes_to_review_with_per_class_reasons(world):
@@ -714,7 +714,7 @@ def test_a_poor_read_goes_to_review_with_per_class_reasons(world):
     _readyProject(world)
     queue = _resource()
     _as(world.people["bobby"])
-    info = queue.nextCase(clientProtocol=16)
+    info = queue.nextCase(clientProtocol=17)
     read = _tree(np)
     read[read == 4] = 3             # the RCA called LCx ...
     read[0, 0, 0] = 4               # ... and one stray voxel of "RCA" elsewhere
@@ -791,7 +791,7 @@ def test_a_reviewer_sees_who_sent_what_and_under_which_filenames(world):
     _readyProject(world)
     queue = _resource()
     _as(world.people["bobby"])
-    info = queue.nextCase(clientProtocol=16)
+    info = queue.nextCase(clientProtocol=17)
     read = _tree(np)
     read[read == 4] = 3             # poor enough to need a reviewer,
     read[0, 0, 0] = 4               # but with every required class present
@@ -835,9 +835,9 @@ def test_a_two_read_case_is_decided_when_both_reads_are_in(world):
     Case14().collection.update_many({"tier": {"$ne": "imagecas-unlabelled"}},
                                     {"$set": {"retired": True}})
     _as(world.people["anna"])
-    first = queue.nextCase(clientProtocol=16)
+    first = queue.nextCase(clientProtocol=17)
     _as(world.people["bobby"])
-    second = queue.nextCase(clientProtocol=16)
+    second = queue.nextCase(clientProtocol=17)
     assert first["caseId"] == second["caseId"], "both slots of the first two-read case"
 
     a = _submit(world, queue, world.people["anna"], first, _tree(np))
@@ -858,7 +858,7 @@ def test_export_writes_four_masks_per_approved_read(world, tmp_path):
     _readyProject(world)
     queue = _resource()
     _as(world.people["cathy"])
-    info = queue.nextCase(clientProtocol=16)
+    info = queue.nextCase(clientProtocol=17)
     _submit(world, queue, world.people["cathy"], info, _tree(np))
     scoring.runOnce()
     out = tmp_path / "export"
@@ -868,6 +868,237 @@ def test_export_writes_four_masks_per_approved_read(world, tmp_path):
     manifest = json.loads((out / "manifest.json").read_text())
     assert manifest["source"]["label_set"] == "coronary_icx4"
     assert manifest["source"]["prelabel_versions"][info["caseName"]] == "v1"
+
+
+# ------------------------------------------------- D39 (#275): every class whole
+
+
+def _stackOf(np, classes):
+    """``classes`` (``{name: 0/1 array in _tree's x, y, z order}``) as a class stack's
+    masks, in project order and SimpleITK's (z, y, x) order. Missing classes are empty."""
+    from segqueue14 import labels
+
+    shape = next(iter(classes.values())).shape
+    return [np.ascontiguousarray((classes.get(name, np.zeros(shape, np.uint8)) != 0)
+                                 .astype(np.uint8).transpose(2, 1, 0))
+            for name in labels.NAMES]
+
+
+def _uploadStack(world, user, caseName, masks):
+    """Write ``masks`` as the 0.17.0 module does -- a class stack on the CT grid -- and
+    upload it as ``user``. Returns ``(file document, SubmissionMeta dict)``."""
+    import SimpleITK as sitk
+    from girder_segqueue14.utils import incomingFolder
+
+    from segqueue14 import labelfile, labels
+
+    ct = sitk.ReadImage(str(world.data / f"{caseName}.nii.gz"))
+    d, sp, o = ct.GetDirection(), ct.GetSpacing(), ct.GetOrigin()
+    ijkToLps = [[d[3 * r + c] * sp[c] for c in range(3)] + [o[r]] for r in range(3)]
+    path = world.data / f"{caseName}_{user['login']}_{uuid.uuid4().hex[:6]}.seg.nrrd"
+    labelfile.write_class_stack(str(path), masks, labels.NAMES, ijkToLps)
+    fileDoc = _upload(path, incomingFolder(world.admin), user)
+    meta = {"checksum": _sha(path), "sizeBytes": os.path.getsize(path),
+            "annotationSeconds": 300.0,
+            "voxelCounts": {n: int((m != 0).sum()) for n, m in zip(labels.NAMES, masks)},
+            "extensionVersion": "0.17.0"}
+    return fileDoc, meta
+
+
+def _submitStack(world, queue, user, info, masks, labelFormat="class-stack-nrrd/1"):
+    _as(user)
+    queue.downloadCase(caseId=info["caseId"])
+    fileDoc, meta = _uploadStack(world, user, info["caseName"], masks)
+    _as(user)
+    return queue.submit(assignmentId=info["assignmentId"], fileId=str(fileDoc["_id"]),
+                        meta=json.dumps(meta), labelFormat=labelFormat, clientProtocol=17)
+
+
+def _storedStack(world, submission):
+    """The stored file of ``submission``, read back without Slicer."""
+    from girder.models.file import File
+
+    from segqueue14 import labelfile
+
+    path = world.data / f"stored_{uuid.uuid4().hex[:6]}.seg.nrrd"
+    fileDoc = File().load(submission["fileId"], force=True)
+    with open(path, "wb") as out:
+        for chunk in File().download(fileDoc, headers=False)():
+            out.write(chunk)
+    assert labelfile.sniff(str(path)) == labelfile.FORMAT_CLASS_STACK
+    return labelfile.read_class_stack(str(path))
+
+
+def test_an_untouched_seeded_case_keeps_all_four_classes_whole(world, tmp_path):
+    """#275: four identical full copies (D26, nothing trimmed) are stored, counted,
+    scored, opened by a reviewer and exported as four whole classes -- not as all RCA."""
+    import numpy as np
+    from girder_segqueue14 import export, scoring
+    from girder_segqueue14.models import Submission14
+
+    from segqueue14 import labels
+
+    _readyProject(world)
+    queue = _resource()
+    cathy = world.people["cathy"]
+    _as(cathy)
+    info = queue.nextCase(clientProtocol=17)
+    tree = (_tree(np) > 0).astype(np.uint8)
+    whole = int(tree.sum())
+    masks = _stackOf(np, {name: tree for name in labels.NAMES})
+    response = _submitStack(world, queue, cathy, info, masks)
+
+    submission = Submission14().load(response["submissionId"], force=True)
+    assert submission["labelFormat"] == "class-stack-nrrd/1"
+    assert submission["voxelCounts"] == {name: whole for name in labels.NAMES}
+    stored = _storedStack(world, submission)
+    assert stored["names"] == labels.NAMES
+    assert [int(m.sum()) for m in stored["masks"]] == [whole] * 4
+
+    scoring.runOnce()
+    submission = Submission14().load(response["submissionId"], force=True)
+    score = submission["autoScore"]
+    assert score["voxelCounts"] == {name: whole for name in labels.NAMES}
+    assert score["missingRequired"] == []
+    ref = score["reference"]["per_structure"]
+    # Every class is scored from its own whole mask against the reference.
+    assert all(ref[name]["voxels_read"] == whole for name in labels.NAMES)
+    assert all(0 < ref[name]["dice"] < 1 for name in labels.NAMES)
+
+    _as(world.people["revy"])
+    row = queue.getSubmission(submissionId=response["submissionId"])
+    assert row["labelFormat"] == "class-stack-nrrd/1"
+
+    Submission14().collection.update_one({"_id": submission["_id"]},
+                                         {"$set": {"needsReview": False}})
+    from girder_segqueue14.models import Assignment14
+
+    Assignment14().collection.update_one({"_id": submission["assignmentId"]},
+                                         {"$set": {"state": "approved"}})
+    out = tmp_path / "export"
+    assert export.main(["--out", str(out)]) == 0
+    import nibabel as nib
+
+    for name in labels.NAMES:
+        mask = np.asarray(nib.load(str(out / info["caseName"] / "segmentations"
+                                       / f"{name}.nii.gz")).dataobj)
+        assert int((mask > 0).sum()) == whole, name
+        assert np.array_equal(mask > 0, tree > 0), name
+
+
+def test_a_partly_trimmed_case_keeps_every_class_s_own_voxels(world, tmp_path):
+    import numpy as np
+    from girder_segqueue14 import scoring
+    from girder_segqueue14.models import Submission14
+
+    _readyProject(world)
+    queue = _resource()
+    anna = world.people["anna"]
+    _as(anna)
+    info = queue.nextCase(clientProtocol=17)
+    tree = _tree(np)
+    classes = {name: (tree == value).astype(np.uint8)
+               for name, value in (("LM", 1), ("LAD", 2), ("LCx", 3), ("RCA", 4))}
+    classes["LAD"] = classes["LAD"] | classes["LCx"]     # LAD not yet cut off the LCx
+    response = _submitStack(world, queue, anna, info, _stackOf(np, classes))
+    scoring.runOnce()
+
+    submission = Submission14().load(response["submissionId"], force=True)
+    stored = _storedStack(world, submission)
+    for name, mask in zip(stored["names"], stored["masks"]):
+        assert np.array_equal(mask != 0, classes[name].transpose(2, 1, 0) != 0), name
+    ref = submission["autoScore"]["reference"]["per_structure"]
+    assert ref["LCx"]["dice"] == 1.0 and ref["LM"]["dice"] == 1.0 and ref["RCA"]["dice"] == 1.0
+    assert ref["LAD"]["voxels_read"] == int(classes["LAD"].sum())
+    assert ref["LAD"]["dice"] < 1.0
+
+
+def test_a_revision_round_trips_as_a_class_stack(world):
+    import numpy as np
+    from girder_segqueue14 import scoring
+    from girder_segqueue14.models import Submission14
+
+    from segqueue14 import labels
+
+    _readyProject(world)
+    queue = _resource()
+    bobby, revy = world.people["bobby"], world.people["revy"]
+    _as(bobby)
+    info = queue.nextCase(clientProtocol=17)
+    tree = (_tree(np) > 0).astype(np.uint8)
+    original = _submitStack(world, queue, bobby, info,
+                            _stackOf(np, {name: tree for name in labels.NAMES}))["submissionId"]
+    scoring.runOnce()
+
+    masks = _stackOf(np, {name: tree for name in labels.NAMES})
+    _as(revy)
+    fileDoc, meta = _uploadStack(world, revy, info["caseName"], masks)
+    _as(revy)
+    assert _refusal(queue.revise, submissionId=original, fileId=str(fileDoc["_id"]),
+                    meta=json.dumps(meta), clientProtocol=16).code == 426
+    result = queue.revise(submissionId=original, fileId=str(fileDoc["_id"]),
+                          meta=json.dumps(meta), labelFormat="class-stack-nrrd/1",
+                          clientProtocol=17)
+    revision = Submission14().load(result["submissionId"], force=True)
+    assert revision["labelFormat"] == "class-stack-nrrd/1"
+    assert revision["voxelCounts"] == {name: int(tree.sum()) for name in labels.NAMES}
+    stored = _storedStack(world, revision)
+    assert [int(m.sum()) for m in stored["masks"]] == [int(tree.sum())] * 4
+
+
+def test_a_0_16_module_is_told_to_update_and_formats_are_recorded_as_stored(world):
+    """A 0.16.5 module (protocol 16) writes one label volume and loses overlapping
+    classes: refused with the update message. An unknown format name is refused; a
+    declared format is recorded as the stored bytes say, and a submission without one
+    is an old label volume."""
+    import numpy as np
+    from girder_segqueue14.models import Submission14
+
+    _readyProject(world)
+    queue = _resource()
+    anna = world.people["anna"]
+    _as(anna)
+    info = queue.nextCase(clientProtocol=17)
+    queue.downloadCase(caseId=info["caseId"])
+    fileDoc, meta = _uploadSeg(world, anna, info["caseName"], _tree(np))
+    args = dict(assignmentId=info["assignmentId"], fileId=str(fileDoc["_id"]),
+                meta=json.dumps(meta))
+    _as(anna)
+    err = _refusal(queue.submit, clientProtocol=16, **args)
+    assert err.code == 426 and "Update the SegQueue14 module" in err.extra["message"]
+    err = _refusal(queue.submit, labelFormat="png", clientProtocol=17, **args)
+    assert err.code == 400 and err.extra["segqueueError"] == "bad_label_format"
+    # Declared a class stack, uploaded a label volume: the bytes win.
+    response = queue.submit(labelFormat="class-stack-nrrd/1", clientProtocol=17, **args)
+    assert Submission14().load(response["submissionId"], force=True)["labelFormat"] == "labelmap"
+
+
+def test_old_label_volume_submissions_still_score_and_export(world, tmp_path):
+    """Everything stored before protocol 17 is one label volume: no labelFormat on the
+    row, and it scores and exports exactly as before."""
+    import numpy as np
+    from girder_segqueue14 import export, scoring
+    from girder_segqueue14.models import Submission14
+
+    _readyProject(world)
+    queue = _resource()
+    _as(world.people["cathy"])
+    info = queue.nextCase(clientProtocol=17)
+    response = _submit(world, queue, world.people["cathy"], info, _tree(np))
+    Submission14().collection.update_one({"_id": __import__("bson").ObjectId(
+        response["submissionId"])}, {"$unset": {"labelFormat": ""}})
+    scoring.runOnce()
+    submission = Submission14().load(response["submissionId"], force=True)
+    assert submission["autoScore"]["reference"]["mean_dice"] == 1.0
+    _as(world.people["revy"])
+    assert queue.getSubmission(submissionId=response["submissionId"])["labelFormat"] == "labelmap"
+    out = tmp_path / "export"
+    assert export.main(["--out", str(out)]) == 0
+    import nibabel as nib
+
+    lad = np.asarray(nib.load(str(out / info["caseName"] / "segmentations"
+                                  / "LAD.nii.gz")).dataobj)
+    assert int((lad > 0).sum()) == int((_tree(np) == 2).sum())
 
 
 def test_export_leaves_a_d27_sealed_case_out_unless_acceptance_scoring(world, tmp_path, capsys):
@@ -881,7 +1112,7 @@ def test_export_leaves_a_d27_sealed_case_out_unless_acceptance_scoring(world, tm
     _readyProject(world)
     queue = _resource()
     _as(world.people["cathy"])
-    info = queue.nextCase(clientProtocol=16)
+    info = queue.nextCase(clientProtocol=17)
     _submit(world, queue, world.people["cathy"], info, _tree(np))
     scoring.runOnce()
     case = Case14().findOne({"name": info["caseName"]})

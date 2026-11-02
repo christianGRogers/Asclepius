@@ -32,9 +32,14 @@ structures per case rather than silently training on a hole.
 
 Two things about the inputs that are easy to get wrong:
 
-* A submission is an **integer label volume**, whatever its filename suffix
-  says. Label values come from the ``segqueue.project`` setting and match
-  ``configs/labels/coronary.yaml``. Splitting is by value, not by channel.
+* A submission from protocol 17 on is a **class stack** (D39,
+  ``segqueue14.labelfile``): one 0/1 channel per class, every class whole,
+  overlaps included. Each channel is written as that class's mask, as it is --
+  two classes that share voxels both keep them here, and ``segtrain convert``
+  decides what a training label does with that (#275). An older submission is
+  an **integer label volume**, whatever its filename suffix says, in the
+  project's label values; it is split by value. The format is read from the
+  file's own header.
 * The CT written here is the case's **stored** volume, which is the geometry
   corrected one. Going back to the original dataset file would pair labels drawn
   on the corrected grid with an image on the uncorrected one -- and for the ~1 in
@@ -61,6 +66,7 @@ import sys
 import tempfile
 
 from segqueue import states as st
+from segqueue14 import labelfile
 from segqueue14 import labels as project_labels
 
 #: Written beside the CT, as ``segtrain convert`` expects.
@@ -118,6 +124,28 @@ def splitLabels(labels, segments):
             for spec in segments}
 
 
+def splitClassStack(path, segments):
+    """A class-stack file as ``{name: (mask, grid image)}`` for every segment.
+
+    Each class is its own channel, whole (D39). A segment the file does not name
+    gets an empty mask, so a missing class is reported as empty, never dropped.
+    """
+    np, sitk = _requireDeps()
+    data = labelfile.read_class_stack(path)
+    grid = sitk.GetImageFromArray(np.zeros(data['masks'].shape[1:], np.uint8))
+    grid.SetSpacing(data['spacing'])
+    grid.SetOrigin(data['origin'])
+    grid.SetDirection(data['direction'])
+    byName = {name: index for index, name in enumerate(data['names'])}
+    out = {}
+    for spec in segments:
+        index = byName.get(spec.name)
+        mask = (data['masks'][index].astype(np.uint8) if index is not None
+                else np.zeros(data['masks'].shape[1:], np.uint8))
+        out[spec.name] = (mask, grid)
+    return out
+
+
 def _writeMask(array, reference, path):
     """Write a binary mask sharing ``reference``'s grid exactly."""
     _, sitk = _requireDeps()
@@ -154,22 +182,30 @@ def exportCase(case, submission, outRoot, segments, name=None, dryRun=False):
 
     labelPath = _download(labelFile, os.path.splitext(labelFile['name'])[1] or '.nrrd')
     try:
-        labelImage = sitk.ReadImage(labelPath)
-        labels = sitk.GetArrayFromImage(labelImage)
+        if labelfile.sniff(labelPath) == labelfile.FORMAT_CLASS_STACK:
+            masks = splitClassStack(labelPath, segments)
+        else:
+            labelImage = sitk.ReadImage(labelPath)
+            masks = {name: (mask, labelImage) for name, mask in
+                     splitLabels(sitk.GetArrayFromImage(labelImage), segments).items()}
 
         empty = []
-        for structure, mask in splitLabels(labels, segments).items():
+        shape = None
+        for structure, (mask, grid) in masks.items():
             if not mask.any():
                 empty.append(structure)
-            _writeMask(mask, labelImage,
+            shape = mask.shape
+            _writeMask(mask, grid,
                        os.path.join(target, SEGMENTATIONS_DIR, structure + '.nii.gz'))
+        overlap = labelfile.overlaps([m for m, _ in masks.values()], list(masks))
     finally:
         _unlink(labelPath)
 
     _writeVolume(volume, os.path.join(target, 'ct.nii.gz'))
 
     return {'case': caseName, 'written': len(segments), 'empty': empty,
-            'shape': tuple(int(n) for n in labels.shape)}
+            'overlaps': [list(row) for row in overlap],
+            'shape': tuple(int(n) for n in shape) if shape else None}
 
 
 def _writeVolume(fileDoc, destination):
@@ -368,6 +404,7 @@ def main(argv=None):
 
     written = skippedReplicas = failed = sealedExcluded = sealedIncluded = 0
     emptyStructures = {}
+    overlapping = []
     exportedCases = []
     prelabelVersions = {}
     args.prelabelVersions = prelabelVersions
@@ -400,6 +437,11 @@ def main(argv=None):
         for structure in result.get('empty', ()):
             emptyStructures[structure] = emptyStructures.get(structure, 0) + 1
         note = f'  [{len(result["empty"])} empty]' if result.get('empty') else ''
+        if result.get('overlaps'):
+            # Kept whole (D39): every class has all its voxels in its own file.
+            overlapping.append(result['case'])
+            note += '  [classes overlap: ' + ', '.join(
+                f'{a}/{b} {n}' for a, b, n in result['overlaps']) + ']'
         print(f'  + {result["case"]}{note}')
 
     args.poolSeal = {'sha256': seal.sha256,
@@ -421,6 +463,10 @@ def main(argv=None):
     if emptyStructures:
         print('Structures with no voxels in some cases (absent, not missing): '
               + ', '.join(f'{k} x{v}' for k, v in sorted(emptyStructures.items())))
+    if overlapping:
+        print(f'{len(overlapping)} case(s) have classes that share voxels; each class '
+              'was written whole (D39). How a training label treats them is '
+              '`segtrain convert`\'s overlap policy (#275).')
     if skippedReplicas:
         print(f'{skippedReplicas} additional approved annotation(s) of duplicated '
               'cases were not exported. Pass --replicas all to write them.')

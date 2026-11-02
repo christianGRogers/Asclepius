@@ -17,6 +17,10 @@ having a separate contract:
   automatic *binary* vessel mask (TotalSegmentator ``coronary_arteries``) that the
   annotator divides into the four classes (D25). It is a helper segment, like the heart
   region, and is structurally unable to reach a submission.
+* **A ``labelFormat``** on submit and revise (protocol 17, D39): what the
+  uploaded file is. ``class-stack-nrrd/1`` keeps every class whole, overlaps
+  included; a submission without one is an old single label volume
+  (``labelmap``), which stays readable everywhere.
 * **``missing_required``** -- D13's old submit refusal. No longer raised since
   #270 (project lead, 2026-11-02); the code is kept so an older module still
   recognises it.
@@ -54,6 +58,9 @@ from segqueue.protocol import (  # noqa: F401
 )
 
 from . import PROTOCOL_VERSION
+from .labelfile import FORMAT_CLASS_STACK as LABEL_FORMAT_CLASS_STACK  # noqa: F401
+from .labelfile import FORMAT_LABELMAP as LABEL_FORMAT_LABELMAP
+from .labelfile import FORMATS as LABEL_FORMATS
 
 #: ``https://host/api/v1/segqueue14/...``.
 API_PREFIX = "segqueue14"
@@ -100,6 +107,9 @@ def path(template: str, **kwargs: Any) -> str:
 
 
 # -------------------------------------------------------------- error codes
+
+#: HTTP 400 from /submit or /revise for a ``labelFormat`` this server cannot read.
+ERR_BAD_LABEL_FORMAT = "bad_label_format"
 
 #: Formerly HTTP 400 from /submit for an empty required class (D13); not raised since #270.
 ERR_MISSING_REQUIRED = "missing_required"
@@ -193,3 +203,22 @@ def check_client_protocol(client_protocol: Optional[Any]) -> None:
             {"minProtocol": MIN_CLIENT_PROTOCOL, "serverProtocol": PROTOCOL_VERSION,
              "module": "SegQueue14"},
         )
+
+
+def label_format(value: Optional[Any]) -> str:
+    """The stored format for a submit's ``labelFormat``; raise for an unknown one.
+
+    Missing means an old single label volume (``labelmap``): every submission
+    from before protocol 17. A client cannot reach the server without protocol
+    17 any more, but the default keeps those stored submissions meaningful.
+    """
+    text = "" if value is None else str(value).strip()
+    if not text:
+        return LABEL_FORMAT_LABELMAP
+    if text not in LABEL_FORMATS:
+        raise ProtocolError(
+            ERR_BAD_LABEL_FORMAT,
+            f"Unknown segmentation file format {text!r}; this server reads "
+            + ", ".join(LABEL_FORMATS) + ". Update the SegQueue14 module.",
+            {"labelFormat": text, "known": list(LABEL_FORMATS)})
+    return text

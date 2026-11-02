@@ -38,6 +38,7 @@ from ..models import Assignment14, Case14, Note14, Submission14
 from ..settings import getPolicy, getProject
 from ..utils import (
     checkClientProtocol,
+    checkLabelFormat,
     fileForCase,
     hashStoredFile,
     incomingFolder,
@@ -45,6 +46,7 @@ from ..utils import (
     refuse,
     requireAnnotator,
     requireCaseInvolvement,
+    storedLabelFormat,
     submissionsFolder,
 )
 
@@ -260,14 +262,19 @@ class QueueResource14(Resource):
         .jsonParam('meta', 'SubmissionMeta as JSON.', requireObject=True)
         .jsonParam('geometry', 'Segmentation and source geometry as JSON.',
                    requireObject=True, required=False)
+        .param('labelFormat', 'What the uploaded file is (segqueue14.labelfile): '
+               '"class-stack-nrrd/1", every class whole (protocol 17, D39), or '
+               '"labelmap", one label volume. Missing means "labelmap".',
+               required=False)
         .param('clientProtocol', 'SegQueue14 protocol version the client speaks.',
                dataType='integer', required=False)
-        .errorResponse('The upload is corrupt.', 400)
+        .errorResponse('The upload is corrupt, or its labelFormat is unknown.', 400)
         .errorResponse('This assignment cannot be submitted in its current state.', 409)
         .errorResponse('The SegQueue14 module is out of date.', 426)
     )
-    def submit(self, assignmentId, fileId, meta, geometry, clientProtocol):
+    def submit(self, assignmentId, fileId, meta, geometry, labelFormat, clientProtocol):
         checkClientProtocol(clientProtocol)
+        labelFormat = checkLabelFormat(labelFormat)
         user = requireAnnotator(self.getCurrentUser())
         assignment = loadOwnAssignment(Assignment14(), assignmentId, user)
 
@@ -285,6 +292,9 @@ class QueueResource14(Resource):
         if file is None:
             refuse('no_such_file', 'That upload could not be found.', status=404)
         self._verifyUpload(file, submissionMeta)
+        # Recorded as the stored bytes say, not as declared (an unknown declared
+        # name was already refused above).
+        labelFormat = storedLabelFormat(file)
 
         item = Item().load(file['itemId'], force=True)
         if item is not None:
@@ -299,7 +309,7 @@ class QueueResource14(Resource):
 
         submission = Submission14().createSubmission(
             assignment, submissionMeta, file['_id'], needsReview=needsReview,
-            geometry=geometry)
+            geometry=geometry, labelFormat=labelFormat)
         assignment = Assignment14().transition(
             assignment, st.SUBMIT,
             submissionId=submission['_id'], needsReview=needsReview, reviewRoll=roll)

@@ -210,4 +210,9 @@ duplicate scoring on real label volumes, and anything at 5,000-case scale.
 Approved work is exported into the case layout `segtrain convert` reads
 (README, “Data”) by `segqueue-export` (`server/girder_segqueue/export.py`;
 `segqueue14-export` for SegQueue14): the stored CT plus one binary mask per vessel.
+A SegQueue14 submission from 0.17.0 (protocol 17) is a class stack -- one 0/1
+channel per class on the CT grid, every class whole, overlaps included (D39,
+`src/segqueue14/labelfile.py`); older ones are one label volume. The export writes
+each class whole either way, and `segtrain convert` for task 716 refuses a read
+whose classes overlap until the training-time rule is decided (#275).
 ---

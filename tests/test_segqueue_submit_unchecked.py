@@ -77,11 +77,11 @@ class _Client:
         self.calls.append(("upload", name))
         return {"_id": "file1"}
 
-    def submit(self, assignmentId, meta, fileId, geometry=None):
+    def submit(self, assignmentId, meta, fileId, geometry=None, labelFormat=None):
         self.calls.append(("submit", assignmentId, meta.voxel_counts, geometry))
         return {"submissionId": "s1"}
 
-    def reviseSubmission(self, submissionId, meta, fileId):
+    def reviseSubmission(self, submissionId, meta, fileId, labelFormat=None):
         self.calls.append(("revise", submissionId, meta.voxel_counts))
         return {"submissionId": "s2", "state": "approved"}
 
@@ -106,7 +106,9 @@ def _logic(module, tmp_path, counts):
             handle.write(b"synthetic labelmap")
         return dict(counts), None, None
 
+    # SegQueue14 0.17.0 writes a class stack (exportSubmission, D39); SegQueue a labelmap.
     logic.exportLabelmap = export
+    logic.exportSubmission = export
     # If anything still asked about overlaps, the answer would be "yes".
     logic.classOverlaps = lambda: [("LAD", "LCx", 20)]
     logic.bankTime = lambda: None

@@ -141,8 +141,9 @@ check your internet connection and the server address.
 4. Side branches take the class of the vessel they come off. Diagonals and septals
    are LAD. Obtuse marginals are LCx. A ramus intermedius is always LCx. A PDA or
    posterolateral branch belongs to whichever artery it arises from.
-5. Click **Submit case**. The case cannot be submitted while LAD, LCx or RCA is
-   empty, or while any voxel belongs to two classes. The panel tells you which.
+5. Click **Submit case**. Nothing checks what you drew before it is sent (project
+   lead, 2026-11-02): an empty LAD, LCx or RCA no longer blocks the
+   submit, so check each class yourself first.
 
 Other buttons you will see:
 
@@ -169,8 +170,6 @@ again. This works for both install routes from version 0.16.4 onward.
 | "Update the SegQueue14 module" at login | Your module is older than the server expects | Click Check for updates, then Update and restart |
 | "Could not reach the server" | No connection, or a typo in the address | Check your internet and the Server box |
 | SegQueue says Draw tube is missing | SegmentEditorExtraEffects is not installed | Install it from the Extensions Manager (step 3) |
-| "Cannot submit: LAD, LCx or RCA is empty" | A required class has no voxels | Fill in the missing vessel |
-| "Cannot submit: a voxel is in two classes" | Two class copies overlap | Show each class and erase the overlap |
 | SegQueue is not in the module list after Route A | The wrong folder was added, or Slicer was not restarted | Check that the path ends in `qt-scripted-modules`, then restart |
 
 ## 9. Getting help

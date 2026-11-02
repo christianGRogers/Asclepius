@@ -113,8 +113,10 @@ resumable uploads, which is the one part you cannot afford to get subtly wrong.
 
 The shared package is the load-bearing idea. A route name, a state name or a
 validation rule cannot drift between client and server, because there is one
-definition and both import it — and the submission checks that refuse an empty
-segment client-side are the *same function* that refuses it again server-side.
+definition and both import it. (Nothing checks what a submission's segmentation
+contains, client or server, since the project lead's instruction of 2026-11-02,
+#270; the voxel counts are recorded, and the scoring worker flags an empty
+required class for review.)
 
 ### Quality, without reading every case
 

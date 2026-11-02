@@ -1,4 +1,4 @@
-"""SegQueue14 inside a real 3D Slicer: the D26 seed prefill and the overlap check.
+"""SegQueue14 inside a real 3D Slicer: the D26 seed prefill, drafts, and the export.
 
     xvfb-run -a Slicer --no-splash --no-main-window --python-script tests/slicer_selftest14.py
 
@@ -6,9 +6,11 @@ What only Slicer can say: that one seed copied into all four class segments stay
 four full, overlapping copies (one label volume imported into several target
 segments fills only the first -- found in 5.8 while writing this), that trimming
 one copy leaves the others whole, that a saved draft keeps them, that the classes
-start hidden, that ``submit()`` refuses overlapping classes before any upload, and
-that a trimmed case exports one class per voxel, and that the reviewer's
-ImageCAS-X reference is shown in the four classes (#68).
+start hidden, that a draft saved with the copies still overlapping reopens with
+every class readable (the false "empty" of #270), that overlapping classes and
+an empty scene are uploaded rather than refused (#270), that a trimmed case
+exports one class per voxel, and that the reviewer's ImageCAS-X reference is
+shown in the four classes (#68).
 
 With ``SEGQUEUE_SELFTEST_INSTALLED=<folder>`` it tests the module Slicer loaded
 from that installed folder instead of the checkout.
@@ -49,12 +51,23 @@ class _Assignment:
         self.__dict__.update(fields)
 
 
-class _NoUploadClient:
-    def uploadFile(self, *args, **kwargs):
-        raise AssertionError("uploaded although classes overlap")
+class _RecordingClient:
+    """Takes uploads and hand-overs without a server, and remembers them."""
 
-    def submit(self, *args, **kwargs):
-        raise AssertionError("submitted although classes overlap")
+    def __init__(self):
+        self.calls = []
+
+    def uploadFile(self, path, *args, **kwargs):
+        self.calls.append(("upload", os.path.isfile(path)))
+        return {"_id": "file"}
+
+    def submit(self, assignmentId, meta, fileId, geometry=None):
+        self.calls.append(("submit", dict(meta.voxel_counts)))
+        return {"submissionId": "s1"}
+
+    def reviseSubmission(self, submissionId, meta, fileId):
+        self.calls.append(("revise", dict(meta.voxel_counts)))
+        return {"submissionId": "s2"}
 
 
 def _counts(slicer, labels, segmentationNode, volume, segmentId):
@@ -127,6 +140,17 @@ def run():
     slicer.mrmlScene.RemoveNode(reopened)
     check("a saved draft keeps the four copies", again == copies, again)
 
+    # #270: the same draft reopened the way a resumed case is (through
+    # _applyTemplate). Re-pinning label values used to leave LAD, LCx and RCA
+    # unreadable here, so they exported as empty.
+    resumed = module.SegQueue14Logic(cacheRoot=os.path.join(tmp, "cache"))
+    resumed.project = logic.project
+    resumed.volumeNode = volume
+    resumed._loadOrCreateSegmentation({"workPath": draft})
+    reread = _counts(slicer, labels, resumed.segmentationNode, volume, resumed.segmentIdFor)
+    check("a resumed draft keeps every class readable", reread == copies, reread)
+    slicer.mrmlScene.RemoveNode(resumed.segmentationNode)
+
     logic.setClassesVisible(False)
     display = logic.segmentationNode.GetDisplayNode()
     hidden = [not display.GetSegmentVisibility(logic.segmentIdFor(s.name))
@@ -139,16 +163,13 @@ def run():
     check("untrimmed copies overlap pairwise", len(overlaps) == 6 and all(
         n == nSeed for _, _, n in overlaps), overlaps)
 
-    logic.client = _NoUploadClient()
+    logic.client = _RecordingClient()
     logic.assignment = assignment
     logic._sessionStart = time.time()
-    try:
-        logic.submit()
-        refusal = ""
-    except module.SegQueueError as exc:
-        refusal = str(exc)
-    check("submit refuses overlapping classes before any upload", "share" in refusal,
-          refusal[:80])
+    logic.reviseSubmission("s0")
+    check("overlapping classes are uploaded, not refused (#270)",
+          [c[0] for c in logic.client.calls] == ["upload", "revise"]
+          and logic.client.calls[0][1], logic.client.calls)
 
     for name, (lo, hi) in TUBES.items():
         segmentId = logic.segmentIdFor(name)
@@ -243,6 +264,19 @@ def run():
           counts == {name: TUBE_VOXELS for name in TUBES}
           and byValue == {name: [labels.LABEL_VALUES[name]] for name in TUBES},
           (counts, byValue))
+
+    # #270: an empty scene is submitted, as an all-background file on the CT grid.
+    empty = slicer.mrmlScene.AddNewNodeByClass("vtkMRMLSegmentationNode", "empty")
+    empty.CreateDefaultDisplayNodes()
+    empty.SetReferenceImageGeometryParameterFromVolumeNode(volume)
+    logic.segmentationNode = empty
+    logic._applyTemplate()
+    logic.client = _RecordingClient()
+    logic.submit()
+    check("an empty scene is uploaded and handed over (#270)",
+          logic.client.calls == [("upload", True),
+                                 ("submit", {name: 0 for name in TUBES})],
+          logic.client.calls)
 
 
 try:

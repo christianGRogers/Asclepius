@@ -1,0 +1,80 @@
+{
+ "n_volumes": 904,
+ "n_patients": 642,
+ "patients_by_status": {
+  "coronary seal (D27/D32/D33)": 170,
+  "free": 221,
+  "seal reserve (A34)": 101,
+  "a D35 draft (union)": 60,
+  "free: ImageCHD (congenital, own stratum)": 90
+ },
+ "d35_draft_union_size": 234,
+ "free_patients": 221,
+ "free_whole_heart_good_contrast_inplane_le_0p5mm": 25,
+ "free_layer_ready_by_source": {
+  "CCA200-HF": 16,
+  "Figshare-EpicardialFat-CE": 5,
+  "PLOS-Peng2016-CCTA-JPEG": 3,
+  "Slicer-SampleData": 1
+ },
+ "free_whole_heart_good_or_moderate_inplane_le_0p5mm": 41,
+ "free_relaxed_by_source": {
+  "CCA200-HF": 20,
+  "PLOS-Peng2016-CCTA-JPEG": 14,
+  "Figshare-EpicardialFat-CE": 6,
+  "Slicer-SampleData": 1
+ },
+ "free_by_source": {
+  "TotalSegmentator-cardiac": 114,
+  "ImageALCAPA": 30,
+  "HOCMvalvesSeg": 27,
+  "CCA200-HF": 20,
+  "PLOS-Peng2016-CCTA-JPEG": 17,
+  "Figshare-EpicardialFat-CE": 6,
+  "VMR-Coronary": 3,
+  "Zenodo-STOPSTORM": 3,
+  "Slicer-SampleData": 1
+ },
+ "free_multi_volume_patients": 0,
+ "free_multi_volume_examples": [],
+ "field_values": {
+  "heart_in_fov": [
+   [
+    "full",
+    812
+   ],
+   [
+    "partial",
+    88
+   ],
+   [
+    "no",
+    4
+   ]
+  ],
+  "contrast": [
+   [
+    "good",
+    526
+   ],
+   [
+    "moderate",
+    295
+   ],
+   [
+    "weak",
+    77
+   ],
+   [
+    "none",
+    6
+   ]
+  ]
+ },
+ "inplane_spacing_all": {
+  "<=0.4": 369,
+  "0.4-0.5": 215,
+  ">0.5": 320
+ },
+ "janusm_r1_volumes": 41
+}

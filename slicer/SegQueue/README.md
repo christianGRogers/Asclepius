@@ -497,6 +497,12 @@ The client asks the server how much it already has and continues from there.
 
 ## Version history
 
+**0.13.1** — Nothing about the segmentation is checked before a submit or a
+reviewer's save any more (project lead, 2026-11-02, #270): a scene with nothing
+drawn is uploaded as an all-background label volume instead of being refused.
+A reopened draft keeps its segments' label values, so no class reads as empty
+after a restart. Not released: SegQueue14 is the released line.
+
 **0.13.0** — The panel, rebuilt. No change to what it does; a change to how
 much of it there is and how it reads.
 

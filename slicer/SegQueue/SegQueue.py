@@ -22,10 +22,10 @@ Three decisions shape the whole module:
 * **Local data is a lease, not a library.** Every byte lives under one managed
   cache directory holding one case, purged the moment that case is submitted or
   released. See ``SegQueueLib/cache.py``.
-* **Nothing here is trusted.** Validation runs client-side so the annotator gets
-  an instant, specific complaint instead of a rejection three days later -- and
-  the identical checks run again on the server, because a client can be old or
-  patched.
+* **Nothing here is trusted.** The server checks login, roles, ownership, the
+  module's protocol and the upload's checksum. Nothing checks what the
+  segmentation contains, client or server (#270): every submission is seen by a
+  reviewer instead.
 
 Runs against Slicer's bundled Python 3.9 with no pip installs. It imports
 ``segqueue`` from the sibling ``src/`` directory, which is stdlib-only by design,
@@ -107,7 +107,7 @@ from SegQueueLib import (
     updater,
 )
 
-__version__ = "0.13.0"
+__version__ = "0.13.1"
 
 #: How often the in-progress segmentation is written to disk. Two minutes is
 #: chosen against the cost of losing work rather than the cost of the write: a
@@ -744,16 +744,22 @@ class SegQueueLogic(ScriptedLoadableModuleLogic):
 
         for spec in self.project.segments:
             segmentId = existing.get(spec.name)
-            if segmentId is None:
+            created = segmentId is None
+            if created:
                 segmentId = segmentation.AddEmptySegment(spec.name, spec.name,
                                                          list(spec.color))
             segment = segmentation.GetSegment(segmentId)
             segment.SetColor(*spec.color)
-            # Pin the exported label value to the protocol's, so the integers in
-            # the submitted volume mean the same thing for every annotator and
-            # match what `segtrain convert` expects. Older Slicer builds lack
-            # this setter; there the export order below still produces the right
-            # values, it is just not guaranteed by the file itself.
+            if not created:
+                # Never re-pin the label value of a segment that already exists
+                # (a reopened draft): its voxels are stored under its current
+                # value, and changing it makes them unreadable, so the segment
+                # reads as empty and drops out of the export (#270). The export
+                # numbers the classes by project order regardless.
+                continue
+            # A new, empty segment: pin its label value to the protocol's. Older
+            # Slicer builds lack this setter; the export order gives the same
+            # values there.
             try:
                 segment.SetLabelValue(int(spec.label))
             except AttributeError:  # pragma: no cover - old Slicer
@@ -952,17 +958,13 @@ class SegQueueLogic(ScriptedLoadableModuleLogic):
                 raise RuntimeError(
                     "Slicer could not export the segments to a label volume.")
 
-            # Nothing drawn yet: Slicer exports a labelmap of zero extent, and
-            # every way of writing that to disk fails. Reporting the write
-            # failure would be technically true and useless -- the annotator
-            # would see "could not write the segmentation" at the exact moment
-            # the honest answer is "you have not segmented anything yet". Hand
-            # back empty counts instead and let the ordinary checks say which
-            # vessels are missing, by name.
+            # Nothing drawn yet: Slicer can export a labelmap of zero extent,
+            # which cannot be written to disk. An empty scene is still a
+            # submission (#270), so write an all-background volume on the
+            # source grid instead.
             image = labelmapNode.GetImageData()
             if image is None or 0 in tuple(image.GetDimensions()):
-                empty = {spec.name: 0 for spec in self.project.segments}
-                return empty, self.sourceGeometry(), None
+                _fillWithBackground(labelmapNode, self.volumeNode)
 
             if not slicer.util.saveNode(labelmapNode, path):
                 raise RuntimeError("Could not write the segmentation to " + path)
@@ -1003,15 +1005,9 @@ class SegQueueLogic(ScriptedLoadableModuleLogic):
         self.bankTime()
         path = os.path.join(self.cache.caseDir(assignment.assignment_id),
                             "submission.seg.nrrd")
+        # Nothing judges the contents (#270), not even an empty scene: the
+        # export always writes a file, all background if nothing was drawn.
         counts, sourceGeom, segGeom = self.exportLabelmap(path)
-
-        # Nothing judges the contents. The one refusal left is not a
-        # judgement: the export writes no file at all for an empty scene,
-        # and uploading nothing must not look like a submission.
-        if not os.path.isfile(path):
-            raise SegQueueError(
-                "There is nothing to submit -- none of the segments has any "
-                "voxels in it.")
 
         meta = SubmissionMeta(
             checksum=sha256_file(path),
@@ -1051,9 +1047,7 @@ class SegQueueLogic(ScriptedLoadableModuleLogic):
         case on the strength of it -- see the ``revise`` endpoint for why the
         authorship matters more than it looks.
 
-        Validated with the same checks the annotator's submission runs, including
-        the overlap check: a reviewer correcting a case by hand is exactly as able
-        to leave two branches sharing a voxel as an annotator is.
+        Like ``submit``, nothing about the segmentation is checked first (#270).
         """
         if self.segmentationNode is None or self.volumeNode is None:
             raise SegQueueError("There is no segmentation open to save.")
@@ -1068,10 +1062,6 @@ class SegQueueLogic(ScriptedLoadableModuleLogic):
         path = os.path.join(directory, "revision.seg.nrrd")
 
         counts, sourceGeom, segGeom = self.exportLabelmap(path)
-        if not os.path.isfile(path):
-            raise SegQueueError(
-                "There is nothing to save -- none of the segments has any "
-                "voxels in it.")
 
         meta = SubmissionMeta(
             checksum=sha256_file(path),
@@ -1117,6 +1107,15 @@ def _labelValueOf(segment, segmentId):
         if tail.isdigit():
             return int(tail)
     return None
+
+
+def _fillWithBackground(labelmapNode, volumeNode):
+    """Make ``labelmapNode`` an all-zero label volume on ``volumeNode``'s grid."""
+    import numpy as np
+
+    shape = slicer.util.arrayFromVolume(volumeNode).shape
+    slicer.util.updateVolumeFromArray(labelmapNode, np.zeros(shape, np.uint8))
+    labelmapNode.CopyOrientation(volumeNode)
 
 
 def _geometryOf(node):
@@ -2372,7 +2371,7 @@ class SegQueueWidget(ScriptedLoadableModuleWidget):
         reviewer-only way to submit. Everything that makes a submission correct
         hangs off having one: the project's segments created with the right names
         and label values, the branches started from the coronary mask, the
-        autosave, the elapsed-time record, the overlap check, and the upload the
+        autosave, the elapsed-time record, and the upload the
         server will accept. A second path to submitting would have to reproduce
         all of that, and would drift from it.
 

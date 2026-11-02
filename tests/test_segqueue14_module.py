@@ -259,29 +259,25 @@ def test_a_seeded_case_starts_with_the_seed_in_every_class_hidden():
     assert "ImportLabelmapToSegmentationNode" not in copy
 
 
-def _checkedExport():
-    # Both upload paths export through this one method, so the checks are
-    # asserted once here and each path is asserted to go through it.
-    return ast.get_source_segment(_source(), _method("SegQueue14Logic", "_exportChecked"))
-
-
 @pytest.mark.parametrize("method", ["submit", "reviseSubmission"])
-def test_overlapping_classes_are_refused_before_the_export(method):
-    checked = _checkedExport()
-    assert checked.index("classOverlaps()") < checked.index("self.exportLabelmap(")
-    assert "labels.overlap_message" in checked
+def test_nothing_about_the_segmentation_is_checked_before_the_upload(method):
+    # #270 (project lead, 2026-11-02): no D13, D26 or empty-scene refusal.
     body = ast.get_source_segment(_source(), _method("SegQueue14Logic", method))
-    assert "self._exportChecked(" in body and "self.exportLabelmap(" not in body
+    assert body.index("self.exportLabelmap(") < body.index("uploadFile")
+    for gone in ("classOverlaps", "missing_required", "overlap_message", "_exportChecked"):
+        assert gone not in body
 
 
-@pytest.mark.parametrize("method", ["submit", "reviseSubmission"])
-def test_required_classes_are_checked_before_anything_is_uploaded(method):
-    checked = _checkedExport()
-    assert checked.index("self.exportLabelmap(") < checked.index("missing_required")
-    assert "labels.missing_required_message" in checked
-    body = ast.get_source_segment(_source(), _method("SegQueue14Logic", method))
-    check = body.index("self._exportChecked(")
-    assert check < body.index("uploadFile"), "the D13 check must come before the upload"
+def test_a_reopened_draft_keeps_its_label_values():
+    # The false "LAD, LCx and RCA are empty" of #270: re-pinning the label value
+    # of a segment loaded from a draft left its voxels unreadable.
+    body = ast.get_source_segment(_source(), _method("SegQueue14Logic", "_applyTemplate"))
+    assert body.index("if not created:") < body.index("SetLabelValue")
+
+
+def test_an_empty_scene_is_still_written():
+    body = ast.get_source_segment(_source(), _method("SegQueue14Logic", "exportLabelmap"))
+    assert "_fillWithBackground(" in body and "return empty" not in body
 
 
 def test_there_is_no_instructions_panel_and_help_is_a_link():

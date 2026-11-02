@@ -17,7 +17,9 @@ having a separate contract:
   automatic *binary* vessel mask (TotalSegmentator ``coronary_arteries``) that the
   annotator divides into the four classes (D25). It is a helper segment, like the heart
   region, and is structurally unable to reach a submission.
-* **``missing_required``** -- D13's submit rule, refused by name.
+* **``missing_required``** -- D13's old submit refusal. No longer raised since
+  #270 (project lead, 2026-11-02); the code is kept so an older module still
+  recognises it.
 
 Stdlib only, Python 3.9, like the rest of the shared code.
 """
@@ -99,7 +101,7 @@ def path(template: str, **kwargs: Any) -> str:
 
 # -------------------------------------------------------------- error codes
 
-#: HTTP 400 from /submit: a required class (D13) has no voxels.
+#: Formerly HTTP 400 from /submit for an empty required class (D13); not raised since #270.
 ERR_MISSING_REQUIRED = "missing_required"
 
 # --------------------------------------------------------- case asset kinds

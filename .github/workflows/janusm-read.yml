@@ -1,0 +1,116 @@
+# The JanusMRead Slicer module (the Janus-M border reader, #156).
+#
+# Builds the module's own zip (JanusMRead-<v>-Slicer-5.8.zip) and keeps it as a
+# workflow artifact, then runs tests/slicer_selftest_janusm.py inside a real
+# Slicer against that zip, unzipped and loaded the way a reader installs it
+# (Additional module paths): a phantom case into the four segments, the
+# half-maximum window, the checks before upload, and submits through a fake
+# Janus-M read queue.
+#
+# Building is all this does. Publishing a release (tag janusm-read-v<v>) is the
+# project lead's decision, and nothing here can: read-only permissions, no tag,
+# no release, no deploy. Separate from SegQueue14's workflows on purpose.
+
+name: JanusMRead
+
+on:
+  pull_request:
+    paths:
+      - "slicer/JanusMRead/**"
+      - "slicer/build-extension-janusm.py"
+      - "src/janusm_reads/**"
+      - "tests/slicer_selftest_janusm.py"
+      - "tests/test_janusm_read_module.py"
+      - "tools/fetch_slicer.py"
+      - ".github/workflows/janusm-read.yml"
+  workflow_dispatch:
+    inputs:
+      slicer_version:
+        description: "Which Slicer the self-test runs in"
+        type: string
+        default: "5.8.1"
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build the zip
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    outputs:
+      version: ${{ steps.build.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Build
+        id: build
+        run: |
+          python slicer/build-extension-janusm.py --out dist
+          echo "version=$(python slicer/build-extension-janusm.py --print-version)" >> "$GITHUB_OUTPUT"
+          ls -l dist
+      - uses: actions/upload-artifact@v4
+        with:
+          name: JanusMRead-zip
+          path: dist/JanusMRead-*-Slicer-*.zip
+          if-no-files-found: error
+
+  selftest:
+    name: JanusMRead inside Slicer
+    needs: build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    env:
+      SLICER_VERSION: ${{ inputs.slicer_version || '5.8.1' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: JanusMRead-zip
+          path: dist
+
+      - name: Slicer
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            xvfb xauth libpulse-dev libpulse-mainloop-glib0 libnss3 \
+            libglu1-mesa libgl1 libopengl0 libfontconfig1 libdbus-1-3 libcups2t64 \
+            libx11-xcb1 libxcb-icccm4 libxcb-image0 libxcb-keysyms1 \
+            libxcb-randr0 libxcb-render0 libxcb-render-util0 libxcb-shape0 \
+            libxcb-shm0 libxcb-sync1 libxcb-xfixes0 libxcb-glx0 libxcb-dri3-0 \
+            libxcb-util1 libxcb-xinerama0 libxcb-xkb1 libxkbcommon0 \
+            libxkbcommon-x11-0 libxcomposite1 libxcursor1 libxdamage1 libxi6 \
+            libxrandr2 libxrender1 libxtst6 libsm6 libxt6 libasound2t64
+          python3 tools/fetch_slicer.py --os linux --version "$SLICER_VERSION" --out slicer.tar.gz --github-env
+          mkdir -p "$HOME/slicer"
+          tar -xzf slicer.tar.gz -C "$HOME/slicer" --strip-components=1
+
+      - name: Unzip it as a reader would
+        # Into the home folder, not the workspace: a git checkout is not an install.
+        run: |
+          unzip -q dist/JanusMRead-*-Slicer-5.8.zip -d "$HOME"
+          ls "$HOME/JanusMRead/lib/Slicer-5.8/qt-scripted-modules"
+
+      - name: Self-test on the installed module
+        shell: bash
+        env:
+          JANUSM_SELFTEST_OUT: ${{ github.workspace }}/selftest-janusm.txt
+        run: |
+          MODULES="$HOME/JanusMRead/lib/Slicer-5.8/qt-scripted-modules"
+          export JANUSM_SELFTEST_INSTALLED="$MODULES"
+          # Slicer's exit status after a --python-script is not reliable; the report is.
+          xvfb-run -a "$HOME/slicer/Slicer" --no-splash --no-main-window \
+            --additional-module-paths "$MODULES" \
+            --python-script tests/slicer_selftest_janusm.py || true
+          cat selftest-janusm.txt
+          { echo '### JanusMRead inside Slicer'; echo '```'; cat selftest-janusm.txt; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+          tail -n 1 selftest-janusm.txt | grep -q "RESULT PASS"
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: janusm-selftest-report
+          path: selftest-janusm.txt
+          if-no-files-found: ignore

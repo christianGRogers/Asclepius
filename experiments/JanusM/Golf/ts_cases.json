@@ -1,0 +1,242 @@
+{
+ "s1250": {
+  "age": "72.00",
+  "gender": "m",
+  "institute": "I",
+  "study_type": "ct aortic valve",
+  "manufacturer": "siemens",
+  "scanner_model": "somatom definition flash",
+  "kvp": "100",
+  "split": "train"
+ },
+ "s1330": {
+  "age": "78.00",
+  "gender": "m",
+  "institute": "I",
+  "study_type": "ct heart-thorakale aorta",
+  "manufacturer": "siemens",
+  "scanner_model": "somatom definition flash",
+  "kvp": "100",
+  "split": "train"
+ },
+ "s1239": {
+  "age": "52.00",
+  "gender": "m",
+  "institute": "I",
+  "study_type": "ct left artrium",
+  "manufacturer": "siemens",
+  "scanner_model": "somatom definition flash",
+  "kvp": "100",
+  "split": "train"
+ },
+ "s0946": {
+  "age": "69.00",
+  "gender": "f",
+  "institute": "I",
+  "study_type": "ct heart-thorakale aorta",
+  "manufacturer": "siemens",
+  "scanner_model": "somatom force",
+  "kvp": "90",
+  "split": "train"
+ },
+ "s0624": {
+  "age": "81.00",
+  "gender": "m",
+  "institute": "I",
+  "study_type": "ct aortic valve",
+  "manufacturer": "siemens",
+  "scanner_model": "somatom definition flash",
+  "kvp": "120",
+  "split": "train"
+ },
+ "s0702": {
+  "age": "81.00",
+  "gender": "m",
+  "institute": "G",
+  "study_type": "ct heart",
+  "manufacturer": "siemens",
+  "scanner_model": "somatom definition flash",
+  "kvp": "120",
+  "split": "train"
+ },
+ "s0877": {
+  "age": "47.00",
+  "gender": "f",
+  "institute": "I",
+  "study_type": "ct heart",
+  "manufacturer": "siemens",
+  "scanner_model": "somatom definition flash",
+  "kvp": "100",
+  "split": "train"
+ },
+ "s1272": {
+  "age": "57.00",
+  "gender": "m",
+  "institute": "I",
+  "study_type": "ct heart-thorakale aorta",
+  "manufacturer": "siemens",
+  "scanner_model": "somatom definition edge",
+  "kvp": "100",
+  "split": "train"
+ },
+ "s0684": {
+  "age": "59.00",
+  "gender": "m",
+  "institute": "I",
+  "study_type": "ct heart",
+  "manufacturer": "siemens",
+  "scanner_model": "somatom definition flash",
+  "kvp": "120",
+  "split": "test"
+ },
+ "s0767": {
+  "age": "64.00",
+  "gender": "f",
+  "institute": "I",
+  "study_type": "ct heart",
+  "manufacturer": "siemens",
+  "scanner_model": "somatom definition flash",
+  "kvp": "100",
+  "split": "train"
+ },
+ "s0531": {
+  "age": "67.00",
+  "gender": "f",
+  "institute": "I",
+  "study_type": "ct heart-thorakale aorta",
+  "manufacturer": "siemens",
+  "scanner_model": "somatom definition flash",
+  "kvp": "100",
+  "split": "train"
+ },
+ "s0184": {
+  "age": "66.00",
+  "gender": "m",
+  "institute": "I",
+  "study_type": "ct heart-thorakale aorta",
+  "manufacturer": "siemens",
+  "scanner_model": "somatom definition flash",
+  "kvp": "120",
+  "split": "train"
+ },
+ "s0189": {
+  "age": "50.00",
+  "gender": "m",
+  "institute": "I",
+  "study_type": "ct aortic valve",
+  "manufacturer": "siemens",
+  "scanner_model": "somatom definition flash",
+  "kvp": "120",
+  "split": "train"
+ },
+ "s0919": {
+  "age": "65.00",
+  "gender": "f",
+  "institute": "I",
+  "study_type": "ct aortic valve",
+  "manufacturer": "siemens",
+  "scanner_model": "somatom definition flash",
+  "kvp": "120",
+  "split": "train"
+ },
+ "s0671": {
+  "age": "75.00",
+  "gender": "m",
+  "institute": "I",
+  "study_type": "ct left artrium",
+  "manufacturer": "siemens",
+  "scanner_model": "somatom definition flash",
+  "kvp": "100",
+  "split": "train"
+ },
+ "s0901": {
+  "age": "74.00",
+  "gender": "m",
+  "institute": "I",
+  "study_type": "ct heart-thorakale aorta",
+  "manufacturer": "siemens",
+  "scanner_model": "somatom definition flash",
+  "kvp": "80",
+  "split": "train"
+ },
+ "s1073": {
+  "age": "70.00",
+  "gender": "m",
+  "institute": "I",
+  "study_type": "ct heart-thorakale aorta",
+  "manufacturer": "siemens",
+  "scanner_model": "somatom definition edge",
+  "kvp": "100",
+  "split": "train"
+ },
+ "s0270": {
+  "age": "69.00",
+  "gender": "m",
+  "institute": "I",
+  "study_type": "ct heart",
+  "manufacturer": "siemens",
+  "scanner_model": "somatom definition flash",
+  "kvp": "120",
+  "split": "train"
+ },
+ "s0403": {
+  "age": "84.00",
+  "gender": "f",
+  "institute": "B",
+  "study_type": "ct heart-thorakale aorta",
+  "manufacturer": "philips",
+  "scanner_model": "iqon - spectral ct",
+  "kvp": "120",
+  "split": "train"
+ },
+ "s1049": {
+  "age": "63.00",
+  "gender": "m",
+  "institute": "I",
+  "study_type": "ct left artrium",
+  "manufacturer": "siemens",
+  "scanner_model": "somatom definition flash",
+  "kvp": "100",
+  "split": "train"
+ },
+ "s0597": {
+  "age": "79.00",
+  "gender": "m",
+  "institute": "I",
+  "study_type": "ct aortic valve",
+  "manufacturer": "siemens",
+  "scanner_model": "somatom definition edge",
+  "kvp": "100",
+  "split": "train"
+ },
+ "s0653": {
+  "age": "76.00",
+  "gender": "f",
+  "institute": "G",
+  "study_type": "ct heart",
+  "manufacturer": "siemens",
+  "scanner_model": "somatom definition flash",
+  "kvp": "120",
+  "split": "train"
+ },
+ "s1133": {
+  "age": "83.00",
+  "gender": "f",
+  "institute": "I",
+  "study_type": "ct heart-thorakale aorta",
+  "manufacturer": "siemens",
+  "scanner_model": "somatom definition flash",
+  "kvp": "100",
+  "split": "val"
+ },
+ "s0665": {
+  "age": "64.00",
+  "gender": "f",
+  "institute": "I",
+  "study_type": "ct aortic valve",
+  "manufacturer": "siemens",
+  "scanner_model": "somatom definition as+",
+  "kvp": "100",
+  "split": "train"
+ }
+}

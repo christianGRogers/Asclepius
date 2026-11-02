@@ -1,0 +1,3047 @@
+{
+ "rule": "Kilo v1: the SegQueue/cases volumes Janus-M may read, prelabel, train or score on.\n\nJanus-M never reads, scores or trains on a coronary sealed case or a D35 decision-set patient (D37,\nREADME). Kilo is stricter than that minimum, by patient (`segtrain.pool_seal`, D32/D33 grouping):\n\n  refused  1. the D27/D32 pool seal, primary and report-only (the project's guard, hash-pinned);\n           2. the seal's whole extension order (the A34 reserve: \"untrained, unprelabelled and\n              uninspected\" until the seal is sized);\n           4. PLOS-Peng2016 (burned-in patient text; QC report).\n           3. every patient of every Round 10 D35 draw (Delta's adopted draw, and Atlas's, Bridge's\n              and Crucible's), since A33 freezes all candidate draws until the lead answers Q1.\n  kept     every other volume of the 904 in the QC report (`QC volume reports.csv`) with the\n           whole heart in the field of view and contrast not 'none'. Coronary annotatability does\n           not matter for the myocardium, so volumes left out of the coronary pool list are kept.\n  flagged  spacing-suspect sets (ImageALCAPA, HOCMvalvesSeg, CCA200-HF; QC report) and the\n           paediatric congenital sets: usable for training, never for a mm metric or the seal.",
+ "seal_sha256": "e71141b407acb79eeff912eee21029d34edb677d984172d871eb5f02cb1d0690",
+ "n_qc_volumes": 904,
+ "refused_volumes": {
+  "sealed": 369,
+  "reserve": 156,
+  "d35_any_draw": 48,
+  "heart_not_full": 20,
+  "no_contrast": 2,
+  "privacy_burned_in_text": 17
+ },
+ "kept_volumes": 292,
+ "kept_patients": 292,
+ "kept_adult_good_spacing_volumes": 126,
+ "kept_adult_good_spacing_patients": 126,
+ "by_source_[volumes,patients]": {
+  "CCA200-HF": [
+   20,
+   20
+  ],
+  "Figshare-EpicardialFat-CE": [
+   6,
+   6
+  ],
+  "HOCMvalvesSeg": [
+   27,
+   27
+  ],
+  "ImageALCAPA": [
+   30,
+   30
+  ],
+  "ImageCHD": [
+   88,
+   88
+  ],
+  "Slicer-SampleData": [
+   1,
+   1
+  ],
+  "Taiwan-AICUP-CardiacCT": [
+   20,
+   20
+  ],
+  "TotalSegmentator-cardiac": [
+   97,
+   97
+  ],
+  "Zenodo-STOPSTORM": [
+   3,
+   3
+  ]
+ },
+ "volumes": [
+  {
+   "name": "CCA200-HF__CCA_00.nii.gz",
+   "item_id": "6acf26878b4d3a662c979126",
+   "patient": "CCA200-HF__CCA_00",
+   "source": "CCA200-HF",
+   "contrast": "good",
+   "quality": "fair",
+   "flags": [
+    "spacing_suspect"
+   ]
+  },
+  {
+   "name": "CCA200-HF__CCA_01.nii.gz",
+   "item_id": "6acf268a8b4d3a662c979128",
+   "patient": "CCA200-HF__CCA_01",
+   "source": "CCA200-HF",
+   "contrast": "good",
+   "quality": "good",
+   "flags": [
+    "spacing_suspect"
+   ]
+  },
+  {
+   "name": "CCA200-HF__CCA_02.nii.gz",
+   "item_id": "6acf268b8b4d3a662c97912a",
+   "patient": "CCA200-HF__CCA_02",
+   "source": "CCA200-HF",
+   "contrast": "good",
+   "quality": "good",
+   "flags": [
+    "spacing_suspect"
+   ]
+  },
+  {
+   "name": "CCA200-HF__CCA_03.nii.gz",
+   "item_id": "6acf268d8b4d3a662c97912c",
+   "patient": "CCA200-HF__CCA_03",
+   "source": "CCA200-HF",
+   "contrast": "moderate",
+   "quality": "good",
+   "flags": [
+    "spacing_suspect"
+   ]
+  },
+  {
+   "name": "CCA200-HF__CCA_04.nii.gz",
+   "item_id": "6acf268e8b4d3a662c97912e",
+   "patient": "CCA200-HF__CCA_04",
+   "source": "CCA200-HF",
+   "contrast": "good",
+   "quality": "good",
+   "flags": [
+    "spacing_suspect"
+   ]
+  },
+  {
+   "name": "CCA200-HF__CCA_05.nii.gz",
+   "item_id": "6acf26908b4d3a662c979130",
+   "patient": "CCA200-HF__CCA_05",
+   "source": "CCA200-HF",
+   "contrast": "good",
+   "quality": "fair",
+   "flags": [
+    "spacing_suspect"
+   ]
+  },
+  {
+   "name": "CCA200-HF__CCA_06.nii.gz",
+   "item_id": "6acf26918b4d3a662c979132",
+   "patient": "CCA200-HF__CCA_06",
+   "source": "CCA200-HF",
+   "contrast": "moderate",
+   "quality": "fair",
+   "flags": [
+    "spacing_suspect"
+   ]
+  },
+  {
+   "name": "CCA200-HF__CCA_07.nii.gz",
+   "item_id": "6acf26938b4d3a662c979134",
+   "patient": "CCA200-HF__CCA_07",
+   "source": "CCA200-HF",
+   "contrast": "moderate",
+   "quality": "fair",
+   "flags": [
+    "spacing_suspect"
+   ]
+  },
+  {
+   "name": "CCA200-HF__CCA_08.nii.gz",
+   "item_id": "6acf26958b4d3a662c979136",
+   "patient": "CCA200-HF__CCA_08",
+   "source": "CCA200-HF",
+   "contrast": "good",
+   "quality": "fair",
+   "flags": [
+    "spacing_suspect"
+   ]
+  },
+  {
+   "name": "CCA200-HF__CCA_09.nii.gz",
+   "item_id": "6acf26968b4d3a662c979138",
+   "patient": "CCA200-HF__CCA_09",
+   "source": "CCA200-HF",
+   "contrast": "good",
+   "quality": "good",
+   "flags": [
+    "spacing_suspect"
+   ]
+  },
+  {
+   "name": "CCA200-HF__CCA_10.nii.gz",
+   "item_id": "6acf26988b4d3a662c97913a",
+   "patient": "CCA200-HF__CCA_10",
+   "source": "CCA200-HF",
+   "contrast": "good",
+   "quality": "good",
+   "flags": [
+    "spacing_suspect"
+   ]
+  },
+  {
+   "name": "CCA200-HF__CCA_11.nii.gz",
+   "item_id": "6acf26998b4d3a662c97913c",
+   "patient": "CCA200-HF__CCA_11",
+   "source": "CCA200-HF",
+   "contrast": "good",
+   "quality": "good",
+   "flags": [
+    "spacing_suspect"
+   ]
+  },
+  {
+   "name": "CCA200-HF__CCA_12.nii.gz",
+   "item_id": "6acf269b8b4d3a662c97913e",
+   "patient": "CCA200-HF__CCA_12",
+   "source": "CCA200-HF",
+   "contrast": "good",
+   "quality": "good",
+   "flags": [
+    "spacing_suspect"
+   ]
+  },
+  {
+   "name": "CCA200-HF__CCA_13.nii.gz",
+   "item_id": "6acf269d8b4d3a662c979140",
+   "patient": "CCA200-HF__CCA_13",
+   "source": "CCA200-HF",
+   "contrast": "good",
+   "quality": "good",
+   "flags": [
+    "spacing_suspect"
+   ]
+  },
+  {
+   "name": "CCA200-HF__CCA_14.nii.gz",
+   "item_id": "6acf269e8b4d3a662c979142",
+   "patient": "CCA200-HF__CCA_14",
+   "source": "CCA200-HF",
+   "contrast": "good",
+   "quality": "good",
+   "flags": [
+    "spacing_suspect"
+   ]
+  },
+  {
+   "name": "CCA200-HF__CCA_15.nii.gz",
+   "item_id": "6acf26a08b4d3a662c979144",
+   "patient": "CCA200-HF__CCA_15",
+   "source": "CCA200-HF",
+   "contrast": "good",
+   "quality": "fair",
+   "flags": [
+    "spacing_suspect"
+   ]
+  },
+  {
+   "name": "CCA200-HF__CCA_16.nii.gz",
+   "item_id": "6acf26a18b4d3a662c979146",
+   "patient": "CCA200-HF__CCA_16",
+   "source": "CCA200-HF",
+   "contrast": "good",
+   "quality": "good",
+   "flags": [
+    "spacing_suspect"
+   ]
+  },
+  {
+   "name": "CCA200-HF__CCA_17.nii.gz",
+   "item_id": "6acf26a38b4d3a662c979148",
+   "patient": "CCA200-HF__CCA_17",
+   "source": "CCA200-HF",
+   "contrast": "moderate",
+   "quality": "fair",
+   "flags": [
+    "spacing_suspect"
+   ]
+  },
+  {
+   "name": "CCA200-HF__CCA_18.nii.gz",
+   "item_id": "6acf26a48b4d3a662c97914a",
+   "patient": "CCA200-HF__CCA_18",
+   "source": "CCA200-HF",
+   "contrast": "good",
+   "quality": "good",
+   "flags": [
+    "spacing_suspect"
+   ]
+  },
+  {
+   "name": "CCA200-HF__CCA_19.nii.gz",
+   "item_id": "6acf26a68b4d3a662c97914c",
+   "patient": "CCA200-HF__CCA_19",
+   "source": "CCA200-HF",
+   "contrast": "good",
+   "quality": "good",
+   "flags": [
+    "spacing_suspect"
+   ]
+  },
+  {
+   "name": "Figshare-EpicardialFat-CE__CE003.nii.gz",
+   "item_id": "6acf26c88b4d3a662c979176",
+   "patient": "Figshare-EpicardialFat-CE__CE003",
+   "source": "Figshare-EpicardialFat-CE",
+   "contrast": "good",
+   "quality": "poor",
+   "flags": []
+  },
+  {
+   "name": "Figshare-EpicardialFat-CE__CE008.nii.gz",
+   "item_id": "6acf26d08b4d3a662c979180",
+   "patient": "Figshare-EpicardialFat-CE__CE008",
+   "source": "Figshare-EpicardialFat-CE",
+   "contrast": "good",
+   "quality": "poor",
+   "flags": []
+  },
+  {
+   "name": "Figshare-EpicardialFat-CE__CE015.nii.gz",
+   "item_id": "6acf26db8b4d3a662c97918e",
+   "patient": "Figshare-EpicardialFat-CE__CE015",
+   "source": "Figshare-EpicardialFat-CE",
+   "contrast": "moderate",
+   "quality": "poor",
+   "flags": []
+  },
+  {
+   "name": "Figshare-EpicardialFat-CE__CE019.nii.gz",
+   "item_id": "6acf26e18b4d3a662c979196",
+   "patient": "Figshare-EpicardialFat-CE__CE019",
+   "source": "Figshare-EpicardialFat-CE",
+   "contrast": "good",
+   "quality": "poor",
+   "flags": []
+  },
+  {
+   "name": "Figshare-EpicardialFat-CE__CE038.nii.gz",
+   "item_id": "6acf26ff8b4d3a662c9791bc",
+   "patient": "Figshare-EpicardialFat-CE__CE038",
+   "source": "Figshare-EpicardialFat-CE",
+   "contrast": "good",
+   "quality": "poor",
+   "flags": []
+  },
+  {
+   "name": "Figshare-EpicardialFat-CE__CE040.nii.gz",
+   "item_id": "6acf27038b4d3a662c9791c0",
+   "patient": "Figshare-EpicardialFat-CE__CE040",
+   "source": "Figshare-EpicardialFat-CE",
+   "contrast": "good",
+   "quality": "poor",
+   "flags": []
+  },
+  {
+   "name": "HOCMvalvesSeg__10.nii.gz",
+   "item_id": "6acf27058b4d3a662c9791c2",
+   "patient": "HOCMvalvesSeg__10",
+   "source": "HOCMvalvesSeg",
+   "contrast": "good",
+   "quality": "poor",
+   "flags": [
+    "spacing_suspect"
+   ]
+  },
+  {
+   "name": "HOCMvalvesSeg__11.nii.gz",
+   "item_id": "6acf27068b4d3a662c9791c4",
+   "patient": "HOCMvalvesSeg__11",
+   "source": "HOCMvalvesSeg",
+   "contrast": "good",
+   "quality": "fair",
+   "flags": [
+    "spacing_suspect"
+   ]
+  },
+  {
+   "name": "HOCMvalvesSeg__12.nii.gz",
+   "item_id": "6acf27088b4d3a662c9791c6",
+   "patient": "HOCMvalvesSeg__12",
+   "source": "HOCMvalvesSeg",
+   "contrast": "good",
+   "quality": "poor",
+   "flags": [
+    "spacing_suspect"
+   ]
+  },
+  {
+   "name": "HOCMvalvesSeg__13.nii.gz",
+   "item_id": "6acf27098b4d3a662c9791c8",
+   "patient": "HOCMvalvesSeg__13",
+   "source": "HOCMvalvesSeg",
+   "contrast": "good",
+   "quality": "fair",
+   "flags": [
+    "spacing_suspect"
+   ]
+  },
+  {
+   "name": "HOCMvalvesSeg__15.nii.gz",
+   "item_id": "6acf270b8b4d3a662c9791ca",
+   "patient": "HOCMvalvesSeg__15",
+   "source": "HOCMvalvesSeg",
+   "contrast": "moderate",
+   "quality": "fair",
+   "flags": [
+    "spacing_suspect"
+   ]
+  },
+  {
+   "name": "HOCMvalvesSeg__16.nii.gz",
+   "item_id": "6acf270c8b4d3a662c9791cc",
+   "patient": "HOCMvalvesSeg__16",
+   "source": "HOCMvalvesSeg",
+   "contrast": "good",
+   "quality": "poor",
+   "flags": [
+    "spacing_suspect"
+   ]
+  },
+  {
+   "name": "HOCMvalvesSeg__17.nii.gz",
+   "item_id": "6acf270e8b4d3a662c9791ce",
+   "patient": "HOCMvalvesSeg__17",
+   "source": "HOCMvalvesSeg",
+   "contrast": "good",
+   "quality": "fair",
+   "flags": [
+    "spacing_suspect"
+   ]
+  },
+  {
+   "name": "HOCMvalvesSeg__18.nii.gz",
+   "item_id": "6acf270f8b4d3a662c9791d0",
+   "patient": "HOCMvalvesSeg__18",
+   "source": "HOCMvalvesSeg",
+   "contrast": "good",
+   "quality": "fair",
+   "flags": [
+    "spacing_suspect"
+   ]
+  },
+  {
+   "name": "HOCMvalvesSeg__22.nii.gz",
+   "item_id": "6acf27118b4d3a662c9791d2",
+   "patient": "HOCMvalvesSeg__22",
+   "source": "HOCMvalvesSeg",
+   "contrast": "good",
+   "quality": "fair",
+   "flags": [
+    "spacing_suspect"
+   ]
+  },
+  {
+   "name": "HOCMvalvesSeg__23.nii.gz",
+   "item_id": "6acf27128b4d3a662c9791d4",
+   "patient": "HOCMvalvesSeg__23",
+   "source": "HOCMvalvesSeg",
+   "contrast": "moderate",
+   "quality": "poor",
+   "flags": [
+    "spacing_suspect"
+   ]
+  },
+  {
+   "name": "HOCMvalvesSeg__24.nii.gz",
+   "item_id": "6acf27148b4d3a662c9791d6",
+   "patient": "HOCMvalvesSeg__24",
+   "source": "HOCMvalvesSeg",
+   "contrast": "good",
+   "quality": "fair",
+   "flags": [
+    "spacing_suspect"
+   ]
+  },
+  {
+   "name": "HOCMvalvesSeg__3.nii.gz",
+   "item_id": "6acf27168b4d3a662c9791d8",
+   "patient": "HOCMvalvesSeg__3",
+   "source": "HOCMvalvesSeg",
+   "contrast": "good",
+   "quality": "fair",
+   "flags": [
+    "spacing_suspect"
+   ]
+  },
+  {
+   "name": "HOCMvalvesSeg__31.nii.gz",
+   "item_id": "6acf27188b4d3a662c9791da",
+   "patient": "HOCMvalvesSeg__31",
+   "source": "HOCMvalvesSeg",
+   "contrast": "good",
+   "quality": "fair",
+   "flags": [
+    "spacing_suspect"
+   ]
+  },
+  {
+   "name": "HOCMvalvesSeg__33.nii.gz",
+   "item_id": "6acf27198b4d3a662c9791dc",
+   "patient": "HOCMvalvesSeg__33",
+   "source": "HOCMvalvesSeg",
+   "contrast": "good",
+   "quality": "fair",
+   "flags": [
+    "spacing_suspect"
+   ]
+  },
+  {
+   "name": "HOCMvalvesSeg__34.nii.gz",
+   "item_id": "6acf271b8b4d3a662c9791de",
+   "patient": "HOCMvalvesSeg__34",
+   "source": "HOCMvalvesSeg",
+   "contrast": "good",
+   "quality": "fair",
+   "flags": [
+    "spacing_suspect"
+   ]
+  },
+  {
+   "name": "HOCMvalvesSeg__35.nii.gz",
+   "item_id": "6acf271c8b4d3a662c9791e0",
+   "patient": "HOCMvalvesSeg__35",
+   "source": "HOCMvalvesSeg",
+   "contrast": "good",
+   "quality": "fair",
+   "flags": [
+    "spacing_suspect"
+   ]
+  },
+  {
+   "name": "HOCMvalvesSeg__37.nii.gz",
+   "item_id": "6acf271e8b4d3a662c9791e2",
+   "patient": "HOCMvalvesSeg__37",
+   "source": "HOCMvalvesSeg",
+   "contrast": "good",
+   "quality": "fair",
+   "flags": [
+    "spacing_suspect"
+   ]
+  },
+  {
+   "name": "HOCMvalvesSeg__39.nii.gz",
+   "item_id": "6acf27208b4d3a662c9791e4",
+   "patient": "HOCMvalvesSeg__39",
+   "source": "HOCMvalvesSeg",
+   "contrast": "good",
+   "quality": "poor",
+   "flags": [
+    "spacing_suspect"
+   ]
+  },
+  {
+   "name": "HOCMvalvesSeg__40.nii.gz",
+   "item_id": "6acf27218b4d3a662c9791e6",
+   "patient": "HOCMvalvesSeg__40",
+   "source": "HOCMvalvesSeg",
+   "contrast": "good",
+   "quality": "fair",
+   "flags": [
+    "spacing_suspect"
+   ]
+  },
+  {
+   "name": "HOCMvalvesSeg__42.nii.gz",
+   "item_id": "6acf27238b4d3a662c9791e8",
+   "patient": "HOCMvalvesSeg__42",
+   "source": "HOCMvalvesSeg",
+   "contrast": "good",
+   "quality": "fair",
+   "flags": [
+    "spacing_suspect"
+   ]
+  },
+  {
+   "name": "HOCMvalvesSeg__45.nii.gz",
+   "item_id": "6acf27258b4d3a662c9791ea",
+   "patient": "HOCMvalvesSeg__45",
+   "source": "HOCMvalvesSeg",
+   "contrast": "moderate",
+   "quality": "poor",
+   "flags": [
+    "spacing_suspect"
+   ]
+  },
+  {
+   "name": "HOCMvalvesSeg__46.nii.gz",
+   "item_id": "6acf27268b4d3a662c9791ec",
+   "patient": "HOCMvalvesSeg__46",
+   "source": "HOCMvalvesSeg",
+   "contrast": "good",
+   "quality": "poor",
+   "flags": [
+    "spacing_suspect"
+   ]
+  },
+  {
+   "name": "HOCMvalvesSeg__47.nii.gz",
+   "item_id": "6acf27288b4d3a662c9791ee",
+   "patient": "HOCMvalvesSeg__47",
+   "source": "HOCMvalvesSeg",
+   "contrast": "good",
+   "quality": "fair",
+   "flags": [
+    "spacing_suspect"
+   ]
+  },
+  {
+   "name": "HOCMvalvesSeg__48.nii.gz",
+   "item_id": "6acf27298b4d3a662c9791f0",
+   "patient": "HOCMvalvesSeg__48",
+   "source": "HOCMvalvesSeg",
+   "contrast": "good",
+   "quality": "fair",
+   "flags": [
+    "spacing_suspect"
+   ]
+  },
+  {
+   "name": "HOCMvalvesSeg__5.nii.gz",
+   "item_id": "6acf272b8b4d3a662c9791f2",
+   "patient": "HOCMvalvesSeg__5",
+   "source": "HOCMvalvesSeg",
+   "contrast": "good",
+   "quality": "fair",
+   "flags": [
+    "spacing_suspect"
+   ]
+  },
+  {
+   "name": "HOCMvalvesSeg__7.nii.gz",
+   "item_id": "6acf272c8b4d3a662c9791f4",
+   "patient": "HOCMvalvesSeg__7",
+   "source": "HOCMvalvesSeg",
+   "contrast": "good",
+   "quality": "fair",
+   "flags": [
+    "spacing_suspect"
+   ]
+  },
+  {
+   "name": "HOCMvalvesSeg__9.nii.gz",
+   "item_id": "6acf272e8b4d3a662c9791f6",
+   "patient": "HOCMvalvesSeg__9",
+   "source": "HOCMvalvesSeg",
+   "contrast": "good",
+   "quality": "poor",
+   "flags": [
+    "spacing_suspect"
+   ]
+  },
+  {
+   "name": "ImageALCAPA__1.nii.gz",
+   "item_id": "6acf27d68b4d3a662c9792cc",
+   "patient": "ImageALCAPA__1",
+   "source": "ImageALCAPA",
+   "contrast": "good",
+   "quality": "fair",
+   "flags": [
+    "spacing_suspect",
+    "paediatric"
+   ]
+  },
+  {
+   "name": "ImageALCAPA__10.nii.gz",
+   "item_id": "6acf27d78b4d3a662c9792ce",
+   "patient": "ImageALCAPA__10",
+   "source": "ImageALCAPA",
+   "contrast": "good",
+   "quality": "fair",
+   "flags": [
+    "spacing_suspect",
+    "paediatric"
+   ]
+  },
+  {
+   "name": "ImageALCAPA__11.nii.gz",
+   "item_id": "6acf27d98b4d3a662c9792d0",
+   "patient": "ImageALCAPA__11",
+   "source": "ImageALCAPA",
+   "contrast": "good",
+   "quality": "fair",
+   "flags": [
+    "spacing_suspect",
+    "paediatric"
+   ]
+  },
+  {
+   "name": "ImageALCAPA__12.nii.gz",
+   "item_id": "6acf27db8b4d3a662c9792d2",
+   "patient": "ImageALCAPA__12",
+   "source": "ImageALCAPA",
+   "contrast": "good",
+   "quality": "fair",
+   "flags": [
+    "spacing_suspect",
+    "paediatric"
+   ]
+  },
+  {
+   "name": "ImageALCAPA__13.nii.gz",
+   "item_id": "6acf27dc8b4d3a662c9792d4",
+   "patient": "ImageALCAPA__13",
+   "source": "ImageALCAPA",
+   "contrast": "good",
+   "quality": "fair",
+   "flags": [
+    "spacing_suspect",
+    "paediatric"
+   ]
+  },
+  {
+   "name": "ImageALCAPA__14.nii.gz",
+   "item_id": "6acf27de8b4d3a662c9792d6",
+   "patient": "ImageALCAPA__14",
+   "source": "ImageALCAPA",
+   "contrast": "moderate",
+   "quality": "fair",
+   "flags": [
+    "spacing_suspect",
+    "paediatric"
+   ]
+  },
+  {
+   "name": "ImageALCAPA__15.nii.gz",
+   "item_id": "6acf27df8b4d3a662c9792d8",
+   "patient": "ImageALCAPA__15",
+   "source": "ImageALCAPA",
+   "contrast": "good",
+   "quality": "fair",
+   "flags": [
+    "spacing_suspect",
+    "paediatric"
+   ]
+  },
+  {
+   "name": "ImageALCAPA__16.nii.gz",
+   "item_id": "6acf27e18b4d3a662c9792da",
+   "patient": "ImageALCAPA__16",
+   "source": "ImageALCAPA",
+   "contrast": "moderate",
+   "quality": "fair",
+   "flags": [
+    "spacing_suspect",
+    "paediatric"
+   ]
+  },
+  {
+   "name": "ImageALCAPA__17.nii.gz",
+   "item_id": "6acf27e28b4d3a662c9792dc",
+   "patient": "ImageALCAPA__17",
+   "source": "ImageALCAPA",
+   "contrast": "good",
+   "quality": "fair",
+   "flags": [
+    "spacing_suspect",
+    "paediatric"
+   ]
+  },
+  {
+   "name": "ImageALCAPA__18.nii.gz",
+   "item_id": "6acf27e48b4d3a662c9792de",
+   "patient": "ImageALCAPA__18",
+   "source": "ImageALCAPA",
+   "contrast": "good",
+   "quality": "fair",
+   "flags": [
+    "spacing_suspect",
+    "paediatric"
+   ]
+  },
+  {
+   "name": "ImageALCAPA__19.nii.gz",
+   "item_id": "6acf27e58b4d3a662c9792e0",
+   "patient": "ImageALCAPA__19",
+   "source": "ImageALCAPA",
+   "contrast": "good",
+   "quality": "fair",
+   "flags": [
+    "spacing_suspect",
+    "paediatric"
+   ]
+  },
+  {
+   "name": "ImageALCAPA__2.nii.gz",
+   "item_id": "6acf27e78b4d3a662c9792e2",
+   "patient": "ImageALCAPA__2",
+   "source": "ImageALCAPA",
+   "contrast": "moderate",
+   "quality": "fair",
+   "flags": [
+    "spacing_suspect",
+    "paediatric"
+   ]
+  },
+  {
+   "name": "ImageALCAPA__20.nii.gz",
+   "item_id": "6acf27e88b4d3a662c9792e4",
+   "patient": "ImageALCAPA__20",
+   "source": "ImageALCAPA",
+   "contrast": "good",
+   "quality": "fair",
+   "flags": [
+    "spacing_suspect",
+    "paediatric"
+   ]
+  },
+  {
+   "name": "ImageALCAPA__21.nii.gz",
+   "item_id": "6acf27ea8b4d3a662c9792e6",
+   "patient": "ImageALCAPA__21",
+   "source": "ImageALCAPA",
+   "contrast": "good",
+   "quality": "fair",
+   "flags": [
+    "spacing_suspect",
+    "paediatric"
+   ]
+  },
+  {
+   "name": "ImageALCAPA__22.nii.gz",
+   "item_id": "6acf27eb8b4d3a662c9792e8",
+   "patient": "ImageALCAPA__22",
+   "source": "ImageALCAPA",
+   "contrast": "good",
+   "quality": "fair",
+   "flags": [
+    "spacing_suspect",
+    "paediatric"
+   ]
+  },
+  {
+   "name": "ImageALCAPA__23.nii.gz",
+   "item_id": "6acf27ed8b4d3a662c9792ea",
+   "patient": "ImageALCAPA__23",
+   "source": "ImageALCAPA",
+   "contrast": "moderate",
+   "quality": "fair",
+   "flags": [
+    "spacing_suspect",
+    "paediatric"
+   ]
+  },
+  {
+   "name": "ImageALCAPA__24.nii.gz",
+   "item_id": "6acf27ef8b4d3a662c9792ec",
+   "patient": "ImageALCAPA__24",
+   "source": "ImageALCAPA",
+   "contrast": "good",
+   "quality": "fair",
+   "flags": [
+    "spacing_suspect",
+    "paediatric"
+   ]
+  },
+  {
+   "name": "ImageALCAPA__25.nii.gz",
+   "item_id": "6acf27f08b4d3a662c9792ee",
+   "patient": "ImageALCAPA__25",
+   "source": "ImageALCAPA",
+   "contrast": "moderate",
+   "quality": "fair",
+   "flags": [
+    "spacing_suspect",
+    "paediatric"
+   ]
+  },
+  {
+   "name": "ImageALCAPA__26.nii.gz",
+   "item_id": "6acf27f28b4d3a662c9792f0",
+   "patient": "ImageALCAPA__26",
+   "source": "ImageALCAPA",
+   "contrast": "moderate",
+   "quality": "fair",
+   "flags": [
+    "spacing_suspect",
+    "paediatric"
+   ]
+  },
+  {
+   "name": "ImageALCAPA__27.nii.gz",
+   "item_id": "6acf27f38b4d3a662c9792f2",
+   "patient": "ImageALCAPA__27",
+   "source": "ImageALCAPA",
+   "contrast": "good",
+   "quality": "fair",
+   "flags": [
+    "spacing_suspect",
+    "paediatric"
+   ]
+  },
+  {
+   "name": "ImageALCAPA__28.nii.gz",
+   "item_id": "6acf27f58b4d3a662c9792f4",
+   "patient": "ImageALCAPA__28",
+   "source": "ImageALCAPA",
+   "contrast": "good",
+   "quality": "poor",
+   "flags": [
+    "spacing_suspect",
+    "paediatric"
+   ]
+  },
+  {
+   "name": "ImageALCAPA__29.nii.gz",
+   "item_id": "6acf27f68b4d3a662c9792f6",
+   "patient": "ImageALCAPA__29",
+   "source": "ImageALCAPA",
+   "contrast": "good",
+   "quality": "fair",
+   "flags": [
+    "spacing_suspect",
+    "paediatric"
+   ]
+  },
+  {
+   "name": "ImageALCAPA__3.nii.gz",
+   "item_id": "6acf27f88b4d3a662c9792f8",
+   "patient": "ImageALCAPA__3",
+   "source": "ImageALCAPA",
+   "contrast": "good",
+   "quality": "fair",
+   "flags": [
+    "spacing_suspect",
+    "paediatric"
+   ]
+  },
+  {
+   "name": "ImageALCAPA__30.nii.gz",
+   "item_id": "6acf27fa8b4d3a662c9792fa",
+   "patient": "ImageALCAPA__30",
+   "source": "ImageALCAPA",
+   "contrast": "good",
+   "quality": "fair",
+   "flags": [
+    "spacing_suspect",
+    "paediatric"
+   ]
+  },
+  {
+   "name": "ImageALCAPA__4.nii.gz",
+   "item_id": "6acf27fb8b4d3a662c9792fc",
+   "patient": "ImageALCAPA__4",
+   "source": "ImageALCAPA",
+   "contrast": "good",
+   "quality": "fair",
+   "flags": [
+    "spacing_suspect",
+    "paediatric"
+   ]
+  },
+  {
+   "name": "ImageALCAPA__5.nii.gz",
+   "item_id": "6acf27fd8b4d3a662c9792fe",
+   "patient": "ImageALCAPA__5",
+   "source": "ImageALCAPA",
+   "contrast": "good",
+   "quality": "fair",
+   "flags": [
+    "spacing_suspect",
+    "paediatric"
+   ]
+  },
+  {
+   "name": "ImageALCAPA__6.nii.gz",
+   "item_id": "6acf27fe8b4d3a662c979300",
+   "patient": "ImageALCAPA__6",
+   "source": "ImageALCAPA",
+   "contrast": "good",
+   "quality": "fair",
+   "flags": [
+    "spacing_suspect",
+    "paediatric"
+   ]
+  },
+  {
+   "name": "ImageALCAPA__7.nii.gz",
+   "item_id": "6acf28008b4d3a662c979302",
+   "patient": "ImageALCAPA__7",
+   "source": "ImageALCAPA",
+   "contrast": "good",
+   "quality": "fair",
+   "flags": [
+    "spacing_suspect",
+    "paediatric"
+   ]
+  },
+  {
+   "name": "ImageALCAPA__8.nii.gz",
+   "item_id": "6acf28028b4d3a662c979304",
+   "patient": "ImageALCAPA__8",
+   "source": "ImageALCAPA",
+   "contrast": "good",
+   "quality": "fair",
+   "flags": [
+    "spacing_suspect",
+    "paediatric"
+   ]
+  },
+  {
+   "name": "ImageALCAPA__9.nii.gz",
+   "item_id": "6acf28038b4d3a662c979306",
+   "patient": "ImageALCAPA__9",
+   "source": "ImageALCAPA",
+   "contrast": "good",
+   "quality": "fair",
+   "flags": [
+    "spacing_suspect",
+    "paediatric"
+   ]
+  },
+  {
+   "name": "ImageCHD__1002.nii.gz",
+   "item_id": "6acf28078b4d3a662c97930a",
+   "patient": "ImageCHD__1002",
+   "source": "ImageCHD",
+   "contrast": "good",
+   "quality": "fair",
+   "flags": [
+    "paediatric"
+   ]
+  },
+  {
+   "name": "ImageCHD__1003.nii.gz",
+   "item_id": "6acf28088b4d3a662c97930c",
+   "patient": "ImageCHD__1003",
+   "source": "ImageCHD",
+   "contrast": "good",
+   "quality": "fair",
+   "flags": [
+    "paediatric"
+   ]
+  },
+  {
+   "name": "ImageCHD__1004.nii.gz",
+   "item_id": "6acf280a8b4d3a662c97930e",
+   "patient": "ImageCHD__1004",
+   "source": "ImageCHD",
+   "contrast": "good",
+   "quality": "fair",
+   "flags": [
+    "paediatric"
+   ]
+  },
+  {
+   "name": "ImageCHD__1005.nii.gz",
+   "item_id": "6acf280b8b4d3a662c979310",
+   "patient": "ImageCHD__1005",
+   "source": "ImageCHD",
+   "contrast": "good",
+   "quality": "fair",
+   "flags": [
+    "paediatric"
+   ]
+  },
+  {
+   "name": "ImageCHD__1007.nii.gz",
+   "item_id": "6acf280d8b4d3a662c979312",
+   "patient": "ImageCHD__1007",
+   "source": "ImageCHD",
+   "contrast": "good",
+   "quality": "fair",
+   "flags": [
+    "paediatric"
+   ]
+  },
+  {
+   "name": "ImageCHD__1008.nii.gz",
+   "item_id": "6acf280e8b4d3a662c979314",
+   "patient": "ImageCHD__1008",
+   "source": "ImageCHD",
+   "contrast": "good",
+   "quality": "fair",
+   "flags": [
+    "paediatric"
+   ]
+  },
+  {
+   "name": "ImageCHD__1011.nii.gz",
+   "item_id": "6acf28118b4d3a662c979318",
+   "patient": "ImageCHD__1011",
+   "source": "ImageCHD",
+   "contrast": "good",
+   "quality": "fair",
+   "flags": [
+    "paediatric"
+   ]
+  },
+  {
+   "name": "ImageCHD__1012.nii.gz",
+   "item_id": "6acf28138b4d3a662c97931a",
+   "patient": "ImageCHD__1012",
+   "source": "ImageCHD",
+   "contrast": "good",
+   "quality": "fair",
+   "flags": [
+    "paediatric"
+   ]
+  },
+  {
+   "name": "ImageCHD__1013.nii.gz",
+   "item_id": "6acf28148b4d3a662c97931c",
+   "patient": "ImageCHD__1013",
+   "source": "ImageCHD",
+   "contrast": "moderate",
+   "quality": "fair",
+   "flags": [
+    "paediatric"
+   ]
+  },
+  {
+   "name": "ImageCHD__1014.nii.gz",
+   "item_id": "6acf28168b4d3a662c97931e",
+   "patient": "ImageCHD__1014",
+   "source": "ImageCHD",
+   "contrast": "good",
+   "quality": "good",
+   "flags": [
+    "paediatric"
+   ]
+  },
+  {
+   "name": "ImageCHD__1016.nii.gz",
+   "item_id": "6acf28198b4d3a662c979322",
+   "patient": "ImageCHD__1016",
+   "source": "ImageCHD",
+   "contrast": "moderate",
+   "quality": "fair",
+   "flags": [
+    "paediatric"
+   ]
+  },
+  {
+   "name": "ImageCHD__1017.nii.gz",
+   "item_id": "6acf281a8b4d3a662c979324",
+   "patient": "ImageCHD__1017",
+   "source": "ImageCHD",
+   "contrast": "good",
+   "quality": "fair",
+   "flags": [
+    "paediatric"
+   ]
+  },
+  {
+   "name": "ImageCHD__1018.nii.gz",
+   "item_id": "6acf281b8b4d3a662c979326",
+   "patient": "ImageCHD__1018",
+   "source": "ImageCHD",
+   "contrast": "good",
+   "quality": "fair",
+   "flags": [
+    "paediatric"
+   ]
+  },
+  {
+   "name": "ImageCHD__1019.nii.gz",
+   "item_id": "6acf281d8b4d3a662c979328",
+   "patient": "ImageCHD__1019",
+   "source": "ImageCHD",
+   "contrast": "good",
+   "quality": "fair",
+   "flags": [
+    "paediatric"
+   ]
+  },
+  {
+   "name": "ImageCHD__1020.nii.gz",
+   "item_id": "6acf281e8b4d3a662c97932a",
+   "patient": "ImageCHD__1020",
+   "source": "ImageCHD",
+   "contrast": "weak",
+   "quality": "poor",
+   "flags": [
+    "paediatric"
+   ]
+  },
+  {
+   "name": "ImageCHD__1022.nii.gz",
+   "item_id": "6acf28218b4d3a662c97932e",
+   "patient": "ImageCHD__1022",
+   "source": "ImageCHD",
+   "contrast": "good",
+   "quality": "fair",
+   "flags": [
+    "paediatric"
+   ]
+  },
+  {
+   "name": "ImageCHD__1023.nii.gz",
+   "item_id": "6acf28238b4d3a662c979330",
+   "patient": "ImageCHD__1023",
+   "source": "ImageCHD",
+   "contrast": "weak",
+   "quality": "fair",
+   "flags": [
+    "paediatric"
+   ]
+  },
+  {
+   "name": "ImageCHD__1025.nii.gz",
+   "item_id": "6acf28268b4d3a662c979334",
+   "patient": "ImageCHD__1025",
+   "source": "ImageCHD",
+   "contrast": "good",
+   "quality": "fair",
+   "flags": [
+    "paediatric"
+   ]
+  },
+  {
+   "name": "ImageCHD__1030.nii.gz",
+   "item_id": "6acf282b8b4d3a662c97933a",
+   "patient": "ImageCHD__1030",
+   "source": "ImageCHD",
+   "contrast": "good",
+   "quality": "fair",
+   "flags": [
+    "paediatric"
+   ]
+  },
+  {
+   "name": "ImageCHD__1032.nii.gz",
+   "item_id": "6acf282d8b4d3a662c97933c",
+   "patient": "ImageCHD__1032",
+   "source": "ImageCHD",
+   "contrast": "moderate",
+   "quality": "fair",
+   "flags": [
+    "paediatric"
+   ]
+  },
+  {
+   "name": "ImageCHD__1033.nii.gz",
+   "item_id": "6acf282e8b4d3a662c97933e",
+   "patient": "ImageCHD__1033",
+   "source": "ImageCHD",
+   "contrast": "good",
+   "quality": "fair",
+   "flags": [
+    "paediatric"
+   ]
+  },
+  {
+   "name": "ImageCHD__1035.nii.gz",
+   "item_id": "6acf28308b4d3a662c979340",
+   "patient": "ImageCHD__1035",
+   "source": "ImageCHD",
+   "contrast": "moderate",
+   "quality": "fair",
+   "flags": [
+    "paediatric"
+   ]
+  },
+  {
+   "name": "ImageCHD__1037.nii.gz",
+   "item_id": "6acf28338b4d3a662c979344",
+   "patient": "ImageCHD__1037",
+   "source": "ImageCHD",
+   "contrast": "weak",
+   "quality": "fair",
+   "flags": [
+    "paediatric"
+   ]
+  },
+  {
+   "name": "ImageCHD__1039.nii.gz",
+   "item_id": "6acf28348b4d3a662c979346",
+   "patient": "ImageCHD__1039",
+   "source": "ImageCHD",
+   "contrast": "good",
+   "quality": "poor",
+   "flags": [
+    "paediatric"
+   ]
+  },
+  {
+   "name": "ImageCHD__1041.nii.gz",
+   "item_id": "6acf28368b4d3a662c979348",
+   "patient": "ImageCHD__1041",
+   "source": "ImageCHD",
+   "contrast": "good",
+   "quality": "fair",
+   "flags": [
+    "paediatric"
+   ]
+  },
+  {
+   "name": "ImageCHD__1042.nii.gz",
+   "item_id": "6acf28378b4d3a662c97934a",
+   "patient": "ImageCHD__1042",
+   "source": "ImageCHD",
+   "contrast": "moderate",
+   "quality": "fair",
+   "flags": [
+    "paediatric"
+   ]
+  },
+  {
+   "name": "ImageCHD__1043.nii.gz",
+   "item_id": "6acf28398b4d3a662c97934c",
+   "patient": "ImageCHD__1043",
+   "source": "ImageCHD",
+   "contrast": "moderate",
+   "quality": "fair",
+   "flags": [
+    "paediatric"
+   ]
+  },
+  {
+   "name": "ImageCHD__1046.nii.gz",
+   "item_id": "6acf283c8b4d3a662c979350",
+   "patient": "ImageCHD__1046",
+   "source": "ImageCHD",
+   "contrast": "good",
+   "quality": "fair",
+   "flags": [
+    "paediatric"
+   ]
+  },
+  {
+   "name": "ImageCHD__1047.nii.gz",
+   "item_id": "6acf283e8b4d3a662c979352",
+   "patient": "ImageCHD__1047",
+   "source": "ImageCHD",
+   "contrast": "moderate",
+   "quality": "good",
+   "flags": [
+    "paediatric"
+   ]
+  },
+  {
+   "name": "ImageCHD__1050.nii.gz",
+   "item_id": "6acf28418b4d3a662c979356",
+   "patient": "ImageCHD__1050",
+   "source": "ImageCHD",
+   "contrast": "good",
+   "quality": "fair",
+   "flags": [
+    "paediatric"
+   ]
+  },
+  {
+   "name": "ImageCHD__1051.nii.gz",
+   "item_id": "6acf28438b4d3a662c979358",
+   "patient": "ImageCHD__1051",
+   "source": "ImageCHD",
+   "contrast": "good",
+   "quality": "fair",
+   "flags": [
+    "paediatric"
+   ]
+  },
+  {
+   "name": "ImageCHD__1052.nii.gz",
+   "item_id": "6acf28448b4d3a662c97935a",
+   "patient": "ImageCHD__1052",
+   "source": "ImageCHD",
+   "contrast": "moderate",
+   "quality": "fair",
+   "flags": [
+    "paediatric"
+   ]
+  },
+  {
+   "name": "ImageCHD__1053.nii.gz",
+   "item_id": "6acf28468b4d3a662c97935c",
+   "patient": "ImageCHD__1053",
+   "source": "ImageCHD",
+   "contrast": "moderate",
+   "quality": "fair",
+   "flags": [
+    "paediatric"
+   ]
+  },
+  {
+   "name": "ImageCHD__1054.nii.gz",
+   "item_id": "6acf28478b4d3a662c97935e",
+   "patient": "ImageCHD__1054",
+   "source": "ImageCHD",
+   "contrast": "moderate",
+   "quality": "fair",
+   "flags": [
+    "paediatric"
+   ]
+  },
+  {
+   "name": "ImageCHD__1059.nii.gz",
+   "item_id": "6acf284a8b4d3a662c979362",
+   "patient": "ImageCHD__1059",
+   "source": "ImageCHD",
+   "contrast": "good",
+   "quality": "fair",
+   "flags": [
+    "paediatric"
+   ]
+  },
+  {
+   "name": "ImageCHD__1060.nii.gz",
+   "item_id": "6acf284c8b4d3a662c979364",
+   "patient": "ImageCHD__1060",
+   "source": "ImageCHD",
+   "contrast": "good",
+   "quality": "fair",
+   "flags": [
+    "paediatric"
+   ]
+  },
+  {
+   "name": "ImageCHD__1062.nii.gz",
+   "item_id": "6acf284f8b4d3a662c979368",
+   "patient": "ImageCHD__1062",
+   "source": "ImageCHD",
+   "contrast": "moderate",
+   "quality": "fair",
+   "flags": [
+    "paediatric"
+   ]
+  },
+  {
+   "name": "ImageCHD__1064.nii.gz",
+   "item_id": "6acf28528b4d3a662c97936c",
+   "patient": "ImageCHD__1064",
+   "source": "ImageCHD",
+   "contrast": "good",
+   "quality": "fair",
+   "flags": [
+    "paediatric"
+   ]
+  },
+  {
+   "name": "ImageCHD__1066.nii.gz",
+   "item_id": "6acf28548b4d3a662c97936e",
+   "patient": "ImageCHD__1066",
+   "source": "ImageCHD",
+   "contrast": "good",
+   "quality": "fair",
+   "flags": [
+    "paediatric"
+   ]
+  },
+  {
+   "name": "ImageCHD__1067.nii.gz",
+   "item_id": "6acf28558b4d3a662c979370",
+   "patient": "ImageCHD__1067",
+   "source": "ImageCHD",
+   "contrast": "good",
+   "quality": "good",
+   "flags": [
+    "paediatric"
+   ]
+  },
+  {
+   "name": "ImageCHD__1070.nii.gz",
+   "item_id": "6acf28578b4d3a662c979372",
+   "patient": "ImageCHD__1070",
+   "source": "ImageCHD",
+   "contrast": "good",
+   "quality": "fair",
+   "flags": [
+    "paediatric"
+   ]
+  },
+  {
+   "name": "ImageCHD__1074.nii.gz",
+   "item_id": "6acf285a8b4d3a662c979376",
+   "patient": "ImageCHD__1074",
+   "source": "ImageCHD",
+   "contrast": "moderate",
+   "quality": "fair",
+   "flags": [
+    "paediatric"
+   ]
+  },
+  {
+   "name": "ImageCHD__1077.nii.gz",
+   "item_id": "6acf285d8b4d3a662c97937a",
+   "patient": "ImageCHD__1077",
+   "source": "ImageCHD",
+   "contrast": "good",
+   "quality": "poor",
+   "flags": [
+    "paediatric"
+   ]
+  },
+  {
+   "name": "ImageCHD__1078.nii.gz",
+   "item_id": "6acf285f8b4d3a662c97937c",
+   "patient": "ImageCHD__1078",
+   "source": "ImageCHD",
+   "contrast": "moderate",
+   "quality": "fair",
+   "flags": [
+    "paediatric"
+   ]
+  },
+  {
+   "name": "ImageCHD__1079.nii.gz",
+   "item_id": "6acf28618b4d3a662c97937e",
+   "patient": "ImageCHD__1079",
+   "source": "ImageCHD",
+   "contrast": "good",
+   "quality": "fair",
+   "flags": [
+    "paediatric"
+   ]
+  },
+  {
+   "name": "ImageCHD__1080.nii.gz",
+   "item_id": "6acf28628b4d3a662c979380",
+   "patient": "ImageCHD__1080",
+   "source": "ImageCHD",
+   "contrast": "good",
+   "quality": "fair",
+   "flags": [
+    "paediatric"
+   ]
+  },
+  {
+   "name": "ImageCHD__1081.nii.gz",
+   "item_id": "6acf28648b4d3a662c979382",
+   "patient": "ImageCHD__1081",
+   "source": "ImageCHD",
+   "contrast": "good",
+   "quality": "fair",
+   "flags": [
+    "paediatric"
+   ]
+  },
+  {
+   "name": "ImageCHD__1083.nii.gz",
+   "item_id": "6acf28658b4d3a662c979384",
+   "patient": "ImageCHD__1083",
+   "source": "ImageCHD",
+   "contrast": "moderate",
+   "quality": "fair",
+   "flags": [
+    "paediatric"
+   ]
+  },
+  {
+   "name": "ImageCHD__1085.nii.gz",
+   "item_id": "6acf28678b4d3a662c979386",
+   "patient": "ImageCHD__1085",
+   "source": "ImageCHD",
+   "contrast": "good",
+   "quality": "fair",
+   "flags": [
+    "paediatric"
+   ]
+  },
+  {
+   "name": "ImageCHD__1088.nii.gz",
+   "item_id": "6acf28688b4d3a662c979388",
+   "patient": "ImageCHD__1088",
+   "source": "ImageCHD",
+   "contrast": "moderate",
+   "quality": "fair",
+   "flags": [
+    "paediatric"
+   ]
+  },
+  {
+   "name": "ImageCHD__1092.nii.gz",
+   "item_id": "6acf286b8b4d3a662c97938c",
+   "patient": "ImageCHD__1092",
+   "source": "ImageCHD",
+   "contrast": "moderate",
+   "quality": "fair",
+   "flags": [
+    "paediatric"
+   ]
+  },
+  {
+   "name": "ImageCHD__1098.nii.gz",
+   "item_id": "6acf286d8b4d3a662c97938e",
+   "patient": "ImageCHD__1098",
+   "source": "ImageCHD",
+   "contrast": "good",
+   "quality": "fair",
+   "flags": [
+    "paediatric"
+   ]
+  },
+  {
+   "name": "ImageCHD__1099.nii.gz",
+   "item_id": "6acf286e8b4d3a662c979390",
+   "patient": "ImageCHD__1099",
+   "source": "ImageCHD",
+   "contrast": "good",
+   "quality": "fair",
+   "flags": [
+    "paediatric"
+   ]
+  },
+  {
+   "name": "ImageCHD__1101.nii.gz",
+   "item_id": "6acf28708b4d3a662c979392",
+   "patient": "ImageCHD__1101",
+   "source": "ImageCHD",
+   "contrast": "good",
+   "quality": "fair",
+   "flags": [
+    "paediatric"
+   ]
+  },
+  {
+   "name": "ImageCHD__1102.nii.gz",
+   "item_id": "6acf28728b4d3a662c979394",
+   "patient": "ImageCHD__1102",
+   "source": "ImageCHD",
+   "contrast": "good",
+   "quality": "fair",
+   "flags": [
+    "paediatric"
+   ]
+  },
+  {
+   "name": "ImageCHD__1103.nii.gz",
+   "item_id": "6acf28738b4d3a662c979396",
+   "patient": "ImageCHD__1103",
+   "source": "ImageCHD",
+   "contrast": "good",
+   "quality": "good",
+   "flags": [
+    "paediatric"
+   ]
+  },
+  {
+   "name": "ImageCHD__1105.nii.gz",
+   "item_id": "6acf28758b4d3a662c979398",
+   "patient": "ImageCHD__1105",
+   "source": "ImageCHD",
+   "contrast": "moderate",
+   "quality": "good",
+   "flags": [
+    "paediatric"
+   ]
+  },
+  {
+   "name": "ImageCHD__1106.nii.gz",
+   "item_id": "6acf28778b4d3a662c97939a",
+   "patient": "ImageCHD__1106",
+   "source": "ImageCHD",
+   "contrast": "good",
+   "quality": "good",
+   "flags": [
+    "paediatric"
+   ]
+  },
+  {
+   "name": "ImageCHD__1109.nii.gz",
+   "item_id": "6acf28788b4d3a662c97939c",
+   "patient": "ImageCHD__1109",
+   "source": "ImageCHD",
+   "contrast": "moderate",
+   "quality": "fair",
+   "flags": [
+    "paediatric"
+   ]
+  },
+  {
+   "name": "ImageCHD__1110.nii.gz",
+   "item_id": "6acf287a8b4d3a662c97939e",
+   "patient": "ImageCHD__1110",
+   "source": "ImageCHD",
+   "contrast": "moderate",
+   "quality": "fair",
+   "flags": [
+    "paediatric"
+   ]
+  },
+  {
+   "name": "ImageCHD__1111.nii.gz",
+   "item_id": "6acf287c8b4d3a662c9793a0",
+   "patient": "ImageCHD__1111",
+   "source": "ImageCHD",
+   "contrast": "good",
+   "quality": "fair",
+   "flags": [
+    "paediatric"
+   ]
+  },
+  {
+   "name": "ImageCHD__1112.nii.gz",
+   "item_id": "6acf287d8b4d3a662c9793a2",
+   "patient": "ImageCHD__1112",
+   "source": "ImageCHD",
+   "contrast": "moderate",
+   "quality": "fair",
+   "flags": [
+    "paediatric"
+   ]
+  },
+  {
+   "name": "ImageCHD__1113.nii.gz",
+   "item_id": "6acf287f8b4d3a662c9793a4",
+   "patient": "ImageCHD__1113",
+   "source": "ImageCHD",
+   "contrast": "moderate",
+   "quality": "fair",
+   "flags": [
+    "paediatric"
+   ]
+  },
+  {
+   "name": "ImageCHD__1116.nii.gz",
+   "item_id": "6acf28828b4d3a662c9793a8",
+   "patient": "ImageCHD__1116",
+   "source": "ImageCHD",
+   "contrast": "good",
+   "quality": "fair",
+   "flags": [
+    "paediatric"
+   ]
+  },
+  {
+   "name": "ImageCHD__1117.nii.gz",
+   "item_id": "6acf28848b4d3a662c9793aa",
+   "patient": "ImageCHD__1117",
+   "source": "ImageCHD",
+   "contrast": "moderate",
+   "quality": "fair",
+   "flags": [
+    "paediatric"
+   ]
+  },
+  {
+   "name": "ImageCHD__1119.nii.gz",
+   "item_id": "6acf28858b4d3a662c9793ac",
+   "patient": "ImageCHD__1119",
+   "source": "ImageCHD",
+   "contrast": "weak",
+   "quality": "poor",
+   "flags": [
+    "paediatric"
+   ]
+  },
+  {
+   "name": "ImageCHD__1120.nii.gz",
+   "item_id": "6acf28878b4d3a662c9793ae",
+   "patient": "ImageCHD__1120",
+   "source": "ImageCHD",
+   "contrast": "moderate",
+   "quality": "fair",
+   "flags": [
+    "paediatric"
+   ]
+  },
+  {
+   "name": "ImageCHD__1121.nii.gz",
+   "item_id": "6acf28898b4d3a662c9793b0",
+   "patient": "ImageCHD__1121",
+   "source": "ImageCHD",
+   "contrast": "moderate",
+   "quality": "fair",
+   "flags": [
+    "paediatric"
+   ]
+  },
+  {
+   "name": "ImageCHD__1124.nii.gz",
+   "item_id": "6acf288c8b4d3a662c9793b4",
+   "patient": "ImageCHD__1124",
+   "source": "ImageCHD",
+   "contrast": "good",
+   "quality": "fair",
+   "flags": [
+    "paediatric"
+   ]
+  },
+  {
+   "name": "ImageCHD__1125.nii.gz",
+   "item_id": "6acf288d8b4d3a662c9793b6",
+   "patient": "ImageCHD__1125",
+   "source": "ImageCHD",
+   "contrast": "good",
+   "quality": "fair",
+   "flags": [
+    "paediatric"
+   ]
+  },
+  {
+   "name": "ImageCHD__1126.nii.gz",
+   "item_id": "6acf288f8b4d3a662c9793b8",
+   "patient": "ImageCHD__1126",
+   "source": "ImageCHD",
+   "contrast": "moderate",
+   "quality": "poor",
+   "flags": [
+    "paediatric"
+   ]
+  },
+  {
+   "name": "ImageCHD__1127.nii.gz",
+   "item_id": "6acf28908b4d3a662c9793ba",
+   "patient": "ImageCHD__1127",
+   "source": "ImageCHD",
+   "contrast": "moderate",
+   "quality": "fair",
+   "flags": [
+    "paediatric"
+   ]
+  },
+  {
+   "name": "ImageCHD__1128.nii.gz",
+   "item_id": "6acf28928b4d3a662c9793bc",
+   "patient": "ImageCHD__1128",
+   "source": "ImageCHD",
+   "contrast": "moderate",
+   "quality": "fair",
+   "flags": [
+    "paediatric"
+   ]
+  },
+  {
+   "name": "ImageCHD__1132.nii.gz",
+   "item_id": "6acf28958b4d3a662c9793c0",
+   "patient": "ImageCHD__1132",
+   "source": "ImageCHD",
+   "contrast": "moderate",
+   "quality": "fair",
+   "flags": [
+    "paediatric"
+   ]
+  },
+  {
+   "name": "ImageCHD__1135.nii.gz",
+   "item_id": "6acf28988b4d3a662c9793c4",
+   "patient": "ImageCHD__1135",
+   "source": "ImageCHD",
+   "contrast": "good",
+   "quality": "fair",
+   "flags": [
+    "paediatric"
+   ]
+  },
+  {
+   "name": "ImageCHD__1138.nii.gz",
+   "item_id": "6acf289a8b4d3a662c9793c6",
+   "patient": "ImageCHD__1138",
+   "source": "ImageCHD",
+   "contrast": "good",
+   "quality": "fair",
+   "flags": [
+    "paediatric"
+   ]
+  },
+  {
+   "name": "ImageCHD__1139.nii.gz",
+   "item_id": "6acf289c8b4d3a662c9793c8",
+   "patient": "ImageCHD__1139",
+   "source": "ImageCHD",
+   "contrast": "moderate",
+   "quality": "fair",
+   "flags": [
+    "paediatric"
+   ]
+  },
+  {
+   "name": "ImageCHD__1140.nii.gz",
+   "item_id": "6acf289d8b4d3a662c9793ca",
+   "patient": "ImageCHD__1140",
+   "source": "ImageCHD",
+   "contrast": "moderate",
+   "quality": "fair",
+   "flags": [
+    "paediatric"
+   ]
+  },
+  {
+   "name": "ImageCHD__1143.nii.gz",
+   "item_id": "6acf28a08b4d3a662c9793ce",
+   "patient": "ImageCHD__1143",
+   "source": "ImageCHD",
+   "contrast": "moderate",
+   "quality": "poor",
+   "flags": [
+    "paediatric"
+   ]
+  },
+  {
+   "name": "ImageCHD__1144.nii.gz",
+   "item_id": "6acf28a28b4d3a662c9793d0",
+   "patient": "ImageCHD__1144",
+   "source": "ImageCHD",
+   "contrast": "good",
+   "quality": "fair",
+   "flags": [
+    "paediatric"
+   ]
+  },
+  {
+   "name": "ImageCHD__1145.nii.gz",
+   "item_id": "6acf28a48b4d3a662c9793d2",
+   "patient": "ImageCHD__1145",
+   "source": "ImageCHD",
+   "contrast": "moderate",
+   "quality": "fair",
+   "flags": [
+    "paediatric"
+   ]
+  },
+  {
+   "name": "ImageCHD__1146.nii.gz",
+   "item_id": "6acf28a58b4d3a662c9793d4",
+   "patient": "ImageCHD__1146",
+   "source": "ImageCHD",
+   "contrast": "moderate",
+   "quality": "fair",
+   "flags": [
+    "paediatric"
+   ]
+  },
+  {
+   "name": "ImageCHD__1148.nii.gz",
+   "item_id": "6acf28a98b4d3a662c9793d8",
+   "patient": "ImageCHD__1148",
+   "source": "ImageCHD",
+   "contrast": "good",
+   "quality": "fair",
+   "flags": [
+    "paediatric"
+   ]
+  },
+  {
+   "name": "ImageCHD__1150.nii.gz",
+   "item_id": "6acf28ab8b4d3a662c9793da",
+   "patient": "ImageCHD__1150",
+   "source": "ImageCHD",
+   "contrast": "moderate",
+   "quality": "fair",
+   "flags": [
+    "paediatric"
+   ]
+  },
+  {
+   "name": "ImageCHD__1158.nii.gz",
+   "item_id": "6acf28ac8b4d3a662c9793dc",
+   "patient": "ImageCHD__1158",
+   "source": "ImageCHD",
+   "contrast": "good",
+   "quality": "fair",
+   "flags": [
+    "paediatric"
+   ]
+  },
+  {
+   "name": "ImageCHD__1161.nii.gz",
+   "item_id": "6acf28ae8b4d3a662c9793de",
+   "patient": "ImageCHD__1161",
+   "source": "ImageCHD",
+   "contrast": "moderate",
+   "quality": "poor",
+   "flags": [
+    "paediatric"
+   ]
+  },
+  {
+   "name": "ImageCHD__1170.nii.gz",
+   "item_id": "6acf28b08b4d3a662c9793e0",
+   "patient": "ImageCHD__1170",
+   "source": "ImageCHD",
+   "contrast": "good",
+   "quality": "fair",
+   "flags": [
+    "paediatric"
+   ]
+  },
+  {
+   "name": "ImageCHD__1178.nii.gz",
+   "item_id": "6acf28b18b4d3a662c9793e2",
+   "patient": "ImageCHD__1178",
+   "source": "ImageCHD",
+   "contrast": "moderate",
+   "quality": "poor",
+   "flags": [
+    "paediatric"
+   ]
+  },
+  {
+   "name": "Slicer-SampleData__PDA_CT.nii.gz",
+   "item_id": "6acf2a578b4d3a662c9795f2",
+   "patient": "Slicer-SampleData__PDA_CT",
+   "source": "Slicer-SampleData",
+   "contrast": "good",
+   "quality": "fair",
+   "flags": [
+    "paediatric"
+   ]
+  },
+  {
+   "name": "Taiwan-AICUP-CardiacCT__patient0001.nii.gz",
+   "item_id": "6acf2a788b4d3a662c97961c",
+   "patient": "Taiwan-AICUP-CardiacCT__patient0001",
+   "source": "Taiwan-AICUP-CardiacCT",
+   "contrast": "good",
+   "quality": "good",
+   "flags": []
+  },
+  {
+   "name": "Taiwan-AICUP-CardiacCT__patient0013.nii.gz",
+   "item_id": "6acf2a8b8b4d3a662c979634",
+   "patient": "Taiwan-AICUP-CardiacCT__patient0013",
+   "source": "Taiwan-AICUP-CardiacCT",
+   "contrast": "moderate",
+   "quality": "fair",
+   "flags": []
+  },
+  {
+   "name": "Taiwan-AICUP-CardiacCT__patient0014.nii.gz",
+   "item_id": "6acf2a8d8b4d3a662c979636",
+   "patient": "Taiwan-AICUP-CardiacCT__patient0014",
+   "source": "Taiwan-AICUP-CardiacCT",
+   "contrast": "good",
+   "quality": "good",
+   "flags": []
+  },
+  {
+   "name": "Taiwan-AICUP-CardiacCT__patient0015.nii.gz",
+   "item_id": "6acf2a8e8b4d3a662c979638",
+   "patient": "Taiwan-AICUP-CardiacCT__patient0015",
+   "source": "Taiwan-AICUP-CardiacCT",
+   "contrast": "good",
+   "quality": "good",
+   "flags": []
+  },
+  {
+   "name": "Taiwan-AICUP-CardiacCT__patient0020.nii.gz",
+   "item_id": "6acf2a968b4d3a662c979642",
+   "patient": "Taiwan-AICUP-CardiacCT__patient0020",
+   "source": "Taiwan-AICUP-CardiacCT",
+   "contrast": "good",
+   "quality": "good",
+   "flags": []
+  },
+  {
+   "name": "Taiwan-AICUP-CardiacCT__patient0024.nii.gz",
+   "item_id": "6acf2a9d8b4d3a662c97964a",
+   "patient": "Taiwan-AICUP-CardiacCT__patient0024",
+   "source": "Taiwan-AICUP-CardiacCT",
+   "contrast": "good",
+   "quality": "good",
+   "flags": []
+  },
+  {
+   "name": "Taiwan-AICUP-CardiacCT__patient0029.nii.gz",
+   "item_id": "6acf2aa58b4d3a662c979654",
+   "patient": "Taiwan-AICUP-CardiacCT__patient0029",
+   "source": "Taiwan-AICUP-CardiacCT",
+   "contrast": "good",
+   "quality": "good",
+   "flags": []
+  },
+  {
+   "name": "Taiwan-AICUP-CardiacCT__patient0032.nii.gz",
+   "item_id": "6acf2aaa8b4d3a662c97965a",
+   "patient": "Taiwan-AICUP-CardiacCT__patient0032",
+   "source": "Taiwan-AICUP-CardiacCT",
+   "contrast": "good",
+   "quality": "good",
+   "flags": []
+  },
+  {
+   "name": "Taiwan-AICUP-CardiacCT__patient0036.nii.gz",
+   "item_id": "6acf2ab18b4d3a662c979662",
+   "patient": "Taiwan-AICUP-CardiacCT__patient0036",
+   "source": "Taiwan-AICUP-CardiacCT",
+   "contrast": "good",
+   "quality": "fair",
+   "flags": []
+  },
+  {
+   "name": "Taiwan-AICUP-CardiacCT__patient0039.nii.gz",
+   "item_id": "6acf2ab58b4d3a662c979668",
+   "patient": "Taiwan-AICUP-CardiacCT__patient0039",
+   "source": "Taiwan-AICUP-CardiacCT",
+   "contrast": "good",
+   "quality": "good",
+   "flags": []
+  },
+  {
+   "name": "Taiwan-AICUP-CardiacCT__patient0042.nii.gz",
+   "item_id": "6acf2aba8b4d3a662c97966e",
+   "patient": "Taiwan-AICUP-CardiacCT__patient0042",
+   "source": "Taiwan-AICUP-CardiacCT",
+   "contrast": "good",
+   "quality": "good",
+   "flags": []
+  },
+  {
+   "name": "Taiwan-AICUP-CardiacCT__patient0043.nii.gz",
+   "item_id": "6acf2abc8b4d3a662c979670",
+   "patient": "Taiwan-AICUP-CardiacCT__patient0043",
+   "source": "Taiwan-AICUP-CardiacCT",
+   "contrast": "moderate",
+   "quality": "good",
+   "flags": []
+  },
+  {
+   "name": "Taiwan-AICUP-CardiacCT__patient0055.nii.gz",
+   "item_id": "6acf2ad08b4d3a662c979688",
+   "patient": "Taiwan-AICUP-CardiacCT__patient0055",
+   "source": "Taiwan-AICUP-CardiacCT",
+   "contrast": "moderate",
+   "quality": "good",
+   "flags": []
+  },
+  {
+   "name": "Taiwan-AICUP-CardiacCT__patient0067.nii.gz",
+   "item_id": "6acf2ae58b4d3a662c9796a0",
+   "patient": "Taiwan-AICUP-CardiacCT__patient0067",
+   "source": "Taiwan-AICUP-CardiacCT",
+   "contrast": "good",
+   "quality": "good",
+   "flags": []
+  },
+  {
+   "name": "Taiwan-AICUP-CardiacCT__patient0071.nii.gz",
+   "item_id": "6acf2aeb8b4d3a662c9796a8",
+   "patient": "Taiwan-AICUP-CardiacCT__patient0071",
+   "source": "Taiwan-AICUP-CardiacCT",
+   "contrast": "good",
+   "quality": "good",
+   "flags": []
+  },
+  {
+   "name": "Taiwan-AICUP-CardiacCT__patient0073.nii.gz",
+   "item_id": "6acf2aef8b4d3a662c9796ac",
+   "patient": "Taiwan-AICUP-CardiacCT__patient0073",
+   "source": "Taiwan-AICUP-CardiacCT",
+   "contrast": "moderate",
+   "quality": "fair",
+   "flags": []
+  },
+  {
+   "name": "Taiwan-AICUP-CardiacCT__patient0077.nii.gz",
+   "item_id": "6acf2af58b4d3a662c9796b4",
+   "patient": "Taiwan-AICUP-CardiacCT__patient0077",
+   "source": "Taiwan-AICUP-CardiacCT",
+   "contrast": "good",
+   "quality": "good",
+   "flags": []
+  },
+  {
+   "name": "Taiwan-AICUP-CardiacCT__patient0079.nii.gz",
+   "item_id": "6acf2af88b4d3a662c9796b8",
+   "patient": "Taiwan-AICUP-CardiacCT__patient0079",
+   "source": "Taiwan-AICUP-CardiacCT",
+   "contrast": "good",
+   "quality": "good",
+   "flags": []
+  },
+  {
+   "name": "Taiwan-AICUP-CardiacCT__patient0084.nii.gz",
+   "item_id": "6acf2b008b4d3a662c9796c2",
+   "patient": "Taiwan-AICUP-CardiacCT__patient0084",
+   "source": "Taiwan-AICUP-CardiacCT",
+   "contrast": "moderate",
+   "quality": "fair",
+   "flags": []
+  },
+  {
+   "name": "Taiwan-AICUP-CardiacCT__patient0085.nii.gz",
+   "item_id": "6acf2b028b4d3a662c9796c4",
+   "patient": "Taiwan-AICUP-CardiacCT__patient0085",
+   "source": "Taiwan-AICUP-CardiacCT",
+   "contrast": "moderate",
+   "quality": "good",
+   "flags": []
+  },
+  {
+   "name": "TotalSegmentator-cardiac__s0032.nii.gz",
+   "item_id": "6acf2b1e8b4d3a662c9796e6",
+   "patient": "TotalSegmentator-cardiac__s0032",
+   "source": "TotalSegmentator-cardiac",
+   "contrast": "moderate",
+   "quality": "poor",
+   "flags": []
+  },
+  {
+   "name": "TotalSegmentator-cardiac__s0076.nii.gz",
+   "item_id": "6acf2b208b4d3a662c9796e8",
+   "patient": "TotalSegmentator-cardiac__s0076",
+   "source": "TotalSegmentator-cardiac",
+   "contrast": "weak",
+   "quality": "poor",
+   "flags": []
+  },
+  {
+   "name": "TotalSegmentator-cardiac__s0095.nii.gz",
+   "item_id": "6acf2b218b4d3a662c9796ea",
+   "patient": "TotalSegmentator-cardiac__s0095",
+   "source": "TotalSegmentator-cardiac",
+   "contrast": "weak",
+   "quality": "poor",
+   "flags": []
+  },
+  {
+   "name": "TotalSegmentator-cardiac__s0111.nii.gz",
+   "item_id": "6acf2b238b4d3a662c9796ec",
+   "patient": "TotalSegmentator-cardiac__s0111",
+   "source": "TotalSegmentator-cardiac",
+   "contrast": "moderate",
+   "quality": "poor",
+   "flags": []
+  },
+  {
+   "name": "TotalSegmentator-cardiac__s0115.nii.gz",
+   "item_id": "6acf2b258b4d3a662c9796ee",
+   "patient": "TotalSegmentator-cardiac__s0115",
+   "source": "TotalSegmentator-cardiac",
+   "contrast": "weak",
+   "quality": "poor",
+   "flags": []
+  },
+  {
+   "name": "TotalSegmentator-cardiac__s0138.nii.gz",
+   "item_id": "6acf2b268b4d3a662c9796f0",
+   "patient": "TotalSegmentator-cardiac__s0138",
+   "source": "TotalSegmentator-cardiac",
+   "contrast": "moderate",
+   "quality": "poor",
+   "flags": []
+  },
+  {
+   "name": "TotalSegmentator-cardiac__s0184.nii.gz",
+   "item_id": "6acf2b288b4d3a662c9796f2",
+   "patient": "TotalSegmentator-cardiac__s0184",
+   "source": "TotalSegmentator-cardiac",
+   "contrast": "weak",
+   "quality": "poor",
+   "flags": []
+  },
+  {
+   "name": "TotalSegmentator-cardiac__s0189.nii.gz",
+   "item_id": "6acf2b298b4d3a662c9796f4",
+   "patient": "TotalSegmentator-cardiac__s0189",
+   "source": "TotalSegmentator-cardiac",
+   "contrast": "moderate",
+   "quality": "poor",
+   "flags": []
+  },
+  {
+   "name": "TotalSegmentator-cardiac__s0230.nii.gz",
+   "item_id": "6acf2b2b8b4d3a662c9796f6",
+   "patient": "TotalSegmentator-cardiac__s0230",
+   "source": "TotalSegmentator-cardiac",
+   "contrast": "weak",
+   "quality": "poor",
+   "flags": []
+  },
+  {
+   "name": "TotalSegmentator-cardiac__s0270.nii.gz",
+   "item_id": "6acf2b2d8b4d3a662c9796f8",
+   "patient": "TotalSegmentator-cardiac__s0270",
+   "source": "TotalSegmentator-cardiac",
+   "contrast": "weak",
+   "quality": "poor",
+   "flags": []
+  },
+  {
+   "name": "TotalSegmentator-cardiac__s0271.nii.gz",
+   "item_id": "6acf2b2e8b4d3a662c9796fa",
+   "patient": "TotalSegmentator-cardiac__s0271",
+   "source": "TotalSegmentator-cardiac",
+   "contrast": "moderate",
+   "quality": "poor",
+   "flags": []
+  },
+  {
+   "name": "TotalSegmentator-cardiac__s0349.nii.gz",
+   "item_id": "6acf2b338b4d3a662c979700",
+   "patient": "TotalSegmentator-cardiac__s0349",
+   "source": "TotalSegmentator-cardiac",
+   "contrast": "weak",
+   "quality": "poor",
+   "flags": []
+  },
+  {
+   "name": "TotalSegmentator-cardiac__s0374.nii.gz",
+   "item_id": "6acf2b388b4d3a662c979706",
+   "patient": "TotalSegmentator-cardiac__s0374",
+   "source": "TotalSegmentator-cardiac",
+   "contrast": "good",
+   "quality": "fair",
+   "flags": []
+  },
+  {
+   "name": "TotalSegmentator-cardiac__s0380.nii.gz",
+   "item_id": "6acf2b398b4d3a662c979708",
+   "patient": "TotalSegmentator-cardiac__s0380",
+   "source": "TotalSegmentator-cardiac",
+   "contrast": "moderate",
+   "quality": "poor",
+   "flags": []
+  },
+  {
+   "name": "TotalSegmentator-cardiac__s0391.nii.gz",
+   "item_id": "6acf2b3b8b4d3a662c97970a",
+   "patient": "TotalSegmentator-cardiac__s0391",
+   "source": "TotalSegmentator-cardiac",
+   "contrast": "moderate",
+   "quality": "poor",
+   "flags": []
+  },
+  {
+   "name": "TotalSegmentator-cardiac__s0398.nii.gz",
+   "item_id": "6acf2b3c8b4d3a662c97970c",
+   "patient": "TotalSegmentator-cardiac__s0398",
+   "source": "TotalSegmentator-cardiac",
+   "contrast": "moderate",
+   "quality": "poor",
+   "flags": []
+  },
+  {
+   "name": "TotalSegmentator-cardiac__s0403.nii.gz",
+   "item_id": "6acf2b3e8b4d3a662c97970e",
+   "patient": "TotalSegmentator-cardiac__s0403",
+   "source": "TotalSegmentator-cardiac",
+   "contrast": "weak",
+   "quality": "fair",
+   "flags": []
+  },
+  {
+   "name": "TotalSegmentator-cardiac__s0405.nii.gz",
+   "item_id": "6acf2b3f8b4d3a662c979710",
+   "patient": "TotalSegmentator-cardiac__s0405",
+   "source": "TotalSegmentator-cardiac",
+   "contrast": "moderate",
+   "quality": "poor",
+   "flags": []
+  },
+  {
+   "name": "TotalSegmentator-cardiac__s0414.nii.gz",
+   "item_id": "6acf2b418b4d3a662c979712",
+   "patient": "TotalSegmentator-cardiac__s0414",
+   "source": "TotalSegmentator-cardiac",
+   "contrast": "moderate",
+   "quality": "poor",
+   "flags": []
+  },
+  {
+   "name": "TotalSegmentator-cardiac__s0424.nii.gz",
+   "item_id": "6acf2b438b4d3a662c979714",
+   "patient": "TotalSegmentator-cardiac__s0424",
+   "source": "TotalSegmentator-cardiac",
+   "contrast": "weak",
+   "quality": "poor",
+   "flags": []
+  },
+  {
+   "name": "TotalSegmentator-cardiac__s0439.nii.gz",
+   "item_id": "6acf2b468b4d3a662c979718",
+   "patient": "TotalSegmentator-cardiac__s0439",
+   "source": "TotalSegmentator-cardiac",
+   "contrast": "weak",
+   "quality": "poor",
+   "flags": []
+  },
+  {
+   "name": "TotalSegmentator-cardiac__s0444.nii.gz",
+   "item_id": "6acf2b478b4d3a662c97971a",
+   "patient": "TotalSegmentator-cardiac__s0444",
+   "source": "TotalSegmentator-cardiac",
+   "contrast": "moderate",
+   "quality": "fair",
+   "flags": []
+  },
+  {
+   "name": "TotalSegmentator-cardiac__s0452.nii.gz",
+   "item_id": "6acf2b498b4d3a662c97971c",
+   "patient": "TotalSegmentator-cardiac__s0452",
+   "source": "TotalSegmentator-cardiac",
+   "contrast": "moderate",
+   "quality": "poor",
+   "flags": []
+  },
+  {
+   "name": "TotalSegmentator-cardiac__s0463.nii.gz",
+   "item_id": "6acf2b4c8b4d3a662c979720",
+   "patient": "TotalSegmentator-cardiac__s0463",
+   "source": "TotalSegmentator-cardiac",
+   "contrast": "good",
+   "quality": "fair",
+   "flags": []
+  },
+  {
+   "name": "TotalSegmentator-cardiac__s0488.nii.gz",
+   "item_id": "6acf2b4f8b4d3a662c979724",
+   "patient": "TotalSegmentator-cardiac__s0488",
+   "source": "TotalSegmentator-cardiac",
+   "contrast": "good",
+   "quality": "poor",
+   "flags": []
+  },
+  {
+   "name": "TotalSegmentator-cardiac__s0508.nii.gz",
+   "item_id": "6acf2b508b4d3a662c979726",
+   "patient": "TotalSegmentator-cardiac__s0508",
+   "source": "TotalSegmentator-cardiac",
+   "contrast": "moderate",
+   "quality": "poor",
+   "flags": []
+  },
+  {
+   "name": "TotalSegmentator-cardiac__s0528.nii.gz",
+   "item_id": "6acf2b528b4d3a662c979728",
+   "patient": "TotalSegmentator-cardiac__s0528",
+   "source": "TotalSegmentator-cardiac",
+   "contrast": "moderate",
+   "quality": "poor",
+   "flags": []
+  },
+  {
+   "name": "TotalSegmentator-cardiac__s0531.nii.gz",
+   "item_id": "6acf2b538b4d3a662c97972a",
+   "patient": "TotalSegmentator-cardiac__s0531",
+   "source": "TotalSegmentator-cardiac",
+   "contrast": "good",
+   "quality": "poor",
+   "flags": []
+  },
+  {
+   "name": "TotalSegmentator-cardiac__s0557.nii.gz",
+   "item_id": "6acf2b558b4d3a662c97972c",
+   "patient": "TotalSegmentator-cardiac__s0557",
+   "source": "TotalSegmentator-cardiac",
+   "contrast": "weak",
+   "quality": "poor",
+   "flags": []
+  },
+  {
+   "name": "TotalSegmentator-cardiac__s0585.nii.gz",
+   "item_id": "6acf2b578b4d3a662c97972e",
+   "patient": "TotalSegmentator-cardiac__s0585",
+   "source": "TotalSegmentator-cardiac",
+   "contrast": "weak",
+   "quality": "poor",
+   "flags": []
+  },
+  {
+   "name": "TotalSegmentator-cardiac__s0594.nii.gz",
+   "item_id": "6acf2b598b4d3a662c979730",
+   "patient": "TotalSegmentator-cardiac__s0594",
+   "source": "TotalSegmentator-cardiac",
+   "contrast": "good",
+   "quality": "poor",
+   "flags": []
+  },
+  {
+   "name": "TotalSegmentator-cardiac__s0624.nii.gz",
+   "item_id": "6acf2b5c8b4d3a662c979734",
+   "patient": "TotalSegmentator-cardiac__s0624",
+   "source": "TotalSegmentator-cardiac",
+   "contrast": "weak",
+   "quality": "poor",
+   "flags": []
+  },
+  {
+   "name": "TotalSegmentator-cardiac__s0654.nii.gz",
+   "item_id": "6acf2b5f8b4d3a662c979738",
+   "patient": "TotalSegmentator-cardiac__s0654",
+   "source": "TotalSegmentator-cardiac",
+   "contrast": "good",
+   "quality": "poor",
+   "flags": []
+  },
+  {
+   "name": "TotalSegmentator-cardiac__s0659.nii.gz",
+   "item_id": "6acf2b628b4d3a662c97973c",
+   "patient": "TotalSegmentator-cardiac__s0659",
+   "source": "TotalSegmentator-cardiac",
+   "contrast": "moderate",
+   "quality": "poor",
+   "flags": []
+  },
+  {
+   "name": "TotalSegmentator-cardiac__s0671.nii.gz",
+   "item_id": "6acf2b668b4d3a662c979740",
+   "patient": "TotalSegmentator-cardiac__s0671",
+   "source": "TotalSegmentator-cardiac",
+   "contrast": "good",
+   "quality": "poor",
+   "flags": []
+  },
+  {
+   "name": "TotalSegmentator-cardiac__s0698.nii.gz",
+   "item_id": "6acf2b6b8b4d3a662c979746",
+   "patient": "TotalSegmentator-cardiac__s0698",
+   "source": "TotalSegmentator-cardiac",
+   "contrast": "weak",
+   "quality": "poor",
+   "flags": []
+  },
+  {
+   "name": "TotalSegmentator-cardiac__s0702.nii.gz",
+   "item_id": "6acf2b6c8b4d3a662c979748",
+   "patient": "TotalSegmentator-cardiac__s0702",
+   "source": "TotalSegmentator-cardiac",
+   "contrast": "moderate",
+   "quality": "poor",
+   "flags": []
+  },
+  {
+   "name": "TotalSegmentator-cardiac__s0710.nii.gz",
+   "item_id": "6acf2b6e8b4d3a662c97974a",
+   "patient": "TotalSegmentator-cardiac__s0710",
+   "source": "TotalSegmentator-cardiac",
+   "contrast": "weak",
+   "quality": "poor",
+   "flags": []
+  },
+  {
+   "name": "TotalSegmentator-cardiac__s0717.nii.gz",
+   "item_id": "6acf2b708b4d3a662c97974c",
+   "patient": "TotalSegmentator-cardiac__s0717",
+   "source": "TotalSegmentator-cardiac",
+   "contrast": "moderate",
+   "quality": "poor",
+   "flags": []
+  },
+  {
+   "name": "TotalSegmentator-cardiac__s0729.nii.gz",
+   "item_id": "6acf2b718b4d3a662c97974e",
+   "patient": "TotalSegmentator-cardiac__s0729",
+   "source": "TotalSegmentator-cardiac",
+   "contrast": "good",
+   "quality": "poor",
+   "flags": []
+  },
+  {
+   "name": "TotalSegmentator-cardiac__s0773.nii.gz",
+   "item_id": "6acf2b768b4d3a662c979754",
+   "patient": "TotalSegmentator-cardiac__s0773",
+   "source": "TotalSegmentator-cardiac",
+   "contrast": "moderate",
+   "quality": "poor",
+   "flags": []
+  },
+  {
+   "name": "TotalSegmentator-cardiac__s0781.nii.gz",
+   "item_id": "6acf2b778b4d3a662c979756",
+   "patient": "TotalSegmentator-cardiac__s0781",
+   "source": "TotalSegmentator-cardiac",
+   "contrast": "moderate",
+   "quality": "poor",
+   "flags": []
+  },
+  {
+   "name": "TotalSegmentator-cardiac__s0784.nii.gz",
+   "item_id": "6acf2b798b4d3a662c979758",
+   "patient": "TotalSegmentator-cardiac__s0784",
+   "source": "TotalSegmentator-cardiac",
+   "contrast": "moderate",
+   "quality": "poor",
+   "flags": []
+  },
+  {
+   "name": "TotalSegmentator-cardiac__s0787.nii.gz",
+   "item_id": "6acf2b7b8b4d3a662c97975a",
+   "patient": "TotalSegmentator-cardiac__s0787",
+   "source": "TotalSegmentator-cardiac",
+   "contrast": "moderate",
+   "quality": "poor",
+   "flags": []
+  },
+  {
+   "name": "TotalSegmentator-cardiac__s0813.nii.gz",
+   "item_id": "6acf2b7c8b4d3a662c97975c",
+   "patient": "TotalSegmentator-cardiac__s0813",
+   "source": "TotalSegmentator-cardiac",
+   "contrast": "moderate",
+   "quality": "poor",
+   "flags": []
+  },
+  {
+   "name": "TotalSegmentator-cardiac__s0822.nii.gz",
+   "item_id": "6acf2b7e8b4d3a662c97975e",
+   "patient": "TotalSegmentator-cardiac__s0822",
+   "source": "TotalSegmentator-cardiac",
+   "contrast": "moderate",
+   "quality": "poor",
+   "flags": []
+  },
+  {
+   "name": "TotalSegmentator-cardiac__s0825.nii.gz",
+   "item_id": "6acf2b808b4d3a662c979760",
+   "patient": "TotalSegmentator-cardiac__s0825",
+   "source": "TotalSegmentator-cardiac",
+   "contrast": "weak",
+   "quality": "poor",
+   "flags": []
+  },
+  {
+   "name": "TotalSegmentator-cardiac__s0826.nii.gz",
+   "item_id": "6acf2b818b4d3a662c979762",
+   "patient": "TotalSegmentator-cardiac__s0826",
+   "source": "TotalSegmentator-cardiac",
+   "contrast": "weak",
+   "quality": "poor",
+   "flags": []
+  },
+  {
+   "name": "TotalSegmentator-cardiac__s0832.nii.gz",
+   "item_id": "6acf2b838b4d3a662c979764",
+   "patient": "TotalSegmentator-cardiac__s0832",
+   "source": "TotalSegmentator-cardiac",
+   "contrast": "moderate",
+   "quality": "poor",
+   "flags": []
+  },
+  {
+   "name": "TotalSegmentator-cardiac__s0834.nii.gz",
+   "item_id": "6acf2b858b4d3a662c979766",
+   "patient": "TotalSegmentator-cardiac__s0834",
+   "source": "TotalSegmentator-cardiac",
+   "contrast": "moderate",
+   "quality": "poor",
+   "flags": []
+  },
+  {
+   "name": "TotalSegmentator-cardiac__s0838.nii.gz",
+   "item_id": "6acf2b878b4d3a662c979768",
+   "patient": "TotalSegmentator-cardiac__s0838",
+   "source": "TotalSegmentator-cardiac",
+   "contrast": "moderate",
+   "quality": "poor",
+   "flags": []
+  },
+  {
+   "name": "TotalSegmentator-cardiac__s0848.nii.gz",
+   "item_id": "6acf2b8b8b4d3a662c97976e",
+   "patient": "TotalSegmentator-cardiac__s0848",
+   "source": "TotalSegmentator-cardiac",
+   "contrast": "moderate",
+   "quality": "poor",
+   "flags": []
+  },
+  {
+   "name": "TotalSegmentator-cardiac__s0877.nii.gz",
+   "item_id": "6acf2b8e8b4d3a662c979772",
+   "patient": "TotalSegmentator-cardiac__s0877",
+   "source": "TotalSegmentator-cardiac",
+   "contrast": "good",
+   "quality": "fair",
+   "flags": []
+  },
+  {
+   "name": "TotalSegmentator-cardiac__s0881.nii.gz",
+   "item_id": "6acf2b918b4d3a662c979776",
+   "patient": "TotalSegmentator-cardiac__s0881",
+   "source": "TotalSegmentator-cardiac",
+   "contrast": "moderate",
+   "quality": "poor",
+   "flags": []
+  },
+  {
+   "name": "TotalSegmentator-cardiac__s0883.nii.gz",
+   "item_id": "6acf2b938b4d3a662c979778",
+   "patient": "TotalSegmentator-cardiac__s0883",
+   "source": "TotalSegmentator-cardiac",
+   "contrast": "good",
+   "quality": "poor",
+   "flags": []
+  },
+  {
+   "name": "TotalSegmentator-cardiac__s0891.nii.gz",
+   "item_id": "6acf2b958b4d3a662c97977a",
+   "patient": "TotalSegmentator-cardiac__s0891",
+   "source": "TotalSegmentator-cardiac",
+   "contrast": "moderate",
+   "quality": "poor",
+   "flags": []
+  },
+  {
+   "name": "TotalSegmentator-cardiac__s0892.nii.gz",
+   "item_id": "6acf2b978b4d3a662c97977c",
+   "patient": "TotalSegmentator-cardiac__s0892",
+   "source": "TotalSegmentator-cardiac",
+   "contrast": "moderate",
+   "quality": "poor",
+   "flags": []
+  },
+  {
+   "name": "TotalSegmentator-cardiac__s0911.nii.gz",
+   "item_id": "6acf2b9a8b4d3a662c979780",
+   "patient": "TotalSegmentator-cardiac__s0911",
+   "source": "TotalSegmentator-cardiac",
+   "contrast": "good",
+   "quality": "poor",
+   "flags": []
+  },
+  {
+   "name": "TotalSegmentator-cardiac__s0919.nii.gz",
+   "item_id": "6acf2b9b8b4d3a662c979782",
+   "patient": "TotalSegmentator-cardiac__s0919",
+   "source": "TotalSegmentator-cardiac",
+   "contrast": "moderate",
+   "quality": "poor",
+   "flags": []
+  },
+  {
+   "name": "TotalSegmentator-cardiac__s0935.nii.gz",
+   "item_id": "6acf2b9d8b4d3a662c979784",
+   "patient": "TotalSegmentator-cardiac__s0935",
+   "source": "TotalSegmentator-cardiac",
+   "contrast": "good",
+   "quality": "fair",
+   "flags": []
+  },
+  {
+   "name": "TotalSegmentator-cardiac__s0946.nii.gz",
+   "item_id": "6acf2ba08b4d3a662c979788",
+   "patient": "TotalSegmentator-cardiac__s0946",
+   "source": "TotalSegmentator-cardiac",
+   "contrast": "good",
+   "quality": "poor",
+   "flags": []
+  },
+  {
+   "name": "TotalSegmentator-cardiac__s0954.nii.gz",
+   "item_id": "6acf2ba18b4d3a662c97978a",
+   "patient": "TotalSegmentator-cardiac__s0954",
+   "source": "TotalSegmentator-cardiac",
+   "contrast": "moderate",
+   "quality": "poor",
+   "flags": []
+  },
+  {
+   "name": "TotalSegmentator-cardiac__s0956.nii.gz",
+   "item_id": "6acf2ba38b4d3a662c97978c",
+   "patient": "TotalSegmentator-cardiac__s0956",
+   "source": "TotalSegmentator-cardiac",
+   "contrast": "good",
+   "quality": "fair",
+   "flags": []
+  },
+  {
+   "name": "TotalSegmentator-cardiac__s0977.nii.gz",
+   "item_id": "6acf2ba68b4d3a662c979790",
+   "patient": "TotalSegmentator-cardiac__s0977",
+   "source": "TotalSegmentator-cardiac",
+   "contrast": "moderate",
+   "quality": "poor",
+   "flags": []
+  },
+  {
+   "name": "TotalSegmentator-cardiac__s0978.nii.gz",
+   "item_id": "6acf2ba88b4d3a662c979792",
+   "patient": "TotalSegmentator-cardiac__s0978",
+   "source": "TotalSegmentator-cardiac",
+   "contrast": "moderate",
+   "quality": "poor",
+   "flags": []
+  },
+  {
+   "name": "TotalSegmentator-cardiac__s0987.nii.gz",
+   "item_id": "6acf2bab8b4d3a662c979796",
+   "patient": "TotalSegmentator-cardiac__s0987",
+   "source": "TotalSegmentator-cardiac",
+   "contrast": "moderate",
+   "quality": "poor",
+   "flags": []
+  },
+  {
+   "name": "TotalSegmentator-cardiac__s1007.nii.gz",
+   "item_id": "6acf2bae8b4d3a662c97979a",
+   "patient": "TotalSegmentator-cardiac__s1007",
+   "source": "TotalSegmentator-cardiac",
+   "contrast": "moderate",
+   "quality": "poor",
+   "flags": []
+  },
+  {
+   "name": "TotalSegmentator-cardiac__s1018.nii.gz",
+   "item_id": "6acf2baf8b4d3a662c97979c",
+   "patient": "TotalSegmentator-cardiac__s1018",
+   "source": "TotalSegmentator-cardiac",
+   "contrast": "good",
+   "quality": "poor",
+   "flags": []
+  },
+  {
+   "name": "TotalSegmentator-cardiac__s1022.nii.gz",
+   "item_id": "6acf2bb38b4d3a662c9797a0",
+   "patient": "TotalSegmentator-cardiac__s1022",
+   "source": "TotalSegmentator-cardiac",
+   "contrast": "moderate",
+   "quality": "poor",
+   "flags": []
+  },
+  {
+   "name": "TotalSegmentator-cardiac__s1033.nii.gz",
+   "item_id": "6acf2bb48b4d3a662c9797a2",
+   "patient": "TotalSegmentator-cardiac__s1033",
+   "source": "TotalSegmentator-cardiac",
+   "contrast": "moderate",
+   "quality": "poor",
+   "flags": []
+  },
+  {
+   "name": "TotalSegmentator-cardiac__s1049.nii.gz",
+   "item_id": "6acf2bb68b4d3a662c9797a4",
+   "patient": "TotalSegmentator-cardiac__s1049",
+   "source": "TotalSegmentator-cardiac",
+   "contrast": "moderate",
+   "quality": "poor",
+   "flags": []
+  },
+  {
+   "name": "TotalSegmentator-cardiac__s1052.nii.gz",
+   "item_id": "6acf2bb88b4d3a662c9797a6",
+   "patient": "TotalSegmentator-cardiac__s1052",
+   "source": "TotalSegmentator-cardiac",
+   "contrast": "moderate",
+   "quality": "poor",
+   "flags": []
+  },
+  {
+   "name": "TotalSegmentator-cardiac__s1073.nii.gz",
+   "item_id": "6acf2bb98b4d3a662c9797a8",
+   "patient": "TotalSegmentator-cardiac__s1073",
+   "source": "TotalSegmentator-cardiac",
+   "contrast": "moderate",
+   "quality": "fair",
+   "flags": []
+  },
+  {
+   "name": "TotalSegmentator-cardiac__s1083.nii.gz",
+   "item_id": "6acf2bbb8b4d3a662c9797aa",
+   "patient": "TotalSegmentator-cardiac__s1083",
+   "source": "TotalSegmentator-cardiac",
+   "contrast": "good",
+   "quality": "poor",
+   "flags": []
+  },
+  {
+   "name": "TotalSegmentator-cardiac__s1105.nii.gz",
+   "item_id": "6acf2bbe8b4d3a662c9797ae",
+   "patient": "TotalSegmentator-cardiac__s1105",
+   "source": "TotalSegmentator-cardiac",
+   "contrast": "moderate",
+   "quality": "poor",
+   "flags": []
+  },
+  {
+   "name": "TotalSegmentator-cardiac__s1122.nii.gz",
+   "item_id": "6acf2bc18b4d3a662c9797b2",
+   "patient": "TotalSegmentator-cardiac__s1122",
+   "source": "TotalSegmentator-cardiac",
+   "contrast": "moderate",
+   "quality": "poor",
+   "flags": []
+  },
+  {
+   "name": "TotalSegmentator-cardiac__s1133.nii.gz",
+   "item_id": "6acf2bc38b4d3a662c9797b4",
+   "patient": "TotalSegmentator-cardiac__s1133",
+   "source": "TotalSegmentator-cardiac",
+   "contrast": "moderate",
+   "quality": "poor",
+   "flags": []
+  },
+  {
+   "name": "TotalSegmentator-cardiac__s1172.nii.gz",
+   "item_id": "6acf2bc68b4d3a662c9797b8",
+   "patient": "TotalSegmentator-cardiac__s1172",
+   "source": "TotalSegmentator-cardiac",
+   "contrast": "weak",
+   "quality": "poor",
+   "flags": []
+  },
+  {
+   "name": "TotalSegmentator-cardiac__s1190.nii.gz",
+   "item_id": "6acf2bca8b4d3a662c9797bc",
+   "patient": "TotalSegmentator-cardiac__s1190",
+   "source": "TotalSegmentator-cardiac",
+   "contrast": "good",
+   "quality": "poor",
+   "flags": []
+  },
+  {
+   "name": "TotalSegmentator-cardiac__s1201.nii.gz",
+   "item_id": "6acf2bcb8b4d3a662c9797be",
+   "patient": "TotalSegmentator-cardiac__s1201",
+   "source": "TotalSegmentator-cardiac",
+   "contrast": "moderate",
+   "quality": "poor",
+   "flags": []
+  },
+  {
+   "name": "TotalSegmentator-cardiac__s1225.nii.gz",
+   "item_id": "6acf2bcd8b4d3a662c9797c0",
+   "patient": "TotalSegmentator-cardiac__s1225",
+   "source": "TotalSegmentator-cardiac",
+   "contrast": "moderate",
+   "quality": "poor",
+   "flags": []
+  },
+  {
+   "name": "TotalSegmentator-cardiac__s1230.nii.gz",
+   "item_id": "6acf2bce8b4d3a662c9797c2",
+   "patient": "TotalSegmentator-cardiac__s1230",
+   "source": "TotalSegmentator-cardiac",
+   "contrast": "good",
+   "quality": "poor",
+   "flags": []
+  },
+  {
+   "name": "TotalSegmentator-cardiac__s1239.nii.gz",
+   "item_id": "6acf2bd28b4d3a662c9797c6",
+   "patient": "TotalSegmentator-cardiac__s1239",
+   "source": "TotalSegmentator-cardiac",
+   "contrast": "weak",
+   "quality": "poor",
+   "flags": []
+  },
+  {
+   "name": "TotalSegmentator-cardiac__s1243.nii.gz",
+   "item_id": "6acf2bd38b4d3a662c9797c8",
+   "patient": "TotalSegmentator-cardiac__s1243",
+   "source": "TotalSegmentator-cardiac",
+   "contrast": "weak",
+   "quality": "poor",
+   "flags": []
+  },
+  {
+   "name": "TotalSegmentator-cardiac__s1248.nii.gz",
+   "item_id": "6acf2bd58b4d3a662c9797ca",
+   "patient": "TotalSegmentator-cardiac__s1248",
+   "source": "TotalSegmentator-cardiac",
+   "contrast": "moderate",
+   "quality": "poor",
+   "flags": []
+  },
+  {
+   "name": "TotalSegmentator-cardiac__s1258.nii.gz",
+   "item_id": "6acf2bd88b4d3a662c9797ce",
+   "patient": "TotalSegmentator-cardiac__s1258",
+   "source": "TotalSegmentator-cardiac",
+   "contrast": "moderate",
+   "quality": "poor",
+   "flags": []
+  },
+  {
+   "name": "TotalSegmentator-cardiac__s1262.nii.gz",
+   "item_id": "6acf2bda8b4d3a662c9797d0",
+   "patient": "TotalSegmentator-cardiac__s1262",
+   "source": "TotalSegmentator-cardiac",
+   "contrast": "moderate",
+   "quality": "poor",
+   "flags": []
+  },
+  {
+   "name": "TotalSegmentator-cardiac__s1269.nii.gz",
+   "item_id": "6acf2bdc8b4d3a662c9797d2",
+   "patient": "TotalSegmentator-cardiac__s1269",
+   "source": "TotalSegmentator-cardiac",
+   "contrast": "weak",
+   "quality": "poor",
+   "flags": []
+  },
+  {
+   "name": "TotalSegmentator-cardiac__s1272.nii.gz",
+   "item_id": "6acf2bde8b4d3a662c9797d4",
+   "patient": "TotalSegmentator-cardiac__s1272",
+   "source": "TotalSegmentator-cardiac",
+   "contrast": "moderate",
+   "quality": "poor",
+   "flags": []
+  },
+  {
+   "name": "TotalSegmentator-cardiac__s1277.nii.gz",
+   "item_id": "6acf2bdf8b4d3a662c9797d6",
+   "patient": "TotalSegmentator-cardiac__s1277",
+   "source": "TotalSegmentator-cardiac",
+   "contrast": "weak",
+   "quality": "poor",
+   "flags": []
+  },
+  {
+   "name": "TotalSegmentator-cardiac__s1280.nii.gz",
+   "item_id": "6acf2be18b4d3a662c9797d8",
+   "patient": "TotalSegmentator-cardiac__s1280",
+   "source": "TotalSegmentator-cardiac",
+   "contrast": "moderate",
+   "quality": "poor",
+   "flags": []
+  },
+  {
+   "name": "TotalSegmentator-cardiac__s1305.nii.gz",
+   "item_id": "6acf2be38b4d3a662c9797da",
+   "patient": "TotalSegmentator-cardiac__s1305",
+   "source": "TotalSegmentator-cardiac",
+   "contrast": "good",
+   "quality": "poor",
+   "flags": []
+  },
+  {
+   "name": "TotalSegmentator-cardiac__s1310.nii.gz",
+   "item_id": "6acf2be48b4d3a662c9797dc",
+   "patient": "TotalSegmentator-cardiac__s1310",
+   "source": "TotalSegmentator-cardiac",
+   "contrast": "moderate",
+   "quality": "poor",
+   "flags": []
+  },
+  {
+   "name": "TotalSegmentator-cardiac__s1326.nii.gz",
+   "item_id": "6acf2be68b4d3a662c9797de",
+   "patient": "TotalSegmentator-cardiac__s1326",
+   "source": "TotalSegmentator-cardiac",
+   "contrast": "weak",
+   "quality": "poor",
+   "flags": []
+  },
+  {
+   "name": "TotalSegmentator-cardiac__s1327.nii.gz",
+   "item_id": "6acf2be78b4d3a662c9797e0",
+   "patient": "TotalSegmentator-cardiac__s1327",
+   "source": "TotalSegmentator-cardiac",
+   "contrast": "moderate",
+   "quality": "poor",
+   "flags": []
+  },
+  {
+   "name": "TotalSegmentator-cardiac__s1330.nii.gz",
+   "item_id": "6acf2be98b4d3a662c9797e2",
+   "patient": "TotalSegmentator-cardiac__s1330",
+   "source": "TotalSegmentator-cardiac",
+   "contrast": "moderate",
+   "quality": "poor",
+   "flags": []
+  },
+  {
+   "name": "TotalSegmentator-cardiac__s1332.nii.gz",
+   "item_id": "6acf2bea8b4d3a662c9797e4",
+   "patient": "TotalSegmentator-cardiac__s1332",
+   "source": "TotalSegmentator-cardiac",
+   "contrast": "moderate",
+   "quality": "poor",
+   "flags": []
+  },
+  {
+   "name": "Zenodo-STOPSTORM__Case1.nii.gz",
+   "item_id": "6acf2c298b4d3a662c97982c",
+   "patient": "Zenodo-STOPSTORM__Case1",
+   "source": "Zenodo-STOPSTORM",
+   "contrast": "moderate",
+   "quality": "poor",
+   "flags": []
+  },
+  {
+   "name": "Zenodo-STOPSTORM__Case2.nii.gz",
+   "item_id": "6acf2c2b8b4d3a662c97982e",
+   "patient": "Zenodo-STOPSTORM__Case2",
+   "source": "Zenodo-STOPSTORM",
+   "contrast": "moderate",
+   "quality": "poor",
+   "flags": []
+  },
+  {
+   "name": "Zenodo-STOPSTORM__Case3.nii.gz",
+   "item_id": "6acf2c2d8b4d3a662c979830",
+   "patient": "Zenodo-STOPSTORM__Case3",
+   "source": "Zenodo-STOPSTORM",
+   "contrast": "moderate",
+   "quality": "poor",
+   "flags": []
+  }
+ ]
+}

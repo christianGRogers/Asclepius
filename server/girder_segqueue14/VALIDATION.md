@@ -44,15 +44,22 @@ The queue is the 675 pooled volumes only (D23): no ImageCAS case of any kind.
 - [ ] The case opens with the yellow `~ vessel seed (not submitted)` segment over the
       vessels (faint in 3D) and the four class segments each a full copy of the seed,
       hidden (D26); the case line says each class starts as the whole seed.
-- [ ] Press **Submit case** before trimming anything: refused before upload, naming the
-      classes that share voxels.
 - [ ] Cut the classes down: show one class (its eye), erase what is not that vessel
       (*Scissors* / *Erase*, or *Islands* -> *Remove selected island*), hide it, next.
       It is quick enough to be the way annotators work (if not, say so before go-live).
 - [ ] *Save draft*, close Slicer, reopen and log in: the draft (your trimmed classes,
       not fresh copies) and the seed come back.
-- [ ] Erase all of LCx and press **Submit case**: refused before upload, naming LCx.
-      Undo, submit: accepted, local copy deleted.
+- [ ] Submit-time validation is gone (project lead, 2026-11-02, #270): nothing about
+      the segmentation is checked before submit or a reviewer's save, client or
+      server. On test cases, **Submit case** is accepted (local copy deleted) with
+      untrimmed, overlapping classes (D26 no longer enforced), with LCx erased (D13 no
+      longer enforced), and with every class empty (an all-background file is
+      uploaded). Login, roles, case ownership, the protocol gate and the upload
+      checksum still refuse. The voxel counts and geometry are recorded with each
+      submission, and the worker still flags an empty LAD, LCx or RCA for review.
+- [ ] *Save draft* while the classes are still untrimmed copies, close Slicer, reopen:
+      every class still shows the whole seed, and after trimming and submitting the
+      reviewer sees all four classes (the false "empty" of #270).
 - [ ] Old module: with a SegQueue14 zip built from an older protocol (or by running
       `python tests/segqueue14_e2e.py --url <server> --user <test account>`), login is
       refused with *"Update the SegQueue14 module"*.

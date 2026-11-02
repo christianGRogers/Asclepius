@@ -18,8 +18,11 @@ What an annotator sees:
   are what is submitted; the seed never is. A case with a model *prelabel*
   instead has it loaded straight into the four segments.
 * The heart mask still ships, as a helper segment that is never submitted.
-* **Submit** refuses a case whose LAD, LCx or RCA is empty (D13), naming them,
-  before anything is uploaded; the server checks again.
+* **Submit** sends whatever the four segments hold. Since the project lead's
+  instruction of 2026-11-02 (#270) nothing about the segmentation is checked
+  before submit or a reviewer's save, client or server: an empty LAD, LCx or RCA
+  (D13), classes sharing voxels (D26) and even an all-empty scene go through, and
+  the voxel counts and geometry are recorded with the submission, not enforced.
 
 The server owns the protocol, local data is a lease, nothing the client says is
 trusted: those three decisions are the live module's and are kept unchanged.
@@ -98,7 +101,7 @@ from SegQueue14Lib import SegQueue14Error as SegQueueError
 
 #: Continues SegQueue's numbering (0.13.0 was the last 4-class release). The
 #: release tag is ``segqueue-v`` + this; bump it to publish.
-__version__ = "0.16.4"
+__version__ = "0.16.5"
 
 #: Where the module's help points.
 HELP_URL = "https://github.com/christianGRogers/Asclepius"
@@ -466,8 +469,7 @@ class SegQueue14Logic(ScriptedLoadableModuleLogic):
         the CT, which keeps the copies as overlapping segments in separate
         labelmap layers; trimming one leaves the others whole. (Importing one
         label volume into several target segments does not: only the first gets
-        the voxels -- checked in Slicer 5.8.) ``submit`` refuses the case until
-        no voxel is left in two classes. Returns how many classes have voxels.
+        the voxels -- checked in Slicer 5.8.) Returns how many classes have voxels.
         """
         if (not sourceSegmentId or self.segmentationNode is None
                 or self.volumeNode is None or self.project is None):
@@ -514,8 +516,8 @@ class SegQueue14Logic(ScriptedLoadableModuleLogic):
         On the source grid, one class at a time: each voxel carries a bit per class
         it is in, so memory stays at one mask plus one bit volume however large
         the CT is. A seed-prefilled class that has not been cut down yet overlaps
-        every other one, which is how an untouched copy is caught before upload
-        (D26).
+        every other one (D26). Informational only: since #270 nothing refuses a
+        submission for overlapping classes.
         """
         import numpy as np
 
@@ -917,16 +919,25 @@ class SegQueue14Logic(ScriptedLoadableModuleLogic):
 
         for spec in self.project.segments:
             segmentId = existing.get(spec.name)
-            if segmentId is None:
+            created = segmentId is None
+            if created:
                 segmentId = segmentation.AddEmptySegment(spec.name, spec.name,
                                                          list(spec.color))
             segment = segmentation.GetSegment(segmentId)
             segment.SetColor(*spec.color)
-            # Pin the exported label value to the protocol's, so the integers in
-            # the submitted volume mean the same thing for every annotator and
-            # match what `segtrain convert` expects. Older Slicer builds lack
-            # this setter; there the export order below still produces the right
-            # values, it is just not guaranteed by the file itself.
+            if not created:
+                # Never re-pin the label value of a segment that already exists
+                # (a reopened draft). Its voxels are stored in its layer under its
+                # current value; changing the value leaves them unreadable, so the
+                # segment reads as empty and drops out of the export. That was the
+                # false "LAD, LCx and RCA are empty" of #270: a draft autosaved
+                # while the classes still overlapped keeps each class at value 1
+                # in its own layer. exportLabelmap numbers the classes by project
+                # order, so the submitted values do not depend on this.
+                continue
+            # A new, empty segment: pin its label value to the protocol's. Older
+            # Slicer builds lack this setter; the export order gives the same
+            # values there.
             try:
                 segment.SetLabelValue(int(spec.label))
             except AttributeError:  # pragma: no cover - old Slicer
@@ -1070,17 +1081,13 @@ class SegQueue14Logic(ScriptedLoadableModuleLogic):
                 raise RuntimeError(
                     "Slicer could not export the segments to a label volume.")
 
-            # Nothing drawn yet: Slicer exports a labelmap of zero extent, and
-            # every way of writing that to disk fails. Reporting the write
-            # failure would be technically true and useless -- the annotator
-            # would see "could not write the segmentation" at the exact moment
-            # the honest answer is "you have not segmented anything yet". Hand
-            # back empty counts instead and let the ordinary checks say which
-            # vessels are missing, by name.
+            # Nothing drawn yet: Slicer can export a labelmap of zero extent,
+            # which cannot be written to disk. An empty scene is still a
+            # submission (#270), so write an all-background volume on the
+            # source grid instead.
             image = labelmapNode.GetImageData()
             if image is None or 0 in tuple(image.GetDimensions()):
-                empty = {spec.name: 0 for spec in self.project.segments}
-                return empty, self.sourceGeometry(), None
+                _fillWithBackground(labelmapNode, self.volumeNode)
 
             if not slicer.util.saveNode(labelmapNode, path):
                 raise RuntimeError("Could not write the segmentation to " + path)
@@ -1109,8 +1116,10 @@ class SegQueue14Logic(ScriptedLoadableModuleLogic):
     # -------------------------------------------------------------- submit
 
     def submit(self, note="", progress=None):
-        """Export, validate, upload and hand over. Returns the server's response.
+        """Export, upload and hand over. Returns the server's response.
 
+        Nothing about the segmentation is checked first (#270): empty classes,
+        overlapping classes and an empty scene are all submitted as they are.
         Raises ``SegQueueError`` with the annotator-facing text on any refusal.
         On success the local copy is gone before this returns.
         """
@@ -1121,7 +1130,7 @@ class SegQueue14Logic(ScriptedLoadableModuleLogic):
         self.bankTime()
         path = os.path.join(self.cache.caseDir(assignment.assignment_id),
                             "submission.seg.nrrd")
-        counts, sourceGeom, segGeom = self._exportChecked(path, "submit")
+        counts, sourceGeom, segGeom = self.exportLabelmap(path)
 
         meta = SubmissionMeta(
             checksum=sha256_file(path),
@@ -1161,9 +1170,7 @@ class SegQueue14Logic(ScriptedLoadableModuleLogic):
         case on the strength of it -- see the ``revise`` endpoint for why the
         authorship matters more than it looks.
 
-        Validated with the same checks the annotator's submission runs, including
-        the overlap check: a reviewer correcting a case by hand is exactly as able
-        to leave two branches sharing a voxel as an annotator is.
+        Like ``submit``, nothing about the segmentation is checked first (#270).
         """
         if self.segmentationNode is None or self.volumeNode is None:
             raise SegQueueError("There is no segmentation open to save.")
@@ -1171,7 +1178,7 @@ class SegQueue14Logic(ScriptedLoadableModuleLogic):
             raise SegQueueError("You are not logged in.")
 
         path = os.path.join(self.reviewDir(), "revision.seg.nrrd")
-        counts, sourceGeom, segGeom = self._exportChecked(path, "save")
+        counts, sourceGeom, segGeom = self.exportLabelmap(path)
 
         meta = SubmissionMeta(
             checksum=sha256_file(path),
@@ -1190,34 +1197,6 @@ class SegQueue14Logic(ScriptedLoadableModuleLogic):
             progress=progress)
         return self.client.reviseSubmission(submissionId, meta, uploaded["_id"])
 
-    def _exportChecked(self, path, action):
-        """Export the project segments to ``path``, refusing what the server would.
-
-        Returns ``(counts, sourceGeometry, segmentationGeometry)`` as
-        ``exportLabelmap`` does. The same checks guard an annotator's submission
-        and a reviewer's revision; ``action`` ("submit", "save") only words the
-        refusal for an empty scene.
-        """
-        # D26: no voxel in two classes -- in particular, no class left as an
-        # untrimmed copy of the seed. Checked before the export, which would
-        # otherwise quietly give each shared voxel to one of the classes.
-        overlaps = self.classOverlaps()
-        if overlaps:
-            raise SegQueueError(labels.overlap_message(overlaps))
-        counts, sourceGeom, segGeom = self.exportLabelmap(path)
-
-        # D13: LAD, LCx and RCA must each have something in them. Checked here,
-        # on the exported volume the server will receive, so the annotator hears
-        # it before an upload rather than after; the server checks again.
-        missing = labels.missing_required(counts)
-        if missing:
-            raise SegQueueError(labels.missing_required_message(missing))
-        if not os.path.isfile(path):
-            raise SegQueueError(
-                "There is nothing to {} -- none of the segments has any "
-                "voxels in it.".format(action))
-        return counts, sourceGeom, segGeom
-
     def reviewDir(self):
         """The scratch directory under the cache root that review work goes to."""
         directory = os.path.join(self.cache.root, "review")
@@ -1235,6 +1214,15 @@ class SegQueue14Logic(ScriptedLoadableModuleLogic):
         response = self.client.releaseCase(assignment.assignment_id, reason=reason)
         self.closeCase(purge=True)
         return response
+
+
+def _fillWithBackground(labelmapNode, volumeNode):
+    """Make ``labelmapNode`` an all-zero label volume on ``volumeNode``'s grid."""
+    import numpy as np
+
+    shape = slicer.util.arrayFromVolume(volumeNode).shape
+    slicer.util.updateVolumeFromArray(labelmapNode, np.zeros(shape, np.uint8))
+    labelmapNode.CopyOrientation(volumeNode)
 
 
 def _labelValueOf(segment, segmentId):
@@ -2553,7 +2541,7 @@ class SegQueue14Widget(ScriptedLoadableModuleWidget):
         reviewer-only way to submit. Everything that makes a submission correct
         hangs off having one: the project's segments created with the right names
         and label values, the branches started from the coronary mask, the
-        autosave, the elapsed-time record, the overlap check, and the upload the
+        autosave, the elapsed-time record, and the upload the
         server will accept. A second path to submitting would have to reproduce
         all of that, and would drift from it.
 

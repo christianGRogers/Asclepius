@@ -200,7 +200,7 @@ to download a zip again.
 | "Could not reach the server" | Check your internet connection and the Server box |
 | SegQueue says Draw tube is missing | Go back to Step 2 and install SegmentEditorExtraEffects |
 | SegQueue is not in the module list | Make sure you restarted Slicer after installing. If it is still missing, install the zip again |
-| "Cannot submit" | Read the message. Either a required vessel is empty, or two vessels overlap somewhere |
+| "Cannot submit" | Read the message. It is about your login, the case or the upload, never about what you drew: since 2026-11-02 empty or overlapping vessels no longer block a submit, so check them yourself first |
 
 Still stuck? Send the project lead a screenshot, your Slicer version (**Help**,
 then **About 3D Slicer**), and whether you are on Windows, an Intel Mac or an

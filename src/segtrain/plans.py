@@ -51,7 +51,7 @@ from .splits import SPLIT_TEST, build_splits, read_meta, select, validate_splits
 TASK_EXTRA_KEYS = (
     "planner", "gpu_memory_target_gb", "ct_window", "ct_norm", "patch_size", "batch_size",
     "ignore_label", "sealed_list", "explicit_split", "save_test_probabilities",
-    "plans_from", "lr_arms", "sealed_pool_list", "pool_reads",
+    "plans_from", "lr_arms", "sealed_pool_list", "pool_reads", "overlap_policy",
 )
 
 #: Sidecar beside splits_final.json recording that the split came from explicit lists (ImageCAS-X

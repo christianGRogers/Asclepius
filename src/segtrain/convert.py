@@ -67,6 +67,8 @@ GEOMETRY_TOLERANCE_VOXELS = 0.1
 # How to resolve a voxel claimed by two structures. See resolve_overlap().
 OVERLAP_SMALLER_WINS = "smaller_wins"
 OVERLAP_LABEL_ORDER = "label_order"
+# No rule: a case whose masks overlap is reported and not converted (#275).
+OVERLAP_REFUSE = "refuse"
 
 # nnU-Net's image reader. This default is not cosmetic -- it is required for this
 # dataset to train on all of its data.
@@ -211,6 +213,12 @@ def resolve_overlap(
 
     Either way the rule is deterministic given the data, so a case converts
     identically every time.
+
+    ``refuse`` picks nobody: contested voxels keep their first owner here only
+    so the count is right, and ``convert_case`` then fails the case. It is for
+    SegQueue14 reads, whose classes are kept whole and may overlap by design
+    (D39) -- whole trees, not a voxel at an interface -- so which class a shared
+    voxel trains as is a labelling decision, not a tie-break (#275).
     """
     collision = mask & (out != 0)
     n_collisions = int(collision.sum())
@@ -218,6 +226,10 @@ def resolve_overlap(
     if n_collisions == 0:
         out[mask] = index
         return 0
+
+    if policy == OVERLAP_REFUSE:
+        out[mask & (out == 0)] = index
+        return n_collisions
 
     if policy == OVERLAP_LABEL_ORDER:
         out[mask] = index
@@ -240,10 +252,13 @@ def merge_masks(
     names: Sequence[str],
     reference: nib.Nifti1Image,
     overlap_policy: str = OVERLAP_SMALLER_WINS,
+    pairs: Optional[list] = None,
 ) -> tuple[np.ndarray, list[str], int, list[str]]:
     """Stack binary masks into one uint8 label volume.
 
-    Returns ``(labels, missing, n_overlap_voxels, geometry_mismatch)``.
+    Returns ``(labels, missing, n_overlap_voxels, geometry_mismatch)``. ``pairs``,
+    when given, is extended with ``(earlier name, name, voxels)`` for every pair of
+    structures that share voxels (counted against the volume as built so far).
     """
     shape = reference.shape
     out = np.zeros(shape, dtype=np.uint8)
@@ -275,6 +290,10 @@ def merge_masks(
             continue
 
         sizes[index] = count
+        if pairs is not None:
+            claimed = out[mask]
+            for prev in np.unique(claimed[claimed != 0]):
+                pairs.append((names[int(prev) - 1], name, int((claimed == prev).sum())))
         overlaps += resolve_overlap(out, mask, index, sizes, overlap_policy)
 
     return out, missing, overlaps, mismatch
@@ -385,13 +404,26 @@ def convert_case(
             return CaseResult(case_id, True, skipped=True)
 
         ct = nib.load(str(ct_path))
+        pairs: list = []
         if seg_dir is not None:
             labels, missing, overlaps, mismatch = merge_masks(
-                seg_dir, names, ct, overlap_policy=overlap_policy
+                seg_dir, names, ct, overlap_policy=overlap_policy, pairs=pairs
             )
         else:
             labels, missing, mismatch = remap_multilabel(multilabel, label_set, ct, ignore_value)
             overlaps = 0
+
+        if overlaps and overlap_policy == OVERLAP_REFUSE:
+            # #275: classes kept whole (D39) share voxels, and no rule says which
+            # one a training label gets. Not converted; the masks are untouched.
+            for stale in (label_path, image_path):
+                if stale.exists() or stale.is_symlink():
+                    stale.unlink()
+            shared = ", ".join(f"{a}/{b} {n} voxels" for a, b, n in pairs)
+            return CaseResult(case_id, False, overlaps=overlaps,
+                              error=f"classes overlap ({shared}); NOT converted: "
+                                    "overlap_policy 'refuse' picks no class for a shared "
+                                    "voxel until the training-time rule is decided (#275)")
 
         if mismatch:
             # Some label data was unusable. Writing the case anyway would train its vessels as
@@ -636,7 +668,11 @@ def convert_dataset(
         train_ids = train_ids[:limit]
         test_ids = test_ids[: max(1, limit // 8)] if test_ids else []
 
-    report = ConvertReport(task=task.nnunet_name, overlap_policy=cfg.overlap_policy)
+    # A task may set its own overlap policy (SegQueue14 reads: refuse, #275).
+    overlap_policy = str(extras.get("overlap_policy") or cfg.overlap_policy)
+    if overlap_policy not in (OVERLAP_SMALLER_WINS, OVERLAP_LABEL_ORDER, OVERLAP_REFUSE):
+        raise ValueError(f"{task.nnunet_name}: unknown overlap_policy {overlap_policy!r}")
+    report = ConvertReport(task=task.nnunet_name, overlap_policy=overlap_policy)
     report.n_pool_sealed = n_pool_sealed
 
     if dry_run:
@@ -688,7 +724,7 @@ def convert_dataset(
                 task.label_set,
                 cfg.link_mode,
                 overwrite,
-                cfg.overlap_policy,
+                overlap_policy,
                 ignore_value,
             ): is_test
             for case, img_dir, lbl_dir, is_test in jobs

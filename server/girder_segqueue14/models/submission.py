@@ -22,6 +22,7 @@ from girder.exceptions import ValidationException
 from girder.models.model_base import AccessControlledModel
 from pymongo import ReturnDocument
 from segqueue14 import plan as sqplan
+from segqueue14.labelfile import FORMAT_LABELMAP as LABEL_FORMAT_LABELMAP
 
 #: Kinds the worker scores.
 SCORED_KINDS = (sqplan.KIND_REFERENCE, sqplan.KIND_PAIRED)
@@ -46,7 +47,7 @@ class Submission14(AccessControlledModel):
             '_id', 'assignmentId', 'caseId', 'userId', 'fileId', 'checksum',
             'sizeBytes', 'annotationSeconds', 'voxelCounts', 'slicerVersion',
             'extensionVersion', 'annotatorNote', 'warnings', 'attempt', 'created',
-            'authorRole', 'revisionOf', 'prelabelVersion',
+            'authorRole', 'revisionOf', 'prelabelVersion', 'labelFormat',
         })
         self.exposeFields(level=AccessType.SITE_ADMIN, fields={
             'kind', 'scored', 'autoScore', 'needsReview',
@@ -70,10 +71,13 @@ class Submission14(AccessControlledModel):
         doc['sizeBytes'] = int(doc.get('sizeBytes', 0))
         doc.setdefault('voxelCounts', {})
         doc.setdefault('warnings', [])
+        # Every submission from before protocol 17 is one label volume (#275).
+        doc.setdefault('labelFormat', LABEL_FORMAT_LABELMAP)
         return doc
 
     def createSubmission(self, assignment, meta, fileId, warnings=(), needsReview=True,
-                         author=None, revisionOf=None, geometry=None):
+                         author=None, revisionOf=None, geometry=None,
+                         labelFormat=LABEL_FORMAT_LABELMAP):
         """Store one accepted upload.
 
         ``meta`` is a ``segqueue.protocol.SubmissionMeta``. The checksum stored
@@ -106,6 +110,9 @@ class Submission14(AccessControlledModel):
             'sizeBytes': meta.size_bytes,
             'annotationSeconds': meta.annotation_seconds,
             'voxelCounts': meta.voxel_counts,
+            # What the stored file is (segqueue14.labelfile): a class stack keeps
+            # every class whole (D39); a labelmap is one value per voxel.
+            'labelFormat': labelFormat,
             # As the client reported it (source and segmentation grids). Recorded
             # for scoring and audit only; nothing refuses a mismatch (#270).
             'geometry': dict(geometry) if geometry else None,

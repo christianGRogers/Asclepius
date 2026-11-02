@@ -138,7 +138,8 @@ def main(argv=None):
                                        size_bytes=os.path.getsize(prelabel),
                                        annotation_seconds=1.0, voxel_counts=counts,
                                        extension_version="e2e")
-        response = client.submit(assignment.assignment_id, meta, uploaded["_id"])
+        response = client.submit(assignment.assignment_id, meta, uploaded["_id"],
+                                 labelFormat=protocol.LABEL_FORMAT_LABELMAP)
         check("the unchanged prelabel is accepted as a read",
               bool(response.get("submissionId")), json.dumps(response)[:120])
     else:

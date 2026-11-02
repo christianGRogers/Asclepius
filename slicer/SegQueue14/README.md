@@ -28,8 +28,9 @@ and continues its version numbers (D24): same server, its own routes
    class of the artery it arises from. A ramus intermedius is always LCx (D1b). Add
    vessel the seed missed, delete anything that is not a coronary artery, and trim or
    extend the outline to the contrast-filled lumen.
-4. **Submit case.** What is in the four segments is what is submitted. The seed and
-   the heart mask are helpers and never leave your machine.
+4. **Submit case.** What is in the four segments is what is submitted, **every class
+   whole** (D39, 0.17.0): where two classes share voxels, both keep them. The seed
+   and the heart mask are helpers and never leave your machine.
 
 ## Install
 
@@ -90,6 +91,17 @@ from the archive for the Slicer version the install was built for
 moved on, login is refused with *"Update the SegQueue14 module"*.
 
 ## For developers
+
+**The submission file** (0.17.0, protocol 17, D39, #275) is a *class stack*
+(`src/segqueue14/labelfile.py`): one gzip NRRD on the CT grid, voxel for voxel, with
+one uint8 0/1 channel per class in project order (LM, LAD, LCx, RCA) and
+`SegQueue14_Format:=class-stack-nrrd/1` in its header. Its header also carries
+Slicer's segmentation keys (one layer per class), so Slicer opens it as four named,
+overlapping segments; the scoring worker, `segqueue14-export` and anything else read
+it with numpy alone (`labelfile.read_class_stack`). Up to 0.16.x a submission was one
+label volume, which keeps one class per voxel: an untouched seeded case came out as
+all RCA. Those files stay readable everywhere; the submission row's `labelFormat`
+(read from the stored file's header) says which a file is.
 
 `SegQueue14Lib/` (client, cache) has no Slicer imports and is tested by
 `tests/test_segqueue14_client.py`; the module itself is checked statically by

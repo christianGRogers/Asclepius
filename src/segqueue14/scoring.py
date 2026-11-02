@@ -6,7 +6,10 @@ which never calls them.
 
 The metric is ``segtrain.metrics.agreement`` -- the same Dice and HD95 the live
 SegQueue scores gold and duplicate cases with, and the training pipeline reports
--- applied to the project's classes (``labels.NAMES``), with two additions:
+-- applied to the project's classes (``labels.NAMES``), each scored from its
+own mask (``score_masks``): a class-stack submission keeps every class whole,
+overlaps included (D39), and an old label volume is split by value first. Two
+additions:
 
 * **presence** per class: is the vessel there in the read, in the reference, and
   do they agree. A missed L-PDA is a Dice of 0 *and* a presence disagreement; the
@@ -31,12 +34,20 @@ CROP_MARGIN = 2
 
 
 def crop_to_union(a, b, margin: int = CROP_MARGIN):
-    """``(a, b)`` cut to the bounding box of ``(a > 0) | (b > 0)`` plus a margin."""
+    """``(a, b)`` cut to the bounding box of ``(a > 0) | (b > 0)`` plus a margin.
+
+    3D label volumes, or 4D class stacks ``(class, z, y, x)``: a stack is cut on
+    its three spatial axes, every class alike.
+    """
     import numpy as np
 
     either = (a > 0) | (b > 0)
+    stacked = either.ndim == 4
+    if stacked:
+        either = either.any(axis=0)
+    lead = (slice(None),) if stacked else ()
     if not either.any():
-        return a[:1, :1, :1], b[:1, :1, :1]
+        return a[lead + (slice(0, 1),) * 3], b[lead + (slice(0, 1),) * 3]
     slices = []
     for axis in range(either.ndim):
         other = tuple(i for i in range(either.ndim) if i != axis)
@@ -44,8 +55,34 @@ def crop_to_union(a, b, margin: int = CROP_MARGIN):
         lo = max(0, int(hit[0]) - margin)
         hi = min(either.shape[axis], int(hit[-1]) + 1 + margin)
         slices.append(slice(lo, hi))
-    window = tuple(slices)
+    window = lead + tuple(slices)
     return a[window], b[window]
+
+
+def as_masks(volume, names: Optional[Sequence[str]] = None):
+    """``(class, z, y, x)`` 0/1 masks: a class stack as it is, a label volume by value.
+
+    A 3D array is an old single-label submission (or a reference) in the
+    project's values, ``names[i]`` being label ``i + 1``; a 4D one is already a
+    class stack in ``names`` order.
+    """
+    import numpy as np
+
+    names = list(labels.NAMES if names is None else names)
+    volume = np.asarray(volume)
+    if volume.ndim == 4:
+        if volume.shape[0] != len(names):
+            raise ValueError(f"{volume.shape[0]} channels for {len(names)} classes")
+        return (volume != 0).astype(np.uint8)
+    return np.stack([(volume == i) for i in range(1, len(names) + 1)]).astype(np.uint8)
+
+
+def mask_counts(masks, names: Optional[Sequence[str]] = None) -> Dict[str, int]:
+    """``{class name: voxels}`` from ``(class, ...)`` masks, each class counted whole."""
+    import numpy as np
+
+    names = list(labels.NAMES if names is None else names)
+    return {name: int(np.count_nonzero(masks[i])) for i, name in enumerate(names)}
 
 
 def voxel_counts(volume, names: Optional[Sequence[str]] = None) -> Dict[str, int]:
@@ -71,13 +108,25 @@ def score_labels(read, reference, spacing: Sequence[float],
     ``segtrain.metrics.agreement`` dict with ``voxels_read`` / ``voxels_ref`` and
     presence per class, plus ``presence_agreement`` and ``required_min_dice``.
     """
-    from segtrain.metrics import agreement
+    names = list(labels.NAMES if names is None else names)
+    return score_masks(as_masks(read, names), as_masks(reference, names), spacing, names)
+
+
+def score_masks(read, reference, spacing: Sequence[float],
+                names: Optional[Sequence[str]] = None) -> dict:
+    """``score_labels`` from ``(class, z, y, x)`` masks: each class from its own.
+
+    Where classes overlap (D39) each keeps all of its voxels, so a read whose four
+    classes are full copies of the tree scores every class against the
+    reference, not only the one a label volume would have kept.
+    """
+    from segtrain.metrics import agreement_masks
 
     names = list(labels.NAMES if names is None else names)
     if read.shape != reference.shape:
         raise ValueError(f"shapes differ: {read.shape} != {reference.shape}")
     a, b = crop_to_union(read, reference)
-    result = agreement(a, b, names, spacing)
+    result = agreement_masks(a, b, names, spacing)
 
     agree = 0
     for name in names:

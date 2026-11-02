@@ -858,14 +858,31 @@ class CaseReads:
     aorta: Optional[np.ndarray] = None  # TotalSegmentator aorta on the same grid (A1 ostium)
     #: D7: annotators whose read the case note records as a correction of a major mask error
     corrected: frozenset = frozenset()
+    #: #275 (D39): read -> [(class, class, voxels), ...] for a SegQueue14 read whose classes share
+    #: voxels; only with ``load_read_folder(overlap="report")`` (the default refuses such a read)
+    overlaps: dict = field(default_factory=dict)
 
 
 EXPORT_SEGMENTS = {
+    # segqueue-export (the live SegQueue)
     "left_main": LM,
     "left_anterior_descending": LAD,
     "left_circumflex": LCX,
     "right_coronary_artery": RCA,
+    # segqueue14-export (src/segqueue14/labels.py, configs/labels/coronary_icx4.yaml)
+    "LM": LM,
+    "LAD": LAD,
+    "LCx": LCX,
+    "RCA": RCA,
 }
+_SHORT = {LM: "LM", LAD: "LAD", LCX: "LCx", RCA: "RCA"}
+#: ``load_read_folder(overlap=...)``: what to do with a read whose classes share voxels (#275).
+OVERLAP_REFUSE = "refuse"
+OVERLAP_REPORT = "report"
+
+
+class OverlappingClassesError(ValueError):
+    """Reads whose classes share voxels, where the report needs one class per voxel (#275)."""
 _NOT_READS = ("ct", "image", "img", "mask", "coronary_arteries", "seed", "heart")
 
 
@@ -891,20 +908,37 @@ def _to_grid(img, ref_affine, ref_shape, what: str) -> np.ndarray:
     return data
 
 
-def _read_from_segmentations(seg_dir: str):
-    """SegQueue export: one binary NIfTI per vessel -> one 4-class read (and its image)."""
+def _read_from_segmentations(seg_dir: str, shared: Optional[list] = None):
+    """SegQueue export: one binary NIfTI per vessel -> one 4-class read (and its image).
+
+    A SegQueue14 export keeps every class whole, overlaps included (D39), and a label array has
+    one class per voxel. ``shared`` (a list) is extended with ``(class, class, voxels)`` for every
+    pair of classes that share voxels; the caller decides what that means (#275). In the array,
+    a shared voxel keeps the lower class (LM before LAD before LCx before RCA).
+    """
     import nibabel as nib
 
-    lab, img0 = None, None
+    masks, img0 = {}, None
     for f in sorted(os.listdir(seg_dir)):
         name = f.split(".nii")[0]
         if name not in EXPORT_SEGMENTS:
             continue
         img = nib.load(os.path.join(seg_dir, f))
         v = np.asarray(img.dataobj) > 0.5
-        if lab is None:
-            lab, img0 = np.zeros(v.shape, np.uint8), img
-        lab[v & (lab == 0)] = EXPORT_SEGMENTS[name]
+        cls = EXPORT_SEGMENTS[name]
+        masks[cls] = masks[cls] | v if cls in masks else v
+        if img0 is None:
+            img0 = img
+    if not masks:
+        return None, None
+    lab = np.zeros(next(iter(masks.values())).shape, np.uint8)
+    for cls in sorted(masks):
+        if shared is not None:
+            for prev in sorted(c for c in masks if c < cls):
+                n = int((masks[prev] & masks[cls]).sum())
+                if n:
+                    shared.append((_SHORT[prev], _SHORT[cls], n))
+        lab[masks[cls] & (lab == 0)] = cls
     return lab, img0
 
 
@@ -918,6 +952,7 @@ def load_read_folder(
     milestone: bool = False,
     refused: Optional[list] = None,
     pool_seal: str = "refuse",
+    overlap: str = OVERLAP_REFUSE,
 ) -> list[CaseReads]:
     """Load a wave of double reads. Two layouts are accepted:
 
@@ -945,7 +980,16 @@ def load_read_folder(
     file is opened (``pool_seal="refuse"``, the default); ``"exclude"`` skips those folders,
     lists them in ``refused`` and logs the count; ``"acceptance"`` (acceptance scoring only)
     keeps them and logs it. ``milestone`` does not lift the pool seal.
+    **#275 (D39):** a SegQueue14 read keeps every class whole, so its classes can share voxels,
+    and this report needs one class per voxel. With ``overlap="refuse"`` (the default) the load
+    raises ``OverlappingClassesError`` naming every such read and the voxels shared -- after
+    looking at all of them, so one run lists them all. ``overlap="report"`` loads them, gives a
+    shared voxel the lower class (LM, LAD, LCx, RCA), warns, and records the pairs in
+    ``CaseReads.overlaps``. Which rule is right is the lead's call, not this function's.
     """
+    if overlap not in (OVERLAP_REFUSE, OVERLAP_REPORT):
+        raise ValueError(
+            f"overlap must be {OVERLAP_REFUSE!r} or {OVERLAP_REPORT!r}, got {overlap!r}")
     import warnings
 
     import nibabel as nib
@@ -966,6 +1010,7 @@ def load_read_folder(
     if pool_seal == EXCLUDE and refused is not None:
         refused.extend(why for why in (seal.reason(e) for e in entries) if why)
     groups: dict = {}
+    overlapping: dict = {}  # (case, read) -> [(class, class, voxels), ...]
     for entry in entries:
         if entry not in allowed:
             continue
@@ -979,9 +1024,12 @@ def load_read_folder(
                 continue
         seg = os.path.join(cdir, "segmentations")
         if os.path.isdir(seg):
-            lab, img = _read_from_segmentations(seg)
+            shared: list = []
+            lab, img = _read_from_segmentations(seg, shared)
             if lab is not None:
                 groups.setdefault(case_id(entry), []).append((read_name(entry), lab, img))
+                if shared:
+                    overlapping[(case_id(entry), read_name(entry))] = shared
             continue
         for f in sorted(os.listdir(cdir)):
             if not f.endswith((".nii.gz", ".nii")):
@@ -991,6 +1039,18 @@ def load_read_folder(
                 continue
             img = nib.load(os.path.join(cdir, f))
             groups.setdefault(case_id(entry), []).append((name, None, img))
+    if overlapping:
+        listed = "; ".join(
+            f"{case}/{read}: " + ", ".join(f"{a}/{b} {n} voxels" for a, b, n in pairs)
+            for (case, read), pairs in sorted(overlapping.items()))
+        if overlap == OVERLAP_REFUSE:
+            raise OverlappingClassesError(
+                f"{len(overlapping)} read(s) have classes that share voxels ({listed}). Each class "
+                "is kept whole (D39) and this report needs one class per voxel; no rule for that "
+                "is decided yet (#275). Pass overlap='report' to load them with the lower class "
+                "winning, recorded per read.")
+        warnings.warn(f"reads: classes share voxels, lower class kept in the label array: {listed}",
+                      stacklevel=2)
     out = []
     for case in sorted(groups):
         items = sorted(groups[case], key=lambda t: t[0])
@@ -1031,7 +1091,8 @@ def load_read_folder(
                 if os.path.exists(cand):
                     aorta = _to_grid(nib.load(cand), ref_aff, ref_shape, f"{case}/aorta") > 0.5
                     break
-        out.append(CaseReads(case, reads, spacing, mask, icx, ref_aff, aorta))
+        shared = {read: overlapping[(case, read)] for read in reads if (case, read) in overlapping}
+        out.append(CaseReads(case, reads, spacing, mask, icx, ref_aff, aorta, overlaps=shared))
     return out
 
 

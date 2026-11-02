@@ -211,3 +211,32 @@ def checkClientProtocol(clientProtocol) -> None:
         protocol.check_client_protocol(clientProtocolFrom(clientProtocol))
     except protocol.ProtocolError as exc:
         refuse(exc.code, str(exc), status=426, **exc.detail)
+
+
+def storedLabelFormat(file) -> str:
+    """What a stored upload is, from its own header (``segqueue14.labelfile``).
+
+    Read from the first 64 KB of the stored bytes, so the submission records what
+    the file is rather than what the client said it is.
+    """
+    from girder.models.file import File
+    from segqueue14 import labelfile
+
+    raw = b''
+    for chunk in File().download(file, headers=False, endByte=1 << 16)():
+        raw += chunk
+        if len(raw) >= 1 << 16:
+            break
+    return labelfile.sniff_bytes(raw)
+
+
+def checkLabelFormat(labelFormat) -> str:
+    """The stored ``labelFormat`` of an upload; refuse (400) one nobody can read.
+
+    Only the declared name is checked, never the segmentation (D38): a missing
+    one is an old single label volume.
+    """
+    try:
+        return protocol.label_format(labelFormat)
+    except protocol.ProtocolError as exc:
+        refuse(exc.code, str(exc), status=400, **exc.detail)

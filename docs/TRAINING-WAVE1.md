@@ -13,6 +13,7 @@ comments give the reasons, and `tests/test_task_icx4_wave1.py` checks it against
 |---|---|---|
 | Classes | LM 1, LAD 2, LCx 3, RCA 4 (`coronary_icx4`, D25) | the tests, against `src/segqueue14/labels.py` |
 | Samples | Each read is its own sample (A11′): `<case>`, `<case>__r2` | `segtrain index` keys the split on the case, so both reads of a case land in the same split |
+| Shared voxels (D40) | A voxel two or more classes of one read claim becomes nnU-Net's ignore label (5, `"ignore"` in `dataset.json`); a voxel one class claims keeps it. Every read stays in training. Ignore is not an output channel: still icx4's 4 + 1 outputs | `overlap_policy: ignore` + `ignore_label: true`; `convert` lists the ignored voxels and class pairs per case |
 | Plans | icx4's own plans file, adopted rather than re-planned: 0.5 mm iso, ResEnc 60 GB, 256³ / batch 2, icx4's CT window | `segtrain plan --plans-from` refuses any other plans; the trainer's loader refuses a checkpoint whose plans differ |
 | Trainer | `nnUNetTrainer_segtrain_finetune`: full load including the output heads, 2500-iteration warm-up then poly, 250 epochs, mirroring off | the trainer refuses to start from random weights |
 | LR arms | `primary` peak 1e-2 (A17a/b); `lr1e3` peak 1e-3 (the pre-registered fallback) | `--arm` |
@@ -40,9 +41,9 @@ On the cluster (`$SCRATCH/wave1` here), after moving the export there (`segtrain
 
 ```sh
 segtrain index   --root $SCRATCH/wave1 --layout nested
-segtrain convert --task 716 --zenodo-root $SCRATCH/wave1      # refuses on any A14- or D27-sealed read,
-                                                              # and lists (does not convert) reads whose
-                                                              # classes overlap (D39, #275)
+segtrain convert --task 716 --zenodo-root $SCRATCH/wave1      # refuses on any A14- or D27-sealed read;
+                                                              # voxels a read's classes share (D39) are
+                                                              # written as ignore and listed per case (D40)
 segtrain plan    --task 716 --zenodo-root $SCRATCH/wave1 \
                  --plans-from $SCRATCH/icx4/nnunet_preprocessed/Dataset715_ICX4/nnUNetResEncUNetPlans_60G_iso05.json
 segtrain preprocess --task 716
@@ -76,4 +77,7 @@ Notes:
 - `segtrain status` reads events from the runs root (pass the same `--runs-root` for `lr1e3`). `segtrain evaluate`
   looks only in the primary arm's model folder (`nnUNetTrainer_segtrain_finetune__…`). Score the `lr1e3` model
   from its own folder (`nnUNetTrainer_segtrain_finetune_lr1e3__…`) with `nnUNetv2_predict -tr`.
+- Shared voxels (D40): `segtrain reads-report` loads reads the same way by default (`--overlap ignore`). It leaves
+  a voxel either read marks ignore out of the inter-read metrics, and `segtrain evaluate` leaves reference ignore
+  voxels out of Dice/NSD. `--overlap refuse` and `--overlap report` (lower class wins) are still available.
 - Don't also pass nnU-Net's `-pretrained_weights`. It would overwrite the network body after the full load.

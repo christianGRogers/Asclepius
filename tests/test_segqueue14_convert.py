@@ -208,10 +208,172 @@ def test_overlapping_classes_are_exported_whole_and_refused_by_convert(tmp_path)
     assert not (task.raw_dir(cfg) / "labelsTr" / "imagecas_0004.nii.gz").exists()
 
 
-def test_task_716_refuses_overlapping_reads():
+def test_task_716_trains_shared_voxels_as_ignore():
+    """D40 (#278): task 716 writes shared voxels as nnU-Net's ignore label."""
     from segtrain.config import load_task
     from segtrain.plans import task_extras
 
     task = load_task(716, tasks_dir=REPO / "configs" / "tasks",
                      labels_dir=REPO / "configs" / "labels")
-    assert task_extras(task)["overlap_policy"] == "refuse"
+    extras = task_extras(task)
+    assert extras["overlap_policy"] == "ignore"
+    assert extras["ignore_label"] is True
+
+
+# ------------------------------------------------- D40 (#278): shared voxels -> ignore
+
+IGNORE = labels.N_CLASSES + 1
+
+
+def _ignore_task(tmp_path, policy="ignore", ignore_label=True):
+    """A task like 716 on the round-trip label set: ``overlap_policy`` and ``ignore_label``."""
+    task_file = tmp_path / "Dataset799_SegQueue14RoundTrip.yaml"
+    task_file.write_text(f"overlap_policy: {policy}\n"
+                         + ("ignore_label: true\n" if ignore_label else ""))
+    return TaskConfig(dataset_id=799, dataset_name="SegQueue14RoundTrip",
+                      label_set=_label_set(), spacing=None, configuration="3d_fullres",
+                      source_path=task_file)
+
+
+def _write_masks(folder, classes):
+    """A SegQueue14 export folder: ct.nii.gz + segmentations/<class>.nii.gz, classes whole."""
+    affine = np.diag([0.5, 0.5, 0.6, 1.0])
+    (folder / "segmentations").mkdir(parents=True)
+    shape = next(iter(classes.values())).shape
+    nib.save(nib.Nifti1Image(np.full(shape, 300, dtype=np.int16), affine),
+             str(folder / "ct.nii.gz"))
+    for name, mask in classes.items():
+        nib.save(nib.Nifti1Image(mask.astype(np.uint8), affine),
+                 str(folder / "segmentations" / f"{name}.nii.gz"))
+
+
+def _convert_with(tmp_path, root, task):
+    rows = build_rows(scan(root), val_fraction=0.0, test_fraction=0.0, seed=1)
+    write_meta(root / "meta.csv", rows)
+    cfg = _config(tmp_path, root)
+    report = convert_dataset(cfg, task, read_meta(root / "meta.csv"))
+    return report, task.raw_dir(cfg)
+
+
+def _label(raw, case):
+    return np.asarray(nib.load(str(raw / "labelsTr" / f"{case}.nii.gz")).dataobj)
+
+
+def test_an_untouched_seeded_read_converts_to_ignore_on_the_tree(tmp_path):
+    """Four identical full masks (an untouched seeded case): all ignore on the tree, 0 elsewhere."""
+    sitk = pytest.importorskip("SimpleITK")
+    ex = _exporter()
+    root = tmp_path / "export"
+    tree = _read(seed=2) > 0
+    classes = {name: tree.astype(np.uint8) for name in labels.NAMES}
+    _write_stack_case(sitk, ex, root / "imagecas_0004", classes, np.diag([0.5, 0.5, 0.6, 1.0]))
+
+    report, raw = _convert_with(tmp_path, root, _ignore_task(tmp_path))
+    assert report.ok, report.render()
+    got = _label(raw, "imagecas_0004")
+    assert np.array_equal(got, np.where(tree, IGNORE, 0))
+    [case] = report.with_overlaps
+    assert case.ignored == int(tree.sum())
+    text = report.render()
+    assert f"imagecas_0004: {int(tree.sum())} ignored voxels" in text
+    assert "LM/LAD" in text and "D40" in text
+
+
+def test_a_partly_trimmed_read_keeps_single_class_voxels_and_ignores_only_shared(tmp_path):
+    root = tmp_path / "export"
+    truth = _read(seed=7)
+    classes = {name: truth == labels.LABEL_VALUES[name] for name in labels.NAMES}
+    lcx = classes["LCx"]
+    # The annotator trimmed LM, LCx and RCA to their own vessels but left LAD over LCx too.
+    classes["LAD"] = classes["LAD"] | lcx
+    _write_masks(root / "imagecas_0003", classes)
+
+    report, raw = _convert_with(tmp_path, root, _ignore_task(tmp_path))
+    assert report.ok, report.render()
+    got = _label(raw, "imagecas_0003")
+    want = truth.copy()
+    want[lcx] = IGNORE
+    assert np.array_equal(got, want)
+    [case] = report.with_overlaps
+    assert case.ignored == int(lcx.sum())
+    assert case.overlap_pairs == [("LAD", "LCx", int(lcx.sum()))]
+    assert f"imagecas_0003: {int(lcx.sum())} ignored voxels (LAD/LCx {int(lcx.sum())})" \
+        in report.render()
+
+
+def test_three_classes_on_one_voxel_count_it_once(tmp_path):
+    root = tmp_path / "export"
+    truth = _read(seed=4)
+    classes = {name: truth == labels.LABEL_VALUES[name] for name in labels.NAMES}
+    rca = classes["RCA"]
+    classes["LM"] = classes["LM"] | rca
+    classes["LAD"] = classes["LAD"] | rca
+    _write_masks(root / "imagecas_0006", classes)
+
+    report, raw = _convert_with(tmp_path, root, _ignore_task(tmp_path))
+    assert report.ok, report.render()
+    got = _label(raw, "imagecas_0006")
+    want = truth.copy()
+    want[rca] = IGNORE
+    assert np.array_equal(got, want)
+    assert report.with_overlaps[0].ignored == int(rca.sum())
+
+
+def test_an_overlap_free_read_converts_exactly_as_before(tmp_path):
+    root = tmp_path / "export"
+    truth = _read(seed=9)
+    _write_masks(root / "imagecas_0007",
+                 {name: truth == labels.LABEL_VALUES[name] for name in labels.NAMES})
+    report, raw = _convert_with(tmp_path, root, _ignore_task(tmp_path))
+    assert report.ok, report.render()
+    assert np.array_equal(_label(raw, "imagecas_0007"), truth)
+    assert not report.with_overlaps
+    assert "ignore" not in report.render()
+
+
+def test_an_old_single_label_read_converts_as_before(tmp_path):
+    root = tmp_path / "icx"
+    truth = _read(seed=5)
+    folder = root / "imagecas_0010"
+    folder.mkdir(parents=True)
+    affine = np.diag([0.4, 0.4, 0.5, 1.0])
+    nib.save(nib.Nifti1Image(np.zeros(truth.shape, dtype=np.int16), affine),
+             str(folder / "ct.nii.gz"))
+    nib.save(nib.Nifti1Image(truth, affine), str(folder / "labels.nii.gz"))
+    report, raw = _convert_with(tmp_path, root, _ignore_task(tmp_path))
+    assert report.ok, report.render()
+    assert np.array_equal(_label(raw, "imagecas_0010"), truth)
+
+
+def test_the_dataset_json_declares_ignore_as_the_highest_label(tmp_path):
+    import json
+
+    root = tmp_path / "export"
+    truth = _read(seed=1)
+    _write_masks(root / "imagecas_0008",
+                 {name: truth > 0 for name in labels.NAMES})
+    report, raw = _convert_with(tmp_path, root, _ignore_task(tmp_path))
+    assert report.ok, report.render()
+    dj = json.loads((raw / "dataset.json").read_text())
+    assert dj["labels"] == {"background": 0, **dict(labels.LABEL_VALUES), "ignore": IGNORE}
+    assert dj["labels"]["ignore"] == max(dj["labels"].values())
+
+
+def test_ignore_without_an_ignore_label_is_refused(tmp_path):
+    root = tmp_path / "export"
+    truth = _read(seed=1)
+    _write_masks(root / "imagecas_0008", {name: truth > 0 for name in labels.NAMES})
+    with pytest.raises(ValueError, match="ignore_label: true"):
+        _convert_with(tmp_path, root, _ignore_task(tmp_path, ignore_label=False))
+
+
+@pytest.mark.parametrize("policy", ["smaller_wins", "label_order"])
+def test_the_other_policies_still_pick_a_class(tmp_path, policy):
+    root = tmp_path / "export"
+    tree = _read(seed=2) > 0
+    _write_masks(root / "imagecas_0004", {name: tree for name in labels.NAMES})
+    report, raw = _convert_with(tmp_path, root, _ignore_task(tmp_path, policy=policy))
+    assert report.ok, report.render()
+    got = _label(raw, "imagecas_0004")
+    assert set(np.unique(got[tree])) <= set(labels.LABEL_VALUES.values())
+    assert (got[~tree] == 0).all()

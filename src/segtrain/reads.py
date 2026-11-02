@@ -859,7 +859,8 @@ class CaseReads:
     #: D7: annotators whose read the case note records as a correction of a major mask error
     corrected: frozenset = frozenset()
     #: #275 (D39): read -> [(class, class, voxels), ...] for a SegQueue14 read whose classes share
-    #: voxels; only with ``load_read_folder(overlap="report")`` (the default refuses such a read)
+    #: voxels. With ``load_read_folder(overlap="ignore")`` (the default, D40) those voxels are
+    #: ``IGNORE`` in the read; with ``overlap="report"`` they keep the lower class.
     overlaps: dict = field(default_factory=dict)
 
 
@@ -879,6 +880,9 @@ _SHORT = {LM: "LM", LAD: "LAD", LCX: "LCx", RCA: "RCA"}
 #: ``load_read_folder(overlap=...)``: what to do with a read whose classes share voxels (#275).
 OVERLAP_REFUSE = "refuse"
 OVERLAP_REPORT = "report"
+#: D40 (#278), the default: a shared voxel is ``IGNORE`` in the read, as it is in training.
+OVERLAP_IGNORE = "ignore"
+OVERLAP_MODES = (OVERLAP_IGNORE, OVERLAP_REFUSE, OVERLAP_REPORT)
 
 
 class OverlappingClassesError(ValueError):
@@ -908,13 +912,15 @@ def _to_grid(img, ref_affine, ref_shape, what: str) -> np.ndarray:
     return data
 
 
-def _read_from_segmentations(seg_dir: str, shared: Optional[list] = None):
+def _read_from_segmentations(seg_dir: str, shared: Optional[list] = None,
+                             ignore_shared: bool = False):
     """SegQueue export: one binary NIfTI per vessel -> one 4-class read (and its image).
 
     A SegQueue14 export keeps every class whole, overlaps included (D39), and a label array has
     one class per voxel. ``shared`` (a list) is extended with ``(class, class, voxels)`` for every
-    pair of classes that share voxels; the caller decides what that means (#275). In the array,
-    a shared voxel keeps the lower class (LM before LAD before LCx before RCA).
+    pair of classes that share voxels. In the array a shared voxel is ``IGNORE`` when
+    ``ignore_shared`` (D40, as in training), else it keeps the lower class (LM before LAD before
+    LCx before RCA).
     """
     import nibabel as nib
 
@@ -939,6 +945,11 @@ def _read_from_segmentations(seg_dir: str, shared: Optional[list] = None):
                 if n:
                     shared.append((_SHORT[prev], _SHORT[cls], n))
         lab[masks[cls] & (lab == 0)] = cls
+    if ignore_shared:
+        n_claims = np.zeros(lab.shape, np.uint8)
+        for m in masks.values():
+            n_claims += m
+        lab[n_claims >= 2] = IGNORE
     return lab, img0
 
 
@@ -952,7 +963,7 @@ def load_read_folder(
     milestone: bool = False,
     refused: Optional[list] = None,
     pool_seal: str = "refuse",
-    overlap: str = OVERLAP_REFUSE,
+    overlap: str = OVERLAP_IGNORE,
 ) -> list[CaseReads]:
     """Load a wave of double reads. Two layouts are accepted:
 
@@ -981,15 +992,16 @@ def load_read_folder(
     lists them in ``refused`` and logs the count; ``"acceptance"`` (acceptance scoring only)
     keeps them and logs it. ``milestone`` does not lift the pool seal.
     **#275 (D39):** a SegQueue14 read keeps every class whole, so its classes can share voxels,
-    and this report needs one class per voxel. With ``overlap="refuse"`` (the default) the load
-    raises ``OverlappingClassesError`` naming every such read and the voxels shared -- after
-    looking at all of them, so one run lists them all. ``overlap="report"`` loads them, gives a
-    shared voxel the lower class (LM, LAD, LCx, RCA), warns, and records the pairs in
-    ``CaseReads.overlaps``. Which rule is right is the lead's call, not this function's.
+    and this report needs one class per voxel. With ``overlap="ignore"`` (the default, D40) a
+    voxel two or more classes claim is ``IGNORE`` in the read, as in training: no class wins it,
+    and :func:`first_reads_report` leaves it out of the inter-read metrics. The load warns and
+    records the pairs in ``CaseReads.overlaps``. ``overlap="refuse"`` raises
+    ``OverlappingClassesError`` naming every such read and the voxels shared -- after looking at
+    all of them, so one run lists them all. ``overlap="report"`` gives a shared voxel the lower
+    class (LM, LAD, LCx, RCA) instead, warns, and records the pairs.
     """
-    if overlap not in (OVERLAP_REFUSE, OVERLAP_REPORT):
-        raise ValueError(
-            f"overlap must be {OVERLAP_REFUSE!r} or {OVERLAP_REPORT!r}, got {overlap!r}")
+    if overlap not in OVERLAP_MODES:
+        raise ValueError(f"overlap must be one of {OVERLAP_MODES}, got {overlap!r}")
     import warnings
 
     import nibabel as nib
@@ -1025,7 +1037,8 @@ def load_read_folder(
         seg = os.path.join(cdir, "segmentations")
         if os.path.isdir(seg):
             shared: list = []
-            lab, img = _read_from_segmentations(seg, shared)
+            lab, img = _read_from_segmentations(seg, shared,
+                                                ignore_shared=overlap == OVERLAP_IGNORE)
             if lab is not None:
                 groups.setdefault(case_id(entry), []).append((read_name(entry), lab, img))
                 if shared:
@@ -1047,10 +1060,11 @@ def load_read_folder(
             raise OverlappingClassesError(
                 f"{len(overlapping)} read(s) have classes that share voxels ({listed}). Each class "
                 "is kept whole (D39) and this report needs one class per voxel; no rule for that "
-                "is decided yet (#275). Pass overlap='report' to load them with the lower class "
-                "winning, recorded per read.")
-        warnings.warn(f"reads: classes share voxels, lower class kept in the label array: {listed}",
-                      stacklevel=2)
+                "is applied (overlap='refuse'). The default, overlap='ignore' (D40), marks shared "
+                "voxels ignore; overlap='report' gives them the lower class.")
+        kept = ("written as ignore (D40)" if overlap == OVERLAP_IGNORE
+                else "lower class kept in the label array")
+        warnings.warn(f"reads: classes share voxels, {kept}: {listed}", stacklevel=2)
     out = []
     for case in sorted(groups):
         items = sorted(groups[case], key=lambda t: t[0])
@@ -1149,6 +1163,7 @@ def crop_case(cr: CaseReads, margin_mm: float = CROP_MARGIN_MM) -> CaseReads:
         aff,
         cut(cr.aorta),
         frozenset(cr.corrected),
+        overlaps=dict(cr.overlaps),
     )
 
 
@@ -1214,8 +1229,17 @@ def first_reads_report(
                 )
                 row["convention"][n] = asdict(cc)
                 checks.append(cc)
+        if cr.overlaps:
+            row["shared_class_voxels"] = {
+                n: [list(p) for p in cr.overlaps[n]] for n in names if n in cr.overlaps}
         if len(names) >= 2:
             a, b = cr.reads[names[0]], cr.reads[names[1]]
+            # D40: a voxel either read leaves to ignore (its classes share it) is no class's, so
+            # the agreement metrics below leave it out of both reads rather than count it for one.
+            left_out = (a == IGNORE) | (b == IGNORE)
+            row["ignored_voxels"] = int(left_out.sum())
+            if left_out.any():
+                a, b = np.where(left_out, 0, a), np.where(left_out, 0, b)
             ign = name_conflict(a, b)  # reported only: A11' trains on each read as it is
             vessel = (a > 0) | (b > 0)
             row["name_conflict_fraction"] = float(ign.sum() / max(1, vessel.sum()))
@@ -1299,6 +1323,9 @@ def first_reads_report(
     lm_d = [r["lm_end_distance_mm"] for r in pairs]
     wave = {
         "n_cases": len(rows),
+        # D40: reads whose classes share voxels, and the pair voxels left out of the agreement
+        "n_reads_with_shared_voxels": sum(len(r.get("shared_class_voxels", {})) for r in rows),
+        "ignored_voxels_left_out": sum(r.get("ignored_voxels", 0) for r in pairs),
         "n_pool_sealed_excluded": n_pool_sealed,
         "a3_thin_reads": int(sum(c.thin for c in checks)),
         # D7: noted corrections are listed but do not halt; un-noted departures do
@@ -1361,6 +1388,9 @@ def report_markdown(report: Mapping) -> str:
         f"{w.get('a3_noted_corrections', 0)}; un-noted: {w.get('a3_unnoted_departures', 0)}) "
         f"-> wave halt: **{w['a3_halt']}** (A3, > 10 % un-noted).",
         f"Adjudication (third-read) rate: {w['adjudication_rate']}.",
+        f"Reads whose classes share voxels (D39): {w.get('n_reads_with_shared_voxels', 0)}; "
+        f"voxels left out of the inter-read metrics as ignore (D40): "
+        f"{w.get('ignored_voxels_left_out', 0)}.",
         "",
         "## Inter-read tF1 per class (A10's reference level)"
         + (

@@ -1364,7 +1364,7 @@ def cmd_reads_report(args) -> int:
     cases = load_read_folder(args.reads, mask_dir=args.masks, icx_dir=args.icx,
                              aorta_dir=args.aorta_dir, refused=refused,
                              pool_seal=args.sealed_pool,
-                             overlap=getattr(args, "overlap", "refuse"))
+                             overlap=getattr(args, "overlap", "ignore"))
     # With --aorta-dir each case is scored with its own aorta (the A1 ostium of record);
     # cases without one, or a run without the option, stay provisional (A1a).
     scorer = default_scorer() if args.score else None
@@ -1699,10 +1699,11 @@ def build_parser() -> argparse.ArgumentParser:
                    help="D27 sealed pool cases: refuse (default) stops on any; exclude drops "
                         "them and reports the count; acceptance keeps them (acceptance scoring "
                         "only)")
-    s.add_argument("--overlap", choices=("refuse", "report"), default="refuse",
-                   help="SegQueue14 reads whose classes share voxels (#275): refuse (default) "
-                        "stops and lists them; report loads them, lower class winning, and "
-                        "records the overlap per read")
+    s.add_argument("--overlap", choices=("ignore", "refuse", "report"), default="ignore",
+                   help="SegQueue14 reads whose classes share voxels (D39): ignore (default, "
+                        "D40) marks shared voxels ignore, as in training, and leaves them out "
+                        "of the inter-read metrics; refuse stops and lists them; report loads "
+                        "them with the lower class winning. The overlap is recorded per read")
     s.add_argument("--out", type=Path, required=True, help="output directory")
     s.set_defaults(func=cmd_reads_report)
 

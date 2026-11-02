@@ -37,7 +37,7 @@ ENV_BY_KEY = {
 }
 
 VALID_LINK_MODES = ("hardlink", "symlink", "copy")
-VALID_OVERLAP_POLICIES = ("smaller_wins", "label_order", "refuse")
+VALID_OVERLAP_POLICIES = ("smaller_wins", "label_order", "refuse", "ignore")
 
 
 class ConfigError(RuntimeError):

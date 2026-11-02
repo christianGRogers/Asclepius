@@ -68,8 +68,8 @@ INSTRUCTIONS = (
     "marginals are LCx, a PDA or posterolateral branch is the class of the artery "
     "it arises from. A ramus intermedius is always LCx. Also add vessel the seed "
     "missed, delete anything that is not a coronary artery, and trim or extend the "
-    "outline to the contrast-filled lumen. Every vessel voxel should be in exactly "
-    "one class. Note anything unusual."
+    "outline to the contrast-filled lumen. A case cannot be submitted while any "
+    "voxel is in two classes. Note anything unusual."
 )
 
 #: Project name served by default.

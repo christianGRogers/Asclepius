@@ -47,7 +47,15 @@ gpu_memory_target_gb: 60
 patch_size: [256, 256, 256]
 batch_size: 2
 # No ct_window: icx4 trained on nnU-Net's own window (Round 8: the default tied the fixed one); the adopted
-# plans carry it. No ignore_label: A11' read samples carry none, and icx4 has 4 + 1 outputs.
+# plans carry it.
+#
+# ignore_label (D40, #278): dataset.json declares "ignore": 5 (n_classes + 1, the highest value, as nnU-Net v2
+# requires). It is where convert writes voxels two or more classes share (overlap_policy below). nnU-Net leaves
+# those voxels out of the loss and validation metrics; ignore is not an output channel, so the network still has
+# icx4's 4 + 1 outputs and the warm start loads unchanged (finetune_load compares labels without "ignore").
+# A11' still holds: each read is its own sample with its own labels, and two reads naming a voxel differently
+# is not ignored (only one read's classes sharing a voxel is).
+ignore_label: true
 
 # Adopt the plans of this dataset instead of planning (see segtrain.plans.adopt_plans).
 plans_from:
@@ -71,9 +79,11 @@ sealed_list: trillium/sealed_test.json
 sealed_pool_list: configs/segqueue14/sealed-pool-2026-10.json
 
 # D39 / #275: a SegQueue14 read keeps every class whole, overlaps included (an untouched seeded case is four
-# full copies of the tree). Which class a shared voxel trains as is the lead's decision, not a tie-break, so
-# convert picks none: a read whose classes overlap is reported and NOT converted until that rule is decided.
-overlap_policy: refuse
+# full copies of the tree). D40 (#278): no class wins a shared voxel. A voxel claimed by two or more classes
+# trains as the ignore label above; a voxel claimed by exactly one class keeps it; background stays 0. Every
+# read stays in training (an untouched seeded read is all ignore on the tree), and `segtrain convert` lists
+# the ignored voxels and the class pairs per case. `refuse`, `smaller_wins` and `label_order` remain options.
+overlap_policy: ignore
 
 # SegQueue14 pool reads (<Source>__<Case>, D22/D23) are training samples. They are not ImageCAS cases, so A14
 # does not judge them; the D27 seal above does, by patient. Every other name A14 cannot map is still refused.

@@ -129,9 +129,12 @@ reader_writer: NibabelIOWithReorient
 #   label_order   higher label index wins; alphabetical, so anatomically
 #                 arbitrary. Provided only for comparison.
 #   refuse        no rule: a case whose masks overlap is reported and not
-#                 converted. A task file may set its own policy; task 716
-#                 (SegQueue14 reads, whose classes are kept whole: D39, #275)
-#                 sets this one.
+#                 converted.
+#   ignore        no class wins: a voxel in two or more masks becomes nnU-Net's
+#                 ignore label (needs a task with ignore_label: true), and the
+#                 report lists the ignored voxels per case. A task file may set
+#                 its own policy; task 716 (SegQueue14 reads, whose classes are
+#                 kept whole: D39) sets this one (D40, #278).
 overlap_policy: smaller_wins
 
 # Running on a SciNet cluster via SLURM. Defaults target Trillium's GPU

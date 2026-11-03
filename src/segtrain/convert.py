@@ -69,6 +69,10 @@ OVERLAP_SMALLER_WINS = "smaller_wins"
 OVERLAP_LABEL_ORDER = "label_order"
 # No rule: a case whose masks overlap is reported and not converted (#275).
 OVERLAP_REFUSE = "refuse"
+# D40 (#278): a voxel claimed by two or more classes becomes nnU-Net's ignore label; needs a task
+# with ``ignore_label: true``.
+OVERLAP_IGNORE = "ignore"
+OVERLAP_POLICIES = (OVERLAP_SMALLER_WINS, OVERLAP_LABEL_ORDER, OVERLAP_REFUSE, OVERLAP_IGNORE)
 
 # nnU-Net's image reader. This default is not cosmetic -- it is required for this
 # dataset to train on all of its data.
@@ -100,6 +104,10 @@ class CaseResult:
     n_labels_written: int = 0
     missing: list[str] = field(default_factory=list)
     overlaps: int = 0
+    # D40 (``ignore`` policy): voxels written as the ignore label because two or more classes
+    # claimed them, and the class pairs behind them as ``(class, class, voxels)``.
+    ignored: int = 0
+    overlap_pairs: list = field(default_factory=list)
     # Label data that could not be used and was dropped: a mask whose geometry
     # disagrees with the CT, or an integer value the label set does not account
     # for. Dropping is reported loudly because the alternative -- a structure
@@ -191,6 +199,7 @@ def resolve_overlap(
     index: int,
     sizes: dict,
     policy: str,
+    ignore_value: Optional[int] = None,
 ) -> int:
     """Assign ``index`` to ``mask``, deciding who wins voxels already claimed.
 
@@ -219,6 +228,10 @@ def resolve_overlap(
     SegQueue14 reads, whose classes are kept whole and may overlap by design
     (D39) -- whole trees, not a voxel at an interface -- so which class a shared
     voxel trains as is a labelling decision, not a tie-break (#275).
+
+    ``ignore`` (D40, #278) is the lead's answer to that: no class wins. A voxel claimed by two or
+    more classes becomes ``ignore_value`` (nnU-Net's ignore label, ``n_classes + 1``), so it is
+    left out of the loss; a voxel claimed by exactly one class keeps that class.
     """
     collision = mask & (out != 0)
     n_collisions = int(collision.sum())
@@ -229,6 +242,13 @@ def resolve_overlap(
 
     if policy == OVERLAP_REFUSE:
         out[mask & (out == 0)] = index
+        return n_collisions
+
+    if policy == OVERLAP_IGNORE:
+        if ignore_value is None:
+            raise ValueError("overlap_policy 'ignore' needs an ignore value (ignore_label: true)")
+        out[mask & (out == 0)] = index
+        out[collision] = ignore_value  # already ignore stays ignore
         return n_collisions
 
     if policy == OVERLAP_LABEL_ORDER:
@@ -253,12 +273,14 @@ def merge_masks(
     reference: nib.Nifti1Image,
     overlap_policy: str = OVERLAP_SMALLER_WINS,
     pairs: Optional[list] = None,
+    ignore_value: Optional[int] = None,
 ) -> tuple[np.ndarray, list[str], int, list[str]]:
     """Stack binary masks into one uint8 label volume.
 
     Returns ``(labels, missing, n_overlap_voxels, geometry_mismatch)``. ``pairs``,
     when given, is extended with ``(earlier name, name, voxels)`` for every pair of
-    structures that share voxels (counted against the volume as built so far).
+    structures that share voxels (counted against the first class to claim each voxel).
+    ``ignore_value`` is the label written for shared voxels under ``overlap_policy='ignore'``.
     """
     shape = reference.shape
     out = np.zeros(shape, dtype=np.uint8)
@@ -266,6 +288,9 @@ def merge_masks(
     mismatch: list[str] = []
     overlaps = 0
     sizes: dict = {}
+    # The first class to claim each voxel, for the pair counts: under 'ignore' a shared voxel in
+    # ``out`` no longer names a class.
+    owner = out if overlap_policy != OVERLAP_IGNORE else np.zeros(shape, dtype=np.uint8)
 
     zooms = [float(z) for z in reference.header.get_zooms()[:3]]
     tolerance_mm = GEOMETRY_TOLERANCE_VOXELS * min(zooms or [1.0])
@@ -291,10 +316,12 @@ def merge_masks(
 
         sizes[index] = count
         if pairs is not None:
-            claimed = out[mask]
+            claimed = owner[mask]
             for prev in np.unique(claimed[claimed != 0]):
                 pairs.append((names[int(prev) - 1], name, int((claimed == prev).sum())))
-        overlaps += resolve_overlap(out, mask, index, sizes, overlap_policy)
+        if owner is not out:
+            owner[mask & (owner == 0)] = index
+        overlaps += resolve_overlap(out, mask, index, sizes, overlap_policy, ignore_value)
 
     return out, missing, overlaps, mismatch
 
@@ -407,7 +434,8 @@ def convert_case(
         pairs: list = []
         if seg_dir is not None:
             labels, missing, overlaps, mismatch = merge_masks(
-                seg_dir, names, ct, overlap_policy=overlap_policy, pairs=pairs
+                seg_dir, names, ct, overlap_policy=overlap_policy, pairs=pairs,
+                ignore_value=ignore_value,
             )
         else:
             labels, missing, mismatch = remap_multilabel(multilabel, label_set, ct, ignore_value)
@@ -446,12 +474,17 @@ def convert_case(
 
         link_or_copy(ct_path, image_path, link_mode)
 
+        ignored = 0
+        if overlap_policy == OVERLAP_IGNORE and seg_dir is not None:
+            ignored = int((labels == label_set.n_classes + 1).sum())
         return CaseResult(
             case_id,
             True,
             n_labels_written=int(labels[labels <= label_set.n_classes].max(initial=0)),
             missing=missing,
             overlaps=overlaps,
+            ignored=ignored,
+            overlap_pairs=[(a, b, n) for a, b, n in pairs] if overlaps else [],
             geometry_mismatch=mismatch,
         )
     except Exception as exc:  # worker boundary: report, never crash the pool
@@ -546,7 +579,16 @@ class ConvertReport:
                 f"  {n} case(s) had absent structures, e.g. {ex.case_id}: "
                 f"{', '.join(ex.missing[:4])}{'...' if len(ex.missing) > 4 else ''}"
             )
-        if self.with_overlaps:
+        if self.with_overlaps and self.overlap_policy == OVERLAP_IGNORE:
+            # D40: every case, never a summary only. Shared voxels are not trained on.
+            n = len(self.with_overlaps)
+            total = sum(r.ignored for r in self.with_overlaps)
+            lines.append(f"  {n} case(s) had classes sharing voxels; {total} voxels written as "
+                         "the ignore label (D40, overlap_policy 'ignore'):")
+            for r in sorted(self.with_overlaps, key=lambda r: r.case_id):
+                shared = ", ".join(f"{a}/{b} {k}" for a, b, k in r.overlap_pairs)
+                lines.append(f"    {r.case_id}: {r.ignored} ignored voxels ({shared})")
+        elif self.with_overlaps:
             # Expected, not alarming: the source masks are independently produced
             # per structure and disagree by a voxel or two at shared interfaces.
             n = len(self.with_overlaps)
@@ -668,10 +710,13 @@ def convert_dataset(
         train_ids = train_ids[:limit]
         test_ids = test_ids[: max(1, limit // 8)] if test_ids else []
 
-    # A task may set its own overlap policy (SegQueue14 reads: refuse, #275).
+    # A task may set its own overlap policy (SegQueue14 reads: ignore, D40 / #278).
     overlap_policy = str(extras.get("overlap_policy") or cfg.overlap_policy)
-    if overlap_policy not in (OVERLAP_SMALLER_WINS, OVERLAP_LABEL_ORDER, OVERLAP_REFUSE):
+    if overlap_policy not in OVERLAP_POLICIES:
         raise ValueError(f"{task.nnunet_name}: unknown overlap_policy {overlap_policy!r}")
+    if overlap_policy == OVERLAP_IGNORE and ignore_value is None:
+        raise ValueError(f"{task.nnunet_name}: overlap_policy 'ignore' writes nnU-Net's ignore "
+                         "label, so the task must set ignore_label: true")
     report = ConvertReport(task=task.nnunet_name, overlap_policy=overlap_policy)
     report.n_pool_sealed = n_pool_sealed
 

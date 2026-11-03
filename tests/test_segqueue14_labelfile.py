@@ -212,7 +212,7 @@ def _export_tree(root, folder, classes):
                  str(seg / f"{name}.nii.gz"))
 
 
-def test_reads_load_a_segqueue14_export_and_refuse_overlaps_unless_asked(tmp_path):
+def test_reads_load_a_segqueue14_export_and_refuse_overlaps_when_asked(tmp_path):
     pytest.importorskip("scipy")
     from segtrain import reads as R
 
@@ -224,7 +224,7 @@ def test_reads_load_a_segqueue14_export_and_refuse_overlaps_unless_asked(tmp_pat
     sealed = set()
 
     with pytest.raises(R.OverlappingClassesError, match=r"LAD/LCx \d+ voxels"):
-        R.load_read_folder(str(tmp_path), sealed=sealed, pool_seal="exclude")
+        R.load_read_folder(str(tmp_path), sealed=sealed, pool_seal="exclude", overlap="refuse")
 
     with pytest.warns(UserWarning, match="classes share voxels"):
         [case] = R.load_read_folder(str(tmp_path), sealed=sealed, pool_seal="exclude",
@@ -233,3 +233,68 @@ def test_reads_load_a_segqueue14_export_and_refuse_overlaps_unless_asked(tmp_pat
     assert np.array_equal(case.reads["r1"], tree)              # LM, LAD, LCx, RCA by name
     assert case.overlaps == {"r2": [("LAD", "LCx", int(disjoint["LCx"].sum()))]}
     assert "r1" not in case.overlaps
+
+
+def test_reads_mark_shared_voxels_ignore_by_default(tmp_path):
+    """D40 (#278): the default load writes a voxel two classes share as IGNORE and records it."""
+    pytest.importorskip("scipy")
+    from segtrain import reads as R
+
+    tree = _tree()
+    disjoint = {name: tree == labels.LABEL_VALUES[name] for name in labels.NAMES}
+    _export_tree(tmp_path, "imagecas_0004", disjoint)
+    overlapping = dict(disjoint, LAD=disjoint["LAD"] | disjoint["LCx"])
+    _export_tree(tmp_path, "imagecas_0004__r2", overlapping)
+
+    with pytest.warns(UserWarning, match=r"written as ignore \(D40\)"):
+        [case] = R.load_read_folder(str(tmp_path), sealed=set(), pool_seal="exclude")
+    assert np.array_equal(case.reads["r1"], tree)
+    want = tree.copy()
+    want[disjoint["LCx"]] = R.IGNORE
+    assert np.array_equal(case.reads["r2"], want)
+    assert case.overlaps == {"r2": [("LAD", "LCx", int(disjoint["LCx"].sum()))]}
+
+
+def test_an_untouched_seeded_read_is_all_ignore_on_the_tree(tmp_path):
+    pytest.importorskip("scipy")
+    from segtrain import reads as R
+
+    tree = _tree() > 0
+    _export_tree(tmp_path, "imagecas_0004", {name: tree for name in labels.NAMES})
+    with pytest.warns(UserWarning, match="classes share voxels"):
+        [case] = R.load_read_folder(str(tmp_path), sealed=set(), pool_seal="exclude")
+    assert np.array_equal(case.reads["r1"], np.where(tree, R.IGNORE, 0))
+
+
+def test_the_reads_report_leaves_ignored_voxels_out_of_the_agreement(tmp_path):
+    """A voxel one read leaves to ignore counts for no class in the inter-read metrics."""
+    pytest.importorskip("scipy")
+    from segtrain import reads as R
+
+    tree = _tree()
+    disjoint = {name: tree == labels.LABEL_VALUES[name] for name in labels.NAMES}
+    _export_tree(tmp_path, "imagecas_0004", disjoint)
+    _export_tree(tmp_path, "imagecas_0004__r2",
+                 dict(disjoint, LAD=disjoint["LAD"] | disjoint["LCx"]))
+    with pytest.warns(UserWarning):
+        cases = R.load_read_folder(str(tmp_path), sealed=set(), pool_seal="exclude")
+
+    seen = []
+
+    def scorer(ref, pred, spacing):
+        seen.append((np.asarray(ref).copy(), np.asarray(pred).copy()))
+        return {c: 1.0 for c in R.CLASSES if (np.asarray(ref) == c).any()}
+
+    report = R.first_reads_report(cases, scorer=scorer, use_namer=False, pool_seal="exclude")
+    [row] = report["cases"]
+    n_lcx = int(disjoint["LCx"].sum())
+    assert row["ignored_voxels"] == n_lcx
+    assert row["shared_class_voxels"] == {"r2": [["LAD", "LCx", n_lcx]]}
+    assert row["name_conflict_fraction"] == 0.0           # LAD-over-LCx is not a naming conflict
+    for ref, pred in seen:
+        assert R.IGNORE not in np.unique(ref) and R.IGNORE not in np.unique(pred)
+        assert not (ref == R.LCX).any() and not (pred == R.LCX).any()   # left out of both
+    assert report["wave"]["ignored_voxels_left_out"] == n_lcx
+    assert report["wave"]["n_reads_with_shared_voxels"] == 1
+    assert "left out of the inter-read metrics as ignore (D40): " + str(n_lcx) \
+        in R.report_markdown(report)

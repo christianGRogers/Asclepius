@@ -196,12 +196,32 @@ def agreement(
         raise ValueError(
             f"shapes differ: {a_labels.shape} != {b_labels.shape}"
         )
+    return agreement_masks(
+        (a_labels == idx for idx in range(1, len(names) + 1)),
+        (b_labels == idx for idx in range(1, len(names) + 1)),
+        names, spacing)
 
+
+def agreement_masks(
+    a_masks: Iterable[np.ndarray],
+    b_masks: Iterable[np.ndarray],
+    names: Sequence[str],
+    spacing: Sequence[float],
+) -> dict:
+    """``agreement`` from one binary mask per structure, in ``names`` order.
+
+    For labellings whose structures may share voxels -- a SegQueue14 class stack
+    keeps every class whole (D39) -- so each structure is scored from its own
+    mask, never from a label volume that could hold only one of them per voxel.
+    ``agreement`` is this over ``labels == 1, 2, ...``.
+    """
     per_structure = {}
     dices = []
-    for idx, name in enumerate(names, start=1):
-        a = a_labels == idx
-        b = b_labels == idx
+    for name, a, b in zip(names, a_masks, b_masks):
+        a = np.asarray(a) != 0
+        b = np.asarray(b) != 0
+        if a.shape != b.shape:
+            raise ValueError(f"{name}: shapes differ: {a.shape} != {b.shape}")
         d = dice_score(a, b)
         h = hausdorff95(a, b, spacing)
         per_structure[name] = {

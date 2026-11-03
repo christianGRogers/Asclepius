@@ -23,6 +23,10 @@ What an annotator sees:
   before submit or a reviewer's save, client or server: an empty LAD, LCx or RCA
   (D13), classes sharing voxels (D26) and even an all-empty scene go through, and
   the voxel counts and geometry are recorded with the submission, not enforced.
+* **Every class is saved whole, overlaps included** (D39, 0.17.0): the upload is
+  a class stack (``segqueue14.labelfile``), one 0/1 channel per class on the CT
+  grid, not one label volume -- which kept one class per voxel and turned an
+  untouched seeded case into all RCA (#275).
 
 The server owns the protocol, local data is a lease, nothing the client says is
 trusted: those three decisions are the live module's and are kept unchanged.
@@ -78,6 +82,7 @@ try:
     from segqueue.dataset import sniff_suffix, suffix_for
     from segqueue.segcheck import Geometry
     from segqueue import release as rel
+    from segqueue14 import labelfile
     from segqueue14 import labels
     from segqueue14 import protocol
     from segqueue14.protocol import SubmissionMeta
@@ -87,6 +92,7 @@ except ImportError as exc:  # pragma: no cover - surfaced in the UI instead
     rel = None
     protocol = None
     labels = None
+    labelfile = None
     _IMPORT_ERROR = str(exc)
 
 from SegQueue14Lib import (
@@ -101,7 +107,7 @@ from SegQueue14Lib import SegQueue14Error as SegQueueError
 
 #: Continues SegQueue's numbering (0.13.0 was the last 4-class release). The
 #: release tag is ``segqueue-v`` + this; bump it to publish.
-__version__ = "0.16.5"
+__version__ = "0.17.0"
 
 #: Where the module's help points.
 HELP_URL = "https://github.com/christianGRogers/Asclepius"
@@ -336,7 +342,7 @@ class SegQueue14Logic(ScriptedLoadableModuleLogic):
     def _loadHelpers(self, assignment):
         """Bring the case's heart mask and vessel seed into the scene, as helpers.
 
-        Scaffolding only: ``exportLabelmap`` copies the project's own segments,
+        Scaffolding only: ``exportSubmission`` reads the project's own segments,
         so a helper is structurally unable to reach the server. The live
         project's ImageCAS seed is never shipped (D8); a pooled new-dataset case
         may ship its own binary vessel seed (D23) -- an automatic outline of the
@@ -435,7 +441,7 @@ class SegQueue14Logic(ScriptedLoadableModuleLogic):
                 # under the value it chose, and changing the segment's value
                 # afterwards makes them unreadable -- every class but the first
                 # came back empty (Slicer 5.12, found with #68). Nothing needs it:
-                # exportLabelmap numbers the classes by project order.
+                # exportSubmission reads the classes by name, in project order.
                 segment = segmentationNode.GetSegmentation().GetSegment(segmentId)
                 if segment is not None:
                     segment.SetName(spec.name)
@@ -697,7 +703,12 @@ class SegQueue14Logic(ScriptedLoadableModuleLogic):
     def applyProjectNames(self):
         """Put the project's names and colours back onto a loaded submission.
 
-        A submission is stored as a *labelmap*: integers on the source grid, with
+        A submission from 0.17.0 on (D39) is a class stack whose header names
+        every class, so Slicer loads it as LM, LAD, LCx and RCA already -- four
+        overlapping segments, one per layer, all with value 1. Those are matched
+        by name and only given the project's colours.
+
+        An older submission is stored as a *labelmap*: integers on the source grid, with
         no names and no colours, because that is the one form whose geometry
         matches the CT voxel for voxel and that ``segtrain convert`` can read
         without re-registering anything. The cost is that loading one back gives
@@ -710,7 +721,7 @@ class SegQueue14Logic(ScriptedLoadableModuleLogic):
         stored form is correct, and every submission ever made can be read this
         way, including the ones already on the server.
 
-        It also makes the reviewer's own edits exportable. ``exportLabelmap``
+        It also makes the reviewer's own edits exportable. ``exportSubmission``
         looks segments up *by name*, so without this a revision saved from a
         submission would find nothing to export and silently write an empty file.
 
@@ -719,8 +730,32 @@ class SegQueue14Logic(ScriptedLoadableModuleLogic):
         if self.segmentationNode is None or self.project is None:
             return 0
         byLabel = {int(spec.label): spec for spec in self.project.segments}
+        byName = {spec.name: spec for spec in self.project.segments}
         segmentation = self.segmentationNode.GetSegmentation()
         display = self.segmentationNode.GetDisplayNode()
+
+        def recolour(segmentId, segment, spec):
+            segment.SetName(spec.name)
+            segment.SetColor(*spec.color)
+            if display is not None:
+                # The display node caches the colour it was given when the
+                # segment was created, so setting it on the segment alone leaves
+                # the slice views showing the old one.
+                try:
+                    display.SetSegmentOverrideColor(segmentId, *spec.color)
+                except AttributeError:  # pragma: no cover - old Slicer
+                    pass
+
+        ids = [segmentation.GetNthSegmentID(i)
+               for i in range(segmentation.GetNumberOfSegments())]
+        named = [i for i in ids if segmentation.GetSegment(i).GetName() in byName]
+        if named:
+            # A class stack (D39): named by its header; never renamed by value,
+            # which would give all four (value 1 each) one name.
+            for segmentId in named:
+                segment = segmentation.GetSegment(segmentId)
+                recolour(segmentId, segment, byName[segment.GetName()])
+            return len(named)
 
         # Only when the label values actually tell the segments apart. A label
         # value is unique within a *layer*, not within a segmentation: a working
@@ -742,16 +777,7 @@ class SegQueue14Logic(ScriptedLoadableModuleLogic):
             spec = byLabel.get(_labelValueOf(segment, segmentId))
             if spec is None:
                 continue
-            segment.SetName(spec.name)
-            segment.SetColor(*spec.color)
-            if display is not None:
-                # The display node caches the colour it was given when the
-                # segment was created, so setting it on the segment alone leaves
-                # the slice views showing the old one.
-                try:
-                    display.SetSegmentOverrideColor(segmentId, *spec.color)
-                except AttributeError:  # pragma: no cover - old Slicer
-                    pass
+            recolour(segmentId, segment, spec)
             matched += 1
         return matched
 
@@ -932,8 +958,8 @@ class SegQueue14Logic(ScriptedLoadableModuleLogic):
                 # segment reads as empty and drops out of the export. That was the
                 # false "LAD, LCx and RCA are empty" of #270: a draft autosaved
                 # while the classes still overlapped keeps each class at value 1
-                # in its own layer. exportLabelmap numbers the classes by project
-                # order, so the submitted values do not depend on this.
+                # in its own layer. exportSubmission reads the classes by name, so
+                # the submitted channels do not depend on this.
                 continue
             # A new, empty segment: pin its label value to the protocol's. Older
             # Slicer builds lack this setter; the export order gives the same
@@ -1035,80 +1061,74 @@ class SegQueue14Logic(ScriptedLoadableModuleLogic):
 
     # ---------------------------------------------------------- validation
 
-    def exportLabelmap(self, path):
-        """Write the segmentation as a label volume on the source grid.
+    def exportSubmission(self, path):
+        """Write every project class, whole, to a class-stack file on the CT grid.
 
-        Two deliberate departures from the obvious implementation.
+        D39 (#275): each class is saved in its entirety, overlaps included. The
+        file is ``segqueue14.labelfile``'s class stack: one 0/1 channel per class
+        in project order, voxel for voxel on the CT. It replaced a single label
+        volume (``ExportSegmentsToLabelmapNode``), which can hold one value per
+        voxel and so kept one class wherever classes overlapped -- the last, RCA:
+        an untouched seeded case (D26, every class a full copy of the seed) was
+        uploaded as an all-RCA tree.
 
-        **Not a plain ``saveNode``.** Slicer stores a ``.seg.nrrd`` binary
-        labelmap cropped to the segments' own bounding box, so the file's grid is
-        *not* the source volume's -- it would fail the geometry check this module
-        is about to run, and downstream code would have to re-register every
-        submission against its CT. Exporting against the reference geometry gives
-        a volume that overlays the source voxel for voxel, which is what both the
-        QA scorer and the training conversion want.
+        **Not a plain ``saveNode``.** Slicer stores a ``.seg.nrrd`` cropped to the
+        segments' own extent, so its grid is *not* the CT's, and downstream code
+        would have to re-register every submission against its CT. Each class is
+        read here against the CT (``arrayFromSegmentBinaryLabelmap`` with the
+        volume as reference), which also walks Slicer's labelmap layers -- the
+        layers overlapping segments live in.
 
-        **Named segments, not everything in the scene.** The scene also holds the
-        heart mask, which came from the source dataset and
-        must never be submitted as if an annotator had drawn them. Passing an
-        explicit id list is what excludes them -- structurally, not by
-        convention.
+        **Named segments, not everything in the scene.** The heart mask and the
+        vessel seed are helpers and must never be submitted as if an annotator had
+        drawn them; only the project's own classes are read, by name -- which
+        excludes the helpers structurally, not by convention.
 
-        That id list is also load-bearing for a subtler reason. A segmentation
-        keeps its binary labelmaps in *layers*, and Slicer adds a layer whenever
-        segments might overlap -- which Draw tube does on every apply. Copying
-        segments into a scratch segmentation and exporting that silently drops
-        everything above layer 0, so the second vessel an annotator draws comes
-        out empty. ``ExportSegmentsToLabelmapNode`` walks the layers properly.
-        The symptom was a validation failure insisting a vessel was empty while
-        it was plainly on screen.
-
-        Returns ``(voxelCounts, sourceGeometry, segmentationGeometry)``.
+        Returns ``(voxelCounts, sourceGeometry, segmentationGeometry)``; the
+        counts are per class, each counted whole, from the masks written.
         """
-        segmentIds = vtk.vtkStringArray()
-        for spec in self.project.segments:
-            segmentId = self.segmentIdFor(spec.name)
-            if segmentId:
-                segmentIds.InsertNextValue(segmentId)
+        import numpy as np
 
-        labelmapNode = slicer.mrmlScene.AddNewNodeByClass(
-            "vtkMRMLLabelMapVolumeNode", "SegQueue14Export")
+        if self.volumeNode is None or self.project is None:
+            raise RuntimeError("There is no case open to export.")
+        shape = slicer.util.arrayFromVolume(self.volumeNode).shape
+        specs = sorted(self.project.segments, key=lambda spec: int(spec.label))
+        masks = []
+        for spec in specs:
+            masks.append(self._classMask(spec.name, shape))
+
+        matrix = vtk.vtkMatrix4x4()
+        self.volumeNode.GetIJKToRASMatrix(matrix)
+        ijkToRas = [[matrix.GetElement(r, c) for c in range(4)] for r in range(4)]
+        names = [spec.name for spec in specs]
         try:
-            ok = slicer.modules.segmentations.logic().ExportSegmentsToLabelmapNode(
-                self.segmentationNode, segmentIds, labelmapNode, self.volumeNode,
-                slicer.vtkSegmentation.EXTENT_REFERENCE_GEOMETRY)
-            if not ok:
+            labelfile.write_class_stack(
+                path, masks, names, labelfile.ras_to_lps(ijkToRas),
+                colors=[tuple(spec.color) for spec in specs])
+        except (OSError, ValueError) as exc:
+            raise RuntimeError(
+                "Could not write the segmentation to {}: {}".format(path, exc)) from exc
+        counts = {name: int(np.count_nonzero(mask)) for name, mask in zip(names, masks)}
+        geometry = self.sourceGeometry()
+        return counts, geometry, geometry
+
+    def _classMask(self, name, shape):
+        """One class as a 0/1 uint8 array on the CT grid; zeros if it has none."""
+        import numpy as np
+
+        segmentId = self.segmentIdFor(name)
+        mask = None
+        if segmentId:
+            mask = slicer.util.arrayFromSegmentBinaryLabelmap(
+                self.segmentationNode, segmentId, self.volumeNode)
+        if mask is None or tuple(mask.shape) != tuple(shape):
+            # An empty segment can come back with no extent at all.
+            if mask is not None and mask.size and mask.any():
                 raise RuntimeError(
-                    "Slicer could not export the segments to a label volume.")
-
-            # Nothing drawn yet: Slicer can export a labelmap of zero extent,
-            # which cannot be written to disk. An empty scene is still a
-            # submission (#270), so write an all-background volume on the
-            # source grid instead.
-            image = labelmapNode.GetImageData()
-            if image is None or 0 in tuple(image.GetDimensions()):
-                _fillWithBackground(labelmapNode, self.volumeNode)
-
-            if not slicer.util.saveNode(labelmapNode, path):
-                raise RuntimeError("Could not write the segmentation to " + path)
-            counts = self._voxelCounts(labelmapNode)
-            return counts, self.sourceGeometry(), _geometryOf(labelmapNode)
-        finally:
-            slicer.mrmlScene.RemoveNode(labelmapNode)
-
-    def _voxelCounts(self, labelmapNode):
-        """Voxels per segment, counted from the exported volume.
-
-        Counted from the export rather than from the editor's segments on
-        purpose: it measures what is actually about to be uploaded, so an export
-        that silently dropped or merged a structure shows up as an empty segment
-        here instead of as a mystery three weeks later.
-        """
-        array = slicer.util.arrayFromVolume(labelmapNode)
-        counts = {}
-        for spec in self.project.segments:
-            counts[spec.name] = int((array == int(spec.label)).sum())
-        return counts
+                    "Slicer returned {} on a {} grid, not the CT's {}.".format(
+                        name, tuple(mask.shape), tuple(shape)))
+            return np.zeros(shape, np.uint8)
+        return (mask != 0).astype(np.uint8)
 
     def sourceGeometry(self):
         return _geometryOf(self.volumeNode)
@@ -1130,7 +1150,7 @@ class SegQueue14Logic(ScriptedLoadableModuleLogic):
         self.bankTime()
         path = os.path.join(self.cache.caseDir(assignment.assignment_id),
                             "submission.seg.nrrd")
-        counts, sourceGeom, segGeom = self.exportLabelmap(path)
+        counts, sourceGeom, segGeom = self.exportSubmission(path)
 
         meta = SubmissionMeta(
             checksum=sha256_file(path),
@@ -1152,7 +1172,8 @@ class SegQueue14Logic(ScriptedLoadableModuleLogic):
             geometry={
                 "source": sourceGeom.to_dict() if sourceGeom else None,
                 "segmentation": segGeom.to_dict() if segGeom else None,
-            })
+            },
+            labelFormat=labelfile.FORMAT_CLASS_STACK)
 
         # Only now is the data safely on the server, so only now is it safe to
         # delete the local copy. Marking the manifest first means that if the
@@ -1178,7 +1199,7 @@ class SegQueue14Logic(ScriptedLoadableModuleLogic):
             raise SegQueueError("You are not logged in.")
 
         path = os.path.join(self.reviewDir(), "revision.seg.nrrd")
-        counts, sourceGeom, segGeom = self.exportLabelmap(path)
+        counts, sourceGeom, segGeom = self.exportSubmission(path)
 
         meta = SubmissionMeta(
             checksum=sha256_file(path),
@@ -1195,7 +1216,9 @@ class SegQueue14Logic(ScriptedLoadableModuleLogic):
             path, self.project.upload_folder_id,
             name="revision_{}.seg.nrrd".format(submissionId),
             progress=progress)
-        return self.client.reviseSubmission(submissionId, meta, uploaded["_id"])
+        return self.client.reviseSubmission(
+            submissionId, meta, uploaded["_id"],
+            labelFormat=labelfile.FORMAT_CLASS_STACK)
 
     def reviewDir(self):
         """The scratch directory under the cache root that review work goes to."""
@@ -1214,15 +1237,6 @@ class SegQueue14Logic(ScriptedLoadableModuleLogic):
         response = self.client.releaseCase(assignment.assignment_id, reason=reason)
         self.closeCase(purge=True)
         return response
-
-
-def _fillWithBackground(labelmapNode, volumeNode):
-    """Make ``labelmapNode`` an all-zero label volume on ``volumeNode``'s grid."""
-    import numpy as np
-
-    shape = slicer.util.arrayFromVolume(volumeNode).shape
-    slicer.util.updateVolumeFromArray(labelmapNode, np.zeros(shape, np.uint8))
-    labelmapNode.CopyOrientation(volumeNode)
 
 
 def _labelValueOf(segment, segmentId):
@@ -2386,9 +2400,10 @@ class SegQueue14Widget(ScriptedLoadableModuleWidget):
             slicer.util.setSliceViewerLayers(background=volumeNode, fit=True)
             self.logic.volumeNode = volumeNode
             self.logic.segmentationNode = segmentationNode
-            # A submission is stored as a labelmap, so it comes back as
-            # Segment_1, Segment_2 ... in colours Slicer chose. The label values
-            # are the protocol's, which is enough to put the names back.
+            # A class stack (0.17.0 on, D39) loads as the four named classes,
+            # each whole, overlaps visible. An older labelmap submission comes
+            # back as Segment_1, Segment_2 ... in colours Slicer chose; its label
+            # values are the protocol's, which is enough to put the names back.
             self.logic.applyProjectNames()
             self.logic.applyViewPreset()
             self._bindEditor(segmentationNode, volumeNode)

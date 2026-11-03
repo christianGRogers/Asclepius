@@ -142,11 +142,22 @@ def test_labels_match_segqueue14(task):
     assert task.label_set.n_classes == sq14_labels.N_CLASSES
 
 
-def test_no_ignore_label_and_no_fixed_window(task):
-    # A11' read samples carry no ignore value; icx4 trained on nnU-Net's own window.
+def test_shared_voxels_train_as_ignore_and_no_fixed_window(task):
+    # D40 (#278): voxels a read's classes share are nnU-Net's ignore label (n_classes + 1, the
+    # highest value); icx4 trained on nnU-Net's own window.
     extras = task_extras(task)
-    assert not extras.get("ignore_label")
+    assert extras["ignore_label"] is True
+    assert extras["overlap_policy"] == "ignore"
     assert "ct_window" not in extras
+
+
+def test_ignore_is_not_an_output_so_icx4s_heads_still_fit(task):
+    """icx4 has 4 + 1 outputs; ignore is not one of them, so the warm start's label check holds."""
+    pytest.importorskip("torch")
+    from segtrain.nnunet_ext.finetune_load import output_labels
+
+    labels = {"background": 0, **task.label_set.labels, "ignore": task.label_set.n_classes + 1}
+    assert len(output_labels({"labels": labels})) == 4 + 1
 
 
 # ----------------------------------------------------------------- icx4's plan

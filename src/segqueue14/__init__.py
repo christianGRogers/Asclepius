@@ -25,5 +25,7 @@ __version__ = "0.1.0"
 #: classes. 15 (D25): four classes; a 14-class module (protocol 14, SegQueue
 #: 0.14.0) is refused. 16 (D26): seeded cases open with the seed in every class,
 #: and overlapping classes are refused; a 0.15.0 module, which opens them empty,
-#: is told to update.
-PROTOCOL_VERSION = 16
+#: is told to update. 17 (D39, #275): a submission is a class stack, every class
+#: whole, overlaps included (``segqueue14.labelfile``); a 0.16.x module, which
+#: writes one label volume and so keeps one class per voxel, is told to update.
+PROTOCOL_VERSION = 17

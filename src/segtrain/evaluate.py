@@ -30,6 +30,13 @@ def _save_test_probabilities(task: TaskConfig) -> bool:
     return bool(task_extras(task).get("save_test_probabilities"))
 
 
+def _ignore_value(task: TaskConfig) -> Optional[int]:
+    """nnU-Net's ignore label (``n_classes + 1``) for a task with ``ignore_label: true``."""
+    from .plans import task_extras
+
+    return task.label_set.n_classes + 1 if task_extras(task).get("ignore_label") else None
+
+
 def predict_test_set(
     cfg: Config,
     task: TaskConfig,
@@ -105,7 +112,11 @@ def score_predictions(
 
     **D27:** a prediction for a sealed SegQueue14 pool volume makes scoring refuse before any file
     is opened; ``pool_seal="exclude"`` drops those and logs the count, ``"acceptance"`` (acceptance
-    scoring only) keeps them and logs it."""
+    scoring only) keeps them and logs it.
+
+    For a task with an ignore label (D40: voxels a read's classes share), reference voxels carrying
+    it are left out of the scoring: no class owns them, so a prediction there is neither a hit
+    nor a false positive."""
     from .pool_seal import apply as apply_pool_seal
 
     labels_ts = task.raw_dir(cfg) / "labelsTs"
@@ -116,6 +127,8 @@ def score_predictions(
         preds = preds[:limit]
 
     per_case: dict[str, list[ClassScore]] = {}
+    ignore: Optional[int] = None
+    ignore_known = False
     for i, pred_path in enumerate(preds, start=1):
         case_id = pred_path.name[: -len(".nii.gz")]
         ref_path = labels_ts / f"{case_id}.nii.gz"
@@ -125,9 +138,16 @@ def score_predictions(
         pred_img = nib.load(str(pred_path))
         ref_img = nib.load(str(ref_path))
         spacing = [float(z) for z in ref_img.header.get_zooms()[:3]]
+        pred = np.asanyarray(pred_img.dataobj).astype(np.uint8)
+        ref = np.asanyarray(ref_img.dataobj).astype(np.uint8)
+        if not ignore_known:
+            ignore, ignore_known = _ignore_value(task), True
+        if ignore is not None:
+            left_out = ref == ignore
+            pred, ref = np.where(left_out, 0, pred), np.where(left_out, 0, ref)
         per_case[case_id] = score_case(
-            np.asanyarray(pred_img.dataobj).astype(np.uint8),
-            np.asanyarray(ref_img.dataobj).astype(np.uint8),
+            pred,
+            ref,
             names,
             spacing,
             tolerance_mm=tolerance_mm,

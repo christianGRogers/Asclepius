@@ -18,6 +18,11 @@ approved here, as the live worker does for gold and duplicates. The metric code
 is ``segtrain.metrics`` via ``segqueue14.scoring`` -- one implementation of Dice
 for the model, the team and the paper.
 
+A submission is a class stack (one mask per class, every class whole, overlaps
+included: D39, ``segqueue14.labelfile``) or, from before protocol 17, one label
+volume; each class is scored from its own mask either way, and old submissions
+score exactly as they did.
+
 A submission's grid is not trusted to be the reference's: a Slicer export can
 store the same voxels in a different index order (the first real SegQueue
 submissions were z-reversed against their CT). Both are put on the reference's
@@ -32,7 +37,7 @@ import time
 
 from girder.models.file import File
 from segqueue import states as st
-from segqueue14 import labels
+from segqueue14 import labelfile, labels
 from segqueue14 import scoring as sq
 
 from .maintenance import SWEEP_SECONDS, sweep
@@ -56,22 +61,74 @@ def _deps():
     return np, sitk
 
 
-def readImage(fileDoc):
-    """A Girder file as a SimpleITK image, via a temp file (ITK reads paths)."""
-    _, sitk = _deps()
+def _downloadTemp(fileDoc):
+    """A Girder file at a temp path (ITK and the class-stack reader read paths)."""
     name = fileDoc.get('name', '')
     suffix = '.nii.gz' if name.endswith('.nii.gz') else (os.path.splitext(name)[1] or '.nrrd')
     handle, path = tempfile.mkstemp(suffix=suffix)
+    with os.fdopen(handle, 'wb') as out:
+        for chunk in File().download(fileDoc, headers=False)():
+            out.write(chunk)
+    return path
+
+
+def readImage(fileDoc):
+    """A Girder file as a SimpleITK image, via a temp file (ITK reads paths)."""
+    _, sitk = _deps()
+    path = _downloadTemp(fileDoc)
     try:
-        with os.fdopen(handle, 'wb') as out:
-            for chunk in File().download(fileDoc, headers=False)():
-                out.write(chunk)
         return sitk.ReadImage(path)
     finally:
-        try:
-            os.unlink(path)
-        except OSError:
-            pass
+        _unlink(path)
+
+
+def readLabels(fileDoc):
+    """A stored segmentation, whatever its format.
+
+    A class stack (D39, ``segqueue14.labelfile``) comes back as a list of
+    SimpleITK images, one 0/1 mask per project class in label order, each whole
+    -- overlaps included. Anything else is an old single label volume (or a
+    reference) and comes back as one SimpleITK image. The format is read from
+    the file's own header, not from what the client declared.
+    """
+    path = _downloadTemp(fileDoc)
+    try:
+        if labelfile.sniff(path) == labelfile.FORMAT_CLASS_STACK:
+            return classStackImages(path)
+        _, sitk = _deps()
+        return sitk.ReadImage(path)
+    finally:
+        _unlink(path)
+
+
+def classStackImages(path, names=None):
+    """A class-stack file as one SimpleITK mask per class, in ``names`` order.
+
+    Classes are matched by the names in the file's header; a project class the
+    file does not name is an empty mask on the same grid.
+    """
+    np, sitk = _deps()
+    names = list(labels.NAMES if names is None else names)
+    data = labelfile.read_class_stack(path)
+    byName = {name: index for index, name in enumerate(data['names'])}
+    images = []
+    for name in names:
+        index = byName.get(name)
+        mask = (data['masks'][index] if index is not None
+                else np.zeros(data['masks'].shape[1:], np.uint8))
+        image = sitk.GetImageFromArray(np.ascontiguousarray(mask, dtype=np.uint8))
+        image.SetSpacing(data['spacing'])
+        image.SetOrigin(data['origin'])
+        image.SetDirection(data['direction'])
+        images.append(image)
+    return images
+
+
+def _unlink(path):
+    try:
+        os.unlink(path)
+    except OSError:
+        pass
 
 
 def sameGrid(a, b, tol=1e-3):
@@ -91,34 +148,62 @@ def onGrid(image, reference):
     return np.asarray(sitk.GetArrayFromImage(image)).astype(np.uint8, copy=False)
 
 
+def masksOnGrid(read, reference, icx14=False):
+    """``(class, z, y, x)`` masks of ``read`` (from ``readLabels``) on ``reference``'s grid.
+
+    A class stack is resampled class by class, so each keeps its own voxels; a
+    label volume is resampled once and split by value -- after collapsing
+    ImageCAS-X's 14 values to the four when ``icx14`` says it is a reference.
+    """
+    np, _ = _deps()
+    if isinstance(read, list):
+        return np.stack([onGrid(image, reference) != 0 for image in read]).astype(np.uint8)
+    values = onGrid(read, reference)
+    if icx14:
+        values = labels.icx14_to_four(values, _spacing(reference))
+    return sq.as_masks(values)
+
+
+def _gridOf(image):
+    """The image whose grid a read is put on: a label volume, or a stack's first class."""
+    return image[0] if isinstance(image, list) else image
+
+
+def _anyLabel(image):
+    np, sitk = _deps()
+    images = image if isinstance(image, list) else [image]
+    return any(np.count_nonzero(sitk.GetArrayViewFromImage(i)) for i in images)
+
+
 def _spacing(image):
     # GetArrayFromImage is (z, y, x); spacing is (x, y, z).
     return tuple(reversed(image.GetSpacing()))
 
 
 def scoreAgainst(readFile, referenceFile, icx14=False):
-    """Score one stored label file against another, on the second one's grid.
+    """Score one stored segmentation against another, on the second one's grid.
 
-    ``icx14`` says the second file is an ImageCAS-X reference (a case's
-    ``referenceFileId``), in its 14 label values: it is collapsed to the
+    Either file may be a class stack (every class whole, D39) or an old label
+    volume; both are turned into one mask per class and each class is scored
+    from its own mask. ``icx14`` says the second file is an ImageCAS-X reference
+    (a case's ``referenceFileId``), in its 14 label values: it is collapsed to the
     project's four first (``labels.icx14_to_four``, D25), so like is scored with
     like. It is decided by what the file is, never by its values (#57). A second
     read is already in the four and is compared as stored.
+
+    Returns ``(score, readMasks)``; ``readMasks`` is ``(class, z, y, x)``.
     """
-    np, sitk = _deps()
-    reference = readImage(referenceFile)
-    read = readImage(readFile)
-    readArr = onGrid(read, reference)
-    refArr = np.asarray(sitk.GetArrayFromImage(reference))
-    if icx14:
-        refArr = labels.icx14_to_four(refArr, _spacing(reference))
-    refArr = refArr.astype(np.uint8, copy=False)
-    if np.count_nonzero(readArr) == 0 and np.count_nonzero(sitk.GetArrayViewFromImage(read)):
+    reference = readLabels(referenceFile)
+    read = readLabels(readFile)
+    grid = _gridOf(reference)
+    readMasks = masksOnGrid(read, grid)
+    refMasks = masksOnGrid(reference, grid, icx14=icx14)
+    if not readMasks.any() and _anyLabel(read):
         # Labels in the file, none after resampling: the two do not overlap in
         # physical space, so every number would be a meaningless zero.
-        return {'error': 'geometry_mismatch', 'mean_dice': None}, readArr
-    result = sq.score_labels(readArr, refArr, _spacing(reference))
-    return result, readArr
+        return {'error': 'geometry_mismatch', 'mean_dice': None}, readMasks
+    result = sq.score_masks(readMasks, refMasks, _spacing(grid))
+    return result, readMasks
 
 
 def partnerSubmission(submission):
@@ -179,7 +264,8 @@ def scoreOne(submission, thresholds=None):
         return None  # a paired case waiting for its second read
 
     if readArr is not None:
-        counts = sq.voxel_counts(readArr)
+        # Each class counted whole, overlaps included (D39).
+        counts = sq.mask_counts(readArr)
         score['voxelCounts'] = counts
         missing = labels.missing_required(counts)
         score['missingRequired'] = missing

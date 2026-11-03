@@ -57,6 +57,12 @@ The queue is the 675 pooled volumes only (D23): no ImageCAS case of any kind.
       uploaded). Login, roles, case ownership, the protocol gate and the upload
       checksum still refuse. The voxel counts and geometry are recorded with each
       submission, and the worker still flags an empty LAD, LCx or RCA for review.
+- [ ] D39 (#275): take a seeded case, touch nothing, **Submit case**. As a reviewer,
+      open it: all four classes show, each the whole tree (overlaps visible), and the
+      row's voxel counts are equal for every class. Save it as your revision: the
+      revision's counts are the same. (Up to 0.16.5 it reopened as all RCA.)
+- [ ] A 0.16.x module is refused at login, submit and a reviewer's save with
+      *"Update the SegQueue14 module"* (protocol 17).
 - [ ] *Save draft* while the classes are still untrimmed copies, close Slicer, reopen:
       every class still shows the whole seed, and after trimming and submitting the
       reviewer sees all four classes (the false "empty" of #270).
@@ -89,6 +95,9 @@ The queue is the 675 pooled volumes only (D23): no ImageCAS case of any kind.
 - [ ] `segtrain convert` with the `coronary_icx4` label set converts it, and the
       label volume has values 0-4 where the read had them
       (`tests/test_segqueue14_convert.py` does exactly this on synthetic reads).
+- [ ] A read whose classes overlap is exported with every class whole (the export
+      line says `classes overlap: ...`), and `segtrain convert --task 716` reports it
+      and does not convert it (`overlap_policy: refuse`, #275).
 
 ## F. Rollback rehearsal (optional, recommended)
 

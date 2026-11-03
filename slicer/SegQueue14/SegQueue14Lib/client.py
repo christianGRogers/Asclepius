@@ -421,14 +421,20 @@ class SegQueue14Client:
     # -------------------------------------------------------------- submit
 
     def submit(self, assignmentId: str, meta: 'protocol.SubmissionMeta', fileId: str,
-               geometry: Optional[Dict[str, Any]] = None) -> Any:
-        """Hand an uploaded file to the queue as a finished segmentation."""
+               geometry: Optional[Dict[str, Any]] = None,
+               labelFormat: str = protocol.LABEL_FORMAT_CLASS_STACK) -> Any:
+        """Hand an uploaded file to the queue as a finished segmentation.
+
+        ``labelFormat`` names what the file is (``segqueue14.labelfile``): from
+        protocol 17 a class stack, every class whole (D39).
+        """
         return self._json(
             'POST', protocol.path(protocol.CASE_SUBMIT, assignment_id=assignmentId),
             params={
                 'fileId': fileId,
                 'meta': json.dumps(meta.to_dict()),
                 'geometry': json.dumps(geometry or {}),
+                'labelFormat': labelFormat,
                 'clientProtocol': PROTOCOL_VERSION,
             },
         )
@@ -491,12 +497,15 @@ class SegQueue14Client:
                                                case_id=caseId)) or []
 
     def reviseSubmission(self, submissionId: str, meta: 'protocol.SubmissionMeta',
-                         fileId: str) -> Any:
+                         fileId: str,
+                         labelFormat: str = protocol.LABEL_FORMAT_CLASS_STACK) -> Any:
         """Store a reviewer's corrected version, which also approves the case."""
         return self._json(
             'POST', protocol.path(protocol.REVIEW_REVISE,
                                   submission_id=submissionId),
-            params={'fileId': fileId, 'meta': json.dumps(meta.to_dict())})
+            params={'fileId': fileId, 'meta': json.dumps(meta.to_dict()),
+                    'labelFormat': labelFormat,
+                    'clientProtocol': PROTOCOL_VERSION})
 
     def annotators(self) -> List[Dict[str, Any]]:
         """Who a case can be handed to, with how much each already holds."""

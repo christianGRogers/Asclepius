@@ -1,0 +1,23 @@
+# Once a day: prune snapshots past the retention, then `restic check` reading a 1%
+# sample of the data back from the backup server. Same priority and limits as
+# the hourly run; the hourly run skips while this holds the lock.
+[Unit]
+Description=SegQueue backup: daily prune and repository check
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/lib/segqueue-backup/segqueue-backup.sh check
+Nice=19
+IOSchedulingClass=idle
+TimeoutStartSec=3h
+StateDirectory=segqueue-backup
+StateDirectoryMode=0700
+CacheDirectory=segqueue-backup
+CacheDirectoryMode=0700
+Environment=RESTIC_CACHE_DIR=/var/cache/segqueue-backup
+ProtectSystem=strict
+ProtectHome=read-only
+PrivateTmp=yes
+NoNewPrivileges=yes

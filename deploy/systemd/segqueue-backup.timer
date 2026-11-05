@@ -1,0 +1,13 @@
+# Every hour, a few minutes after the hour (spread so it never lines up with other
+# hourly jobs). Persistent: an hour missed while janus was off runs at boot.
+[Unit]
+Description=Hourly SegQueue backup
+
+[Timer]
+OnCalendar=hourly
+RandomizedDelaySec=5min
+Persistent=true
+Unit=segqueue-backup.service
+
+[Install]
+WantedBy=timers.target

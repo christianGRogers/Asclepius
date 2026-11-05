@@ -241,6 +241,82 @@ anything else, restore the `pre-d36` dump (`mongorestore --drop --gzip --archive
 no step deletes assetstore files except the removal of the empty `SegQueue14`
 collection.
 
+## D42 on janus: hourly backup to the backup server
+
+Every hour, the Girder database and every submission and reviewer revision file
+go to a restic repository on the lead's backup server (same LAN as janus), over
+SFTP. CT volumes are **not** backed up: they are kept in CCTA-Pool. Code:
+`deploy/backup/` and `deploy/systemd/segqueue-backup*`. Issue #283.
+
+**What is in each snapshot**
+
+* The whole `girder` database, as uncompressed BSON in mongodump's layout. Each
+  collection is written in `_id` order, so restic stores only what changed.
+* Every assetstore file a `segqueue14_submission` row points at, found through the
+  database (`fileId` -> `file` -> assetstore root + path). That covers annotators'
+  submissions and reviewers' revisions. Old-queue `segqueue_submission` files are
+  included too.
+* Seeds, prelabels (current and earlier) and reference labels up to 50 MB each
+  (`BACKUP_MAX_EXTRA_MB`).
+* Never included: a case's `fileId` or `regionFileId` (the CT), even when something
+  else points at it, or anything filed under `CCTA-Pool` or `ImageCAS-X`.
+* `manifest.json` lists every file, its kind and checksum, plus any file the
+  database names that was not found on disk.
+
+**How it stays out of the annotators' way**
+
+* It only reads: no Girder or Mongo restart, no fsync lock, no write.
+* The unit runs at `Nice=19` with `IOSchedulingClass=idle` (ionice -c3), and restic
+  is capped at 20 MiB/s.
+* A `flock` stops overlaps: a run that would overlap is skipped and logged.
+* It refuses to start if `/var/lib/segqueue-backup` or `~/segqueue-data` has less
+  than 5 GB free (`BACKUP_MIN_FREE_MB`).
+* The local dump is written to a temp name, renamed when complete, and deleted once
+  the snapshot is saved.
+* Retention: 48 hourly, 14 daily, 8 weekly and 12 monthly snapshots. A daily timer
+  (03:40) prunes and runs `restic check --read-data-subset=1%`.
+
+**Steps** (Actions -> *SegQueue14 on janus*; all idempotent):
+
+| Step | What it does |
+|---|---|
+| `backup-install` | On janus: installs restic if needed (the distro's restic if 0.14 or newer, else the pinned official 0.17.3 binary with its SHA-256 checked). Creates an SSH key at `/etc/segqueue-backup/id_ed25519` (once) and writes `BACKUP_RESTIC_PASSWORD` to `/etc/segqueue-backup/restic-password` (root, 600). On the backup server: authorises that key, limited to `sftp-server` where the binary is found, `restrict` in any case. Back on janus: tries each route to the backup server, pins its host key, opens or creates the repository, installs and starts the timers, and takes the first backup. |
+| `backup-status` | Read-only. Shows the timers, the last run's result, the snapshot count, the newest snapshot's age and size, the repository size and the last log lines. **Fails if the newest snapshot is older than 2 hours.** |
+| `backup-restore-test` | Restores the newest snapshot into `/var/lib/segqueue-backup/restore-test`. Loads the database into a scratch `mongod` on 127.0.0.1:27199 (it refuses the live server). Checks every submission's file is present and its SHA-256 matches the one Girder recorded, then deletes the scratch copy. Live data is not touched. Run it once before calling the job live, then monthly. |
+| `backup-off` | Stops and disables both timers. Keeps the repository, every snapshot, the key and the password. `backup-install` turns it back on. |
+
+**Secrets** (repository settings -> Secrets and variables -> Actions):
+
+| Secret | Needed for | What |
+|---|---|---|
+| `SSH_PORT_SFTP_SERVER` | every backup step | The backup server's SSH port. Its host and login are the same as janus's (`SSH_HOST`, `SSH_USERNAME`, `SSH_PASSWORD`). |
+| `BACKUP_RESTIC_PASSWORD` | `backup-install` | The repository password: long and random. **Also keep it in a password manager**: without it nobody can read the backups once janus is gone. Install refuses if it is missing. It cannot be changed by editing the secret: install refuses a password that does not open the existing repository. |
+| `BACKUP_SFTP_LAN_ADDRESS` | optional | `host:port` of the backup server **as seen from janus**. It is tried first if set. Otherwise janus tries `SSH_HOST:SSH_PORT_SFTP_SERVER`. Install says which route worked, or what to set if none did. |
+| `SSH_KNOWN_HOSTS_SFTP_SERVER` | optional | The backup server's `known_hosts` lines. Without it the runner trusts the key offered on first contact. Janus pins only a key matching what the runner saw. |
+
+The SSH password is used only by the runner. It is never stored on janus: janus
+reaches the backup server with its own key.
+
+**Restoring for real** (the lead's call; the drill above does not need this):
+
+```sh
+# Anywhere with restic, the password and SFTP access to the backup server; on janus:
+sudo -i
+set -a; . /etc/segqueue-backup/backup.env; set +a
+R=(restic -o "sftp.command=$BACKUP_SFTP_COMMAND")
+"${R[@]}" snapshots --tag segqueue14          # pick one; or use `latest`
+"${R[@]}" restore <id> --target /var/tmp/sq-restore
+# The database (mongodump layout; mongorestore from the MongoDB database tools):
+mongorestore --drop --nsInclude 'girder.*' /var/tmp/sq-restore/var/lib/segqueue-backup/dump
+# The files are under the target at their original absolute paths. Put back only what is missing:
+rsync -a --ignore-existing /var/tmp/sq-restore/home/christian/segqueue-data/ /home/christian/segqueue-data/
+```
+
+Stop Girder and the workers before a database restore. The CT volumes are not in
+the backup: re-import them from CCTA-Pool if the assetstore itself was lost.
+
+**Logs:** `journalctl -u segqueue-backup` (hourly) and `journalctl -u segqueue-backup-check` (daily).
+
 ## Rollback
 
 Nothing below touches the live SegQueue: SegQueue14 never wrote to `segqueue_*`, the

@@ -360,3 +360,118 @@ def test_a_half_downloaded_helper_is_never_a_cache_hit(tmp_path):
     assert cachedHelper(None, stem) is None
     (tmp_path / "prelabel.nii.gz").write_bytes(b"\x1f\x8bwhole")
     assert cachedHelper(None, stem) == stem + ".nii.gz"
+
+
+# --------------------------------------------------- reviewer state filter (#281)
+
+def _review_filters():
+    for node in _tree().body:
+        if (isinstance(node, ast.Assign)
+                and any(isinstance(t, ast.Name) and t.id == "REVIEW_FILTERS"
+                        for t in node.targets)):
+            return ast.literal_eval(node.value)
+    raise AssertionError("REVIEW_FILTERS not found")
+
+
+def _review_listing():
+    """``_reviewListing`` executed on its own: it needs nothing from Slicer."""
+    node = next(n for n in _tree().body
+                if isinstance(n, ast.FunctionDef) and n.name == "_reviewListing")
+    namespace = {}
+    exec(compile(ast.Module(body=[node], type_ignores=[]), str(MODULE), "exec"),
+         namespace)
+    return namespace["_reviewListing"]
+
+
+class _Client:
+    """Answers ``allCases`` the way the 0.3.0 server does: a state filter keeps
+    every case with *any* assignment in that state, with all its assignments."""
+
+    def __init__(self, cases):
+        self.cases = cases
+        self.calls = []
+
+    def allCases(self, state=None, unassigned=False):
+        self.calls.append((state, unassigned))
+        if unassigned:
+            return [c for c in self.cases if not c["assignments"]]
+        if state:
+            return [c for c in self.cases
+                    if any(a["state"] == state for a in c["assignments"])]
+        return list(self.cases)
+
+
+def _case(case_id, *states):
+    return {"caseId": case_id, "caseName": case_id,
+            "assignments": [{"annotator": "a{}".format(i), "state": s}
+                            for i, s in enumerate(states)]}
+
+
+ALL_STATES = ("assigned", "downloaded", "rejected", "submitted", "under_review",
+              "approved", "released")
+
+
+def _project():
+    return [_case("two_reads", "submitted", "downloaded"),
+            _case("given_back", "submitted", "released"),
+            _case("nobody")] + [_case("only_" + s, s) for s in ALL_STATES]
+
+
+def test_the_state_filter_has_exactly_the_five_reviewer_entries():
+    filters = _review_filters()
+    assert [label for label, _ in filters] == [
+        "All cases", "Unassigned", "In progress", "Waiting for review", "Approved"]
+    assert dict(filters) == {
+        "All cases": None,
+        "Unassigned": "unassigned",
+        "In progress": ("assigned", "downloaded", "rejected"),
+        "Waiting for review": ("submitted", "under_review"),
+        "Approved": ("approved",),
+    }
+
+
+def test_the_dropdown_is_filled_from_the_filters_and_read_by_index():
+    source = ast.get_source_segment(_source(), _method("SegQueue14Widget",
+                                                       "onRefreshReview"))
+    assert "REVIEW_FILTERS[index]" in source
+    assert "itemData" not in source
+
+
+@pytest.mark.parametrize("other", ["downloaded", "released"])
+def test_a_two_read_case_shows_only_its_submitted_read_while_waiting(other):
+    listing = _review_listing()
+    cases, rows = listing(_Client([_case("c1", "submitted", other)]),
+                          ("submitted", "under_review"))
+    assert [c["caseId"] for c in cases] == ["c1"]
+    assert [(c["caseId"], a["state"]) for c, a in rows] == [("c1", "submitted")]
+
+
+@pytest.mark.parametrize("label", ["In progress", "Waiting for review", "Approved"])
+def test_each_group_shows_only_its_states(label):
+    states = dict(_review_filters())[label]
+    cases, rows = _review_listing()(_Client(_project()), states)
+    shown = {a["state"] for _c, a in rows}
+    assert shown == set(states)
+    assert all(a is not None for _c, a in rows)
+    # Every read in the group is there, and every case listed has a row.
+    expected = sum(1 for c in _project() for a in c["assignments"]
+                   if a["state"] in states)
+    assert len(rows) == expected
+    assert {c["caseId"] for c in cases} == {c["caseId"] for c, _a in rows}
+
+
+def test_all_cases_shows_every_read_and_a_row_for_a_case_nobody_holds():
+    client = _Client(_project())
+    cases, rows = _review_listing()(client, None)
+    assert client.calls == [(None, False)]
+    assert len(cases) == len(_project())
+    assert ("nobody", None) in [(c["caseId"], a) for c, a in rows]
+    assert len(rows) == 1 + sum(len(c["assignments"]) for c in _project())
+
+
+def test_unassigned_is_the_unassigned_listing_unchanged():
+    client = _Client(_project())
+    cases, rows = _review_listing()(client, "unassigned")
+    assert client.calls == [(None, True)]
+    assert [c["caseId"] for c in cases] == ["nobody"]
+    assert [(c["caseId"], a) for c, a in rows] == [("nobody", None)]

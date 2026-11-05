@@ -1,0 +1,34 @@
+# Hourly backup of the database and the segmentations to the lead's backup server
+# (D42, issue #283). Started by segqueue-backup.timer; installed by the
+# "SegQueue14 on janus" workflow's backup-install step.
+#
+# It only reads Girder's data: it never stops, restarts, locks or writes to Girder,
+# Mongo or the assetstore, which is why there is no Requires= on segqueue-mongod
+# (a backup must never start or stop the database) and no Restart= (a failed run
+# is retried by the next hour's, and shows in backup-status meanwhile).
+[Unit]
+Description=SegQueue hourly backup (database + segmentations) to the backup server
+After=network-online.target segqueue-mongod.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/lib/segqueue-backup/segqueue-backup.sh run
+# Annotators first: lowest CPU priority (nice 19) and the idle I/O class
+# (ionice -c3), so a CT download or an upload is never slowed by a backup.
+# restic's own bandwidth cap is in backup.env.
+Nice=19
+IOSchedulingClass=idle
+# An hourly run is a few MB. Anything near an hour is stuck: stop it, and the
+# next hour's run (which skips while this one holds the lock) starts clean.
+TimeoutStartSec=50min
+# Read-only everywhere except its own state and cache.
+StateDirectory=segqueue-backup
+StateDirectoryMode=0700
+CacheDirectory=segqueue-backup
+CacheDirectoryMode=0700
+Environment=RESTIC_CACHE_DIR=/var/cache/segqueue-backup
+ProtectSystem=strict
+ProtectHome=read-only
+PrivateTmp=yes
+NoNewPrivileges=yes

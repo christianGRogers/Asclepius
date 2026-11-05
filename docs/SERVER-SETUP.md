@@ -418,6 +418,18 @@ to wait. There is no cron job to forget.
 
 ### Backups
 
+**janus (native install, systemd): hourly, to the backup server.** Use the
+`backup-install` step of the *SegQueue14 on janus* workflow. It backs up the
+database and every submission and revision file, but not the CT volumes, to a
+restic repository over SFTP. The repository is unencrypted, with no password,
+by the lead's decision. Check it with `backup-status`, run the restore drill
+with `backup-restore-test` and turn it off with `backup-off`. Restoring, the
+secrets it needs and what it never touches are in
+[`server/girder_segqueue14/DEPLOY.md`](../server/girder_segqueue14/DEPLOY.md#d42-on-janus-hourly-backup-to-the-backup-server)
+(D42, issue #283).
+
+**The Docker layout: nightly**, from cron:
+
 ```
 0 2 * * * RESTIC_REPOSITORY=/mnt/backup/segqueue \
           RESTIC_PASSWORD_FILE=/root/.restic-pass \

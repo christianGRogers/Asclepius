@@ -21,6 +21,14 @@
 #   bash segqueue14-deploy.sh consolidate [--apply]      # SegQueue14 writes into SegQueue (installs main)
 # CCTA-Pool and ImageCAS-X are out of scope: no step writes to them (status counts them).
 #
+# D42 (issue #283), the hourly backup to the lead's backup server; these hand over to
+# deploy/backup/segqueue-backup.sh (see its header) and are run by the workflow's
+# backup-* steps, which also reach the backup server:
+#   bash segqueue14-deploy.sh backup-prepare | backup-finish ...   (backup-install)
+#   bash segqueue14-deploy.sh backup-status          # read-only; fails if > 2 h old
+#   bash segqueue14-deploy.sh backup-restore-test    # scratch restore + checks
+#   bash segqueue14-deploy.sh backup-off             # timers off; snapshots kept
+#
 # What it never does: check out a branch in ~/Asclepius, reinstall the old plugin
 # (server/; only restore-live does, from that checkout), or write to the old
 # SegQueue's data outside the D36 steps. `main` is cloned separately into
@@ -438,5 +446,11 @@ case "${1:-}" in
     restore-live) restore_live ;;
     retire-groups) shift; retire_groups "$@" ;;
     consolidate) shift; consolidate "$@" ;;
-    *) sed -n '2,25p' "$0"; exit 1 ;;
+    backup-prepare|backup-finish|backup-status|backup-restore-test|backup-off)
+        step="${1#backup-}"; shift
+        case "$step" in prepare|finish) step="install-$step" ;; esac
+        # The hourly job's priority for the drill too: annotators come first.
+        nice_=(); [ "$step" = restore-test ] && nice_=(nice -n 19 ionice -c3)
+        USER_HOME="$USER_HOME" exec ${nice_[@]+"${nice_[@]}"} bash "$(dirname "$0")/backup/segqueue-backup.sh" "$step" "$@" ;;
+    *) sed -n '2,34p' "$0"; exit 1 ;;
 esac

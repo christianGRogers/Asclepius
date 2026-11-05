@@ -13,6 +13,7 @@
 #                          nothing installed — Slicer's situation exactly
 #   server-integration     the atomic claim, against a real MongoDB, because a
 #                          mocked database verifies the mock
+#   backup                 the janus backup (D42): dump, restic, restore drill
 #   acceptance             the real client against a real server over real HTTP
 #
 # Only `acceptance` needs anything to be running, and it builds that itself.
@@ -254,6 +255,64 @@ jobs:
             tail -40 server-tests.log 2>/dev/null || echo "(no output captured)"
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
+
+  # --------------------------------------------------------------------------
+  backup:
+    name: Janus backup against MongoDB and restic
+    # D42 (issue #283): the hourly backup's dump, restic snapshot, restore drill,
+    # overlap lock and free-space guard, with synthetic data. Two MongoDBs: the
+    # drill refuses to load a restore into the server the backup came from.
+    runs-on: ubuntu-latest
+    services:
+      mongo:
+        image: mongo:7
+        ports: ["27099:27017"]
+        options: >-
+          --health-cmd "mongosh --quiet --eval 'db.adminCommand({ping:1})'"
+          --health-interval 10s --health-timeout 5s --health-retries 10
+      scratch:
+        image: mongo:7
+        ports: ["27098:27017"]
+        options: >-
+          --health-cmd "mongosh --quiet --eval 'db.adminCommand({ping:1})'"
+          --health-interval 10s --health-timeout 5s --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - name: Install
+        run: |
+          # The version backup-install pins on janus (>= 0.17 for --insecure-no-password),
+          # checked against the release's published SHA-256.
+          v=0.17.3; sum=5097faeda6aa13167aae6e36efdba636637f8741fed89bbf015678334632d4d3
+          curl -fsSL -o restic.bz2 "https://github.com/restic/restic/releases/download/v$v/restic_${v}_linux_amd64.bz2"
+          echo "$sum  restic.bz2" | sha256sum -c -
+          bunzip2 restic.bz2 && sudo install -m 755 restic /usr/local/bin/restic && rm -f restic
+          restic version
+          python -m pip install --upgrade pip
+          pip install -e ".[dev]" pymongo
+      - name: Backup tests
+        env:
+          SEGQUEUE_TEST_MONGO: mongodb://localhost:27099
+          SEGQUEUE_TEST_SCRATCH_MONGO: mongodb://localhost:27098
+        run: pytest -q -rs tests/test_backup.py --junitxml=junit.xml
+      - name: Fail if these skipped
+        # As in server-integration: everything these need is installed here, so
+        # a skip is a broken install, not a pass.
+        if: always()
+        run: |
+          python - <<'PY'
+          import sys, xml.etree.ElementTree as ET
+          suite = ET.parse("junit.xml").getroot().find("testsuite")
+          skipped, tests = int(suite.get("skipped")), int(suite.get("tests"))
+          print(f"{tests - skipped} of {tests} ran")
+          for case in suite.iter("testcase"):
+              for skip in case.iter("skipped"):
+                  print(f"::error title=Backup test skipped::{case.get('name')}: {skip.get('message')}")
+          sys.exit(1 if skipped else 0)
+          PY
 
   # --------------------------------------------------------------------------
   acceptance:

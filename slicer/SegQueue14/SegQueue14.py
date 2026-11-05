@@ -107,7 +107,7 @@ from SegQueue14Lib import SegQueue14Error as SegQueueError
 
 #: Continues SegQueue's numbering (0.13.0 was the last 4-class release). The
 #: release tag is ``segqueue-v`` + this; bump it to publish.
-__version__ = "0.17.0"
+__version__ = "0.17.1"
 
 #: Where the module's help points.
 HELP_URL = "https://github.com/christianGRogers/Asclepius"
@@ -125,14 +125,16 @@ HEARTBEAT_SECONDS = 300
 CTA_WINDOW = 800
 CTA_LEVEL = 300
 
+#: The reviewer's state filter: a label and the assignment states it shows.
+#: ``None`` is every case; ``"unassigned"`` is the cases nobody holds. A given-
+#: back (``released``) read is not a group of its own: the case is back in the
+#: pool and still shows under "All cases".
 REVIEW_FILTERS = (
-    ("assigned", "Assigned, not downloaded"),
-    ("downloaded", "Being worked on"),
-    ("submitted", "Submitted"),
-    ("under_review", "Under review"),
-    ("approved", "Approved"),
-    ("rejected", "Rejected (historical)"),
-    ("released", "Given back"),
+    ("All cases", None),
+    ("Unassigned", "unassigned"),
+    ("In progress", ("assigned", "downloaded", "rejected")),
+    ("Waiting for review", ("submitted", "under_review")),
+    ("Approved", ("approved",)),
 )
 REVIEW_DECIDED_STATES = frozenset({"approved", "released"})
 
@@ -1301,6 +1303,47 @@ def _storedCacheRoot():
     return slicer.util.settingsValue(_SETTING_CACHE, defaultRoot())
 
 
+def _reviewListing(client, states):
+    """The cases and the (case, assignment) rows the submission viewer shows.
+
+    One row per *assignment*, not per case: a case can be out with two
+    annotators at once, and each of them has their own state to show.
+
+    ``states`` is a ``REVIEW_FILTERS`` entry. ``None`` and ``"unassigned"`` show
+    every assignment of every case they fetch, plus one row for a case nobody
+    holds, because "nothing has happened to this one" is the most useful thing
+    the viewer can say about it. A group of states shows only the assignments
+    in it: the server returns a case with *any* assignment in a state, with all
+    of its assignments, so a two-read case with one read submitted would
+    otherwise list its downloaded read under "Waiting for review" too.
+
+    Every case, not the first page (``allCases`` pages): a thousand-case
+    project would otherwise show its first two hundred and look complete. A
+    group is fetched whole and filtered here, which is one paging loop and
+    works against any server.
+    """
+    if states is None or states == "unassigned":
+        cases = client.allCases(unassigned=(states == "unassigned"))
+        rows = []
+        for case in cases:
+            assignments = case.get("assignments") or []
+            if not assignments:
+                rows.append((case, None))
+            for assignment in assignments:
+                rows.append((case, assignment))
+        return cases, rows
+
+    wanted = frozenset(states)
+    cases, rows = [], []
+    for case in client.allCases():
+        matching = [a for a in case.get("assignments") or []
+                    if a.get("state") in wanted]
+        if matching:
+            cases.append(case)
+            rows.extend((case, a) for a in matching)
+    return cases, rows
+
+
 # =============================================================================
 #  Widget
 # =============================================================================
@@ -2024,13 +2067,12 @@ class SegQueue14Widget(ScriptedLoadableModuleWidget):
         controls = qt.QHBoxLayout()
         self.reviewFilter = qt.QComboBox()
         # The order is the lifecycle, so the list reads as a progression rather
-        # than as an alphabetised set of jargon.
-        self.reviewFilter.addItem("All cases", "")
-        self.reviewFilter.addItem("Unassigned", "unassigned")
-        for state, label in REVIEW_FILTERS:
-            self.reviewFilter.addItem(label, state)
+        # than as an alphabetised set of jargon. Looked up by index, so the
+        # groups of states never pass through Qt's item data.
+        for label, _states in REVIEW_FILTERS:
+            self.reviewFilter.addItem(label)
         self.reviewFilter.setToolTip(
-            "Narrow the list to cases with an assignment in one state. "
+            "Narrow the list to the reads in one stage. "
             "'Unassigned' is the cases nobody has been given yet.")
         self.reviewFilter.currentIndexChanged.connect(
             lambda _index: self.onRefreshReview())
@@ -2180,30 +2222,15 @@ class SegQueue14Widget(ScriptedLoadableModuleWidget):
         """Reload the case list. Cheap enough to be the answer to most doubts."""
         if self.logic is None or self.logic.client is None:
             return
-        selected = self.reviewFilter.itemData(self.reviewFilter.currentIndex)
+        index = self.reviewFilter.currentIndex
+        states = REVIEW_FILTERS[index][1] if 0 <= index < len(REVIEW_FILTERS) else None
         with _busy():
             try:
-                # Every case, not the first page: a thousand-case project
-                # would otherwise show its first two hundred and look complete.
-                self._reviewCases = self.logic.client.allCases(
-                    state=None if selected in ("", "unassigned") else selected,
-                    unassigned=(selected == "unassigned"))
+                self._reviewCases, self._reviewRows = _reviewListing(
+                    self.logic.client, states)
             except SegQueueError as exc:
                 slicer.util.errorDisplay(str(exc))
                 return
-
-        # One row per *assignment*, not per case: a case can be out with two
-        # annotators at once, and each of them has their own state to show. A
-        # case nobody holds still gets a row, because "nothing has happened to
-        # this one" is the most useful thing the viewer can say about it.
-        self._reviewRows = []
-        for case in self._reviewCases:
-            assignments = case.get("assignments") or []
-            if not assignments:
-                self._reviewRows.append((case, None))
-                continue
-            for assignment in assignments:
-                self._reviewRows.append((case, assignment))
 
         self.reviewTable.setRowCount(len(self._reviewRows))
         for index, (case, assignment) in enumerate(self._reviewRows):

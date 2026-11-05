@@ -1,0 +1,12 @@
+# Daily at night, when nobody is annotating.
+[Unit]
+Description=Daily SegQueue backup prune and check
+
+[Timer]
+OnCalendar=*-*-* 03:40
+RandomizedDelaySec=20min
+Persistent=true
+Unit=segqueue-backup-check.service
+
+[Install]
+WantedBy=timers.target

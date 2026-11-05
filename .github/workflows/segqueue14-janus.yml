@@ -24,9 +24,9 @@
 # The script never touches the live checkout, the live plugin or live data; see its
 # header. Secrets: SSH_HOST, SSH_PORT, SSH_USERNAME, SSH_PASSWORD (as server-ssh.yml),
 # SSH_KNOWN_HOSTS optional. The backup steps also need SSH_PORT_SFTP_SERVER (the backup
-# server: same host and login as janus, this port) and, for backup-install,
-# BACKUP_RESTIC_PASSWORD; optional: BACKUP_SFTP_LAN_ADDRESS (host:port of the backup
-# server as seen from janus) and SSH_KNOWN_HOSTS_SFTP_SERVER.
+# server: same host and login as janus, this port); optional: BACKUP_SFTP_LAN_ADDRESS
+# (host:port of the backup server as seen from janus) and SSH_KNOWN_HOSTS_SFTP_SERVER.
+# The backup repository has no password (the lead's decision on #283).
 
 name: SegQueue14 on janus
 
@@ -82,7 +82,6 @@ jobs:
           USERNAME: ${{ secrets.SSH_USERNAME }}
           PASSWORD: ${{ secrets.SSH_PASSWORD }}
           SFTP_PORT: ${{ secrets.SSH_PORT_SFTP_SERVER }}
-          RESTIC_PW: ${{ secrets.BACKUP_RESTIC_PASSWORD }}
           CMD: ${{ steps.cmd.outputs.cmd }}
         run: |
           set -euo pipefail
@@ -90,11 +89,8 @@ jobs:
           [ -n "$HOST" ]     || missing+=(SSH_HOST)
           [ -n "$USERNAME" ] || missing+=(SSH_USERNAME)
           [ -n "$PASSWORD" ] || missing+=(SSH_PASSWORD)
-          # The backup steps (D42): the backup server's port, and the repository
-          # password for install. Install refuses without the password: a copy kept
-          # only on janus would be lost with janus.
+          # The backup steps (D42) also need the backup server's port.
           case "$CMD" in backup-*) [ -n "$SFTP_PORT" ] || missing+=(SSH_PORT_SFTP_SERVER) ;; esac
-          [ "$CMD" != backup-install ] || [ -n "$RESTIC_PW" ] || missing+=(BACKUP_RESTIC_PASSWORD)
           if [ ${#missing[@]} -gt 0 ]; then echo "::error::not set: ${missing[*]}"; exit 1; fi
 
       - name: Install sshpass
@@ -159,7 +155,6 @@ jobs:
 
       # D42: the backup steps. Same janus connection as above; backup-install also
       # reaches the backup server (same host and login, port SSH_PORT_SFTP_SERVER).
-      # The repository password goes to janus over stdin, never in argv or the log.
       - name: Run the backup step
         if: steps.cmd.outputs.backup == 'true'
         env:
@@ -170,7 +165,6 @@ jobs:
           SFTP_PORT: ${{ secrets.SSH_PORT_SFTP_SERVER }}
           SFTP_KNOWN_HOSTS: ${{ secrets.SSH_KNOWN_HOSTS_SFTP_SERVER }}
           LAN_ADDRESS: ${{ secrets.BACKUP_SFTP_LAN_ADDRESS }}
-          RESTIC_PASSWORD_SECRET: ${{ steps.cmd.outputs.cmd == 'backup-install' && secrets.BACKUP_RESTIC_PASSWORD || '' }}
           CMD: ${{ steps.cmd.outputs.cmd }}
         run: |
           set -uo pipefail

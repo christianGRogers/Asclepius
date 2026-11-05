@@ -248,6 +248,11 @@ go to a restic repository on the lead's backup server (same LAN as janus), over
 SFTP. CT volumes are **not** backed up: they are kept in CCTA-Pool. Code:
 `deploy/backup/` and `deploy/systemd/segqueue-backup*`. Issue #283.
 
+**The repository is not encrypted and has no password** (the lead's decision on
+#283: the data is not sensitive and is to be published). restic runs with
+`--insecure-no-password`, which needs restic 0.17 or newer. Access to the backups is
+the backup server's SFTP login and nothing else.
+
 **What is in each snapshot**
 
 * The whole `girder` database, as uncompressed BSON in mongodump's layout. Each
@@ -280,17 +285,16 @@ SFTP. CT volumes are **not** backed up: they are kept in CCTA-Pool. Code:
 
 | Step | What it does |
 |---|---|
-| `backup-install` | On janus: installs restic if needed (the distro's restic if 0.14 or newer, else the pinned official 0.17.3 binary with its SHA-256 checked). Creates an SSH key at `/etc/segqueue-backup/id_ed25519` (once) and writes `BACKUP_RESTIC_PASSWORD` to `/etc/segqueue-backup/restic-password` (root, 600). On the backup server: authorises that key, limited to `sftp-server` where the binary is found, `restrict` in any case. Back on janus: tries each route to the backup server, pins its host key, opens or creates the repository, installs and starts the timers, and takes the first backup. |
+| `backup-install` | On janus: installs the pinned restic 0.17.3 at `/usr/local/bin/restic` (the official release, its SHA-256 checked; the distro's restic is not used) and creates an SSH key at `/etc/segqueue-backup/id_ed25519` (once). On the backup server: authorises that key, limited to `sftp-server` where the binary is found, `restrict` in any case. Back on janus: tries each route to the backup server, pins its host key, opens or creates the (unencrypted) repository, installs and starts the timers, and takes the first backup. It refuses an existing repository that is encrypted. |
 | `backup-status` | Read-only. Shows the timers, the last run's result, the snapshot count, the newest snapshot's age and size, the repository size and the last log lines. **Fails if the newest snapshot is older than 2 hours.** |
 | `backup-restore-test` | Restores the newest snapshot into `/var/lib/segqueue-backup/restore-test`. Loads the database into a scratch `mongod` on 127.0.0.1:27199 (it refuses the live server). Checks every submission's file is present and its SHA-256 matches the one Girder recorded, then deletes the scratch copy. Live data is not touched. Run it once before calling the job live, then monthly. |
-| `backup-off` | Stops and disables both timers. Keeps the repository, every snapshot, the key and the password. `backup-install` turns it back on. |
+| `backup-off` | Stops and disables both timers. Keeps the repository, every snapshot and the key. `backup-install` turns it back on. |
 
 **Secrets** (repository settings -> Secrets and variables -> Actions):
 
 | Secret | Needed for | What |
 |---|---|---|
 | `SSH_PORT_SFTP_SERVER` | every backup step | The backup server's SSH port. Its host and login are the same as janus's (`SSH_HOST`, `SSH_USERNAME`, `SSH_PASSWORD`). |
-| `BACKUP_RESTIC_PASSWORD` | `backup-install` | The repository password: long and random. **Also keep it in a password manager**: without it nobody can read the backups once janus is gone. Install refuses if it is missing. It cannot be changed by editing the secret: install refuses a password that does not open the existing repository. |
 | `BACKUP_SFTP_LAN_ADDRESS` | optional | `host:port` of the backup server **as seen from janus**. It is tried first if set. Otherwise janus tries `SSH_HOST:SSH_PORT_SFTP_SERVER`. Install says which route worked, or what to set if none did. |
 | `SSH_KNOWN_HOSTS_SFTP_SERVER` | optional | The backup server's `known_hosts` lines. Without it the runner trusts the key offered on first contact. Janus pins only a key matching what the runner saw. |
 
@@ -300,10 +304,11 @@ reaches the backup server with its own key.
 **Restoring for real** (the lead's call; the drill above does not need this):
 
 ```sh
-# Anywhere with restic, the password and SFTP access to the backup server; on janus:
+# Anywhere with restic >= 0.17 and SFTP access to the backup server; on janus:
 sudo -i
 set -a; . /etc/segqueue-backup/backup.env; set +a
-R=(restic -o "sftp.command=$BACKUP_SFTP_COMMAND")
+R=(restic --insecure-no-password -o "sftp.command=$BACKUP_SFTP_COMMAND")
+# Elsewhere: R=(restic --insecure-no-password -r sftp:<user>@<backup server>:segqueue-backup)
 "${R[@]}" snapshots --tag segqueue14          # pick one; or use `latest`
 "${R[@]}" restore <id> --target /var/tmp/sq-restore
 # The database (mongodump layout; mongorestore from the MongoDB database tools):

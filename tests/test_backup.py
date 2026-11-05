@@ -47,14 +47,12 @@ def _run(cmd, env, timeout=300):
 def _shell_env(tmp_path, **extra):
     conf = tmp_path / 'conf'
     conf.mkdir(exist_ok=True)
-    (conf / 'restic-password').write_text('synthetic-test-password\n')
     env = {
         'BACKUP_CONF_DIR': str(conf),
         'BACKUP_ENV': str(conf / 'backup.env'),   # absent: no janus settings leak in
         'BACKUP_STATE': str(tmp_path / 'state'),
         'BACKUP_PYTHON': sys.executable,
         'RESTIC_REPOSITORY': str(tmp_path / 'repo'),
-        'RESTIC_PASSWORD_FILE': str(conf / 'restic-password'),
         'RESTIC_CACHE_DIR': str(tmp_path / 'cache'),
         'BACKUP_MIN_FREE_MB': '1',
         'BACKUP_MONGOD': '',
@@ -102,6 +100,23 @@ def test_a_run_that_would_overlap_is_skipped(tmp_path):
     assert out.returncode == 0, out.stdout + out.stderr
     assert 'skipped: another backup job is still running' in out.stdout
     assert not (state / 'dump').exists()
+
+
+def test_the_job_never_asks_for_or_passes_a_password():
+    with open(SCRIPT) as handle:
+        script = handle.read()
+    # Every restic call goes through restic_(), which adds --insecure-no-password.
+    assert '--insecure-no-password' in script
+    calls = re.findall(r'^\s*(?:"\$RESTIC_BIN"|restic)\s[^\n]*', script, re.M)
+    assert calls == ['    "$RESTIC_BIN" "${args[@]}" "$@"'], calls   # restic_() itself
+    assert 'restic-password' not in script
+
+
+def test_a_password_in_the_environment_is_ignored(tmp_path):
+    env = _shell_env(tmp_path, RESTIC_PASSWORD='should-not-be-used', RESTIC_REPOSITORY='',
+                     GIRDER_MONGO_URI='mongodb://127.0.0.1:1/never')
+    out = _run('run', env)
+    assert 'should-not-be-used' not in out.stdout + out.stderr
 
 
 def test_run_refuses_without_a_repository(tmp_path):
@@ -187,7 +202,8 @@ def test_the_workflow_offers_the_backup_steps_and_checks_their_secrets():
     for step in ('backup-install', 'backup-status', 'backup-restore-test', 'backup-off'):
         assert step in wf
     assert 'SSH_PORT_SFTP_SERVER' in wf
-    assert 'BACKUP_RESTIC_PASSWORD' in wf
+    # No repository password (lead, #283): no secret for it, and nothing refuses without one.
+    assert 'BACKUP_RESTIC_PASSWORD' not in wf
     assert 'StrictHostKeyChecking=no' not in wf
 
 
@@ -370,12 +386,22 @@ def test_verify_refuses_to_load_into_the_live_server(girder, tmp_path):
 
 # ---------------------------------------------------------------- the round trip, with restic
 
-_skip_restic = pytest.mark.skipif(not RESTIC, reason='restic is not installed')
+def _restic_version():
+    if not RESTIC:
+        return (0,)
+    out = subprocess.run([RESTIC, 'version'], capture_output=True, text=True).stdout
+    m = re.match(r'restic (\d+)\.(\d+)', out)
+    return (int(m.group(1)), int(m.group(2))) if m else (0,)
+
+
+_skip_restic = pytest.mark.skipif(_restic_version() < (0, 17),
+                                  reason='restic >= 0.17 (--insecure-no-password) is not installed')
 
 
 def _restic(env, *args):
-    return subprocess.run([RESTIC, *args], env=dict(os.environ, **env), capture_output=True,
-                          text=True, timeout=120)
+    # No password: the repository is unencrypted by the lead's decision on #283.
+    return subprocess.run([RESTIC, '--insecure-no-password', *args],
+                          env=dict(os.environ, **env), capture_output=True, text=True, timeout=120)
 
 
 @needs_mongo

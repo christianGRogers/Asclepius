@@ -280,7 +280,12 @@ jobs:
           cache: pip
       - name: Install
         run: |
-          sudo apt-get update -qq && sudo apt-get install -y -qq --no-install-recommends restic
+          # The version backup-install pins on janus (>= 0.17 for --insecure-no-password),
+          # checked against the release's published SHA-256.
+          v=0.17.3; sum=5097faeda6aa13167aae6e36efdba636637f8741fed89bbf015678334632d4d3
+          curl -fsSL -o restic.bz2 "https://github.com/restic/restic/releases/download/v$v/restic_${v}_linux_amd64.bz2"
+          echo "$sum  restic.bz2" | sha256sum -c -
+          bunzip2 restic.bz2 && sudo install -m 755 restic /usr/local/bin/restic && rm -f restic
           restic version
           python -m pip install --upgrade pip
           pip install -e ".[dev]" pymongo

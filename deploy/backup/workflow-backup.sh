@@ -4,18 +4,20 @@
 # (password via sshpass -e, sudo via stdin) and runs segqueue14-deploy.sh there,
 # which hands over to deploy/backup/segqueue-backup.sh.
 #
-#   backup-install       janus: restic, an SSH key, the repository password ->
+#   backup-install       janus: restic 0.17.3 (pinned), an SSH key ->
 #                        backup server: authorise that key (SFTP only, if it can) ->
 #                        janus: find the route that works, pin the host key,
-#                        open/create the repository, start the timers, first backup
+#                        open/create the (unencrypted) repository, start the timers,
+#                        first backup
 #   backup-status        janus: read-only report; fails if the newest snapshot is > 2 h old
 #   backup-restore-test  janus: restore into a scratch folder + scratch Mongo and check
 #   backup-off           janus: stop and disable the timers (keeps every snapshot)
 #
 # Environment (from secrets): HOST PORT USERNAME SSHPASS SFTP_PORT
-#   RESTIC_PASSWORD_SECRET (install only), LAN_ADDRESS (optional host:port),
+#   LAN_ADDRESS (optional host:port),
 #   SFTP_KNOWN_HOSTS (optional: the backup server's known_hosts line(s)).
-# Never prints a password; GitHub masks the secrets in anything else that is printed.
+# The repository has no password (the lead's decision on #283). Never prints the SSH
+# password; GitHub masks the secrets in anything else that is printed.
 set -euo pipefail
 
 STEP="${1:?step}"
@@ -50,13 +52,6 @@ EOF
         "sudo -S -p '' bash -c 'echo $b64 | base64 -d | bash'"
 }
 
-# Write stdin to a file in the deploy user's home on janus (mode 600, no sudo, nothing
-# in argv): how the repository password reaches janus.
-put_on_janus() {   # put_on_janus <file name in home>
-    sshpass -e ssh "${SSH_OPTS[@]}" -o UserKnownHostsFile="$KH" -p "${PORT:-22}" \
-        "${USERNAME}@${HOST}" "umask 077 && cat > ~/$1"
-}
-
 # Run a script on the backup server as SSH_USERNAME (no sudo).
 on_backup() {   # stdin: the script
     local b64
@@ -67,10 +62,8 @@ on_backup() {   # stdin: the script
 
 install() {
     [ -n "${SFTP_PORT:-}" ] || die "secret SSH_PORT_SFTP_SERVER is not set: the backup server's SSH port"
-    [ -n "${RESTIC_PASSWORD_SECRET:-}" ] || die "secret BACKUP_RESTIC_PASSWORD is not set. Create it (a long random password, also kept in your password manager): without it the backups could not be read once janus is gone. Nothing was installed."
 
-    say "1/4 janus: restic, the backup SSH key, the repository password"
-    printf '%s' "$RESTIC_PASSWORD_SECRET" | put_on_janus .segqueue-backup-restic-password.new
+    say "1/4 janus: restic, the backup SSH key"
     on_janus backup-prepare | tee prepare.txt
     local pubkey
     pubkey=$(sed -n 's/^PUBKEY //p' prepare.txt | tail -1)

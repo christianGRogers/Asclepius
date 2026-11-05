@@ -11,16 +11,19 @@
 #   segqueue-backup.sh restore-test   restores the newest snapshot into a scratch folder and a
 #                                     scratch Mongo (port 27199), checks every submission's file
 #                                     and checksum, deletes the scratch copy. Live data untouched.
-#   segqueue-backup.sh install-prepare   restic, the SSH key, the password from the workflow
+#   segqueue-backup.sh install-prepare   restic (>= 0.17), the SSH key
 #   segqueue-backup.sh install-finish --user U --route HOST:PORT [--route ...] --hostkeys-b64 B64
-#                                     pick the route that works, pin the host key, init/open
+#                                     pick the route that works, pin the host key, open/create
 #                                     the repository, install and start the timers, first backup
-#   segqueue-backup.sh off            stop and disable the timers; keeps the repository, key,
-#                                     password and every snapshot
+#   segqueue-backup.sh off            stop and disable the timers; keeps the repository, key
+#                                     and every snapshot
 #
 # Never touches Girder or Mongo beyond reading them: no restart, no lock, no write.
-# Never prints the repository password. Settings: /etc/segqueue-backup/backup.env (written
-# by install-finish), then backup.local.env for overrides the install leaves alone.
+# The repository is NOT encrypted (the lead's decision on #283: the data is not
+# sensitive and is to be published), so there is no password: restic runs with
+# --insecure-no-password (restic >= 0.17). Access is the backup server's SFTP login.
+# Settings: /etc/segqueue-backup/backup.env (written by install-finish), then
+# backup.local.env for overrides the install leaves alone.
 set -uo pipefail
 
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -48,8 +51,10 @@ BACKUP_ENV="${BACKUP_ENV:-$CONF_DIR/backup.env}"
 : "${BACKUP_SCRATCH_MONGO:=}"             # or an existing scratch server (tests)
 : "${BACKUP_SFTP_COMMAND:=}"
 : "${RESTIC_BIN:=restic}"
-: "${RESTIC_PASSWORD_FILE:=$CONF_DIR/restic-password}"
-export GIRDER_MONGO_URI RESTIC_PASSWORD_FILE
+export GIRDER_MONGO_URI
+# No password (see the header). One left in the environment would make restic refuse
+# --insecure-no-password, or try to decrypt with it.
+unset RESTIC_PASSWORD RESTIC_PASSWORD_FILE RESTIC_PASSWORD_COMMAND
 [ -n "${RESTIC_REPOSITORY:-}" ] && export RESTIC_REPOSITORY
 [ -n "${RESTIC_CACHE_DIR:-}" ] && export RESTIC_CACHE_DIR && mkdir -p "$RESTIC_CACHE_DIR" 2>/dev/null
 
@@ -69,14 +74,14 @@ die() { printf '[backup] ERROR: %s\n' "$*" >&2; exit 1; }
 py() { "$BACKUP_PYTHON" "$BACKUP_LIB/segqueue_backup.py" "$@"; }
 
 restic_() {
-    local args=(--limit-upload "$BACKUP_LIMIT_UPLOAD_KIB" --limit-download "$BACKUP_LIMIT_DOWNLOAD_KIB")
+    local args=(--insecure-no-password
+                --limit-upload "$BACKUP_LIMIT_UPLOAD_KIB" --limit-download "$BACKUP_LIMIT_DOWNLOAD_KIB")
     [ -n "$BACKUP_SFTP_COMMAND" ] && args+=(-o "sftp.command=$BACKUP_SFTP_COMMAND")
     "$RESTIC_BIN" "${args[@]}" "$@"
 }
 
 need_repo() {
     [ -n "${RESTIC_REPOSITORY:-}" ] || die "no RESTIC_REPOSITORY: not installed? (run the backup-install step)"
-    [ -r "$RESTIC_PASSWORD_FILE" ] || die "no readable password file $RESTIC_PASSWORD_FILE"
 }
 
 # One job at a time. `run` skips if another holds the lock; the others wait a while.
@@ -238,14 +243,20 @@ sys.exit(1)" "$scratch_uri" || die "the scratch mongod did not start (see $scrat
 
 need_root() { [ "$(id -u)" = 0 ] || die "run as root"; }
 
-restic_ok() {   # a restic new enough for --files-from-verbatim and the exit codes used here
+restic_ok() {   # 0.17 or newer: --insecure-no-password, and the exit codes used here
     local v
     v=$("$RESTIC_BIN" version 2>/dev/null | awk '{print $2}')
-    [ -n "$v" ] && [ "$(printf '%s\n0.14.0\n' "$v" | sort -V | head -1)" = 0.14.0 ]
+    [ -n "$v" ] && [ "$(printf '%s\n0.17.0\n' "$v" | sort -V | head -1)" = 0.17.0 ]
 }
 
+# The pinned release, always at /usr/local/bin/restic (the distro's restic is not used:
+# older ones lack --insecure-no-password, and the version should not drift).
+PINNED_RESTIC=/usr/local/bin/restic
 install_restic() {
-    if restic_ok; then say "restic: $("$RESTIC_BIN" version)"; return 0; fi
+    RESTIC_BIN=$PINNED_RESTIC
+    if "$RESTIC_BIN" version 2>/dev/null | grep -q "^restic $RESTIC_PIN_VERSION "; then
+        say "restic: $("$RESTIC_BIN" version)"; return 0
+    fi
     local arch
     case "$(uname -m)" in x86_64) arch=amd64 ;; aarch64) arch=arm64 ;; *) die "no pinned restic for $(uname -m)" ;; esac
     local url="https://github.com/restic/restic/releases/download/v${RESTIC_PIN_VERSION}/restic_${RESTIC_PIN_VERSION}_linux_${arch}.bz2"
@@ -255,17 +266,14 @@ install_restic() {
     curl -fsSL -o "$tmp/restic.bz2" "$url" || die "could not download $url"
     echo "${RESTIC_PIN_SHA256[$arch]}  $tmp/restic.bz2" | sha256sum -c --quiet - \
         || die "the restic download does not match its pinned checksum; not installed"
-    bunzip2 "$tmp/restic.bz2" && install -m 755 "$tmp/restic" /usr/local/bin/restic
+    bunzip2 "$tmp/restic.bz2" && install -m 755 "$tmp/restic" "$RESTIC_BIN"
     rm -rf "$tmp"
-    RESTIC_BIN=/usr/local/bin/restic
     restic_ok || die "restic still not usable"
     say "restic: $("$RESTIC_BIN" version)"
 }
 
 cmd_install_prepare() {
     need_root
-    local user_home="${USER_HOME:-}"
-    [ -n "$user_home" ] || die "USER_HOME is not set (run through segqueue14-deploy.sh)"
     install_restic
     install -d -m 700 "$CONF_DIR" "$BACKUP_STATE"
     if [ ! -f "$CONF_DIR/id_ed25519" ]; then
@@ -275,15 +283,6 @@ cmd_install_prepare() {
     else
         say "the backup SSH key exists: $CONF_DIR/id_ed25519"
     fi
-    local transit="$user_home/.segqueue-backup-restic-password.new"
-    if [ -s "$transit" ]; then
-        install -m 600 -o root -g root "$transit" "$CONF_DIR/restic-password.new"
-        rm -f "$transit"
-        say "received the repository password (checked against the repository in the next step)"
-    elif [ ! -s "$CONF_DIR/restic-password" ]; then
-        die "no repository password: the BACKUP_RESTIC_PASSWORD secret did not arrive"
-    fi
-    rm -f "$transit"
     printf 'PUBKEY %s\n' "$(cat "$CONF_DIR/id_ed25519.pub")"
 }
 
@@ -333,14 +332,16 @@ try_route() {   # try_route host port user expected_known_hosts_file
     return 1
 }
 
-# Open the repository with a password file: 0 opens, 10 no repository, 12 wrong password.
-probe_repo() {   # probe_repo password_file
+# Open the repository: 0 opens, 10 no repository there yet, 1 anything else.
+probe_repo() {
     local out rc
-    out=$(RESTIC_PASSWORD_FILE="$1" restic_ --no-lock cat config 2>&1 >/dev/null)
+    out=$(restic_ --no-lock cat config 2>&1 >/dev/null)
     rc=$?
     [ "$rc" = 0 ] && return 0
     if [ "$rc" = 10 ] || grep -qiE 'does not exist|Is there a repository' <<< "$out"; then return 10; fi
-    if [ "$rc" = 12 ] || grep -qiE 'wrong password|no key found' <<< "$out"; then return 12; fi
+    if [ "$rc" = 12 ] || grep -qiE 'wrong password|no key found' <<< "$out"; then
+        say "the repository there is encrypted with a password; this job only uses unencrypted ones"
+    fi
     say "restic: $(tail -n 3 <<< "$out" | tr '\n' ' ')"
     return 1
 }
@@ -359,8 +360,8 @@ cmd_install_finish() {
     done
     [ -n "$user" ] && [ -n "$hostkeys_b64" ] && [ ${#routes[@]} -gt 0 ] \
         || die "usage: install-finish --user U --route HOST:PORT [...] --hostkeys-b64 B64"
-    restic_ok || RESTIC_BIN=/usr/local/bin/restic
-    restic_ok || die "no usable restic; run install-prepare"
+    RESTIC_BIN=$PINNED_RESTIC
+    restic_ok || die "no restic $RESTIC_PIN_VERSION at $PINNED_RESTIC; run install-prepare"
     [ -f "$CONF_DIR/id_ed25519" ] || die "no backup SSH key; run install-prepare"
     local user_home="${USER_HOME:-}"
 
@@ -385,21 +386,13 @@ cmd_install_finish() {
     BACKUP_SFTP_COMMAND="ssh -F $CONF_DIR/ssh_config segqueue-backup-target -s sftp"
     export RESTIC_REPOSITORY
 
-    # The password: the new one from the secret if it came, else the one already here.
-    local pw="$CONF_DIR/restic-password"
-    [ -s "$CONF_DIR/restic-password.new" ] && pw="$CONF_DIR/restic-password.new"
-    [ -s "$pw" ] || die "no repository password on janus; set BACKUP_RESTIC_PASSWORD and run backup-install"
-    probe_repo "$pw"
+    probe_repo
     case $? in
-        0) say "the repository on the backup server opens with the password" ;;
-        10) say "no repository yet: creating one"
-            RESTIC_PASSWORD_FILE="$pw" restic_ init >/dev/null || die "restic init failed" ;;
-        12) rm -f "$CONF_DIR/restic-password.new"
-            die "BACKUP_RESTIC_PASSWORD does not open the existing repository; the password on janus is unchanged. Put the original password back in the secret (it cannot be changed this way)." ;;
-        *) die "could not open or create the repository" ;;
+        0) say "the repository on the backup server opens" ;;
+        10) say "no repository yet: creating one (unencrypted, by the lead's decision on #283)"
+            restic_ init >/dev/null || die "restic init failed" ;;
+        *) die "could not open or create the repository at $repo_path on the backup server" ;;
     esac
-    [ "$pw" = "$CONF_DIR/restic-password.new" ] && mv "$pw" "$CONF_DIR/restic-password"
-    chmod 600 "$CONF_DIR/restic-password"
 
     local venv_py="$user_home/Asclepius/.venv/bin/python" mongod_bin=""
     [ -x "$venv_py" ] || die "no live venv Python at $venv_py"
@@ -412,10 +405,9 @@ cmd_install_finish() {
     umask 077
     cat > "$CONF_DIR/backup.env" <<EOF
 # Written by segqueue-backup.sh install-finish; overrides go in backup.local.env.
-# No secrets here: the password is in restic-password, the key in id_ed25519.
+# No secrets here (the SSH key is in id_ed25519; the repository has no password).
 RESTIC_REPOSITORY='$RESTIC_REPOSITORY'
-RESTIC_PASSWORD_FILE='$CONF_DIR/restic-password'
-RESTIC_BIN='$(command -v "$RESTIC_BIN" || echo "$RESTIC_BIN")'
+RESTIC_BIN='$PINNED_RESTIC'
 BACKUP_SFTP_COMMAND='$BACKUP_SFTP_COMMAND'
 BACKUP_PYTHON='$venv_py'
 BACKUP_MONGOD='$mongod_bin'
@@ -441,7 +433,7 @@ cmd_off() {
         say "a backup run is in progress; it will finish on its own, and no further run starts"
     fi
     say "hourly backups are off. Kept: the repository and every snapshot on the backup server,"
-    say "  $CONF_DIR (key, pinned host key, password) and $LIB_DEST. On again: backup-install."
+    say "  $CONF_DIR (key, pinned host key) and $LIB_DEST. On again: backup-install."
 }
 
 case "${1:-}" in

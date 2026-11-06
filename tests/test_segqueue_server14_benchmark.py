@@ -46,6 +46,8 @@ pytestmark = pytest.mark.needs_mongo
 
 #: The project's draw (``test_segqueue14_benchmark``) and the next case in draw order.
 PICK, NEXT = 855, None
+#: The lead's choice of case (D43 amended, #293).
+LEAD_PICK = 1
 
 
 def _drawOrder():
@@ -78,7 +80,8 @@ def bench(world):
     seeds = Folder().createFolder(live, "seeds-totalseg", parentType="collection",
                                   creator=admin)
     files = {}
-    for n in (first, second):
+    # ImageCAS 1 (c0000) as well: the lead's choice (D43 amended, #293).
+    for n in dict.fromkeys((first, second, LEAD_PICK)):
         ctPath = _nifti(world.data / f"ImageCAS__{n:04d}.nii.gz",
                         np.full((24, 24, 24), 100, dtype=np.int16))
         ct = _upload(ctPath, cases, admin)
@@ -459,3 +462,297 @@ def test_no_export_takes_a_benchmark_read(bench, tmp_path):
     manifest = json.loads((out / "manifest.json").read_text())
     assert manifest["source"]["annotator_benchmark_excluded"] == 1
     assert not any(n.startswith("annotator_benchmark") for n in os.listdir(out))
+
+
+# ----------------------------------------------- seed --from-girder (#293)
+
+
+def _leadPublic(world):
+    """``user/christian/Public``: the lead's own Girder folder (made with the account)."""
+    from girder.models.folder import Folder
+    from girder.models.user import User
+
+    lead = User().createUser("christian", "password1", "C", "R", "christian@example.org")
+    public = Folder().findOne({"parentId": lead["_id"], "parentCollection": "user",
+                               "name": "Public"})
+    assert public is not None
+    return lead, public
+
+
+def _mask(world, name, shape=(24, 24, 24), value=3, spacing=(0.5, 0.5, 0.5)):
+    import numpy as np
+
+    mask = np.zeros(shape, np.uint8)
+    if value:
+        mask[4:9, 4:9, 4:20] = 1
+        mask[10:12, 10:12, 10:12] = value   # a second label: still vessel
+    return _nifti(world.data / name, mask, spacing)
+
+
+def _fromGirder(apply=True, **kwargs):
+    from girder_segqueue14 import benchmark
+
+    lines, out = _lines()
+    return benchmark.runSeed(apply=apply, fromGirder="user/christian/Public", out=out,
+                             **kwargs), lines
+
+
+def _snapshot(fileDoc):
+    """The lead's file as stored: its document and its bytes."""
+    from girder.models.file import File
+
+    doc = File().load(fileDoc["_id"], force=True)
+    data = b"".join(File().download(doc, headers=False)())
+    return {k: doc.get(k) for k in ("name", "itemId", "size", "sha512", "updated")}, data
+
+
+def test_from_girder_finds_the_0855_file_binarises_and_copies_it(bench):
+    import numpy as np
+    import SimpleITK as sitk
+    from girder.models.file import File
+    from girder.models.folder import Folder
+    from girder.models.item import Item
+
+    _create()
+    lead, public = _leadPublic(bench)
+    sub = Folder().createFolder(public, "totalseg", parentType="folder", creator=lead)
+    src = _upload(_mask(bench, "ImageCAS__0855_coronary.nii.gz"), sub, lead)
+    Item().setMetadata(Item().load(src["itemId"], force=True),
+                       {"totalsegmentator_version": "2.18.0"})
+    notes = bench.data / "seed_notes.txt"
+    notes.write_text("made with TotalSegmentator")
+    _upload(notes, public, lead)                        # not a volume: ignored
+    before = _snapshot(src)
+
+    dry, lines = _fromGirder(apply=False)
+    assert dry["seed"] == "would upload" and dry["voxels"] == 5 * 5 * 16 + 8
+    assert _benchCase()["seedFileId"] is None
+    assert any("totalseg/ImageCAS__0855_coronary.nii.gz" in line for line in lines)
+    assert any("24 x 24 x 24 voxels" in line for line in lines)
+
+    done, _ = _fromGirder()
+    assert done["seed"] == "uploaded"
+    case = _benchCase()
+    assert case["seedSource"] == (
+        "TotalSegmentator coronary_arteries (binary), version 2.18.0, supplied by the lead "
+        "from user/christian/Public/totalseg/ImageCAS__0855_coronary.nii.gz")
+    seed = Item().findOne({"folderId": bench.bench["seeds"]["_id"]})
+    assert seed["name"] == "ImageCAS__0855__totalseg-coronary.nii.gz"
+    assert seed["meta"]["seed_source"] == case["seedSource"]
+    stored = File().load(case["seedFileId"], force=True)
+    assert stored["_id"] != src["_id"] and stored["itemId"] == seed["_id"]
+    path = bench.data / "stored.nii.gz"
+    path.write_bytes(b"".join(File().download(stored, headers=False)()))
+    arr = sitk.GetArrayFromImage(sitk.ReadImage(str(path)))
+    assert arr.dtype == np.uint8 and set(np.unique(arr)) == {0, 1}
+
+    # The lead's file is untouched, where it was; a re-run changes nothing.
+    assert _snapshot(src) == before
+    seedsBefore = list(Item().find({"folderId": bench.bench["seeds"]["_id"]}))
+    again, _ = _fromGirder()
+    assert again == {"seed": "present"}
+    assert list(Item().find({"folderId": bench.bench["seeds"]["_id"]})) == seedsBefore
+    assert _benchCase()["seedFileId"] == case["seedFileId"]
+    assert _snapshot(src) == before
+
+
+def test_from_girder_takes_the_only_volume_and_says_when_the_version_is_unknown(bench):
+    _create()
+    lead, public = _leadPublic(bench)
+    _upload(_mask(bench, "coronary.nii.gz"), public, lead)
+    dry, _ = _fromGirder(apply=False)
+    assert dry["seedSource"].startswith(
+        "TotalSegmentator coronary_arteries (binary), version unknown, supplied by the lead "
+        "from user/christian/Public/coronary.nii.gz")
+
+
+def test_from_girder_refuses_ambiguity_and_lists_the_candidates(bench):
+    from girder.models.item import Item
+
+    _create()
+    lead, public = _leadPublic(bench)
+    _upload(_mask(bench, "a_0855.nii.gz"), public, lead)
+    _upload(_mask(bench, "b_0855.nii.gz"), public, lead)
+    with pytest.raises(SystemExit, match=r"2 label volume.*a_0855.nii.gz \(\d+ bytes\).*"
+                                         r"b_0855.nii.gz \(\d+ bytes\)"):
+        _fromGirder(apply=False)
+    assert _benchCase()["seedFileId"] is None
+    # Neither name holds 0855 and there are two: refused too.
+    for item in list(Item().find({"folderId": public["_id"]})):
+        Item().remove(item)
+    _upload(_mask(bench, "x.nii.gz"), public, lead)
+    _upload(_mask(bench, "y.nii.gz"), public, lead)
+    with pytest.raises(SystemExit, match="none has the case id"):
+        _fromGirder(apply=False)
+    # --from-girder-file picks one explicitly.
+    dry, _ = _fromGirder(apply=False, fromGirderFile="y.nii.gz")
+    assert dry["seed"] == "would upload" and "Public/y.nii.gz" in dry["seedSource"]
+    with pytest.raises(SystemExit, match="0 label volume"):
+        _fromGirder(apply=False, fromGirderFile="nope.nii.gz")
+
+
+def test_from_girder_refuses_a_wrong_grid_and_an_empty_mask(bench):
+    from girder.models.item import Item
+
+    _create()
+    lead, public = _leadPublic(bench)
+    item = _upload(_mask(bench, "shape_0855.nii.gz", shape=(20, 24, 24)), public, lead)
+    with pytest.raises(SystemExit, match="grid"):
+        _fromGirder()
+    Item().remove(Item().load(item["itemId"], force=True))
+    item = _upload(_mask(bench, "spacing_0855.nii.gz", spacing=(0.6, 0.5, 0.5)), public, lead)
+    with pytest.raises(SystemExit, match="grid"):
+        _fromGirder()
+    Item().remove(Item().load(item["itemId"], force=True))
+    _upload(_mask(bench, "empty_0855.nii.gz", value=0), public, lead)
+    with pytest.raises(SystemExit, match="empty"):
+        _fromGirder()
+    assert _benchCase()["seedFileId"] is None
+    assert Item().findOne({"folderId": bench.bench["seeds"]["_id"]}) is None
+
+
+def test_from_girder_refuses_a_missing_folder_and_mixed_sources(bench):
+    from girder_segqueue14 import benchmark
+
+    _create()
+    with pytest.raises(SystemExit, match="no Girder resource"):
+        _fromGirder(apply=False)
+    with pytest.raises(SystemExit, match="one of"):
+        benchmark.runSeed(fromGirder="user/christian/Public", seedFile="x", out=print)
+    with pytest.raises(SystemExit, match="needs --from-girder"):
+        benchmark.runSeed(fromGirderFile="x.nii.gz", out=print)
+
+
+# -------------------------------- create --imagecas-id / --replace (#293)
+
+
+def _createAs(n, replace=False, apply=True):
+    from girder_segqueue14 import benchmark
+
+    lines, out = _lines()
+    return benchmark.runCreate(apply=apply, root=str(REPO), imagecasId=n, replace=replace,
+                               out=out), lines
+
+
+def _benchCases():
+    from girder_segqueue14.models import Case14
+
+    return list(Case14().find({"benchmark": True}))
+
+
+def test_create_takes_the_leads_choice_and_records_it(bench):
+    dry, _ = _createAs(LEAD_PICK, apply=False)
+    assert dry["name"] == "annotator_benchmark_0001" and _benchCases() == []
+    done, _ = _createAs(LEAD_PICK)
+    assert done["created"]
+    case = _benchCase()
+    pick = case["benchmarkPick"]
+    assert case["name"] == "annotator_benchmark_0001"
+    assert pick["method"] == "lead's choice" and pick["icxCase"] == "c0000"
+    assert pick["why"].startswith("the lead's choice (D43 amended, #293), not the draw")
+    assert case["fileId"] == bench.bench["files"][LEAD_PICK]["ct"]["_id"]
+    assert case["referenceFileId"] == bench.bench["files"][LEAD_PICK]["ref"]["_id"]
+    again, _ = _createAs(LEAD_PICK)
+    assert again == {"created": False, "name": "annotator_benchmark_0001"}
+    assert len(_benchCases()) == 1
+
+
+def test_the_leads_choice_must_pass_every_check(bench):
+    from janusm import guard
+    from segqueue14 import benchmark as b
+
+    g = guard.load_guard(REPO)
+    splits = json.loads((REPO / "trillium-results/icx14/results/splits.json").read_text())
+    sealed = json.loads((REPO / "trillium/sealed_test.json").read_text())
+    e = b.eligibility(splits, sealed, lambda c: g.reason(c, source="ImageCAS-X"))
+    held = next(c for c, why in e.excluded.items() if why.startswith("JA12 guard"))
+    with pytest.raises(SystemExit, match="not eligible: JA12 guard"):
+        _createAs(b.imagecas_id(held))
+    test = next(c for c in splits["test"] if c not in e.excluded and c not in e.eligible)
+    with pytest.raises(SystemExit, match="not an ImageCAS-X train/val case"):
+        _createAs(b.imagecas_id(test))
+    # Eligible, but its CT is not in Girder.
+    missing = next(c for c in e.eligible if b.imagecas_id(c) not in bench.bench["files"])
+    with pytest.raises(SystemExit, match="cannot be served"):
+        _createAs(b.imagecas_id(missing))
+    assert _benchCases() == []
+
+
+def test_replace_swaps_an_untouched_case_and_keeps_its_files(bench):
+    from girder.models.file import File
+
+    _create()                                    # the draw: annotator_benchmark_0855
+    old = _benchCase()
+    with pytest.raises(SystemExit, match="--replace swaps it"):
+        _createAs(LEAD_PICK)
+    with pytest.raises(SystemExit, match="--replace needs --imagecas-id"):
+        from girder_segqueue14 import benchmark
+
+        benchmark.runCreate(apply=True, root=str(REPO), replace=True, out=lambda _: None)
+
+    dry, lines = _createAs(LEAD_PICK, replace=True, apply=False)
+    assert dry["replaces"] == "annotator_benchmark_0855" and not dry["created"]
+    assert any("replaces annotator_benchmark_0855" in line for line in lines)
+    assert [c["_id"] for c in _benchCases()] == [old["_id"]]
+
+    done, _ = _createAs(LEAD_PICK, replace=True)
+    assert done["created"] and done["replaces"] == "annotator_benchmark_0855"
+    cases = _benchCases()
+    assert [c["name"] for c in cases] == ["annotator_benchmark_0001"]
+    assert cases[0]["benchmarkReplaced"][0]["name"] == "annotator_benchmark_0855"
+    # The old case's CT and reference are still there.
+    for kind in ("ct", "ref"):
+        assert File().load(bench.bench["files"][PICK][kind]["_id"], force=True) is not None
+    # Idempotent: a re-run shows the case and changes nothing.
+    again, _ = _createAs(LEAD_PICK, replace=True)
+    assert not again["created"] and [c["_id"] for c in _benchCases()] == [cases[0]["_id"]]
+
+
+def test_replace_refuses_once_anyone_was_given_the_case(bench):
+    _seeded(bench)                               # annotator_benchmark_0855, with a seed
+    _assign("admin,bobby,cathy,revy")            # anna is invited
+    with pytest.raises(SystemExit, match="pending invitation"):
+        _createAs(LEAD_PICK, replace=True, apply=False)
+    assert [c["name"] for c in _benchCases()] == ["annotator_benchmark_0855"]
+
+
+def test_seed_from_girder_finds_case_1_by_its_naming(bench):
+    _createAs(LEAD_PICK)
+    lead, public = _leadPublic(bench)
+    _upload(_mask(bench, "imagecas_0001_totalseg.nii.gz"), public, lead)
+    _upload(_mask(bench, "ImageCAS__0855_coronary.nii.gz"), public, lead)
+    _upload(_mask(bench, "totalseg_v2.1_notes.nii.gz"), public, lead)
+    done, lines = _fromGirder()
+    assert done["seed"] == "uploaded"
+    case = _benchCase()
+    assert case["name"] == "annotator_benchmark_0001"
+    assert case["seedSource"].endswith("from user/christian/Public/imagecas_0001_totalseg.nii.gz")
+
+
+def test_seed_from_girder_never_overwrites_a_different_seed_of_that_name(bench):
+    import numpy as np
+    from girder.models.item import Item
+
+    seeds = bench.bench["seeds"]
+    other = np.zeros((24, 24, 24), np.uint8)
+    other[1:3, 1:3, 1:3] = 1
+    clash = _upload(_nifti(bench.data / "clash.nii.gz", other), seeds, bench.admin,
+                    name="ImageCAS__0001__totalseg-coronary.nii.gz")
+    _createAs(LEAD_PICK)
+    assert _benchCase()["seedFileId"] is None     # the lead's case is not auto-seeded
+    lead, public = _leadPublic(bench)
+    _upload(_mask(bench, "ImageCAS__0001.nii.gz"), public, lead)
+    with pytest.raises(SystemExit, match="different mask"):
+        _fromGirder()
+    assert _benchCase()["seedFileId"] is None
+    assert Item().find({"folderId": seeds["_id"]}).count() == 1
+
+    # The same mask under that name is attached, not uploaded twice.
+    Item().remove(Item().load(clash["itemId"], force=True))
+    same = _upload(_mask(bench, "same.nii.gz"), seeds, bench.admin,
+                   name="ImageCAS__0001__totalseg-coronary.nii.gz")
+    done, _ = _fromGirder()
+    assert done["seed"] == "attached"
+    assert _benchCase()["seedFileId"] == same["_id"]
+    assert "supplied by the lead" in _benchCase()["seedSource"]
+    assert Item().find({"folderId": seeds["_id"]}).count() == 1

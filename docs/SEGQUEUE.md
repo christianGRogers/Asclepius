@@ -138,6 +138,19 @@ Reviewing 5,000 segmentations by hand is not a plan. Four mechanisms instead:
 Rejections go back to the **same** annotator with the reviewer's comment, which
 is the only version of this loop that teaches anyone anything.
 
+**The annotator benchmark (SegQueue14, D43).** One ImageCAS-X case, drawn once
+and then fixed, is served to every annotator (except the logins excluded at run
+time) as their next case, under the name `annotator_benchmark_<ImageCAS id>`. It
+starts from a binary TotalSegmentator seed, like a pool case, so the annotator
+sees nothing unusual. Each submission is scored on its own against the ImageCAS-X
+segmentation, collapsed to the four classes, and always goes to the reviewer
+tab with that Dice. It is never paired with another read, never counts as a pool
+read or against a quota, and is never exported or trained on. A retest serves
+the same case again and keeps every attempt's score, so proficiency can be
+measured over time. The case is drawn only from ImageCAS-X train/val cases that
+nothing holds out (`src/segqueue14/benchmark.py`); the tool is
+`segqueue14-benchmark` (`server/girder_segqueue14/DEPLOY.md`, "D43 on janus").
+
 ### Running it
 
 ```sh

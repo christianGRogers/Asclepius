@@ -21,6 +21,13 @@
 #   backup-status | backup-restore-test    read-only on live data
 #   backup-off                             timers off; every snapshot is kept
 #
+# D43 (issue #286), the annotator benchmark; see server/girder_segqueue14/DEPLOY.md.
+# Dry runs without --apply. `args` carries the logins, e.g. --exclude=<login>,<login>:
+#   benchmark-status                       who has it, each attempt's Dice
+#   benchmark-create [--apply]             draw once (never redrawn) and create the case
+#   benchmark-seed [--apply]               TotalSegmentator 2.18.0 on CPU, at nice 19
+#   benchmark-assign [--apply]             args: --exclude=... [--login=...] [--retest]
+#
 # The script never touches the live checkout, the live plugin or live data; see its
 # header. Secrets: SSH_HOST, SSH_PORT, SSH_USERNAME, SSH_PASSWORD (as server-ssh.yml),
 # SSH_KNOWN_HOSTS optional. The backup steps also need SSH_PORT_SFTP_SERVER (the backup
@@ -40,7 +47,15 @@ on:
         options: [diagnose, status, install, populate, "populate --apply", worker, off,
                   backup, retire-live, restore-live, retire-groups, "retire-groups --apply",
                   consolidate, "consolidate --apply",
-                  backup-install, backup-status, backup-restore-test, backup-off]
+                  backup-install, backup-status, backup-restore-test, backup-off,
+                  benchmark-status, benchmark-create, "benchmark-create --apply",
+                  benchmark-seed, "benchmark-seed --apply",
+                  benchmark-assign, "benchmark-assign --apply"]
+      args:
+        description: "benchmark-assign only: --exclude=<login,...> [--login=<login,...>] [--retest]"
+        type: string
+        required: false
+        default: ""
 
 concurrency:
   group: server-ssh
@@ -62,6 +77,7 @@ jobs:
         id: cmd
         env:
           INPUT: ${{ inputs.command }}
+          ARGS: ${{ inputs.args }}
         run: |
           set -euo pipefail
           cmd="$INPUT"
@@ -70,8 +86,30 @@ jobs:
             backup|retire-live|restore-live|retire-groups|"retire-groups --apply") ;;
             consolidate|"consolidate --apply") ;;
             backup-install|backup-status|backup-restore-test|backup-off) ;;
+            benchmark-status|benchmark-create|"benchmark-create --apply") ;;
+            benchmark-seed|"benchmark-seed --apply") ;;
+            benchmark-assign|"benchmark-assign --apply") ;;
             *) echo "::error::unknown step '$cmd'"; exit 1 ;;
           esac
+          # D43: only benchmark-assign takes arguments, and only these options, as
+          # plain logins: the value reaches a shell on janus, so nothing else passes.
+          if [ -n "$ARGS" ]; then
+            case "$cmd" in benchmark-assign*) ;; *) echo "::error::only benchmark-assign takes args"; exit 1 ;; esac
+            if ! printf '%s' "$ARGS" | grep -Eq '^[A-Za-z0-9 ,._=-]+$'; then
+              echo "::error::args may hold only logins (letters, digits, . _ -), commas and the options"; exit 1
+            fi
+            for word in $ARGS; do
+              case "$word" in
+                --exclude=*|--login=*|--retest) ;;
+                *) echo "::error::args: '$word' is not --exclude=..., --login=... or --retest"; exit 1 ;;
+              esac
+            done
+            # The step is ours (a fixed list above), the options go first: --apply stays last.
+            set -- $cmd
+            cmd="$1 $ARGS${2:+ $2}"
+          elif [[ "$cmd" == benchmark-assign* ]]; then
+            echo "::error::benchmark-assign needs args: --exclude=<login,...> (the logins that never get it)"; exit 1
+          fi
           echo "cmd=$cmd" >> "$GITHUB_OUTPUT"
           case "$cmd" in backup-*) echo "backup=true" >> "$GITHUB_OUTPUT" ;; esac
           echo "### segqueue14-deploy.sh \`$cmd\`" >> "$GITHUB_STEP_SUMMARY"

@@ -17,6 +17,11 @@ What is different:
   seeded from TotalSegmentator instead); ``referenceFileId`` is
   the ImageCAS-X segmentation every read is scored against, never served to an
   annotator.
+* **The annotator benchmark** (D43, ``segqueue14.benchmark``): one case with
+  ``benchmark: True`` is never in the pool. ``SERVABLE_QUERY`` leaves it out, so
+  neither ``/next``'s pool scan nor a reviewer's hand-assignment can hand it out,
+  and its ``replicasWanted`` is never consulted; it is served only to the users
+  in its ``benchmarkPending`` list (``claimBenchmark``), once per invitation.
 """
 
 import datetime
@@ -60,6 +65,7 @@ class Case14(AccessControlledModel):
             # sort in `candidates`.
             ([('retired', 1), ('priority', -1), ('serveOrder', 1), ('created', 1)], {}),
             'assignedUserIds',
+            'benchmark',
         ])
         self.exposeFields(level=AccessType.READ, fields={
             '_id', 'name', 'target', 'priority', 'serveOrder', 'replicasWanted',
@@ -71,7 +77,7 @@ class Case14(AccessControlledModel):
         self.exposeFields(level=AccessType.SITE_ADMIN, fields={
             'tier', 'split', 'blindDuplicate', 'referenceFileId', 'prelabelFileId',
             'prelabelHistory', 'sourceCaseId', 'fileId', 'regionFileId',
-            'seedFileId', 'seedSource',
+            'seedFileId', 'seedSource', 'benchmark', 'benchmarkPick', 'benchmarkPending',
         })
 
     def validate(self, doc):
@@ -104,6 +110,9 @@ class Case14(AccessControlledModel):
         doc.setdefault('tier', '')
         doc.setdefault('split', None)
         doc.setdefault('sourceCaseId', None)
+        doc['benchmark'] = bool(doc.get('benchmark', False))
+        if doc['benchmark']:
+            doc.setdefault('benchmarkPending', [])
         return doc
 
     # ------------------------------------------------------------- creation
@@ -112,9 +121,9 @@ class Case14(AccessControlledModel):
                    priority=0, serveOrder=0, replicasWanted=1, tier='', dataset='',
                    split=None, blindDuplicate=False, referenceFileId=None,
                    regionFileId=None, sourceCaseId=None, geometryFixed=False,
-                   target='coronary-14', seedFileId=None, seedSource=''):
+                   target='coronary-14', seedFileId=None, seedSource='', extra=None):
         now = _now()
-        return self.save({
+        doc = {
             'name': name,
             'fileId': fileId,
             'sourceCaseId': sourceCaseId,
@@ -143,12 +152,18 @@ class Case14(AccessControlledModel):
             'creatorId': creator['_id'] if creator else None,
             'created': now,
             'updated': now,
-        })
+        }
+        # Written with the case, not after it: a benchmark case must never exist,
+        # even for a moment, without the flag that keeps it out of the pool.
+        doc.update(extra or {})
+        return self.save(doc)
 
     # ---------------------------------------------------------- the claim
 
     SERVABLE_QUERY = {
         'retired': False,
+        # The annotator benchmark (D43) is never a pool case.
+        'benchmark': {'$ne': True},
         '$expr': {
             '$lt': [
                 {'$add': ['$activeCount', '$approvedCount']},
@@ -173,6 +188,45 @@ class Case14(AccessControlledModel):
             {
                 '$inc': {'activeCount': 1},
                 '$push': {'assignedUserIds': userId},
+                '$set': {'updated': _now()},
+            },
+            return_document=ReturnDocument.AFTER,
+        )
+
+    # ------------------------------------------------- the benchmark (D43)
+
+    BENCHMARK_QUERY = {'benchmark': True}
+
+    def benchmarkCase(self):
+        """The annotator benchmark case, or None. Raises if there is more than one."""
+        found = list(self.find(self.BENCHMARK_QUERY, limit=2))
+        if len(found) > 1:
+            raise ValidationException('More than one annotator benchmark case exists.')
+        return found[0] if found else None
+
+    def invite(self, caseId, userId):
+        """Make the benchmark the next case for ``userId``. True if newly invited."""
+        result = self.collection.update_one(
+            {'_id': caseId, 'benchmark': True, 'benchmarkPending': {'$ne': userId}},
+            {'$push': {'benchmarkPending': userId}, '$set': {'updated': _now()}})
+        return bool(result.modified_count)
+
+    def claimBenchmark(self, userId):
+        """Atomically take this user's benchmark invitation, or ``None``.
+
+        One invitation, one lease: the user leaves ``benchmarkPending`` in the same
+        update that takes the slot, so two ``/next`` calls cannot both win it. A
+        case with no seed is never served (it would open with nothing to correct).
+        Replica counters move as for any case, but ``replicasWanted`` is never
+        consulted: every invited annotator gets it.
+        """
+        return self.collection.find_one_and_update(
+            {'benchmark': True, 'retired': False, 'seedFileId': {'$ne': None},
+             'benchmarkPending': userId},
+            {
+                '$pull': {'benchmarkPending': userId},
+                '$inc': {'activeCount': 1},
+                '$addToSet': {'assignedUserIds': userId},
                 '$set': {'updated': _now()},
             },
             return_document=ReturnDocument.AFTER,

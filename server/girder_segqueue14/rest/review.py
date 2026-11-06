@@ -24,6 +24,7 @@ from girder.models.user import User
 from segqueue import states as st
 from segqueue.checksum import matches
 from segqueue14 import labels, protocol
+from segqueue14 import plan as sqplan
 from segqueue14 import scoring as sq
 
 from ..constants import ANNOTATOR_GROUP, QUOTA_FIELD
@@ -368,6 +369,7 @@ class ReviewResource14(Resource):
             'dataset': case.get('dataset', ''),
             'blindDuplicate': bool(case.get('blindDuplicate', False)),
             'hasReference': bool(case.get('referenceFileId')),
+            'benchmark': bool(case.get('benchmark')),
             'prelabelVersion': case.get('prelabelVersion') or '',
             'assignments': [self._assignmentRow(a) for a in assignments],
         }
@@ -764,6 +766,10 @@ class ReviewResource14(Resource):
             'kind': kind,
             'prelabelVersion': submission.get('prelabelVersion') or '',
             'tier': case.get('tier', ''),
+            # The annotator benchmark (D43): scored against ImageCAS-X on its own,
+            # never paired, never trained on. Which attempt of this annotator's.
+            'benchmark': bool(case.get('benchmark')),
+            'benchmarkAttempt': assignment.get('benchmarkAttempt'),
             'autoScore': _headline(submission),
             'scores': submission.get('autoScore'),
             'scored': submission.get('scored', False),
@@ -780,6 +786,10 @@ class ReviewResource14(Resource):
         """
         reasons = []
         score = submission.get('autoScore') or {}
+        if score.get('benchmark') or submission.get('kind') == sqplan.KIND_BENCHMARK:
+            # Always here, whatever the scores (D43): the reviewer sees why.
+            reasons.append('annotator benchmark (D43): this annotator\'s own Dice '
+                           'against ImageCAS-X; never paired, never trained on')
         thresholds = getReference()
         reasons.extend(sq.reference_flags(score.get('reference'), thresholds))
         reasons.extend(sq.duplicate_flags(score.get('duplicate'), thresholds))

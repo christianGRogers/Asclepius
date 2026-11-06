@@ -29,6 +29,13 @@
 #   bash segqueue14-deploy.sh backup-restore-test    # scratch restore + checks
 #   bash segqueue14-deploy.sh backup-off             # timers off; snapshots kept
 #
+# D43 (issue #286), the annotator benchmark: one fixed ImageCAS-X case, served to every
+# annotator but the excluded logins. Dry runs without --apply; see segqueue14-benchmark:
+#   bash segqueue14-deploy.sh benchmark-status
+#   bash segqueue14-deploy.sh benchmark-create [--apply]   # draw (once) and create the case
+#   bash segqueue14-deploy.sh benchmark-seed [--apply]     # TotalSegmentator 2.18.0 on CPU
+#   bash segqueue14-deploy.sh benchmark-assign --exclude=<login,...> [--login=<login,...>] [--retest] [--apply]
+#
 # What it never does: check out a branch in ~/Asclepius, reinstall the old plugin
 # (server/; only restore-live does, from that checkout), or write to the old
 # SegQueue's data outside the D36 steps. `main` is cloned separately into
@@ -342,6 +349,63 @@ for coll in sorted(db['collection'].find({}), key=lambda x: x['name']):
 PYEOF
 }
 
+# ------------------------------------------------------------ D43 (issue #286)
+
+# TotalSegmentator lives in its own venv, never in Girder's: torch and nnU-Net are
+# large and pin their own numpy. The weights go to TS_HOME.
+TS_VENV="${TS_VENV:-$DATA/totalseg-venv}"
+TS_HOME="${TS_HOME:-$DATA/totalseg-home}"
+TS_VERSION=2.18.0        # the pool seeds' version (segqueue14.plan.SEED_SOURCE_TOTALSEG)
+
+benchmark_cli() {
+    local bin="$LIVE/.venv/bin/segqueue14-benchmark"
+    [ -x "$bin" ] || die "segqueue14-benchmark is not installed: run the install step first"
+    # The draw reads the pinned lists in the checkout of main (the JA12 guard's inputs).
+    as_user env SEGQUEUE14_REPO="$SRC" JANUSM_REPO="$SRC" TOTALSEG_HOME_DIR="$TS_HOME" \
+        "$bin" "$@"
+}
+
+benchmark_seed() {
+    local apply=""
+    [ "${1:-}" = "--apply" ] && apply="--apply"
+    local ts="$TS_VENV/bin/TotalSegmentator"
+    if [ ! -x "$ts" ]; then
+        if [ -z "$apply" ]; then
+            say "TotalSegmentator $TS_VERSION is not installed at $TS_VENV."
+            say "'benchmark-seed --apply' installs it (CPU-only torch, ~3 GB, once), then"
+            say "segments the benchmark CT at nice 19 and attaches the seed. Nothing changed."
+            benchmark_cli status --repo "$SRC"
+            return 0
+        fi
+        local free_mb
+        free_mb=$(df -Pm "$DATA" | awk 'NR==2 {print $4}')
+        [ "${free_mb:-0}" -ge 10000 ] || die "only ${free_mb} MB free under $DATA; need 10 GB"
+        say "installing TotalSegmentator $TS_VERSION (CPU) into $TS_VENV"
+        as_user "$PY" -m venv "$TS_VENV"
+        as_user "$TS_VENV/bin/python" -m pip install -q --upgrade pip
+        as_user "$TS_VENV/bin/python" -m pip install -q \
+            --extra-index-url https://download.pytorch.org/whl/cpu "TotalSegmentator==$TS_VERSION" \
+            || die "could not install TotalSegmentator; see DEPLOY.md (D43) for the seed made elsewhere"
+    fi
+    if [ -n "$apply" ]; then
+        local mem_mb
+        mem_mb=$(awk '/MemAvailable/ {print int($2 / 1024)}' /proc/meminfo)
+        [ "${mem_mb:-0}" -ge 8000 ] || die "only ${mem_mb} MB of memory available; TotalSegmentator needs ~8 GB"
+    fi
+    as_user mkdir -p "$TS_HOME"
+    benchmark_cli seed --repo "$SRC" --totalseg "$ts" $apply
+}
+
+benchmark() {
+    local step="$1"; shift
+    [ -f "$SRC/trillium/sealed_test.json" ] || fetch_branch
+    case "$step" in
+        status|create|assign) benchmark_cli "$step" --repo "$SRC" "$@" ;;
+        seed) benchmark_seed "$@" ;;
+        *) die "unknown step benchmark-$step" ;;
+    esac
+}
+
 # ------------------------------------------------------------ D36 (issue #124)
 
 recent_backup() {   # a D36 database dump from the last 24 h, or nothing
@@ -446,11 +510,14 @@ case "${1:-}" in
     restore-live) restore_live ;;
     retire-groups) shift; retire_groups "$@" ;;
     consolidate) shift; consolidate "$@" ;;
+    benchmark-status|benchmark-create|benchmark-seed|benchmark-assign)
+        step="${1#benchmark-}"; shift
+        benchmark "$step" "$@" ;;
     backup-prepare|backup-finish|backup-status|backup-restore-test|backup-off)
         step="${1#backup-}"; shift
         case "$step" in prepare|finish) step="install-$step" ;; esac
         # The hourly job's priority for the drill too: annotators come first.
         nice_=(); [ "$step" = restore-test ] && nice_=(nice -n 19 ionice -c3)
         USER_HOME="$USER_HOME" exec ${nice_[@]+"${nice_[@]}"} bash "$(dirname "$0")/backup/segqueue-backup.sh" "$step" "$@" ;;
-    *) sed -n '2,34p' "$0"; exit 1 ;;
+    *) sed -n '2,46p' "$0"; exit 1 ;;
 esac

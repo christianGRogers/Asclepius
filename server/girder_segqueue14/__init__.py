@@ -31,7 +31,7 @@ from girder.plugin import GirderPlugin
 
 logger = logging.getLogger(__name__)
 
-__version__ = '0.3.0'
+__version__ = '0.4.0'
 
 #: Set to any non-empty value to keep the plugin installed but not mounted --
 #: the fastest rollback there is: set it, restart Girder, and /segqueue14 is gone

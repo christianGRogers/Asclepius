@@ -12,6 +12,10 @@ scored against:
 * **a second read** -- the case wants two reads (the 200 unlabelled cases, a new
   dataset, or an ImageCAS-X blind duplicate): the same numbers between the two.
 
+The annotator benchmark (D43) is a reference-scored case with two differences:
+it is never paired with another annotator's read of it, and it always goes to a
+reviewer, scored or not. Each attempt keeps its own score.
+
 A read whose scores fall below the ``segqueue14.reference`` thresholds goes to a
 reviewer whatever the sampling roll said; one that passes and was not sampled is
 approved here, as the live worker does for gold and duplicates. The metric code
@@ -38,6 +42,7 @@ import time
 from girder.models.file import File
 from segqueue import states as st
 from segqueue14 import labelfile, labels
+from segqueue14 import plan as sqplan
 from segqueue14 import scoring as sq
 
 from .maintenance import SWEEP_SECONDS, sweep
@@ -233,7 +238,10 @@ def scoreOne(submission, thresholds=None):
     if readFile is None:
         return None
 
+    benchmark = bool(case.get('benchmark')) or submission.get('kind') == sqplan.KIND_BENCHMARK
     score = {'flags': [], 'against': []}
+    if benchmark:
+        score['benchmark'] = True
     readArr = None
     if case.get('referenceFileId'):
         referenceFile = File().load(case['referenceFileId'], force=True)
@@ -245,7 +253,9 @@ def scoreOne(submission, thresholds=None):
         score['against'].append('imagecas-x')
         score['flags'] += sq.reference_flags(score['reference'], thresholds)
 
-    partner = partnerSubmission(submission) if case.get('replicasWanted', 1) >= 2 else None
+    # A benchmark read is the annotator's alone: never paired (D43).
+    partner = (partnerSubmission(submission)
+               if case.get('replicasWanted', 1) >= 2 and not benchmark else None)
     if partner is not None:
         partnerFile = File().load(partner['fileId'], force=True)
         if partnerFile is not None:
@@ -274,13 +284,14 @@ def scoreOne(submission, thresholds=None):
                                   + ', '.join(missing))
     score['mean_dice'] = sq.headline_dice(score)
 
-    needsReview = bool(score['flags'])
+    # A benchmark read always goes to a reviewer, with its Dice (D43).
+    needsReview = bool(score['flags']) or benchmark
     Submission14().recordScore(submission['_id'], score, needsReview=needsReview)
     if needsReview:
         Assignment14().collection.update_one(
             {'_id': submission['assignmentId']}, {'$set': {'needsReview': True}})
-        logger.info('flagged submission %s: %s', submission['_id'],
-                    '; '.join(score['flags']))
+        logger.info('%s submission %s: %s', 'benchmark' if benchmark else 'flagged',
+                    submission['_id'], '; '.join(score['flags']) or 'for review')
     _autoApproveIfClear(submission, needsReview)
     return score
 
@@ -291,6 +302,8 @@ def _autoApproveIfClear(submission, needsReview):
     assignment = Assignment14().load(submission['assignmentId'], force=True)
     if assignment is None or assignment.get('needsReview'):
         return
+    if assignment.get('kind') == sqplan.KIND_BENCHMARK:
+        return  # never auto-approved (D43)
     if not st.can(assignment['state'], st.APPROVE):
         return
     try:

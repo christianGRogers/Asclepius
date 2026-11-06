@@ -224,6 +224,9 @@ DATASET_IMAGECAS = "imagecas"
 KIND_REFERENCE = "reference"   # the case has an ImageCAS-X reference
 KIND_PAIRED = "paired"         # a two-read case without a reference
 KIND_NORMAL = "normal"
+#: The annotator benchmark (D43): scored against ImageCAS-X on its own, never
+#: paired, always reviewed, never trained on (``segqueue14.benchmark``).
+KIND_BENCHMARK = "benchmark"
 
 
 def tier_for_split(split: Optional[str]) -> str:

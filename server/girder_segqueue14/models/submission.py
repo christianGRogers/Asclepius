@@ -24,8 +24,8 @@ from pymongo import ReturnDocument
 from segqueue14 import plan as sqplan
 from segqueue14.labelfile import FORMAT_LABELMAP as LABEL_FORMAT_LABELMAP
 
-#: Kinds the worker scores.
-SCORED_KINDS = (sqplan.KIND_REFERENCE, sqplan.KIND_PAIRED)
+#: Kinds the worker scores. A benchmark read (D43) is scored against ImageCAS-X.
+SCORED_KINDS = (sqplan.KIND_REFERENCE, sqplan.KIND_PAIRED, sqplan.KIND_BENCHMARK)
 
 #: Who made a submission. An annotator's is the work; a reviewer's is a
 #: correction of it, and the two must never be counted as the same thing.

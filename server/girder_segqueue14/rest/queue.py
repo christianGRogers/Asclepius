@@ -35,6 +35,7 @@ from segqueue14 import protocol
 
 from ..constants import MAX_ASSIGN_ATTEMPTS, QUOTA_FIELD
 from ..models import Assignment14, Case14, Note14, Submission14
+from ..models.assignment import NOT_BENCHMARK
 from ..settings import getPolicy, getProject
 from ..utils import (
     checkClientProtocol,
@@ -55,8 +56,9 @@ def quotaRemaining(user):
     quota = user.get(QUOTA_FIELD)
     if quota is None:
         return None
+    # A benchmark read (D43) is not one of the cases a quota counts.
     done = Assignment14().collection.count_documents(
-        {'userId': user['_id'], 'state': st.APPROVED})
+        {'userId': user['_id'], 'state': st.APPROVED, 'kind': NOT_BENCHMARK})
     return max(0, int(quota) - done)
 
 
@@ -103,6 +105,22 @@ def claimNext(user, policy):
                 return Assignment14().createAssignment(
                     claimed, user, kind=None, policy=policy)
     return None
+
+
+def claimBenchmark(user, policy):
+    """This user's annotator benchmark (D43), if they have been assigned it.
+
+    Checked before the pool, so an invited annotator gets it as their next case.
+    Each invitation is one attempt: the lease records which attempt it is, and a
+    retest is a fresh invitation (``segqueue14-benchmark assign --retest``).
+    """
+    claimed = Case14().claimBenchmark(user['_id'])
+    if claimed is None:
+        return None
+    attempt = len(Assignment14().benchmarkHistory(claimed['_id'], user['_id'])) + 1
+    return Assignment14().createAssignment(
+        claimed, user, kind=sqplan.KIND_BENCHMARK, policy=policy,
+        extra={'benchmarkAttempt': attempt})
 
 
 class QueueResource14(Resource):
@@ -158,9 +176,8 @@ class QueueResource14(Resource):
     @access.user
     @autoDescribeRoute(
         Description('Assign me the next SegQueue14 case and return it.')
-        .notes('Atomic, and in serve order: ImageCAS-X train/val, then the '
-               'unlabelled cases, then the held-out ImageCAS-X test cases, as set by '
-               'segqueue14-populate.')
+        .notes('Atomic, and in serve order as set by segqueue14-populate. An '
+               'annotator assigned the annotator benchmark (D43) gets it first.')
         .param('clientProtocol', 'SegQueue14 protocol version the client speaks.',
                dataType='integer', required=False)
         .errorResponse('You already hold the maximum number of cases.', 409)
@@ -173,6 +190,13 @@ class QueueResource14(Resource):
         policy = getPolicy()
 
         openCount = Assignment14().countOpenForUser(user['_id'])
+        # The annotator benchmark (D43) comes first, whatever the quota says: it
+        # is not one of the cases a quota counts. An annotator holding a case
+        # gets it right after, as the concurrency limit still applies.
+        if openCount < policy.max_concurrent:
+            assignment = claimBenchmark(user, policy)
+            if assignment is not None:
+                return assignmentInfo(assignment).to_dict()
         remaining = quotaRemaining(user)
         if not pol.can_take_more(openCount, policy, remaining):
             if remaining is not None and remaining <= 0:
@@ -301,11 +325,18 @@ class QueueResource14(Resource):
             Item().move(item, submissionsFolder(user))
 
         policy = getPolicy()
-        record = Assignment14().recordFor(user['_id'])
-        roll = random.random()
-        # The sampled review rate (training gate, probation, trusted rate) applies
-        # as in the live project. The automatic scores add to it in the worker.
-        needsReview = pol.review_needed(record, policy, roll, kind=pol.NORMAL)
+        kind = assignment.get('kind', sqplan.KIND_NORMAL)
+        if kind == sqplan.KIND_BENCHMARK:
+            # The annotator benchmark (D43) always goes to a reviewer, with its
+            # Dice against ImageCAS-X; no roll decides it.
+            roll, needsReview = None, True
+        else:
+            record = Assignment14().recordFor(user['_id'])
+            roll = random.random()
+            # The sampled review rate (training gate, probation, trusted rate)
+            # applies as in the live project. The automatic scores add to it in
+            # the worker.
+            needsReview = pol.review_needed(record, policy, roll, kind=pol.NORMAL)
 
         submission = Submission14().createSubmission(
             assignment, submissionMeta, file['_id'], needsReview=needsReview,
@@ -314,7 +345,6 @@ class QueueResource14(Resource):
             assignment, st.SUBMIT,
             submissionId=submission['_id'], needsReview=needsReview, reviewRoll=roll)
 
-        kind = assignment.get('kind', sqplan.KIND_NORMAL)
         if not needsReview and kind == sqplan.KIND_NORMAL:
             assignment = Assignment14().transition(assignment, st.APPROVE)
             Case14().completeSlot(assignment['caseId'])

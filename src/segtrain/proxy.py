@@ -139,6 +139,17 @@ def pool_name(name) -> bool:
     return bool(sep and source and rest) and not source.lower().startswith("imagecas")
 
 
+#: The annotator benchmark (D43, ``segqueue14.benchmark``): ``annotator_benchmark_0123``. Its reads
+#: measure annotators and are never trained on, sealed list or not.
+_BENCHMARK = re.compile(r"annotator_benchmark_\d{1,4}")
+
+
+def benchmark_name(name) -> bool:
+    """True for the annotator benchmark case or a read of it (``annotator_benchmark_0123__r2``)."""
+    base = split_read_suffix(name)[0].replace("\\", "/").rsplit("/", 1)[-1]
+    return bool(_BENCHMARK.fullmatch(base))
+
+
 def sealed_reason(name, sealed: set, allow_pool: bool = False) -> Optional[str]:
     """Why ``name`` may not enter training under a sealed list (A14), or None if it may.
 
@@ -147,7 +158,11 @@ def sealed_reason(name, sealed: set, allow_pool: bool = False) -> Optional[str]:
 
     ``allow_pool``: a SegQueue14 pool name (:func:`pool_name`) is not an ImageCAS case and so not
     A14's to judge; it passes here. Only for callers that check it against the D27 pool seal
-    (``segtrain.pool_seal``, by patient) first, as ``convert`` and ``sealed_guard`` do."""
+    (``segtrain.pool_seal``, by patient) first, as ``convert`` and ``sealed_guard`` do.
+
+    The annotator benchmark (D43) is refused by name, whatever ``allow_pool`` says."""
+    if benchmark_name(name):
+        return f"{name}: annotator benchmark (D43); never trained on"
     case = canonical_case(name)
     if case is None:
         if allow_pool and pool_name(name):

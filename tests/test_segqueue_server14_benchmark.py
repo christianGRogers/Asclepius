@@ -46,6 +46,8 @@ pytestmark = pytest.mark.needs_mongo
 
 #: The project's draw (``test_segqueue14_benchmark``) and the next case in draw order.
 PICK, NEXT = 855, None
+#: The lead's choice of case (D43 amended, #293).
+LEAD_PICK = 1
 
 
 def _drawOrder():
@@ -78,7 +80,8 @@ def bench(world):
     seeds = Folder().createFolder(live, "seeds-totalseg", parentType="collection",
                                   creator=admin)
     files = {}
-    for n in (first, second):
+    # ImageCAS 1 (c0000) as well: the lead's choice (D43 amended, #293).
+    for n in dict.fromkeys((first, second, LEAD_PICK)):
         ctPath = _nifti(world.data / f"ImageCAS__{n:04d}.nii.gz",
                         np.full((24, 24, 24), 100, dtype=np.int16))
         ct = _upload(ctPath, cases, admin)
@@ -618,3 +621,138 @@ def test_from_girder_refuses_a_missing_folder_and_mixed_sources(bench):
         benchmark.runSeed(fromGirder="user/christian/Public", seedFile="x", out=print)
     with pytest.raises(SystemExit, match="needs --from-girder"):
         benchmark.runSeed(fromGirderFile="x.nii.gz", out=print)
+
+
+# -------------------------------- create --imagecas-id / --replace (#293)
+
+
+def _createAs(n, replace=False, apply=True):
+    from girder_segqueue14 import benchmark
+
+    lines, out = _lines()
+    return benchmark.runCreate(apply=apply, root=str(REPO), imagecasId=n, replace=replace,
+                               out=out), lines
+
+
+def _benchCases():
+    from girder_segqueue14.models import Case14
+
+    return list(Case14().find({"benchmark": True}))
+
+
+def test_create_takes_the_leads_choice_and_records_it(bench):
+    dry, _ = _createAs(LEAD_PICK, apply=False)
+    assert dry["name"] == "annotator_benchmark_0001" and _benchCases() == []
+    done, _ = _createAs(LEAD_PICK)
+    assert done["created"]
+    case = _benchCase()
+    pick = case["benchmarkPick"]
+    assert case["name"] == "annotator_benchmark_0001"
+    assert pick["method"] == "lead's choice" and pick["icxCase"] == "c0000"
+    assert pick["why"].startswith("the lead's choice (D43 amended, #293), not the draw")
+    assert case["fileId"] == bench.bench["files"][LEAD_PICK]["ct"]["_id"]
+    assert case["referenceFileId"] == bench.bench["files"][LEAD_PICK]["ref"]["_id"]
+    again, _ = _createAs(LEAD_PICK)
+    assert again == {"created": False, "name": "annotator_benchmark_0001"}
+    assert len(_benchCases()) == 1
+
+
+def test_the_leads_choice_must_pass_every_check(bench):
+    from janusm import guard
+    from segqueue14 import benchmark as b
+
+    g = guard.load_guard(REPO)
+    splits = json.loads((REPO / "trillium-results/icx14/results/splits.json").read_text())
+    sealed = json.loads((REPO / "trillium/sealed_test.json").read_text())
+    e = b.eligibility(splits, sealed, lambda c: g.reason(c, source="ImageCAS-X"))
+    held = next(c for c, why in e.excluded.items() if why.startswith("JA12 guard"))
+    with pytest.raises(SystemExit, match="not eligible: JA12 guard"):
+        _createAs(b.imagecas_id(held))
+    test = next(c for c in splits["test"] if c not in e.excluded and c not in e.eligible)
+    with pytest.raises(SystemExit, match="not an ImageCAS-X train/val case"):
+        _createAs(b.imagecas_id(test))
+    # Eligible, but its CT is not in Girder.
+    missing = next(c for c in e.eligible if b.imagecas_id(c) not in bench.bench["files"])
+    with pytest.raises(SystemExit, match="cannot be served"):
+        _createAs(b.imagecas_id(missing))
+    assert _benchCases() == []
+
+
+def test_replace_swaps_an_untouched_case_and_keeps_its_files(bench):
+    from girder.models.file import File
+
+    _create()                                    # the draw: annotator_benchmark_0855
+    old = _benchCase()
+    with pytest.raises(SystemExit, match="--replace swaps it"):
+        _createAs(LEAD_PICK)
+    with pytest.raises(SystemExit, match="--replace needs --imagecas-id"):
+        from girder_segqueue14 import benchmark
+
+        benchmark.runCreate(apply=True, root=str(REPO), replace=True, out=lambda _: None)
+
+    dry, lines = _createAs(LEAD_PICK, replace=True, apply=False)
+    assert dry["replaces"] == "annotator_benchmark_0855" and not dry["created"]
+    assert any("replaces annotator_benchmark_0855" in line for line in lines)
+    assert [c["_id"] for c in _benchCases()] == [old["_id"]]
+
+    done, _ = _createAs(LEAD_PICK, replace=True)
+    assert done["created"] and done["replaces"] == "annotator_benchmark_0855"
+    cases = _benchCases()
+    assert [c["name"] for c in cases] == ["annotator_benchmark_0001"]
+    assert cases[0]["benchmarkReplaced"][0]["name"] == "annotator_benchmark_0855"
+    # The old case's CT and reference are still there.
+    for kind in ("ct", "ref"):
+        assert File().load(bench.bench["files"][PICK][kind]["_id"], force=True) is not None
+    # Idempotent: a re-run shows the case and changes nothing.
+    again, _ = _createAs(LEAD_PICK, replace=True)
+    assert not again["created"] and [c["_id"] for c in _benchCases()] == [cases[0]["_id"]]
+
+
+def test_replace_refuses_once_anyone_was_given_the_case(bench):
+    _seeded(bench)                               # annotator_benchmark_0855, with a seed
+    _assign("admin,bobby,cathy,revy")            # anna is invited
+    with pytest.raises(SystemExit, match="pending invitation"):
+        _createAs(LEAD_PICK, replace=True, apply=False)
+    assert [c["name"] for c in _benchCases()] == ["annotator_benchmark_0855"]
+
+
+def test_seed_from_girder_finds_case_1_by_its_naming(bench):
+    _createAs(LEAD_PICK)
+    lead, public = _leadPublic(bench)
+    _upload(_mask(bench, "imagecas_0001_totalseg.nii.gz"), public, lead)
+    _upload(_mask(bench, "ImageCAS__0855_coronary.nii.gz"), public, lead)
+    _upload(_mask(bench, "totalseg_v2.1_notes.nii.gz"), public, lead)
+    done, lines = _fromGirder()
+    assert done["seed"] == "uploaded"
+    case = _benchCase()
+    assert case["name"] == "annotator_benchmark_0001"
+    assert case["seedSource"].endswith("from user/christian/Public/imagecas_0001_totalseg.nii.gz")
+
+
+def test_seed_from_girder_never_overwrites_a_different_seed_of_that_name(bench):
+    import numpy as np
+    from girder.models.item import Item
+
+    seeds = bench.bench["seeds"]
+    other = np.zeros((24, 24, 24), np.uint8)
+    other[1:3, 1:3, 1:3] = 1
+    clash = _upload(_nifti(bench.data / "clash.nii.gz", other), seeds, bench.admin,
+                    name="ImageCAS__0001__totalseg-coronary.nii.gz")
+    _createAs(LEAD_PICK)
+    assert _benchCase()["seedFileId"] is None     # the lead's case is not auto-seeded
+    lead, public = _leadPublic(bench)
+    _upload(_mask(bench, "ImageCAS__0001.nii.gz"), public, lead)
+    with pytest.raises(SystemExit, match="different mask"):
+        _fromGirder()
+    assert _benchCase()["seedFileId"] is None
+    assert Item().find({"folderId": seeds["_id"]}).count() == 1
+
+    # The same mask under that name is attached, not uploaded twice.
+    Item().remove(Item().load(clash["itemId"], force=True))
+    same = _upload(_mask(bench, "same.nii.gz"), seeds, bench.admin,
+                   name="ImageCAS__0001__totalseg-coronary.nii.gz")
+    done, _ = _fromGirder()
+    assert done["seed"] == "attached"
+    assert _benchCase()["seedFileId"] == same["_id"]
+    assert "supplied by the lead" in _benchCase()["seedSource"]
+    assert Item().find({"folderId": seeds["_id"]}).count() == 1

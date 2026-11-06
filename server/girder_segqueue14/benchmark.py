@@ -10,6 +10,7 @@ dry run without ``--apply``::
     segqueue14-benchmark create [--apply]         # make the case (or show the one there is)
     segqueue14-benchmark seed --totalseg BIN [--apply]    # its TotalSegmentator seed, on CPU
     segqueue14-benchmark seed --seed-file PATH [--apply]  # ... or one made elsewhere
+    segqueue14-benchmark seed --from-girder user/x/Public [--from-girder-file NAME] [--apply]
     segqueue14-benchmark assign --exclude a,b [--login x,y] [--retest] [--apply]
     segqueue14-benchmark status [--json]
 
@@ -30,8 +31,11 @@ made binary (uint8 0/1) on the CT's own grid, uploaded to
 ``SegQueue/seeds-totalseg/ImageCAS__NNNN__totalseg-coronary.nii.gz``. The
 TotalSegmentator install is separate from Girder's (``--totalseg`` names its
 executable); the deploy step builds one. A seed made elsewhere the same way can be
-given with ``--seed-file``; it must be on the CT's grid. The case is served only
-once it has a seed.
+given with ``--seed-file``; it must be on the CT's grid. ``--from-girder`` takes it
+from a Girder folder instead (#293): the volume there whose name holds the case's
+ImageCAS id (``0855``), else the only volume there, else ``--from-girder-file``
+names it. The file is downloaded and copied into the seeds folder; the original is
+never changed, moved or deleted. The case is served only once it has a seed.
 
 **assign.** Invites every member of ``segqueue14-annotators`` except the
 ``--exclude`` logins (required, may be empty: say who is left out), or only the
@@ -356,12 +360,12 @@ def runCreate(apply=False, root=None, twinsFile=None, out=print):
     return {'created': True, 'name': case['name'], 'pick': record}
 
 
-def _attachSeed(case, fileId):
+def _attachSeed(case, fileId, source=None):
     from .models import Case14
 
     result = Case14().collection.update_one(
         {'_id': case['_id'], 'seedFileId': None},
-        {'$set': {'seedFileId': fileId, 'seedSource': sqplan.SEED_SOURCE_TOTALSEG,
+        {'$set': {'seedFileId': fileId, 'seedSource': source or sqplan.SEED_SOURCE_TOTALSEG,
                   'updated': _now()}})
     return bool(result.modified_count)
 
@@ -409,6 +413,16 @@ def binarise(segPath, ctPath, outPath):
     sitk.WriteImage(image, str(outPath), True)
     vox = float(np.prod(ctGrid[1]))
     return {'voxels': voxels, 'volume_ml': round(voxels * vox / 1000, 3)}
+
+
+def _sha256(path):
+    import hashlib
+
+    digest = hashlib.sha256()
+    with open(path, 'rb') as handle:
+        for block in iter(lambda: handle.read(1 << 20), b''):
+            digest.update(block)
+    return digest.hexdigest()
 
 
 def totalsegVersion(binary):
@@ -464,7 +478,114 @@ def runTotalseg(binary, ctPath, outPath, workDir, out=print):
     raise SystemExit('REFUSED: TotalSegmentator failed twice; no seed made')
 
 
-def runSeed(apply=False, totalseg=None, seedFile=None, out=print):
+#: Label-volume files ``--from-girder`` considers (a ``.seg.nrrd`` ends in ``.nrrd``).
+SEED_VOLUME_SUFFIXES = ('.nii.gz', '.nii', '.nrrd', '.nhdr')
+#: Item metadata keys that may carry the TotalSegmentator version (lower-cased).
+TS_VERSION_KEYS = ('totalsegmentator_version', 'totalseg_version', 'totalsegmentator',
+                   'ts_version')
+
+
+def _volumeSuffix(name):
+    lower = name.lower()
+    return next((s for s in SEED_VOLUME_SUFFIXES if lower.endswith(s)), None)
+
+
+def _girderFolder(path):
+    """The Girder folder at resource path ``path`` (e.g. ``user/christian/Public``)."""
+    from girder.exceptions import GirderException, ResourcePathNotFound
+    from girder.utility.path import lookUpPath
+
+    clean = '/' + str(path).strip().strip('/')
+    try:
+        found = lookUpPath(clean, filter=False, force=True)
+    except (GirderException, ResourcePathNotFound, IndexError) as exc:
+        raise SystemExit(f'REFUSED: no Girder resource at {clean} ({exc})') from exc
+    if found['model'] != 'folder':
+        raise SystemExit(f"REFUSED: {clean} is a {found['model']}, not a folder")
+    return found['document'], clean.lstrip('/')
+
+
+def _girderCandidates(folder):
+    """``[(path relative to folder, item, file)]`` for every volume under ``folder``."""
+    from .populate import _childFolders
+
+    out = []
+
+    def walk(node, rel):
+        from girder.models.folder import Folder
+        from girder.models.item import Item
+
+        for item in Folder().childItems(node):
+            for fileDoc in Item().childFiles(item):
+                if _volumeSuffix(fileDoc['name']):
+                    name = fileDoc['name'] if fileDoc['name'] == item['name'] else \
+                        f"{item['name']}/{fileDoc['name']}"
+                    out.append((f'{rel}{name}', item, fileDoc))
+        for child in _childFolders(node):
+            walk(child, f"{rel}{child['name']}/")
+
+    walk(folder, '')
+    return sorted(out, key=lambda c: c[0])
+
+
+def _listing(candidates):
+    return '; '.join(f"{rel} ({fileDoc.get('size', 0)} bytes)"
+                     for rel, _, fileDoc in candidates) or 'none'
+
+
+def pickGirderSeed(candidates, n, fileName=None):
+    """The one candidate to use: ``fileName`` if given, else the one whose name holds
+    ``NNNN``, else the only volume. Refuses zero or several, listing them."""
+    if fileName:
+        chosen = [c for c in candidates
+                  if fileName in (c[0], c[2]['name'], c[1]['name'])]
+        why = f'named {fileName!r}'
+    else:
+        tag = f'{int(n):04d}'
+        chosen = [c for c in candidates if tag in c[2]['name'] or tag in c[1]['name']]
+        why = f'with {tag} in the name'
+        if not chosen:
+            chosen, why = candidates, 'there (none has the case id in its name)'
+    if len(chosen) != 1:
+        raise SystemExit(
+            f'REFUSED: {len(chosen)} label volume(s) {why}; pass --from-girder-file <name>. '
+            f'Volumes: {_listing(candidates)}')
+    return chosen[0]
+
+
+def tsVersionOf(path, meta=None):
+    """The TotalSegmentator version recorded in the file's header or item metadata."""
+    import re
+
+    import SimpleITK as sitk
+
+    pattern = re.compile(r'(?i)totalseg\w*\D{0,3}v?(\d+\.\d+(?:\.\d+)?)')
+    for key, value in (meta or {}).items():
+        if str(key).lower() in TS_VERSION_KEYS:
+            match = re.search(r'\d+\.\d+(?:\.\d+)?', str(value))
+            if match:
+                return match.group(0)
+    try:
+        reader = sitk.ImageFileReader()
+        reader.SetFileName(str(path))
+        reader.ReadImageInformation()
+        texts = [f'{k} {reader.GetMetaData(k)}' for k in reader.GetMetaDataKeys()]
+    except RuntimeError:
+        return None
+    for text in texts:
+        match = pattern.search(text)
+        if match:
+            return match.group(1)
+    return None
+
+
+def girderSeedSource(where, version):
+    return (f'TotalSegmentator coronary_arteries (binary), version {version or "unknown"}, '
+            f'supplied by the lead from {where}')
+
+
+def runSeed(apply=False, totalseg=None, seedFile=None, fromGirder=None, fromGirderFile=None,
+            out=print):
     """Give the benchmark case its seed. Returns a summary dict."""
     from girder.models.file import File
     from girder.models.item import Item
@@ -473,10 +594,16 @@ def runSeed(apply=False, totalseg=None, seedFile=None, out=print):
     from .models import Submission14
     from .populate import _firstFile
 
+    sources = [bool(totalseg), bool(seedFile), bool(fromGirder)]
+    if sum(sources) > 1:
+        raise SystemExit('REFUSED: pass one of --totalseg, --seed-file or --from-girder')
+    if fromGirderFile and not fromGirder:
+        raise SystemExit('REFUSED: --from-girder-file needs --from-girder <folder path>')
     case = _case()
     n = sqbench.imagecas_id_of(case['name'])
     if case.get('seedFileId'):
-        out(f"{case['name']} has its seed already; nothing to do.")
+        out(f"{case['name']} has its seed already ({case.get('seedSource') or '?'}); "
+            'nothing to do.')
         return {'seed': 'present'}
     if Submission14().collection.count_documents({'caseId': case['_id']}):
         raise SystemExit('REFUSED: the case has submissions; its starting point cannot change')
@@ -490,9 +617,16 @@ def runSeed(apply=False, totalseg=None, seedFile=None, out=print):
         if apply:
             _attachSeed(case, _firstFile(existing)['_id'])
         return {'seed': 'attached' if apply else 'found'}
-    if not totalseg and not seedFile:
-        raise SystemExit('REFUSED: pass --totalseg <TotalSegmentator executable> or '
-                         '--seed-file <mask on the CT grid>')
+    if not any(sources):
+        raise SystemExit('REFUSED: pass --totalseg <TotalSegmentator executable>, '
+                         '--seed-file <mask on the CT grid> or --from-girder <folder path>')
+    picked = None
+    if fromGirder:
+        gFolder, gPath = _girderFolder(fromGirder)
+        candidates = _girderCandidates(gFolder)
+        out(f'{gPath}: {len(candidates)} label volume(s): {_listing(candidates)}')
+        picked = pickGirderSeed(candidates, n, fromGirderFile)
+        out(f"using {gPath}/{picked[0]} ({picked[2].get('size', 0)} bytes)")
     ct = File().load(case['fileId'], force=True)
     if ct is None:
         raise SystemExit(f"REFUSED: {case['name']}'s CT is missing from storage")
@@ -518,18 +652,36 @@ def runSeed(apply=False, totalseg=None, seedFile=None, out=print):
         if float(grid[0][0]) * grid[0][1] * grid[0][2] > LARGE_VOXELS:
             raise SystemExit(f'REFUSED: {grid[0]} voxels; the pool batch made seeds this large '
                              'on a 0.8 mm copy, which this step does not do')
+        seedSource, extraMeta = sqplan.SEED_SOURCE_TOTALSEG, {}
         if totalseg:
             made = Path(work) / 'seg.nii.gz'
             command = runTotalseg(totalseg, ctPath, made, work, out=out)
             source = f'TotalSegmentator {TOTALSEG_VERSION}: {command}'
+        elif picked is not None:
+            rel, gItem, gFile = picked
+            # A copy: the lead's file is only read, never changed, moved or deleted.
+            made = Path(work) / ('girder-seed' + _volumeSuffix(gFile['name']))
+            with open(made, 'wb') as handle:
+                for chunk in File().download(gFile, headers=False)():
+                    handle.write(chunk)
+            version = tsVersionOf(made, gItem.get('meta'))
+            out(f'TotalSegmentator version in its metadata: {version or "unknown"}')
+            where = f'{gPath}/{rel}'
+            source = seedSource = girderSeedSource(where, version)
+            extraMeta = {'from_girder': where, 'from_girder_file_id': str(gFile['_id']),
+                         'from_girder_sha256': _sha256(made),
+                         'totalseg_version': version or 'unknown'}
         else:
             made, source = Path(seedFile), f'supplied file {Path(seedFile).name}'
         final = Path(work) / seedName(n)
         stats = binarise(made, ctPath, final)
-        out(f"seed: {stats['voxels']} voxels, {stats['volume_ml']} ml, on the CT's grid")
+        out(f"seed: {stats['voxels']} voxels, {stats['volume_ml']} ml, on the CT's grid "
+            f"({' x '.join(str(v) for v in grid[0])} voxels, spacing "
+            f"{', '.join(f'{v:.4g}' for v in grid[1])} mm)")
+        out(f'seedSource: {seedSource}')
         if not apply:
             out(f'dry run: would upload {seedName(n)} and attach it. --apply does it.')
-            return {'seed': 'would upload', **stats}
+            return {'seed': 'would upload', 'seedSource': seedSource, **stats}
         admin = _admin()
         with open(final, 'rb') as handle:
             fileDoc = Upload().uploadFromFile(
@@ -538,12 +690,12 @@ def runSeed(apply=False, totalseg=None, seedFile=None, out=print):
         item = Item().load(fileDoc['itemId'], force=True)
         Item().setMetadata(item, {
             'source': 'ImageCAS-X', 'imagecas_id': n, 'segqueue14_case': case['name'],
-            'seed_source': sqplan.SEED_SOURCE_TOTALSEG, 'made_by': source,
-            'role': 'annotator benchmark seed (D43)', **stats})
-        if not _attachSeed(case, fileDoc['_id']):
+            'seed_source': seedSource, 'made_by': source,
+            'role': 'annotator benchmark seed (D43)', **extraMeta, **stats})
+        if not _attachSeed(case, fileDoc['_id'], seedSource):
             out('note: the case got a seed meanwhile; the upload is kept but not attached')
         out(f'uploaded {seedName(n)} and attached it to {case["name"]}')
-        return {'seed': 'uploaded', **stats}
+        return {'seed': 'uploaded', 'seedSource': seedSource, **stats}
     finally:
         shutil.rmtree(work, ignore_errors=True)
 
@@ -725,6 +877,12 @@ def buildParser():
                    help=f'TotalSegmentator {TOTALSEG_VERSION} executable (its own venv).')
     p.add_argument('--seed-file', default=None,
                    help='A seed made elsewhere the same way, on the CT\'s grid.')
+    p.add_argument('--from-girder', default=None, metavar='FOLDER',
+                   help='Take the seed from this Girder folder (a resource path such as '
+                        'user/christian/Public): the volume whose name holds the case\'s '
+                        'ImageCAS id, else the only one. It is copied, never changed.')
+    p.add_argument('--from-girder-file', default=None, metavar='NAME',
+                   help='With --from-girder: the file to use, by name (or path in the folder).')
     p = sub.add_parser('assign', help='Make it the next case for annotators.')
     common(p)
     p.add_argument('--exclude', default=None, required=True,
@@ -748,7 +906,8 @@ def main(argv=None):  # pragma: no cover - CLI entry point
     if args.step == 'create':
         runCreate(apply=args.apply, root=args.repo, twinsFile=args.twins_file)
     elif args.step == 'seed':
-        runSeed(apply=args.apply, totalseg=args.totalseg, seedFile=args.seed_file)
+        runSeed(apply=args.apply, totalseg=args.totalseg, seedFile=args.seed_file,
+                fromGirder=args.from_girder, fromGirderFile=args.from_girder_file)
     elif args.step == 'assign':
         runAssign(args.exclude, logins=args.login, retest=args.retest, apply=args.apply)
     elif args.step == 'status':

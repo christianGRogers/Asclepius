@@ -353,6 +353,7 @@ idempotent). The code must be on `main` and installed first (`install`).
 | `benchmark-status` | Read-only. The case, its seed and reference, who is invited, and every attempt: login, attempt, state, submitted date, mean Dice and per-class Dice (LM, LAD, LCx, RCA). |
 | `benchmark-create [--apply]` | Draws the case (or shows the one there is) and creates it: the CT `ImageCAS-X/cases/ImageCAS__NNNN.nii.gz` and the reference `ImageCAS-X/labels/**/ImageCAS-X__NNNN__labels14.nii.gz`, both referenced in place (nothing copied, nothing written to `ImageCAS-X`). Attaches the seed if it is already in `SegQueue/seeds-totalseg`. |
 | `benchmark-seed [--apply]` | Makes the seed the way the pool seeds were made (`tools/ccta/totalseg_cpu.py`): TotalSegmentator **2.18.0** `coronary_arteries`, CPU, the same command (`-ta coronary_arteries --ml -d cpu -nr 4 -ns 4`, then the low-memory retry), the mask made binary (uint8 0/1) on the CT's grid. Uploads `SegQueue/seeds-totalseg/ImageCAS__NNNN__totalseg-coronary.nii.gz` and attaches it. With `--apply` it first installs TotalSegmentator 2.18.0 (CPU-only torch, ~3 GB) into `~/segqueue-data/totalseg-venv`, never into Girder's venv; the weights go to `~/segqueue-data/totalseg-home`. It runs at `nice 19` / `ionice -c3`; one ImageCAS CT takes minutes. It refuses with less than 10 GB free or 8 GB of memory available. |
+| `benchmark-seed [--apply]`, args `--from-girder=<folder> [--from-girder-file=<name>]` | Takes the seed from a file in Girder instead of running TotalSegmentator (#293), e.g. `--from-girder=user/christian/Public`. It looks through that folder and its subfolders for `.nii.gz`, `.nii`, `.nrrd` or `.nhdr` files and takes the one whose name holds the case's ImageCAS id (`0855`), or, if no name does, the only one. With none or several it refuses and lists them with their sizes; `--from-girder-file=<name>` then picks one. The mask must be on the CT's grid (shape, spacing, origin and direction, as for `--seed-file`) and not empty; anything above 0 is vessel. The step prints the voxel count and the grid. With `--apply` it copies the file into `SegQueue/seeds-totalseg/ImageCAS__0855__totalseg-coronary.nii.gz` and attaches it; the original is only read, never changed, moved or deleted. `seedSource` names the file it came from and the TotalSegmentator version, when the file's header or item metadata (`totalsegmentator_version`) records one, else "unknown". It does not install TotalSegmentator. Re-running changes nothing. Args may hold only letters, digits, `/ . _ -` and these two options. |
 | `benchmark-assign [--apply]`, args `--exclude=<login,...>` | Makes it the next case for every member of `segqueue14-annotators` except the excluded logins (required: the logins D43 leaves out). An annotator holding a case gets it right after. Skips anyone who has submitted it already. `--login=<login,...>` limits it to those annotators; `--retest` gives a fresh attempt to annotators who have done it. Excluding a login that was invited withdraws the invitation. An unknown login in `--exclude` stops the step. |
 
 Run in this order: `benchmark-create`, `benchmark-create --apply`,
@@ -369,6 +370,11 @@ assignment and submission with its own score; `benchmark-status` lists them all.
 `annotator_benchmark_NNNN`, its reasons start with "annotator benchmark (D43)",
 and its Dice is the annotator's own against ImageCAS-X. Approve it as any other
 read once looked at; approving it trains nothing.
+
+**From the lead's Girder folder** (#293; the D43 seed): `benchmark-seed` with args
+`--from-girder=user/christian/Public` (a dry run: check the file it picked, the grid and
+the voxel count), then `benchmark-seed --apply` with the same args, then
+`benchmark-status`.
 
 **If TotalSegmentator cannot run on janus** (no network to PyPI,
 download.pytorch.org or GitHub for the weights, or not enough memory): the lead

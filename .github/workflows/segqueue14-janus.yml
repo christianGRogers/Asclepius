@@ -25,7 +25,8 @@
 # Dry runs without --apply. `args` carries the logins, e.g. --exclude=<login>,<login>:
 #   benchmark-status                       who has it, each attempt's Dice
 #   benchmark-create [--apply]             draw once (never redrawn) and create the case
-#   benchmark-seed [--apply]               TotalSegmentator 2.18.0 on CPU, at nice 19
+#   benchmark-seed [--apply]               TotalSegmentator 2.18.0 on CPU, at nice 19, or
+#                                          args: --from-girder=<folder> [--from-girder-file=<name>]
 #   benchmark-assign [--apply]             args: --exclude=... [--login=...] [--retest]
 #
 # The script never touches the live checkout, the live plugin or live data; see its
@@ -52,7 +53,7 @@ on:
                   benchmark-seed, "benchmark-seed --apply",
                   benchmark-assign, "benchmark-assign --apply"]
       args:
-        description: "benchmark-assign only: --exclude=<login,...> [--login=<login,...>] [--retest]"
+        description: "benchmark-assign: --exclude=<login,...> [--login=<login,...>] [--retest]; benchmark-seed: --from-girder=<folder> [--from-girder-file=<name>]"
         type: string
         required: false
         default: ""
@@ -91,20 +92,38 @@ jobs:
             benchmark-assign|"benchmark-assign --apply") ;;
             *) echo "::error::unknown step '$cmd'"; exit 1 ;;
           esac
-          # D43: only benchmark-assign takes arguments, and only these options, as
-          # plain logins: the value reaches a shell on janus, so nothing else passes.
+          # D43: only benchmark-assign and benchmark-seed take arguments, and only these
+          # options, as plain logins or Girder paths: the value reaches a shell on janus,
+          # so nothing else passes (no quotes, spaces in values, globs or $).
           if [ -n "$ARGS" ]; then
-            case "$cmd" in benchmark-assign*) ;; *) echo "::error::only benchmark-assign takes args"; exit 1 ;; esac
-            if ! printf '%s' "$ARGS" | grep -Eq '^[A-Za-z0-9 ,._=-]+$'; then
-              echo "::error::args may hold only logins (letters, digits, . _ -), commas and the options"; exit 1
-            fi
-            for word in $ARGS; do
-              case "$word" in
-                --exclude=*|--login=*|--retest) ;;
-                *) echo "::error::args: '$word' is not --exclude=..., --login=... or --retest"; exit 1 ;;
-              esac
-            done
+            case "$cmd" in
+              benchmark-assign*)
+                if ! printf '%s' "$ARGS" | grep -Eq '^[A-Za-z0-9 ,._=-]+$'; then
+                  echo "::error::args may hold only logins (letters, digits, . _ -), commas and the options"; exit 1
+                fi
+                for word in $ARGS; do
+                  case "$word" in
+                    --exclude=*|--login=*|--retest) ;;
+                    *) echo "::error::args: '$word' is not --exclude=..., --login=... or --retest"; exit 1 ;;
+                  esac
+                done ;;
+              benchmark-seed*)
+                # #293: the Girder folder the lead uploaded the seed to, e.g. user/christian/Public.
+                if ! printf '%s' "$ARGS" | grep -Eq '^[A-Za-z0-9 /._=-]+$'; then
+                  echo "::error::args may hold only Girder paths (letters, digits, / . _ -) and the options"; exit 1
+                fi
+                for word in $ARGS; do
+                  case "$word" in
+                    --from-girder=?*|--from-girder-file=?*) ;;
+                    *) echo "::error::args: '$word' is not --from-girder=<folder> or --from-girder-file=<name>"; exit 1 ;;
+                  esac
+                  case "$word" in *..*) echo "::error::args: '$word' may not hold '..'"; exit 1 ;; esac
+                done
+                case " $ARGS" in *" --from-girder="*) ;; *) echo "::error::benchmark-seed args need --from-girder=<folder>"; exit 1 ;; esac ;;
+              *) echo "::error::only benchmark-assign and benchmark-seed take args"; exit 1 ;;
+            esac
             # The step is ours (a fixed list above), the options go first: --apply stays last.
+            # shellcheck disable=SC2086  # split the fixed step into its words
             set -- $cmd
             cmd="$1 $ARGS${2:+ $2}"
           elif [[ "$cmd" == benchmark-assign* ]]; then

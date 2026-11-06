@@ -34,6 +34,7 @@
 #   bash segqueue14-deploy.sh benchmark-status
 #   bash segqueue14-deploy.sh benchmark-create [--apply]   # draw (once) and create the case
 #   bash segqueue14-deploy.sh benchmark-seed [--apply]     # TotalSegmentator 2.18.0 on CPU
+#   bash segqueue14-deploy.sh benchmark-seed --from-girder=<folder> [--from-girder-file=<name>] [--apply]
 #   bash segqueue14-deploy.sh benchmark-assign --exclude=<login,...> [--login=<login,...>] [--retest] [--apply]
 #
 # What it never does: check out a branch in ~/Asclepius, reinstall the old plugin
@@ -368,8 +369,19 @@ benchmark_cli() {
 }
 
 benchmark_seed() {
-    local apply=""
-    [ "${1:-}" = "--apply" ] && apply="--apply"
+    local apply="" girder=() arg
+    for arg in "$@"; do
+        case "$arg" in
+            --apply) apply="--apply" ;;
+            --from-girder=*|--from-girder-file=*) girder+=("$arg") ;;
+            *) die "benchmark-seed: unknown argument '$arg'" ;;
+        esac
+    done
+    # #293: the seed is a file the lead uploaded to Girder; no TotalSegmentator here.
+    if [ ${#girder[@]} -gt 0 ]; then
+        benchmark_cli seed --repo "$SRC" "${girder[@]}" $apply
+        return
+    fi
     local ts="$TS_VENV/bin/TotalSegmentator"
     if ! as_user bash "$TS_VENV_SH" check "$PY" "$TS_VENV" "$TS_VERSION"; then
         if [ -z "$apply" ]; then

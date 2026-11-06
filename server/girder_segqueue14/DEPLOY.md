@@ -345,6 +345,21 @@ twin is excluded; `--twins-file` applies one if it ever exists. The pick, its
 reasons, the salt and the guard's pins are stored on the case. Once the case
 exists nothing is drawn again, whatever the lists say later.
 
+**The lead's choice (D43 amended, #293).** The lead chose **ImageCAS case 1
+(`c0000`, train), `annotator_benchmark_0001`**, in place of the draw.
+`benchmark-create` with `--imagecas-id=1` takes it. It goes through every check
+the draw applies (ImageCAS-X train/val with its CT and reference in Girder; not
+test, sealed, excluded or refused by the guard; not a twin, if a list is given),
+and refuses otherwise. The case records `method: "lead's choice"` and says so in
+its `why`. `c0000` is a declared development case (Atlas, Bridge, Crucible, Delta),
+which is fine for the benchmark: it is not held out. `--replace` swaps an existing
+benchmark case (janus has `annotator_benchmark_0855`) for the chosen one, but only
+if nobody has been given it: no assignment, submission, review or note, and no
+invitation pending or on record. Otherwise it refuses and nothing changes. Only
+the old case's record is removed, and the new case keeps a copy of it under
+`benchmarkReplaced`. The CT, the ImageCAS-X files and any seed file are never
+touched, and there is never more than one benchmark case.
+
 **Steps** (Actions -> *SegQueue14 on janus*; dry runs without `--apply`; all
 idempotent). The code must be on `main` and installed first (`install`).
 
@@ -353,6 +368,8 @@ idempotent). The code must be on `main` and installed first (`install`).
 | `benchmark-status` | Read-only. The case, its seed and reference, who is invited, and every attempt: login, attempt, state, submitted date, mean Dice and per-class Dice (LM, LAD, LCx, RCA). |
 | `benchmark-create [--apply]` | Draws the case (or shows the one there is) and creates it: the CT `ImageCAS-X/cases/ImageCAS__NNNN.nii.gz` and the reference `ImageCAS-X/labels/**/ImageCAS-X__NNNN__labels14.nii.gz`, both referenced in place (nothing copied, nothing written to `ImageCAS-X`). Attaches the seed if it is already in `SegQueue/seeds-totalseg`. |
 | `benchmark-seed [--apply]` | Makes the seed the way the pool seeds were made (`tools/ccta/totalseg_cpu.py`): TotalSegmentator **2.18.0** `coronary_arteries`, CPU, the same command (`-ta coronary_arteries --ml -d cpu -nr 4 -ns 4`, then the low-memory retry), the mask made binary (uint8 0/1) on the CT's grid. Uploads `SegQueue/seeds-totalseg/ImageCAS__NNNN__totalseg-coronary.nii.gz` and attaches it. With `--apply` it first installs TotalSegmentator 2.18.0 (CPU-only torch, ~3 GB) into `~/segqueue-data/totalseg-venv`, never into Girder's venv; the weights go to `~/segqueue-data/totalseg-home`. It runs at `nice 19` / `ionice -c3`; one ImageCAS CT takes minutes. It refuses with less than 10 GB free or 8 GB of memory available. |
+| `benchmark-create [--apply]`, args `--imagecas-id=<N> [--replace]` | The lead's choice of case in place of the draw (see above). If the benchmark case is already that one, it shows it and changes nothing. If it is another one, it refuses unless `--replace` is given. The dry run shows what would be removed and what created. |
+| `benchmark-seed [--apply]`, args `--from-girder=<folder> [--from-girder-file=<name>]` | Takes the seed from a file in Girder instead of running TotalSegmentator (#293), e.g. `--from-girder=user/christian/Public`. It looks through that folder and its subfolders for `.nii.gz`, `.nii`, `.nrrd` or `.nhdr` files and takes the one whose name carries the case's ImageCAS id as a number of its own (for case 1: `ImageCAS__0001…`, `imagecas_0001…`, `case1…`, `case_1…`, `1.nii.gz`; not `10`, `1001` or a version such as `2.18.0`), or, if no name does, the only one. With none or several it refuses and lists them with their sizes; `--from-girder-file=<name>` then picks one. The mask must be on the CT's grid (shape, spacing, origin and direction, as for `--seed-file`) and not empty; anything above 0 is vessel. The step prints the voxel count and the grid. With `--apply` it copies the file into `SegQueue/seeds-totalseg/ImageCAS__NNNN__totalseg-coronary.nii.gz` and attaches it; the original is only read, never changed, moved or deleted. `seedSource` names the file it came from and the TotalSegmentator version, when the file's header or item metadata (`totalsegmentator_version`) records one, else "unknown". It does not install TotalSegmentator. A case the lead chose is never given a seed from `seeds-totalseg` automatically. If that folder already holds a file of the seed's name, the step attaches it only if it is the same mask, and otherwise refuses without overwriting it. Re-running changes nothing. Args may hold only letters, digits, `/ . _ -` and these two options. |
 | `benchmark-assign [--apply]`, args `--exclude=<login,...>` | Makes it the next case for every member of `segqueue14-annotators` except the excluded logins (required: the logins D43 leaves out). An annotator holding a case gets it right after. Skips anyone who has submitted it already. `--login=<login,...>` limits it to those annotators; `--retest` gives a fresh attempt to annotators who have done it. Excluding a login that was invited withdraws the invitation. An unknown login in `--exclude` stops the step. |
 
 Run in this order: `benchmark-create`, `benchmark-create --apply`,
@@ -369,6 +386,15 @@ assignment and submission with its own score; `benchmark-status` lists them all.
 `annotator_benchmark_NNNN`, its reasons start with "annotator benchmark (D43)",
 and its Dice is the annotator's own against ImageCAS-X. Approve it as any other
 read once looked at; approving it trains nothing.
+
+**Case 1 with the lead's seed** (#293), in order, each dry run checked before its `--apply`:
+
+1. `benchmark-create`, args `--imagecas-id=1 --replace`. Check that it removes only `annotator_benchmark_0855` and creates `annotator_benchmark_0001`.
+2. `benchmark-create --apply`, same args.
+3. `benchmark-seed`, args `--from-girder=user/christian/Public`. Check the file it picked, the grid and the voxel count. If it lists candidates, add `--from-girder-file=<name>`.
+4. `benchmark-seed --apply`, same args.
+5. `benchmark-status`.
+6. `benchmark-assign`, then `benchmark-assign --apply`, as below.
 
 **If TotalSegmentator cannot run on janus** (no network to PyPI,
 download.pytorch.org or GitHub for the weights, or not enough memory): the lead

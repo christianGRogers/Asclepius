@@ -8,8 +8,10 @@ dry run without ``--apply``::
 
     segqueue14-benchmark pick                     # the draw from the repository alone
     segqueue14-benchmark create [--apply]         # make the case (or show the one there is)
+    segqueue14-benchmark create --imagecas-id N [--replace] [--apply]  # the lead's choice
     segqueue14-benchmark seed --totalseg BIN [--apply]    # its TotalSegmentator seed, on CPU
     segqueue14-benchmark seed --seed-file PATH [--apply]  # ... or one made elsewhere
+    segqueue14-benchmark seed --from-girder user/x/Public [--from-girder-file NAME] [--apply]
     segqueue14-benchmark assign --exclude a,b [--login x,y] [--retest] [--apply]
     segqueue14-benchmark status [--json]
 
@@ -23,6 +25,11 @@ case in draw order whose CT (``ImageCAS-X/cases/ImageCAS__NNNN.nii.gz``) and
 ImageCAS-X reference (``ImageCAS-X/labels/**/ImageCAS-X__NNNN__labels14.nii.gz``)
 are in Girder, references both in place (nothing is copied) and records the pick
 on the case. Once the case exists, nothing is drawn again: later runs show it.
+``--imagecas-id N`` is the lead's choice in place of the draw (D43 amended, #293):
+it must pass every check the draw applies, and is recorded as the lead's choice.
+``--replace`` swaps an existing benchmark case for it, only if nobody has been given
+the old one (no assignment, submission, review, note or invitation); only the old
+case record goes, never a file.
 
 **seed.** As the pool seeds were made (``tools/ccta/totalseg_cpu.py``):
 TotalSegmentator 2.18.0 ``coronary_arteries``, on CPU, the same command, the mask
@@ -30,8 +37,11 @@ made binary (uint8 0/1) on the CT's own grid, uploaded to
 ``SegQueue/seeds-totalseg/ImageCAS__NNNN__totalseg-coronary.nii.gz``. The
 TotalSegmentator install is separate from Girder's (``--totalseg`` names its
 executable); the deploy step builds one. A seed made elsewhere the same way can be
-given with ``--seed-file``; it must be on the CT's grid. The case is served only
-once it has a seed.
+given with ``--seed-file``; it must be on the CT's grid. ``--from-girder`` takes it
+from a Girder folder instead (#293): the volume there whose name carries the case's
+ImageCAS id (``namesCase``), else the only volume there, else ``--from-girder-file``
+names it. The file is downloaded and copied into the seeds folder; the original is
+never changed, moved or deleted. The case is served only once it has a seed.
 
 **assign.** Invites every member of ``segqueue14-annotators`` except the
 ``--exclude`` logins (required, may be empty: say who is left out), or only the
@@ -272,34 +282,80 @@ def _case(required=True):
 # ------------------------------------------------------------------ create
 
 
-def runCreate(apply=False, root=None, twinsFile=None, out=print):
-    """Make the benchmark case, or show the one there is. Returns a summary dict."""
+def _showExisting(existing, apply, out):
     from girder.models.file import File
 
+    pick = existing.get('benchmarkPick') or {}
+    out(f"benchmark case: {existing['name']} (exists; never redrawn)")
+    out(f"  pick: {pick.get('why', '?')}")
+    n = sqbench.imagecas_id_of(existing['name'])
+    if not existing.get('seedFileId') and n is not None \
+            and pick.get('method') != sqbench.LEAD_CHOICE:
+        seed = _seedItem(n)
+        if seed is not None:
+            from .populate import _firstFile
+
+            seedFile = _firstFile(seed)
+            if seedFile is not None and apply:
+                _attachSeed(existing, seedFile['_id'])
+            state = 'attached' if apply else 'found; --apply attaches it'
+            out(f'  seed: {seedName(n)} {state}')
+    out(f"  seed: {'yes' if existing.get('seedFileId') else 'none yet'}; reference: "
+        f"{'yes' if existing.get('referenceFileId') else 'MISSING'}; "
+        f"CT present: {File().load(existing['fileId'], force=True) is not None}")
+    return {'created': False, 'name': existing['name']}
+
+
+def _replaceBlockers(case):
+    """Why ``case`` cannot be removed by ``--replace``; empty if it can."""
+    from .models import Assignment14, Submission14
+    from .models.note import Note14
+    from .models.review import Review14
+
+    out = []
+    for label, model in (('assignment', Assignment14), ('submission', Submission14),
+                         ('review', Review14), ('note', Note14)):
+        count = model().collection.count_documents({'caseId': case['_id']})
+        if count:
+            out.append(f'{count} {label}(s)')
+    if case.get('benchmarkPending'):
+        out.append(f"{len(case['benchmarkPending'])} pending invitation(s)")
+    if case.get('benchmarkInvites'):
+        out.append(f"{len(case['benchmarkInvites'])} invitation(s) on record")
+    return out
+
+
+def runCreate(apply=False, root=None, twinsFile=None, imagecasId=None, replace=False,
+              out=print):
+    """Make the benchmark case, or show the one there is. Returns a summary dict.
+
+    ``imagecasId``: the lead's choice in place of the draw (D43 amended, #293); it
+    must pass every eligibility check. ``replace``: remove the existing benchmark
+    case first, only if nobody has been given it (no assignment, submission,
+    review, note or invitation). Only its case record is removed; the CT, the
+    ImageCAS-X files and any seed file are never touched.
+    """
     from .models import Case14
     from .utils import hashStoredFile
 
+    if replace and imagecasId is None:
+        raise SystemExit('REFUSED: --replace needs --imagecas-id <N>: name the case that '
+                         'replaces the existing one')
     existing = _case(required=False)
     if existing is not None:
-        pick = existing.get('benchmarkPick') or {}
-        out(f"benchmark case: {existing['name']} (exists; never redrawn)")
-        out(f"  pick: {pick.get('why', '?')}")
-        n = sqbench.imagecas_id_of(existing['name'])
-        seed = None
-        if not existing.get('seedFileId') and n is not None:
-            seed = _seedItem(n)
-            if seed is not None:
-                from .populate import _firstFile
-
-                seedFile = _firstFile(seed)
-                if seedFile is not None and apply:
-                    _attachSeed(existing, seedFile['_id'])
-                state = 'attached' if apply else 'found; --apply attaches it'
-                out(f'  seed: {seedName(n)} {state}')
-        out(f"  seed: {'yes' if existing.get('seedFileId') else 'none yet'}; reference: "
-            f"{'yes' if existing.get('referenceFileId') else 'MISSING'}; "
-            f"CT present: {File().load(existing['fileId'], force=True) is not None}")
-        return {'created': False, 'name': existing['name']}
+        same = imagecasId is None or \
+            sqbench.imagecas_id_of(existing['name']) == int(imagecasId)
+        if same:
+            return _showExisting(existing, apply, out)
+        if not replace:
+            _showExisting(existing, False, out)
+            raise SystemExit(f"REFUSED: the benchmark case is {existing['name']}, not "
+                             f"{sqbench.case_name(imagecasId)}; --replace swaps it (only if "
+                             'nobody has been given it)')
+        blockers = _replaceBlockers(existing)
+        if blockers:
+            raise SystemExit(f"REFUSED: {existing['name']} cannot be replaced: it has "
+                             + ', '.join(blockers) + '. Nothing changed.')
 
     elig, splits, guard = computeEligibility(repoRoot(root), twinsFile)
     _printEligibility(elig, out)
@@ -315,23 +371,32 @@ def runCreate(apply=False, root=None, twinsFile=None, out=print):
 
     skipped = []
     try:
-        pick = sqbench.draw(elig, splits, usable, skipped)
+        if imagecasId is not None:
+            pick = sqbench.choose(elig, splits, int(imagecasId), usable)
+        else:
+            pick = sqbench.draw(elig, splits, usable, skipped)
     except ValueError as exc:
         raise SystemExit(f'REFUSED: {exc}') from exc
     for line in skipped:
         out(f'  skipped {line}')
-    out(f'pick: {pick.name}')
+    out(f'pick: {pick.name} ({pick.method})')
     out(f'  why: {pick.why}')
     clash = Case14().findOne({'name': pick.name})
     if clash is not None:
         raise SystemExit(f'REFUSED: a case named {pick.name} exists and is not the benchmark')
     ct, ref = found[pick.icx]
-    seedItem = _seedItem(pick.imagecas_id)
     seedFile = None
+    seedItem = _seedItem(pick.imagecas_id)
     if seedItem is not None:
         from .populate import _firstFile
 
         seedFile = _firstFile(seedItem)
+    if pick.method == sqbench.LEAD_CHOICE and seedFile is not None:
+        # The lead's case takes the lead's seed (`seed --from-girder`), not whatever
+        # file of that name is in the seeds folder.
+        out(f'  {seedName(pick.imagecas_id)} is in {SEEDS_FOLDER} already; not attached '
+            '(run seed)')
+        seedFile = None
     out(f"  CT {ct['name']} ({ct.get('size', 0)} bytes, referenced in place); reference "
         f"{ref['name']}; seed {seedName(pick.imagecas_id) if seedFile else 'none yet (run seed)'}")
     from janusm.guard import GUARD_VERSION
@@ -339,9 +404,29 @@ def runCreate(apply=False, root=None, twinsFile=None, out=print):
     record = dict(pick.to_dict(), twins=elig.twins, excluded=elig.counts(),
                   skipped=skipped, guardVersion=GUARD_VERSION, pins=dict(guard.pins),
                   pickedAt=_now())
+    replaced = None
+    if existing is not None:
+        replaced = {'name': existing['name'], 'caseId': str(existing['_id']),
+                    'pick': existing.get('benchmarkPick'), 'created': existing.get('created'),
+                    'seedFileId': existing.get('seedFileId'), 'removedAt': _now()}
+        out(f"  replaces {existing['name']}: its case record is removed; its CT, the "
+            'ImageCAS-X files and any seed file are not touched')
     if not apply:
-        out('dry run: nothing written. --apply creates the case.')
-        return {'created': False, 'name': pick.name, 'pick': record}
+        out('dry run: nothing written. --apply '
+            + ('removes the old case record and creates the new case.' if replaced
+               else 'creates the case.'))
+        return {'created': False, 'name': pick.name, 'pick': record,
+                'replaces': replaced['name'] if replaced else None}
+    if replaced is not None:
+        # Atomic: only while it is still the untouched benchmark case.
+        gone = Case14().collection.delete_one({
+            '_id': existing['_id'], 'benchmark': True,
+            'benchmarkPending': {'$in': [None, []]},
+            'benchmarkInvites': {'$in': [None, []]}})
+        if gone.deleted_count != 1 or _replaceBlockers(existing):
+            raise SystemExit(f"REFUSED: {existing['name']} changed meanwhile; check "
+                             'benchmark-status before trying again')
+        out(f"removed the case record {existing['name']}")
     case = Case14().createCase(
         name=pick.name, fileId=ct['_id'], checksum=hashStoredFile(ct),
         sizeBytes=ct.get('size', 0), creator=_admin(), priority=0, serveOrder=0,
@@ -350,18 +435,20 @@ def runCreate(apply=False, root=None, twinsFile=None, out=print):
         seedFileId=seedFile['_id'] if seedFile else None,
         seedSource=sqplan.SEED_SOURCE_TOTALSEG if seedFile else '',
         extra={'benchmark': True, 'benchmarkPick': record, 'benchmarkPending': [],
-               'benchmarkInvites': []})
+               'benchmarkInvites': [],
+               **({'benchmarkReplaced': [replaced]} if replaced else {})})
     out(f"created {case['name']}" + ('' if seedFile else '; it is served only once it has a '
                                                          'seed (segqueue14-benchmark seed)'))
-    return {'created': True, 'name': case['name'], 'pick': record}
+    return {'created': True, 'name': case['name'], 'pick': record,
+            'replaces': replaced['name'] if replaced else None}
 
 
-def _attachSeed(case, fileId):
+def _attachSeed(case, fileId, source=None):
     from .models import Case14
 
     result = Case14().collection.update_one(
         {'_id': case['_id'], 'seedFileId': None},
-        {'$set': {'seedFileId': fileId, 'seedSource': sqplan.SEED_SOURCE_TOTALSEG,
+        {'$set': {'seedFileId': fileId, 'seedSource': source or sqplan.SEED_SOURCE_TOTALSEG,
                   'updated': _now()}})
     return bool(result.modified_count)
 
@@ -409,6 +496,28 @@ def binarise(segPath, ctPath, outPath):
     sitk.WriteImage(image, str(outPath), True)
     vox = float(np.prod(ctGrid[1]))
     return {'voxels': voxels, 'volume_ml': round(voxels * vox / 1000, 3)}
+
+
+def _sameMask(a, b):
+    """True if two masks are on the same grid with the same voxels set."""
+    import numpy as np
+    import SimpleITK as sitk
+
+    if not _sameGrid(_grid(a), _grid(b)):
+        return False
+    one = sitk.GetArrayFromImage(sitk.ReadImage(str(a))) > 0
+    two = sitk.GetArrayFromImage(sitk.ReadImage(str(b))) > 0
+    return bool(np.array_equal(one, two))
+
+
+def _sha256(path):
+    import hashlib
+
+    digest = hashlib.sha256()
+    with open(path, 'rb') as handle:
+        for block in iter(lambda: handle.read(1 << 20), b''):
+            digest.update(block)
+    return digest.hexdigest()
 
 
 def totalsegVersion(binary):
@@ -464,7 +573,129 @@ def runTotalseg(binary, ctPath, outPath, workDir, out=print):
     raise SystemExit('REFUSED: TotalSegmentator failed twice; no seed made')
 
 
-def runSeed(apply=False, totalseg=None, seedFile=None, out=print):
+#: Label-volume files ``--from-girder`` considers (a ``.seg.nrrd`` ends in ``.nrrd``).
+SEED_VOLUME_SUFFIXES = ('.nii.gz', '.nii', '.nrrd', '.nhdr')
+#: Item metadata keys that may carry the TotalSegmentator version (lower-cased).
+TS_VERSION_KEYS = ('totalsegmentator_version', 'totalseg_version', 'totalsegmentator',
+                   'ts_version')
+
+
+def _volumeSuffix(name):
+    lower = name.lower()
+    return next((s for s in SEED_VOLUME_SUFFIXES if lower.endswith(s)), None)
+
+
+def _girderFolder(path):
+    """The Girder folder at resource path ``path`` (e.g. ``user/christian/Public``)."""
+    from girder.exceptions import GirderException, ResourcePathNotFound
+    from girder.utility.path import lookUpPath
+
+    clean = '/' + str(path).strip().strip('/')
+    try:
+        found = lookUpPath(clean, filter=False, force=True)
+    except (GirderException, ResourcePathNotFound, IndexError) as exc:
+        raise SystemExit(f'REFUSED: no Girder resource at {clean} ({exc})') from exc
+    if found['model'] != 'folder':
+        raise SystemExit(f"REFUSED: {clean} is a {found['model']}, not a folder")
+    return found['document'], clean.lstrip('/')
+
+
+def _girderCandidates(folder):
+    """``[(path relative to folder, item, file)]`` for every volume under ``folder``."""
+    from .populate import _childFolders
+
+    out = []
+
+    def walk(node, rel):
+        from girder.models.folder import Folder
+        from girder.models.item import Item
+
+        for item in Folder().childItems(node):
+            for fileDoc in Item().childFiles(item):
+                if _volumeSuffix(fileDoc['name']):
+                    name = fileDoc['name'] if fileDoc['name'] == item['name'] else \
+                        f"{item['name']}/{fileDoc['name']}"
+                    out.append((f'{rel}{name}', item, fileDoc))
+        for child in _childFolders(node):
+            walk(child, f"{rel}{child['name']}/")
+
+    walk(folder, '')
+    return sorted(out, key=lambda c: c[0])
+
+
+def _listing(candidates):
+    return '; '.join(f"{rel} ({fileDoc.get('size', 0)} bytes)"
+                     for rel, _, fileDoc in candidates) or 'none'
+
+
+def namesCase(name, n):
+    """True if ``name`` carries ImageCAS id ``n`` as a number of its own.
+
+    ``ImageCAS__0001.nii.gz``, ``imagecas_0001_seg.nii.gz``, ``case1.nrrd``,
+    ``case_1.nii.gz`` and ``1.nii.gz`` all name case 1; version numbers such as
+    ``2.18.0`` and longer numbers such as ``10`` or ``1001`` do not.
+    """
+    import re
+
+    text = re.sub(r'\d+(?:\.\d+)+', ' ', str(name))      # versions: 2.18.0, v2.1
+    return any(int(run) == int(n) for run in re.findall(r'\d+', text))
+
+
+def pickGirderSeed(candidates, n, fileName=None):
+    """The one candidate to use: ``fileName`` if given, else the one whose name carries
+    the case's ImageCAS id (``namesCase``), else the only volume. Refuses zero or
+    several, listing them."""
+    if fileName:
+        chosen = [c for c in candidates
+                  if fileName in (c[0], c[2]['name'], c[1]['name'])]
+        why = f'named {fileName!r}'
+    else:
+        tag = f'{int(n):04d}'
+        chosen = [c for c in candidates if namesCase(c[2]['name'], n)
+                  or namesCase(c[1]['name'], n)]
+        why = f'with ImageCAS id {int(n)} ({tag}) in the name'
+        if not chosen:
+            chosen, why = candidates, 'there (none has the case id in its name)'
+    if len(chosen) != 1:
+        raise SystemExit(
+            f'REFUSED: {len(chosen)} label volume(s) {why}; pass --from-girder-file <name>. '
+            f'Volumes: {_listing(candidates)}')
+    return chosen[0]
+
+
+def tsVersionOf(path, meta=None):
+    """The TotalSegmentator version recorded in the file's header or item metadata."""
+    import re
+
+    import SimpleITK as sitk
+
+    pattern = re.compile(r'(?i)totalseg\w*\D{0,3}v?(\d+\.\d+(?:\.\d+)?)')
+    for key, value in (meta or {}).items():
+        if str(key).lower() in TS_VERSION_KEYS:
+            match = re.search(r'\d+\.\d+(?:\.\d+)?', str(value))
+            if match:
+                return match.group(0)
+    try:
+        reader = sitk.ImageFileReader()
+        reader.SetFileName(str(path))
+        reader.ReadImageInformation()
+        texts = [f'{k} {reader.GetMetaData(k)}' for k in reader.GetMetaDataKeys()]
+    except RuntimeError:
+        return None
+    for text in texts:
+        match = pattern.search(text)
+        if match:
+            return match.group(1)
+    return None
+
+
+def girderSeedSource(where, version):
+    return (f'TotalSegmentator coronary_arteries (binary), version {version or "unknown"}, '
+            f'supplied by the lead from {where}')
+
+
+def runSeed(apply=False, totalseg=None, seedFile=None, fromGirder=None, fromGirderFile=None,
+            out=print):
     """Give the benchmark case its seed. Returns a summary dict."""
     from girder.models.file import File
     from girder.models.item import Item
@@ -473,10 +704,16 @@ def runSeed(apply=False, totalseg=None, seedFile=None, out=print):
     from .models import Submission14
     from .populate import _firstFile
 
+    sources = [bool(totalseg), bool(seedFile), bool(fromGirder)]
+    if sum(sources) > 1:
+        raise SystemExit('REFUSED: pass one of --totalseg, --seed-file or --from-girder')
+    if fromGirderFile and not fromGirder:
+        raise SystemExit('REFUSED: --from-girder-file needs --from-girder <folder path>')
     case = _case()
     n = sqbench.imagecas_id_of(case['name'])
     if case.get('seedFileId'):
-        out(f"{case['name']} has its seed already; nothing to do.")
+        out(f"{case['name']} has its seed already ({case.get('seedSource') or '?'}); "
+            'nothing to do.')
         return {'seed': 'present'}
     if Submission14().collection.count_documents({'caseId': case['_id']}):
         raise SystemExit('REFUSED: the case has submissions; its starting point cannot change')
@@ -484,15 +721,24 @@ def runSeed(apply=False, totalseg=None, seedFile=None, out=print):
     if folder is None:
         raise SystemExit(f'REFUSED: no {LIVE_COLLECTION_NAME}/{SEEDS_FOLDER} folder')
     existing = _seedItem(n)
-    if existing is not None and _firstFile(existing) is not None:
+    if existing is not None and _firstFile(existing) is None:
+        existing = None
+    if existing is not None and not fromGirder:
         out(f"{seedName(n)} is in {SEEDS_FOLDER} already; "
             + ('attached.' if apply else '--apply attaches it.'))
         if apply:
             _attachSeed(case, _firstFile(existing)['_id'])
         return {'seed': 'attached' if apply else 'found'}
-    if not totalseg and not seedFile:
-        raise SystemExit('REFUSED: pass --totalseg <TotalSegmentator executable> or '
-                         '--seed-file <mask on the CT grid>')
+    if not any(sources):
+        raise SystemExit('REFUSED: pass --totalseg <TotalSegmentator executable>, '
+                         '--seed-file <mask on the CT grid> or --from-girder <folder path>')
+    picked = None
+    if fromGirder:
+        gFolder, gPath = _girderFolder(fromGirder)
+        candidates = _girderCandidates(gFolder)
+        out(f'{gPath}: {len(candidates)} label volume(s): {_listing(candidates)}')
+        picked = pickGirderSeed(candidates, n, fromGirderFile)
+        out(f"using {gPath}/{picked[0]} ({picked[2].get('size', 0)} bytes)")
     ct = File().load(case['fileId'], force=True)
     if ct is None:
         raise SystemExit(f"REFUSED: {case['name']}'s CT is missing from storage")
@@ -518,18 +764,54 @@ def runSeed(apply=False, totalseg=None, seedFile=None, out=print):
         if float(grid[0][0]) * grid[0][1] * grid[0][2] > LARGE_VOXELS:
             raise SystemExit(f'REFUSED: {grid[0]} voxels; the pool batch made seeds this large '
                              'on a 0.8 mm copy, which this step does not do')
+        seedSource, extraMeta = sqplan.SEED_SOURCE_TOTALSEG, {}
         if totalseg:
             made = Path(work) / 'seg.nii.gz'
             command = runTotalseg(totalseg, ctPath, made, work, out=out)
             source = f'TotalSegmentator {TOTALSEG_VERSION}: {command}'
+        elif picked is not None:
+            rel, gItem, gFile = picked
+            # A copy: the lead's file is only read, never changed, moved or deleted.
+            made = Path(work) / ('girder-seed' + _volumeSuffix(gFile['name']))
+            with open(made, 'wb') as handle:
+                for chunk in File().download(gFile, headers=False)():
+                    handle.write(chunk)
+            version = tsVersionOf(made, gItem.get('meta'))
+            out(f'TotalSegmentator version in its metadata: {version or "unknown"}')
+            where = f'{gPath}/{rel}'
+            source = seedSource = girderSeedSource(where, version)
+            extraMeta = {'from_girder': where, 'from_girder_file_id': str(gFile['_id']),
+                         'from_girder_sha256': _sha256(made),
+                         'totalseg_version': version or 'unknown'}
         else:
             made, source = Path(seedFile), f'supplied file {Path(seedFile).name}'
         final = Path(work) / seedName(n)
         stats = binarise(made, ctPath, final)
-        out(f"seed: {stats['voxels']} voxels, {stats['volume_ml']} ml, on the CT's grid")
+        out(f"seed: {stats['voxels']} voxels, {stats['volume_ml']} ml, on the CT's grid "
+            f"({' x '.join(str(v) for v in grid[0])} voxels, spacing "
+            f"{', '.join(f'{v:.4g}' for v in grid[1])} mm)")
+        out(f'seedSource: {seedSource}')
+        if existing is not None:
+            # --from-girder only: a file of that name is there already (a re-run after
+            # an interrupted attach, or a pool seed). Never overwrite or duplicate it.
+            have = Path(work) / 'existing.nii.gz'
+            with open(have, 'wb') as handle:
+                for chunk in File().download(_firstFile(existing), headers=False)():
+                    handle.write(chunk)
+            if not _sameMask(have, final):
+                raise SystemExit(
+                    f'REFUSED: {SEEDS_FOLDER}/{seedName(n)} exists and is a different mask '
+                    'from the one in Girder; nothing changed. It is not overwritten: the '
+                    'lead decides which seed the case gets.')
+            out(f'{SEEDS_FOLDER}/{seedName(n)} exists and is the same mask; '
+                + ('attached.' if apply else '--apply attaches it.'))
+            if apply:
+                _attachSeed(case, _firstFile(existing)['_id'], seedSource)
+            return {'seed': 'attached' if apply else 'found', 'seedSource': seedSource,
+                    **stats}
         if not apply:
             out(f'dry run: would upload {seedName(n)} and attach it. --apply does it.')
-            return {'seed': 'would upload', **stats}
+            return {'seed': 'would upload', 'seedSource': seedSource, **stats}
         admin = _admin()
         with open(final, 'rb') as handle:
             fileDoc = Upload().uploadFromFile(
@@ -538,12 +820,12 @@ def runSeed(apply=False, totalseg=None, seedFile=None, out=print):
         item = Item().load(fileDoc['itemId'], force=True)
         Item().setMetadata(item, {
             'source': 'ImageCAS-X', 'imagecas_id': n, 'segqueue14_case': case['name'],
-            'seed_source': sqplan.SEED_SOURCE_TOTALSEG, 'made_by': source,
-            'role': 'annotator benchmark seed (D43)', **stats})
-        if not _attachSeed(case, fileDoc['_id']):
+            'seed_source': seedSource, 'made_by': source,
+            'role': 'annotator benchmark seed (D43)', **extraMeta, **stats})
+        if not _attachSeed(case, fileDoc['_id'], seedSource):
             out('note: the case got a seed meanwhile; the upload is kept but not attached')
         out(f'uploaded {seedName(n)} and attached it to {case["name"]}')
-        return {'seed': 'uploaded', **stats}
+        return {'seed': 'uploaded', 'seedSource': seedSource, **stats}
     finally:
         shutil.rmtree(work, ignore_errors=True)
 
@@ -719,12 +1001,24 @@ def buildParser():
     p = sub.add_parser('create', help='Create the benchmark case, or show the one there is.')
     common(p)
     p.add_argument('--twins-file', default=None)
+    p.add_argument('--imagecas-id', type=int, default=None, metavar='N',
+                   help='The lead\'s choice of case (ImageCAS id) in place of the draw '
+                        '(D43 amended); it must pass every eligibility check.')
+    p.add_argument('--replace', action='store_true',
+                   help='With --imagecas-id: remove the existing benchmark case record first, '
+                        'only if nobody has been given it. Files are never touched.')
     p = sub.add_parser('seed', help='Give the case its TotalSegmentator seed.')
     common(p)
     p.add_argument('--totalseg', default=None,
                    help=f'TotalSegmentator {TOTALSEG_VERSION} executable (its own venv).')
     p.add_argument('--seed-file', default=None,
                    help='A seed made elsewhere the same way, on the CT\'s grid.')
+    p.add_argument('--from-girder', default=None, metavar='FOLDER',
+                   help='Take the seed from this Girder folder (a resource path such as '
+                        'user/christian/Public): the volume whose name holds the case\'s '
+                        'ImageCAS id, else the only one. It is copied, never changed.')
+    p.add_argument('--from-girder-file', default=None, metavar='NAME',
+                   help='With --from-girder: the file to use, by name (or path in the folder).')
     p = sub.add_parser('assign', help='Make it the next case for annotators.')
     common(p)
     p.add_argument('--exclude', default=None, required=True,
@@ -746,9 +1040,11 @@ def main(argv=None):  # pragma: no cover - CLI entry point
     if args.repo:
         os.environ.setdefault(REPO_ENV, args.repo)
     if args.step == 'create':
-        runCreate(apply=args.apply, root=args.repo, twinsFile=args.twins_file)
+        runCreate(apply=args.apply, root=args.repo, twinsFile=args.twins_file,
+                  imagecasId=args.imagecas_id, replace=args.replace)
     elif args.step == 'seed':
-        runSeed(apply=args.apply, totalseg=args.totalseg, seedFile=args.seed_file)
+        runSeed(apply=args.apply, totalseg=args.totalseg, seedFile=args.seed_file,
+                fromGirder=args.from_girder, fromGirderFile=args.from_girder_file)
     elif args.step == 'assign':
         runAssign(args.exclude, logins=args.login, retest=args.retest, apply=args.apply)
     elif args.step == 'status':

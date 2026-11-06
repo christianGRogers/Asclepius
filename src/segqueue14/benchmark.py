@@ -22,6 +22,10 @@ reference) that nothing holds out. **Excluded**, each with its reason:
 lowest. It depends only on the eligible set and the salt, both recorded with the
 pick; the server stores the pick on the case and never draws again.
 
+**The lead's choice** (D43 amended, #293): ``choose`` takes a named ImageCAS id
+instead of the draw. It must pass every check above; it is recorded as the lead's
+choice, not the draw.
+
 Standard library only, Python 3.9.
 """
 
@@ -178,11 +182,13 @@ class Pick:
     salt: str
     split: str
     why: str
+    method: str = "draw"   # "draw", or "lead's choice" (D43 amended, #293)
 
     def to_dict(self) -> Dict[str, object]:
         return {"icxCase": self.icx, "imagecasId": self.imagecas_id, "name": self.name,
                 "rank": self.rank, "position": self.position, "eligible": self.eligible,
-                "salt": self.salt, "split": self.split, "why": self.why}
+                "salt": self.salt, "split": self.split, "why": self.why,
+                "method": self.method}
 
 
 def draw(elig: Eligibility, splits: Mapping[str, Iterable[str]],
@@ -212,3 +218,34 @@ def draw(elig: Eligibility, splits: Mapping[str, Iterable[str]],
                     position=position, eligible=len(elig.eligible), salt=elig.salt,
                     split=split, why=why)
     raise ValueError(f"no usable benchmark case among {len(elig.eligible)} eligible")
+
+
+#: ``Pick.method`` for a case the lead named (D43 amended, #293).
+LEAD_CHOICE = "lead's choice"
+
+
+def choose(elig: Eligibility, splits: Mapping[str, Iterable[str]], imagecas_id_: int,
+           usable: Optional[Callable[[str], Optional[str]]] = None) -> Pick:
+    """The lead's named case (ImageCAS id), in place of the draw.
+
+    Fails closed: raises ``ValueError`` with the reason if the case is not an
+    ImageCAS-X train/val case, is excluded for any reason ``eligibility`` gives,
+    or ``usable`` refuses it (its CT or reference is missing).
+    """
+    n = int(imagecas_id_)
+    case_name(n)                                   # 1..1000, or ValueError
+    c = icx_case(n)
+    if c in elig.excluded:
+        raise ValueError(f"ImageCAS {n} ({c}) is not eligible: {elig.excluded[c]}")
+    if c not in elig.eligible:
+        raise ValueError(f"ImageCAS {n} ({c}) is not an ImageCAS-X train/val case")
+    problem = usable(c) if usable is not None else None
+    if problem:
+        raise ValueError(f"ImageCAS {n} ({c}) cannot be served: {problem}")
+    split = {str(x): s for s in ELIGIBLE_SPLITS for x in splits.get(s, ())}.get(c, "")
+    why = (f"the lead's choice (D43 amended, #293), not the draw: ImageCAS-X {split} case "
+           f"{c} (ImageCAS {n}); not test, not on any trillium/sealed_test.json list, not "
+           f"refused by the JA12 guard; twins: {elig.twins}")
+    return Pick(icx=c, imagecas_id=n, name=case_name(n), rank=rank(c, elig.salt),
+                position=elig.eligible.index(c), eligible=len(elig.eligible),
+                salt=elig.salt, split=split, why=why, method=LEAD_CHOICE)

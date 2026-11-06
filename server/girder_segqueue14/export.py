@@ -48,6 +48,11 @@ Two things about the inputs that are easy to get wrong:
 Runs against the models directly rather than over REST, like ``segqueue-ingest``
 and for the same reason: the files are already on this disk.
 
+**The annotator benchmark (D43).** Reads of the benchmark case
+(``annotator_benchmark_<ImageCAS id>``, ``segqueue14.benchmark``) are never exported:
+they measure annotators and are never trained on. There is no option to include
+them; the run says how many cases it left out.
+
 **The D27 pool seal.** Reads of the sealed SegQueue14 pool volumes
 (``configs/segqueue14/sealed-pool-2026-10.json``, via ``segtrain.pool_seal``) are
 left out of every export by default, before any file of theirs is opened, and the
@@ -66,6 +71,7 @@ import sys
 import tempfile
 
 from segqueue import states as st
+from segqueue14 import benchmark as sqbench
 from segqueue14 import labelfile
 from segqueue14 import labels as project_labels
 
@@ -250,6 +256,13 @@ def selectable(includeUnreviewed=False):
 
 #: The ``name`` ``collect`` yields for a case the D27 pool seal leaves out.
 SEALED = object()
+#: The ``name`` ``collect`` yields for the annotator benchmark (D43), always left out.
+BENCHMARK = object()
+
+
+def isBenchmark(case):
+    """The annotator benchmark case (D43), by its flag or its name."""
+    return bool(case.get('benchmark')) or sqbench.is_benchmark_name(case.get('name', ''))
 
 
 def collect(since=None, includeUnreviewed=False, limit=0, replicas='first', seal=None):
@@ -264,7 +277,8 @@ def collect(since=None, includeUnreviewed=False, limit=0, replicas='first', seal
 
     ``seal`` (a ``segtrain.pool_seal.PoolSeal``): each of its cases is yielded once
     as ``(case, None, SEALED)``, before any submission of it is loaded, and does not
-    count towards ``limit``.
+    count towards ``limit``. The annotator benchmark (D43) is yielded the same way,
+    as ``(case, None, BENCHMARK)``, always.
     """
     _, Assignment, Case, Submission = _models()
     assignments, submissions, cases = Assignment(), Submission(), Case()
@@ -283,6 +297,9 @@ def collect(since=None, includeUnreviewed=False, limit=0, replicas='first', seal
     for caseId, group in byCase.items():
         case = cases.load(caseId, force=True)
         if case is None:
+            continue
+        if isBenchmark(case):
+            yield case, None, BENCHMARK
             continue
         if seal is not None and seal.is_sealed(case['name']):
             yield case, None, SEALED
@@ -331,6 +348,7 @@ def _writeManifest(out, cases, segments, args, since):
         'include_unreviewed': bool(args.include_unreviewed),
         'since': since.isoformat() if since else None,
         'pool_seal': getattr(args, 'poolSeal', None),
+        'annotator_benchmark_excluded': getattr(args, 'benchmarkExcluded', 0),
     })
     return manifest.write(out)
 
@@ -402,7 +420,7 @@ def main(argv=None):
     if not args.dry_run:
         os.makedirs(args.out, exist_ok=True)
 
-    written = skippedReplicas = failed = sealedExcluded = sealedIncluded = 0
+    written = skippedReplicas = failed = sealedExcluded = sealedIncluded = benchmarks = 0
     emptyStructures = {}
     overlapping = []
     exportedCases = []
@@ -416,6 +434,9 @@ def main(argv=None):
             seal=None if acceptance else seal):
         if name is SEALED:
             sealedExcluded += 1
+            continue
+        if name is BENCHMARK:
+            benchmarks += 1
             continue
         if submission is None:
             skippedReplicas += 1
@@ -447,7 +468,10 @@ def main(argv=None):
     args.poolSeal = {'sha256': seal.sha256,
                      'mode': 'acceptance' if acceptance else 'exclude',
                      'excluded_cases': sealedExcluded, 'included_reads': sealedIncluded}
+    args.benchmarkExcluded = benchmarks
     print(f'\n{verb} {written} case(s) into {args.out}.')
+    if benchmarks:
+        print(f'{benchmarks} annotator benchmark case(s) left out (D43; never trained on).')
     if acceptance:
         print(f'ACCEPTANCE SCORING: {sealedIncluded} read(s) of D27 sealed pool volumes '
               'included.')

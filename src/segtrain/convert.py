@@ -539,6 +539,7 @@ class ConvertReport:
     n_excluded: int = 0
     excluded: list[str] = field(default_factory=list)
     n_pool_sealed: int = 0
+    n_benchmark: int = 0
     failures: list[CaseResult] = field(default_factory=list)
     with_missing: list[CaseResult] = field(default_factory=list)
     with_overlaps: list[CaseResult] = field(default_factory=list)
@@ -569,6 +570,8 @@ class ConvertReport:
                if self.n_excluded else "")
             + (f"; {self.n_pool_sealed} sealed pool volume(s) excluded (D27)"
                if self.n_pool_sealed else "")
+            + (f"; {self.n_benchmark} annotator benchmark read(s) skipped (D43)"
+               if self.n_benchmark else "")
         ]
         for why in self.excluded[:5]:
             lines.append(f"  excluded: {why}")
@@ -661,6 +664,13 @@ def convert_dataset(
             sealed_path = Path(__file__).resolve().parents[2] / sealed_path
         exclude = load_sealed(sealed_path)
     exclude = set(exclude or ())
+    # D43: annotator benchmark reads measure annotators and are never trained on. Dropped here,
+    # whatever the task, before anything else looks at them.
+    from .proxy import benchmark_name
+
+    n_rows = len(rows)
+    rows = [r for r in rows if not benchmark_name(r.case_id)]
+    n_benchmark = n_rows - len(rows)
     # D27: sealed pool volumes never become training data. Refuse (default) or, explicitly, drop.
     from .pool_seal import ACCEPTANCE
     from .pool_seal import apply as apply_pool_seal
@@ -719,6 +729,7 @@ def convert_dataset(
                          "label, so the task must set ignore_label: true")
     report = ConvertReport(task=task.nnunet_name, overlap_policy=overlap_policy)
     report.n_pool_sealed = n_pool_sealed
+    report.n_benchmark = n_benchmark
 
     if dry_run:
         print(f"[dry-run] {task.nnunet_name} -> {raw_dir}")

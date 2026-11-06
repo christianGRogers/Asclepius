@@ -322,6 +322,78 @@ the backup: re-import them from CCTA-Pool if the assetstore itself was lost.
 
 **Logs:** `journalctl -u segqueue-backup` (hourly) and `journalctl -u segqueue-backup-check` (daily).
 
+## D43 on janus: the annotator benchmark
+
+One ImageCAS-X case, drawn once and then fixed, is every annotator's next case
+(except the logins you exclude), named `annotator_benchmark_<ImageCAS id>`. It is
+seeded like the pool cases, scored on its own against ImageCAS-X (Dice per class
+and mean, collapsed to the four classes), and every submission goes to the
+reviewer tab. It is never paired, never counted as a pool read or against a
+quota, and never exported or trained on. Issue #286; code:
+`server/girder_segqueue14/benchmark.py`, `src/segqueue14/benchmark.py`.
+
+**Which case.** ImageCAS-X train/val cases, minus the test split, every list in
+`trillium/sealed_test.json` and everything the JA12 guard (`janusm.guard`)
+refuses for an ImageCAS-X id (the A14 sealed 100, test, val 80, the Janus-M seal
+and decision cases). That leaves 400 train cases. They are ranked by
+`sha256("asclepius-annotator-benchmark-d43:" + case)` and the first one whose CT
+and reference are in Girder is taken: **ImageCAS 855 (`c0854`, train),
+`annotator_benchmark_0855`**, with today's lists. The project has no list of
+ImageCAS cases that may be in TotalSegmentator's training data (the twin list
+`configs/janusm/ts-twins-r1.json` is about TotalSegmentator subjects), so no
+twin is excluded; `--twins-file` applies one if it ever exists. The pick, its
+reasons, the salt and the guard's pins are stored on the case. Once the case
+exists nothing is drawn again, whatever the lists say later.
+
+**Steps** (Actions -> *SegQueue14 on janus*; dry runs without `--apply`; all
+idempotent). The code must be on `main` and installed first (`install`).
+
+| Step | What it does |
+|---|---|
+| `benchmark-status` | Read-only. The case, its seed and reference, who is invited, and every attempt: login, attempt, state, submitted date, mean Dice and per-class Dice (LM, LAD, LCx, RCA). |
+| `benchmark-create [--apply]` | Draws the case (or shows the one there is) and creates it: the CT `ImageCAS-X/cases/ImageCAS__NNNN.nii.gz` and the reference `ImageCAS-X/labels/**/ImageCAS-X__NNNN__labels14.nii.gz`, both referenced in place (nothing copied, nothing written to `ImageCAS-X`). Attaches the seed if it is already in `SegQueue/seeds-totalseg`. |
+| `benchmark-seed [--apply]` | Makes the seed the way the pool seeds were made (`tools/ccta/totalseg_cpu.py`): TotalSegmentator **2.18.0** `coronary_arteries`, CPU, the same command (`-ta coronary_arteries --ml -d cpu -nr 4 -ns 4`, then the low-memory retry), the mask made binary (uint8 0/1) on the CT's grid. Uploads `SegQueue/seeds-totalseg/ImageCAS__NNNN__totalseg-coronary.nii.gz` and attaches it. With `--apply` it first installs TotalSegmentator 2.18.0 (CPU-only torch, ~3 GB) into `~/segqueue-data/totalseg-venv`, never into Girder's venv; the weights go to `~/segqueue-data/totalseg-home`. It runs at `nice 19` / `ionice -c3`; one ImageCAS CT takes minutes. It refuses with less than 10 GB free or 8 GB of memory available. |
+| `benchmark-assign [--apply]`, args `--exclude=<login,...>` | Makes it the next case for every member of `segqueue14-annotators` except the excluded logins (required: the logins D43 leaves out). An annotator holding a case gets it right after. Skips anyone who has submitted it already. `--login=<login,...>` limits it to those annotators; `--retest` gives a fresh attempt to annotators who have done it. Excluding a login that was invited withdraws the invitation. An unknown login in `--exclude` stops the step. |
+
+Run in this order: `benchmark-create`, `benchmark-create --apply`,
+`benchmark-seed`, `benchmark-seed --apply`, `benchmark-status`,
+`benchmark-assign` with `--exclude=<login>,<login>` (check the list it prints),
+then `benchmark-assign --apply` with the same args. The case is never served
+without its seed.
+
+**Retest.** `benchmark-assign --apply` with `--exclude=<login>,<login> --retest`
+(everyone) or `--login=<login> --retest` (one annotator). Each attempt is its own
+assignment and submission with its own score; `benchmark-status` lists them all.
+
+**Reading results.** `benchmark-status`, or the reviewer tab: the row is named
+`annotator_benchmark_NNNN`, its reasons start with "annotator benchmark (D43)",
+and its Dice is the annotator's own against ImageCAS-X. Approve it as any other
+read once looked at; approving it trains nothing.
+
+**If TotalSegmentator cannot run on janus** (no network to PyPI,
+download.pytorch.org or GitHub for the weights, or not enough memory): the lead
+makes the seed elsewhere with TotalSegmentator 2.18.0 on the CT
+(`ImageCAS-X/cases/ImageCAS__0855.nii.gz` in Girder):
+
+```sh
+TotalSegmentator -i ImageCAS__0855.nii.gz -o seed.nii.gz -ta coronary_arteries --ml -d cpu -nr 4 -ns 4
+```
+
+then copies `seed.nii.gz` to janus and, on janus as the deploy user:
+
+```sh
+export GIRDER_MONGO_URI=mongodb://127.0.0.1:27017/girder
+~/Asclepius/.venv/bin/segqueue14-benchmark seed --seed-file seed.nii.gz          # dry run: grid and size
+~/Asclepius/.venv/bin/segqueue14-benchmark seed --seed-file seed.nii.gz --apply
+```
+
+It refuses a mask that is not on the CT's grid or is empty.
+
+**What else it touches.** The training export (`segqueue14-export`) always
+leaves benchmark reads out and says how many; `segtrain convert` skips any
+`annotator_benchmark_*` read and the trainer's guard refuses one. The hourly
+backup includes its submissions and its seed like any other.
+
 ## Rollback
 
 Nothing below touches the live SegQueue: SegQueue14 never wrote to `segqueue_*`, the

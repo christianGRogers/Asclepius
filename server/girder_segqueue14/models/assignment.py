@@ -38,6 +38,10 @@ def _epoch(dt):
     return dt.timestamp() if dt is not None else None
 
 
+#: Annotator benchmark reads (D43) say nothing about the pool: they are left out of
+#: the record the sampling policy reads and of the approved-case quota.
+NOT_BENCHMARK = {'$ne': sqplan.KIND_BENCHMARK}
+
 #: Which timestamp each event stamps. Recorded declaratively so that the list of
 #: things the dashboard can measure is visible in one place rather than scattered
 #: through endpoint handlers.
@@ -55,7 +59,9 @@ _TIMESTAMP_FOR_EVENT = {
 
 
 def kindForCase(case):
-    """Reference-scored, paired (two reads, no reference) or normal."""
+    """Benchmark (D43), reference-scored, paired (two reads, no reference) or normal."""
+    if case.get('benchmark'):
+        return sqplan.KIND_BENCHMARK
     if case.get('referenceFileId'):
         return sqplan.KIND_REFERENCE
     if int(case.get('replicasWanted', 1)) >= 2:
@@ -83,7 +89,8 @@ class Assignment14(AccessControlledModel):
         # `kind` is exposed only to admins: an annotator who can see that their
         # case is a gold seed can look up the answer, and a duplicate that is
         # known to be a duplicate measures nothing.
-        self.exposeFields(level=AccessType.SITE_ADMIN, fields={'kind', 'reviewRoll'})
+        self.exposeFields(level=AccessType.SITE_ADMIN,
+                          fields={'kind', 'reviewRoll', 'benchmarkAttempt'})
 
     def validate(self, doc):
         if doc.get('state') not in st.ALL_STATES:
@@ -94,7 +101,7 @@ class Assignment14(AccessControlledModel):
 
     # ------------------------------------------------------------- creation
 
-    def createAssignment(self, case, user, kind=None, policy=None):
+    def createAssignment(self, case, user, kind=None, policy=None, extra=None):
         """Record the lease. The case's slot must already have been claimed.
 
         Ordering matters and is not arbitrary: ``Case.claim`` consumes the slot
@@ -125,6 +132,7 @@ class Assignment14(AccessControlledModel):
             'prelabelVersion': case.get('prelabelVersion') or '',
             'prelabelFileId': case.get('prelabelFileId'),
         }
+        doc.update(extra or {})
         return self.save(doc)
 
     def recordPrelabelServed(self, assignment, case):
@@ -218,6 +226,13 @@ class Assignment14(AccessControlledModel):
             'state': {'$in': sorted(st.ACTIVE_STATES)},
         }))
 
+    def benchmarkHistory(self, caseId, userId=None):
+        """Every benchmark lease on ``caseId`` (of ``userId``), oldest first."""
+        query = {'caseId': caseId, 'kind': sqplan.KIND_BENCHMARK}
+        if userId is not None:
+            query['userId'] = userId
+        return list(self.find(query, sort=[('assignedAt', 1)]))
+
     def approvedForCase(self, caseId):
         """Approved assignments, oldest first -- the duplicate partner lookup."""
         return list(self.find({'caseId': caseId, 'state': st.APPROVED},
@@ -271,7 +286,8 @@ class Assignment14(AccessControlledModel):
         only on submit.
         """
         decided = list(self.find(
-            {'userId': userId, 'state': {'$in': [st.APPROVED, st.REJECTED]}},
+            {'userId': userId, 'state': {'$in': [st.APPROVED, st.REJECTED]},
+             'kind': NOT_BENCHMARK},
             fields=['state', 'decidedAt'],
             sort=[('decidedAt', 1)],
         ))
@@ -293,7 +309,7 @@ class Assignment14(AccessControlledModel):
                 lastRejection = assignment.get('decidedAt')
                 break
 
-        query = {'userId': userId, 'submittedAt': {'$ne': None}}
+        query = {'userId': userId, 'submittedAt': {'$ne': None}, 'kind': NOT_BENCHMARK}
         if lastRejection is not None:
             query['submittedAt'] = {'$gt': lastRejection}
         sinceRejection = self.collection.count_documents(query)

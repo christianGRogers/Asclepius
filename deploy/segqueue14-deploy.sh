@@ -356,6 +356,8 @@ PYEOF
 TS_VENV="${TS_VENV:-$DATA/totalseg-venv}"
 TS_HOME="${TS_HOME:-$DATA/totalseg-home}"
 TS_VERSION=2.18.0        # the pool seeds' version (segqueue14.plan.SEED_SOURCE_TOTALSEG)
+# Makes and checks that venv without ensurepip (issue #290); writes only inside TS_VENV.
+TS_VENV_SH="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/totalseg-venv.sh"
 
 benchmark_cli() {
     local bin="$LIVE/.venv/bin/segqueue14-benchmark"
@@ -369,9 +371,9 @@ benchmark_seed() {
     local apply=""
     [ "${1:-}" = "--apply" ] && apply="--apply"
     local ts="$TS_VENV/bin/TotalSegmentator"
-    if [ ! -x "$ts" ]; then
+    if ! as_user bash "$TS_VENV_SH" check "$PY" "$TS_VENV" "$TS_VERSION"; then
         if [ -z "$apply" ]; then
-            say "TotalSegmentator $TS_VERSION is not installed at $TS_VENV."
+            say "TotalSegmentator $TS_VERSION is not installed (or is incomplete) at $TS_VENV."
             say "'benchmark-seed --apply' installs it (CPU-only torch, ~3 GB, once), then"
             say "segments the benchmark CT at nice 19 and attaches the seed. Nothing changed."
             benchmark_cli status --repo "$SRC"
@@ -381,11 +383,8 @@ benchmark_seed() {
         free_mb=$(df -Pm "$DATA" | awk 'NR==2 {print $4}')
         [ "${free_mb:-0}" -ge 10000 ] || die "only ${free_mb} MB free under $DATA; need 10 GB"
         say "installing TotalSegmentator $TS_VERSION (CPU) into $TS_VENV"
-        as_user "$PY" -m venv "$TS_VENV"
-        as_user "$TS_VENV/bin/python" -m pip install -q --upgrade pip
-        as_user "$TS_VENV/bin/python" -m pip install -q \
-            --extra-index-url https://download.pytorch.org/whl/cpu "TotalSegmentator==$TS_VERSION" \
-            || die "could not install TotalSegmentator; see DEPLOY.md (D43) for the seed made elsewhere"
+        as_user bash "$TS_VENV_SH" install "$PY" "$TS_VENV" "$TS_VERSION" \
+            || die "TotalSegmentator is not installed; see the line above"
     fi
     if [ -n "$apply" ]; then
         local mem_mb

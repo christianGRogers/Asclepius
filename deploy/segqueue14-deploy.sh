@@ -37,6 +37,10 @@
 #   bash segqueue14-deploy.sh benchmark-seed --from-girder=<folder> [--from-girder-file=<name>] [--apply]
 #   bash segqueue14-deploy.sh benchmark-assign --exclude=<login,...> [--login=<login,...>] [--retest] [--apply]
 #
+# Issue #296, read-only: the annotation quality report (segqueue14-report quality), at
+# nice 19 / ionice idle; it writes nothing to Mongo or the assetstore:
+#   bash segqueue14-deploy.sh quality-report [--limit=<N>]
+#
 # What it never does: check out a branch in ~/Asclepius, reinstall the old plugin
 # (server/; only restore-live does, from that checkout), or write to the old
 # SegQueue's data outside the D36 steps. `main` is cloned separately into
@@ -417,6 +421,24 @@ benchmark() {
     esac
 }
 
+# ------------------------------------------------------------ issue #296
+
+quality_report() {
+    local bin="$LIVE/.venv/bin/segqueue14-report" args=() arg
+    [ -x "$bin" ] || die "segqueue14-report is not installed: run the install step first"
+    for arg in "$@"; do
+        case "$arg" in
+            --limit=*)
+                [[ "${arg#--limit=}" =~ ^[0-9]{1,5}$ ]] || die "quality-report: --limit takes 1 to 5 digits"
+                args+=(--limit "${arg#--limit=}") ;;
+            *) die "quality-report: unknown argument '$arg'" ;;
+        esac
+    done
+    local low=(nice -n 19)
+    command -v ionice >/dev/null && low+=(ionice -c 3)
+    as_user "${low[@]}" "$bin" quality "${args[@]}"
+}
+
 # ------------------------------------------------------------ D36 (issue #124)
 
 recent_backup() {   # a D36 database dump from the last 24 h, or nothing
@@ -524,6 +546,7 @@ case "${1:-}" in
     benchmark-status|benchmark-create|benchmark-seed|benchmark-assign)
         step="${1#benchmark-}"; shift
         benchmark "$step" "$@" ;;
+    quality-report) shift; quality_report "$@" ;;
     backup-prepare|backup-finish|backup-status|backup-restore-test|backup-off)
         step="${1#backup-}"; shift
         case "$step" in prepare|finish) step="install-$step" ;; esac

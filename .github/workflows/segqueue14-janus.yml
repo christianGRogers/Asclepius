@@ -32,7 +32,8 @@
 #
 # Issue #296, read-only (writes nothing to Mongo or the assetstore; nice 19 / ionice idle):
 #   quality-report                         annotation quality per annotator, the benchmark
-#                                          table at the end; args: only --limit=<digits>
+#                                          table at the end; args: --limit=<digits> and/or
+#                                          --exclude=<login,...> (#299: left out entirely)
 #
 # The script never touches the live checkout, the live plugin or live data; see its
 # header. Secrets: SSH_HOST, SSH_PORT, SSH_USERNAME, SSH_PASSWORD (as server-ssh.yml),
@@ -59,7 +60,7 @@ on:
                   benchmark-assign, "benchmark-assign --apply",
                   quality-report]
       args:
-        description: "benchmark-assign: --exclude=<login,...> [--login=<login,...>] [--retest]; benchmark-seed: --from-girder=<folder> [--from-girder-file=<name>]; benchmark-create: --imagecas-id=<N> [--replace]; quality-report: --limit=<N>"
+        description: "benchmark-assign: --exclude=<login,...> [--login=<login,...>] [--retest]; benchmark-seed: --from-girder=<folder> [--from-girder-file=<name>]; benchmark-create: --imagecas-id=<N> [--replace]; quality-report: [--limit=<N>] [--exclude=<login,...>]"
         type: string
         required: false
         default: ""
@@ -145,9 +146,11 @@ jobs:
                 done
                 case " $ARGS" in *" --imagecas-id="*) ;; *) echo "::error::benchmark-create args need --imagecas-id=<digits>"; exit 1 ;; esac ;;
               quality-report)
-                # #296: read-only; the one option is how many reads' files to open.
-                if ! printf '%s' "$ARGS" | grep -Eq '^--limit=[0-9]{1,5}$'; then
-                  echo "::error::quality-report args may hold only --limit=<1 to 5 digits>"; exit 1
+                # #296: read-only; how many reads' files to open and (#299) the logins
+                # left out, each at most once, in either order.
+                q_limit='--limit=[0-9]{1,5}' q_excl='--exclude=[a-z0-9._-]+(,[a-z0-9._-]+)*'
+                if ! printf '%s' "$ARGS" | grep -Eq "^(($q_limit)|($q_excl)|($q_limit) ($q_excl)|($q_excl) ($q_limit))\$"; then
+                  echo "::error::quality-report args may hold only --limit=<1 to 5 digits> and --exclude=<login,...>"; exit 1
                 fi ;;
               *) echo "::error::only benchmark-assign, benchmark-seed, benchmark-create and quality-report take args"; exit 1 ;;
             esac

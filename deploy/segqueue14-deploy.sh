@@ -39,7 +39,7 @@
 #
 # Issue #296, read-only: the annotation quality report (segqueue14-report quality), at
 # nice 19 / ionice idle; it writes nothing to Mongo or the assetstore:
-#   bash segqueue14-deploy.sh quality-report [--limit=<N>]
+#   bash segqueue14-deploy.sh quality-report [--limit=<N>] [--exclude=<login,...>]
 #
 # What it never does: check out a branch in ~/Asclepius, reinstall the old plugin
 # (server/; only restore-live does, from that checkout), or write to the old
@@ -431,6 +431,10 @@ quality_report() {
             --limit=*)
                 [[ "${arg#--limit=}" =~ ^[0-9]{1,5}$ ]] || die "quality-report: --limit takes 1 to 5 digits"
                 args+=(--limit "${arg#--limit=}") ;;
+            --exclude=*)   # #299: logins left out of the report
+                [[ "${arg#--exclude=}" =~ ^[a-z0-9._-]+(,[a-z0-9._-]+)*$ ]] \
+                    || die "quality-report: --exclude takes logins (a-z 0-9 . _ -), comma-separated"
+                args+=(--exclude "${arg#--exclude=}") ;;
             *) die "quality-report: unknown argument '$arg'" ;;
         esac
     done

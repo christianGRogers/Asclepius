@@ -335,6 +335,9 @@ def test_exclude_leaves_a_login_out_of_the_report(world):
 
 
 def test_exclude_takes_comma_separated_logins():
+    # No database here, but the plugin imports Girder: run where it is installed (the
+    # server job, which refuses skips), skip in the plain test job.
+    pytest.importorskip("girder")
     from girder_segqueue14 import report
 
     args = report.buildParser().parse_args(["quality", "--exclude", "bo,anna,,bo"])

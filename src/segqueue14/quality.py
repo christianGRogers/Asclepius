@@ -37,6 +37,10 @@ FLAG_REASONS = (
 )
 OTHER_REASON = 'other'
 REASONS = [reason for _, reason in FLAG_REASONS] + [OTHER_REASON]
+#: Assignment states, in lifecycle order (``segqueue.states``).
+ASSIGNMENT_STATES = ['assigned', 'downloaded', 'submitted', 'under_review', 'approved',
+                     'rejected', 'released']
+
 #: Column headings for the reasons.
 SHORT_REASONS = {'pair not comparable': 'pair n/a', 'low pair Dice': 'low pair',
                  'empty required class': 'empty req', 'reference not scorable': 'ref n/a',
@@ -175,6 +179,20 @@ def render(report, benchmarkLines=()):
                        [[n, p['analysed'], p['overlapReads'], p['overlapMedian'],
                          p['overlapMax']] + [p['empty'][c] for c in NAMES]
                         for n, p in people.items()])
+    states = report.get('assignmentStates') or {}
+    if len(states) > 1:
+        lines += ['', 'Assignments by state (pool)']
+        lines += table(['login'] + ASSIGNMENT_STATES + ['total'],
+                       [[n] + [row.get(x, 0) for x in ASSIGNMENT_STATES] + [sum(row.values())]
+                        for n, row in sorted(states.items(), key=lambda kv: kv[0] == 'all')])
+    check = report.get('approvedCount')
+    if check is not None:
+        line = (f"approvedCount check: {check['mismatches']} pool case(s) whose approvedCount "
+                'differs from their approved assignments')
+        if check['examples']:
+            line += ': ' + ', '.join(f"{e['case']} ({e['approvedCount']} vs "
+                                     f"{e['approvedAssignments']})" for e in check['examples'])
+        lines.append(line)
     lines += ['', f"Project: {t['cases']} pool cases -- {t['reads0']} with no read, "
                   f"{t['reads1']} with one, {t['reads2']} with two or more; "
                   f"{t['pairsScored']} pairs scored."]

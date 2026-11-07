@@ -438,7 +438,9 @@ revised by a reviewer, median time; pair agreement from the stored pair scores
 flags by reason; the mean fraction of the seed each class keeps, reads with two or
 more near-copies of the seed and reads likely submitted untrimmed (two or more
 classes keep > 90% of the seed, D39); overlap between classes; empty classes.
-Then the project totals (cases with 0, 1, 2+ reads; pairs scored) and a short
+Then assignments by state (overall and per login), a check that each pool case's
+`approvedCount` equals its number of approved assignments (mismatches counted,
+a few named), the project totals (cases with 0, 1, 2+ reads; pairs scored) and a short
 list of reads worth a reviewer's eye, by case name and login only.
 
 The step needs the plugin installed from a `main` that has it (the `install`

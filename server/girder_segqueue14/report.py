@@ -25,6 +25,11 @@ the end, as ``segqueue14-benchmark status`` prints it:
 * overlap: the fraction of labelled voxels in two or more classes, per read;
 * empty classes: reads with an empty LM, LAD, LCx or RCA.
 
+**Project:** assignments by state, overall and per login; each pool case's
+``approvedCount`` against its number of approved assignments (a mismatch is an
+accounting problem, not an annotation one); cases with 0, 1 or 2+ reads; pairs
+scored; and the reads most worth a reviewer's eye.
+
 The seed and overlap figures need the files, so only the ``--limit`` newest reads
 are opened (``DEFAULT_LIMIT``; 0 opens none); everything else comes from the
 database. The deploy step runs this at nice 19 / ionice idle.
@@ -46,6 +51,7 @@ from segqueue import states as st
 from segqueue14 import labelfile
 from segqueue14 import plan as sqplan
 from segqueue14.quality import (
+    ASSIGNMENT_STATES,
     DEFAULT_PAIR_FLAG,
     EYE_ROWS,
     NAMES,
@@ -186,7 +192,7 @@ def collect(db, limit=DEFAULT_LIMIT, analyse=None):
     benchmarkIds = [c['_id'] for c in db['segqueue14_case'].find({'benchmark': True}, {'_id': 1})]
     cases = {c['_id']: c for c in db['segqueue14_case'].find(
         {'benchmark': {'$ne': True}},
-        {'name': 1, 'seedFileId': 1, 'replicasWanted': 1, 'retired': 1})}
+        {'name': 1, 'seedFileId': 1, 'replicasWanted': 1, 'retired': 1, 'approvedCount': 1})}
     pool = {'kind': {'$ne': sqplan.KIND_BENCHMARK}, 'caseId': {'$nin': benchmarkIds}}
     submissions = list(db['segqueue14_submission'].find(pool, {
         'assignmentId': 1, 'caseId': 1, 'userId': 1, 'authorRole': 1, 'revisionOf': 1,
@@ -195,7 +201,8 @@ def collect(db, limit=DEFAULT_LIMIT, analyse=None):
     submissions = [s for s in submissions if s['caseId'] in cases]
     reads = [s for s in submissions if s.get('authorRole', ANNOTATOR) == ANNOTATOR]
     revisions = [s for s in submissions if s.get('authorRole') == REVIEWER]
-    assignments = list(db['segqueue14_assignment'].find(pool, {'userId': 1, 'state': 1}))
+    assignments = [a for a in db['segqueue14_assignment'].find(
+        pool, {'userId': 1, 'state': 1, 'caseId': 1}) if a['caseId'] in cases]
     sentBack = list(db['segqueue14_review'].find(
         {'verdict': 'reject', 'caseId': {'$nin': benchmarkIds}}, {'annotatorId': 1}))
 
@@ -233,6 +240,24 @@ def collect(db, limit=DEFAULT_LIMIT, analyse=None):
         original = byId.get(revision.get('revisionOf'))
         if original is not None:
             person(original['userId'])['revised'] += 1
+
+    # Every pool assignment by state, overall and per login.
+    states = {'all': {state: 0 for state in ASSIGNMENT_STATES}}
+    approvedByCase = {}
+    for a in assignments:
+        for key in ('all', login(a['userId'])):
+            row = states.setdefault(key, {state: 0 for state in ASSIGNMENT_STATES})
+            row[a['state']] = row.get(a['state'], 0) + 1
+        if a['state'] == st.APPROVED:
+            approvedByCase[a['caseId']] = approvedByCase.get(a['caseId'], 0) + 1
+    # The case's approvedCount should be the number of its approved assignments.
+    mismatched = sorted(
+        (c['name'], int(c.get('approvedCount') or 0), approvedByCase.get(c['_id'], 0))
+        for c in cases.values()
+        if int(c.get('approvedCount') or 0) != approvedByCase.get(c['_id'], 0))
+    consistency = {'mismatches': len(mismatched),
+                   'examples': [{'case': n, 'approvedCount': have, 'approvedAssignments': want}
+                                for n, have, want in mismatched[:EYE_ROWS]]}
 
     # One latest read per (annotator, case) for the pair figures.
     latest = {}
@@ -344,7 +369,8 @@ def collect(db, limit=DEFAULT_LIMIT, analyse=None):
                              'classes': r['keptAbove']}
                             for r in perRead if r.get('untrimmed')][:2 * EYE_ROWS],
     }
-    return {'annotators': annotators, 'totals': totals, 'eye': eye, 'reads': perRead}
+    return {'annotators': annotators, 'totals': totals, 'eye': eye, 'reads': perRead,
+            'assignmentStates': states, 'approvedCount': consistency}
 
 
 def runQuality(limit=DEFAULT_LIMIT, asJson=False, out=print, db=None, analyse=None):

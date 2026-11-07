@@ -93,7 +93,10 @@ def _build(world):
 
     a = case("pool_a", replicas=2)
     b = case("pool_b", replicas=2)
-    case("pool_c")                                   # never read
+    c = case("pool_c")                               # never read; cathy holds it
+    Assignment14().collection.insert_one({
+        "caseId": c["_id"], "userId": people["cathy"]["_id"], "state": "assigned",
+        "kind": "normal", "attempt": 1, "assignedAt": _now(65)})
     d = case("pool_d", replicas=1)
     bench = case("annotator_benchmark_0001", benchmark=True)
 
@@ -174,6 +177,8 @@ def test_the_quality_report_on_a_synthetic_pool(world):
     assert _snapshot(pool) == before, "the report wrote something"
 
     people, totals, eye = got["annotators"], got["totals"], got["eye"]
+    zero = {s: 0 for s in ["assigned", "downloaded", "submitted", "under_review", "approved",
+                           "rejected", "released"]}
     # Reviewers' revisions are not reads; the benchmark read is not a pool read.
     assert set(people) == {"anna", "bobby", "cathy"}
     anna, bobby, cathy = people["anna"], people["bobby"], people["cathy"]
@@ -245,6 +250,20 @@ def test_the_quality_report_on_a_synthetic_pool(world):
     assert newest["totals"]["analysed"] == 1
     assert [r["case"] for r in newest["reads"] if "counts" in r] == ["pool_d"]
     assert ids["bobby_d"]["submission"]
+
+    # Assignments by state, and approvedCount against the approved assignments: the
+    # synthetic cases were never counted (approvedCount 0), two have an approved read.
+    states = got["assignmentStates"]
+    assert states["anna"] == dict(zero, approved=1, rejected=1)
+    assert states["bobby"] == dict(zero, submitted=1, under_review=1)
+    assert states["cathy"] == dict(zero, approved=1, assigned=1), "the benchmark is left out"
+    assert states["all"] == dict(zero, assigned=1, submitted=1, under_review=1, approved=2,
+                                 rejected=1)
+    assert got["approvedCount"] == {"mismatches": 2, "examples": [
+        {"case": "pool_a", "approvedCount": 0, "approvedAssignments": 1},
+        {"case": "pool_b", "approvedCount": 0, "approvedAssignments": 1}]}
+    assert "approvedCount check: 2 pool case(s)" in text and "pool_a (0 vs 1)" in text
+    assert "Assignments by state (pool)" in text
 
     js = report.runQuality(limit=5, asJson=True, out=lambda _: None, db=pool.db)
     assert js["benchmark"]["case"] == "annotator_benchmark_0001"

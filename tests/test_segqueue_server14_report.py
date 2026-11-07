@@ -270,3 +270,76 @@ def test_the_quality_report_on_a_synthetic_pool(world):
     js = report.runQuality(limit=5, asJson=True, out=lambda _: None, db=pool.db)
     assert js["benchmark"]["case"] == "annotator_benchmark_0001"
     assert _snapshot(pool) == before
+
+
+def test_exclude_leaves_a_login_out_of_the_report(world):
+    """#299: ``--exclude anna`` drops her reads, assignments and review, unpairs her
+    partners' reads (pool_a and pool_b become single-read cases for bobby and cathy),
+    leaves the approvedCount check over everyone, and says who was left out."""
+    from girder_segqueue14 import report
+
+    pool = world
+    _build(pool)
+    before = _snapshot(pool)
+    plain = []
+    full = report.runQuality(limit=0, out=plain.append, db=pool.db)
+    again = []
+    assert report.runQuality(limit=0, out=again.append, db=pool.db, exclude=()) == full
+    assert again == plain and "excluded" not in full, "no --exclude: output unchanged"
+    assert "Left out" not in "\n".join(plain)
+
+    lines = []
+    got = report.runQuality(limit=50, out=lines.append, db=pool.db, exclude=("anna",))
+    assert _snapshot(pool) == before, "the report wrote something"
+    people, totals, eye = got["annotators"], got["totals"], got["eye"]
+    text = "\n".join(lines)
+
+    # Her reads are gone from every table, the totals and the lists.
+    assert set(people) == {"bobby", "cathy"}
+    assert "anna" not in str(got["reads"]) and "anna" not in str(eye)
+    assert totals["reads"] == 3
+    assert (totals["cases"], totals["reads0"], totals["reads1"], totals["reads2"]) == (4, 1, 3, 0)
+
+    # Her partners' pairs are not scored: no pairs, no pair Dice, no low-pair entry.
+    assert totals["pairsScored"] == 0
+    assert people["bobby"]["pairs"]["n"] == 0 and people["bobby"]["pairs"]["below"] == 0
+    assert people["cathy"]["pairs"]["n"] == 0 and people["cathy"]["pairs"]["mean"] is None
+    assert all(r["pairMeanDice"] is None for r in got["reads"])
+    assert eye["lowestPairDice"] == [] and eye["likelyUntrimmed"] == []
+    assert "low pair Dice 0.40" not in text
+    # Their own figures stay: bobby's flags are his, from the stored scores.
+    assert people["bobby"]["reads"] == 2 and people["bobby"]["revisedByReviewer"] == 1
+    assert people["cathy"]["approved"] == 1
+
+    # Assignments by state leave her out; the approvedCount check does not.
+    states = got["assignmentStates"]
+    assert "anna" not in states
+    assert states["all"]["approved"] == 1 and states["all"]["rejected"] == 0
+    assert got["approvedCount"] == full["approvedCount"]
+    assert "(over every login, the left-out ones too)" in text
+
+    # The header names her, by login only; the benchmark table is still there.
+    assert got["excluded"] == ["anna"]
+    assert "Left out (--exclude): anna;" in text
+    assert "Benchmark (segqueue14-benchmark status)" in text
+
+    # The benchmark table drops excluded logins too.
+    js = report.runQuality(limit=0, asJson=True, out=lambda _: None, db=pool.db,
+                           exclude=("cathy",))
+    assert js["benchmark"]["case"] == "annotator_benchmark_0001"
+    assert all(r["login"] != "cathy" for r in js["benchmark"]["attempts"])
+    assert "cathy" not in js["benchmark"]["pending"]
+    shown = report.runQuality(limit=0, asJson=True, out=lambda _: None, db=pool.db)
+    assert any(r["login"] == "cathy" for r in shown["benchmark"]["attempts"])
+    assert _snapshot(pool) == before
+
+
+def test_exclude_takes_comma_separated_logins():
+    # No database here, but the plugin imports Girder: run where it is installed (the
+    # server job, which refuses skips), skip in the plain test job.
+    pytest.importorskip("girder")
+    from girder_segqueue14 import report
+
+    args = report.buildParser().parse_args(["quality", "--exclude", "bo,anna,,bo"])
+    assert args.exclude == ("anna", "bo")
+    assert report.buildParser().parse_args(["quality"]).exclude == ()

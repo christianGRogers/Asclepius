@@ -6,7 +6,7 @@ created) and reads segmentation and seed files straight from the assetstore; it
 never writes to Mongo or to the assetstore. Run on the server, like
 ``segqueue14-benchmark status``::
 
-    segqueue14-report quality [--limit N] [--json]
+    segqueue14-report quality [--limit N] [--exclude LOGIN,...] [--json]
 
 **Per annotator** (Girder login), over annotator submissions to pool cases; the
 annotator benchmark (D43) is left out of every pool number and shown on its own at
@@ -29,6 +29,12 @@ the end, as ``segqueue14-benchmark status`` prints it:
 ``approvedCount`` against its number of approved assignments (a mismatch is an
 accounting problem, not an annotation one); cases with 0, 1 or 2+ reads; pairs
 scored; and the reads most worth a reviewer's eye.
+
+``--exclude`` leaves logins out entirely (#299): their submissions, assignments and
+sent-back reviews are dropped before anything is counted, a pair whose partner is
+excluded is not scored (the case counts as single-read), and the benchmark table
+drops them too. The ``approvedCount`` check alone still runs over every login: it is
+a data-integrity check, not a quality figure.
 
 The seed and overlap figures need the files, so only the ``--limit`` newest reads
 are opened (``DEFAULT_LIMIT``; 0 opens none); everything else comes from the
@@ -186,9 +192,22 @@ def analyseRead(db, submission, case, seedCache=None):
     return seedComparison(masks, seed)
 
 
-def collect(db, limit=DEFAULT_LIMIT, analyse=None):
+def collect(db, limit=DEFAULT_LIMIT, analyse=None, exclude=()):
     """Every figure of the report, as one dict. ``analyse(submission, case)`` opens a
-    read's files (default ``analyseRead``); it is called for the ``limit`` newest."""
+    read's files (default ``analyseRead``); it is called for the ``limit`` newest.
+    ``exclude``: logins left out of every figure but the approvedCount check."""
+    excluded = set(exclude or ())
+    logins = {}
+
+    def login(userId):
+        if userId not in logins:
+            doc = db['user'].find_one({'_id': userId}, {'login': 1}) or {}
+            logins[userId] = doc.get('login') or str(userId)
+        return logins[userId]
+
+    def kept(userId):
+        return not excluded or login(userId) not in excluded
+
     benchmarkIds = [c['_id'] for c in db['segqueue14_case'].find({'benchmark': True}, {'_id': 1})]
     cases = {c['_id']: c for c in db['segqueue14_case'].find(
         {'benchmark': {'$ne': True}},
@@ -199,20 +218,27 @@ def collect(db, limit=DEFAULT_LIMIT, analyse=None):
         'fileId': 1, 'annotationSeconds': 1, 'voxelCounts': 1, 'autoScore': 1,
         'created': 1}, sort=[('created', -1), ('_id', -1)]))
     submissions = [s for s in submissions if s['caseId'] in cases]
+    # Every pool submission, excluded logins' too: to tell whose a pair partner is.
+    everyById = {s['_id']: s for s in submissions}
+    submissions = [s for s in submissions if kept(s['userId'])]
     reads = [s for s in submissions if s.get('authorRole', ANNOTATOR) == ANNOTATOR]
     revisions = [s for s in submissions if s.get('authorRole') == REVIEWER]
-    assignments = [a for a in db['segqueue14_assignment'].find(
+    everyAssignment = [a for a in db['segqueue14_assignment'].find(
         pool, {'userId': 1, 'state': 1, 'caseId': 1}) if a['caseId'] in cases]
-    sentBack = list(db['segqueue14_review'].find(
-        {'verdict': 'reject', 'caseId': {'$nin': benchmarkIds}}, {'annotatorId': 1}))
+    assignments = [a for a in everyAssignment if kept(a['userId'])]
+    sentBack = [r for r in db['segqueue14_review'].find(
+        {'verdict': 'reject', 'caseId': {'$nin': benchmarkIds}}, {'annotatorId': 1})
+        if r.get('annotatorId') is None or kept(r['annotatorId'])]
 
-    logins = {}
-
-    def login(userId):
-        if userId not in logins:
-            doc = db['user'].find_one({'_id': userId}, {'login': 1}) or {}
-            logins[userId] = doc.get('login') or str(userId)
-        return logins[userId]
+    def pairOf(submission):
+        """``pairScore``, unless the partner read is an excluded login's."""
+        pair = pairScore(submission)
+        if pair is None or not excluded:
+            return pair
+        partner = everyById.get(_objectId(pair.get('partnerSubmissionId')))
+        if partner is not None and not kept(partner['userId']):
+            return None
+        return pair
 
     people = {}
 
@@ -243,14 +269,16 @@ def collect(db, limit=DEFAULT_LIMIT, analyse=None):
 
     # Every pool assignment by state, overall and per login.
     states = {'all': {state: 0 for state in ASSIGNMENT_STATES}}
-    approvedByCase = {}
     for a in assignments:
         for key in ('all', login(a['userId'])):
             row = states.setdefault(key, {state: 0 for state in ASSIGNMENT_STATES})
             row[a['state']] = row.get(a['state'], 0) + 1
+    # The case's approvedCount should be the number of its approved assignments. A
+    # data-integrity check, so over every login, excluded ones too.
+    approvedByCase = {}
+    for a in everyAssignment:
         if a['state'] == st.APPROVED:
             approvedByCase[a['caseId']] = approvedByCase.get(a['caseId'], 0) + 1
-    # The case's approvedCount should be the number of its approved assignments.
     mismatched = sorted(
         (c['name'], int(c.get('approvedCount') or 0), approvedByCase.get(c['_id'], 0))
         for c in cases.values()
@@ -267,7 +295,7 @@ def collect(db, limit=DEFAULT_LIMIT, analyse=None):
     pairKeys = set()
     lowPairs = []
     for s in latest.values():
-        pair = pairScore(s)
+        pair = pairOf(s)
         if pair is None:
             continue
         perClass = {n: ((pair.get('per_structure') or {}).get(n) or {}).get('dice') for n in NAMES}
@@ -303,7 +331,7 @@ def collect(db, limit=DEFAULT_LIMIT, analyse=None):
         row = {'case': cases[s['caseId']]['name'], 'login': login(s['userId']),
                'created': s.get('created').isoformat() if s.get('created') else None,
                'flags': sorted({flagReason(f) for f in flags}),
-               'pairMeanDice': (pairScore(s) or {}).get('mean_dice')}
+               'pairMeanDice': (pairOf(s) or {}).get('mean_dice')}
         figures = None
         if limit and index < limit and s.get('fileId') is not None:
             try:
@@ -369,21 +397,26 @@ def collect(db, limit=DEFAULT_LIMIT, analyse=None):
                              'classes': r['keptAbove']}
                             for r in perRead if r.get('untrimmed')][:2 * EYE_ROWS],
     }
-    return {'annotators': annotators, 'totals': totals, 'eye': eye, 'reads': perRead,
-            'assignmentStates': states, 'approvedCount': consistency}
+    report = {'annotators': annotators, 'totals': totals, 'eye': eye, 'reads': perRead,
+              'assignmentStates': states, 'approvedCount': consistency}
+    if excluded:
+        report['excluded'] = sorted(excluded)
+    return report
 
 
-def runQuality(limit=DEFAULT_LIMIT, asJson=False, out=print, db=None, analyse=None):
+def runQuality(limit=DEFAULT_LIMIT, asJson=False, out=print, db=None, analyse=None,
+               exclude=()):
     db = _database() if db is None else db
-    report = collect(db, limit=limit, analyse=analyse)
+    report = collect(db, limit=limit, analyse=analyse, exclude=exclude)
     from . import benchmark
 
     benchmarkLines = []
     if asJson:
-        report['benchmark'] = benchmark.runStatus(asJson=True, out=lambda _: None)
+        report['benchmark'] = benchmark.runStatus(asJson=True, out=lambda _: None,
+                                                  exclude=exclude)
         out(json.dumps(report, indent=1, default=str))
         return report
-    benchmark.runStatus(out=benchmarkLines.append)
+    benchmark.runStatus(out=benchmarkLines.append, exclude=exclude)
     for line in render(report, benchmarkLines):
         out(line)
     return report
@@ -398,15 +431,23 @@ def buildParser():
     p.add_argument('--limit', type=int, default=DEFAULT_LIMIT,
                    help=f'Open the files of only the N newest reads (default {DEFAULT_LIMIT}; '
                         '0 opens none).')
+    p.add_argument('--exclude', type=logins, default=(), metavar='LOGIN,...',
+                   help='Leave these logins out of every figure (their reads, assignments '
+                        'and pairs) but the approvedCount check (#299).')
     p.add_argument('--json', action='store_true', help='Everything, as JSON.')
     return parser
+
+
+def logins(value):
+    """``a,b`` -> ``('a', 'b')``; blanks dropped."""
+    return tuple(sorted({x.strip() for x in value.split(',') if x.strip()}))
 
 
 def main(argv=None):  # pragma: no cover - CLI entry point
     args = buildParser().parse_args(argv)
     if args.limit < 0:
         raise SystemExit('--limit must be 0 or more')
-    runQuality(limit=args.limit, asJson=args.json)
+    runQuality(limit=args.limit, asJson=args.json, exclude=args.exclude)
     return 0
 
 

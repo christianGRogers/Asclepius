@@ -50,6 +50,9 @@ def _which(tmp_path, command, args=""):
      "benchmark-create --imagecas-id=1 --replace --apply"),
     ("benchmark-assign --apply", "--exclude=a,b --retest",
      "benchmark-assign --exclude=a,b --retest --apply"),
+    ("quality-report", "", "quality-report"),
+    ("quality-report", "--limit=0", "quality-report --limit=0"),
+    ("quality-report", "--limit=500", "quality-report --limit=500"),
 ])
 def test_accepted(tmp_path, command, args, expected):
     code, cmd, log = _which(tmp_path, command, args)
@@ -75,7 +78,14 @@ def test_accepted(tmp_path, command, args, expected):
     ("benchmark-create", "--imagecas-id=", "takes 1 to 4 digits"),
     ("benchmark-create", "--imagecas-id=$(id)", "may hold only --imagecas-id"),
     ("benchmark-create", "--replace", "need --imagecas-id"),
-    ("benchmark-status", "--imagecas-id=1", "only benchmark-assign, benchmark-seed and"),
+    ("benchmark-status", "--imagecas-id=1", "only benchmark-assign, benchmark-seed,"),
+    ("quality-report --apply", "", "unknown step"),
+    ("quality-report", "--limit=5 --json", "only --limit="),
+    ("quality-report", "--limit=1;id", "only --limit="),
+    ("quality-report", "--limit=$(id)", "only --limit="),
+    ("quality-report", "--limit=", "only --limit="),
+    ("quality-report", "--limit=123456", "only --limit="),
+    ("quality-report", "--apply", "only --limit="),
     ("benchmark-assign", "--exclude=a/b", "only logins"),
     ("benchmark-assign", "--from-girder=x", "is not --exclude"),
     ("benchmark-assign", "", "needs args"),

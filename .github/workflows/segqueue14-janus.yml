@@ -30,6 +30,10 @@
 #                                          args: --from-girder=<folder> [--from-girder-file=<name>]
 #   benchmark-assign [--apply]             args: --exclude=... [--login=...] [--retest]
 #
+# Issue #296, read-only (writes nothing to Mongo or the assetstore; nice 19 / ionice idle):
+#   quality-report                         annotation quality per annotator, the benchmark
+#                                          table at the end; args: only --limit=<digits>
+#
 # The script never touches the live checkout, the live plugin or live data; see its
 # header. Secrets: SSH_HOST, SSH_PORT, SSH_USERNAME, SSH_PASSWORD (as server-ssh.yml),
 # SSH_KNOWN_HOSTS optional. The backup steps also need SSH_PORT_SFTP_SERVER (the backup
@@ -52,9 +56,10 @@ on:
                   backup-install, backup-status, backup-restore-test, backup-off,
                   benchmark-status, benchmark-create, "benchmark-create --apply",
                   benchmark-seed, "benchmark-seed --apply",
-                  benchmark-assign, "benchmark-assign --apply"]
+                  benchmark-assign, "benchmark-assign --apply",
+                  quality-report]
       args:
-        description: "benchmark-assign: --exclude=<login,...> [--login=<login,...>] [--retest]; benchmark-seed: --from-girder=<folder> [--from-girder-file=<name>]; benchmark-create: --imagecas-id=<N> [--replace]"
+        description: "benchmark-assign: --exclude=<login,...> [--login=<login,...>] [--retest]; benchmark-seed: --from-girder=<folder> [--from-girder-file=<name>]; benchmark-create: --imagecas-id=<N> [--replace]; quality-report: --limit=<N>"
         type: string
         required: false
         default: ""
@@ -91,9 +96,11 @@ jobs:
             benchmark-status|benchmark-create|"benchmark-create --apply") ;;
             benchmark-seed|"benchmark-seed --apply") ;;
             benchmark-assign|"benchmark-assign --apply") ;;
+            quality-report) ;;
             *) echo "::error::unknown step '$cmd'"; exit 1 ;;
           esac
-          # D43: only benchmark-assign, -seed and -create take arguments, and only these
+          # D43: only benchmark-assign, -seed, -create and quality-report (#296) take
+          # arguments, and only these
           # options, as plain logins or Girder paths: the value reaches a shell on janus,
           # so nothing else passes (no quotes, spaces in values, globs or $).
           if [ -n "$ARGS" ]; then
@@ -137,7 +144,12 @@ jobs:
                   esac
                 done
                 case " $ARGS" in *" --imagecas-id="*) ;; *) echo "::error::benchmark-create args need --imagecas-id=<digits>"; exit 1 ;; esac ;;
-              *) echo "::error::only benchmark-assign, benchmark-seed and benchmark-create take args"; exit 1 ;;
+              quality-report)
+                # #296: read-only; the one option is how many reads' files to open.
+                if ! printf '%s' "$ARGS" | grep -Eq '^--limit=[0-9]{1,5}$'; then
+                  echo "::error::quality-report args may hold only --limit=<1 to 5 digits>"; exit 1
+                fi ;;
+              *) echo "::error::only benchmark-assign, benchmark-seed, benchmark-create and quality-report take args"; exit 1 ;;
             esac
             # The step is ours (a fixed list above), the options go first: --apply stays last.
             # shellcheck disable=SC2086  # split the fixed step into its words

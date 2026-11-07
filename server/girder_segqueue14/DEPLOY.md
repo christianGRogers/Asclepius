@@ -420,6 +420,33 @@ leaves benchmark reads out and says how many; `segtrain convert` skips any
 `annotator_benchmark_*` read and the trainer's guard refuses one. The hourly
 backup includes its submissions and its seed like any other.
 
+## Annotation quality report (#296)
+
+The *SegQueue14 on janus* step `quality-report` runs `segqueue14-report quality`.
+It is **read-only**: plain `find` queries on SegQueue14's collections (no model
+is instantiated for the pool figures, so no index is created either) and reads of
+the stored files from the assetstore, linked rather than copied; it writes nothing
+to Mongo or the assetstore. It runs at nice 19 / ionice idle. The only argument is
+`--limit=<N>` (default 100): how many of the newest reads have their files opened
+for the seed and overlap figures (`0` opens none). Everything else is from the
+database, over every pool read.
+
+Per annotator (pool reads; the benchmark is left out and shown at the end as
+`benchmark-status` prints it): reads submitted, approved, sent back, under review,
+revised by a reviewer, median time; pair agreement from the stored pair scores
+(mean, median, range, per class, pairs below the `duplicate_mean_dice_flag`);
+flags by reason; the mean fraction of the seed each class keeps, reads with two or
+more near-copies of the seed and reads likely submitted untrimmed (two or more
+classes keep > 90% of the seed, D39); overlap between classes; empty classes.
+Then assignments by state (overall and per login), a check that each pool case's
+`approvedCount` equals its number of approved assignments (mismatches counted,
+a few named), the project totals (cases with 0, 1, 2+ reads; pairs scored) and a short
+list of reads worth a reviewer's eye, by case name and login only.
+
+The step needs the plugin installed from a `main` that has it (the `install`
+step): `segqueue14-report` is a new entry point. On janus by hand, as the deploy
+user: `nice -n 19 ionice -c 3 ~/Asclepius/.venv/bin/segqueue14-report quality [--limit N] [--json]`.
+
 ## Rollback
 
 Nothing below touches the live SegQueue: SegQueue14 never wrote to `segqueue_*`, the

@@ -35,6 +35,7 @@ segqueue14-prelabels = "girder_segqueue14.prelabels:main"
 segqueue14-score = "girder_segqueue14.scoring:main"
 segqueue14-export = "girder_segqueue14.export:main"
 segqueue14-benchmark = "girder_segqueue14.benchmark:main"
+segqueue14-report = "girder_segqueue14.report:main"
 
 # This file sits inside the package directory, so the package is mapped onto
 # "." rather than discovered. That keeps it a separate distribution from

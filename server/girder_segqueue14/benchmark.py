@@ -923,7 +923,8 @@ def _score(assignment):
                         'error': ref.get('error')}
 
 
-def runStatus(asJson=False, out=print):
+def runStatus(asJson=False, out=print, exclude=()):
+    """Who has the benchmark and each attempt's Dice; ``exclude``: logins left out."""
     from girder.models.user import User
 
     from .models import Assignment14
@@ -942,6 +943,8 @@ def runStatus(asJson=False, out=print):
 
     rows = []
     for a in Assignment14().benchmarkHistory(case['_id']):
+        if login(a['userId']) in exclude:
+            continue
         submission, score = _score(a)
         rows.append({
             'login': login(a['userId']), 'attempt': a.get('benchmarkAttempt'),
@@ -952,7 +955,8 @@ def runStatus(asJson=False, out=print):
     summary = {'case': case['name'], 'imagecasId': pick.get('imagecasId'),
                'why': pick.get('why'), 'seed': bool(case.get('seedFileId')),
                'reference': bool(case.get('referenceFileId')),
-               'pending': sorted(login(u) for u in case.get('benchmarkPending') or []),
+               'pending': sorted(login(u) for u in case.get('benchmarkPending') or []
+                                 if login(u) not in exclude),
                'attempts': rows}
     if asJson:
         out(json.dumps(summary, indent=1, default=str))

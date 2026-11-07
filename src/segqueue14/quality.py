@@ -146,6 +146,9 @@ def render(report, benchmarkLines=()):
              'is at the end.',
              f"{t['reads']} annotator reads; files opened for the {t['analysed']} newest "
              f"(--limit {t['limit']})."]
+    if report.get('excluded'):
+        lines.append(f"Left out (--exclude): {', '.join(report['excluded'])}; their reads, "
+                     'assignments and pairs count nowhere below but the approvedCount check.')
     if not people:
         lines.append('No pool reads yet.')
     else:
@@ -189,6 +192,8 @@ def render(report, benchmarkLines=()):
     if check is not None:
         line = (f"approvedCount check: {check['mismatches']} pool case(s) whose approvedCount "
                 'differs from their approved assignments')
+        if report.get('excluded'):
+            line += ' (over every login, the left-out ones too)'
         if check['examples']:
             line += ': ' + ', '.join(f"{e['case']} ({e['approvedCount']} vs "
                                      f"{e['approvedAssignments']})" for e in check['examples'])

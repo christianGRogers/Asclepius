@@ -234,7 +234,9 @@ def test_the_quality_report_on_a_synthetic_pool(world):
     # The text: the tables, the list, and the benchmark table at the end, case names and
     # logins only, within the step summary's lines.
     text = "\n".join(lines)
-    assert len(lines) <= report.MAX_LINES
+    from segqueue14.quality import MAX_LINES
+
+    assert len(lines) <= MAX_LINES
     assert "low pair Dice 0.40: pool_a (anna, bobby)" in text
     assert "likely untrimmed (LM, LAD, LCx, RCA keep the seed): pool_a (anna)" in text
     assert "Benchmark (segqueue14-benchmark status)" in text

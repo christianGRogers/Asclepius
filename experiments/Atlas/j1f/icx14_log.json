@@ -1,0 +1,109 @@
+{
+ "lines": 898,
+ "dropped_lines": 4,
+ "epochs": [
+  0,
+  455
+ ],
+ "median_epoch_time_s": 181.315,
+ "classes": {
+  "LM": {
+   "cases_with_class": 630,
+   "epochs_gt0": 596,
+   "first_epoch_gt0": 130,
+   "max": 0.921,
+   "mean_last50": 0.904
+  },
+  "LAD": {
+   "cases_with_class": 640,
+   "epochs_gt0": 850,
+   "first_epoch_gt0": 21,
+   "max": 0.919,
+   "mean_last50": 0.904
+  },
+  "LCx": {
+   "cases_with_class": 640,
+   "epochs_gt0": 843,
+   "first_epoch_gt0": 21,
+   "max": 0.886,
+   "mean_last50": 0.837
+  },
+  "D1": {
+   "cases_with_class": 631,
+   "epochs_gt0": 0,
+   "first_epoch_gt0": null,
+   "max": 0.0,
+   "mean_last50": 0.0
+  },
+  "D2": {
+   "cases_with_class": 380,
+   "epochs_gt0": 0,
+   "first_epoch_gt0": null,
+   "max": 0.0,
+   "mean_last50": 0.0
+  },
+  "OM1": {
+   "cases_with_class": 558,
+   "epochs_gt0": 0,
+   "first_epoch_gt0": null,
+   "max": 0.0,
+   "mean_last50": 0.0
+  },
+  "OM2": {
+   "cases_with_class": 243,
+   "epochs_gt0": 0,
+   "first_epoch_gt0": null,
+   "max": 0.0,
+   "mean_last50": 0.0
+  },
+  "IM": {
+   "cases_with_class": 147,
+   "epochs_gt0": 0,
+   "first_epoch_gt0": null,
+   "max": 0.0,
+   "mean_last50": 0.0
+  },
+  "RCA": {
+   "cases_with_class": 640,
+   "epochs_gt0": 779,
+   "first_epoch_gt0": 58,
+   "max": 0.938,
+   "mean_last50": 0.925
+  },
+  "R-PDA": {
+   "cases_with_class": 594,
+   "epochs_gt0": 0,
+   "first_epoch_gt0": null,
+   "max": 0.0,
+   "mean_last50": 0.0
+  },
+  "R-PLA": {
+   "cases_with_class": 589,
+   "epochs_gt0": 32,
+   "first_epoch_gt0": 424,
+   "max": 0.779,
+   "mean_last50": 0.442
+  },
+  "L-PDA": {
+   "cases_with_class": 38,
+   "epochs_gt0": 0,
+   "first_epoch_gt0": null,
+   "max": 0.0,
+   "mean_last50": 0.0
+  },
+  "L-PLA": {
+   "cases_with_class": 59,
+   "epochs_gt0": 0,
+   "first_epoch_gt0": null,
+   "max": 0.0,
+   "mean_last50": 0.0
+  },
+  "Other": {
+   "cases_with_class": 76,
+   "epochs_gt0": 0,
+   "first_epoch_gt0": null,
+   "max": 0.0,
+   "mean_last50": 0.0
+  }
+ }
+}

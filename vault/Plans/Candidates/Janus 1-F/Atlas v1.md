@@ -18,7 +18,7 @@ Janus 1-F has to name 14 branches, and ImageCAS-X labels only part of them. This
    (two 23 h jobs), 9 of its 10 branch classes had a validation pseudo-Dice of exactly 0 in every epoch. The tenth,
    R-PLA, first rose above 0 at epoch 424. Its trunks learned normally (LM 0.90, LAD 0.90, LCx 0.84, RCA 0.93) (§2).
 2. **ImageCAS-X's ordinals follow a rule.** On the 613 training cases, ⟨ORD⟩ (§3.3).
-3. **ImageCAS-X draws only the branches it names.** The LAD and RCA labels carry ⟨EP⟩ unnamed side twigs. Septals, SN,
+3. **ImageCAS-X draws only the branches it names.** The LAD and RCA labels carry at most one unnamed twig in 97 % of cases, against the several septals and RCA branches every heart has. Septals, SN,
    conus and RMA are therefore **background** in ImageCAS-X, not unlabelled LAD/RCA (§3.2).
 4. **An exact warm start exists.** New branch outputs can be initialised from Janus 0's head so that, with hierarchical
    decoding, the first epoch reproduces Janus 0 voxel for voxel (§5.2, checked numerically).
@@ -117,20 +117,58 @@ numbers: [[Atlas - J1F - ImageCAS-X gives branch types cleanly, and ordinals fol
 
 ### 3.1 Frequency, size and calibre
 
-⟨TABLE31⟩
+Per ImageCAS-X class, on the 613 training cases (all 0.5 mm slices):
+
+| Class | Cases | Share of cases | Share of tree voxels | Median volume (mm³) | Median diameter (mm) | p10 diameter | Median length (mm) |
+|---|---|---|---|---|---|---|---|
+| LM | 604 | 0.985 | 5.3 % | 99 | 3.00 | 2.13 | 9.3 |
+| LAD | 613 | 1.000 | 22.1 % | 428 | 1.69 | 1.42 | 112 |
+| LCx | 613 | 1.000 | 14.9 % | 280 | 1.70 | 1.39 | 70 |
+| RCA | 613 | 1.000 | 31.4 % | 596 | 2.25 | 1.68 | 89 |
+| D1 | 604 | 0.985 | 4.9 % | 83 | 1.27 | 1.00 | 35 |
+| D2 | 355 | 0.579 | 2.2 % | 68 | 1.27 | 1.00 | 28 |
+| OM1 | 534 | 0.871 | 4.5 % | 81 | 1.35 | 1.00 | 36 |
+| OM2 | 228 | 0.372 | 1.8 % | 92 | 1.35 | 1.18 | 36 |
+| IM (ramus) | 148 | 0.241 | 1.1 % | 69 | 1.22 | 1.00 | 37 |
+| R-PDA | 566 | 0.923 | 4.6 % | 94 | 1.23 | 1.00 | 47 |
+| R-PLA | 559 | 0.912 | 6.2 % | 114 | 1.35 | 1.06 | 48 |
+| L-PDA | 37 | 0.060 | 0.3 % | 81 | 1.28 | 1.00 | 38 |
+| L-PLA | 54 | 0.088 | 0.3 % | 34 | 1.22 | 1.00 | 17 |
+| Other | 73 | 0.119 | 0.5 % | 65 | 1.26 | 1.00 | 32 |
+
+**As 1-F types:**
+
+| Type | Cases with it | Share of the 613 |
+|---|---|---|
+| D (D1 + D2 + LAD-side Other) | 604 | 0.985 |
+| OM (OM1 + OM2 + LCx-side Other) | 535 | 0.873 |
+| Ramus | 148 | 0.241 |
+| PDA (R- or L-) | 601 | 0.980 |
+| PLB (R- or L-) | 604 | 0.985 |
 
 - **Calibre.** Diameter is 2 × the whole-tree distance transform, sampled on each class's skeleton. ImageCAS-X's
-  labelled branches are ⟨CAL⟩ mm across at the median, which is about ⟨CALV⟩ voxels at 0.5 mm.
+  labelled branches are 1.22–1.35 mm across at the median, which is about 2.5 voxels at 0.5 mm.
   - The 10th percentile sits at the grid floor (1.0 mm), so the smallest branches are at the resolution limit already.
   - Septals, SN and conus are not labelled anywhere in ImageCAS-X, so their calibre cannot be measured here. It is
     measured on the first extended reads (§4.4, trigger E1).
   - I found no findable published table of septal, SN or conus calibre to cite instead. Dodge et al. 1992
     (doi:10.1161/01.CIR.86.1.232) reports segment diameters, but I could not check its branch table, so I do not use it.
-- **Imbalance.** Each branch class holds ⟨IMB⟩ of the tree's voxels. The tree is about 0.05 % of the volume.
+- **Imbalance.** Each branch class holds 0.3–6 % of the tree's voxels; the four vessels hold 74 %. The tree is about 0.05 % of the volume.
 
 ### 3.2 ImageCAS-X draws only what it names
 
-⟨EP31⟩
+Skeleton end points per class are a proxy for side twigs. A class's proximal end joins its parent, so it is not an
+end point. Every unnamed side twig adds one end point; so does a forked distal tip or a skeleton spur.
+
+| Class | 1 end point | 2 | ≥ 3 |
+|---|---|---|---|
+| LAD | 490 (80 %) | 105 (17 %) | 18 (3 %) |
+| RCA | 488 (80 %) | 108 (18 %) | 17 (3 %) |
+| LCx | 529 (86 %) | 49 (8 %) | 5 (1 %) |
+
+A typical LAD gives off several septals, and a typical RCA gives off a conus branch, an SN artery and one or more
+acute marginals. If ImageCAS-X drew them as part of the parent, most LADs and RCAs would have three or more end
+points. **3 % do. ImageCAS-X draws the branches it names and leaves the others out.**
 
 **Consequence for partial labels:** in an ImageCAS-X case, a septal, SN, conus or RMA voxel is labelled **background**.
 - It is not "LAD, branch unknown". The correct training target for an ImageCAS-X background voxel is the **set**
@@ -146,11 +184,45 @@ numbers: [[Atlas - J1F - ImageCAS-X gives branch types cleanly, and ordinals fol
 
 ### 3.4 "Other" and D3
 
-⟨OTH34⟩
+The "Other" components (≥ 20 voxels, 26-connected) and what they touch:
+
+| | Count |
+|---|---|
+| Components touching only LAD/D1/D2 (a D3/D4) | 49, in 47 cases (7.7 %): 45 cases with one, 2 with two |
+| Components touching only LCx/OM/L-PDA/L-PLA (OM3/OM4) | 20 cases |
+| Components touching both sides | 0 |
+| Components touching neither | 1 |
+| The most proximal LAD-side component starts distal to D2's origin | **45 of 45** with an origin distance (median 15.8 mm after D2; minimum 0.4 mm) |
+| A LAD-side Other in a case without D2 | 0 |
+
+So:
+- **D3 is in ImageCAS-X**, as the most proximal LAD-side "Other" component, in 7.7 % of training cases (about 47 of
+  620). That is too few to learn as its own network class, and as an ordinal it does not need to be: it is a D-type
+  component ordered third.
+- **The side is never ambiguous.** No "Other" component touches both sides.
+- **D3 cannot be separated from D4 inside a component, but D3/D4 as separate components** are ordered like every
+  other diagonal.
+
+D3's tF1 on ImageCAS-X therefore exists only for the about 9 locked-100 cases that hold it (7.7 % of 100), below §4.4's
+report threshold. D3 is reported pooled with the "rare branches" until extended reads add cases.
 
 ### 3.5 Dominance and the PDA/PLB question
 
-⟨DOM35⟩
+From ImageCAS-X's `Descriptors.xlsx`, on the 613 training cases:
+
+| Dominance | Cases | R-PDA | R-PLA | L-PDA | L-PLA | No PDA |
+|---|---|---|---|---|---|---|
+| Right | 558 (91 %) | 557 | 554 | 0 | 5 | 1 |
+| Co-dominant | 21 (3 %) | 9 | 5 | 6 | 18 | 8 |
+| Left | 34 (6 %) | 0 | 0 | 31 | 31 | 3 |
+
+- **ImageCAS-X names PDA/PLA by origin.** In a left-dominant heart there is never an "R-PDA". The L-/R- prefix is the
+  parent; the PDA/PLA part is the position.
+- **58 of 613 cases (9.5 %) have a left-sided PDA or PLA.** Under D25 those voxels are LCx in Janus 0's labels. Under
+  #280's default ("always RCA") they would be RCA.
+- **D44's "PDA" and "PLB" are positional names**, and ImageCAS-X supplies them for both origins. So the mapping is
+  R-PDA, L-PDA → PDA and R-PLA, L-PLA → PLB.
+- The only open question is the four-class collapse. That is Q1.
 
 ## 4. Data and the partial-label strategy
 
@@ -177,7 +249,7 @@ step is a small CPU post-process on the predicted label map:
 
 **Why types and not ordinals:**
 - the network never has to tell D1 from D2 by local appearance;
-- the positives of D1 + D2 + D3 train one class (the D type is in ⟨DTYPE⟩ of cases, against D2's ⟨D2SHARE⟩);
+- the positives of D1 + D2 + D3 train one class (the D type is in 98.5 % of cases; D2 alone is in 57.9 %, and D3 in 7.7 %);
 - the rule cannot produce the ordinal errors a network makes, such as two D1s or a D2 without a D1;
 - it reuses `src/segtrain/namer.py`'s skeleton and geodesic machinery.
 
@@ -435,7 +507,7 @@ is answered. Its commands are written in the round that adopts it.
 
 ## 10. Questions for the lead
 
-- **Q1. PDA and PLB in a left-dominant heart.** ImageCAS-X labels L-PDA/L-PLA in ⟨LPDA⟩ of the 613 training cases.
+- **Q1. PDA and PLB in a left-dominant heart.** ImageCAS-X labels L-PDA/L-PLA in 58 of the 613 training cases (9.5 %: all 34 left-dominant, 19 of 21 co-dominant and 5 right-dominant cases) (§3.5).
   - D44 lists PDA and PLB under the RCA, and #280's default collapse sends them to the RCA always.
   - D25 (and Janus 0's training labels) send a left-sided PDA/PLA to the **LCx**.
   - **Recommendation: name by position, collapse by origin.** A PDA is "PDA" whether it arises from the RCA or the

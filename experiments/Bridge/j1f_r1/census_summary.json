@@ -1,0 +1,290 @@
+{
+ "n_cases": 620,
+ "census": {
+  "LM": {
+   "cases": 611,
+   "share": 0.985,
+   "mm3_median": 98.6,
+   "len_mm_median": 7.7,
+   "diam_median_mm": 3.0,
+   "diam_p10_median_mm": 2.64,
+   "comps_gt1": 0
+  },
+  "LAD": {
+   "cases": 620,
+   "share": 1.0,
+   "mm3_median": 428.0,
+   "len_mm_median": 111.0,
+   "diam_median_mm": 1.68,
+   "diam_p10_median_mm": 1.21,
+   "comps_gt1": 5
+  },
+  "LCx": {
+   "cases": 620,
+   "share": 1.0,
+   "mm3_median": 279.8,
+   "len_mm_median": 68.5,
+   "diam_median_mm": 1.67,
+   "diam_p10_median_mm": 1.19,
+   "comps_gt1": 4
+  },
+  "D1": {
+   "cases": 611,
+   "share": 0.985,
+   "mm3_median": 82.9,
+   "len_mm_median": 34.9,
+   "diam_median_mm": 1.27,
+   "diam_p10_median_mm": 1.0,
+   "comps_gt1": 8
+  },
+  "D2": {
+   "cases": 359,
+   "share": 0.579,
+   "mm3_median": 68.2,
+   "len_mm_median": 28.0,
+   "diam_median_mm": 1.27,
+   "diam_p10_median_mm": 1.0,
+   "comps_gt1": 0
+  },
+  "OM1": {
+   "cases": 540,
+   "share": 0.871,
+   "mm3_median": 82.5,
+   "len_mm_median": 35.1,
+   "diam_median_mm": 1.35,
+   "diam_p10_median_mm": 1.0,
+   "comps_gt1": 1
+  },
+  "OM2": {
+   "cases": 229,
+   "share": 0.369,
+   "mm3_median": 91.8,
+   "len_mm_median": 35.9,
+   "diam_median_mm": 1.35,
+   "diam_p10_median_mm": 1.0,
+   "comps_gt1": 1
+  },
+  "IM": {
+   "cases": 149,
+   "share": 0.24,
+   "mm3_median": 68.4,
+   "len_mm_median": 36.3,
+   "diam_median_mm": 1.21,
+   "diam_p10_median_mm": 1.0,
+   "comps_gt1": 5
+  },
+  "RCA": {
+   "cases": 620,
+   "share": 1.0,
+   "mm3_median": 597.5,
+   "len_mm_median": 87.5,
+   "diam_median_mm": 2.25,
+   "diam_p10_median_mm": 1.87,
+   "comps_gt1": 1
+  },
+  "R-PDA": {
+   "cases": 572,
+   "share": 0.923,
+   "mm3_median": 93.9,
+   "len_mm_median": 46.2,
+   "diam_median_mm": 1.22,
+   "diam_p10_median_mm": 1.0,
+   "comps_gt1": 63
+  },
+  "R-PLA": {
+   "cases": 565,
+   "share": 0.911,
+   "mm3_median": 114.0,
+   "len_mm_median": 47.7,
+   "diam_median_mm": 1.35,
+   "diam_p10_median_mm": 1.0,
+   "comps_gt1": 0
+  },
+  "L-PDA": {
+   "cases": 38,
+   "share": 0.061,
+   "mm3_median": 80.6,
+   "len_mm_median": 35.8,
+   "diam_median_mm": 1.31,
+   "diam_p10_median_mm": 1.0,
+   "comps_gt1": 0
+  },
+  "L-PLA": {
+   "cases": 54,
+   "share": 0.087,
+   "mm3_median": 34.2,
+   "len_mm_median": 16.1,
+   "diam_median_mm": 1.21,
+   "diam_p10_median_mm": 0.98,
+   "comps_gt1": 1
+  },
+  "Other": {
+   "cases": 73,
+   "share": 0.118,
+   "mm3_median": 65.1,
+   "len_mm_median": 29.6,
+   "diam_median_mm": 1.25,
+   "diam_p10_median_mm": 1.0,
+   "comps_gt1": 5
+  }
+ },
+ "spacing": {
+  "inplane_min": 0.289,
+  "inplane_max": 0.453,
+  "slice_min": 0.5,
+  "slice_max": 0.5
+ },
+ "other_components_by_side": {
+  "LAD": 50,
+  "LCx": 20,
+  "other:RCA": 7,
+  "none": 1
+ },
+ "cases_by_LAD_side_other_count": {
+  "0": 572,
+  "1": 46,
+  "2": 2
+ },
+ "cases_with_a_D3_in_Other": 48,
+ "cases_with_a_D4_in_Other": 2,
+ "diagonals": {
+  "pair": {
+   "n": 358,
+   "ordered": 356,
+   "tie": 0,
+   "reversed": 0,
+   "no_origin": 2
+  },
+  "reversed_cases": [],
+  "rederive_branch_agreement": 0.998,
+  "branches": 1017,
+  "rederive_voxel_agreement": 0.9993,
+  "per_reference_name": {
+   "D1": {
+    "n": 610,
+    "agree": 1.0
+   },
+   "D2": {
+    "n": 357,
+    "agree": 0.997
+   },
+   "Other": {
+    "n": 50,
+    "agree": 0.98
+   }
+  }
+ },
+ "marginals": {
+  "pair": {
+   "n": 229,
+   "ordered": 228,
+   "tie": 0,
+   "reversed": 0,
+   "no_origin": 1
+  },
+  "reversed_cases": [],
+  "rederive_branch_agreement": 0.9987,
+  "branches": 786,
+  "rederive_voxel_agreement": 0.9993,
+  "per_reference_name": {
+   "OM1": {
+    "n": 539,
+    "agree": 1.0
+   },
+   "OM2": {
+    "n": 228,
+    "agree": 1.0
+   },
+   "Other": {
+    "n": 19,
+    "agree": 0.947
+   }
+  }
+ },
+ "branch_parent": {
+  "D1": {
+   "LAD": 610,
+   "LCx": 1
+  },
+  "OM1": {
+   "LCx": 540
+  },
+  "OM2": {
+   "LCx": 229
+  },
+  "R-PDA": {
+   "RCA": 571,
+   "none": 1
+  },
+  "R-PLA": {
+   "RCA": 555,
+   "none": 10
+  },
+  "D2": {
+   "LAD": 359
+  },
+  "IM": {
+   "LCx": 70,
+   "LAD": 79
+  },
+  "L-PLA": {
+   "LCx": 54
+  },
+  "L-PDA": {
+   "LCx": 36,
+   "none": 2
+  }
+ },
+ "dominance": {
+  "right": 556,
+  "left (L-PLA only)": 10,
+  "co": 13,
+  "left": 36,
+  "none labelled": 2,
+  "co (R-PDA without R-PLA)": 3
+ },
+ "pda_plb_cases": {
+  "PDA_right": 572,
+  "PDA_left": 38,
+  "PLB_right": 565,
+  "PLB_left": 54
+ },
+ "wilson_halfwidth": {
+  "10": {
+   "0.5": 0.263,
+   "0.7": 0.248,
+   "0.85": 0.212,
+   "0.95": 0.17
+  },
+  "20": {
+   "0.5": 0.201,
+   "0.7": 0.187,
+   "0.85": 0.154,
+   "0.95": 0.114
+  },
+  "30": {
+   "0.5": 0.168,
+   "0.7": 0.156,
+   "0.85": 0.127,
+   "0.95": 0.089
+  },
+  "50": {
+   "0.5": 0.134,
+   "0.7": 0.123,
+   "0.85": 0.099,
+   "0.95": 0.066
+  },
+  "80": {
+   "0.5": 0.107,
+   "0.7": 0.099,
+   "0.85": 0.078,
+   "0.95": 0.051
+  },
+  "120": {
+   "0.5": 0.088,
+   "0.7": 0.081,
+   "0.85": 0.064,
+   "0.95": 0.041
+  }
+ }
+}

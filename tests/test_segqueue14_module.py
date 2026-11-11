@@ -344,7 +344,7 @@ def test_the_archive_is_the_segqueue_extension_and_is_self_sufficient(tmp_path):
             "print(segqueue14.PROTOCOL_VERSION)")
     out = subprocess.run([sys.executable, "-I", "-c", code], capture_output=True, text=True)
     assert out.returncode == 0, out.stderr
-    assert out.stdout.strip() == "17"
+    assert out.stdout.strip() == "18"
 
 
 def test_a_half_downloaded_helper_is_never_a_cache_hit(tmp_path):
@@ -373,14 +373,23 @@ def _review_filters():
     raise AssertionError("REVIEW_FILTERS not found")
 
 
+#: The review-list functions, which need nothing from Slicer.
+_LISTING = ("_reviewListing", "_parseUtc", "_easternTime", "_newestFirst")
+
+
+def _listing_namespace():
+    nodes = [n for n in _tree().body
+             if isinstance(n, ast.FunctionDef) and n.name in _LISTING]
+    assert sorted(n.name for n in nodes) == sorted(_LISTING)
+    namespace = {}
+    exec(compile(ast.Module(body=nodes, type_ignores=[]), str(MODULE), "exec"),
+         namespace)
+    return namespace
+
+
 def _review_listing():
     """``_reviewListing`` executed on its own: it needs nothing from Slicer."""
-    node = next(n for n in _tree().body
-                if isinstance(n, ast.FunctionDef) and n.name == "_reviewListing")
-    namespace = {}
-    exec(compile(ast.Module(body=[node], type_ignores=[]), str(MODULE), "exec"),
-         namespace)
-    return namespace["_reviewListing"]
+    return _listing_namespace()["_reviewListing"]
 
 
 class _Client:
@@ -475,3 +484,63 @@ def test_unassigned_is_the_unassigned_listing_unchanged():
     assert client.calls == [(None, True)]
     assert [c["caseId"] for c in cases] == ["nobody"]
     assert [(c["caseId"], a) for c, a in rows] == [("nobody", None)]
+
+
+# ------------------------------------- #280: the reviewer list, newest first, in ET
+
+
+@pytest.mark.parametrize("stamp, shown", [
+    # Winter, EST (UTC-5).
+    ("2026-01-15T17:32:10.123000", "2026-01-15 12:32 ET"),
+    ("2026-11-10T19:32:00+00:00", "2026-11-10 14:32 ET"),
+    # Summer, EDT (UTC-4).
+    ("2026-07-01T04:05:00", "2026-07-01 00:05 ET"),
+    # DST starts 2026-03-08 at 02:00 EST (07:00 UTC).
+    ("2026-03-08T06:59:00", "2026-03-08 01:59 ET"),
+    ("2026-03-08T07:00:00", "2026-03-08 03:00 ET"),
+    # DST ends 2026-11-01 at 02:00 EDT (06:00 UTC): 01:xx happens twice.
+    ("2026-11-01T05:30:00", "2026-11-01 01:30 ET"),
+    ("2026-11-01T06:30:00", "2026-11-01 01:30 ET"),
+    ("2026-11-01T07:00:00", "2026-11-01 02:00 ET"),
+    # Another year's rule dates (2027: 14 March, 7 November).
+    ("2027-03-14T07:00:00Z", "2027-03-14 03:00 ET"),
+    ("2027-11-07T05:59:00Z", "2027-11-07 01:59 ET"),
+    ("2027-11-07T06:00:00Z", "2027-11-07 01:00 ET"),
+    # An offset other than UTC is converted, not trusted as Eastern.
+    ("2026-07-01T10:00:00+02:00", "2026-07-01 04:00 ET"),
+    (None, "--"), ("", "--"), ("not a date", "--"),
+])
+def test_submission_times_are_shown_in_us_eastern_time(stamp, shown):
+    assert _listing_namespace()["_easternTime"](stamp) == shown
+
+
+def test_the_review_list_is_newest_submission_first_and_unsubmitted_last():
+    def case(name, *submitted):
+        return {"caseId": name, "caseName": name,
+                "assignments": [{"annotator": "a{}".format(i), "state": "submitted"
+                                 if when else "downloaded", "submittedAt": when}
+                                for i, when in enumerate(submitted)]}
+
+    cases = [case("old", "2026-11-01T12:00:00"),
+             case("pair", "2026-11-09T08:00:00+00:00", None),
+             case("nobody"),
+             case("newest", "2026-11-10T19:32:00"),
+             case("middle", "2026-11-05T12:00:00")]
+    cases[2]["assignments"] = []
+    listing = _review_listing()
+    _, rows = listing(_Client(cases), None)
+    order = [(c["caseName"], (a or {}).get("submittedAt")) for c, a in rows]
+    assert order == [("newest", "2026-11-10T19:32:00"),
+                     ("pair", "2026-11-09T08:00:00+00:00"),
+                     ("middle", "2026-11-05T12:00:00"),
+                     ("old", "2026-11-01T12:00:00"),
+                     ("pair", None), ("nobody", None)]
+    # A state group is sorted the same way.
+    _, rows = listing(_Client(cases), ("submitted",))
+    assert [c["caseName"] for c, _ in rows] == ["newest", "pair", "middle", "old"]
+
+
+def test_the_review_table_shows_the_submission_time_in_eastern_time():
+    source = MODULE.read_text()
+    assert '"Submitted (ET)"' in source
+    assert '_easternTime(assignment.get("submittedAt"))' in source

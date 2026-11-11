@@ -23,7 +23,10 @@ the end, as ``segqueue14-benchmark status`` prints it:
   which two or more classes keep more than ``UNTRIMMED_KEEP`` of the seed was
   probably submitted untrimmed (the figures and tables: ``segqueue14.quality``);
 * overlap: the fraction of labelled voxels in two or more classes, per read;
-* empty classes: reads with an empty LM, LAD, LCx or RCA.
+* empty classes: reads with an empty LM, LAD, LCx or RCA;
+* extended reads: reads with the optional extended classes (D44). Every figure
+  here is over the four classes: an extended read is collapsed first, each branch
+  into its parent (``labels.collapse_to_four``).
 
 **Project:** assignments by state, overall and per login; each pool case's
 ``approvedCount`` against its number of approved assignments (a mismatch is an
@@ -54,7 +57,7 @@ import sys
 import tempfile
 
 from segqueue import states as st
-from segqueue14 import labelfile
+from segqueue14 import labelfile, labels
 from segqueue14 import plan as sqplan
 from segqueue14.quality import (
     ASSIGNMENT_STATES,
@@ -245,7 +248,7 @@ def collect(db, limit=DEFAULT_LIMIT, analyse=None, exclude=()):
     def person(userId):
         return people.setdefault(login(userId), {
             'reads': 0, 'approved': 0, 'sentBack': 0, 'underReview': 0, 'revised': 0,
-            'seconds': [], 'pairs': [], 'flagged': 0,
+            'seconds': [], 'pairs': [], 'flagged': 0, 'extended': 0,
             'flags': {reason: 0 for reason in REASONS}, 'analysed': [],
             'empty': {name: 0 for name in NAMES}})
 
@@ -320,6 +323,9 @@ def collect(db, limit=DEFAULT_LIMIT, analyse=None, exclude=()):
     for index, s in enumerate(reads):
         p = person(s['userId'])
         p['reads'] += 1
+        # Reads with the optional extended classes (D44); scored collapsed to four.
+        if s.get('extended') or labels.is_extended(s.get('classes') or ()):
+            p['extended'] += 1
         if usable(s.get('annotationSeconds')) and s['annotationSeconds'] > 0:
             p['seconds'].append(float(s['annotationSeconds']))
         score = s.get('autoScore') or {}
@@ -370,6 +376,7 @@ def collect(db, limit=DEFAULT_LIMIT, analyse=None, exclude=()):
         annotators[name] = {
             'reads': p['reads'], 'approved': p['approved'], 'sentBack': p['sentBack'],
             'underReview': p['underReview'], 'revisedByReviewer': p['revised'],
+            'extended': p['extended'],
             'medianSeconds': round(statistics.median(p['seconds']), 1) if p['seconds'] else None,
             'pairs': dict(summary(means), below=sum(1 for m in means if m < pairFlag),
                           perClass={n: meanOf([x['perClass'][n] for x in p['pairs']])

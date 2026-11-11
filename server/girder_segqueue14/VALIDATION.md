@@ -62,7 +62,7 @@ The queue is the 675 pooled volumes only (D23): no ImageCAS case of any kind.
       row's voxel counts are equal for every class. Save it as your revision: the
       revision's counts are the same. (Up to 0.16.5 it reopened as all RCA.)
 - [ ] A 0.16.x module is refused at login, submit and a reviewer's save with
-      *"Update the SegQueue14 module"* (protocol 17).
+      *"Update the SegQueue14 module"* (the server accepts protocols 17 and 18).
 - [ ] *Save draft* while the classes are still untrimmed copies, close Slicer, reopen:
       every class still shows the whole seed, and after trimming and submitting the
       reviewer sees all four classes (the false "empty" of #270).
@@ -99,12 +99,46 @@ The queue is the 675 pooled volumes only (D23): no ImageCAS case of any kind.
       line says `classes overlap: ...`), and `segtrain convert --task 716` reports it
       and does not convert it (`overlap_policy: refuse`, #275).
 
+## E2. Extended classes (0.18.0, D44)
+
+Synthetic or test cases only. Keep one Slicer with 0.17.x and one with 0.18.0.
+
+- [ ] 0.17.x still logs in, gets a case, submits it and reviews a four-class read
+      against the updated server (no *"Update the SegQueue14 module"*).
+- [ ] 0.18.0, toggle off (the default): a seeded case opens with LM, LAD, LCx and
+      RCA as before, and submits as a four-class read (the review row's `classes`
+      are the four, `extended` false).
+- [ ] Turn **Extended classes** on: 17 empty classes appear, grouped under their
+      parents, with the materials last. The group ticks hide and show each group,
+      and each group's tooltip lists what goes in its classes.
+- [ ] Move a branch from LAD into D1 and paint a calcified plaque, then submit. As
+      a 0.18.0 reviewer, open it: all 21 classes, D1 and the plaque as drawn. Save
+      it as your revision: the revision's `classes` are all 21.
+- [ ] As a 0.17.x reviewer, the same read is refused at open with *"Update
+      SegQueue14 to review this read"*. A four-class read still opens and revises.
+- [ ] Open a draft saved by 0.17.x in 0.18.0: the four classes are as they were
+      (with the toggle on, plus 17 empty ones).
+- [ ] Turn the toggle off with D1 drawn: only the empty extended classes go, and
+      SegQueue says it kept D1.
+- [ ] On a two-read case, one 0.17.x read and one extended read of the same vessels
+      pair, and the pair Dice is the four-class one. Two extended reads that both
+      painted a stent also get a `materials` Dice for it.
+- [ ] The reviewer's case list is newest submission first, unsubmitted rows last,
+      and *Submitted (ET)* matches the submit time in Eastern time.
+- [ ] `segqueue14-export` writes all 21 masks for the extended read
+      (`Calcified_plaque.nii.gz`, ...), and `--four-class` writes the four with the
+      branches folded into their parents.
+
 ## F. Rollback rehearsal (optional, recommended)
 
 - [ ] Set `SEGQUEUE14_DISABLE=1`, restart: `/api/v1/segqueue14/project` is 404 and
       SegQueue works. Remove it, restart: SegQueue14 is back with its data.
 
 ## Decisions to confirm while doing this
+
+- [ ] D44: PDA, PLB and SN always fold into RCA when scored, including
+      left-dominant hearts (where PDA/PLB come off the LCx) and an SN from the LCx.
+- [ ] D44: the **Extended classes** toggle is off by default.
 
 - [ ] The pair threshold (`duplicate_mean_dice_flag` 0.60) -- a placeholder until real
       reads are seen.

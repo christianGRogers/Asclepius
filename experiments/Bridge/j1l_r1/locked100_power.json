@@ -1,0 +1,399 @@
+{
+ "n_locked": 100,
+ "scale_pessimistic": {
+  "LM": 1.489,
+  "LAD": 1.609,
+  "LCx": 1.215,
+  "RCA": 0.996
+ },
+ "measured_sd_macro_delta": {
+  "scratch pair": 0.0411,
+  "warm replicate": 0.0382
+ },
+ "mde_80pct_two_sided": {
+  "optimistic (warm-replicate shape, measured scale)": {
+   "sd_delta": 0.0382,
+   "mde_n100": 0.0107
+  },
+  "central (scratch-pair shape, measured scale)": {
+   "sd_delta": 0.0406,
+   "mde_n100": 0.0114
+  },
+  "pessimistic (scratch-pair shape x Janus 0 spread)": {
+   "sd_delta": 0.0506,
+   "mde_n100": 0.0142
+  },
+  "harsh (pessimistic, macro SD 0.072, Atlas R10 upper)": {
+   "sd_delta": 0.072,
+   "mde_n100": 0.0202
+  }
+ },
+ "grid": {
+  "optimistic (warm-replicate shape, measured scale)": {
+   "uniform -0.03": {
+    "adopt_m0.01": 0.0,
+    "adopt_m0.015": 0.0,
+    "adopt_m0.02": 0.0,
+    "better_m0.01": 0.0,
+    "better_m0.015": 0.0,
+    "better_m0.02": 0.0,
+    "L2_fail": 0.875,
+    "lo_mean": -0.037,
+    "sd_macro_delta": 0.0372
+   },
+   "uniform -0.02": {
+    "adopt_m0.01": 0.0,
+    "adopt_m0.015": 0.0,
+    "adopt_m0.02": 0.018,
+    "better_m0.01": 0.0,
+    "better_m0.015": 0.0,
+    "better_m0.02": 0.0,
+    "L2_fail": 0.215,
+    "lo_mean": -0.027,
+    "sd_macro_delta": 0.0368
+   },
+   "uniform -0.01": {
+    "adopt_m0.01": 0.019,
+    "adopt_m0.015": 0.279,
+    "adopt_m0.02": 0.812,
+    "better_m0.01": 0.0,
+    "better_m0.015": 0.0,
+    "better_m0.02": 0.0,
+    "L2_fail": 0.019,
+    "lo_mean": -0.017,
+    "sd_macro_delta": 0.0368
+   },
+   "zero": {
+    "adopt_m0.01": 0.822,
+    "adopt_m0.015": 0.98,
+    "adopt_m0.02": 0.997,
+    "better_m0.01": 0.016,
+    "better_m0.015": 0.016,
+    "better_m0.02": 0.016,
+    "L2_fail": 0.002,
+    "lo_mean": -0.007,
+    "sd_macro_delta": 0.0369
+   },
+   "uniform +0.005 (data scaling, high)": {
+    "adopt_m0.01": 0.98,
+    "adopt_m0.015": 0.997,
+    "adopt_m0.02": 1.0,
+    "better_m0.01": 0.276,
+    "better_m0.015": 0.276,
+    "better_m0.02": 0.276,
+    "L2_fail": 0.001,
+    "lo_mean": -0.002,
+    "sd_macro_delta": 0.0369
+   },
+   "uniform +0.01": {
+    "adopt_m0.01": 0.998,
+    "adopt_m0.015": 1.0,
+    "adopt_m0.02": 1.0,
+    "better_m0.01": 0.818,
+    "better_m0.015": 0.818,
+    "better_m0.02": 0.818,
+    "L2_fail": 0.0,
+    "lo_mean": 0.003,
+    "sd_macro_delta": 0.0371
+   },
+   "uniform +0.02": {
+    "adopt_m0.01": 1.0,
+    "adopt_m0.015": 1.0,
+    "adopt_m0.02": 1.0,
+    "better_m0.01": 1.0,
+    "better_m0.015": 1.0,
+    "better_m0.02": 1.0,
+    "L2_fail": 0.0,
+    "lo_mean": 0.013,
+    "sd_macro_delta": 0.0376
+   },
+   "LCx only -0.05 (macro -0.0125)": {
+    "adopt_m0.01": 0.0,
+    "adopt_m0.015": 0.007,
+    "adopt_m0.02": 0.012,
+    "better_m0.01": 0.0,
+    "better_m0.015": 0.0,
+    "better_m0.02": 0.0,
+    "L2_fail": 0.988,
+    "lo_mean": -0.019,
+    "sd_macro_delta": 0.037
+   }
+  },
+  "central (scratch-pair shape, measured scale)": {
+   "uniform -0.03": {
+    "adopt_m0.01": 0.0,
+    "adopt_m0.015": 0.0,
+    "adopt_m0.02": 0.0,
+    "better_m0.01": 0.0,
+    "better_m0.015": 0.0,
+    "better_m0.02": 0.0,
+    "L2_fail": 0.992,
+    "lo_mean": -0.038,
+    "sd_macro_delta": 0.0401
+   },
+   "uniform -0.02": {
+    "adopt_m0.01": 0.0,
+    "adopt_m0.015": 0.002,
+    "adopt_m0.02": 0.031,
+    "better_m0.01": 0.0,
+    "better_m0.015": 0.0,
+    "better_m0.02": 0.0,
+    "L2_fail": 0.329,
+    "lo_mean": -0.028,
+    "sd_macro_delta": 0.0399
+   },
+   "uniform -0.01": {
+    "adopt_m0.01": 0.038,
+    "adopt_m0.015": 0.245,
+    "adopt_m0.02": 0.709,
+    "better_m0.01": 0.0,
+    "better_m0.015": 0.0,
+    "better_m0.02": 0.0,
+    "L2_fail": 0.043,
+    "lo_mean": -0.018,
+    "sd_macro_delta": 0.0399
+   },
+   "zero": {
+    "adopt_m0.01": 0.688,
+    "adopt_m0.015": 0.94,
+    "adopt_m0.02": 0.992,
+    "better_m0.01": 0.034,
+    "better_m0.015": 0.034,
+    "better_m0.02": 0.034,
+    "L2_fail": 0.005,
+    "lo_mean": -0.008,
+    "sd_macro_delta": 0.0402
+   },
+   "uniform +0.005 (data scaling, high)": {
+    "adopt_m0.01": 0.94,
+    "adopt_m0.015": 0.995,
+    "adopt_m0.02": 0.998,
+    "better_m0.01": 0.265,
+    "better_m0.015": 0.265,
+    "better_m0.02": 0.265,
+    "L2_fail": 0.002,
+    "lo_mean": -0.003,
+    "sd_macro_delta": 0.04
+   },
+   "uniform +0.01": {
+    "adopt_m0.01": 0.997,
+    "adopt_m0.015": 0.999,
+    "adopt_m0.02": 0.999,
+    "better_m0.01": 0.684,
+    "better_m0.015": 0.684,
+    "better_m0.02": 0.684,
+    "L2_fail": 0.001,
+    "lo_mean": 0.002,
+    "sd_macro_delta": 0.0399
+   },
+   "uniform +0.02": {
+    "adopt_m0.01": 1.0,
+    "adopt_m0.015": 1.0,
+    "adopt_m0.02": 1.0,
+    "better_m0.01": 0.995,
+    "better_m0.015": 0.995,
+    "better_m0.02": 0.995,
+    "L2_fail": 0.0,
+    "lo_mean": 0.012,
+    "sd_macro_delta": 0.04
+   },
+   "LCx only -0.05 (macro -0.0125)": {
+    "adopt_m0.01": 0.004,
+    "adopt_m0.015": 0.014,
+    "adopt_m0.02": 0.016,
+    "better_m0.01": 0.0,
+    "better_m0.015": 0.0,
+    "better_m0.02": 0.0,
+    "L2_fail": 0.985,
+    "lo_mean": -0.02,
+    "sd_macro_delta": 0.0414
+   }
+  },
+  "pessimistic (scratch-pair shape x Janus 0 spread)": {
+   "uniform -0.03": {
+    "adopt_m0.01": 0.0,
+    "adopt_m0.015": 0.0,
+    "adopt_m0.02": 0.0,
+    "better_m0.01": 0.0,
+    "better_m0.015": 0.0,
+    "better_m0.02": 0.0,
+    "L2_fail": 0.989,
+    "lo_mean": -0.041,
+    "sd_macro_delta": 0.0501
+   },
+   "uniform -0.02": {
+    "adopt_m0.01": 0.0,
+    "adopt_m0.015": 0.0,
+    "adopt_m0.02": 0.022,
+    "better_m0.01": 0.0,
+    "better_m0.015": 0.0,
+    "better_m0.02": 0.0,
+    "L2_fail": 0.561,
+    "lo_mean": -0.031,
+    "sd_macro_delta": 0.05
+   },
+   "uniform -0.01": {
+    "adopt_m0.01": 0.021,
+    "adopt_m0.015": 0.151,
+    "adopt_m0.02": 0.444,
+    "better_m0.01": 0.0,
+    "better_m0.015": 0.0,
+    "better_m0.02": 0.0,
+    "L2_fail": 0.116,
+    "lo_mean": -0.021,
+    "sd_macro_delta": 0.05
+   },
+   "zero": {
+    "adopt_m0.01": 0.42,
+    "adopt_m0.015": 0.76,
+    "adopt_m0.02": 0.93,
+    "better_m0.01": 0.018,
+    "better_m0.015": 0.018,
+    "better_m0.02": 0.018,
+    "L2_fail": 0.025,
+    "lo_mean": -0.011,
+    "sd_macro_delta": 0.0501
+   },
+   "uniform +0.005 (data scaling, high)": {
+    "adopt_m0.01": 0.776,
+    "adopt_m0.015": 0.938,
+    "adopt_m0.02": 0.99,
+    "better_m0.01": 0.146,
+    "better_m0.015": 0.146,
+    "better_m0.02": 0.146,
+    "L2_fail": 0.007,
+    "lo_mean": -0.006,
+    "sd_macro_delta": 0.05
+   },
+   "uniform +0.01": {
+    "adopt_m0.01": 0.945,
+    "adopt_m0.015": 0.992,
+    "adopt_m0.02": 0.997,
+    "better_m0.01": 0.451,
+    "better_m0.015": 0.451,
+    "better_m0.02": 0.451,
+    "L2_fail": 0.002,
+    "lo_mean": -0.001,
+    "sd_macro_delta": 0.0499
+   },
+   "uniform +0.02": {
+    "adopt_m0.01": 0.998,
+    "adopt_m0.015": 0.999,
+    "adopt_m0.02": 0.999,
+    "better_m0.01": 0.945,
+    "better_m0.015": 0.945,
+    "better_m0.02": 0.945,
+    "L2_fail": 0.001,
+    "lo_mean": 0.009,
+    "sd_macro_delta": 0.0502
+   },
+   "LCx only -0.05 (macro -0.0125)": {
+    "adopt_m0.01": 0.007,
+    "adopt_m0.015": 0.029,
+    "adopt_m0.02": 0.042,
+    "better_m0.01": 0.0,
+    "better_m0.015": 0.0,
+    "better_m0.02": 0.0,
+    "L2_fail": 0.954,
+    "lo_mean": -0.023,
+    "sd_macro_delta": 0.0511
+   }
+  },
+  "harsh (pessimistic, macro SD 0.072, Atlas R10 upper)": {
+   "uniform -0.03": {
+    "adopt_m0.01": 0.0,
+    "adopt_m0.015": 0.0,
+    "adopt_m0.02": 0.0,
+    "better_m0.01": 0.0,
+    "better_m0.015": 0.0,
+    "better_m0.02": 0.0,
+    "L2_fail": 0.989,
+    "lo_mean": -0.046,
+    "sd_macro_delta": 0.0713
+   },
+   "uniform -0.02": {
+    "adopt_m0.01": 0.0,
+    "adopt_m0.015": 0.002,
+    "adopt_m0.02": 0.016,
+    "better_m0.01": 0.0,
+    "better_m0.015": 0.0,
+    "better_m0.02": 0.0,
+    "L2_fail": 0.749,
+    "lo_mean": -0.035,
+    "sd_macro_delta": 0.0714
+   },
+   "uniform -0.01": {
+    "adopt_m0.01": 0.026,
+    "adopt_m0.015": 0.09,
+    "adopt_m0.02": 0.236,
+    "better_m0.01": 0.0,
+    "better_m0.015": 0.0,
+    "better_m0.02": 0.0,
+    "L2_fail": 0.337,
+    "lo_mean": -0.025,
+    "sd_macro_delta": 0.0713
+   },
+   "zero": {
+    "adopt_m0.01": 0.243,
+    "adopt_m0.015": 0.466,
+    "adopt_m0.02": 0.694,
+    "better_m0.01": 0.02,
+    "better_m0.015": 0.02,
+    "better_m0.02": 0.02,
+    "L2_fail": 0.107,
+    "lo_mean": -0.016,
+    "sd_macro_delta": 0.0709
+   },
+   "uniform +0.005 (data scaling, high)": {
+    "adopt_m0.01": 0.493,
+    "adopt_m0.015": 0.73,
+    "adopt_m0.02": 0.87,
+    "better_m0.01": 0.09,
+    "better_m0.015": 0.09,
+    "better_m0.02": 0.09,
+    "L2_fail": 0.058,
+    "lo_mean": -0.01,
+    "sd_macro_delta": 0.0712
+   },
+   "uniform +0.01": {
+    "adopt_m0.01": 0.728,
+    "adopt_m0.015": 0.881,
+    "adopt_m0.02": 0.95,
+    "better_m0.01": 0.246,
+    "better_m0.015": 0.246,
+    "better_m0.02": 0.246,
+    "L2_fail": 0.028,
+    "lo_mean": -0.005,
+    "sd_macro_delta": 0.071
+   },
+   "uniform +0.02": {
+    "adopt_m0.01": 0.956,
+    "adopt_m0.015": 0.986,
+    "adopt_m0.02": 0.99,
+    "better_m0.01": 0.722,
+    "better_m0.015": 0.722,
+    "better_m0.02": 0.722,
+    "L2_fail": 0.007,
+    "lo_mean": 0.005,
+    "sd_macro_delta": 0.0711
+   },
+   "LCx only -0.05 (macro -0.0125)": {
+    "adopt_m0.01": 0.008,
+    "adopt_m0.015": 0.031,
+    "adopt_m0.02": 0.067,
+    "better_m0.01": 0.0,
+    "better_m0.015": 0.0,
+    "better_m0.02": 0.0,
+    "L2_fail": 0.904,
+    "lo_mean": -0.028,
+    "sd_macro_delta": 0.0722
+   }
+  }
+ },
+ "data_scaling_gain": {
+  "beta -0.07": 0.0006,
+  "beta -0.128": 0.0012,
+  "beta -0.309": 0.0028,
+  "beta -0.5": 0.0045
+ }
+}

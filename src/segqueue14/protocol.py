@@ -7,9 +7,11 @@ having a separate contract:
 * **A separate prefix.** Every route is ``/api/v1/segqueue14/...``, so the two
   plugins load in one Girder without a single shared path.
 * **A separate protocol version** (``segqueue14.PROTOCOL_VERSION``), checked on
-  every write. There are no legacy SegQueue14 clients to protect, so unlike the
-  live check a *missing* version is refused too: a client that does not say what
-  it speaks is not one that was written for this server.
+  every write. Unlike the live check a *missing* version is refused too: a client
+  that does not say what it speaks is not one that was written for this server.
+  Protocol 17 (module 0.17.x) is still accepted (D44, #280): it speaks the four
+  classes and is refused only on a read with extended classes
+  (``check_extended_reader``), which it would save back with four.
 * **A ``prelabel`` asset** instead of the live binary coronary ``seed`` (D8, D25):
   a model's prediction in the project's classes, loaded straight into the
   project segments.
@@ -65,8 +67,13 @@ from .labelfile import FORMATS as LABEL_FORMATS
 #: ``https://host/api/v1/segqueue14/...``.
 API_PREFIX = "segqueue14"
 
-#: Oldest SegQueue14 client protocol the server accepts.
-MIN_CLIENT_PROTOCOL = PROTOCOL_VERSION
+#: Oldest SegQueue14 client protocol the server accepts. 17 (0.17.x) keeps
+#: working after protocol 18 (D44): it speaks the four classes only.
+MIN_CLIENT_PROTOCOL = 17
+
+#: The first protocol that knows the 17 extended classes (D44). A reviewer on an
+#: older module is refused a read that has them (``check_extended_reader``).
+EXTENDED_CLASSES_PROTOCOL = 18
 
 #: Headers. Distinct from the live ones so a proxy log says which module spoke.
 CLIENT_VERSION_HEADER = "X-SegQueue14-Client"
@@ -113,6 +120,10 @@ ERR_BAD_LABEL_FORMAT = "bad_label_format"
 
 #: Formerly HTTP 400 from /submit for an empty required class (D13); not raised since #270.
 ERR_MISSING_REQUIRED = "missing_required"
+
+#: HTTP 426 from a reviewer route when a module older than protocol 18 asks for a
+#: read with extended classes (D44): it would show four and save back four.
+ERR_UPDATE_TO_REVIEW = "update_to_review"
 
 # --------------------------------------------------------- case asset kinds
 
@@ -188,21 +199,54 @@ def too_old_message(sent: Optional[int]) -> str:
 
 
 def check_client_protocol(client_protocol: Optional[Any]) -> None:
-    """Raise ``ProtocolError`` unless the client speaks this protocol or newer.
+    """Raise ``ProtocolError`` unless the client speaks ``MIN_CLIENT_PROTOCOL`` or newer.
 
     A missing or unparseable version is refused, unlike the live check: every
-    SegQueue14 client ever released sends one.
+    SegQueue14 client ever released sends one. Protocol 17 is accepted (D44).
     """
-    try:
-        version = None if client_protocol in (None, "") else int(client_protocol)
-    except (TypeError, ValueError):
-        version = None
+    version = _version(client_protocol)
     if version is None or version < MIN_CLIENT_PROTOCOL:
         raise ProtocolError(
             ERR_CLIENT_TOO_OLD, too_old_message(version),
             {"minProtocol": MIN_CLIENT_PROTOCOL, "serverProtocol": PROTOCOL_VERSION,
              "module": "SegQueue14"},
         )
+
+
+def _version(client_protocol: Optional[Any]) -> Optional[int]:
+    try:
+        return None if client_protocol in (None, "") else int(client_protocol)
+    except (TypeError, ValueError):
+        return None
+
+
+def update_to_review_message(sent: Optional[int]) -> str:
+    """The refusal a protocol-17 reviewer gets on an extended read (D44)."""
+    return ("Update SegQueue14 to review this read. It has extended classes "
+            "(branches or materials) that this version of the module cannot show, "
+            "and saving it from here would keep only LM, LAD, LCx and RCA. Install "
+            "the latest SegQueue module (Check for updates) and restart Slicer. "
+            f"Four-class reads still open as before. (Module protocol {sent}; "
+            f"extended classes need {EXTENDED_CLASSES_PROTOCOL}.)")
+
+
+def check_extended_reader(client_protocol: Optional[Any], extended: bool) -> None:
+    """Raise ``ProtocolError`` if a module too old for extended classes asks for
+    a read that has them (D44, #280).
+
+    A four-class read is fine from any accepted module. A request that names no
+    protocol at all is not a SegQueue14 module (a browser, an admin script): it
+    cannot save anything back, so it is not refused here.
+    """
+    if not extended:
+        return
+    version = _version(client_protocol)
+    if version is None or version >= EXTENDED_CLASSES_PROTOCOL:
+        return
+    raise ProtocolError(
+        ERR_UPDATE_TO_REVIEW, update_to_review_message(version),
+        {"minProtocol": EXTENDED_CLASSES_PROTOCOL, "serverProtocol": PROTOCOL_VERSION,
+         "module": "SegQueue14", "extendedClasses": True})
 
 
 def label_format(value: Optional[Any]) -> str:

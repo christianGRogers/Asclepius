@@ -25,11 +25,20 @@ submission or a reviewer's revision for an empty or overlapping class.
 ``missing_required`` is still used by the scoring worker, which flags an empty
 required class for review; ``missing_required_message`` and ``overlap_message``
 are no longer shown at submit.
+
+**The extended classes (D44, #280).** 17 optional classes on top of the four:
+three materials (stent, calcified and non-calcified plaque) and 14 named side
+branches. They are SegQueue-only: ``NAMES``, ``LABEL_VALUES`` and ``N_CLASSES``
+stay the four vessels -- the headline every score, the training labels and the
+label config are about -- and the extras live in ``EXTRA_NAMES`` and friends.
+An extended read is collapsed to the four before it is scored
+(``collapse_to_four``): each branch is unioned into its parent; materials go
+into no vessel. Label values 5-21 are fixed here and never reused.
 """
 
 from __future__ import annotations
 
-from typing import Dict, Iterable, List, Mapping, Optional
+from typing import Dict, Iterable, List, Mapping, Optional, Sequence
 
 #: ``(label, name, colour, required, hint)`` in label order. Names are the short
 #: ImageCAS-X names; they are also the per-class file names in a training export
@@ -76,6 +85,153 @@ PROJECT_NAME = "Coronary segmentation, 4 classes"
 
 #: Name of the label config this table must match (configs/labels/<name>.yaml).
 LABEL_SET_NAME = "coronary_icx4"
+
+
+# ----------------------------------------------------- extended classes (D44)
+
+#: Groups of the extended classes, in panel order. "Vessels" is the four above.
+GROUP_VESSELS = "Vessels"
+GROUP_MATERIALS = "Materials"
+GROUP_LAD = "LAD branches"
+GROUP_LCX = "LCx branches"
+GROUP_RCA = "RCA branches"
+GROUP_OTHER = "Other"
+GROUPS = (GROUP_VESSELS, GROUP_LAD, GROUP_LCX, GROUP_OTHER, GROUP_RCA, GROUP_MATERIALS)
+
+#: ``(label, name, colour, group, parent, hint)`` in label order. ``parent`` is the
+#: vessel a branch is folded into for scoring (D44; PDA, PLB and SN always RCA, the
+#: ramus always LCx as D1b); a material has none. Label values are pinned: a draft
+#: or a stored read keeps them forever, so a value is never reassigned or reused.
+#: Colours: branches are shades of their parent's colour, materials stand apart.
+_EXTRA_TABLE = (
+    (5, "Stent", (0.80, 0.80, 0.86), GROUP_MATERIALS, None,
+     "The stent: its metal struts, end to end. Leave the lumen inside it in its "
+     "vessel class too; overlap is fine."),
+    (6, "Calcified plaque", (0.95, 0.30, 0.85), GROUP_MATERIALS, None,
+     "Calcified plaque: the bright, calcium-dense plaque in or on the vessel wall."),
+    (7, "Non-calcified plaque", (0.55, 0.20, 0.65), GROUP_MATERIALS, None,
+     "Non-calcified (soft) plaque: lower-density plaque in the vessel wall."),
+    (8, "D1", (0.55, 0.92, 0.45), GROUP_LAD, "LAD",
+     "First diagonal: the first diagonal branch off the LAD, over the lateral wall."),
+    (9, "D2", (0.30, 0.85, 0.65), GROUP_LAD, "LAD",
+     "Second diagonal off the LAD."),
+    (10, "D3", (0.08, 0.50, 0.35), GROUP_LAD, "LAD",
+     "Third diagonal off the LAD."),
+    (11, "S1", (0.78, 0.88, 0.22), GROUP_LAD, "LAD",
+     "First septal perforator: the first branch off the LAD into the septum."),
+    (12, "S2", (0.52, 0.66, 0.08), GROUP_LAD, "LAD",
+     "Second septal perforator off the LAD."),
+    (13, "S3", (0.32, 0.42, 0.12), GROUP_LAD, "LAD",
+     "Third septal perforator off the LAD."),
+    (14, "OM1", (0.45, 0.70, 1.00), GROUP_LCX, "LCx",
+     "First obtuse marginal off the LCx, over the lateral wall."),
+    (15, "OM2", (0.15, 0.22, 0.62), GROUP_LCX, "LCx",
+     "Second obtuse marginal off the LCx."),
+    (16, "SN", (1.00, 0.92, 0.50), GROUP_RCA, "RCA",
+     "Sinus node artery, to the sinus node (folded into RCA when scored, whichever "
+     "artery it comes off)."),
+    (17, "Conus", (0.95, 0.55, 0.08), GROUP_RCA, "RCA",
+     "Conus branch: usually the first RCA branch, to the right ventricular outflow "
+     "tract."),
+    (18, "RMA", (0.78, 0.42, 0.20), GROUP_RCA, "RCA",
+     "Right (acute) marginal: off the RCA along the acute margin of the right "
+     "ventricle."),
+    (19, "PDA", (0.62, 0.32, 0.04), GROUP_RCA, "RCA",
+     "Posterior descending artery, in the posterior interventricular groove "
+     "(folded into RCA when scored, whichever artery it comes off)."),
+    (20, "PLB", (1.00, 0.68, 0.52), GROUP_RCA, "RCA",
+     "Posterolateral branch, beyond the crux (folded into RCA when scored, "
+     "whichever artery it comes off)."),
+    (21, "Ramus", (0.15, 0.82, 0.92), GROUP_OTHER, "LCx",
+     "Ramus intermedius: a third branch from the left main, between the LAD and "
+     "LCx (folded into LCx when scored, D1b)."),
+)
+
+#: The 17 extended class names, in label order.
+EXTRA_NAMES: List[str] = [row[1] for row in _EXTRA_TABLE]
+#: The materials: never folded into a vessel.
+MATERIALS: List[str] = [row[1] for row in _EXTRA_TABLE if row[4] is None]
+#: ``{branch: parent vessel}`` for the 14 named branches.
+PARENT: Dict[str, str] = {row[1]: row[4] for row in _EXTRA_TABLE if row[4]}
+#: ``{name: group}`` for all 21 classes.
+GROUP_OF: Dict[str, str] = {**{name: GROUP_VESSELS for name in NAMES},
+                             **{row[1]: row[3] for row in _EXTRA_TABLE}}
+#: All 21 names in label order: the channel order of an extended class stack.
+ALL_NAMES: List[str] = NAMES + EXTRA_NAMES
+#: ``{name: label value}`` for all 21.
+ALL_LABEL_VALUES: Dict[str, int] = {**LABEL_VALUES,
+                                     **{row[1]: row[0] for row in _EXTRA_TABLE}}
+#: All 21 names grouped by parent, for the panel: each vessel followed by its
+#: branches, then the materials.
+DISPLAY_ORDER: List[str] = (
+    ["LM", "LAD"] + [n for n in EXTRA_NAMES if GROUP_OF[n] == GROUP_LAD]
+    + ["LCx"] + [n for n in EXTRA_NAMES if GROUP_OF[n] in (GROUP_LCX, GROUP_OTHER)]
+    + ["RCA"] + [n for n in EXTRA_NAMES if GROUP_OF[n] == GROUP_RCA]
+    + MATERIALS)
+
+#: What annotators are told about the extended classes (D44), shown in the panel
+#: when they are turned on; each class's own hint is in ``extra_segment_dicts``.
+EXTENDED_INSTRUCTIONS = (
+    "Extended classes are optional: leave any of them empty. LM, LAD, LCx and RCA "
+    "start as before. To use a branch class, move that branch out of its parent "
+    "into its class: D1-D3 and S1-S3 come out of LAD; OM1, OM2 and the ramus out "
+    "of LCx; SN, conus, RMA, PDA and PLB out of RCA. Branches beyond the third "
+    "diagonal or septal, or the second marginal, stay in the parent. Paint stent, "
+    "calcified and non-calcified plaque where you see them; they may overlap the "
+    "vessels. Every class is saved whole, overlaps included. When scored, each "
+    "branch counts towards its parent; materials are scored on their own.")
+
+
+def extra_segment_dicts() -> List[dict]:
+    """The 17 extended classes as ``SegmentSpec.to_dict()``-shaped dicts, plus
+    ``group`` and ``parent`` (which ``SegmentSpec`` ignores)."""
+    return [
+        {"name": name, "label": label, "color": list(colour), "required": False,
+         "hint": hint, "group": group, "parent": parent}
+        for label, name, colour, group, parent, hint in _EXTRA_TABLE
+    ]
+
+
+def extra_segment_specs() -> list:
+    """The 17 extended classes as ``segqueue.protocol.SegmentSpec`` objects."""
+    from segqueue.protocol import SegmentSpec
+
+    return [SegmentSpec.from_dict(d) for d in extra_segment_dicts()]
+
+
+def is_extended(names: Iterable[str]) -> bool:
+    """Whether a read with these classes has any of the 17 extended ones."""
+    extras = set(EXTRA_NAMES)
+    return any(str(n) in extras for n in names)
+
+
+def stack_names(extended: bool) -> List[str]:
+    """The channels of a class stack: the four, or all 21 in label order."""
+    return list(ALL_NAMES if extended else NAMES)
+
+
+def collapse_to_four(masks, names: Sequence[str]):
+    """``(4, ...)`` 0/1 masks in ``NAMES`` order from ``(C, ...)`` masks named ``names``.
+
+    Each of the four vessels is its own mask unioned with every branch whose parent
+    it is (``PARENT``, D44); materials and unknown names go into no vessel. A
+    four-class read comes back unchanged (as uint8 0/1), so a 4-class read scores
+    exactly as before, and an extended read scores like the same voxels drawn into
+    the parents.
+    """
+    import numpy as np
+
+    masks = np.asarray(masks)
+    names = [str(n) for n in names]
+    if masks.shape[0] != len(names):
+        raise ValueError(f"{masks.shape[0]} channels for {len(names)} class names")
+    out = np.zeros((len(NAMES),) + masks.shape[1:], np.uint8)
+    index = {name: i for i, name in enumerate(NAMES)}
+    for channel, name in enumerate(names):
+        target = index.get(name, index.get(PARENT.get(name, ""), None))
+        if target is not None:
+            out[target] |= (masks[channel] != 0)
+    return out
 
 
 #: ImageCAS-X's 14 label values -> these four (D1 territory, D1b ramus -> LCx).

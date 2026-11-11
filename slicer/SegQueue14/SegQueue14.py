@@ -27,6 +27,12 @@ What an annotator sees:
   a class stack (``segqueue14.labelfile``), one 0/1 channel per class on the CT
   grid, not one label volume -- which kept one class per voxel and turned an
   untouched seeded case into all RCA (#275).
+* **Extended classes** (D44, 0.18.0, protocol 18): an optional per-annotator
+  toggle, off by default, adds 17 empty classes -- stent, calcified and
+  non-calcified plaque, D1-D3, S1-S3, OM1-OM2, SN, conus, RMA, PDA, PLB and the
+  ramus -- grouped under their parent vessel. With it off, a case is the four
+  classes exactly as before; with any extended class in the scene, all 21 are
+  submitted. Turning it off removes only extended classes that are empty.
 
 The server owns the protocol, local data is a lease, nothing the client says is
 trusted: those three decisions are the live module's and are kept unchanged.
@@ -107,7 +113,7 @@ from SegQueue14Lib import SegQueue14Error as SegQueueError
 
 #: Continues SegQueue's numbering (0.13.0 was the last 4-class release). The
 #: release tag is ``segqueue-v`` + this; bump it to publish.
-__version__ = "0.17.1"
+__version__ = "0.18.0"
 
 #: Where the module's help points.
 HELP_URL = "https://github.com/christianGRogers/Asclepius"
@@ -157,6 +163,21 @@ _SETTING_CACHE = "SegQueue14/cacheRoot"
 #: Kept solely so that, as in the live module, a remembered username is cleared.
 _SETTING_LEGACY_USER = "SegQueue14/lastUser"
 _SETTING_UPDATE = "SegQueue14/updateCheck"
+#: The "Extended classes" toggle (D44), per login: ``SegQueue14/extendedClasses/<login>``.
+#: Off when never set, so an annotator who does not use them keeps the four.
+_SETTING_EXTENDED = "SegQueue14/extendedClasses"
+
+
+def extendedSettingKey(login):
+    """The settings key for one login's "Extended classes" toggle (D44)."""
+    return "{}/{}".format(_SETTING_EXTENDED, (login or "").strip().lower() or "_")
+
+
+def settingIsOn(value):
+    """A QSettings value as a bool: QSettings hands back "true"/"false" strings."""
+    if isinstance(value, str):
+        return value.strip().lower() in ("1", "true", "yes", "on")
+    return bool(value)
 #: The retired module's server setting, read (never written) so an annotator who
 #: updated from SegQueue 0.13 finds their server already filled in.
 _LIVE_SETTING_SERVER = "SegQueue/serverUrl"
@@ -216,6 +237,9 @@ class SegQueue14Logic(ScriptedLoadableModuleLogic):
         self.prelabelClasses = 0
         #: How many classes were filled with a copy of the seed on this open (D26).
         self.seedPrefilled = 0
+        #: The annotator's "Extended classes" toggle (D44): new scenes get the 17
+        #: extended classes, empty. Off by default; set from the per-login setting.
+        self.extendedClasses = False
 
     # ------------------------------------------------------------ session
 
@@ -499,6 +523,122 @@ class SegQueue14Logic(ScriptedLoadableModuleLogic):
                 filled += 1
         return filled
 
+    # ----------------------------------------------------- extended classes
+
+    def extraSpecs(self):
+        """The 17 extended classes (D44) as ``SegmentSpec``s, in label order."""
+        return labels.extra_segment_specs()
+
+    def hasExtendedSegments(self, segmentationNode=None):
+        """Whether the scene has any extended class (D44), drawn in or not."""
+        node = segmentationNode or self.segmentationNode
+        if node is None:
+            return False
+        return any(_segmentIdIn(node, name) for name in labels.EXTRA_NAMES)
+
+    def classSpecs(self):
+        """Every class the open read has, in label order: the project's four,
+        plus all 17 extended ones when the toggle is on or any is in the scene.
+
+        This is what is exported, hidden, checked for overlap and named: an
+        extended read always carries all 21 channels (``labels.ALL_NAMES``), so
+        which classes a read has never depends on which ones were painted.
+        """
+        if self.project is None:
+            return []
+        specs = sorted(self.project.segments, key=lambda spec: int(spec.label))
+        if self.extendedClasses or self.hasExtendedSegments():
+            have = {spec.name for spec in specs}
+            specs += [spec for spec in self.extraSpecs() if spec.name not in have]
+        return specs
+
+    def addExtendedClasses(self, segmentationNode=None):
+        """Add whichever of the 17 extended classes are missing, empty (D44).
+
+        Each new segment gets its pinned label value (``labels.ALL_LABEL_VALUES``)
+        and colour once, on creation; an existing one is never re-pinned (#270).
+        Returns how many were added.
+        """
+        node = segmentationNode or self.segmentationNode
+        if node is None:
+            return 0
+        segmentation = node.GetSegmentation()
+        added = 0
+        for spec in self.extraSpecs():
+            if _segmentIdIn(node, spec.name):
+                continue
+            segmentId = segmentation.AddEmptySegment(spec.name, spec.name, list(spec.color))
+            segment = segmentation.GetSegment(segmentId)
+            try:
+                segment.SetLabelValue(int(spec.label))
+            except AttributeError:  # pragma: no cover - old Slicer
+                pass
+            added += 1
+        self.orderSegments(node)
+        return added
+
+    def removeEmptyExtendedClasses(self, segmentationNode=None):
+        """Remove the extended classes that hold nothing. Returns ``(removed, kept)``.
+
+        An extended class with voxels is kept, whatever the toggle says: turning
+        the classes off must never throw away work.
+        """
+        node = segmentationNode or self.segmentationNode
+        if node is None:
+            return [], []
+        removed, kept = [], []
+        segmentation = node.GetSegmentation()
+        for name in labels.EXTRA_NAMES:
+            segmentId = _segmentIdIn(node, name)
+            if not segmentId:
+                continue
+            if _segmentHasContent(node, name):
+                kept.append(name)
+            else:
+                segmentation.RemoveSegment(segmentId)
+                removed.append(name)
+        return removed, kept
+
+    def orderSegments(self, segmentationNode=None):
+        """Put the classes in panel order: each vessel followed by its branches,
+        then the materials (``labels.DISPLAY_ORDER``), then the helpers.
+
+        Order only: ids, names, values and voxels are untouched. A Slicer without
+        ``SetSegmentIndex`` keeps the order the segments were added in.
+        """
+        node = segmentationNode or self.segmentationNode
+        if node is None:
+            return False
+        segmentation = node.GetSegmentation()
+        position = 0
+        for name in labels.DISPLAY_ORDER:
+            segmentId = _segmentIdIn(node, name)
+            if not segmentId:
+                continue
+            try:
+                segmentation.SetSegmentIndex(segmentId, position)
+            except AttributeError:  # pragma: no cover - old Slicer
+                return False
+            position += 1
+        return True
+
+    def setGroupVisible(self, group, visible):
+        """Show or hide every class of one group (``labels.GROUPS``). Returns how many."""
+        if self.segmentationNode is None:
+            return 0
+        display = self.segmentationNode.GetDisplayNode()
+        if display is None:
+            return 0
+        changed = 0
+        for name in labels.ALL_NAMES:
+            if labels.GROUP_OF.get(name) != group:
+                continue
+            segmentId = self.segmentIdFor(name)
+            if segmentId:
+                display.SetSegmentVisibility(segmentId, bool(visible))
+                changed += 1
+        return changed
+
     def setClassesVisible(self, visible):
         """Show or hide the project's class segments, leaving the helpers alone.
 
@@ -511,7 +651,7 @@ class SegQueue14Logic(ScriptedLoadableModuleLogic):
         if display is None:
             return 0
         changed = 0
-        for spec in self.project.segments:
+        for spec in self.classSpecs():
             segmentId = self.segmentIdFor(spec.name)
             if segmentId:
                 display.SetSegmentVisibility(segmentId, bool(visible))
@@ -531,7 +671,7 @@ class SegQueue14Logic(ScriptedLoadableModuleLogic):
 
         if self.segmentationNode is None or self.volumeNode is None or self.project is None:
             return []
-        specs = sorted(self.project.segments, key=lambda spec: int(spec.label))
+        specs = self.classSpecs()
         dtype = np.uint8 if len(specs) <= 8 else np.uint32
         bits = None
         seen = []          # (bit index, name) of classes already folded in
@@ -732,7 +872,9 @@ class SegQueue14Logic(ScriptedLoadableModuleLogic):
         if self.segmentationNode is None or self.project is None:
             return 0
         byLabel = {int(spec.label): spec for spec in self.project.segments}
-        byName = {spec.name: spec for spec in self.project.segments}
+        # By name: the four and the 17 extended classes (D44). An old labelmap
+        # submission only ever holds the four, so by value stays the four.
+        byName = {spec.name: spec for spec in list(self.project.segments) + self.extraSpecs()}
         segmentation = self.segmentationNode.GetSegmentation()
         display = self.segmentationNode.GetDisplayNode()
 
@@ -757,6 +899,7 @@ class SegQueue14Logic(ScriptedLoadableModuleLogic):
             for segmentId in named:
                 segment = segmentation.GetSegment(segmentId)
                 recolour(segmentId, segment, byName[segment.GetName()])
+            self.orderSegments()
             return len(named)
 
         # Only when the label values actually tell the segments apart. A label
@@ -971,6 +1114,13 @@ class SegQueue14Logic(ScriptedLoadableModuleLogic):
             except AttributeError:  # pragma: no cover - old Slicer
                 pass
 
+        # D44: the 17 extended classes, empty, when the annotator has turned them
+        # on. A draft that already has them keeps them as they are (never
+        # re-pinned), toggle or not; one from 0.17.x gets them added, empty.
+        if self.extendedClasses:
+            self.addExtendedClasses()
+        else:
+            self.orderSegments()
 
     def closeCase(self, purge=False):
         """Take the case out of the scene, banking any elapsed time first."""
@@ -1086,6 +1236,10 @@ class SegQueue14Logic(ScriptedLoadableModuleLogic):
         drawn them; only the project's own classes are read, by name -- which
         excludes the helpers structurally, not by convention.
 
+        **Four classes or 21** (D44): ``classSpecs``. With no extended class in the
+        scene the file is the four, exactly as 0.17.x writes it; with any, all 21
+        in label order, the empty ones as empty channels.
+
         Returns ``(voxelCounts, sourceGeometry, segmentationGeometry)``; the
         counts are per class, each counted whole, from the masks written.
         """
@@ -1094,7 +1248,8 @@ class SegQueue14Logic(ScriptedLoadableModuleLogic):
         if self.volumeNode is None or self.project is None:
             raise RuntimeError("There is no case open to export.")
         shape = slicer.util.arrayFromVolume(self.volumeNode).shape
-        specs = sorted(self.project.segments, key=lambda spec: int(spec.label))
+        # The four, or all 21 once any extended class is in the scene (D44).
+        specs = self.classSpecs()
         masks = []
         for spec in specs:
             masks.append(self._classMask(spec.name, shape))
@@ -1321,6 +1476,9 @@ def _reviewListing(client, states):
     project would otherwise show its first two hundred and look complete. A
     group is fetched whole and filtered here, which is one paging loop and
     works against any server.
+
+    Rows come newest submission first, rows with no submission last
+    (``_newestFirst``; the lead, #280).
     """
     if states is None or states == "unassigned":
         cases = client.allCases(unassigned=(states == "unassigned"))
@@ -1331,7 +1489,7 @@ def _reviewListing(client, states):
                 rows.append((case, None))
             for assignment in assignments:
                 rows.append((case, assignment))
-        return cases, rows
+        return cases, _newestFirst(rows)
 
     wanted = frozenset(states)
     cases, rows = [], []
@@ -1341,7 +1499,66 @@ def _reviewListing(client, states):
         if matching:
             cases.append(case)
             rows.extend((case, a) for a in matching)
-    return cases, rows
+    return cases, _newestFirst(rows)
+
+
+def _parseUtc(value):
+    """An ISO timestamp from the server as an aware UTC ``datetime``, or None.
+
+    The server writes Mongo's dates with ``isoformat()``: UTC, with or without
+    ``+00:00``. A naive one is UTC too.
+    """
+    import datetime
+
+    if not value:
+        return None
+    text = str(value).strip().replace("Z", "+00:00")
+    try:
+        stamp = datetime.datetime.fromisoformat(text)
+    except ValueError:
+        return None
+    if stamp.tzinfo is None:
+        return stamp.replace(tzinfo=datetime.timezone.utc)
+    return stamp.astimezone(datetime.timezone.utc)
+
+
+def _easternTime(value):
+    """A server timestamp in US Eastern time (America/Toronto), ``2026-11-10 14:32 ET``.
+
+    DST by the US/Canada rule (since 2007): EDT (UTC-4) from 02:00 local on the
+    second Sunday of March to 02:00 local on the first Sunday of November, EST
+    (UTC-5) otherwise. Worked out here rather than with ``zoneinfo``, which has
+    no time-zone data in Slicer's Python on Windows. ``--`` for no time.
+    """
+    import datetime
+
+    utc = _parseUtc(value)
+    if utc is None:
+        return "--"
+
+    def sunday(year, month, nth):
+        first = datetime.datetime(year, month, 1, tzinfo=datetime.timezone.utc)
+        return first + datetime.timedelta(days=(6 - first.weekday()) % 7 + 7 * (nth - 1))
+
+    year = utc.year
+    starts = sunday(year, 3, 2) + datetime.timedelta(hours=7)    # 02:00 EST
+    ends = sunday(year, 11, 1) + datetime.timedelta(hours=6)     # 02:00 EDT
+    hours = -4 if starts <= utc < ends else -5
+    local = utc + datetime.timedelta(hours=hours)
+    return local.strftime("%Y-%m-%d %H:%M") + " ET"
+
+
+def _newestFirst(rows):
+    """``(case, assignment)`` rows by submission time, newest first; none last.
+
+    Stable, so rows with no submission (nothing sent yet, or nobody holds the
+    case) keep the server's order among themselves.
+    """
+    def key(row):
+        stamp = _parseUtc((row[1] or {}).get("submittedAt"))
+        return (stamp is None, -stamp.timestamp() if stamp is not None else 0.0)
+
+    return sorted(rows, key=key)
 
 
 # =============================================================================
@@ -1366,6 +1583,8 @@ class SegQueue14Widget(ScriptedLoadableModuleWidget):
         self._claimedSubmission = None
         self._reviewStart = None
         self._slicerLogo = None
+        #: Who is logged in, for the per-login "Extended classes" setting (D44).
+        self._login = ""
 
     # ------------------------------------------------------------------ setup
 
@@ -1982,6 +2201,8 @@ class SegQueue14Widget(ScriptedLoadableModuleWidget):
         # effect, keyboard shortcut and undo behaviour an annotator learns here
         # is the one they would learn in the Segment Editor module, which is also
         # what every tutorial and every YouTube video shows.
+        self._buildExtendedRow(layout)
+
         self.editorWidget = slicer.qMRMLSegmentEditorWidget()
         self.editorWidget.setMRMLScene(slicer.mrmlScene)
         self.editorWidget.setSegmentationNodeSelectorVisible(False)
@@ -1992,6 +2213,86 @@ class SegQueue14Widget(ScriptedLoadableModuleWidget):
         self.editorNode = slicer.mrmlScene.AddNewNodeByClass("vtkMRMLSegmentEditorNode")
         self.editorWidget.setMRMLSegmentEditorNode(self.editorNode)
         layout.addWidget(self.editorWidget)
+
+    def _buildExtendedRow(self, layout):
+        """The "Extended classes" toggle (D44), and per-group show/hide once on.
+
+        Off by default and remembered per login: an annotator who does not use the
+        extended classes keeps the familiar four. The instructions and each class's
+        hint sit under the toggle, where the classes are.
+        """
+        self.extendedCheck = qt.QCheckBox("Extended classes (optional)")
+        self.extendedCheck.setToolTip(
+            "Adds 17 optional classes, empty: stent, calcified and non-calcified "
+            "plaque, D1-D3, S1-S3, OM1-OM2, SN, conus, RMA, PDA, PLB and the ramus. "
+            "Leave any of them empty. Turning this off removes only the empty ones.")
+        self.extendedCheck.toggled.connect(self.onToggleExtended)
+        layout.addWidget(self.extendedCheck)
+
+        self.extendedBox = qt.QWidget()
+        boxLayout = qt.QVBoxLayout(self.extendedBox)
+        boxLayout.setContentsMargins(0, 0, 0, 0)
+        boxLayout.setSpacing(4)
+        self.extendedHelp = _muted(qt.QLabel(labels.EXTENDED_INSTRUCTIONS))
+        self.extendedHelp.setWordWrap(True)
+        boxLayout.addWidget(self.extendedHelp)
+
+        row = qt.QHBoxLayout()
+        row.addWidget(_muted(qt.QLabel("Show:")))
+        self.groupChecks = {}
+        hints = {d["name"]: d["hint"] for d in labels.segment_dicts()
+                 + labels.extra_segment_dicts()}
+        for group in labels.GROUPS:
+            check = qt.QCheckBox(group)
+            check.setChecked(True)
+            check.setToolTip("\n".join(
+                "{}: {}".format(name, hints.get(name, ""))
+                for name in labels.DISPLAY_ORDER if labels.GROUP_OF.get(name) == group))
+            check.toggled.connect(
+                lambda on, group=group: self.logic.setGroupVisible(group, on))
+            row.addWidget(check)
+            self.groupChecks[group] = check
+        row.addStretch(1)
+        boxLayout.addLayout(row)
+        self.extendedBox.setVisible(False)
+        layout.addWidget(self.extendedBox)
+
+    def _loadExtendedSetting(self, login):
+        """Set the toggle from this login's saved choice (off if never set)."""
+        self._login = login
+        on = settingIsOn(qt.QSettings().value(extendedSettingKey(login), False))
+        self.extendedCheck.blockSignals(True)
+        self.extendedCheck.setChecked(on)
+        self.extendedCheck.blockSignals(False)
+        self.logic.extendedClasses = on
+        self._updateExtendedBox()
+
+    def _updateExtendedBox(self):
+        """Show the group row and instructions when the scene has extended classes."""
+        shown = bool(self.logic.extendedClasses) or self.logic.hasExtendedSegments()
+        self.extendedBox.setVisible(shown)
+        for check in self.groupChecks.values():
+            check.blockSignals(True)
+            check.setChecked(True)
+            check.blockSignals(False)
+
+    def onToggleExtended(self, on):
+        """Turn the extended classes on or off, for this login and the open scene."""
+        qt.QSettings().setValue(extendedSettingKey(getattr(self, "_login", "")), bool(on))
+        self.logic.extendedClasses = bool(on)
+        if self.logic.segmentationNode is not None and (
+                self.logic.assignment is not None or self._claimedSubmission):
+            if on:
+                self.logic.addExtendedClasses()
+            else:
+                _removed, kept = self.logic.removeEmptyExtendedClasses()
+                if kept:
+                    slicer.util.infoDisplay(
+                        "Kept {} because they have voxels in them. Erase a class "
+                        "first if you want it gone; the read is submitted with all "
+                        "21 classes while any of them is in the scene.".format(
+                            ", ".join(kept)))
+        self._updateExtendedBox()
 
     def _buildSubmitSection(self):
         box = ctk.ctkCollapsibleButton()
@@ -2097,13 +2398,13 @@ class SegQueue14Widget(ScriptedLoadableModuleWidget):
         # is a mark against the state and the sentence in the row's tooltip.
         self.reviewTable.setColumnCount(5)
         self.reviewTable.setHorizontalHeaderLabels(
-            ["Case", "Annotator", "State", "Submitted", "#"])
+            ["Case", "Annotator", "State", "Submitted (ET)", "#"])
         # "#" rather than "Subs": the column holds a single digit, and the word
         # was forty pixels wide to label it -- forty the case name wanted.
         header = self.reviewTable.horizontalHeaderItem(4)
         if header is not None:
             header.setToolTip("How many submissions have been made on this case.")
-        _tidyTable(self.reviewTable, [104, 70, 110, 78, 26], 190)
+        _tidyTable(self.reviewTable, [104, 70, 110, 124, 26], 190)
         self.reviewTable.itemSelectionChanged.connect(self.onReviewRowChanged)
         layout.addWidget(self.reviewTable)
 
@@ -2249,11 +2550,9 @@ class SegQueue14Widget(ScriptedLoadableModuleWidget):
                 case.get("caseName", ""),
                 assignment.get("annotator", "") or "--",
                 state,
-                # The date only. The minute matters when two attempts on one
-                # case are being compared, which is what the history table is
-                # for; here it is a thousand rows being scanned for "when was
-                # this last touched", and the time cost a column of width.
-                _shortTime(assignment.get("submittedAt"))[:10],
+                # When it was submitted, in US Eastern time (#280): the list is
+                # sorted by it, newest first, so it is shown in full.
+                _easternTime(assignment.get("submittedAt")),
                 str(assignment.get("submissionCount", 0)),
             ]
             # One tooltip for the whole row: the flags are sentences, and a
@@ -2262,8 +2561,10 @@ class SegQueue14Widget(ScriptedLoadableModuleWidget):
             for column, text in enumerate(cells):
                 item = qt.QTableWidgetItem(text)
                 if column == 3:
-                    item.setToolTip(_shortTime(assignment.get("submittedAt"))
-                                    or tip)
+                    item.setToolTip(
+                        "Submitted {} (US Eastern time)".format(
+                            _easternTime(assignment.get("submittedAt")))
+                        + ("\n" + tip if tip else ""))
                 elif tip:
                     item.setToolTip(tip)
                 self.reviewTable.setItem(index, column, item)
@@ -2432,6 +2733,10 @@ class SegQueue14Widget(ScriptedLoadableModuleWidget):
             # back as Segment_1, Segment_2 ... in colours Slicer chose; its label
             # values are the protocol's, which is enough to put the names back.
             self.logic.applyProjectNames()
+            # D44: an extended read loads with all its classes, whatever the toggle
+            # says; with the toggle on, a four-class read gets the 17, empty.
+            if self.logic.extendedClasses:
+                self.logic.addExtendedClasses()
             self.logic.applyViewPreset()
             self._bindEditor(segmentationNode, volumeNode)
             slicer.app.layoutManager().setLayout(
@@ -2444,11 +2749,13 @@ class SegQueue14Widget(ScriptedLoadableModuleWidget):
 
         self._claimedSubmission = submissionId
         self._reviewStart = time.time()
+        self._updateExtendedBox()
         self.reviewStatusLabel.setText(
-            "Reviewing <b>{}</b> by {} — edit it in the Segment Editor if you "
+            "Reviewing <b>{}</b> by {}{} — edit it in the Segment Editor if you "
             "want to correct it.".format(
                 _escape(entry.get("caseName", "")),
-                _escape((entry.get("annotator") or {}).get("login", ""))))
+                _escape((entry.get("annotator") or {}).get("login", "")),
+                " (extended classes)" if entry.get("extended") else ""))
         self.editorBox.collapsed = False
         self._updateReviewEnabled()
         # The Segment Editor is enabled by whether there is something to edit,
@@ -2903,6 +3210,7 @@ class SegQueue14Widget(ScriptedLoadableModuleWidget):
 
         project = self.logic.project
         login = user.get("login", username)
+        self._loadExtendedSetting(login)
         quota = ("" if project.quota_remaining is None
                  else "  ·  {} left in quota".format(project.quota_remaining))
         self.statusLabel.setText(login + quota)
@@ -2932,6 +3240,7 @@ class SegQueue14Widget(ScriptedLoadableModuleWidget):
         self.reworkLabel.setVisible(False)
         self.reviewBox.setVisible(False)
         self._bindEditor(None, None)
+        self._loadExtendedSetting("")
         self._updateEnabled()
 
     # ------------------------------------------------------------------ case
@@ -3025,6 +3334,7 @@ class SegQueue14Widget(ScriptedLoadableModuleWidget):
         # obvious in the tree's shape long before it is in a slice.
         self.logic.showPrelabelIn3d(True)
         self.logic.centre3d()
+        self._updateExtendedBox()
 
         self.caseBox.collapsed = False
         # Left open on purpose: it is now the whole interface. Every effect, the

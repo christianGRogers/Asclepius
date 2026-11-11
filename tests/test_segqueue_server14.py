@@ -527,7 +527,9 @@ def test_the_protocol_is_checked_at_login_next_and_submit(world):
     project = queue.getProject(clientProtocol=17)
     assert [s["name"] for s in project["segments"]][:3] == ["LM", "LAD", "LCx"]
     assert [s["name"] for s in project["segments"]] == ["LM", "LAD", "LCx", "RCA"]
-    assert project["protocolVersion"] == 17
+    # The server speaks 18 (D44) and still serves the 0.17.x module the four.
+    assert project["protocolVersion"] == 18
+    assert queue.getProject(clientProtocol=18)["segments"] == project["segments"]
     assert "starts as a full copy of the vessel seed" in project["instructions"]
 
 
@@ -873,20 +875,23 @@ def test_export_writes_four_masks_per_approved_read(world, tmp_path):
 # ------------------------------------------------- D39 (#275): every class whole
 
 
-def _stackOf(np, classes):
+def _stackOf(np, classes, names=None):
     """``classes`` (``{name: 0/1 array in _tree's x, y, z order}``) as a class stack's
-    masks, in project order and SimpleITK's (z, y, x) order. Missing classes are empty."""
+    masks, in ``names`` order (default the project's four) and SimpleITK's (z, y, x)
+    order. Missing classes are empty."""
     from segqueue14 import labels
 
     shape = next(iter(classes.values())).shape
     return [np.ascontiguousarray((classes.get(name, np.zeros(shape, np.uint8)) != 0)
                                  .astype(np.uint8).transpose(2, 1, 0))
-            for name in labels.NAMES]
+            for name in (labels.NAMES if names is None else names)]
 
 
-def _uploadStack(world, user, caseName, masks):
+def _uploadStack(world, user, caseName, masks, names=None):
     """Write ``masks`` as the 0.17.0 module does -- a class stack on the CT grid -- and
-    upload it as ``user``. Returns ``(file document, SubmissionMeta dict)``."""
+    upload it as ``user``. ``names`` are the channels (default the four; all 21 for
+    an extended read, as 0.18.0 writes it). Returns ``(file document, SubmissionMeta
+    dict)``."""
     import SimpleITK as sitk
     from girder_segqueue14.utils import incomingFolder
 
@@ -895,23 +900,26 @@ def _uploadStack(world, user, caseName, masks):
     ct = sitk.ReadImage(str(world.data / f"{caseName}.nii.gz"))
     d, sp, o = ct.GetDirection(), ct.GetSpacing(), ct.GetOrigin()
     ijkToLps = [[d[3 * r + c] * sp[c] for c in range(3)] + [o[r]] for r in range(3)]
+    names = list(labels.NAMES if names is None else names)
     path = world.data / f"{caseName}_{user['login']}_{uuid.uuid4().hex[:6]}.seg.nrrd"
-    labelfile.write_class_stack(str(path), masks, labels.NAMES, ijkToLps)
+    labelfile.write_class_stack(str(path), masks, names, ijkToLps)
     fileDoc = _upload(path, incomingFolder(world.admin), user)
     meta = {"checksum": _sha(path), "sizeBytes": os.path.getsize(path),
             "annotationSeconds": 300.0,
-            "voxelCounts": {n: int((m != 0).sum()) for n, m in zip(labels.NAMES, masks)},
-            "extensionVersion": "0.17.0"}
+            "voxelCounts": {n: int((m != 0).sum()) for n, m in zip(names, masks)},
+            "extensionVersion": "0.18.0" if labels.is_extended(names) else "0.17.0"}
     return fileDoc, meta
 
 
-def _submitStack(world, queue, user, info, masks, labelFormat="class-stack-nrrd/1"):
+def _submitStack(world, queue, user, info, masks, labelFormat="class-stack-nrrd/1",
+                 names=None, clientProtocol=17):
     _as(user)
     queue.downloadCase(caseId=info["caseId"])
-    fileDoc, meta = _uploadStack(world, user, info["caseName"], masks)
+    fileDoc, meta = _uploadStack(world, user, info["caseName"], masks, names=names)
     _as(user)
     return queue.submit(assignmentId=info["assignmentId"], fileId=str(fileDoc["_id"]),
-                        meta=json.dumps(meta), labelFormat=labelFormat, clientProtocol=17)
+                        meta=json.dumps(meta), labelFormat=labelFormat,
+                        clientProtocol=clientProtocol)
 
 
 def _storedStack(world, submission):
@@ -1324,3 +1332,338 @@ def test_the_pool_creates_listed_cases_with_their_seeds_and_attaches_late_seeds(
     assert _liveSnapshot(world) == before
     Case14().collection.update_many({"dataset": {"$in": ["SetA", "SetB"]}},
                                     {"$set": {"retired": True}})
+
+
+# ------------------------------------- D44 (#280): the optional extended classes
+
+
+def _protocolHeader(version):
+    """Send ``version`` the way every module sends it on every request: the header."""
+    import cherrypy
+
+    from segqueue14 import protocol
+
+    if version is None:
+        cherrypy.request.headers.pop(protocol.PROTOCOL_HEADER, None)
+    else:
+        cherrypy.request.headers[protocol.PROTOCOL_HEADER] = str(version)
+
+
+@pytest.fixture
+def header():
+    yield _protocolHeader
+    _protocolHeader(None)
+
+
+def _fourOf(np, tree):
+    """``tree``'s four classes as ``{name: 0/1 array}``."""
+    from segqueue14 import labels
+
+    return {name: (tree == labels.LABEL_VALUES[name]).astype(np.uint8)
+            for name in labels.NAMES}
+
+
+#: Where ``_extendedOf`` moves branches to, as ``(class, parent, x-slice)`` inside
+#: the parent's block of ``_tree``, which spans x 6:14 on axis 2.
+_MOVES = (("D1", "LAD", slice(10, 12)), ("S1", "LAD", slice(12, 14)),
+          ("OM1", "LCx", slice(10, 12)), ("Ramus", "LCx", slice(12, 14)),
+          ("SN", "RCA", slice(10, 12)), ("PDA", "RCA", slice(12, 14)))
+
+
+def _extendedOf(np, tree, materials=("Stent", "Calcified plaque")):
+    """``tree`` as a 21-class read: branches moved out of their parents into their
+    own classes, and materials painted over the LAD (stent) and RCA (plaque). The
+    same vessel voxels as ``_fourOf(tree)`` once collapsed."""
+    from segqueue14 import labels
+
+    classes = _fourOf(np, tree)
+    shape = tree.shape
+    for name in labels.EXTRA_NAMES:
+        classes[name] = np.zeros(shape, np.uint8)
+    for name, parent, xs in _MOVES:
+        block = np.zeros(shape, bool)
+        block[..., xs] = classes[parent][..., xs] != 0
+        classes[name][block] = 1
+        classes[parent][block] = 0
+    paint = {"Stent": ("LAD", slice(6, 8)), "Calcified plaque": ("RCA", slice(6, 7)),
+             "Non-calcified plaque": ("LCx", slice(6, 7))}
+    for name in materials:
+        vessel, xs = paint[name]
+        source = _fourOf(np, tree)[vessel]
+        classes[name][..., xs] = source[..., xs]
+    return classes
+
+
+def _poor(np):
+    """A read poor enough to go to a reviewer, every required class present."""
+    read = _tree(np)
+    read[read == 4] = 3
+    read[0, 0, 0] = 4
+    return read
+
+
+def test_an_extended_read_is_stored_scored_and_exported_whole(world, tmp_path):
+    """A 21-class read: stored with its classes, scored collapsed to the four (a
+    perfect read stays perfect), shown to reviewers as extended, exported with all
+    its classes, and with --four-class collapsed."""
+    import nibabel as nib
+    import numpy as np
+    from girder_segqueue14 import export, scoring
+    from girder_segqueue14.models import Assignment14, Submission14
+
+    from segqueue14 import labels
+
+    _readyProject(world)
+    queue = _resource()
+    cathy = world.people["cathy"]
+    _as(cathy)
+    info = queue.nextCase(clientProtocol=18)
+    tree = _tree(np)
+    classes = _extendedOf(np, tree)
+    response = _submitStack(world, queue, cathy, info,
+                            _stackOf(np, classes, labels.ALL_NAMES),
+                            names=labels.ALL_NAMES, clientProtocol=18)
+
+    submission = Submission14().load(response["submissionId"], force=True)
+    assert submission["classes"] == labels.ALL_NAMES and submission["extended"] is True
+    assert _storedStack(world, submission)["names"] == labels.ALL_NAMES
+
+    scoring.runOnce()
+    submission = Submission14().load(response["submissionId"], force=True)
+    score = submission["autoScore"]
+    ref = score["reference"]
+    # Collapsed, the read is exactly the reference's four classes.
+    assert ref["mean_dice"] == 1.0
+    assert all(ref["per_structure"][n]["dice"] == 1.0 for n in labels.NAMES)
+    assert ref["extended"] == {"read": True, "reference": False}
+    assert "materials" not in ref                   # ImageCAS-X has none
+    assert score["voxelCounts"] == {n: int((tree == labels.LABEL_VALUES[n]).sum())
+                                    for n in labels.NAMES}
+    assert Assignment14().load(submission["assignmentId"], force=True)["state"] == "approved"
+
+    _as(world.people["revy"])
+    row = queue.getSubmission(submissionId=response["submissionId"])
+    assert row["extended"] is True and row["classes"] == labels.ALL_NAMES
+    [lease] = [r for r in queue.listCases(state="approved")
+               if r["caseId"] == info["caseId"]][0]["assignments"]
+    assert lease["extended"] is True
+
+    out = tmp_path / "export"
+    assert export.main(["--out", str(out)]) == 0
+    folder = out / info["caseName"] / "segmentations"
+    names = sorted(p.name for p in folder.iterdir())
+    assert len(names) == 21 and "Calcified_plaque.nii.gz" in names
+    d1 = np.asarray(nib.load(str(folder / "D1.nii.gz")).dataobj)
+    assert np.array_equal(d1 > 0, classes["D1"] > 0)
+    manifest = json.loads((out / "manifest.json").read_text())
+    assert manifest["source"]["classes"] == "read"
+    assert manifest["source"]["extended_reads"] == [info["caseName"]]
+
+    four = tmp_path / "four"
+    assert export.main(["--out", str(four), "--four-class"]) == 0
+    folder = four / info["caseName"] / "segmentations"
+    assert sorted(p.name for p in folder.iterdir()) == \
+        ["LAD.nii.gz", "LCx.nii.gz", "LM.nii.gz", "RCA.nii.gz"]
+    for name in labels.NAMES:
+        mask = np.asarray(nib.load(str(folder / f"{name}.nii.gz")).dataobj)
+        assert np.array_equal(mask > 0, tree == labels.LABEL_VALUES[name]), name
+    assert json.loads((four / "manifest.json").read_text())["source"]["classes"] == "four"
+
+
+def test_the_collapsed_score_equals_the_four_class_score_of_the_same_voxels(world):
+    """Against the ImageCAS-X reference, an imperfect extended read scores exactly as
+    the same voxels drawn into the parents do."""
+    import numpy as np
+    from girder.models.folder import Folder
+    from girder_segqueue14 import scoring
+
+    from segqueue14 import labels
+
+    _readyProject(world)
+    queue = _resource()
+    anna = world.people["anna"]
+    _as(anna)
+    info = queue.nextCase(clientProtocol=18)
+    read = _tree(np, shift=1)                         # off by a voxel: Dice below 1
+    extended = _stackOf(np, _extendedOf(np, read), labels.ALL_NAMES)
+    drawn = _stackOf(np, _fourOf(np, read))
+    folder = Folder().createFolder(world.admin, f"scratch-{uuid.uuid4().hex[:6]}",
+                                   parentType="user", creator=world.admin)
+    extFile, _ = _uploadStack(world, anna, info["caseName"], extended, names=labels.ALL_NAMES)
+    fourFile, _ = _uploadStack(world, anna, info["caseName"], drawn)
+    from girder.models.file import File
+    from girder_segqueue14.models import Case14
+
+    case = Case14().load(info["caseId"], force=True)
+    reference = File().load(case["referenceFileId"], force=True)
+    got, gotMasks = scoring.scoreAgainst(extFile, reference, icx14=True)
+    want, wantMasks = scoring.scoreAgainst(fourFile, reference, icx14=True)
+    assert folder is not None
+    assert 0 < want["mean_dice"] < 1
+    assert got["per_structure"] == want["per_structure"]
+    assert got["mean_dice"] == want["mean_dice"]
+    assert got["required_min_dice"] == want["required_min_dice"]
+    assert np.array_equal(gotMasks, wantMasks)
+    assert "extended" not in want and got["extended"]["read"] is True
+
+
+def test_a_protocol_17_module_still_logs_in_fetches_submits_and_reviews(world, header):
+    """D44: 0.17.x is not 426'd. It logs in, gets a case, submits four classes, and
+    a 0.17.x reviewer claims, opens and revises a four-class read."""
+    import numpy as np
+    from girder_segqueue14 import scoring
+    from girder_segqueue14.models import Submission14
+
+    from segqueue14 import labels
+
+    _readyProject(world)
+    queue = _resource()
+    bobby, revy = world.people["bobby"], world.people["revy"]
+    header(17)
+    _as(bobby)
+    assert [s["name"] for s in queue.getProject(clientProtocol=17)["segments"]] == labels.NAMES
+    info = queue.nextCase(clientProtocol=17)
+    sid = _submitStack(world, queue, bobby, info, _stackOf(np, _fourOf(np, _poor(np))),
+                       clientProtocol=17)["submissionId"]
+    assert Submission14().load(sid, force=True)["extended"] is False
+    scoring.runOnce()
+
+    _as(revy)
+    queue.claim(submissionId=sid)
+    assert callable(queue.downloadSubmission(submissionId=sid))
+    fileDoc, meta = _uploadStack(world, revy, info["caseName"],
+                                 _stackOf(np, _fourOf(np, _tree(np))))
+    _as(revy)
+    result = queue.revise(submissionId=sid, fileId=str(fileDoc["_id"]),
+                          meta=json.dumps(meta), labelFormat="class-stack-nrrd/1",
+                          clientProtocol=17)
+    assert result["state"] == "approved"
+    revision = Submission14().load(result["submissionId"], force=True)
+    assert revision["classes"] == labels.NAMES and revision["extended"] is False
+
+
+def test_a_protocol_17_reviewer_is_refused_only_on_an_extended_read(world, header):
+    import numpy as np
+    from girder_segqueue14 import scoring
+    from girder_segqueue14.models import Submission14
+
+    from segqueue14 import labels
+
+    _readyProject(world)
+    queue = _resource()
+    anna, bobby, revy = (world.people[n] for n in ("anna", "bobby", "revy"))
+    _as(anna)
+    first = queue.nextCase(clientProtocol=18)
+    extended = _submitStack(world, queue, anna, first,
+                            _stackOf(np, _extendedOf(np, _poor(np)), labels.ALL_NAMES),
+                            names=labels.ALL_NAMES, clientProtocol=18)["submissionId"]
+    _as(bobby)
+    second = queue.nextCase(clientProtocol=17)
+    four = _submitStack(world, queue, bobby, second,
+                        _stackOf(np, _fourOf(np, _poor(np))))["submissionId"]
+    scoring.runOnce()
+
+    _as(revy)
+    header(17)
+    for call in (queue.claim, queue.downloadSubmission):
+        err = _refusal(call, submissionId=extended)
+        assert err.code == 426 and err.extra["segqueueError"] == "update_to_review"
+        assert "Update SegQueue14 to review this read" in err.extra["message"]
+    fileDoc, meta = _uploadStack(world, revy, first["caseName"],
+                                 _stackOf(np, _fourOf(np, _tree(np))))
+    _as(revy)
+    err = _refusal(queue.revise, submissionId=extended, fileId=str(fileDoc["_id"]),
+                   meta=json.dumps(meta), labelFormat="class-stack-nrrd/1",
+                   clientProtocol=17)
+    assert err.code == 426 and err.extra["segqueueError"] == "update_to_review"
+    assert Submission14().countForAssignment(
+        Submission14().load(extended, force=True)["assignmentId"]) == 1
+    # The four-class read is unaffected.
+    queue.claim(submissionId=four)
+    assert callable(queue.downloadSubmission(submissionId=four))
+    # No protocol at all is not a module (a browser): it may download, never save.
+    header(None)
+    assert callable(queue.downloadSubmission(submissionId=extended))
+
+    # The 0.18 module opens and revises it with every class.
+    header(18)
+    queue.claim(submissionId=extended)
+    assert callable(queue.downloadSubmission(submissionId=extended))
+    fileDoc, meta = _uploadStack(world, revy, first["caseName"],
+                                 _stackOf(np, _extendedOf(np, _tree(np)), labels.ALL_NAMES),
+                                 names=labels.ALL_NAMES)
+    _as(revy)
+    result = queue.revise(submissionId=extended, fileId=str(fileDoc["_id"]),
+                          meta=json.dumps(meta), labelFormat="class-stack-nrrd/1",
+                          clientProtocol=18)
+    revision = Submission14().load(result["submissionId"], force=True)
+    assert revision["classes"] == labels.ALL_NAMES and revision["extended"] is True
+    assert _storedStack(world, revision)["names"] == labels.ALL_NAMES
+    original = Submission14().load(extended, force=True)
+    assert _storedStack(world, original)["names"] == labels.ALL_NAMES
+
+
+def test_an_extended_read_pairs_with_a_four_class_read(world):
+    """Two-read cases: an extended read pairs with a four-class one (collapsed, the
+    same voxels: Dice 1.0, no materials); two extended reads also get a Dice per
+    material both have."""
+    import numpy as np
+    from girder_segqueue14 import scoring
+    from girder_segqueue14.models import Case14, Submission14
+
+    from segqueue14 import labels
+
+    _readyProject(world)
+    queue = _resource()
+    Case14().collection.update_many({"tier": {"$ne": "imagecas-unlabelled"}},
+                                    {"$set": {"retired": True}})
+    tree = _tree(np)
+    anna, bobby, cathy, revy = (world.people[n] for n in ("anna", "bobby", "cathy", "revy"))
+
+    _as(anna)
+    a = queue.nextCase(clientProtocol=17)
+    _as(bobby)
+    b = queue.nextCase(clientProtocol=18)
+    assert a["caseId"] == b["caseId"]
+    sa = _submitStack(world, queue, anna, a, _stackOf(np, _fourOf(np, tree)))
+    sb = _submitStack(world, queue, bobby, b,
+                      _stackOf(np, _extendedOf(np, tree), labels.ALL_NAMES),
+                      names=labels.ALL_NAMES, clientProtocol=18)
+    assert scoring.runOnce() == 2
+    for sid in (sa["submissionId"], sb["submissionId"]):
+        pair = Submission14().load(sid, force=True)["autoScore"]["duplicate"]
+        assert pair["mean_dice"] == 1.0 and "materials" not in pair
+
+    _as(cathy)
+    c = queue.nextCase(clientProtocol=18)
+    _as(revy)
+    d = queue.nextCase(clientProtocol=18)
+    assert c["caseId"] == d["caseId"] != a["caseId"]
+    sc = _submitStack(world, queue, cathy, c,
+                      _stackOf(np, _extendedOf(np, tree), labels.ALL_NAMES),
+                      names=labels.ALL_NAMES, clientProtocol=18)
+    sd = _submitStack(world, queue, revy, d,
+                      _stackOf(np, _extendedOf(np, tree, materials=("Stent",)),
+                               labels.ALL_NAMES),
+                      names=labels.ALL_NAMES, clientProtocol=18)
+    assert scoring.runOnce() == 2
+    pair = Submission14().load(sd["submissionId"], force=True)["autoScore"]["duplicate"]
+    assert pair["mean_dice"] == 1.0                   # materials never move the headline
+    assert pair["materials"]["Stent"]["dice"] == 1.0
+    assert pair["materials"]["Calcified plaque"]["dice"] == 0.0
+    assert pair["materials"]["Non-calcified plaque"]["dice"] is None
+    mirrored = Submission14().load(sc["submissionId"], force=True)["autoScore"]["duplicate"]
+    assert mirrored["materials"]["Stent"]["dice"] == 1.0
+
+
+def test_the_project_setting_refuses_the_extended_classes(world):
+    """0.17.x builds its panel from /project, so the extended classes never go there."""
+    from girder.exceptions import ValidationException
+    from girder.models.setting import Setting
+
+    from segqueue14 import labels
+
+    value = {"name": "x", "instructions": "y",
+             "segments": labels.segment_dicts() + labels.extra_segment_dicts()[:1]}
+    with pytest.raises(ValidationException, match="extended class"):
+        Setting().set("segqueue14.project", value)

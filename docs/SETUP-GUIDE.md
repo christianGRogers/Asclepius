@@ -144,6 +144,8 @@ check your internet connection and the server address.
 5. Click **Submit case**. Nothing checks what you drew before it is sent (project
    lead, 2026-11-02): an empty LAD, LCx or RCA no longer blocks the
    submit, so check each class yourself first.
+6. Optional: the **Extended classes** below add named branches and plaque/stent
+   classes on top of the four.
 
 Other buttons you will see:
 
@@ -153,6 +155,29 @@ Other buttons you will see:
 
 The seed and the heart mask are helpers. They never leave your computer, and the
 local copy of a case is deleted once the server confirms your submission.
+
+### Extended classes (optional, 0.18.0)
+
+The **Extended classes (optional)** box above the Segment Editor is off by default
+and remembered per login. With it off, a case is the four classes above and
+nothing else changes. Turned on, it adds 17 empty classes, grouped under their
+parent vessel in the segment list:
+
+| Group | Classes | Counts towards |
+|---|---|---|
+| LAD branches | D1, D2, D3 (diagonals); S1, S2, S3 (septals) | LAD |
+| LCx branches | OM1, OM2 (obtuse marginals) | LCx |
+| Other | Ramus (ramus intermedius) | LCx |
+| RCA branches | SN (sinus node), Conus, RMA (right marginal), PDA, PLB | RCA |
+| Materials | Stent, Calcified plaque, Non-calcified plaque | none (scored on its own) |
+
+Any of them may stay empty. To use a branch class, move that branch out of its
+parent into its class. Paint stent and plaque where you see them; overlapping a
+vessel is fine, and every class is saved whole. The tooltip on each group says
+what goes in each class, and the **Show** ticks hide or show a group. Turning the
+box off removes only the extended classes that are empty. When a read is scored,
+each branch is counted as part of its parent vessel, so a read that uses the
+branch classes is compared like a four-class read.
 
 ## 7. Updating
 

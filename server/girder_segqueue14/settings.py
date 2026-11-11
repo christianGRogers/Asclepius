@@ -135,6 +135,12 @@ def _validateProject(doc):
     # load every prelabel into the wrong segments and score every read against
     # the wrong vessels -- while looking entirely plausible.
     for spec in (SegmentSpec.from_dict(e) for e in segments):
+        # The extended classes (D44) are never project segments: /project is what a
+        # 0.17.x module builds its panel from, and the 0.18 module adds them itself.
+        if spec.name in labels.EXTRA_NAMES:
+            raise ValidationException(
+                f'{spec.name} is an extended class (D44); the SegQueue14 module adds '
+                'those itself. Keep the project to LM, LAD, LCx and RCA.', 'value')
         expected = labels.LABEL_VALUES.get(spec.name)
         if expected is not None and expected != spec.label:
             raise ValidationException(

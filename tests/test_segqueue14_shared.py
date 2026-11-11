@@ -159,13 +159,21 @@ def test_the_current_client_is_accepted():
     protocol.check_client_protocol(str(PROTOCOL_VERSION))
 
 
-@pytest.mark.parametrize("sent", [None, "", 0, 1, PROTOCOL_VERSION - 1, "garbage"])
+def test_the_0_17_module_is_still_accepted():
+    # D44: protocol 18 adds the extended classes; 0.17.x (protocol 17) keeps working.
+    assert PROTOCOL_VERSION == 18
+    assert protocol.MIN_CLIENT_PROTOCOL == 17
+    protocol.check_client_protocol(17)
+    protocol.check_client_protocol("17")
+
+
+@pytest.mark.parametrize("sent", [None, "", 0, 1, 16, "garbage"])
 def test_an_old_or_foreign_client_is_told_to_update_the_segqueue14_module(sent):
     with pytest.raises(protocol.ProtocolError) as info:
         protocol.check_client_protocol(sent)
     assert info.value.code == protocol.ERR_CLIENT_TOO_OLD
     assert "Update the SegQueue14 module" in str(info.value)
-    assert info.value.detail["minProtocol"] == PROTOCOL_VERSION
+    assert info.value.detail["minProtocol"] == protocol.MIN_CLIENT_PROTOCOL
 
 
 def test_the_live_client_protocol_is_refused():

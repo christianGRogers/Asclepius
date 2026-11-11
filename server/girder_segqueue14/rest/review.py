@@ -7,6 +7,11 @@ ImageCAS-X reference.
 
 Reviewer endpoints: triage the queue, look at one, decide.
 
+**Extended classes (D44).** A read with the 17 extended classes is refused to a
+module older than protocol 18 at claim, download and revise
+(``utils.checkExtendedReader``): it would show four classes and save back four.
+Four-class reads are reviewed from either module version.
+
 Claiming is explicit and separate from deciding. With two or three reviewers in
 a lab that is not ceremony -- it is the difference between two people opening the
 same submission in Slicer and spending twenty minutes each on it, and them
@@ -38,14 +43,16 @@ from ..models.review import APPROVE
 from ..settings import getPolicy, getReference
 from ..utils import (
     checkClientProtocol,
+    checkExtendedReader,
     checkLabelFormat,
     fileForCase,
     fullName,
     hashStoredFile,
     isAnnotator,
+    isExtended,
     refuse,
     requireReviewer,
-    storedLabelFormat,
+    storedLabelInfo,
     submissionsFolder,
 )
 
@@ -137,11 +144,16 @@ class ReviewResource14(Resource):
     @access.user
     @autoDescribeRoute(
         Description('Download the submitted segmentation.')
+        .notes('A read with extended classes (D44) is refused (426) to a module '
+               'older than protocol 18, which would show only four of its classes.')
         .param('submissionId', 'The submission.', paramType='path')
+        .errorResponse('The module is too old for this read\'s extended classes.', 426)
     )
     def downloadSubmission(self, submissionId):
         requireReviewer(self.getCurrentUser())
         submission = self._loadSubmission(submissionId)
+        # A 0.17.x module would load four classes of an extended read (D44).
+        checkExtendedReader(submission)
         file = File().load(submission['fileId'], force=True)
         if file is None:
             refuse('submission_file_missing',
@@ -168,10 +180,13 @@ class ReviewResource14(Resource):
         Description('Claim a submission so no other reviewer duplicates the work.')
         .param('submissionId', 'The submission to claim.', paramType='path')
         .errorResponse('Someone else already claimed it.', 409)
+        .errorResponse('The module is too old for this read\'s extended classes.', 426)
     )
     def claim(self, submissionId):
         user = requireReviewer(self.getCurrentUser())
         submission = self._loadSubmission(submissionId)
+        # Before the claim, so a reviewer who cannot open it holds nothing (D44).
+        checkExtendedReader(submission)
         assignment = self._assignmentFor(submission)
         try:
             assignment = Assignment().transition(
@@ -406,6 +421,7 @@ class ReviewResource14(Resource):
             row['flagged'] = self._flagged(submission, getPolicy())
             row['prelabelVersion'] = submission.get('prelabelVersion') or ''
             row['authorRole'] = submission.get('authorRole', sub.ANNOTATOR)
+            row['extended'] = isExtended(submission)
         return row
 
     def _volumeName(self, case):
@@ -470,7 +486,8 @@ class ReviewResource14(Resource):
                '(else the request header).', dataType='integer', required=False)
         .errorResponse('The labelFormat is unknown.', 400)
         .errorResponse('That case has already been decided.', 409)
-        .errorResponse('The SegQueue14 module is out of date.', 426)
+        .errorResponse('The SegQueue14 module is out of date, or too old for this '
+                       'read\'s extended classes.', 426)
     )
     def revise(self, submissionId, fileId, meta, labelFormat, clientProtocol):
         # A revision is a submission too: a module older than protocol 17 would
@@ -479,6 +496,8 @@ class ReviewResource14(Resource):
         labelFormat = checkLabelFormat(labelFormat)
         user = requireReviewer(self.getCurrentUser())
         original = self._loadSubmission(submissionId)
+        # A 0.17.x module revising an extended read would save four classes of it.
+        checkExtendedReader(original, clientProtocol)
         assignment = self._assignmentFor(original)
 
         if not st.can(assignment['state'], st.APPROVE):
@@ -498,7 +517,7 @@ class ReviewResource14(Resource):
                    'was corrupted in transit. Nothing has been recorded.',
                    status=400, expected=submissionMeta.checksum, actual=actual)
         submissionMeta.checksum = actual
-        labelFormat = storedLabelFormat(file)
+        labelFormat, classes = storedLabelInfo(file)
 
         item = Item().load(file['itemId'], force=True)
         if item is not None:
@@ -507,7 +526,7 @@ class ReviewResource14(Resource):
         revision = Submission().createSubmission(
             assignment, submissionMeta, file['_id'],
             needsReview=False, author=user, revisionOf=original['_id'],
-            labelFormat=labelFormat,
+            labelFormat=labelFormat, classes=classes,
         )
 
         Review().createReview(revision, user, APPROVE,
@@ -758,6 +777,10 @@ class ReviewResource14(Resource):
             'annotationSeconds': submission.get('annotationSeconds'),
             'voxelCounts': submission.get('voxelCounts', {}),
             'labelFormat': submission.get('labelFormat') or protocol.LABEL_FORMAT_LABELMAP,
+            # Which classes the read has (D44): a 0.17.x module cannot open an
+            # extended one, and a 0.18 module shows it as "extended".
+            'classes': list(submission.get('classes') or labels.NAMES),
+            'extended': isExtended(submission),
             'annotatorNote': submission.get('annotatorNote', ''),
             'warnings': submission.get('warnings', []),
             'submittedAt': _iso(assignment.get('submittedAt')),

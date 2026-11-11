@@ -148,7 +148,9 @@ downloads, and Slicer needs the zip itself. Turn that off first.
    ![The SegQueue panel with the Server box and the login fields](images/annotator/segqueue-panel.png)
 
 If you see "Update the SegQueue14 module", click **Check for updates** and then
-**Update and restart**, then log in again.
+**Update and restart**, then log in again. Reviewers: "Update SegQueue14 to review
+this read" means the same thing. That read uses the extended classes, which older
+versions cannot show.
 
 ## Your first case
 
@@ -173,8 +175,34 @@ If you see "Update the SegQueue14 module", click **Check for updates** and then
    the LAD. Obtuse marginals go with the LCx. A ramus intermedius always goes with
    the LCx. A posterior descending or posterolateral branch goes with whichever
    artery it comes from.
-5. Click **Submit case**. SegQueue will not let you submit if LAD, LCx or RCA is
-   empty, or if any spot belongs to two vessels at once. It tells you which.
+5. Click **Submit case**. Nothing checks what you drew before it is sent, so look
+   over each vessel yourself first.
+
+### Extended classes (optional)
+
+Above the Segment Editor there is a box called **Extended classes (optional)**. It
+is off unless you turn it on, and SegQueue remembers your choice for your login.
+If you leave it off, everything above is the whole job.
+
+Turned on, it adds 17 more classes, all empty, listed under the vessel they belong
+to:
+
+| Group | Classes |
+|---|---|
+| LAD branches | D1, D2, D3 (1st to 3rd diagonal); S1, S2, S3 (1st to 3rd septal) |
+| LCx branches | OM1, OM2 (1st and 2nd obtuse marginal) |
+| Other | Ramus (ramus intermedius) |
+| RCA branches | SN (sinus node), Conus, RMA (right marginal), PDA, PLB (posterolateral) |
+| Materials | Stent, Calcified plaque, Non-calcified plaque |
+
+- Use only the ones you want. An empty class is fine.
+- To use a branch class, move that branch out of its parent vessel and into its
+  class. For example, erase the first diagonal from LAD and paint it into D1.
+- Paint stent and plaque where you see them. They may overlap the vessel.
+- Hover over a group name in the box to see what goes in each class. The
+  **Show** ticks hide or show a whole group.
+- Turning the box off removes only the extended classes you left empty. A class
+  you drew in stays.
 
 Useful buttons:
 

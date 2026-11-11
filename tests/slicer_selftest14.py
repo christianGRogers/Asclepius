@@ -15,6 +15,14 @@ classes (not as all RCA), reopens for a reviewer with all four whole and named,
 and round-trips through a reviewer's revision the same way; and that a partly
 trimmed case keeps every class's own voxels.
 
+D44 (#280), the optional extended classes (``run_extended``): a seeded case opens
+with the four vessels as before; turning "Extended classes" on adds the 17 empty,
+with their pinned label values, grouped under their parents; a branch moved from
+LAD into D1 and a painted plaque are submitted, opened by a reviewer and revised
+with all 21 classes whole; a 0.17.x four-class draft reopens intact (with the 17
+empty extras when the toggle is on); and turning the toggle off removes only the
+empty extended classes.
+
 With ``SEGQUEUE_SELFTEST_INSTALLED=<folder>`` it tests the module Slicer loaded
 from that installed folder instead of the checkout.
 
@@ -395,11 +403,218 @@ def run():
     check("and reopens for a reviewer with all four whole (#275)", again == whole, again)
 
 
-try:
-    run()
-except Exception:
-    say("EXCEPTION", traceback.format_exc())
-    checks.append(False)
+def _countsOf(slicer, node, volume, names, segmentIdIn):
+    """``{name: voxels}`` of ``names`` in ``node``; None for a class it does not have."""
+    out = {}
+    for name in names:
+        segmentId = segmentIdIn(node, name)
+        out[name] = None if not segmentId else int((slicer.util.arrayFromSegmentBinaryLabelmap(
+            node, segmentId, volume) > 0).sum())
+    return out
+
+
+def _seededCase(slicer, np, module, labels, tmp, name, seed, extended):
+    """A fresh seeded case opened as ``openCase`` does, with the toggle as given."""
+    from segqueue.protocol import ProjectConfig
+
+    ct = np.where(seed > 0, 400, -100).astype(np.int16)
+    volume = slicer.mrmlScene.AddNewNodeByClass("vtkMRMLScalarVolumeNode", name)
+    slicer.util.updateVolumeFromArray(volume, ct)
+    volume.SetSpacing(0.5, 0.5, 0.6)
+    volume.SetOrigin(10, -20, 30)
+    logic = module.SegQueue14Logic(cacheRoot=os.path.join(tmp, "cache-" + name))
+    logic.project = ProjectConfig(name="selftest", instructions=labels.INSTRUCTIONS,
+                                  segments=labels.segment_specs())
+    logic.extendedClasses = extended
+    logic.volumeNode = volume
+    logic._loadOrCreateSegmentation({})
+    os.makedirs(logic.cache.caseDir(name), exist_ok=True)
+    seedNode = slicer.mrmlScene.AddNewNodeByClass("vtkMRMLLabelMapVolumeNode", name + "-seed")
+    slicer.util.updateVolumeFromArray(seedNode, seed)
+    seedNode.CopyOrientation(volume)
+    seedPath = os.path.join(logic.cache.caseDir(name), "seed.nii.gz")
+    slicer.util.saveNode(seedNode, seedPath)
+    slicer.mrmlScene.RemoveNode(seedNode)
+    logic.seedSegmentId = logic._importHelper(seedPath, SEED_NAME, (0.95, 0.85, 0.2), 0.25)
+    assignment = _Assignment(assignment_id=name, case_name=name, attempt=1,
+                             has_seed=True, has_prelabel=False)
+    logic._prefillClassesFromSeed(assignment)
+    logic.assignment = assignment
+    logic._sessionStart = time.time()
+    return logic, volume
+
+
+def _trim(slicer, np, logic, volume):
+    """Cut every vessel class down to its own tube."""
+    for name, (lo, hi) in TUBES.items():
+        segmentId = logic.segmentIdFor(name)
+        array = slicer.util.arrayFromSegmentBinaryLabelmap(
+            logic.segmentationNode, segmentId, volume).copy()
+        keep = np.zeros_like(array)
+        keep[5:35, lo:hi, lo:hi] = 1
+        slicer.util.updateSegmentBinaryLabelmapFromArray(
+            array * keep, logic.segmentationNode, segmentId, volume)
+
+
+def run_extended():
+    import numpy as np
+
+    import slicer
+
+    if not os.environ.get("SEGQUEUE_SELFTEST_INSTALLED"):
+        sys.path.insert(0, os.path.join(REPO, "src"))
+        sys.path.insert(0, os.path.join(REPO, "slicer", "SegQueue14"))
+    import SegQueue14 as module
+
+    from segqueue14 import labelfile, labels
+
+    say("--- D44: extended classes")
+    tmp = tempfile.mkdtemp()
+    seed = np.zeros(SHAPE, np.uint8)
+    for lo, hi in TUBES.values():
+        seed[5:35, lo:hi, lo:hi] = 1
+    nSeed = int(seed.sum())
+    segIn = module._segmentIdIn
+
+    # 1. Toggle off (the default): a seeded case opens with the four vessels, as now.
+    four, volume = _seededCase(slicer, np, module, labels, tmp, "four", seed, False)
+    names = [four.segmentationNode.GetSegmentation().GetNthSegment(i).GetName()
+             for i in range(four.segmentationNode.GetSegmentation().GetNumberOfSegments())]
+    check("with the toggle off a seeded case opens with the four vessels",
+          sorted(n for n in names if n != SEED_NAME) == sorted(labels.NAMES)
+          and _countsOf(slicer, four.segmentationNode, volume, labels.NAMES, segIn)
+          == {n: nSeed for n in labels.NAMES}, names)
+    four.client = _RecordingClient()
+    path = os.path.join(tmp, "four.seg.nrrd")
+    four.exportSubmission(path)
+    check("and is submitted as a plain four-class read",
+          labelfile.read_class_stack(path)["names"] == labels.NAMES)
+
+    # A 0.17.x draft: four trimmed classes, saved, as 0.17.x autosaves it.
+    _trim(slicer, np, four, volume)
+    draft = os.path.join(tmp, "draft-0.17.seg.nrrd")
+    slicer.util.saveNode(four.segmentationNode, draft)
+    tubes = {n: TUBE_VOXELS for n in labels.NAMES}
+
+    # 2. The toggle on adds the 17, empty, with their pinned values, under their parents.
+    four.extendedClasses = True
+    added = four.addExtendedClasses()
+    node = four.segmentationNode
+    extras = _countsOf(slicer, node, volume, labels.EXTRA_NAMES, segIn)
+    check("turning the toggle on adds the 17 extended classes, empty",
+          added == 17 and extras == {n: 0 for n in labels.EXTRA_NAMES}, (added, extras))
+    values = {n: module._labelValueOf(node.GetSegmentation().GetSegment(segIn(node, n)),
+                                      segIn(node, n)) for n in labels.EXTRA_NAMES}
+    check("each with its pinned label value",
+          values == {n: labels.ALL_LABEL_VALUES[n] for n in labels.EXTRA_NAMES}, values)
+    segmentation = node.GetSegmentation()
+    order = [segmentation.GetNthSegment(i).GetName()
+             for i in range(segmentation.GetNumberOfSegments())]
+    check("grouped by parent in the segment list",
+          order[:21] == labels.DISPLAY_ORDER, order)
+    check("and the four are untouched",
+          _countsOf(slicer, node, volume, labels.NAMES, segIn) == tubes)
+    check("adding them again adds nothing", four.addExtendedClasses() == 0)
+    check("a group hides and shows", four.setGroupVisible(labels.GROUP_LAD, False) == 6
+          and not node.GetDisplayNode().GetSegmentVisibility(segIn(node, "D1")))
+    four.setGroupVisible(labels.GROUP_LAD, True)
+
+    # 3. A branch moved out of LAD into D1, and a plaque painted on the RCA.
+    lo, hi = TUBES["LAD"]
+    lad = slicer.util.arrayFromSegmentBinaryLabelmap(node, segIn(node, "LAD"), volume).copy()
+    d1 = np.zeros_like(lad)
+    d1[5:15, lo:hi, lo:hi] = lad[5:15, lo:hi, lo:hi]
+    lad[5:15, lo:hi, lo:hi] = 0
+    slicer.util.updateSegmentBinaryLabelmapFromArray(lad, node, segIn(node, "LAD"), volume)
+    slicer.util.updateSegmentBinaryLabelmapFromArray(d1, node, segIn(node, "D1"), volume)
+    lo, hi = TUBES["RCA"]
+    plaque = np.zeros_like(lad)
+    plaque[20:24, lo:hi, lo:hi] = 1
+    slicer.util.updateSegmentBinaryLabelmapFromArray(
+        plaque, node, segIn(node, "Calcified plaque"), volume)
+    want = dict({n: 0 for n in labels.ALL_NAMES}, **tubes)
+    want.update({"LAD": TUBE_VOXELS - 90, "D1": 90, "Calcified plaque": 36})
+    check("a branch moved from LAD to D1 and a plaque painted",
+          _countsOf(slicer, node, volume, labels.ALL_NAMES, segIn) == want,
+          _countsOf(slicer, node, volume, labels.ALL_NAMES, segIn))
+
+    # 4. Submit, reviewer open, revise: all 21 classes whole, every time. Submit
+    # closes the case and takes its CT out of the scene, so the reviewer and the
+    # resumed drafts below get a CT of their own, on the same grid.
+    volume = slicer.mrmlScene.AddNewNodeByClass("vtkMRMLScalarVolumeNode", "ct-review")
+    slicer.util.updateVolumeFromArray(volume, np.where(seed > 0, 400, -100).astype(np.int16))
+    volume.SetSpacing(0.5, 0.5, 0.6)
+    volume.SetOrigin(10, -20, 30)
+    four.client = _RecordingClient()
+    four.submit()
+    check("submit uploads all 21 classes whole",
+          four.client.calls == [("upload", True), ("submit", want)]
+          and four.client.files == [want], (four.client.calls, four.client.files))
+    uploaded = four.client.kept[0]
+    stored = labelfile.read_class_stack(uploaded)
+    check("in label order, the extended read's channels", stored["names"] == labels.ALL_NAMES,
+          stored["names"])
+    review = module.SegQueue14Logic(cacheRoot=os.path.join(tmp, "review"))
+    review.project = four.project
+    review.volumeNode = volume
+    review.segmentationNode = slicer.util.loadSegmentation(uploaded)
+    review.applyProjectNames()
+    opened = _countsOf(slicer, review.segmentationNode, volume, labels.ALL_NAMES, segIn)
+    check("a reviewer opens all 21 classes whole, even with the toggle off",
+          opened == want and not review.extendedClasses, opened)
+    review.client = _RecordingClient()
+    review.reviseSubmission("s21")
+    check("and a revision round-trips all 21",
+          review.client.calls == [("upload", True), ("revise", want)]
+          and review.client.files == [want]
+          and labelfile.read_class_stack(review.client.kept[0])["names"] == labels.ALL_NAMES,
+          (review.client.calls, review.client.files))
+    slicer.mrmlScene.RemoveNode(review.segmentationNode)
+
+    # 5. The 0.17.x four-class draft reopens intact, toggle off and on.
+    for on in (False, True):
+        resumed = module.SegQueue14Logic(cacheRoot=os.path.join(tmp, "resume"))
+        resumed.project = four.project
+        resumed.extendedClasses = on
+        resumed.volumeNode = volume
+        resumed._loadOrCreateSegmentation({"workPath": draft})
+        got = _countsOf(slicer, resumed.segmentationNode, volume, labels.ALL_NAMES, segIn)
+        expected = dict({n: (0 if on else None) for n in labels.EXTRA_NAMES}, **tubes)
+        check("a 0.17.x four-class draft reopens intact (toggle {})".format(
+            "on: the 17 added, empty" if on else "off"), got == expected, got)
+        path = os.path.join(tmp, "resumed-{}.seg.nrrd".format(on))
+        resumed.exportSubmission(path)
+        check("  and exports {} classes".format(21 if on else 4),
+              labelfile.read_class_stack(path)["names"]
+              == (labels.ALL_NAMES if on else labels.NAMES))
+        if on:
+            # 6. Off again: the empty extended classes go, a painted one stays.
+            d1 = np.zeros(SHAPE, np.uint8)
+            d1[5:7, 20:23, 20:23] = 1
+            slicer.util.updateSegmentBinaryLabelmapFromArray(
+                d1, resumed.segmentationNode, segIn(resumed.segmentationNode, "D1"), volume)
+            resumed.extendedClasses = False
+            removed, kept = resumed.removeEmptyExtendedClasses()
+            check("toggling off removes only the empty extended classes",
+                  kept == ["D1"] and len(removed) == 16, (removed, kept))
+            check("  so the read keeps all 21 channels while D1 has voxels",
+                  [s.name for s in resumed.classSpecs()] == labels.ALL_NAMES)
+        slicer.mrmlScene.RemoveNode(resumed.segmentationNode)
+
+    # 7. Toggle on from the start: the seed fills the four only; the 17 start empty.
+    fresh, volume2 = _seededCase(slicer, np, module, labels, tmp, "fresh", seed, True)
+    got = _countsOf(slicer, fresh.segmentationNode, volume2, labels.ALL_NAMES, segIn)
+    check("with the toggle on a seeded case opens with the four seeded and 17 empty",
+          got == dict({n: 0 for n in labels.EXTRA_NAMES}, **{n: nSeed for n in labels.NAMES}),
+          got)
+
+
+for part in (run, run_extended):
+    try:
+        part()
+    except Exception:
+        say("EXCEPTION in", part.__name__, traceback.format_exc())
+        checks.append(False)
 
 passed = bool(checks) and all(checks)
 say("RESULT", "PASS" if passed else "FAIL")

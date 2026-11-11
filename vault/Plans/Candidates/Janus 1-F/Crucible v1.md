@@ -16,7 +16,7 @@ issue: christianGRogers/Asclepius#303
    - Its protocol says: "Septal perforators, acute marginals and nodal arteries were not traced". Side branches stop
      where the distal diameter is under 1 mm. "Other" holds a D3/D4/OM3/OM4 only if it is "at least as large as the
      first or second branches or >1.8 mm" (Bransby et al., arXiv:2608.30404, §2 and Table 1).
-   - On the 620 training cases, the trunk classes carry almost no unnamed branch: {TWIG_LINE}
+   - On the 620 training cases, the trunk classes carry almost no unnamed branch: an unnamed branch of ≥ 5 mm hangs off the LAD class in 13 of 620 cases (2.1 %), off the LCx in 9 (1.5 %) and off the RCA in 3 (0.5 %). Such branches are 0.3 %, 0.4 % and 0.1 % of those classes' centreline. Septals alone would put several in almost every LAD
      ([[Crucible - ImageCAS-X traced no septal, nodal or acute marginal branch, so its background is not a negative for six of 1-F's classes]]).
    - So a voxel of a septal, the SN, the conus or the RMA is **background** in ImageCAS-X. So is a small D3. Train 1-F on
      ImageCAS-X as drawn and it learns to *not* segment S1–S3, SN, Conus and RMA. Their only positive labels will be
@@ -48,7 +48,7 @@ issue: christianGRogers/Asclepius#303
 5. **The L-PDA/L-PLA question has a measured price.**
    - Recommended to the lead: name by anatomy (L-PDA → PDA, L-PLA → PLB); collapse to four by origin.
    - #280/#310's default collapse sends PDA/PLB always to RCA. That contradicts D25 for left-sided PDA/PLB, in
-     {LDOM_CASES} of the 620. There they are a median {LDOM_SHARE} of the LCx territory (§2.2).
+     59 (9.5 %) of the 620. There they are a median 0.117 of the LCx territory (§2.2).
 
 ## 1. What ImageCAS-X gives 1-F (CPU, 620 D45 training cases)
 
@@ -60,19 +60,41 @@ issue: christianGRogers/Asclepius#303
   or #302's launcher must confirm the same 20** before any 1-F or 1-L job (§9).
 - `census.py` and `summarise.py`: labels only, no CT.
 
-{CENSUS_TABLE}
+| ImageCAS-X class | Cases (of 620) | Median mm³ where present | Median centreline (mm) | Median skeleton radius (mm) | Cases whose 10th-percentile radius < 0.5 mm |
+|---|---|---|---|---|---|
+| LM | 611 (98.5 %) | 99 | 10 | 1.50 | 0 % |
+| LAD | 620 | 428 | 152 | 0.85 | 3 % |
+| LCx | 620 | 280 | 96 | 0.85 | 6 % |
+| D1 | 611 (98.5 %) | 83 | 46 | 0.64 | 25 % |
+| D2 | 359 (57.9 %) | 68 | 39 | 0.64 | 31 % |
+| OM1 | 540 (87.1 %) | 83 | 45 | 0.67 | 22 % |
+| OM2 | 229 (36.9 %) | 92 | 49 | 0.67 | 23 % |
+| IM (Ramus) | 149 (24.0 %) | 68 | 42 | 0.61 | 26 % |
+| RCA | 620 | 597 | 118 | 1.12 | 1 % |
+| R-PDA | 572 (92.3 %) | 94 | 54 | 0.61 | 25 % |
+| R-PLA | 565 (91.1 %) | 114 | 61 | 0.67 | 27 % |
+| L-PDA | 38 (6.1 %) | 81 | 48 | 0.65 | 29 % |
+| L-PLA | 54 (8.7 %) | 34 | 24 | 0.61 | 56 % |
+| Other | 66 (10.6 %) | 74 | 44 | 0.63 | 27 % |
+
+- Unnamed branches ≥ 5 mm inside a trunk class, after removing the trunk's own end:
+  - LAD: 13 cases (2.1 %), 0.3 % of LAD centreline;
+  - LCx: 9 cases (1.5 %), 0.4 %;
+  - RCA: 3 cases (0.5 %), 0.1 %.
+- Raw terminal trunk-class branches per case are 0–2 in every case.
+- Dominance by ImageCAS-X's naming: L-PDA or L-PLA in 59 cases (9.5 %); 13 of them also have an R-PDA/R-PLA.
 
 Reading it:
-- **Eight 1-F branch classes have ImageCAS-X labels**, with these case counts: D1 {N_D1}, D2 {N_D2}, OM1 {N_OM1},
-  OM2 {N_OM2}, Ramus (IM) {N_IM}, PDA (R + L) {N_PDA}, PLB (R + L) {N_PLB}, and D3 (inside Other, below) {N_D3}.
+- **Eight 1-F branch classes have ImageCAS-X labels**, with these case counts: D1 611, D2 359, OM1 540,
+  OM2 229, Ramus (IM) 149, PDA (R + L) 608, PLB (R + L) 610, and D3 (inside Other, below) 47.
 - **D3 exists only as a large "Other" piece.**
-  - D-family Other pieces (those touching LAD/D1/D2 only) appear in {N_D3} cases ({P_D3}). Per case: {DCOUNT}.
+  - D-family Other pieces (those touching LAD/D1/D2 only) appear in 47 cases (7.6 %). Per case: one piece in 45 cases, two in 2.
   - Every one touches the LAD trunk itself, so it is a diagonal off the LAD.
   - A case with one such piece gives a D3 label. With two or more, the proximal-most piece is D3 and the rest are
     LAD (D4+, parent class).
   - A small D3 is untraced, so ImageCAS-X has **no D3-absent label**. A case without Other may still have a D3 in its
     background. That is why D3 is in the untraced set of the background (§3).
-- **Calibre.** The thinnest traced branches have median skeleton radius {RAD_BRANCH} mm. In about a quarter of the
+- **Calibre.** The thinnest traced branches have median skeleton radius 0.61–0.67 mm. In about a quarter of the
   cases with a given branch, the branch's 10th-percentile radius is below 0.5 mm.
   - At nnU-Net's 0.5 mm isotropic grid, a vessel at ImageCAS-X's 1 mm stopping diameter is 2 voxels across.
   - Septals, SN, conus and RMA are untraced, so their calibre cannot be measured here.
@@ -104,7 +126,7 @@ Reading it:
   - Under D44 this is the only reading that keeps every voxel in exactly one class.
   - It is written here as an assumption (L2), because D44 does not say it.
 - **ImageCAS-X's LAD is LAD only.** Septals were not traced, so the LAD label is not "LAD or septal". The census
-  confirms it (§1): no unnamed branch hangs off the LAD class in {LAD_TWIG_PCT} of cases.
+  confirms it (§1): no unnamed branch hangs off the LAD class in 607 of 620 (98 %) of cases.
 
 ### 2.2 The PDA/PLB question (for the lead, L1)
 
@@ -118,7 +140,7 @@ Reading it:
   ImageCAS-X authors named it the same way (L-PDA is a PDA, from the left), as did Li et al. (arXiv:2212.00386:
   L-PDA and L-PLB are classes).
 - **The price of (c).**
-  - In the 620, {LDOM_CASES} have L-PDA or L-PLA. There they are a median {LDOM_SHARE} (p90 {LDOM_P90}) of the D25
+  - In the 620, 59 (9.5 %) have L-PDA or L-PLA. There they are a median 0.117 (p90 0.210) of the D25
     LCx territory.
   - In those cases the four-class pair score of an extended read against a 4-class read moves that much LCx into RCA.
   - Population left dominance is 9 % on CCTA (Gebhard et al., CONFIRM, EHJ-CVI 2015, 6382 patients, Results).
@@ -273,7 +295,7 @@ scores Janus 0 and 1-F₀ on the same 100 with the same aortas.
   - ImageCAS-X's side-branch inter-observer DSC is 71–83 (Table 1);
   - CPR-GCN's side-branch F1 is 0.91 on expert centrelines.
   - 0.70 is a floor below both, chosen so that a model at the human level passes.
-- Expected counts in the locked 100 (scaled from the 620): {EXPECTED_LOCKED}. L-PDA/L-PLA alone are too rare to
+- Expected counts in the locked 100 (scaled from the 620): D1 ≈ 99, PDA ≈ 98, PLB ≈ 98, OM1 ≈ 87, D2 ≈ 58, OM2 ≈ 37, Ramus ≈ 24, D3 ≈ 8 cases. So R2's per-class rule binds D1, D2, OM1, OM2, Ramus, PDA and PLB; D3 is macro-only. L-PDA/L-PLA alone are too rare to
   decide anything; they are pooled into PDA and PLB.
 
 **R3. Outcome.**

@@ -14,6 +14,11 @@ additions:
 * **presence** per class: is the vessel there in the read, in the reference, and
   do they agree. A missed L-PDA is a Dice of 0 *and* a presence disagreement; the
   second is the one a reviewer can act on at a glance.
+* **extended reads** (D44): a read with the 17 extended classes is collapsed to
+  the four first (``labels.collapse_to_four``: each branch into its parent;
+  materials into nothing), so the headline stays four-class and a 4-class read
+  scores exactly as before. ``score_reads`` does that and adds a per-material Dice
+  (``materials``) for each material *both* reads have.
 * **cropping** to the union of both labellings before scoring. Dice and HD95 are
   unchanged by it (the margin keeps every surface voxel's neighbourhood), and it
   turns one distance transform per class over a whole chest CT into one per class
@@ -140,6 +145,50 @@ def score_masks(read, reference, spacing: Sequence[float],
     result["presence_agreement"] = round(agree / float(len(names)), 4) if names else None
     result["required_min_dice"] = required_min_dice(result)
     return result
+
+
+def score_reads(read, read_names: Sequence[str], reference,
+                reference_names: Sequence[str], spacing: Sequence[float]) -> dict:
+    """Score two class stacks whose classes may differ (D44).
+
+    ``read`` and ``reference`` are ``(class, z, y, x)`` masks on the same grid,
+    named ``read_names`` and ``reference_names`` (the four, or all 21). Both are
+    collapsed to the four and scored by ``score_masks``: the headline. A material
+    that both name gets its own entry under ``materials``; a material only one of
+    them has is not scored (one annotator not using a class is not disagreement).
+    ``extended`` (only when either side has extended classes) says which.
+    """
+    a = labels.collapse_to_four(read, read_names)
+    b = labels.collapse_to_four(reference, reference_names)
+    result = score_masks(a, b, spacing)
+    materials = material_scores(read, read_names, reference, reference_names, spacing)
+    if materials:
+        result["materials"] = materials
+    extended = {"read": labels.is_extended(read_names),
+                "reference": labels.is_extended(reference_names)}
+    if any(extended.values()):
+        # Only when there is something to say: a 4-class pair's stored score is
+        # exactly what it was before D44.
+        result["extended"] = extended
+    return result
+
+
+def material_scores(read, read_names: Sequence[str], reference,
+                    reference_names: Sequence[str], spacing: Sequence[float]) -> dict:
+    """``{material: {dice, hd95, voxels_read, voxels_ref}}`` for each material in both."""
+    from segtrain.metrics import agreement_masks
+
+    mine = {str(n): i for i, n in enumerate(read_names)}
+    theirs = {str(n): i for i, n in enumerate(reference_names)}
+    out = {}
+    for name in labels.MATERIALS:
+        if name not in mine or name not in theirs:
+            continue
+        a, b = crop_to_union(read[mine[name]] != 0, reference[theirs[name]] != 0)
+        entry = agreement_masks([a], [b], [name], spacing)["per_structure"][name]
+        out[name] = {"dice": entry["dice"], "hd95": entry["hd95"],
+                     "voxels_read": entry["voxels_a"], "voxels_ref": entry["voxels_b"]}
+    return out
 
 
 def required_min_dice(result: Mapping,

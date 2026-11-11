@@ -151,6 +151,29 @@ measured over time. The case is drawn only from ImageCAS-X train/val cases that
 nothing holds out (`src/segqueue14/benchmark.py`); the tool is
 `segqueue14-benchmark` (`server/girder_segqueue14/DEPLOY.md`, "D43 on janus").
 
+**Extended classes (SegQueue14 0.18.0, protocol 18, D44).** 17 optional classes on
+top of LM, LAD, LCx and RCA: stent, calcified and non-calcified plaque; D1-D3 and
+S1-S3 (LAD); OM1-OM2 (LCx); SN, conus, RMA, PDA and PLB (RCA); and the ramus. They
+are SegQueue-only: model development stays four-class (D25), and the research plan
+and `src/segtrain` are unchanged. In the module they sit behind a per-annotator
+toggle, off by default (`slicer/SegQueue14/README.md`). With it off, a read is the
+plain four classes. Compatibility rules:
+
+* The server accepts protocols 17 (0.17.x) and 18. Four-class submissions and
+  drafts are stored and scored exactly as before.
+* A read with extended classes is refused to a protocol-17 reviewer at claim,
+  download and revise (*"Update SegQueue14 to review this read"*), because that
+  module would save it back with four. A four-class read is reviewable from
+  either version.
+* Each submission records its `classes` (from the file header) and `extended`.
+
+Scoring keeps the four-class headline. An extended read is collapsed first
+(`labels.collapse_to_four`): D1-D3 and S1-S3 are unioned into LAD; OM1-OM2 and the
+ramus into LCx; SN, conus, RMA, PDA and PLB into RCA (always, whatever the
+dominance). Materials go into no vessel. A pair gets a per-material Dice
+(`materials`) only for materials both reads have. An extended read pairs with a
+four-class one. The quality report counts extended reads per annotator.
+
 ### Running it
 
 ```sh
@@ -227,5 +250,8 @@ A SegQueue14 submission from 0.17.0 (protocol 17) is a class stack -- one 0/1
 channel per class on the CT grid, every class whole, overlaps included (D39,
 `src/segqueue14/labelfile.py`); older ones are one label volume. The export writes
 each class whole either way, and `segtrain convert` for task 716 refuses a read
-whose classes overlap until the training-time rule is decided (#275).
+whose classes overlap until the training-time rule is decided (#275). An extended
+read (D44) is written with all its classes (`Calcified_plaque.nii.gz` and so on);
+`segqueue14-export --four-class` writes every read as the four instead, extended
+ones collapsed. Use that for a four-class training set.
 ---

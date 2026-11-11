@@ -141,7 +141,8 @@ def test_bad_inputs_are_refused(tmp_path):
 
 
 def test_protocol_17_refuses_a_0_16_module():
-    assert PROTOCOL_VERSION == 17 and protocol.MIN_CLIENT_PROTOCOL == 17
+    # Protocol 18 (D44) still accepts 17; 16 is still refused.
+    assert PROTOCOL_VERSION == 18 and protocol.MIN_CLIENT_PROTOCOL == 17
     protocol.check_client_protocol(17)
     with pytest.raises(protocol.ProtocolError) as err:
         protocol.check_client_protocol(16)

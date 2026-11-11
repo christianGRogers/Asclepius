@@ -206,11 +206,23 @@ def clientProtocolFrom(clientProtocol) -> Optional[str]:
 
 
 def checkClientProtocol(clientProtocol) -> None:
-    """Refuse (426) a client that is not a current SegQueue14 module."""
+    """Refuse (426) a client older than ``protocol.MIN_CLIENT_PROTOCOL`` (17)."""
     try:
         protocol.check_client_protocol(clientProtocolFrom(clientProtocol))
     except protocol.ProtocolError as exc:
         refuse(exc.code, str(exc), status=426, **exc.detail)
+
+
+def _storedHead(file) -> bytes:
+    """The first 64 KB of a stored file: enough for any SegQueue14 header."""
+    from girder.models.file import File
+
+    raw = b''
+    for chunk in File().download(file, headers=False, endByte=1 << 16)():
+        raw += chunk
+        if len(raw) >= 1 << 16:
+            break
+    return raw
 
 
 def storedLabelFormat(file) -> str:
@@ -219,15 +231,47 @@ def storedLabelFormat(file) -> str:
     Read from the first 64 KB of the stored bytes, so the submission records what
     the file is rather than what the client said it is.
     """
-    from girder.models.file import File
-    from segqueue14 import labelfile
+    return storedLabelInfo(file)[0]
 
-    raw = b''
-    for chunk in File().download(file, headers=False, endByte=1 << 16)():
-        raw += chunk
-        if len(raw) >= 1 << 16:
-            break
-    return labelfile.sniff_bytes(raw)
+
+def storedLabelInfo(file) -> tuple[str, list[str]]:
+    """``(labelFormat, classes)`` of a stored upload, from its own header.
+
+    ``classes`` are the channel names of a class stack: the four, or all 21 for a
+    read with the extended classes (D44). An old label volume is the four.
+    """
+    from segqueue14 import labelfile, labels
+
+    raw = _storedHead(file)
+    labelFormat = labelfile.sniff_bytes(raw)
+    classes = labelfile.class_names_bytes(raw) if labelFormat == labelfile.FORMAT_CLASS_STACK \
+        else []
+    return labelFormat, (classes or list(labels.NAMES))
+
+
+def isExtended(submission: Optional[dict]) -> bool:
+    """Whether a stored read has the extended classes (D44). Older rows have none."""
+    from segqueue14 import labels
+
+    if not submission:
+        return False
+    if 'extended' in submission:
+        return bool(submission['extended'])
+    return labels.is_extended(submission.get('classes') or ())
+
+
+def checkExtendedReader(submission: Optional[dict], clientProtocol=None) -> None:
+    """Refuse (426) a module older than protocol 18 a read with extended classes.
+
+    D44: a 0.17.x reviewer would load four classes of it and save back four. A
+    four-class read is never refused; neither is a request naming no protocol (it
+    is not a module, and cannot save anything back).
+    """
+    try:
+        protocol.check_extended_reader(clientProtocolFrom(clientProtocol),
+                                       isExtended(submission))
+    except protocol.ProtocolError as exc:
+        refuse(exc.code, str(exc), status=426, **exc.detail)
 
 
 def checkLabelFormat(labelFormat) -> str:

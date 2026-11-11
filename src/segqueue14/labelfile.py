@@ -8,10 +8,12 @@ in its entirety, overlaps included.
 
 **The format (``FORMAT_CLASS_STACK``).** One gzip-compressed NRRD on the CT grid,
 voxel for voxel, with a class axis: ``dimension: 4``, ``sizes: C I J K``,
-``kinds: list domain domain domain``, one uint8 0/1 channel per class in project
-order (LM, LAD, LCx, RCA). The header also carries Slicer's segmentation keys,
-one layer per class, so the same file is a valid Slicer ``.seg.nrrd``: Slicer opens
-it as four named, coloured, overlapping segments. Unlike a ``.seg.nrrd`` that
+``kinds: list domain domain domain``, one uint8 0/1 channel per class in label
+order: the four (LM, LAD, LCx, RCA), or all 21 for a read with the extended
+classes (D44, ``labels.ALL_NAMES``). ``SegQueue14_Classes`` names the channels, so
+which classes a read has is in its header. The header also carries Slicer's
+segmentation keys, one layer per class, so the same file is a valid Slicer
+``.seg.nrrd``: Slicer opens it as named, coloured, overlapping segments. Unlike a ``.seg.nrrd`` that
 Slicer writes itself, it is never cropped to the segments' extent: the grid is
 the CT's. ``SegQueue14_Format`` in the header names the format, so a reader
 tells it from an old single-label file by the header alone.
@@ -174,6 +176,29 @@ def sniff(path: str) -> str:
     return FORMAT_LABELMAP
 
 
+def class_names(header: Dict[str, str]) -> List[str]:
+    """The channel names of a class-stack header (``parse_header``'s dict), or []."""
+    if header.get(FORMAT_KEY) != FORMAT_CLASS_STACK:
+        return []
+    names = [n for n in header.get(CLASSES_KEY, "").split("|") if n]
+    try:
+        channels = int(header.get("sizes", "").split()[0])
+    except (IndexError, ValueError):
+        channels = len(names)
+    if len(names) != channels:
+        names = [header.get(f"Segment{c}_Name", f"class{c + 1}") for c in range(channels)]
+    return names
+
+
+def class_names_bytes(raw: bytes) -> List[str]:
+    """``class_names`` over the first bytes of a file; [] for an old label volume."""
+    try:
+        header, _ = _read_header_bytes(io.BytesIO(raw))
+    except LabelFileError:
+        return []
+    return class_names(parse_header(header))
+
+
 def sniff_bytes(raw: bytes) -> str:
     """``sniff`` over the first bytes of a file (its header is in the first 64 KB)."""
     try:
@@ -263,9 +288,7 @@ def read_class_stack(path: str) -> dict:
     data = np.frombuffer(payload[:expected], dtype=np.uint8).reshape(nk, nj, ni, nc)
     masks = np.ascontiguousarray(np.moveaxis(data, -1, 0)) != 0
 
-    names = [n for n in header.get(CLASSES_KEY, "").split("|") if n]
-    if len(names) != nc:
-        names = [header.get(f"Segment{c}_Name", f"class{c + 1}") for c in range(nc)]
+    names = class_names(header)
     vectors = [_numbers(v) for v in re.findall(r"\(([^)]*)\)",
                                                header.get("space directions", ""))]
     if len(vectors) != 3:

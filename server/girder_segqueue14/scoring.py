@@ -27,6 +27,12 @@ included: D39, ``segqueue14.labelfile``) or, from before protocol 17, one label
 volume; each class is scored from its own mask either way, and old submissions
 score exactly as they did.
 
+A read with the extended classes (D44) is collapsed to the four before it is
+scored: each branch is unioned into its parent and the materials go into no
+vessel (``labels.collapse_to_four``), so the headline stays four-class and an
+extended read pairs with a 4-class one. A material both reads of a pair have is
+scored on its own, under ``materials``; it never moves the headline.
+
 A submission's grid is not trusted to be the reference's: a Slicer export can
 store the same voxels in a different index order (the first real SegQueue
 submissions were z-reversed against their CT). Both are put on the reference's
@@ -87,14 +93,23 @@ def readImage(fileDoc):
         _unlink(path)
 
 
+class ClassStack(list):
+    """A class-stack read: one SimpleITK mask per class, with the class ``names``."""
+
+    def __init__(self, images, names):
+        super().__init__(images)
+        self.names = list(names)
+
+
 def readLabels(fileDoc):
     """A stored segmentation, whatever its format.
 
-    A class stack (D39, ``segqueue14.labelfile``) comes back as a list of
-    SimpleITK images, one 0/1 mask per project class in label order, each whole
-    -- overlaps included. Anything else is an old single label volume (or a
-    reference) and comes back as one SimpleITK image. The format is read from
-    the file's own header, not from what the client declared.
+    A class stack (D39, ``segqueue14.labelfile``) comes back as a ``ClassStack``:
+    one SimpleITK 0/1 mask per class the file has (the four, or all 21 with the
+    extended classes, D44), each whole -- overlaps included -- and their names.
+    Anything else is an old single label volume (or a reference) and comes back
+    as one SimpleITK image. The format is read from the file's own header, not
+    from what the client declared.
     """
     path = _downloadTemp(fileDoc)
     try:
@@ -107,14 +122,15 @@ def readLabels(fileDoc):
 
 
 def classStackImages(path, names=None):
-    """A class-stack file as one SimpleITK mask per class, in ``names`` order.
+    """A class-stack file as a ``ClassStack``: one SimpleITK mask per class.
 
-    Classes are matched by the names in the file's header; a project class the
-    file does not name is an empty mask on the same grid.
+    With ``names``, those classes in that order, matched by the names in the
+    file's header; a class the file does not name is an empty mask on the same
+    grid. Without, every class the file has, in its own order.
     """
     np, sitk = _deps()
-    names = list(labels.NAMES if names is None else names)
     data = labelfile.read_class_stack(path)
+    names = list(data['names'] if names is None else names)
     byName = {name: index for index, name in enumerate(data['names'])}
     images = []
     for name in names:
@@ -126,7 +142,7 @@ def classStackImages(path, names=None):
         image.SetOrigin(data['origin'])
         image.SetDirection(data['direction'])
         images.append(image)
-    return images
+    return ClassStack(images, names)
 
 
 def _unlink(path):
@@ -153,20 +169,34 @@ def onGrid(image, reference):
     return np.asarray(sitk.GetArrayFromImage(image)).astype(np.uint8, copy=False)
 
 
-def masksOnGrid(read, reference, icx14=False):
-    """``(class, z, y, x)`` masks of ``read`` (from ``readLabels``) on ``reference``'s grid.
+def stackOnGrid(read, reference, icx14=False):
+    """``(masks, names)``: every class of ``read`` (from ``readLabels``) on ``reference``'s grid.
 
-    A class stack is resampled class by class, so each keeps its own voxels; a
-    label volume is resampled once and split by value -- after collapsing
-    ImageCAS-X's 14 values to the four when ``icx14`` says it is a reference.
+    A class stack is resampled class by class, so each keeps its own voxels, and
+    keeps all its classes (the four, or 21, D44); a label volume is resampled once
+    and split by value into the four -- after collapsing ImageCAS-X's 14 values to
+    the four when ``icx14`` says it is a reference.
     """
     np, _ = _deps()
     if isinstance(read, list):
-        return np.stack([onGrid(image, reference) != 0 for image in read]).astype(np.uint8)
+        names = list(getattr(read, 'names', None) or labels.NAMES[:len(read)])
+        masks = np.stack([onGrid(image, reference) != 0 for image in read]).astype(np.uint8)
+        return masks, names
     values = onGrid(read, reference)
     if icx14:
         values = labels.icx14_to_four(values, _spacing(reference))
-    return sq.as_masks(values)
+    return sq.as_masks(values), list(labels.NAMES)
+
+
+def masksOnGrid(read, reference, icx14=False):
+    """``(4, z, y, x)`` masks of ``read`` on ``reference``'s grid, in the four classes.
+
+    ``stackOnGrid``, then an extended read collapsed to the four
+    (``labels.collapse_to_four``, D44): each branch unioned into its parent,
+    materials dropped. A four-class read comes back as it was.
+    """
+    masks, names = stackOnGrid(read, reference, icx14=icx14)
+    return labels.collapse_to_four(masks, names)
 
 
 def _gridOf(image):
@@ -196,19 +226,25 @@ def scoreAgainst(readFile, referenceFile, icx14=False):
     like. It is decided by what the file is, never by its values (#57). A second
     read is already in the four and is compared as stored.
 
-    Returns ``(score, readMasks)``; ``readMasks`` is ``(class, z, y, x)``.
+    Either side may have the extended classes (D44): both are collapsed to the
+    four for the headline, and a material both have is scored on its own
+    (``segqueue14.scoring.score_reads``). A 4-class pair scores as it always did.
+
+    Returns ``(score, readMasks)``; ``readMasks`` is ``(4, z, y, x)``, the read in
+    the four classes.
     """
     reference = readLabels(referenceFile)
     read = readLabels(readFile)
     grid = _gridOf(reference)
-    readMasks = masksOnGrid(read, grid)
-    refMasks = masksOnGrid(reference, grid, icx14=icx14)
+    readMasks, readNames = stackOnGrid(read, grid)
+    refMasks, refNames = stackOnGrid(reference, grid, icx14=icx14)
+    four = labels.collapse_to_four(readMasks, readNames)
     if not readMasks.any() and _anyLabel(read):
         # Labels in the file, none after resampling: the two do not overlap in
         # physical space, so every number would be a meaningless zero.
-        return {'error': 'geometry_mismatch', 'mean_dice': None}, readMasks
-    result = sq.score_masks(readMasks, refMasks, _spacing(grid))
-    return result, readMasks
+        return {'error': 'geometry_mismatch', 'mean_dice': None}, four
+    result = sq.score_reads(readMasks, readNames, refMasks, refNames, _spacing(grid))
+    return result, four
 
 
 def partnerSubmission(submission):

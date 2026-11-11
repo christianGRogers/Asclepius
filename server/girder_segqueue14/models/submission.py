@@ -21,6 +21,7 @@ from girder.constants import AccessType
 from girder.exceptions import ValidationException
 from girder.models.model_base import AccessControlledModel
 from pymongo import ReturnDocument
+from segqueue14 import labels
 from segqueue14 import plan as sqplan
 from segqueue14.labelfile import FORMAT_LABELMAP as LABEL_FORMAT_LABELMAP
 
@@ -48,6 +49,7 @@ class Submission14(AccessControlledModel):
             'sizeBytes', 'annotationSeconds', 'voxelCounts', 'slicerVersion',
             'extensionVersion', 'annotatorNote', 'warnings', 'attempt', 'created',
             'authorRole', 'revisionOf', 'prelabelVersion', 'labelFormat',
+            'classes', 'extended',
         })
         self.exposeFields(level=AccessType.SITE_ADMIN, fields={
             'kind', 'scored', 'autoScore', 'needsReview',
@@ -73,11 +75,14 @@ class Submission14(AccessControlledModel):
         doc.setdefault('warnings', [])
         # Every submission from before protocol 17 is one label volume (#275).
         doc.setdefault('labelFormat', LABEL_FORMAT_LABELMAP)
+        # Every submission from before protocol 18 has the four classes (D44).
+        doc['classes'] = [str(n) for n in (doc.get('classes') or labels.NAMES)]
+        doc['extended'] = labels.is_extended(doc['classes'])
         return doc
 
     def createSubmission(self, assignment, meta, fileId, warnings=(), needsReview=True,
                          author=None, revisionOf=None, geometry=None,
-                         labelFormat=LABEL_FORMAT_LABELMAP):
+                         labelFormat=LABEL_FORMAT_LABELMAP, classes=None):
         """Store one accepted upload.
 
         ``meta`` is a ``segqueue.protocol.SubmissionMeta``. The checksum stored
@@ -94,6 +99,10 @@ class Submission14(AccessControlledModel):
         attributing the reviewer's corrections to the annotator would flatter
         exactly the submissions a human had to fix. ``revisionOf`` records which
         submission was being corrected, so the pair can be told apart later.
+
+        ``classes`` are the classes in the stored file, from its header: the four,
+        or all 21 for a read with the extended classes (D44). ``extended`` is
+        derived from them in ``validate``.
         """
         doc = {
             'assignmentId': assignment['_id'],
@@ -113,6 +122,9 @@ class Submission14(AccessControlledModel):
             # What the stored file is (segqueue14.labelfile): a class stack keeps
             # every class whole (D39); a labelmap is one value per voxel.
             'labelFormat': labelFormat,
+            # Which classes the file has (D44): the four, or the four and the 17
+            # extended ones. Read from the file's header, like labelFormat.
+            'classes': list(classes or labels.NAMES),
             # As the client reported it (source and segmentation grids). Recorded
             # for scoring and audit only; nothing refuses a mismatch (#270).
             'geometry': dict(geometry) if geometry else None,

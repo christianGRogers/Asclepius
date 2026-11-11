@@ -32,6 +32,44 @@ and continues its version numbers (D24): same server, its own routes
    whole** (D39, 0.17.0): where two classes share voxels, both keep them. The seed
    and the heart mask are helpers and never leave your machine.
 
+### Extended classes (0.18.0, protocol 18, D44)
+
+An optional **Extended classes** toggle above the Segment Editor, **off by default**
+and remembered per login (`SegQueue14/extendedClasses/<login>`), adds 17 classes,
+empty, grouped under their parent in the segment list, with show/hide per group:
+
+| Group | Classes (label values) | Folded into, when scored |
+|---|---|---|
+| Materials | Stent (5), Calcified plaque (6), Non-calcified plaque (7) | nothing |
+| LAD branches | D1-D3 (8-10), S1-S3 (11-13) | LAD |
+| LCx branches | OM1, OM2 (14, 15) | LCx |
+| RCA branches | SN (16), Conus (17), RMA (18), PDA (19), PLB (20) | RCA |
+| Other | Ramus (21) | LCx (D1b) |
+
+- **Off:** nothing changes. A case is the four classes, submitted as a four-class
+  stack exactly as 0.17.x submits it.
+- **On:** the 17 are added empty to the open case or draft. The seed still fills
+  only LM, LAD, LCx and RCA (D26); the annotator moves a branch out of its parent
+  into its class, and paints the materials. Overlaps are fine (D39).
+- **Submitted classes:** while any extended class is in the scene, the read is
+  submitted with all 21 channels in label order (`labels.ALL_NAMES`), the empty ones
+  empty. Turning the toggle off removes only the empty extended classes; a class
+  with voxels is kept, so the read stays extended.
+- **Label values** 5-21 are fixed (`src/segqueue14/labels.py`) and set once when a
+  segment is created. An existing segment is never re-pinned (#270's root cause), so
+  a 0.17.x draft opened in 0.18.0 keeps its four classes untouched, plus the 17
+  empty ones if the toggle is on.
+- **Reviewers:** an extended read opens with all its classes whatever the toggle
+  says, and a revision keeps all 21. A 0.17.x module is refused an extended read at
+  claim, download and revise with *"Update SegQueue14 to review this read"*;
+  four-class reads open in either version.
+
+**The reviewer's case list** (0.18.0, #280) is sorted by submission time, newest
+first; rows with nothing submitted yet come last. The *Submitted (ET)* column shows
+that time in US Eastern time (America/Toronto, daylight saving included), e.g.
+`2026-11-10 14:32 ET`. It uses the `submittedAt` the server already sends, so the
+server is unchanged for this.
+
 ## Install
 
 The short guide for new annotators is [docs/ANNOTATOR-SETUP.md](../../docs/ANNOTATOR-SETUP.md);
@@ -88,7 +126,9 @@ checkout: add `slicer/SegQueue14` to *Additional module paths*.
 that carry SegQueue14). It works the same for both install routes: it updates
 from the archive for the Slicer version the install was built for
 (`lib/Slicer-5.8`), whatever Slicer is running. If the server's protocol has
-moved on, login is refused with *"Update the SegQueue14 module"*.
+moved on, login is refused with *"Update the SegQueue14 module"*. The server
+accepts protocols 17 (0.17.x) and 18 (0.18.0): 0.17.x keeps working for
+four-class work (D44).
 
 ## For developers
 
@@ -101,7 +141,10 @@ overlapping segments; the scoring worker, `segqueue14-export` and anything else 
 it with numpy alone (`labelfile.read_class_stack`). Up to 0.16.x a submission was one
 label volume, which keeps one class per voxel: an untouched seeded case came out as
 all RCA. Those files stay readable everywhere; the submission row's `labelFormat`
-(read from the stored file's header) says which a file is.
+(read from the stored file's header) says which a file is. From 0.18.0 an
+extended read has 21 channels (`labels.ALL_NAMES`); the header's
+`SegQueue14_Classes` names them, and the server records them as the row's `classes`
+and `extended`.
 
 `SegQueue14Lib/` (client, cache) has no Slicer imports and is tested by
 `tests/test_segqueue14_client.py`; the module itself is checked statically by

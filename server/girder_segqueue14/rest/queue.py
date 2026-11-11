@@ -16,7 +16,9 @@ Adapted from ``girder_segqueue.rest.queue``. The differences:
   are accepted; voxel counts and geometry are recorded with the submission;
 * every write -- and ``/project``, which the module calls at login -- checks the
   SegQueue14 protocol version, so an out-of-date module is told to update before
-  it can do anything.
+  it can do anything. Protocol 17 (0.17.x, four classes) and 18 (0.18.0, the
+  optional extended classes, D44) are both accepted; ``/project`` serves the four
+  classes either way, and a 0.18 module adds the extended ones itself.
 """
 
 import random
@@ -47,7 +49,7 @@ from ..utils import (
     refuse,
     requireAnnotator,
     requireCaseInvolvement,
-    storedLabelFormat,
+    storedLabelInfo,
     submissionsFolder,
 )
 
@@ -317,8 +319,9 @@ class QueueResource14(Resource):
             refuse('no_such_file', 'That upload could not be found.', status=404)
         self._verifyUpload(file, submissionMeta)
         # Recorded as the stored bytes say, not as declared (an unknown declared
-        # name was already refused above).
-        labelFormat = storedLabelFormat(file)
+        # name was already refused above): the format, and which classes the read
+        # has -- the four, or the four and the extended ones (D44).
+        labelFormat, classes = storedLabelInfo(file)
 
         item = Item().load(file['itemId'], force=True)
         if item is not None:
@@ -340,7 +343,7 @@ class QueueResource14(Resource):
 
         submission = Submission14().createSubmission(
             assignment, submissionMeta, file['_id'], needsReview=needsReview,
-            geometry=geometry, labelFormat=labelFormat)
+            geometry=geometry, labelFormat=labelFormat, classes=classes)
         assignment = Assignment14().transition(
             assignment, st.SUBMIT,
             submissionId=submission['_id'], needsReview=needsReview, reviewRoll=roll)

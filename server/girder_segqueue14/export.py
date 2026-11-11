@@ -8,7 +8,16 @@ with the ``coronary_icx4`` label set reads the result directly::
     <out>/<case>/segmentations/{LM,LAD,LCx,RCA}.nii.gz
 
 The manifest additionally records each case's prelabel model version, the
-provenance a D15 refresh makes necessary. Original notes follow.
+provenance a D15 refresh makes necessary.
+
+**Extended reads (D44).** A read with the 17 optional extended classes is written
+with every class it has: the four plus ``segmentations/<class>.nii.gz`` for each
+extended one (spaces in a name become ``_``: ``Calcified_plaque.nii.gz``). A
+four-class read is written as before. ``--four-class`` writes every read as the
+four instead, an extended one collapsed first (each branch unioned into its
+parent, materials dropped: ``labels.collapse_to_four``) -- what a four-class
+training set (D25) wants. The manifest says which was done and lists the extended
+reads. Original notes follow.
 
 ``segqueue-export`` -- write approved work out in the training layout.
 
@@ -152,6 +161,31 @@ def splitClassStack(path, segments):
     return out
 
 
+def classStackAll(path, fourClass=False):
+    """A class-stack file as ``{name: (mask, grid image)}`` for every class it has.
+
+    The read's own classes (the four, or all 21 for an extended read, D44), in the
+    file's order; with ``fourClass`` the four, an extended read collapsed first.
+    """
+    np, sitk = _requireDeps()
+    data = labelfile.read_class_stack(path)
+    grid = sitk.GetImageFromArray(np.zeros(data['masks'].shape[1:], np.uint8))
+    grid.SetSpacing(data['spacing'])
+    grid.SetOrigin(data['origin'])
+    grid.SetDirection(data['direction'])
+    if fourClass:
+        masks = project_labels.collapse_to_four(data['masks'], data['names'])
+        names = list(project_labels.NAMES)
+    else:
+        masks, names = data['masks'], list(data['names'])
+    return {name: (masks[i].astype(np.uint8), grid) for i, name in enumerate(names)}
+
+
+def maskFileName(name):
+    """``segmentations/<name>.nii.gz``'s stem: a class name with spaces as ``_``."""
+    return str(name).replace(' ', '_').replace('/', '_')
+
+
 def _writeMask(array, reference, path):
     """Write a binary mask sharing ``reference``'s grid exactly."""
     _, sitk = _requireDeps()
@@ -163,11 +197,14 @@ def _writeMask(array, reference, path):
     sitk.WriteImage(image, path, True)
 
 
-def exportCase(case, submission, outRoot, segments, name=None, dryRun=False):
+def exportCase(case, submission, outRoot, segments, name=None, dryRun=False,
+               fourClass=False):
     """Write one case's CT and per-vessel masks. Returns a summary dict.
 
     ``name`` overrides the output directory, which is how a second approved
     annotation of the same case is written without overwriting the first.
+    An extended read (D44) is written with all its classes, or, with
+    ``fourClass``, collapsed to the four.
     """
     np, sitk = _requireDeps()
     File = _models()[0]
@@ -189,7 +226,11 @@ def exportCase(case, submission, outRoot, segments, name=None, dryRun=False):
     labelPath = _download(labelFile, os.path.splitext(labelFile['name'])[1] or '.nrrd')
     try:
         if labelfile.sniff(labelPath) == labelfile.FORMAT_CLASS_STACK:
-            masks = splitClassStack(labelPath, segments)
+            header = labelfile.read_header(labelPath)
+            if fourClass or project_labels.is_extended(labelfile.class_names(header)):
+                masks = classStackAll(labelPath, fourClass=fourClass)
+            else:
+                masks = splitClassStack(labelPath, segments)
         else:
             labelImage = sitk.ReadImage(labelPath)
             masks = {name: (mask, labelImage) for name, mask in
@@ -201,15 +242,16 @@ def exportCase(case, submission, outRoot, segments, name=None, dryRun=False):
             if not mask.any():
                 empty.append(structure)
             shape = mask.shape
-            _writeMask(mask, grid,
-                       os.path.join(target, SEGMENTATIONS_DIR, structure + '.nii.gz'))
+            _writeMask(mask, grid, os.path.join(
+                target, SEGMENTATIONS_DIR, maskFileName(structure) + '.nii.gz'))
         overlap = labelfile.overlaps([m for m, _ in masks.values()], list(masks))
     finally:
         _unlink(labelPath)
 
     _writeVolume(volume, os.path.join(target, 'ct.nii.gz'))
 
-    return {'case': caseName, 'written': len(segments), 'empty': empty,
+    return {'case': caseName, 'written': len(masks), 'empty': empty,
+            'extended': project_labels.is_extended(masks),
             'overlaps': [list(row) for row in overlap],
             'shape': tuple(int(n) for n in shape) if shape else None}
 
@@ -349,6 +391,10 @@ def _writeManifest(out, cases, segments, args, since):
         'since': since.isoformat() if since else None,
         'pool_seal': getattr(args, 'poolSeal', None),
         'annotator_benchmark_excluded': getattr(args, 'benchmarkExcluded', 0),
+        # D44: 'read' writes each read's own classes (an extended read has 21);
+        # 'four' collapses every read to the four.
+        'classes': 'four' if getattr(args, 'four_class', False) else 'read',
+        'extended_reads': sorted(getattr(args, 'extendedCases', ())),
     })
     return manifest.write(out)
 
@@ -371,6 +417,11 @@ def buildParser():
                         help='A duplicated case has more than one approved '
                              'annotation. first: write the earliest and report '
                              'the rest. all: write them as <case>__r2 etc.')
+    parser.add_argument('--four-class', action='store_true',
+                        help='Write every read as LM, LAD, LCx and RCA only: an '
+                             'extended read (D44) is collapsed first, each branch into '
+                             'its parent, materials dropped. Default: each read\'s own '
+                             'classes.')
     parser.add_argument('--limit', type=int, default=0,
                         help='Stop after this many cases (0 = no limit).')
     parser.add_argument('--dry-run', action='store_true',
@@ -424,6 +475,8 @@ def main(argv=None):
     emptyStructures = {}
     overlapping = []
     exportedCases = []
+    extendedCases = []
+    args.extendedCases = extendedCases
     prelabelVersions = {}
     args.prelabelVersions = prelabelVersions
     verb = 'would export' if args.dry_run else 'exported'
@@ -444,7 +497,7 @@ def main(argv=None):
             continue
 
         result = exportCase(case, submission, args.out, segments,
-                            name=name, dryRun=args.dry_run)
+                            name=name, dryRun=args.dry_run, fourClass=args.four_class)
         if result.get('error'):
             failed += 1
             print(f'  ! {result["case"]}  [{result["error"]}]', file=sys.stderr)
@@ -454,6 +507,8 @@ def main(argv=None):
         if acceptance and seal.is_sealed(case['name']):
             sealedIncluded += 1
         exportedCases.append(result['case'])
+        if result.get('extended'):
+            extendedCases.append(result['case'])
         prelabelVersions[result['case']] = submission.get('prelabelVersion') or ''
         for structure in result.get('empty', ()):
             emptyStructures[structure] = emptyStructures.get(structure, 0) + 1
@@ -470,6 +525,12 @@ def main(argv=None):
                      'excluded_cases': sealedExcluded, 'included_reads': sealedIncluded}
     args.benchmarkExcluded = benchmarks
     print(f'\n{verb} {written} case(s) into {args.out}.')
+    if extendedCases:
+        print(f'{len(extendedCases)} read(s) with extended classes (D44) written with all '
+              'their classes; --four-class collapses them to LM/LAD/LCx/RCA.')
+    elif args.four_class:
+        print('--four-class: every read written as LM, LAD, LCx and RCA (extended reads '
+              'collapsed, D44).')
     if benchmarks:
         print(f'{benchmarks} annotator benchmark case(s) left out (D43; never trained on).')
     if acceptance:

@@ -1,0 +1,182 @@
+{
+ "sd_diff_optimistic": [
+  0.0382,
+  0.0411
+ ],
+ "sd_diff_pessimistic": [
+  0.0671,
+  0.0753
+ ],
+ "janus0_sd_case": 0.1173,
+ "locked100": [
+  {
+   "n": 80,
+   "sd_label": "optimistic",
+   "sd_diff": 0.0382,
+   "mde_superiority": 0.012,
+   "p_pass_NI_0.01_if_neutral": 0.649,
+   "p_pass_NI_0.02_if_neutral": 0.997,
+   "p_sup_if_gain_0.005": 0.215,
+   "p_sup_if_gain_0.01": 0.649,
+   "p_sup_if_gain_0.02": 0.997
+  },
+  {
+   "n": 80,
+   "sd_label": "optimistic",
+   "sd_diff": 0.0411,
+   "mde_superiority": 0.0129,
+   "p_pass_NI_0.01_if_neutral": 0.586,
+   "p_pass_NI_0.02_if_neutral": 0.992,
+   "p_sup_if_gain_0.005": 0.192,
+   "p_sup_if_gain_0.01": 0.586,
+   "p_sup_if_gain_0.02": 0.992
+  },
+  {
+   "n": 80,
+   "sd_label": "pessimistic",
+   "sd_diff": 0.0671,
+   "mde_superiority": 0.021,
+   "p_pass_NI_0.01_if_neutral": 0.265,
+   "p_pass_NI_0.02_if_neutral": 0.76,
+   "p_sup_if_gain_0.005": 0.098,
+   "p_sup_if_gain_0.01": 0.265,
+   "p_sup_if_gain_0.02": 0.76
+  },
+  {
+   "n": 80,
+   "sd_label": "pessimistic",
+   "sd_diff": 0.0753,
+   "mde_superiority": 0.0236,
+   "p_pass_NI_0.01_if_neutral": 0.22,
+   "p_pass_NI_0.02_if_neutral": 0.661,
+   "p_sup_if_gain_0.005": 0.086,
+   "p_sup_if_gain_0.01": 0.22,
+   "p_sup_if_gain_0.02": 0.661
+  },
+  {
+   "n": 100,
+   "sd_label": "optimistic",
+   "sd_diff": 0.0382,
+   "mde_superiority": 0.0107,
+   "p_pass_NI_0.01_if_neutral": 0.745,
+   "p_pass_NI_0.02_if_neutral": 0.999,
+   "p_sup_if_gain_0.005": 0.258,
+   "p_sup_if_gain_0.01": 0.745,
+   "p_sup_if_gain_0.02": 0.999
+  },
+  {
+   "n": 100,
+   "sd_label": "optimistic",
+   "sd_diff": 0.0411,
+   "mde_superiority": 0.0115,
+   "p_pass_NI_0.01_if_neutral": 0.682,
+   "p_pass_NI_0.02_if_neutral": 0.998,
+   "p_sup_if_gain_0.005": 0.229,
+   "p_sup_if_gain_0.01": 0.682,
+   "p_sup_if_gain_0.02": 0.998
+  },
+  {
+   "n": 100,
+   "sd_label": "pessimistic",
+   "sd_diff": 0.0671,
+   "mde_superiority": 0.0188,
+   "p_pass_NI_0.01_if_neutral": 0.319,
+   "p_pass_NI_0.02_if_neutral": 0.846,
+   "p_sup_if_gain_0.005": 0.112,
+   "p_sup_if_gain_0.01": 0.319,
+   "p_sup_if_gain_0.02": 0.846
+  },
+  {
+   "n": 100,
+   "sd_label": "pessimistic",
+   "sd_diff": 0.0753,
+   "mde_superiority": 0.0211,
+   "p_pass_NI_0.01_if_neutral": 0.264,
+   "p_pass_NI_0.02_if_neutral": 0.757,
+   "p_sup_if_gain_0.005": 0.097,
+   "p_sup_if_gain_0.01": 0.264,
+   "p_sup_if_gain_0.02": 0.757
+  },
+  {
+   "n": 120,
+   "sd_label": "optimistic",
+   "sd_diff": 0.0382,
+   "mde_superiority": 0.0098,
+   "p_pass_NI_0.01_if_neutral": 0.818,
+   "p_pass_NI_0.02_if_neutral": 1.0,
+   "p_sup_if_gain_0.005": 0.299,
+   "p_sup_if_gain_0.01": 0.818,
+   "p_sup_if_gain_0.02": 1.0
+  },
+  {
+   "n": 120,
+   "sd_label": "optimistic",
+   "sd_diff": 0.0411,
+   "mde_superiority": 0.0105,
+   "p_pass_NI_0.01_if_neutral": 0.76,
+   "p_pass_NI_0.02_if_neutral": 1.0,
+   "p_sup_if_gain_0.005": 0.265,
+   "p_sup_if_gain_0.01": 0.76,
+   "p_sup_if_gain_0.02": 1.0
+  },
+  {
+   "n": 120,
+   "sd_label": "pessimistic",
+   "sd_diff": 0.0671,
+   "mde_superiority": 0.0172,
+   "p_pass_NI_0.01_if_neutral": 0.372,
+   "p_pass_NI_0.02_if_neutral": 0.904,
+   "p_sup_if_gain_0.005": 0.126,
+   "p_sup_if_gain_0.01": 0.372,
+   "p_sup_if_gain_0.02": 0.904
+  },
+  {
+   "n": 120,
+   "sd_label": "pessimistic",
+   "sd_diff": 0.0753,
+   "mde_superiority": 0.0193,
+   "p_pass_NI_0.01_if_neutral": 0.307,
+   "p_pass_NI_0.02_if_neutral": 0.829,
+   "p_sup_if_gain_0.005": 0.109,
+   "p_sup_if_gain_0.01": 0.307,
+   "p_sup_if_gain_0.02": 0.829
+  }
+ ],
+ "data_gain": {
+  "alpha_0.07": 0.0006,
+  "alpha_0.2": 0.0018,
+  "alpha_0.35": 0.0032,
+  "alpha_0.5": 0.0045
+ },
+ "warm_continuation_B_to_F0": {
+  "n": 80,
+  "mean_B": 0.8932,
+  "mean_F0": 0.8908,
+  "mean_diff": -0.0024,
+  "ci95": [
+   -0.0129,
+   0.0072
+  ],
+  "sd_diff": 0.0455,
+  "per_class_mean_diff": {
+   "1": {
+    "n": 72,
+    "mean_diff": -0.0183
+   },
+   "2": {
+    "n": 72,
+    "mean_diff": -0.0031
+   },
+   "3": {
+    "n": 72,
+    "mean_diff": 0.0139
+   },
+   "4": {
+    "n": 56,
+    "mean_diff": -0.0081
+   }
+  },
+  "fp_per_case_diff": 0.013,
+  "note": "macro over unflagged classes per case (the decisive rule); thick D0-era reference"
+ }
+}

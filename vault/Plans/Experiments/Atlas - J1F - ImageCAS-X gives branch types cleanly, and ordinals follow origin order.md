@@ -126,7 +126,23 @@ out.
 
 **The rule scored by tF1** (`ordinal_rule.py`, tF1 @ 1.5 mm per class, rule vs ImageCAS-X):
 
-⟨ORDTAB⟩
+604 cases scored (9 without an LM label are skipped).
+
+| Class | Cases | Mean tF1, rule vs ImageCAS-X | Cases < 1.0 | Cases < 0.9 | Class mask voxel-identical |
+|---|---|---|---|---|---|
+| D1 | 595 | 0.998 | 3 | 3 | 584 |
+| D2 | 349 | 0.990 | 4 | 4 | 344 |
+| D3 | 45 | 0.956 | 2 | 2 | 43 |
+| OM1 | 525 | 0.997 | 4 | 4 | 520 |
+| OM2 | 222 | 0.982 | 4 | 4 | 217 |
+| LAD / LCx | 604 / 604 | 1.000 / 1.000 | 0 / 0 | 0 | 597 / 602 |
+| **Ordinal macro** (mean over D1–D3, OM1–OM2 present) | 601 | **0.995** | | | |
+
+How the rule and ImageCAS-X differ:
+- 586 of 604 cases are voxel-identical in every class.
+- In 4 cases (D) and 4 (OM), the type union does not split into one component per named branch: two branches touch,
+  or one is broken.
+- The other differences are specks under 20 voxels that the rule returns to the parent; tF1 does not see them.
 
 ### 5. "Other", D3, and dominance
 

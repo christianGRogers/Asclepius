@@ -17,7 +17,7 @@ Janus 1-F has to name 14 branches, and ImageCAS-X labels only part of them. This
 1. **The project's own 14-class run never learned a branch.** It was the cancelled `icx14`. After 455 of 1000 epochs
    (two 23 h jobs), 9 of its 10 branch classes had a validation pseudo-Dice of exactly 0 in every epoch. The tenth,
    R-PLA, first rose above 0 at epoch 424. Its trunks learned normally (LM 0.90, LAD 0.90, LCx 0.84, RCA 0.93) (§2).
-2. **ImageCAS-X's ordinals follow a rule.** On the 613 training cases, ⟨ORD⟩ (§3.3).
+2. **ImageCAS-X's ordinals follow a rule.** On the 613 training cases, D1 starts before D2 in 349 of 349, OM1 before OM2 in 222 of 222, and D3 after D2 in 45 of 45. Naming ordinals by origin order reproduces ImageCAS-X's names at a mean ordinal tF1 of **0.995**, with 586 of 604 cases voxel-identical (§3.3).
 3. **ImageCAS-X draws only the branches it names.** The LAD and RCA labels carry at most one unnamed twig in 97 % of cases, against the several septals and RCA branches every heart has. Septals, SN,
    conus and RMA are therefore **background** in ImageCAS-X, not unlabelled LAD/RCA (§3.2).
 4. **An exact warm start exists.** New branch outputs can be initialised from Janus 0's head so that, with hierarchical
@@ -35,7 +35,7 @@ So:
   extended pool reads, under a marginal (set-valued) loss. Three conditions apply: the read marks the branch group
   complete, ≥ 30 trainable patients carry the class, and a class is emitted only after it clears a per-class floor on
   ≥ 40 evaluation patients (§4.4).
-- **Three questions go to the lead (§10).** The main one is PDA/PLB: name them by position, but collapse to four
+- **Four questions go to the lead (§10).** The main one is PDA/PLB: name them by position, but collapse to four
   classes by origin, which is D25's own rule.
 
 ## 1. What binds this plan
@@ -180,7 +180,39 @@ points. **3 % do. ImageCAS-X draws the branches it names and leaves the others o
 
 ### 3.3 Ordinals follow origin order, so a network can learn types
 
-⟨ORD33⟩
+**Origin order.** Geodesic distance from the LM along the left tree to each branch's first voxel. 9 cases have no LM
+label and are left out.
+
+| Pair | Cases with both | Lower ordinal starts first | Median gap |
+|---|---|---|---|
+| D1 vs D2 | 349 | **349** | 16.1 mm |
+| OM1 vs OM2 | 222 | **222** | 16.3 mm |
+| D2 with no D1 / OM2 with no OM1 | 0 / 0 | — | — |
+| First LAD-side "Other" (D3) vs D2 | 45 | **45 start after D2** | 15.8 mm |
+
+**The rule, scored with the project's metric** (`ordinal_rule.py`):
+1. Take each type's union (D = D1 + D2 + LAD-side Other; OM = OM1 + OM2 + LCx-side Other).
+2. Split it into components and order them by origin.
+3. Name them, and score per-class tF1 @ 1.5 mm (the pinned `tf1.py`) against ImageCAS-X's own names.
+
+| Class | Cases | Mean tF1 | Cases < 0.9 |
+|---|---|---|---|
+| D1 | 595 | 0.998 | 3 |
+| D2 | 349 | 0.990 | 4 |
+| D3 | 45 | 0.956 | 2 |
+| OM1 | 525 | 0.997 | 4 |
+| OM2 | 222 | 0.982 | 4 |
+| **Ordinal macro** | 601 | **0.995** | |
+
+What this shows:
+- 586 of 604 cases are voxel-identical in every class.
+- Where the rule fails (4 cases per type), two named branches touch or one is broken, so the type union does not split
+  into one component per branch.
+- **This is the rule's ceiling:** with a perfect type segmentation, ordinals cost about 0.005 tF1.
+- On a predicted tree, the rule's errors come from type errors and from touching or broken branches. Arm N's and
+  Arm T's scores include both.
+- The same failure (touching branches) argues for splitting a type's components at bifurcations of the skeleton graph,
+  not only by connectivity. That refinement is for the launcher (§9) and is measured again on the locked 100.
 
 ### 3.4 "Other" and D3
 
@@ -531,7 +563,7 @@ is answered. Its commands are written in the round that adopts it.
 |---|---|
 | Arm N's branch tF1 already clears B2's floor on most ImageCAS-X classes, and T fails B1 | 1-F phase 1 is N; GPU goes to phase 2 only |
 | T's branches are still zero at epoch 250 | Parent-copy is not enough: Round 2 tests a type-only head (5 types, no vessels) or class-balanced patch sampling |
-| §3.3's rule disagrees with ImageCAS-X's ordinals on more than 5 % of branches | Ordinals become a learned step (on the graph, in Arm N's classifier), not a rule |
+| On predicted trees (locked 100), the ordinal step loses more than 0.05 tF1 against the same arm's types scored with reference ordinals (it costs 0.005 on ImageCAS-X's own labels, §3.3) | Ordinals become a learned step (on the graph, in Arm N's classifier), not a rule |
 | Extended reads never mark groups complete (Q4a declined) | Phase 2 uses positive-only supervision for S/SN/Conus/RMA (set {class, parent, bg} on unmarked voxels), and the emit floor rises to tF1 ≥ 0.80 |
 | The lead answers Q1 "always RCA" | Only the collapse and V1's reference change |
 | 1-L is adopted before Job T starts | Job T warm-starts from 1-L |

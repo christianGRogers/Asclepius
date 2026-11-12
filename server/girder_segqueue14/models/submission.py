@@ -49,7 +49,7 @@ class Submission14(AccessControlledModel):
             'sizeBytes', 'annotationSeconds', 'voxelCounts', 'slicerVersion',
             'extensionVersion', 'annotatorNote', 'warnings', 'attempt', 'created',
             'authorRole', 'revisionOf', 'prelabelVersion', 'labelFormat',
-            'classes', 'extended',
+            'classes', 'extended', 'reopenedAt',
         })
         self.exposeFields(level=AccessType.SITE_ADMIN, fields={
             'kind', 'scored', 'autoScore', 'needsReview',
@@ -172,7 +172,7 @@ class Submission14(AccessControlledModel):
         """The worker's queue: annotator submissions not yet scored."""
         return list(self.find(
             {'scored': False, 'kind': {'$in': list(SCORED_KINDS)},
-             'authorRole': ANNOTATOR},
+             'authorRole': ANNOTATOR, 'reopenedAt': None},
             limit=limit, sort=[('created', 1)],
         ))
 

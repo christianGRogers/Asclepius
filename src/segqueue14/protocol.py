@@ -75,6 +75,10 @@ MIN_CLIENT_PROTOCOL = 17
 #: older module is refused a read that has them (``check_extended_reader``).
 EXTENDED_CLASSES_PROTOCOL = 18
 
+#: The first protocol that opens a reopened case from the annotator's own read
+#: (#315). An older module is refused such a case (``check_reopen_reader``).
+REOPEN_PROTOCOL = 19
+
 #: Headers. Distinct from the live ones so a proxy log says which module spoke.
 CLIENT_VERSION_HEADER = "X-SegQueue14-Client"
 PROTOCOL_HEADER = "X-SegQueue14-Protocol"
@@ -125,6 +129,10 @@ ERR_MISSING_REQUIRED = "missing_required"
 #: read with extended classes (D44): it would show four and save back four.
 ERR_UPDATE_TO_REVIEW = "update_to_review"
 
+#: HTTP 426 from an annotator route when a module older than protocol 19 opens or
+#: submits a case reopened for the annotator's own revision (#315).
+ERR_UPDATE_TO_REVISE = "update_to_revise"
+
 # --------------------------------------------------------- case asset kinds
 
 #: The whole-heart mask from the source dataset, as in the live project. Still
@@ -138,9 +146,13 @@ ASSET_PRELABEL = "prelabel"
 #: coronary tree with no classes (D23). Shown beside the project segments as a
 #: guide to divide into the four classes; never submitted.
 ASSET_SEED = "seed"
+#: The annotator's own submitted read (a class stack, D39), on a case reopened for
+#: their revision (#315): the starting point in place of the prelabel or the seed.
+#: Served only for that annotator's reopened assignment.
+ASSET_OWN = "own"
 #: What an annotator may fetch. The ImageCAS-X reference is deliberately absent:
 #: an annotator who could download it could copy it.
-ASSET_KINDS = (ASSET_REGION, ASSET_PRELABEL, ASSET_SEED)
+ASSET_KINDS = (ASSET_REGION, ASSET_PRELABEL, ASSET_SEED, ASSET_OWN)
 #: Reviewers may additionally fetch the ImageCAS-X reference for a case, to see
 #: what a low reference score is measured against.
 ASSET_REFERENCE = "reference"
@@ -168,11 +180,15 @@ class AssignmentInfo14(AssignmentInfo):
 
     has_prelabel: bool = False
     prelabel_version: str = ""
+    #: Reopened for the annotator's own revision (#315): open it from the ``own``
+    #: asset, their submitted read, instead of the prelabel or the seed.
+    start_from_own: bool = False
 
     def to_dict(self) -> dict:
         data = super().to_dict()
         data["hasPrelabel"] = self.has_prelabel
         data["prelabelVersion"] = self.prelabel_version
+        data["startFromOwn"] = self.start_from_own
         return data
 
     @classmethod
@@ -182,6 +198,7 @@ class AssignmentInfo14(AssignmentInfo):
             **{k: getattr(base, k) for k in base.__dataclass_fields__},
             has_prelabel=bool(data.get("hasPrelabel", False)),
             prelabel_version=str(data.get("prelabelVersion", "") or ""),
+            start_from_own=bool(data.get("startFromOwn", False)),
         )
 
 
@@ -247,6 +264,31 @@ def check_extended_reader(client_protocol: Optional[Any], extended: bool) -> Non
         ERR_UPDATE_TO_REVIEW, update_to_review_message(version),
         {"minProtocol": EXTENDED_CLASSES_PROTOCOL, "serverProtocol": PROTOCOL_VERSION,
          "module": "SegQueue14", "extendedClasses": True})
+
+
+def update_to_revise_message(sent: Optional[int]) -> str:
+    """The refusal an older module gets on a case reopened for revision (#315)."""
+    return ("Update SegQueue14 to open this case. It was reopened so you can look "
+            "again at your own submission, and this version of the module would "
+            "open it from the seed instead of from your work. Install the latest "
+            "SegQueue14 (Check for updates) and restart Slicer; the case then opens "
+            f"with your submitted classes. (Module protocol {sent}; reopened cases "
+            f"need {REOPEN_PROTOCOL}.)")
+
+
+def check_reopen_reader(client_protocol: Optional[Any]) -> None:
+    """Raise ``ProtocolError`` unless the module can open a reopened case (#315).
+
+    Unlike ``check_extended_reader``, a request naming no protocol is refused too:
+    every SegQueue14 module sends one, and these are annotator routes.
+    """
+    version = _version(client_protocol)
+    if version is not None and version >= REOPEN_PROTOCOL:
+        return
+    raise ProtocolError(
+        ERR_UPDATE_TO_REVISE, update_to_revise_message(version),
+        {"minProtocol": REOPEN_PROTOCOL, "serverProtocol": PROTOCOL_VERSION,
+         "module": "SegQueue14", "reopened": True})
 
 
 def label_format(value: Optional[Any]) -> str:

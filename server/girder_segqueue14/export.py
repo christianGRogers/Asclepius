@@ -350,7 +350,9 @@ def collect(since=None, includeUnreviewed=False, limit=0, replicas='first', seal
             if index and replicas != 'all':
                 yield case, None, None      # a replica the caller must report
                 continue
-            submission = submissions.findOne({'assignmentId': assignment['_id']})
+            # Never a read reopened for its annotator's revision (#315).
+            submission = submissions.findOne({'assignmentId': assignment['_id'],
+                                              'reopenedAt': None})
             if submission is None:
                 continue
             name = case['name'] if index == 0 else f"{case['name']}__r{index + 1}"

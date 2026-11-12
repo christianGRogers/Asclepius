@@ -219,11 +219,13 @@ def collect(db, limit=DEFAULT_LIMIT, analyse=None, exclude=()):
     submissions = list(db['segqueue14_submission'].find(pool, {
         'assignmentId': 1, 'caseId': 1, 'userId': 1, 'authorRole': 1, 'revisionOf': 1,
         'fileId': 1, 'annotationSeconds': 1, 'voxelCounts': 1, 'autoScore': 1,
-        'created': 1}, sort=[('created', -1), ('_id', -1)]))
+        'created': 1, 'reopenedAt': 1}, sort=[('created', -1), ('_id', -1)]))
     submissions = [s for s in submissions if s['caseId'] in cases]
     # Every pool submission, excluded logins' too: to tell whose a pair partner is.
     everyById = {s['_id']: s for s in submissions}
-    submissions = [s for s in submissions if kept(s['userId'])]
+    # A read reopened for its annotator's own revision (#315) is history, not a
+    # read, until the resubmission replaces it.
+    submissions = [s for s in submissions if kept(s['userId']) and not s.get('reopenedAt')]
     reads = [s for s in submissions if s.get('authorRole', ANNOTATOR) == ANNOTATOR]
     revisions = [s for s in submissions if s.get('authorRole') == REVIEWER]
     everyAssignment = [a for a in db['segqueue14_assignment'].find(
@@ -236,10 +238,12 @@ def collect(db, limit=DEFAULT_LIMIT, analyse=None, exclude=()):
     def pairOf(submission):
         """``pairScore``, unless the partner read is an excluded login's."""
         pair = pairScore(submission)
-        if pair is None or not excluded:
+        if pair is None:
             return pair
         partner = everyById.get(_objectId(pair.get('partnerSubmissionId')))
-        if partner is not None and not kept(partner['userId']):
+        if partner is not None and partner.get('reopenedAt'):
+            return None  # paired with a reopened read (#315): not a pair any more
+        if partner is not None and excluded and not kept(partner['userId']):
             return None
         return pair
 

@@ -213,6 +213,15 @@ def checkClientProtocol(clientProtocol) -> None:
         refuse(exc.code, str(exc), status=426, **exc.detail)
 
 
+def checkReopenReader(clientProtocol=None) -> None:
+    """Refuse (426) a module older than protocol 19 on a case reopened for the
+    annotator's own revision (#315): it would open the case from the seed."""
+    try:
+        protocol.check_reopen_reader(clientProtocolFrom(clientProtocol))
+    except protocol.ProtocolError as exc:
+        refuse(exc.code, str(exc), status=426, **exc.detail)
+
+
 def _storedHead(file) -> bytes:
     """The first 64 KB of a stored file: enough for any SegQueue14 header."""
     from girder.models.file import File

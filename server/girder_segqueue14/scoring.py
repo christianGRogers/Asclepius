@@ -255,6 +255,8 @@ def partnerSubmission(submission):
             continue
         if other.get('authorRole', ANNOTATOR) != ANNOTATOR:
             continue
+        if other.get('reopenedAt'):
+            continue  # back with its annotator (#315): her resubmission pairs instead
         found = other  # forCase is oldest first, so the last one wins
     return found
 
@@ -338,6 +340,8 @@ def _autoApproveIfClear(submission, needsReview):
     assignment = Assignment14().load(submission['assignmentId'], force=True)
     if assignment is None or assignment.get('needsReview'):
         return
+    if submission.get('reopenedAt') or assignment.get('submissionId') != submission['_id']:
+        return  # not the assignment's current read (#315): its score decides nothing
     if assignment.get('kind') == sqplan.KIND_BENCHMARK:
         return  # never auto-approved (D43)
     if not st.can(assignment['state'], st.APPROVE):

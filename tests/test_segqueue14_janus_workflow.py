@@ -57,6 +57,11 @@ def _which(tmp_path, command, args=""):
     ("quality-report", "--exclude=a.b,c_d,e-1", "quality-report --exclude=a.b,c_d,e-1"),
     ("quality-report", "--limit=5 --exclude=a,b", "quality-report --limit=5 --exclude=a,b"),
     ("quality-report", "--exclude=a,b --limit=5", "quality-report --exclude=a,b --limit=5"),
+    # #315: one login and one date, in either order; --apply from the step only.
+    ("reopen", "--login=ryoplacv --submitted-before=2026-11-09",
+     "reopen --login=ryoplacv --submitted-before=2026-11-09"),
+    ("reopen --apply", "--submitted-before=2026-11-09 --login=ryoplacv",
+     "reopen --submitted-before=2026-11-09 --login=ryoplacv --apply"),
 ])
 def test_accepted(tmp_path, command, args, expected):
     code, cmd, log = _which(tmp_path, command, args)
@@ -105,6 +110,20 @@ def test_accepted(tmp_path, command, args, expected):
     ("benchmark-assign", "--exclude=a/b", "only logins"),
     ("benchmark-assign", "--from-girder=x", "is not --exclude"),
     ("benchmark-assign", "", "needs args"),
+    ("reopen", "", "reopen needs args"),
+    ("reopen --apply", "", "reopen needs args"),
+    ("reopen", "--login=ryoplacv", "exactly --login="),
+    ("reopen", "--submitted-before=2026-11-09", "exactly --login="),
+    ("reopen", "--login=a,b --submitted-before=2026-11-09", "exactly --login="),
+    ("reopen", "--login=a --login=b --submitted-before=2026-11-09", "exactly --login="),
+    ("reopen", "--login=Anna --submitted-before=2026-11-09", "exactly --login="),
+    ("reopen", "--login=$(id) --submitted-before=2026-11-09", "exactly --login="),
+    ("reopen", "--login=a;id --submitted-before=2026-11-09", "exactly --login="),
+    ("reopen", "--login=a --submitted-before=2026-11-9", "exactly --login="),
+    ("reopen", "--login=a --submitted-before=11/09/2026", "exactly --login="),
+    ("reopen", "--login=a --submitted-before=2026-11-09 --apply", "exactly --login="),
+    ("reopen", "--login=a  --submitted-before=2026-11-09", "exactly --login="),
+    ("reopen --dry-run", "--login=a --submitted-before=2026-11-09", "unknown step"),
 ])
 def test_refused(tmp_path, command, args, why):
     code, cmd, log = _which(tmp_path, command, args)

@@ -185,6 +185,7 @@ class ReviewResource14(Resource):
     def claim(self, submissionId):
         user = requireReviewer(self.getCurrentUser())
         submission = self._loadSubmission(submissionId)
+        self._refuseReopened(submission)
         # Before the claim, so a reviewer who cannot open it holds nothing (D44).
         checkExtendedReader(submission)
         assignment = self._assignmentFor(submission)
@@ -207,6 +208,7 @@ class ReviewResource14(Resource):
     def releaseClaim(self, submissionId):
         requireReviewer(self.getCurrentUser())
         submission = self._loadSubmission(submissionId)
+        self._refuseReopened(submission)
         assignment = self._assignmentFor(submission)
         try:
             assignment = Assignment().transition(assignment, st.ABANDON_REVIEW)
@@ -246,6 +248,7 @@ class ReviewResource14(Resource):
     def verdict(self, submissionId, verdict, comment, rubric, secondsSpent):
         user = requireReviewer(self.getCurrentUser())
         submission = self._loadSubmission(submissionId)
+        self._refuseReopened(submission)
         assignment = self._assignmentFor(submission)
 
         if verdict != APPROVE:
@@ -496,6 +499,7 @@ class ReviewResource14(Resource):
         labelFormat = checkLabelFormat(labelFormat)
         user = requireReviewer(self.getCurrentUser())
         original = self._loadSubmission(submissionId)
+        self._refuseReopened(original)
         # A 0.17.x module revising an extended read would save four classes of it.
         checkExtendedReader(original, clientProtocol)
         assignment = self._assignmentFor(original)
@@ -573,6 +577,7 @@ class ReviewResource14(Resource):
     def returnToPool(self, submissionId, reason):
         user = requireReviewer(self.getCurrentUser())
         submission = self._loadSubmission(submissionId)
+        self._refuseReopened(submission)
         assignment = self._assignmentFor(submission)
 
         try:
@@ -738,6 +743,16 @@ class ReviewResource14(Resource):
         if submission is None:
             refuse('no_such_submission', 'No such submission.', status=404)
         return submission
+
+    def _refuseReopened(self, submission):
+        """A read reopened for its annotator's own revision (#315) is history: no
+        claim, verdict, revision or return lands on it, even once the annotator has
+        resubmitted on the same assignment."""
+        if submission.get('reopenedAt'):
+            refuse(protocol.ERR_BAD_STATE,
+                   'This read was reopened for the annotator\'s own revision and is '
+                   'no longer the one to review. Refresh the queue for their new read.',
+                   status=409, state='reopened')
 
     def _loadCase(self, caseId):
         case = Case().load(caseId, force=True)

@@ -210,10 +210,11 @@ jobs:
           # test_segqueue_server.py, which binds Girder's scratch database first.
           # test_segqueue_server14_benchmark.py: the annotator benchmark (D43, #286).
           # test_segqueue_server14_report.py: the read-only quality report (#296).
+          # test_segqueue_server14_reopen.py: reopening an annotator's own reads (#315).
           pytest -q -rs tests/test_segqueue_server.py tests/test_d36_consolidate.py \
             tests/test_segqueue_server_janusm.py tests/test_janusm_reads.py \
             tests/test_segqueue_server14.py tests/test_segqueue_server14_benchmark.py \
-            tests/test_segqueue_server14_report.py \
+            tests/test_segqueue_server14_report.py tests/test_segqueue_server14_reopen.py \
             -k "not test_janusm_reads or r4s17 or r5s or ps3s11" --junitxml=junit.xml \
             2>&1 | tee server-tests.log
       - name: Fail if these skipped

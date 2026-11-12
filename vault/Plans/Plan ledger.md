@@ -2,7 +2,7 @@
 aliases: [Plan ledger]
 tags: [plans, changelog]
 status: living
-updated: 2026-11-11
+updated: 2026-11-12
 ---
 
 # Plan ledger
@@ -69,3 +69,16 @@ Candidates are in `Candidates/Janus 1-L/`; rulings are `Judgements/Janus 1-L Rou
 | 1-L | 1 | [[Candidates/Janus 1-L/Atlas v1\|Atlas v1]] | Atlas | Lost. The list pins (L-A1), the replicate's σ_g purpose and the decomposition reports adopted; Skeleton Recall arm b not adopted |
 | 1-L | 1 | [[Candidates/Janus 1-L/Bridge v1\|Bridge v1]] | Bridge | Lost. Trillium costing, the identity check, the side-aware D44 collapse and the −0.015 non-inferiority rule (as Q4) adopted; locked-100 half-split threshold refused |
 | 1-L | 1 | [[Candidates/Janus 1-L/Foxtrot v1\|Foxtrot v1]] | Foxtrot | Lost. The per-case identity check against Fir adopted; the shipped ensemble sent to round 2 and the lead (Q6) |
+
+## Track 1-F (Janus 1-F, D45, #303)
+
+Candidates are in `Candidates/Janus 1-F/`; rulings are `Judgements/Janus 1-F Round <N>.md`; the track's plan is
+[[Master plan - Janus 1-F]]. Amendments are numbered F-A*n*.
+
+| Track | Round | Plan | Author | Fate |
+|---|---|---|---|---|
+| 1-F | 1 | [[Candidates/Janus 1-F/Delta v1\|Delta v1]] | Delta | **Track 1-F plan** (first holder), with F-A1–F-A13 ([[Janus 1-F Round 1]]). The 13-class parent-copy warm start, readings F and T, and the measured gate eligibility kept; hierarchical decoding, the L3 recall guard and a two-part detection gate added; its Q1 recommendation (left PDA → LCx) not the judge's |
+| 1-F | 1 | [[Candidates/Janus 1-F/Atlas v1\|Atlas v1]] | Atlas | Lost. Hierarchical decoding (F-A4) and the rule-ordinal report (F-A9) adopted; the "group complete" flag sent to the lead (Q3); Arm N sent to round 2; types-only outputs not adopted |
+| 1-F | 1 | [[Candidates/Janus 1-F/Crucible v1\|Crucible v1]] | Crucible | Lost. Leaf-Dice, the territory band and the inter-read agreement floor adopted for stage 2 (F-A11); L2 and the cross-track septal note adopted; the separate pilot not adopted |
+| 1-F | 1 | [[Candidates/Janus 1-F/Foxtrot v1\|Foxtrot v1]] | Foxtrot | Lost. The training-case stall check (F-A5), F0 and ignore for unexplained "Other" adopted; the replicate sent to the lead (Q8); the D3-fit read threshold and the a2-must-agree gate not adopted |
+| 1-F | 1 | [[Candidates/Janus 1-F/Bridge v1\|Bridge v1]] | Bridge | Lost. Job B (reads per class) sent to round 2; the child-in-parent overlap rule sent to the lead (Q4); SN origin evidence used; dormant stage-1 heads not adopted |

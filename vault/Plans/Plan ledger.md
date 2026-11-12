@@ -2,7 +2,7 @@
 aliases: [Plan ledger]
 tags: [plans, changelog]
 status: living
-updated: 2026-10-25
+updated: 2026-11-11
 ---
 
 # Plan ledger
@@ -56,3 +56,16 @@ Every plan version ever submitted, and what happened to it.
 | 10 | [[Crucible v11]] | Crucible | Lost. The reserve-inclusive population shared with the winner; the val-80 seed-learning gate (G3), the `trillium/janus1` launcher on icx4's Fir path and the timeline adopted; the two-run Janus 1 and the default seal of 200 not adopted |
 | 10 | [[Delta v10]] | Delta | **Master plan** (new holder). The D35 draw with the seal's mix (A33, subject to Q1), the extension skip (A34), Job S (A40) and the three-run Janus 1 (A37); the ≥ 30-patient start and the lr1e3 tie-break not adopted ([[Round 10]]) |
 | 10 | [[Foxtrot v6]] | Foxtrot | Lost. The model-vs-recipe distinction in A22 adopted (A37); M1 folded into Job S; seal-200-now and the 50-patient D35 from extension positions 51–100 refused |
+
+## Track 1-L (Janus 1-L, D45, #302)
+
+Candidates are in `Candidates/Janus 1-L/`; rulings are `Judgements/Janus 1-L Round <N>.md`; the track's plan is
+[[Master plan - Janus 1-L]]. Amendments are numbered L-A*n*.
+
+| Track | Round | Plan | Author | Fate |
+|---|---|---|---|---|
+| 1-L | 1 | [[Candidates/Janus 1-L/Crucible v1\|Crucible v1]] | Crucible | **Track 1-L plan** (first holder), with L-A1–L-A12 ([[Janus 1-L Round 1]]). Rule W, Job 0 and the H1–H3 sequence kept; the replicate added and G3 replaced by L3 |
+| 1-L | 1 | [[Candidates/Janus 1-L/Delta v1\|Delta v1]] | Delta | Lost. The trimmed recall guard (L3), the folds-0/1 runs and the split file and guard (#306) adopted; the superiority ladder deferred to round 2 |
+| 1-L | 1 | [[Candidates/Janus 1-L/Atlas v1\|Atlas v1]] | Atlas | Lost. The list pins (L-A1), the replicate's σ_g purpose and the decomposition reports adopted; Skeleton Recall arm b not adopted |
+| 1-L | 1 | [[Candidates/Janus 1-L/Bridge v1\|Bridge v1]] | Bridge | Lost. Trillium costing, the identity check, the side-aware D44 collapse and the −0.015 non-inferiority rule (as Q4) adopted; locked-100 half-split threshold refused |
+| 1-L | 1 | [[Candidates/Janus 1-L/Foxtrot v1\|Foxtrot v1]] | Foxtrot | Lost. The per-case identity check against Fir adopted; the shipped ensemble sent to round 2 and the lead (Q6) |

@@ -91,6 +91,10 @@ RELEASE = "release"
 #: the audit trail able to say which of the two happened.
 RETURN_TO_POOL = "return_to_pool"
 EXPIRE = "expire"
+#: An admin gives a submitted read back to the annotator who made it, for their own
+#: revision (SegQueue14 ``reopen``, #315). Not an API verb: only the admin tool
+#: sends it. The submission stays as history; the annotator starts from it.
+REOPEN = "reopen"
 
 ALL_EVENTS = (
     ASSIGN,
@@ -104,6 +108,7 @@ ALL_EVENTS = (
     RELEASE,
     RETURN_TO_POOL,
     EXPIRE,
+    REOPEN,
 )
 
 #: ``(state, event) -> next state``. The absence of a key is a refusal.
@@ -133,11 +138,15 @@ TRANSITIONS = {
     (SUBMITTED, APPROVE): APPROVED,
     (SUBMITTED, REJECT): REJECTED,
     (SUBMITTED, RETURN_TO_POOL): RELEASED,
+    (SUBMITTED, REOPEN): ASSIGNED,
 
     (UNDER_REVIEW, APPROVE): APPROVED,
     (UNDER_REVIEW, REJECT): REJECTED,
     (UNDER_REVIEW, ABANDON_REVIEW): SUBMITTED,
     (UNDER_REVIEW, RETURN_TO_POOL): RELEASED,
+    # Reopening a claimed read ends the claim: the reviewer's approve then finds
+    # the assignment no longer under review and is refused.
+    (UNDER_REVIEW, REOPEN): ASSIGNED,
 
     (REJECTED, REWORK): ASSIGNED,
     # An annotator who has left cannot rework. Reclaiming a rejected assignment

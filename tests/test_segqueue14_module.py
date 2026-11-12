@@ -344,7 +344,7 @@ def test_the_archive_is_the_segqueue_extension_and_is_self_sufficient(tmp_path):
             "print(segqueue14.PROTOCOL_VERSION)")
     out = subprocess.run([sys.executable, "-I", "-c", code], capture_output=True, text=True)
     assert out.returncode == 0, out.stderr
-    assert out.stdout.strip() == "18"
+    assert out.stdout.strip() == "19"
 
 
 def test_a_half_downloaded_helper_is_never_a_cache_hit(tmp_path):

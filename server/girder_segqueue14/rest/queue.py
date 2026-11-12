@@ -42,6 +42,7 @@ from ..settings import getPolicy, getProject
 from ..utils import (
     checkClientProtocol,
     checkLabelFormat,
+    checkReopenReader,
     fileForCase,
     hashStoredFile,
     incomingFolder,
@@ -86,7 +87,13 @@ def assignmentInfo(assignment):
         has_seed=bool(case.get('seedFileId')),
         has_prelabel=bool(case.get('prelabelFileId')),
         prelabel_version=case.get('prelabelVersion') or '',
+        start_from_own=isReopened(assignment),
     )
+
+
+def isReopened(assignment):
+    """Reopened for the annotator's own revision (#315) and not yet resubmitted."""
+    return bool(assignment.get('startFileId')) and assignment['state'] in st.OPEN_STATES
 
 
 def claimNext(user, policy):
@@ -191,6 +198,12 @@ class QueueResource14(Resource):
         user = requireAnnotator(self.getCurrentUser())
         policy = getPolicy()
 
+        # A read reopened for her own revision (#315) comes before anything new,
+        # and is not one of the cases a quota counts.
+        reopened = Assignment14().reopenedForUser(user['_id'])
+        if reopened:
+            return assignmentInfo(reopened[0]).to_dict()
+
         openCount = Assignment14().countOpenForUser(user['_id'])
         # The annotator benchmark (D43) comes first, whatever the quota says: it
         # is not one of the cases a quota counts. An annotator holding a case
@@ -226,6 +239,9 @@ class QueueResource14(Resource):
     def downloadCase(self, case):
         user = requireAnnotator(self.getCurrentUser())
         assignment = self._requireOpenAssignment(case, user)
+        if isReopened(assignment):
+            # An older module would open it from the seed, not from her read.
+            checkReopenReader()
         if assignment['state'] == st.REJECTED:
             assignment = Assignment14().transition(
                 assignment, st.REWORK, policy=getPolicy())
@@ -241,7 +257,8 @@ class QueueResource14(Resource):
                '(D23, D25); ``region`` is the heart mask that frames the view. '
                'A 404 means the case has none of that kind.')
         .modelParam('caseId', 'The case.', model=Case14, force=True, destName='case')
-        .param('kind', 'prelabel, seed or region.', paramType='path')
+        .param('kind', 'prelabel, seed, region or own (#315: the annotator\'s own '
+               'read, on a case reopened for their revision).', paramType='path')
         .errorResponse('That case is not assigned to you.', 403)
         .errorResponse('This case has no asset of that kind.', 404)
     )
@@ -250,9 +267,13 @@ class QueueResource14(Resource):
         if kind not in protocol.ASSET_KINDS:
             refuse(protocol.ERR_NO_ASSET, f'Unknown asset kind {kind!r}.', status=400)
         assignment = self._requireOpenAssignment(case, user)
-        fileId = case.get({protocol.ASSET_PRELABEL: 'prelabelFileId',
-                           protocol.ASSET_SEED: 'seedFileId',
-                           protocol.ASSET_REGION: 'regionFileId'}[kind])
+        if kind == protocol.ASSET_OWN:
+            # Her own submitted read, on a case reopened for her revision (#315).
+            fileId = assignment.get('startFileId') if isReopened(assignment) else None
+        else:
+            fileId = case.get({protocol.ASSET_PRELABEL: 'prelabelFileId',
+                               protocol.ASSET_SEED: 'seedFileId',
+                               protocol.ASSET_REGION: 'regionFileId'}[kind])
         if not fileId:
             refuse(protocol.ERR_NO_ASSET, f'This case has no {kind}.', status=404)
         file = File().load(fileId, force=True)
@@ -303,6 +324,9 @@ class QueueResource14(Resource):
         labelFormat = checkLabelFormat(labelFormat)
         user = requireAnnotator(self.getCurrentUser())
         assignment = loadOwnAssignment(Assignment14(), assignmentId, user)
+        if isReopened(assignment):
+            # #315: never a seed-started read in place of her own from an old module.
+            checkReopenReader(clientProtocol)
 
         if not st.can(assignment['state'], st.SUBMIT):
             refuse(protocol.ERR_BAD_STATE,

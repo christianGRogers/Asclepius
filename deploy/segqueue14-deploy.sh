@@ -41,6 +41,10 @@
 # nice 19 / ionice idle; it writes nothing to Mongo or the assetstore:
 #   bash segqueue14-deploy.sh quality-report [--limit=<N>] [--exclude=<login,...>]
 #
+# Issue #315: an annotator's own submitted reads back in their queue, for their own
+# revision, starting from what they submitted (segqueue14-reopen). Dry run without --apply:
+#   bash segqueue14-deploy.sh reopen --login=<login> --submitted-before=<YYYY-MM-DD> [--apply]
+#
 # What it never does: check out a branch in ~/Asclepius, reinstall the old plugin
 # (server/; only restore-live does, from that checkout), or write to the old
 # SegQueue's data outside the D36 steps. `main` is cloned separately into
@@ -421,6 +425,28 @@ benchmark() {
     esac
 }
 
+# ------------------------------------------------------------ issue #315
+
+reopen() {
+    local bin="$LIVE/.venv/bin/segqueue14-reopen" login="" before="" apply="" arg
+    [ -x "$bin" ] || die "segqueue14-reopen is not installed: run the install step first"
+    for arg in "$@"; do
+        case "$arg" in
+            --login=*)
+                [ -z "$login" ] || die "reopen: one --login only"
+                login="${arg#--login=}"
+                [[ "$login" =~ ^[a-z0-9._-]+$ ]] || die "reopen: --login takes one login (a-z 0-9 . _ -)" ;;
+            --submitted-before=*)
+                before="${arg#--submitted-before=}"
+                [[ "$before" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}$ ]] || die "reopen: --submitted-before takes YYYY-MM-DD" ;;
+            --apply) apply="--apply" ;;
+            *) die "reopen: unknown argument '$arg'" ;;
+        esac
+    done
+    [ -n "$login" ] && [ -n "$before" ] || die "reopen needs --login=<login> and --submitted-before=<YYYY-MM-DD>"
+    as_user "$bin" --login "$login" --submitted-before "$before" $apply
+}
+
 # ------------------------------------------------------------ issue #296
 
 quality_report() {
@@ -551,11 +577,12 @@ case "${1:-}" in
         step="${1#benchmark-}"; shift
         benchmark "$step" "$@" ;;
     quality-report) shift; quality_report "$@" ;;
+    reopen) shift; reopen "$@" ;;
     backup-prepare|backup-finish|backup-status|backup-restore-test|backup-off)
         step="${1#backup-}"; shift
         case "$step" in prepare|finish) step="install-$step" ;; esac
         # The hourly job's priority for the drill too: annotators come first.
         nice_=(); [ "$step" = restore-test ] && nice_=(nice -n 19 ionice -c3)
         USER_HOME="$USER_HOME" exec ${nice_[@]+"${nice_[@]}"} bash "$(dirname "$0")/backup/segqueue-backup.sh" "$step" "$@" ;;
-    *) sed -n '2,46p' "$0"; exit 1 ;;
+    *) sed -n '2,51p' "$0"; exit 1 ;;
 esac

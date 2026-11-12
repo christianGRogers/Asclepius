@@ -12,8 +12,9 @@ an empty scene are uploaded rather than refused (#270), that the reviewer's
 ImageCAS-X reference is shown in the four classes (#68), and D39 (#275): that an
 untouched seeded case -- four identical full copies -- is submitted as four whole
 classes (not as all RCA), reopens for a reviewer with all four whole and named,
-and round-trips through a reviewer's revision the same way; and that a partly
-trimmed case keeps every class's own voxels.
+and round-trips through a reviewer's revision the same way; that a partly
+trimmed case keeps every class's own voxels; and (#315) that a case reopened for
+the annotator's own revision opens from their submitted read with every class intact.
 
 D44 (#280), the optional extended classes (``run_extended``): a seeded case opens
 with the four vessels as before; turning "Extended classes" on adds the 17 empty,
@@ -401,6 +402,43 @@ def run():
     again = _counts(slicer, labels, reopened, volume,
                     lambda name: module._segmentIdIn(reopened, name))
     check("and reopens for a reviewer with all four whole (#275)", again == whole, again)
+
+    # #315: a case reopened for the annotator's own revision opens from what she
+    # submitted -- here the partly trimmed read, LAD still over the LCx tube --
+    # with every class as it was, overlap included, and no seed laid over it.
+    import shutil
+
+    class _OwnClient:
+        def __init__(self, path):
+            self.path, self.asked = path, []
+
+        def downloadAsset(self, caseId, kind, stem, progress=None):
+            self.asked.append(kind)
+            shutil.copy(self.path, stem + ".seg.nrrd")
+            return stem + ".seg.nrrd"
+
+    ct3 = slicer.mrmlScene.AddNewNodeByClass("vtkMRMLScalarVolumeNode", "ct3")
+    slicer.util.updateVolumeFromArray(ct3, ct)
+    ct3.CopyOrientation(volume)
+    mine = module.SegQueue14Logic(cacheRoot=os.path.join(tmp, "cache3"))
+    mine.project = logic.project
+    mine.volumeNode = ct3
+    mine.client = _OwnClient(partly)
+    own = _Assignment(assignment_id="a3", case_id="c3", case_name="reopened", attempt=2,
+                      state="assigned", checksum="", size_bytes=0, has_seed=True,
+                      has_prelabel=False, start_from_own=True)
+    manifest = mine._startFromOwn(own, mine.cache.open(own))
+    mine._loadOrCreateSegmentation(manifest)
+    mine.assignment = own
+    got = _counts(slicer, labels, mine.segmentationNode, ct3, mine.segmentIdFor)
+    asSubmitted = dict({name: TUBE_VOXELS for name in TUBES}, LAD=2 * TUBE_VOXELS)
+    check("a reopened case opens from her own read, every class intact (#315)",
+          mine.client.asked == ["own"] and mine.resumedDraft and got == asSubmitted,
+          (mine.client.asked, got))
+    counts, _source, _segmentation = mine.exportSubmission(os.path.join(tmp, "again.seg.nrrd"))
+    check("  and kept as it is, it saves back the same classes (D38)",
+          counts == asSubmitted, counts)
+    slicer.mrmlScene.RemoveNode(mine.segmentationNode)
 
 
 def _countsOf(slicer, node, volume, names, segmentIdIn):

@@ -33,6 +33,9 @@ What an annotator sees:
   ramus -- grouped under their parent vessel. With it off, a case is the four
   classes exactly as before; with any extended class in the scene, all 21 are
   submitted. Turning it off removes only extended classes that are empty.
+* **Reopened cases** (#315, 0.19.0, protocol 19): a case the lead reopened for the
+  annotator's own revision opens from their submitted read, every class whole
+  (D39), instead of the prelabel or the seed. Submitting it unchanged is fine (D38).
 
 The server owns the protocol, local data is a lease, nothing the client says is
 trusted: those three decisions are the live module's and are kept unchanged.
@@ -113,7 +116,7 @@ from SegQueue14Lib import SegQueue14Error as SegQueueError
 
 #: Continues SegQueue's numbering (0.13.0 was the last 4-class release). The
 #: release tag is ``segqueue-v`` + this; bump it to publish.
-__version__ = "0.18.0"
+__version__ = "0.19.0"
 
 #: Where the module's help points.
 HELP_URL = "https://github.com/christianGRogers/Asclepius"
@@ -342,6 +345,8 @@ class SegQueue14Logic(ScriptedLoadableModuleLogic):
 
         self.volumeNode = slicer.util.loadVolume(volumePath)
         self.volumeNode.SetName(assignment.case_name or "case")
+        if getattr(assignment, "start_from_own", False):
+            manifest = self._startFromOwn(assignment, manifest)
         self._loadOrCreateSegmentation(manifest)
         self._loadHelpers(assignment)
         # A fresh case starts from the model's prediction; a reopened draft is
@@ -362,6 +367,30 @@ class SegQueue14Logic(ScriptedLoadableModuleLogic):
             self.setClassesVisible(False)
         self._sessionStart = time.time()
         return manifest
+
+    def _startFromOwn(self, assignment, manifest):
+        """A case reopened for the annotator's own revision (#315): their submitted
+        read becomes the draft, so it opens exactly as a resumed draft does --
+        every class whole (D39), no prelabel or seed laid over it. A draft already
+        on disk is work done since the reopen, and wins. A read that cannot be
+        fetched stops the case from opening, rather than opening it from the seed:
+        submitted from there, it would replace their work.
+        """
+        draft = manifest.get("workPath")
+        if draft and os.path.isfile(draft):
+            return manifest
+        stem = os.path.join(self.cache.caseDir(assignment.assignment_id),
+                            protocol.ASSET_OWN)
+        path = self._cachedHelper(stem) or self.client.downloadAsset(
+            assignment.case_id, protocol.ASSET_OWN, stem)
+        if not path:
+            raise SegQueueError(
+                "This case was reopened so you can revise your own submission, but "
+                "your submission could not be fetched. Nothing has changed; try "
+                "again, and tell the project lead if it keeps happening.")
+        self._openedFromOwn = True
+        return self.cache.update(assignment.assignment_id, workPath=path) or dict(
+            manifest, workPath=path)
 
     # ------------------------------------------------------- helper masks
 
@@ -1049,11 +1078,18 @@ class SegQueue14Logic(ScriptedLoadableModuleLogic):
         annotator's own corrections when they come back to a case tomorrow.
         """
         self.resumedDraft = False
+        openedFromOwn = getattr(self, "_openedFromOwn", False)
+        self._openedFromOwn = False
         draft = manifest.get("workPath")
         if draft and os.path.isfile(draft):
             try:
                 self.segmentationNode = slicer.util.loadSegmentation(draft)
                 self.resumedDraft = self.segmentationNode is not None
+                if self.resumedDraft and openedFromOwn:
+                    # Their submitted read (#315): named and coloured as the
+                    # project's, an old labelmap read included, before the
+                    # template adds whatever classes it lacks.
+                    self.applyProjectNames()
             except Exception:
                 # A corrupt autosave must not lock the annotator out of the case.
                 # Losing the draft is bad; losing the case is worse.

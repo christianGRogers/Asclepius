@@ -45,7 +45,7 @@ def test_every_request_declares_the_segqueue14_protocol():
     session = FakeSession()
     makeClient(session).whoami()
     headers = session.calls[0]["headers"]
-    assert headers[protocol.PROTOCOL_HEADER] == str(PROTOCOL_VERSION) == "18"
+    assert headers[protocol.PROTOCOL_HEADER] == str(PROTOCOL_VERSION) == "19"
     assert headers[protocol.CLIENT_VERSION_HEADER] == "14.0"
 
 

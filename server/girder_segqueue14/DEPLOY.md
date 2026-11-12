@@ -447,6 +447,29 @@ The step needs the plugin installed from a `main` that has it (the `install`
 step): `segqueue14-report` is a new entry point. On janus by hand, as the deploy
 user: `nice -n 19 ionice -c 3 ~/Asclepius/.venv/bin/segqueue14-report quality [--limit N] [--json]`.
 
+## Reopening an annotator's own reads (#315)
+
+The *SegQueue14 on janus* step `reopen` runs `segqueue14-reopen`; `args` is exactly
+`--login=<one login> --submitted-before=YYYY-MM-DD`. Run `reopen` first (a dry run:
+it lists each matching case, its state, when it was submitted and whether a
+reviewer holds it), then `reopen --apply`.
+
+It takes that login's pool assignments still `submitted` or `under_review` whose
+latest submission was made before midnight US Eastern on that day; never an
+approved one, the benchmark (D43), or anyone else's. Each goes back to the
+annotator's queue (`assigned`, a fresh lease, attempt + 1) and is served before any
+new case, outside the quota. Any reviewer claim ends, and a reviewer can no longer
+act on the old read. The old submission is kept, marked `reopenedAt`, and left out
+of the quality report, pair scoring and the export until the resubmission replaces
+it. The case thread gets a note (no login named: the pair partner can read it).
+Running `--apply` again changes nothing.
+
+The annotator needs SegQueue14 **0.19.0** (protocol 19): it opens the case from
+their submitted read, every class whole (D39). An older module is told to update
+when it opens or submits such a case; nothing else changes for it. The step needs
+the plugin installed from a `main` that has it (the `install` step):
+`segqueue14-reopen` is a new entry point.
+
 ## Rollback
 
 Nothing below touches the live SegQueue: SegQueue14 never wrote to `segqueue_*`, the

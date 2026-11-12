@@ -35,6 +35,11 @@
 #                                          table at the end; args: --limit=<digits> and/or
 #                                          --exclude=<login,...> (#299: left out entirely)
 #
+# Issue #315, an annotator's own submitted reads back in their queue for their own
+# revision, starting from their submission. Dry run without --apply; `args` is exactly
+# --login=<one login> --submitted-before=YYYY-MM-DD:
+#   reopen [--apply]                       args: --login=<login> --submitted-before=<date>
+#
 # The script never touches the live checkout, the live plugin or live data; see its
 # header. Secrets: SSH_HOST, SSH_PORT, SSH_USERNAME, SSH_PASSWORD (as server-ssh.yml),
 # SSH_KNOWN_HOSTS optional. The backup steps also need SSH_PORT_SFTP_SERVER (the backup
@@ -58,9 +63,9 @@ on:
                   benchmark-status, benchmark-create, "benchmark-create --apply",
                   benchmark-seed, "benchmark-seed --apply",
                   benchmark-assign, "benchmark-assign --apply",
-                  quality-report]
+                  quality-report, reopen, "reopen --apply"]
       args:
-        description: "benchmark-assign: --exclude=<login,...> [--login=<login,...>] [--retest]; benchmark-seed: --from-girder=<folder> [--from-girder-file=<name>]; benchmark-create: --imagecas-id=<N> [--replace]; quality-report: [--limit=<N>] [--exclude=<login,...>]"
+        description: "benchmark-assign: --exclude=<login,...> [--login=<login,...>] [--retest]; benchmark-seed: --from-girder=<folder> [--from-girder-file=<name>]; benchmark-create: --imagecas-id=<N> [--replace]; quality-report: [--limit=<N>] [--exclude=<login,...>]; reopen: --login=<login> --submitted-before=<YYYY-MM-DD>"
         type: string
         required: false
         default: ""
@@ -98,6 +103,7 @@ jobs:
             benchmark-seed|"benchmark-seed --apply") ;;
             benchmark-assign|"benchmark-assign --apply") ;;
             quality-report) ;;
+            reopen|"reopen --apply") ;;
             *) echo "::error::unknown step '$cmd'"; exit 1 ;;
           esac
           # D43: only benchmark-assign, -seed, -create and quality-report (#296) take
@@ -152,7 +158,14 @@ jobs:
                 if ! printf '%s' "$ARGS" | grep -Eq "^(($q_limit)|($q_excl)|($q_limit) ($q_excl)|($q_excl) ($q_limit))\$"; then
                   echo "::error::quality-report args may hold only --limit=<1 to 5 digits> and --exclude=<login,...>"; exit 1
                 fi ;;
-              *) echo "::error::only benchmark-assign, benchmark-seed, benchmark-create and quality-report take args"; exit 1 ;;
+              reopen*)
+                # #315: exactly one login and one date, in either order; --apply only
+                # from the step's own choice above.
+                r_login='--login=[a-z0-9._-]+' r_date='--submitted-before=[0-9]{4}-[0-9]{2}-[0-9]{2}'
+                if ! printf '%s' "$ARGS" | grep -Eq "^(($r_login) ($r_date)|($r_date) ($r_login))\$"; then
+                  echo "::error::reopen args must be exactly --login=<one login> and --submitted-before=YYYY-MM-DD"; exit 1
+                fi ;;
+              *) echo "::error::only benchmark-assign, benchmark-seed, benchmark-create, quality-report and reopen take args"; exit 1 ;;
             esac
             # The step is ours (a fixed list above), the options go first: --apply stays last.
             # shellcheck disable=SC2086  # split the fixed step into its words
@@ -160,6 +173,8 @@ jobs:
             cmd="$1 $ARGS${2:+ $2}"
           elif [[ "$cmd" == benchmark-assign* ]]; then
             echo "::error::benchmark-assign needs args: --exclude=<login,...> (the logins that never get it)"; exit 1
+          elif [[ "$cmd" == reopen* ]]; then
+            echo "::error::reopen needs args: --login=<login> --submitted-before=YYYY-MM-DD"; exit 1
           fi
           echo "cmd=$cmd" >> "$GITHUB_OUTPUT"
           case "$cmd" in backup-*) echo "backup=true" >> "$GITHUB_OUTPUT" ;; esac

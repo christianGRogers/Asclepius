@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "girder-segqueue14"
-version = "0.4.0"
+version = "0.5.0"
 description = "SegQueue14: four-class coronary annotation (D25) for the SegQueue annotation platform, as a Girder 5 plugin that runs beside the live one. The name is historical."
 requires-python = ">=3.10"
 license = { text = "MIT" }
@@ -36,6 +36,7 @@ segqueue14-score = "girder_segqueue14.scoring:main"
 segqueue14-export = "girder_segqueue14.export:main"
 segqueue14-benchmark = "girder_segqueue14.benchmark:main"
 segqueue14-report = "girder_segqueue14.report:main"
+segqueue14-reopen = "girder_segqueue14.reopen:main"
 
 # This file sits inside the package directory, so the package is mapped onto
 # "." rather than discovered. That keeps it a separate distribution from

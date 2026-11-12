@@ -528,7 +528,7 @@ def test_the_protocol_is_checked_at_login_next_and_submit(world):
     assert [s["name"] for s in project["segments"]][:3] == ["LM", "LAD", "LCx"]
     assert [s["name"] for s in project["segments"]] == ["LM", "LAD", "LCx", "RCA"]
     # The server speaks 18 (D44) and still serves the 0.17.x module the four.
-    assert project["protocolVersion"] == 18
+    assert project["protocolVersion"] == 19
     assert queue.getProject(clientProtocol=18)["segments"] == project["segments"]
     assert "starts as a full copy of the vessel seed" in project["instructions"]
 

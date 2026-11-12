@@ -32,4 +32,7 @@ __version__ = "0.1.0"
 #: 18 (D44, #280): the 17 optional extended classes. Backwards compatible: the
 #: server still accepts protocol 17 (0.17.x) for everything but opening or
 #: revising a read that has extended classes, which it would save back with four.
-PROTOCOL_VERSION = 18
+#: 19 (#315): a case reopened for the annotator's own revision opens from their
+#: submitted read (the ``own`` asset), every class whole. Backwards compatible: an
+#: older module is refused only on such a case, which it would open from the seed.
+PROTOCOL_VERSION = 19

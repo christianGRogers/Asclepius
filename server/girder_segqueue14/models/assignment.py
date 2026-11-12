@@ -55,6 +55,7 @@ _TIMESTAMP_FOR_EVENT = {
     st.RELEASE: 'releasedAt',
     st.RETURN_TO_POOL: 'releasedAt',
     st.EXPIRE: 'releasedAt',
+    st.REOPEN: 'reopenedAt',
 }
 
 
@@ -85,6 +86,7 @@ class Assignment14(AccessControlledModel):
             '_id', 'caseId', 'userId', 'state', 'attempt', 'assignedAt',
             'downloadedAt', 'submittedAt', 'decidedAt', 'deadline',
             'lastHeartbeat', 'reviewerComment', 'submissionId', 'prelabelVersion',
+            'reopenedAt',
         })
         # `kind` is exposed only to admins: an annotator who can see that their
         # case is a gold seed can look up the answer, and a duplicate that is
@@ -167,9 +169,10 @@ class Assignment14(AccessControlledModel):
         if stamp:
             update[stamp] = now
 
-        if event == st.REWORK:
+        if event in (st.REWORK, st.REOPEN):
             # A new attempt gets a fresh lease; otherwise a case rejected on day
             # six of a seven-day lease would expire before it could be fixed.
+            # REOPEN (#315) is the same for the annotator: her own read, back.
             policy = policy or pol.SamplingPolicy()
             update['attempt'] = st.next_attempt(assignment.get('attempt', 1))
             update['deadline'] = now + datetime.timedelta(days=policy.lease_days)
@@ -209,6 +212,13 @@ class Assignment14(AccessControlledModel):
         if states:
             query['state'] = {'$in': list(states)}
         return self.find(query, sort=[('assignedAt', 1)])
+
+    def reopenedForUser(self, userId):
+        """This user's open assignments that were reopened for her own revision
+        (#315), oldest first: served before anything new."""
+        return list(self.find({
+            'userId': userId, 'state': {'$in': sorted(st.OPEN_STATES)},
+            'startFileId': {'$ne': None}}, sort=[('assignedAt', 1)]))
 
     def openForUser(self, userId):
         """Assignments that count against this user's concurrency limit."""

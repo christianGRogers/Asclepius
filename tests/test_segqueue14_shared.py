@@ -161,7 +161,8 @@ def test_the_current_client_is_accepted():
 
 def test_the_0_17_module_is_still_accepted():
     # D44: protocol 18 adds the extended classes; 0.17.x (protocol 17) keeps working.
-    assert PROTOCOL_VERSION == 18
+    # #315: protocol 19 opens a reopened case from the annotator's own read.
+    assert PROTOCOL_VERSION == 19
     assert protocol.MIN_CLIENT_PROTOCOL == 17
     protocol.check_client_protocol(17)
     protocol.check_client_protocol("17")
@@ -628,3 +629,24 @@ def test_the_seed_is_an_asset_annotators_and_reviewers_may_fetch():
     assert protocol.SEED_SEGMENT_NAME.startswith("~")
     info = protocol.AssignmentInfo14(assignment_id="a", has_seed=True)
     assert protocol.AssignmentInfo14.from_dict(info.to_dict()).has_seed
+
+
+def test_a_reopened_case_needs_protocol_19_and_old_info_still_parses():
+    """#315: only a protocol-19 module may open or submit a reopened case; the new
+    field is optional on the wire, so an older module's parser ignores it."""
+    for sent in (None, "", 17, 18, "18"):
+        with pytest.raises(protocol.ProtocolError) as info:
+            protocol.check_reopen_reader(sent)
+        assert info.value.code == protocol.ERR_UPDATE_TO_REVISE
+        assert "Update SegQueue14 to open this case" in str(info.value)
+    protocol.check_reopen_reader(19)
+    protocol.check_reopen_reader("20")
+    assert protocol.ASSET_OWN in protocol.ASSET_KINDS
+    assert protocol.ASSET_OWN not in protocol.REVIEW_ASSET_KINDS
+    info = protocol.AssignmentInfo14(assignment_id="a", case_id="c", case_name="n",
+                                     state="assigned", start_from_own=True)
+    assert info.to_dict()["startFromOwn"] is True
+    assert protocol.AssignmentInfo14.from_dict(info.to_dict()).start_from_own is True
+    data = info.to_dict()
+    del data["startFromOwn"]
+    assert protocol.AssignmentInfo14.from_dict(data).start_from_own is False

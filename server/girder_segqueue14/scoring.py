@@ -33,6 +33,13 @@ vessel (``labels.collapse_to_four``), so the headline stays four-class and an
 extended read pairs with a 4-class one. A material both reads of a pair have is
 scored on its own, under ``materials``; it never moves the headline.
 
+PDA, PLB and SN go to the vessel they leave, RCA or LCx, decided from the read by
+contact (D47 Q1, ``labels.assign_contact_branches``); a component touching neither,
+or both equally, falls back to RCA. ``autoScore.branchParents`` records the
+outcome, fallbacks included, for the quality report. Reads scored under 0.18's
+always-RCA rule are scored again with ``segqueue14-score --rescore-extended``
+(``rescoreExtended``), which replaces the stored score and changes nothing else.
+
 A submission's grid is not trusted to be the reference's: a Slicer export can
 store the same voxels in a different index order (the first real SegQueue
 submissions were z-reversed against their CT). Both are put on the reference's
@@ -59,6 +66,10 @@ from .settings import getReference
 logger = logging.getLogger(__name__)
 
 POLL_SECONDS = 30
+
+#: How PDA, PLB and SN were assigned in a stored score: ``contact`` is D47 Q1 (the
+#: vessel they leave). A score without it is from 0.18.0's always-RCA rule.
+BRANCH_RULE = 'contact'
 
 
 def _deps():
@@ -268,6 +279,28 @@ def scoreOne(submission, thresholds=None):
     read has not arrived. It stays unscored and is retried on the next pass, so
     the first read of a pair is decided when the pair is complete.
     """
+    score = computeScore(submission, thresholds)
+    if score is None:
+        return None
+    benchmark = bool(score.get('benchmark'))
+    # A benchmark read always goes to a reviewer, with its Dice (D43).
+    needsReview = bool(score['flags']) or benchmark
+    Submission14().recordScore(submission['_id'], score, needsReview=needsReview)
+    if needsReview:
+        Assignment14().collection.update_one(
+            {'_id': submission['assignmentId']}, {'$set': {'needsReview': True}})
+        logger.info('%s submission %s: %s', 'benchmark' if benchmark else 'flagged',
+                    submission['_id'], '; '.join(score['flags']) or 'for review')
+    _autoApproveIfClear(submission, needsReview)
+    return score
+
+
+def computeScore(submission, thresholds=None):
+    """The automatic score of one submission, or None to wait (see ``scoreOne``).
+
+    Records nothing on ``submission`` itself; a two-read partner's ``duplicate``
+    half is updated to match, as it always was.
+    """
     thresholds = thresholds or getReference()
     case = Case14().load(submission['caseId'], force=True)
     if case is None:
@@ -277,7 +310,7 @@ def scoreOne(submission, thresholds=None):
         return None
 
     benchmark = bool(case.get('benchmark')) or submission.get('kind') == sqplan.KIND_BENCHMARK
-    score = {'flags': [], 'against': []}
+    score = {'flags': [], 'against': [], 'branchRule': BRANCH_RULE}
     if benchmark:
         score['benchmark'] = True
     readArr = None
@@ -307,6 +340,8 @@ def scoreOne(submission, thresholds=None):
             # The earlier read of the pair was decided before this one existed;
             # give it the pair score too, for the reviewer's view.
             mirrored = dict(pair, partnerSubmissionId=str(submission['_id']))
+            # branchParents describes this read, not the partner's (D47 Q1).
+            mirrored.pop('branchParents', None)
             Submission14().mergeScore(partner['_id'], 'duplicate', mirrored)
     elif not case.get('referenceFileId'):
         return None  # a paired case waiting for its second read
@@ -321,17 +356,65 @@ def scoreOne(submission, thresholds=None):
             score['flags'].append('required class empty in the uploaded file: '
                                   + ', '.join(missing))
     score['mean_dice'] = sq.headline_dice(score)
-
-    # A benchmark read always goes to a reviewer, with its Dice (D43).
-    needsReview = bool(score['flags']) or benchmark
-    Submission14().recordScore(submission['_id'], score, needsReview=needsReview)
-    if needsReview:
-        Assignment14().collection.update_one(
-            {'_id': submission['assignmentId']}, {'$set': {'needsReview': True}})
-        logger.info('%s submission %s: %s', 'benchmark' if benchmark else 'flagged',
-                    submission['_id'], '; '.join(score['flags']) or 'for review')
-    _autoApproveIfClear(submission, needsReview)
+    # Which vessel the read's PDA, PLB and SN went to, and how many fell back to
+    # RCA (D47 Q1): the same read either way, so whichever half has it.
+    for key in ('reference', 'duplicate'):
+        parents = (score.get(key) or {}).get('branchParents')
+        if parents:
+            score['branchParents'] = parents
+            break
     return score
+
+
+def rescoreCandidates():
+    """Scored annotator reads with a PDA, PLB or SN class: the reads 0.18.0 scored
+    with those always in RCA (D47 Q1). Read from the stored header's classes, so
+    only extended reads are candidates."""
+    found = []
+    for submission in Submission14().find(
+            {'extended': True, 'scored': True, 'autoScore': {'$ne': None},
+             'authorRole': ANNOTATOR}, sort=[('created', 1)]):
+        if set(submission.get('classes') or ()) & set(labels.CONTACT_BRANCHES):
+            found.append(submission)
+    return found
+
+
+def rescoreExtended(dryRun=False, thresholds=None, out=print):
+    """Score again every extended read scored before D47 Q1 (#322).
+
+    Replaces ``autoScore`` (keeping the old one under ``autoScore.previous``) and
+    changes nothing else: no review is raised or lowered and no case is approved,
+    because a read already decided by a human or the worker stays decided. A read
+    whose new score now has flags it did not have is listed, for the lead to look
+    at. A read already scored under the new rule (``branchRule`` is ``contact``) is
+    left alone, so running this twice changes nothing the second time.
+
+    Returns ``{'candidates', 'rescored', 'skipped', 'newlyFlagged'}``.
+    """
+    thresholds = thresholds or getReference()
+    summary = {'candidates': 0, 'rescored': 0, 'skipped': 0, 'newlyFlagged': []}
+    for submission in rescoreCandidates():
+        old = submission.get('autoScore') or {}
+        if old.get('branchRule') == BRANCH_RULE:
+            summary['skipped'] += 1
+            continue
+        summary['candidates'] += 1
+        if dryRun:
+            out(f"would rescore {submission['_id']}")
+            continue
+        score = computeScore(submission, thresholds)
+        if score is None:
+            summary['skipped'] += 1
+            continue
+        score['branchRule'] = BRANCH_RULE
+        score['previous'] = {k: v for k, v in old.items() if k != 'previous'}
+        Submission14().recordScore(submission['_id'], score, needsReview=None)
+        summary['rescored'] += 1
+        if set(score.get('flags') or ()) - set(old.get('flags') or ()):
+            summary['newlyFlagged'].append(str(submission['_id']))
+        out(f"rescored {submission['_id']}: mean Dice {old.get('mean_dice')} -> "
+            f"{score.get('mean_dice')}")
+    return summary
 
 
 def _autoApproveIfClear(submission, needsReview):
@@ -396,8 +479,23 @@ def main(argv=None):  # pragma: no cover - CLI entry point
     parser.add_argument('--once', action='store_true', help='One pass, then exit.')
     parser.add_argument('--poll', type=int, default=POLL_SECONDS)
     parser.add_argument('--sweep', type=int, default=SWEEP_SECONDS)
+    parser.add_argument('--rescore-extended', action='store_true',
+                        help='Score again every extended read scored before PDA, PLB '
+                             'and SN went to the vessel they leave (D47), then exit. '
+                             'Replaces the stored score only; no review or approval '
+                             'changes.')
+    parser.add_argument('--dry-run', action='store_true',
+                        help='With --rescore-extended: list, change nothing.')
     args = parser.parse_args(argv)
     logging.basicConfig(level=logging.INFO, format='%(asctime)s %(levelname)s %(message)s')
+    if args.rescore_extended:
+        summary = rescoreExtended(dryRun=args.dry_run)
+        verb = 'would rescore' if args.dry_run else 'rescored'
+        print(f"{verb} {summary['candidates'] if args.dry_run else summary['rescored']} "
+              f"extended read(s); {summary['skipped']} already current or not ready; "
+              f"{len(summary['newlyFlagged'])} newly flagged"
+              + (': ' + ', '.join(summary['newlyFlagged']) if summary['newlyFlagged'] else ''))
+        return 0
     if args.once:
         print(f'scored {runOnce()} submission(s)')
         print(f"released {len(sweep()['released'])} stranded assignment(s)")

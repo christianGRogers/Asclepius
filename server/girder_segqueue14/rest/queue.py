@@ -50,7 +50,7 @@ from ..utils import (
     refuse,
     requireAnnotator,
     requireCaseInvolvement,
-    storedLabelInfo,
+    storedLabelHeader,
     submissionsFolder,
 )
 
@@ -88,6 +88,7 @@ def assignmentInfo(assignment):
         has_prelabel=bool(case.get('prelabelFileId')),
         prelabel_version=case.get('prelabelVersion') or '',
         start_from_own=isReopened(assignment),
+        extended_mode=bool(case.get('extendedMode')),
     )
 
 
@@ -345,7 +346,8 @@ class QueueResource14(Resource):
         # Recorded as the stored bytes say, not as declared (an unknown declared
         # name was already refused above): the format, and which classes the read
         # has -- the four, or the four and the extended ones (D44).
-        labelFormat, classes = storedLabelInfo(file)
+        # And which branch groups were marked complete (D47 Q3), in the same header.
+        labelFormat, classes, completeGroups = storedLabelHeader(file)
 
         item = Item().load(file['itemId'], force=True)
         if item is not None:
@@ -367,7 +369,8 @@ class QueueResource14(Resource):
 
         submission = Submission14().createSubmission(
             assignment, submissionMeta, file['_id'], needsReview=needsReview,
-            geometry=geometry, labelFormat=labelFormat, classes=classes)
+            geometry=geometry, labelFormat=labelFormat, classes=classes,
+            completeGroups=completeGroups)
         assignment = Assignment14().transition(
             assignment, st.SUBMIT,
             submissionId=submission['_id'], needsReview=needsReview, reviewRoll=roll)

@@ -18,7 +18,8 @@ additions:
   the four first (``labels.collapse_to_four``: each branch into its parent;
   materials into nothing), so the headline stays four-class and a 4-class read
   scores exactly as before. ``score_reads`` does that and adds a per-material Dice
-  (``materials``) for each material *both* reads have.
+  (``materials``) for each material *both* reads have. PDA, PLB and SN go to
+  the vessel they leave, RCA or LCx, decided from the read (D47 Q1).
 * **cropping** to the union of both labellings before scoring. Dice and HD95 are
   unchanged by it (the margin keeps every surface voxel's neighbourhood), and it
   turns one distance transform per class over a whole chest CT into one per class
@@ -157,10 +158,18 @@ def score_reads(read, read_names: Sequence[str], reference,
     that both name gets its own entry under ``materials``; a material only one of
     them has is not scored (one annotator not using a class is not disagreement).
     ``extended`` (only when either side has extended classes) says which.
+
+    PDA, PLB and SN go to the vessel they leave (D47 Q1); ``branchParents`` (only
+    when the read has any of them) says how the read's components were assigned and
+    how many fell back to RCA (``labels.assign_contact_branches``).
     """
-    a = labels.collapse_to_four(read, read_names)
+    read_stats = {}
+    a = labels.collapse_to_four(read, read_names, stats=read_stats)
     b = labels.collapse_to_four(reference, reference_names)
     result = score_masks(a, b, spacing)
+    summary = labels.contact_summary(read_stats)
+    if summary:
+        result["branchParents"] = summary
     materials = material_scores(read, read_names, reference, reference_names, spacing)
     if materials:
         result["materials"] = materials

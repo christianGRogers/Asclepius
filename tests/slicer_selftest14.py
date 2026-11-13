@@ -24,6 +24,11 @@ with all 21 classes whole; a 0.17.x four-class draft reopens intact (with the 17
 empty extras when the toggle is on); and turning the toggle off removes only the
 empty extended classes.
 
+D47 (#322, ``run_d47``): a case flagged for extended mode opens with the extended
+classes; the three branch-group "complete" tick-boxes start unticked, are saved
+with the draft, go into the class-stack header on submit, are shown to a reviewer
+and kept by a revision; and a PDA moved out of the LCx collapses into the LCx.
+
 With ``SEGQUEUE_SELFTEST_INSTALLED=<folder>`` it tests the module Slicer loaded
 from that installed folder instead of the checkout.
 
@@ -647,7 +652,167 @@ def run_extended():
           got)
 
 
-for part in (run, run_extended):
+def run_d47():
+    """D47 (#322): a flagged case opens with the extended classes; the branch-group
+    tick-boxes are saved with the draft, written in the class-stack header on
+    submit, shown to a reviewer and kept by a revision; a PDA moved out of the LCx
+    collapses into the LCx."""
+    import numpy as np
+
+    import slicer
+
+    if not os.environ.get("SEGQUEUE_SELFTEST_INSTALLED"):
+        sys.path.insert(0, os.path.join(REPO, "src"))
+        sys.path.insert(0, os.path.join(REPO, "slicer", "SegQueue14"))
+    import SegQueue14 as module
+
+    from segqueue.protocol import ProjectConfig
+    from segqueue14 import labelfile, labels
+
+    say("--- D47: branch parents, complete groups, extended-mode cases")
+    tmp = tempfile.mkdtemp()
+    segIn = module._segmentIdIn
+    seed = np.zeros(SHAPE, np.uint8)
+    for lo, hi in TUBES.values():
+        seed[5:35, lo:hi, lo:hi] = 1
+
+    def ct(name):
+        volume = slicer.mrmlScene.AddNewNodeByClass("vtkMRMLScalarVolumeNode", name)
+        slicer.util.updateVolumeFromArray(volume, np.where(seed > 0, 400, -100).astype(np.int16))
+        volume.SetSpacing(0.5, 0.5, 0.6)
+        volume.SetOrigin(10, -20, 30)
+        return volume
+
+    project = ProjectConfig(name="selftest", instructions=labels.INSTRUCTIONS,
+                            segments=labels.segment_specs())
+    flagged = _Assignment(assignment_id="x1", case_id="cx1", case_name="flagged", attempt=1,
+                          state="assigned", checksum="", size_bytes=0, has_seed=True,
+                          has_prelabel=False, extended_mode=True)
+
+    # 1. A flagged case, toggle off: opens with the extended classes on.
+    logic = module.SegQueue14Logic(cacheRoot=os.path.join(tmp, "cache"))
+    logic.project = project
+    logic.extendedClasses = False
+    volume = ct("ct-flagged")
+    logic.volumeNode = volume
+    manifest = logic.cache.open(flagged)
+    logic._applyCaseFlags(flagged, manifest)
+    logic._loadOrCreateSegmentation(manifest)
+    logic.assignment = flagged
+    logic._sessionStart = time.time()
+    got = _countsOf(slicer, logic.segmentationNode, volume, labels.ALL_NAMES, segIn)
+    check("a flagged case opens with all 21 classes, toggle off",
+          logic.extendedOn() and not logic.extendedClasses
+          and all(got[n] is not None for n in labels.ALL_NAMES), got)
+    plain = module.SegQueue14Logic(cacheRoot=os.path.join(tmp, "plain"))
+    plain.project = project
+    plain.volumeNode = volume
+    unflagged = _Assignment(**dict(flagged.__dict__, assignment_id="x0", extended_mode=False))
+    plain._applyCaseFlags(unflagged, plain.cache.open(unflagged))
+    plain._loadOrCreateSegmentation({})
+    check("  an unflagged case still opens with the four",
+          not plain.extendedOn() and not plain.hasExtendedSegments())
+    path = os.path.join(tmp, "four.seg.nrrd")
+    plain.exportSubmission(path)
+    check("  and a four-class read writes no complete-groups key",
+          labelfile.COMPLETE_KEY not in labelfile.read_header(path))
+    slicer.mrmlScene.RemoveNode(plain.segmentationNode)
+
+    # 2. Ticks start off and are saved with the draft.
+    check("the branch groups start unticked", logic.completeGroups == set())
+    logic.setCompleteGroup(labels.GROUP_RCA, True)
+    logic.setCompleteGroup(labels.GROUP_LAD, True)
+    logic.setCompleteGroup(labels.GROUP_LAD, False)
+    logic.setCompleteGroup(labels.GROUP_LCX, True)
+    ticked = [labels.GROUP_LCX, labels.GROUP_RCA]
+    check("  ticked ones are saved with the case",
+          logic.cache.manifest("x1").get("completeGroups") == ticked,
+          logic.cache.manifest("x1"))
+    again = module.SegQueue14Logic(cacheRoot=os.path.join(tmp, "cache"))
+    again._applyCaseFlags(flagged, again.cache.manifest("x1"))
+    check("  and come back when the case is reopened", again.completeGroups == set(ticked))
+
+    # 3. The tick-boxes in the panel.
+    try:
+        widget = module.SegQueue14Widget()
+        widget.setup()
+        widget.logic = logic
+        widget._updateExtendedBox()
+        boxes = widget.completeChecks
+        check("the panel has one complete tick-box per branch group",
+              list(boxes) == list(labels.COMPLETE_GROUPS), list(boxes))
+        check("  showing the open read's ticks",
+              [boxes[g].checked for g in labels.COMPLETE_GROUPS] == [False, True, True])
+        boxes[labels.GROUP_LAD].setChecked(True)
+        boxes[labels.GROUP_LCX].setChecked(False)
+        ticked = [labels.GROUP_LAD, labels.GROUP_RCA]
+        check("  ticking one updates the read", logic.completeGroups == set(ticked),
+              logic.completeGroups)
+        check("  the extended-mode note shows on a flagged case, and the toggle is on",
+              not widget.extendedModeLabel.isHidden() and widget.extendedCheck.checked)
+        widget.logic = plain
+        plain.caseExtendedMode = False
+        widget._updateExtendedBox()
+        check("  and not on an unflagged one", widget.extendedModeLabel.isHidden())
+        widget.logic = logic
+        try:
+            widget.cleanup()
+        except Exception:
+            pass
+    except Exception:
+        check("the panel builds with the tick-boxes", False, traceback.format_exc())
+        logic.setCompleteGroup(labels.GROUP_LAD, True)
+        logic.setCompleteGroup(labels.GROUP_LCX, False)
+        ticked = [labels.GROUP_LAD, labels.GROUP_RCA]
+
+    # 4. A PDA moved out of the LCx (left-dominant), submitted with the ticks.
+    node = logic.segmentationNode
+    lo, hi = TUBES["LCx"]
+    for name in labels.NAMES:
+        keep = np.zeros(SHAPE, np.uint8)
+        a, b = TUBES[name]
+        keep[5:35, a:b, a:b] = 1
+        slicer.util.updateSegmentBinaryLabelmapFromArray(keep, node, segIn(node, name), volume)
+    lcx = slicer.util.arrayFromSegmentBinaryLabelmap(node, segIn(node, "LCx"), volume).copy()
+    pda = np.zeros_like(lcx)
+    pda[25:35, lo:hi, lo:hi] = lcx[25:35, lo:hi, lo:hi]
+    lcx[25:35, lo:hi, lo:hi] = 0
+    slicer.util.updateSegmentBinaryLabelmapFromArray(lcx, node, segIn(node, "LCx"), volume)
+    slicer.util.updateSegmentBinaryLabelmapFromArray(pda, node, segIn(node, "PDA"), volume)
+    review_ct = ct("ct-d47-review")
+    logic.client = _RecordingClient()
+    logic.submit()
+    uploaded = logic.client.kept[0]
+    stored = labelfile.read_class_stack(uploaded)
+    check("submit writes the ticks in the class-stack header",
+          stored["completeGroups"] == ticked, stored["completeGroups"])
+    stats = {}
+    four = labels.collapse_to_four(stored["masks"], stored["names"], stats=stats)
+    check("  and the PDA off the LCx collapses into the LCx, not the RCA",
+          int(four[labels.NAMES.index("LCx")].sum()) == TUBE_VOXELS
+          and int(four[labels.NAMES.index("RCA")].sum()) == TUBE_VOXELS
+          and stats["byParent"] == {"RCA": 0, "LCx": 1}, stats)
+    check("  the case is closed and its flags cleared",
+          logic.assignment is None and not logic.caseExtendedMode and not logic.completeGroups)
+
+    # 5. A reviewer opens it (the ticks come from the row, else the header) and revises.
+    review = module.SegQueue14Logic(cacheRoot=os.path.join(tmp, "review"))
+    review.project = project
+    review.volumeNode = review_ct
+    review.segmentationNode = slicer.util.loadSegmentation(uploaded)
+    review.applyProjectNames()
+    review.setCompleteGroups(labelfile.complete_groups(labelfile.read_header(uploaded)))
+    check("a reviewer sees the annotator's ticks", review.completeGroups == set(ticked))
+    review.client = _RecordingClient()
+    review.reviseSubmission("s47")
+    revised = labelfile.read_class_stack(review.client.kept[0])
+    check("  and a revision keeps them",
+          revised["completeGroups"] == ticked and revised["names"] == labels.ALL_NAMES,
+          revised["completeGroups"])
+    slicer.mrmlScene.RemoveNode(review.segmentationNode)
+
+
+for part in (run, run_extended, run_d47):
     try:
         part()
     except Exception:

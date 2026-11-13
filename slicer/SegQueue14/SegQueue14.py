@@ -116,7 +116,7 @@ from SegQueue14Lib import SegQueue14Error as SegQueueError
 
 #: Continues SegQueue's numbering (0.13.0 was the last 4-class release). The
 #: release tag is ``segqueue-v`` + this; bump it to publish.
-__version__ = "0.19.0"
+__version__ = "0.20.0"
 
 #: Where the module's help points.
 HELP_URL = "https://github.com/christianGRogers/Asclepius"
@@ -243,6 +243,12 @@ class SegQueue14Logic(ScriptedLoadableModuleLogic):
         #: The annotator's "Extended classes" toggle (D44): new scenes get the 17
         #: extended classes, empty. Off by default; set from the per-login setting.
         self.extendedClasses = False
+        #: The open case is flagged to be read in extended mode (D47 Q6): the
+        #: extended classes are on for it, whatever the per-login toggle says.
+        self.caseExtendedMode = False
+        #: The branch groups ticked complete on the open read (D47 Q3), a subset of
+        #: ``labels.COMPLETE_GROUPS``. Saved in the class-stack header on submit.
+        self.completeGroups = set()
 
     # ------------------------------------------------------------ session
 
@@ -347,6 +353,7 @@ class SegQueue14Logic(ScriptedLoadableModuleLogic):
         self.volumeNode.SetName(assignment.case_name or "case")
         if getattr(assignment, "start_from_own", False):
             manifest = self._startFromOwn(assignment, manifest)
+        self._applyCaseFlags(assignment, manifest)
         self._loadOrCreateSegmentation(manifest)
         self._loadHelpers(assignment)
         # A fresh case starts from the model's prediction; a reopened draft is
@@ -391,6 +398,25 @@ class SegQueue14Logic(ScriptedLoadableModuleLogic):
         self._openedFromOwn = True
         return self.cache.update(assignment.assignment_id, workPath=path) or dict(
             manifest, workPath=path)
+
+    def _applyCaseFlags(self, assignment, manifest):
+        """D47 for the case being opened: extended mode from the case's flag (Q6),
+        and the branch-group ticks the draft or the reopened read had (Q3)."""
+        self.caseExtendedMode = bool(getattr(assignment, "extended_mode", False))
+        self.completeGroups = set(self._savedCompleteGroups(manifest))
+        # Into the manifest now: the next autosave replaces the read they came from.
+        self.cache.update(assignment.assignment_id,
+                          completeGroups=labels.clean_complete_groups(self.completeGroups))
+
+    def _savedCompleteGroups(self, manifest):
+        """The ticks to start from (D47 Q3): the draft's own, else those in the
+        header of the read the draft came from (a reopened case's own read)."""
+        if "completeGroups" in (manifest or {}):
+            return labels.clean_complete_groups(manifest.get("completeGroups"))
+        draft = (manifest or {}).get("workPath")
+        if draft and os.path.isfile(draft):
+            return labelfile.complete_groups(labelfile.read_header(draft)) or []
+        return []
 
     # ------------------------------------------------------- helper masks
 
@@ -576,10 +602,45 @@ class SegQueue14Logic(ScriptedLoadableModuleLogic):
         if self.project is None:
             return []
         specs = sorted(self.project.segments, key=lambda spec: int(spec.label))
-        if self.extendedClasses or self.hasExtendedSegments():
+        if self.extendedOn() or self.hasExtendedSegments():
             have = {spec.name for spec in specs}
             specs += [spec for spec in self.extraSpecs() if spec.name not in have]
         return specs
+
+    def extendedOn(self):
+        """Whether new scenes get the extended classes: the annotator's toggle, or
+        a case flagged for extended mode (D47 Q6)."""
+        return bool(self.extendedClasses or self.caseExtendedMode)
+
+    def setCompleteGroup(self, group, on):
+        """Tick or untick one branch group as complete (D47 Q3).
+
+        Kept with the case's draft (the cache manifest), so it survives a restart
+        like the segmentation does. Returns the ticked groups, in panel order.
+        """
+        if group not in labels.COMPLETE_GROUPS:
+            raise ValueError("not a branch group: {!r}".format(group))
+        if on:
+            self.completeGroups.add(group)
+        else:
+            self.completeGroups.discard(group)
+        ticked = labels.clean_complete_groups(self.completeGroups)
+        if self.assignment is not None:
+            self.cache.update(self.assignment.assignment_id, completeGroups=ticked)
+        return ticked
+
+    def setCompleteGroups(self, groups):
+        """Replace the ticks (a read opened for review or revision). Not saved."""
+        self.completeGroups = set(labels.clean_complete_groups(groups or ()))
+
+    def completeGroupsForExport(self):
+        """What goes in the class-stack header (D47 Q3): the ticked groups for a
+        read with the extended classes ([] when none is ticked), ``None`` for a
+        four-class read, which has no branch classes to be complete about."""
+        names = [spec.name for spec in self.classSpecs()]
+        if not labels.is_extended(names):
+            return None
+        return labels.clean_complete_groups(self.completeGroups)
 
     def addExtendedClasses(self, segmentationNode=None):
         """Add whichever of the 17 extended classes are missing, empty (D44).
@@ -1153,7 +1214,7 @@ class SegQueue14Logic(ScriptedLoadableModuleLogic):
         # D44: the 17 extended classes, empty, when the annotator has turned them
         # on. A draft that already has them keeps them as they are (never
         # re-pinned), toggle or not; one from 0.17.x gets them added, empty.
-        if self.extendedClasses:
+        if self.extendedOn():
             self.addExtendedClasses()
         else:
             self.orderSegments()
@@ -1170,6 +1231,8 @@ class SegQueue14Logic(ScriptedLoadableModuleLogic):
             self.cache.purge(self.assignment.assignment_id)
         self.assignment = None
         self._sessionStart = None
+        self.caseExtendedMode = False
+        self.completeGroups = set()
 
     # ---------------------------------------------------------------- time
 
@@ -1274,7 +1337,8 @@ class SegQueue14Logic(ScriptedLoadableModuleLogic):
 
         **Four classes or 21** (D44): ``classSpecs``. With no extended class in the
         scene the file is the four, exactly as 0.17.x writes it; with any, all 21
-        in label order, the empty ones as empty channels.
+        in label order, the empty ones as empty channels, and the branch groups
+        ticked complete in the header (D47 Q3, ``completeGroupsForExport``).
 
         Returns ``(voxelCounts, sourceGeometry, segmentationGeometry)``; the
         counts are per class, each counted whole, from the masks written.
@@ -1297,7 +1361,9 @@ class SegQueue14Logic(ScriptedLoadableModuleLogic):
         try:
             labelfile.write_class_stack(
                 path, masks, names, labelfile.ras_to_lps(ijkToRas),
-                colors=[tuple(spec.color) for spec in specs])
+                colors=[tuple(spec.color) for spec in specs],
+                # D47 Q3: the branch groups ticked complete, for an extended read.
+                complete_groups=self.completeGroupsForExport())
         except (OSError, ValueError) as exc:
             raise RuntimeError(
                 "Could not write the segmentation to {}: {}".format(path, exc)) from exc
@@ -2255,8 +2321,16 @@ class SegQueue14Widget(ScriptedLoadableModuleWidget):
 
         Off by default and remembered per login: an annotator who does not use the
         extended classes keeps the familiar four. The instructions and each class's
-        hint sit under the toggle, where the classes are.
+        hint sit under the toggle, where the classes are. Under them, one
+        "complete" tick-box per branch group (D47 Q3); above the toggle, the
+        extended-mode note on a flagged case (D47 Q6).
         """
+        self.extendedModeLabel = qt.QLabel(labels.EXTENDED_MODE_NOTE)
+        self.extendedModeLabel.setWordWrap(True)
+        _tint(self.extendedModeLabel, "warn")
+        self.extendedModeLabel.setVisible(False)
+        layout.addWidget(self.extendedModeLabel)
+
         self.extendedCheck = qt.QCheckBox("Extended classes (optional)")
         self.extendedCheck.setToolTip(
             "Adds 17 optional classes, empty: stent, calcified and non-calcified "
@@ -2290,6 +2364,25 @@ class SegQueue14Widget(ScriptedLoadableModuleWidget):
             self.groupChecks[group] = check
         row.addStretch(1)
         boxLayout.addLayout(row)
+
+        # D47 Q3: "I looked for every branch of this group, so an empty class here
+        # means absent". Unticked by default; nothing is required at submit (D38).
+        row = qt.QHBoxLayout()
+        row.addWidget(_muted(qt.QLabel("Complete:")))
+        self.completeChecks = {}
+        for group in labels.COMPLETE_GROUPS:
+            check = qt.QCheckBox(group)
+            check.setChecked(False)
+            check.setToolTip(
+                "Tick when you have looked for every branch of this group ({}), so "
+                "an empty class here means the branch is absent, not that you did "
+                "not look. Optional.".format(", ".join(labels.group_members(group))))
+            check.toggled.connect(
+                lambda on, group=group: self.onToggleComplete(group, on))
+            row.addWidget(check)
+            self.completeChecks[group] = check
+        row.addStretch(1)
+        boxLayout.addLayout(row)
         self.extendedBox.setVisible(False)
         layout.addWidget(self.extendedBox)
 
@@ -2304,18 +2397,39 @@ class SegQueue14Widget(ScriptedLoadableModuleWidget):
         self._updateExtendedBox()
 
     def _updateExtendedBox(self):
-        """Show the group row and instructions when the scene has extended classes."""
-        shown = bool(self.logic.extendedClasses) or self.logic.hasExtendedSegments()
+        """Show the group row and instructions when the scene has extended classes;
+        the extended-mode note on a flagged case (D47 Q6); the ticks of the open
+        read (D47 Q3)."""
+        flagged = bool(self.logic.caseExtendedMode)
+        self.extendedModeLabel.setVisible(flagged)
+        self.extendedCheck.blockSignals(True)
+        self.extendedCheck.setChecked(bool(self.logic.extendedOn()))
+        self.extendedCheck.blockSignals(False)
+        shown = self.logic.extendedOn() or self.logic.hasExtendedSegments()
         self.extendedBox.setVisible(shown)
         for check in self.groupChecks.values():
             check.blockSignals(True)
             check.setChecked(True)
             check.blockSignals(False)
+        for group, check in self.completeChecks.items():
+            check.blockSignals(True)
+            check.setChecked(group in self.logic.completeGroups)
+            check.blockSignals(False)
+
+    def onToggleComplete(self, group, on):
+        """Tick or untick a branch group as complete (D47 Q3), for the open read."""
+        self.logic.setCompleteGroup(group, on)
 
     def onToggleExtended(self, on):
-        """Turn the extended classes on or off, for this login and the open scene."""
+        """Turn the extended classes on or off, for this login and the open scene.
+
+        On a case flagged for extended mode (D47 Q6) turning them off is still
+        allowed: it is a request, not a rule (D38).
+        """
         qt.QSettings().setValue(extendedSettingKey(getattr(self, "_login", "")), bool(on))
         self.logic.extendedClasses = bool(on)
+        if not on:
+            self.logic.caseExtendedMode = False
         if self.logic.segmentationNode is not None and (
                 self.logic.assignment is not None or self._claimedSubmission):
             if on:
@@ -2769,9 +2883,15 @@ class SegQueue14Widget(ScriptedLoadableModuleWidget):
             # back as Segment_1, Segment_2 ... in colours Slicer chose; its label
             # values are the protocol's, which is enough to put the names back.
             self.logic.applyProjectNames()
+            # D47: the read's ticks (shown and kept on revise), and the case's
+            # extended-mode flag, from the server's row; the file's header if the
+            # server is too old to send them.
+            self.logic.setCompleteGroups(self._reviewCompleteGroups(entry, segPath))
+            self.logic.caseExtendedMode = bool(entry.get("extendedMode"))
             # D44: an extended read loads with all its classes, whatever the toggle
-            # says; with the toggle on, a four-class read gets the 17, empty.
-            if self.logic.extendedClasses:
+            # says; with the toggle on (or a flagged case), a four-class read gets
+            # the 17, empty.
+            if self.logic.extendedOn():
                 self.logic.addExtendedClasses()
             self.logic.applyViewPreset()
             self._bindEditor(segmentationNode, volumeNode)
@@ -2854,6 +2974,15 @@ class SegQueue14Widget(ScriptedLoadableModuleWidget):
             "Assigned <b>{}</b> to {}.".format(
                 _escape(case.get("caseName", "")), _escape(who)))
         self.onRefreshReview()
+
+    def _reviewCompleteGroups(self, entry, segPath):
+        """The branch groups a read under review was ticked complete with (D47 Q3)."""
+        if entry.get("completeGroups") is not None:
+            return entry.get("completeGroups")
+        try:
+            return labelfile.complete_groups(labelfile.read_header(segPath)) or []
+        except Exception:
+            return []
 
     def onOpenCase(self):
         """Load a case's own volume, for one with no submission to open.

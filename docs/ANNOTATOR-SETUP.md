@@ -196,8 +196,17 @@ to:
 | Materials | Stent, Calcified plaque, Non-calcified plaque |
 
 - Use only the ones you want. An empty class is fine.
-- To use a branch class, move that branch out of its parent vessel and into its
-  class. For example, erase the first diagonal from LAD and paint it into D1.
+- To use a branch class, move that branch out of whichever vessel it leaves and
+  into its class. For example, erase the first diagonal from LAD and paint it into
+  D1. SN, PDA and PLB come out of the RCA or the LCx, whichever they come off: in
+  a left-dominant heart the PDA and PLB come off the LCx.
+- Trace septals, SN, conus and RMA as far as you can see them, even where the
+  vessel seed stops.
+- The **Complete** ticks (LAD branches, LCx branches, RCA branches) mean "I looked
+  for every branch in this group, so an empty class here means it is absent". Tick
+  them only when that is true. They are optional.
+- Some cases open with the box already on and a note asking you to use the
+  extended classes. Please do.
 - Paint stent and plaque where you see them. They may overlap the vessel.
 - Hover over a group name in the box to see what goes in each class. The
   **Show** ticks hide or show a whole group.

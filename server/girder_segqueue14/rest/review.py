@@ -52,7 +52,7 @@ from ..utils import (
     isExtended,
     refuse,
     requireReviewer,
-    storedLabelInfo,
+    storedLabelHeader,
     submissionsFolder,
 )
 
@@ -521,7 +521,11 @@ class ReviewResource14(Resource):
                    'was corrupted in transit. Nothing has been recorded.',
                    status=400, expected=submissionMeta.checksum, actual=actual)
         submissionMeta.checksum = actual
-        labelFormat, classes = storedLabelInfo(file)
+        labelFormat, classes, completeGroups = storedLabelHeader(file)
+        if completeGroups is None:
+            # A module before 0.20.0 does not know the ticks (D47 Q3): keep the
+            # annotator's, so revising from it does not erase them.
+            completeGroups = original.get('completeGroups')
 
         item = Item().load(file['itemId'], force=True)
         if item is not None:
@@ -530,7 +534,7 @@ class ReviewResource14(Resource):
         revision = Submission().createSubmission(
             assignment, submissionMeta, file['_id'],
             needsReview=False, author=user, revisionOf=original['_id'],
-            labelFormat=labelFormat, classes=classes,
+            labelFormat=labelFormat, classes=classes, completeGroups=completeGroups,
         )
 
         Review().createReview(revision, user, APPROVE,
@@ -796,6 +800,8 @@ class ReviewResource14(Resource):
             # extended one, and a 0.18 module shows it as "extended".
             'classes': list(submission.get('classes') or labels.NAMES),
             'extended': isExtended(submission),
+            # The branch groups marked complete (D47 Q3); None if never said.
+            'completeGroups': submission.get('completeGroups'),
             'annotatorNote': submission.get('annotatorNote', ''),
             'warnings': submission.get('warnings', []),
             'submittedAt': _iso(assignment.get('submittedAt')),
@@ -808,6 +814,8 @@ class ReviewResource14(Resource):
             # never paired, never trained on. Which attempt of this annotator's.
             'benchmark': bool(case.get('benchmark')),
             'benchmarkAttempt': assignment.get('benchmarkAttempt'),
+            # Read in extended mode (D47 Q6): the module turns the extended classes on.
+            'extendedMode': bool(case.get('extendedMode')),
             'autoScore': _headline(submission),
             'scores': submission.get('autoScore'),
             'scored': submission.get('scored', False),

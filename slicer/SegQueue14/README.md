@@ -43,7 +43,8 @@ empty, grouped under their parent in the segment list, with show/hide per group:
 | Materials | Stent (5), Calcified plaque (6), Non-calcified plaque (7) | nothing |
 | LAD branches | D1-D3 (8-10), S1-S3 (11-13) | LAD |
 | LCx branches | OM1, OM2 (14, 15) | LCx |
-| RCA branches | SN (16), Conus (17), RMA (18), PDA (19), PLB (20) | RCA |
+| RCA branches | Conus (17), RMA (18) | RCA |
+| RCA branches | SN (16), PDA (19), PLB (20) | the vessel each component leaves, RCA or LCx (D47); RCA if neither |
 | Other | Ramus (21) | LCx (D1b) |
 
 - **Off:** nothing changes. A case is the four classes, submitted as a four-class
@@ -63,6 +64,26 @@ empty, grouped under their parent in the segment list, with show/hide per group:
   says, and a revision keeps all 21. A 0.17.x module is refused an extended read at
   claim, download and revise with *"Update SegQueue14 to review this read"*;
   four-class reads open in either version.
+
+### D47 (0.20.0, #322)
+
+- **Branch parents:** when a read is scored, paired or exported `--four-class`, each
+  SN, PDA and PLB component is counted with the vessel it leaves (most face contact
+  with RCA or LCx); one touching neither, or both equally, goes to RCA and is
+  counted. Server-side: every module version gets it.
+- **Complete** tick-boxes under the extended classes, one per branch group (LAD
+  branches; LCx branches, ramus included; RCA branches): "I looked for every branch
+  of this group, so an empty class here means absent". Unticked by default, never
+  required. Saved with the draft and written into the class-stack header
+  (`SegQueue14_CompleteGroups`) of an extended read; a reviewer sees the annotator's
+  ticks and a revision keeps them.
+- **Extended-mode cases:** a case the server flags `extendedMode` opens with the
+  extended classes on (whatever the toggle) and a one-line note asking the
+  annotator to use them. Turning the toggle off is still allowed.
+- The extended instructions say to move a branch out of whichever vessel it leaves,
+  and to trace septals, SN, conus and RMA beyond the seed where visible.
+- Older modules: 0.18.x/0.19.x ignore the flag and the ticks; a revision from them
+  keeps the annotator's ticks (the server carries them forward).
 
 **The reviewer's case list** (0.18.0, #280) is sorted by submission time, newest
 first; rows with nothing submitted yet come last. The *Submitted (ET)* column shows

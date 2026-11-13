@@ -136,8 +136,10 @@ Synthetic or test cases only. Keep one Slicer with 0.17.x and one with 0.18.0.
 
 ## Decisions to confirm while doing this
 
-- [ ] D44: PDA, PLB and SN always fold into RCA when scored, including
-      left-dominant hearts (where PDA/PLB come off the LCx) and an SN from the LCx.
+- [ ] D47 Q1 (replaces D44's always-RCA): PDA, PLB and SN go to the vessel they
+      leave when scored; `segqueue14-score --rescore-extended --dry-run` lists the
+      extended reads scored under the old rule, and without `--dry-run` rescores
+      them once.
 - [ ] D44: the **Extended classes** toggle is off by default.
 
 - [ ] The pair threshold (`duplicate_mean_dice_flag` 0.60) -- a placeholder until real

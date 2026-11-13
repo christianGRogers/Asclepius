@@ -18,6 +18,13 @@ Slicer writes itself, it is never cropped to the segments' extent: the grid is
 the CT's. ``SegQueue14_Format`` in the header names the format, so a reader
 tells it from an old single-label file by the header alone.
 
+**Branch groups marked complete (D47 Q3, #322).** ``SegQueue14_CompleteGroups``
+lists, ``|``-separated, the branch groups (``labels.COMPLETE_GROUPS``) the
+annotator ticked as complete: "I looked for every branch of this group, so an
+empty class here means absent". A module from 0.20.0 on always writes the key,
+empty when nothing is ticked; a file without it was written by an older module,
+which never asked (``complete_groups`` returns ``None`` for it).
+
 **Old files (``FORMAT_LABELMAP``).** Submissions from before protocol 17 are one
 integer volume in the project's label values, and stay readable everywhere.
 
@@ -42,6 +49,8 @@ FORMATS = (FORMAT_CLASS_STACK, FORMAT_LABELMAP)
 FORMAT_KEY = "SegQueue14_Format"
 #: The header key that lists the classes, ``|``-separated, in channel order.
 CLASSES_KEY = "SegQueue14_Classes"
+#: The header key that lists the branch groups marked complete (D47 Q3).
+COMPLETE_KEY = "SegQueue14_CompleteGroups"
 
 _MAGIC = b"NRRD"
 _HEADER_LIMIT = 1 << 16
@@ -75,11 +84,14 @@ def _vector(values) -> str:
 
 def header_text(names: Sequence[str], size_ijk: Sequence[int], ijk_to_lps,
                 colors: Optional[Sequence[Sequence[float]]] = None,
-                encoding: str = "gzip") -> str:
+                encoding: str = "gzip",
+                complete_groups: Optional[Sequence[str]] = None) -> str:
     """The NRRD header for a class stack of ``names`` on the given grid.
 
     ``ijk_to_lps`` is a 4x4 (or 3x4) matrix whose columns 0-2 are the i, j, k
     steps in LPS millimetres and whose column 3 is the origin.
+    ``complete_groups`` (D47 Q3): the branch groups marked complete; ``None``
+    writes no ``COMPLETE_KEY`` at all, as a module before 0.20.0 did.
     """
     names = [str(n) for n in names]
     for name in names:
@@ -104,6 +116,14 @@ def header_text(names: Sequence[str], size_ijk: Sequence[int], ijk_to_lps,
         "space origin: " + _vector(origin),
         f"{FORMAT_KEY}:={FORMAT_CLASS_STACK}",
         f"{CLASSES_KEY}:=" + "|".join(names),
+    ]
+    if complete_groups is not None:
+        groups = [str(g) for g in complete_groups]
+        for group in groups:
+            if "|" in group or "\n" in group:
+                raise ValueError(f"group name {group!r} cannot go in a header")
+        lines.append(f"{COMPLETE_KEY}:=" + "|".join(groups))
+    lines += [
         # Slicer's segmentation keys: each class its own layer, value 1 in it.
         "Segmentation_ContainedRepresentationNames:=Binary labelmap|",
         "Segmentation_MasterRepresentation:=Binary labelmap",
@@ -190,6 +210,26 @@ def class_names(header: Dict[str, str]) -> List[str]:
     return names
 
 
+def complete_groups(header: Dict[str, str]) -> Optional[List[str]]:
+    """The branch groups a class-stack header marks complete (D47 Q3), in panel
+    order; ``[]`` if none is ticked; ``None`` if the header has no such key (an
+    older module, or not a class stack)."""
+    if header.get(FORMAT_KEY) != FORMAT_CLASS_STACK or COMPLETE_KEY not in header:
+        return None
+    from . import labels
+
+    return labels.clean_complete_groups(header[COMPLETE_KEY].split("|"))
+
+
+def complete_groups_bytes(raw: bytes) -> Optional[List[str]]:
+    """``complete_groups`` over the first bytes of a file."""
+    try:
+        header, _ = _read_header_bytes(io.BytesIO(raw))
+    except LabelFileError:
+        return None
+    return complete_groups(parse_header(header))
+
+
 def class_names_bytes(raw: bytes) -> List[str]:
     """``class_names`` over the first bytes of a file; [] for an old label volume."""
     try:
@@ -215,12 +255,14 @@ def sniff_bytes(raw: bytes) -> str:
 
 def write_class_stack(path: str, masks: Sequence, names: Sequence[str], ijk_to_lps,
                       colors: Optional[Sequence[Sequence[float]]] = None,
-                      compresslevel: int = 6) -> None:
+                      compresslevel: int = 6,
+                      complete_groups: Optional[Sequence[str]] = None) -> None:
     """Write ``masks`` (one array per class, each indexed ``[k, j, i]``) to ``path``.
 
     Every mask must have the same shape: the CT's, so the file overlays it voxel
     for voxel. Any non-zero voxel is written as 1. The data is streamed one
     k-slice at a time, so memory stays at the masks themselves.
+    ``complete_groups`` goes in the header (D47 Q3; ``header_text``).
     """
     import numpy as np
 
@@ -234,7 +276,8 @@ def write_class_stack(path: str, masks: Sequence, names: Sequence[str], ijk_to_l
         raise ValueError(f"every mask must be 3D with one shape; got "
                          f"{[m.shape for m in masks]}")
     nk, nj, ni = shape
-    header = header_text(names, (ni, nj, nk), ijk_to_lps, colors)
+    header = header_text(names, (ni, nj, nk), ijk_to_lps, colors,
+                         complete_groups=complete_groups)
     with open(path, "wb") as out:
         out.write(header.encode("latin-1"))
         with gzip.GzipFile(fileobj=out, mode="wb", compresslevel=compresslevel,
@@ -256,7 +299,8 @@ def read_class_stack(path: str) -> dict:
     """Read a class-stack file without Slicer.
 
     Returns ``{"masks", "names", "ijk_to_lps", "spacing", "origin", "direction",
-    "format"}``: ``masks`` is uint8 0/1, shaped ``(classes, k, j, i)`` -- each
+    "format", "completeGroups"}``: ``completeGroups`` is ``complete_groups`` of the
+    header (D47 Q3). ``masks`` is uint8 0/1, shaped ``(classes, k, j, i)`` -- each
     ``masks[c]`` in the same index order as a SimpleITK or Slicer array of the CT;
     ``spacing``/``origin``/``direction`` are ITK's (LPS; ``direction`` row-major
     3x3), so ``SimpleITK.GetImageFromArray(masks[c])`` plus those is the class
@@ -307,6 +351,7 @@ def read_class_stack(path: str) -> dict:
         "origin": tuple(origin),
         "direction": tuple(direction),
         "format": FORMAT_CLASS_STACK,
+        "completeGroups": complete_groups(header),
     }
 
 

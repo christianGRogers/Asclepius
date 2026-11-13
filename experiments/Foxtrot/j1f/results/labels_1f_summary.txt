@@ -1,0 +1,79 @@
+{
+ "n": 620,
+ "per_value": {
+  "LM": {
+   "cases": 611,
+   "share_of_fg_volume_pct": 5.24
+  },
+  "LAD": {
+   "cases": 620,
+   "share_of_fg_volume_pct": 22.14
+  },
+  "LCx": {
+   "cases": 620,
+   "share_of_fg_volume_pct": 14.96
+  },
+  "RCA": {
+   "cases": 620,
+   "share_of_fg_volume_pct": 31.57
+  },
+  "D1": {
+   "cases": 611,
+   "share_of_fg_volume_pct": 4.8
+  },
+  "D2": {
+   "cases": 359,
+   "share_of_fg_volume_pct": 2.24
+  },
+  "D3": {
+   "cases": 47,
+   "share_of_fg_volume_pct": 0.26
+  },
+  "OM1": {
+   "cases": 540,
+   "share_of_fg_volume_pct": 4.54
+  },
+  "OM2": {
+   "cases": 229,
+   "share_of_fg_volume_pct": 1.79
+  },
+  "Ramus": {
+   "cases": 149,
+   "share_of_fg_volume_pct": 1.08
+  },
+  "PDA": {
+   "cases": 572,
+   "share_of_fg_volume_pct": 4.64
+  },
+  "PLB": {
+   "cases": 565,
+   "share_of_fg_volume_pct": 6.22
+  },
+  "set{PDA,LCx}": {
+   "cases": 38,
+   "share_of_fg_volume_pct": 0.27
+  },
+  "set{PLB,LCx}": {
+   "cases": 54,
+   "share_of_fg_volume_pct": 0.25
+  },
+  "set{LAD,D3}": {
+   "cases": 1,
+   "share_of_fg_volume_pct": 0.0
+  },
+  "ignore": {
+   "cases": 8,
+   "share_of_fg_volume_pct": 0.0
+  }
+ },
+ "other": {
+  "other_diag": 50,
+  "other_marg": 20,
+  "other_amb": 8,
+  "d3_from_other": 47,
+  "d3_set": 1,
+  "d4_to_lad": 2
+ },
+ "cases_with_D3": 47,
+ "cases_with_D3_set": 1
+}

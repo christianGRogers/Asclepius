@@ -168,15 +168,20 @@ parent vessel in the segment list:
 | LAD branches | D1, D2, D3 (diagonals); S1, S2, S3 (septals) | LAD |
 | LCx branches | OM1, OM2 (obtuse marginals) | LCx |
 | Other | Ramus (ramus intermedius) | LCx |
-| RCA branches | SN (sinus node), Conus, RMA (right marginal), PDA, PLB | RCA |
+| RCA branches | Conus, RMA (right marginal) | RCA |
+| RCA branches | SN (sinus node), PDA, PLB | the vessel each leaves: RCA or LCx (D47) |
 | Materials | Stent, Calcified plaque, Non-calcified plaque | none (scored on its own) |
 
-Any of them may stay empty. To use a branch class, move that branch out of its
-parent into its class. Paint stent and plaque where you see them; overlapping a
+Any of them may stay empty. To use a branch class, move that branch out of
+whichever vessel it leaves into its class (SN, PDA and PLB out of the RCA or the
+LCx). Trace septals, SN, conus and RMA as far as they are visible, even where the
+seed stops. The **Complete** ticks, one per branch group, say "I looked for every
+branch here, so an empty class means absent"; they are optional. A case flagged
+for extended mode opens with the box on and a note asking you to use it. Paint stent and plaque where you see them; overlapping a
 vessel is fine, and every class is saved whole. The tooltip on each group says
 what goes in each class, and the **Show** ticks hide or show a group. Turning the
 box off removes only the extended classes that are empty. When a read is scored,
-each branch is counted as part of its parent vessel, so a read that uses the
+each branch is counted as part of the vessel it leaves, so a read that uses the
 branch classes is compared like a four-class read.
 
 ## 7. Updating

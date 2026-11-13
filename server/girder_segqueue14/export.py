@@ -17,7 +17,15 @@ four-class read is written as before. ``--four-class`` writes every read as the
 four instead, an extended one collapsed first (each branch unioned into its
 parent, materials dropped: ``labels.collapse_to_four``) -- what a four-class
 training set (D25) wants. The manifest says which was done and lists the extended
-reads. Original notes follow.
+reads. In that collapse PDA, PLB and SN go to the vessel they leave, RCA or LCx,
+decided from the read by contact (D47 Q1); the manifest counts the components that
+touched neither (or both equally) and fell back to RCA.
+
+**Next to each read (D47 Q3):** ``<case>/read.json`` -- the read's classes,
+whether it is extended, and the branch groups its annotator marked complete
+(``completeGroups``: an empty class in a group listed there means absent; ``null``
+when the module did not say, as before 0.20.0), plus, with ``--four-class``, how
+its PDA, PLB and SN were assigned (``branchParents``). Original notes follow.
 
 ``segqueue-export`` -- write approved work out in the training layout.
 
@@ -74,6 +82,7 @@ a missing or altered seal file stops the export.
 
 import argparse
 import datetime
+import json
 import os
 import socket
 import sys
@@ -86,6 +95,9 @@ from segqueue14 import labels as project_labels
 
 #: Written beside the CT, as ``segtrain convert`` expects.
 SEGMENTATIONS_DIR = 'segmentations'
+#: Per read, next to ``segmentations/`` (D47 Q3): classes, completeness ticks and,
+#: with ``--four-class``, how PDA, PLB and SN were assigned.
+READ_INFO = 'read.json'
 
 
 def _models():
@@ -161,11 +173,12 @@ def splitClassStack(path, segments):
     return out
 
 
-def classStackAll(path, fourClass=False):
+def classStackAll(path, fourClass=False, stats=None):
     """A class-stack file as ``{name: (mask, grid image)}`` for every class it has.
 
     The read's own classes (the four, or all 21 for an extended read, D44), in the
-    file's order; with ``fourClass`` the four, an extended read collapsed first.
+    file's order; with ``fourClass`` the four, an extended read collapsed first
+    (``stats``, a dict, gets the PDA/PLB/SN assignment: ``labels.collapse_to_four``).
     """
     np, sitk = _requireDeps()
     data = labelfile.read_class_stack(path)
@@ -174,7 +187,7 @@ def classStackAll(path, fourClass=False):
     grid.SetOrigin(data['origin'])
     grid.SetDirection(data['direction'])
     if fourClass:
-        masks = project_labels.collapse_to_four(data['masks'], data['names'])
+        masks = project_labels.collapse_to_four(data['masks'], data['names'], stats=stats)
         names = list(project_labels.NAMES)
     else:
         masks, names = data['masks'], list(data['names'])
@@ -224,11 +237,18 @@ def exportCase(case, submission, outRoot, segments, name=None, dryRun=False,
     os.makedirs(os.path.join(target, SEGMENTATIONS_DIR), exist_ok=True)
 
     labelPath = _download(labelFile, os.path.splitext(labelFile['name'])[1] or '.nrrd')
+    stats = {}
+    classes = list(submission.get('classes') or project_labels.NAMES)
+    completeGroups = submission.get('completeGroups')
     try:
         if labelfile.sniff(labelPath) == labelfile.FORMAT_CLASS_STACK:
             header = labelfile.read_header(labelPath)
-            if fourClass or project_labels.is_extended(labelfile.class_names(header)):
-                masks = classStackAll(labelPath, fourClass=fourClass)
+            classes = labelfile.class_names(header) or classes
+            # The file is the authority; the row says the same unless it predates D47.
+            fromFile = labelfile.complete_groups(header)
+            completeGroups = fromFile if fromFile is not None else completeGroups
+            if fourClass or project_labels.is_extended(classes):
+                masks = classStackAll(labelPath, fourClass=fourClass, stats=stats)
             else:
                 masks = splitClassStack(labelPath, segments)
         else:
@@ -249,9 +269,19 @@ def exportCase(case, submission, outRoot, segments, name=None, dryRun=False,
         _unlink(labelPath)
 
     _writeVolume(volume, os.path.join(target, 'ct.nii.gz'))
+    parents = project_labels.contact_summary(stats)
+    readInfo = {'classes': classes, 'extended': project_labels.is_extended(classes),
+                'completeGroups': completeGroups,
+                'written': 'four' if fourClass else 'read'}
+    if parents:
+        readInfo['branchParents'] = parents
+    with open(os.path.join(target, READ_INFO), 'w') as handle:
+        json.dump(readInfo, handle, indent=2, sort_keys=True)
 
     return {'case': caseName, 'written': len(masks), 'empty': empty,
             'extended': project_labels.is_extended(masks),
+            'completeGroups': completeGroups,
+            'branchParents': parents,
             'overlaps': [list(row) for row in overlap],
             'shape': tuple(int(n) for n in shape) if shape else None}
 
@@ -397,6 +427,12 @@ def _writeManifest(out, cases, segments, args, since):
         # 'four' collapses every read to the four.
         'classes': 'four' if getattr(args, 'four_class', False) else 'read',
         'extended_reads': sorted(getattr(args, 'extendedCases', ())),
+        # D47 Q3: per case, the branch groups its annotator marked complete (only
+        # reads whose module said; also in <case>/read.json).
+        'complete_groups': dict(sorted(getattr(args, 'completeGroups', {}).items())),
+        # D47 Q1, --four-class only: PDA/PLB/SN components assigned by contact, and
+        # how many touched neither vessel (or both equally) and fell back to RCA.
+        'branch_parents': getattr(args, 'branchParents', None),
     })
     return manifest.write(out)
 
@@ -481,6 +517,10 @@ def main(argv=None):
     args.extendedCases = extendedCases
     prelabelVersions = {}
     args.prelabelVersions = prelabelVersions
+    completeGroups = {}
+    args.completeGroups = completeGroups
+    parents = {'components': 0, 'toLCx': 0, 'fallback': 0, 'fallbackCases': []}
+    args.branchParents = parents if args.four_class else None
     verb = 'would export' if args.dry_run else 'exported'
 
     for case, submission, name in collect(
@@ -512,6 +552,15 @@ def main(argv=None):
         if result.get('extended'):
             extendedCases.append(result['case'])
         prelabelVersions[result['case']] = submission.get('prelabelVersion') or ''
+        if result.get('completeGroups') is not None:
+            completeGroups[result['case']] = result['completeGroups']
+        if result.get('branchParents'):
+            bp = result['branchParents']
+            parents['components'] += bp['components']
+            parents['toLCx'] += bp['byParent'].get('LCx', 0)
+            parents['fallback'] += bp['fallback']
+            if bp['fallback']:
+                parents['fallbackCases'].append(result['case'])
         for structure in result.get('empty', ()):
             emptyStructures[structure] = emptyStructures.get(structure, 0) + 1
         note = f'  [{len(result["empty"])} empty]' if result.get('empty') else ''
@@ -533,6 +582,12 @@ def main(argv=None):
     elif args.four_class:
         print('--four-class: every read written as LM, LAD, LCx and RCA (extended reads '
               'collapsed, D44).')
+    if args.four_class and parents['components']:
+        print(f"PDA/PLB/SN (D47): {parents['components']} component(s) put in the vessel "
+              f"they leave, {parents['toLCx']} of them LCx; {parents['fallback']} touched "
+              'neither vessel (or both equally) and went to RCA'
+              + (f" ({', '.join(parents['fallbackCases'])})" if parents['fallback'] else '')
+              + '.')
     if benchmarks:
         print(f'{benchmarks} annotator benchmark case(s) left out (D43; never trained on).')
     if acceptance:

@@ -169,10 +169,37 @@ plain four classes. Compatibility rules:
 
 Scoring keeps the four-class headline. An extended read is collapsed first
 (`labels.collapse_to_four`): D1-D3 and S1-S3 are unioned into LAD; OM1-OM2 and the
-ramus into LCx; SN, conus, RMA, PDA and PLB into RCA (always, whatever the
-dominance). Materials go into no vessel. A pair gets a per-material Dice
-(`materials`) only for materials both reads have. An extended read pairs with a
-four-class one. The quality report counts extended reads per annotator.
+ramus into LCx; conus and RMA into RCA. Materials go into no vessel. A pair gets a
+per-material Dice (`materials`) only for materials both reads have. An extended
+read pairs with a four-class one. The quality report counts extended reads per
+annotator.
+
+**D47 (SegQueue14 0.20.0, #322).** Three changes to the extended classes, all
+backwards compatible (protocol stays 19; 0.18.x and 0.19.x keep working):
+
+* **PDA, PLB and SN go to the vessel they leave** (Q1), not always to RCA. Each
+  connected component (26-connected) of each of the three classes goes to whichever
+  of RCA or LCx it has more face contact with, counting conus and RMA as RCA and
+  OM1, OM2 and the ramus as LCx; a component reached only through another one (a
+  PDA off a left PLB) takes that one's vessel. A component touching neither, or both
+  equally, falls back to RCA and is counted: `autoScore.branchParents` per read, the
+  quality report's *rca fallback* column, and the export manifest's
+  `branch_parents` with `--four-class`. The rule is server-side and applies to every
+  module version. `segqueue14-score --rescore-extended [--dry-run]` scores again the
+  extended reads scored under 0.18's rule (replaces the stored score, keeps the old
+  one under `autoScore.previous`, changes no review state; idempotent).
+* **"Branch group complete" tick-boxes** (Q3), one per group (LAD branches, LCx
+  branches with the ramus, RCA branches): "I looked for every branch of this group,
+  so an empty class here means absent". Unticked by default, never required (D38).
+  They travel in the class-stack header (`SegQueue14_CompleteGroups`), are stored as
+  `completeGroups` on the submission (`null` = the module did not say), shown to
+  reviewers and kept by a revision (from an older module too, which carries the
+  annotator's forward), and written by the export to `<case>/read.json` and the
+  manifest's `complete_groups`.
+* **Extended-mode cases** (Q6 hook): a case with `extendedMode: true` opens in
+  0.20.0 with the extended classes on and a one-line note asking the annotator to use
+  them. Set it with `PUT /segqueue14/case/{id}/extended_mode?on=true` (admin).
+  Which cases get it (the D35 decision patients) waits for #116.
 
 ### Running it
 

@@ -224,7 +224,12 @@ def _fake_models(cases, submissions_opened):
             return byId.get(caseId)
 
     class Submission:
-        def findOne(self, query):
+        def find(self, query, sort=None):
+            # Reviewer revisions (#331): none here.
+            submissions_opened.append(query["assignmentId"])
+            return []
+
+        def findOne(self, query, sort=None):
             submissions_opened.append(query["assignmentId"])
             return {"_id": "s" + query["assignmentId"], "fileId": "f"}
 
@@ -244,7 +249,7 @@ def test_export_leaves_sealed_cases_out_by_default_and_counts_them(monkeypatch):
     sealed = [case["name"] for case, _, name in got if name is ex.SEALED]
     assert exported == [OPEN_POOL, "imagecas_0002"]
     assert sealed == [SEALED, REPORT_ONLY]
-    assert opened == ["a0", "a3"]               # no submission of a sealed case was loaded
+    assert list(dict.fromkeys(opened)) == ["a0", "a3"]  # no submission of a sealed case was loaded
     # --limit counts exported cases only
     assert [n for _, _, n in ex.collect(seal=seal, limit=2) if n is not ex.SEALED] == exported
     # acceptance scoring (no seal passed) includes them

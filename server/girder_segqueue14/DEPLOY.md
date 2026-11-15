@@ -470,6 +470,31 @@ when it opens or submits such a case; nothing else changes for it. The step need
 the plugin installed from a `main` that has it (the `install` step):
 `segqueue14-reopen` is a new entry point.
 
+## Exports before #331: was a reviewer's correction left out?
+
+Before #331, `segqueue14-export` wrote the *annotator's* read of an approved
+assignment even when a reviewer had corrected it (`review/:id/revise`): the
+correction never reached training. From #331 on it writes the newest reviewer
+revision, and `read.json` / the manifest's `exported_reads` say which
+(`exportedRole: reviewer|annotator`); the run prints how many were revisions.
+
+Which approved assignments have a revision -- read-only, on janus:
+
+```sh
+mongosh --quiet girder --eval '
+  const ids = db.segqueue14_submission.distinct("assignmentId",
+    {authorRole: "reviewer", reopenedAt: null});
+  const rows = db.segqueue14_assignment.find(
+    {_id: {$in: ids}, state: "approved"}, {caseId: 1}).toArray();
+  print(rows.length + " approved assignment(s) with a reviewer revision");
+  db.segqueue14_case.find({_id: {$in: rows.map(r => r.caseId)}}, {name: 1})
+    .forEach(c => print(c.name));'
+```
+
+`0` means no export was affected. Otherwise, a case named there that is in an
+earlier export's `manifest.json` (and whose `read.json` has no `exportedRole`) was
+exported from the annotator's read; export again and replace it.
+
 ## Rollback
 
 Nothing below touches the live SegQueue: SegQueue14 never wrote to `segqueue_*`, the

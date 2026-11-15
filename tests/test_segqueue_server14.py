@@ -1881,18 +1881,22 @@ def test_complete_groups_round_trip_through_submit_review_revise_and_export(worl
     assert Submission14().load(result["submissionId"], force=True)["completeGroups"] == \
         ["LCx branches"]
 
-    # The export writes each approved assignment's read as it does today (the
-    # annotator's submission), with its ticks next to it.
+    # The export writes each approved assignment's reviewer revision (#331), with
+    # the ticks the revision carries next to it.
     out = tmp_path / "export"
     assert export.main(["--out", str(out)]) == 0
     read = json.loads((out / first["caseName"] / export.READ_INFO).read_text())
-    assert read["completeGroups"] == ticked
+    assert read["completeGroups"] == list(labels.COMPLETE_GROUPS)
     assert read["extended"] is True and read["classes"] == labels.ALL_NAMES
+    assert read["exportedRole"] == "reviewer" and read["revisionOf"] == str(one)
     read = json.loads((out / second["caseName"] / export.READ_INFO).read_text())
     assert read["completeGroups"] == ["LCx branches"]
+    assert read["exportedRole"] == "reviewer" and read["revisionOf"] == str(two)
     manifest = json.loads((out / "manifest.json").read_text())
     assert manifest["source"]["complete_groups"] == {
-        first["caseName"]: ticked, second["caseName"]: ["LCx branches"]}
+        first["caseName"]: list(labels.COMPLETE_GROUPS),
+        second["caseName"]: ["LCx branches"]}
+    assert manifest["source"]["revised_reads"] == 2
     assert manifest["source"]["branch_parents"] is None
 
 
@@ -2010,3 +2014,162 @@ def _oid(value):
     from bson import ObjectId
 
     return ObjectId(value)
+
+
+# ------------------------------------------- #331: the reviewer's revision is exported
+
+
+def _reviseWith(world, queue, reviewer, info, submissionId, classes, header):
+    """``reviewer`` claims ``submissionId`` and revises it to ``classes`` (21 classes,
+    0.20.0, every group ticked). Returns the revision's id."""
+    from segqueue14 import labels
+
+    _as(reviewer)
+    header(19)
+    queue.claim(submissionId=submissionId)
+    fileDoc, meta = _uploadTicked(world, reviewer, info["caseName"], classes,
+                                  list(labels.COMPLETE_GROUPS))
+    _as(reviewer)
+    return queue.revise(submissionId=submissionId, fileId=str(fileDoc["_id"]),
+                        meta=json.dumps(meta), labelFormat="class-stack-nrrd/1",
+                        clientProtocol=19)["submissionId"]
+
+
+def _mask(folder, name):
+    import nibabel as nib
+    import numpy as np
+
+    return np.asarray(nib.load(str(folder / f"{name}.nii.gz")).dataobj) > 0
+
+
+def test_export_writes_the_reviewers_revision_not_the_annotators_read(world, tmp_path,
+                                                                     header):
+    """#331: an approved read a reviewer corrected exports the revision's bytes and
+    classes (also --four-class, collapsed); one with no revision exports the annotator
+    read; read.json and the manifest say which. Fails on the old unsorted findOne,
+    which returned the annotator's original."""
+    import numpy as np
+    from girder_segqueue14 import export, scoring
+    from girder_segqueue14.models import Submission14
+
+    from segqueue14 import labels
+
+    _readyProject(world)
+    queue = _resource()
+    anna, bobby, revy = (world.people[n] for n in ("anna", "bobby", "revy"))
+    tree = _tree(np)
+    # anna's read is poor and four-class; the reviewer corrects it to an extended read.
+    _as(anna)
+    first = queue.nextCase(clientProtocol=19)
+    poor = _poor(np)
+    one = _submitTicked(world, queue, anna, first, _withBranch(np, poor, "D1", "LAD",
+                                                               slice(12, 14)),
+                        ["LAD branches"])["submissionId"]
+    # bobby's read is perfect: approved by its score, never revised.
+    _as(bobby)
+    second = queue.nextCase(clientProtocol=19)
+    perfect = _withBranch(np, tree, "OM1", "LCx", slice(12, 14))
+    two = _submitTicked(world, queue, bobby, second, perfect,
+                        ["LCx branches"])["submissionId"]
+    scoring.runOnce()
+
+    corrected = _withBranch(np, tree, "PDA", "RCA", slice(12, 14))
+    revision = _reviseWith(world, queue, revy, first, one, corrected, header)
+    assert Submission14().load(revision, force=True)["authorRole"] == "reviewer"
+
+    out = tmp_path / "export"
+    assert export.main(["--out", str(out)]) == 0
+    folder = out / first["caseName"] / "segmentations"
+    # The revision's voxels, not anna's: her RCA was drawn into LCx and her D1 is gone.
+    assert np.array_equal(_mask(folder, "RCA"), corrected["RCA"] > 0)
+    assert np.array_equal(_mask(folder, "LCx"), corrected["LCx"] > 0)
+    assert np.array_equal(_mask(folder, "PDA"), corrected["PDA"] > 0)
+    assert not _mask(folder, "D1").any()
+    read = json.loads((out / first["caseName"] / export.READ_INFO).read_text())
+    assert read["exportedRole"] == "reviewer"
+    assert read["submissionId"] == str(revision) and read["revisionOf"] == str(one)
+    assert read["completeGroups"] == list(labels.COMPLETE_GROUPS)
+
+    folder = out / second["caseName"] / "segmentations"
+    assert np.array_equal(_mask(folder, "OM1"), perfect["OM1"] > 0)
+    read = json.loads((out / second["caseName"] / export.READ_INFO).read_text())
+    assert read == {**read, "exportedRole": "annotator", "submissionId": str(two),
+                    "revisionOf": None, "completeGroups": ["LCx branches"]}
+
+    source = json.loads((out / "manifest.json").read_text())["source"]
+    assert source["exported_reads"] == {
+        first["caseName"]: {"exportedRole": "reviewer", "submissionId": str(revision),
+                            "revisionOf": str(one)},
+        second["caseName"]: {"exportedRole": "annotator", "submissionId": str(two),
+                             "revisionOf": None}}
+    assert source["revised_reads"] == 1
+
+    # --four-class collapses the revision: its PDA goes back into RCA.
+    four = tmp_path / "four"
+    assert export.main(["--out", str(four), "--four-class"]) == 0
+    folder = four / first["caseName"] / "segmentations"
+    assert sorted(p.name for p in folder.iterdir()) == \
+        ["LAD.nii.gz", "LCx.nii.gz", "LM.nii.gz", "RCA.nii.gz"]
+    for name in labels.NAMES:
+        assert np.array_equal(_mask(folder, name), tree == labels.LABEL_VALUES[name]), name
+    read = json.loads((four / first["caseName"] / export.READ_INFO).read_text())
+    assert read["exportedRole"] == "reviewer" and read["written"] == "four"
+
+
+def test_the_newest_revision_wins_and_a_reopened_read_is_never_exported(world, header):
+    """#331: of two revisions the newest is exported, whatever order Mongo holds them
+    in; with none, the newest annotator read not reopened (#315); a reopened read is
+    never chosen, nor a revision of one."""
+    import datetime
+
+    import numpy as np
+    from girder_segqueue14 import export, scoring
+    from girder_segqueue14.models import Assignment14, Submission14
+
+    _readyProject(world)
+    queue = _resource()
+    anna, revy = world.people["anna"], world.people["revy"]
+    tree = _tree(np)
+    _as(anna)
+    info = queue.nextCase(clientProtocol=19)
+    one = _submitTicked(world, queue, anna, info,
+                        _withBranch(np, _poor(np), "D1", "LAD", slice(12, 14)))["submissionId"]
+    scoring.runOnce()
+    first = _reviseWith(world, queue, revy, info, one,
+                        _withBranch(np, tree, "D1", "LAD", slice(12, 14)), header)
+    assignment = Assignment14().load(Submission14().load(one, force=True)["assignmentId"],
+                                     force=True)
+    assert assignment["state"] == "approved"
+
+    def pick():
+        return export.exportedSubmission(assignment)["_id"]
+
+    assert pick() == Submission14().load(first, force=True)["_id"]
+
+    # A second revision (two reviewers racing: rest/review.py stores the loser's),
+    # inserted *before* the first in natural order but created after it.
+    base = Submission14().load(first, force=True)
+    later = {k: v for k, v in base.items() if k != "_id"}
+    later["created"] = base["created"] + datetime.timedelta(minutes=5)
+    Submission14().collection.delete_one({"_id": base["_id"]})
+    newest = Submission14().save(later)["_id"]
+    Submission14().collection.insert_one(base)
+    assert pick() == newest
+
+    # No revision: the newest annotator read that is not reopened.
+    Submission14().collection.delete_many({"assignmentId": assignment["_id"],
+                                           "authorRole": "reviewer"})
+    read = Submission14().load(one, force=True)
+    older = {k: v for k, v in read.items() if k != "_id"}
+    older["created"] = read["created"] - datetime.timedelta(days=1)
+    older = Submission14().save(older)["_id"]
+    assert pick() == read["_id"]
+    # Reopened (#315): never exported, even as the newest -- the older read is.
+    now = datetime.datetime.now(datetime.timezone.utc)
+    Submission14().collection.update_one({"_id": read["_id"]}, {"$set": {"reopenedAt": now}})
+    assert pick() == older
+    # A revision of a reopened read is not chosen either.
+    Submission14().collection.insert_one(base)       # revisionOf the reopened read
+    assert pick() == older
+    Submission14().collection.update_one({"_id": older}, {"$set": {"reopenedAt": now}})
+    assert export.exportedSubmission(assignment) is None

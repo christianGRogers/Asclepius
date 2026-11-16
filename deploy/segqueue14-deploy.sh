@@ -56,6 +56,10 @@
 # revision, starting from what they submitted (segqueue14-reopen). Dry run without --apply:
 #   bash segqueue14-deploy.sh reopen --login=<login> --submitted-before=<YYYY-MM-DD> [--apply]
 #
+# D48: that login's reads reopened (#315) and then expired by the sweep, restored as
+# ordinary reads (segqueue14-restore-reopened). Dry run without --apply:
+#   bash segqueue14-deploy.sh restore-reopened --login=<login> [--apply]
+#
 # What it never does: check out a branch in ~/Asclepius, reinstall the old plugin
 # (server/; only restore-live does, from that checkout), or write to the old
 # SegQueue's data outside the D36 steps. `main` is cloned separately into
@@ -458,6 +462,25 @@ reopen() {
     as_user "$bin" --login "$login" --submitted-before "$before" $apply
 }
 
+# ------------------------------------------------------------ D48
+
+restore_reopened() {
+    local bin="$LIVE/.venv/bin/segqueue14-restore-reopened" login="" apply="" arg
+    [ -x "$bin" ] || die "segqueue14-restore-reopened is not installed: run the install step first"
+    for arg in "$@"; do
+        case "$arg" in
+            --login=*)
+                [ -z "$login" ] || die "restore-reopened: one --login only"
+                login="${arg#--login=}"
+                [[ "$login" =~ ^[a-z0-9._-]+$ ]] || die "restore-reopened: --login takes one login (a-z 0-9 . _ -)" ;;
+            --apply) apply="--apply" ;;
+            *) die "restore-reopened: unknown argument '$arg'" ;;
+        esac
+    done
+    [ -n "$login" ] || die "restore-reopened needs --login=<login>"
+    as_user "$bin" --login "$login" $apply
+}
+
 # ------------------------------------------------------------ issue #296
 
 quality_report() {
@@ -634,6 +657,7 @@ case "${1:-}" in
     rescore-extended) shift; rescore_extended "$@" ;;
     revisions-check) shift; revisions_check "$@" ;;
     reopen) shift; reopen "$@" ;;
+    restore-reopened) shift; restore_reopened "$@" ;;
     backup-prepare|backup-finish|backup-status|backup-restore-test|backup-off)
         step="${1#backup-}"; shift
         case "$step" in prepare|finish) step="install-$step" ;; esac

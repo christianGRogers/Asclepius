@@ -503,6 +503,25 @@ score only (no review or approval changes). The *SegQueue14 on janus* step
 other arguments. After the merge to `main`: `install`, `rescore-extended`, and if the
 count reads right, `rescore-extended --apply`.
 
+## Restoring reopened reads the sweep expired (D48)
+
+Before 0.5.1 a reopened read (#315) kept its first attempt's heartbeat, and the next
+hourly sweep expired it and re-pooled the case. The *SegQueue14 on janus* step
+`restore-reopened` runs `segqueue14-restore-reopened`; `args` is exactly
+`--login=<one login>`. Run `restore-reopened` first (a dry run: each case, when the
+read was submitted, reopened and expired, and the sweep's reason), then
+`restore-reopened --apply` -- only on the lead's word.
+
+It takes that login's assignments reopened and then expired by the sweep, with no
+read resubmitted since; never one the annotator released, one a reviewer returned to
+the pool, or anybody else's. For each, the original read counts again (its
+`reopenedAt` is cleared: export, quality report, pair scoring), the assignment is
+`submitted` again and in the reviewers' queue, the case's `activeCount` goes up by one
+(the case keeps the reads made since: three, which D48 accepts), and the case thread
+gets a note naming no login. The annotator is not sent the case again. Running
+`--apply` again changes nothing. A new entry point: `install` from a `main` that has
+it first.
+
 ## Exports before #331: was a reviewer's correction left out?
 
 Before #331, `segqueue14-export` wrote the *annotator's* read of an approved

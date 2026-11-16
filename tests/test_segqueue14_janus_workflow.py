@@ -69,6 +69,10 @@ def _which(tmp_path, command, args=""):
      "reopen --login=ryoplacv --submitted-before=2026-11-09"),
     ("reopen --apply", "--submitted-before=2026-11-09 --login=ryoplacv",
      "reopen --submitted-before=2026-11-09 --login=ryoplacv --apply"),
+    # D48: exactly one login; --apply from the step only.
+    ("restore-reopened", "--login=ryoplacv", "restore-reopened --login=ryoplacv"),
+    ("restore-reopened --apply", "--login=ryoplacv",
+     "restore-reopened --login=ryoplacv --apply"),
 ])
 def test_accepted(tmp_path, command, args, expected):
     code, cmd, log = _which(tmp_path, command, args)
@@ -152,6 +156,16 @@ def test_accepted(tmp_path, command, args, expected):
     ("reopen", "--login=a --submitted-before=2026-11-09 --apply", "exactly --login="),
     ("reopen", "--login=a  --submitted-before=2026-11-09", "exactly --login="),
     ("reopen --dry-run", "--login=a --submitted-before=2026-11-09", "unknown step"),
+    ("restore-reopened", "", "restore-reopened needs args"),
+    ("restore-reopened --apply", "", "restore-reopened needs args"),
+    ("restore-reopened", "--login=a,b", "exactly --login="),
+    ("restore-reopened", "--login=a --login=b", "exactly --login="),
+    ("restore-reopened", "--login=Anna", "exactly --login="),
+    ("restore-reopened", "--login=$(id)", "exactly --login="),
+    ("restore-reopened", "--login=a;id", "exactly --login="),
+    ("restore-reopened", "--login=a --apply", "exactly --login="),
+    ("restore-reopened", "--login=a --submitted-before=2026-11-09", "exactly --login="),
+    ("restore-reopened --dry-run", "--login=a", "unknown step"),
 ])
 def test_refused(tmp_path, command, args, why):
     code, cmd, log = _which(tmp_path, command, args)

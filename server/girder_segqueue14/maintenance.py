@@ -47,6 +47,9 @@ INCOMING_MAX_AGE_SECONDS = 86400
 def sweep(dryRun=False, policy=None, now=None):
     """Release every assignment whose lease or heartbeat has lapsed.
 
+    Never the annotator benchmark (D43): ``Assignment14.reclaimable`` leaves it
+    out, so an invited annotator keeps it until they submit it.
+
     Returns ``{'released': [...], 'discarded': [...]}``. ``released`` holds one
     ``{assignmentId, caseId, userId, reason}`` per reclaimed lease; ``discarded``
     holds one ``{itemId, name, ageSeconds}`` per abandoned upload swept out of the

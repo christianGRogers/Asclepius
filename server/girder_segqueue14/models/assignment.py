@@ -96,7 +96,13 @@ def reclaimReason(assignment, policy, now):
     so an assignment reopened or reworked before ``transition`` cleared it is safe
     too. Reasons keep ``policy.reclaim_reason``'s wording, which the readers report
     recognises, with the deadline that lapsed.
+
+    Never a reason for the annotator benchmark (D43), for its lease or a quiet
+    client: /next serves it before any pool case, so the invited annotator holds it
+    until they submit it.
     """
+    if assignment.get('kind') == sqplan.KIND_BENCHMARK:
+        return None
     now = _utc(now)
     start = attemptStart(assignment)
     deadline = _utc(assignment.get('deadline'))
@@ -318,12 +324,14 @@ class Assignment14(AccessControlledModel):
     def reclaimable(self, policy, now=None):
         """Open assignments whose lease has expired or whose client has gone quiet.
 
-        Judged by ``reclaimReason``, the same function the sweep records its reason
-        with, so what is taken back and why can never disagree. Evaluated in Python
-        over the (small) set of open assignments -- a few dozen at any moment.
+        Never a benchmark assignment (D43). Judged by ``reclaimReason``, the same
+        function the sweep records its reason with, so what is taken back and why
+        can never disagree. Evaluated in Python over the (small) set of open
+        assignments -- a few dozen at any moment.
         """
         now = now or _now()
-        return [a for a in self.find({'state': {'$in': sorted(st.OPEN_STATES)}})
+        return [a for a in self.find({'state': {'$in': sorted(st.OPEN_STATES)},
+                                      'kind': NOT_BENCHMARK})
                 if reclaimReason(a, policy, now)]
 
     def recordFor(self, userId):

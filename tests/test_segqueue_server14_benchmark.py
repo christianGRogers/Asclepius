@@ -819,6 +819,7 @@ def test_the_sweep_never_expires_the_benchmark_but_still_expires_pool_cases(benc
 
     from girder_segqueue14 import maintenance
     from girder_segqueue14.models import Assignment14, Case14
+    from girder_segqueue14.models.assignment import reclaimReason
     from girder_segqueue14.settings import getPolicy
 
     queue, held, pool = _holding(bench)
@@ -851,6 +852,8 @@ def test_the_sweep_never_expires_the_benchmark_but_still_expires_pool_cases(benc
     assert case["activeCount"] == 1 and bench.people["anna"]["_id"] in case["assignedUserIds"]
     assert Case14().load(held["caseId"], force=True)["activeCount"] == 1
     assert maintenance.sweep(policy=policy, now=later)["released"] == []
+    # No reason is ever given for it, whoever asks.
+    assert reclaimReason(kept, policy, later) is None
 
 
 def test_withdrawing_an_invitation_still_works_and_the_pool_is_served(bench):

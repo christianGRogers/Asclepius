@@ -172,7 +172,7 @@ definition runs on the reference and the prediction alike, at the case's native 
 |---|---|
 | **Piece** | A 26-connected component of one class with ≥ 20 voxels |
 | **Centreline** | `skimage.morphology.skeletonize` of the piece. Length = skeleton voxels × mean spacing (Bridge v1's `census.py`) |
-| **Present** | A class is present in a case if the summed centreline length of its pieces is **≥ 5 mm**. On the 620, 3 mm instead of 5 mm changes presence in ≤ 3 cases for each gated class (D1 1, D2 2, OM1 2, OM2 1, R-PDA 2, R-PLA 5), and in 6 of 54 for L-PLA. The 5 mm line is kept: it also stops a 3–5 mm skeleton spur on a prediction from counting as a branch |
+| **Present** | A class is present in a case if the summed centreline length of its pieces is **≥ 5 mm**. On the 620, 3 mm instead of 5 mm changes presence in ≤ 5 cases for each gated class (D1 1, D2 2, OM1 2, OM2 1, R-PDA 2, R-PLA 5), and in 6 of 54 for L-PLA. The 5 mm line is kept: it also stops a 3–5 mm skeleton spur on a prediction from counting as a branch |
 | **Presence agreement** | The share of the 100 cases where reference and prediction both have the class, or both lack it |
 | **Detected** | A reference piece is detected if ≥ 50 % of its centreline points lie within 1.5 mm (D3) of predicted foreground of **any** class |
 | **Named** | A detected reference piece is named right if, among its centreline points within 1.5 mm of predicted foreground, the **majority** have their nearest predicted foreground voxel labelled with the reference's class. A tie counts as wrong |
@@ -442,7 +442,7 @@ model.
 |---|---|---|---|
 | **Label counts that feed training** (D3 from "Other", ignored pieces, L-PDA/L-PLA) | `j1f_labels.py`'s own summary, reproduced on Fir by F0 | D3 47; "Other" diag 50 / marg 20 / ambiguous 8 (the F0 line in the master plan) | It is the converter that makes the training labels, so its count is the one the model sees. Bridge v1's 48 is withdrawn: it counted by a looser origin rule |
 | **Dominance** | ImageCAS-X's `Descriptors.xlsx` (its own definition), 620 rows | **Right 564, left 35, co-dominant 21** | The dataset's field, not an inference |
-| **Cases with a left-sided PDA or PLA** | Labels | **59** (35 left, 19 co-dominant, 5 right-dominant with an L-PLA) | The number that matters for D47's collapse |
+| **Cases with a left-sided PDA or PLA** | Labels | **59** (35 left-dominant, 19 co-dominant, 5 right-dominant by the descriptor) | The number that matters for D47's collapse |
 | **Unnamed trunk twigs** | `census_r2.py`: the skeleton of each trunk class, minus its longest path; each remaining skeleton component is a twig of length (voxels × mean spacing) | [TWIG_TABLE] | One method, two cut-offs, code in the repository |
 | **Per-class geometry** (volume, length, diameter, origins) | Bridge v1 `census_620.jsonl` | Bridge v1 §2.4 | The only per-branch table with origins |
 

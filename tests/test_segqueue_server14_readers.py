@@ -201,3 +201,55 @@ def test_readers_takes_min():
     assert report.buildParser().parse_args(["readers"]).minLogins == 3
     args = report.buildParser().parse_args(["readers", "--min", "4", "--json"])
     assert (args.minLogins, args.json) == (4, True)
+
+
+def test_the_revisions_report_lists_approved_reviewer_revisions(world):
+    """``segqueue14-report revisions`` (#332's DEPLOY.md query, #334): approved
+    assignments with a standing reviewer revision, by case name; writes nothing."""
+    from girder_segqueue14 import report
+    from girder_segqueue14.models import Assignment14, Case14, Submission14
+
+    people = world.people
+
+    def read(name, state, revision=None):
+        c = Case14().createCase(name, fileId=None, checksum="", sizeBytes=0,
+                                replicasWanted=2)
+        a = Assignment14().collection.insert_one({
+            "caseId": c["_id"], "userId": people["anna"]["_id"], "state": state,
+            "kind": "paired", "attempt": 1, "assignedAt": _at(0)}).inserted_id
+        subs = [("annotator", "anna", None)]
+        if revision is not None:
+            subs.append(("reviewer", "revy", revision))
+        for i, (role, login, reopened) in enumerate(subs):
+            doc = {"assignmentId": a, "caseId": c["_id"], "userId": people[login]["_id"],
+                   "authorRole": role, "kind": "paired", "created": _at(10 + i)}
+            if reopened != "missing":
+                doc["reopenedAt"] = _at(30) if reopened == "reopened" else None
+            Submission14().collection.insert_one(doc)
+
+    read("rev_case", "approved", revision="standing")
+    read("rev_no_field", "approved", revision="missing")   # older docs: no reopenedAt
+    read("rev_reopened", "approved", revision="reopened")
+    read("rev_pending", "under_review", revision="standing")
+    read("plain_approved", "approved")
+
+    before = _snapshot(world)
+    lines = []
+    got = report.runRevisions(out=lines.append, db=world.db)
+    assert _snapshot(world) == before, "the report wrote something"
+    assert got == {"assignments": 2, "cases": ["rev_case", "rev_no_field"]}
+    assert lines == ["2 approved assignment(s) with a reviewer revision",
+                     "rev_case", "rev_no_field"]
+    js = []
+    report.runRevisions(asJson=True, out=js.append, db=world.db)
+    assert '"assignments": 2' in js[0]
+
+
+def test_revisions_takes_only_json():
+    pytest.importorskip("girder")
+    from girder_segqueue14 import report
+
+    assert report.buildParser().parse_args(["revisions"]).json is False
+    assert report.buildParser().parse_args(["revisions", "--json"]).json is True
+    with pytest.raises(SystemExit):
+        report.buildParser().parse_args(["revisions", "--min", "3"])

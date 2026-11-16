@@ -493,6 +493,16 @@ when it opens or submits such a case; nothing else changes for it. The step need
 the plugin installed from a `main` that has it (the `install` step):
 `segqueue14-reopen` is a new entry point.
 
+## Extended reads scored before D47: `rescore-extended`
+
+`segqueue14-score --rescore-extended` (#326) scores again every extended read scored
+before PDA, PLB and SN went to the vessel they leave (D47); it replaces the stored
+score only (no review or approval changes). The *SegQueue14 on janus* step
+`rescore-extended` (#334) is its dry run (`--dry-run`: lists, changes nothing);
+`rescore-extended --apply` rescores. Both run at nice 19 / ionice idle and take no
+other arguments. After the merge to `main`: `install`, `rescore-extended`, and if the
+count reads right, `rescore-extended --apply`.
+
 ## Exports before #331: was a reviewer's correction left out?
 
 Before #331, `segqueue14-export` wrote the *annotator's* read of an approved
@@ -501,7 +511,9 @@ correction never reached training. From #331 on it writes the newest reviewer
 revision, and `read.json` / the manifest's `exported_reads` say which
 (`exportedRole: reviewer|annotator`); the run prints how many were revisions.
 
-Which approved assignments have a revision -- read-only, on janus:
+Which approved assignments have a revision -- read-only: the *SegQueue14 on janus*
+step `revisions-check` (#334) runs `segqueue14-report revisions` at nice 19 / ionice
+idle and prints the same count and case names. By hand on janus, the same query:
 
 ```sh
 mongosh --quiet girder --eval '

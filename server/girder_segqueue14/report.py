@@ -1,6 +1,7 @@
 """``segqueue14-report quality`` -- how good are the annotations coming in (#296);
 ``segqueue14-report readers`` -- which cases have more annotators than they want, and
-why (#334; see ``collectReaders``).
+why (#334; see ``collectReaders``); ``segqueue14-report revisions`` -- the approved
+assignments that have a reviewer revision (#332, #334; see ``collectRevisions``).
 
 Read-only. It reads SegQueue14's Mongo collections through plain ``find`` queries
 (no Girder model is instantiated for the pool part, so not even an index is
@@ -10,6 +11,7 @@ never writes to Mongo or to the assetstore. Run on the server, like
 
     segqueue14-report quality [--limit N] [--exclude LOGIN,...] [--json]
     segqueue14-report readers [--min N] [--json]
+    segqueue14-report revisions [--json]
 
 **Per annotator** (Girder login), over annotator submissions to pool cases; the
 annotator benchmark (D43) is left out of every pool number and shown on its own at
@@ -723,6 +725,43 @@ def runReaders(minLogins=DEFAULT_MIN_READERS, asJson=False, out=print, db=None):
     return report
 
 
+# ---------------------------------------------------------- revisions (#332, #334)
+
+
+def collectRevisions(db):
+    """Approved assignments with a standing reviewer revision, and their cases.
+
+    The ``mongosh`` query in DEPLOY.md (#332) as plain ``find`` queries: a reviewer
+    submission not reopened, on an assignment now ``approved``. Those cases' exports
+    before #332 came from the annotator's read.
+    """
+    ids = db['segqueue14_submission'].distinct(
+        'assignmentId', {'authorRole': REVIEWER, 'reopenedAt': None})
+    rows = list(db['segqueue14_assignment'].find(
+        {'_id': {'$in': ids}, 'state': 'approved'}, {'caseId': 1}))
+    names = {c['_id']: c.get('name') for c in db['segqueue14_case'].find(
+        {'_id': {'$in': [r['caseId'] for r in rows]}}, {'name': 1})}
+    cases = sorted({str(names.get(r['caseId']) or r['caseId']) for r in rows})
+    return {'assignments': len(rows), 'cases': cases}
+
+
+def renderRevisions(report):
+    lines = [f"{report['assignments']} approved assignment(s) with a reviewer revision"]
+    lines += report['cases']
+    return lines
+
+
+def runRevisions(asJson=False, out=print, db=None):
+    db = _database() if db is None else db
+    report = collectRevisions(db)
+    if asJson:
+        out(json.dumps(report, indent=1))
+    else:
+        for line in renderRevisions(report):
+            out(line)
+    return report
+
+
 def buildParser():
     parser = argparse.ArgumentParser(
         prog='segqueue14-report',
@@ -742,6 +781,9 @@ def buildParser():
                    help='List cases with at least N distinct annotator logins '
                         f'(default {DEFAULT_MIN_READERS}).')
     r.add_argument('--json', action='store_true', help='Everything, as JSON.')
+    v = sub.add_parser('revisions', help='Approved assignments with a reviewer revision, '
+                                         'and their cases (#332).')
+    v.add_argument('--json', action='store_true', help='As JSON.')
     return parser
 
 
@@ -752,6 +794,9 @@ def logins(value):
 
 def main(argv=None):  # pragma: no cover - CLI entry point
     args = buildParser().parse_args(argv)
+    if args.report == 'revisions':
+        runRevisions(asJson=args.json)
+        return 0
     if args.report == 'readers':
         if args.minLogins < 1:
             raise SystemExit('--min must be 1 or more')

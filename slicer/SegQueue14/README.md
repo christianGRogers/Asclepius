@@ -85,6 +85,23 @@ empty, grouped under their parent in the segment list, with show/hide per group:
 - Older modules: 0.18.x/0.19.x ignore the flag and the ticks; a revision from them
   keeps the annotator's ticks (the server carries them forward).
 
+### Compare reads (0.21.0, #335, reviewers)
+
+- **Compare reads** under *Submissions* loads every annotator read of the selected
+  case onto its CT, read-only, each in its own colour (A red, B blue, C yellow, ...):
+  surfaces in 3D, outlines in the slices, a show box and an opacity slider per read.
+  Enabled when the case has two or more annotator reads. Reopened reads (#315) and
+  attempts a resubmission replaced are left out unless *Include reopened* is ticked.
+- **Agreement map:** pick any two reads; per class (or all) the voxels in both
+  (white), in the first only and in the second only (each read's colour), with the
+  per-class Dice and voxel counts beside it. A four-class read against an extended
+  one is compared after the collapse to the four (D47's PDA/PLB/SN rule); two
+  extended reads class by class, with the four-class mean (the server's pair score)
+  shown too. Computed by `segqueue14.compare`, as the server scores pairs.
+- **Nothing is written:** no claim, verdict, draft or upload. *Open A for revision*
+  opens that read through the ordinary review flow.
+- Module only: the protocol stays 19 and the server is unchanged.
+
 **The reviewer's case list** (0.18.0, #280) is sorted by submission time, newest
 first; rows with nothing submitted yet come last. The *Submitted (ET)* column shows
 that time in US Eastern time (America/Toronto, daylight saving included), e.g.

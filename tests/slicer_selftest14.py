@@ -29,6 +29,12 @@ classes; the three branch-group "complete" tick-boxes start unticked, are saved
 with the draft, go into the class-stack header on submit, are shown to a reviewer
 and kept by a revision; and a PDA moved out of the LCx collapses into the LCx.
 
+#335 (``run_compare``), the reviewer's "Compare reads" view: three synthetic reads of
+one case load together, read-only; the agreement map's both / A-only / B-only counts
+match a hand-computed overlap per class, on the CT grid; the Dice shown is the
+server's pair score; an extended read against a four-class read compares after the
+collapse; any two of three can be picked; the panel drives it; nothing is written.
+
 With ``SEGQUEUE_SELFTEST_INSTALLED=<folder>`` it tests the module Slicer loaded
 from that installed folder instead of the checkout.
 
@@ -812,7 +818,208 @@ def run_d47():
     slicer.mrmlScene.RemoveNode(review.segmentationNode)
 
 
-for part in (run, run_extended, run_d47):
+def run_compare():
+    """#335: the reviewer's "Compare reads" view, read-only, on synthetic reads."""
+    import hashlib
+
+    import numpy as np
+    import vtk
+
+    import slicer
+
+    if not os.environ.get("SEGQUEUE_SELFTEST_INSTALLED"):
+        sys.path.insert(0, os.path.join(REPO, "src"))
+        sys.path.insert(0, os.path.join(REPO, "slicer", "SegQueue14"))
+    import SegQueue14 as module
+
+    from segqueue.protocol import ProjectConfig
+    from segqueue14 import compare, labelfile, labels
+
+    say("--- #335: compare reads")
+    tmp = tempfile.mkdtemp()
+    volume = slicer.mrmlScene.AddNewNodeByClass("vtkMRMLScalarVolumeNode", "ct-compare")
+    slicer.util.updateVolumeFromArray(volume, np.full(SHAPE, -100, np.int16))
+    volume.SetSpacing(0.5, 0.5, 0.6)
+    volume.SetOrigin(10, -20, 30)
+    volumePath = os.path.join(tmp, "ct.nrrd")
+    slicer.util.saveNode(volume, volumePath)
+    matrix = vtk.vtkMatrix4x4()
+    volume.GetIJKToRASMatrix(matrix)
+    ijkToLps = labelfile.ras_to_lps([[matrix.GetElement(r, c) for c in range(4)]
+                                     for r in range(4)])
+    slicer.mrmlScene.RemoveNode(volume)
+
+    def tube(name, k0=5, k1=35):
+        mask = np.zeros(SHAPE, np.uint8)
+        lo, hi = TUBES[name]
+        mask[k0:k1, lo:hi, lo:hi] = 1
+        return mask
+
+    empty = np.zeros(SHAPE, np.uint8)
+    # A: the four tubes whole. B: no LM, LAD from k 10, RCA to k 20.
+    readA = [tube("LM"), tube("LAD"), tube("LCx"), tube("RCA")]
+    readB = [empty, tube("LAD", 10), tube("LCx"), tube("RCA", 5, 20)]
+    # C, extended: A's tree with the LAD's end drawn as D1 and the LCx's as a PDA
+    # leaving the LCx (left-dominant, D47 Q1). Collapsed, it is A exactly.
+    readC = [empty] * len(labels.ALL_NAMES)
+    readC[0], readC[1] = tube("LM"), tube("LAD", 5, 25)
+    readC[2], readC[3] = tube("LCx", 5, 25), tube("RCA")
+    readC[labels.ALL_NAMES.index("D1")] = tube("LAD", 25, 35)
+    readC[labels.ALL_NAMES.index("PDA")] = tube("LCx", 25, 35)
+    files = {}
+    for key, masks, names in (("A", readA, labels.NAMES), ("B", readB, labels.NAMES),
+                              ("C", readC, labels.ALL_NAMES)):
+        files[key] = os.path.join(tmp, f"read{key}.seg.nrrd")
+        labelfile.write_class_stack(files[key], masks, names, ijkToLps)
+
+    def digest():
+        out = {}
+        for key, path in files.items():
+            with open(path, "rb") as handle:
+                out[key] = hashlib.sha256(handle.read()).hexdigest()
+        return out
+
+    before = digest()
+    logic = module.SegQueue14Logic(cacheRoot=os.path.join(tmp, "cache"))
+    logic.project = ProjectConfig(name="selftest", instructions=labels.INSTRUCTIONS,
+                                  segments=labels.segment_specs())
+    logic.client = _RecordingClient()
+    reads = [{"key": key, "label": f"{key}: ann{n}", "path": files[key],
+              "submissionId": "s" + key} for n, key in enumerate("ABC", start=1)]
+    state = logic.loadComparison(volumePath, reads)
+
+    # 1. Three reads load together, on the one CT.
+    nodes = [state["reads"][k]["node"] for k in "ABC"]
+    check("three synthetic reads of one case load together",
+          all(slicer.mrmlScene.IsNodePresent(n) for n in nodes)
+          and slicer.mrmlScene.GetNodesByClass("vtkMRMLScalarVolumeNode").GetNumberOfItems() == 1,
+          [n.GetName() for n in nodes])
+    kept = {k: [int(m.sum()) for m in state["reads"][k]["masks"]][:4] for k in "ABC"}
+    check("  each with its own classes whole",
+          kept["A"] == [TUBE_VOXELS] * 4
+          and kept["B"] == [0, 25 * 9, TUBE_VOXELS, 15 * 9]
+          and kept["C"] == [TUBE_VOXELS, 20 * 9, 20 * 9, TUBE_VOXELS], kept)
+
+    # 2. The agreement map of A and B against a hand-computed overlap, per class.
+    check("  the first two are the agreement pair", state["pair"] == ("A", "B"))
+    result = state["result"]
+    hand = {"LM": (0, TUBE_VOXELS, 0), "LAD": (25 * 9, 5 * 9, 0),
+            "LCx": (TUBE_VOXELS, 0, 0), "RCA": (15 * 9, 15 * 9, 0)}
+    got = {n: tuple(result["per_class"][n][k] for k in ("both", "a_only", "b_only"))
+           for n in labels.NAMES}
+    check("the agreement map's both / A-only / B-only counts match by hand, per class",
+          got == hand, got)
+    ids = state["agreementIds"]
+    drawn = {}
+    for (name, category), segmentId in ids.items():
+        drawn[(name, category)] = int(slicer.util.arrayFromSegmentBinaryLabelmap(
+            state["agreementNode"], segmentId, logic.volumeNode).sum())
+    expected = {(n, c): v for n in labels.NAMES
+                for c, v in zip((compare.BOTH, compare.A_ONLY, compare.B_ONLY), hand[n]) if v}
+    check("  and the map drawn on the CT grid holds exactly those voxels",
+          drawn == expected, drawn)
+    names = sorted(state["agreementNode"].GetSegmentation().GetNthSegment(i).GetName()
+                   for i in range(state["agreementNode"].GetSegmentation().GetNumberOfSegments()))
+    check("  named per class and category", "LAD: A only" in names and "LAD: both" in names,
+          names)
+
+    # 3. The Dice shown is the server's pair score on the same voxels.
+    a = labelfile.read_class_stack(files["A"])
+    b = labelfile.read_class_stack(files["B"])
+    try:
+        from segqueue14 import scoring
+
+        server = scoring.score_reads(a["masks"], a["names"], b["masks"], b["names"],
+                                     a["spacing"])
+        serverDice = {n: server["per_structure"][n]["dice"] for n in labels.NAMES}
+        how = "segqueue14.scoring.score_reads"
+    except ImportError:
+        # No scipy in this Slicer: segtrain.metrics.dice_score's formula, from the files.
+        serverDice = {}
+        for i, n in enumerate(labels.NAMES):
+            x, y = a["masks"][i] != 0, b["masks"][i] != 0
+            total = int(x.sum()) + int(y.sum())
+            serverDice[n] = round(2.0 * int((x & y).sum()) / total, 4) if total else None
+        how = "dice_score's formula (segtrain not importable here)"
+    shown = {n: result["per_class"][n]["dice"] for n in labels.NAMES}
+    check("the Dice shown matches the server's pair scoring", shown == serverDice,
+          f"{shown} vs {serverDice} by {how}")
+
+    # 4. The display: side by side, then the map, one class.
+    logic.setReadVisible("B", False)
+    logic.setReadOpacity("A", 0.4)
+    displays = {k: state["reads"][k]["node"].GetDisplayNode() for k in "ABC"}
+    check("side by side: a read can be hidden and its opacity set",
+          not displays["B"].GetVisibility() and displays["A"].GetVisibility()
+          and abs(displays["A"].GetOpacity() - 0.4) < 1e-6)
+    colours = {k: tuple(round(c, 2) for c in state["reads"][k]["node"].GetSegmentation()
+                        .GetNthSegment(0).GetColor()) for k in "ABC"}
+    check("  each read in its own colour", len(set(colours.values())) == 3, colours)
+    logic.setCompareMode("agreement")
+    logic.setAgreementClass("LAD")
+    mapDisplay = state["agreementNode"].GetDisplayNode()
+    visible = sorted(name for (name, _c), sid in state["agreementIds"].items()
+                     if mapDisplay.GetSegmentVisibility(sid))
+    check("agreement map: the reads hide, the map shows, one class at a time",
+          mapDisplay.GetVisibility() and not any(d.GetVisibility() for d in displays.values())
+          and set(visible) == {"LAD"}, visible)
+
+    # 5. An extended read against a four-class read compares after the collapse.
+    ext = logic.setAgreementPair("C", "A")
+    check("an extended read against a four-class read compares after the collapse",
+          ext["mode"] == compare.MODE_FOUR and ext["names"] == labels.NAMES
+          and all(ext["per_class"][n]["dice"] == 1.0 for n in labels.NAMES),
+          {n: ext["per_class"][n]["dice"] for n in labels.NAMES})
+
+    # 6. Three reads: pick any two.
+    picked = logic.setAgreementPair("B", "C")
+    names = [state["agreementNode"].GetSegmentation().GetNthSegment(i).GetName()
+             for i in range(state["agreementNode"].GetSegmentation().GetNumberOfSegments())]
+    check("three reads: any two can be picked for the map",
+          state["pair"] == ("B", "C") and "B vs C" in state["agreementNode"].GetName()
+          and "LAD: C only" in names
+          and picked["per_class"]["LAD"]["a_only"] == 0
+          and picked["per_class"]["LAD"]["b_only"] == 5 * 9, names)
+
+    # 7. The panel drives the same logic.
+    try:
+        widget = module.SegQueue14Widget()
+        widget.setup()
+        widget.logic = logic
+        widget._fillComparePanel(reads)
+        check("the compare panel lists the reads and the classes",
+              widget.compareACombo.count == 3 and widget.compareBCombo.count == 3
+              and widget.compareClassCombo.count == 1 + len(labels.NAMES)
+              and not widget.compareFrame.isHidden())
+        widget.compareBCombo.setCurrentIndex(2)
+        check("  picking a read re-pairs the map", state["pair"] == ("A", "C"), state["pair"])
+        widget.compareModeCombo.setCurrentIndex(1)
+        widget.compareClassCombo.setCurrentIndex(widget.compareClassCombo.findText("RCA"))
+        check("  the mode and class pickers drive the view",
+              state["mode"] == "agreement" and state["selected"] == "RCA",
+              (state["mode"], state["selected"]))
+        widget._compareReadWidgets[2].setChecked(False)   # B's show box
+        check("  a read's show box hides it", state["reads"]["B"].get("visible") is False)
+        check("  the summary names the pair", "A vs C" in widget.compareSummary.text)
+        try:
+            widget.cleanup()
+        except Exception:
+            pass
+    except Exception:
+        check("the compare panel builds", False, traceback.format_exc())
+
+    # 8. Read-only.
+    check("comparing writes nothing to any submission",
+          digest() == before and logic.client.calls == []
+          and logic.segmentationNode is None and logic.assignment is None,
+          logic.client.calls)
+    logic.closeComparison()
+    check("  and closing it takes its reads and map out of the scene",
+          not any(slicer.mrmlScene.IsNodePresent(n) for n in nodes)
+          and logic.comparison is None)
+
+
+for part in (run, run_extended, run_d47, run_compare):
     try:
         part()
     except Exception:

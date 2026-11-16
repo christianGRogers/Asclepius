@@ -643,3 +643,17 @@ def test_a_review_open_or_a_case_open_ends_the_comparison():
                             ("SegQueue14Logic", "closeCase")):
         body = ast.get_source_segment(_source(), _method(classname, name))
         assert "closeComparison()" in body, name
+
+
+def test_a_refused_release_shows_the_servers_message_and_keeps_the_case():
+    """The benchmark (D43) cannot be released: the module does not know a case is
+    the benchmark (the kind is never sent), so the server's refusal is what the
+    annotator sees. ``releaseCase`` raises before ``closeCase`` purges anything,
+    and the widget shows ``str(exc)`` and returns with the case still open."""
+    logic = ast.get_source_segment(_source(), _method("SegQueue14Logic", "release"))
+    assert logic.index("self.client.releaseCase(") < logic.index("self.closeCase(")
+    widget = ast.get_source_segment(_source(), _method("SegQueue14Widget", "onRelease"))
+    handler = widget[widget.index("except SegQueueError as exc:"):]
+    assert handler.split("return", 1)[0].strip().endswith("slicer.util.errorDisplay(str(exc))")
+    assert widget.index("return", widget.index("except SegQueueError")) < widget.index(
+        'self.caseLabel.setText("No case open.")')

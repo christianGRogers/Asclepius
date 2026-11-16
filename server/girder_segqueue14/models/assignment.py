@@ -263,6 +263,8 @@ class Assignment14(AccessControlledModel):
     def reclaimable(self, policy, now=None):
         """Assignments whose lease has expired or whose client has gone quiet.
 
+        Never a benchmark assignment (D43).
+
         The deadline half is an indexed range query. The heartbeat half cannot
         be, since "stale" is relative to a configurable window, so it is
         evaluated in Python over the (small) set of open assignments -- there
@@ -270,15 +272,15 @@ class Assignment14(AccessControlledModel):
         """
         now = now or _now()
         nowEpoch = now.timestamp()
-        openStates = sorted(st.OPEN_STATES)
+        # The annotator benchmark (D43) is never reclaimed, for its lease or a
+        # quiet client: /next serves it before any pool case, so the invited
+        # annotator holds it until they submit it.
+        open_ = {'state': {'$in': sorted(st.OPEN_STATES)}, 'kind': NOT_BENCHMARK}
 
-        expired = list(self.find({
-            'state': {'$in': openStates},
-            'deadline': {'$lte': now},
-        }))
+        expired = list(self.find(dict(open_, deadline={'$lte': now})))
         seen = {a['_id'] for a in expired}
 
-        for assignment in self.find({'state': {'$in': openStates}}):
+        for assignment in self.find(open_):
             if assignment['_id'] in seen:
                 continue
             if pol.heartbeat_stale(

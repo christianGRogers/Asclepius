@@ -756,3 +756,117 @@ def test_seed_from_girder_never_overwrites_a_different_seed_of_that_name(bench):
     assert _benchCase()["seedFileId"] == same["_id"]
     assert "supplied by the lead" in _benchCase()["seedSource"]
     assert Item().find({"folderId": seeds["_id"]}).count() == 1
+
+
+# ------------------------------------------------- no release, no expiry
+
+
+def _holding(world):
+    """anna holds the benchmark, cathy a pool case; both just assigned."""
+    from girder_segqueue14.models import Assignment14
+
+    _readyProject(world)
+    _seeded(world)
+    _assign("cathy,admin")
+    queue = _resource()
+    _as(world.people["anna"])
+    bench = queue.nextCase(clientProtocol=17)
+    assert bench["caseName"] == "annotator_benchmark_0855"
+    _as(world.people["cathy"])
+    pool = queue.nextCase(clientProtocol=17)
+    assert not pool["caseName"].startswith("annotator_benchmark_")
+    load = Assignment14().load
+    return queue, load(bench["assignmentId"], force=True), load(pool["assignmentId"], force=True)
+
+
+def test_an_annotator_cannot_release_the_benchmark_and_nothing_changes(bench):
+    from girder_segqueue14.models import Assignment14, Case14
+
+    queue, held, _ = _holding(bench)
+    before = (Assignment14().load(held["_id"], force=True), _benchCase())
+    _as(bench.people["anna"])
+    refused = _refusal(queue.release, assignmentId=str(held["_id"]), reason="no thanks")
+    assert refused.code == 403
+    assert refused.extra["message"] == (
+        "The benchmark case can't be released; please annotate and submit it.")
+    assert refused.extra["segqueueError"] == "benchmark_no_release"
+
+    after = (Assignment14().load(held["_id"], force=True), _benchCase())
+    assert after[0] == before[0] and after[0]["state"] == "assigned"
+    for field in ("activeCount", "assignedUserIds", "benchmarkPending"):
+        assert after[1][field] == before[1][field], field
+    assert bench.people["anna"]["_id"] in after[1]["assignedUserIds"]
+    # Still hers, still open: her next /next is the same case.
+    assert queue.listMine()[0]["assignmentId"] == str(held["_id"])
+    assert Case14().load(held["caseId"], force=True)["activeCount"] == 1
+
+
+def test_a_pool_case_is_still_released_as_before(bench):
+    from girder_segqueue14.models import Assignment14, Case14
+
+    queue, _, pool = _holding(bench)
+    caseBefore = Case14().load(pool["caseId"], force=True)
+    _as(bench.people["cathy"])
+    result = queue.release(assignmentId=str(pool["_id"]), reason="test")
+    assert result == {"released": True, "caseId": str(pool["caseId"])}
+    assert Assignment14().load(pool["_id"], force=True)["state"] == "released"
+    caseAfter = Case14().load(pool["caseId"], force=True)
+    assert caseAfter["activeCount"] == caseBefore["activeCount"] - 1
+
+
+def test_the_sweep_never_expires_the_benchmark_but_still_expires_pool_cases(bench):
+    import datetime
+
+    from girder_segqueue14 import maintenance
+    from girder_segqueue14.models import Assignment14, Case14
+    from girder_segqueue14.settings import getPolicy
+
+    queue, held, pool = _holding(bench)
+    policy = getPolicy()
+    now = datetime.datetime.now(datetime.timezone.utc)
+
+    # A stale heartbeat on both, leases still running.
+    stale = now - datetime.timedelta(hours=policy.stale_heartbeat_hours + 1)
+    Assignment14().collection.update_many(
+        {"_id": {"$in": [held["_id"], pool["_id"]]}}, {"$set": {"lastHeartbeat": stale}})
+    assert [a["_id"] for a in Assignment14().reclaimable(policy, now=now)] == [pool["_id"]]
+    dry = maintenance.sweep(dryRun=True, policy=policy, now=now)["released"]
+    assert [r["assignmentId"] for r in dry] == [str(pool["_id"])]
+    swept = maintenance.sweep(policy=policy, now=now)["released"]
+    assert [r["assignmentId"] for r in swept] == [str(pool["_id"])]
+    assert "heartbeat" in swept[0]["reason"]
+    assert Assignment14().load(pool["_id"], force=True)["state"] == "released"
+    assert Assignment14().load(held["_id"], force=True)["state"] == "assigned"
+
+    # Long past the lease too: the benchmark is still hers.
+    later = now + datetime.timedelta(days=policy.lease_days * 10)
+    _as(bench.people["cathy"])
+    again = queue.nextCase(clientProtocol=17)
+    swept = maintenance.sweep(policy=policy, now=later)["released"]
+    assert [r["assignmentId"] for r in swept] == [again["assignmentId"]]
+    assert "lease" in swept[0]["reason"]
+    kept = Assignment14().load(held["_id"], force=True)
+    assert kept["state"] == "assigned" and kept["releasedAt"] is None
+    case = _benchCase()
+    assert case["activeCount"] == 1 and bench.people["anna"]["_id"] in case["assignedUserIds"]
+    assert Case14().load(held["caseId"], force=True)["activeCount"] == 1
+    assert maintenance.sweep(policy=policy, now=later)["released"] == []
+
+
+def test_withdrawing_an_invitation_still_works_and_the_pool_is_served(bench):
+    _readyProject(bench)
+    _seeded(bench)
+    _assign("admin")
+    cathy = bench.people["cathy"]
+    assert cathy["_id"] in _benchCase()["benchmarkPending"]
+    result, _ = _assign("cathy,admin")
+    assert result["cathy"] == "excluded; invitation withdrawn"
+    case = _benchCase()
+    assert cathy["_id"] not in case["benchmarkPending"]
+    assert cathy["_id"] not in case["assignedUserIds"]
+    # Her next case is from the pool, and that one she can still give back.
+    queue = _resource()
+    _as(cathy)
+    got = queue.nextCase(clientProtocol=17)
+    assert not got["caseName"].startswith("annotator_benchmark_")
+    assert queue.release(assignmentId=got["assignmentId"], reason="test")["released"]

@@ -117,6 +117,28 @@ def test_a_missing_required_class_refusal_keeps_its_code():
     assert caught.value.detail["missing"] == ["LCx"]
 
 
+BENCHMARK_REFUSAL = "The benchmark case can't be released; please annotate and submit it."
+
+
+def test_a_refused_benchmark_release_is_the_servers_message_unchanged():
+    # The module shows str(exc) in its error dialog and keeps the case open.
+    session = FakeSession({("POST", "release"): girderError(
+        "benchmark_no_release", BENCHMARK_REFUSAL, status=403)})
+    with pytest.raises(SegQueue14Error) as caught:
+        makeClient(session).releaseCase("a1", reason="released by annotator")
+    assert str(caught.value) == BENCHMARK_REFUSAL
+    assert caught.value.code == "benchmark_no_release"
+
+
+def test_a_refusal_code_the_module_does_not_know_is_still_a_clean_message():
+    # An older module never heard of the code: the same message, never a crash.
+    session = FakeSession({("POST", "release"): girderError(
+        "some_future_code", BENCHMARK_REFUSAL, status=403)})
+    with pytest.raises(SegQueue14Error) as caught:
+        makeClient(session).releaseCase("a1")
+    assert str(caught.value) == BENCHMARK_REFUSAL
+
+
 def test_every_client_error_carries_a_code_and_detail(tmp_path):
     # An unstructured HTTP failure, and one the client raises itself, both have
     # the two attributes a structured refusal has -- empty, not missing.

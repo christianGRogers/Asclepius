@@ -330,3 +330,108 @@ def test_the_resubmission_replaces_the_old_read_in_pairing_and_the_report(scene,
     assert _refusal(queue.verdict, submissionId=old, verdict="approve").code == 409
     assert _refusal(queue.returnToPool, submissionId=old, reason="x").code == 409
     assert Assignment14().load(s["paired"]["assignmentId"], force=True)["state"] == "submitted"
+
+
+# ------------------------------------------------- D48: restore-reopened
+
+def _expireAs050(assignmentId, reason="no heartbeat for 72 hours"):
+    """What the 0.5.0 sweep did to a reopened read an hour after the reopen."""
+    from girder_segqueue14.models import Assignment14, Case14
+
+    from segqueue import states as st
+
+    a = Assignment14().load(assignmentId, force=True)
+    Assignment14().transition(a, st.EXPIRE, releaseReason=reason)
+    Case14().releaseSlot(a["caseId"])
+
+
+def _restore(apply, login="anna"):
+    from girder_segqueue14 import restore
+
+    lines = []
+    rows = restore.runRestore(login, apply=apply, out=lines.append)
+    return rows, lines
+
+
+@pytest.fixture
+def expired(scene):
+    """anna's two reads reopened and expired by the sweep; one of them was resubmitted
+    (a read on the assignment that is not marked reopened); cathy's read reopened and
+    then released by cathy herself."""
+    from girder_segqueue14 import reopen
+    from girder_segqueue14.models import Assignment14, Submission14
+
+    s = scene.s
+    _run(apply=True)
+    reopen.runReopen("cathy", DAY, apply=True, out=lambda _: None)
+    _expireAs050(s["paired"]["assignmentId"])
+    _expireAs050(s["claimed"]["assignmentId"], reason="lease of 7 days expired")
+    Submission14().collection.insert_one({
+        "assignmentId": s["claimed"]["assignmentId"], "caseId": s["claimed"]["caseId"],
+        "userId": s["claimed"]["userId"], "authorRole": "annotator", "kind": "normal",
+        "created": datetime.datetime.now(UTC), "reopenedAt": None, "scored": True})
+    _as(scene.people["cathy"])
+    scene.queue.release(assignmentId=str(s["cathy"]["assignmentId"]), reason="")
+    a = Assignment14().load(s["cathy"]["assignmentId"], force=True)
+    assert a["state"] == "released" and a.get("reopenedAt") is not None
+    return scene
+
+
+def test_restore_dry_run_lists_only_the_expired_unresubmitted_read(expired):
+    from girder_segqueue14.models import Case14, Note14, Submission14
+
+    s = expired.s
+    ids = [sub["assignmentId"] for sub in s.values()]
+    before = (_docs(ids), list(Submission14().find({})), list(Case14().find({})))
+    rows, lines = _restore(apply=False)
+    assert [r["assignmentId"] for r in rows] == [str(s["paired"]["assignmentId"])]
+    assert rows[0]["reason"] == "no heartbeat for 72 hours"
+    assert any("dry run" in line for line in lines)
+    assert (_docs(ids), list(Submission14().find({})), list(Case14().find({}))) == before
+    assert Note14().collection.count_documents({"text": {"$regex": "D48"}}) == 0
+    assert _restore(apply=False, login="cathy")[0] == [], "released by the annotator"
+
+
+def test_restore_apply_makes_it_an_ordinary_read_again_and_is_idempotent(expired):
+    from girder_segqueue14 import export, report, scoring
+    from girder_segqueue14.models import Assignment14, Case14, Note14, Submission14
+
+    s = expired.s
+    paired = s["paired"]
+    untouched = [s[k]["assignmentId"] for k in s if k != "paired"]
+    before = _docs(untouched)
+    activeBefore = Case14().load(paired["caseId"], force=True)["activeCount"]
+    assert scoring.partnerSubmission(s["bobby"]) is None
+    assert report.collect(expired.db, limit=0)["annotators"]["bobby"]["pairs"]["n"] == 0
+
+    rows, _ = _restore(apply=True)
+    assert [(r["assignmentId"], r["done"]) for r in rows] == [
+        (str(paired["assignmentId"]), "restored")]
+    a = Assignment14().load(paired["assignmentId"], force=True)
+    assert a["state"] == "submitted" and a["needsReview"] is True
+    assert a["submissionId"] == paired["_id"]
+    assert a["startFileId"] is None and a["startSubmissionId"] is None
+    assert a["releasedAt"] is None and a["releaseReason"] is None
+    assert a["restoredFrom"]["releaseReason"] == "no heartbeat for 72 hours"
+    assert a["reopenedAt"] is not None, "kept as history"
+    assert Submission14().load(paired["_id"], force=True)["reopenedAt"] is None
+    assert Case14().load(paired["caseId"], force=True)["activeCount"] == activeBefore + 1
+    assert a["_id"] in {x["_id"] for x in Assignment14().pendingReview(limit=500)}
+    notes = [n["text"] for n in Note14().forCase(paired["caseId"])]
+    assert any("(D48)" in n for n in notes) and not any("anna" in n for n in notes)
+    assert _docs(untouched) == before, "resubmitted, released and others untouched"
+
+    # It counts again: pairing, the quality report, the export, the readers check.
+    assert scoring.partnerSubmission(s["bobby"])["_id"] == paired["_id"]
+    people = report.collect(expired.db, limit=0)["annotators"]
+    assert people["bobby"]["pairs"]["n"] == 1 and people["anna"]["pairs"]["n"] == 1
+    assert export.exportedSubmission(a)["_id"] == paired["_id"]
+    caseName = Case14().load(paired["caseId"], force=True)["name"]
+    assert caseName not in {m["case"] for m in report.collectReaders(
+        expired.db, minLogins=1)["activeCount"]["cases"]}
+
+    # Twice is a no-op.
+    after = _docs([s[k]["assignmentId"] for k in s])
+    assert _restore(apply=True)[0] == []
+    assert _docs([s[k]["assignmentId"] for k in s]) == after
+    assert Note14().collection.count_documents({"text": {"$regex": "D48"}}) == 1

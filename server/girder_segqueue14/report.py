@@ -458,6 +458,9 @@ RETURN_REASON = 'returned to the pool'
 STATE_LABELS = {'return-to-pool': 'returned to pool', 'release': 'released',
                 'expired': 'expired'}
 TIME_ZONE = 'America/New_York'
+#: A sweep this soon after a reopen or rework took the old attempt's lease or
+#: heartbeat for the new one's (the Nov 12 reopens; fixed in 0.5.1).
+QUICK_EXPIRY_SECONDS = 3600
 
 
 def _eastern(dt):
@@ -523,7 +526,7 @@ def collectReaders(db, minLogins=DEFAULT_MIN_READERS):
     for a in db['segqueue14_assignment'].find({}, {
             'caseId': 1, 'userId': 1, 'state': 1, 'assignedAt': 1, 'submittedAt': 1,
             'decidedAt': 1, 'releasedAt': 1, 'releaseReason': 1, 'reviewerId': 1,
-            'reopenedAt': 1, 'attempt': 1}):
+            'reopenedAt': 1, 'reworkedAt': 1, 'attempt': 1}):
         byCase.setdefault(a['caseId'], []).append(a)
     reads = {}  # assignmentId -> annotator submissions, oldest first
     for s in db['segqueue14_submission'].find(
@@ -623,6 +626,27 @@ def collectReaders(db, minLogins=DEFAULT_MIN_READERS):
         })
     listed.sort(key=lambda c: str(c['case']))
 
+    # Reopened or reworked, then expired by the sweep within the hour: a new attempt
+    # judged by the old attempt's lease or heartbeat (fixed in 0.5.1). Every case,
+    # not only those listed above.
+    quickExpiries = []
+    for caseId, assignments in byCase.items():
+        for a in assignments:
+            restarts = [(_sortKey(a[k]), how, a[k]) for k, how in (
+                ('reopenedAt', 'reopened'), ('reworkedAt', 'reworked')) if a.get(k)]
+            if not restarts or freedBy(a) != 'expired' or a.get('releasedAt') is None:
+                continue
+            _, how, restarted = max(restarts, key=lambda r: r[0])
+            gap = _sortKey(a['releasedAt'])[1] - _sortKey(restarted)[1]
+            if 0 <= gap <= QUICK_EXPIRY_SECONDS:
+                quickExpiries.append({
+                    'case': (cases.get(caseId) or {}).get('name', str(caseId)),
+                    'login': login(a['userId']),
+                    'how': how,
+                    'restarted': _eastern(restarted), 'expired': _eastern(a['releasedAt']),
+                    'minutes': int(gap // 60), 'releaseReason': a.get('releaseReason')})
+    quickExpiries.sort(key=lambda r: (r['expired'] or '', str(r['case']), r['login']))
+
     totals = {c: 0 for c in CAUSES + (WITHIN_WANTED,)}
     for c in listed:
         totals[c['cause']] += 1
@@ -631,6 +655,7 @@ def collectReaders(db, minLogins=DEFAULT_MIN_READERS):
         'threeOrMoreSubmitted': sum(1 for c in listed if c['submittedLogins'] >= 3),
         'unexplained': [c for c in listed if c['cause'] == 'other/unexplained'],
         'activeCount': {'mismatches': len(mismatches), 'cases': mismatches},
+        'expiredAfterReopen': quickExpiries,
     }
 
 
@@ -675,6 +700,15 @@ def renderReaders(report):
                          for m in check['cases']))
     else:
         lines.append('activeCount check: every case matches its open assignments')
+    quick = report['expiredAfterReopen']
+    if quick:
+        lines.append(f'Reopened or reworked, then expired by the sweep within 1 hour: '
+                     f'{len(quick)}: ' + '; '.join(
+                         f"{r['case']} {r['login']} ({r['how']} {r['restarted']}, expired "
+                         f"{r['expired']}, {r['minutes']} min, {r['releaseReason'] or '-'})"
+                         for r in quick))
+    else:
+        lines.append('Reopened or reworked, then expired by the sweep within 1 hour: none')
     return lines
 
 

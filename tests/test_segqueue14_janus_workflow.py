@@ -60,11 +60,19 @@ def _which(tmp_path, command, args=""):
     ("readers-report", "", "readers-report"),
     ("readers-report", "--min=3", "readers-report --min=3"),
     ("readers-report", "--min=10", "readers-report --min=10"),
+    # #334: no args; --apply from the step only.
+    ("rescore-extended", "", "rescore-extended"),
+    ("rescore-extended --apply", "", "rescore-extended --apply"),
+    ("revisions-check", "", "revisions-check"),
     # #315: one login and one date, in either order; --apply from the step only.
     ("reopen", "--login=ryoplacv --submitted-before=2026-11-09",
      "reopen --login=ryoplacv --submitted-before=2026-11-09"),
     ("reopen --apply", "--submitted-before=2026-11-09 --login=ryoplacv",
      "reopen --submitted-before=2026-11-09 --login=ryoplacv --apply"),
+    # D48: exactly one login; --apply from the step only.
+    ("restore-reopened", "--login=ryoplacv", "restore-reopened --login=ryoplacv"),
+    ("restore-reopened --apply", "--login=ryoplacv",
+     "restore-reopened --login=ryoplacv --apply"),
 ])
 def test_accepted(tmp_path, command, args, expected):
     code, cmd, log = _which(tmp_path, command, args)
@@ -121,6 +129,16 @@ def test_accepted(tmp_path, command, args, expected):
     ("readers-report", "--limit=5", "only --min="),
     ("readers-report", "--exclude=a", "only --min="),
     ("readers-report", " --min=3", "only --min="),
+    ("rescore-extended", "--apply", "only benchmark-assign, benchmark-seed,"),
+    ("rescore-extended", "--dry-run", "only benchmark-assign, benchmark-seed,"),
+    ("rescore-extended --apply", "--apply", "only benchmark-assign, benchmark-seed,"),
+    ("rescore-extended --apply", "--once", "only benchmark-assign, benchmark-seed,"),
+    ("rescore-extended", "x;id", "only benchmark-assign, benchmark-seed,"),
+    ("rescore-extended --dry-run", "", "unknown step"),
+    ("rescore-extended  --apply", "", "unknown step"),
+    ("revisions-check", "--json", "only benchmark-assign, benchmark-seed,"),
+    ("revisions-check", "$(id)", "only benchmark-assign, benchmark-seed,"),
+    ("revisions-check --apply", "", "unknown step"),
     ("benchmark-assign", "--exclude=a/b", "only logins"),
     ("benchmark-assign", "--from-girder=x", "is not --exclude"),
     ("benchmark-assign", "", "needs args"),
@@ -138,6 +156,16 @@ def test_accepted(tmp_path, command, args, expected):
     ("reopen", "--login=a --submitted-before=2026-11-09 --apply", "exactly --login="),
     ("reopen", "--login=a  --submitted-before=2026-11-09", "exactly --login="),
     ("reopen --dry-run", "--login=a --submitted-before=2026-11-09", "unknown step"),
+    ("restore-reopened", "", "restore-reopened needs args"),
+    ("restore-reopened --apply", "", "restore-reopened needs args"),
+    ("restore-reopened", "--login=a,b", "exactly --login="),
+    ("restore-reopened", "--login=a --login=b", "exactly --login="),
+    ("restore-reopened", "--login=Anna", "exactly --login="),
+    ("restore-reopened", "--login=$(id)", "exactly --login="),
+    ("restore-reopened", "--login=a;id", "exactly --login="),
+    ("restore-reopened", "--login=a --apply", "exactly --login="),
+    ("restore-reopened", "--login=a --submitted-before=2026-11-09", "exactly --login="),
+    ("restore-reopened --dry-run", "--login=a", "unknown step"),
 ])
 def test_refused(tmp_path, command, args, why):
     code, cmd, log = _which(tmp_path, command, args)

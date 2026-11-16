@@ -35,7 +35,12 @@ from segqueue.checksum import matches
 from segqueue14 import plan as sqplan
 from segqueue14 import protocol
 
-from ..constants import MAX_ASSIGN_ATTEMPTS, QUOTA_FIELD
+from ..constants import (
+    BENCHMARK_NO_RELEASE_MESSAGE,
+    ERR_BENCHMARK_NO_RELEASE,
+    MAX_ASSIGN_ATTEMPTS,
+    QUOTA_FIELD,
+)
 from ..models import Assignment14, Case14, Note14, Submission14
 from ..models.assignment import NOT_BENCHMARK
 from ..settings import getPolicy, getProject
@@ -407,6 +412,8 @@ class QueueResource14(Resource):
         Description('Give a SegQueue14 case back to the pool.')
         .param('assignmentId', 'The assignment to release.', paramType='path')
         .param('reason', 'Why, for the record.', required=False, default='')
+        .errorResponse('The annotator benchmark (D43) cannot be released.', 403)
+        .errorResponse('This assignment cannot be released in its current state.', 409)
     )
     def release(self, assignmentId, reason):
         user = requireAnnotator(self.getCurrentUser())
@@ -415,6 +422,11 @@ class QueueResource14(Resource):
             refuse(protocol.ERR_BAD_STATE,
                    f"A case in state {assignment['state']} cannot be released.",
                    status=409, state=assignment['state'])
+        if assignment.get('kind') == sqplan.KIND_BENCHMARK:
+            # An invited annotator annotates the benchmark (D43); nothing is
+            # written. An admin withdraws a pending invitation with
+            # `segqueue14-benchmark assign --exclude=<login>`.
+            refuse(ERR_BENCHMARK_NO_RELEASE, BENCHMARK_NO_RELEASE_MESSAGE, status=403)
         assignment = Assignment14().transition(
             assignment, st.RELEASE, releaseReason=reason or 'released by annotator')
         Case14().releaseSlot(assignment['caseId'])

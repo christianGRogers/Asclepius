@@ -1,6 +1,7 @@
 """``segqueue14-report quality`` -- how good are the annotations coming in (#296);
 ``segqueue14-report readers`` -- which cases have more annotators than they want, and
-why (#334; see ``collectReaders``).
+why (#334; see ``collectReaders``); ``segqueue14-report revisions`` -- the approved
+assignments that have a reviewer revision (#332, #334; see ``collectRevisions``).
 
 Read-only. It reads SegQueue14's Mongo collections through plain ``find`` queries
 (no Girder model is instantiated for the pool part, so not even an index is
@@ -10,6 +11,7 @@ never writes to Mongo or to the assetstore. Run on the server, like
 
     segqueue14-report quality [--limit N] [--exclude LOGIN,...] [--json]
     segqueue14-report readers [--min N] [--json]
+    segqueue14-report revisions [--json]
 
 **Per annotator** (Girder login), over annotator submissions to pool cases; the
 annotator benchmark (D43) is left out of every pool number and shown on its own at
@@ -458,6 +460,9 @@ RETURN_REASON = 'returned to the pool'
 STATE_LABELS = {'return-to-pool': 'returned to pool', 'release': 'released',
                 'expired': 'expired'}
 TIME_ZONE = 'America/New_York'
+#: A sweep this soon after a reopen or rework took the old attempt's lease or
+#: heartbeat for the new one's (the Nov 12 reopens; fixed in 0.5.1).
+QUICK_EXPIRY_SECONDS = 3600
 
 
 def _eastern(dt):
@@ -523,7 +528,7 @@ def collectReaders(db, minLogins=DEFAULT_MIN_READERS):
     for a in db['segqueue14_assignment'].find({}, {
             'caseId': 1, 'userId': 1, 'state': 1, 'assignedAt': 1, 'submittedAt': 1,
             'decidedAt': 1, 'releasedAt': 1, 'releaseReason': 1, 'reviewerId': 1,
-            'reopenedAt': 1, 'attempt': 1}):
+            'reopenedAt': 1, 'reworkedAt': 1, 'attempt': 1}):
         byCase.setdefault(a['caseId'], []).append(a)
     reads = {}  # assignmentId -> annotator submissions, oldest first
     for s in db['segqueue14_submission'].find(
@@ -623,6 +628,27 @@ def collectReaders(db, minLogins=DEFAULT_MIN_READERS):
         })
     listed.sort(key=lambda c: str(c['case']))
 
+    # Reopened or reworked, then expired by the sweep within the hour: a new attempt
+    # judged by the old attempt's lease or heartbeat (fixed in 0.5.1). Every case,
+    # not only those listed above.
+    quickExpiries = []
+    for caseId, assignments in byCase.items():
+        for a in assignments:
+            restarts = [(_sortKey(a[k]), how, a[k]) for k, how in (
+                ('reopenedAt', 'reopened'), ('reworkedAt', 'reworked')) if a.get(k)]
+            if not restarts or freedBy(a) != 'expired' or a.get('releasedAt') is None:
+                continue
+            _, how, restarted = max(restarts, key=lambda r: r[0])
+            gap = _sortKey(a['releasedAt'])[1] - _sortKey(restarted)[1]
+            if 0 <= gap <= QUICK_EXPIRY_SECONDS:
+                quickExpiries.append({
+                    'case': (cases.get(caseId) or {}).get('name', str(caseId)),
+                    'login': login(a['userId']),
+                    'how': how,
+                    'restarted': _eastern(restarted), 'expired': _eastern(a['releasedAt']),
+                    'minutes': int(gap // 60), 'releaseReason': a.get('releaseReason')})
+    quickExpiries.sort(key=lambda r: (r['expired'] or '', str(r['case']), r['login']))
+
     totals = {c: 0 for c in CAUSES + (WITHIN_WANTED,)}
     for c in listed:
         totals[c['cause']] += 1
@@ -631,6 +657,7 @@ def collectReaders(db, minLogins=DEFAULT_MIN_READERS):
         'threeOrMoreSubmitted': sum(1 for c in listed if c['submittedLogins'] >= 3),
         'unexplained': [c for c in listed if c['cause'] == 'other/unexplained'],
         'activeCount': {'mismatches': len(mismatches), 'cases': mismatches},
+        'expiredAfterReopen': quickExpiries,
     }
 
 
@@ -675,6 +702,15 @@ def renderReaders(report):
                          for m in check['cases']))
     else:
         lines.append('activeCount check: every case matches its open assignments')
+    quick = report['expiredAfterReopen']
+    if quick:
+        lines.append(f'Reopened or reworked, then expired by the sweep within 1 hour: '
+                     f'{len(quick)}: ' + '; '.join(
+                         f"{r['case']} {r['login']} ({r['how']} {r['restarted']}, expired "
+                         f"{r['expired']}, {r['minutes']} min, {r['releaseReason'] or '-'})"
+                         for r in quick))
+    else:
+        lines.append('Reopened or reworked, then expired by the sweep within 1 hour: none')
     return lines
 
 
@@ -685,6 +721,43 @@ def runReaders(minLogins=DEFAULT_MIN_READERS, asJson=False, out=print, db=None):
         out(json.dumps(report, indent=1, default=str))
     else:
         for line in renderReaders(report):
+            out(line)
+    return report
+
+
+# ---------------------------------------------------------- revisions (#332, #334)
+
+
+def collectRevisions(db):
+    """Approved assignments with a standing reviewer revision, and their cases.
+
+    The ``mongosh`` query in DEPLOY.md (#332) as plain ``find`` queries: a reviewer
+    submission not reopened, on an assignment now ``approved``. Those cases' exports
+    before #332 came from the annotator's read.
+    """
+    ids = db['segqueue14_submission'].distinct(
+        'assignmentId', {'authorRole': REVIEWER, 'reopenedAt': None})
+    rows = list(db['segqueue14_assignment'].find(
+        {'_id': {'$in': ids}, 'state': 'approved'}, {'caseId': 1}))
+    names = {c['_id']: c.get('name') for c in db['segqueue14_case'].find(
+        {'_id': {'$in': [r['caseId'] for r in rows]}}, {'name': 1})}
+    cases = sorted({str(names.get(r['caseId']) or r['caseId']) for r in rows})
+    return {'assignments': len(rows), 'cases': cases}
+
+
+def renderRevisions(report):
+    lines = [f"{report['assignments']} approved assignment(s) with a reviewer revision"]
+    lines += report['cases']
+    return lines
+
+
+def runRevisions(asJson=False, out=print, db=None):
+    db = _database() if db is None else db
+    report = collectRevisions(db)
+    if asJson:
+        out(json.dumps(report, indent=1))
+    else:
+        for line in renderRevisions(report):
             out(line)
     return report
 
@@ -708,6 +781,9 @@ def buildParser():
                    help='List cases with at least N distinct annotator logins '
                         f'(default {DEFAULT_MIN_READERS}).')
     r.add_argument('--json', action='store_true', help='Everything, as JSON.')
+    v = sub.add_parser('revisions', help='Approved assignments with a reviewer revision, '
+                                         'and their cases (#332).')
+    v.add_argument('--json', action='store_true', help='As JSON.')
     return parser
 
 
@@ -718,6 +794,9 @@ def logins(value):
 
 def main(argv=None):  # pragma: no cover - CLI entry point
     args = buildParser().parse_args(argv)
+    if args.report == 'revisions':
+        runRevisions(asJson=args.json)
+        return 0
     if args.report == 'readers':
         if args.minLogins < 1:
             raise SystemExit('--min must be 1 or more')

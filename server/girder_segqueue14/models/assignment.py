@@ -70,6 +70,56 @@ def kindForCase(case):
     return sqplan.KIND_NORMAL
 
 
+def _utc(dt):
+    """Mongo hands datetimes back naive; they are UTC."""
+    if dt is not None and dt.tzinfo is None:
+        dt = dt.replace(tzinfo=datetime.timezone.utc)
+    return dt
+
+
+def attemptStart(assignment):
+    """When the current attempt began: the original claim (``assignedAt``), or the
+    latest rework or reopen after it. Both start a new attempt with a new lease."""
+    stamps = [_utc(assignment.get(k)) for k in ('assignedAt', 'reworkedAt', 'reopenedAt')]
+    stamps = [s for s in stamps if s is not None]
+    return max(stamps) if stamps else None
+
+
+def reclaimReason(assignment, policy, now):
+    """Why the sweep should take this open assignment back, or None.
+
+    The lease is the stored ``deadline``, which ``transition`` renews on REWORK and
+    REOPEN -- not ``assignedAt + lease_days``, which for a reopened or reworked read
+    is the *first* attempt's lease (``policy.reclaim_reason``'s reading, kept for
+    the 0.13 plugin; ``assignedAt`` stays the original claim for the reports). A
+    heartbeat older than the current attempt is not this attempt's and is ignored,
+    so an assignment reopened or reworked before ``transition`` cleared it is safe
+    too. Reasons keep ``policy.reclaim_reason``'s wording, which the readers report
+    recognises, with the deadline that lapsed.
+
+    Never a reason for the annotator benchmark (D43), for its lease or a quiet
+    client: /next serves it before any pool case, so the invited annotator holds it
+    until they submit it.
+    """
+    if assignment.get('kind') == sqplan.KIND_BENCHMARK:
+        return None
+    now = _utc(now)
+    start = attemptStart(assignment)
+    deadline = _utc(assignment.get('deadline'))
+    if deadline is None and start is not None:
+        deadline = start + datetime.timedelta(days=policy.lease_days)
+    if deadline is not None and now >= deadline:
+        days = (deadline - start).total_seconds() / 86400.0 if start else policy.lease_days
+        return (f"lease of {days:.3g} days expired "
+                f"(deadline {deadline.strftime('%Y-%m-%d %H:%M')} UTC)")
+    heartbeat = _utc(assignment.get('lastHeartbeat'))
+    if heartbeat is not None and start is not None and heartbeat < start:
+        heartbeat = None
+    if pol.heartbeat_stale(_epoch(heartbeat), now.timestamp(), policy):
+        return f"no heartbeat for {policy.stale_heartbeat_hours:.3g} hours"
+    return None
+
+
 class Assignment14(AccessControlledModel):
     def initialize(self):
         self.name = 'segqueue14_assignment'
@@ -178,6 +228,17 @@ class Assignment14(AccessControlledModel):
             update['deadline'] = now + datetime.timedelta(days=policy.lease_days)
             update['downloadedAt'] = None
             update['submittedAt'] = None
+            # And the heartbeat starts over with it. The old one belongs to the
+            # previous attempt -- often days old by the time a read is reopened or
+            # reworked -- and left in place it made the very next sweep take the
+            # case back as abandoned (all nine reads reopened on Nov 12 went that
+            # way). None rather than now: a fresh claim starts with None too, and
+            # the client heartbeats only the case that is open in Slicer, so `now`
+            # would reclaim every other reopened read of an annotator working
+            # through them one at a time once three days passed. With None, the
+            # fresh deadline covers an annotator who never comes back, and 72 hours
+            # of silence after the first heartbeat on this attempt still counts.
+            update['lastHeartbeat'] = None
 
         update.update(extra)
 
@@ -261,31 +322,17 @@ class Assignment14(AccessControlledModel):
         ))
 
     def reclaimable(self, policy, now=None):
-        """Assignments whose lease has expired or whose client has gone quiet.
+        """Open assignments whose lease has expired or whose client has gone quiet.
 
-        The deadline half is an indexed range query. The heartbeat half cannot
-        be, since "stale" is relative to a configurable window, so it is
-        evaluated in Python over the (small) set of open assignments -- there
-        are at most a few dozen at any moment, one per annotator.
+        Never a benchmark assignment (D43). Judged by ``reclaimReason``, the same
+        function the sweep records its reason with, so what is taken back and why
+        can never disagree. Evaluated in Python over the (small) set of open
+        assignments -- a few dozen at any moment.
         """
         now = now or _now()
-        nowEpoch = now.timestamp()
-        openStates = sorted(st.OPEN_STATES)
-
-        expired = list(self.find({
-            'state': {'$in': openStates},
-            'deadline': {'$lte': now},
-        }))
-        seen = {a['_id'] for a in expired}
-
-        for assignment in self.find({'state': {'$in': openStates}}):
-            if assignment['_id'] in seen:
-                continue
-            if pol.heartbeat_stale(
-                _epoch(assignment.get('lastHeartbeat')), nowEpoch, policy
-            ):
-                expired.append(assignment)
-        return expired
+        return [a for a in self.find({'state': {'$in': sorted(st.OPEN_STATES)},
+                                      'kind': NOT_BENCHMARK})
+                if reclaimReason(a, policy, now)]
 
     def recordFor(self, userId):
         """Build the ``AnnotatorRecord`` the sampling policy reads.

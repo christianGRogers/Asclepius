@@ -56,4 +56,11 @@ QUOTA_FIELD = "segqueue14Quota"
 # ------------------------------------------------------------ tuning
 
 MAX_ASSIGN_ATTEMPTS = 8
+
+#: The refusal code for an annotator's release of the annotator benchmark (D43):
+#: an invited annotator annotates it and cannot give it back. Any client shows the
+#: message; none needs to know the code.
+ERR_BENCHMARK_NO_RELEASE = "benchmark_no_release"
+BENCHMARK_NO_RELEASE_MESSAGE = (
+    "The benchmark case can't be released; please annotate and submit it.")
 CANDIDATE_BATCH = 32

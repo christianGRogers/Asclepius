@@ -3,7 +3,7 @@ tags: [plans/candidate, bridge, janus-1f, branches, partial-labels, fir, D44, D4
 author: Bridge
 track: Janus 1-F
 round: 2
-updated: 2026-11-15
+updated: 2026-11-16
 issue: christianGRogers/Asclepius#303
 ---
 
@@ -21,8 +21,9 @@ answers that change the plan:
    proposes **per-class lines at a human's expectation minus 1.96 binomial SEs**. Under them a human fails "4 of 6"
    0.15–3 % of the time, and a model with twice a human's errors still fails 96 %.
 2. **The four-class collapse for predictions is SegQueue 0.20.0's own function**, imported, not re-written (item 2).
-   On the 620, `assign_contact_branches` gives ImageCAS-X's own side for **[CONTACT]** posterior-branch
-   components.
+   On the 620, `assign_contact_branches` gives ImageCAS-X's own side for **all 1,296** posterior-branch
+   components (1,296 of 1,296, no fallback used). Scoring by contact and scoring by side therefore give the same
+   answer on the reference.
 3. **Arm N is dropped** (item 3). The T reading is already segment-then-label on Janus 0's tree, and the gate no
    longer needs a branch-tF1 spread.
 4. **Reads per class: Job B, smaller and absolute** (item 5). Two runs, not three (≈ 22 GPU-h, not 33). k\* is read
@@ -30,8 +31,8 @@ answers that change the plan:
    J1F-A's verdict and before any extended read trains. Until it has run, F-A11's 30-patient rule stands.
 
 The other items are measured or specified below:
-- Stage 2's band (item 4): an 8 mm band releases about 68× the traced tree's volume of background per case, and
-  15 mm about 200×.
+- Stage 2's band (item 4): an 8 mm band releases about 71× the traced tree's volume of background per case, and
+  15 mm about 218×.
 - The scoring set for the six untraced classes (item 6).
 - Shi et al.'s numbers, reconciled row by row (item 7). One of Bridge v1's own claims is retracted.
 - The frozen `role:swe` spec as a diff against #306 (item 8).
@@ -186,9 +187,18 @@ definition runs on the reference and the prediction alike, at the case's native 
 - the label map is pinned by hash instead.
 
 **The contact rule on ImageCAS-X's own labels** (`census_r2.py`, 620 cases):
-[CONTACT_TABLE]
+| Class | ImageCAS-X side | Contact rule says | Components |
+|---|---|---|---|
+| PDA | R | RCA | 638 |
+| PDA | L | LCx | 38 |
+| PLB | R | RCA | 565 |
+| PLB | L | LCx | 55 |
+| **All** | | **agree: 1,296 of 1,296** | cases with any disagreement: **0**; fallbacks (unattached or tie): **0** |
 
-**What this means:** on the reference, the side label and the contact rule agree [CONTACT_SUMMARY]. So scoring the
+- 59 of the 620 cases have a left-sided component. Two cases have no PDA or PLB at all.
+
+**What this means:** on the reference, the side label and the contact rule agree **on every component in every case**. The rule's fallback was never needed, because every
+ImageCAS-X posterior piece touches its own parent and only that parent. So scoring the
 prediction by contact against the reference by side compares like with like, to within the disagreements listed.
 SegQueue and the 1-F scorer then give one answer for the same voxels, because they run one function.
 
@@ -241,19 +251,26 @@ applied to F's own predicted types.
 The band is the region of ImageCAS-X background that stage 2 labels as a set ({bg, untraced classes}) rather than
 {bg}. Measured per case, as medians over the 620:
 
-[BAND_TABLE]
+| Band width d | Background released, mm³ (p10–p90) | × traced tree | Host-restricted, mm³ | Host share | Share by nearest side: LAD / LCx / RCA / LM |
+|---|---|---|---|---|---|
+| 4 mm | 42,400 (34,700–51,600) | 21× | 32,200 | 0.78 | 0.33 / 0.26 / 0.38 / 0.03 |
+| 8 mm | 138,700 (115,200–166,200) | 71× | 107,400 | 0.79 | 0.33 / 0.26 / 0.39 / 0.03 |
+| 15 mm | 427,500 (360,800–502,800) | 218× | 338,200 | 0.80 | 0.32 / 0.25 / 0.40 / 0.04 |
+
+The traced tree's median volume is 1,951 mm³. All values are medians over the 620; the source is `census_r2_summary.json`.
 
 **Reading it:**
 - **The band is two orders of magnitude larger than what it is meant to catch.**
-  - The traced tree has a median volume of [TREE] mm³. A traced side branch has a median of 70–115 mm³ (Bridge v1
+  - The traced tree has a median volume of 1,951 mm³. A traced side branch has a median of 70–115 mm³ (Bridge v1
     census).
-  - So at 8 mm, about [R8] mm³ of background per case loses its full background pressure for each untraced class,
+  - So at 8 mm, about 138,700 mm³ of background per case loses its full background pressure for each untraced class,
     to make room for perhaps 50–150 mm³ of untraced vessel.
   - Under a marginal CE, the network pays nothing for putting an untraced class's probability anywhere in that
     volume, as long as bg + that class is high.
 - **Restricting the band to the host vessels** (the LAD side for S1–S3, the RCA side and the first 30 mm of the LCx
-  for SN, Conus and RMA) releases [HOST8] of it at 8 mm. It does not change the order of magnitude.
-- **The LAD-side and RCA-side zones barely overlap** ([OVL] at 8 mm). That makes a better restriction possible.
+  for SN, Conus and RMA) releases 79 % of it at 8 mm. It does not change the order of magnitude.
+- **The LAD-side and RCA-side zones barely overlap** (at 8 mm they overlap in 4 of the 620 cases, at most 0.3 % of the host band; at 15 mm in 122 cases, at
+  most 2.3 %). That makes a better restriction possible.
 
 **Bridge's proposal for stage 2 (B-v2-3):**
 1. **Territory-specific sets, not one set:**
@@ -269,7 +286,7 @@ The band is the region of ImageCAS-X background that stage 2 labels as a set ({b
    the **95th percentile per group** (septal; RCA group), rounded up to 1 mm.
    - That needs reads, which exist before J1F-2 by definition (F-A11's counts).
    - **Until then, d = 8 mm** (Foxtrot) is the provisional value, not Crucible's 15. At 15 mm the band releases about
-     three times the background of 8 mm ([R15] vs [R8] mm³) for distal septal segments that a 4-class pool read
+     three times the background of 8 mm (427,500 vs 138,700 mm³) for distal septal segments that a 4-class pool read
      already supervises as part of the LAD set.
 3. **The leakage gate, pre-registered for stage 2** (Bridge v1 §9, now a gate). On the locked 100, reading the
    stage-2 model (one look, as F-A7):
@@ -443,13 +460,16 @@ model.
 | **Label counts that feed training** (D3 from "Other", ignored pieces, L-PDA/L-PLA) | `j1f_labels.py`'s own summary, reproduced on Fir by F0 | D3 47; "Other" diag 50 / marg 20 / ambiguous 8 (the F0 line in the master plan) | It is the converter that makes the training labels, so its count is the one the model sees. Bridge v1's 48 is withdrawn: it counted by a looser origin rule |
 | **Dominance** | ImageCAS-X's `Descriptors.xlsx` (its own definition), 620 rows | **Right 564, left 35, co-dominant 21** | The dataset's field, not an inference |
 | **Cases with a left-sided PDA or PLA** | Labels | **59** (35 left-dominant, 19 co-dominant, 5 right-dominant by the descriptor) | The number that matters for D47's collapse |
-| **Unnamed trunk twigs** | `census_r2.py`: the skeleton of each trunk class, minus its longest path; each remaining skeleton component is a twig of length (voxels × mean spacing) | [TWIG_TABLE] | One method, two cut-offs, code in the repository |
+| **Unnamed trunk twigs** | `census_r2.py`: the skeleton of each trunk class, minus its longest path; each remaining skeleton component is a twig of length (voxels × mean spacing) | Cases with a twig ≥ 3 mm / ≥ 5 mm: **LAD 6 / 3, LCx 1 / 1, RCA 2 / 1**. At most one twig per case. Totals: **9 / 5** twigs in 620 cases | One method, two cut-offs, code in the repository |
 | **Per-class geometry** (volume, length, diameter, origins) | Bridge v1 `census_620.jsonl` | Bridge v1 §2.4 | The only per-branch table with origins |
 
 - **Atlas's dominance (34 left, 21 co-dominant of 613) agrees with this to within its seven fewer cases.**
 - **Bridge v1's and Foxtrot's "46 left" were label inferences.** They are replaced by the descriptor.
 - **On twigs:** Crucible's 13, Delta's 4 and Foxtrot's 6 used three methods. The census above replaces all three
-  for quotation. [TWIG_NOTE]
+  for quotation. **ImageCAS-X almost never leaves an unnamed side twig on a trunk**: 9 twigs of at least 3 mm in 620 cases,
+  each in a different case.
+  - This is closest to Delta's 4 and Foxtrot's 6. Crucible's 13 is not reproduced.
+  - No twig rule is needed in the converter or the scorer: at most 1.5 % of cases would be touched.
 
 ## 12. Item 11: D47's and Q8/Q9's consequences
 
@@ -516,7 +536,7 @@ model.
 |---|---|---|
 | `gate_sim.py` → `gate_sim.json` | §2: human-level false-fail of the ruled and proposed gates, plus power | seconds |
 | `fetch_seg620.py` | The 620's segmentations and `Descriptors.xlsx`, by range requests | ≈ 5 min |
-| `census_r2.py` → `census_r2.jsonl` | §3 contact rule, §5 bands, §11 twigs, per case | ≈ 2 h on 4 cores |
+| `census_r2.py` → `census_r2.jsonl` | §3 contact rule, §5 bands, §11 twigs, per case | ≈ 5 h on 2–4 cores |
 | `summarise_r2.py` → `census_r2_summary.json` | The tables of §3, §5 and §11 | seconds |
 | `untraced_yield.py` → `untraced_yield.json` | §7 | seconds |
 | `test_j1f_r2.py` | Self-tests: the q fit recovers a planted mixture; the twig measure on a synthetic trunk with one known twig | seconds |

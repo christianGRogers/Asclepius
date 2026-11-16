@@ -1,0 +1,119 @@
+{
+ "n_cases": 620,
+ "contact": {
+  "components": 1296,
+  "agree_with_icx_side": 1296,
+  "table": {
+   "PDA icx L -> LCx": 38,
+   "PDA icx R -> RCA": 638,
+   "PLB icx L -> LCx": 55,
+   "PLB icx R -> RCA": 565
+  },
+  "cases_with_any_disagreement": 0,
+  "disagreeing_cases": [],
+  "voxel_share_disagreeing": 0.0,
+  "fallbacks": {
+   "fallback": 0,
+   "fallbackUnattached": 0,
+   "fallbackTie": 0
+  }
+ },
+ "tree_mm3_median": 1950.8,
+ "band": {
+  "4.0": {
+   "all_mm3_median": 42392.55,
+   "all_mm3_p10_p90": [
+    34724.27,
+    51605.68000000001
+   ],
+   "all_over_tree_median": 21.4,
+   "host_mm3_median": 32235.050000000003,
+   "host_over_tree_median": 16.1,
+   "host_share_of_all_median": 0.777,
+   "LAD_and_RCA_overlap_mm3_median": 0.0,
+   "LAD_and_RCA_overlap_share_of_host_median": 0.0,
+   "by_side_share_median": {
+    "LAD": 0.33,
+    "LCx": 0.257,
+    "RCA": 0.38,
+    "LM": 0.028
+   }
+  },
+  "8.0": {
+   "all_mm3_median": 138736.5,
+   "all_mm3_p10_p90": [
+    115169.61,
+    166167.68
+   ],
+   "all_over_tree_median": 70.7,
+   "host_mm3_median": 107425.25,
+   "host_over_tree_median": 54.1,
+   "host_share_of_all_median": 0.785,
+   "LAD_and_RCA_overlap_mm3_median": 0.0,
+   "LAD_and_RCA_overlap_share_of_host_median": 0.0,
+   "by_side_share_median": {
+    "LAD": 0.325,
+    "LCx": 0.255,
+    "RCA": 0.386,
+    "LM": 0.03
+   }
+  },
+  "15.0": {
+   "all_mm3_median": 427530.85,
+   "all_mm3_p10_p90": [
+    360845.94,
+    502766.91000000003
+   ],
+   "all_over_tree_median": 217.5,
+   "host_mm3_median": 338200.15,
+   "host_over_tree_median": 171.0,
+   "host_share_of_all_median": 0.802,
+   "LAD_and_RCA_overlap_mm3_median": 0.0,
+   "LAD_and_RCA_overlap_share_of_host_median": 0.0,
+   "by_side_share_median": {
+    "LAD": 0.317,
+    "LCx": 0.247,
+    "RCA": 0.401,
+    "LM": 0.037
+   }
+  }
+ },
+ "twigs": {
+  "LAD": {
+   ">=3mm": {
+    "cases_with_any": 6,
+    "twigs_total": 6,
+    "max_per_case": 1
+   },
+   ">=5mm": {
+    "cases_with_any": 3,
+    "twigs_total": 3,
+    "max_per_case": 1
+   }
+  },
+  "LCx": {
+   ">=3mm": {
+    "cases_with_any": 1,
+    "twigs_total": 1,
+    "max_per_case": 1
+   },
+   ">=5mm": {
+    "cases_with_any": 1,
+    "twigs_total": 1,
+    "max_per_case": 1
+   }
+  },
+  "RCA": {
+   ">=3mm": {
+    "cases_with_any": 2,
+    "twigs_total": 2,
+    "max_per_case": 1
+   },
+   ">=5mm": {
+    "cases_with_any": 1,
+    "twigs_total": 1,
+    "max_per_case": 1
+   }
+  }
+ }
+}

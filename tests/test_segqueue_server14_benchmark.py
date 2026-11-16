@@ -826,10 +826,13 @@ def test_the_sweep_never_expires_the_benchmark_but_still_expires_pool_cases(benc
     policy = getPolicy()
     now = datetime.datetime.now(datetime.timezone.utc)
 
-    # A stale heartbeat on both, leases still running.
-    stale = now - datetime.timedelta(hours=policy.stale_heartbeat_hours + 1)
+    # One heartbeat each, just after the claim, then silence past the window with
+    # the leases still running. (#341: a heartbeat from before the attempt began
+    # is not this attempt's, so it is stamped after assignedAt.)
     Assignment14().collection.update_many(
-        {"_id": {"$in": [held["_id"], pool["_id"]]}}, {"$set": {"lastHeartbeat": stale}})
+        {"_id": {"$in": [held["_id"], pool["_id"]]}}, {"$set": {"lastHeartbeat": now}})
+    now = now + datetime.timedelta(hours=policy.stale_heartbeat_hours + 1)
+    assert now < pool["deadline"].replace(tzinfo=datetime.timezone.utc)
     assert [a["_id"] for a in Assignment14().reclaimable(policy, now=now)] == [pool["_id"]]
     dry = maintenance.sweep(dryRun=True, policy=policy, now=now)["released"]
     assert [r["assignmentId"] for r in dry] == [str(pool["_id"])]

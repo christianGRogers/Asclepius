@@ -1,0 +1,6 @@
+train620 620 {'LAD': 620, 'LCx': 620, 'RCA': 620, 'LM': 611, 'D1': 611, 'PDA': 572, 'PLB': 565, 'OM1': 540, 'D2': 359, 'OM2': 229, 'Ramus': 149, 'D3': 47}
+ mismatch voxels 40 in Other 40 cases 2 tree voxels 20855864
+ d3 47 d4->LAD 2 other_lcx 20 nearest 9
+locked100 100 {'LAD': 100, 'LCx': 100, 'RCA': 100, 'LM': 98, 'D1': 98, 'PDA': 96, 'PLB': 96, 'OM1': 84, 'D2': 64, 'OM2': 40, 'Ramus': 24, 'D3': 7}
+ mismatch voxels 0 in Other 0 cases 0 tree voxels 3481905
+ d3 7 d4->LAD 0 other_lcx 5 nearest 0

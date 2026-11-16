@@ -183,12 +183,16 @@ class AssignmentInfo14(AssignmentInfo):
     #: Reopened for the annotator's own revision (#315): open it from the ``own``
     #: asset, their submitted read, instead of the prelabel or the seed.
     start_from_own: bool = False
+    #: Read in extended mode (D47 Q6): the module turns the extended classes on and
+    #: asks the annotator to use them. Optional; a module before 0.20.0 ignores it.
+    extended_mode: bool = False
 
     def to_dict(self) -> dict:
         data = super().to_dict()
         data["hasPrelabel"] = self.has_prelabel
         data["prelabelVersion"] = self.prelabel_version
         data["startFromOwn"] = self.start_from_own
+        data["extendedMode"] = self.extended_mode
         return data
 
     @classmethod
@@ -199,6 +203,7 @@ class AssignmentInfo14(AssignmentInfo):
             has_prelabel=bool(data.get("hasPrelabel", False)),
             prelabel_version=str(data.get("prelabelVersion", "") or ""),
             start_from_own=bool(data.get("startFromOwn", False)),
+            extended_mode=bool(data.get("extendedMode", False)),
         )
 
 

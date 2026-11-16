@@ -249,13 +249,25 @@ def storedLabelInfo(file) -> tuple[str, list[str]]:
     ``classes`` are the channel names of a class stack: the four, or all 21 for a
     read with the extended classes (D44). An old label volume is the four.
     """
+    labelFormat, classes, _ = storedLabelHeader(file)
+    return labelFormat, classes
+
+
+def storedLabelHeader(file) -> tuple[str, list[str], Optional[list[str]]]:
+    """``(labelFormat, classes, completeGroups)`` of a stored upload, from its header.
+
+    ``completeGroups`` are the branch groups the annotator marked complete (D47
+    Q3, ``labelfile.complete_groups``): ``None`` when the file does not say, which
+    is every file a module before 0.20.0 wrote.
+    """
     from segqueue14 import labelfile, labels
 
     raw = _storedHead(file)
     labelFormat = labelfile.sniff_bytes(raw)
-    classes = labelfile.class_names_bytes(raw) if labelFormat == labelfile.FORMAT_CLASS_STACK \
-        else []
-    return labelFormat, (classes or list(labels.NAMES))
+    stack = labelFormat == labelfile.FORMAT_CLASS_STACK
+    classes = labelfile.class_names_bytes(raw) if stack else []
+    groups = labelfile.complete_groups_bytes(raw) if stack else None
+    return labelFormat, (classes or list(labels.NAMES)), groups
 
 
 def isExtended(submission: Optional[dict]) -> bool:

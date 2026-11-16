@@ -2,7 +2,7 @@
 aliases: [Plan ledger]
 tags: [plans, changelog]
 status: living
-updated: 2026-10-25
+updated: 2026-11-12
 ---
 
 # Plan ledger
@@ -56,3 +56,34 @@ Every plan version ever submitted, and what happened to it.
 | 10 | [[Crucible v11]] | Crucible | Lost. The reserve-inclusive population shared with the winner; the val-80 seed-learning gate (G3), the `trillium/janus1` launcher on icx4's Fir path and the timeline adopted; the two-run Janus 1 and the default seal of 200 not adopted |
 | 10 | [[Delta v10]] | Delta | **Master plan** (new holder). The D35 draw with the seal's mix (A33, subject to Q1), the extension skip (A34), Job S (A40) and the three-run Janus 1 (A37); the ≥ 30-patient start and the lr1e3 tie-break not adopted ([[Round 10]]) |
 | 10 | [[Foxtrot v6]] | Foxtrot | Lost. The model-vs-recipe distinction in A22 adopted (A37); M1 folded into Job S; seal-200-now and the 50-patient D35 from extension positions 51–100 refused |
+
+## Track 1-L (Janus 1-L, D45, #302)
+
+Candidates are in `Candidates/Janus 1-L/`; rulings are `Judgements/Janus 1-L Round <N>.md`; the track's plan is
+[[Master plan - Janus 1-L]]. Amendments are numbered L-A*n*.
+
+| Track | Round | Plan | Author | Fate |
+|---|---|---|---|---|
+| 1-L | 1 | [[Candidates/Janus 1-L/Crucible v1\|Crucible v1]] | Crucible | **Track 1-L plan** (first holder), with L-A1–L-A12 ([[Janus 1-L Round 1]]). Rule W, Job 0 and the H1–H3 sequence kept; the replicate added and G3 replaced by L3 |
+| 1-L | 1 | [[Candidates/Janus 1-L/Delta v1\|Delta v1]] | Delta | Lost. The trimmed recall guard (L3), the folds-0/1 runs and the split file and guard (#306) adopted; the superiority ladder deferred to round 2 |
+| 1-L | 1 | [[Candidates/Janus 1-L/Atlas v1\|Atlas v1]] | Atlas | Lost. The list pins (L-A1), the replicate's σ_g purpose and the decomposition reports adopted; Skeleton Recall arm b not adopted |
+| 1-L | 1 | [[Candidates/Janus 1-L/Bridge v1\|Bridge v1]] | Bridge | Lost. Trillium costing, the identity check, the side-aware D44 collapse and the −0.015 non-inferiority rule (as Q4) adopted; locked-100 half-split threshold refused |
+| 1-L | 1 | [[Candidates/Janus 1-L/Foxtrot v1\|Foxtrot v1]] | Foxtrot | Lost. The per-case identity check against Fir adopted; the shipped ensemble sent to round 2 and the lead (Q6) |
+| 1-L | 2 | [[Candidates/Janus 1-L/Delta v2\|Delta v2]] | Delta | **Track 1-L plan** (new holder), with L-A13–L-A25 ([[Janus 1-L Round 2]]). E in a1's place, Rule T by width on D60's shared centreline, the L3 `recall` field and the `decide.py` gate catch; S at 1.25 % (amended from 2.5 %) |
+| 1-L | 2 | [[Candidates/Janus 1-L/Crucible v2\|Crucible v2]] | Crucible | Lost the holder's seat. E's pre-registration and a2 fallback, the wording table, S's 1.25 % and the final-validation subclass adopted; its volume-band Rule T not adopted |
+| 1-L | 2 | [[Candidates/Janus 1-L/Bridge v2\|Bridge v2]] | Bridge | Lost. Four nnU-Net 2.8.1 defects (fingerprint, moved plans, fold val, sealed path) adopted, val = 10 tuning cases, the decomposition of record and Q-B1 (as Q-R2-3); a1 as candidate and frozen t\* not adopted |
+| 1-L | 2 | [[Candidates/Janus 1-L/Foxtrot v2\|Foxtrot v2]] | Foxtrot | Lost. The per-case stability evidence for E, the two-look budget and QF1/QF2 (as Q-R2-1/Q-R2-2) adopted; its two-step volume switch not adopted |
+| 1-L | 2 | [[Candidates/Janus 1-L/Atlas v2\|Atlas v2]] | Atlas | Lost. "Ships what was tested", the guard-naming wording and Step T's log check adopted; a1 as candidate and the 0.45 mm third look refused |
+
+## Track 1-F (Janus 1-F, D45, #303)
+
+Candidates are in `Candidates/Janus 1-F/`; rulings are `Judgements/Janus 1-F Round <N>.md`; the track's plan is
+[[Master plan - Janus 1-F]]. Amendments are numbered F-A*n*.
+
+| Track | Round | Plan | Author | Fate |
+|---|---|---|---|---|
+| 1-F | 1 | [[Candidates/Janus 1-F/Delta v1\|Delta v1]] | Delta | **Track 1-F plan** (first holder), with F-A1–F-A13 ([[Janus 1-F Round 1]]). The 13-class parent-copy warm start, readings F and T, and the measured gate eligibility kept; hierarchical decoding, the L3 recall guard and a two-part detection gate added; its Q1 recommendation (left PDA → LCx) not the judge's |
+| 1-F | 1 | [[Candidates/Janus 1-F/Atlas v1\|Atlas v1]] | Atlas | Lost. Hierarchical decoding (F-A4) and the rule-ordinal report (F-A9) adopted; the "group complete" flag sent to the lead (Q3); Arm N sent to round 2; types-only outputs not adopted |
+| 1-F | 1 | [[Candidates/Janus 1-F/Crucible v1\|Crucible v1]] | Crucible | Lost. Leaf-Dice, the territory band and the inter-read agreement floor adopted for stage 2 (F-A11); L2 and the cross-track septal note adopted; the separate pilot not adopted |
+| 1-F | 1 | [[Candidates/Janus 1-F/Foxtrot v1\|Foxtrot v1]] | Foxtrot | Lost. The training-case stall check (F-A5), F0 and ignore for unexplained "Other" adopted; the replicate sent to the lead (Q8); the D3-fit read threshold and the a2-must-agree gate not adopted |
+| 1-F | 1 | [[Candidates/Janus 1-F/Bridge v1\|Bridge v1]] | Bridge | Lost. Job B (reads per class) sent to round 2; the child-in-parent overlap rule sent to the lead (Q4); SN origin evidence used; dormant stage-1 heads not adopted |

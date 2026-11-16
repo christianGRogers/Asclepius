@@ -1,0 +1,255 @@
+{
+ "n_cases": 613,
+ "classes": {
+  "LM": {
+   "cases": 604,
+   "share_cases": 0.985,
+   "share_of_tree_voxels": 0.0525,
+   "mm3_median": 99.0,
+   "diam_med_mm_median": 3.0,
+   "diam_med_mm_p10": 2.13,
+   "diam_in_0.5mm_voxels_median": 6.0,
+   "skel_len_mm_median": 9.3,
+   "cases_more_than_1_component": 0,
+   "end_points_median": 1.0,
+   "cases_with_ge3_end_points": 1
+  },
+  "LAD": {
+   "cases": 613,
+   "share_cases": 1.0,
+   "share_of_tree_voxels": 0.2213,
+   "mm3_median": 427.8,
+   "diam_med_mm_median": 1.69,
+   "diam_med_mm_p10": 1.42,
+   "diam_in_0.5mm_voxels_median": 3.4,
+   "skel_len_mm_median": 112.2,
+   "cases_more_than_1_component": 5,
+   "end_points_median": 1.0,
+   "cases_with_ge3_end_points": 18
+  },
+  "LCx": {
+   "cases": 613,
+   "share_cases": 1.0,
+   "share_of_tree_voxels": 0.1489,
+   "mm3_median": 279.9,
+   "diam_med_mm_median": 1.7,
+   "diam_med_mm_p10": 1.39,
+   "diam_in_0.5mm_voxels_median": 3.4,
+   "skel_len_mm_median": 70.0,
+   "cases_more_than_1_component": 4,
+   "end_points_median": 1.0,
+   "cases_with_ge3_end_points": 5
+  },
+  "D1": {
+   "cases": 604,
+   "share_cases": 0.985,
+   "share_of_tree_voxels": 0.0487,
+   "mm3_median": 82.55,
+   "diam_med_mm_median": 1.27,
+   "diam_med_mm_p10": 1.0,
+   "diam_in_0.5mm_voxels_median": 2.5,
+   "skel_len_mm_median": 35.4,
+   "cases_more_than_1_component": 8,
+   "end_points_median": 1.0,
+   "cases_with_ge3_end_points": 26
+  },
+  "D2": {
+   "cases": 355,
+   "share_cases": 0.579,
+   "share_of_tree_voxels": 0.022,
+   "mm3_median": 68.2,
+   "diam_med_mm_median": 1.27,
+   "diam_med_mm_p10": 1.0,
+   "diam_in_0.5mm_voxels_median": 2.5,
+   "skel_len_mm_median": 28.1,
+   "cases_more_than_1_component": 0,
+   "end_points_median": 1.0,
+   "cases_with_ge3_end_points": 9
+  },
+  "OM1": {
+   "cases": 534,
+   "share_cases": 0.871,
+   "share_of_tree_voxels": 0.0454,
+   "mm3_median": 81.35,
+   "diam_med_mm_median": 1.35,
+   "diam_med_mm_p10": 1.0,
+   "diam_in_0.5mm_voxels_median": 2.7,
+   "skel_len_mm_median": 35.6,
+   "cases_more_than_1_component": 1,
+   "end_points_median": 1.0,
+   "cases_with_ge3_end_points": 4
+  },
+  "OM2": {
+   "cases": 228,
+   "share_cases": 0.372,
+   "share_of_tree_voxels": 0.0184,
+   "mm3_median": 91.9,
+   "diam_med_mm_median": 1.35,
+   "diam_med_mm_p10": 1.18,
+   "diam_in_0.5mm_voxels_median": 2.7,
+   "skel_len_mm_median": 35.9,
+   "cases_more_than_1_component": 1,
+   "end_points_median": 1.0,
+   "cases_with_ge3_end_points": 2
+  },
+  "IM": {
+   "cases": 148,
+   "share_cases": 0.241,
+   "share_of_tree_voxels": 0.0109,
+   "mm3_median": 68.5,
+   "diam_med_mm_median": 1.22,
+   "diam_med_mm_p10": 1.0,
+   "diam_in_0.5mm_voxels_median": 2.4,
+   "skel_len_mm_median": 36.75,
+   "cases_more_than_1_component": 5,
+   "end_points_median": 1.0,
+   "cases_with_ge3_end_points": 2
+  },
+  "RCA": {
+   "cases": 613,
+   "share_cases": 1.0,
+   "share_of_tree_voxels": 0.3139,
+   "mm3_median": 595.9,
+   "diam_med_mm_median": 2.25,
+   "diam_med_mm_p10": 1.68,
+   "diam_in_0.5mm_voxels_median": 4.5,
+   "skel_len_mm_median": 88.8,
+   "cases_more_than_1_component": 1,
+   "end_points_median": 1.0,
+   "cases_with_ge3_end_points": 17
+  },
+  "R-PDA": {
+   "cases": 566,
+   "share_cases": 0.923,
+   "share_of_tree_voxels": 0.0462,
+   "mm3_median": 93.9,
+   "diam_med_mm_median": 1.23,
+   "diam_med_mm_p10": 1.0,
+   "diam_in_0.5mm_voxels_median": 2.5,
+   "skel_len_mm_median": 46.8,
+   "cases_more_than_1_component": 63,
+   "end_points_median": 1.0,
+   "cases_with_ge3_end_points": 7
+  },
+  "R-PLA": {
+   "cases": 559,
+   "share_cases": 0.912,
+   "share_of_tree_voxels": 0.0617,
+   "mm3_median": 113.6,
+   "diam_med_mm_median": 1.35,
+   "diam_med_mm_p10": 1.06,
+   "diam_in_0.5mm_voxels_median": 2.7,
+   "skel_len_mm_median": 48.1,
+   "cases_more_than_1_component": 0,
+   "end_points_median": 1.0,
+   "cases_with_ge3_end_points": 23
+  },
+  "L-PDA": {
+   "cases": 37,
+   "share_cases": 0.06,
+   "share_of_tree_voxels": 0.0027,
+   "mm3_median": 80.7,
+   "diam_med_mm_median": 1.28,
+   "diam_med_mm_p10": 1.0,
+   "diam_in_0.5mm_voxels_median": 2.6,
+   "skel_len_mm_median": 37.5,
+   "cases_more_than_1_component": 0,
+   "end_points_median": 1.0,
+   "cases_with_ge3_end_points": 0
+  },
+  "L-PLA": {
+   "cases": 54,
+   "share_cases": 0.088,
+   "share_of_tree_voxels": 0.0027,
+   "mm3_median": 34.2,
+   "diam_med_mm_median": 1.22,
+   "diam_med_mm_p10": 1.0,
+   "diam_in_0.5mm_voxels_median": 2.4,
+   "skel_len_mm_median": 16.6,
+   "cases_more_than_1_component": 1,
+   "end_points_median": 1.0,
+   "cases_with_ge3_end_points": 1
+  },
+  "Other": {
+   "cases": 73,
+   "share_cases": 0.119,
+   "share_of_tree_voxels": 0.0047,
+   "mm3_median": 65.1,
+   "diam_med_mm_median": 1.26,
+   "diam_med_mm_p10": 1.0,
+   "diam_in_0.5mm_voxels_median": 2.5,
+   "skel_len_mm_median": 31.95,
+   "cases_more_than_1_component": 5,
+   "end_points_median": 1.0,
+   "cases_with_ge3_end_points": 1
+  }
+ },
+ "other": {
+  "components_ge20vox_by_side": {
+   "LAD": 49,
+   "LCx": 20,
+   "both": 0,
+   "none": 1
+  },
+  "cases_with_LAD_side_other (a D3 candidate)": 47,
+  "share_cases_with_LAD_side_other": 0.077,
+  "cases_with_LCx_side_other (OM3/OM4)": 20,
+  "LAD_side_other_components_per_case_hist": {
+   "0": 566,
+   "1": 45,
+   "2": 2
+  },
+  "proximal_LAD_side_other_origin_distal_to_D2_origin": 45,
+  "proximal_LAD_side_other_origin_proximal_to_D2_origin": 0,
+  "LAD_side_other_without_D2": 0
+ },
+ "ordinal": {
+  "D1_vs_D2": {
+   "pairs": 349,
+   "D1_proximal": 349,
+   "D2_proximal_or_equal": 0,
+   "share_consistent": 1.0,
+   "gap_mm_median": 16.1
+  },
+  "OM1_vs_OM2": {
+   "pairs": 222,
+   "OM1_proximal": 222,
+   "OM2_proximal_or_equal": 0,
+   "share_consistent": 1.0,
+   "gap_mm_median": 16.25
+  },
+  "D2_without_D1": 0,
+  "OM2_without_OM1": 0,
+  "cases_without_LM": 9
+ },
+ "dominance": {
+  "R": {
+   "cases": 558,
+   "R-PDA": 557,
+   "R-PLA": 554,
+   "L-PDA": 0,
+   "L-PLA": 5,
+   "no_PDA": 1
+  },
+  "Co": {
+   "cases": 21,
+   "R-PDA": 9,
+   "R-PLA": 5,
+   "L-PDA": 6,
+   "L-PLA": 18,
+   "no_PDA": 8
+  },
+  "L": {
+   "cases": 34,
+   "R-PDA": 0,
+   "R-PLA": 0,
+   "L-PDA": 31,
+   "L-PLA": 31,
+   "no_PDA": 3
+  }
+ },
+ "both_R_and_L_PDA": 2,
+ "zooms_z_hist": {
+  "0.5": 613
+ }
+}

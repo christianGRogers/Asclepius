@@ -41,6 +41,7 @@ class AdminResource14(Resource):
         parent.route('PATCH', ('users', ':userId'), self.updateAnnotator)
         parent.route('POST', ('case', ':caseId', 'retire'), self.retireCase)
         parent.route('POST', ('case', ':caseId', 'assign'), self.assignCase)
+        parent.route('PUT', ('case', ':caseId', 'extended_mode'), self.setExtendedMode)
         parent.route('POST', ('sweep',), self.sweep)
         parent.route('POST', ('prelabels', 'attach'), self.attachPrelabel)
         parent.route('GET', ('prelabels', 'status'), self.prelabelStatus)
@@ -270,6 +271,21 @@ class AdminResource14(Resource):
     )
     def retireCase(self, case, reason):
         return Case().retire(case, reason)
+
+    @access.admin
+    @autoDescribeRoute(
+        Description('Flag a case to be read in extended mode (D47 Q6), or clear it.')
+        .notes('On a flagged case the module (0.20.0 on) turns the extended classes '
+               'on and asks the annotator to use them. Reads already submitted are '
+               'not touched; an older module ignores the flag.')
+        .modelParam('caseId', 'The case.', model=Case, force=True, destName='case')
+        .param('on', 'Flag (true) or clear (false).', dataType='boolean',
+               required=False, default=True)
+    )
+    def setExtendedMode(self, case, on):
+        case = Case().setExtendedMode(case, on)
+        return {'caseId': str(case['_id']), 'name': case.get('name', ''),
+                'extendedMode': bool(case.get('extendedMode'))}
 
     @access.admin
     @autoDescribeRoute(

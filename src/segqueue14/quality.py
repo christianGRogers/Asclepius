@@ -154,9 +154,10 @@ def render(report, benchmarkLines=()):
     else:
         lines += ['', 'Reads']
         lines += table(['login', 'reads', 'approved', 'sent back', 'in review',
-                        'revised', 'extended', 'median min'],
+                        'revised', 'extended', 'rca fallback', 'median min'],
                        [[n, p['reads'], p['approved'], p['sentBack'], p['underReview'],
                          p['revisedByReviewer'], p.get('extended', 0),
+                         p.get('branchFallback', 0),
                          None if p['medianSeconds'] is None else p['medianSeconds'] / 60]
                         for n, p in people.items()])
         lines += ['', f"Pair agreement (two-read cases, stored scores; flag < {t['pairFlag']:.2f})"]

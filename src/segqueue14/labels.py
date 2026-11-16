@@ -34,6 +34,19 @@ label config are about -- and the extras live in ``EXTRA_NAMES`` and friends.
 An extended read is collapsed to the four before it is scored
 (``collapse_to_four``): each branch is unioned into its parent; materials go
 into no vessel. Label values 5-21 are fixed here and never reused.
+
+**PDA, PLB and SN go to the vessel they leave (D47 Q1, #322).** 0.18.0 folded them
+into RCA always, which moves LCx voxels into the RCA in a left-dominant heart
+(and for the ~20 % of SN arteries that come off the circumflex), against D25.
+``collapse_to_four`` now decides each of their connected components from the read
+itself (``CONTACT_BRANCHES``): the one of RCA and LCx it has the most face contact
+with wins; a component with no contact, or a tie, falls back to RCA and is
+counted (``stats``).
+
+**Branch groups marked complete (D47 Q3).** An extended read may say, per parent
+group, "I looked for every branch of this group": ``COMPLETE_GROUPS``. They travel
+in the class-stack header (``labelfile.COMPLETE_KEY``); an empty class in a group
+marked complete means absent, in one not marked it means not looked for.
 """
 
 from __future__ import annotations
@@ -99,9 +112,11 @@ GROUP_OTHER = "Other"
 GROUPS = (GROUP_VESSELS, GROUP_LAD, GROUP_LCX, GROUP_OTHER, GROUP_RCA, GROUP_MATERIALS)
 
 #: ``(label, name, colour, group, parent, hint)`` in label order. ``parent`` is the
-#: vessel a branch is folded into for scoring (D44; PDA, PLB and SN always RCA, the
-#: ramus always LCx as D1b); a material has none. Label values are pinned: a draft
-#: or a stored read keeps them forever, so a value is never reassigned or reused.
+#: vessel a branch is folded into for scoring (D44; the ramus always LCx as D1b); a
+#: material has none. For PDA, PLB and SN it is only the fallback: they go to the
+#: vessel they leave, decided per read (D47 Q1, ``CONTACT_BRANCHES``). Label values
+#: are pinned: a draft or a stored read keeps them forever, so a value is never
+#: reassigned or reused.
 #: Colours: branches are shades of their parent's colour, materials stand apart.
 _EXTRA_TABLE = (
     (5, "Stent", (0.80, 0.80, 0.86), GROUP_MATERIALS, None,
@@ -128,8 +143,8 @@ _EXTRA_TABLE = (
     (15, "OM2", (0.15, 0.22, 0.62), GROUP_LCX, "LCx",
      "Second obtuse marginal off the LCx."),
     (16, "SN", (1.00, 0.92, 0.50), GROUP_RCA, "RCA",
-     "Sinus node artery, to the sinus node (folded into RCA when scored, whichever "
-     "artery it comes off)."),
+     "Sinus node artery, to the sinus node (counted with the vessel it comes off, "
+     "RCA or LCx, when scored)."),
     (17, "Conus", (0.95, 0.55, 0.08), GROUP_RCA, "RCA",
      "Conus branch: usually the first RCA branch, to the right ventricular outflow "
      "tract."),
@@ -138,10 +153,10 @@ _EXTRA_TABLE = (
      "ventricle."),
     (19, "PDA", (0.62, 0.32, 0.04), GROUP_RCA, "RCA",
      "Posterior descending artery, in the posterior interventricular groove "
-     "(folded into RCA when scored, whichever artery it comes off)."),
+     "(counted with the vessel it comes off, RCA or LCx, when scored)."),
     (20, "PLB", (1.00, 0.68, 0.52), GROUP_RCA, "RCA",
-     "Posterolateral branch, beyond the crux (folded into RCA when scored, "
-     "whichever artery it comes off)."),
+     "Posterolateral branch, beyond the crux (counted with the vessel it comes "
+     "off, RCA or LCx, when scored)."),
     (21, "Ramus", (0.15, 0.82, 0.92), GROUP_OTHER, "LCx",
      "Ramus intermedius: a third branch from the left main, between the LAD and "
      "LCx (folded into LCx when scored, D1b)."),
@@ -169,17 +184,45 @@ DISPLAY_ORDER: List[str] = (
     + ["RCA"] + [n for n in EXTRA_NAMES if GROUP_OF[n] == GROUP_RCA]
     + MATERIALS)
 
-#: What annotators are told about the extended classes (D44), shown in the panel
-#: when they are turned on; each class's own hint is in ``extra_segment_dicts``.
+#: What annotators are told about the extended classes (D44, D47), shown in the
+#: panel when they are turned on; each class's own hint is in ``extra_segment_dicts``.
 EXTENDED_INSTRUCTIONS = (
     "Extended classes are optional: leave any of them empty. LM, LAD, LCx and RCA "
-    "start as before. To use a branch class, move that branch out of its parent "
-    "into its class: D1-D3 and S1-S3 come out of LAD; OM1, OM2 and the ramus out "
-    "of LCx; SN, conus, RMA, PDA and PLB out of RCA. Branches beyond the third "
-    "diagonal or septal, or the second marginal, stay in the parent. Paint stent, "
-    "calcified and non-calcified plaque where you see them; they may overlap the "
-    "vessels. Every class is saved whole, overlaps included. When scored, each "
-    "branch counts towards its parent; materials are scored on their own.")
+    "start as before. To use a branch class, move that branch out of whichever "
+    "vessel it leaves into its class: D1-D3 and S1-S3 come out of LAD; OM1, OM2 and "
+    "the ramus out of LCx; conus and RMA out of RCA; SN, PDA and PLB out of "
+    "whichever of RCA or LCx they come off (in a left-dominant heart the PDA and "
+    "PLB come off the LCx). Branches beyond the third diagonal or septal, or the "
+    "second marginal, stay in the parent. Trace septals, SN, conus and RMA as far "
+    "as you can see them, even where the vessel seed stops. Tick a branch group "
+    "complete when you have looked for every branch in it, so an empty class there "
+    "means absent. Paint stent, calcified and non-calcified plaque where you see "
+    "them; they may overlap the vessels. Every class is saved whole, overlaps "
+    "included. When scored, each branch counts towards the vessel it leaves; "
+    "materials are scored on their own.")
+
+#: The extended-mode case note (D47 Q6): shown on a case flagged ``extendedMode``.
+EXTENDED_MODE_NOTE = (
+    "This case is read in extended mode: please use the extended classes "
+    "(branches and materials).")
+
+#: The branch groups an extended read can mark complete (D47 Q3), in panel order:
+#: "I looked for every branch of this group, so an empty class here means absent".
+COMPLETE_GROUPS = (GROUP_LAD, GROUP_LCX, GROUP_RCA)
+
+
+def group_members(group: str) -> List[str]:
+    """The extended classes a completeness tick covers, in label order. The ramus
+    (group "Other") is folded into LCx, so the LCx tick covers it too."""
+    groups = (GROUP_LCX, GROUP_OTHER) if group == GROUP_LCX else (group,)
+    return [n for n in EXTRA_NAMES if GROUP_OF[n] in groups]
+
+
+def clean_complete_groups(groups) -> List[str]:
+    """``groups`` as stored: the known ``COMPLETE_GROUPS`` among them, in panel
+    order, each once. Anything else (an unknown or misspelt group) is dropped."""
+    wanted = set(str(g).strip() for g in (groups or ()))
+    return [g for g in COMPLETE_GROUPS if g in wanted]
 
 
 def extra_segment_dicts() -> List[dict]:
@@ -210,7 +253,16 @@ def stack_names(extended: bool) -> List[str]:
     return list(ALL_NAMES if extended else NAMES)
 
 
-def collapse_to_four(masks, names: Sequence[str]):
+#: Branches whose parent is decided per read, by contact (D47 Q1): RCA or LCx,
+#: whichever the component leaves. ``PARENT`` holds their fallback.
+CONTACT_BRANCHES = ("SN", "PDA", "PLB")
+#: The vessels a ``CONTACT_BRANCHES`` component may leave, fallback first.
+CONTACT_PARENTS = ("RCA", "LCx")
+#: Where a component with no contact, or a tie, goes.
+CONTACT_FALLBACK = "RCA"
+
+
+def collapse_to_four(masks, names: Sequence[str], stats: Optional[dict] = None):
     """``(4, ...)`` 0/1 masks in ``NAMES`` order from ``(C, ...)`` masks named ``names``.
 
     Each of the four vessels is its own mask unioned with every branch whose parent
@@ -218,6 +270,11 @@ def collapse_to_four(masks, names: Sequence[str]):
     four-class read comes back unchanged (as uint8 0/1), so a 4-class read scores
     exactly as before, and an extended read scores like the same voxels drawn into
     the parents.
+
+    **PDA, PLB and SN (D47 Q1)** go to the vessel they leave, decided from the read
+    (``assign_contact_branches``): each connected component goes to RCA or LCx by
+    which it touches more. ``stats``, when given a dict, is filled with what was
+    decided (see ``assign_contact_branches``).
     """
     import numpy as np
 
@@ -227,11 +284,183 @@ def collapse_to_four(masks, names: Sequence[str]):
         raise ValueError(f"{masks.shape[0]} channels for {len(names)} class names")
     out = np.zeros((len(NAMES),) + masks.shape[1:], np.uint8)
     index = {name: i for i, name in enumerate(NAMES)}
+    contact = []
     for channel, name in enumerate(names):
+        if name in CONTACT_BRANCHES:
+            contact.append((name, masks[channel] != 0))
+            continue
         target = index.get(name, index.get(PARENT.get(name, ""), None))
         if target is not None:
             out[target] |= (masks[channel] != 0)
+    decided = assign_contact_branches(
+        contact, {p: out[index[p]] != 0 for p in CONTACT_PARENTS})
+    for parent, mask in decided.pop("masks").items():
+        out[index[parent]] |= mask
+    if stats is not None:
+        stats.clear()
+        stats.update(decided)
     return out
+
+
+def assign_contact_branches(branches, parents) -> dict:
+    """Decide which vessel each PDA, PLB and SN component leaves (D47 Q1).
+
+    ``branches`` is ``[(name, 0/1 mask), ...]``; ``parents`` is ``{"RCA": mask,
+    "LCx": mask}``: each vessel with its fixed branches already in it (conus and
+    RMA in RCA; OM1, OM2 and the ramus in LCx). Masks share one shape.
+
+    **The rule.** Each class is split into connected components (26-connected: a
+    stroke that steps diagonally is one piece). A component's contact with a vessel
+    is how many of its voxels are in the vessel or share a face with it. It goes
+    to the vessel with the most contact. A component that touches neither, but
+    touches a component already decided (a PDA drawn off a PLB that leaves the
+    LCx), takes that component's vessel, by the same count; this repeats until
+    nothing changes. A component still touching nothing, or touching both equally,
+    falls back to RCA (``CONTACT_FALLBACK``) and is counted.
+
+    Returns ``{"masks": {"RCA": mask, "LCx": mask}, "components": n, "byParent":
+    {"RCA": n, "LCx": n}, "fallback": n, "fallbackUnattached": n, "fallbackTie": n,
+    "perClass": {name: {"RCA": n, "LCx": n}}}``, counts in components; ``perClass``
+    has only the classes with any voxels.
+    """
+    import numpy as np
+
+    parents = {p: np.asarray(parents[p]) != 0 for p in CONTACT_PARENTS}
+    shape = next(iter(parents.values())).shape
+    result = {"masks": {p: np.zeros(shape, bool) for p in CONTACT_PARENTS},
+              "components": 0, "byParent": {p: 0 for p in CONTACT_PARENTS},
+              "fallback": 0, "fallbackUnattached": 0, "fallbackTie": 0, "perClass": {}}
+    branches = [(str(n), np.asarray(m) != 0) for n, m in branches]
+    present = [m for _, m in branches if m.any()]
+    if not present:
+        return result
+    # Work inside the branches' bounding box, one voxel wider: contact is never
+    # further away than that, so a whole CT need not be labelled.
+    box = _bbox(np.logical_or.reduce(present), pad=1)
+    territory = {p: parents[p][box] for p in CONTACT_PARENTS}
+    pieces = []                                 # [name, component mask (boxed), parent]
+    for name, mask in branches:
+        if not mask.any():
+            continue
+        labelled, n = _components(mask[box])
+        for k in range(1, n + 1):
+            pieces.append([name, labelled == k, None])
+
+    def contacts(piece, regions):
+        return {p: int(np.count_nonzero(piece & regions[p])) for p in CONTACT_PARENTS}
+
+    reach = {p: _grow(territory[p]) for p in CONTACT_PARENTS}
+    ties = set()
+    for piece in pieces:
+        got = contacts(piece[1], reach)
+        best = max(got.values())
+        if best and list(got.values()).count(best) == 1:
+            piece[2] = max(got, key=got.get)
+        elif best:
+            ties.add(id(piece))
+    # Components reached only through another decided component.
+    changed = True
+    while changed:
+        changed = False
+        decided = {p: np.zeros(territory[p].shape, bool) for p in CONTACT_PARENTS}
+        for piece in pieces:
+            if piece[2] is not None:
+                decided[piece[2]] |= piece[1]
+        reach = {p: _grow(decided[p]) for p in CONTACT_PARENTS}
+        for piece in pieces:
+            if piece[2] is not None or id(piece) in ties:
+                continue
+            got = contacts(piece[1], reach)
+            best = max(got.values())
+            if best and list(got.values()).count(best) == 1:
+                piece[2] = max(got, key=got.get)
+                changed = True
+            elif best:
+                ties.add(id(piece))
+                changed = True
+    for piece in pieces:
+        name, mask, parent = piece
+        if parent is None:
+            parent = CONTACT_FALLBACK
+            result["fallback"] += 1
+            result["fallbackTie" if id(piece) in ties else "fallbackUnattached"] += 1
+        result["masks"][parent][box] |= mask
+        result["components"] += 1
+        result["byParent"][parent] += 1
+        row = result["perClass"].setdefault(name, {p: 0 for p in CONTACT_PARENTS})
+        row[parent] += 1
+    return result
+
+
+def contact_summary(stats: Optional[Mapping]) -> Optional[dict]:
+    """``assign_contact_branches``'s counts without the masks, for storing in a
+    score; ``None`` when the read has no PDA, PLB or SN at all."""
+    if not stats or not stats.get("components"):
+        return None
+    return {k: v for k, v in stats.items() if k != "masks"}
+
+
+def _bbox(mask, pad=0):
+    """The slices of ``mask``'s bounding box, ``pad`` voxels wider, clipped."""
+    import numpy as np
+
+    out = []
+    for axis in range(mask.ndim):
+        other = tuple(a for a in range(mask.ndim) if a != axis)
+        hit = np.flatnonzero(mask.any(axis=other))
+        out.append(slice(max(0, int(hit[0]) - pad), min(mask.shape[axis], int(hit[-1]) + 1 + pad)))
+    return tuple(out)
+
+
+def _grow(mask):
+    """``mask`` and every voxel sharing a face with it (6-connected dilation)."""
+    out = mask.copy()
+    for axis in range(mask.ndim):
+        lead = [slice(None)] * mask.ndim
+        trail = [slice(None)] * mask.ndim
+        lead[axis], trail[axis] = slice(1, None), slice(None, -1)
+        out[tuple(lead)] |= mask[tuple(trail)]
+        out[tuple(trail)] |= mask[tuple(lead)]
+    return out
+
+
+def _components(mask, use_scipy=True):
+    """``(labels, n)``: the 26-connected components of ``mask``, numbered 1..n.
+
+    scipy when present (the server); otherwise a plain numpy flood (Slicer may not
+    ship scipy), slow on a large mask but only ever run on a branch's own box.
+    """
+    import numpy as np
+
+    mask = np.asarray(mask) != 0
+    if use_scipy:
+        try:
+            from scipy import ndimage
+        except ImportError:
+            pass
+        else:
+            labelled, n = ndimage.label(mask, structure=np.ones((3,) * mask.ndim, bool))
+            return labelled, int(n)
+    # Every voxel starts as its own number; each pass takes the largest number
+    # among its 26 neighbours, until nothing changes; then renumber 1..n.
+    big = np.where(mask, np.arange(1, mask.size + 1).reshape(mask.shape), 0)
+    padded = np.zeros(tuple(s + 2 for s in mask.shape), big.dtype)
+    inner = tuple(slice(1, -1) for _ in mask.shape)
+    offsets = [o for o in np.ndindex(*(3,) * mask.ndim) if any(v != 1 for v in o)]
+    while True:
+        padded[inner] = big
+        best = big.copy()
+        for o in offsets:
+            view = padded[tuple(slice(v, v + s) for v, s in zip(o, mask.shape))]
+            np.maximum(best, view, out=best)
+        best[~mask] = 0
+        if np.array_equal(best, big):
+            break
+        big = best
+    values = np.unique(big[mask])
+    out = np.zeros(mask.shape, np.int64)
+    out[mask] = np.searchsorted(values, big[mask]) + 1
+    return out, len(values)
 
 
 #: ImageCAS-X's 14 label values -> these four (D1 territory, D1b ramus -> LCx).

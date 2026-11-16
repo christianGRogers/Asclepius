@@ -1667,3 +1667,509 @@ def test_the_project_setting_refuses_the_extended_classes(world):
              "segments": labels.segment_dicts() + labels.extra_segment_dicts()[:1]}
     with pytest.raises(ValidationException, match="extended class"):
         Setting().set("segqueue14.project", value)
+
+
+# ------------------------------- D47 (#322): branch parents, complete groups, flag
+
+
+def _uploadTicked(world, user, caseName, classes, completeGroups=None):
+    """``classes`` (``{name: 0/1 array in _tree's order}``) as a 21-class stack, as
+    0.20.0 writes it: with the branch groups ticked complete in the header (``None``
+    writes no key, as 0.18/0.19 do). Returns ``(file document, SubmissionMeta dict)``."""
+    import numpy as np
+    import SimpleITK as sitk
+    from girder_segqueue14.utils import incomingFolder
+
+    from segqueue14 import labelfile, labels
+
+    masks = _stackOf(np, classes, labels.ALL_NAMES)
+    ct = sitk.ReadImage(str(world.data / f"{caseName}.nii.gz"))
+    d, sp, o = ct.GetDirection(), ct.GetSpacing(), ct.GetOrigin()
+    ijkToLps = [[d[3 * r + c] * sp[c] for c in range(3)] + [o[r]] for r in range(3)]
+    path = world.data / f"{caseName}_{user['login']}_{uuid.uuid4().hex[:6]}.seg.nrrd"
+    labelfile.write_class_stack(str(path), masks, labels.ALL_NAMES, ijkToLps,
+                                complete_groups=completeGroups)
+    fileDoc = _upload(path, incomingFolder(world.admin), user)
+    meta = {"checksum": _sha(path), "sizeBytes": os.path.getsize(path),
+            "annotationSeconds": 300.0,
+            "voxelCounts": {n: int((m != 0).sum()) for n, m in zip(labels.ALL_NAMES, masks)},
+            "extensionVersion": "0.20.0" if completeGroups is not None else "0.19.0"}
+    return fileDoc, meta
+
+
+def _submitTicked(world, queue, user, info, classes, completeGroups=None):
+    _as(user)
+    queue.downloadCase(caseId=info["caseId"])
+    fileDoc, meta = _uploadTicked(world, user, info["caseName"], classes, completeGroups)
+    _as(user)
+    return queue.submit(assignmentId=info["assignmentId"], fileId=str(fileDoc["_id"]),
+                        meta=json.dumps(meta), labelFormat="class-stack-nrrd/1",
+                        clientProtocol=19)
+
+
+def _withBranch(np, tree, branch, parent, xs):
+    """``tree`` as 21 classes with ``parent``'s voxels at x ``xs`` moved into ``branch``
+    (so the branch leaves ``parent`` and touches it along a face)."""
+    from segqueue14 import labels
+
+    classes = _fourOf(np, tree)
+    for name in labels.EXTRA_NAMES:
+        classes[name] = np.zeros(tree.shape, np.uint8)
+    block = np.zeros(tree.shape, bool)
+    block[..., xs] = classes[parent][..., xs] != 0
+    classes[branch][block] = 1
+    classes[parent][block] = 0
+    return classes
+
+
+@pytest.mark.parametrize("branch", ["PDA", "PLB", "SN"])
+def test_a_branch_off_the_lcx_scores_as_lcx(world, branch):
+    """D47 Q1: a PDA, PLB or SN that leaves the LCx collapses to LCx. Against the
+    reference that is the same tree: Dice 1.0 everywhere (0.18's always-RCA rule
+    put those voxels in RCA and scored LCx and RCA below 1)."""
+    import numpy as np
+    from girder_segqueue14 import scoring
+    from girder_segqueue14.models import Submission14
+
+    _readyProject(world)
+    queue = _resource()
+    cathy = world.people["cathy"]
+    _as(cathy)
+    info = queue.nextCase(clientProtocol=19)
+    classes = _withBranch(np, _tree(np), branch, "LCx", slice(11, 14))
+    sid = _submitTicked(world, queue, cathy, info, classes, [])["submissionId"]
+    scoring.runOnce()
+    score = Submission14().load(sid, force=True)["autoScore"]
+    ref = score["reference"]
+    assert ref["mean_dice"] == 1.0
+    assert ref["per_structure"]["LCx"]["dice"] == 1.0
+    assert ref["per_structure"]["RCA"]["dice"] == 1.0
+    assert score["branchParents"]["byParent"] == {"RCA": 0, "LCx": 1}
+    assert score["branchParents"]["fallback"] == 0
+    assert score["branchRule"] == scoring.BRANCH_RULE
+
+
+def test_a_branch_off_the_rca_scores_as_rca_and_a_loose_one_is_counted(world):
+    """A PDA off the RCA stays RCA; an SN drawn touching nothing falls back to RCA
+    and is counted, in the score and in the quality report."""
+    import numpy as np
+    from girder_segqueue14 import report, scoring
+    from girder_segqueue14.models import Submission14
+
+    _readyProject(world)
+    queue = _resource()
+    anna = world.people["anna"]
+    _as(anna)
+    info = queue.nextCase(clientProtocol=19)
+    tree = _tree(np)
+    classes = _withBranch(np, tree, "PDA", "RCA", slice(11, 14))
+    sid = _submitTicked(world, queue, anna, info, classes, [])["submissionId"]
+    scoring.runOnce()
+    score = Submission14().load(sid, force=True)["autoScore"]
+    assert score["reference"]["per_structure"]["RCA"]["dice"] == 1.0
+    assert score["branchParents"]["byParent"] == {"RCA": 1, "LCx": 0}
+    assert score["branchParents"]["fallback"] == 0
+
+    _as(anna)
+    second = queue.nextCase(clientProtocol=19)
+    loose = _withBranch(np, tree, "PDA", "LCx", slice(11, 14))
+    loose["SN"][20:22, 20:22, 20:22] = 1                # nowhere near a vessel
+    sid2 = _submitTicked(world, queue, anna, second, loose, [])["submissionId"]
+    scoring.runOnce()
+    score = Submission14().load(sid2, force=True)["autoScore"]
+    assert score["branchParents"]["fallback"] == 1
+    assert score["branchParents"]["fallbackUnattached"] == 1
+    assert score["branchParents"]["byParent"] == {"RCA": 1, "LCx": 1}
+    # The PDA is LCx; the loose SN went to RCA, so RCA is no longer perfect.
+    assert score["reference"]["per_structure"]["LCx"]["dice"] == 1.0
+    assert score["reference"]["per_structure"]["RCA"]["dice"] < 1.0
+
+    got = report.runQuality(limit=0, out=lambda _: None, db=world.db)
+    assert got["annotators"]["anna"]["branchFallback"] == 1
+
+
+def test_a_four_class_read_scores_exactly_as_before_d47(world):
+    """No PDA, PLB or SN: no branchParents, the same numbers as the bare collapse."""
+    import numpy as np
+    from girder_segqueue14 import scoring
+    from girder_segqueue14.models import Submission14
+
+    _readyProject(world)
+    queue = _resource()
+    bobby = world.people["bobby"]
+    _as(bobby)
+    info = queue.nextCase(clientProtocol=17)
+    sid = _submitStack(world, queue, bobby, info,
+                       _stackOf(np, _fourOf(np, _tree(np, shift=1))))["submissionId"]
+    scoring.runOnce()
+    submission = Submission14().load(sid, force=True)
+    score = submission["autoScore"]
+    assert "branchParents" not in score and "branchParents" not in score["reference"]
+    assert submission["completeGroups"] is None
+    reference = scoring.File().load(
+        scoring.Case14().load(submission["caseId"], force=True)["referenceFileId"], force=True)
+    readFile = scoring.File().load(submission["fileId"], force=True)
+    import segqueue14.scoring as sq
+
+    readArr, _ = scoring.stackOnGrid(scoring.readLabels(readFile),
+                                     scoring._gridOf(scoring.readLabels(reference)))
+    refArr, _ = scoring.stackOnGrid(scoring.readLabels(reference),
+                                    scoring._gridOf(scoring.readLabels(reference)), icx14=True)
+    want = sq.score_masks(readArr, refArr, scoring._spacing(scoring._gridOf(
+        scoring.readLabels(reference))))
+    assert score["reference"]["per_structure"] == want["per_structure"]
+    assert score["reference"]["mean_dice"] == want["mean_dice"]
+
+
+def test_complete_groups_round_trip_through_submit_review_revise_and_export(world, tmp_path,
+                                                                             header):
+    """D47 Q3: the ticks are stored from the header, shown to the reviewer, kept by
+    a revision from 0.20 (as the reviewer leaves them) and from an older module
+    (which does not know them), and written next to the read by the export."""
+    import numpy as np
+    from girder_segqueue14 import export, scoring
+    from girder_segqueue14.models import Submission14
+
+    from segqueue14 import labels
+
+    _readyProject(world)
+    queue = _resource()
+    anna, bobby, revy = (world.people[n] for n in ("anna", "bobby", "revy"))
+    poor = _poor(np)                                     # goes to a reviewer
+    _as(anna)
+    first = queue.nextCase(clientProtocol=19)
+    ticked = ["LAD branches", "RCA branches"]
+    one = _submitTicked(world, queue, anna, first,
+                        _withBranch(np, poor, "D1", "LAD", slice(12, 14)),
+                        ticked)["submissionId"]
+    _as(bobby)
+    second = queue.nextCase(clientProtocol=19)
+    two = _submitTicked(world, queue, bobby, second,
+                        _withBranch(np, poor, "OM1", "LCx", slice(12, 14)),
+                        ["LCx branches"])["submissionId"]
+    assert Submission14().load(one, force=True)["completeGroups"] == ticked
+    scoring.runOnce()
+
+    _as(revy)
+    header(19)
+    row = queue.getSubmission(submissionId=one)
+    assert row["completeGroups"] == ticked
+    assert [r for r in queue.caseSubmissions(caseId=first["caseId"])
+            if r["submissionId"] == one][0]["completeGroups"] == ticked
+
+    # 0.20 revises: the header carries the ticks the reviewer left (one added).
+    queue.claim(submissionId=one)
+    fileDoc, meta = _uploadTicked(world, revy, first["caseName"],
+                                  _withBranch(np, _tree(np), "D1", "LAD", slice(12, 14)),
+                                  ticked + ["LCx branches"])
+    _as(revy)
+    result = queue.revise(submissionId=one, fileId=str(fileDoc["_id"]), meta=json.dumps(meta),
+                          labelFormat="class-stack-nrrd/1", clientProtocol=19)
+    revision = Submission14().load(result["submissionId"], force=True)
+    assert revision["completeGroups"] == list(labels.COMPLETE_GROUPS)
+    assert _storedStack(world, revision)["completeGroups"] == list(labels.COMPLETE_GROUPS)
+    # The annotator's own read is untouched.
+    assert Submission14().load(one, force=True)["completeGroups"] == ticked
+
+    # 0.19 revises (no key in the header): the annotator's ticks are kept.
+    queue.claim(submissionId=two)
+    fileDoc, meta = _uploadTicked(world, revy, second["caseName"],
+                                  _withBranch(np, _tree(np), "OM1", "LCx", slice(12, 14)))
+    _as(revy)
+    result = queue.revise(submissionId=two, fileId=str(fileDoc["_id"]), meta=json.dumps(meta),
+                          labelFormat="class-stack-nrrd/1", clientProtocol=19)
+    assert Submission14().load(result["submissionId"], force=True)["completeGroups"] == \
+        ["LCx branches"]
+
+    # The export writes each approved assignment's reviewer revision (#331), with
+    # the ticks the revision carries next to it.
+    out = tmp_path / "export"
+    assert export.main(["--out", str(out)]) == 0
+    read = json.loads((out / first["caseName"] / export.READ_INFO).read_text())
+    assert read["completeGroups"] == list(labels.COMPLETE_GROUPS)
+    assert read["extended"] is True and read["classes"] == labels.ALL_NAMES
+    assert read["exportedRole"] == "reviewer" and read["revisionOf"] == str(one)
+    read = json.loads((out / second["caseName"] / export.READ_INFO).read_text())
+    assert read["completeGroups"] == ["LCx branches"]
+    assert read["exportedRole"] == "reviewer" and read["revisionOf"] == str(two)
+    manifest = json.loads((out / "manifest.json").read_text())
+    assert manifest["source"]["complete_groups"] == {
+        first["caseName"]: list(labels.COMPLETE_GROUPS),
+        second["caseName"]: ["LCx branches"]}
+    assert manifest["source"]["revised_reads"] == 2
+    assert manifest["source"]["branch_parents"] is None
+
+
+def test_four_class_export_puts_a_left_pda_in_lcx_and_counts_fallbacks(world, tmp_path):
+    import nibabel as nib
+    import numpy as np
+    from girder_segqueue14 import export, scoring
+
+    _readyProject(world)
+    queue = _resource()
+    cathy = world.people["cathy"]
+    _as(cathy)
+    info = queue.nextCase(clientProtocol=19)
+    tree = _tree(np)
+    classes = _withBranch(np, tree, "PLB", "LCx", slice(11, 14))
+    classes["SN"][20:22, 20:22, 20:22] = 1
+    _submitTicked(world, queue, cathy, info, classes, ["RCA branches"])
+    scoring.runOnce()
+    out = tmp_path / "four"
+    assert export.main(["--out", str(out), "--four-class", "--include-unreviewed"]) == 0
+    folder = out / info["caseName"] / "segmentations"
+    lcx = np.asarray(nib.load(str(folder / "LCx.nii.gz")).dataobj)
+    want = tree == 3
+    assert np.array_equal(lcx > 0, want)
+    read = json.loads((out / info["caseName"] / export.READ_INFO).read_text())
+    assert read["written"] == "four" and read["completeGroups"] == ["RCA branches"]
+    assert read["branchParents"]["byParent"] == {"RCA": 1, "LCx": 1}
+    parents = json.loads((out / "manifest.json").read_text())["source"]["branch_parents"]
+    assert parents == {"components": 2, "toLCx": 1, "fallback": 1,
+                       "fallbackCases": [info["caseName"]]}
+
+
+def test_a_flagged_case_opens_in_extended_mode(world, header):
+    """D47 Q6: an admin flags a case; the annotator's assignment and the reviewer's
+    row say so; unflagged cases and older modules are unaffected."""
+    import numpy as np
+    from girder_segqueue14.models import Case14
+
+    _readyProject(world)
+    queue = _resource()
+    anna, revy = world.people["anna"], world.people["revy"]
+    assert all(c["extendedMode"] is False for c in Case14().find({}))
+    case = Case14().findOne({"retired": False}, sort=[("priority", -1), ("serveOrder", 1),
+                                                      ("created", 1)])
+    _as(world.admin)
+    assert queue.setExtendedMode(caseId=str(case["_id"]), on=True)["extendedMode"] is True
+    assert Case14().load(case["_id"], force=True)["extendedMode"] is True
+
+    _as(anna)
+    info = queue.nextCase(clientProtocol=19)
+    assert info["caseId"] == str(case["_id"]) and info["extendedMode"] is True
+    assert [a for a in queue.listMine() if a["caseId"] == info["caseId"]][0][
+        "extendedMode"] is True
+    # A 0.17 module is served the same case; it simply ignores the field.
+    sid = _submitStack(world, queue, anna, info,
+                       _stackOf(np, _fourOf(np, _poor(np))))["submissionId"]
+    _as(revy)
+    header(19)
+    assert queue.getSubmission(submissionId=sid)["extendedMode"] is True
+
+    _as(world.people["bobby"])
+    other = queue.nextCase(clientProtocol=19)
+    assert other["caseId"] != info["caseId"] and other["extendedMode"] is False
+
+    _as(world.admin)
+    assert queue.setExtendedMode(caseId=str(case["_id"]), on=False)["extendedMode"] is False
+
+
+def test_rescore_extended_rescores_old_reads_once_and_changes_nothing_else(world):
+    """Reads 0.18 scored with PDA/PLB/SN always in RCA are scored again under D47 Q1,
+    once; review state and approvals are untouched."""
+    import numpy as np
+    from girder_segqueue14 import scoring
+    from girder_segqueue14.models import Assignment14, Submission14
+
+    _readyProject(world)
+    queue = _resource()
+    cathy, bobby = world.people["cathy"], world.people["bobby"]
+    _as(cathy)
+    info = queue.nextCase(clientProtocol=19)
+    sid = _submitTicked(world, queue, cathy, info,
+                        _withBranch(np, _tree(np), "PDA", "LCx", slice(11, 14)),
+                        None)["submissionId"]
+    _as(bobby)
+    four = queue.nextCase(clientProtocol=17)
+    _submitStack(world, queue, bobby, four, _stackOf(np, _fourOf(np, _tree(np))))
+    scoring.runOnce()
+    # As 0.18.0 stored it: no branchRule, LCx short of its PDA.
+    old = {"flags": [], "mean_dice": 0.9, "reference": {"mean_dice": 0.9}}
+    Submission14().collection.update_one({"_id": _oid(sid)}, {"$set": {"autoScore": old}})
+    assignment = Assignment14().load(Submission14().load(sid, force=True)["assignmentId"],
+                                     force=True)
+
+    assert [str(s["_id"]) for s in scoring.rescoreCandidates()] == [sid]
+    lines = []
+    dry = scoring.rescoreExtended(dryRun=True, out=lines.append)
+    assert dry["candidates"] == 1 and dry["rescored"] == 0
+    assert Submission14().load(sid, force=True)["autoScore"] == old
+
+    done = scoring.rescoreExtended(out=lines.append)
+    assert done["rescored"] == 1 and done["newlyFlagged"] == []
+    submission = Submission14().load(sid, force=True)
+    assert submission["autoScore"]["reference"]["per_structure"]["LCx"]["dice"] == 1.0
+    assert submission["autoScore"]["previous"] == old
+    assert submission["autoScore"]["branchRule"] == scoring.BRANCH_RULE
+    after = Assignment14().load(assignment["_id"], force=True)
+    assert (after["state"], after.get("needsReview")) == \
+        (assignment["state"], assignment.get("needsReview"))
+
+    again = scoring.rescoreExtended(out=lines.append)
+    assert again["rescored"] == 0 and again["skipped"] == 1
+
+
+def _oid(value):
+    from bson import ObjectId
+
+    return ObjectId(value)
+
+
+# ------------------------------------------- #331: the reviewer's revision is exported
+
+
+def _reviseWith(world, queue, reviewer, info, submissionId, classes, header):
+    """``reviewer`` claims ``submissionId`` and revises it to ``classes`` (21 classes,
+    0.20.0, every group ticked). Returns the revision's id."""
+    from segqueue14 import labels
+
+    _as(reviewer)
+    header(19)
+    queue.claim(submissionId=submissionId)
+    fileDoc, meta = _uploadTicked(world, reviewer, info["caseName"], classes,
+                                  list(labels.COMPLETE_GROUPS))
+    _as(reviewer)
+    return queue.revise(submissionId=submissionId, fileId=str(fileDoc["_id"]),
+                        meta=json.dumps(meta), labelFormat="class-stack-nrrd/1",
+                        clientProtocol=19)["submissionId"]
+
+
+def _mask(folder, name):
+    import nibabel as nib
+    import numpy as np
+
+    return np.asarray(nib.load(str(folder / f"{name}.nii.gz")).dataobj) > 0
+
+
+def test_export_writes_the_reviewers_revision_not_the_annotators_read(world, tmp_path,
+                                                                     header):
+    """#331: an approved read a reviewer corrected exports the revision's bytes and
+    classes (also --four-class, collapsed); one with no revision exports the annotator
+    read; read.json and the manifest say which. Fails on the old unsorted findOne,
+    which returned the annotator's original."""
+    import numpy as np
+    from girder_segqueue14 import export, scoring
+    from girder_segqueue14.models import Submission14
+
+    from segqueue14 import labels
+
+    _readyProject(world)
+    queue = _resource()
+    anna, bobby, revy = (world.people[n] for n in ("anna", "bobby", "revy"))
+    tree = _tree(np)
+    # anna's read is poor and four-class; the reviewer corrects it to an extended read.
+    _as(anna)
+    first = queue.nextCase(clientProtocol=19)
+    poor = _poor(np)
+    one = _submitTicked(world, queue, anna, first, _withBranch(np, poor, "D1", "LAD",
+                                                               slice(12, 14)),
+                        ["LAD branches"])["submissionId"]
+    # bobby's read is perfect: approved by its score, never revised.
+    _as(bobby)
+    second = queue.nextCase(clientProtocol=19)
+    perfect = _withBranch(np, tree, "OM1", "LCx", slice(12, 14))
+    two = _submitTicked(world, queue, bobby, second, perfect,
+                        ["LCx branches"])["submissionId"]
+    scoring.runOnce()
+
+    corrected = _withBranch(np, tree, "PDA", "RCA", slice(12, 14))
+    revision = _reviseWith(world, queue, revy, first, one, corrected, header)
+    assert Submission14().load(revision, force=True)["authorRole"] == "reviewer"
+
+    out = tmp_path / "export"
+    assert export.main(["--out", str(out)]) == 0
+    folder = out / first["caseName"] / "segmentations"
+    # The revision's voxels, not anna's: her RCA was drawn into LCx and her D1 is gone.
+    assert np.array_equal(_mask(folder, "RCA"), corrected["RCA"] > 0)
+    assert np.array_equal(_mask(folder, "LCx"), corrected["LCx"] > 0)
+    assert np.array_equal(_mask(folder, "PDA"), corrected["PDA"] > 0)
+    assert not _mask(folder, "D1").any()
+    read = json.loads((out / first["caseName"] / export.READ_INFO).read_text())
+    assert read["exportedRole"] == "reviewer"
+    assert read["submissionId"] == str(revision) and read["revisionOf"] == str(one)
+    assert read["completeGroups"] == list(labels.COMPLETE_GROUPS)
+
+    folder = out / second["caseName"] / "segmentations"
+    assert np.array_equal(_mask(folder, "OM1"), perfect["OM1"] > 0)
+    read = json.loads((out / second["caseName"] / export.READ_INFO).read_text())
+    assert read == {**read, "exportedRole": "annotator", "submissionId": str(two),
+                    "revisionOf": None, "completeGroups": ["LCx branches"]}
+
+    source = json.loads((out / "manifest.json").read_text())["source"]
+    assert source["exported_reads"] == {
+        first["caseName"]: {"exportedRole": "reviewer", "submissionId": str(revision),
+                            "revisionOf": str(one)},
+        second["caseName"]: {"exportedRole": "annotator", "submissionId": str(two),
+                             "revisionOf": None}}
+    assert source["revised_reads"] == 1
+
+    # --four-class collapses the revision: its PDA goes back into RCA.
+    four = tmp_path / "four"
+    assert export.main(["--out", str(four), "--four-class"]) == 0
+    folder = four / first["caseName"] / "segmentations"
+    assert sorted(p.name for p in folder.iterdir()) == \
+        ["LAD.nii.gz", "LCx.nii.gz", "LM.nii.gz", "RCA.nii.gz"]
+    for name in labels.NAMES:
+        assert np.array_equal(_mask(folder, name), tree == labels.LABEL_VALUES[name]), name
+    read = json.loads((four / first["caseName"] / export.READ_INFO).read_text())
+    assert read["exportedRole"] == "reviewer" and read["written"] == "four"
+
+
+def test_the_newest_revision_wins_and_a_reopened_read_is_never_exported(world, header):
+    """#331: of two revisions the newest is exported, whatever order Mongo holds them
+    in; with none, the newest annotator read not reopened (#315); a reopened read is
+    never chosen, nor a revision of one."""
+    import datetime
+
+    import numpy as np
+    from girder_segqueue14 import export, scoring
+    from girder_segqueue14.models import Assignment14, Submission14
+
+    _readyProject(world)
+    queue = _resource()
+    anna, revy = world.people["anna"], world.people["revy"]
+    tree = _tree(np)
+    _as(anna)
+    info = queue.nextCase(clientProtocol=19)
+    one = _submitTicked(world, queue, anna, info,
+                        _withBranch(np, _poor(np), "D1", "LAD", slice(12, 14)))["submissionId"]
+    scoring.runOnce()
+    first = _reviseWith(world, queue, revy, info, one,
+                        _withBranch(np, tree, "D1", "LAD", slice(12, 14)), header)
+    assignment = Assignment14().load(Submission14().load(one, force=True)["assignmentId"],
+                                     force=True)
+    assert assignment["state"] == "approved"
+
+    def pick():
+        return export.exportedSubmission(assignment)["_id"]
+
+    assert pick() == Submission14().load(first, force=True)["_id"]
+
+    # A second revision (two reviewers racing: rest/review.py stores the loser's),
+    # inserted *before* the first in natural order but created after it.
+    base = Submission14().load(first, force=True)
+    later = {k: v for k, v in base.items() if k != "_id"}
+    later["created"] = base["created"] + datetime.timedelta(minutes=5)
+    Submission14().collection.delete_one({"_id": base["_id"]})
+    newest = Submission14().save(later)["_id"]
+    Submission14().collection.insert_one(base)
+    assert pick() == newest
+
+    # No revision: the newest annotator read that is not reopened.
+    Submission14().collection.delete_many({"assignmentId": assignment["_id"],
+                                           "authorRole": "reviewer"})
+    read = Submission14().load(one, force=True)
+    older = {k: v for k, v in read.items() if k != "_id"}
+    older["created"] = read["created"] - datetime.timedelta(days=1)
+    older = Submission14().save(older)["_id"]
+    assert pick() == read["_id"]
+    # Reopened (#315): never exported, even as the newest -- the older read is.
+    now = datetime.datetime.now(datetime.timezone.utc)
+    Submission14().collection.update_one({"_id": read["_id"]}, {"$set": {"reopenedAt": now}})
+    assert pick() == older
+    # A revision of a reopened read is not chosen either.
+    Submission14().collection.insert_one(base)       # revisionOf the reopened read
+    assert pick() == older
+    Submission14().collection.update_one({"_id": older}, {"$set": {"reopenedAt": now}})
+    assert export.exportedSubmission(assignment) is None

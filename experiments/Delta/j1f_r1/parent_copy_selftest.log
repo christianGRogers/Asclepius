@@ -1,0 +1,3 @@
+stage 1 collapse vs Janus 0: max |dp| 1.55e-15; argmax agreement 1.0000; LAD-territory tie 0.00e+00
+stage 2 collapse vs Janus 0: max |dp| 1.89e-15; stage 2 collapsed to stage 1 vs stage 1 (all 13 channels): 9.44e-16
+parent_copy self-test: PASS

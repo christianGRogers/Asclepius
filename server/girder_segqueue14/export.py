@@ -17,7 +17,15 @@ four-class read is written as before. ``--four-class`` writes every read as the
 four instead, an extended one collapsed first (each branch unioned into its
 parent, materials dropped: ``labels.collapse_to_four``) -- what a four-class
 training set (D25) wants. The manifest says which was done and lists the extended
-reads. Original notes follow.
+reads. In that collapse PDA, PLB and SN go to the vessel they leave, RCA or LCx,
+decided from the read by contact (D47 Q1); the manifest counts the components that
+touched neither (or both equally) and fell back to RCA.
+
+**Next to each read (D47 Q3):** ``<case>/read.json`` -- the read's classes,
+whether it is extended, and the branch groups its annotator marked complete
+(``completeGroups``: an empty class in a group listed there means absent; ``null``
+when the module did not say, as before 0.20.0), plus, with ``--four-class``, how
+its PDA, PLB and SN were assigned (``branchParents``). Original notes follow.
 
 ``segqueue-export`` -- write approved work out in the training layout.
 
@@ -57,6 +65,13 @@ Two things about the inputs that are easy to get wrong:
 Runs against the models directly rather than over REST, like ``segqueue-ingest``
 and for the same reason: the files are already on this disk.
 
+**Which read (#331).** For each exported assignment, the newest reviewer revision
+(``rest/review.py`` ``revise``) if there is one, else the newest annotator read not
+reopened (#315): ``exportedSubmission``. Every mode follows it (``--four-class``,
+replicas, ``--since``); a revision's file carries its own D47 ticks. ``read.json`` and
+the manifest's ``exported_reads`` record ``exportedRole`` (``reviewer``/``annotator``),
+the submission id and ``revisionOf``; ``revised_reads`` counts the revisions.
+
 **The annotator benchmark (D43).** Reads of the benchmark case
 (``annotator_benchmark_<ImageCAS id>``, ``segqueue14.benchmark``) are never exported:
 they measure annotators and are never trained on. There is no option to include
@@ -74,6 +89,7 @@ a missing or altered seal file stops the export.
 
 import argparse
 import datetime
+import json
 import os
 import socket
 import sys
@@ -86,6 +102,9 @@ from segqueue14 import labels as project_labels
 
 #: Written beside the CT, as ``segtrain convert`` expects.
 SEGMENTATIONS_DIR = 'segmentations'
+#: Per read, next to ``segmentations/`` (D47 Q3): classes, completeness ticks and,
+#: with ``--four-class``, how PDA, PLB and SN were assigned.
+READ_INFO = 'read.json'
 
 
 def _models():
@@ -161,11 +180,12 @@ def splitClassStack(path, segments):
     return out
 
 
-def classStackAll(path, fourClass=False):
+def classStackAll(path, fourClass=False, stats=None):
     """A class-stack file as ``{name: (mask, grid image)}`` for every class it has.
 
     The read's own classes (the four, or all 21 for an extended read, D44), in the
-    file's order; with ``fourClass`` the four, an extended read collapsed first.
+    file's order; with ``fourClass`` the four, an extended read collapsed first
+    (``stats``, a dict, gets the PDA/PLB/SN assignment: ``labels.collapse_to_four``).
     """
     np, sitk = _requireDeps()
     data = labelfile.read_class_stack(path)
@@ -174,7 +194,7 @@ def classStackAll(path, fourClass=False):
     grid.SetOrigin(data['origin'])
     grid.SetDirection(data['direction'])
     if fourClass:
-        masks = project_labels.collapse_to_four(data['masks'], data['names'])
+        masks = project_labels.collapse_to_four(data['masks'], data['names'], stats=stats)
         names = list(project_labels.NAMES)
     else:
         masks, names = data['masks'], list(data['names'])
@@ -219,16 +239,23 @@ def exportCase(case, submission, outRoot, segments, name=None, dryRun=False,
 
     if dryRun:
         return {'case': caseName, 'written': len(segments), 'empty': [],
-                'dryRun': True}
+                'dryRun': True, **provenance(submission)}
 
     os.makedirs(os.path.join(target, SEGMENTATIONS_DIR), exist_ok=True)
 
     labelPath = _download(labelFile, os.path.splitext(labelFile['name'])[1] or '.nrrd')
+    stats = {}
+    classes = list(submission.get('classes') or project_labels.NAMES)
+    completeGroups = submission.get('completeGroups')
     try:
         if labelfile.sniff(labelPath) == labelfile.FORMAT_CLASS_STACK:
             header = labelfile.read_header(labelPath)
-            if fourClass or project_labels.is_extended(labelfile.class_names(header)):
-                masks = classStackAll(labelPath, fourClass=fourClass)
+            classes = labelfile.class_names(header) or classes
+            # The file is the authority; the row says the same unless it predates D47.
+            fromFile = labelfile.complete_groups(header)
+            completeGroups = fromFile if fromFile is not None else completeGroups
+            if fourClass or project_labels.is_extended(classes):
+                masks = classStackAll(labelPath, fourClass=fourClass, stats=stats)
             else:
                 masks = splitClassStack(labelPath, segments)
         else:
@@ -249,9 +276,21 @@ def exportCase(case, submission, outRoot, segments, name=None, dryRun=False,
         _unlink(labelPath)
 
     _writeVolume(volume, os.path.join(target, 'ct.nii.gz'))
+    parents = project_labels.contact_summary(stats)
+    readInfo = {'classes': classes, 'extended': project_labels.is_extended(classes),
+                'completeGroups': completeGroups,
+                'written': 'four' if fourClass else 'read',
+                **provenance(submission)}
+    if parents:
+        readInfo['branchParents'] = parents
+    with open(os.path.join(target, READ_INFO), 'w') as handle:
+        json.dump(readInfo, handle, indent=2, sort_keys=True)
 
     return {'case': caseName, 'written': len(masks), 'empty': empty,
+            **provenance(submission),
             'extended': project_labels.is_extended(masks),
+            'completeGroups': completeGroups,
+            'branchParents': parents,
             'overlaps': [list(row) for row in overlap],
             'shape': tuple(int(n) for n in shape) if shape else None}
 
@@ -307,15 +346,64 @@ def isBenchmark(case):
     return bool(case.get('benchmark')) or sqbench.is_benchmark_name(case.get('name', ''))
 
 
+#: ``exportedRole``: whose read of an assignment was written (#331).
+ROLE_REVIEWER = 'reviewer'
+ROLE_ANNOTATOR = 'annotator'
+
+
+def exportedSubmission(assignment, submissions=None):
+    """The submission to write for one assignment (#331), or ``None``.
+
+    1. The newest reviewer revision (``rest/review.py`` ``revise``), if there is one:
+       it is the read a reviewer corrected and approved, and the one to train on.
+       A revision of a read reopened for its annotator (#315) is never chosen.
+    2. Otherwise the newest annotator submission not reopened (#315).
+
+    Newest by ``created``, then ``_id``: an explicit sort, so the answer never
+    depends on Mongo's natural order (which is how the annotator's original used
+    to be exported in place of the reviewer's correction).
+    """
+    if submissions is None:
+        submissions = _models()[3]()
+    newest = [('created', -1), ('_id', -1)]
+    for revision in submissions.find(
+            {'assignmentId': assignment['_id'], 'authorRole': ROLE_REVIEWER,
+             'reopenedAt': None}, sort=newest):
+        original = (submissions.load(revision['revisionOf'], force=True)
+                    if revision.get('revisionOf') else None)
+        if original is not None and original.get('reopenedAt'):
+            continue
+        return revision
+    return submissions.findOne(
+        {'assignmentId': assignment['_id'], 'authorRole': {'$ne': ROLE_REVIEWER},
+         'reopenedAt': None}, sort=newest)
+
+
+def exportedRole(submission):
+    """``reviewer`` for a reviewer's revision, ``annotator`` otherwise."""
+    return (ROLE_REVIEWER if submission.get('authorRole') == ROLE_REVIEWER
+            else ROLE_ANNOTATOR)
+
+
+def provenance(submission):
+    """What ``read.json`` and the manifest record about the exported submission."""
+    revisionOf = submission.get('revisionOf')
+    return {'exportedRole': exportedRole(submission),
+            'submissionId': str(submission['_id']),
+            'revisionOf': str(revisionOf) if revisionOf else None}
+
+
 def collect(since=None, includeUnreviewed=False, limit=0, replicas='first', seal=None):
     """Pair each exportable case with the submission(s) to write for it.
 
-    Yields ``(case, submission, name)``. For a duplicated case there are two
-    approved annotations of the same image; ``replicas='first'`` takes the
-    earliest decided one and the caller reports the rest, ``replicas='all'``
-    writes the others under ``<case>__r2``, ``<case>__r3``. Never silently
-    drops one: exporting the same image twice under one name would overwrite,
-    and dropping it without a word would hide a disagreement worth seeing.
+    Yields ``(case, submission, name)``; ``submission`` is ``exportedSubmission``'s
+    choice: a reviewer's revision over the annotator's read (#331). For a
+    duplicated case there are two approved annotations of the same image;
+    ``replicas='first'`` takes the earliest decided one and the caller reports
+    the rest, ``replicas='all'`` writes the others under ``<case>__r2``,
+    ``<case>__r3``. Never silently drops one: exporting the same image twice
+    under one name would overwrite, and dropping it without a word would hide
+    a disagreement worth seeing.
 
     ``seal`` (a ``segtrain.pool_seal.PoolSeal``): each of its cases is yielded once
     as ``(case, None, SEALED)``, before any submission of it is loaded, and does not
@@ -350,9 +438,7 @@ def collect(since=None, includeUnreviewed=False, limit=0, replicas='first', seal
             if index and replicas != 'all':
                 yield case, None, None      # a replica the caller must report
                 continue
-            # Never a read reopened for its annotator's revision (#315).
-            submission = submissions.findOne({'assignmentId': assignment['_id'],
-                                              'reopenedAt': None})
+            submission = exportedSubmission(assignment, submissions)
             if submission is None:
                 continue
             name = case['name'] if index == 0 else f"{case['name']}__r{index + 1}"
@@ -397,6 +483,17 @@ def _writeManifest(out, cases, segments, args, since):
         # 'four' collapses every read to the four.
         'classes': 'four' if getattr(args, 'four_class', False) else 'read',
         'extended_reads': sorted(getattr(args, 'extendedCases', ())),
+        # D47 Q3: per case, the branch groups its annotator marked complete (only
+        # reads whose module said; also in <case>/read.json).
+        'complete_groups': dict(sorted(getattr(args, 'completeGroups', {}).items())),
+        # D47 Q1, --four-class only: PDA/PLB/SN components assigned by contact, and
+        # how many touched neither vessel (or both equally) and fell back to RCA.
+        'branch_parents': getattr(args, 'branchParents', None),
+        # #331: per case, which submission was written -- the reviewer's revision
+        # when there is one, else the annotator's read -- and how many were revisions.
+        'exported_reads': dict(sorted(getattr(args, 'exportedReads', {}).items())),
+        'revised_reads': sum(1 for r in getattr(args, 'exportedReads', {}).values()
+                             if r['exportedRole'] == ROLE_REVIEWER),
     })
     return manifest.write(out)
 
@@ -481,6 +578,12 @@ def main(argv=None):
     args.extendedCases = extendedCases
     prelabelVersions = {}
     args.prelabelVersions = prelabelVersions
+    completeGroups = {}
+    args.completeGroups = completeGroups
+    exportedReads = {}
+    args.exportedReads = exportedReads
+    parents = {'components': 0, 'toLCx': 0, 'fallback': 0, 'fallbackCases': []}
+    args.branchParents = parents if args.four_class else None
     verb = 'would export' if args.dry_run else 'exported'
 
     for case, submission, name in collect(
@@ -512,6 +615,16 @@ def main(argv=None):
         if result.get('extended'):
             extendedCases.append(result['case'])
         prelabelVersions[result['case']] = submission.get('prelabelVersion') or ''
+        exportedReads[result['case']] = provenance(submission)
+        if result.get('completeGroups') is not None:
+            completeGroups[result['case']] = result['completeGroups']
+        if result.get('branchParents'):
+            bp = result['branchParents']
+            parents['components'] += bp['components']
+            parents['toLCx'] += bp['byParent'].get('LCx', 0)
+            parents['fallback'] += bp['fallback']
+            if bp['fallback']:
+                parents['fallbackCases'].append(result['case'])
         for structure in result.get('empty', ()):
             emptyStructures[structure] = emptyStructures.get(structure, 0) + 1
         note = f'  [{len(result["empty"])} empty]' if result.get('empty') else ''
@@ -520,6 +633,8 @@ def main(argv=None):
             overlapping.append(result['case'])
             note += '  [classes overlap: ' + ', '.join(
                 f'{a}/{b} {n}' for a, b, n in result['overlaps']) + ']'
+        if exportedRole(submission) == ROLE_REVIEWER:
+            note += '  [reviewer revision]'
         print(f'  + {result["case"]}{note}')
 
     args.poolSeal = {'sha256': seal.sha256,
@@ -527,12 +642,21 @@ def main(argv=None):
                      'excluded_cases': sealedExcluded, 'included_reads': sealedIncluded}
     args.benchmarkExcluded = benchmarks
     print(f'\n{verb} {written} case(s) into {args.out}.')
+    revised = sum(1 for r in exportedReads.values() if r['exportedRole'] == ROLE_REVIEWER)
+    print(f'{revised} of them the reviewer\'s revision of the read (#331); the rest the '
+          'annotator\'s read.')
     if extendedCases:
         print(f'{len(extendedCases)} read(s) with extended classes (D44) written with all '
               'their classes; --four-class collapses them to LM/LAD/LCx/RCA.')
     elif args.four_class:
         print('--four-class: every read written as LM, LAD, LCx and RCA (extended reads '
               'collapsed, D44).')
+    if args.four_class and parents['components']:
+        print(f"PDA/PLB/SN (D47): {parents['components']} component(s) put in the vessel "
+              f"they leave, {parents['toLCx']} of them LCx; {parents['fallback']} touched "
+              'neither vessel (or both equally) and went to RCA'
+              + (f" ({', '.join(parents['fallbackCases'])})" if parents['fallback'] else '')
+              + '.')
     if benchmarks:
         print(f'{benchmarks} annotator benchmark case(s) left out (D43; never trained on).')
     if acceptance:

@@ -26,7 +26,11 @@ the end, as ``segqueue14-benchmark status`` prints it:
 * empty classes: reads with an empty LM, LAD, LCx or RCA;
 * extended reads: reads with the optional extended classes (D44). Every figure
   here is over the four classes: an extended read is collapsed first, each branch
-  into its parent (``labels.collapse_to_four``).
+  into its parent (``labels.collapse_to_four``);
+* PDA/PLB/SN fallbacks (D47 Q1): in the collapse, PDA, PLB and SN go to the vessel
+  they leave, by contact; ``rca fallback`` counts the scored reads with a
+  component that touched neither RCA nor LCx (or both equally) and so went to RCA,
+  from the stored scores (``autoScore.branchParents``).
 
 **Project:** assignments by state, overall and per login; each pool case's
 ``approvedCount`` against its number of approved assignments (a mismatch is an
@@ -252,7 +256,7 @@ def collect(db, limit=DEFAULT_LIMIT, analyse=None, exclude=()):
     def person(userId):
         return people.setdefault(login(userId), {
             'reads': 0, 'approved': 0, 'sentBack': 0, 'underReview': 0, 'revised': 0,
-            'seconds': [], 'pairs': [], 'flagged': 0, 'extended': 0,
+            'seconds': [], 'pairs': [], 'flagged': 0, 'extended': 0, 'branchFallback': 0,
             'flags': {reason: 0 for reason in REASONS}, 'analysed': [],
             'empty': {name: 0 for name in NAMES}})
 
@@ -330,6 +334,9 @@ def collect(db, limit=DEFAULT_LIMIT, analyse=None, exclude=()):
         # Reads with the optional extended classes (D44); scored collapsed to four.
         if s.get('extended') or labels.is_extended(s.get('classes') or ()):
             p['extended'] += 1
+        # PDA/PLB/SN that went to RCA only because they touched neither vessel (D47).
+        if ((s.get('autoScore') or {}).get('branchParents') or {}).get('fallback'):
+            p['branchFallback'] += 1
         if usable(s.get('annotationSeconds')) and s['annotationSeconds'] > 0:
             p['seconds'].append(float(s['annotationSeconds']))
         score = s.get('autoScore') or {}
@@ -380,7 +387,7 @@ def collect(db, limit=DEFAULT_LIMIT, analyse=None, exclude=()):
         annotators[name] = {
             'reads': p['reads'], 'approved': p['approved'], 'sentBack': p['sentBack'],
             'underReview': p['underReview'], 'revisedByReviewer': p['revised'],
-            'extended': p['extended'],
+            'extended': p['extended'], 'branchFallback': p['branchFallback'],
             'medianSeconds': round(statistics.median(p['seconds']), 1) if p['seconds'] else None,
             'pairs': dict(summary(means), below=sum(1 for m in means if m < pairFlag),
                           perClass={n: meanOf([x['perClass'][n] for x in p['pairs']])

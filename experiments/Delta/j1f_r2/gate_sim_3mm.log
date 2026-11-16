@@ -1,0 +1,194 @@
+locked reference counts (presence >= 3 mm): {'D1': 98, 'D2': 64, 'OM1': 84, 'OM2': 40, 'PDA': 99, 'PLB': 100, 'D3': 7}
+human miss rates: {'D1': 0.016, 'D2': 0.085, 'OM1': 0.033, 'OM2': 0.179, 'PDA': 0.006, 'PLB': 0.02}
+
+## F-A6 as ruled (R 0.80, N 0.85, margin 0.05) | human x1.0, PDA/PLB swap 0.01 | P(<4 of 6) = 0.000, P(6 of 6) = 0.638, mean passing 5.63
+  D1   n= 98 rec 0.984 agr 0.993 [T1 0.969, line 0.919] nam 0.974 | fail rec 0.000 agr 0.000 nam 0.000 class 0.000
+  D2   n= 64 rec 0.915 agr 0.924 [T1 0.894, line 0.844] nam 0.942 | fail rec 0.003 agr 0.004 nam 0.004 class 0.009
+  OM1  n= 84 rec 0.967 agr 0.971 [T1 0.944, line 0.894] nam 0.961 | fail rec 0.000 agr 0.000 nam 0.000 class 0.000
+  OM2  n= 40 rec 0.822 agr 0.887 [T1 0.875, line 0.825] nam 0.912 | fail rec 0.268 agr 0.028 nam 0.112 class 0.353
+  PDA  n= 99 rec 0.994 agr 0.983 [T1 0.988, line 0.938] nam 0.990 | fail rec 0.000 agr 0.001 nam 0.000 class 0.001
+  PLB  n=100 rec 0.979 agr 0.970 [T1 0.962, line 0.912] nam 0.990 | fail rec 0.000 agr 0.003 nam 0.000 class 0.003
+
+## F-A6 as ruled (R 0.80, N 0.85, margin 0.05) | human x1.5, PDA/PLB swap 0.01 | P(<4 of 6) = 0.005, P(6 of 6) = 0.111, mean passing 4.95
+  D1   n= 98 rec 0.977 agr 0.989 [T1 0.969, line 0.919] nam 0.960 | fail rec 0.000 agr 0.000 nam 0.000 class 0.000
+  D2   n= 64 rec 0.872 agr 0.890 [T1 0.894, line 0.844] nam 0.915 | fail rec 0.059 agr 0.073 nam 0.048 class 0.147
+  OM1  n= 84 rec 0.951 agr 0.956 [T1 0.944, line 0.894] nam 0.943 | fail rec 0.000 agr 0.006 nam 0.002 class 0.007
+  OM2  n= 40 rec 0.731 agr 0.839 [T1 0.875, line 0.825] nam 0.872 | fail rec 0.786 agr 0.341 nam 0.337 class 0.867
+  PDA  n= 99 rec 0.991 agr 0.979 [T1 0.988, line 0.938] nam 0.990 | fail rec 0.000 agr 0.004 nam 0.000 class 0.004
+  PLB  n=100 rec 0.970 agr 0.960 [T1 0.962, line 0.912] nam 0.990 | fail rec 0.000 agr 0.022 nam 0.000 class 0.022
+
+## F-A6 as ruled (R 0.80, N 0.85, margin 0.05) | human x1.0, PDA/PLB swap 0.02 | P(<4 of 6) = 0.000, P(6 of 6) = 0.623, mean passing 5.61
+  D1   n= 98 rec 0.984 agr 0.993 [T1 0.969, line 0.919] nam 0.974 | fail rec 0.000 agr 0.000 nam 0.000 class 0.000
+  D2   n= 64 rec 0.915 agr 0.924 [T1 0.894, line 0.844] nam 0.942 | fail rec 0.003 agr 0.004 nam 0.004 class 0.009
+  OM1  n= 84 rec 0.967 agr 0.971 [T1 0.944, line 0.894] nam 0.961 | fail rec 0.000 agr 0.000 nam 0.000 class 0.000
+  OM2  n= 40 rec 0.822 agr 0.887 [T1 0.875, line 0.825] nam 0.912 | fail rec 0.268 agr 0.028 nam 0.112 class 0.353
+  PDA  n= 99 rec 0.994 agr 0.974 [T1 0.988, line 0.938] nam 0.980 | fail rec 0.000 agr 0.011 nam 0.000 class 0.011
+  PLB  n=100 rec 0.979 agr 0.961 [T1 0.962, line 0.912] nam 0.980 | fail rec 0.000 agr 0.015 nam 0.000 class 0.015
+
+## F-A6 as ruled (R 0.80, N 0.85, margin 0.05) | bad: every class in every case | P(<4 of 6) = 1.000, P(6 of 6) = 0.000, mean passing 3.00
+  D1   n= 98 rec 0.984 agr 0.980 [T1 0.969, line 0.919] nam 0.974 | fail rec 0.000 agr 0.000 nam 0.000 class 0.000
+  D2   n= 64 rec 1.000 agr 0.640 [T1 0.894, line 0.844] nam 0.942 | fail rec 0.000 agr 1.000 nam 0.004 class 1.000
+  OM1  n= 84 rec 0.967 agr 0.840 [T1 0.944, line 0.894] nam 0.961 | fail rec 0.000 agr 1.000 nam 0.000 class 1.000
+  OM2  n= 40 rec 1.000 agr 0.400 [T1 0.875, line 0.825] nam 0.912 | fail rec 0.000 agr 1.000 nam 0.112 class 1.000
+  PDA  n= 99 rec 0.994 agr 0.990 [T1 0.988, line 0.938] nam 0.990 | fail rec 0.000 agr 0.000 nam 0.000 class 0.000
+  PLB  n=100 rec 0.979 agr 1.000 [T1 0.962, line 0.912] nam 0.990 | fail rec 0.000 agr 0.000 nam 0.000 class 0.000
+
+## F-A6 as ruled (R 0.80, N 0.85, margin 0.05) | bad: ordinal shift in 25% of cases | P(<4 of 6) = 1.000, P(6 of 6) = 0.000, mean passing 2.00
+  D1   n= 98 rec 0.984 agr 0.993 [T1 0.969, line 0.919] nam 0.724 | fail rec 0.000 agr 0.000 nam 1.000 class 1.000
+  D2   n= 64 rec 0.915 agr 0.924 [T1 0.894, line 0.844] nam 0.692 | fail rec 0.003 agr 0.004 nam 1.000 class 1.000
+  OM1  n= 84 rec 0.967 agr 0.971 [T1 0.944, line 0.894] nam 0.711 | fail rec 0.000 agr 0.000 nam 1.000 class 1.000
+  OM2  n= 40 rec 0.822 agr 0.887 [T1 0.875, line 0.825] nam 0.662 | fail rec 0.268 agr 0.028 nam 1.000 class 1.000
+  PDA  n= 99 rec 0.994 agr 0.983 [T1 0.988, line 0.938] nam 0.990 | fail rec 0.000 agr 0.001 nam 0.000 class 0.001
+  PLB  n=100 rec 0.979 agr 0.970 [T1 0.962, line 0.912] nam 0.990 | fail rec 0.000 agr 0.003 nam 0.000 class 0.003
+
+## F-A6 as ruled (R 0.80, N 0.85, margin 0.05) | bad: ordinal shift in 15% of cases | P(<4 of 6) = 0.981, P(6 of 6) = 0.000, mean passing 2.18
+  D1   n= 98 rec 0.984 agr 0.993 [T1 0.969, line 0.919] nam 0.824 | fail rec 0.000 agr 0.000 nam 0.923 class 0.923
+  D2   n= 64 rec 0.915 agr 0.924 [T1 0.894, line 0.844] nam 0.792 | fail rec 0.003 agr 0.004 nam 0.971 class 0.972
+  OM1  n= 84 rec 0.967 agr 0.971 [T1 0.944, line 0.894] nam 0.811 | fail rec 0.000 agr 0.000 nam 0.958 class 0.958
+  OM2  n= 40 rec 0.822 agr 0.887 [T1 0.875, line 0.825] nam 0.762 | fail rec 0.268 agr 0.028 nam 0.950 class 0.967
+  PDA  n= 99 rec 0.994 agr 0.983 [T1 0.988, line 0.938] nam 0.990 | fail rec 0.000 agr 0.001 nam 0.000 class 0.001
+  PLB  n=100 rec 0.979 agr 0.970 [T1 0.962, line 0.912] nam 0.990 | fail rec 0.000 agr 0.003 nam 0.000 class 0.003
+
+## F-A6 as ruled (R 0.80, N 0.85, margin 0.05) | bad: misses 35% of every branch | P(<4 of 6) = 1.000, P(6 of 6) = 0.000, mean passing 0.00
+  D1   n= 98 rec 0.650 agr 0.820 [T1 0.969, line 0.919] nam 0.972 | fail rec 1.000 agr 0.997 nam 0.000 class 1.000
+  D2   n= 64 rec 0.648 agr 0.653 [T1 0.894, line 0.844] nam 0.633 | fail rec 0.998 agr 1.000 nam 0.999 class 1.000
+  OM1  n= 84 rec 0.649 agr 0.801 [T1 0.944, line 0.894] nam 0.960 | fail rec 0.999 agr 0.994 nam 0.001 class 1.000
+  OM2  n= 40 rec 0.651 agr 0.759 [T1 0.875, line 0.825] nam 0.625 | fail rec 0.968 agr 0.971 nam 0.994 class 1.000
+  PDA  n= 99 rec 0.650 agr 0.649 [T1 0.988, line 0.938] nam 0.990 | fail rec 1.000 agr 1.000 nam 0.000 class 1.000
+  PLB  n=100 rec 0.651 agr 0.646 [T1 0.962, line 0.912] nam 0.990 | fail rec 0.999 agr 1.000 nam 0.000 class 1.000
+
+## F-A6 as ruled (R 0.80, N 0.85, margin 0.05) | bad: misses 20% of every branch | P(<4 of 6) = 1.000, P(6 of 6) = 0.000, mean passing 0.77
+  D1   n= 98 rec 0.800 agr 0.914 [T1 0.969, line 0.919] nam 0.973 | fail rec 0.501 agr 0.504 nam 0.000 class 0.636
+  D2   n= 64 rec 0.801 agr 0.782 [T1 0.894, line 0.844] nam 0.771 | fail rec 0.526 agr 0.958 nam 0.922 class 0.985
+  OM1  n= 84 rec 0.800 agr 0.891 [T1 0.944, line 0.894] nam 0.961 | fail rec 0.529 agr 0.539 nam 0.000 class 0.663
+  OM2  n= 40 rec 0.799 agr 0.836 [T1 0.875, line 0.825] nam 0.761 | fail rec 0.416 agr 0.369 nam 0.891 class 0.943
+  PDA  n= 99 rec 0.799 agr 0.794 [T1 0.988, line 0.938] nam 0.990 | fail rec 0.527 agr 1.000 nam 0.000 class 1.000
+  PLB  n=100 rec 0.800 agr 0.793 [T1 0.962, line 0.912] nam 0.990 | fail rec 0.450 agr 1.000 nam 0.000 class 1.000
+
+## proposed (R 0.75, N 0.80, margin 0.05) | human x1.0, PDA/PLB swap 0.01 | P(<4 of 6) = 0.000, P(6 of 6) = 0.886, mean passing 5.89
+  D1   n= 98 rec 0.984 agr 0.993 [T1 0.969, line 0.919] nam 0.974 | fail rec 0.000 agr 0.000 nam 0.000 class 0.000
+  D2   n= 64 rec 0.915 agr 0.924 [T1 0.894, line 0.844] nam 0.942 | fail rec 0.000 agr 0.004 nam 0.000 class 0.003
+  OM1  n= 84 rec 0.967 agr 0.971 [T1 0.944, line 0.894] nam 0.961 | fail rec 0.000 agr 0.000 nam 0.000 class 0.000
+  OM2  n= 40 rec 0.822 agr 0.887 [T1 0.875, line 0.825] nam 0.912 | fail rec 0.084 agr 0.028 nam 0.017 class 0.107
+  PDA  n= 99 rec 0.994 agr 0.983 [T1 0.988, line 0.938] nam 0.990 | fail rec 0.000 agr 0.001 nam 0.000 class 0.001
+  PLB  n=100 rec 0.979 agr 0.970 [T1 0.962, line 0.912] nam 0.990 | fail rec 0.000 agr 0.003 nam 0.000 class 0.003
+
+## proposed (R 0.75, N 0.80, margin 0.05) | human x1.5, PDA/PLB swap 0.01 | P(<4 of 6) = 0.002, P(6 of 6) = 0.345, mean passing 5.27
+  D1   n= 98 rec 0.977 agr 0.989 [T1 0.969, line 0.919] nam 0.960 | fail rec 0.000 agr 0.000 nam 0.000 class 0.000
+  D2   n= 64 rec 0.872 agr 0.890 [T1 0.894, line 0.844] nam 0.915 | fail rec 0.002 agr 0.073 nam 0.003 class 0.076
+  OM1  n= 84 rec 0.951 agr 0.956 [T1 0.944, line 0.894] nam 0.943 | fail rec 0.000 agr 0.006 nam 0.000 class 0.006
+  OM2  n= 40 rec 0.731 agr 0.839 [T1 0.875, line 0.825] nam 0.872 | fail rec 0.522 agr 0.341 nam 0.122 class 0.619
+  PDA  n= 99 rec 0.991 agr 0.979 [T1 0.988, line 0.938] nam 0.990 | fail rec 0.000 agr 0.004 nam 0.000 class 0.004
+  PLB  n=100 rec 0.970 agr 0.960 [T1 0.962, line 0.912] nam 0.990 | fail rec 0.000 agr 0.022 nam 0.000 class 0.022
+
+## proposed (R 0.75, N 0.80, margin 0.05) | human x1.0, PDA/PLB swap 0.02 | P(<4 of 6) = 0.000, P(6 of 6) = 0.865, mean passing 5.86
+  D1   n= 98 rec 0.984 agr 0.993 [T1 0.969, line 0.919] nam 0.974 | fail rec 0.000 agr 0.000 nam 0.000 class 0.000
+  D2   n= 64 rec 0.915 agr 0.924 [T1 0.894, line 0.844] nam 0.942 | fail rec 0.000 agr 0.004 nam 0.000 class 0.003
+  OM1  n= 84 rec 0.967 agr 0.971 [T1 0.944, line 0.894] nam 0.961 | fail rec 0.000 agr 0.000 nam 0.000 class 0.000
+  OM2  n= 40 rec 0.822 agr 0.887 [T1 0.875, line 0.825] nam 0.912 | fail rec 0.084 agr 0.028 nam 0.017 class 0.107
+  PDA  n= 99 rec 0.994 agr 0.974 [T1 0.988, line 0.938] nam 0.980 | fail rec 0.000 agr 0.011 nam 0.000 class 0.011
+  PLB  n=100 rec 0.979 agr 0.961 [T1 0.962, line 0.912] nam 0.980 | fail rec 0.000 agr 0.015 nam 0.000 class 0.015
+
+## proposed (R 0.75, N 0.80, margin 0.05) | bad: every class in every case | P(<4 of 6) = 1.000, P(6 of 6) = 0.000, mean passing 3.00
+  D1   n= 98 rec 0.984 agr 0.980 [T1 0.969, line 0.919] nam 0.974 | fail rec 0.000 agr 0.000 nam 0.000 class 0.000
+  D2   n= 64 rec 1.000 agr 0.640 [T1 0.894, line 0.844] nam 0.942 | fail rec 0.000 agr 1.000 nam 0.000 class 1.000
+  OM1  n= 84 rec 0.967 agr 0.840 [T1 0.944, line 0.894] nam 0.961 | fail rec 0.000 agr 1.000 nam 0.000 class 1.000
+  OM2  n= 40 rec 1.000 agr 0.400 [T1 0.875, line 0.825] nam 0.912 | fail rec 0.000 agr 1.000 nam 0.017 class 1.000
+  PDA  n= 99 rec 0.994 agr 0.990 [T1 0.988, line 0.938] nam 0.990 | fail rec 0.000 agr 0.000 nam 0.000 class 0.000
+  PLB  n=100 rec 0.979 agr 1.000 [T1 0.962, line 0.912] nam 0.990 | fail rec 0.000 agr 0.000 nam 0.000 class 0.000
+
+## proposed (R 0.75, N 0.80, margin 0.05) | bad: ordinal shift in 25% of cases | P(<4 of 6) = 1.000, P(6 of 6) = 0.000, mean passing 2.00
+  D1   n= 98 rec 0.984 agr 0.993 [T1 0.969, line 0.919] nam 0.724 | fail rec 0.000 agr 0.000 nam 1.000 class 1.000
+  D2   n= 64 rec 0.915 agr 0.924 [T1 0.894, line 0.844] nam 0.692 | fail rec 0.000 agr 0.004 nam 1.000 class 1.000
+  OM1  n= 84 rec 0.967 agr 0.971 [T1 0.944, line 0.894] nam 0.711 | fail rec 0.000 agr 0.000 nam 1.000 class 1.000
+  OM2  n= 40 rec 0.822 agr 0.887 [T1 0.875, line 0.825] nam 0.662 | fail rec 0.084 agr 0.028 nam 1.000 class 1.000
+  PDA  n= 99 rec 0.994 agr 0.983 [T1 0.988, line 0.938] nam 0.990 | fail rec 0.000 agr 0.001 nam 0.000 class 0.001
+  PLB  n=100 rec 0.979 agr 0.970 [T1 0.962, line 0.912] nam 0.990 | fail rec 0.000 agr 0.003 nam 0.000 class 0.003
+
+## proposed (R 0.75, N 0.80, margin 0.05) | bad: ordinal shift in 15% of cases | P(<4 of 6) = 0.206, P(6 of 6) = 0.056, mean passing 4.19
+  D1   n= 98 rec 0.984 agr 0.993 [T1 0.969, line 0.919] nam 0.824 | fail rec 0.000 agr 0.000 nam 0.104 class 0.104
+  D2   n= 64 rec 0.915 agr 0.924 [T1 0.894, line 0.844] nam 0.792 | fail rec 0.000 agr 0.004 nam 0.631 class 0.632
+  OM1  n= 84 rec 0.967 agr 0.971 [T1 0.944, line 0.894] nam 0.811 | fail rec 0.000 agr 0.000 nam 0.253 class 0.252
+  OM2  n= 40 rec 0.822 agr 0.887 [T1 0.875, line 0.825] nam 0.762 | fail rec 0.084 agr 0.028 nam 0.796 class 0.821
+  PDA  n= 99 rec 0.994 agr 0.983 [T1 0.988, line 0.938] nam 0.990 | fail rec 0.000 agr 0.001 nam 0.000 class 0.001
+  PLB  n=100 rec 0.979 agr 0.970 [T1 0.962, line 0.912] nam 0.990 | fail rec 0.000 agr 0.003 nam 0.000 class 0.003
+
+## proposed (R 0.75, N 0.80, margin 0.05) | bad: misses 35% of every branch | P(<4 of 6) = 1.000, P(6 of 6) = 0.000, mean passing 0.01
+  D1   n= 98 rec 0.650 agr 0.820 [T1 0.969, line 0.919] nam 0.972 | fail rec 0.983 agr 0.997 nam 0.000 class 0.998
+  D2   n= 64 rec 0.648 agr 0.653 [T1 0.894, line 0.844] nam 0.633 | fail rec 0.948 agr 1.000 nam 0.991 class 1.000
+  OM1  n= 84 rec 0.649 agr 0.801 [T1 0.944, line 0.894] nam 0.960 | fail rec 0.969 agr 0.994 nam 0.000 class 0.997
+  OM2  n= 40 rec 0.651 agr 0.759 [T1 0.875, line 0.825] nam 0.625 | fail rec 0.875 agr 0.971 nam 0.966 class 0.998
+  PDA  n= 99 rec 0.650 agr 0.649 [T1 0.988, line 0.938] nam 0.990 | fail rec 0.986 agr 1.000 nam 0.000 class 1.000
+  PLB  n=100 rec 0.651 agr 0.646 [T1 0.962, line 0.912] nam 0.990 | fail rec 0.979 agr 1.000 nam 0.000 class 1.000
+
+## proposed (R 0.75, N 0.80, margin 0.05) | bad: misses 20% of every branch | P(<4 of 6) = 0.997, P(6 of 6) = 0.000, mean passing 1.24
+  D1   n= 98 rec 0.800 agr 0.914 [T1 0.969, line 0.919] nam 0.973 | fail rec 0.114 agr 0.504 nam 0.000 class 0.513
+  D2   n= 64 rec 0.801 agr 0.782 [T1 0.894, line 0.844] nam 0.771 | fail rec 0.117 agr 0.958 nam 0.668 class 0.965
+  OM1  n= 84 rec 0.800 agr 0.891 [T1 0.944, line 0.894] nam 0.961 | fail rec 0.101 agr 0.539 nam 0.000 class 0.545
+  OM2  n= 40 rec 0.799 agr 0.836 [T1 0.875, line 0.825] nam 0.761 | fail rec 0.166 agr 0.369 nam 0.669 class 0.741
+  PDA  n= 99 rec 0.799 agr 0.794 [T1 0.988, line 0.938] nam 0.990 | fail rec 0.121 agr 1.000 nam 0.000 class 1.000
+  PLB  n=100 rec 0.800 agr 0.793 [T1 0.962, line 0.912] nam 0.990 | fail rec 0.086 agr 1.000 nam 0.000 class 1.000
+
+## looser (R 0.75, N 0.80, margin 0.07) | human x1.0, PDA/PLB swap 0.01 | P(<4 of 6) = 0.000, P(6 of 6) = 0.900, mean passing 5.90
+  D1   n= 98 rec 0.984 agr 0.993 [T1 0.969, line 0.899] nam 0.974 | fail rec 0.000 agr 0.000 nam 0.000 class 0.000
+  D2   n= 64 rec 0.915 agr 0.924 [T1 0.894, line 0.824] nam 0.942 | fail rec 0.000 agr 0.000 nam 0.000 class 0.000
+  OM1  n= 84 rec 0.967 agr 0.971 [T1 0.944, line 0.874] nam 0.961 | fail rec 0.000 agr 0.000 nam 0.000 class 0.000
+  OM2  n= 40 rec 0.822 agr 0.887 [T1 0.875, line 0.805] nam 0.912 | fail rec 0.084 agr 0.009 nam 0.017 class 0.100
+  PDA  n= 99 rec 0.994 agr 0.983 [T1 0.988, line 0.918] nam 0.990 | fail rec 0.000 agr 0.000 nam 0.000 class 0.000
+  PLB  n=100 rec 0.979 agr 0.970 [T1 0.962, line 0.892] nam 0.990 | fail rec 0.000 agr 0.000 nam 0.000 class 0.000
+
+## looser (R 0.75, N 0.80, margin 0.07) | human x1.5, PDA/PLB swap 0.01 | P(<4 of 6) = 0.000, P(6 of 6) = 0.411, mean passing 5.39
+  D1   n= 98 rec 0.977 agr 0.989 [T1 0.969, line 0.899] nam 0.960 | fail rec 0.000 agr 0.000 nam 0.000 class 0.000
+  D2   n= 64 rec 0.872 agr 0.890 [T1 0.894, line 0.824] nam 0.915 | fail rec 0.002 agr 0.021 nam 0.003 class 0.024
+  OM1  n= 84 rec 0.951 agr 0.956 [T1 0.944, line 0.874] nam 0.943 | fail rec 0.000 agr 0.001 nam 0.000 class 0.001
+  OM2  n= 40 rec 0.731 agr 0.839 [T1 0.875, line 0.805] nam 0.872 | fail rec 0.522 agr 0.172 nam 0.122 class 0.579
+  PDA  n= 99 rec 0.991 agr 0.979 [T1 0.988, line 0.918] nam 0.990 | fail rec 0.000 agr 0.001 nam 0.000 class 0.000
+  PLB  n=100 rec 0.970 agr 0.960 [T1 0.962, line 0.892] nam 0.990 | fail rec 0.000 agr 0.003 nam 0.000 class 0.003
+
+## looser (R 0.75, N 0.80, margin 0.07) | human x1.0, PDA/PLB swap 0.02 | P(<4 of 6) = 0.000, P(6 of 6) = 0.897, mean passing 5.90
+  D1   n= 98 rec 0.984 agr 0.993 [T1 0.969, line 0.899] nam 0.974 | fail rec 0.000 agr 0.000 nam 0.000 class 0.000
+  D2   n= 64 rec 0.915 agr 0.924 [T1 0.894, line 0.824] nam 0.942 | fail rec 0.000 agr 0.000 nam 0.000 class 0.000
+  OM1  n= 84 rec 0.967 agr 0.971 [T1 0.944, line 0.874] nam 0.961 | fail rec 0.000 agr 0.000 nam 0.000 class 0.000
+  OM2  n= 40 rec 0.822 agr 0.887 [T1 0.875, line 0.805] nam 0.912 | fail rec 0.084 agr 0.009 nam 0.017 class 0.100
+  PDA  n= 99 rec 0.994 agr 0.974 [T1 0.988, line 0.918] nam 0.980 | fail rec 0.000 agr 0.001 nam 0.000 class 0.001
+  PLB  n=100 rec 0.979 agr 0.961 [T1 0.962, line 0.892] nam 0.980 | fail rec 0.000 agr 0.002 nam 0.000 class 0.001
+
+## looser (R 0.75, N 0.80, margin 0.07) | bad: every class in every case | P(<4 of 6) = 1.000, P(6 of 6) = 0.000, mean passing 3.00
+  D1   n= 98 rec 0.984 agr 0.980 [T1 0.969, line 0.899] nam 0.974 | fail rec 0.000 agr 0.000 nam 0.000 class 0.000
+  D2   n= 64 rec 1.000 agr 0.640 [T1 0.894, line 0.824] nam 0.942 | fail rec 0.000 agr 1.000 nam 0.000 class 1.000
+  OM1  n= 84 rec 0.967 agr 0.840 [T1 0.944, line 0.874] nam 0.961 | fail rec 0.000 agr 1.000 nam 0.000 class 1.000
+  OM2  n= 40 rec 1.000 agr 0.400 [T1 0.875, line 0.805] nam 0.912 | fail rec 0.000 agr 1.000 nam 0.017 class 1.000
+  PDA  n= 99 rec 0.994 agr 0.990 [T1 0.988, line 0.918] nam 0.990 | fail rec 0.000 agr 0.000 nam 0.000 class 0.000
+  PLB  n=100 rec 0.979 agr 1.000 [T1 0.962, line 0.892] nam 0.990 | fail rec 0.000 agr 0.000 nam 0.000 class 0.000
+
+## looser (R 0.75, N 0.80, margin 0.07) | bad: ordinal shift in 25% of cases | P(<4 of 6) = 1.000, P(6 of 6) = 0.000, mean passing 2.00
+  D1   n= 98 rec 0.984 agr 0.993 [T1 0.969, line 0.899] nam 0.724 | fail rec 0.000 agr 0.000 nam 1.000 class 1.000
+  D2   n= 64 rec 0.915 agr 0.924 [T1 0.894, line 0.824] nam 0.692 | fail rec 0.000 agr 0.000 nam 1.000 class 1.000
+  OM1  n= 84 rec 0.967 agr 0.971 [T1 0.944, line 0.874] nam 0.711 | fail rec 0.000 agr 0.000 nam 1.000 class 1.000
+  OM2  n= 40 rec 0.822 agr 0.887 [T1 0.875, line 0.805] nam 0.662 | fail rec 0.084 agr 0.009 nam 1.000 class 1.000
+  PDA  n= 99 rec 0.994 agr 0.983 [T1 0.988, line 0.918] nam 0.990 | fail rec 0.000 agr 0.000 nam 0.000 class 0.000
+  PLB  n=100 rec 0.979 agr 0.970 [T1 0.962, line 0.892] nam 0.990 | fail rec 0.000 agr 0.000 nam 0.000 class 0.000
+
+## looser (R 0.75, N 0.80, margin 0.07) | bad: ordinal shift in 15% of cases | P(<4 of 6) = 0.203, P(6 of 6) = 0.057, mean passing 4.19
+  D1   n= 98 rec 0.984 agr 0.993 [T1 0.969, line 0.899] nam 0.824 | fail rec 0.000 agr 0.000 nam 0.104 class 0.104
+  D2   n= 64 rec 0.915 agr 0.924 [T1 0.894, line 0.824] nam 0.792 | fail rec 0.000 agr 0.000 nam 0.631 class 0.631
+  OM1  n= 84 rec 0.967 agr 0.971 [T1 0.944, line 0.874] nam 0.811 | fail rec 0.000 agr 0.000 nam 0.253 class 0.252
+  OM2  n= 40 rec 0.822 agr 0.887 [T1 0.875, line 0.805] nam 0.762 | fail rec 0.084 agr 0.009 nam 0.796 class 0.821
+  PDA  n= 99 rec 0.994 agr 0.983 [T1 0.988, line 0.918] nam 0.990 | fail rec 0.000 agr 0.000 nam 0.000 class 0.000
+  PLB  n=100 rec 0.979 agr 0.970 [T1 0.962, line 0.892] nam 0.990 | fail rec 0.000 agr 0.000 nam 0.000 class 0.000
+
+## looser (R 0.75, N 0.80, margin 0.07) | bad: misses 35% of every branch | P(<4 of 6) = 1.000, P(6 of 6) = 0.000, mean passing 0.02
+  D1   n= 98 rec 0.650 agr 0.820 [T1 0.969, line 0.899] nam 0.972 | fail rec 0.983 agr 0.986 nam 0.000 class 0.995
+  D2   n= 64 rec 0.648 agr 0.653 [T1 0.894, line 0.824] nam 0.633 | fail rec 0.948 agr 1.000 nam 0.991 class 1.000
+  OM1  n= 84 rec 0.649 agr 0.801 [T1 0.944, line 0.874] nam 0.960 | fail rec 0.969 agr 0.975 nam 0.000 class 0.990
+  OM2  n= 40 rec 0.651 agr 0.759 [T1 0.875, line 0.805] nam 0.625 | fail rec 0.875 agr 0.904 nam 0.966 class 0.998
+  PDA  n= 99 rec 0.650 agr 0.649 [T1 0.988, line 0.918] nam 0.990 | fail rec 0.986 agr 1.000 nam 0.000 class 1.000
+  PLB  n=100 rec 0.651 agr 0.646 [T1 0.962, line 0.892] nam 0.990 | fail rec 0.979 agr 1.000 nam 0.000 class 1.000
+
+## looser (R 0.75, N 0.80, margin 0.07) | bad: misses 20% of every branch | P(<4 of 6) = 0.984, P(6 of 6) = 0.000, mean passing 1.79
+  D1   n= 98 rec 0.800 agr 0.914 [T1 0.969, line 0.899] nam 0.973 | fail rec 0.114 agr 0.241 nam 0.000 class 0.277
+  D2   n= 64 rec 0.801 agr 0.782 [T1 0.894, line 0.824] nam 0.771 | fail rec 0.117 agr 0.872 nam 0.668 class 0.905
+  OM1  n= 84 rec 0.800 agr 0.891 [T1 0.944, line 0.874] nam 0.961 | fail rec 0.101 agr 0.289 nam 0.000 class 0.310
+  OM2  n= 40 rec 0.799 agr 0.836 [T1 0.875, line 0.805] nam 0.761 | fail rec 0.166 agr 0.182 nam 0.669 class 0.721
+  PDA  n= 99 rec 0.799 agr 0.794 [T1 0.988, line 0.918] nam 0.990 | fail rec 0.121 agr 1.000 nam 0.000 class 1.000
+  PLB  n=100 rec 0.800 agr 0.793 [T1 0.962, line 0.892] nam 0.990 | fail rec 0.086 agr 0.996 nam 0.000 class 0.996

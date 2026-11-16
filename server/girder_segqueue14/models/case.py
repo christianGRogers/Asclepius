@@ -22,6 +22,10 @@ What is different:
   neither ``/next``'s pool scan nor a reviewer's hand-assignment can hand it out,
   and its ``replicasWanted`` is never consulted; it is served only to the users
   in its ``benchmarkPending`` list (``claimBenchmark``), once per invitation.
+* **Extended mode** (D47 Q6): ``extendedMode: True`` asks the annotator to read
+  the case with the extended classes; the module turns them on
+  (``setExtendedMode``). Which cases get it (the D35 decision patients) waits
+  for #116.
 """
 
 import datetime
@@ -70,7 +74,7 @@ class Case14(AccessControlledModel):
         self.exposeFields(level=AccessType.READ, fields={
             '_id', 'name', 'target', 'priority', 'serveOrder', 'replicasWanted',
             'activeCount', 'approvedCount', 'retired', 'sizeBytes', 'checksum',
-            'created', 'updated', 'dataset', 'prelabelVersion',
+            'created', 'updated', 'dataset', 'prelabelVersion', 'extendedMode',
         })
         # Which tier a case is in, whether it is a blind duplicate and whether it
         # has a reference are queue mechanics an annotator must not see.
@@ -113,6 +117,8 @@ class Case14(AccessControlledModel):
         doc['benchmark'] = bool(doc.get('benchmark', False))
         if doc['benchmark']:
             doc.setdefault('benchmarkPending', [])
+        # D47 Q6: read with the extended classes on. Off for every case unless set.
+        doc['extendedMode'] = bool(doc.get('extendedMode', False))
         return doc
 
     # ------------------------------------------------------------- creation
@@ -325,6 +331,18 @@ class Case14(AccessControlledModel):
             out[row['_id'] or ''] = {k: row[k] for k in
                                      ('cases', 'readsWanted', 'readsApproved', 'priority')}
         return out
+
+    def setExtendedMode(self, case, on=True):
+        """Flag a case to be read in extended mode (D47 Q6), or clear the flag.
+
+        The module turns the extended classes on for a flagged case and asks the
+        annotator to use them. Nothing else changes: reads already submitted keep
+        whatever classes they have, and a module before 0.20.0 ignores the flag.
+        """
+        return self.collection.find_one_and_update(
+            {'_id': case['_id']},
+            {'$set': {'extendedMode': bool(on), 'updated': _now()}},
+            return_document=ReturnDocument.AFTER)
 
     def retire(self, case, reason=''):
         case['retired'] = True

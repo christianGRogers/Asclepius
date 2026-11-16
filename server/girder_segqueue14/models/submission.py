@@ -49,7 +49,7 @@ class Submission14(AccessControlledModel):
             'sizeBytes', 'annotationSeconds', 'voxelCounts', 'slicerVersion',
             'extensionVersion', 'annotatorNote', 'warnings', 'attempt', 'created',
             'authorRole', 'revisionOf', 'prelabelVersion', 'labelFormat',
-            'classes', 'extended', 'reopenedAt',
+            'classes', 'extended', 'reopenedAt', 'completeGroups',
         })
         self.exposeFields(level=AccessType.SITE_ADMIN, fields={
             'kind', 'scored', 'autoScore', 'needsReview',
@@ -78,11 +78,16 @@ class Submission14(AccessControlledModel):
         # Every submission from before protocol 18 has the four classes (D44).
         doc['classes'] = [str(n) for n in (doc.get('classes') or labels.NAMES)]
         doc['extended'] = labels.is_extended(doc['classes'])
+        # D47 Q3: the branch groups marked complete. None is "not said" (a module
+        # before 0.20.0, or a row from before); [] is "said, none ticked".
+        groups = doc.get('completeGroups')
+        doc['completeGroups'] = None if groups is None else labels.clean_complete_groups(groups)
         return doc
 
     def createSubmission(self, assignment, meta, fileId, warnings=(), needsReview=True,
                          author=None, revisionOf=None, geometry=None,
-                         labelFormat=LABEL_FORMAT_LABELMAP, classes=None):
+                         labelFormat=LABEL_FORMAT_LABELMAP, classes=None,
+                         completeGroups=None):
         """Store one accepted upload.
 
         ``meta`` is a ``segqueue.protocol.SubmissionMeta``. The checksum stored
@@ -102,7 +107,8 @@ class Submission14(AccessControlledModel):
 
         ``classes`` are the classes in the stored file, from its header: the four,
         or all 21 for a read with the extended classes (D44). ``extended`` is
-        derived from them in ``validate``.
+        derived from them in ``validate``. ``completeGroups`` are the branch groups
+        marked complete (D47 Q3), from the same header; ``None`` if it does not say.
         """
         doc = {
             'assignmentId': assignment['_id'],
@@ -125,6 +131,8 @@ class Submission14(AccessControlledModel):
             # Which classes the file has (D44): the four, or the four and the 17
             # extended ones. Read from the file's header, like labelFormat.
             'classes': list(classes or labels.NAMES),
+            # Which branch groups the annotator looked through in full (D47 Q3).
+            'completeGroups': None if completeGroups is None else list(completeGroups),
             # As the client reported it (source and segmentation grids). Recorded
             # for scoring and audit only; nothing refuses a mismatch (#270).
             'geometry': dict(geometry) if geometry else None,

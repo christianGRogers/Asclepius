@@ -447,6 +447,29 @@ The step needs the plugin installed from a `main` that has it (the `install`
 step): `segqueue14-report` is a new entry point. On janus by hand, as the deploy
 user: `nice -n 19 ionice -c 3 ~/Asclepius/.venv/bin/segqueue14-report quality [--limit N] [--json]`.
 
+## Readers report (#334)
+
+The *SegQueue14 on janus* step `readers-report` runs `segqueue14-report readers`, at
+nice 19 / ionice idle; `args` is nothing or `--min=<1 or 2 digits>` (default 3). It is
+read-only: plain `find` queries, nothing written to Mongo or the assetstore.
+
+It lists every case, pool or benchmark, with at least `--min` distinct annotator
+logins across its assignments: the case's `replicasWanted`, `activeCount`,
+`approvedCount`, whether it is the benchmark, and one row per assignment (oldest
+first: login, state, claimed / submitted / decided in US Eastern time,
+`releaseReason`, whether a read exists and whether it was reopened, #315). Each case
+gets one **cause**, the mechanism that freed the slot each extra annotator (past
+`replicasWanted`) came in through: `return-to-pool` (the assignment has a
+`reviewerId`), `expired` (the sweep's `releaseReason`), `release` (any other
+release), `reopen` (a reopened read later released or expired), `benchmark` (D43,
+on purpose), or `other/unexplained` (no slot freed before the extra was claimed:
+counter drift, a race or the D36 consolidation). Then totals per cause, the cases
+with 3+ submitted annotator reads, the unexplained cases in full, and every case
+whose `activeCount` is not its number of open assignments (`segqueue.states`
+`ACTIVE_STATES`). Case names and logins only.
+
+After the merge to `main`: `install`, then `readers-report`.
+
 ## Reopening an annotator's own reads (#315)
 
 The *SegQueue14 on janus* step `reopen` runs `segqueue14-reopen`; `args` is exactly

@@ -41,6 +41,10 @@
 # nice 19 / ionice idle; it writes nothing to Mongo or the assetstore:
 #   bash segqueue14-deploy.sh quality-report [--limit=<N>] [--exclude=<login,...>]
 #
+# Issue #334, read-only: cases with more annotators than they want, and which mechanism
+# let each extra one in (segqueue14-report readers), at nice 19 / ionice idle:
+#   bash segqueue14-deploy.sh readers-report [--min=<N>]
+#
 # Issue #315: an annotator's own submitted reads back in their queue, for their own
 # revision, starting from what they submitted (segqueue14-reopen). Dry run without --apply:
 #   bash segqueue14-deploy.sh reopen --login=<login> --submitted-before=<YYYY-MM-DD> [--apply]
@@ -469,6 +473,24 @@ quality_report() {
     as_user "${low[@]}" "$bin" quality "${args[@]}"
 }
 
+# ------------------------------------------------------------ issue #334
+
+readers_report() {
+    local bin="$LIVE/.venv/bin/segqueue14-report" args=() arg
+    [ -x "$bin" ] || die "segqueue14-report is not installed: run the install step first"
+    for arg in "$@"; do
+        case "$arg" in
+            --min=*)
+                [[ "${arg#--min=}" =~ ^[0-9]{1,2}$ ]] || die "readers-report: --min takes 1 or 2 digits"
+                args+=(--min "${arg#--min=}") ;;
+            *) die "readers-report: unknown argument '$arg'" ;;
+        esac
+    done
+    local low=(nice -n 19)
+    command -v ionice >/dev/null && low+=(ionice -c 3)
+    as_user "${low[@]}" "$bin" readers ${args[@]+"${args[@]}"}
+}
+
 # ------------------------------------------------------------ D36 (issue #124)
 
 recent_backup() {   # a D36 database dump from the last 24 h, or nothing
@@ -577,6 +599,7 @@ case "${1:-}" in
         step="${1#benchmark-}"; shift
         benchmark "$step" "$@" ;;
     quality-report) shift; quality_report "$@" ;;
+    readers-report) shift; readers_report "$@" ;;
     reopen) shift; reopen "$@" ;;
     backup-prepare|backup-finish|backup-status|backup-restore-test|backup-off)
         step="${1#backup-}"; shift
@@ -584,5 +607,5 @@ case "${1:-}" in
         # The hourly job's priority for the drill too: annotators come first.
         nice_=(); [ "$step" = restore-test ] && nice_=(nice -n 19 ionice -c3)
         USER_HOME="$USER_HOME" exec ${nice_[@]+"${nice_[@]}"} bash "$(dirname "$0")/backup/segqueue-backup.sh" "$step" "$@" ;;
-    *) sed -n '2,51p' "$0"; exit 1 ;;
+    *) sed -n '2,55p' "$0"; exit 1 ;;
 esac

@@ -544,3 +544,102 @@ def test_the_review_table_shows_the_submission_time_in_eastern_time():
     source = MODULE.read_text()
     assert '"Submitted (ET)"' in source
     assert '_easternTime(assignment.get("submittedAt"))' in source
+
+
+# ---------------------------------------------------- compare reads (#335)
+
+#: Every method of the "Compare reads" view, logic and panel.
+_COMPARE_LOGIC = ("loadComparison", "_readClassPieces", "_paintRead", "setAgreementPair",
+                  "agreementSegmentName", "_buildAgreementNode", "setCompareMode",
+                  "setAgreementClass", "setReadVisible", "setReadOpacity",
+                  "_applyCompareVisibility", "closeComparison")
+_COMPARE_WIDGET = ("_buildCompareSection", "_comparableReads", "onCompareReads",
+                   "_fillComparePanel", "_fillCompareClasses", "_updateCompareSummary",
+                   "onCompareModeChanged", "onComparePairChanged", "onCompareClassChanged",
+                   "onCloseComparison")
+
+
+def _calls_in(node):
+    return {n.func.attr for n in ast.walk(node)
+            if isinstance(n, ast.Call) and isinstance(n.func, ast.Attribute)}
+
+
+def test_the_module_is_0_21_0_and_still_protocol_19():
+    assert re.search(r'^__version__ = "0\.21\.0"$', _source(), re.M)
+    sys_path = str(REPO / "src")
+    import sys
+
+    if sys_path not in sys.path:
+        sys.path.append(sys_path)
+    from segqueue14 import PROTOCOL_VERSION
+
+    assert PROTOCOL_VERSION == 19
+
+
+def test_comparing_never_writes_a_submission_a_draft_or_a_decision():
+    """Read-only (#335): the only server calls are downloads, nothing is saved."""
+    forbidden = {"uploadFile", "submit", "reviseSubmission", "claim", "claimReview",
+                 "verdict", "returnToPool", "releaseCase", "saveNode", "autosave",
+                 "exportSubmission", "assignCase", "_bindEditor"}
+    for classname, names in (("SegQueue14Logic", _COMPARE_LOGIC),
+                             ("SegQueue14Widget", _COMPARE_WIDGET)):
+        for name in names:
+            used = _calls_in(_method(classname, name)) & forbidden
+            assert not used, f"{classname}.{name} calls {sorted(used)}"
+    body = ast.get_source_segment(_source(), _method("SegQueue14Widget", "onCompareReads"))
+    client = set(re.findall(r"self\.logic\.client\.(\w+)", body))
+    assert client == {"downloadReviewFile"}
+    # Nothing is left open for review: Save changes & approve stays disabled.
+    assert "self._claimedSubmission = None" in body
+    load = ast.get_source_segment(_source(), _method("SegQueue14Logic", "loadComparison"))
+    assert "self.segmentationNode = None" in load
+
+
+def test_the_compare_panel_is_wired():
+    build = ast.get_source_segment(_source(), _method("SegQueue14Widget",
+                                                      "_buildCompareSection"))
+    for wiring in ("self.compareButton.clicked.connect(self.onCompareReads)",
+                   "self.compareModeCombo.currentIndexChanged.connect(self.onCompareModeChanged)",
+                   "combo.currentIndexChanged.connect(self.onComparePairChanged)",
+                   "self.compareClassCombo.currentIndexChanged.connect(self.onCompareClassChanged)",
+                   "self.compareReviseButton.clicked.connect(self.onCompareOpenForRevision)",
+                   "self.compareCloseButton.clicked.connect(self.onCloseComparison)",
+                   "self.includeReopenedCheck.toggled.connect("):
+        assert wiring in build, wiring
+    review = ast.get_source_segment(_source(), _method("SegQueue14Widget",
+                                                       "_buildReviewSection"))
+    assert "self._buildCompareSection(layout)" in review
+    fill = ast.get_source_segment(_source(), _method("SegQueue14Widget", "_fillComparePanel"))
+    assert "self.logic.setReadVisible(key, on)" in fill
+    assert "self.logic.setReadOpacity(key, value / 100.0)" in fill
+
+
+def test_the_compare_modes_are_side_by_side_and_the_agreement_map():
+    for node in _tree().body:
+        if (isinstance(node, ast.Assign)
+                and any(isinstance(t, ast.Name) and t.id == "COMPARE_MODES"
+                        for t in node.targets)):
+            modes = ast.literal_eval(node.value)
+            break
+    else:
+        raise AssertionError("COMPARE_MODES not found")
+    assert [mode for _label, mode in modes] == ["side", "agreement"]
+
+
+def test_compare_is_offered_only_with_two_reads_and_reopened_reads_only_when_asked():
+    enabled = ast.get_source_segment(_source(), _method("SegQueue14Widget",
+                                                        "_updateReviewEnabled"))
+    assert "len(self._comparableReads()) >= 2" in enabled
+    assert "self.logic.assignment is None" in enabled
+    picker = ast.get_source_segment(_source(), _method("SegQueue14Widget",
+                                                       "_comparableReads"))
+    assert "compare.comparable_reads(" in picker
+    assert "self.includeReopenedCheck.checked" in picker
+
+
+def test_a_review_open_or_a_case_open_ends_the_comparison():
+    for classname, name in (("SegQueue14Widget", "onOpenReview"),
+                            ("SegQueue14Widget", "onOpenCase"),
+                            ("SegQueue14Logic", "closeCase")):
+        body = ast.get_source_segment(_source(), _method(classname, name))
+        assert "closeComparison()" in body, name

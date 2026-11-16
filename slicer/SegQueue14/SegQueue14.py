@@ -36,6 +36,9 @@ What an annotator sees:
 * **Reopened cases** (#315, 0.19.0, protocol 19): a case the lead reopened for the
   annotator's own revision opens from their submitted read, every class whole
   (D39), instead of the prelabel or the seed. Submitting it unchanged is fine (D38).
+* **Compare reads** (#335, 0.21.0, reviewers): two or more annotators' reads of one
+  case loaded together, read-only, each in its own colour, with an agreement map of
+  any two (both / A only / B only per class, and the Dice, ``segqueue14.compare``).
 
 The server owns the protocol, local data is a lease, nothing the client says is
 trusted: those three decisions are the live module's and are kept unchanged.
@@ -91,6 +94,7 @@ try:
     from segqueue.dataset import sniff_suffix, suffix_for
     from segqueue.segcheck import Geometry
     from segqueue import release as rel
+    from segqueue14 import compare
     from segqueue14 import labelfile
     from segqueue14 import labels
     from segqueue14 import protocol
@@ -102,6 +106,7 @@ except ImportError as exc:  # pragma: no cover - surfaced in the UI instead
     protocol = None
     labels = None
     labelfile = None
+    compare = None
     _IMPORT_ERROR = str(exc)
 
 from SegQueue14Lib import (
@@ -116,7 +121,7 @@ from SegQueue14Lib import SegQueue14Error as SegQueueError
 
 #: Continues SegQueue's numbering (0.13.0 was the last 4-class release). The
 #: release tag is ``segqueue-v`` + this; bump it to publish.
-__version__ = "0.20.0"
+__version__ = "0.21.0"
 
 #: Where the module's help points.
 HELP_URL = "https://github.com/christianGRogers/Asclepius"
@@ -146,6 +151,12 @@ REVIEW_FILTERS = (
     ("Approved", ("approved",)),
 )
 REVIEW_DECIDED_STATES = frozenset({"approved", "released"})
+
+#: The "Compare reads" display modes (#335): a label and the logic's mode.
+COMPARE_MODES = (
+    ("Side by side, a colour per read", "side"),
+    ("Agreement map of two reads", "agreement"),
+)
 
 #: Opacity of the classes in the 3D view when a case opens: solid enough to
 #: read which branch is which, the question a correction starts from.
@@ -249,6 +260,9 @@ class SegQueue14Logic(ScriptedLoadableModuleLogic):
         #: The branch groups ticked complete on the open read (D47 Q3), a subset of
         #: ``labels.COMPLETE_GROUPS``. Saved in the class-stack header on submit.
         self.completeGroups = set()
+        #: The reviewer's "Compare reads" scene (#335), or None: see
+        #: ``loadComparison``. Read-only: nothing in it is ever uploaded.
+        self.comparison = None
 
     # ------------------------------------------------------------ session
 
@@ -1222,6 +1236,7 @@ class SegQueue14Logic(ScriptedLoadableModuleLogic):
     def closeCase(self, purge=False):
         """Take the case out of the scene, banking any elapsed time first."""
         self.bankTime()
+        self.closeComparison()
         for node in (self.segmentationNode, self.volumeNode):
             if node is not None:
                 slicer.mrmlScene.RemoveNode(node)
@@ -1479,6 +1494,241 @@ class SegQueue14Logic(ScriptedLoadableModuleLogic):
             submissionId, meta, uploaded["_id"],
             labelFormat=labelfile.FORMAT_CLASS_STACK)
 
+    # ------------------------------------------------- compare reads (#335)
+
+    def loadComparison(self, volumePath, reads, progress=None):
+        """Load a case's CT and several annotator reads of it, read-only, together.
+
+        ``reads`` is ``[{"key": "A", "label": ..., "path": ..., "row": {...}}, ...]``
+        (``compare.comparable_reads`` rows plus the downloaded file). Each read is
+        loaded into its own segmentation node, every class in the read's colour
+        (``compare.read_colour``), and its classes are kept as masks cropped to the
+        union of all the reads: the agreement map is computed from those
+        (``setAgreementPair``). Nothing is bound to the Segment Editor, nothing is
+        ``self.segmentationNode``, and nothing here uploads: comparing never
+        changes a submission, a draft, a review state or a claim.
+
+        Returns the comparison dict (also ``self.comparison``).
+        """
+        import numpy as np
+
+        if len(reads) < 2:
+            raise ValueError("Comparing needs two reads or more.")
+        self.closeComparison()
+        slicer.mrmlScene.Clear(False)
+        self.segmentationNode = None
+        volumeNode = slicer.util.loadVolume(volumePath)
+        self.volumeNode = volumeNode
+        shape = tuple(slicer.util.arrayFromVolume(volumeNode).shape)
+
+        loaded = []
+        for done, read in enumerate(reads):
+            node = slicer.util.loadSegmentation(read["path"])
+            node.SetName("Read {} (compare, read-only)".format(read["label"]))
+            names, pieces = self._readClassPieces(node, volumeNode)
+            self._paintRead(node, compare.read_colour(read["key"]))
+            loaded.append((read, node, names, pieces))
+            if progress is not None:
+                progress(done + 1, len(reads))
+
+        box = compare.union_box([b for _r, _n, _names, pieces in loaded
+                                 for b, _sub in pieces], shape)
+        boxShape = tuple(s.stop - s.start for s in box)
+        state = {"shape": shape, "box": box, "reads": {}, "order": [],
+                 "mode": "side", "pair": None, "result": None,
+                 "selected": compare.ALL_CLASSES, "agreementNode": None}
+        for read, node, names, pieces in loaded:
+            masks = np.zeros((len(names),) + boxShape, np.uint8)
+            for channel, (pieceBox, sub) in enumerate(pieces):
+                if pieceBox is None:
+                    continue
+                where = tuple(slice(p.start - b.start, p.stop - b.start)
+                              for p, b in zip(pieceBox, box))
+                masks[channel][where] = sub
+            state["reads"][read["key"]] = {"read": read, "node": node, "names": names,
+                                           "masks": masks}
+            state["order"].append(read["key"])
+        self.comparison = state
+        slicer.util.setSliceViewerLayers(background=volumeNode, fit=True)
+        self.applyViewPreset()
+        self.setAgreementPair(state["order"][0], state["order"][1])
+        self.setCompareMode("side")
+        return state
+
+    def _readClassPieces(self, node, volumeNode):
+        """``(names, [(box, mask in box), ...])``: a loaded read's classes on the CT grid.
+
+        The names are put back as a reviewer's open does (``applyProjectNames``: a
+        class stack by its header, an old labelmap by value). Each class is cut to
+        its own bounding box straight away, so a whole CT is never held per class.
+        """
+        keep = self.segmentationNode
+        self.segmentationNode = node
+        try:
+            self.applyProjectNames()
+        finally:
+            self.segmentationNode = keep
+        known = labels.ALL_NAMES
+        present = [n for n in known if _segmentIdIn(node, n)]
+        names = labels.stack_names(labels.is_extended(present))
+        pieces = []
+        for name in names:
+            segmentId = _segmentIdIn(node, name)
+            if not segmentId:
+                pieces.append((None, None))
+                continue
+            array = slicer.util.arrayFromSegmentBinaryLabelmap(node, segmentId, volumeNode)
+            box = compare.bounding_box(array, margin=2)
+            pieces.append((box, None if box is None else (array[box] != 0)))
+        return names, pieces
+
+    def _paintRead(self, node, colour):
+        """Every class of a read in the read's own colour, surfaces built."""
+        segmentation = node.GetSegmentation()
+        display = node.GetDisplayNode()
+        for i in range(segmentation.GetNumberOfSegments()):
+            segmentId = segmentation.GetNthSegmentID(i)
+            segmentation.GetSegment(segmentId).SetColor(*colour)
+            if display is not None:
+                try:
+                    display.SetSegmentOverrideColor(segmentId, *colour)
+                except AttributeError:  # pragma: no cover - old Slicer
+                    pass
+                display.SetSegmentVisibility(segmentId, True)
+        node.CreateClosedSurfaceRepresentation()
+        if display is not None:
+            display.SetVisibility2DFill(False)
+            display.SetVisibility2DOutline(True)
+
+    def setAgreementPair(self, keyA, keyB):
+        """Compare read ``keyA`` with read ``keyB`` and rebuild the agreement map.
+
+        Returns ``compare.compare_reads``'s result (also kept on the comparison).
+        """
+        state = self.comparison
+        if state is None:
+            return None
+        if keyA == keyB or keyA not in state["reads"] or keyB not in state["reads"]:
+            raise ValueError("Pick two different reads.")
+        a, b = state["reads"][keyA], state["reads"][keyB]
+        result = compare.compare_reads(a["masks"], a["names"], b["masks"], b["names"])
+        state["pair"] = (keyA, keyB)
+        state["result"] = result
+        if state["selected"] not in result["names"]:
+            state["selected"] = compare.ALL_CLASSES
+        self._buildAgreementNode()
+        self._applyCompareVisibility()
+        return result
+
+    def agreementSegmentName(self, name, category):
+        """``LAD: both`` / ``LAD: A only`` / ``LAD: C only``, after the pair's keys."""
+        keyA, keyB = self.comparison["pair"]
+        label = {compare.BOTH: "both", compare.A_ONLY: keyA + " only",
+                 compare.B_ONLY: keyB + " only"}[category]
+        return "{}: {}".format(name, label)
+
+    def _buildAgreementNode(self):
+        """One segment per class and category (both, A only, B only), on the CT grid."""
+        import numpy as np
+
+        state = self.comparison
+        old = state.get("agreementNode")
+        if old is not None:
+            slicer.mrmlScene.RemoveNode(old)
+        keyA, keyB = state["pair"]
+        node = slicer.mrmlScene.AddNewNodeByClass(
+            "vtkMRMLSegmentationNode",
+            "Agreement {} vs {} (compare, read-only)".format(keyA, keyB))
+        node.CreateDefaultDisplayNodes()
+        node.SetReferenceImageGeometryParameterFromVolumeNode(self.volumeNode)
+        colours = {compare.BOTH: compare.CATEGORIES[0][2],
+                   compare.A_ONLY: compare.read_colour(keyA),
+                   compare.B_ONLY: compare.read_colour(keyB)}
+        names, a, b = state["result"]["masks"]
+        full = np.zeros(state["shape"], np.uint8)
+        box = state["box"]
+        segmentation = node.GetSegmentation()
+        ids = {}
+        for channel, name in enumerate(names):
+            if not (a[channel].any() or b[channel].any()):
+                continue
+            for category, mask in compare.category_masks(a[channel], b[channel]).items():
+                if not mask.any():
+                    continue
+                segmentId = segmentation.AddEmptySegment(
+                    "", self.agreementSegmentName(name, category), colours[category])
+                full[box] = mask
+                slicer.util.updateSegmentBinaryLabelmapFromArray(
+                    full, node, segmentId, self.volumeNode)
+                ids[(name, category)] = segmentId
+        full[box] = 0
+        node.CreateClosedSurfaceRepresentation()
+        state["agreementNode"] = node
+        state["agreementIds"] = ids
+
+    def setCompareMode(self, mode):
+        """``"side"``: each read in its colour; ``"agreement"``: the map."""
+        if self.comparison is None:
+            return
+        self.comparison["mode"] = "agreement" if mode == "agreement" else "side"
+        self._applyCompareVisibility()
+
+    def setAgreementClass(self, name):
+        """Show one class of the map, or ``compare.ALL_CLASSES``."""
+        if self.comparison is None:
+            return
+        self.comparison["selected"] = name or compare.ALL_CLASSES
+        self._applyCompareVisibility()
+
+    def setReadVisible(self, key, visible):
+        """Show or hide one read in the side-by-side view."""
+        entry = (self.comparison or {}).get("reads", {}).get(key)
+        if entry is None:
+            return
+        entry["visible"] = bool(visible)
+        self._applyCompareVisibility()
+
+    def setReadOpacity(self, key, opacity):
+        """One read's opacity in the side-by-side view, 0-1."""
+        entry = (self.comparison or {}).get("reads", {}).get(key)
+        if entry is None:
+            return
+        display = entry["node"].GetDisplayNode()
+        if display is not None:
+            display.SetOpacity(max(0.0, min(1.0, float(opacity))))
+
+    def _applyCompareVisibility(self):
+        state = self.comparison
+        if state is None:
+            return
+        side = state["mode"] == "side"
+        for entry in state["reads"].values():
+            display = entry["node"].GetDisplayNode()
+            if display is not None:
+                display.SetVisibility(side and entry.get("visible", True))
+        node = state.get("agreementNode")
+        if node is None:
+            return
+        display = node.GetDisplayNode()
+        if display is None:
+            return
+        display.SetVisibility(not side)
+        for (name, _category), segmentId in state.get("agreementIds", {}).items():
+            display.SetSegmentVisibility(
+                segmentId, state["selected"] in (compare.ALL_CLASSES, name))
+
+    def closeComparison(self):
+        """Take the comparison's nodes out of the scene and forget its masks."""
+        state = self.comparison
+        self.comparison = None
+        if state is None:
+            return
+        nodes = [entry["node"] for entry in state["reads"].values()]
+        nodes.append(state.get("agreementNode"))
+        for node in nodes:
+            if node is not None and slicer.mrmlScene.IsNodePresent(node):
+                slicer.mrmlScene.RemoveNode(node)
+
     def reviewDir(self):
         """The scratch directory under the cache root that review work goes to."""
         directory = os.path.join(self.cache.root, "review")
@@ -1685,6 +1935,10 @@ class SegQueue14Widget(ScriptedLoadableModuleWidget):
         self._claimedSubmission = None
         self._reviewStart = None
         self._slicerLogo = None
+        #: The reads in the open comparison (#335), and their panel rows.
+        self._compareReads = []
+        self._compareReadWidgets = []
+        self._compareSyncing = False
         #: Who is logged in, for the per-login "Extended classes" setting (D44).
         self._login = ""
 
@@ -2602,6 +2856,8 @@ class SegQueue14Widget(ScriptedLoadableModuleWidget):
         self.referenceButton.clicked.connect(self.onShowReference)
         layout.addWidget(self.referenceButton)
 
+        self._buildCompareSection(layout)
+
         self.reviewStatusLabel = qt.QLabel()
         self.reviewStatusLabel.setWordWrap(True)
         layout.addWidget(self.reviewStatusLabel)
@@ -2666,6 +2922,276 @@ class SegQueue14Widget(ScriptedLoadableModuleWidget):
         self.assignButton.clicked.connect(self.onAssignCase)
         assignRow.addWidget(self.assignButton)
         layout.addLayout(assignRow)
+
+    # ------------------------------------------------- compare reads (#335)
+
+    def _buildCompareSection(self, layout):
+        """Several annotators' reads of one case on top of one another, read-only.
+
+        Under the case it compares, beside "Open submission": it is another way
+        of looking at the selected case's history, and like the reference it never
+        becomes what is reviewed -- nothing here claims, decides or uploads.
+        """
+        layout.addWidget(_separator())
+        layout.addWidget(_caption(
+            "Two or more annotators' reads of the selected case, together in the "
+            "same scene and read-only."))
+        row = qt.QHBoxLayout()
+        self.compareButton = qt.QPushButton("Compare reads")
+        self.compareButton.setToolTip(
+            "Loads every annotator read of the selected case onto its CT, each in "
+            "its own colour, and an agreement map of two of them. Nothing is "
+            "claimed, changed or uploaded.")
+        self.compareButton.clicked.connect(self.onCompareReads)
+        row.addWidget(self.compareButton, 1)
+        self.includeReopenedCheck = qt.QCheckBox("Include reopened")
+        self.includeReopenedCheck.setToolTip(
+            "Also offer reads reopened for their annotator's own revision (#315) "
+            "and earlier attempts a resubmission replaced. Left out by default, "
+            "as the pair score leaves them out.")
+        self.includeReopenedCheck.toggled.connect(
+            lambda _on: self._updateReviewEnabled())
+        row.addWidget(self.includeReopenedCheck)
+        layout.addLayout(row)
+
+        frame = qt.QFrame()
+        frame.setVisible(False)
+        self.compareFrame = frame
+        form = qt.QFormLayout(frame)
+
+        self.compareModeCombo = qt.QComboBox()
+        for label, _mode in COMPARE_MODES:
+            self.compareModeCombo.addItem(label)
+        self.compareModeCombo.setToolTip(
+            "Side by side: each read in its own colour, outlined in the slices. "
+            "Agreement map: the voxels in both reads, in the first only and in "
+            "the second only, per class.")
+        self.compareModeCombo.currentIndexChanged.connect(self.onCompareModeChanged)
+        form.addRow("Show:", self.compareModeCombo)
+
+        readsBox = qt.QWidget()
+        self.compareReadsLayout = qt.QGridLayout(readsBox)
+        self.compareReadsLayout.setContentsMargins(0, 0, 0, 0)
+        form.addRow("Reads:", readsBox)
+
+        pair = qt.QHBoxLayout()
+        self.compareACombo = qt.QComboBox()
+        self.compareBCombo = qt.QComboBox()
+        for combo in (self.compareACombo, self.compareBCombo):
+            combo.setToolTip("The two reads the agreement map compares.")
+            combo.currentIndexChanged.connect(self.onComparePairChanged)
+        pair.addWidget(self.compareACombo, 1)
+        pair.addWidget(qt.QLabel("vs"))
+        pair.addWidget(self.compareBCombo, 1)
+        form.addRow("Agreement:", pair)
+
+        self.compareClassCombo = qt.QComboBox()
+        self.compareClassCombo.setToolTip("One class of the agreement map, or all.")
+        self.compareClassCombo.currentIndexChanged.connect(self.onCompareClassChanged)
+        form.addRow("Class:", self.compareClassCombo)
+
+        self.compareSummary = qt.QLabel()
+        self.compareSummary.setWordWrap(True)
+        self.compareSummary.setTextInteractionFlags(qt.Qt.TextSelectableByMouse)
+        form.addRow(self.compareSummary)
+
+        buttons = qt.QHBoxLayout()
+        self.compareReviseButton = qt.QPushButton("Open first read for revision")
+        self.compareReviseButton.setToolTip(
+            "Closes the comparison and opens the first read of the pair as "
+            "\"Open submission\" does, to correct it in the Segment Editor.")
+        self.compareReviseButton.clicked.connect(self.onCompareOpenForRevision)
+        buttons.addWidget(self.compareReviseButton, 1)
+        self.compareCloseButton = qt.QPushButton("Close comparison")
+        self.compareCloseButton.clicked.connect(self.onCloseComparison)
+        buttons.addWidget(self.compareCloseButton)
+        form.addRow(buttons)
+        layout.addWidget(frame)
+
+    def _comparableReads(self):
+        if compare is None:
+            return []
+        return compare.comparable_reads(self._historyRows,
+                                        bool(self.includeReopenedCheck.checked))
+
+    def onCompareReads(self):
+        """Download the selected case's annotator reads and load them together."""
+        case, _assignment = self._selectedReviewRow()
+        if case is None:
+            slicer.util.errorDisplay("Select a case first.")
+            return
+        if self.logic.assignment is not None:
+            slicer.util.errorDisplay(
+                "You have a case of your own open. Submit it or give it back "
+                "first -- comparing reads clears the scene.")
+            return
+        reads = self._comparableReads()
+        if len(reads) < 2:
+            slicer.util.errorDisplay(
+                "This case has fewer than two annotator reads to compare.")
+            return
+
+        directory = os.path.join(self.logic.reviewDir(), "compare")
+        shutil.rmtree(directory, ignore_errors=True)
+        os.makedirs(directory, exist_ok=True)
+        with _busy():
+            volumePath = os.path.join(
+                directory, _safeName(reads[0].get("volumeName"), "volume.nrrd"))
+            try:
+                self.logic.client.downloadReviewFile(
+                    reads[0]["submissionId"], "volume", volumePath)
+                for read in reads:
+                    read["label"] = compare.read_label(read)
+                    read["path"] = os.path.join(directory, "{}_{}".format(
+                        read["key"], _safeName(read.get("submissionName"),
+                                               "submission.seg.nrrd")))
+                    self.logic.client.downloadReviewFile(
+                        read["submissionId"], "download", read["path"])
+            except SegQueueError as exc:
+                slicer.util.errorDisplay(str(exc))
+                return
+            volumePath = self.logic.correctSuffix(volumePath)
+            try:
+                self.logic.loadComparison(volumePath, reads)
+            except Exception:
+                slicer.util.errorDisplay(
+                    "The reads downloaded but could not be compared:\n\n"
+                    + traceback.format_exc())
+                return
+            slicer.app.layoutManager().setLayout(
+                slicer.vtkMRMLLayoutNode.SlicerLayoutFourUpView)
+            self.logic.centre3d()
+
+        # Read-only: nothing is open for review, so nothing can be revised or
+        # approved from this scene by accident.
+        self._claimedSubmission = None
+        self._fillComparePanel(reads)
+        self.reviewStatusLabel.setText(
+            "Comparing {} reads of <b>{}</b>, read-only.".format(
+                len(reads), _escape(case.get("caseName", ""))))
+        self._updateEnabled()
+        self._updateReviewEnabled()
+
+    def _fillComparePanel(self, reads):
+        """The per-read rows, the pair pickers and the class list for ``reads``."""
+        self._compareSyncing = True
+        try:
+            self._compareReads = list(reads)
+            for widget in self._compareReadWidgets:
+                widget.setParent(None)
+            self._compareReadWidgets = []
+            for row, read in enumerate(reads):
+                key = read["key"]
+                check = qt.QCheckBox(read["label"])
+                check.checked = True
+                colour = compare.read_colour(key)
+                check.setStyleSheet("QCheckBox {{ color: rgb({},{},{}); }}".format(
+                    *(int(255 * c) for c in colour)))
+                check.toggled.connect(
+                    lambda on, key=key: self.logic.setReadVisible(key, on))
+                slider = qt.QSlider(qt.Qt.Horizontal)
+                slider.setRange(0, 100)
+                slider.setValue(100)
+                slider.setToolTip("Opacity of read {}.".format(key))
+                slider.valueChanged.connect(
+                    lambda value, key=key: self.logic.setReadOpacity(key, value / 100.0))
+                self.compareReadsLayout.addWidget(check, row, 0)
+                self.compareReadsLayout.addWidget(slider, row, 1)
+                self._compareReadWidgets += [check, slider]
+            for combo in (self.compareACombo, self.compareBCombo):
+                combo.clear()
+                for read in reads:
+                    combo.addItem(read["label"])
+            self.compareACombo.setCurrentIndex(0)
+            self.compareBCombo.setCurrentIndex(1)
+            self.compareModeCombo.setCurrentIndex(0)
+        finally:
+            self._compareSyncing = False
+        self._fillCompareClasses()
+        self.compareFrame.setVisible(True)
+
+    def _fillCompareClasses(self):
+        state = self.logic.comparison if self.logic is not None else None
+        result = (state or {}).get("result")
+        self._compareSyncing = True
+        try:
+            self.compareClassCombo.clear()
+            if result is not None:
+                self.compareClassCombo.addItem(compare.ALL_CLASSES)
+                for name in result["names"]:
+                    self.compareClassCombo.addItem(name)
+                index = self.compareClassCombo.findText(state["selected"])
+                self.compareClassCombo.setCurrentIndex(max(0, index))
+        finally:
+            self._compareSyncing = False
+        self._updateCompareSummary()
+
+    def _updateCompareSummary(self):
+        state = self.logic.comparison if self.logic is not None else None
+        if not state or not state.get("result"):
+            self.compareSummary.setText("")
+            return
+        keyA, keyB = state["pair"]
+        result = state["result"]
+        head = ("<b>{} vs {}</b> -- {}".format(
+            keyA, keyB, "class by class (both reads extended)"
+            if result["mode"] == compare.MODE_CLASSES
+            else "the four vessels, extended classes collapsed into them"))
+        lines = compare.summary_lines(result, state["selected"])
+        self.compareSummary.setText(head + "<br>" + "<br>".join(_escape(line) for line in lines))
+        self.compareReviseButton.setText("Open {} for revision".format(keyA))
+
+    def onCompareModeChanged(self, index=None):
+        if self._compareSyncing or self.logic is None:
+            return
+        index = self.compareModeCombo.currentIndex
+        mode = COMPARE_MODES[index][1] if 0 <= index < len(COMPARE_MODES) else "side"
+        self.logic.setCompareMode(mode)
+
+    def onComparePairChanged(self, index=None):
+        if self._compareSyncing or self.logic is None or self.logic.comparison is None:
+            return
+        a, b = self.compareACombo.currentIndex, self.compareBCombo.currentIndex
+        if not (0 <= a < len(self._compareReads) and 0 <= b < len(self._compareReads)):
+            return
+        if a == b:
+            self.compareSummary.setText("Pick two different reads.")
+            return
+        with _busy():
+            self.logic.setAgreementPair(self._compareReads[a]["key"],
+                                        self._compareReads[b]["key"])
+        self._fillCompareClasses()
+
+    def onCompareClassChanged(self, index=None):
+        if self._compareSyncing or self.logic is None:
+            return
+        self.logic.setAgreementClass(self.compareClassCombo.currentText)
+        self._updateCompareSummary()
+
+    def onCompareOpenForRevision(self):
+        """The first read of the pair, opened through the ordinary review flow."""
+        state = self.logic.comparison if self.logic is not None else None
+        if not state or not state.get("pair"):
+            return
+        submissionId = state["reads"][state["pair"][0]]["read"].get("submissionId")
+        row = next((i for i, entry in enumerate(self._historyRows)
+                    if entry.get("submissionId") == submissionId), -1)
+        if row < 0:
+            slicer.util.errorDisplay("That read is no longer in the case's history.")
+            return
+        self.onCloseComparison()
+        self.historyTable.setCurrentCell(row, 0)
+        self.onOpenReview()
+
+    def onCloseComparison(self):
+        if self.logic is not None:
+            self.logic.closeComparison()
+        self._compareReads = []
+        for widget in self._compareReadWidgets:
+            widget.setParent(None)
+        self._compareReadWidgets = []
+        self.compareFrame.setVisible(False)
+        self._updateReviewEnabled()
 
     # ------------------------------------------------------ submission viewer
 
@@ -2815,6 +3341,12 @@ class SegQueue14Widget(ScriptedLoadableModuleWidget):
         self.referenceButton.setEnabled(
             _case is not None and self.logic is not None
             and self.logic.volumeNode is not None)
+        # Comparing needs two annotator reads and a free scene (#335).
+        self.compareButton.setEnabled(
+            _case is not None and self.logic is not None
+            and self.logic.assignment is None and len(self._comparableReads()) >= 2)
+        if self.logic is None or self.logic.comparison is None:
+            self.compareFrame.setVisible(False)
         self.approveButton.setEnabled(hasSubmission and not decided)
         self.poolButton.setEnabled(hasSubmission and not decided)
         # Revising uploads whatever is in the scene, so it needs an opened
@@ -2866,6 +3398,7 @@ class SegQueue14Widget(ScriptedLoadableModuleWidget):
             # Last line of defence on the name, for a server too old to send it.
             volumePath = self.logic.correctSuffix(volumePath)
 
+            self.logic.closeComparison()
             slicer.mrmlScene.Clear(False)
             try:
                 volumeNode = slicer.util.loadVolume(volumePath)
@@ -3014,6 +3547,7 @@ class SegQueue14Widget(ScriptedLoadableModuleWidget):
                 return
             volumePath = self.logic.correctSuffix(volumePath)
 
+            self.logic.closeComparison()
             slicer.mrmlScene.Clear(False)
             try:
                 volumeNode = slicer.util.loadVolume(volumePath)

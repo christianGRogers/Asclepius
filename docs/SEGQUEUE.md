@@ -201,6 +201,37 @@ backwards compatible (protocol stays 19; 0.18.x and 0.19.x keep working):
   them. Set it with `PUT /segqueue14/case/{id}/extended_mode?on=true` (admin).
   Which cases get it (the D35 decision patients) waits for #116.
 
+**Compare reads (SegQueue14 0.21.0, #335).** A reviewer can see two or more
+annotators' reads of one case on top of one another, in 3D and in the slices, instead
+of one submission at a time. Select a case in *Submissions* and press **Compare
+reads** (enabled when the case has two or more annotator reads: a pool pair, a third
+read after a return to pool, or a benchmark's several attempts).
+
+* **Which reads:** annotator reads only (a reviewer's revision is not a read), the
+  ones the server pairs: the latest annotator submission on each assignment, not a
+  read reopened for its annotator's own revision (#315). *Include reopened* offers
+  those, and earlier attempts a resubmission replaced, too. Reads are named A, B, C
+  ... oldest first.
+* **Side by side:** every read in its own colour (A red, B blue, C yellow, ...),
+  surfaces in 3D and outlines in the slices, each with a show box and an opacity
+  slider.
+* **Agreement map:** for the two reads picked (any two of three or more), per class,
+  the voxels in **both** (white), in **the first only** (its colour) and in **the
+  second only** (its colour), in 3D and in the slices; one class or all. Beside it,
+  per class, the Dice and the voxel counts both / first only / second only, and the
+  mean Dice. A four-class read against an extended one is compared after the
+  collapse to the four (`labels.collapse_to_four`, PDA/PLB/SN by contact, D47); two
+  extended reads class by class, with the four-class mean (the pair score) beside.
+  The numbers are `segqueue14.compare`, the same Dice as the server's pair scoring
+  (`scoring.score_reads`), on the same voxels.
+* **Read-only:** comparing downloads the reads and the CT and nothing else: no
+  claim, no verdict, no draft, no upload, and *Save changes & approve* stays off.
+  *Open A for revision* closes the comparison and opens that read through the
+  ordinary *Open submission* flow.
+
+Reviewer-side only, in the module: annotators see nothing new, the protocol stays
+19 and the server is unchanged (no server install needed).
+
 ### Running it
 
 ```sh

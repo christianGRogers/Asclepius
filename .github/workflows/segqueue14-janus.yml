@@ -35,6 +35,10 @@
 #                                          table at the end; args: --limit=<digits> and/or
 #                                          --exclude=<login,...> (#299: left out entirely)
 #
+# Issue #334, read-only, the same way (nice 19 / ionice idle, writes nothing):
+#   readers-report                         cases with at least N distinct annotator logins
+#                                          (default 3) and why; args: --min=<1-2 digits>
+#
 # Issue #315, an annotator's own submitted reads back in their queue for their own
 # revision, starting from their submission. Dry run without --apply; `args` is exactly
 # --login=<one login> --submitted-before=YYYY-MM-DD:
@@ -63,9 +67,9 @@ on:
                   benchmark-status, benchmark-create, "benchmark-create --apply",
                   benchmark-seed, "benchmark-seed --apply",
                   benchmark-assign, "benchmark-assign --apply",
-                  quality-report, reopen, "reopen --apply"]
+                  quality-report, readers-report, reopen, "reopen --apply"]
       args:
-        description: "benchmark-assign: --exclude=<login,...> [--login=<login,...>] [--retest]; benchmark-seed: --from-girder=<folder> [--from-girder-file=<name>]; benchmark-create: --imagecas-id=<N> [--replace]; quality-report: [--limit=<N>] [--exclude=<login,...>]; reopen: --login=<login> --submitted-before=<YYYY-MM-DD>"
+        description: "benchmark-assign: --exclude=<login,...> [--login=<login,...>] [--retest]; benchmark-seed: --from-girder=<folder> [--from-girder-file=<name>]; benchmark-create: --imagecas-id=<N> [--replace]; quality-report: [--limit=<N>] [--exclude=<login,...>]; readers-report: [--min=<N>]; reopen: --login=<login> --submitted-before=<YYYY-MM-DD>"
         type: string
         required: false
         default: ""
@@ -102,11 +106,12 @@ jobs:
             benchmark-status|benchmark-create|"benchmark-create --apply") ;;
             benchmark-seed|"benchmark-seed --apply") ;;
             benchmark-assign|"benchmark-assign --apply") ;;
-            quality-report) ;;
+            quality-report|readers-report) ;;
             reopen|"reopen --apply") ;;
             *) echo "::error::unknown step '$cmd'"; exit 1 ;;
           esac
-          # D43: only benchmark-assign, -seed, -create and quality-report (#296) take
+          # D43: only benchmark-assign, -seed, -create, quality-report (#296),
+          # readers-report (#334) and reopen (#315) take
           # arguments, and only these
           # options, as plain logins or Girder paths: the value reaches a shell on janus,
           # so nothing else passes (no quotes, spaces in values, globs or $).
@@ -158,6 +163,11 @@ jobs:
                 if ! printf '%s' "$ARGS" | grep -Eq "^(($q_limit)|($q_excl)|($q_limit) ($q_excl)|($q_excl) ($q_limit))\$"; then
                   echo "::error::quality-report args may hold only --limit=<1 to 5 digits> and --exclude=<login,...>"; exit 1
                 fi ;;
+              readers-report)
+                # #334: read-only; only the minimum number of distinct logins.
+                if ! printf '%s' "$ARGS" | grep -Eq '^--min=[0-9]{1,2}$'; then
+                  echo "::error::readers-report args may hold only --min=<1 or 2 digits>"; exit 1
+                fi ;;
               reopen*)
                 # #315: exactly one login and one date, in either order; --apply only
                 # from the step's own choice above.
@@ -165,7 +175,7 @@ jobs:
                 if ! printf '%s' "$ARGS" | grep -Eq "^(($r_login) ($r_date)|($r_date) ($r_login))\$"; then
                   echo "::error::reopen args must be exactly --login=<one login> and --submitted-before=YYYY-MM-DD"; exit 1
                 fi ;;
-              *) echo "::error::only benchmark-assign, benchmark-seed, benchmark-create, quality-report and reopen take args"; exit 1 ;;
+              *) echo "::error::only benchmark-assign, benchmark-seed, benchmark-create, quality-report, readers-report and reopen take args"; exit 1 ;;
             esac
             # The step is ours (a fixed list above), the options go first: --apply stays last.
             # shellcheck disable=SC2086  # split the fixed step into its words

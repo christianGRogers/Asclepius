@@ -39,6 +39,13 @@
 #   readers-report                         cases with at least N distinct annotator logins
 #                                          (default 3) and why; args: --min=<1-2 digits>
 #
+# Issue #334, also at nice 19 / ionice idle; neither takes args:
+#   rescore-extended [--apply]             extended reads scored before D47 scored again
+#                                          (segqueue14-score --rescore-extended, #326);
+#                                          dry run without --apply; the score only
+#   revisions-check                        read-only: approved assignments with a reviewer
+#                                          revision, and their cases (#332's DEPLOY.md query)
+#
 # Issue #315, an annotator's own submitted reads back in their queue for their own
 # revision, starting from their submission. Dry run without --apply; `args` is exactly
 # --login=<one login> --submitted-before=YYYY-MM-DD:
@@ -70,7 +77,9 @@ on:
                   benchmark-status, benchmark-create, "benchmark-create --apply",
                   benchmark-seed, "benchmark-seed --apply",
                   benchmark-assign, "benchmark-assign --apply",
-                  quality-report, readers-report, reopen, "reopen --apply",
+                  quality-report, readers-report,
+                  rescore-extended, "rescore-extended --apply", revisions-check,
+                  reopen, "reopen --apply",
                   restore-reopened, "restore-reopened --apply"]
       args:
         description: "benchmark-assign: --exclude=<login,...> [--login=<login,...>] [--retest]; benchmark-seed: --from-girder=<folder> [--from-girder-file=<name>]; benchmark-create: --imagecas-id=<N> [--replace]; quality-report: [--limit=<N>] [--exclude=<login,...>]; readers-report: [--min=<N>]; reopen: --login=<login> --submitted-before=<YYYY-MM-DD>; restore-reopened: --login=<login>"
@@ -111,6 +120,7 @@ jobs:
             benchmark-seed|"benchmark-seed --apply") ;;
             benchmark-assign|"benchmark-assign --apply") ;;
             quality-report|readers-report) ;;
+            rescore-extended|"rescore-extended --apply"|revisions-check) ;;
             reopen|"reopen --apply") ;;
             restore-reopened|"restore-reopened --apply") ;;
             *) echo "::error::unknown step '$cmd'"; exit 1 ;;
@@ -185,6 +195,7 @@ jobs:
                 if ! printf '%s' "$ARGS" | grep -Eq '^--login=[a-z0-9._-]+$'; then
                   echo "::error::restore-reopened args must be exactly --login=<one login>"; exit 1
                 fi ;;
+              # #334: rescore-extended and revisions-check take none; they fall here.
               *) echo "::error::only benchmark-assign, benchmark-seed, benchmark-create, quality-report, readers-report, reopen and restore-reopened take args"; exit 1 ;;
             esac
             # The step is ours (a fixed list above), the options go first: --apply stays last.

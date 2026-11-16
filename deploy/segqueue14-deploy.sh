@@ -45,6 +45,13 @@
 # let each extra one in (segqueue14-report readers), at nice 19 / ionice idle:
 #   bash segqueue14-deploy.sh readers-report [--min=<N>]
 #
+# Issue #334, both at nice 19 / ionice idle. Extended reads scored before D47 scored
+# again (segqueue14-score --rescore-extended, #326; replaces the stored score only),
+# a dry run without --apply; and, read-only, the approved assignments with a reviewer
+# revision and their cases (segqueue14-report revisions; DEPLOY.md's query, #332):
+#   bash segqueue14-deploy.sh rescore-extended [--apply]
+#   bash segqueue14-deploy.sh revisions-check
+#
 # Issue #315: an annotator's own submitted reads back in their queue, for their own
 # revision, starting from what they submitted (segqueue14-reopen). Dry run without --apply:
 #   bash segqueue14-deploy.sh reopen --login=<login> --submitted-before=<YYYY-MM-DD> [--apply]
@@ -514,6 +521,30 @@ readers_report() {
     as_user "${low[@]}" "$bin" readers ${args[@]+"${args[@]}"}
 }
 
+rescore_extended() {
+    local bin="$LIVE/.venv/bin/segqueue14-score" dry=(--dry-run)
+    [ -x "$bin" ] || die "segqueue14-score is not installed: run the install step first"
+    case "${1:-}" in
+        "") ;;
+        --apply) dry=() ;;
+        *) die "rescore-extended: takes only --apply" ;;
+    esac
+    [ $# -le 1 ] || die "rescore-extended: takes only --apply"
+    local low=(nice -n 19)
+    command -v ionice >/dev/null && low+=(ionice -c 3)
+    as_user "${low[@]}" "$bin" --rescore-extended ${dry[@]+"${dry[@]}"}
+    [ ${#dry[@]} -eq 0 ] || say "dry run only. If it reads right: bash $0 rescore-extended --apply"
+}
+
+revisions_check() {
+    local bin="$LIVE/.venv/bin/segqueue14-report"
+    [ -x "$bin" ] || die "segqueue14-report is not installed: run the install step first"
+    [ $# -eq 0 ] || die "revisions-check: takes no arguments"
+    local low=(nice -n 19)
+    command -v ionice >/dev/null && low+=(ionice -c 3)
+    as_user "${low[@]}" "$bin" revisions
+}
+
 # ------------------------------------------------------------ D36 (issue #124)
 
 recent_backup() {   # a D36 database dump from the last 24 h, or nothing
@@ -623,6 +654,8 @@ case "${1:-}" in
         benchmark "$step" "$@" ;;
     quality-report) shift; quality_report "$@" ;;
     readers-report) shift; readers_report "$@" ;;
+    rescore-extended) shift; rescore_extended "$@" ;;
+    revisions-check) shift; revisions_check "$@" ;;
     reopen) shift; reopen "$@" ;;
     restore-reopened) shift; restore_reopened "$@" ;;
     backup-prepare|backup-finish|backup-status|backup-restore-test|backup-off)
@@ -631,5 +664,5 @@ case "${1:-}" in
         # The hourly job's priority for the drill too: annotators come first.
         nice_=(); [ "$step" = restore-test ] && nice_=(nice -n 19 ionice -c3)
         USER_HOME="$USER_HOME" exec ${nice_[@]+"${nice_[@]}"} bash "$(dirname "$0")/backup/segqueue-backup.sh" "$step" "$@" ;;
-    *) sed -n '2,55p' "$0"; exit 1 ;;
+    *) sed -n '2,66p' "$0"; exit 1 ;;
 esac

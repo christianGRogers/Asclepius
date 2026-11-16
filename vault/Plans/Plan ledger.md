@@ -69,6 +69,11 @@ Candidates are in `Candidates/Janus 1-L/`; rulings are `Judgements/Janus 1-L Rou
 | 1-L | 1 | [[Candidates/Janus 1-L/Atlas v1\|Atlas v1]] | Atlas | Lost. The list pins (L-A1), the replicate's σ_g purpose and the decomposition reports adopted; Skeleton Recall arm b not adopted |
 | 1-L | 1 | [[Candidates/Janus 1-L/Bridge v1\|Bridge v1]] | Bridge | Lost. Trillium costing, the identity check, the side-aware D44 collapse and the −0.015 non-inferiority rule (as Q4) adopted; locked-100 half-split threshold refused |
 | 1-L | 1 | [[Candidates/Janus 1-L/Foxtrot v1\|Foxtrot v1]] | Foxtrot | Lost. The per-case identity check against Fir adopted; the shipped ensemble sent to round 2 and the lead (Q6) |
+| 1-L | 2 | [[Candidates/Janus 1-L/Delta v2\|Delta v2]] | Delta | **Track 1-L plan** (new holder), with L-A13–L-A25 ([[Janus 1-L Round 2]]). E in a1's place, Rule T by width on D60's shared centreline, the L3 `recall` field and the `decide.py` gate catch; S at 1.25 % (amended from 2.5 %) |
+| 1-L | 2 | [[Candidates/Janus 1-L/Crucible v2\|Crucible v2]] | Crucible | Lost the holder's seat. E's pre-registration and a2 fallback, the wording table, S's 1.25 % and the final-validation subclass adopted; its volume-band Rule T not adopted |
+| 1-L | 2 | [[Candidates/Janus 1-L/Bridge v2\|Bridge v2]] | Bridge | Lost. Four nnU-Net 2.8.1 defects (fingerprint, moved plans, fold val, sealed path) adopted, val = 10 tuning cases, the decomposition of record and Q-B1 (as Q-R2-3); a1 as candidate and frozen t\* not adopted |
+| 1-L | 2 | [[Candidates/Janus 1-L/Foxtrot v2\|Foxtrot v2]] | Foxtrot | Lost. The per-case stability evidence for E, the two-look budget and QF1/QF2 (as Q-R2-1/Q-R2-2) adopted; its two-step volume switch not adopted |
+| 1-L | 2 | [[Candidates/Janus 1-L/Atlas v2\|Atlas v2]] | Atlas | Lost. "Ships what was tested", the guard-naming wording and Step T's log check adopted; a1 as candidate and the 0.45 mm third look refused |
 
 ## Track 1-F (Janus 1-F, D45, #303)
 

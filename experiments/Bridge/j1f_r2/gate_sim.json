@@ -1,0 +1,506 @@
+{
+ "draws": 200000,
+ "seed": 20261115,
+ "q_fit_sensitivity": {
+  "0.05": {
+   "D1": 0.1115,
+   "D2": 0.0763,
+   "OM1": 0.1569,
+   "OM2": 0.1202,
+   "PDA": 0.0627,
+   "PLB": 0.0441
+  },
+  "0.08": {
+   "D1": 0.1072,
+   "D2": 0.0717,
+   "OM1": 0.1526,
+   "OM2": 0.1157,
+   "PDA": 0.0579,
+   "PLB": 0.0391
+  },
+  "0.12": {
+   "D1": 0.098,
+   "D2": 0.0622,
+   "OM1": 0.1435,
+   "OM2": 0.1063,
+   "PDA": 0.0478,
+   "PLB": 0.0286
+  }
+ },
+ "ruled": {
+  "lines": {
+   "D1": [
+    0.8,
+    0.919,
+    0.85
+   ],
+   "D2": [
+    0.8,
+    0.844,
+    0.85
+   ],
+   "OM1": [
+    0.8,
+    0.894,
+    0.85
+   ],
+   "OM2": [
+    0.8,
+    0.825,
+    0.85
+   ],
+   "PDA": [
+    0.8,
+    0.938,
+    0.85
+   ],
+   "PLB": [
+    0.8,
+    0.912,
+    0.85
+   ]
+  },
+  "symmetric": {
+   "per_class": {
+    "D1": {
+     "n": 98,
+     "miss_rate": 0.0158,
+     "misname_rate_q": 0.1072,
+     "E_recall": 0.984,
+     "E_naming": 0.893,
+     "E_presence": 0.969,
+     "fail_recall": 0.0,
+     "fail_presence": 0.004,
+     "fail_naming": 0.091,
+     "fail_class": 0.094
+    },
+    "D2": {
+     "n": 64,
+     "miss_rate": 0.0828,
+     "misname_rate_q": 0.0717,
+     "E_recall": 0.917,
+     "E_naming": 0.928,
+     "E_presence": 0.894,
+     "fail_recall": 0.002,
+     "fail_presence": 0.062,
+     "fail_naming": 0.017,
+     "fail_class": 0.08
+    },
+    "OM1": {
+     "n": 84,
+     "miss_rate": 0.0333,
+     "misname_rate_q": 0.1526,
+     "E_recall": 0.967,
+     "E_naming": 0.847,
+     "E_presence": 0.944,
+     "fail_recall": 0.0,
+     "fail_presence": 0.025,
+     "fail_naming": 0.492,
+     "fail_class": 0.504
+    },
+    "OM2": {
+     "n": 40,
+     "miss_rate": 0.1562,
+     "misname_rate_q": 0.1157,
+     "E_recall": 0.844,
+     "E_naming": 0.884,
+     "E_presence": 0.875,
+     "fail_recall": 0.162,
+     "fail_presence": 0.07,
+     "fail_naming": 0.256,
+     "fail_class": 0.42
+    },
+    "PDA": {
+     "n": 96,
+     "miss_rate": 0.0063,
+     "misname_rate_q": 0.0579,
+     "E_recall": 0.994,
+     "E_naming": 0.942,
+     "E_presence": 0.988,
+     "fail_recall": 0.0,
+     "fail_presence": 0.0,
+     "fail_naming": 0.0,
+     "fail_class": 0.001
+    },
+    "PLB": {
+     "n": 96,
+     "miss_rate": 0.0198,
+     "misname_rate_q": 0.0391,
+     "E_recall": 0.98,
+     "E_naming": 0.961,
+     "E_presence": 0.962,
+     "fail_recall": 0.0,
+     "fail_presence": 0.014,
+     "fail_naming": 0.0,
+     "fail_class": 0.014
+    }
+   },
+   "aggregate": {
+    "P(<4 of 6 pass)": 0.0427,
+    "P(<5 of 6)": 0.3036,
+    "P(<6 of 6)": 0.7651,
+    "mean classes passing": 4.886
+   }
+  },
+  "misses_only": {
+   "per_class": {
+    "D1": {
+     "n": 98,
+     "miss_rate": 0.0316,
+     "misname_rate_q": 0.1072,
+     "E_recall": 0.968,
+     "E_naming": 0.893,
+     "E_presence": 0.969,
+     "fail_recall": 0.0,
+     "fail_presence": 0.004,
+     "fail_naming": 0.09,
+     "fail_class": 0.094
+    },
+    "D2": {
+     "n": 64,
+     "miss_rate": 0.1656,
+     "misname_rate_q": 0.0717,
+     "E_recall": 0.834,
+     "E_naming": 0.928,
+     "E_presence": 0.894,
+     "fail_recall": 0.254,
+     "fail_presence": 0.062,
+     "fail_naming": 0.022,
+     "fail_class": 0.315
+    },
+    "OM1": {
+     "n": 84,
+     "miss_rate": 0.0667,
+     "misname_rate_q": 0.1526,
+     "E_recall": 0.933,
+     "E_naming": 0.847,
+     "E_presence": 0.944,
+     "fail_recall": 0.0,
+     "fail_presence": 0.024,
+     "fail_naming": 0.505,
+     "fail_class": 0.517
+    },
+    "OM2": {
+     "n": 40,
+     "miss_rate": 0.3125,
+     "misname_rate_q": 0.1157,
+     "E_recall": 0.688,
+     "E_naming": 0.884,
+     "E_presence": 0.875,
+     "fail_recall": 0.919,
+     "fail_presence": 0.071,
+     "fail_naming": 0.265,
+     "fail_class": 0.947
+    },
+    "PDA": {
+     "n": 96,
+     "miss_rate": 0.0125,
+     "misname_rate_q": 0.0579,
+     "E_recall": 0.988,
+     "E_naming": 0.942,
+     "E_presence": 0.988,
+     "fail_recall": 0.0,
+     "fail_presence": 0.0,
+     "fail_naming": 0.0,
+     "fail_class": 0.001
+    },
+    "PLB": {
+     "n": 96,
+     "miss_rate": 0.0396,
+     "misname_rate_q": 0.0391,
+     "E_recall": 0.96,
+     "E_naming": 0.961,
+     "E_presence": 0.962,
+     "fail_recall": 0.0,
+     "fail_presence": 0.014,
+     "fail_naming": 0.0,
+     "fail_class": 0.014
+    }
+   },
+   "aggregate": {
+    "P(<4 of 6 pass)": 0.2071,
+    "P(<5 of 6)": 0.6793,
+    "P(<6 of 6)": 0.9843,
+    "mean classes passing": 4.112
+   }
+  },
+  "2x_human_errors": {
+   "per_class": {
+    "D1": 0.94,
+    "D2": 0.6,
+    "OM1": 0.999,
+    "OM2": 0.992,
+    "PDA": 0.14,
+    "PLB": 0.024
+   },
+   "aggregate": {
+    "P(<4 of 6 pass)": 0.9766,
+    "P(<5 of 6)": 0.9998,
+    "P(<6 of 6)": 1.0,
+    "mean classes passing": 2.305
+   }
+  },
+  "3x_human_errors": {
+   "per_class": {
+    "D1": 1.0,
+    "D2": 0.983,
+    "OM1": 1.0,
+    "OM2": 1.0,
+    "PDA": 0.712,
+    "PLB": 0.179
+   },
+   "aggregate": {
+    "P(<4 of 6 pass)": 1.0,
+    "P(<5 of 6)": 1.0,
+    "P(<6 of 6)": 1.0,
+    "mean classes passing": 1.126
+   }
+  },
+  "naming_collapse": {
+   "aggregate": {
+    "P(<4 of 6 pass)": 1.0,
+    "P(<5 of 6)": 1.0,
+    "P(<6 of 6)": 1.0,
+    "mean classes passing": 0.0
+   }
+  }
+ },
+ "proposed": {
+  "lines": {
+   "D1": [
+    0.8,
+    0.919,
+    0.83
+   ],
+   "D2": [
+    0.8,
+    0.83,
+    0.86
+   ],
+   "OM1": [
+    0.8,
+    0.89,
+    0.76
+   ],
+   "OM2": [
+    0.73,
+    0.81,
+    0.77
+   ],
+   "PDA": [
+    0.8,
+    0.938,
+    0.89
+   ],
+   "PLB": [
+    0.8,
+    0.912,
+    0.92
+   ]
+  },
+  "symmetric": {
+   "per_class": {
+    "D1": {
+     "n": 98,
+     "miss_rate": 0.0158,
+     "misname_rate_q": 0.1072,
+     "E_recall": 0.984,
+     "E_naming": 0.893,
+     "E_presence": 0.969,
+     "fail_recall": 0.0,
+     "fail_presence": 0.004,
+     "fail_naming": 0.029,
+     "fail_class": 0.033
+    },
+    "D2": {
+     "n": 64,
+     "miss_rate": 0.0828,
+     "misname_rate_q": 0.0717,
+     "E_recall": 0.917,
+     "E_naming": 0.928,
+     "E_presence": 0.894,
+     "fail_recall": 0.002,
+     "fail_presence": 0.017,
+     "fail_naming": 0.031,
+     "fail_class": 0.05
+    },
+    "OM1": {
+     "n": 84,
+     "miss_rate": 0.0333,
+     "misname_rate_q": 0.1526,
+     "E_recall": 0.967,
+     "E_naming": 0.847,
+     "E_presence": 0.944,
+     "fail_recall": 0.0,
+     "fail_presence": 0.01,
+     "fail_naming": 0.02,
+     "fail_class": 0.031
+    },
+    "OM2": {
+     "n": 40,
+     "miss_rate": 0.1562,
+     "misname_rate_q": 0.1157,
+     "E_recall": 0.844,
+     "E_naming": 0.884,
+     "E_presence": 0.875,
+     "fail_recall": 0.039,
+     "fail_presence": 0.022,
+     "fail_naming": 0.028,
+     "fail_class": 0.085
+    },
+    "PDA": {
+     "n": 96,
+     "miss_rate": 0.0063,
+     "misname_rate_q": 0.0579,
+     "E_recall": 0.994,
+     "E_naming": 0.942,
+     "E_presence": 0.988,
+     "fail_recall": 0.0,
+     "fail_presence": 0.0,
+     "fail_naming": 0.022,
+     "fail_class": 0.022
+    },
+    "PLB": {
+     "n": 96,
+     "miss_rate": 0.0198,
+     "misname_rate_q": 0.0391,
+     "E_recall": 0.98,
+     "E_naming": 0.961,
+     "E_presence": 0.962,
+     "fail_recall": 0.0,
+     "fail_presence": 0.014,
+     "fail_naming": 0.032,
+     "fail_class": 0.045
+    }
+   },
+   "aggregate": {
+    "P(<4 of 6 pass)": 0.0015,
+    "P(<5 of 6)": 0.0256,
+    "P(<6 of 6)": 0.2392,
+    "mean classes passing": 5.734
+   }
+  },
+  "misses_only": {
+   "per_class": {
+    "D1": {
+     "n": 98,
+     "miss_rate": 0.0316,
+     "misname_rate_q": 0.1072,
+     "E_recall": 0.968,
+     "E_naming": 0.893,
+     "E_presence": 0.969,
+     "fail_recall": 0.0,
+     "fail_presence": 0.004,
+     "fail_naming": 0.031,
+     "fail_class": 0.035
+    },
+    "D2": {
+     "n": 64,
+     "miss_rate": 0.1656,
+     "misname_rate_q": 0.0717,
+     "E_recall": 0.834,
+     "E_naming": 0.928,
+     "E_presence": 0.894,
+     "fail_recall": 0.255,
+     "fail_presence": 0.017,
+     "fail_naming": 0.038,
+     "fail_class": 0.296
+    },
+    "OM1": {
+     "n": 84,
+     "miss_rate": 0.0667,
+     "misname_rate_q": 0.1526,
+     "E_recall": 0.933,
+     "E_naming": 0.847,
+     "E_presence": 0.944,
+     "fail_recall": 0.0,
+     "fail_presence": 0.01,
+     "fail_naming": 0.021,
+     "fail_class": 0.031
+    },
+    "OM2": {
+     "n": 40,
+     "miss_rate": 0.3125,
+     "misname_rate_q": 0.1157,
+     "E_recall": 0.688,
+     "E_naming": 0.884,
+     "E_presence": 0.875,
+     "fail_recall": 0.748,
+     "fail_presence": 0.022,
+     "fail_naming": 0.045,
+     "fail_class": 0.762
+    },
+    "PDA": {
+     "n": 96,
+     "miss_rate": 0.0125,
+     "misname_rate_q": 0.0579,
+     "E_recall": 0.988,
+     "E_naming": 0.942,
+     "E_presence": 0.988,
+     "fail_recall": 0.0,
+     "fail_presence": 0.0,
+     "fail_naming": 0.022,
+     "fail_class": 0.022
+    },
+    "PLB": {
+     "n": 96,
+     "miss_rate": 0.0396,
+     "misname_rate_q": 0.0391,
+     "E_recall": 0.96,
+     "E_naming": 0.961,
+     "E_presence": 0.962,
+     "fail_recall": 0.0,
+     "fail_presence": 0.014,
+     "fail_naming": 0.029,
+     "fail_class": 0.042
+    }
+   },
+   "aggregate": {
+    "P(<4 of 6 pass)": 0.0312,
+    "P(<5 of 6)": 0.302,
+    "P(<6 of 6)": 0.8533,
+    "mean classes passing": 4.812
+   }
+  },
+  "2x_human_errors": {
+   "per_class": {
+    "D1": 0.855,
+    "D2": 0.649,
+    "OM1": 0.899,
+    "OM2": 0.877,
+    "PDA": 0.545,
+    "PLB": 0.445
+   },
+   "aggregate": {
+    "P(<4 of 6 pass)": 0.9563,
+    "P(<5 of 6)": 0.9957,
+    "P(<6 of 6)": 0.9998,
+    "mean classes passing": 1.729
+   }
+  },
+  "3x_human_errors": {
+   "per_class": {
+    "D1": 1.0,
+    "D2": 0.986,
+    "OM1": 1.0,
+    "OM2": 1.0,
+    "PDA": 0.952,
+    "PLB": 0.856
+   },
+   "aggregate": {
+    "P(<4 of 6 pass)": 1.0,
+    "P(<5 of 6)": 1.0,
+    "P(<6 of 6)": 1.0,
+    "mean classes passing": 0.207
+   }
+  },
+  "naming_collapse": {
+   "aggregate": {
+    "P(<4 of 6 pass)": 1.0,
+    "P(<5 of 6)": 1.0,
+    "P(<6 of 6)": 1.0,
+    "mean classes passing": 0.0
+   }
+  }
+ }
+}

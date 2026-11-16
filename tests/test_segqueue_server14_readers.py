@@ -163,7 +163,16 @@ def test_the_readers_report_names_each_cause(world):
     assert cases["drift_case"]["activeCountMismatch"] is True
     assert cases["rtp_case"]["activeCountMismatch"] is False
 
+    # Reopened, then expired by the sweep 40 minutes later: listed (0.5.1).
+    assert got["expiredAfterReopen"] == [{
+        "case": "reopen_case", "login": "bobby", "how": "reopened",
+        "restarted": "2026-11-02 10:50 EST", "expired": "2026-11-02 11:30 EST",
+        "minutes": 40, "releaseReason": "no heartbeat for 48 hours"}]
+
     text = "\n".join(lines)
+    assert "Reopened or reworked, then expired by the sweep within 1 hour: 1: " \
+           "reopen_case bobby (reopened 2026-11-02 10:50 EST, expired " \
+           "2026-11-02 11:30 EST, 40 min, no heartbeat for 48 hours)" in text
     assert "rtp_case: pool, replicasWanted 2, activeCount 1, approvedCount 1, 3 logins " \
            "-- cause: return-to-pool" in text
     assert "annotator_benchmark_0001: benchmark," in text

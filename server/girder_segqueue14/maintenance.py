@@ -20,11 +20,11 @@ operation instead of two implementations that drift.
 import datetime
 import logging
 
-from segqueue import policy as pol
 from segqueue import states as st
 
 from .models import Assignment14 as Assignment
 from .models import Case14 as Case
+from .models.assignment import reclaimReason
 from .settings import getPolicy
 from .utils import incomingFolder
 
@@ -59,14 +59,9 @@ def sweep(dryRun=False, policy=None, now=None):
     released = []
 
     for assignment in Assignment().reclaimable(policy, now=now):
-        assignedAt = assignment.get('assignedAt')
-        heartbeat = assignment.get('lastHeartbeat')
-        reason = pol.reclaim_reason(
-            assignedAt.timestamp() if assignedAt else 0.0,
-            heartbeat.timestamp() if heartbeat else None,
-            now.timestamp(),
-            policy,
-        ) or 'lease lapsed'
+        # From the stored deadline, which a rework or reopen renews (#315), and
+        # the current attempt's heartbeat: the same test `reclaimable` applied.
+        reason = reclaimReason(assignment, policy, now) or 'lease lapsed'
 
         record = {
             'assignmentId': str(assignment['_id']),

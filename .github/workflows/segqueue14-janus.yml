@@ -43,6 +43,9 @@
 # revision, starting from their submission. Dry run without --apply; `args` is exactly
 # --login=<one login> --submitted-before=YYYY-MM-DD:
 #   reopen [--apply]                       args: --login=<login> --submitted-before=<date>
+# D48: that login's reads reopened (#315) and then expired by the sweep, restored as
+# ordinary reads. Dry run without --apply; `args` is exactly --login=<one login>:
+#   restore-reopened [--apply]             args: --login=<login>
 #
 # The script never touches the live checkout, the live plugin or live data; see its
 # header. Secrets: SSH_HOST, SSH_PORT, SSH_USERNAME, SSH_PASSWORD (as server-ssh.yml),
@@ -67,9 +70,10 @@ on:
                   benchmark-status, benchmark-create, "benchmark-create --apply",
                   benchmark-seed, "benchmark-seed --apply",
                   benchmark-assign, "benchmark-assign --apply",
-                  quality-report, readers-report, reopen, "reopen --apply"]
+                  quality-report, readers-report, reopen, "reopen --apply",
+                  restore-reopened, "restore-reopened --apply"]
       args:
-        description: "benchmark-assign: --exclude=<login,...> [--login=<login,...>] [--retest]; benchmark-seed: --from-girder=<folder> [--from-girder-file=<name>]; benchmark-create: --imagecas-id=<N> [--replace]; quality-report: [--limit=<N>] [--exclude=<login,...>]; readers-report: [--min=<N>]; reopen: --login=<login> --submitted-before=<YYYY-MM-DD>"
+        description: "benchmark-assign: --exclude=<login,...> [--login=<login,...>] [--retest]; benchmark-seed: --from-girder=<folder> [--from-girder-file=<name>]; benchmark-create: --imagecas-id=<N> [--replace]; quality-report: [--limit=<N>] [--exclude=<login,...>]; readers-report: [--min=<N>]; reopen: --login=<login> --submitted-before=<YYYY-MM-DD>; restore-reopened: --login=<login>"
         type: string
         required: false
         default: ""
@@ -108,10 +112,11 @@ jobs:
             benchmark-assign|"benchmark-assign --apply") ;;
             quality-report|readers-report) ;;
             reopen|"reopen --apply") ;;
+            restore-reopened|"restore-reopened --apply") ;;
             *) echo "::error::unknown step '$cmd'"; exit 1 ;;
           esac
           # D43: only benchmark-assign, -seed, -create, quality-report (#296),
-          # readers-report (#334) and reopen (#315) take
+          # readers-report (#334), reopen (#315) and restore-reopened (D48) take
           # arguments, and only these
           # options, as plain logins or Girder paths: the value reaches a shell on janus,
           # so nothing else passes (no quotes, spaces in values, globs or $).
@@ -175,7 +180,12 @@ jobs:
                 if ! printf '%s' "$ARGS" | grep -Eq "^(($r_login) ($r_date)|($r_date) ($r_login))\$"; then
                   echo "::error::reopen args must be exactly --login=<one login> and --submitted-before=YYYY-MM-DD"; exit 1
                 fi ;;
-              *) echo "::error::only benchmark-assign, benchmark-seed, benchmark-create, quality-report, readers-report and reopen take args"; exit 1 ;;
+              restore-reopened*)
+                # D48: exactly one login; --apply only from the step's own choice above.
+                if ! printf '%s' "$ARGS" | grep -Eq '^--login=[a-z0-9._-]+$'; then
+                  echo "::error::restore-reopened args must be exactly --login=<one login>"; exit 1
+                fi ;;
+              *) echo "::error::only benchmark-assign, benchmark-seed, benchmark-create, quality-report, readers-report, reopen and restore-reopened take args"; exit 1 ;;
             esac
             # The step is ours (a fixed list above), the options go first: --apply stays last.
             # shellcheck disable=SC2086  # split the fixed step into its words
@@ -185,6 +195,8 @@ jobs:
             echo "::error::benchmark-assign needs args: --exclude=<login,...> (the logins that never get it)"; exit 1
           elif [[ "$cmd" == reopen* ]]; then
             echo "::error::reopen needs args: --login=<login> --submitted-before=YYYY-MM-DD"; exit 1
+          elif [[ "$cmd" == restore-reopened* ]]; then
+            echo "::error::restore-reopened needs args: --login=<login>"; exit 1
           fi
           echo "cmd=$cmd" >> "$GITHUB_OUTPUT"
           case "$cmd" in backup-*) echo "backup=true" >> "$GITHUB_OUTPUT" ;; esac

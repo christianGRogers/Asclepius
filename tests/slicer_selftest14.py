@@ -1100,7 +1100,11 @@ def run_my_submissions():
               [table.item(0, c).text() for c in (0, 1)])
         check("  a row a reviewer holds is disabled, with the reason as its tooltip",
               buttons[0].enabled and not buttons[1].enabled
-              and buttons[1].toolTip == reviewing and table.item(1, 0).toolTip() == reviewing)
+              and buttons[1].toolTip == reviewing and table.item(1, 0).toolTip() == reviewing,
+              {"enabled": [b.enabled for b in buttons],
+               "own": [b.isEnabledTo(table) for b in buttons],
+               "table": table.enabled, "box": box.enabled,
+               "button tip": buttons[1].toolTip, "item tip": table.item(1, 0).toolTip()})
         check("  more are offered when there are more",
               not widget.mySubmissionsMoreButton.isHidden()
               and "3 of 5" in widget.mySubmissionsStatus.text)

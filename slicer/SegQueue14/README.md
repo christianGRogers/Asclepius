@@ -109,8 +109,10 @@ empty, grouped under their parent in the segment list, with show/hide per group:
   you submitted it (US Eastern time) and one **Revise**.
 - **Revise** takes the case back and opens it straight away from what you submitted,
   every class whole, as a reopened case does (#315). Submit it again and it goes to
-  review like any read; **Release** instead puts your submission back exactly as it
-  was.
+  review like any read. While a revised case is open and not yet resubmitted, the
+  *Give this case back* button reads **Discard changes and close** (0.22.1): it
+  puts your submission back for review exactly as you submitted it, and the case
+  does not go back to the pool.
 - A row you can't revise now is greyed out; hover for why (a reviewer is looking at
   it now, you hold another case, it's the benchmark). The server's own sentence is
   shown if a Revise is refused.

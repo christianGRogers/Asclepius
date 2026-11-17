@@ -565,8 +565,8 @@ def _calls_in(node):
             if isinstance(n, ast.Call) and isinstance(n.func, ast.Attribute)}
 
 
-def test_the_module_is_0_22_0_and_protocol_20():
-    assert re.search(r'^__version__ = "0\.22\.0"$', _source(), re.M)
+def test_the_module_is_0_22_1_and_protocol_20():
+    assert re.search(r'^__version__ = "0\.22\.1"$', _source(), re.M)
     sys_path = str(REPO / "src")
     import sys
 
@@ -732,7 +732,135 @@ def test_revise_opens_the_case_from_the_read_and_shows_refusals_cleanly():
 def test_releasing_a_recalled_case_says_the_read_goes_back():
     release = _body("SegQueue14Widget", "onRelease")
     assert 'getattr(self.logic.assignment, "recalled", False)' in release
-    assert "goes back for review exactly" in release
+    # The confirmation is the one for the open case, from _releaseWording.
+    assert "question = _releaseWording(self.logic.assignment)[2]" in release
+    assert "question.format(self.logic.assignment.case_name)" in release
+    # The action is unchanged: an ordinary release, which the server turns into
+    # putting the submitted read back for a recalled case (#344).
+    assert 'self.logic.release(reason="released by annotator")' in release
+
+
+# ---------------------------- the release button on a recalled case (0.22.1)
+
+
+def _release_namespace():
+    node = next(n for n in _tree().body
+                if isinstance(n, ast.FunctionDef) and n.name == "_releaseWording")
+    namespace = {}
+    exec(compile(ast.Module(body=[node], type_ignores=[]), str(MODULE), "exec"),
+         namespace)
+    method = _method("SegQueue14Widget", "_updateReleaseButton")
+    exec(compile(ast.Module(body=[method], type_ignores=[]), str(MODULE), "exec"),
+         namespace)
+    return namespace
+
+
+class _Button:
+    def __init__(self):
+        self.text, self.tip = None, None
+
+    def setText(self, text):
+        self.text = text
+
+    def setToolTip(self, tip):
+        self.tip = tip
+
+
+class _Logic:
+    def __init__(self, assignment=None):
+        self.assignment = assignment
+
+
+class _Widget:
+    def __init__(self, logic):
+        self.logic = logic
+        self.releaseButton = _Button()
+
+
+def _assignment(**fields):
+    class A:
+        case_name = "imagecas_0007"
+
+    a = A()
+    a.__dict__.update(fields)
+    return a
+
+
+def test_a_recalled_case_reads_discard_changes_and_close():
+    wording = _release_namespace()["_releaseWording"]
+    text, tip, question = wording(_assignment(recalled=True))
+    assert text == "Discard changes and close"
+    assert question.format("imagecas_0007") == (
+        "Discard your changes to 'imagecas_0007'?\n\nYour submission goes back for "
+        "review exactly as you submitted it.")
+    assert "goes back for review exactly as you submitted it" in tip
+    assert "pool" not in tip and "pool" not in question
+
+
+@pytest.mark.parametrize("assignment", [
+    None, _assignment(), _assignment(recalled=False), _assignment(recalled=None)])
+def test_every_other_case_reads_give_this_case_back(assignment):
+    text, tip, question = _release_namespace()["_releaseWording"](assignment)
+    assert text == "Give this case back"
+    assert tip == ("Returns the case to the pool for someone else. Your work on it "
+                   "is discarded.")
+    assert question.format("imagecas_0007") == (
+        "Give 'imagecas_0007' back to the pool?\n\nAnything you have segmented on "
+        "it will be discarded.")
+
+
+def test_the_label_follows_the_open_case_through_recall_resubmit_and_close():
+    update = _release_namespace()["_updateReleaseButton"]
+    logic = _Logic()
+    widget = _Widget(logic)
+    seen = []
+    for assignment in (None,                        # logged in, nothing open
+                       _assignment(recalled=True),  # Revise
+                       None,                        # resubmitted / discarded
+                       _assignment(),               # an ordinary next case
+                       _assignment(recalled=True),  # Revise again
+                       None):                       # closed / logged out
+        logic.assignment = assignment
+        update(widget)
+        seen.append(widget.releaseButton.text)
+    assert seen == ["Give this case back", "Discard changes and close",
+                    "Give this case back", "Give this case back",
+                    "Discard changes and close", "Give this case back"]
+    assert widget.releaseButton.tip.startswith("Returns the case to the pool")
+    # Logged out entirely: no logic at all.
+    widget.logic = None
+    update(widget)
+    assert widget.releaseButton.text == "Give this case back"
+
+
+def test_every_change_of_the_open_case_relabels_the_button():
+    assert "self._updateReleaseButton()" in _body("SegQueue14Widget", "_updateEnabled")
+    for name in ("onLogout", "onSubmit", "onRelease", "_openAssignment"):
+        assert "self._updateEnabled()" in _body("SegQueue14Widget", name), name
+    # Revise opens through _openAssignment.
+    assert "self._openAssignment(assignment)" in _body("SegQueue14Widget", "onRevise")
+    build = _body("SegQueue14Widget", "_buildSubmitSection")
+    assert "self.releaseButton = qt.QPushButton(releaseText)" in build
+    assert "_releaseWording(None)" in build
+
+
+def test_the_labels_are_written_in_one_place():
+    """Neither label, nor the old recalled-case question, is a string anywhere but
+    ``_releaseWording`` (docstrings aside)."""
+    tree = _tree()
+    wording = next(n for n in tree.body
+                   if isinstance(n, ast.FunctionDef) and n.name == "_releaseWording")
+    inside = {id(n) for n in ast.walk(wording)}
+    docstrings = {id(n.body[0].value) for n in ast.walk(tree)
+                  if isinstance(n, (ast.FunctionDef, ast.ClassDef, ast.Module))
+                  and n.body and isinstance(n.body[0], ast.Expr)
+                  and isinstance(n.body[0].value, ast.Constant)}
+    for node in ast.walk(tree):
+        if (isinstance(node, ast.Constant) and isinstance(node.value, str)
+                and id(node) not in inside and id(node) not in docstrings):
+            for text in ("Give this case back", "Discard changes and close",
+                         "Stop revising"):
+                assert text not in node.value, (text, node.lineno)
 
 
 def _sub(**kw):

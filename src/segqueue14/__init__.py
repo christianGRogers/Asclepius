@@ -35,4 +35,7 @@ __version__ = "0.1.0"
 #: 19 (#315): a case reopened for the annotator's own revision opens from their
 #: submitted read (the ``own`` asset), every class whole. Backwards compatible: an
 #: older module is refused only on such a case, which it would open from the seed.
-PROTOCOL_VERSION = 19
+#: 20: an annotator can recall their own submitted, not yet approved pool read for
+#: revision from the module ("My submissions"). Backwards compatible: modules 17-19
+#: never call the two new routes and see nothing different.
+PROTOCOL_VERSION = 20

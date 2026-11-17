@@ -344,7 +344,7 @@ def test_the_archive_is_the_segqueue_extension_and_is_self_sufficient(tmp_path):
             "print(segqueue14.PROTOCOL_VERSION)")
     out = subprocess.run([sys.executable, "-I", "-c", code], capture_output=True, text=True)
     assert out.returncode == 0, out.stderr
-    assert out.stdout.strip() == "19"
+    assert out.stdout.strip() == "20"
 
 
 def test_a_half_downloaded_helper_is_never_a_cache_hit(tmp_path):
@@ -374,7 +374,8 @@ def _review_filters():
 
 
 #: The review-list functions, which need nothing from Slicer.
-_LISTING = ("_reviewListing", "_parseUtc", "_easternTime", "_newestFirst")
+_LISTING = ("_reviewListing", "_parseUtc", "_easternTime", "_newestFirst", "_epochIso",
+            "_mySubmissionRows")
 
 
 def _listing_namespace():
@@ -564,8 +565,8 @@ def _calls_in(node):
             if isinstance(n, ast.Call) and isinstance(n.func, ast.Attribute)}
 
 
-def test_the_module_is_0_21_0_and_still_protocol_19():
-    assert re.search(r'^__version__ = "0\.21\.0"$', _source(), re.M)
+def test_the_module_is_0_22_0_and_protocol_20():
+    assert re.search(r'^__version__ = "0\.22\.0"$', _source(), re.M)
     sys_path = str(REPO / "src")
     import sys
 
@@ -573,7 +574,7 @@ def test_the_module_is_0_21_0_and_still_protocol_19():
         sys.path.append(sys_path)
     from segqueue14 import PROTOCOL_VERSION
 
-    assert PROTOCOL_VERSION == 19
+    assert PROTOCOL_VERSION == 20
 
 
 def test_comparing_never_writes_a_submission_a_draft_or_a_decision():
@@ -656,4 +657,110 @@ def test_a_refused_release_shows_the_servers_message_and_keeps_the_case():
     handler = widget[widget.index("except SegQueueError as exc:"):]
     assert handler.split("return", 1)[0].strip().endswith("slicer.util.errorDisplay(str(exc))")
     assert widget.index("return", widget.index("except SegQueueError")) < widget.index(
-        'self.caseLabel.setText("No case open.")')
+        "self.caseLabel.setText(")
+
+
+# ------------------------------------------- "My submissions" (protocol 20)
+
+
+def _body(classname, name):
+    return ast.get_source_segment(_source(), _method(classname, name))
+
+
+def test_my_submissions_is_one_folded_line_in_the_case_section():
+    """Sleek: a collapsed group at the foot of the Case section, not a new top-level
+    section, hidden until a protocol-20 server is logged in to."""
+    build = _body("SegQueue14Widget", "_buildMySubmissions")
+    assert "ctk.ctkCollapsibleGroupBox()" in build
+    assert 'box.title = "My submissions"' in build
+    assert "box.collapsed = True" in build and "box.setVisible(False)" in build
+    assert "box.toggled.connect(self.onMySubmissionsToggled)" in build
+    assert "self.mySubmissionsMoreButton.clicked.connect(self.onMoreMySubmissions)" in build
+    assert ("self.refreshMySubmissionsButton.clicked.connect(self.onRefreshMySubmissions)"
+            in build)
+    assert '["Case", "Submitted (ET)", ""]' in build
+    case = _body("SegQueue14Widget", "_buildCaseSection")
+    assert "self._buildMySubmissions(layout)" in case
+    setup = _body("SegQueue14Widget", "setup")
+    assert "_buildMySubmissions" not in setup, "no new top-level section"
+
+
+def test_each_row_has_a_single_revise_disabled_with_the_reason():
+    fill = _body("SegQueue14Widget", "_fillMySubmissions")
+    assert fill.count('qt.QPushButton(') == 1 and '"Revise"' in fill
+    assert "button.setEnabled(enabled)" in fill and "button.setToolTip(tip)" in fill
+    assert "item.setToolTip(tip)" in fill
+    assert "self.onRevise(a)" in fill
+
+
+def test_the_section_is_hidden_on_a_server_too_old_for_it():
+    logic = _body("SegQueue14Logic", "supportsRecall")
+    assert "protocol.supports_recall(self.project.protocol_version)" in logic
+    assert "self.loggedIn" in logic
+    shown = _body("SegQueue14Widget", "_updateMySubmissionsVisible")
+    assert "self.logic.supportsRecall()" in shown
+    assert "self.mySubmissionsBox.setVisible(shown)" in shown
+    for name in ("onLogin", "onLogout", "onSubmit", "onRelease"):
+        assert "self._updateMySubmissionsVisible()" in _body("SegQueue14Widget", name), name
+    # The list is never asked of a server that does not have it.
+    assert "if not self.supportsRecall():" in _body("SegQueue14Logic", "mySubmissions")
+    assert "not self.logic.supportsRecall()" in _body("SegQueue14Widget",
+                                                       "_loadMySubmissions")
+    import sys
+
+    src = str(REPO / "src")
+    if src not in sys.path:
+        sys.path.append(src)
+    from segqueue14 import protocol
+
+    assert not protocol.supports_recall(19) and protocol.supports_recall(20)
+
+
+def test_revise_opens_the_case_from_the_read_and_shows_refusals_cleanly():
+    revise = _body("SegQueue14Widget", "onRevise")
+    assert "assignment = self.logic.recall(assignmentId)" in revise
+    handler = revise[revise.index("except SegQueueError as exc:"):]
+    assert handler.index("slicer.util.errorDisplay(str(exc))") < handler.index("return")
+    assert "self.onRefreshMySubmissions()" in handler.split("return", 1)[0]
+    # Opened through the ordinary path, which opens a reopened case from the
+    # annotator's own read (``start_from_own``).
+    assert revise.index("self._openAssignment(assignment)") > revise.index("return")
+    assert "start_from_own" in _body("SegQueue14Logic", "openCase")
+    assert "self.client.recall(assignmentId)" in _body("SegQueue14Logic", "recall")
+
+
+def test_releasing_a_recalled_case_says_the_read_goes_back():
+    release = _body("SegQueue14Widget", "onRelease")
+    assert 'getattr(self.logic.assignment, "recalled", False)' in release
+    assert "goes back for review exactly" in release
+
+
+def _sub(**kw):
+    import sys
+
+    src = str(REPO / "src")
+    if src not in sys.path:
+        sys.path.append(src)
+    from segqueue14 import protocol
+
+    row = dict(assignment_id="a", case_id="c", case_name="imagecas_0007",
+               state="submitted", submitted_at=None, can_recall=True)
+    row.update(kw)
+    return protocol.MySubmission(**row)
+
+
+def test_rows_show_the_case_the_eastern_time_and_why_not():
+    rows = _listing_namespace()["_mySubmissionRows"]([
+        # 2026-11-10 19:32 UTC is 14:32 EST.
+        _sub(submitted_at=1794339120.0),
+        _sub(case_name="", case_id="c9", can_recall=False,
+             reason="A reviewer is looking at this case now. Try again once they "
+                    "have finished."),
+        _sub(can_recall=False, reason=""),
+    ])
+    assert rows[0] == ("imagecas_0007", "2026-11-10 14:32 ET", True,
+                       "Take this case back and open it from what you submitted.")
+    assert rows[1][0] == "c9" and rows[1][1] == "--" and rows[1][2] is False
+    assert rows[1][3].startswith("A reviewer is looking at this case now")
+    assert rows[2][2] is False and rows[2][3] == "This case can't be revised now."
+    assert _listing_namespace()["_mySubmissionRows"]([]) == []

@@ -217,6 +217,9 @@ Useful buttons:
 
 - **Save draft** keeps your work so you can carry on later.
 - **Give this case back** returns a case you cannot finish.
+- **Discard changes and close** takes its place on a case you took back from **My
+  submissions** with **Revise**. Your submission goes back for review exactly as you
+  submitted it.
 
 Nothing is stored on your computer once a case is submitted.
 

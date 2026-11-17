@@ -177,7 +177,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        runner: [macos-14, macos-15-intel]
+        runner: [macos-15, macos-15-intel]
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 60
     steps:
@@ -248,7 +248,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        runner: [ubuntu-24.04, macos-14, macos-15-intel]
+        runner: [ubuntu-24.04, macos-15, macos-15-intel]
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 30
     env:
@@ -349,7 +349,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        runner: [macos-14, macos-15-intel, ubuntu-24.04]
+        runner: [macos-15, macos-15-intel, ubuntu-24.04]
         slicer: ["5.8.1", release, preview]
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 40

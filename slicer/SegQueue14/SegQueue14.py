@@ -121,7 +121,7 @@ from SegQueue14Lib import SegQueue14Error as SegQueueError
 
 #: Continues SegQueue's numbering (0.13.0 was the last 4-class release). The
 #: release tag is ``segqueue-v`` + this; bump it to publish.
-__version__ = "0.22.0"
+__version__ = "0.22.1"
 
 #: Where the module's help points.
 HELP_URL = "https://github.com/christianGRogers/Asclepius"
@@ -1930,6 +1930,28 @@ def _epochIso(seconds):
         return None
 
 
+def _releaseWording(assignment):
+    """``(button label, tooltip, confirmation)`` for the release button, for the
+    open ``assignment`` (or None). A case the annotator took back with Revise and
+    has not resubmitted (``recalled``) is not given back to the pool: releasing it
+    discards the changes and puts the submission back for review as it was. The
+    confirmation has one ``{}``, the case name.
+    """
+    if bool(getattr(assignment, "recalled", False)):
+        return (
+            "Discard changes and close",
+            "Discards the changes you made since you took this case back and closes "
+            "it. Your submission goes back for review exactly as you submitted it.",
+            "Discard your changes to '{}'?\n\nYour submission goes back for review "
+            "exactly as you submitted it.")
+    return (
+        "Give this case back",
+        "Returns the case to the pool for someone else. Your work on it is "
+        "discarded.",
+        "Give '{}' back to the pool?\n\nAnything you have segmented on it will be "
+        "discarded.")
+
+
 def _mySubmissionRows(rows):
     """"My submissions" rows (``protocol.MySubmission``) as ``(case, submitted in
     US Eastern time, Revise enabled, tooltip)``. A row that cannot be revised now
@@ -2902,10 +2924,10 @@ class SegQueue14Widget(ScriptedLoadableModuleWidget):
         self.saveButton.clicked.connect(self.onSaveDraft)
         row.addWidget(self.saveButton)
 
-        self.releaseButton = qt.QPushButton("Give this case back")
-        self.releaseButton.setToolTip(
-            "Returns the case to the pool for someone else. Your work on it is "
-            "discarded.")
+        # Its label and tooltip follow the open case: see _updateReleaseButton.
+        releaseText, releaseTip, _ = _releaseWording(None)
+        self.releaseButton = qt.QPushButton(releaseText)
+        self.releaseButton.setToolTip(releaseTip)
         self.releaseButton.clicked.connect(self.onRelease)
         row.addWidget(self.releaseButton)
         layout.addLayout(row)
@@ -4334,12 +4356,7 @@ class SegQueue14Widget(ScriptedLoadableModuleWidget):
         # A case taken back from "My submissions" is not the pool's to have: the
         # server puts the submitted read back as it was.
         recalled = bool(getattr(self.logic.assignment, "recalled", False))
-        question = (
-            "Stop revising '{}'?\n\nYour submission goes back for review exactly "
-            "as you submitted it; changes made since are discarded."
-            if recalled else
-            "Give '{}' back to the pool?\n\nAnything you have segmented on it "
-            "will be discarded.")
+        question = _releaseWording(self.logic.assignment)[2]
         if not slicer.util.confirmYesNoDisplay(
                 question.format(self.logic.assignment.case_name)):
             return
@@ -4379,8 +4396,19 @@ class SegQueue14Widget(ScriptedLoadableModuleWidget):
         self.nextButton.setEnabled(loggedIn and not hasCase)
         for button in (self.saveButton, self.submitButton, self.releaseButton):
             button.setEnabled(hasCase)
+        self._updateReleaseButton()
         self.editorBox.setEnabled(hasCase or reviewing)
         self.notesBox.setEnabled(hasCase)
+
+    def _updateReleaseButton(self):
+        """"Discard changes and close" while the open case is one recalled with
+        Revise and not yet resubmitted; "Give this case back" otherwise. Called
+        from ``_updateEnabled``, which every open, submit, release and logout ends
+        with."""
+        assignment = self.logic.assignment if self.logic is not None else None
+        text, tip, _ = _releaseWording(assignment)
+        self.releaseButton.setText(text)
+        self.releaseButton.setToolTip(tip)
 
 
 def _progressInto(bar):

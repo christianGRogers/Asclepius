@@ -1133,6 +1133,38 @@ def run_my_submissions():
               [a.assignment_id for a in opened] == ["a1"]
               and ("recall", "a1") in logic.client.calls, logic.client.calls)
 
+        # 0.22.1: while the recalled case is open the release button reads
+        # "Discard changes and close", and its question says the read goes back.
+        release = widget.releaseButton
+        check("  with nothing open the button reads 'Give this case back'",
+              release.text == "Give this case back", release.text)
+        logic.assignment = opened[0]
+        widget._updateEnabled()
+        asked = []
+        realConfirm = slicer.util.confirmYesNoDisplay
+        slicer.util.confirmYesNoDisplay = lambda text, *a, **k: asked.append(text) or False
+        try:
+            release.click()
+        finally:
+            slicer.util.confirmYesNoDisplay = realConfirm
+        check("  a recalled case reads 'Discard changes and close'",
+              release.text == "Discard changes and close" and release.enabled
+              and "goes back for review exactly" in release.toolTip,
+              (release.text, release.toolTip))
+        check("  and asks to discard the changes, keeping the case when refused",
+              asked == ["Discard your changes to 'imagecas_0001'?\n\nYour submission "
+                        "goes back for review exactly as you submitted it."]
+              and logic.assignment is opened[0], asked)
+        logic.assignment = _Assignment(assignment_id="a9", case_name="other",
+                                       recalled=False)
+        widget._updateEnabled()
+        check("  an ordinary case reads 'Give this case back'",
+              release.text == "Give this case back", release.text)
+        logic.assignment = None
+        widget._updateEnabled()
+        check("  and so does nothing open, after a resubmit or close",
+              release.text == "Give this case back", release.text)
+
         widget.mySubmissionsMoreButton.click()
         check("  Show more appends the next page", table.rowCount == 6
               and ("list", 3) in logic.client.calls, table.rowCount)

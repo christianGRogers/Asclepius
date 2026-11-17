@@ -1024,7 +1024,6 @@ def run_my_submissions():
     older server; opened, one row per submission with a single Revise, disabled with
     the server's reason; Revise opens the recalled case, and a refusal is the
     server's sentence. Saves a screenshot of the panel beside the report."""
-    import qt
 
     import slicer
 

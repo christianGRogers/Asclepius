@@ -1050,7 +1050,7 @@ def run_my_submissions():
                 assignment_id="a{}".format(i), case_id="c{}".format(i),
                 case_name="imagecas_{:04d}".format(i), state="submitted",
                 # 2026-11-10 19:32 UTC, an hour apart going back: 14:32 EST first.
-                submitted_at=1794339120.0 - 3600 * i, can_recall=i != 2,
+                submitted_at=1794339120.0 - 3600 * (i - 1), can_recall=i != 2,
                 reason="" if i != 2 else reviewing,
                 reason_code="" if i != 2 else protocol.ERR_RECALL_REVIEWING)
                 for i in range(1 + offset, 4 + offset)]
@@ -1100,7 +1100,8 @@ def run_my_submissions():
               [table.item(0, c).text() for c in (0, 1)])
         check("  a row a reviewer holds is disabled, with the reason as its tooltip",
               buttons[0].enabled and not buttons[1].enabled
-              and buttons[1].toolTip == reviewing and table.item(1, 0).toolTip() == reviewing,
+              # Qt may hand a widget's tooltip back as rich text: <p>...</p>.
+              and reviewing in buttons[1].toolTip and table.item(1, 0).toolTip() == reviewing,
               {"enabled": [b.enabled for b in buttons],
                "own": [b.isEnabledTo(table) for b in buttons],
                "table": table.enabled, "box": box.enabled,

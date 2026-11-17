@@ -45,7 +45,7 @@ def test_every_request_declares_the_segqueue14_protocol():
     session = FakeSession()
     makeClient(session).whoami()
     headers = session.calls[0]["headers"]
-    assert headers[protocol.PROTOCOL_HEADER] == str(PROTOCOL_VERSION) == "19"
+    assert headers[protocol.PROTOCOL_HEADER] == str(PROTOCOL_VERSION) == "20"
     assert headers[protocol.CLIENT_VERSION_HEADER] == "14.0"
 
 
@@ -380,3 +380,58 @@ def test_reviewer_downloads_write_the_bytes_and_return_the_count(tmp_path, call)
     assert written == len(payload) and dest.read_bytes() == payload
     assert seen[-1] == (len(payload), len(payload))
     assert session.calls[0]["stream"] is True
+
+
+# ------------------------------------------- "My submissions" (protocol 20)
+
+
+def _row(**extra):
+    row = {"assignmentId": "a7", "caseId": "c7", "caseName": "imagecas_0007",
+           "state": "submitted", "submittedAt": 1794243600.0, "canRecall": True,
+           "reason": "", "reasonCode": ""}
+    row.update(extra)
+    return row
+
+
+def test_my_submissions_asks_its_own_route_with_a_page_and_parses_the_rows():
+    session = FakeSession({("GET", "/segqueue14/mine/submissions"): FakeResponse(200, {
+        "items": [_row(), _row(assignmentId="a8", canRecall=False,
+                               reason=protocol.RECALL_MESSAGES["recall_reviewing"],
+                               reasonCode="recall_reviewing", state="under_review")],
+        "total": 31, "limit": 20, "offset": 20})})
+    rows, total = makeClient(session).mySubmissions(offset=20)
+    call = session.calls[0]
+    assert call["url"].endswith("/api/v1/segqueue14/mine/submissions")
+    assert call["params"] == {"limit": protocol.MY_SUBMISSIONS_PAGE, "offset": 20}
+    assert total == 31
+    assert [r.assignment_id for r in rows] == ["a7", "a8"]
+    assert rows[0].can_recall and rows[0].submitted_at == 1794243600.0
+    assert not rows[1].can_recall and rows[1].reason.startswith("A reviewer is looking")
+    assert rows[1].reason_code == "recall_reviewing"
+
+
+def test_recall_posts_with_the_protocol_and_returns_the_case_to_open():
+    session = FakeSession({("POST", "/segqueue14/assignment/a7/recall"): FakeResponse(
+        200, _assignment(assignmentId="a7", startFromOwn=True, recalled=True))})
+    info = makeClient(session).recall("a7")
+    call = session.calls[0]
+    assert call["params"] == {"clientProtocol": PROTOCOL_VERSION}
+    assert call["headers"][protocol.PROTOCOL_HEADER] == str(PROTOCOL_VERSION)
+    assert info.assignment_id == "a7" and info.start_from_own and info.recalled
+
+
+@pytest.mark.parametrize("code, status", [
+    ("recall_reviewing", 409), ("recall_holding", 409), ("recall_approved", 409),
+    ("recall_benchmark", 403), ("recall_not_yours", 403)])
+def test_every_recall_refusal_is_the_servers_sentence_unchanged(code, status):
+    message = protocol.RECALL_MESSAGES[code]
+    session = FakeSession({("POST", "/recall"): girderError(code, message, status=status)})
+    with pytest.raises(SegQueue14Error) as err:
+        makeClient(session).recall("a7")
+    assert str(err.value) == message and err.value.code == code
+
+
+def test_an_old_server_assignment_reads_as_not_recalled():
+    info = protocol.AssignmentInfo14.from_dict(_assignment())
+    assert info.recalled is False
+    assert protocol.AssignmentInfo14.from_dict(info.to_dict()).recalled is False

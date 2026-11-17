@@ -23,7 +23,7 @@ no Slicer and no server.
 
 import json
 import os
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any, Callable, Dict, List, Optional, Tuple
 
 import requests
 
@@ -310,6 +310,30 @@ class SegQueue14Client:
         # left at ``destPath`` would be reused on every reopen (#64).
         self._saveBody(response, destPath, progress, reportTotal=False)
         return destPath
+
+    def mySubmissions(self, limit: int = 0, offset: int = 0
+                      ) -> Tuple[List['protocol.MySubmission'], int]:
+        """My submitted, not yet approved reads, newest first: ``(rows, total)``.
+
+        Protocol 20; ask only a server whose ``/project`` says it has it
+        (``protocol.supports_recall``).
+        """
+        data = self._json('GET', protocol.path(protocol.MY_SUBMISSIONS),
+                          params={'limit': int(limit or protocol.MY_SUBMISSIONS_PAGE),
+                                  'offset': int(offset or 0)}) or {}
+        rows = [protocol.MySubmission.from_dict(r) for r in data.get('items') or []]
+        return rows, int(data.get('total', len(rows)) or 0)
+
+    def recall(self, assignmentId: str) -> 'protocol.AssignmentInfo14':
+        """Take one of my submitted reads back for revision; the assignment to open.
+
+        A refusal (a reviewer has it, it was approved, I hold another case...)
+        raises ``SegQueue14Error`` with the server's sentence and ``code``.
+        """
+        data = self._json('POST', protocol.path(protocol.CASE_RECALL,
+                                                assignment_id=assignmentId),
+                          params={'clientProtocol': PROTOCOL_VERSION})
+        return protocol.AssignmentInfo14.from_dict(data)
 
     def heartbeat(self, assignmentId: str) -> bool:
         """Best-effort. A failed heartbeat must never interrupt segmenting."""

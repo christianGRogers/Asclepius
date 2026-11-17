@@ -23,6 +23,11 @@ having a separate contract:
   uploaded file is. ``class-stack-nrrd/1`` keeps every class whole, overlaps
   included; a submission without one is an old single label volume
   (``labelmap``), which stays readable everywhere.
+* **"My submissions"** (protocol 20): ``mine/submissions`` lists the annotator's own
+  submitted, not yet approved reads, and ``assignment/{id}/recall`` takes one back for
+  revision (``recall_blocker`` says whether and why not). Modules 17-19 never call
+  them; a protocol-20 module hides the section on an older server
+  (``supports_recall``).
 * **``missing_required``** -- D13's old submit refusal. No longer raised since
   #270 (project lead, 2026-11-02); the code is kept so an older module still
   recognises it.
@@ -79,6 +84,11 @@ EXTENDED_CLASSES_PROTOCOL = 18
 #: (#315). An older module is refused such a case (``check_reopen_reader``).
 REOPEN_PROTOCOL = 19
 
+#: The first protocol whose module lists the annotator's own submissions and
+#: recalls one for revision ("My submissions"). A module talking to an older server
+#: hides the section (``supports_recall``); an older module never calls the routes.
+RECALL_PROTOCOL = 20
+
 #: Headers. Distinct from the live ones so a proxy log says which module spoke.
 CLIENT_VERSION_HEADER = "X-SegQueue14-Client"
 PROTOCOL_HEADER = "X-SegQueue14-Protocol"
@@ -95,6 +105,10 @@ CASE_NOTES = "case/{case_id}/notes"
 CASE_SUBMIT = "assignment/{assignment_id}/submit"
 CASE_RELEASE = "assignment/{assignment_id}/release"
 HEARTBEAT = "assignment/{assignment_id}/heartbeat"
+#: The annotator's own submitted, not yet approved reads, newest first (protocol 20).
+MY_SUBMISSIONS = "mine/submissions"
+#: Take one of them back for revision (protocol 20).
+CASE_RECALL = "assignment/{assignment_id}/recall"
 REVIEW_QUEUE = "review/queue"
 REVIEW_CLAIM = "review/{submission_id}/claim"
 REVIEW_VERDICT = "review/{submission_id}/verdict"
@@ -132,6 +146,92 @@ ERR_UPDATE_TO_REVIEW = "update_to_review"
 #: HTTP 426 from an annotator route when a module older than protocol 19 opens or
 #: submits a case reopened for the annotator's own revision (#315).
 ERR_UPDATE_TO_REVISE = "update_to_revise"
+
+#: Refusals of /recall (protocol 20). Each comes with a sentence for the annotator,
+#: the same one the list shows as the reason a row cannot be revised.
+ERR_RECALL_NOT_YOURS = "recall_not_yours"
+ERR_RECALL_APPROVED = "recall_approved"
+ERR_RECALL_REVIEWING = "recall_reviewing"
+ERR_RECALL_BENCHMARK = "recall_benchmark"
+ERR_RECALL_HOLDING = "recall_holding"
+ERR_RECALL_NOT_SUBMITTED = "recall_not_submitted"
+ERR_UPDATE_TO_RECALL = "update_to_recall"
+
+RECALL_MESSAGES = {
+    ERR_RECALL_NOT_YOURS: "That case is not one of your submissions.",
+    ERR_RECALL_APPROVED: "This read has already been approved, so it can't be revised.",
+    ERR_RECALL_REVIEWING: "A reviewer is looking at this case now. Try again once "
+                          "they have finished.",
+    ERR_RECALL_BENCHMARK: "The benchmark case can't be revised once it is submitted.",
+    ERR_RECALL_HOLDING: "Finish or release your current case first.",
+    ERR_RECALL_NOT_SUBMITTED: "This case is not waiting for review any more, so there "
+                              "is nothing to revise. Refresh the list.",
+}
+
+#: HTTP status for each refusal.
+RECALL_STATUS = {
+    ERR_RECALL_NOT_YOURS: 403,
+    ERR_RECALL_APPROVED: 409,
+    ERR_RECALL_REVIEWING: 409,
+    ERR_RECALL_BENCHMARK: 403,
+    ERR_RECALL_HOLDING: 409,
+    ERR_RECALL_NOT_SUBMITTED: 409,
+}
+
+#: Rows per page of /mine/submissions: the default, and the most one call returns.
+MY_SUBMISSIONS_PAGE = 20
+MY_SUBMISSIONS_MAX_PAGE = 100
+
+
+def recall_blocker(state: str, reviewer_claimed: bool = False, benchmark: bool = False,
+                   holding_open: bool = False, approved_state: str = "approved",
+                   recallable_states: tuple = ("submitted", "under_review")
+                   ) -> Optional[str]:
+    """Why an annotator's own read cannot be recalled now, as an ``ERR_RECALL_*``
+    code, or ``None`` if it can.
+
+    One rule for the list (the disabled row's tooltip) and for /recall (the
+    refusal), so the two can never disagree. Checked in the order an annotator
+    can do something about: what the read is first (approved, benchmark, not
+    submitted), then what is happening to it (a reviewer has it), then what they
+    hold themselves.
+    """
+    if state == approved_state:
+        return ERR_RECALL_APPROVED
+    if benchmark:
+        return ERR_RECALL_BENCHMARK
+    if state not in recallable_states:
+        return ERR_RECALL_NOT_SUBMITTED
+    if reviewer_claimed:
+        return ERR_RECALL_REVIEWING
+    if holding_open:
+        return ERR_RECALL_HOLDING
+    return None
+
+
+def supports_recall(server_protocol: Optional[Any]) -> bool:
+    """Whether a server (by the protocol ``/project`` reports) has "My submissions"."""
+    version = _version(server_protocol)
+    return version is not None and version >= RECALL_PROTOCOL
+
+
+def update_to_recall_message(sent: Optional[int]) -> str:
+    """The refusal a module older than protocol 20 gets from /recall."""
+    return ("Update SegQueue14 to revise a submitted case: install the latest "
+            "SegQueue14 (Check for updates) and restart Slicer. (Module protocol "
+            f"{sent}; revising needs {RECALL_PROTOCOL}.)")
+
+
+def check_recall_client(client_protocol: Optional[Any]) -> None:
+    """Raise ``ProtocolError`` unless the module speaks ``RECALL_PROTOCOL``."""
+    version = _version(client_protocol)
+    if version is not None and version >= RECALL_PROTOCOL:
+        return
+    raise ProtocolError(
+        ERR_UPDATE_TO_RECALL, update_to_recall_message(version),
+        {"minProtocol": RECALL_PROTOCOL, "serverProtocol": PROTOCOL_VERSION,
+         "module": "SegQueue14"})
+
 
 # --------------------------------------------------------- case asset kinds
 
@@ -186,9 +286,13 @@ class AssignmentInfo14(AssignmentInfo):
     #: Read in extended mode (D47 Q6): the module turns the extended classes on and
     #: asks the annotator to use them. Optional; a module before 0.20.0 ignores it.
     extended_mode: bool = False
+    #: Recalled by the annotator from "My submissions" (protocol 20) and not yet
+    #: resubmitted: releasing it puts the submitted read back, unchanged.
+    recalled: bool = False
 
     def to_dict(self) -> dict:
         data = super().to_dict()
+        data["recalled"] = self.recalled
         data["hasPrelabel"] = self.has_prelabel
         data["prelabelVersion"] = self.prelabel_version
         data["startFromOwn"] = self.start_from_own
@@ -204,6 +308,51 @@ class AssignmentInfo14(AssignmentInfo):
             prelabel_version=str(data.get("prelabelVersion", "") or ""),
             start_from_own=bool(data.get("startFromOwn", False)),
             extended_mode=bool(data.get("extendedMode", False)),
+            recalled=bool(data.get("recalled", False)),
+        )
+
+
+@dataclass
+class MySubmission:
+    """One row of "My submissions" (protocol 20): an annotator's own submitted,
+    not yet approved pool read. Says nothing about the read's kind or scores."""
+
+    assignment_id: str = ""
+    case_id: str = ""
+    case_name: str = ""
+    #: ``submitted`` or ``under_review``.
+    state: str = ""
+    #: Unix seconds, UTC; the module shows it in US Eastern time.
+    submitted_at: Optional[float] = None
+    can_recall: bool = False
+    #: Why not, when ``can_recall`` is false: one of ``RECALL_MESSAGES``.
+    reason: str = ""
+    reason_code: str = ""
+
+    def to_dict(self) -> dict:
+        return {
+            "assignmentId": self.assignment_id,
+            "caseId": self.case_id,
+            "caseName": self.case_name,
+            "state": self.state,
+            "submittedAt": self.submitted_at,
+            "canRecall": self.can_recall,
+            "reason": self.reason,
+            "reasonCode": self.reason_code,
+        }
+
+    @classmethod
+    def from_dict(cls, data: dict) -> MySubmission:
+        submitted = data.get("submittedAt")
+        return cls(
+            assignment_id=str(data.get("assignmentId", "") or ""),
+            case_id=str(data.get("caseId", "") or ""),
+            case_name=str(data.get("caseName", "") or ""),
+            state=str(data.get("state", "") or ""),
+            submitted_at=None if submitted is None else float(submitted),
+            can_recall=bool(data.get("canRecall", False)),
+            reason=str(data.get("reason", "") or ""),
+            reason_code=str(data.get("reasonCode", "") or ""),
         )
 
 

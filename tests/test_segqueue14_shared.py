@@ -162,7 +162,8 @@ def test_the_current_client_is_accepted():
 def test_the_0_17_module_is_still_accepted():
     # D44: protocol 18 adds the extended classes; 0.17.x (protocol 17) keeps working.
     # #315: protocol 19 opens a reopened case from the annotator's own read.
-    assert PROTOCOL_VERSION == 19
+    # Protocol 20: "My submissions" (recall); 17-19 keep working.
+    assert PROTOCOL_VERSION == 20
     assert protocol.MIN_CLIENT_PROTOCOL == 17
     protocol.check_client_protocol(17)
     protocol.check_client_protocol("17")
@@ -650,3 +651,52 @@ def test_a_reopened_case_needs_protocol_19_and_old_info_still_parses():
     data = info.to_dict()
     del data["startFromOwn"]
     assert protocol.AssignmentInfo14.from_dict(data).start_from_own is False
+
+
+# ------------------------------------------- "My submissions" (protocol 20)
+
+
+def test_recall_needs_a_protocol_20_server_and_module():
+    assert protocol.RECALL_PROTOCOL == 20 == PROTOCOL_VERSION
+    for old in (None, "", "x", 17, 18, 19, "19"):
+        assert not protocol.supports_recall(old)
+    assert protocol.supports_recall(20) and protocol.supports_recall("21")
+    protocol.check_recall_client(20)
+    for old in (None, 19, "18"):
+        with pytest.raises(protocol.ProtocolError) as err:
+            protocol.check_recall_client(old)
+        assert err.value.code == protocol.ERR_UPDATE_TO_RECALL
+        assert "Update SegQueue14" in str(err.value)
+
+
+@pytest.mark.parametrize("state, kw, code", [
+    ("submitted", {}, None),
+    ("under_review", {}, None),                       # no reviewer holds it
+    ("under_review", {"reviewer_claimed": True}, "recall_reviewing"),
+    ("approved", {}, "recall_approved"),
+    ("approved", {"benchmark": True, "holding_open": True}, "recall_approved"),
+    ("submitted", {"benchmark": True}, "recall_benchmark"),
+    ("submitted", {"holding_open": True}, "recall_holding"),
+    ("under_review", {"reviewer_claimed": True, "holding_open": True}, "recall_reviewing"),
+    ("assigned", {}, "recall_not_submitted"),
+    ("released", {}, "recall_not_submitted"),
+])
+def test_one_rule_says_whether_and_why_a_read_can_be_recalled(state, kw, code):
+    assert protocol.recall_blocker(state, **kw) == code
+    if code:
+        assert protocol.RECALL_MESSAGES[code] and protocol.RECALL_STATUS[code] in (403, 409)
+
+
+def test_the_refusal_sentences_are_the_ones_the_lead_asked_for():
+    assert protocol.RECALL_MESSAGES["recall_reviewing"].startswith(
+        "A reviewer is looking at this case now")
+    assert protocol.RECALL_MESSAGES["recall_holding"] == \
+        "Finish or release your current case first."
+
+
+def test_a_my_submissions_row_round_trips():
+    row = protocol.MySubmission(assignment_id="a", case_id="c", case_name="n",
+                                state="submitted", submitted_at=1.5, can_recall=False,
+                                reason="why", reason_code="recall_holding")
+    assert protocol.MySubmission.from_dict(row.to_dict()) == row
+    assert protocol.MySubmission.from_dict({}).submitted_at is None

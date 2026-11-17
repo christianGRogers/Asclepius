@@ -121,7 +121,7 @@ from SegQueue14Lib import SegQueue14Error as SegQueueError
 
 #: Continues SegQueue's numbering (0.13.0 was the last 4-class release). The
 #: release tag is ``segqueue-v`` + this; bump it to publish.
-__version__ = "0.21.0"
+__version__ = "0.22.0"
 
 #: Where the module's help points.
 HELP_URL = "https://github.com/christianGRogers/Asclepius"
@@ -316,6 +316,23 @@ class SegQueue14Logic(ScriptedLoadableModuleLogic):
     def requestNext(self):
         """Ask for a case. Returns an ``AssignmentInfo`` or None if none is free."""
         return self.client.nextCase()
+
+    def supportsRecall(self):
+        """Whether the server has "My submissions" (protocol 20). An older server
+        reports an older protocol at login, and the section stays hidden."""
+        return bool(self.loggedIn and self.project is not None
+                    and protocol.supports_recall(self.project.protocol_version))
+
+    def mySubmissions(self, offset=0):
+        """``(rows, total)``: my submitted, not yet approved reads, newest first."""
+        if not self.supportsRecall():
+            return [], 0
+        return self.client.mySubmissions(offset=offset)
+
+    def recall(self, assignmentId):
+        """Take one of my submitted reads back to revise; the assignment to open.
+        Raises ``SegQueueError`` with the server's sentence when it is refused."""
+        return self.client.recall(assignmentId)
 
     def openCase(self, assignment, progress=None):
         """Fetch, verify and load a case, then set the scene up to work on it.
@@ -1900,6 +1917,34 @@ def _easternTime(value):
     return local.strftime("%Y-%m-%d %H:%M") + " ET"
 
 
+def _epochIso(seconds):
+    """Unix seconds from the server as an ISO UTC timestamp, or None."""
+    import datetime
+
+    if seconds is None:
+        return None
+    try:
+        return datetime.datetime.fromtimestamp(
+            float(seconds), datetime.timezone.utc).isoformat()
+    except (TypeError, ValueError, OverflowError, OSError):
+        return None
+
+
+def _mySubmissionRows(rows):
+    """"My submissions" rows (``protocol.MySubmission``) as ``(case, submitted in
+    US Eastern time, Revise enabled, tooltip)``. A row that cannot be revised now
+    carries the server's reason as its tooltip; one that can says what Revise does.
+    """
+    shown = []
+    for row in rows:
+        enabled = bool(row.can_recall)
+        tip = ("Take this case back and open it from what you submitted."
+               if enabled else (row.reason or "This case can't be revised now."))
+        shown.append((row.case_name or row.case_id, _easternTime(_epochIso(row.submitted_at)),
+                      enabled, tip))
+    return shown
+
+
 def _newestFirst(rows):
     """``(case, assignment)`` rows by submission time, newest first; none last.
 
@@ -2542,9 +2587,139 @@ class SegQueue14Widget(ScriptedLoadableModuleWidget):
         layout.addWidget(self.notesBox)
         self._renderNotes([])
 
+        self._buildMySubmissions(layout)
+
         self.progressBar = qt.QProgressBar()
         self.progressBar.setVisible(False)
         layout.addWidget(self.progressBar)
+
+    def _buildMySubmissions(self, layout):
+        """"My submissions" (protocol 20): one folded line at the foot of the Case
+        section, and nothing more until it is opened. Opened, it lists the reads
+        this annotator submitted that are not approved yet, newest first, each with
+        a single Revise. Hidden when logged out and when the server is too old for
+        it, so nobody is shown a list that can only fail.
+        """
+        box = ctk.ctkCollapsibleGroupBox()
+        box.title = "My submissions"
+        box.collapsed = True
+        box.setVisible(False)
+        box.setToolTip(
+            "Your submitted cases that have not been approved yet. Revise takes one "
+            "back and opens it from what you submitted.")
+        self.mySubmissionsBox = box
+        inner = qt.QVBoxLayout(box)
+        inner.setContentsMargins(6, 4, 6, 4)
+        inner.setSpacing(4)
+
+        self.mySubmissionsTable = qt.QTableWidget()
+        self.mySubmissionsTable.setColumnCount(3)
+        self.mySubmissionsTable.setHorizontalHeaderLabels(
+            ["Case", "Submitted (ET)", ""])
+        _tidyTable(self.mySubmissionsTable, [120, 124, 64], 90)
+        self.mySubmissionsTable.setSelectionMode(qt.QAbstractItemView.NoSelection)
+        inner.addWidget(self.mySubmissionsTable)
+
+        footer = qt.QHBoxLayout()
+        self.mySubmissionsStatus = _muted(qt.QLabel(""))
+        footer.addWidget(self.mySubmissionsStatus, 1)
+        self.mySubmissionsMoreButton = _link(qt.QPushButton("Show more"))
+        self.mySubmissionsMoreButton.setToolTip("Load the next, older submissions.")
+        self.mySubmissionsMoreButton.clicked.connect(self.onMoreMySubmissions)
+        self.mySubmissionsMoreButton.setVisible(False)
+        footer.addWidget(self.mySubmissionsMoreButton)
+        self.refreshMySubmissionsButton = _link(qt.QPushButton("Refresh"))
+        self.refreshMySubmissionsButton.setToolTip("Reload the list.")
+        self.refreshMySubmissionsButton.clicked.connect(self.onRefreshMySubmissions)
+        footer.addWidget(self.refreshMySubmissionsButton)
+        inner.addLayout(footer)
+
+        # Fetched when opened, not at login: folded, it costs nothing.
+        box.toggled.connect(self.onMySubmissionsToggled)
+        self._mySubmissions = []
+        self._mySubmissionsTotal = 0
+        layout.addWidget(box)
+
+    def _updateMySubmissionsVisible(self):
+        """Shown only to a logged-in user on a server with protocol 20."""
+        shown = self.logic is not None and self.logic.supportsRecall()
+        self.mySubmissionsBox.setVisible(shown)
+        if not shown:
+            self._mySubmissions, self._mySubmissionsTotal = [], 0
+            self._fillMySubmissions()
+        elif not self.mySubmissionsBox.collapsed:
+            self.onRefreshMySubmissions()
+
+    def onMySubmissionsToggled(self, expanded):
+        if expanded:
+            self.onRefreshMySubmissions()
+
+    def onRefreshMySubmissions(self):
+        self._loadMySubmissions(append=False)
+
+    def onMoreMySubmissions(self):
+        self._loadMySubmissions(append=True)
+
+    def _loadMySubmissions(self, append=False):
+        if self.logic is None or not self.logic.supportsRecall():
+            return
+        offset = len(self._mySubmissions) if append else 0
+        try:
+            with _busy():
+                rows, total = self.logic.mySubmissions(offset=offset)
+        except SegQueueError as exc:
+            self.mySubmissionsStatus.setText("Could not load the list.")
+            self.mySubmissionsStatus.setToolTip(str(exc))
+            return
+        self._mySubmissions = (self._mySubmissions if append else []) + list(rows)
+        self._mySubmissionsTotal = total
+        self._fillMySubmissions()
+
+    def _fillMySubmissions(self):
+        table = self.mySubmissionsTable
+        shown = _mySubmissionRows(self._mySubmissions)
+        table.setRowCount(len(shown))
+        for row, (entry, cells) in enumerate(zip(self._mySubmissions, shown)):
+            name, when, enabled, tip = cells
+            for column, text in enumerate((name, when)):
+                item = qt.QTableWidgetItem(text)
+                item.setToolTip(tip)
+                if not enabled:
+                    item.setForeground(qt.QBrush(qt.QColor(_themeColours()["muted"])))
+                table.setItem(row, column, item)
+            button = _link(qt.QPushButton("Revise"))
+            button.setEnabled(enabled)
+            button.setToolTip(tip)
+            button.clicked.connect(
+                lambda _checked=False, a=entry.assignment_id: self.onRevise(a))
+            table.setCellWidget(row, 2, button)
+        if not shown:
+            self.mySubmissionsStatus.setText("Nothing waiting for review.")
+        else:
+            self.mySubmissionsStatus.setText(
+                "{} of {}".format(len(shown), self._mySubmissionsTotal)
+                if self._mySubmissionsTotal > len(shown) else "")
+        self.mySubmissionsStatus.setToolTip("")
+        self.mySubmissionsMoreButton.setVisible(
+            self._mySubmissionsTotal > len(shown))
+
+    def onRevise(self, assignmentId):
+        """Take the read back and open it from what was submitted. A refusal (a
+        reviewer has it now, it was approved, another case is open) is the
+        server's own sentence, and the list is reloaded to show why."""
+        if self.logic.assignment is not None:
+            slicer.util.errorDisplay(
+                protocol.RECALL_MESSAGES[protocol.ERR_RECALL_HOLDING])
+            return
+        try:
+            with _busy():
+                assignment = self.logic.recall(assignmentId)
+        except SegQueueError as exc:
+            slicer.util.errorDisplay(str(exc))
+            self.onRefreshMySubmissions()
+            return
+        self._openAssignment(assignment)
+        self.onRefreshMySubmissions()
 
     def _buildEditorSection(self):
         box = ctk.ctkCollapsibleButton()
@@ -3922,6 +4097,7 @@ class SegQueue14Widget(ScriptedLoadableModuleWidget):
         self.loginBox.collapsed = True
 
         self.reviewBox.setVisible(self.logic.isReviewer())
+        self._updateMySubmissionsVisible()
         self._updateEnabled()
         self._offerResume()
 
@@ -3938,6 +4114,7 @@ class SegQueue14Widget(ScriptedLoadableModuleWidget):
         self._clearNotes()
         self.reworkLabel.setVisible(False)
         self.reviewBox.setVisible(False)
+        self._updateMySubmissionsVisible()
         self._bindEditor(None, None)
         self._loadExtendedSetting("")
         self._updateEnabled()
@@ -4149,13 +4326,22 @@ class SegQueue14Widget(ScriptedLoadableModuleWidget):
         self.reworkLabel.setVisible(False)
         self._bindEditor(None, None)
         self._updateEnabled()
+        self._updateMySubmissionsVisible()
 
     def onRelease(self):
         if self.logic.assignment is None:
             return
+        # A case taken back from "My submissions" is not the pool's to have: the
+        # server puts the submitted read back as it was.
+        recalled = bool(getattr(self.logic.assignment, "recalled", False))
+        question = (
+            "Stop revising '{}'?\n\nYour submission goes back for review exactly "
+            "as you submitted it; changes made since are discarded."
+            if recalled else
+            "Give '{}' back to the pool?\n\nAnything you have segmented on it "
+            "will be discarded.")
         if not slicer.util.confirmYesNoDisplay(
-                "Give '{}' back to the pool?\n\nAnything you have segmented on it "
-                "will be discarded.".format(self.logic.assignment.case_name)):
+                question.format(self.logic.assignment.case_name)):
             return
         with _busy():
             try:
@@ -4163,11 +4349,14 @@ class SegQueue14Widget(ScriptedLoadableModuleWidget):
             except SegQueueError as exc:
                 slicer.util.errorDisplay(str(exc))
                 return
-        self.caseLabel.setText("No case open.")
+        self.caseLabel.setText(
+            "Revision withdrawn; your submission is back for review."
+            if recalled else "No case open.")
         self._clearNotes()
         self.reworkLabel.setVisible(False)
         self._bindEditor(None, None)
         self._updateEnabled()
+        self._updateMySubmissionsVisible()
 
     # --------------------------------------------------------------- review
 

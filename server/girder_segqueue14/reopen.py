@@ -108,8 +108,13 @@ def _reviewer(assignment):
     return (reviewer or {}).get('login') or 'a reviewer'
 
 
-def reopenOne(assignment, submission, policy=None):
-    """Reopen one assignment. Returns it, or ``None`` if its state moved meanwhile."""
+def reopenOne(assignment, submission, policy=None, note=NOTE_TEXT, **extra):
+    """Reopen one assignment. Returns it, or ``None`` if its state moved meanwhile.
+
+    The annotator's own recall from the module (``recall.py``) comes through here
+    too, with its own ``note`` and ``extra`` fields for the assignment, so an admin
+    reopen and a recall can never treat the read differently.
+    """
     from .models import Assignment14, Note14, Submission14
     from .models.submission import ANNOTATOR
 
@@ -125,12 +130,12 @@ def reopenOne(assignment, submission, policy=None):
         reopened = Assignment14().transition(
             assignment, st.REOPEN, policy=policy,
             startFileId=submission['fileId'], startSubmissionId=submission['_id'],
-            reviewerId=None, needsReview=False)
+            reviewerId=None, needsReview=False, **extra)
     except st.TransitionError:
         Submission14().collection.update_many(
             {'_id': {'$in': marked}, 'reopenedAt': now}, {'$set': {'reopenedAt': None}})
         return None
-    Note14().systemNote(assignment['caseId'], NOTE_TEXT)
+    Note14().systemNote(assignment['caseId'], note)
     return reopened
 
 

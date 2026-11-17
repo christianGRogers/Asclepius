@@ -25,6 +25,7 @@ from segqueue import states as st
 from .models import Assignment14 as Assignment
 from .models import Case14 as Case
 from .models.assignment import reclaimReason
+from .recall import SWEEP_NOTE_TEXT, isRecalled, undoRecall
 from .settings import getPolicy
 from .utils import incomingFolder
 
@@ -72,6 +73,16 @@ def sweep(dryRun=False, policy=None, now=None):
             'userId': str(assignment['userId']),
             'reason': reason,
         }
+        if isRecalled(assignment):
+            # Recalled by its annotator from "My submissions" and never finished:
+            # their submitted read goes back as it was rather than the case to the
+            # pool, so a recall can never cost the read (the D48 lesson).
+            record['restored'] = True
+            if not dryRun and undoRecall(assignment, note=SWEEP_NOTE_TEXT,
+                                         why=reason) is None:
+                continue
+            released.append(record)
+            continue
         if dryRun:
             released.append(record)
             continue

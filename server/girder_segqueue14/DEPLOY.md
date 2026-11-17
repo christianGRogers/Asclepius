@@ -493,6 +493,29 @@ when it opens or submits such a case; nothing else changes for it. The step need
 the plugin installed from a `main` that has it (the `install` step):
 `segqueue14-reopen` is a new entry point.
 
+## Annotators revising their own reads: "My submissions" (plugin 0.6.0)
+
+No step to run: the self-service form of the reopen above. SegQueue14 **0.22.0**
+(protocol 20) has a folded *My submissions* line in the Case section listing the
+annotator's own reads that are `submitted` or `under_review` (never approved ones),
+newest first, each with one *Revise* (`GET /segqueue14/mine/submissions`,
+`POST /segqueue14/assignment/:id/recall`, `recall.py`). Revise reopens the read
+through the same `reopenOne` as `segqueue14-reopen`: the old submission is marked
+`reopenedAt` and leaves the export, quality report and pair scoring until the
+resubmission, the lease is fresh with no heartbeat (#341), the case's `activeCount`
+does not move, and the case thread gets a note naming no login.
+
+Refused (and shown disabled, with the reason, in the list): someone else's
+assignment, an approved read, the benchmark (D43), a read a reviewer has claimed
+("A reviewer is looking at this case now."), and while the annotator holds another
+open case ("Finish or release your current case first."). A reviewer's claim and a
+recall at the same moment are settled by the guarded state update: one wins, the
+other is refused. A recall never costs the read: *Release* on a recalled case that
+was not resubmitted puts the submitted read back exactly as it was (state, review
+flags, `reopenedAt` cleared), and the sweep does the same if the fresh lease runs
+out. Deploy the server before the module reaches `main`: a 0.22.0 module on an older
+server hides the section; modules 0.17-0.21 never call the new routes.
+
 ## Extended reads scored before D47: `rescore-extended`
 
 `segqueue14-score --rescore-extended` (#326) scores again every extended read scored

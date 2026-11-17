@@ -444,4 +444,5 @@ jobs:
             install.txt
             load.txt
             selftest14.txt
+            my-submissions.png
           if-no-files-found: ignore

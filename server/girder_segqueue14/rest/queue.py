@@ -19,6 +19,9 @@ Adapted from ``girder_segqueue.rest.queue``. The differences:
   it can do anything. Protocol 17 (0.17.x, four classes) and 18 (0.18.0, the
   optional extended classes, D44) are both accepted; ``/project`` serves the four
   classes either way, and a 0.18 module adds the extended ones itself.
+* ``/mine/submissions`` and ``/assignment/:id/recall`` (protocol 20): an annotator
+  lists their own submitted, not yet approved reads and takes one back for revision
+  (``recall.py``); releasing a recalled case puts the read back as it was.
 """
 
 import random
@@ -43,10 +46,12 @@ from ..constants import (
 )
 from ..models import Assignment14, Case14, Note14, Submission14
 from ..models.assignment import NOT_BENCHMARK
+from ..recall import RecallRefused, isRecalled, listOwn, recallOne, undoRecall
 from ..settings import getPolicy, getProject
 from ..utils import (
     checkClientProtocol,
     checkLabelFormat,
+    checkRecallClient,
     checkReopenReader,
     fileForCase,
     hashStoredFile,
@@ -94,6 +99,7 @@ def assignmentInfo(assignment):
         prelabel_version=case.get('prelabelVersion') or '',
         start_from_own=isReopened(assignment),
         extended_mode=bool(case.get('extendedMode')),
+        recalled=isRecalled(assignment),
     )
 
 
@@ -145,6 +151,7 @@ class QueueResource14(Resource):
 
         self.route('GET', ('project',), self.getProject)
         self.route('GET', ('mine',), self.listMine)
+        self.route('GET', ('mine', 'submissions'), self.listMySubmissions)
         self.route('POST', ('next',), self.nextCase)
         self.route('GET', ('case', ':caseId', 'download'), self.downloadCase)
         self.route('GET', ('case', ':caseId', 'asset', ':kind'), self.downloadAsset)
@@ -153,6 +160,7 @@ class QueueResource14(Resource):
         self.route('POST', ('assignment', ':assignmentId', 'submit'), self.submit)
         self.route('POST', ('assignment', ':assignmentId', 'release'), self.release)
         self.route('POST', ('assignment', ':assignmentId', 'heartbeat'), self.heartbeat)
+        self.route('POST', ('assignment', ':assignmentId', 'recall'), self.recall)
 
     # ------------------------------------------------------------- project
 
@@ -185,6 +193,51 @@ class QueueResource14(Resource):
         states = None if includeFinished else sorted(st.OPEN_STATES)
         return [assignmentInfo(a).to_dict()
                 for a in Assignment14().forUser(user['_id'], states)]
+
+    @access.user
+    @autoDescribeRoute(
+        Description('List my submitted, not yet approved reads, newest first.')
+        .notes('Protocol 20 ("My submissions"). Each row says whether it can be '
+               'recalled for revision now and, if not, why. Approved and released '
+               'reads are not listed.')
+        .param('limit', 'Rows per page (at most 100).', dataType='integer',
+               required=False, default=protocol.MY_SUBMISSIONS_PAGE)
+        .param('offset', 'Rows to skip.', dataType='integer', required=False, default=0)
+    )
+    def listMySubmissions(self, limit, offset):
+        user = requireAnnotator(self.getCurrentUser())
+        rows, total = listOwn(user, limit=limit, offset=offset)
+        return {'items': [r.to_dict() for r in rows], 'total': total,
+                'limit': max(1, min(int(limit or protocol.MY_SUBMISSIONS_PAGE),
+                                    protocol.MY_SUBMISSIONS_MAX_PAGE)),
+                'offset': max(0, int(offset or 0))}
+
+    @access.user
+    @autoDescribeRoute(
+        Description('Take back one of my submitted reads to revise it.')
+        .notes('Protocol 20. The read is reopened exactly as the admin reopen '
+               '(#315) does it, and the case opens from it. Refused while a '
+               'reviewer has it, once it is approved, for the benchmark, and while '
+               'I hold another open case.')
+        .param('assignmentId', 'The assignment to recall.', paramType='path')
+        .param('clientProtocol', 'SegQueue14 protocol version the client speaks.',
+               dataType='integer', required=False)
+        .errorResponse('Not my assignment, or the benchmark.', 403)
+        .errorResponse('Approved, being reviewed, or I hold another case.', 409)
+        .errorResponse('The SegQueue14 module is out of date.', 426)
+    )
+    def recall(self, assignmentId, clientProtocol):
+        checkClientProtocol(clientProtocol)
+        checkRecallClient(clientProtocol)
+        user = requireAnnotator(self.getCurrentUser())
+        assignment = Assignment14().load(assignmentId, force=True)
+        if assignment is None:
+            refuse('no_such_assignment', 'No such assignment.', status=404)
+        try:
+            reopened = recallOne(user, assignment, policy=getPolicy())
+        except RecallRefused as exc:
+            refuse(exc.code, str(exc), status=exc.status, state=assignment['state'])
+        return assignmentInfo(reopened).to_dict()
 
     # ---------------------------------------------------------------- next
 
@@ -427,6 +480,18 @@ class QueueResource14(Resource):
             # written. An admin withdraws a pending invitation with
             # `segqueue14-benchmark assign --exclude=<login>`.
             refuse(ERR_BENCHMARK_NO_RELEASE, BENCHMARK_NO_RELEASE_MESSAGE, status=403)
+        if isRecalled(assignment):
+            # Recalled from "My submissions" and not resubmitted: the read goes back
+            # as it was, and keeps its slot. Nothing the annotator submitted is lost.
+            restored = undoRecall(assignment)
+            if restored is not None:
+                return {'released': True, 'caseId': str(assignment['caseId']),
+                        'restored': True}
+            assignment = Assignment14().load(assignment['_id'], force=True)
+            if not st.can(assignment['state'], st.RELEASE):
+                refuse(protocol.ERR_BAD_STATE,
+                       f"A case in state {assignment['state']} cannot be released.",
+                       status=409, state=assignment['state'])
         assignment = Assignment14().transition(
             assignment, st.RELEASE, releaseReason=reason or 'released by annotator')
         Case14().releaseSlot(assignment['caseId'])

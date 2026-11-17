@@ -222,6 +222,15 @@ def checkReopenReader(clientProtocol=None) -> None:
         refuse(exc.code, str(exc), status=426, **exc.detail)
 
 
+def checkRecallClient(clientProtocol=None) -> None:
+    """Refuse (426) a module older than protocol 20 on /recall: it has no "My
+    submissions" and could not have asked."""
+    try:
+        protocol.check_recall_client(clientProtocolFrom(clientProtocol))
+    except protocol.ProtocolError as exc:
+        refuse(exc.code, str(exc), status=426, **exc.detail)
+
+
 def _storedHead(file) -> bytes:
     """The first 64 KB of a stored file: enough for any SegQueue14 header."""
     from girder.models.file import File

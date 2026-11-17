@@ -1019,7 +1019,134 @@ def run_compare():
           and logic.comparison is None)
 
 
-for part in (run, run_extended, run_d47, run_compare):
+def run_my_submissions():
+    """Protocol 20: "My submissions", a folded line in the Case section. Hidden on an
+    older server; opened, one row per submission with a single Revise, disabled with
+    the server's reason; Revise opens the recalled case, and a refusal is the
+    server's sentence. Saves a screenshot of the panel beside the report."""
+    import qt
+
+    import slicer
+
+    if not os.environ.get("SEGQUEUE_SELFTEST_INSTALLED"):
+        sys.path.insert(0, os.path.join(REPO, "src"))
+        sys.path.insert(0, os.path.join(REPO, "slicer", "SegQueue14"))
+    import SegQueue14 as module
+
+    from segqueue.protocol import ProjectConfig
+    from segqueue14 import labels, protocol
+
+    say("--- protocol 20: My submissions")
+    reviewing = protocol.RECALL_MESSAGES[protocol.ERR_RECALL_REVIEWING]
+
+    class Client:
+        loggedIn = True
+
+        def __init__(self):
+            self.calls = []
+
+        def mySubmissions(self, limit=0, offset=0):
+            self.calls.append(("list", offset))
+            rows = [protocol.MySubmission(
+                assignment_id="a{}".format(i), case_id="c{}".format(i),
+                case_name="imagecas_{:04d}".format(i), state="submitted",
+                # 2026-11-10 19:32 UTC, an hour apart going back: 14:32 EST first.
+                submitted_at=1794339120.0 - 3600 * i, can_recall=i != 2,
+                reason="" if i != 2 else reviewing,
+                reason_code="" if i != 2 else protocol.ERR_RECALL_REVIEWING)
+                for i in range(1 + offset, 4 + offset)]
+            return rows, 5
+
+        def recall(self, assignmentId):
+            self.calls.append(("recall", assignmentId))
+            if assignmentId == "a3":
+                raise module.SegQueueError(
+                    protocol.RECALL_MESSAGES[protocol.ERR_RECALL_HOLDING],
+                    protocol.ERR_RECALL_HOLDING)
+            return _Assignment(assignment_id=assignmentId, case_name="imagecas_0001",
+                               start_from_own=True, recalled=True)
+
+    tmp = tempfile.mkdtemp()
+    logic = module.SegQueue14Logic(cacheRoot=os.path.join(tmp, "cache"))
+    logic.client = Client()
+    shown, opened = [], []
+    realError = slicer.util.errorDisplay
+    try:
+        widget = module.SegQueue14Widget()
+        widget.setup()
+        widget.logic = logic
+        box = widget.mySubmissionsBox
+        check("My submissions starts hidden and folded",
+              box.isHidden() and box.collapsed)
+
+        logic.project = ProjectConfig(segments=labels.segment_specs(), protocol_version=19)
+        widget._updateMySubmissionsVisible()
+        check("  stays hidden on a protocol-19 server, and asks it nothing",
+              box.isHidden() and logic.client.calls == [], logic.client.calls)
+
+        logic.project = ProjectConfig(segments=labels.segment_specs(), protocol_version=20)
+        widget._updateMySubmissionsVisible()
+        check("  shows, folded, on a protocol-20 server, and asks nothing until opened",
+              not box.isHidden() and box.collapsed and logic.client.calls == [])
+
+        box.collapsed = False
+        table = widget.mySubmissionsTable
+        check("  opening it loads the list", logic.client.calls == [("list", 0)]
+              and table.rowCount == 3, (logic.client.calls, table.rowCount))
+        buttons = [table.cellWidget(r, 2) for r in range(table.rowCount)]
+        check("  each row: the case, the time in ET, one Revise",
+              table.item(0, 0).text() == "imagecas_0001"
+              and table.item(0, 1).text() == "2026-11-10 14:32 ET"
+              and all(b.text == "Revise" for b in buttons),
+              [table.item(0, c).text() for c in (0, 1)])
+        check("  a row a reviewer holds is disabled, with the reason as its tooltip",
+              buttons[0].enabled and not buttons[1].enabled
+              and buttons[1].toolTip == reviewing and table.item(1, 0).toolTip() == reviewing)
+        check("  more are offered when there are more",
+              not widget.mySubmissionsMoreButton.isHidden()
+              and "3 of 5" in widget.mySubmissionsStatus.text)
+
+        # A screenshot of the panel for the pull request.
+        try:
+            widget.parent.resize(420, 760)
+            widget.parent.show()
+            slicer.app.processEvents()
+            shot = os.path.join(os.path.dirname(OUT), "my-submissions.png")
+            widget.parent.grab().save(shot)
+            say("screenshot", shot)
+        except Exception:
+            say("no screenshot:", traceback.format_exc().splitlines()[-1])
+
+        slicer.util.errorDisplay = lambda text, *a, **k: shown.append(text)
+        widget._openAssignment = lambda assignment: opened.append(assignment)
+        buttons[2].click()
+        check("  a refusal shows the server's sentence and opens nothing",
+              shown == [protocol.RECALL_MESSAGES[protocol.ERR_RECALL_HOLDING]]
+              and opened == [], shown)
+        # The refusal reloaded the list, so the row's button is a new one.
+        table.cellWidget(0, 2).click()
+        check("  Revise opens the recalled case",
+              [a.assignment_id for a in opened] == ["a1"]
+              and ("recall", "a1") in logic.client.calls, logic.client.calls)
+
+        widget.mySubmissionsMoreButton.click()
+        check("  Show more appends the next page", table.rowCount == 6
+              and ("list", 3) in logic.client.calls, table.rowCount)
+
+        logic.client = None
+        widget._updateMySubmissionsVisible()
+        check("  hidden again once logged out", box.isHidden())
+        try:
+            widget.cleanup()
+        except Exception:
+            pass
+    except Exception:
+        check("the My submissions panel builds", False, traceback.format_exc())
+    finally:
+        slicer.util.errorDisplay = realError
+
+
+for part in (run, run_extended, run_d47, run_compare, run_my_submissions):
     try:
         part()
     except Exception:

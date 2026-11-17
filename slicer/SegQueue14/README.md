@@ -102,6 +102,20 @@ empty, grouped under their parent in the segment list, with show/hide per group:
   opens that read through the ordinary review flow.
 - Module only: the protocol stays 19 and the server is unchanged.
 
+### My submissions (0.22.0, protocol 20)
+
+- A folded **My submissions** line at the foot of the *Case* section. Opened, it
+  lists your submitted cases that are not approved yet, newest first: the case, when
+  you submitted it (US Eastern time) and one **Revise**.
+- **Revise** takes the case back and opens it straight away from what you submitted,
+  every class whole, as a reopened case does (#315). Submit it again and it goes to
+  review like any read; **Release** instead puts your submission back exactly as it
+  was.
+- A row you can't revise now is greyed out; hover for why (a reviewer is looking at
+  it now, you hold another case, it's the benchmark). The server's own sentence is
+  shown if a Revise is refused.
+- Hidden when the server is older than protocol 20.
+
 **The reviewer's case list** (0.18.0, #280) is sorted by submission time, newest
 first; rows with nothing submitted yet come last. The *Submitted (ET)* column shows
 that time in US Eastern time (America/Toronto, daylight saving included), e.g.

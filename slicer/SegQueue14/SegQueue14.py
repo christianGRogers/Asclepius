@@ -121,7 +121,7 @@ from SegQueue14Lib import SegQueue14Error as SegQueueError
 
 #: Continues SegQueue's numbering (0.13.0 was the last 4-class release). The
 #: release tag is ``segqueue-v`` + this; bump it to publish.
-__version__ = "0.22.1"
+__version__ = "0.23.0"
 
 #: Where the module's help points.
 HELP_URL = "https://github.com/christianGRogers/Asclepius"
@@ -151,6 +151,13 @@ REVIEW_FILTERS = (
     ("Approved", ("approved",)),
 )
 REVIEW_DECIDED_STATES = frozenset({"approved", "released"})
+#: The states in which an annotator holds a case (``segqueue.states.OPEN_STATES``):
+#: what the "Mark defect" confirmation counts (protocol 21).
+REVIEW_HOLDING_STATES = frozenset({"assigned", "downloaded", "rejected"})
+#: The "Defect" badge in the case list (protocol 21): white on a red that reads in
+#: both of Slicer's themes.
+DEFECT_BADGE_BACKGROUND = "#b3261e"
+DEFECT_BADGE_TEXT = "#ffffff"
 
 #: The "Compare reads" display modes (#335): a label and the logic's mode.
 COMPARE_MODES = (
@@ -322,6 +329,13 @@ class SegQueue14Logic(ScriptedLoadableModuleLogic):
         reports an older protocol at login, and the section stays hidden."""
         return bool(self.loggedIn and self.project is not None
                     and protocol.supports_recall(self.project.protocol_version))
+
+    def supportsDefect(self):
+        """Whether the server keeps defect cases out of the pool (protocol 21). An
+        older server reports an older protocol at login, and the controls stay
+        hidden: there, a case marked by hand would still be served."""
+        return bool(self.loggedIn and self.project is not None
+                    and protocol.supports_defect(self.project.protocol_version))
 
     def mySubmissions(self, offset=0):
         """``(rows, total)``: my submitted, not yet approved reads, newest first."""
@@ -1967,6 +1981,53 @@ def _mySubmissionRows(rows):
     return shown
 
 
+def _reviewRowShown(case, query, defectOnly=False):
+    """Whether a case-list row passes the search box and the "Defect only" toggle.
+
+    The search is ``protocol.name_matches``: a case-insensitive substring of the
+    case name, the same rule as the server's ``name`` filter. Filtered here, over
+    every case the list loaded (``allCases`` reads every page), so typing never
+    waits on the server.
+    """
+    case = case or {}
+    if defectOnly and not case.get("defect"):
+        return False
+    return protocol.name_matches(case.get("caseName", ""), query)
+
+
+def _defectHolders(case):
+    """How many annotators hold ``case`` now (an open lease): the server's count
+    when it sent one, else counted from the row's assignments."""
+    case = case or {}
+    if case.get("holders") is not None:
+        return int(case["holders"])
+    return sum(1 for a in case.get("assignments") or []
+               if (a or {}).get("state") in REVIEW_HOLDING_STATES)
+
+
+def _defectPrompt(caseName, holders):
+    """The "Mark defect" confirmation: what it does, and who holds the case now."""
+    if holders == 1:
+        held = "1 annotator holds it now. They keep it and can finish it."
+    elif holders:
+        held = "{} annotators hold it now. They keep it and can finish it.".format(holders)
+    else:
+        held = "Nobody holds it now."
+    return ("Mark '{}' defect?\n\nIt stays in the system with all its data, but is "
+            "not given to any annotator until it is unmarked. {}\n\n"
+            "Reason (optional):".format(caseName, held))
+
+
+def _defectTooltip(case):
+    """The badge's tooltip: who marked the case defect, when (US Eastern) and why."""
+    case = case or {}
+    who = case.get("defectBy") or "a reviewer"
+    text = "Defect: marked by {} on {}".format(who, _easternTime(case.get("defectAt")))
+    if case.get("defectReason"):
+        text += ": " + case["defectReason"]
+    return text + ". Not given to anyone new until it is unmarked."
+
+
 def _newestFirst(rows):
     """``(case, assignment)`` rows by submission time, newest first; none last.
 
@@ -2986,6 +3047,27 @@ class SegQueue14Widget(ScriptedLoadableModuleWidget):
         controls.addWidget(self.refreshReviewButton)
         layout.addLayout(controls)
 
+        # Search and "Defect only" (protocol 21): one quiet line under the filter.
+        # Both narrow the loaded list at once (every case is loaded, every page),
+        # and neither changes the order: newest submission first.
+        search = qt.QHBoxLayout()
+        self.reviewSearch = qt.QLineEdit()
+        self.reviewSearch.setPlaceholderText("Search cases by name")
+        self.reviewSearch.setClearButtonEnabled(True)
+        self.reviewSearch.setToolTip(
+            "Show only the cases whose name contains this (any case).")
+        self.reviewSearch.textChanged.connect(lambda _text: self._applyReviewSearch())
+        search.addWidget(self.reviewSearch, 1)
+        self.defectOnlyCheck = qt.QCheckBox("Defect only")
+        self.defectOnlyCheck.setToolTip(
+            "Show only the cases marked defect: never given to an annotator until "
+            "they are unmarked.")
+        self.defectOnlyCheck.toggled.connect(lambda _on: self._applyReviewSearch())
+        # Hidden until a server that has defect cases (protocol 21) is logged in to.
+        self.defectOnlyCheck.setVisible(False)
+        search.addWidget(self.defectOnlyCheck)
+        layout.addLayout(search)
+
         self.reviewTable = qt.QTableWidget()
         # Five columns rather than the original seven, because the dock is
         # narrow and the case name is the one thing every row is looked up
@@ -3008,6 +3090,20 @@ class SegQueue14Widget(ScriptedLoadableModuleWidget):
         _tidyTable(self.reviewTable, [104, 70, 110, 124, 26], 190)
         self.reviewTable.itemSelectionChanged.connect(self.onReviewRowChanged)
         layout.addWidget(self.reviewTable)
+
+        # Under the list: how many cases it shows, and the defect mark for the
+        # selected one (protocol 21) -- a link, as it is a rare, deliberate act.
+        footer = qt.QHBoxLayout()
+        self.reviewCountLabel = _muted(qt.QLabel(""))
+        footer.addWidget(self.reviewCountLabel, 1)
+        self.defectButton = _link(qt.QPushButton("Mark defect\u2026"))
+        self.defectButton.setToolTip(
+            "Marks the selected case defect: it keeps all its data but is never "
+            "given to an annotator until it is unmarked. Whoever holds it keeps it.")
+        self.defectButton.clicked.connect(self.onToggleDefect)
+        self.defectButton.setVisible(False)
+        footer.addWidget(self.defectButton)
+        layout.addLayout(footer)
 
         layout.addWidget(_caption(
             "Every submission against the selected case, oldest first. Nothing "
@@ -3419,6 +3515,9 @@ class SegQueue14Widget(ScriptedLoadableModuleWidget):
             flagged = assignment.get("flagged") or []
             if flagged:
                 state = "\u26a0 " + state
+            defect = bool(case.get("defect"))
+            if defect:
+                state = "Defect \u00b7 " + state
             cells = [
                 case.get("caseName", ""),
                 assignment.get("annotator", "") or "--",
@@ -3430,7 +3529,7 @@ class SegQueue14Widget(ScriptedLoadableModuleWidget):
             ]
             # One tooltip for the whole row: the flags are sentences, and a
             # reviewer who sees the mark wants them wherever they point.
-            tip = "\n".join(flagged)
+            tip = "\n".join(([_defectTooltip(case)] if defect else []) + list(flagged))
             for column, text in enumerate(cells):
                 item = qt.QTableWidgetItem(text)
                 if column == 3:
@@ -3440,6 +3539,13 @@ class SegQueue14Widget(ScriptedLoadableModuleWidget):
                         + ("\n" + tip if tip else ""))
                 elif tip:
                     item.setToolTip(tip)
+                if defect and column == 2:
+                    # The badge: the state cell in white on red, bold.
+                    item.setBackground(qt.QBrush(qt.QColor(DEFECT_BADGE_BACKGROUND)))
+                    item.setForeground(qt.QBrush(qt.QColor(DEFECT_BADGE_TEXT)))
+                    font = item.font()
+                    font.setBold(True)
+                    item.setFont(font)
                 self.reviewTable.setItem(index, column, item)
         # No resizeColumnsToContents: it measures every row of every column,
         # and this table is the whole project. Only the case name is sized to
@@ -3451,7 +3557,119 @@ class SegQueue14Widget(ScriptedLoadableModuleWidget):
                    floor=70, ceiling=150)
         self._refreshAnnotators()
         self._clearHistory()
+        self._applyReviewSearch()
         self._updateReviewEnabled()
+
+    def _applyReviewSearch(self):
+        """Hide the rows the search box and "Defect only" leave out.
+
+        Rows are hidden, never removed, so a table row is still the same index into
+        ``_reviewRows``. A selected row that is hidden is deselected, so nothing acts
+        on a case the reviewer can no longer see.
+        """
+        query = self.reviewSearch.text
+        defectOnly = bool(self.defectOnlyCheck.checked
+                          and not self.defectOnlyCheck.isHidden())
+        shownCases, allCases = set(), set()
+        for index, (case, _assignment) in enumerate(self._reviewRows):
+            shown = _reviewRowShown(case, query, defectOnly)
+            self.reviewTable.setRowHidden(index, not shown)
+            allCases.add(case.get("caseId"))
+            if shown:
+                shownCases.add(case.get("caseId"))
+        row = self.reviewTable.currentRow()
+        if 0 <= row < len(self._reviewRows) and self.reviewTable.isRowHidden(row):
+            self.reviewTable.clearSelection()
+            self.reviewTable.setCurrentCell(-1, -1)
+            self._clearHistory()
+        if not allCases:
+            self.reviewCountLabel.setText("")
+        elif query.strip() or defectOnly:
+            self.reviewCountLabel.setText(
+                "{} of {} cases".format(len(shownCases), len(allCases)) if shownCases
+                else "No case matches.")
+        else:
+            self.reviewCountLabel.setText("{} cases".format(len(allCases)))
+        self._updateReviewEnabled()
+
+    def _updateDefectControls(self):
+        """The defect controls (protocol 21): shown only against a server that has
+        defect cases; the button reads Mark or Unmark for the selected case."""
+        supported = self.logic is not None and self.logic.supportsDefect()
+        self.defectOnlyCheck.setVisible(supported)
+        self.defectButton.setVisible(supported)
+        if not supported:
+            self.defectOnlyCheck.setChecked(False)
+            return
+        case, _assignment = self._selectedReviewRow()
+        if case is not None and case.get("defect"):
+            self.defectButton.setText("Unmark defect")
+            self.defectButton.setToolTip(
+                "Makes the selected case servable again under the normal rules.")
+        else:
+            self.defectButton.setText("Mark defect\u2026")
+            self.defectButton.setToolTip(
+                "The benchmark case can't be marked defect."
+                if case is not None and case.get("benchmark") else
+                "Marks the selected case defect: it keeps all its data but is never "
+                "given to an annotator until it is unmarked. Whoever holds it keeps it.")
+        self.defectButton.setEnabled(case is not None and not case.get("benchmark"))
+
+    def _defectDialog(self, case):
+        """The "Mark defect" confirmation, with how many hold the case and an
+        optional one-line reason. Built apart from ``_askDefectReason`` so the
+        self-test can read it without a modal loop."""
+        dialog = qt.QInputDialog(self.parent)
+        dialog.setWindowTitle("Mark case defect")
+        dialog.setInputMode(qt.QInputDialog.TextInput)
+        dialog.setLabelText(_defectPrompt(case.get("caseName", "this case"),
+                                          _defectHolders(case)))
+        dialog.setTextValue("")
+        dialog.setOkButtonText("Mark defect")
+        return dialog
+
+    def _askDefectReason(self, case):
+        """``(confirmed, reason)`` from the "Mark defect" dialog."""
+        dialog = self._defectDialog(case)
+        confirmed = dialog.exec_() == qt.QDialog.Accepted
+        return confirmed, (dialog.textValue() if confirmed else "")
+
+    def onToggleDefect(self):
+        """Mark the selected case defect, or unmark it, after asking."""
+        case, _assignment = self._selectedReviewRow()
+        if case is None or self.logic is None or not self.logic.supportsDefect():
+            return
+        name = case.get("caseName", "this case")
+        if case.get("defect"):
+            if not slicer.util.confirmYesNoDisplay(
+                    "Unmark '{}' as defect?\n\nIt can be given to annotators again "
+                    "under the normal rules.".format(name)):
+                return
+            call, done = (lambda: self.logic.client.unmarkDefect(case["caseId"]),
+                          "{} is no longer marked defect.")
+        else:
+            confirmed, reason = self._askDefectReason(case)
+            if not confirmed:
+                return
+            call, done = (lambda: self.logic.client.markDefect(case["caseId"], reason),
+                          "Marked {} defect: it is not given to anyone new.")
+        with _busy():
+            try:
+                call()
+            except SegQueueError as exc:
+                slicer.util.errorDisplay(str(exc))
+                return
+        caseId = case["caseId"]
+        self.onRefreshReview()
+        self._selectCase(caseId)
+        self.reviewStatusLabel.setText(_escape(done.format(name)))
+
+    def _selectCase(self, caseId):
+        """Select the first visible row of ``caseId`` (after a refresh)."""
+        for index, (case, _assignment) in enumerate(self._reviewRows):
+            if case.get("caseId") == caseId and not self.reviewTable.isRowHidden(index):
+                self.reviewTable.setCurrentCell(index, 0)
+                return
 
     def onReviewRowChanged(self):
         """Fill the history table for whichever case is selected."""
@@ -3551,6 +3769,7 @@ class SegQueue14Widget(ScriptedLoadableModuleWidget):
         # accident is approving the previous case's segmentation onto this one.
         self.reviseButton.setEnabled(
             bool(self._claimedSubmission) and hasSubmission and not decided)
+        self._updateDefectControls()
 
     def _reviewPaths(self, entry):
         """``(volumePath, segPath)`` named after what the files actually are.
@@ -4119,6 +4338,7 @@ class SegQueue14Widget(ScriptedLoadableModuleWidget):
         self.loginBox.collapsed = True
 
         self.reviewBox.setVisible(self.logic.isReviewer())
+        self._updateDefectControls()
         self._updateMySubmissionsVisible()
         self._updateEnabled()
         self._offerResume()
@@ -4136,6 +4356,7 @@ class SegQueue14Widget(ScriptedLoadableModuleWidget):
         self._clearNotes()
         self.reworkLabel.setVisible(False)
         self.reviewBox.setVisible(False)
+        self._updateDefectControls()
         self._updateMySubmissionsVisible()
         self._bindEditor(None, None)
         self._loadExtendedSetting("")

@@ -445,4 +445,5 @@ jobs:
             load.txt
             selftest14.txt
             my-submissions.png
+            defect-cases.png
           if-no-files-found: ignore

@@ -35,6 +35,13 @@ match a hand-computed overlap per class, on the CT grid; the Dice shown is the
 server's pair score; an extended read against a four-class read compares after the
 collapse; any two of three can be picked; the panel drives it; nothing is written.
 
+Protocol 21 (``run_defect_cases``), the reviewer's case list: the search box narrows
+it by case name (any case, every loaded case) without changing its order; a defect
+case carries a "Defect" badge with who, when and why; "Defect only" and the
+Mark/Unmark button are hidden on an older server; marking asks first, saying how
+many annotators hold the case, with an optional reason; unmarking asks; a refusal
+is the server's sentence; the benchmark's button is disabled.
+
 With ``SEGQUEUE_SELFTEST_INSTALLED=<folder>`` it tests the module Slicer loaded
 from that installed folder instead of the checkout.
 
@@ -1182,7 +1189,239 @@ def run_my_submissions():
         slicer.util.errorDisplay = realError
 
 
-for part in (run, run_extended, run_d47, run_compare, run_my_submissions):
+def run_defect_cases():
+    """Protocol 21: search and defect cases in the reviewer's case list. Saves a
+    screenshot of the panel beside the report."""
+    import slicer
+
+    if not os.environ.get("SEGQUEUE_SELFTEST_INSTALLED"):
+        sys.path.insert(0, os.path.join(REPO, "src"))
+        sys.path.insert(0, os.path.join(REPO, "slicer", "SegQueue14"))
+    import SegQueue14 as module
+
+    from segqueue.protocol import ProjectConfig
+    from segqueue14 import labels, protocol
+
+    say("--- protocol 21: search and defect cases")
+
+    def assignment(state, annotator, submitted=None):
+        return {"assignmentId": "a-" + annotator + state, "state": state,
+                "annotator": annotator, "attempt": 1, "submittedAt": submitted,
+                "submissionCount": 1 if submitted else 0, "flagged": []}
+
+    class Client:
+        loggedIn = True
+
+        def __init__(self):
+            self.calls = []
+            self.cases = [
+                {"caseId": "c1", "caseName": "imagecas_0001", "defect": True,
+                 "defectReason": "motion artefact", "defectBy": "revy",
+                 "defectAt": "2026-11-10T19:32:00+00:00", "holders": 0,
+                 "assignments": [assignment("submitted", "anna",
+                                            "2026-11-10T18:00:00+00:00")]},
+                {"caseId": "c2", "caseName": "imagecas_0002", "defect": False,
+                 "holders": 1, "assignments": [assignment("downloaded", "bobby")]},
+                {"caseId": "c3", "caseName": "imagecas_0010", "defect": False,
+                 "holders": 0, "assignments": [assignment(
+                     "approved", "cathy", "2026-11-11T18:00:00+00:00")]},
+                {"caseId": "c4", "caseName": "annotator_benchmark_0855", "defect": False,
+                 "benchmark": True, "holders": 0, "assignments": []},
+            ]
+            self.refuse = None
+
+        def allCases(self, state=None, unassigned=False, **kwargs):
+            self.calls.append(("list", state, unassigned))
+            return [dict(c) for c in self.cases]
+
+        def annotators(self):
+            return []
+
+        def caseSubmissions(self, caseId):
+            return []
+
+        def markDefect(self, caseId, reason=""):
+            self.calls.append(("mark", caseId, reason))
+            if self.refuse:
+                raise module.SegQueueError(self.refuse, protocol.ERR_DEFECT_BENCHMARK)
+            for c in self.cases:
+                if c["caseId"] == caseId:
+                    c.update(defect=True, defectReason=reason, defectBy="revy",
+                             defectAt="2026-11-12T15:00:00+00:00")
+            return {"caseId": caseId, "defect": True, "changed": True}
+
+        def unmarkDefect(self, caseId):
+            self.calls.append(("unmark", caseId))
+            for c in self.cases:
+                if c["caseId"] == caseId:
+                    c.update(defect=False, defectReason="", defectBy="", defectAt=None)
+            return {"caseId": caseId, "defect": False, "changed": True}
+
+    tmp = tempfile.mkdtemp()
+    logic = module.SegQueue14Logic(cacheRoot=os.path.join(tmp, "cache"))
+    logic.client = Client()
+    shown, asked = [], []
+    realError, realConfirm = slicer.util.errorDisplay, slicer.util.confirmYesNoDisplay
+    answers = []
+    try:
+        widget = module.SegQueue14Widget()
+        widget.setup()
+        widget.logic = logic
+        widget.reviewBox.setVisible(True)
+        widget.reviewBox.collapsed = False
+        table = widget.reviewTable
+
+        def rows():
+            return [(table.item(r, 0).text(), table.item(r, 2).text())
+                    for r in range(table.rowCount) if not table.isRowHidden(r)]
+
+        def select(caseId):
+            widget._selectCase(caseId)
+            slicer.app.processEvents()
+
+        check("the search box sits above the list, empty, and shows on any server",
+              not widget.reviewSearch.isHidden() and widget.reviewSearch.text == ""
+              and widget.reviewSearch.placeholderText == "Search cases by name")
+
+        logic.project = ProjectConfig(segments=labels.segment_specs(), protocol_version=20)
+        widget.onRefreshReview()
+        check("  on a protocol-20 server: no Defect only, no Mark defect",
+              widget.defectOnlyCheck.isHidden() and widget.defectButton.isHidden())
+        check("  the order is unchanged: newest submission first, none last",
+              [n for n, _ in rows()] == ["imagecas_0010", "imagecas_0001",
+                                         "imagecas_0002", "annotator_benchmark_0855"],
+              rows())
+
+        widget.reviewSearch.setText("CAS_001")
+        check("  search: a case-insensitive substring of the name",
+              [n for n, _ in rows()] == ["imagecas_0010"]
+              and widget.reviewCountLabel.text == "1 of 4 cases",
+              (rows(), widget.reviewCountLabel.text))
+        widget.reviewSearch.setText("0")
+        check("  the order holds while searching",
+              [n for n, _ in rows()][:3] == ["imagecas_0010", "imagecas_0001",
+                                             "imagecas_0002"], rows())
+        widget.reviewSearch.setText("zzz")
+        check("  no match says so", rows() == []
+              and widget.reviewCountLabel.text == "No case matches.",
+              widget.reviewCountLabel.text)
+        widget.reviewSearch.setText("")
+        check("  cleared, every case is back",
+              len(rows()) == 4 and widget.reviewCountLabel.text == "4 cases",
+              widget.reviewCountLabel.text)
+
+        logic.project = ProjectConfig(segments=labels.segment_specs(), protocol_version=21)
+        widget.onRefreshReview()
+        check("  on a protocol-21 server: Defect only and Mark defect show",
+              not widget.defectOnlyCheck.isHidden() and not widget.defectButton.isHidden())
+        index = next(r for r in range(table.rowCount)
+                     if table.item(r, 0).text() == "imagecas_0001")
+        badge = table.item(index, 2)
+        check("  a defect case wears a Defect badge: red, bold, with who, when and why",
+              badge.text().startswith("Defect \u00b7 submitted")
+              and badge.background().color().name() == module.DEFECT_BADGE_BACKGROUND
+              and badge.font().bold()
+              and "marked by revy on 2026-11-10 14:32 ET: motion artefact"
+              in badge.toolTip(), (badge.text(), badge.toolTip()))
+        plain = table.item(next(r for r in range(table.rowCount)
+                                if table.item(r, 0).text() == "imagecas_0002"), 2)
+        check("  and no other case does", not plain.text().startswith("Defect"),
+              plain.text())
+
+        widget.defectOnlyCheck.setChecked(True)
+        check("  Defect only shows only the defect cases",
+              [n for n, _ in rows()] == ["imagecas_0001"]
+              and widget.reviewCountLabel.text == "1 of 4 cases", rows())
+        widget.reviewSearch.setText("0002")
+        check("  with the search too", rows() == [])
+        widget.reviewSearch.setText("")
+        widget.defectOnlyCheck.setChecked(False)
+
+        select("c2")
+        check("  a plain case's button reads Mark defect",
+              widget.defectButton.text == "Mark defect\u2026"
+              and widget.defectButton.enabled, widget.defectButton.text)
+        case = next(c for c, _ in widget._reviewRows if c["caseId"] == "c2")
+        dialog = widget._defectDialog(case)
+        check("  the confirmation says how many hold it, and asks for an optional reason",
+              "1 annotator holds it now. They keep it and can finish it."
+              in dialog.labelText and dialog.labelText.endswith("Reason (optional):")
+              and dialog.okButtonText == "Mark defect", dialog.labelText)
+        dialog.reject()
+
+        widget._askDefectReason = lambda c: (asked.append(c["caseId"]) or (False, ""))
+        widget.defectButton.click()
+        check("  cancelling marks nothing", asked == ["c2"]
+              and not [c for c in logic.client.calls if c[0] == "mark"],
+              logic.client.calls)
+
+        widget._askDefectReason = lambda c: (True, "truncated scan")
+        widget.defectButton.click()
+        check("  confirming marks it, with the reason",
+              ("mark", "c2", "truncated scan") in logic.client.calls, logic.client.calls)
+        selected, _ = widget._selectedReviewRow()
+        check("  the list reloads with the case still selected, now defect",
+              selected is not None and selected["caseId"] == "c2" and selected["defect"]
+              and widget.defectButton.text == "Unmark defect",
+              (selected, widget.defectButton.text))
+
+        # A screenshot of the panel for the pull request.
+        try:
+            widget.reviewSearch.setText("imagecas")
+            widget.parent.resize(460, 900)
+            widget.parent.show()
+            slicer.app.processEvents()
+            shot = os.path.join(os.path.dirname(OUT), "defect-cases.png")
+            widget.parent.grab().save(shot)
+            say("screenshot", shot)
+            widget.reviewSearch.setText("")
+        except Exception:
+            say("no screenshot:", traceback.format_exc().splitlines()[-1])
+
+        slicer.util.confirmYesNoDisplay = lambda text, *a, **k: (
+            answers.append(text) or False)
+        widget.defectButton.click()
+        check("  unmarking asks, and No changes nothing",
+              len(answers) == 1 and answers[0].startswith("Unmark 'imagecas_0002'")
+              and not [c for c in logic.client.calls if c[0] == "unmark"], answers)
+        slicer.util.confirmYesNoDisplay = lambda text, *a, **k: True
+        widget.defectButton.click()
+        selected, _ = widget._selectedReviewRow()
+        check("  Yes unmarks it", ("unmark", "c2") in logic.client.calls
+              and selected is not None and not selected["defect"]
+              and widget.defectButton.text == "Mark defect\u2026", logic.client.calls)
+
+        select("c4")
+        check("  the benchmark's button is disabled, and says why",
+              not widget.defectButton.enabled
+              and "benchmark" in widget.defectButton.toolTip, widget.defectButton.toolTip)
+
+        slicer.util.errorDisplay = lambda text, *a, **k: shown.append(text)
+        logic.client.refuse = protocol.DEFECT_BENCHMARK_MESSAGE
+        select("c3")
+        widget.defectButton.click()
+        check("  a refusal shows the server's sentence",
+              shown == [protocol.DEFECT_BENCHMARK_MESSAGE], shown)
+
+        widget.defectOnlyCheck.setChecked(True)
+        logic.project = ProjectConfig(segments=labels.segment_specs(), protocol_version=20)
+        widget.onRefreshReview()
+        check("  hidden again on an older server, and Defect only is off",
+              widget.defectOnlyCheck.isHidden() and widget.defectButton.isHidden()
+              and not widget.defectOnlyCheck.checked and len(rows()) == 4)
+        try:
+            widget.cleanup()
+        except Exception:
+            pass
+    except Exception:
+        check("the search and defect controls build", False, traceback.format_exc())
+    finally:
+        slicer.util.errorDisplay = realError
+        slicer.util.confirmYesNoDisplay = realConfirm
+
+
+for part in (run, run_extended, run_d47, run_compare, run_my_submissions,
+             run_defect_cases):
     try:
         part()
     except Exception:

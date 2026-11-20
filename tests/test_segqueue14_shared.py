@@ -163,7 +163,8 @@ def test_the_0_17_module_is_still_accepted():
     # D44: protocol 18 adds the extended classes; 0.17.x (protocol 17) keeps working.
     # #315: protocol 19 opens a reopened case from the annotator's own read.
     # Protocol 20: "My submissions" (recall); 17-19 keep working.
-    assert PROTOCOL_VERSION == 20
+    # Protocol 21: defect cases; 17-20 keep working.
+    assert PROTOCOL_VERSION == 21
     assert protocol.MIN_CLIENT_PROTOCOL == 17
     protocol.check_client_protocol(17)
     protocol.check_client_protocol("17")
@@ -657,7 +658,7 @@ def test_a_reopened_case_needs_protocol_19_and_old_info_still_parses():
 
 
 def test_recall_needs_a_protocol_20_server_and_module():
-    assert protocol.RECALL_PROTOCOL == 20 == PROTOCOL_VERSION
+    assert protocol.RECALL_PROTOCOL == 20 < PROTOCOL_VERSION == protocol.DEFECT_PROTOCOL == 21
     for old in (None, "", "x", 17, 18, 19, "19"):
         assert not protocol.supports_recall(old)
     assert protocol.supports_recall(20) and protocol.supports_recall("21")

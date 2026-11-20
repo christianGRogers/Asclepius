@@ -344,7 +344,7 @@ def test_the_archive_is_the_segqueue_extension_and_is_self_sufficient(tmp_path):
             "print(segqueue14.PROTOCOL_VERSION)")
     out = subprocess.run([sys.executable, "-I", "-c", code], capture_output=True, text=True)
     assert out.returncode == 0, out.stderr
-    assert out.stdout.strip() == "20"
+    assert out.stdout.strip() == "21"
 
 
 def test_a_half_downloaded_helper_is_never_a_cache_hit(tmp_path):
@@ -375,14 +375,26 @@ def _review_filters():
 
 #: The review-list functions, which need nothing from Slicer.
 _LISTING = ("_reviewListing", "_parseUtc", "_easternTime", "_newestFirst", "_epochIso",
-            "_mySubmissionRows")
+            "_mySubmissionRows", "_reviewRowShown", "_defectHolders", "_defectPrompt",
+            "_defectTooltip")
+#: Module constants those functions read.
+_LISTING_CONSTANTS = ("REVIEW_HOLDING_STATES",)
 
 
 def _listing_namespace():
+    import sys
+
+    src = str(REPO / "src")
+    if src not in sys.path:
+        sys.path.append(src)
+    from segqueue14 import protocol
+
     nodes = [n for n in _tree().body
              if isinstance(n, ast.FunctionDef) and n.name in _LISTING]
     assert sorted(n.name for n in nodes) == sorted(_LISTING)
-    namespace = {}
+    nodes += [n for n in _tree().body if isinstance(n, ast.Assign) and any(
+        isinstance(t, ast.Name) and t.id in _LISTING_CONSTANTS for t in n.targets)]
+    namespace = {"protocol": protocol}
     exec(compile(ast.Module(body=nodes, type_ignores=[]), str(MODULE), "exec"),
          namespace)
     return namespace
@@ -565,8 +577,8 @@ def _calls_in(node):
             if isinstance(n, ast.Call) and isinstance(n.func, ast.Attribute)}
 
 
-def test_the_module_is_0_22_1_and_protocol_20():
-    assert re.search(r'^__version__ = "0\.22\.1"$', _source(), re.M)
+def test_the_module_is_0_23_0_and_protocol_21():
+    assert re.search(r'^__version__ = "0\.23\.0"$', _source(), re.M)
     sys_path = str(REPO / "src")
     import sys
 
@@ -574,7 +586,7 @@ def test_the_module_is_0_22_1_and_protocol_20():
         sys.path.append(sys_path)
     from segqueue14 import PROTOCOL_VERSION
 
-    assert PROTOCOL_VERSION == 20
+    assert PROTOCOL_VERSION == 21
 
 
 def test_comparing_never_writes_a_submission_a_draft_or_a_decision():
@@ -892,3 +904,113 @@ def test_rows_show_the_case_the_eastern_time_and_why_not():
     assert rows[1][3].startswith("A reviewer is looking at this case now")
     assert rows[2][2] is False and rows[2][3] == "This case can't be revised now."
     assert _listing_namespace()["_mySubmissionRows"]([]) == []
+
+
+# ------------------------------------- search and defect cases (protocol 21)
+
+
+def test_the_search_box_and_defect_only_sit_above_the_case_list():
+    """Sleek, like "My submissions": one quiet line under the state filter, the
+    defect toggle hidden until a protocol-21 server."""
+    build = _body("SegQueue14Widget", "_buildReviewSection")
+    assert 'self.reviewSearch.setPlaceholderText("Search cases by name")' in build
+    assert "self.reviewSearch.setClearButtonEnabled(True)" in build
+    assert "self.reviewSearch.textChanged.connect(" in build
+    assert 'self.defectOnlyCheck = qt.QCheckBox("Defect only")' in build
+    assert "self.defectOnlyCheck.setVisible(False)" in build
+    assert "self.defectButton.setVisible(False)" in build
+    assert "self.defectButton.clicked.connect(self.onToggleDefect)" in build
+    # Above the table, below the state filter.
+    assert (build.index("self.reviewFilter = qt.QComboBox()")
+            < build.index("self.reviewSearch = qt.QLineEdit()")
+            < build.index("self.reviewTable = qt.QTableWidget()")
+            < build.index("self.defectButton = _link("))
+
+
+def test_the_search_keeps_the_order_and_hides_rather_than_removes():
+    refresh = _body("SegQueue14Widget", "onRefreshReview")
+    assert "_reviewListing(" in refresh and "self._applyReviewSearch()" in refresh
+    apply = _body("SegQueue14Widget", "_applyReviewSearch")
+    assert "self.reviewTable.setRowHidden(index, not shown)" in apply
+    assert "_reviewRowShown(case, query, defectOnly)" in apply
+    assert "setRowCount" not in apply and "sort" not in apply
+    assert "_newestFirst(rows)" in ast.get_source_segment(
+        _source(), next(n for n in _tree().body
+                        if isinstance(n, ast.FunctionDef) and n.name == "_reviewListing"))
+
+
+def test_rows_match_by_case_insensitive_substring_and_defect_only():
+    shown = _listing_namespace()["_reviewRowShown"]
+    case = {"caseName": "imagecas_0042", "defect": False}
+    assert shown(case, "") and shown(case, "  CAS_004 ") and shown(case, "0042")
+    assert not shown(case, "0043") and not shown(case, "", defectOnly=True)
+    assert shown(dict(case, defect=True), "42", defectOnly=True)
+    assert not shown(dict(case, defect=True), "43", defectOnly=True)
+    assert shown({}, "") and not shown({}, "x")
+
+
+def test_the_badge_is_on_the_state_cell_with_who_when_and_why():
+    refresh = _body("SegQueue14Widget", "onRefreshReview")
+    assert 'state = "Defect \\u00b7 " + state' in refresh
+    assert "if defect and column == 2:" in refresh
+    assert "qt.QColor(DEFECT_BADGE_BACKGROUND)" in refresh
+    assert "_defectTooltip(case)" in refresh
+    tip = _listing_namespace()["_defectTooltip"]({
+        "defect": True, "defectBy": "revy", "defectReason": "motion artefact",
+        # 2026-11-10 19:32 UTC is 14:32 EST.
+        "defectAt": "2026-11-10T19:32:00+00:00"})
+    assert tip == ("Defect: marked by revy on 2026-11-10 14:32 ET: motion artefact. "
+                   "Not given to anyone new until it is unmarked.")
+    assert _listing_namespace()["_defectTooltip"]({"defect": True}).startswith(
+        "Defect: marked by a reviewer on --. Not given")
+
+
+def test_the_confirmation_says_how_many_hold_the_case():
+    ns = _listing_namespace()
+    holders, prompt = ns["_defectHolders"], ns["_defectPrompt"]
+    case = {"caseName": "c", "assignments": [
+        {"state": "assigned"}, {"state": "downloaded"}, {"state": "rejected"},
+        {"state": "submitted"}, {"state": "approved"}, {"state": "released"}, None]}
+    assert holders(case) == 3
+    assert holders(dict(case, holders=1)) == 1, "the server's count when it sent one"
+    assert holders({}) == 0
+    assert "2 annotators hold it now. They keep it and can finish it." in prompt("c", 2)
+    assert "1 annotator holds it now." in prompt("c", 1)
+    assert "Nobody holds it now." in prompt("c", 0)
+    text = prompt("imagecas_0042", 0)
+    assert text.startswith("Mark 'imagecas_0042' defect?")
+    assert "not given to any annotator until it is unmarked" in text
+    assert text.endswith("Reason (optional):")
+
+
+def test_mark_and_unmark_ask_first_and_show_refusals_cleanly():
+    toggle = _body("SegQueue14Widget", "onToggleDefect")
+    assert "not self.logic.supportsDefect()" in toggle
+    assert "slicer.util.confirmYesNoDisplay(" in toggle, "unmarking asks"
+    assert "self._askDefectReason(case)" in toggle, "marking asks, with a reason"
+    assert "self.logic.client.unmarkDefect(case[\"caseId\"])" in toggle
+    assert "self.logic.client.markDefect(case[\"caseId\"], reason)" in toggle
+    handler = toggle[toggle.index("except SegQueueError as exc:"):]
+    assert handler.index("slicer.util.errorDisplay(str(exc))") < handler.index("return")
+    assert toggle.index("self.onRefreshReview()") > toggle.index("except SegQueueError")
+    dialog = _body("SegQueue14Widget", "_defectDialog")
+    assert "_defectPrompt(" in dialog and "_defectHolders(case)" in dialog
+    assert 'dialog.setOkButtonText("Mark defect")' in dialog
+    ask = _body("SegQueue14Widget", "_askDefectReason")
+    assert "self._defectDialog(case)" in ask and "qt.QDialog.Accepted" in ask
+
+
+def test_the_defect_controls_are_hidden_on_a_server_too_old_for_them():
+    logic = _body("SegQueue14Logic", "supportsDefect")
+    assert "protocol.supports_defect(self.project.protocol_version)" in logic
+    assert "self.loggedIn" in logic
+    controls = _body("SegQueue14Widget", "_updateDefectControls")
+    assert "self.logic.supportsDefect()" in controls
+    assert "self.defectOnlyCheck.setVisible(supported)" in controls
+    assert "self.defectButton.setVisible(supported)" in controls
+    assert "self.defectOnlyCheck.setChecked(False)" in controls
+    assert 'case.get("benchmark")' in controls, "the benchmark's button is disabled"
+    for name in ("onLogin", "onLogout"):
+        assert "self._updateDefectControls()" in _body("SegQueue14Widget", name), name
+    assert "self._updateDefectControls()" in _body("SegQueue14Widget",
+                                                    "_updateReviewEnabled")

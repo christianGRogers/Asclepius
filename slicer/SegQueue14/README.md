@@ -118,6 +118,23 @@ empty, grouped under their parent in the segment list, with show/hide per group:
   shown if a Revise is refused.
 - Hidden when the server is older than protocol 20.
 
+### Search and defect cases (0.23.0, protocol 21)
+
+- A **Search cases by name** box under the state filter in *Submissions*: it narrows
+  the case list as you type to the cases whose name contains the text (any case), over
+  every case, not one page. The order does not change; the count under the list says
+  how many cases are shown. Works against any server.
+- A case marked defect shows a red **Defect** badge in its *State* cell; hover for who
+  marked it, when (US Eastern time) and why. **Defect only** beside the search box
+  shows only those.
+- **Mark defect…** under the list (for the selected case) asks first, says how many
+  annotators hold the case now (they keep it and can finish) and takes an optional
+  short reason. A defect case keeps all its data and is not given to any annotator,
+  by *Get next case* or by *Assign*, until **Unmark defect** (which also asks). The
+  benchmark case can't be marked. Reviewers and admins only.
+- *Defect only* and *Mark defect* are hidden when the server is older than
+  protocol 21.
+
 **The reviewer's case list** (0.18.0, #280) is sorted by submission time, newest
 first; rows with nothing submitted yet come last. The *Submitted (ET)* column shows
 that time in US Eastern time (America/Toronto, daylight saving included), e.g.

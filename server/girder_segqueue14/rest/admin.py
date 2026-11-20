@@ -81,6 +81,9 @@ class AdminResource14(Resource):
                 {'state': st.UNDER_REVIEW}),
             # Per serve tier: how far through the D14/D16 order the project is.
             'tiers': Case().countByTier(),
+            # Protocol 21: cases marked defect, never served until unmarked. Still
+            # counted in `cases` by their status; this says how many of them are out.
+            'defect': Case().countDefect(),
         }
 
     def _approvalsPerDay(self, days=14):

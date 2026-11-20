@@ -38,4 +38,7 @@ __version__ = "0.1.0"
 #: 20: an annotator can recall their own submitted, not yet approved pool read for
 #: revision from the module ("My submissions"). Backwards compatible: modules 17-19
 #: never call the two new routes and see nothing different.
-PROTOCOL_VERSION = 20
+#: 21: a reviewer or admin marks a case defect; the server never serves or assigns a
+#: defect case until it is unmarked. Backwards compatible: modules 17-20 never call
+#: the new route and see nothing different (a defect case is simply not served).
+PROTOCOL_VERSION = 21

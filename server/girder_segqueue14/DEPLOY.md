@@ -516,6 +516,37 @@ flags, `reopenedAt` cleared), and the sweep does the same if the fresh lease run
 out. Deploy the server before the module reaches `main`: a 0.22.0 module on an older
 server hides the section; modules 0.17-0.21 never call the new routes.
 
+## Defect cases and the case search (plugin 0.7.0, protocol 21)
+
+No step to run beyond `install`. A reviewer or admin can mark a case **defect** from
+the reviewer's case list in SegQueue14 **0.23.0** (`POST /segqueue14/review/case/:id/defect`
+with an optional `reason`; `DELETE` the same path unmarks). A defect case:
+
+* is never served by `/next` nor hand-assigned: `Case14.SERVABLE_QUERY` leaves out
+  `defect: true`, so `claimNext`, `claim` and the reviewer's *Assign* all skip it,
+  even when it is the only servable case. Unmarking makes it servable again under the
+  normal rules;
+* keeps everything: assignments, submissions, scores, notes, files, `activeCount` and
+  `approvedCount` are untouched. Whoever holds it when it is marked keeps it and can
+  finish; their own read can still be recalled ("My submissions") or reopened
+  (`segqueue14-reopen`), and reviewers approve it as usual;
+* records who and when on the case (`defectBy`, `defectAt`, `defectReason`; every
+  mark and unmark in `defectHistory`), and the case thread gets a note naming no
+  login;
+* is refused for the annotator benchmark (D43), with a message saying so.
+
+`GET /segqueue14/review/cases` takes `name` (a case-insensitive substring, matched
+literally) and `defect=true`, both in the query, so they cover every page; each row
+says `defect`, `defectReason`, `defectBy` (a login), `defectAt` and `holders`.
+`/segqueue14/stats` and `segqueue14-report quality` count defect cases.
+`segqueue14-export` exports them exactly as before and writes `defect` /
+`defectReason` into `<case>/read.json` and the manifest's `defect_cases`, so research
+can choose.
+
+Deploy the server before the module reaches `main`: a 0.23.0 module on an older server
+hides *Defect only* and *Mark defect* (the search box works on any server); modules
+0.17-0.22 (protocols 17-20) keep working and never see the route.
+
 ## Extended reads scored before D47: `rescore-extended`
 
 `segqueue14-score --rescore-extended` (#326) scores again every extended read scored

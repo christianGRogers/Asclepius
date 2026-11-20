@@ -1345,8 +1345,8 @@ def run_defect_cases():
         dialog = widget._defectDialog(case)
         check("  the confirmation says how many hold it, and asks for an optional reason",
               "1 annotator holds it now. They keep it and can finish it."
-              in dialog.labelText and dialog.labelText.endswith("Reason (optional):")
-              and dialog.okButtonText == "Mark defect", dialog.labelText)
+              in dialog.labelText() and dialog.labelText().endswith("Reason (optional):")
+              and dialog.okButtonText() == "Mark defect", dialog.labelText())
         dialog.reject()
 
         widget._askDefectReason = lambda c: (asked.append(c["caseId"]) or (False, ""))
@@ -1368,11 +1368,15 @@ def run_defect_cases():
         # A screenshot of the panel for the pull request.
         try:
             widget.reviewSearch.setText("imagecas")
-            widget.parent.resize(460, 900)
             widget.parent.show()
+            box = widget.reviewBox
+            box.setMinimumHeight(1100)
+            box.resize(460, 1100)
+            box.layout().activate()
+            slicer.app.processEvents()
             slicer.app.processEvents()
             shot = os.path.join(os.path.dirname(OUT), "defect-cases.png")
-            widget.parent.grab().save(shot)
+            box.grab().save(shot)
             say("screenshot", shot)
             widget.reviewSearch.setText("")
         except Exception:

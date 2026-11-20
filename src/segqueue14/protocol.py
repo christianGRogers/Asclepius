@@ -28,6 +28,13 @@ having a separate contract:
   revision (``recall_blocker`` says whether and why not). Modules 17-19 never call
   them; a protocol-20 module hides the section on an older server
   (``supports_recall``).
+* **Defect cases** (protocol 21): a reviewer or admin marks a case defect
+  (``review/case/{id}/defect``, POST to mark, DELETE to unmark). A defect case keeps
+  all its data and is never served or assigned until unmarked; whoever holds it
+  keeps it. ``review/cases`` takes a ``name`` search and a ``defect`` filter and
+  says on each row whether the case is defect. Modules 17-20 never call the route;
+  a protocol-21 module hides its defect controls on an older server
+  (``supports_defect``). The search box needs no server change.
 * **``missing_required``** -- D13's old submit refusal. No longer raised since
   #270 (project lead, 2026-11-02); the code is kept so an older module still
   recognises it.
@@ -89,6 +96,11 @@ REOPEN_PROTOCOL = 19
 #: hides the section (``supports_recall``); an older module never calls the routes.
 RECALL_PROTOCOL = 20
 
+#: The first protocol whose server keeps defect cases out of the pool and whose
+#: module marks and unmarks them. A module talking to an older server hides the
+#: defect controls (``supports_defect``); an older module never calls the route.
+DEFECT_PROTOCOL = 21
+
 #: Headers. Distinct from the live ones so a proxy log says which module spoke.
 CLIENT_VERSION_HEADER = "X-SegQueue14-Client"
 PROTOCOL_HEADER = "X-SegQueue14-Protocol"
@@ -118,6 +130,8 @@ REVIEW_REVISE = "review/{submission_id}/revise"
 REVIEW_POOL = "review/{submission_id}/pool"
 REVIEW_ANNOTATORS = "review/annotators"
 REVIEW_ASSIGN = "review/case/{case_id}/assign"
+#: POST marks the case defect (optional ``reason``), DELETE unmarks it (protocol 21).
+REVIEW_CASE_DEFECT = "review/case/{case_id}/defect"
 REVIEW_CASE_VOLUME = "review/case/{case_id}/volume"
 REVIEW_CASE_ASSET = "review/case/{case_id}/asset/{kind}"
 REVIEW_FILE = "review/{submission_id}/{what}"
@@ -231,6 +245,44 @@ def check_recall_client(client_protocol: Optional[Any]) -> None:
         ERR_UPDATE_TO_RECALL, update_to_recall_message(version),
         {"minProtocol": RECALL_PROTOCOL, "serverProtocol": PROTOCOL_VERSION,
          "module": "SegQueue14"})
+
+
+# ------------------------------------------------- defect cases (protocol 21)
+
+#: Refused: the annotator benchmark (D43) cannot be marked defect.
+ERR_DEFECT_BENCHMARK = "defect_benchmark"
+DEFECT_BENCHMARK_MESSAGE = (
+    "The benchmark case can't be marked defect: every invited annotator must be able "
+    "to read it. Retire or replace the benchmark instead.")
+#: Refused: a defect case cannot be hand-assigned (``review/case/{id}/assign``).
+ERR_CASE_DEFECT = "case_defect"
+CASE_DEFECT_MESSAGE = (
+    "This case is marked defect, so it is not given to anyone. Unmark it first.")
+#: The longest reason kept; a longer one is cut, never refused.
+DEFECT_REASON_MAX_CHARS = 200
+
+
+def supports_defect(server_protocol: Optional[Any]) -> bool:
+    """Whether a server (by the protocol ``/project`` reports) has defect cases."""
+    version = _version(server_protocol)
+    return version is not None and version >= DEFECT_PROTOCOL
+
+
+def clean_defect_reason(text: Optional[Any]) -> str:
+    """A defect reason as stored: one line, trimmed, at most
+    ``DEFECT_REASON_MAX_CHARS``. Empty is allowed: the reason is optional."""
+    line = " ".join(str(text or "").split())
+    return line[:DEFECT_REASON_MAX_CHARS].rstrip()
+
+
+def name_matches(name: Optional[Any], query: Optional[Any]) -> bool:
+    """The case search: ``query`` a case-insensitive substring of ``name``.
+
+    One rule for the module's search box and the server's ``name`` filter. An empty
+    or blank query matches everything; surrounding spaces are ignored.
+    """
+    needle = str(query or "").strip().lower()
+    return not needle or needle in str(name or "").lower()
 
 
 # --------------------------------------------------------- case asset kinds

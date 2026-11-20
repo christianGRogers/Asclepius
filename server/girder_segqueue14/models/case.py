@@ -22,6 +22,14 @@ What is different:
   neither ``/next``'s pool scan nor a reviewer's hand-assignment can hand it out,
   and its ``replicasWanted`` is never consulted; it is served only to the users
   in its ``benchmarkPending`` list (``claimBenchmark``), once per invitation.
+* **Defect cases** (protocol 21): ``defect: True`` keeps a case out of the pool
+  until a reviewer unmarks it. ``SERVABLE_QUERY`` leaves it out, so neither
+  ``/next`` nor a reviewer's hand-assignment hands it out. Nothing else changes:
+  its assignments, submissions, scores, notes, files and counters stay as they
+  are, whoever holds it keeps it, and the export still writes its approved reads
+  (with a ``defect`` flag). Who marked it and when is on the case
+  (``defectBy``/``defectAt``, every change in ``defectHistory``). The benchmark
+  (D43) cannot be marked.
 * **Extended mode** (D47 Q6): ``extendedMode: True`` asks the annotator to read
   the case with the extended classes; the module turns them on
   (``setExtendedMode``). Which cases get it (the D35 decision patients) waits
@@ -70,6 +78,7 @@ class Case14(AccessControlledModel):
             ([('retired', 1), ('priority', -1), ('serveOrder', 1), ('created', 1)], {}),
             'assignedUserIds',
             'benchmark',
+            'defect',
         ])
         self.exposeFields(level=AccessType.READ, fields={
             '_id', 'name', 'target', 'priority', 'serveOrder', 'replicasWanted',
@@ -82,6 +91,7 @@ class Case14(AccessControlledModel):
             'tier', 'split', 'blindDuplicate', 'referenceFileId', 'prelabelFileId',
             'prelabelHistory', 'sourceCaseId', 'fileId', 'regionFileId',
             'seedFileId', 'seedSource', 'benchmark', 'benchmarkPick', 'benchmarkPending',
+            'defect', 'defectReason', 'defectBy', 'defectAt', 'defectHistory',
         })
 
     def validate(self, doc):
@@ -170,6 +180,9 @@ class Case14(AccessControlledModel):
         'retired': False,
         # The annotator benchmark (D43) is never a pool case.
         'benchmark': {'$ne': True},
+        # Nor is a case a reviewer marked defect (protocol 21), until unmarked.
+        # `$ne`, so a case from before the flag existed is servable as it was.
+        'defect': {'$ne': True},
         '$expr': {
             '$lt': [
                 {'$add': ['$activeCount', '$approvedCount']},
@@ -343,6 +356,38 @@ class Case14(AccessControlledModel):
             {'_id': case['_id']},
             {'$set': {'extendedMode': bool(on), 'updated': _now()}},
             return_document=ReturnDocument.AFTER)
+
+    # ------------------------------------------------- defect (protocol 21)
+
+    def setDefect(self, case, user, on=True, reason=''):
+        """Mark ``case`` defect (``on``) or unmark it, recording who and when.
+
+        Guarded on the current flag, so it returns ``None`` when the case was
+        already in that state (or is the benchmark, which is never marked) and the
+        caller knows nothing changed. Touches only the defect fields: counters,
+        ``assignedUserIds`` and every other field stay as they are. Each change is
+        appended to ``defectHistory``; ``defectBy``/``defectAt``/``defectReason``
+        describe the current mark and are cleared on unmark.
+        """
+        now = _now()
+        reason = reason or ''
+        entry = {'defect': bool(on), 'by': user['_id'] if user else None, 'at': now,
+                 'reason': reason}
+        query = {'_id': case['_id'], 'defect': {'$ne': True} if on else True}
+        if on:
+            query['benchmark'] = {'$ne': True}
+            fields = {'$set': {'defect': True, 'defectReason': reason,
+                               'defectBy': entry['by'], 'defectAt': now, 'updated': now}}
+        else:
+            fields = {'$set': {'defect': False, 'updated': now},
+                      '$unset': {'defectReason': '', 'defectBy': '', 'defectAt': ''}}
+        fields['$push'] = {'defectHistory': entry}
+        return self.collection.find_one_and_update(
+            query, fields, return_document=ReturnDocument.AFTER)
+
+    def countDefect(self):
+        """Cases marked defect, retired ones included."""
+        return self.collection.count_documents({'defect': True})
 
     def retire(self, case, reason=''):
         case['retired'] = True

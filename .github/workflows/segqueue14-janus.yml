@@ -54,6 +54,11 @@
 # ordinary reads. Dry run without --apply; `args` is exactly --login=<one login>:
 #   restore-reopened [--apply]             args: --login=<login>
 #
+# The Bradensbay branding of Girder's web UI, through Girder's own settings
+# (core.brand_name, core.banner_color); takes no args. Dry run without --apply: each
+# setting's current and new value; --apply prints the old values to restore:
+#   branding [--apply]
+#
 # The script never touches the live checkout, the live plugin or live data; see its
 # header. Secrets: SSH_HOST, SSH_PORT, SSH_USERNAME, SSH_PASSWORD (as server-ssh.yml),
 # SSH_KNOWN_HOSTS optional. The backup steps also need SSH_PORT_SFTP_SERVER (the backup
@@ -80,7 +85,8 @@ on:
                   quality-report, readers-report,
                   rescore-extended, "rescore-extended --apply", revisions-check,
                   reopen, "reopen --apply",
-                  restore-reopened, "restore-reopened --apply"]
+                  restore-reopened, "restore-reopened --apply",
+                  branding, "branding --apply"]
       args:
         description: "benchmark-assign: --exclude=<login,...> [--login=<login,...>] [--retest]; benchmark-seed: --from-girder=<folder> [--from-girder-file=<name>]; benchmark-create: --imagecas-id=<N> [--replace]; quality-report: [--limit=<N>] [--exclude=<login,...>]; readers-report: [--min=<N>]; reopen: --login=<login> --submitted-before=<YYYY-MM-DD>; restore-reopened: --login=<login>"
         type: string
@@ -123,6 +129,7 @@ jobs:
             rescore-extended|"rescore-extended --apply"|revisions-check) ;;
             reopen|"reopen --apply") ;;
             restore-reopened|"restore-reopened --apply") ;;
+            branding|"branding --apply") ;;
             *) echo "::error::unknown step '$cmd'"; exit 1 ;;
           esac
           # D43: only benchmark-assign, -seed, -create, quality-report (#296),
@@ -195,7 +202,8 @@ jobs:
                 if ! printf '%s' "$ARGS" | grep -Eq '^--login=[a-z0-9._-]+$'; then
                   echo "::error::restore-reopened args must be exactly --login=<one login>"; exit 1
                 fi ;;
-              # #334: rescore-extended and revisions-check take none; they fall here.
+              # #334: rescore-extended and revisions-check take none; nor does
+              # branding. They fall here.
               *) echo "::error::only benchmark-assign, benchmark-seed, benchmark-create, quality-report, readers-report, reopen and restore-reopened take args"; exit 1 ;;
             esac
             # The step is ours (a fixed list above), the options go first: --apply stays last.

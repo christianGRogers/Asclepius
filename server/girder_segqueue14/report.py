@@ -223,7 +223,8 @@ def collect(db, limit=DEFAULT_LIMIT, analyse=None, exclude=()):
     benchmarkIds = [c['_id'] for c in db['segqueue14_case'].find({'benchmark': True}, {'_id': 1})]
     cases = {c['_id']: c for c in db['segqueue14_case'].find(
         {'benchmark': {'$ne': True}},
-        {'name': 1, 'seedFileId': 1, 'replicasWanted': 1, 'retired': 1, 'approvedCount': 1})}
+        {'name': 1, 'seedFileId': 1, 'replicasWanted': 1, 'retired': 1, 'approvedCount': 1,
+         'defect': 1})}
     pool = {'kind': {'$ne': sqplan.KIND_BENCHMARK}, 'caseId': {'$nin': benchmarkIds}}
     submissions = list(db['segqueue14_submission'].find(pool, {
         'assignmentId': 1, 'caseId': 1, 'userId': 1, 'authorRole': 1, 'revisionOf': 1,
@@ -381,6 +382,8 @@ def collect(db, limit=DEFAULT_LIMIT, analyse=None, exclude=()):
               'reads1': sum(1 for c in live if len(readers.get(c['_id'], ())) == 1),
               'reads2': sum(1 for c in live if len(readers.get(c['_id'], ())) >= 2),
               'pairsScored': len(pairKeys), 'reads': len(reads),
+              # Protocol 21: marked defect, kept out of the pool (still counted above).
+              'defect': sum(1 for c in live if c.get('defect')),
               'analysed': sum(1 for r in perRead if 'counts' in r), 'limit': limit,
               'pairFlag': pairFlag}
 

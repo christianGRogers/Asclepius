@@ -471,24 +471,33 @@ class SegQueue14Client:
                           params={'limit': limit}) or []
 
     def caseOverview(self, limit: int = 200, offset: int = 0, state: Optional[str] = None,
-                     unassigned: bool = False) -> List[Dict[str, Any]]:
+                     unassigned: bool = False, name: str = '',
+                     defect: bool = False) -> List[Dict[str, Any]]:
         """Every case and every lease ever taken on it.
 
         The submission viewer's own call, and deliberately not ``reviewQueue``:
         that returns only the sampled fraction awaiting a verdict, which cannot
         answer "where is case s0042?" -- the question a reviewer actually has.
+
+        ``name`` (a case-insensitive substring) and ``defect`` filter in the
+        server's query (protocol 21), so they cover every page; sent only when
+        set, so an older server is asked exactly what it was asked before.
         """
         params = {'limit': limit, 'offset': offset}
         if state:
             params['state'] = state
         if unassigned:
             params['unassigned'] = True
+        if (name or '').strip():
+            params['name'] = name.strip()
+        if defect:
+            params['defect'] = True
         return self._json('GET', protocol.path(protocol.REVIEW_CASES),
                           params=params) or []
 
     def allCases(self, state: Optional[str] = None, unassigned: bool = False,
-                 page: int = 200, progress: Optional[Callable[[int], None]] = None
-                 ) -> List[Dict[str, Any]]:
+                 page: int = 200, progress: Optional[Callable[[int], None]] = None,
+                 name: str = '', defect: bool = False) -> List[Dict[str, Any]]:
         """Every case in the project, paged.
 
         One request would be simpler and wrong: the endpoint pages, and a
@@ -503,7 +512,7 @@ class SegQueue14Client:
         out, offset = [], 0
         while True:
             batch = self.caseOverview(limit=page, offset=offset, state=state,
-                                      unassigned=unassigned)
+                                      unassigned=unassigned, name=name, defect=defect)
             if not batch:
                 return out
             out.extend(batch)
@@ -540,6 +549,18 @@ class SegQueue14Client:
         return self._json('POST', protocol.path(protocol.REVIEW_ASSIGN,
                                                 case_id=caseId),
                           params={'userId': userId})
+
+    def markDefect(self, caseId: str, reason: str = '') -> Dict[str, Any]:
+        """Mark a case defect (protocol 21): never served until unmarked. Returns
+        the case's defect fields, ``changed`` and ``holders``."""
+        params = {'reason': reason} if (reason or '').strip() else {}
+        return self._json('POST', protocol.path(protocol.REVIEW_CASE_DEFECT,
+                                                case_id=caseId), params=params) or {}
+
+    def unmarkDefect(self, caseId: str) -> Dict[str, Any]:
+        """Unmark a defect case (protocol 21): servable again under the normal rules."""
+        return self._json('DELETE', protocol.path(protocol.REVIEW_CASE_DEFECT,
+                                                  case_id=caseId)) or {}
 
     def downloadCaseVolume(self, caseId: str, destPath: str,
                            progress: Progress = None) -> int:

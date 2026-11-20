@@ -45,7 +45,7 @@ def test_every_request_declares_the_segqueue14_protocol():
     session = FakeSession()
     makeClient(session).whoami()
     headers = session.calls[0]["headers"]
-    assert headers[protocol.PROTOCOL_HEADER] == str(PROTOCOL_VERSION) == "20"
+    assert headers[protocol.PROTOCOL_HEADER] == str(PROTOCOL_VERSION) == "21"
     assert headers[protocol.CLIENT_VERSION_HEADER] == "14.0"
 
 
@@ -435,3 +435,70 @@ def test_an_old_server_assignment_reads_as_not_recalled():
     info = protocol.AssignmentInfo14.from_dict(_assignment())
     assert info.recalled is False
     assert protocol.AssignmentInfo14.from_dict(info.to_dict()).recalled is False
+
+
+# -------------------------------------------------- defect cases (protocol 21)
+
+
+def test_the_case_list_sends_search_and_defect_only_when_set():
+    session = FakeSession({("GET", "/segqueue14/review/cases"): FakeResponse(200, [])})
+    client = makeClient(session)
+    client.caseOverview()
+    client.caseOverview(name="  0042 ", defect=True)
+    client.caseOverview(name="   ")
+    assert session.calls[0]["params"] == {"limit": 200, "offset": 0}, "as an old server"
+    assert session.calls[1]["params"] == {"limit": 200, "offset": 0, "name": "0042",
+                                          "defect": True}
+    assert session.calls[2]["params"] == {"limit": 200, "offset": 0}
+
+
+def test_all_cases_pages_with_the_filters_on_every_page():
+    pages = [[{"caseId": "c1"}, {"caseId": "c2"}], [{"caseId": "c3"}], []]
+
+    def answer(call):
+        return FakeResponse(200, pages[call["params"]["offset"] // 2])
+
+    session = FakeSession({("GET", "/segqueue14/review/cases"): answer})
+    rows = makeClient(session).allCases(page=2, name="imagecas", defect=True)
+    assert [r["caseId"] for r in rows] == ["c1", "c2", "c3"]
+    assert [c["params"]["offset"] for c in session.calls] == [0, 2, 4]
+    assert all(c["params"]["name"] == "imagecas" and c["params"]["defect"] is True
+               for c in session.calls)
+
+
+def test_mark_and_unmark_defect_use_one_route_post_and_delete():
+    marked = {"caseId": "c7", "defect": True, "defectReason": "motion", "changed": True,
+              "holders": 2}
+    session = FakeSession({
+        ("POST", "/segqueue14/review/case/c7/defect"): FakeResponse(200, marked),
+        ("DELETE", "/segqueue14/review/case/c7/defect"): FakeResponse(
+            200, {"caseId": "c7", "defect": False, "changed": True})})
+    client = makeClient(session)
+    assert client.markDefect("c7", "motion") == marked
+    assert session.calls[0]["params"] == {"reason": "motion"}
+    client.markDefect("c7", "  ")
+    assert session.calls[1]["params"] == {}, "no reason, no parameter"
+    assert client.unmarkDefect("c7")["defect"] is False
+    assert session.calls[2]["method"] == "DELETE"
+    assert all(c["headers"][protocol.PROTOCOL_HEADER] == "21" for c in session.calls)
+
+
+def test_the_benchmark_refusal_is_the_servers_sentence():
+    session = FakeSession({("POST", "/defect"): girderError(
+        protocol.ERR_DEFECT_BENCHMARK, protocol.DEFECT_BENCHMARK_MESSAGE, status=400)})
+    with pytest.raises(SegQueue14Error) as err:
+        makeClient(session).markDefect("c1")
+    assert str(err.value) == protocol.DEFECT_BENCHMARK_MESSAGE
+    assert err.value.code == protocol.ERR_DEFECT_BENCHMARK
+
+
+def test_the_shared_rules_for_search_and_the_defect_controls():
+    assert protocol.name_matches("imagecas_0042", " CAS_004 ")
+    assert protocol.name_matches("imagecas_0042", "")
+    assert not protocol.name_matches("imagecas_0042", "0043")
+    assert not protocol.name_matches(None, "x") and protocol.name_matches(None, "")
+    assert not protocol.supports_defect(20) and protocol.supports_defect(21)
+    assert not protocol.supports_defect(None) and protocol.supports_defect("22")
+    assert protocol.clean_defect_reason(" a\n b ") == "a b"
+    assert len(protocol.clean_defect_reason("x" * 999)) == protocol.DEFECT_REASON_MAX_CHARS
+    assert protocol.clean_defect_reason(None) == ""

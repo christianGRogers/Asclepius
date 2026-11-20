@@ -412,10 +412,10 @@ def test_the_sweep_leaves_a_fresh_recall_alone_and_a_lapsed_one_restored(scene):
 
 def test_old_modules_see_nothing_different(scene, header):
     """A protocol-19 module never calls the new routes; everything it does call
-    answers as before, and the server says it speaks 20."""
+    answers as before, and the server says it speaks 20 or newer (21: defect cases)."""
     _as(scene.people["anna"])
     project = scene.queue.getProject(clientProtocol=19)
-    assert project["protocolVersion"] == PROTOCOL
+    assert project["protocolVersion"] >= PROTOCOL
     header(19)
     mine = scene.queue.listMine(includeFinished=True)
     assert mine and all(m["recalled"] is False for m in mine)

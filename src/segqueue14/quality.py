@@ -202,6 +202,8 @@ def render(report, benchmarkLines=()):
     lines += ['', f"Project: {t['cases']} pool cases -- {t['reads0']} with no read, "
                   f"{t['reads1']} with one, {t['reads2']} with two or more; "
                   f"{t['pairsScored']} pairs scored."]
+    if t.get('defect'):
+        lines.append(f"  {t['defect']} of them marked defect (not served until unmarked).")
     eye = report['eye']
     lines += ['', f"Worth a reviewer's eye (case, login): pairs below {t['pairFlag']:.2f}, "
                   "most overlap, likely untrimmed"]

@@ -280,7 +280,7 @@ def exportCase(case, submission, outRoot, segments, name=None, dryRun=False,
     readInfo = {'classes': classes, 'extended': project_labels.is_extended(classes),
                 'completeGroups': completeGroups,
                 'written': 'four' if fourClass else 'read',
-                **provenance(submission)}
+                **provenance(submission), **defectInfo(case)}
     if parents:
         readInfo['branchParents'] = parents
     with open(os.path.join(target, READ_INFO), 'w') as handle:
@@ -393,6 +393,18 @@ def provenance(submission):
             'revisionOf': str(revisionOf) if revisionOf else None}
 
 
+def defectInfo(case):
+    """What ``read.json`` records about the case's defect mark (protocol 21).
+
+    A defect case is exported exactly as any other: the flag only lets research
+    choose. ``defectReason`` is the reviewer's optional reason, '' when none, and
+    None when the case is not defect.
+    """
+    marked = bool(case.get('defect'))
+    return {'defect': marked,
+            'defectReason': (case.get('defectReason') or '') if marked else None}
+
+
 def collect(since=None, includeUnreviewed=False, limit=0, replicas='first', seal=None):
     """Pair each exportable case with the submission(s) to write for it.
 
@@ -494,6 +506,9 @@ def _writeManifest(out, cases, segments, args, since):
         'exported_reads': dict(sorted(getattr(args, 'exportedReads', {}).items())),
         'revised_reads': sum(1 for r in getattr(args, 'exportedReads', {}).values()
                              if r['exportedRole'] == ROLE_REVIEWER),
+        # Protocol 21: exported cases marked defect, with the reviewer's reason ('' if
+        # none). Exported like any other (also `defect` in <case>/read.json).
+        'defect_cases': dict(sorted(getattr(args, 'defectCases', {}).items())),
     })
     return manifest.write(out)
 
@@ -582,6 +597,8 @@ def main(argv=None):
     args.completeGroups = completeGroups
     exportedReads = {}
     args.exportedReads = exportedReads
+    defectCases = {}
+    args.defectCases = defectCases
     parents = {'components': 0, 'toLCx': 0, 'fallback': 0, 'fallbackCases': []}
     args.branchParents = parents if args.four_class else None
     verb = 'would export' if args.dry_run else 'exported'
@@ -616,6 +633,8 @@ def main(argv=None):
             extendedCases.append(result['case'])
         prelabelVersions[result['case']] = submission.get('prelabelVersion') or ''
         exportedReads[result['case']] = provenance(submission)
+        if case.get('defect'):
+            defectCases[result['case']] = case.get('defectReason') or ''
         if result.get('completeGroups') is not None:
             completeGroups[result['case']] = result['completeGroups']
         if result.get('branchParents'):
@@ -657,6 +676,9 @@ def main(argv=None):
               'neither vessel (or both equally) and went to RCA'
               + (f" ({', '.join(parents['fallbackCases'])})" if parents['fallback'] else '')
               + '.')
+    if defectCases:
+        print(f'{len(defectCases)} of them marked defect (protocol 21): exported as usual, '
+              'flagged in read.json and the manifest\'s defect_cases.')
     if benchmarks:
         print(f'{benchmarks} annotator benchmark case(s) left out (D43; never trained on).')
     if acceptance:

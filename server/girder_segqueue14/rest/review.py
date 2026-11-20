@@ -12,11 +12,20 @@ module older than protocol 18 at claim, download and revise
 (``utils.checkExtendedReader``): it would show four classes and save back four.
 Four-class reads are reviewed from either module version.
 
+**Defect cases (protocol 21).** ``review/case/:caseId/defect``: a reviewer or admin
+marks a case defect (POST, optional reason) or unmarks it (DELETE). A defect case
+is never served by ``/next`` or hand-assigned (``Case14.SERVABLE_QUERY``); nothing
+of it is deleted or moved, and whoever holds it keeps it. ``review/cases`` takes a
+``name`` search (case-insensitive substring) and a ``defect`` filter, both in the
+query, so they cover every page.
+
 Claiming is explicit and separate from deciding. With two or three reviewers in
 a lab that is not ceremony -- it is the difference between two people opening the
 same submission in Slicer and spending twenty minutes each on it, and them
 working through the queue in parallel.
 """
+
+import re
 
 from girder.api import access
 from girder.api.describe import Description, autoDescribeRoute
@@ -84,6 +93,9 @@ class ReviewResource14(Resource):
         parent.route('GET', ('review', 'annotators'), self.listAnnotators)
         parent.route('POST', ('review', 'case', ':caseId', 'assign'),
                      self.assignCase)
+        parent.route('POST', ('review', 'case', ':caseId', 'defect'), self.markDefect)
+        parent.route('DELETE', ('review', 'case', ':caseId', 'defect'),
+                     self.unmarkDefect)
         parent.route('GET', ('review', 'case', ':caseId', 'volume'),
                      self.downloadCaseVolume)
         parent.route('GET', ('review', 'case', ':caseId', 'asset', ':kind'),
@@ -310,9 +322,13 @@ class ReviewResource14(Resource):
                required=False, enum=list(st.ALL_STATES))
         .param('unassigned', 'Only cases nobody is working on or has finished.',
                dataType='boolean', required=False, default=False)
+        .param('name', 'Only cases whose name contains this (case-insensitive). '
+               'Protocol 21.', required=False, default='')
+        .param('defect', 'Only cases marked defect. Protocol 21.',
+               dataType='boolean', required=False, default=False)
         .pagingParams(defaultSort='name', defaultSortDir=1)
     )
-    def listCases(self, state, unassigned, limit, offset, sort):
+    def listCases(self, state, unassigned, name, defect, limit, offset, sort):
         requireReviewer(self.getCurrentUser())
 
         # Filtered in the query, not after the page is read. Post-filtering
@@ -326,6 +342,13 @@ class ReviewResource14(Resource):
                 'caseId', {'state': state})}
         elif unassigned:
             query['_id'] = {'$nin': Assignment().collection.distinct('caseId')}
+        # The search box (protocol 21): a literal, case-insensitive substring --
+        # escaped, so a name with a dot or a bracket in it is not a pattern.
+        needle = (name or '').strip()
+        if needle:
+            query['name'] = {'$regex': re.escape(needle), '$options': 'i'}
+        if defect:
+            query['defect'] = True
 
         cases = list(Case().find(query, limit=limit, offset=offset, sort=sort))
         if not cases:
@@ -389,7 +412,26 @@ class ReviewResource14(Resource):
             'hasReference': bool(case.get('referenceFileId')),
             'benchmark': bool(case.get('benchmark')),
             'prelabelVersion': case.get('prelabelVersion') or '',
+            # Protocol 21: marked defect, never served until unmarked; by whom (a
+            # reviewer or admin login), when and why.
+            **self._defectFields(case),
+            'holders': sum(1 for a in assignments if a.get('state') in st.OPEN_STATES),
             'assignments': [self._assignmentRow(a) for a in assignments],
+        }
+
+    def _defectFields(self, case):
+        marked = bool(case.get('defect'))
+        by = case.get('defectBy') if marked else None
+        who = ''
+        if by:
+            cache = getattr(self, '_userCache', None) or {}
+            doc = cache.get(by) or User().load(by, force=True) or {}
+            who = doc.get('login', '')
+        return {
+            'defect': marked,
+            'defectReason': (case.get('defectReason') or '') if marked else '',
+            'defectAt': _iso(case.get('defectAt')) if marked else None,
+            'defectBy': who,
         }
 
     def _assignmentRow(self, assignment):
@@ -669,6 +711,9 @@ class ReviewResource14(Resource):
         # `claim` is the atomic one: it consumes a replica slot and records the
         # person in `assignedUserIds` in a single update, so two reviewers
         # assigning the same case at the same moment cannot both win.
+        if case.get('defect'):
+            # Protocol 21: kept out of the pool until it is unmarked, by hand too.
+            refuse(protocol.ERR_CASE_DEFECT, protocol.CASE_DEFECT_MESSAGE, status=409)
         claimed = Case().claim(case['_id'], user['_id'])
         if claimed is None:
             refuse('case_unavailable',
@@ -691,6 +736,64 @@ class ReviewResource14(Resource):
             'caseName': case.get('name', ''),
             'annotator': user.get('login', ''),
             'state': assignment['state'],
+        }
+
+    # ------------------------------------------------ defect (protocol 21)
+
+    @access.user
+    @autoDescribeRoute(
+        Description('Mark a case defect: it is never served or assigned until unmarked.')
+        .notes('Reviewer or admin. Nothing is deleted or moved: assignments, '
+               'submissions, scores, notes, files and counters stay as they are, '
+               'and whoever holds the case keeps it and can finish. Who and when '
+               'are recorded on the case, and the case thread gets a note naming no '
+               'login. The annotator benchmark (D43) is refused. Marking a case '
+               'that is already defect changes nothing (`changed: false`).')
+        .param('caseId', 'The case.', paramType='path')
+        .param('reason', 'Optional short reason (one line, at most '
+               f'{protocol.DEFECT_REASON_MAX_CHARS} characters).',
+               required=False, default='')
+        .errorResponse('The annotator benchmark cannot be marked defect.', 400)
+    )
+    def markDefect(self, caseId, reason):
+        return self._setDefect(caseId, True, reason)
+
+    @access.user
+    @autoDescribeRoute(
+        Description('Unmark a defect case: it is servable again under the normal rules.')
+        .notes('Reviewer or admin. Unmarking a case that is not defect changes '
+               'nothing (`changed: false`).')
+        .param('caseId', 'The case.', paramType='path')
+    )
+    def unmarkDefect(self, caseId):
+        return self._setDefect(caseId, False, '')
+
+    def _setDefect(self, caseId, on, reason):
+        user = requireReviewer(self.getCurrentUser())
+        case = self._loadCase(caseId)
+        if on and case.get('benchmark'):
+            refuse(protocol.ERR_DEFECT_BENCHMARK, protocol.DEFECT_BENCHMARK_MESSAGE,
+                   status=400)
+        reason = protocol.clean_defect_reason(reason) if on else ''
+        updated = Case().setDefect(case, user, on=on, reason=reason)
+        changed = updated is not None
+        if changed:
+            # Names no login (annotators read the thread): who is on the case.
+            Note().systemNote(case['_id'], (
+                'Marked defect by a reviewer{}. It is not given to anyone new until '
+                'it is unmarked; anyone holding it keeps it.'.format(
+                    ': ' + reason if reason else '')) if on else
+                'Defect mark removed by a reviewer. The case is servable again.')
+        else:
+            updated = self._loadCase(caseId)
+        return {
+            'caseId': str(case['_id']),
+            'caseName': case.get('name', ''),
+            'changed': changed,
+            # Annotators holding it now (an open lease): they keep it.
+            'holders': Assignment().collection.count_documents(
+                {'caseId': case['_id'], 'state': {'$in': sorted(st.OPEN_STATES)}}),
+            **self._defectFields(updated),
         }
 
     # ------------------------------------------- opening a case with no work

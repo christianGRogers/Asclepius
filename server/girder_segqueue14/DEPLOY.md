@@ -56,6 +56,7 @@ bash $D populate           # dry run of the pool
 bash $D populate --apply   # create the pool cases that have a seed
 bash $D worker             # SegQueue14 scoring worker
 bash $D status             # counts; `off` is the rollback switch
+bash $D branding           # dry run: Girder's brand name and banner colour (Bradensbay)
 ```
 
 It never checks anything out in `~/Asclepius` and never reinstalls the live plugin:
@@ -544,6 +545,64 @@ the pool, or anybody else's. For each, the original read counts again (its
 gets a note naming no login. The annotator is not sent the case again. Running
 `--apply` again changes nothing. A new entry point: `install` from a `main` that has
 it first.
+
+## Bradensbay branding of Girder's web UI: `branding`
+
+The Girder web UI on janus (janus.bradensbay.com) carries the Bradensbay name and
+colour through **Girder's own settings**; Girder's web client is not forked or
+patched. The *SegQueue14 on janus* step `branding` runs
+`python -m girder_segqueue14.branding` from `~/Asclepius-sq14` (no install, no
+restart); it takes no `args`. Run `branding` first (a dry run), then
+`branding --apply` on the lead's word.
+
+| Setting | New value | Girder 5 default | Where Girder shows it |
+|---|---|---|---|
+| `core.brand_name` | `Bradensbay` | `Girder` | header, front page, browser tab title, API docs, e-mails |
+| `core.banner_color` | `#0A2540` | `#3F3B3B` | header background (Girder picks white text on it) |
+
+The values come from the repository: the name as every logo file spells it
+(`aria-label="Bradensbay"` in `slicer/SegQueue/Resources/Logo/bradensbay-*.svg`) and
+the Bradensbay navy, the dark fill of those marks and wordmarks (the teal `#16BFB2` is
+the accent). `tests/test_segqueue_server14_branding.py` checks both against the files.
+
+Checked against Girder 5.0.0 to 5.0.23 (the plugin pins `girder>=5,<6`); the step
+prints the installed version first and refuses any other major. Girder 5 has **no
+logo, favicon or header-image setting** (its favicon and mark are static files of the
+web client), so the Bradensbay mark and wordmark are not used. `core.contact_email_address`
+and `core.privacy_notice` are left at what they are: the repository names no contact
+address or privacy page for Bradensbay.
+
+- **Dry run** (`branding`): for each setting, the value Girder answers now (and whether
+  it is stored or Girder's default) and the new value; then the old stored values.
+  Nothing is written.
+- **`branding --apply`**: checks both values with Girder's own validators, then writes
+  only the ones that differ through Girder's `Setting` model, and prints the old
+  values and the command that puts them back. Running it again prints
+  `already Bradensbay-branded; nothing to change` and writes nothing. No other setting,
+  user, group or file is touched.
+- Both end with what the running Girder serves at `/api/v1/system/public_settings`.
+  Girder 5 caches no settings unless `core.cache.enabled` is on, so a browser reload
+  shows the change. If the line still shows the old values, a
+  `GIRDER_SETTING_CORE_BRAND_NAME` / `GIRDER_SETTING_CORE_BANNER_COLOR` environment
+  variable in Girder's service overrides the database, or the cache is on; restart
+  Girder only then, by hand.
+
+**Undo.** `--apply` prints, e.g. for a database that held neither:
+
+```text
+[branding] to put the old values back: python -m girder_segqueue14.branding --restore='{"core.banner_color": null, "core.brand_name": null}'
+```
+
+`null` means "not stored": the key is unset and Girder's default comes back. Run it on
+janus as the deploy user, from the same checkout:
+
+```sh
+cd ~/Asclepius-sq14 && PYTHONPATH=server ~/Asclepius/.venv/bin/python -m girder_segqueue14.branding \
+    --restore='{"core.banner_color": null, "core.brand_name": null}'
+```
+
+`--restore` accepts only these two keys. An admin can also set both back in Girder's
+*Admin console -> Server configuration* (Brand Name, Banner Color).
 
 ## Exports before #331: was a reviewer's correction left out?
 

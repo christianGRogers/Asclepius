@@ -60,6 +60,12 @@
 # ordinary reads (segqueue14-restore-reopened). Dry run without --apply:
 #   bash segqueue14-deploy.sh restore-reopened --login=<login> [--apply]
 #
+# The Bradensbay branding of Girder's web UI through Girder's own settings
+# (core.brand_name, core.banner_color; girder_segqueue14.branding). Dry run without
+# --apply; it prints each setting's current and new value, and with --apply the old
+# values and the command that restores them. Nothing else changes:
+#   bash segqueue14-deploy.sh branding [--apply]
+#
 # What it never does: check out a branch in ~/Asclepius, reinstall the old plugin
 # (server/; only restore-live does, from that checkout), or write to the old
 # SegQueue's data outside the D36 steps. `main` is cloned separately into
@@ -545,6 +551,27 @@ revisions_check() {
     as_user "${low[@]}" "$bin" revisions
 }
 
+# ------------------------------------------------------------ branding
+
+branding() {
+    local apply=()
+    case "${1:-}" in
+        "") ;;
+        --apply) apply=(--apply) ;;
+        *) die "branding: takes only --apply" ;;
+    esac
+    [ $# -le 1 ] || die "branding: takes only --apply"
+    fetch_branch
+    # Run from the main checkout, like the D36 tool: no reinstall, no restart.
+    as_user env PYTHONPATH="$SRC/server" "$PY" -m girder_segqueue14.branding ${apply[@]+"${apply[@]}"}
+    # What the running Girder hands its web client (public, no login). Girder 5 caches
+    # no settings unless core.cache.enabled is on, so this follows the database.
+    say "the running Girder serves: $(curl -s localhost:8080/api/v1/system/public_settings \
+        | "$PY" -c 'import json, sys; d = json.load(sys.stdin); print(", ".join(k + "=" + repr(d.get(k)) for k in ("core.brand_name", "core.banner_color")))' \
+        2>/dev/null || echo 'no answer')"
+    [ ${#apply[@]} -gt 0 ] || say "dry run only. If it reads right: bash $0 branding --apply"
+}
+
 # ------------------------------------------------------------ D36 (issue #124)
 
 recent_backup() {   # a D36 database dump from the last 24 h, or nothing
@@ -658,11 +685,12 @@ case "${1:-}" in
     revisions-check) shift; revisions_check "$@" ;;
     reopen) shift; reopen "$@" ;;
     restore-reopened) shift; restore_reopened "$@" ;;
+    branding) shift; branding "$@" ;;
     backup-prepare|backup-finish|backup-status|backup-restore-test|backup-off)
         step="${1#backup-}"; shift
         case "$step" in prepare|finish) step="install-$step" ;; esac
         # The hourly job's priority for the drill too: annotators come first.
         nice_=(); [ "$step" = restore-test ] && nice_=(nice -n 19 ionice -c3)
         USER_HOME="$USER_HOME" exec ${nice_[@]+"${nice_[@]}"} bash "$(dirname "$0")/backup/segqueue-backup.sh" "$step" "$@" ;;
-    *) sed -n '2,66p' "$0"; exit 1 ;;
+    *) sed -n '2,72p' "$0"; exit 1 ;;
 esac

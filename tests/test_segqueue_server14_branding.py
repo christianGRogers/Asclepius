@@ -12,6 +12,7 @@ refuses skips):
     SEGQUEUE_TEST_MONGO=mongodb://localhost:27099 pytest tests/test_segqueue_server14_branding.py
 """
 
+import importlib.util
 import json
 import re
 import sys
@@ -26,7 +27,13 @@ if str(HERE) not in sys.path:
     sys.path.insert(0, str(HERE))
 
 import test_segqueue_server14 as base  # noqa: E402  (puts src/ and server/ on the path)
-from girder_segqueue14 import branding  # noqa: E402  (imports nothing from Girder)
+
+# By file, not through the package: girder_segqueue14/__init__ imports Girder, which
+# the plain test job does not install. branding.py imports Girder only when it runs.
+_spec = importlib.util.spec_from_file_location(
+    "girder_segqueue14_branding", REPO / "server" / "girder_segqueue14" / "branding.py")
+branding = importlib.util.module_from_spec(_spec)
+_spec.loader.exec_module(branding)
 
 girder_db = base.girder_db
 

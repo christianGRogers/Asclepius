@@ -73,6 +73,9 @@ def _which(tmp_path, command, args=""):
     ("restore-reopened", "--login=ryoplacv", "restore-reopened --login=ryoplacv"),
     ("restore-reopened --apply", "--login=ryoplacv",
      "restore-reopened --login=ryoplacv --apply"),
+    # Bradensbay branding: no args; --apply from the step only.
+    ("branding", "", "branding"),
+    ("branding --apply", "", "branding --apply"),
 ])
 def test_accepted(tmp_path, command, args, expected):
     code, cmd, log = _which(tmp_path, command, args)
@@ -166,6 +169,17 @@ def test_accepted(tmp_path, command, args, expected):
     ("restore-reopened", "--login=a --apply", "exactly --login="),
     ("restore-reopened", "--login=a --submitted-before=2026-11-09", "exactly --login="),
     ("restore-reopened --dry-run", "--login=a", "unknown step"),
+    ("branding", "--apply", "only benchmark-assign, benchmark-seed,"),
+    ("branding --apply", "--apply", "only benchmark-assign, benchmark-seed,"),
+    ("branding", "--restore={}", "only benchmark-assign, benchmark-seed,"),
+    ("branding", "--brand=Other", "only benchmark-assign, benchmark-seed,"),
+    ("branding", "x;id", "only benchmark-assign, benchmark-seed,"),
+    ("branding", "$(id)", "only benchmark-assign, benchmark-seed,"),
+    ("branding --restore", "", "unknown step"),
+    ("branding --dry-run", "", "unknown step"),
+    ("branding  --apply", "", "unknown step"),
+    ("branding --apply;id", "", "unknown step"),
+    ("Branding", "", "unknown step"),
 ])
 def test_refused(tmp_path, command, args, why):
     code, cmd, log = _which(tmp_path, command, args)

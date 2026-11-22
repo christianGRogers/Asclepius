@@ -34,13 +34,13 @@ then be a reading round: it applies the tables to the posted numbers and propose
    looks ledger with a preflight that opens a look before any locked-100 score exists. Its self-tests are L-A21's
    test 9 and more (§6).
 3. **§5 item 3, S's form, measured.** A 0.45 mm S keeps Janus 0's network and its 256³ patch, so its view shrinks to
-   115.2 mm. On the 620, VIEW_SENTENCE (§3).
+   115.2 mm. On the 620, the LAD-centred patch loses the LM often enough to fail the check, which was pre-registered before its first run (LAD → LM 0.985 → 0.938; whole tree in one patch 0.97 → 0.78). **So S is 0.5 mm, whatever Job 0 shows** (§3).
 4. **§5 items 4 and 5 as decision tables** (§4, §5), so Job 0's and Step T's outputs settle them without a round.
 5. **#306's command block, final against the merged scripts**, with every interface read and self-tested (§6). The
    one consolidated plan text is Appendix A (§5 item 7).
 
 **Cost:** unchanged at ≈ 33–35 GPU-h. Moving Janus 0's D60 pass into Job 0 (§7) adds nothing, because it moves
-≈ 1 GPU-h from the predict job. S stays at +≈ 53 GPU-h at 0.5 mm, or ≈ 54–56 at 0.45 mm (§3.4).
+≈ 1 GPU-h from the predict job. S stays at +≈ 53 GPU-h, since it is 0.5 mm (§3).
 
 ## 0. Convergence: the seven items of Round 2 §5
 
@@ -48,7 +48,7 @@ then be a reading round: it applies the tables to the posted numbers and propose
 |---|---|---|
 | 1. Step T and Job 0 have run, outputs on #302 | **Not settled.** Neither has run | The lead runs them (D46 Q1, Q2). **This alone keeps round 3 from ruling converged** |
 | 2. The lead's answers to Q-R2-1 to Q-R2-4 | **Settled.** D49: yes to all four | — |
-| 3. S's form | **Settled as a rule** (§3): 0.45 mm only if an L-A23 grid row fires **and** the 115 mm view check passes. VIEW_STATUS | Job 0's `select.json` and `vol60.json` |
+| 3. S's form | **Settled** (§3): 0.45 mm needed an L-A23 grid row **and** the 115 mm view check. The check fails on the 620 (LAD → LM 0.938 < 0.95), so **S is 0.5 mm** | — (Job 0 no longer bears on it) |
 | 4. Calibration | **Settled as a rule** (§4): a temperature fit is a report. Rule W is re-run on calibrated probabilities only if the real-data family mismatch is ≥ 0.02 | Job 0, and `calib.py fit` if its L-A23 row fires |
 | 5. Class-weighted CE in Janus 0's run | **Settled as a rule** (§5): the fine-tune takes the weights that were active in Janus 0's last chunk, from the logs | Step T's `grep` |
 | 6. #306's commands | **Settled except one reading** (§6). The commands, interfaces and gate are final. Still open: the decomposition reading (L-A22) on the posted numbers, and #306 itself, which is built after convergence | Job 0's decomposition summaries |
@@ -97,7 +97,7 @@ and then checked on CPU. Each comes with a fix.
 
 ### 3.1 The rule (pre-registered now; reads only Job 0's tuning-60 numbers)
 
-S takes the **0.45 mm form** if and only if:
+The rule, as pre-registered. §3.2's measurement then fails (b), so S is 0.5 mm. S takes the **0.45 mm form** if and only if:
 - **(a)** an L-A23 row that names 0.45 mm fires on Job 0's tuning-60 output. That is either:
   - "Dice at t\* more than 0.03 below 0.934, with volume ratio ≥ 0.95" (`vol60.py`'s `grid_binds`), or
   - "t\* = 0.50 with Dice peaking at 0.50";
@@ -119,9 +119,35 @@ three questions for a 256³ patch at 0.5 mm (128 mm) and at 0.45 mm (115.2 mm):
 
 The pass rule was written in the script before its first run: round 1's 128 mm values, less 0.02.
 
-VIEW_TABLE
+| On the 620 | 128 mm (0.5 mm) | 115.2 mm (0.45 mm) | Rule |
+|---|---|---|---|
+| LAD in one patch | 1.000 | 0.998 | — |
+| Left tree in one patch | 1.000 | 0.997 | ≥ 0.98 ✓ |
+| Right tree in one patch | 0.998 | 0.994 | ≥ 0.97 ✓ |
+| Whole tree in one patch | 0.974 | **0.784** | — |
+| LAD-centred patch holds the LM (mean; 5th percentile of cases) | 0.985; 0.874 | **0.938**; 0.745 | ≥ 0.95 **✗** |
+| LAD-centred patch holds the LCx | 0.994; 0.969 | 0.973; 0.808 | — |
+| LCx-centred patch holds the LM | 0.996; 0.977 | 0.981; 0.875 | ≥ 0.97 ✓ |
+| RCA-centred patch holds the LM | 0.998; 1.000 | 0.962; 0.511 | — |
+| One inference window's share of the image height | 0.931 | 0.838 | — |
+| Cases whose LAD → LM containment falls by > 0.05 | — | 195 of 620 | — |
 
-VIEW_READING
+Whole-tree extent (x / y / z): median 107 / 90 / 86 mm; p90 120 / 102 / 99 mm; max 145 / 115 / 122 mm. The p90 x
+extent is above 115.2 mm and below 128 mm. Summary: `experiments/Atlas/j1l_r3/view045.json` (no per-case rows).
+
+**The view check fails.**
+- **LAD → LM** falls from 0.985 to **0.938**, below the pre-registered 0.95. For a third of the cases (195 of 620),
+  more than 5 % of LAD-centred patches lose sight of the LM.
+- **The whole tree** fits in one patch in 0.78 of cases, against 0.97 at 128 mm.
+
+At 115 mm, the evidence for naming an LAD voxel (its LM origin) leaves the patch noticeably more often. The
+0.45 mm form would buy lumen width, and pay for it in naming context. Whether naming is where Janus 0 loses tF1 is
+for Job 0's decomposition to say, and either way the trade is not a warm-start fallback. The comparison at 128 mm on the 620 (0.985) agrees with round 1's 0.97 on 153
+cases.
+
+**So item 3 is settled outright: S is 0.5 mm, whatever Job 0 shows.** §3.1(a) is moot. §3.3–3.4 stay on record,
+for a later round that would pair 0.45 mm with a larger patch (about 284³ for 128 mm, which is a new network and a
+new cost, not S).
 
 ### 3.3 The 0.45 mm plans step (no fingerprint, no planner)
 
@@ -368,7 +394,7 @@ The remaining reports of L-A6 come from the same scorer JSONs. They decide nothi
 
 ### 6.6 S (only if `--strigger` says `S_triggers: true`; D49 Q-R2-4)
 
-- **The form:** §3.1.
+- **The form:** 0.5 mm (§3), with Janus 0's plans.
 - **The run:** Janus 0's recipe from scratch on dataset 718, 1000 epochs, final validation skipped
   (`ICX4_SKIP_FINAL_VAL=1`), one run.
 - **Its look:** the same §6.4–6.5 with:
@@ -399,8 +425,8 @@ re-read.
 | Step T `grep -c "class-weighted CE"` | §5's table: no weights, the last chunk's weights, or a stop |
 | Step T `nnUNet_compile` line | Sets #306's `nnUNet_compile` (L-A21). No decision |
 | **Job 0** L0 (`l0.json`) | Fail: stop (L-A8). Round 4 cannot rule converged |
-| Job 0 `select.json` | t\*; L-A23's rows; §3.1(a) and §4 |
-| Job 0 `vol60.json` | L-A23's grid row (F7) → §3.1(a) |
+| Job 0 `select.json` | t\*; L-A23's rows; §4. It no longer sets S's form (§3) |
+| Job 0 `vol60.json` | L-A23's grid row (F7). Reported; S's form is already fixed at 0.5 mm |
 | Job 0 decomposition | §6.7, for later rounds only |
 | Job 0 MDE | The stated MDE, and "under-powered" in the wording if the tF1 MDE is above 0.025. No margin moves (L-A7) |
 | **F0** (Janus 0 on D60) | Rule T's reference. **Run it inside Job 0** (≈ 1 GPU-h, moved out of `predict`, so the total cost is unchanged). Then a D60-side failure is seen before any training: for example, cases where Janus 0 draws nearly nothing at t\* on a quality-0 image, which would leave Rule T few shared points. Pre-registered: if Janus 0 at t\* draws nothing on more than 20 of the 60 cases (`threshold_export.py`'s `voxels.json`, count 0), Rule T has too little reference, so t_C = t\* and the verdict says why. It changes nothing else |
@@ -543,7 +569,7 @@ Its stated false-alarm rate is 3–8 % (heavy-tailed), up to about 19 % (broad).
 - **Trigger:** H1 fails, a1 and a2 at argmax both have point Δ < 0, and L0 passed (`gate.py --strigger`).
 - **The run:** Janus 0's recipe from scratch on the 620, 1000 epochs, final validation skipped. On the trigger, the
   lead runs it without another round (D49 Q-R2-4).
-- **Its form [R3, §3]:** 0.45 mm only if an L-A23 grid row fires and the view check passes. Otherwise 0.5 mm.
+- **Its form [R3, §3]:** 0.5 mm, with Janus 0's plans. The 0.45 mm form failed the 115 mm view check on the 620.
 - **Its look:** t_S by Rule T on S; the same sequence with every bound at 1.25 %.
 - **If S fails,** Janus 0 stays.
 
@@ -562,7 +588,7 @@ Its stated false-alarm rate is 3–8 % (heavy-tailed), up to about 19 % (broad).
 | predict (2 folds × the locked 100 and D60) | ≈ 2–3 |
 | After-Job-0 CPU steps, transfer, collect | 0 |
 | **Total** | **≈ 33–35**, ceiling ≈ 60 |
-| S on its trigger | +≈ 53 (0.5 mm), ≈ 54–56 (0.45 mm) |
+| S on its trigger (0.5 mm) | +≈ 53 |
 | E on all 1000, if adopted (two folds + `nnUNetv2_ensemble` + export at t_C) | ≈ 4–8 |
 
 ### A.5 Commands

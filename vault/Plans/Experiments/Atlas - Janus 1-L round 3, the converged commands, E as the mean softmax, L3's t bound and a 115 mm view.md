@@ -116,7 +116,23 @@ The merged scripts the commands use passed their own self-tests here:
 
 ### Q5. The 115 mm view, on the 620
 
-VIEW_RESULT
+| On the 620 | 128 mm (0.5 mm) | 115.2 mm (0.45 mm) | Rule |
+|---|---|---|---|
+| LAD in one patch | 1.000 | 0.998 | — |
+| Left tree in one patch | 1.000 | 0.997 | ≥ 0.98 ✓ |
+| Right tree in one patch | 0.998 | 0.994 | ≥ 0.97 ✓ |
+| Whole tree in one patch | 0.974 | **0.784** | — |
+| LAD-centred patch holds the LM (mean; 5th percentile of cases) | 0.985; 0.874 | **0.938**; 0.745 | ≥ 0.95 **✗** |
+| LAD-centred patch holds the LCx | 0.994; 0.969 | 0.973; 0.808 | — |
+| LCx-centred patch holds the LM | 0.996; 0.977 | 0.981; 0.875 | ≥ 0.97 ✓ |
+| RCA-centred patch holds the LM | 0.998; 1.000 | 0.962; 0.511 | — |
+| One inference window's share of the image height | 0.931 | 0.838 | — |
+| Cases whose LAD → LM containment falls by > 0.05 | — | 195 of 620 | — |
+
+Whole-tree extent (x / y / z): median 107 / 90 / 86 mm; p90 120 / 102 / 99 mm; max 145 / 115 / 122 mm. The p90 x
+extent is above 115.2 mm and below 128 mm. Summary: `experiments/Atlas/j1l_r3/view045.json` (no per-case rows).
+
+The rule was written in `view045.py` before its first run: round 1's 128 mm values on 153 cases, less 0.02. **It fails on LAD → LM** (0.938 < 0.95).
 
 ## What it changes
 
@@ -126,6 +142,6 @@ VIEW_RESULT
 - **The post-Job-0 block is replaced.** The new one fixes F1, reads L0 in full (F4), and computes the volume ratio
   (F7).
 - **The look is opened by a preflight** before C is scored (F8).
-- **S's form:** VIEW_CHANGE
+- **S's form:** 0.5 mm. The 0.45 mm form with Janus 0's 256³ patch loses the LM from LAD-centred patches too often. A finer grid would need a larger patch, which means a new network, not S.
 - **Calibration:** a temperature fit is a report unless the real-data family mismatch is ≥ 0.02.
 - **Nothing here reads a locked-100 number, and nothing moves a margin.**

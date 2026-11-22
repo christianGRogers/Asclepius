@@ -1,0 +1,15 @@
+--- logit scale 1
+max |territory sum - Janus 0| = 9.99e-16
+hierarchical territory == Janus 0 argmax: 1.000000
+plain 13-way argmax moves 42.23 % of voxels to another territory
+  of Janus 0 foreground voxels: 52.82 %
+--- logit scale 3
+max |territory sum - Janus 0| = 1.33e-15
+hierarchical territory == Janus 0 argmax: 1.000000
+plain 13-way argmax moves 16.10 % of voxels to another territory
+  of Janus 0 foreground voxels: 20.12 %
+--- logit scale 10
+max |territory sum - Janus 0| = 1.33e-15
+hierarchical territory == Janus 0 argmax: 1.000000
+plain 13-way argmax moves 4.83 % of voxels to another territory
+  of Janus 0 foreground voxels: 6.05 %

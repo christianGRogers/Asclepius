@@ -1,4 +1,5 @@
-"""Janus 1-F round 2 (Foxtrot): tables from pass1.jsonl and band.jsonl -> results/summary.md + summary.json."""
+"""Janus 1-F round 2 (Foxtrot): tables -> results/summary.md + summary.json.
+Usage: python3 summarise.py pass1.jsonl selftest.jsonl band.jsonl recheck_collapse.json"""
 import json, sys
 import numpy as np
 
@@ -7,7 +8,9 @@ sys.path.insert(0, HERE)
 from branch_score import aggregate  # noqa
 
 p1 = [json.loads(l) for l in open(sys.argv[1])]
-bd = [json.loads(l) for l in open(sys.argv[2])] if len(sys.argv) > 2 else []
+st = [json.loads(l) for l in open(sys.argv[2])]
+bd = [json.loads(l) for l in open(sys.argv[3])] if len(sys.argv) > 3 else []
+rc = json.load(open(sys.argv[4])) if len(sys.argv) > 4 else None
 out, md = {}, []
 N = len(p1)
 md.append(f'# Foxtrot j1f round 2: summary ({N} of the 620 in pass 1; {len(bd)} in the band pass)\n')
@@ -22,30 +25,32 @@ lab['collapse_mismatch_left_pda_voxels'] = sum(r['collapse_mismatch_left_pda'] f
 lab['ignore_voxels'] = sum(r['ignore_voxels'] for r in p1)
 lab['ignore_share_of_tree'] = sum(r['ignore_voxels'] for r in p1) / sum(r['tree_voxels'] for r in p1)
 out['labels'] = lab
+if rc:
+    lab['recheck_with_grouped_posterior'] = {'n_rechecked': rc['n_rechecked'], **rc['total'], 'cases_with_mismatch': rc['cases_with_mismatch']}
 md.append('## 1. Stage-1 labels (D47 Q1 = A, F-A3) and the origin collapse vs territory.to_four\n')
 md.append('```\n' + json.dumps(lab, indent=1) + '\n```\n')
 
 # 2. scorer self-tests
 ident = aggregate([r['identity'] for r in p1])
-tf = [r for r in p1 if 'perturb' in r]
+ident_st = aggregate([r['identity'] for r in st])
+tf = [r for r in st if 'perturb' in r]
 out['identity'] = ident
 md.append('## 2. Branch scorer self-tests\n')
-md.append(f'Identity (reference scored against itself, {N} cases; tF1 on the {len(tf)} cases with id % 10 == 0):\n')
+md.append(f'Identity (reference scored against itself, {N} cases; branch tF1 on the {len(st)} fit-check cases):\n')
 md.append('| class | ref cases (>= 5 mm) | pieces | recall | naming | presence agr. | tF1 |\n|---|---|---|---|---|---|---|')
 for c, a in ident.items():
-    md.append(f"| {c} | {a['ref_cases']} | {a['pieces']} | {a['recall']} | {a['naming']} | {a['presence_agreement']} | {a['tf1_mean']} |")
+    md.append(f"| {c} | {a['ref_cases']} | {a['pieces']} | {a['recall']} | {a['naming']} | {a['presence_agreement']} | {ident_st[c]['tf1_mean']} |")
 pert = {}
 for k in ('swap_D1_D2', 'drop_OM2', 'types_to_parent', 'erode_branches'):
     ag = aggregate([r['perturb'][k] for r in tf])
     pert[k] = ag
 out['perturb'] = pert
-md.append(f'\nPerturbations ({len(tf)} cases): recall / naming / presence agreement / tF1\n')
+md.append(f'\nPerturbations (the {len(tf)} fit-check cases): recall / naming / presence agreement / tF1\n')
 md.append('| perturbation | ' + ' | '.join(ident) + ' |\n|---|' + '---|' * len(ident))
 for k, ag in pert.items():
-    md.append(f'| {k} | ' + ' | '.join(
-        f"{_r(a['recall'])} / {_r(a['naming'])} / {_r(a['presence_agreement'])} / {_r(a['tf1_mean'])}" if False else
-        '{} / {} / {} / {}'.format(*[('-' if v is None else round(v, 3)) for v in (a['recall'], a['naming'], a['presence_agreement'], a['tf1_mean'])])
-        for a in ag.values()) + ' |')
+    fmt = lambda v: '-' if v is None else round(v, 3)
+    md.append(f'| {k} | ' + ' | '.join(' / '.join(str(fmt(a[m])) for m in ('recall', 'naming', 'presence_agreement', 'tf1_mean'))
+                                     for a in ag.values()) + ' |')
 
 # 3. census for the simulation
 cen = {}
@@ -95,7 +100,7 @@ md.append('```\n' + json.dumps(out['dominance'], indent=1) + '\n```\n')
 
 # 6. band
 if bd:
-    md.append(f'\n## 6. Stage-2 background band ({len(bd)} cases, every 8th id of the 620)\n')
+    md.append(f'\n## 6. Stage-2 background band ({len(bd)} cases, ids divisible by 20 among the 620)\n')
     md.append('| w (mm) | S band cm3 | N band cm3 | R band cm3 | union cm3 | union / 256^3 patch | union / bg within 25 mm | S prox/mid/dist | traced branch vol within w of LAD |\n|---|---|---|---|---|---|---|---|---|')
     bo = {}
     for w in ('4', '8', '15', '25'):

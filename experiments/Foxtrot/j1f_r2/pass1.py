@@ -5,7 +5,8 @@ territory.to_four (D25); (2) the branch scorer's identity and perturbation self-
 simulation needs (pieces, centreline length, presence at 3 and 5 mm, ordinal siblings); (4) unnamed trunk twigs by
 the three round-1 methods (Delta, Foxtrot, Crucible) on the same cases; (5) dominance from labels.
 Refuses any file that is not one of the 620 (split620.json, pinned to L-A1's train pin).
-Usage: python3 pass1.py <label_dir> <out.jsonl> [nproc] [tf1_every]
+Usage: python3 pass1.py <label_dir> <out.jsonl> [nproc]          (census + identity, all 620)
+       python3 pass1.py <label_dir> <out.jsonl> [nproc] selftest (tF1 + perturbations, the 20 fit-check cases)
 """
 import hashlib, json, os, sys
 from multiprocessing import Pool
@@ -25,7 +26,7 @@ SPLIT = json.load(open(f'{HERE}/../j1f/split620.json'))
 TRAIN = set(SPLIT['train620'])
 assert hashlib.sha256('\n'.join(sorted(TRAIN)).encode()).hexdigest() == \
     '1350cb1f50b0080f985835eee0c65b4c8fd1b3b071efadd914c1928863891152'
-TF1_EVERY = 10
+SELFTEST = set(json.load(open(f'{HERE}/results/fitcheck20.json'))['fitcheck20'])  # tF1 + perturbations here only
 
 
 def crucible_twigs(lab, z):
@@ -65,7 +66,7 @@ def perturb(ref, kind):
     return p
 
 
-def one(path):
+def one(path, selftest=None):
     cid = 'c%04d' % (int(os.path.basename(path).split('.')[0]) - 1)
     assert cid in TRAIN, cid
     im = nb.load(path); z = np.array(im.header.get_zooms()[:3], float)
@@ -77,7 +78,7 @@ def one(path):
     row = {'case': cid, 'info': info, 'collapse_mismatch': int(((four != ref4) & m).sum()),
            'collapse_mismatch_left_pda': int(((four != ref4) & m & np.isin(raw, [12, 13])).sum()),
            'ignore_voxels': int((~m).sum()), 'tree_voxels': int((raw > 0).sum())}
-    tf = (int(cid[1:]) % TF1_EVERY == 0)
+    tf = selftest if selftest is not None else False
     ident = B.score_case(lab13, np.where(lab13 == 255, 0, lab13), z, with_tf1=tf)
     row['identity'] = ident
     row['census'] = {k: {'pieces_mm': [p['mm'] for p in v['pieces']], 'ref_mm': v['ref_mm']} for k, v in ident.items()}
@@ -96,13 +97,17 @@ def one(path):
 if __name__ == '__main__':
     d, out = sys.argv[1], sys.argv[2]
     npr = int(sys.argv[3]) if len(sys.argv) > 3 else 3
+    st = len(sys.argv) > 4 and sys.argv[4] == 'selftest'
     files = sorted(os.path.join(d, f) for f in os.listdir(d) if f.endswith('.coronary.nii.gz'))
+    if st:
+        files = [f for f in files if 'c%04d' % (int(os.path.basename(f).split('.')[0]) - 1) in SELFTEST]
     done = set()
     if os.path.exists(out):
         done = {json.loads(l)['case'] for l in open(out)}
     todo = [f for f in files if 'c%04d' % (int(os.path.basename(f).split('.')[0]) - 1) not in done]
-    with Pool(npr, maxtasksperchild=10) as p, open(out, 'a') as fo:
-        for i, r in enumerate(p.imap_unordered(one, todo)):
+    with Pool(npr) as p, open(out, 'a') as fo:
+        from functools import partial
+        for i, r in enumerate(p.imap_unordered(partial(one, selftest=st), todo)):
             fo.write(json.dumps(r) + '\n'); fo.flush()
             if i % 25 == 0:
                 print(i, r['case'], flush=True)

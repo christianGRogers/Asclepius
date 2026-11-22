@@ -18,17 +18,17 @@ what round 3 should freeze.
 
 1. **B's lines, as ruled, fail a human-level model.** I simulated a model that disagrees with ImageCAS-X's reference
    exactly as ImageCAS-X's own second analyst does (Table 1, read from the paper). At the locked-100 counts:
-   - OM2 fails **59 %** of the time (47–81 % across the error mixes I tried);
-   - OM1 up to 47 %, D2 7–22 %.
-   - The "4 of 6" verdict itself rarely fails (≤ 6 %), so the cost is not a lost model. It is **human-level classes
+   - OM2 fails **58 %** of the time (46–81 % across the error mixes I tried);
+   - OM1 up to 50 %, D2 6–22 %.
+   - The "4 of 6" verdict itself rarely fails (≤ 7 %), so the cost is not a lost model. It is **human-level classes
      folded into their parent and listed as failures**.
    - Per-class lines, each set at a human-level model's 5th percentile in the worst error mix, keep every class's
-     false-fail at **≤ 7.3 %** and still fail a model 0.10 worse than human in omission **100 %** of the time (§2.1).
+     false-fail at **≤ 7.1 %** and still fail a model 0.10 worse than human in omission **100 %** of the time (§2.1).
 2. **The scorer can be frozen now** (`experiments/Atlas/j1f_r2/j1f_scorer.py`). It implements F-A3's labels, F-A4's
    origin collapse under D47 Q1, and every B measure. The contact collapse reproduces D25 on the 620 except for "Other"
-   voxels in ⟨C1⟩ cases (§2.2).
-3. **The band is a trade, measured.** Only ⟨B8⟩ of traced side-branch pieces lie wholly within 8 mm of their parent,
-   and ⟨B15⟩ within 15 mm, so no band contains an untraced branch whole. A 15 mm band releases ≈ ⟨V15⟩ cm³ of
+   voxels in 2 cases (§2.2).
+3. **The band is a trade, measured.** Only 5.5 % of traced side-branch pieces lie wholly within 8 mm of their parent,
+   and 23 % within 15 mm, so no band contains an untraced branch whole. A 15 mm band releases ≈ 433 cm³ of
    background per case. I recommend 15 mm **restricted by territory per class**, with a pre-registered leakage gate
    (§2.4).
 4. **The launcher must not validate on the locked 100, and must not save probabilities.** This carries track 1-L's
@@ -106,16 +106,16 @@ Per reference piece:
 
 **Inputs:**
 - The locked counts are 98, 64, 84, 40, 96, 96 of 100.
-- Pieces per case come from the 620 (PDA in two pieces in ⟨P2⟩ % of cases, PLB in ⟨P3⟩ %).
-- 1000–4000 replicates per scenario.
+- Pieces per case come from the 620 (PDA in two or three pieces in 10.7 % of cases, PLB in two in 1.6 %).
+- 2000 replicates per scenario, 8000 for the scenarios that set the lines.
 
 **As ruled** (recall ≥ 0.80, naming ≥ 0.85, presence ≥ A − 0.05). False-fail of a human-level model, central
 scenario (σ_h 0.08, s 0.5), with the range over the nine scenarios in brackets:
 
 | | D1 | D2 | OM1 | OM2 | PDA | PLB | verdict (< 4 of 6) |
 |---|---|---|---|---|---|---|---|
-| fail rate | 0.4 % [0.1–8] | 6.6 % [6–22] | 4.0 % [2–47] | **59 %** [47–81] | 0 % [0–0.1] | 0.3 % [0.1–0.5] | 0.1 % [0.1–6] |
-| driven by | — | recall, presence | naming (s = 1), recall (s = 0) | **recall**: E[recall] = 0.73–0.82 < 0.80 | | | |
+| fail rate | 0.3 % [0.05–11] | 7.2 % [6–22] | 4.7 % [4.7–50] | **58 %** [46–81] | 0 % [0–0.05] | 0.15 % [0.05–0.15] | 0.25 % [0.25–7.4] |
+| driven by | — | recall, presence | naming (s = 1), recall (s = 0) | **recall**: E[recall] = 0.72–0.82 < 0.80 | | | |
 
 - **The ruling's §8 trigger fires.** OM2 fails a human-level model more than 20 % of the time in every scenario, and
   OM1 and D2 do in some. "That gate is loosened before submission."
@@ -130,52 +130,53 @@ scenario for that statistic, rounded **down** to 0.01:
 
 | Class | recall ≥ | naming ≥ | presence ≥ | false-fail, 9 scenarios |
 |---|---|---|---|---|
-| D1 | 0.81 | 0.83 | 0.94 | 1.8–6.1 % |
-| D2 | 0.76 | 0.86 | 0.84 | 3.5–6.6 % |
-| OM1 | 0.75 | 0.77 | 0.90 | 1.8–7.3 % |
-| OM2 | 0.60 | 0.78 | 0.81 | 2.7–6.9 % |
-| PDA | 0.89 | 0.90 | 0.97 | 1.3–5.4 % |
-| PLB | 0.89 | 0.92 | 0.94 | 2.6–6.5 % |
-| **verdict (< 4 of 6)** | | | | **≤ 0.3 %** |
+| D1 | 0.81 | 0.83 | 0.94 | 2.0–6.3 % |
+| D2 | 0.76 | 0.86 | 0.84 | 3.1–6.4 % |
+| OM1 | 0.75 | 0.78 | 0.90 | 2.1–7.1 % |
+| OM2 | 0.60 | 0.78 | 0.81 | 3.7–7.1 % |
+| PDA | 0.89 | 0.90 | 0.97 | 1.5–6.0 % |
+| PLB | 0.89 | 0.92 | 0.94 | 2.7–4.9 % |
+| **verdict (< 4 of 6)** | | | | **≤ 0.25 %** |
 
 **Power** (central scenario): false-pass is what matters. Each row is a model worse than human, with the share of
 replicates in which the **verdict** rejects it:
 
 | Model | as ruled | proposed |
 |---|---|---|
-| omission +0.10 on every class | 100 % | 100 % |
+| omission +0.10 on every class | 99.7 % | 99.9 % |
 | omission +0.20 | 100 % | 100 % |
-| 10 % extra misnaming | 57 % | 54 % |
-| 20 % extra misnaming | 100 % | 99.8 % |
+| 10 % extra misnaming | 58 % | 58 % |
+| 20 % extra misnaming | 100 % | 99.9 % |
 | icx14 (every branch named as its parent) | 100 % | 100 % |
 
 Per class, the proposed lines are **stricter** for D1, PDA and PLB, where a human leaves room, and looser for OM2.
-- A 10 %-misnaming model fails PDA 74 % and PLB 87 % of the time under P1, against 20 % and 14 % as ruled.
-- It fails OM2 19 % under P1, against 78 % as ruled.
+- A 10 %-misnaming model fails PDA 77 % and PLB 87 % of the time under P1, against 20 % and 15 % as ruled.
+- It fails OM2 18 % under P1, against 80 % as ruled.
 
 So P1 moves the gate's strictness to where the locked 100 can see it. Naming errors of 10 % stay hard to see at
 n = 100 under either set. That is a property of the decision set, not of the lines.
 
 **Also kept:**
-- the "4 of 6" rule: under P1 a human fails it ≤ 0.3 % of the time, and a model 0.10 worse in omission 100 %;
+- the "4 of 6" rule: under P1 a human fails it ≤ 0.25 % of the time, and a model 0.10 worse in omission 100 %;
 - presence as a **per-class line**, not "A − 0.05": the binomial at the locked counts is what sets the noise.
 
 **Not proposed:**
-- dropping OM2 from the gated set. At 40 cases its line is low, but it still separates (omission +0.20: 65 %).
+- dropping OM2 from the gated set. At 40 cases its line is low, but it still separates (omission +0.20: 68 %).
 - a lower-bound form (CI against a human line). It needs the model's own spread, which does not exist before the look.
 
 ### 2.2 Item 2: the scorer of record
 
-`experiments/Atlas/j1f_r2/j1f_scorer.py`, proposed for freezing by its sha256 at this PR's head. It is printed by
-`python j1f_scorer.py selftest`, and the hash is posted on #303 with the PR. It imports the pinned `tf1.py`
+`experiments/Atlas/j1f_r2/j1f_scorer.py`, proposed for freezing by its sha256,
+**`2da3cb1a2a95a32fd9706bb8019bdc292a71f2bddaed159b76623b747ec0886c`**. It is printed by
+`python j1f_scorer.py selftest`, and posted on #303 with the PR. It imports the pinned `tf1.py`
 (`24441cf8…5254`) and refuses any other.
 
 | Definition | Frozen value | Why |
 |---|---|---|
-| Piece | 26-component of one branch class, ≥ 20 voxels | R-PDA in two pieces is two pieces, each with its own root (⟨P2⟩ % of cases on the 620) |
+| Piece | 26-component of one branch class, ≥ 20 voxels | R-PDA in two pieces is two pieces, each with its own root (10.7 % of cases on the 620) |
 | Centreline | skeleton of the **whole** reference tree, restricted to the piece; A1c's fallback if empty | a branch's skeleton is the tree's, not its own blob's |
 | Root | the piece's centreline point nearest its parent (LAD for D; LCx for OM, Ramus; LCx or RCA for PDA/PLB) | "rooted at the branch's origin" |
-| Presence | centreline length of the class ≥ **5 mm** | 3 mm and 5 mm differ by ⟨PR⟩ on the 620 (§3). Delta's 5 mm is kept |
+| Presence | centreline length of the class ≥ **5 mm** | 3 mm and 5 mm differ by at most one case per class (D2, OM2, PDA, PLB: one each) on the 620 (§3). Delta's 5 mm is kept |
 | Detection | ≥ 50 % of the piece's centreline within 1.5 mm (D3) of predicted vessel of **any** class | F-A6 |
 | Naming | covered points take the label of their nearest predicted voxel; named right if **strictly more than half** carry the piece's class | F-A6 "mostly the right class", ties fail |
 | Branch tF1 | `tree_f1` on (ref == c, pred == c), one ostium per piece at its root, components ≥ 20 voxels | per-piece rooting |
@@ -204,7 +205,7 @@ n = 100 under either set. That is a property of the decision set, not of the lin
   Janus 0's lumen is thin, and 1-F inherits it. Report each gated class's Dice beside Table 1's (F-A9), so a B1
   failure can be read as width or as naming.
 - **On the 620, the contact collapse of the stage-1 labels equals icx4's `territory.to_four`** (D25) in every voxel
-  except ⟨C2⟩ "Other" voxels in ⟨C1⟩ case(s). The collapse needs no left-dominance case list.
+  except 40 "Other" voxels in 2 case(s). The collapse needs no left-dominance case list.
 - **Cost:** ≈ 110 s per case per reading on one core, so ≈ 6 core-h for F and T on the locked 100: minutes on Fir's
   12 cores.
 
@@ -236,15 +237,15 @@ My round-1 Arm N (a CPU namer on Janus 0's tree) is **dropped**, not built.
 
 | Band | background released per case, median [p10–p90] | × tree volume | share nearest LAD / LCx / RCA / LM | traced side-branch pieces wholly inside (max distance ≤ band) | pieces with their centreline median inside |
 |---|---|---|---|---|---|
-| 4 mm | ⟨V4⟩ cm³ | ⟨X4⟩ | ⟨S4⟩ | ⟨W4⟩ | ⟨M4⟩ |
-| 8 mm | ⟨V8⟩ cm³ | ⟨X8⟩ | ⟨S8⟩ | ⟨W8⟩ | ⟨M8⟩ |
-| 15 mm | ⟨V15⟩ cm³ | ⟨X15⟩ | ⟨S15⟩ | ⟨W15⟩ | ⟨M15⟩ |
+| 4 mm | 43 [36–53] cm³ | 22 | 33 / 26 / 21 / 3 % | 0.3 % | 4.4 % |
+| 8 mm | 142 [118–170] cm³ | 72 | 33 / 25 / 22 / 3 % | 5.5 % | 26 % |
+| 15 mm | 433 cm³ | 220 | 32 / 24 / 23 / 4 % | 23 % | 60 % |
 
 What this shows:
 - **No band holds a side branch whole.** Even at 15 mm, most pieces leave it. A band protects the **proximal**
   course, where an untraced branch's background label would most directly contradict a pool read. Distal voxels
   outside it stay background singletons in ImageCAS-X cases, whatever width is chosen.
-- **Width buys proximal coverage at the price of unsupervised volume.** 15 mm releases ⟨X15⟩ × the tree's volume per
+- **Width buys proximal coverage at the price of unsupervised volume.** 15 mm releases 220 × the tree's volume per
   case: most of the heart's surroundings, where the new classes get no negative evidence from ImageCAS-X.
 - **Territory restriction cuts that price by about three to four.** The released background splits roughly evenly
   between LAD, LCx and RCA (table). A class can only arise where its parent is:
@@ -257,8 +258,8 @@ What this shows:
 - an ImageCAS-X background voxel within **15 mm** of the traced tree gets the set {bg} ∪ {the stage-2 classes whose
   parent territory is nearest that voxel};
 - elsewhere it is {bg};
-- 15 rather than 8 mm because a side branch's median point is inside 15 mm for ⟨M15⟩ of pieces but inside 8 mm for
-  only ⟨M8⟩.
+- 15 rather than 8 mm because a side branch's median point is inside 15 mm for 60 % of pieces but inside 8 mm for
+  only 26 %.
 
 **Proposed (P3): the leakage gate, pre-registered for J1F-2** (Bridge v1's check, made a gate). On the locked 100, where
 ImageCAS-X carries none of the six classes:
@@ -382,13 +383,13 @@ Their definitions are in `census_r2.py`'s docstring: labels only, 620 by the pin
 
 | Quantity | Value on the 620 | Definition |
 |---|---|---|
-| Cases with D1 / D2 / D3 / OM1 / OM2 / Ramus / PDA / PLB (≥ 5 mm) | ⟨PC⟩ | §2.2's presence |
-| PDA in two pieces / PLB in two pieces | ⟨P2n⟩ / ⟨P3n⟩ cases | §2.2's piece |
-| "Other": D3 / D4 → LAD / LCx-side / nearest / ignore (255) | ⟨OT⟩ | F-A3 as implemented |
-| Unnamed trunk twigs (skeleton spurs of the trunk class, beyond its two longest ends), cases with ≥ 1 of ≥ 3 / 5 / 10 mm | LAD ⟨TL⟩; LCx ⟨TC⟩; RCA ⟨TR⟩ | spur = endpoint-to-junction walk on the trunk's own skeleton |
-| Cases with a left-sided PDA or PLA (labels, ≥ 20 voxels) | ⟨LP⟩ | the count that matters for D47 Q1 |
-| Dominance (`Descriptors.xlsx`) R / Co / L | ⟨DX⟩ | ImageCAS-X's own field |
-| `Descriptors.xlsx` "R" with a left-sided posterior branch | ⟨RX⟩ | why dominance and "left-sided PDA/PLA" must not be used interchangeably |
+| Cases with D1 / D2 / D3 / OM1 / OM2 / Ramus / PDA / PLB (≥ 5 mm) | 611 / 358 / 47 / 540 / 228 / 149 / 607 / 609 | §2.2's presence |
+| PDA in two pieces / PLB in two pieces | 65 (3 of them in three pieces) / 10 cases | §2.2's piece |
+| "Other": D3 / D4 → LAD / LCx-side / nearest / ignore (255) | D3 47 cases; D4 → LAD 2 pieces; LCx-side 20; nearest 1; ignore 8 (in 8 cases) | F-A3 as implemented |
+| Unnamed trunk twigs (skeleton spurs of the trunk class, beyond its two longest ends), cases with ≥ 1 of ≥ 3 / 5 / 10 mm | LAD 11 / 9 / 7; LCx 21 / 21 / 20; RCA 1 / 1 / 0 | spur = endpoint-to-junction walk on the trunk's own skeleton |
+| Cases with a left-sided PDA or PLA (labels, ≥ 20 voxels) | 59 (46 left only, 13 with both sides) | the count that matters for D47 Q1 |
+| Dominance (`Descriptors.xlsx`) R / Co / L | 564 / 21 / 35 | ImageCAS-X's own field |
+| `Descriptors.xlsx` "R" with a left-sided posterior branch | 5 cases (and 2 co-dominant with none) | why dominance and "left-sided PDA/PLA" must not be used interchangeably |
 
 - **The round-1 disagreement on trunk twigs** (Crucible 13, Delta 4, Foxtrot 6) came from different spur
   definitions. This one is stated and reproducible.
@@ -411,7 +412,7 @@ Their definitions are in `census_r2.py`'s docstring: labels only, 620 by the pin
 
 | Result | Then |
 |---|---|
-| **F0** prints both pins and Foxtrot's label counts | Nothing changes. My census uses a different implementation of F-A3 (the frozen scorer's), so F0 and `census_r2` are two independent counts of the same rule. Their "Other" counts should agree: mine are ⟨OT⟩ on the 620 |
+| **F0** prints both pins and Foxtrot's label counts | Nothing changes. My census uses a different implementation of F-A3 (the frozen scorer's), so F0 and `census_r2` are two independent counts of the same rule. They already agree with F0's **expected** printout: my D3 47 + D4→LAD 2 + 1 small LAD-touching piece sent to the nearest = Foxtrot's `other_diag` 50; my LCx-side 20 = `other_marg` 20; my ignore 8 = `other_amb` 8; D3 47 and D4→LAD 2 equal. So if F0 prints its expected line on Fir, Fir's copy matches this container's 620 too |
 | F0's pins differ | Stop (ruling §8). Fir's copy is not the 620 |
 | F0's counts differ from Foxtrot's but match mine | The launcher uses the frozen scorer's `stage1_labels` (§2.8), so mine are the ones of record. Report the difference |
 | **Step T** copies plans, fingerprint, checkpoint, the 160 labels and aortas, and Fir's locked-100 predictions | J1F-A can be built as §2.8 says |
@@ -457,7 +458,7 @@ Their definitions are in `census_r2.py`'s docstring: labels only, 620 by the pin
 
 | Claim | Evidence |
 |---|---|
-| B's lines fail a human-level model on OM2 59 % (47–81 %) | `experiments/Atlas/j1f_r2/gate_sim.py`, `gate_sim.json` |
+| B's lines fail a human-level model on OM2 58 % (46–81 %) | `experiments/Atlas/j1f_r2/gate_sim.py`, `gate_sim.json` |
 | Table 1's numbers and definitions | Bransby et al., arXiv:2608.30404v1, Table 1 and its caption; Supplementary B ("Septal perforators, acute marginals and nodal arteries were not traced") |
 | The scorer's definitions and checks | `j1f_scorer.py` (self-test), `validate_scorer.py`, `validate_scorer.json` |
 | Contact collapse equals D25 on the 620 | `census_r2.jsonl` (`collapse_mismatch_*`), `census_r2_summary.json` |

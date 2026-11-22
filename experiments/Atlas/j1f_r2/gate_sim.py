@@ -46,7 +46,7 @@ T1 = {  # n, agreement, clDice mean, clDice sd  (ImageCAS-X Table 1)
     'OM2': (46, .875, .837, .306), 'PDA': (150, .988, .884, .223), 'PLB': (147, .962, .894, .184)}
 LOCKED = {'D1': 98, 'D2': 64, 'OM1': 84, 'OM2': 40, 'PDA': 96, 'PLB': 96}
 AS_RULED = {'recall': 0.80, 'naming': 0.85, 'presence_margin': 0.05, 'k_of_6': 4}
-REPS = 4000
+REPS = 8000
 
 
 def fit_mixture(mu, sd, sigma_h):

@@ -50,9 +50,9 @@ counts (F-A7).
 
 | | D1 | D2 | OM1 | OM2 | PDA | PLB | verdict |
 |---|---|---|---|---|---|---|---|
-| human-level false-fail | 0.4 % [0.1–8] | 6.6 % [6–22] | 4.0 % [2–47] | **59 % [47–81]** | 0 % | 0.3 % | 0.1 % [0.1–6] |
+| human-level false-fail | 0.3 % [0.05–11] | 7.2 % [6–22] | 4.7 % [4.7–50] | **58 % [46–81]** | 0 % | 0.15 % | 0.25 % [0.25–7.4] |
 
-- **OM2's expected recall for a human is 0.73–0.82,** because a second analyst omits OM2 in 18 % of the cases the
+- **OM2's expected recall for a human is 0.72–0.82,** because a second analyst omits OM2 in 18 % of the cases the
   first drew it. No 0.80 line can be passed reliably.
 - **OM1's failure is naming when the low part is ordinal shifts** (s = 1): human naming 0.85.
 
@@ -61,13 +61,13 @@ counts (F-A7).
 | | D1 | D2 | OM1 | OM2 | PDA | PLB |
 |---|---|---|---|---|---|---|
 | recall ≥ | 0.81 | 0.76 | 0.75 | 0.60 | 0.89 | 0.89 |
-| naming ≥ | 0.83 | 0.86 | 0.77 | 0.78 | 0.90 | 0.92 |
+| naming ≥ | 0.83 | 0.86 | 0.78 | 0.78 | 0.90 | 0.92 |
 | presence ≥ | 0.94 | 0.84 | 0.90 | 0.81 | 0.97 | 0.94 |
-| false-fail, nine scenarios | 1.8–6.1 % | 3.5–6.6 % | 1.8–7.3 % | 2.7–6.9 % | 1.3–5.4 % | 2.6–6.5 % |
+| false-fail, nine scenarios | 2.0–6.3 % | 3.1–6.4 % | 2.1–7.1 % | 3.7–7.1 % | 1.5–6.0 % | 2.7–4.9 % |
 
-- **Verdict false-fail ≤ 0.3 %.**
-- **Power** (the verdict rejects): omission +0.10 → 100 %; misnaming +0.10 → 54 % (57 % as ruled); misnaming +0.20 →
-  99.8 %; icx14's "all parent" → 100 %.
+- **Verdict false-fail ≤ 0.25 %.**
+- **Power** (the verdict rejects): omission +0.10 → 99.9 % (99.7 % as ruled); misnaming +0.10 → 58 % (58 % as ruled);
+  misnaming +0.20 → 99.9 %; icx14's "all parent" → 100 %.
 
 ### 3. The scorer
 
@@ -76,15 +76,33 @@ counts (F-A7).
   presence lost; PLB dropped missed; PDA truncated to 40 % missed.
 - **A one-voxel erosion of the tree removes D1 and the PDA altogether.** Branches are at the grid floor.
 - **Cost:** ≈ 110 s per case per reading.
-- **Origin collapse vs `territory.to_four` on the 620:** ⟨COLLAPSE⟩.
+- **Origin collapse vs `territory.to_four` on the 620:** identical except 40 "Other" voxels in 2 cases (Delta v1 found
+  the same 40 in 2). Every left-sided PDA/PLA collapses to the LCx by contact, with no dominance list.
 
 ### 4. Bands and side-branch distance from the parent (620)
 
-⟨BANDTABLE⟩
+| Band | background released, median [p10–p90] | × tree volume (median tree 1.95 cm³) | nearest LAD / LCx / RCA / LM | side-branch pieces wholly inside | pieces with their centreline median inside |
+|---|---|---|---|---|---|
+| 4 mm | 43 [36–53] cm³ | 22 | 33 / 26 / 21 / 3 % | 0.3 % | 4.4 % |
+| 8 mm | 142 [118–170] cm³ | 72 | 33 / 25 / 22 / 3 % | 5.5 % | 26 % |
+| 15 mm | 433 [366–509] cm³ | 220 | 32 / 24 / 23 / 4 % | 23 % | 60 % |
+
+- **Over 3231 traced side-branch pieces** (D1–D3, OM1, OM2, Ramus, PDA, PLB), the distance is measured from each
+  piece's centreline to its own parent trunk.
+- **No band contains a side branch whole.** A 15 mm band covers the median point of 60 % of them.
 
 ### 5. Census of record (620)
 
-⟨CENSUS⟩
+| Quantity | Value |
+|---|---|
+| Cases with D1 / D2 / D3 / OM1 / OM2 / Ramus / PDA / PLB (≥ 5 mm centreline) | 611 / 358 / 47 / 540 / 228 / 149 / 607 / 609 |
+| The same at ≥ 3 mm | equal, except one more case each for D2, OM2, PDA and PLB |
+| PDA in ≥ 2 pieces / PLB in 2 pieces | 65 cases (3 in three pieces) / 10 |
+| "Other": D3 / D4 → LAD / LCx-side / nearest / ignore | 47 / 2 / 20 / 1 / 8 (= F0's expected 50 diag, 20 marg, 8 amb, 47 D3, 2 D4) |
+| Unnamed trunk twigs, cases with a spur ≥ 3 / 5 / 10 mm beyond the trunk's two longest ends | LAD 11 / 9 / 7; LCx 21 / 21 / 20; RCA 1 / 1 / 0 |
+| Cases with a left-sided PDA or PLA | 59 (46 left only, 13 both sides) |
+| `Descriptors.xlsx` dominance R / Co / L | 564 / 21 / 35 |
+| "R" with a left-sided posterior branch | 5 |
 
 ### 6. D35 yields (35 patients)
 

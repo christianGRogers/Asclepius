@@ -1,189 +1,189 @@
 {
  "labels": {
-  "d3": 4,
-  "d4_to_lad": 0,
-  "other_lcx": 3,
-  "other_nearest": 0,
-  "other_ignore": 0,
-  "cases_with_D3": 4,
-  "collapse_mismatch_voxels": 2540,
-  "collapse_mismatch_cases": 2,
-  "collapse_mismatch_left_pda_voxels": 2540,
-  "ignore_voxels": 0,
-  "ignore_share_of_tree": 0.0
+  "d3": 47,
+  "d4_to_lad": 2,
+  "other_lcx": 20,
+  "other_nearest": 1,
+  "other_ignore": 8,
+  "cases_with_D3": 47,
+  "collapse_mismatch_voxels": 4919,
+  "collapse_mismatch_cases": 5,
+  "collapse_mismatch_left_pda_voxels": 4879,
+  "ignore_voxels": 467,
+  "ignore_share_of_tree": 2.23917839126684e-05
  },
  "identity": {
   "D1": {
-   "ref_cases": 74,
-   "pieces": 75,
+   "ref_cases": 610,
+   "pieces": 621,
    "recall": 1.0,
    "naming": 1.0,
    "presence_agreement": 1.0,
-   "tf1_mean": 1.0
+   "tf1_mean": null
   },
   "D2": {
-   "ref_cases": 49,
-   "pieces": 49,
+   "ref_cases": 358,
+   "pieces": 359,
    "recall": 1.0,
    "naming": 1.0,
    "presence_agreement": 1.0,
-   "tf1_mean": 1.0
+   "tf1_mean": null
   },
   "D3": {
-   "ref_cases": 4,
-   "pieces": 4,
+   "ref_cases": 47,
+   "pieces": 47,
    "recall": 1.0,
    "naming": 1.0,
    "presence_agreement": 1.0,
-   "tf1_mean": 1.0
+   "tf1_mean": null
   },
   "OM1": {
-   "ref_cases": 71,
-   "pieces": 71,
+   "ref_cases": 539,
+   "pieces": 541,
    "recall": 1.0,
    "naming": 1.0,
    "presence_agreement": 1.0,
-   "tf1_mean": 1.0
+   "tf1_mean": null
   },
   "OM2": {
-   "ref_cases": 31,
-   "pieces": 32,
+   "ref_cases": 227,
+   "pieces": 230,
    "recall": 1.0,
    "naming": 1.0,
    "presence_agreement": 1.0,
-   "tf1_mean": 1.0
+   "tf1_mean": null
   },
   "Ramus": {
-   "ref_cases": 12,
-   "pieces": 15,
+   "ref_cases": 149,
+   "pieces": 154,
    "recall": 1.0,
    "naming": 1.0,
    "presence_agreement": 1.0,
    "tf1_mean": null
   },
   "PDA": {
-   "ref_cases": 74,
-   "pieces": 79,
+   "ref_cases": 606,
+   "pieces": 676,
    "recall": 1.0,
    "naming": 1.0,
    "presence_agreement": 1.0,
-   "tf1_mean": 1.0
+   "tf1_mean": null
   },
   "PLB": {
-   "ref_cases": 74,
-   "pieces": 76,
+   "ref_cases": 601,
+   "pieces": 620,
    "recall": 1.0,
    "naming": 1.0,
    "presence_agreement": 1.0,
-   "tf1_mean": 1.0
+   "tf1_mean": null
   }
  },
  "perturb": {
   "swap_D1_D2": {
    "D1": {
-    "ref_cases": 7,
-    "pieces": 7,
-    "recall": 1.0,
-    "naming": 0.0,
-    "presence_agreement": 0.8571428571428571,
-    "tf1_mean": 0.0
+    "ref_cases": 0,
+    "pieces": 0,
+    "recall": null,
+    "naming": null,
+    "presence_agreement": null,
+    "tf1_mean": null
    },
    "D2": {
-    "ref_cases": 6,
-    "pieces": 6,
-    "recall": 1.0,
-    "naming": 0.0,
-    "presence_agreement": 0.8571428571428571,
-    "tf1_mean": 0.0
+    "ref_cases": 0,
+    "pieces": 0,
+    "recall": null,
+    "naming": null,
+    "presence_agreement": null,
+    "tf1_mean": null
    },
    "D3": {
-    "ref_cases": 1,
-    "pieces": 1,
-    "recall": 1.0,
-    "naming": 1.0,
-    "presence_agreement": 1.0,
-    "tf1_mean": 1.0
+    "ref_cases": 0,
+    "pieces": 0,
+    "recall": null,
+    "naming": null,
+    "presence_agreement": null,
+    "tf1_mean": null
    },
    "OM1": {
-    "ref_cases": 6,
-    "pieces": 6,
-    "recall": 1.0,
-    "naming": 1.0,
-    "presence_agreement": 1.0,
-    "tf1_mean": 1.0
+    "ref_cases": 0,
+    "pieces": 0,
+    "recall": null,
+    "naming": null,
+    "presence_agreement": null,
+    "tf1_mean": null
    },
    "OM2": {
-    "ref_cases": 3,
-    "pieces": 3,
-    "recall": 1.0,
-    "naming": 1.0,
-    "presence_agreement": 1.0,
-    "tf1_mean": 1.0
+    "ref_cases": 0,
+    "pieces": 0,
+    "recall": null,
+    "naming": null,
+    "presence_agreement": null,
+    "tf1_mean": null
    },
    "Ramus": {
     "ref_cases": 0,
     "pieces": 0,
     "recall": null,
     "naming": null,
-    "presence_agreement": 1.0,
+    "presence_agreement": null,
     "tf1_mean": null
    },
    "PDA": {
-    "ref_cases": 7,
-    "pieces": 9,
-    "recall": 1.0,
-    "naming": 1.0,
-    "presence_agreement": 1.0,
-    "tf1_mean": 1.0
+    "ref_cases": 0,
+    "pieces": 0,
+    "recall": null,
+    "naming": null,
+    "presence_agreement": null,
+    "tf1_mean": null
    },
    "PLB": {
-    "ref_cases": 6,
-    "pieces": 7,
-    "recall": 1.0,
-    "naming": 1.0,
-    "presence_agreement": 1.0,
-    "tf1_mean": 1.0
+    "ref_cases": 0,
+    "pieces": 0,
+    "recall": null,
+    "naming": null,
+    "presence_agreement": null,
+    "tf1_mean": null
    }
   },
   "drop_OM2": {
    "D1": {
-    "ref_cases": 7,
-    "pieces": 7,
-    "recall": 1.0,
-    "naming": 1.0,
-    "presence_agreement": 1.0,
+    "ref_cases": 0,
+    "pieces": 0,
+    "recall": null,
+    "naming": null,
+    "presence_agreement": null,
     "tf1_mean": null
    },
    "D2": {
-    "ref_cases": 6,
-    "pieces": 6,
-    "recall": 1.0,
-    "naming": 1.0,
-    "presence_agreement": 1.0,
+    "ref_cases": 0,
+    "pieces": 0,
+    "recall": null,
+    "naming": null,
+    "presence_agreement": null,
     "tf1_mean": null
    },
    "D3": {
-    "ref_cases": 1,
-    "pieces": 1,
-    "recall": 1.0,
-    "naming": 1.0,
-    "presence_agreement": 1.0,
+    "ref_cases": 0,
+    "pieces": 0,
+    "recall": null,
+    "naming": null,
+    "presence_agreement": null,
     "tf1_mean": null
    },
    "OM1": {
-    "ref_cases": 6,
-    "pieces": 6,
-    "recall": 1.0,
-    "naming": 1.0,
-    "presence_agreement": 1.0,
+    "ref_cases": 0,
+    "pieces": 0,
+    "recall": null,
+    "naming": null,
+    "presence_agreement": null,
     "tf1_mean": null
    },
    "OM2": {
-    "ref_cases": 3,
-    "pieces": 3,
-    "recall": 0.0,
+    "ref_cases": 0,
+    "pieces": 0,
+    "recall": null,
     "naming": null,
-    "presence_agreement": 0.5714285714285714,
+    "presence_agreement": null,
     "tf1_mean": null
    },
    "Ramus": {
@@ -191,65 +191,65 @@
     "pieces": 0,
     "recall": null,
     "naming": null,
-    "presence_agreement": 1.0,
+    "presence_agreement": null,
     "tf1_mean": null
    },
    "PDA": {
-    "ref_cases": 7,
-    "pieces": 9,
-    "recall": 1.0,
-    "naming": 1.0,
-    "presence_agreement": 1.0,
+    "ref_cases": 0,
+    "pieces": 0,
+    "recall": null,
+    "naming": null,
+    "presence_agreement": null,
     "tf1_mean": null
    },
    "PLB": {
-    "ref_cases": 6,
-    "pieces": 7,
-    "recall": 1.0,
-    "naming": 1.0,
-    "presence_agreement": 1.0,
+    "ref_cases": 0,
+    "pieces": 0,
+    "recall": null,
+    "naming": null,
+    "presence_agreement": null,
     "tf1_mean": null
    }
   },
   "types_to_parent": {
    "D1": {
-    "ref_cases": 7,
-    "pieces": 7,
-    "recall": 1.0,
-    "naming": 0.0,
-    "presence_agreement": 0.0,
+    "ref_cases": 0,
+    "pieces": 0,
+    "recall": null,
+    "naming": null,
+    "presence_agreement": null,
     "tf1_mean": null
    },
    "D2": {
-    "ref_cases": 6,
-    "pieces": 6,
-    "recall": 1.0,
-    "naming": 0.0,
-    "presence_agreement": 0.14285714285714285,
+    "ref_cases": 0,
+    "pieces": 0,
+    "recall": null,
+    "naming": null,
+    "presence_agreement": null,
     "tf1_mean": null
    },
    "D3": {
-    "ref_cases": 1,
-    "pieces": 1,
-    "recall": 1.0,
-    "naming": 0.0,
-    "presence_agreement": 0.8571428571428571,
+    "ref_cases": 0,
+    "pieces": 0,
+    "recall": null,
+    "naming": null,
+    "presence_agreement": null,
     "tf1_mean": null
    },
    "OM1": {
-    "ref_cases": 6,
-    "pieces": 6,
-    "recall": 1.0,
-    "naming": 0.0,
-    "presence_agreement": 0.14285714285714285,
+    "ref_cases": 0,
+    "pieces": 0,
+    "recall": null,
+    "naming": null,
+    "presence_agreement": null,
     "tf1_mean": null
    },
    "OM2": {
-    "ref_cases": 3,
-    "pieces": 3,
-    "recall": 1.0,
-    "naming": 0.0,
-    "presence_agreement": 0.5714285714285714,
+    "ref_cases": 0,
+    "pieces": 0,
+    "recall": null,
+    "naming": null,
+    "presence_agreement": null,
     "tf1_mean": null
    },
    "Ramus": {
@@ -257,65 +257,65 @@
     "pieces": 0,
     "recall": null,
     "naming": null,
-    "presence_agreement": 1.0,
+    "presence_agreement": null,
     "tf1_mean": null
    },
    "PDA": {
-    "ref_cases": 7,
-    "pieces": 9,
-    "recall": 1.0,
-    "naming": 1.0,
-    "presence_agreement": 1.0,
+    "ref_cases": 0,
+    "pieces": 0,
+    "recall": null,
+    "naming": null,
+    "presence_agreement": null,
     "tf1_mean": null
    },
    "PLB": {
-    "ref_cases": 6,
-    "pieces": 7,
-    "recall": 1.0,
-    "naming": 1.0,
-    "presence_agreement": 1.0,
+    "ref_cases": 0,
+    "pieces": 0,
+    "recall": null,
+    "naming": null,
+    "presence_agreement": null,
     "tf1_mean": null
    }
   },
   "erode_branches": {
    "D1": {
-    "ref_cases": 7,
-    "pieces": 7,
-    "recall": 1.0,
-    "naming": 1.0,
-    "presence_agreement": 1.0,
+    "ref_cases": 0,
+    "pieces": 0,
+    "recall": null,
+    "naming": null,
+    "presence_agreement": null,
     "tf1_mean": null
    },
    "D2": {
-    "ref_cases": 6,
-    "pieces": 6,
-    "recall": 1.0,
-    "naming": 1.0,
-    "presence_agreement": 1.0,
+    "ref_cases": 0,
+    "pieces": 0,
+    "recall": null,
+    "naming": null,
+    "presence_agreement": null,
     "tf1_mean": null
    },
    "D3": {
-    "ref_cases": 1,
-    "pieces": 1,
-    "recall": 1.0,
-    "naming": 1.0,
-    "presence_agreement": 1.0,
+    "ref_cases": 0,
+    "pieces": 0,
+    "recall": null,
+    "naming": null,
+    "presence_agreement": null,
     "tf1_mean": null
    },
    "OM1": {
-    "ref_cases": 6,
-    "pieces": 6,
-    "recall": 1.0,
-    "naming": 1.0,
-    "presence_agreement": 1.0,
+    "ref_cases": 0,
+    "pieces": 0,
+    "recall": null,
+    "naming": null,
+    "presence_agreement": null,
     "tf1_mean": null
    },
    "OM2": {
-    "ref_cases": 3,
-    "pieces": 3,
-    "recall": 1.0,
-    "naming": 1.0,
-    "presence_agreement": 1.0,
+    "ref_cases": 0,
+    "pieces": 0,
+    "recall": null,
+    "naming": null,
+    "presence_agreement": null,
     "tf1_mean": null
    },
    "Ramus": {
@@ -323,162 +323,164 @@
     "pieces": 0,
     "recall": null,
     "naming": null,
-    "presence_agreement": 1.0,
+    "presence_agreement": null,
     "tf1_mean": null
    },
    "PDA": {
-    "ref_cases": 7,
-    "pieces": 9,
-    "recall": 1.0,
-    "naming": 1.0,
-    "presence_agreement": 1.0,
+    "ref_cases": 0,
+    "pieces": 0,
+    "recall": null,
+    "naming": null,
+    "presence_agreement": null,
     "tf1_mean": null
    },
    "PLB": {
-    "ref_cases": 6,
-    "pieces": 7,
-    "recall": 1.0,
-    "naming": 1.0,
-    "presence_agreement": 0.8571428571428571,
+    "ref_cases": 0,
+    "pieces": 0,
+    "recall": null,
+    "naming": null,
+    "presence_agreement": null,
     "tf1_mean": null
    }
   }
  },
  "census": {
   "D1": {
-   "cases_any": 74,
-   "cases_ge5mm": 74,
-   "cases_ge3mm": 74,
-   "pieces_mean": 1.014,
-   "cases_ge2_pieces": 1,
-   "median_cl_mm": 32.25
+   "cases_any": 611,
+   "cases_ge5mm": 610,
+   "cases_ge3mm": 611,
+   "pieces_mean": 1.016,
+   "cases_ge2_pieces": 8,
+   "median_cl_mm": 35.4
   },
   "D2": {
-   "cases_any": 49,
-   "cases_ge5mm": 49,
-   "cases_ge3mm": 49,
+   "cases_any": 359,
+   "cases_ge5mm": 358,
+   "cases_ge3mm": 358,
    "pieces_mean": 1.0,
    "cases_ge2_pieces": 0,
-   "median_cl_mm": 26.9
+   "median_cl_mm": 28.1
   },
   "D3": {
-   "cases_any": 4,
-   "cases_ge5mm": 4,
-   "cases_ge3mm": 4,
+   "cases_any": 47,
+   "cases_ge5mm": 47,
+   "cases_ge3mm": 47,
    "pieces_mean": 1.0,
    "cases_ge2_pieces": 0,
-   "median_cl_mm": 37.75
+   "median_cl_mm": 28.4
   },
   "OM1": {
-   "cases_any": 71,
-   "cases_ge5mm": 71,
-   "cases_ge3mm": 71,
-   "pieces_mean": 1.0,
-   "cases_ge2_pieces": 0,
-   "median_cl_mm": 33.7
+   "cases_any": 540,
+   "cases_ge5mm": 540,
+   "cases_ge3mm": 540,
+   "pieces_mean": 1.002,
+   "cases_ge2_pieces": 1,
+   "median_cl_mm": 35.9
   },
   "OM2": {
-   "cases_any": 32,
-   "cases_ge5mm": 31,
-   "cases_ge3mm": 32,
-   "pieces_mean": 1.0,
-   "cases_ge2_pieces": 0,
-   "median_cl_mm": 39.7
+   "cases_any": 229,
+   "cases_ge5mm": 227,
+   "cases_ge3mm": 228,
+   "pieces_mean": 1.004,
+   "cases_ge2_pieces": 1,
+   "median_cl_mm": 35.6
   },
   "Ramus": {
-   "cases_any": 12,
-   "cases_ge5mm": 12,
-   "cases_ge3mm": 12,
-   "pieces_mean": 1.25,
-   "cases_ge2_pieces": 3,
-   "median_cl_mm": 30.2
+   "cases_any": 149,
+   "cases_ge5mm": 149,
+   "cases_ge3mm": 149,
+   "pieces_mean": 1.034,
+   "cases_ge2_pieces": 5,
+   "median_cl_mm": 36.7
   },
   "PDA": {
-   "cases_any": 74,
-   "cases_ge5mm": 74,
-   "cases_ge3mm": 74,
-   "pieces_mean": 1.068,
-   "cases_ge2_pieces": 5,
-   "median_cl_mm": 47.400000000000006
+   "cases_any": 608,
+   "cases_ge5mm": 606,
+   "cases_ge3mm": 608,
+   "pieces_mean": 1.112,
+   "cases_ge2_pieces": 65,
+   "median_cl_mm": 46.3
   },
   "PLB": {
-   "cases_any": 75,
-   "cases_ge5mm": 74,
-   "cases_ge3mm": 75,
-   "pieces_mean": 1.013,
-   "cases_ge2_pieces": 1,
-   "median_cl_mm": 47.8
+   "cases_any": 610,
+   "cases_ge5mm": 601,
+   "cases_ge3mm": 610,
+   "pieces_mean": 1.016,
+   "cases_ge2_pieces": 10,
+   "median_cl_mm": 47.05
   }
  },
  "twigs": {
   "delta": {
    "LAD": {
+    "cases_ge3": 7,
+    "cases_ge5": 5,
+    "cases_ge10": 3,
+    "twigs_ge5": 5
+   },
+   "LCx": {
     "cases_ge3": 1,
     "cases_ge5": 1,
     "cases_ge10": 0,
     "twigs_ge5": 1
    },
-   "LCx": {
-    "cases_ge3": 0,
-    "cases_ge5": 0,
-    "cases_ge10": 0,
-    "twigs_ge5": 0
-   },
    "RCA": {
-    "cases_ge3": 0,
-    "cases_ge5": 0,
+    "cases_ge3": 3,
+    "cases_ge5": 2,
     "cases_ge10": 0,
-    "twigs_ge5": 0
+    "twigs_ge5": 2
    }
   },
   "foxtrot": {
    "LAD": {
-    "cases_ge3": 1,
-    "cases_ge5": 1,
-    "cases_ge10": 0,
-    "twigs_ge5": 1
-   },
-   "LCx": {
-    "cases_ge3": 0,
-    "cases_ge5": 0,
-    "cases_ge10": 0,
-    "twigs_ge5": 0
-   },
-   "RCA": {
-    "cases_ge3": 0,
-    "cases_ge5": 0,
-    "cases_ge10": 0,
-    "twigs_ge5": 0
-   }
-  },
-  "crucible": {
-   "LAD": {
-    "cases_ge3": 4,
+    "cases_ge3": 6,
     "cases_ge5": 4,
     "cases_ge10": 3,
     "twigs_ge5": 4
    },
    "LCx": {
+    "cases_ge3": 1,
+    "cases_ge5": 1,
+    "cases_ge10": 0,
+    "twigs_ge5": 1
+   },
+   "RCA": {
+    "cases_ge3": 3,
+    "cases_ge5": 2,
+    "cases_ge10": 0,
+    "twigs_ge5": 2
+   }
+  },
+  "crucible": {
+   "LAD": {
+    "cases_ge3": 15,
+    "cases_ge5": 13,
+    "cases_ge10": 11,
+    "twigs_ge5": 13
+   },
+   "LCx": {
+    "cases_ge3": 10,
+    "cases_ge5": 9,
+    "cases_ge10": 7,
+    "twigs_ge5": 9
+   },
+   "RCA": {
     "cases_ge3": 3,
     "cases_ge5": 3,
     "cases_ge10": 2,
     "twigs_ge5": 3
-   },
-   "RCA": {
-    "cases_ge3": 0,
-    "cases_ge5": 0,
-    "cases_ge10": 0,
-    "twigs_ge5": 0
    }
   }
  },
  "dominance": {
   "by_PDA": {
-   "right": 72,
-   "left": 2,
-   "no PDA: left PLA": 1
+   "right": 570,
+   "left": 36,
+   "no PDA: left PLA": 10,
+   "co (both PDAs)": 2,
+   "no PDA: both/none": 2
   },
-  "cases_with_left_PDA_or_PLA": 4,
-  "cases_with_any_left_and_any_right_posterior": 1
+  "cases_with_left_PDA_or_PLA": 59,
+  "cases_with_any_left_and_any_right_posterior": 13
  }
 }

@@ -1,4 +1,4 @@
-# Foxtrot j1f round 2: summary (620 of the 620 in pass 1; 0 in the band pass)
+# Foxtrot j1f round 2: summary (620 of the 620 in pass 1; 19 in the band pass)
 
 ## 1. Stage-1 labels (D47 Q1 = A, F-A3) and the origin collapse vs territory.to_four
 
@@ -14,33 +14,40 @@
  "collapse_mismatch_cases": 5,
  "collapse_mismatch_left_pda_voxels": 4879,
  "ignore_voxels": 467,
- "ignore_share_of_tree": 2.23917839126684e-05
+ "ignore_share_of_tree": 2.23917839126684e-05,
+ "recheck_with_grouped_posterior": {
+  "n_rechecked": 61,
+  "mismatch": 40,
+  "mismatch_other_voxels": 40,
+  "mismatch_left_posterior": 0,
+  "cases_with_mismatch": 2
+ }
 }
 ```
 
 ## 2. Branch scorer self-tests
 
-Identity (reference scored against itself, 620 cases; branch tF1 on the 0 fit-check cases):
+Identity (reference scored against itself, 620 cases; branch tF1 on the 20 fit-check cases):
 
 | class | ref cases (>= 5 mm) | pieces | recall | naming | presence agr. | tF1 |
 |---|---|---|---|---|---|---|
-| D1 | 610 | 621 | 1.0 | 1.0 | 1.0 | None |
-| D2 | 358 | 359 | 1.0 | 1.0 | 1.0 | None |
-| D3 | 47 | 47 | 1.0 | 1.0 | 1.0 | None |
-| OM1 | 539 | 541 | 1.0 | 1.0 | 1.0 | None |
-| OM2 | 227 | 230 | 1.0 | 1.0 | 1.0 | None |
-| Ramus | 149 | 154 | 1.0 | 1.0 | 1.0 | None |
-| PDA | 606 | 676 | 1.0 | 1.0 | 1.0 | None |
-| PLB | 601 | 620 | 1.0 | 1.0 | 1.0 | None |
+| D1 | 610 | 621 | 1.0 | 1.0 | 1.0 | 1.0 |
+| D2 | 358 | 359 | 1.0 | 1.0 | 1.0 | 1.0 |
+| D3 | 47 | 47 | 1.0 | 1.0 | 1.0 | 1.0 |
+| OM1 | 539 | 541 | 1.0 | 1.0 | 1.0 | 1.0 |
+| OM2 | 227 | 230 | 1.0 | 1.0 | 1.0 | 1.0 |
+| Ramus | 149 | 154 | 1.0 | 1.0 | 1.0 | 1.0 |
+| PDA | 606 | 676 | 1.0 | 1.0 | 1.0 | 1.0 |
+| PLB | 601 | 620 | 1.0 | 1.0 | 1.0 | 1.0 |
 
-Perturbations (the 0 fit-check cases): recall / naming / presence agreement / tF1
+Perturbations (the 20 fit-check cases): recall / naming / presence agreement / tF1
 
 | perturbation | D1 | D2 | D3 | OM1 | OM2 | Ramus | PDA | PLB |
 |---|---|---|---|---|---|---|---|---|
-| swap_D1_D2 | - / - / - / - | - / - / - / - | - / - / - / - | - / - / - / - | - / - / - / - | - / - / - / - | - / - / - / - | - / - / - / - |
-| drop_OM2 | - / - / - / - | - / - / - / - | - / - / - / - | - / - / - / - | - / - / - / - | - / - / - / - | - / - / - / - | - / - / - / - |
-| types_to_parent | - / - / - / - | - / - / - / - | - / - / - / - | - / - / - / - | - / - / - / - | - / - / - / - | - / - / - / - | - / - / - / - |
-| erode_branches | - / - / - / - | - / - / - / - | - / - / - / - | - / - / - / - | - / - / - / - | - / - / - / - | - / - / - / - | - / - / - / - |
+| swap_D1_D2 | 1.0 / 0.0 / 0.5 / 0.0 | 1.0 / 0.0 / 0.5 / 0.0 | 1.0 / 1.0 / 1.0 / 1.0 | 1.0 / 1.0 / 1.0 / 1.0 | 1.0 / 1.0 / 1.0 / 1.0 | 1.0 / 1.0 / 1.0 / 1.0 | 1.0 / 1.0 / 1.0 / 1.0 | 1.0 / 1.0 / 1.0 / 1.0 |
+| drop_OM2 | 1.0 / 1.0 / 1.0 / - | 1.0 / 1.0 / 1.0 / - | 1.0 / 1.0 / 1.0 / - | 1.0 / 1.0 / 1.0 / - | 0.0 / - / 0.3 / - | 1.0 / 1.0 / 1.0 / - | 1.0 / 1.0 / 1.0 / - | 1.0 / 1.0 / 1.0 / - |
+| types_to_parent | 1.0 / 0.0 / 0.0 / - | 1.0 / 0.0 / 0.5 / - | 1.0 / 0.0 / 0.95 / - | 1.0 / 0.0 / 0.0 / - | 1.0 / 0.0 / 0.3 / - | 1.0 / 0.0 / 0.95 / - | 1.0 / 1.0 / 1.0 / - | 1.0 / 1.0 / 1.0 / - |
+| erode_branches | 1.0 / 1.0 / 1.0 / - | 1.0 / 1.0 / 1.0 / - | 1.0 / 1.0 / 1.0 / - | 1.0 / 1.0 / 1.0 / - | 1.0 / 1.0 / 1.0 / - | 1.0 / 1.0 / 1.0 / - | 1.0 / 1.0 / 1.0 / - | 1.0 / 1.0 / 1.0 / - |
 
 ## 3. Census used by the gate simulation (620)
 
@@ -85,3 +92,24 @@ Perturbations (the 0 fit-check cases): recall / naming / presence agreement / tF
 }
 ```
 
+
+## 6. Stage-2 background band (19 cases, ids divisible by 20 among the 620)
+
+| w (mm) | S band cm3 | N band cm3 | R band cm3 | union cm3 | union / 256^3 patch | union / bg within 25 mm | S prox/mid/dist | traced branch vol within w of LAD |
+|---|---|---|---|---|---|---|---|---|
+| 4 | 11.1 | 4.7 | 6.5 | 21.0 | 0.010 | 0.019 | [0.369, 0.308, 0.323] | 0.075 |
+| 8 | 39.0 | 18.2 | 22.9 | 72.1 | 0.034 | 0.066 | [0.366, 0.299, 0.335] | 0.147 |
+| 15 | 130.4 | 72.1 | 79.3 | 238.4 | 0.114 | 0.213 | [0.368, 0.285, 0.347] | 0.243 |
+| 25 | 362.1 | 236.9 | 233.2 | 641.5 | 0.306 | 0.571 | [0.373, 0.27, 0.357] | 0.292 |
+
+Medians over cases. Traced tree volume, median 1.99 cm3.
+
+Synthetic septals (57 tubes): mean share of the centreline inside the band (unpenalised by CE)
+
+| length mm | w=4 | w=8 | w=15 | w=25 | hits a traced vessel |
+|---|---|---|---|---|---|
+| 10 | 0.485 | 0.89 | 1.0 | 1.0 | 0.011 |
+| 20 | 0.246 | 0.459 | 0.837 | 1.0 | 0.005 |
+| 30 | 0.164 | 0.308 | 0.562 | 0.919 | 0.003 |
+| 40 | 0.124 | 0.231 | 0.422 | 0.698 | 0.002 |
+| 60 | 0.083 | 0.154 | 0.282 | 0.466 | 0.002 |

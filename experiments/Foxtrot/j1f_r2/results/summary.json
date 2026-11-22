@@ -10,7 +10,14 @@
   "collapse_mismatch_cases": 5,
   "collapse_mismatch_left_pda_voxels": 4879,
   "ignore_voxels": 467,
-  "ignore_share_of_tree": 2.23917839126684e-05
+  "ignore_share_of_tree": 2.23917839126684e-05,
+  "recheck_with_grouped_posterior": {
+   "n_rechecked": 61,
+   "mismatch": 40,
+   "mismatch_other_voxels": 40,
+   "mismatch_left_posterior": 0,
+   "cases_with_mismatch": 2
+  }
  },
  "identity": {
   "D1": {
@@ -81,265 +88,265 @@
  "perturb": {
   "swap_D1_D2": {
    "D1": {
-    "ref_cases": 0,
-    "pieces": 0,
-    "recall": null,
-    "naming": null,
-    "presence_agreement": null,
-    "tf1_mean": null
+    "ref_cases": 20,
+    "pieces": 20,
+    "recall": 1.0,
+    "naming": 0.0,
+    "presence_agreement": 0.5,
+    "tf1_mean": 0.0
    },
    "D2": {
-    "ref_cases": 0,
-    "pieces": 0,
-    "recall": null,
-    "naming": null,
-    "presence_agreement": null,
-    "tf1_mean": null
+    "ref_cases": 10,
+    "pieces": 10,
+    "recall": 1.0,
+    "naming": 0.0,
+    "presence_agreement": 0.5,
+    "tf1_mean": 0.0
    },
    "D3": {
-    "ref_cases": 0,
-    "pieces": 0,
-    "recall": null,
-    "naming": null,
-    "presence_agreement": null,
-    "tf1_mean": null
+    "ref_cases": 1,
+    "pieces": 1,
+    "recall": 1.0,
+    "naming": 1.0,
+    "presence_agreement": 1.0,
+    "tf1_mean": 1.0
    },
    "OM1": {
-    "ref_cases": 0,
-    "pieces": 0,
-    "recall": null,
-    "naming": null,
-    "presence_agreement": null,
-    "tf1_mean": null
+    "ref_cases": 20,
+    "pieces": 20,
+    "recall": 1.0,
+    "naming": 1.0,
+    "presence_agreement": 1.0,
+    "tf1_mean": 1.0
    },
    "OM2": {
-    "ref_cases": 0,
-    "pieces": 0,
-    "recall": null,
-    "naming": null,
-    "presence_agreement": null,
-    "tf1_mean": null
+    "ref_cases": 14,
+    "pieces": 14,
+    "recall": 1.0,
+    "naming": 1.0,
+    "presence_agreement": 1.0,
+    "tf1_mean": 1.0
    },
    "Ramus": {
-    "ref_cases": 0,
-    "pieces": 0,
-    "recall": null,
-    "naming": null,
-    "presence_agreement": null,
-    "tf1_mean": null
+    "ref_cases": 1,
+    "pieces": 1,
+    "recall": 1.0,
+    "naming": 1.0,
+    "presence_agreement": 1.0,
+    "tf1_mean": 1.0
    },
    "PDA": {
-    "ref_cases": 0,
-    "pieces": 0,
-    "recall": null,
-    "naming": null,
-    "presence_agreement": null,
-    "tf1_mean": null
+    "ref_cases": 19,
+    "pieces": 19,
+    "recall": 1.0,
+    "naming": 1.0,
+    "presence_agreement": 1.0,
+    "tf1_mean": 1.0
    },
    "PLB": {
-    "ref_cases": 0,
-    "pieces": 0,
-    "recall": null,
-    "naming": null,
-    "presence_agreement": null,
-    "tf1_mean": null
+    "ref_cases": 20,
+    "pieces": 21,
+    "recall": 1.0,
+    "naming": 1.0,
+    "presence_agreement": 1.0,
+    "tf1_mean": 1.0
    }
   },
   "drop_OM2": {
    "D1": {
-    "ref_cases": 0,
-    "pieces": 0,
-    "recall": null,
-    "naming": null,
-    "presence_agreement": null,
+    "ref_cases": 20,
+    "pieces": 20,
+    "recall": 1.0,
+    "naming": 1.0,
+    "presence_agreement": 1.0,
     "tf1_mean": null
    },
    "D2": {
-    "ref_cases": 0,
-    "pieces": 0,
-    "recall": null,
-    "naming": null,
-    "presence_agreement": null,
+    "ref_cases": 10,
+    "pieces": 10,
+    "recall": 1.0,
+    "naming": 1.0,
+    "presence_agreement": 1.0,
     "tf1_mean": null
    },
    "D3": {
-    "ref_cases": 0,
-    "pieces": 0,
-    "recall": null,
-    "naming": null,
-    "presence_agreement": null,
+    "ref_cases": 1,
+    "pieces": 1,
+    "recall": 1.0,
+    "naming": 1.0,
+    "presence_agreement": 1.0,
     "tf1_mean": null
    },
    "OM1": {
-    "ref_cases": 0,
-    "pieces": 0,
-    "recall": null,
-    "naming": null,
-    "presence_agreement": null,
+    "ref_cases": 20,
+    "pieces": 20,
+    "recall": 1.0,
+    "naming": 1.0,
+    "presence_agreement": 1.0,
     "tf1_mean": null
    },
    "OM2": {
-    "ref_cases": 0,
-    "pieces": 0,
-    "recall": null,
+    "ref_cases": 14,
+    "pieces": 14,
+    "recall": 0.0,
     "naming": null,
-    "presence_agreement": null,
+    "presence_agreement": 0.3,
     "tf1_mean": null
    },
    "Ramus": {
-    "ref_cases": 0,
-    "pieces": 0,
-    "recall": null,
-    "naming": null,
-    "presence_agreement": null,
+    "ref_cases": 1,
+    "pieces": 1,
+    "recall": 1.0,
+    "naming": 1.0,
+    "presence_agreement": 1.0,
     "tf1_mean": null
    },
    "PDA": {
-    "ref_cases": 0,
-    "pieces": 0,
-    "recall": null,
-    "naming": null,
-    "presence_agreement": null,
+    "ref_cases": 19,
+    "pieces": 19,
+    "recall": 1.0,
+    "naming": 1.0,
+    "presence_agreement": 1.0,
     "tf1_mean": null
    },
    "PLB": {
-    "ref_cases": 0,
-    "pieces": 0,
-    "recall": null,
-    "naming": null,
-    "presence_agreement": null,
+    "ref_cases": 20,
+    "pieces": 21,
+    "recall": 1.0,
+    "naming": 1.0,
+    "presence_agreement": 1.0,
     "tf1_mean": null
    }
   },
   "types_to_parent": {
    "D1": {
-    "ref_cases": 0,
-    "pieces": 0,
-    "recall": null,
-    "naming": null,
-    "presence_agreement": null,
+    "ref_cases": 20,
+    "pieces": 20,
+    "recall": 1.0,
+    "naming": 0.0,
+    "presence_agreement": 0.0,
     "tf1_mean": null
    },
    "D2": {
-    "ref_cases": 0,
-    "pieces": 0,
-    "recall": null,
-    "naming": null,
-    "presence_agreement": null,
+    "ref_cases": 10,
+    "pieces": 10,
+    "recall": 1.0,
+    "naming": 0.0,
+    "presence_agreement": 0.5,
     "tf1_mean": null
    },
    "D3": {
-    "ref_cases": 0,
-    "pieces": 0,
-    "recall": null,
-    "naming": null,
-    "presence_agreement": null,
+    "ref_cases": 1,
+    "pieces": 1,
+    "recall": 1.0,
+    "naming": 0.0,
+    "presence_agreement": 0.95,
     "tf1_mean": null
    },
    "OM1": {
-    "ref_cases": 0,
-    "pieces": 0,
-    "recall": null,
-    "naming": null,
-    "presence_agreement": null,
+    "ref_cases": 20,
+    "pieces": 20,
+    "recall": 1.0,
+    "naming": 0.0,
+    "presence_agreement": 0.0,
     "tf1_mean": null
    },
    "OM2": {
-    "ref_cases": 0,
-    "pieces": 0,
-    "recall": null,
-    "naming": null,
-    "presence_agreement": null,
+    "ref_cases": 14,
+    "pieces": 14,
+    "recall": 1.0,
+    "naming": 0.0,
+    "presence_agreement": 0.3,
     "tf1_mean": null
    },
    "Ramus": {
-    "ref_cases": 0,
-    "pieces": 0,
-    "recall": null,
-    "naming": null,
-    "presence_agreement": null,
+    "ref_cases": 1,
+    "pieces": 1,
+    "recall": 1.0,
+    "naming": 0.0,
+    "presence_agreement": 0.95,
     "tf1_mean": null
    },
    "PDA": {
-    "ref_cases": 0,
-    "pieces": 0,
-    "recall": null,
-    "naming": null,
-    "presence_agreement": null,
+    "ref_cases": 19,
+    "pieces": 19,
+    "recall": 1.0,
+    "naming": 1.0,
+    "presence_agreement": 1.0,
     "tf1_mean": null
    },
    "PLB": {
-    "ref_cases": 0,
-    "pieces": 0,
-    "recall": null,
-    "naming": null,
-    "presence_agreement": null,
+    "ref_cases": 20,
+    "pieces": 21,
+    "recall": 1.0,
+    "naming": 1.0,
+    "presence_agreement": 1.0,
     "tf1_mean": null
    }
   },
   "erode_branches": {
    "D1": {
-    "ref_cases": 0,
-    "pieces": 0,
-    "recall": null,
-    "naming": null,
-    "presence_agreement": null,
+    "ref_cases": 20,
+    "pieces": 20,
+    "recall": 1.0,
+    "naming": 1.0,
+    "presence_agreement": 1.0,
     "tf1_mean": null
    },
    "D2": {
-    "ref_cases": 0,
-    "pieces": 0,
-    "recall": null,
-    "naming": null,
-    "presence_agreement": null,
+    "ref_cases": 10,
+    "pieces": 10,
+    "recall": 1.0,
+    "naming": 1.0,
+    "presence_agreement": 1.0,
     "tf1_mean": null
    },
    "D3": {
-    "ref_cases": 0,
-    "pieces": 0,
-    "recall": null,
-    "naming": null,
-    "presence_agreement": null,
+    "ref_cases": 1,
+    "pieces": 1,
+    "recall": 1.0,
+    "naming": 1.0,
+    "presence_agreement": 1.0,
     "tf1_mean": null
    },
    "OM1": {
-    "ref_cases": 0,
-    "pieces": 0,
-    "recall": null,
-    "naming": null,
-    "presence_agreement": null,
+    "ref_cases": 20,
+    "pieces": 20,
+    "recall": 1.0,
+    "naming": 1.0,
+    "presence_agreement": 1.0,
     "tf1_mean": null
    },
    "OM2": {
-    "ref_cases": 0,
-    "pieces": 0,
-    "recall": null,
-    "naming": null,
-    "presence_agreement": null,
+    "ref_cases": 14,
+    "pieces": 14,
+    "recall": 1.0,
+    "naming": 1.0,
+    "presence_agreement": 1.0,
     "tf1_mean": null
    },
    "Ramus": {
-    "ref_cases": 0,
-    "pieces": 0,
-    "recall": null,
-    "naming": null,
-    "presence_agreement": null,
+    "ref_cases": 1,
+    "pieces": 1,
+    "recall": 1.0,
+    "naming": 1.0,
+    "presence_agreement": 1.0,
     "tf1_mean": null
    },
    "PDA": {
-    "ref_cases": 0,
-    "pieces": 0,
-    "recall": null,
-    "naming": null,
-    "presence_agreement": null,
+    "ref_cases": 19,
+    "pieces": 19,
+    "recall": 1.0,
+    "naming": 1.0,
+    "presence_agreement": 1.0,
     "tf1_mean": null
    },
    "PLB": {
-    "ref_cases": 0,
-    "pieces": 0,
-    "recall": null,
-    "naming": null,
-    "presence_agreement": null,
+    "ref_cases": 20,
+    "pieces": 21,
+    "recall": 1.0,
+    "naming": 1.0,
+    "presence_agreement": 1.0,
     "tf1_mean": null
    }
   }
@@ -482,5 +489,100 @@
   },
   "cases_with_left_PDA_or_PLA": 59,
   "cases_with_any_left_and_any_right_posterior": 13
+ },
+ "band": {
+  "4": {
+   "S": 11101.0,
+   "N": 4728.0,
+   "R": 6472.0,
+   "union": 20956.0,
+   "union_patch_share": 0.01,
+   "union_share_bg25": 0.0189,
+   "traced_branch_within_w_of_LAD_share": 0.0755,
+   "S_pmd": [
+    0.369,
+    0.308,
+    0.323
+   ]
+  },
+  "8": {
+   "S": 38991.0,
+   "N": 18179.0,
+   "R": 22889.0,
+   "union": 72109.0,
+   "union_patch_share": 0.0344,
+   "union_share_bg25": 0.0657,
+   "traced_branch_within_w_of_LAD_share": 0.1473,
+   "S_pmd": [
+    0.366,
+    0.299,
+    0.335
+   ]
+  },
+  "15": {
+   "S": 130384.0,
+   "N": 72109.0,
+   "R": 79341.0,
+   "union": 238354.0,
+   "union_patch_share": 0.1137,
+   "union_share_bg25": 0.2126,
+   "traced_branch_within_w_of_LAD_share": 0.2434,
+   "S_pmd": [
+    0.368,
+    0.285,
+    0.347
+   ]
+  },
+  "25": {
+   "S": 362076.0,
+   "N": 236862.0,
+   "R": 233222.0,
+   "union": 641518.0,
+   "union_patch_share": 0.3059,
+   "union_share_bg25": 0.5714,
+   "traced_branch_within_w_of_LAD_share": 0.2924,
+   "S_pmd": [
+    0.373,
+    0.27,
+    0.357
+   ]
+  }
+ },
+ "synthetic": {
+  "10": {
+   "4": 0.485,
+   "8": 0.89,
+   "15": 1.0,
+   "25": 1.0,
+   "hits": 0.011
+  },
+  "20": {
+   "4": 0.246,
+   "8": 0.459,
+   "15": 0.837,
+   "25": 1.0,
+   "hits": 0.005
+  },
+  "30": {
+   "4": 0.164,
+   "8": 0.308,
+   "15": 0.562,
+   "25": 0.919,
+   "hits": 0.003
+  },
+  "40": {
+   "4": 0.124,
+   "8": 0.231,
+   "15": 0.422,
+   "25": 0.698,
+   "hits": 0.002
+  },
+  "60": {
+   "4": 0.083,
+   "8": 0.154,
+   "15": 0.282,
+   "25": 0.466,
+   "hits": 0.002
+  }
  }
 }

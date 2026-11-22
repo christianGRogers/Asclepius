@@ -1,0 +1,218 @@
+[
+{
+"set": "D35 (35)",
+"prev": 0.3,
+"read_sens": 0.6,
+"patients": 8.8,
+"report(>=20)": false,
+"decide(>=30)": false,
+"half_width_at_0.8": 0.248
+},
+{
+"set": "D35 (35)",
+"prev": 0.3,
+"read_sens": 0.9,
+"patients": 10.4,
+"report(>=20)": false,
+"decide(>=30)": false,
+"half_width_at_0.8": 0.227
+},
+{
+"set": "D35 (35)",
+"prev": 0.5,
+"read_sens": 0.6,
+"patients": 14.7,
+"report(>=20)": false,
+"decide(>=30)": false,
+"half_width_at_0.8": 0.197
+},
+{
+"set": "D35 (35)",
+"prev": 0.5,
+"read_sens": 0.9,
+"patients": 17.3,
+"report(>=20)": false,
+"decide(>=30)": false,
+"half_width_at_0.8": 0.18
+},
+{
+"set": "D35 (35)",
+"prev": 0.7,
+"read_sens": 0.6,
+"patients": 20.6,
+"report(>=20)": true,
+"decide(>=30)": false,
+"half_width_at_0.8": 0.168
+},
+{
+"set": "D35 (35)",
+"prev": 0.7,
+"read_sens": 0.9,
+"patients": 24.3,
+"report(>=20)": true,
+"decide(>=30)": false,
+"half_width_at_0.8": 0.154
+},
+{
+"set": "D35 (35)",
+"prev": 0.9,
+"read_sens": 0.6,
+"patients": 26.5,
+"report(>=20)": true,
+"decide(>=30)": false,
+"half_width_at_0.8": 0.149
+},
+{
+"set": "D35 (35)",
+"prev": 0.9,
+"read_sens": 0.9,
+"patients": 31.2,
+"report(>=20)": true,
+"decide(>=30)": true,
+"half_width_at_0.8": 0.137
+},
+{
+"set": "D35 x2 (70, hypothetical)",
+"prev": 0.3,
+"read_sens": 0.6,
+"patients": 17.6,
+"report(>=20)": false,
+"decide(>=30)": false,
+"half_width_at_0.8": 0.18
+},
+{
+"set": "D35 x2 (70, hypothetical)",
+"prev": 0.3,
+"read_sens": 0.9,
+"patients": 20.8,
+"report(>=20)": true,
+"decide(>=30)": false,
+"half_width_at_0.8": 0.168
+},
+{
+"set": "D35 x2 (70, hypothetical)",
+"prev": 0.5,
+"read_sens": 0.6,
+"patients": 29.4,
+"report(>=20)": true,
+"decide(>=30)": false,
+"half_width_at_0.8": 0.141
+},
+{
+"set": "D35 x2 (70, hypothetical)",
+"prev": 0.5,
+"read_sens": 0.9,
+"patients": 34.6,
+"report(>=20)": true,
+"decide(>=30)": true,
+"half_width_at_0.8": 0.131
+},
+{
+"set": "D35 x2 (70, hypothetical)",
+"prev": 0.7,
+"read_sens": 0.6,
+"patients": 41.2,
+"report(>=20)": true,
+"decide(>=30)": true,
+"half_width_at_0.8": 0.12
+},
+{
+"set": "D35 x2 (70, hypothetical)",
+"prev": 0.7,
+"read_sens": 0.9,
+"patients": 48.5,
+"report(>=20)": true,
+"decide(>=30)": true,
+"half_width_at_0.8": 0.111
+},
+{
+"set": "D35 x2 (70, hypothetical)",
+"prev": 0.9,
+"read_sens": 0.6,
+"patients": 52.9,
+"report(>=20)": true,
+"decide(>=30)": true,
+"half_width_at_0.8": 0.107
+},
+{
+"set": "D35 x2 (70, hypothetical)",
+"prev": 0.9,
+"read_sens": 0.9,
+"patients": 62.4,
+"report(>=20)": true,
+"decide(>=30)": true,
+"half_width_at_0.8": 0.098
+},
+{
+"set": "D35 + seal (185, acceptance only)",
+"prev": 0.3,
+"read_sens": 0.6,
+"patients": 46.6,
+"report(>=20)": true,
+"decide(>=30)": true,
+"half_width_at_0.8": 0.113
+},
+{
+"set": "D35 + seal (185, acceptance only)",
+"prev": 0.3,
+"read_sens": 0.9,
+"patients": 54.9,
+"report(>=20)": true,
+"decide(>=30)": true,
+"half_width_at_0.8": 0.105
+},
+{
+"set": "D35 + seal (185, acceptance only)",
+"prev": 0.5,
+"read_sens": 0.6,
+"patients": 77.7,
+"report(>=20)": true,
+"decide(>=30)": true,
+"half_width_at_0.8": 0.088
+},
+{
+"set": "D35 + seal (185, acceptance only)",
+"prev": 0.5,
+"read_sens": 0.9,
+"patients": 91.6,
+"report(>=20)": true,
+"decide(>=30)": true,
+"half_width_at_0.8": 0.081
+},
+{
+"set": "D35 + seal (185, acceptance only)",
+"prev": 0.7,
+"read_sens": 0.6,
+"patients": 108.8,
+"report(>=20)": true,
+"decide(>=30)": true,
+"half_width_at_0.8": 0.075
+},
+{
+"set": "D35 + seal (185, acceptance only)",
+"prev": 0.7,
+"read_sens": 0.9,
+"patients": 128.2,
+"report(>=20)": true,
+"decide(>=30)": true,
+"half_width_at_0.8": 0.069
+},
+{
+"set": "D35 + seal (185, acceptance only)",
+"prev": 0.9,
+"read_sens": 0.6,
+"patients": 139.9,
+"report(>=20)": true,
+"decide(>=30)": true,
+"half_width_at_0.8": 0.066
+},
+{
+"set": "D35 + seal (185, acceptance only)",
+"prev": 0.9,
+"read_sens": 0.9,
+"patients": 164.8,
+"report(>=20)": true,
+"decide(>=30)": true,
+"half_width_at_0.8": 0.061
+}
+]

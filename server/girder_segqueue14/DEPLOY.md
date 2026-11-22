@@ -44,9 +44,9 @@ that owns the checkout.
 ## Quick path: `deploy/segqueue14-deploy.sh`
 
 Steps 0, 1, 3 and 5 below as one script. **From GitHub:** Actions -> *SegQueue14 on
-janus* -> *Run workflow*, pick the step; it SSHes in with the `SSH_*` secrets, updates
-`~/Asclepius-sq14` to `main` and runs the step as root for the deploy user (output in
-the run summary). **On the server by hand**, from any directory:
+janus* -> *Run workflow*, pick the step; it SSHes in with the `SSH_*` secrets (through
+the gateway server, see *Reaching janus* below), updates `~/Asclepius-sq14` to `main`
+and runs the step as root for the deploy user (output in the run summary). **On the server by hand**, from any directory:
 
 ```sh
 git clone -q --branch main "$(git -C ~/Asclepius remote get-url origin)" ~/Asclepius-sq14
@@ -58,6 +58,28 @@ bash $D worker             # SegQueue14 scoring worker
 bash $D status             # counts; `off` is the rollback switch
 bash $D branding           # dry run: Girder's brand name and banner colour (Bradensbay)
 ```
+
+**Reaching janus.** Janus's SSH port is closed to the outside (since 2026-11-20), so
+both deploy workflows (*SegQueue14 on janus*, *Server over SSH*) log in to the gateway
+server first and jump from there to janus's LAN address (`deploy/janus-ssh.sh`, an
+`ssh -W` ProxyCommand with password auth on both hops). Both host keys are checked
+strictly; a failure names the hop (`gateway hop: ...` or `main-server hop: ...`).
+Repository secrets (Settings -> Secrets and variables -> Actions):
+
+| Secret | Needed | What |
+|---|---|---|
+| `SSH_HOST` | yes | The public host. The gateway is reached here unless `GATEWAY_HOST` is set. |
+| `SSH_USERNAME`, `SSH_PASSWORD` | yes | The login, the same on the gateway and on janus. |
+| `GATEWAY_PORT` | yes | The gateway's SSH port. |
+| `MAIN_SERVER_LAN` | yes | Janus's LAN address as seen from the gateway. |
+| `SSH_PORT` | optional | Janus's sshd port **on that LAN address** (default 22). |
+| `GATEWAY_HOST` | optional | The gateway's host, if it is not `SSH_HOST`. |
+| `SSH_KNOWN_HOSTS` | optional | Janus's `known_hosts` lines, under any host name (the old public entry still works: same keys). Without it janus's key is taken as offered through the already-verified gateway. |
+| `SSH_KNOWN_HOSTS_GATEWAY` | optional | The gateway's `known_hosts` lines. Without it the gateway's key is taken from `ssh-keyscan` on first contact. |
+
+Assumed, and changed in `deploy/janus-ssh.sh` if wrong: the gateway is `SSH_HOST` (or
+`GATEWAY_HOST`) on `GATEWAY_PORT`, it allows TCP forwarding for the login, and janus's
+sshd listens on `SSH_PORT` (default 22) at `MAIN_SERVER_LAN`.
 
 It never checks anything out in `~/Asclepius` and never reinstalls the live plugin:
 `main` is cloned into `~/Asclepius-sq14`, and only the repository root (the shared
@@ -295,7 +317,8 @@ the backup server's SFTP login and nothing else.
 
 | Secret | Needed for | What |
 |---|---|---|
-| `SSH_PORT_SFTP_SERVER` | every backup step | The backup server's SSH port. Its host and login are the same as janus's (`SSH_HOST`, `SSH_USERNAME`, `SSH_PASSWORD`). |
+| `GATEWAY_PORT`, `MAIN_SERVER_LAN` | every backup step | As for every step: the runner reaches janus through the gateway (*Reaching janus* above). Only that leg changed; what janus does to reach the backup server did not. |
+| `SSH_PORT_SFTP_SERVER` | every backup step | The backup server's SSH port. Its host and login are the same as janus's (`SSH_HOST`, `SSH_USERNAME`, `SSH_PASSWORD`). The runner reaches it directly on `SSH_HOST`. |
 | `BACKUP_SFTP_LAN_ADDRESS` | optional | `host:port` of the backup server **as seen from janus**. It is tried first if set. Otherwise janus tries `SSH_HOST:SSH_PORT_SFTP_SERVER`. Install says which route worked, or what to set if none did. |
 | `SSH_KNOWN_HOSTS_SFTP_SERVER` | optional | The backup server's `known_hosts` lines. Without it the runner trusts the key offered on first contact. Janus pins only a key matching what the runner saw. |
 

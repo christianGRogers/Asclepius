@@ -1,8 +1,10 @@
 #!/bin/bash
 # The backup steps of the "SegQueue14 on janus" workflow (D42, issue #283), run on
 # the GitHub runner. Each step reaches janus the way the other deploy steps do
-# (password via sshpass -e, sudo via stdin) and runs segqueue14-deploy.sh there,
-# which hands over to deploy/backup/segqueue-backup.sh.
+# (through the gateway with deploy/janus-ssh.sh: password via sshpass -e, sudo via
+# stdin) and runs segqueue14-deploy.sh there, which hands over to
+# deploy/backup/segqueue-backup.sh. The runner reaches the backup server directly
+# (HOST:SFTP_PORT), and janus's own route to it is unchanged.
 #
 #   backup-install       janus: restic 0.17.3 (pinned), an SSH key ->
 #                        backup server: authorise that key (SFTP only, if it can) ->
@@ -13,7 +15,7 @@
 #   backup-restore-test  janus: restore into a scratch folder + scratch Mongo and check
 #   backup-off           janus: stop and disable the timers (keeps every snapshot)
 #
-# Environment (from secrets): HOST PORT USERNAME SSHPASS SFTP_PORT
+# Environment (from secrets): HOST USERNAME SSHPASS SFTP_PORT
 #   LAN_ADDRESS (optional host:port),
 #   SFTP_KNOWN_HOSTS (optional: the backup server's known_hosts line(s)).
 # The repository has no password (the lead's decision on #283). Never prints the SSH
@@ -21,7 +23,7 @@
 set -euo pipefail
 
 STEP="${1:?step}"
-KH="$HOME/.ssh/known_hosts"            # janus's, written by the workflow's trust step
+JANUS_SSH="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)/janus-ssh.sh"  # set up by the trust step
 KH_BACKUP="$HOME/.ssh/known_hosts_backup"
 SSH_OPTS=(-o BatchMode=no -o ConnectTimeout=20 -o StrictHostKeyChecking=yes)
 
@@ -47,8 +49,7 @@ cd "\$home" && SQ14_USER="\$SQ14_USER" bash "\$script" ${args}
 EOF
     local b64
     b64=$(base64 -w0 < remote.sh)
-    printf '%s\n' "$SSHPASS" | sshpass -e ssh "${SSH_OPTS[@]}" -o UserKnownHostsFile="$KH" \
-        -p "${PORT:-22}" "${USERNAME}@${HOST}" \
+    printf '%s\n' "$SSHPASS" | bash "$JANUS_SSH" run \
         "sudo -S -p '' bash -c 'echo $b64 | base64 -d | bash'"
 }
 

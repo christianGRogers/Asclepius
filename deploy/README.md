@@ -232,6 +232,21 @@ declare `segqueue` as a dependency, because the distribution carrying it is name
 `.github/workflows/server-ssh.yml` does exactly this over SSH -- run it with
 `mode: deploy` rather than doing it by hand.
 
+Janus's SSH port is closed to the outside (since 2026-11-20). `server-ssh.yml` and
+`segqueue14-janus.yml` reach it through the gateway server with `deploy/janus-ssh.sh`:
+password login to the gateway, then on to janus's LAN address, both host keys pinned.
+Secrets, in addition to `SSH_HOST`, `SSH_PORT`, `SSH_USERNAME` and `SSH_PASSWORD`
+(the same login on both servers; `SSH_PORT` is now janus's port on its LAN address,
+default 22):
+
+- `GATEWAY_PORT` (required): the gateway's SSH port, on `SSH_HOST`;
+- `MAIN_SERVER_LAN` (required): janus's LAN address as seen from the gateway;
+- `GATEWAY_HOST` (optional): the gateway's host, when it is not `SSH_HOST`;
+- `SSH_KNOWN_HOSTS` / `SSH_KNOWN_HOSTS_GATEWAY` (optional): janus's / the gateway's
+  `known_hosts` lines, pinned instead of trusting the keys offered on first contact.
+
+See `server/girder_segqueue14/DEPLOY.md`, *Reaching janus*.
+
 The wire protocol between the extension and the server is versioned. If a
 release changes it incompatibly, bump `PROTOCOL_VERSION` and
 `MIN_CLIENT_PROTOCOL` in `src/segqueue/protocol.py`; old extensions then get a

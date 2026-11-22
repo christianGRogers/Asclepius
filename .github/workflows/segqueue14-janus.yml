@@ -61,8 +61,17 @@
 #
 # The script never touches the live checkout, the live plugin or live data; see its
 # header. Secrets: SSH_HOST, SSH_PORT, SSH_USERNAME, SSH_PASSWORD (as server-ssh.yml),
-# SSH_KNOWN_HOSTS optional. The backup steps also need SSH_PORT_SFTP_SERVER (the backup
-# server: same host and login as janus, this port); optional: BACKUP_SFTP_LAN_ADDRESS
+# SSH_KNOWN_HOSTS optional.
+#
+# Janus's SSH port is closed to the outside (2026-11-20), so the runner reaches it
+# through the gateway server (deploy/janus-ssh.sh). Required: GATEWAY_PORT (the
+# gateway's SSH port) and MAIN_SERVER_LAN (janus's address as seen from the gateway).
+# Optional: GATEWAY_HOST (the gateway's host; default SSH_HOST) and
+# SSH_KNOWN_HOSTS_GATEWAY (the gateway's known_hosts lines). Assumed: the same login on
+# both servers, and janus's sshd on SSH_PORT (default 22) at MAIN_SERVER_LAN.
+#
+# The backup steps also need SSH_PORT_SFTP_SERVER (the backup server: same host and
+# login as janus, this port; the runner reaches it directly); optional: BACKUP_SFTP_LAN_ADDRESS
 # (host:port of the backup server as seen from janus) and SSH_KNOWN_HOSTS_SFTP_SERVER.
 # The backup repository has no password (the lead's decision on #283).
 
@@ -226,6 +235,8 @@ jobs:
           HOST: ${{ secrets.SSH_HOST }}
           USERNAME: ${{ secrets.SSH_USERNAME }}
           PASSWORD: ${{ secrets.SSH_PASSWORD }}
+          GATEWAY_PORT: ${{ secrets.GATEWAY_PORT }}
+          MAIN_SERVER_LAN: ${{ secrets.MAIN_SERVER_LAN }}
           SFTP_PORT: ${{ secrets.SSH_PORT_SFTP_SERVER }}
           CMD: ${{ steps.cmd.outputs.cmd }}
         run: |
@@ -234,6 +245,9 @@ jobs:
           [ -n "$HOST" ]     || missing+=(SSH_HOST)
           [ -n "$USERNAME" ] || missing+=(SSH_USERNAME)
           [ -n "$PASSWORD" ] || missing+=(SSH_PASSWORD)
+          # Janus is reached through the gateway (deploy/janus-ssh.sh).
+          [ -n "$GATEWAY_PORT" ]    || missing+=(GATEWAY_PORT)
+          [ -n "$MAIN_SERVER_LAN" ] || missing+=(MAIN_SERVER_LAN)
           # The backup steps (D42) also need the backup server's port.
           case "$CMD" in backup-*) [ -n "$SFTP_PORT" ] || missing+=(SSH_PORT_SFTP_SERVER) ;; esac
           if [ ${#missing[@]} -gt 0 ]; then echo "::error::not set: ${missing[*]}"; exit 1; fi
@@ -241,21 +255,20 @@ jobs:
       - name: Install sshpass
         run: sudo apt-get update -qq && sudo apt-get install -y -qq --no-install-recommends sshpass
 
-      - name: Trust the host key
+      # Both hops: the gateway's key, then janus's through the gateway; each one checked
+      # strictly from here on. Fails naming the hop. See deploy/janus-ssh.sh.
+      - name: Trust the host keys (gateway, then janus)
         env:
+          GATEWAY_HOST: ${{ secrets.GATEWAY_HOST }}
           HOST: ${{ secrets.SSH_HOST }}
+          GATEWAY_PORT: ${{ secrets.GATEWAY_PORT }}
+          MAIN_SERVER_LAN: ${{ secrets.MAIN_SERVER_LAN }}
           PORT: ${{ secrets.SSH_PORT }}
+          USERNAME: ${{ secrets.SSH_USERNAME }}
+          SSHPASS: ${{ secrets.SSH_PASSWORD }}
           KNOWN: ${{ secrets.SSH_KNOWN_HOSTS }}
-        run: |
-          set -euo pipefail
-          mkdir -p ~/.ssh && chmod 700 ~/.ssh
-          if [ -n "$KNOWN" ]; then
-            printf '%s\n' "$KNOWN" > ~/.ssh/known_hosts
-          else
-            ssh-keyscan -p "${PORT:-22}" -H "$HOST" > ~/.ssh/known_hosts 2>/dev/null
-            echo ":warning: no SSH_KNOWN_HOSTS secret; accepted the host key offered." >> "$GITHUB_STEP_SUMMARY"
-          fi
-          chmod 600 ~/.ssh/known_hosts && test -s ~/.ssh/known_hosts
+          KNOWN_GATEWAY: ${{ secrets.SSH_KNOWN_HOSTS_GATEWAY }}
+        run: bash deploy/janus-ssh.sh trust
 
       # As in server-ssh.yml: the password goes through the environment (sshpass -e)
       # and, for sudo, through stdin -- never on a command line. The remote script
@@ -264,8 +277,6 @@ jobs:
         if: steps.cmd.outputs.backup != 'true'
         env:
           SSHPASS: ${{ secrets.SSH_PASSWORD }}
-          HOST: ${{ secrets.SSH_HOST }}
-          PORT: ${{ secrets.SSH_PORT }}
           USERNAME: ${{ secrets.SSH_USERNAME }}
           CMD: ${{ steps.cmd.outputs.cmd }}
         run: |
@@ -289,23 +300,22 @@ jobs:
           EOF
           b64=$(base64 -w0 < remote.sh)
           set +e
-          printf '%s\n' "$SSHPASS" | sshpass -e ssh -o BatchMode=no -o ConnectTimeout=20 \
-            -o UserKnownHostsFile="$HOME/.ssh/known_hosts" -o StrictHostKeyChecking=yes \
-            -p "${PORT:-22}" "${USERNAME}@${HOST}" \
+          # Through the gateway; stdin (the sudo password) reaches janus's sudo -S.
+          printf '%s\n' "$SSHPASS" | bash deploy/janus-ssh.sh run \
             "sudo -S -p '' bash -c 'echo $b64 | base64 -d | bash'" 2>&1 | tee out.txt
           code=${PIPESTATUS[1]}
           set -e
           { echo '```'; tail -n 200 out.txt; echo '```'; echo "exit $code"; } >> "$GITHUB_STEP_SUMMARY"
           exit "$code"
 
-      # D42: the backup steps. Same janus connection as above; backup-install also
-      # reaches the backup server (same host and login, port SSH_PORT_SFTP_SERVER).
+      # D42: the backup steps. Same janus connection as above (through the gateway);
+      # backup-install also reaches the backup server directly (same host and login,
+      # port SSH_PORT_SFTP_SERVER), and janus's own route to it is unchanged.
       - name: Run the backup step
         if: steps.cmd.outputs.backup == 'true'
         env:
           SSHPASS: ${{ secrets.SSH_PASSWORD }}
           HOST: ${{ secrets.SSH_HOST }}
-          PORT: ${{ secrets.SSH_PORT }}
           USERNAME: ${{ secrets.SSH_USERNAME }}
           SFTP_PORT: ${{ secrets.SSH_PORT_SFTP_SERVER }}
           SFTP_KNOWN_HOSTS: ${{ secrets.SSH_KNOWN_HOSTS_SFTP_SERVER }}

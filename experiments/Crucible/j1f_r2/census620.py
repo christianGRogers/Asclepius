@@ -90,7 +90,15 @@ def _is_end(skel, p, nid):
     return i is not None and skel.degrees[i] == 1
 
 
-def bands(m1f, sp):
+def bands(m1f, sp, step=(3, 3, 2)):
+    """On a coarse grid (label max-pooled by `step`, ~1 mm), so volumes are approximate (+/- one coarse voxel shell)."""
+    st = tuple(step)
+    sh = tuple(s // k * k for s, k in zip(m1f.shape, st))
+    mm = m1f[:sh[0], :sh[1], :sh[2]]
+    # majority-free pooling: a coarse voxel takes the highest-priority class inside it (branch/trunk over bg)
+    v = mm.reshape(sh[0] // st[0], st[0], sh[1] // st[1], st[1], sh[2] // st[2], st[2])
+    m1f = np.where(v == 255, 0, v).max(axis=(1, 3, 5)).astype(np.uint8)
+    sp = np.asarray(sp, float) * np.array(st)
     fg = (m1f > 0)
     bg = ~fg
     hosts = {'LADtree': np.isin(m1f, (2, 5, 6, 7)), 'RCA': m1f == 4}
@@ -158,7 +166,7 @@ def one(args):
     row['pieces3'] = {B.NAMES[c]: [round(L, 1) for _, _, L in v] for c, v in p3.items()}
     row['class_mm'] = {B.NAMES[c]: round(B.length_mm(rs == c, sp), 1) for c in range(1, 13)}
     sc = {}
-    for kind in ('self', 'swapD', 'dropOM2', 'PDAasRCA'):
+    for kind in (('self', 'swapD', 'dropOM2', 'PDAasRCA') if do_tf1 else ()):
         pr = m if kind == 'self' else perturb(m, kind)
         dn = B.detect_and_name(m, pr, sp, p5)
         pp = B.presence(pr, sp)

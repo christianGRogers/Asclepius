@@ -100,12 +100,14 @@ def pieces(ref: np.ndarray, sp, ref_skel: np.ndarray | None = None, classes=BRAN
     out = {c: [] for c in classes}
     for c in classes:
         comp, n = ndi.label(ref == c, S26)
-        for i in range(1, n + 1):
-            p = comp == i
-            s = p & (rs == c)
-            L = length_mm(s, sp)
+        for i, sl in enumerate(ndi.find_objects(comp), start=1):
+            if sl is None:
+                continue
+            sl = tuple(slice(max(s.start - 1, 0), s.stop + 1) for s in sl)
+            L = length_mm((comp[sl] == i) & (rs[sl] == c), sp)
             if L >= min_mm:
-                out[c].append((p, s, L))
+                p = comp == i
+                out[c].append((p, p & (rs == c), L))
     return out
 
 

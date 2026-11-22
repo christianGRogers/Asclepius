@@ -52,6 +52,7 @@ def score_case(ref, pred, z, with_tf1=False, classes=tuple(BRANCH)):
     else:
         dist, ind = np.full(ref.shape, np.inf), None
     psk = skeletonize(pm) if pm.any() else np.zeros_like(pm)
+    pdist = {}
     out = {}
     for c in classes:
         m = ref == c
@@ -81,9 +82,10 @@ def score_case(ref, pred, z, with_tf1=False, classes=tuple(BRANCH)):
                 row['pieces'].append({'mm': round(len(pts) * step, 1), 'covered': round(float(cov.mean()), 3),
                                       'detected': det, 'named': named})
                 par = _parent_of(ref, p, c)
-                pm_par = ref == par
-                if pm_par.any():
-                    pd_ = ndi.distance_transform_edt(~pm_par, sampling=z)[tuple(pts.T)]
+                if par not in pdist and (ref == par).any():
+                    pdist[par] = ndi.distance_transform_edt(ref != par, sampling=z)
+                if par in pdist:
+                    pd_ = pdist[par][tuple(pts.T)]
                     o = tuple(int(v) for v in pts[int(np.argmin(pd_))])
                 else:
                     o = tuple(int(v) for v in pts[0])

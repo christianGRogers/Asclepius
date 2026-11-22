@@ -1,0 +1,484 @@
+{
+ "labels": {
+  "d3": 4,
+  "d4_to_lad": 0,
+  "other_lcx": 3,
+  "other_nearest": 0,
+  "other_ignore": 0,
+  "cases_with_D3": 4,
+  "collapse_mismatch_voxels": 2540,
+  "collapse_mismatch_cases": 2,
+  "collapse_mismatch_left_pda_voxels": 2540,
+  "ignore_voxels": 0,
+  "ignore_share_of_tree": 0.0
+ },
+ "identity": {
+  "D1": {
+   "ref_cases": 74,
+   "pieces": 75,
+   "recall": 1.0,
+   "naming": 1.0,
+   "presence_agreement": 1.0,
+   "tf1_mean": 1.0
+  },
+  "D2": {
+   "ref_cases": 49,
+   "pieces": 49,
+   "recall": 1.0,
+   "naming": 1.0,
+   "presence_agreement": 1.0,
+   "tf1_mean": 1.0
+  },
+  "D3": {
+   "ref_cases": 4,
+   "pieces": 4,
+   "recall": 1.0,
+   "naming": 1.0,
+   "presence_agreement": 1.0,
+   "tf1_mean": 1.0
+  },
+  "OM1": {
+   "ref_cases": 71,
+   "pieces": 71,
+   "recall": 1.0,
+   "naming": 1.0,
+   "presence_agreement": 1.0,
+   "tf1_mean": 1.0
+  },
+  "OM2": {
+   "ref_cases": 31,
+   "pieces": 32,
+   "recall": 1.0,
+   "naming": 1.0,
+   "presence_agreement": 1.0,
+   "tf1_mean": 1.0
+  },
+  "Ramus": {
+   "ref_cases": 12,
+   "pieces": 15,
+   "recall": 1.0,
+   "naming": 1.0,
+   "presence_agreement": 1.0,
+   "tf1_mean": null
+  },
+  "PDA": {
+   "ref_cases": 74,
+   "pieces": 79,
+   "recall": 1.0,
+   "naming": 1.0,
+   "presence_agreement": 1.0,
+   "tf1_mean": 1.0
+  },
+  "PLB": {
+   "ref_cases": 74,
+   "pieces": 76,
+   "recall": 1.0,
+   "naming": 1.0,
+   "presence_agreement": 1.0,
+   "tf1_mean": 1.0
+  }
+ },
+ "perturb": {
+  "swap_D1_D2": {
+   "D1": {
+    "ref_cases": 7,
+    "pieces": 7,
+    "recall": 1.0,
+    "naming": 0.0,
+    "presence_agreement": 0.8571428571428571,
+    "tf1_mean": 0.0
+   },
+   "D2": {
+    "ref_cases": 6,
+    "pieces": 6,
+    "recall": 1.0,
+    "naming": 0.0,
+    "presence_agreement": 0.8571428571428571,
+    "tf1_mean": 0.0
+   },
+   "D3": {
+    "ref_cases": 1,
+    "pieces": 1,
+    "recall": 1.0,
+    "naming": 1.0,
+    "presence_agreement": 1.0,
+    "tf1_mean": 1.0
+   },
+   "OM1": {
+    "ref_cases": 6,
+    "pieces": 6,
+    "recall": 1.0,
+    "naming": 1.0,
+    "presence_agreement": 1.0,
+    "tf1_mean": 1.0
+   },
+   "OM2": {
+    "ref_cases": 3,
+    "pieces": 3,
+    "recall": 1.0,
+    "naming": 1.0,
+    "presence_agreement": 1.0,
+    "tf1_mean": 1.0
+   },
+   "Ramus": {
+    "ref_cases": 0,
+    "pieces": 0,
+    "recall": null,
+    "naming": null,
+    "presence_agreement": 1.0,
+    "tf1_mean": null
+   },
+   "PDA": {
+    "ref_cases": 7,
+    "pieces": 9,
+    "recall": 1.0,
+    "naming": 1.0,
+    "presence_agreement": 1.0,
+    "tf1_mean": 1.0
+   },
+   "PLB": {
+    "ref_cases": 6,
+    "pieces": 7,
+    "recall": 1.0,
+    "naming": 1.0,
+    "presence_agreement": 1.0,
+    "tf1_mean": 1.0
+   }
+  },
+  "drop_OM2": {
+   "D1": {
+    "ref_cases": 7,
+    "pieces": 7,
+    "recall": 1.0,
+    "naming": 1.0,
+    "presence_agreement": 1.0,
+    "tf1_mean": null
+   },
+   "D2": {
+    "ref_cases": 6,
+    "pieces": 6,
+    "recall": 1.0,
+    "naming": 1.0,
+    "presence_agreement": 1.0,
+    "tf1_mean": null
+   },
+   "D3": {
+    "ref_cases": 1,
+    "pieces": 1,
+    "recall": 1.0,
+    "naming": 1.0,
+    "presence_agreement": 1.0,
+    "tf1_mean": null
+   },
+   "OM1": {
+    "ref_cases": 6,
+    "pieces": 6,
+    "recall": 1.0,
+    "naming": 1.0,
+    "presence_agreement": 1.0,
+    "tf1_mean": null
+   },
+   "OM2": {
+    "ref_cases": 3,
+    "pieces": 3,
+    "recall": 0.0,
+    "naming": null,
+    "presence_agreement": 0.5714285714285714,
+    "tf1_mean": null
+   },
+   "Ramus": {
+    "ref_cases": 0,
+    "pieces": 0,
+    "recall": null,
+    "naming": null,
+    "presence_agreement": 1.0,
+    "tf1_mean": null
+   },
+   "PDA": {
+    "ref_cases": 7,
+    "pieces": 9,
+    "recall": 1.0,
+    "naming": 1.0,
+    "presence_agreement": 1.0,
+    "tf1_mean": null
+   },
+   "PLB": {
+    "ref_cases": 6,
+    "pieces": 7,
+    "recall": 1.0,
+    "naming": 1.0,
+    "presence_agreement": 1.0,
+    "tf1_mean": null
+   }
+  },
+  "types_to_parent": {
+   "D1": {
+    "ref_cases": 7,
+    "pieces": 7,
+    "recall": 1.0,
+    "naming": 0.0,
+    "presence_agreement": 0.0,
+    "tf1_mean": null
+   },
+   "D2": {
+    "ref_cases": 6,
+    "pieces": 6,
+    "recall": 1.0,
+    "naming": 0.0,
+    "presence_agreement": 0.14285714285714285,
+    "tf1_mean": null
+   },
+   "D3": {
+    "ref_cases": 1,
+    "pieces": 1,
+    "recall": 1.0,
+    "naming": 0.0,
+    "presence_agreement": 0.8571428571428571,
+    "tf1_mean": null
+   },
+   "OM1": {
+    "ref_cases": 6,
+    "pieces": 6,
+    "recall": 1.0,
+    "naming": 0.0,
+    "presence_agreement": 0.14285714285714285,
+    "tf1_mean": null
+   },
+   "OM2": {
+    "ref_cases": 3,
+    "pieces": 3,
+    "recall": 1.0,
+    "naming": 0.0,
+    "presence_agreement": 0.5714285714285714,
+    "tf1_mean": null
+   },
+   "Ramus": {
+    "ref_cases": 0,
+    "pieces": 0,
+    "recall": null,
+    "naming": null,
+    "presence_agreement": 1.0,
+    "tf1_mean": null
+   },
+   "PDA": {
+    "ref_cases": 7,
+    "pieces": 9,
+    "recall": 1.0,
+    "naming": 1.0,
+    "presence_agreement": 1.0,
+    "tf1_mean": null
+   },
+   "PLB": {
+    "ref_cases": 6,
+    "pieces": 7,
+    "recall": 1.0,
+    "naming": 1.0,
+    "presence_agreement": 1.0,
+    "tf1_mean": null
+   }
+  },
+  "erode_branches": {
+   "D1": {
+    "ref_cases": 7,
+    "pieces": 7,
+    "recall": 1.0,
+    "naming": 1.0,
+    "presence_agreement": 1.0,
+    "tf1_mean": null
+   },
+   "D2": {
+    "ref_cases": 6,
+    "pieces": 6,
+    "recall": 1.0,
+    "naming": 1.0,
+    "presence_agreement": 1.0,
+    "tf1_mean": null
+   },
+   "D3": {
+    "ref_cases": 1,
+    "pieces": 1,
+    "recall": 1.0,
+    "naming": 1.0,
+    "presence_agreement": 1.0,
+    "tf1_mean": null
+   },
+   "OM1": {
+    "ref_cases": 6,
+    "pieces": 6,
+    "recall": 1.0,
+    "naming": 1.0,
+    "presence_agreement": 1.0,
+    "tf1_mean": null
+   },
+   "OM2": {
+    "ref_cases": 3,
+    "pieces": 3,
+    "recall": 1.0,
+    "naming": 1.0,
+    "presence_agreement": 1.0,
+    "tf1_mean": null
+   },
+   "Ramus": {
+    "ref_cases": 0,
+    "pieces": 0,
+    "recall": null,
+    "naming": null,
+    "presence_agreement": 1.0,
+    "tf1_mean": null
+   },
+   "PDA": {
+    "ref_cases": 7,
+    "pieces": 9,
+    "recall": 1.0,
+    "naming": 1.0,
+    "presence_agreement": 1.0,
+    "tf1_mean": null
+   },
+   "PLB": {
+    "ref_cases": 6,
+    "pieces": 7,
+    "recall": 1.0,
+    "naming": 1.0,
+    "presence_agreement": 0.8571428571428571,
+    "tf1_mean": null
+   }
+  }
+ },
+ "census": {
+  "D1": {
+   "cases_any": 74,
+   "cases_ge5mm": 74,
+   "cases_ge3mm": 74,
+   "pieces_mean": 1.014,
+   "cases_ge2_pieces": 1,
+   "median_cl_mm": 32.25
+  },
+  "D2": {
+   "cases_any": 49,
+   "cases_ge5mm": 49,
+   "cases_ge3mm": 49,
+   "pieces_mean": 1.0,
+   "cases_ge2_pieces": 0,
+   "median_cl_mm": 26.9
+  },
+  "D3": {
+   "cases_any": 4,
+   "cases_ge5mm": 4,
+   "cases_ge3mm": 4,
+   "pieces_mean": 1.0,
+   "cases_ge2_pieces": 0,
+   "median_cl_mm": 37.75
+  },
+  "OM1": {
+   "cases_any": 71,
+   "cases_ge5mm": 71,
+   "cases_ge3mm": 71,
+   "pieces_mean": 1.0,
+   "cases_ge2_pieces": 0,
+   "median_cl_mm": 33.7
+  },
+  "OM2": {
+   "cases_any": 32,
+   "cases_ge5mm": 31,
+   "cases_ge3mm": 32,
+   "pieces_mean": 1.0,
+   "cases_ge2_pieces": 0,
+   "median_cl_mm": 39.7
+  },
+  "Ramus": {
+   "cases_any": 12,
+   "cases_ge5mm": 12,
+   "cases_ge3mm": 12,
+   "pieces_mean": 1.25,
+   "cases_ge2_pieces": 3,
+   "median_cl_mm": 30.2
+  },
+  "PDA": {
+   "cases_any": 74,
+   "cases_ge5mm": 74,
+   "cases_ge3mm": 74,
+   "pieces_mean": 1.068,
+   "cases_ge2_pieces": 5,
+   "median_cl_mm": 47.400000000000006
+  },
+  "PLB": {
+   "cases_any": 75,
+   "cases_ge5mm": 74,
+   "cases_ge3mm": 75,
+   "pieces_mean": 1.013,
+   "cases_ge2_pieces": 1,
+   "median_cl_mm": 47.8
+  }
+ },
+ "twigs": {
+  "delta": {
+   "LAD": {
+    "cases_ge3": 1,
+    "cases_ge5": 1,
+    "cases_ge10": 0,
+    "twigs_ge5": 1
+   },
+   "LCx": {
+    "cases_ge3": 0,
+    "cases_ge5": 0,
+    "cases_ge10": 0,
+    "twigs_ge5": 0
+   },
+   "RCA": {
+    "cases_ge3": 0,
+    "cases_ge5": 0,
+    "cases_ge10": 0,
+    "twigs_ge5": 0
+   }
+  },
+  "foxtrot": {
+   "LAD": {
+    "cases_ge3": 1,
+    "cases_ge5": 1,
+    "cases_ge10": 0,
+    "twigs_ge5": 1
+   },
+   "LCx": {
+    "cases_ge3": 0,
+    "cases_ge5": 0,
+    "cases_ge10": 0,
+    "twigs_ge5": 0
+   },
+   "RCA": {
+    "cases_ge3": 0,
+    "cases_ge5": 0,
+    "cases_ge10": 0,
+    "twigs_ge5": 0
+   }
+  },
+  "crucible": {
+   "LAD": {
+    "cases_ge3": 4,
+    "cases_ge5": 4,
+    "cases_ge10": 3,
+    "twigs_ge5": 4
+   },
+   "LCx": {
+    "cases_ge3": 3,
+    "cases_ge5": 3,
+    "cases_ge10": 2,
+    "twigs_ge5": 3
+   },
+   "RCA": {
+    "cases_ge3": 0,
+    "cases_ge5": 0,
+    "cases_ge10": 0,
+    "twigs_ge5": 0
+   }
+  }
+ },
+ "dominance": {
+  "by_PDA": {
+   "right": 72,
+   "left": 2,
+   "no PDA: left PLA": 1
+  },
+  "cases_with_left_PDA_or_PLA": 4,
+  "cases_with_any_left_and_any_right_posterior": 1
+ }
+}

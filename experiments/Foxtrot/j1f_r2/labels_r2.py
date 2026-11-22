@@ -7,8 +7,9 @@ Delta v1's `j1f_labels.py` map (the plan of record) with the ruling's two change
   - an "Other" piece touching no LAD-side and no LCx-side voxel (RCA only, or nothing) -> 255 (F-A3).
 Every other "Other" rule is Delta's (first LAD-side piece by geodesic attachment -> D3, later -> LAD;
 LCx-side -> LCx; small two-sided pieces -> nearest LAD/LCx voxel).
-Also: `collapse4(lab13, spacing)` -- F-A4's origin collapse (D1-D3 -> LAD; OM1, OM2, Ramus -> LCx; each PDA/PLB
-26-component -> the one of LCx/RCA it touches most, ties -> RCA). Reads training labels only.
+Also: `collapse4(lab13, spacing)` -- F-A4's origin collapse (D1-D3 -> LAD; OM1, OM2, Ramus -> LCx; PDA and PLB by
+`posterior_side`: each 26-component of PDA+PLB together -> the one of LCx side / RCA it touches most, else the nearer;
+grouping matters: a left PDA often touches only the left PLA). Reads training labels only.
 """
 import numpy as np
 from scipy import ndimage as ndi
@@ -70,32 +71,37 @@ def map13(lab, z):
     return out, info
 
 
-def pda_plb_side(lab13):
-    """{component id: (class, 'LCx'|'RCA')} for every PDA/PLB 26-component, by voxels touched."""
-    res = {}
-    for c in (11, 12):
-        comp, n = ndi.label(lab13 == c, S26)
-        for i in range(1, n + 1):
-            p = comp == i
-            ring = ndi.binary_dilation(p, S26, iterations=2) & ~p
-            v = lab13[ring]
-            nl = int(np.isin(v, [3, 8, 9, 10]).sum()); nr = int((v == 4).sum())
-            res[(c, i)] = 'LCx' if nl > nr else 'RCA'
-    return res
+def posterior_side(lab13, z=(1, 1, 1)):
+    """Side of every PDA/PLB voxel: 3 (LCx) or 4 (RCA). PDA and PLB are grouped first (a left PDA often touches only
+    the left PLA); each 26-component of the group goes to whichever of the LCx side (LCx, OM1, OM2, Ramus) and the
+    RCA it touches most within 2 voxels; if it touches neither, to the nearer of the two (EDT, mm); ties -> RCA."""
+    side = np.zeros(lab13.shape, np.uint8)
+    grp = np.isin(lab13, [11, 12])
+    if not grp.any():
+        return side
+    comp, n = ndi.label(grp, S26)
+    lcx_side = np.isin(lab13, [3, 8, 9, 10]); rca = lab13 == 4
+    dl = dr = None
+    for i in range(1, n + 1):
+        p = comp == i
+        ring = ndi.binary_dilation(p, S26, iterations=2) & ~p
+        nl, nr = int((ring & lcx_side).sum()), int((ring & rca).sum())
+        if nl == 0 and nr == 0:
+            if dl is None:
+                dl = ndi.distance_transform_edt(~lcx_side, sampling=z) if lcx_side.any() else np.full(lab13.shape, np.inf)
+                dr = ndi.distance_transform_edt(~rca, sampling=z) if rca.any() else np.full(lab13.shape, np.inf)
+            nl, nr = -float(dl[p].min()), -float(dr[p].min())
+        side[p] = 3 if nl > nr else 4
+    return side
 
 
-def collapse4(lab13):
+def collapse4(lab13, z=(1, 1, 1)):
     """F-A4 / D47 Q1: origin collapse to 0..4 (255 kept)."""
     out = np.zeros(lab13.shape, np.uint8)
     for k, v in {1: 1, 2: 2, 3: 3, 4: 4, 5: 2, 6: 2, 7: 2, 8: 3, 9: 3, 10: 3}.items():
         out[lab13 == k] = v
     out[lab13 == 255] = 255
-    for c in (11, 12):
-        comp, n = ndi.label(lab13 == c, S26)
-        for i in range(1, n + 1):
-            p = comp == i
-            ring = ndi.binary_dilation(p, S26, iterations=2) & ~p
-            v = lab13[ring]
-            nl = int(np.isin(v, [3, 8, 9, 10]).sum()); nr = int((v == 4).sum())
-            out[p] = 3 if nl > nr else 4
+    side = posterior_side(lab13, z)
+    g = side > 0
+    out[g] = side[g]
     return out

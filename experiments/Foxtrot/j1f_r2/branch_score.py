@@ -12,7 +12,7 @@ Per branch class c in D1, D2, D3, OM1, OM2, Ramus, PDA, PLB:
                     (skeleton voxels x mean voxel side, as Delta's census).
   * branch tF1   -- `segtrain.tf1.tree_f1` at the pinned A1c hash (24441cf8...), on {c -> 1, other vessel -> 2},
                     with ONE ostium per reference piece: the piece's centreline point nearest its parent
-                    (D1-D3 -> LAD; OM1, OM2, Ramus -> LCx; PDA, PLB -> whichever of LCx/RCA the piece touches most).
+                    (D1-D3 -> LAD; OM1, OM2, Ramus -> LCx; PDA, PLB -> the side of their PDA+PLB group, labels_r2.posterior_side).
                     tF1_c = per_class[1]. Unrooted predicted pieces lose recall, as in A1c.
 Case-level aggregation is left to the caller: recall = detected pieces / pieces (pooled over cases);
 naming = named / detected (pooled); presence agreement = share of cases where ref and pred presence agree.
@@ -24,6 +24,8 @@ from skimage.morphology import skeletonize
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), '../../../src'))
 from segtrain.tf1 import tree_f1, Ostium, OstiumReport  # noqa: E402
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from labels_r2 import posterior_side  # noqa: E402
 
 BRANCH = {5: 'D1', 6: 'D2', 7: 'D3', 8: 'OM1', 9: 'OM2', 10: 'Ramus', 11: 'PDA', 12: 'PLB'}
 PARENTS = {5: [2], 6: [2], 7: [2], 8: [3], 9: [3], 10: [3], 11: [3, 4], 12: [3, 4]}
@@ -31,14 +33,11 @@ TOL, DET, PRES = 1.5, 0.5, 5.0
 S26 = np.ones((3, 3, 3), bool)
 
 
-def _parent_of(ref, piece, c):
+def _parent_of(ref, piece, c, side=None):
     cand = PARENTS[c]
     if len(cand) == 1:
         return cand[0]
-    ring = ndi.binary_dilation(piece, S26, iterations=2) & ~piece
-    v = ref[ring]
-    nl = int(np.isin(v, [3, 8, 9, 10]).sum()); nr = int((v == 4).sum())
-    return 3 if nl > nr else 4
+    return int(np.bincount(side[piece], minlength=5).argmax())   # labels_r2.posterior_side, grouped PDA+PLB
 
 
 def score_case(ref, pred, z, with_tf1=False, classes=tuple(BRANCH)):
@@ -53,6 +52,7 @@ def score_case(ref, pred, z, with_tf1=False, classes=tuple(BRANCH)):
         dist, ind = np.full(ref.shape, np.inf), None
     psk = skeletonize(pm) if pm.any() else np.zeros_like(pm)
     pdist = {}
+    side = posterior_side(ref, z)
     out = {}
     for c in classes:
         m = ref == c
@@ -81,7 +81,7 @@ def score_case(ref, pred, z, with_tf1=False, classes=tuple(BRANCH)):
                     named = bool(cnt[c] == top and (cnt == top).sum() == 1)
                 row['pieces'].append({'mm': round(len(pts) * step, 1), 'covered': round(float(cov.mean()), 3),
                                       'detected': det, 'named': named})
-                par = _parent_of(ref, p, c)
+                par = _parent_of(ref, p, c, side)
                 if par not in pdist and (ref == par).any():
                     pdist[par] = ndi.distance_transform_edt(ref != par, sampling=z)
                 if par in pdist:

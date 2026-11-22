@@ -72,7 +72,7 @@ def one(path):
     raw = np.asarray(im.dataobj).astype(np.uint8)
     sl = L.crop(raw, 4); raw = raw[sl]
     lab13, info = L.map13(raw, z)
-    four = L.collapse4(lab13); ref4 = territory.to_four(raw, z)
+    four = L.collapse4(lab13, z); ref4 = territory.to_four(raw, z)
     m = (lab13 != 255)
     row = {'case': cid, 'info': info, 'collapse_mismatch': int(((four != ref4) & m).sum()),
            'collapse_mismatch_left_pda': int(((four != ref4) & m & np.isin(raw, [12, 13])).sum()),

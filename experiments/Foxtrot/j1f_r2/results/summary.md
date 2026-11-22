@@ -1,4 +1,4 @@
-# Foxtrot j1f round 2: summary (620 of the 620 in pass 1; 19 in the band pass)
+# Foxtrot j1f round 2: summary (620 of the 620 in pass 1; 27 in the band pass)
 
 ## 1. Stage-1 labels (D47 Q1 = A, F-A3) and the origin collapse vs territory.to_four
 
@@ -93,23 +93,23 @@ Perturbations (the 20 fit-check cases): recall / naming / presence agreement / t
 ```
 
 
-## 6. Stage-2 background band (19 cases, ids divisible by 20 among the 620)
+## 6. Stage-2 background band (27 cases, ids divisible by 20 among the 620)
 
 | w (mm) | S band cm3 | N band cm3 | R band cm3 | union cm3 | union / 256^3 patch | union / bg within 25 mm | S prox/mid/dist | traced branch vol within w of LAD |
 |---|---|---|---|---|---|---|---|---|
-| 4 | 11.1 | 4.7 | 6.5 | 21.0 | 0.010 | 0.019 | [0.369, 0.308, 0.323] | 0.075 |
-| 8 | 39.0 | 18.2 | 22.9 | 72.1 | 0.034 | 0.066 | [0.366, 0.299, 0.335] | 0.147 |
-| 15 | 130.4 | 72.1 | 79.3 | 238.4 | 0.114 | 0.213 | [0.368, 0.285, 0.347] | 0.243 |
-| 25 | 362.1 | 236.9 | 233.2 | 641.5 | 0.306 | 0.571 | [0.373, 0.27, 0.357] | 0.292 |
+| 4 | 11.1 | 4.6 | 6.3 | 20.0 | 0.009 | 0.019 | [0.367, 0.309, 0.324] | 0.064 |
+| 8 | 38.8 | 18.2 | 22.6 | 69.1 | 0.033 | 0.065 | [0.365, 0.3, 0.335] | 0.129 |
+| 15 | 129.7 | 72.1 | 78.6 | 231.3 | 0.110 | 0.213 | [0.369, 0.284, 0.347] | 0.243 |
+| 25 | 362.1 | 238.0 | 232.7 | 634.6 | 0.303 | 0.586 | [0.375, 0.268, 0.357] | 0.299 |
 
-Medians over cases. Traced tree volume, median 1.99 cm3.
+Medians over cases. Traced tree volume, median 1.96 cm3.
 
-Synthetic septals (57 tubes): mean share of the centreline inside the band (unpenalised by CE)
+Synthetic septals (81 tubes): mean share of the centreline inside the band (unpenalised by CE)
 
 | length mm | w=4 | w=8 | w=15 | w=25 | hits a traced vessel |
 |---|---|---|---|---|---|
-| 10 | 0.485 | 0.89 | 1.0 | 1.0 | 0.011 |
-| 20 | 0.246 | 0.459 | 0.837 | 1.0 | 0.005 |
-| 30 | 0.164 | 0.308 | 0.562 | 0.919 | 0.003 |
-| 40 | 0.124 | 0.231 | 0.422 | 0.698 | 0.002 |
-| 60 | 0.083 | 0.154 | 0.282 | 0.466 | 0.002 |
+| 10 | 0.474 | 0.881 | 1.0 | 1.0 | 0.008 |
+| 20 | 0.24 | 0.453 | 0.831 | 1.0 | 0.003 |
+| 30 | 0.16 | 0.303 | 0.559 | 0.917 | 0.002 |
+| 40 | 0.121 | 0.228 | 0.42 | 0.698 | 0.002 |
+| 60 | 0.081 | 0.152 | 0.281 | 0.466 | 0.002 |

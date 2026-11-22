@@ -160,8 +160,8 @@ def one(args):
     sl = crop(m1f, sp, MARGIN_MM)
     m = m1f[sl]
     rs = B.skeleton_labels(m)
-    p5 = B.pieces(m, sp, rs, min_mm=B.PRESENT_MM)
     p3 = B.pieces(m, sp, rs, min_mm=3.0)
+    p5 = {c: [x for x in v if x[2] >= B.PRESENT_MM] for c, v in p3.items()}
     row['pieces5'] = {B.NAMES[c]: [round(L, 1) for _, _, L in v] for c, v in p5.items()}
     row['pieces3'] = {B.NAMES[c]: [round(L, 1) for _, _, L in v] for c, v in p3.items()}
     row['class_mm'] = {B.NAMES[c]: round(B.length_mm(rs == c, sp), 1) for c in range(1, 13)}

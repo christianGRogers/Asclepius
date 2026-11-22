@@ -21,13 +21,21 @@
 #            which would bring the old queue and its groups back. SegQueue14 is
 #            deployed by segqueue14-janus.yml.
 #
-# Secrets: SSH_HOST, SSH_PORT, SSH_USERNAME, SSH_PASSWORD.
+# Secrets: SSH_HOST, SSH_PORT, SSH_USERNAME, SSH_PASSWORD, GATEWAY_PORT,
+# MAIN_SERVER_LAN; optional GATEWAY_HOST and SSH_KNOWN_HOSTS_GATEWAY.
 #
-# SSH_KNOWN_HOSTS is optional and worth adding. Without it this workflow accepts
-# whatever host key the server presents on first contact, which authenticates the
-# password to the server but does nothing to prove the server is the right one --
-# and the password is a secret being handed over on the strength of that. Get the
-# value with `ssh-keyscan -p <port> <host>` from somewhere you trust.
+# The box's SSH port is closed to the outside (2026-11-20): the runner logs in to the
+# gateway server (GATEWAY_HOST, default SSH_HOST, on GATEWAY_PORT) and from there to
+# the box at MAIN_SERVER_LAN on SSH_PORT (default 22), with the same login on both.
+# deploy/janus-ssh.sh does both hops and pins both host keys.
+#
+# SSH_KNOWN_HOSTS (the box's keys) and SSH_KNOWN_HOSTS_GATEWAY (the gateway's) are
+# optional and worth adding. Without them this workflow accepts whatever host key
+# each server presents on first contact, which authenticates the password to the
+# server but does nothing to prove the server is the right one -- and the password is
+# a secret being handed over on the strength of that. Get the values with
+# `ssh-keyscan -p <port> <host>` from somewhere you trust (the box's from the gateway;
+# any host name in the line will do, the keys are re-filed under one alias).
 
 name: Server over SSH
 
@@ -75,61 +83,56 @@ jobs:
           HOST: ${{ secrets.SSH_HOST }}
           USERNAME: ${{ secrets.SSH_USERNAME }}
           PASSWORD: ${{ secrets.SSH_PASSWORD }}
+          GATEWAY_PORT: ${{ secrets.GATEWAY_PORT }}
+          MAIN_SERVER_LAN: ${{ secrets.MAIN_SERVER_LAN }}
         run: |
           set -euo pipefail
           missing=()
           [ -n "$HOST" ]     || missing+=(SSH_HOST)
           [ -n "$USERNAME" ] || missing+=(SSH_USERNAME)
           [ -n "$PASSWORD" ] || missing+=(SSH_PASSWORD)
+          [ -n "$GATEWAY_PORT" ]    || missing+=(GATEWAY_PORT)
+          [ -n "$MAIN_SERVER_LAN" ] || missing+=(MAIN_SERVER_LAN)
           if [ ${#missing[@]} -gt 0 ]; then
             echo "Not set: ${missing[*]}" >> "$GITHUB_STEP_SUMMARY"
+            echo "::error::not set: ${missing[*]}"
             exit 1
           fi
-          echo "All four SSH secrets are present." >> "$GITHUB_STEP_SUMMARY"
+          echo "The SSH and gateway secrets are present." >> "$GITHUB_STEP_SUMMARY"
 
       - name: Install sshpass
         run: sudo apt-get update && sudo apt-get install -y --no-install-recommends sshpass
 
-      - name: Trust the host key
+      # Both hops: the gateway's key, then the box's through the gateway; each checked
+      # strictly from here on. Fails naming the hop. See deploy/janus-ssh.sh.
+      - name: Trust the host keys (gateway, then the box)
         env:
+          GATEWAY_HOST: ${{ secrets.GATEWAY_HOST }}
           HOST: ${{ secrets.SSH_HOST }}
+          GATEWAY_PORT: ${{ secrets.GATEWAY_PORT }}
+          MAIN_SERVER_LAN: ${{ secrets.MAIN_SERVER_LAN }}
           PORT: ${{ secrets.SSH_PORT }}
+          USERNAME: ${{ secrets.SSH_USERNAME }}
+          SSHPASS: ${{ secrets.SSH_PASSWORD }}
           KNOWN: ${{ secrets.SSH_KNOWN_HOSTS }}
+          KNOWN_GATEWAY: ${{ secrets.SSH_KNOWN_HOSTS_GATEWAY }}
         run: |
           set -euo pipefail
-          mkdir -p ~/.ssh && chmod 700 ~/.ssh
+          bash deploy/janus-ssh.sh trust
           if [ -n "$KNOWN" ]; then
-            printf '%s\n' "$KNOWN" > ~/.ssh/known_hosts
-            echo "Host key pinned from SSH_KNOWN_HOSTS." >> "$GITHUB_STEP_SUMMARY"
-          else
-            ssh-keyscan -p "${PORT:-22}" -H "$HOST" > ~/.ssh/known_hosts 2>/dev/null
-            {
-              echo ":warning: **No \`SSH_KNOWN_HOSTS\` secret**, so this run"
-              echo "accepted whatever host key the server offered. Add the secret"
-              echo '(`ssh-keyscan -p <port> <host>`) to close that window.'
-            } >> "$GITHUB_STEP_SUMMARY"
+            echo "The box's host key pinned from SSH_KNOWN_HOSTS." >> "$GITHUB_STEP_SUMMARY"
           fi
-          chmod 600 ~/.ssh/known_hosts
-          test -s ~/.ssh/known_hosts
 
       # One helper for every remote command, so the password is passed through
       # the environment (`sshpass -e`) and never appears in a command line that
-      # `ps` on a shared runner could read.
+      # `ps` on a shared runner could read. Through the gateway (deploy/janus-ssh.sh).
       - name: Write the ssh helper
-        env:
-          HOST: ${{ secrets.SSH_HOST }}
-          PORT: ${{ secrets.SSH_PORT }}
-          USERNAME: ${{ secrets.SSH_USERNAME }}
         run: |
           set -euo pipefail
           cat > "$RUNNER_TEMP/remote" <<EOF
           #!/usr/bin/env bash
           set -euo pipefail
-          exec sshpass -e ssh \
-            -o BatchMode=no -o ConnectTimeout=20 \
-            -o UserKnownHostsFile=\$HOME/.ssh/known_hosts \
-            -o StrictHostKeyChecking=yes \
-            -p "${PORT:-22}" "${USERNAME}@${HOST}" "\$@"
+          exec bash "$GITHUB_WORKSPACE/deploy/janus-ssh.sh" run "\$@"
           EOF
           chmod +x "$RUNNER_TEMP/remote"
 

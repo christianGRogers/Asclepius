@@ -185,3 +185,38 @@ def test_refused(tmp_path, command, args, why):
     code, cmd, log = _which(tmp_path, command, args)
     assert code != 0 and cmd is None
     assert why in log, log
+
+
+# --- Janus through the gateway (2026-11-20; deploy/janus-ssh.sh) --------------------
+# The full wiring and the helper are tested in tests/test_janus_ssh.py, and end to end
+# against two real sshd in tests/test_janus_ssh_e2e.py.
+
+def _step_named(name):
+    steps = yaml.safe_load(WORKFLOW.read_text())["jobs"]["run"]["steps"]
+    return next(s for s in steps if s.get("name", "").startswith(name))
+
+
+def test_the_step_runs_through_the_gateway():
+    run = _step_named("Run the step on janus")["run"]
+    assert "bash deploy/janus-ssh.sh run" in run
+    assert "printf '%s\\n' \"$SSHPASS\" | bash deploy/janus-ssh.sh run" in run
+    assert "sudo -S -p ''" in run and "base64 -d | bash" in run
+    assert "sshpass" not in run and "ssh-keyscan" not in run
+
+
+def test_both_hops_are_pinned_before_any_step():
+    steps = yaml.safe_load(WORKFLOW.read_text())["jobs"]["run"]["steps"]
+    names = [s.get("name", "") for s in steps]
+    trust = names.index("Trust the host keys (gateway, then janus)")
+    assert trust < names.index("Run the step on janus")
+    assert trust < names.index("Run the backup step")
+    env = _step_named("Trust the host keys")["env"]
+    for secret in ("GATEWAY_HOST", "GATEWAY_PORT", "MAIN_SERVER_LAN", "SSH_KNOWN_HOSTS",
+                   "SSH_KNOWN_HOSTS_GATEWAY"):
+        assert f"secrets.{secret} }}}}" in " ".join(env.values())
+
+
+def test_header_lists_the_gateway_secrets():
+    head = WORKFLOW.read_text().split("\nname:")[0]
+    for secret in ("GATEWAY_PORT", "MAIN_SERVER_LAN", "GATEWAY_HOST", "SSH_KNOWN_HOSTS_GATEWAY"):
+        assert secret in head

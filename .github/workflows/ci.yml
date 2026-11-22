@@ -14,6 +14,8 @@
 #   server-integration     the atomic claim, against a real MongoDB, because a
 #                          mocked database verifies the mock
 #   backup                 the janus backup (D42): dump, restic, restore drill
+#   janus-ssh              the deploy workflows' jump through the gateway, against
+#                          two real sshd on a private network
 #   acceptance             the real client against a real server over real HTTP
 #
 # Only `acceptance` needs anything to be running, and it builds that itself.
@@ -325,6 +327,45 @@ jobs:
               for skip in case.iter("skipped"):
                   print(f"::error title=Backup test skipped::{case.get('name')}: {skip.get('message')}")
           sys.exit(1 if skipped else 0)
+          PY
+
+  # --------------------------------------------------------------------------
+  janus-ssh:
+    name: Janus through the gateway, two real sshd
+    # Janus's SSH port is closed to the outside (2026-11-20); the deploy workflows log
+    # in to the gateway and jump to janus's LAN address (deploy/janus-ssh.sh). Two
+    # network namespaces stand in for the servers -- janus reachable only from the
+    # gateway -- with password logins and password sudo, and the workflows' own step
+    # scripts run against them: both host keys pinned, sudo -S fed through stdin.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - name: Install
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq --no-install-recommends openssh-server openssh-client sshpass iproute2 sudo
+          python -m pip install --upgrade pip
+          pip install -e ".[dev]"
+      - name: Jump tests (as root, for the namespaces and the test user)
+        run: |
+          sudo -E env "PATH=$PATH" JANUS_SSH_E2E=1 \
+            python -m pytest -q -rs -p no:cacheprovider tests/test_janus_ssh_e2e.py --junitxml=junit.xml
+      - name: Fail if these skipped
+        if: always()
+        run: |
+          python - <<'PY'
+          import sys, xml.etree.ElementTree as ET
+          suite = ET.parse("junit.xml").getroot().find("testsuite")
+          skipped, tests = int(suite.get("skipped")), int(suite.get("tests"))
+          print(f"{tests - skipped} of {tests} ran")
+          for case in suite.iter("testcase"):
+              for skip in case.iter("skipped"):
+                  print(f"::error title=Jump test skipped::{case.get('name')}: {skip.get('message')}")
+          sys.exit(1 if skipped or not tests else 0)
           PY
 
   # --------------------------------------------------------------------------

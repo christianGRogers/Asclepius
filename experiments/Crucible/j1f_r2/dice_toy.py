@@ -13,6 +13,8 @@ CE term: marginal CE, -log sum_{c in set} p_c (Shi et al.). Dice term, one of:
   * marginal : Fidon et al.'s Baseline 3 ("merged mass"): on a set voxel containing c, prediction = sum_{k in set} p_k
                and target 1;
   * ignore   : set-valued voxels leave the Dice term entirely (numerator and denominator), as nnU-Net's ignore label;
+  * leaf_batch: leaf, with the Dice sums pooled over the batch of 2 (nnU-Net's batch_dice: true; Fidon's Eq. 4 as
+               written, sums over all voxels of the batch);
   * leaf_skip: leaf, but class c's Dice is dropped on a sample where c has no singleton voxel (c not annotated);
   * none     : CE only;
   * oracle   : every image fully labelled (ceiling of this toy);
@@ -44,43 +46,35 @@ def band_ratio(path):
 
 
 def make_image(rng, kind, band, s_in_band, ratio, present=0.9):
-    """Voxel groups with features, weights (voxel counts) and label sets (bitmask over 3 classes)."""
-    nP, nS = 300.0, 60.0 if rng.random() < present else 0.0
-    nB = ratio[band] * (nP + nS) if band != '0' else 0.0
-    nF = 40 * (nP + nS)
-    g = []
-
-    def grp(n_samples, total, mu, sd, truth):
-        if total <= 0:
-            return
-        x = rng.normal(mu, sd, (n_samples, 3))
-        g.append((x, np.full(n_samples, total / n_samples), truth))
-    grp(60, nP, (2.0, 1.5, 3.0), (1, .7, .5), 1)
-    if nS:
-        sin = nS * (s_in_band if band != '0' else 0.0)
-        grp(30, sin, (2.0, -1.0, 2.0), (1, .7, .5), 2)        # S inside the band
-        grp(30, nS - sin, (2.0, -1.0, 0.6), (1, .7, .5), 2)   # S beyond the band (far from the parent)
-    grp(100, nB, (0.0, 0.0, 1.5), (1, 1, .5), 0)              # background inside the band
-    grp(200, nF, (0.0, 0.0, -1.0), (1, 1, .8), 0)             # far background
-    X = np.concatenate([a for a, _, _ in g])
-    W = np.concatenate([w for _, w, _ in g])
-    T = np.concatenate([np.full(len(a), t) for a, _, t in g])
-    inb = np.concatenate([np.full(len(a), i in ((1,) if not nS else (1, 3)) or (nS and i == 1)) for i, (a, _, _) in
-                          enumerate(g)])
-    # band membership by group index: groups are [P, S_in, S_out, B, F] (S groups only if nS)
-    idx = []
-    names = ['P'] + (['S_in', 'S_out'] if nS else []) + (['B'] if nB > 0 else []) + ['F']
-    for nm, (a, _, _) in zip(names, g):
-        idx += [nm] * len(a)
-    idx = np.array(idx)
-    del inb
+    """Voxel groups with features, weights (voxel counts) and label sets (bitmask over 3 classes).
+    The anatomy is the same for every band: S lies near (50 %), mid (30 %) or far (20 %) from its parent, and the
+    background near the parent is split at 8 mm and 15 mm by the census ratios. The band only decides which groups
+    get the set {bg, S} on an ICX image: '0' none, '8' the near groups, '15' near and mid. `s_in_band` is unused
+    (kept for the call signature)."""
+    nP, nS = 300.0, (60.0 if rng.random() < present else 0.0)
+    tree = nP + nS
+    groups = [('P', 60, nP, (3.0, 1.5, 3.0), 1),
+              ('S_near', 30, 0.5 * nS, (3.0, -1.0, 2.0), 2),
+              ('S_mid', 20, 0.3 * nS, (3.0, -1.0, 1.2), 2),
+              ('S_far', 20, 0.2 * nS, (3.0, -1.0, 0.4), 2),
+              ('B_near', 100, ratio['8'] * tree, (0.0, 0.0, 1.6), 0),
+              ('B_mid', 100, (ratio['15'] - ratio['8']) * tree, (0.0, 0.0, 0.9), 0),
+              ('B_far', 200, 40 * tree, (0.0, 0.0, -1.0), 0)]
+    X, W, T, G = [], [], [], []
+    for nm, k, tot, mu, t in groups:
+        if tot <= 0:
+            continue
+        X.append(rng.normal(mu, (0.8, 0.7, 0.4), (k, 3)))
+        W.append(np.full(k, tot / k)); T.append(np.full(k, t)); G += [nm] * k
+    X, W, T, G = np.concatenate(X), np.concatenate(W), np.concatenate(T), np.array(G)
+    inband = {'0': (), '8': ('S_near', 'B_near'), '15': ('S_near', 'S_mid', 'B_near', 'B_mid')}[band]
     full = np.array([1, 2, 4])[T]
     if kind == 'EXT':
         sets = full
     elif kind == 'C4':
         sets = np.where(np.isin(T, (1, 2)), 2 | 4, 1)
     elif kind == 'ICX':
-        sets = np.where(T == 1, 2, np.where(np.isin(idx, ('S_in', 'B')), 1 | 4, 1))
+        sets = np.where(T == 1, 2, np.where(np.isin(G, inband), 1 | 4, 1))
     elif kind == 'ICX_naive':
         sets = np.where(T == 1, 2, 1)
     elif kind == 'C4_naive':
@@ -144,9 +138,14 @@ def run(dice, band, s_in_band, n_ext, n_4c, ratio, steps=1500, seed=0):
     F = [feats(x) for x, _, _, _ in imgs]
     for _ in range(steps):
         tot = 0.0
-        for i in rng.integers(0, len(imgs), 2):     # batch 2, per-sample Dice, uniform sampling over images
-            x, w, s, _ = imgs[i]
-            tot = tot + loss_fn(lin(F[i]), w, s, 'leaf' if naive else dice)
+        ii = rng.integers(0, len(imgs), 2)          # batch 2, uniform sampling over images
+        if dice == 'leaf_batch':                    # Fidon's Eq. 4 pooled over the batch (batch_dice: true)
+            tot = 2 * loss_fn(lin(torch.cat([F[i] for i in ii])), np.concatenate([imgs[i][1] for i in ii]),
+                              np.concatenate([imgs[i][2] for i in ii]), 'leaf')
+        else:                                       # per-sample Dice, as nnU-Net 3d_fullres (batch_dice: false)
+            for i in ii:
+                x, w, s, _ = imgs[i]
+                tot = tot + loss_fn(lin(F[i]), w, s, 'leaf' if naive else dice)
         opt.zero_grad()
         (tot / 2).backward()
         opt.step()
@@ -155,7 +154,7 @@ def run(dice, band, s_in_band, n_ext, n_4c, ratio, steps=1500, seed=0):
     tp = np.zeros(3); fp = np.zeros(3); fn = np.zeros(3)
     with torch.no_grad():
         for _ in range(200):
-            x, w, _, T = make_image(trng, 'EXT', band if band != '0' else '8', s_in_band, ratio)
+            x, w, _, T = make_image(trng, 'EXT', band, s_in_band, ratio)
             pr = lin(feats(x)).argmax(1).numpy()
             for c in (1, 2):
                 tp[c] += w[(pr == c) & (T == c)].sum()
@@ -164,23 +163,6 @@ def run(dice, band, s_in_band, n_ext, n_4c, ratio, steps=1500, seed=0):
     dsc = lambda c: float(2 * tp[c] / max(2 * tp[c] + fp[c] + fn[c], 1e-9))
     return {'S_dice': round(dsc(2), 3), 'S_recall': round(float(tp[2] / max(tp[2] + fn[2], 1e-9)), 3),
             'S_precision': round(float(tp[2] / max(tp[2] + fp[2], 1e-9)), 3), 'P_dice': round(dsc(1), 3)}
-
-
-if __name__ == '__main__':
-    ratio = band_ratio(sys.argv[1] if len(sys.argv) > 1 else '-')
-    print(json.dumps(grad_check()))
-    out = {'band_ratio_bg_per_tree_mm3': ratio, 'runs': []}
-    grid = [(band, sib) for band, sib in (('0', 0.0), ('8', 0.5), ('15', 0.8))]
-    for dice in ('oracle', 'naive', 'none', 'leaf', 'leaf_skip', 'marginal', 'ignore'):
-        for band, sib in grid:
-            for n_ext in (10, 30, 60):
-                res = [run(dice, band, sib, n_ext, 100, ratio, seed=s) for s in range(5)]
-                agg = {k: [round(float(np.mean([r[k] for r in res])), 3), round(float(np.std([r[k] for r in res])), 3)]
-                       for k in res[0]}
-                row = {'dice': dice, 'band_mm': band, 'S_share_in_band': sib, 'n_ext': n_ext, **agg}
-                out['runs'].append(row)
-                print(json.dumps(row), flush=True)
-    json.dump(out, open(sys.argv[2], 'w'), indent=1)
 
 
 def grad_check():
@@ -195,3 +177,21 @@ def grad_check():
     I, G, P = 25.0, 50.0, 25.0
     g_in = (2 * (G + P) - 2 * I) / (G + P) ** 2
     return {'no_target': rows, 'with_target_50_half_predicted_grad_per_voxel_inside': g_in}
+
+
+if __name__ == '__main__':
+    ratio = band_ratio(sys.argv[1] if len(sys.argv) > 1 else '-')
+    print(json.dumps(grad_check()))
+    out = {'band_ratio_bg_per_tree_mm3': ratio, 'runs': []}
+    grid = [('0', 0.0), ('8', 0.0), ('15', 0.0)]
+    for dice in ('oracle', 'naive', 'none', 'leaf', 'leaf_batch', 'leaf_skip', 'marginal', 'ignore'):
+        for band, sib in grid:
+            for n_ext in (10, 30, 60):
+                res = [run(dice, band, sib, n_ext, 100, ratio, seed=s) for s in range(5)]
+                agg = {k: [round(float(np.mean([r[k] for r in res])), 3), round(float(np.std([r[k] for r in res])), 3)]
+                       for k in res[0]}
+                row = {'dice': dice, 'band_mm': band, 'n_ext': n_ext, **agg}
+                out['runs'].append(row)
+                print(json.dumps(row), flush=True)
+    json.dump(out, open(sys.argv[2], 'w'), indent=1)
+

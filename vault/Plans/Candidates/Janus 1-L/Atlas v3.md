@@ -130,7 +130,7 @@ resampling target:
 
 ```sh
 # on Trillium, after P (dataset 718 exists with Janus 0's moved plans), CPU
-P=$nnUNet_preprocessed/Dataset718_J1L
+P=$(ls -d $nnUNet_preprocessed/Dataset718_*)          # #306 names the dataset
 python - "$P" <<'PY'
 import json, sys
 P = sys.argv[1]

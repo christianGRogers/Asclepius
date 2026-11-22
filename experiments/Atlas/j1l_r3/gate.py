@@ -26,7 +26,9 @@ tF1, flagged classes, provisional, per-class `recall` (L-A17), FP components, wh
 sha256 of `select.json` and of `rule_t.json`, C's t equal to rule_t.json's t_C, and a looks ledger that refuses a
 second look for the same model name and caps the track at two (L-A18).
 
-Usage:
+Usage (Atlas v3 §6.5 has the full block):
+  python gate.py --preflight --name "Janus 1-L.1" --alpha 0.025 --cand-t 0.40 --select select.json \\
+      --select-sha256 <posted> --rule-t rule_t.json --rule-t-sha256 <posted> --ledger looks.json   # before scoring C
   python gate.py --base J0_argmax.json --cand C.json --cand-t 0.40 --name "Janus 1-L.1" --alpha 0.025 \\
       --select select.json --select-sha256 <posted> --rule-t rule_t.json --rule-t-sha256 <posted> \\
       --j0-tc J0_at_tC.json --mde mde.json --ledger looks.json --out gate.json
@@ -120,7 +122,8 @@ def l3(A, C, alpha, b=B):
     return out
 
 
-def evaluate(base_rows, cand_rows, alpha=0.025, b=B, j0_tc_rows=None, mde_tf1=None, name='Janus 1-L.1'):
+def evaluate(base_rows, cand_rows, alpha=0.025, b=B, j0_tc_rows=None, mde_tf1=None, name='Janus 1-L.1',
+             t_c=None, t_star=None, parts=None, what='a two-network ensemble of fine-tunes of Janus 0'):
     A, C = ok(base_rows), ok(cand_rows)
     tf1 = summary(deltas(A, C, decisive), alpha, b)
     cls = {c: summary(d, alpha, b) if len(d := deltas(A, C, lambda r, c=c: class_val(r, c, 'per_class'))) > 1
@@ -163,7 +166,10 @@ def evaluate(base_rows, cand_rows, alpha=0.025, b=B, j0_tc_rows=None, mde_tf1=No
             d = deltas(A, C, lambda r, c=c: class_val(r, c, 'per_class'))
             if d and np.mean(list(d.values())) < -0.05:
                 g5[c] = [k for k, _ in sorted(d.items(), key=lambda kv: kv[1])[:5]]
-    res = dict(name=name, alpha_one_sided=alpha, n_cases=len(set(A) & set(C)), tf1=tf1, per_class_tf1=cls,
+    dt = deltas(A, C, decisive)
+    part_means = {k: round(float(np.mean([dt[c] for c in ids if c in dt])), 4) for k, ids in (parts or {}).items()
+                  if any(c in dt for c in ids)}
+    res = dict(name=name, alpha_one_sided=alpha, t_C=t_c, t_star=t_star, what=what, parts=part_means, n_cases=len(set(A) & set(C)), tf1=tf1, per_class_tf1=cls,
                dice=dice, L3=rec, L3_false_alarm_stated=L3_RATE, fp_per_case=round(fp, 3), H1_parts=h1_parts,
                H1=h1, H2=h2, H3=h3, verdict=verdict, adopted=adopted, share_s=share, G5=g5, mde_tf1=mde_tf1)
     res['wording'] = wording(res)
@@ -210,7 +216,15 @@ def wording(r):
                   f"adds {1 - sh:.2f}." if sh >= 0.8 else " Most of the width gain is the fine-tune." if sh <= 0.2
                   else " The threshold and the fine-tune each contribute.")
     if r['adopted']:
+        if r['t_C'] is not None:
+            moved = ('equal to t*' if r['t_star'] is None or abs(r['t_C'] - r['t_star']) < 1e-9
+                     else f"moved by Rule T from t* = {r['t_star']:.2f}")
+            s += f" It is {r['what']}, exported at foreground threshold {r['t_C']:.2f} ({moved})."
         s += f" L3's stated false-alarm rate is {L3_RATE}."
+    if r['parts']:
+        s += ' Tree-F1 Δ by part: ' + '; '.join(f'{k} {v:+.3f}' for k, v in r['parts'].items()) + '.'
+        if len({v > 0 for v in r['parts'].values()}) > 1:
+            s += ' The parts differ in sign; this is reported and not acted on (A26).'
     if r['mde_tf1'] is not None and r['mde_tf1'] > 0.025:
         s += f" The look is under-powered (tF1 MDE {r['mde_tf1']:.3f})."
     return s
@@ -298,7 +312,13 @@ def main(argv=None):
     if a.mde:
         m = json.load(open(a.mde))['mde']
         mde = max(v['E'][1] if 'E' in v else v['a1'] for k, v in m.items() if k.startswith('tf1'))
-    res = evaluate(base, cand, a.alpha, B, j0tc, mde, a.name)
+    L = json.load(open(os.path.join(ROOT, 'experiments', 'Crucible', 'j1l_r1', 'lists.json')))
+    parts = {'val 80': [c for c in L['locked100'] if c not in L['locked20_of_open36']],
+             'locked 20': L['locked20_of_open36']}
+    tstar = round(float(json.load(open(a.select))['chosen_t']), 2)
+    what = ('a two-network ensemble of fine-tunes of Janus 0' if a.name == 'Janus 1-L.1'
+            else "Janus 0's recipe trained from scratch on the 620")
+    res = evaluate(base, cand, a.alpha, B, j0tc, mde, a.name, t_c=a.cand_t, t_star=tstar, parts=parts, what=what)
     res['inputs'] = {k: sha(p) for k, p in (('base', a.base), ('cand', a.cand), ('select', a.select),
                                              ('rule_t', a.rule_t)) if p}
     for x in led['looks']:
@@ -347,6 +367,9 @@ def selftest():
     r = evaluate(*fixture(1, 0.0, 0.01), b=b, j0_tc_rows=fixture(1, 0.0, 0.009)[1])
     assert r['H2'] and not r['H3'] and r['adopted'] and r['share_s'] is not None and r['share_s'] >= 0.8, r['share_s']
     assert 'export threshold' in r['wording']
+    r = evaluate(*fixture(1, 0.0, 0.01), b=b, t_c=0.35, t_star=0.40,
+                 parts={'val 80': [f'c{i:04d}' for i in range(80)], 'locked 20': [f'c{i:04d}' for i in range(80, 100)]})
+    assert 'moved by Rule T from t* = 0.40' in r['wording'] and 'by part' in r['wording'], r['wording']
     r = evaluate(*fixture(1, 0.01, 0.01), b=b)
     assert r['H3'] and r['verdict'].startswith('adopted (H1, H2, H3)')
     r = evaluate(*fixture(1, 0.0, 0.01, fp=1.2), b=b)                 # FP of 1.2 per case fails H1

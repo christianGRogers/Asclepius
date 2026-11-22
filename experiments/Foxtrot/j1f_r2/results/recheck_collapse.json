@@ -1,0 +1,316 @@
+{
+ "cases": {
+  "c0113": {
+   "mismatch": 0,
+   "mismatch_other_voxels": 0,
+   "mismatch_left_posterior": 0
+  },
+  "c0142": {
+   "mismatch": 0,
+   "mismatch_other_voxels": 0,
+   "mismatch_left_posterior": 0
+  },
+  "c0156": {
+   "mismatch": 0,
+   "mismatch_other_voxels": 0,
+   "mismatch_left_posterior": 0
+  },
+  "c0195": {
+   "mismatch": 0,
+   "mismatch_other_voxels": 0,
+   "mismatch_left_posterior": 0
+  },
+  "c0235": {
+   "mismatch": 0,
+   "mismatch_other_voxels": 0,
+   "mismatch_left_posterior": 0
+  },
+  "c0238": {
+   "mismatch": 0,
+   "mismatch_other_voxels": 0,
+   "mismatch_left_posterior": 0
+  },
+  "c0244": {
+   "mismatch": 0,
+   "mismatch_other_voxels": 0,
+   "mismatch_left_posterior": 0
+  },
+  "c0261": {
+   "mismatch": 0,
+   "mismatch_other_voxels": 0,
+   "mismatch_left_posterior": 0
+  },
+  "c0265": {
+   "mismatch": 0,
+   "mismatch_other_voxels": 0,
+   "mismatch_left_posterior": 0
+  },
+  "c0026": {
+   "mismatch": 0,
+   "mismatch_other_voxels": 0,
+   "mismatch_left_posterior": 0
+  },
+  "c0281": {
+   "mismatch": 0,
+   "mismatch_other_voxels": 0,
+   "mismatch_left_posterior": 0
+  },
+  "c0287": {
+   "mismatch": 0,
+   "mismatch_other_voxels": 0,
+   "mismatch_left_posterior": 0
+  },
+  "c0314": {
+   "mismatch": 0,
+   "mismatch_other_voxels": 0,
+   "mismatch_left_posterior": 0
+  },
+  "c0312": {
+   "mismatch": 0,
+   "mismatch_other_voxels": 0,
+   "mismatch_left_posterior": 0
+  },
+  "c0325": {
+   "mismatch": 0,
+   "mismatch_other_voxels": 0,
+   "mismatch_left_posterior": 0
+  },
+  "c0328": {
+   "mismatch": 0,
+   "mismatch_other_voxels": 0,
+   "mismatch_left_posterior": 0
+  },
+  "c0354": {
+   "mismatch": 0,
+   "mismatch_other_voxels": 0,
+   "mismatch_left_posterior": 0
+  },
+  "c0356": {
+   "mismatch": 37,
+   "mismatch_other_voxels": 37,
+   "mismatch_left_posterior": 0
+  },
+  "c0406": {
+   "mismatch": 0,
+   "mismatch_other_voxels": 0,
+   "mismatch_left_posterior": 0
+  },
+  "c0414": {
+   "mismatch": 0,
+   "mismatch_other_voxels": 0,
+   "mismatch_left_posterior": 0
+  },
+  "c0415": {
+   "mismatch": 0,
+   "mismatch_other_voxels": 0,
+   "mismatch_left_posterior": 0
+  },
+  "c0432": {
+   "mismatch": 0,
+   "mismatch_other_voxels": 0,
+   "mismatch_left_posterior": 0
+  },
+  "c0444": {
+   "mismatch": 0,
+   "mismatch_other_voxels": 0,
+   "mismatch_left_posterior": 0
+  },
+  "c0468": {
+   "mismatch": 0,
+   "mismatch_other_voxels": 0,
+   "mismatch_left_posterior": 0
+  },
+  "c0505": {
+   "mismatch": 0,
+   "mismatch_other_voxels": 0,
+   "mismatch_left_posterior": 0
+  },
+  "c0573": {
+   "mismatch": 0,
+   "mismatch_other_voxels": 0,
+   "mismatch_left_posterior": 0
+  },
+  "c0579": {
+   "mismatch": 0,
+   "mismatch_other_voxels": 0,
+   "mismatch_left_posterior": 0
+  },
+  "c0600": {
+   "mismatch": 0,
+   "mismatch_other_voxels": 0,
+   "mismatch_left_posterior": 0
+  },
+  "c0614": {
+   "mismatch": 0,
+   "mismatch_other_voxels": 0,
+   "mismatch_left_posterior": 0
+  },
+  "c0617": {
+   "mismatch": 0,
+   "mismatch_other_voxels": 0,
+   "mismatch_left_posterior": 0
+  },
+  "c0621": {
+   "mismatch": 0,
+   "mismatch_other_voxels": 0,
+   "mismatch_left_posterior": 0
+  },
+  "c0618": {
+   "mismatch": 0,
+   "mismatch_other_voxels": 0,
+   "mismatch_left_posterior": 0
+  },
+  "c0628": {
+   "mismatch": 0,
+   "mismatch_other_voxels": 0,
+   "mismatch_left_posterior": 0
+  },
+  "c0641": {
+   "mismatch": 0,
+   "mismatch_other_voxels": 0,
+   "mismatch_left_posterior": 0
+  },
+  "c0647": {
+   "mismatch": 0,
+   "mismatch_other_voxels": 0,
+   "mismatch_left_posterior": 0
+  },
+  "c0661": {
+   "mismatch": 3,
+   "mismatch_other_voxels": 3,
+   "mismatch_left_posterior": 0
+  },
+  "c0667": {
+   "mismatch": 0,
+   "mismatch_other_voxels": 0,
+   "mismatch_left_posterior": 0
+  },
+  "c0069": {
+   "mismatch": 0,
+   "mismatch_other_voxels": 0,
+   "mismatch_left_posterior": 0
+  },
+  "c0706": {
+   "mismatch": 0,
+   "mismatch_other_voxels": 0,
+   "mismatch_left_posterior": 0
+  },
+  "c0705": {
+   "mismatch": 0,
+   "mismatch_other_voxels": 0,
+   "mismatch_left_posterior": 0
+  },
+  "c0715": {
+   "mismatch": 0,
+   "mismatch_other_voxels": 0,
+   "mismatch_left_posterior": 0
+  },
+  "c0716": {
+   "mismatch": 0,
+   "mismatch_other_voxels": 0,
+   "mismatch_left_posterior": 0
+  },
+  "c0723": {
+   "mismatch": 0,
+   "mismatch_other_voxels": 0,
+   "mismatch_left_posterior": 0
+  },
+  "c0725": {
+   "mismatch": 0,
+   "mismatch_other_voxels": 0,
+   "mismatch_left_posterior": 0
+  },
+  "c0730": {
+   "mismatch": 0,
+   "mismatch_other_voxels": 0,
+   "mismatch_left_posterior": 0
+  },
+  "c0750": {
+   "mismatch": 0,
+   "mismatch_other_voxels": 0,
+   "mismatch_left_posterior": 0
+  },
+  "c0751": {
+   "mismatch": 0,
+   "mismatch_other_voxels": 0,
+   "mismatch_left_posterior": 0
+  },
+  "c0753": {
+   "mismatch": 0,
+   "mismatch_other_voxels": 0,
+   "mismatch_left_posterior": 0
+  },
+  "c0755": {
+   "mismatch": 0,
+   "mismatch_other_voxels": 0,
+   "mismatch_left_posterior": 0
+  },
+  "c0764": {
+   "mismatch": 0,
+   "mismatch_other_voxels": 0,
+   "mismatch_left_posterior": 0
+  },
+  "c0775": {
+   "mismatch": 0,
+   "mismatch_other_voxels": 0,
+   "mismatch_left_posterior": 0
+  },
+  "c0806": {
+   "mismatch": 0,
+   "mismatch_other_voxels": 0,
+   "mismatch_left_posterior": 0
+  },
+  "c0853": {
+   "mismatch": 0,
+   "mismatch_other_voxels": 0,
+   "mismatch_left_posterior": 0
+  },
+  "c0867": {
+   "mismatch": 0,
+   "mismatch_other_voxels": 0,
+   "mismatch_left_posterior": 0
+  },
+  "c0874": {
+   "mismatch": 0,
+   "mismatch_other_voxels": 0,
+   "mismatch_left_posterior": 0
+  },
+  "c0882": {
+   "mismatch": 0,
+   "mismatch_other_voxels": 0,
+   "mismatch_left_posterior": 0
+  },
+  "c0904": {
+   "mismatch": 0,
+   "mismatch_other_voxels": 0,
+   "mismatch_left_posterior": 0
+  },
+  "c0907": {
+   "mismatch": 0,
+   "mismatch_other_voxels": 0,
+   "mismatch_left_posterior": 0
+  },
+  "c0912": {
+   "mismatch": 0,
+   "mismatch_other_voxels": 0,
+   "mismatch_left_posterior": 0
+  },
+  "c0920": {
+   "mismatch": 0,
+   "mismatch_other_voxels": 0,
+   "mismatch_left_posterior": 0
+  },
+  "c0963": {
+   "mismatch": 0,
+   "mismatch_other_voxels": 0,
+   "mismatch_left_posterior": 0
+  }
+ },
+ "n_rechecked": 61,
+ "total": {
+  "mismatch": 40,
+  "mismatch_other_voxels": 40,
+  "mismatch_left_posterior": 0
+ },
+ "cases_with_mismatch": 2
+}

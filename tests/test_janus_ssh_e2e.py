@@ -131,6 +131,18 @@ def servers(tmp_path_factory):
     _sh("userdel", "-r", USER, check=False)
 
 
+@pytest.fixture(autouse=True)
+def _scratch_files():
+    # The workflow steps write these into the checkout, as on a runner; remove the
+    # ones a test created.
+    names = [ROOT / n for n in ("out.txt", "remote.sh", "prepare.txt")]
+    before = {p for p in names if p.exists()}
+    yield
+    for p in names:
+        if p not in before:
+            p.unlink(missing_ok=True)
+
+
 def _env(servers, tmp_path, **extra):
     home = tmp_path / "home"
     home.mkdir(exist_ok=True)

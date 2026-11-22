@@ -108,6 +108,12 @@ def servers(tmp_path_factory):
             "PasswordAuthentication yes\nKbdInteractiveAuthentication no\n"
             "PubkeyAuthentication no\nUsePAM no\nPermitRootLogin no\n"
             f"AllowUsers {USER}\nAllowTcpForwarding yes\nStrictModes no\n")
+        # OpenSSH >= 9.8 penalises an address after repeated connections that never log
+        # in (each ssh-keyscan here is one), and the tests make many: off, where known.
+        if _sh(SSHD, "-t", "-f", str(d / "sshd_config"), "-o", "PerSourcePenalties=no",
+               check=False).returncode == 0:
+            with open(d / "sshd_config", "a") as f:
+                f.write("PerSourcePenalties no\n")
         procs.append(subprocess.Popen(
             ["ip", "netns", "exec", ns, SSHD, "-D", "-e", "-f", str(d / "sshd_config")],
             stdout=open(d / "log", "w"), stderr=subprocess.STDOUT))

@@ -1,0 +1,408 @@
+[
+{
+"case": "c0217",
+"t_pieces_s": 5.6,
+"identity": {
+"D1": {
+"n": 1,
+"det": 1,
+"named": 1,
+"pres_ref": true,
+"pres_pred": true,
+"tf1": 1.0
+},
+"D2": {
+"n": 1,
+"det": 1,
+"named": 1,
+"pres_ref": true,
+"pres_pred": true,
+"tf1": 1.0
+},
+"D3": {
+"n": 0,
+"det": 0,
+"named": 0,
+"pres_ref": false,
+"pres_pred": false,
+"tf1": NaN
+},
+"OM1": {
+"n": 1,
+"det": 1,
+"named": 1,
+"pres_ref": true,
+"pres_pred": true,
+"tf1": 1.0
+},
+"OM2": {
+"n": 0,
+"det": 0,
+"named": 0,
+"pres_ref": false,
+"pres_pred": false,
+"tf1": NaN
+},
+"Ramus": {
+"n": 0,
+"det": 0,
+"named": 0,
+"pres_ref": false,
+"pres_pred": false,
+"tf1": NaN
+},
+"PDA": {
+"n": 1,
+"det": 1,
+"named": 1,
+"pres_ref": true,
+"pres_pred": true,
+"tf1": 1.0
+},
+"PLB": {
+"n": 1,
+"det": 1,
+"named": 1,
+"pres_ref": true,
+"pres_pred": true,
+"tf1": 1.0
+},
+"t_s": 107.9
+},
+"erode1": {
+"D1": {
+"n": 1,
+"det": 0,
+"named": 0,
+"pres_ref": true,
+"pres_pred": false,
+"tf1": 0.308
+},
+"D2": {
+"n": 1,
+"det": 1,
+"named": 1,
+"pres_ref": true,
+"pres_pred": true,
+"tf1": 0.553
+},
+"D3": {
+"n": 0,
+"det": 0,
+"named": 0,
+"pres_ref": false,
+"pres_pred": false,
+"tf1": NaN
+},
+"OM1": {
+"n": 1,
+"det": 1,
+"named": 1,
+"pres_ref": true,
+"pres_pred": true,
+"tf1": 0.76
+},
+"OM2": {
+"n": 0,
+"det": 0,
+"named": 0,
+"pres_ref": false,
+"pres_pred": false,
+"tf1": NaN
+},
+"Ramus": {
+"n": 0,
+"det": 0,
+"named": 0,
+"pres_ref": false,
+"pres_pred": false,
+"tf1": NaN
+},
+"PDA": {
+"n": 1,
+"det": 0,
+"named": 0,
+"pres_ref": true,
+"pres_pred": true,
+"tf1": 0.195
+},
+"PLB": {
+"n": 1,
+"det": 1,
+"named": 1,
+"pres_ref": true,
+"pres_pred": true,
+"tf1": 0.519
+},
+"t_s": 113.5
+},
+"swap_D1D2": {
+"D1": {
+"n": 1,
+"det": 1,
+"named": 0,
+"pres_ref": true,
+"pres_pred": true,
+"tf1": 0.0
+},
+"D2": {
+"n": 1,
+"det": 1,
+"named": 0,
+"pres_ref": true,
+"pres_pred": true,
+"tf1": 0.0
+},
+"D3": {
+"n": 0,
+"det": 0,
+"named": 0,
+"pres_ref": false,
+"pres_pred": false,
+"tf1": NaN
+},
+"OM1": {
+"n": 1,
+"det": 1,
+"named": 1,
+"pres_ref": true,
+"pres_pred": true,
+"tf1": 1.0
+},
+"OM2": {
+"n": 0,
+"det": 0,
+"named": 0,
+"pres_ref": false,
+"pres_pred": false,
+"tf1": NaN
+},
+"Ramus": {
+"n": 0,
+"det": 0,
+"named": 0,
+"pres_ref": false,
+"pres_pred": false,
+"tf1": NaN
+},
+"PDA": {
+"n": 1,
+"det": 1,
+"named": 1,
+"pres_ref": true,
+"pres_pred": true,
+"tf1": 1.0
+},
+"PLB": {
+"n": 1,
+"det": 1,
+"named": 1,
+"pres_ref": true,
+"pres_pred": true,
+"tf1": 1.0
+},
+"t_s": 113.1
+},
+"fold_OM": {
+"D1": {
+"n": 1,
+"det": 1,
+"named": 1,
+"pres_ref": true,
+"pres_pred": true,
+"tf1": 1.0
+},
+"D2": {
+"n": 1,
+"det": 1,
+"named": 1,
+"pres_ref": true,
+"pres_pred": true,
+"tf1": 1.0
+},
+"D3": {
+"n": 0,
+"det": 0,
+"named": 0,
+"pres_ref": false,
+"pres_pred": false,
+"tf1": NaN
+},
+"OM1": {
+"n": 1,
+"det": 1,
+"named": 0,
+"pres_ref": true,
+"pres_pred": false,
+"tf1": 0.0
+},
+"OM2": {
+"n": 0,
+"det": 0,
+"named": 0,
+"pres_ref": false,
+"pres_pred": false,
+"tf1": NaN
+},
+"Ramus": {
+"n": 0,
+"det": 0,
+"named": 0,
+"pres_ref": false,
+"pres_pred": false,
+"tf1": NaN
+},
+"PDA": {
+"n": 1,
+"det": 1,
+"named": 1,
+"pres_ref": true,
+"pres_pred": true,
+"tf1": 1.0
+},
+"PLB": {
+"n": 1,
+"det": 1,
+"named": 1,
+"pres_ref": true,
+"pres_pred": true,
+"tf1": 1.0
+},
+"t_s": 109.6
+},
+"drop_PLB": {
+"D1": {
+"n": 1,
+"det": 1,
+"named": 1,
+"pres_ref": true,
+"pres_pred": true,
+"tf1": 1.0
+},
+"D2": {
+"n": 1,
+"det": 1,
+"named": 1,
+"pres_ref": true,
+"pres_pred": true,
+"tf1": 1.0
+},
+"D3": {
+"n": 0,
+"det": 0,
+"named": 0,
+"pres_ref": false,
+"pres_pred": false,
+"tf1": NaN
+},
+"OM1": {
+"n": 1,
+"det": 1,
+"named": 1,
+"pres_ref": true,
+"pres_pred": true,
+"tf1": 1.0
+},
+"OM2": {
+"n": 0,
+"det": 0,
+"named": 0,
+"pres_ref": false,
+"pres_pred": false,
+"tf1": NaN
+},
+"Ramus": {
+"n": 0,
+"det": 0,
+"named": 0,
+"pres_ref": false,
+"pres_pred": false,
+"tf1": NaN
+},
+"PDA": {
+"n": 1,
+"det": 1,
+"named": 1,
+"pres_ref": true,
+"pres_pred": true,
+"tf1": 1.0
+},
+"PLB": {
+"n": 1,
+"det": 0,
+"named": 0,
+"pres_ref": true,
+"pres_pred": false,
+"tf1": 0.0
+},
+"t_s": 110.5
+},
+"trunc_PDA_40": {
+"D1": {
+"n": 1,
+"det": 1,
+"named": 1,
+"pres_ref": true,
+"pres_pred": true,
+"tf1": 1.0
+},
+"D2": {
+"n": 1,
+"det": 1,
+"named": 1,
+"pres_ref": true,
+"pres_pred": true,
+"tf1": 1.0
+},
+"D3": {
+"n": 0,
+"det": 0,
+"named": 0,
+"pres_ref": false,
+"pres_pred": false,
+"tf1": NaN
+},
+"OM1": {
+"n": 1,
+"det": 1,
+"named": 1,
+"pres_ref": true,
+"pres_pred": true,
+"tf1": 1.0
+},
+"OM2": {
+"n": 0,
+"det": 0,
+"named": 0,
+"pres_ref": false,
+"pres_pred": false,
+"tf1": NaN
+},
+"Ramus": {
+"n": 0,
+"det": 0,
+"named": 0,
+"pres_ref": false,
+"pres_pred": false,
+"tf1": NaN
+},
+"PDA": {
+"n": 1,
+"det": 0,
+"named": 0,
+"pres_ref": true,
+"pres_pred": true,
+"tf1": 0.577
+},
+"PLB": {
+"n": 1,
+"det": 1,
+"named": 1,
+"pres_ref": true,
+"pres_pred": true,
+"tf1": 1.0
+},
+"t_s": 102.7
+}
+}
+]

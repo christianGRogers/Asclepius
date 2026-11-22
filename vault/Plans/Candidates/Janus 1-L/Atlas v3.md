@@ -24,7 +24,7 @@ then be a reading round: it applies the tables to the posted numbers and propose
 **What this version adds, in order of weight:**
 1. **Eight defects in the plan of record's commands and interfaces** (§2), found by reading the merged scripts and
    nnU-Net 2.8.1's wheel, and checked on CPU here. Three would have stopped or changed the look:
-   - the post-Job-0 block crashes on its second line: `'%.2f' % chosen_t` with a string `chosen_t`;
+   - the post-Job-0 block crashes before the decomposition at t\*: `'%.2f' % chosen_t` is given a string;
    - **`nnUNetv2_predict -f 0 1` is not E.** It averages logits, while `nnUNetv2_ensemble` averages probabilities.
      L-A14 says the two are equal. At t_C < 0.5 they draw different widths;
    - **L3 with L-A5's bootstrap bound false-alarms twice as often as its stated 3–8 %**: 8.1–13.8 % on the measured

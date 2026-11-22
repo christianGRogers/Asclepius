@@ -11,6 +11,10 @@ tF1, flagged classes, provisional, per-class `recall` (L-A17), FP components, wh
   H1        LB(Δ decisive macro tF1) > -0.02; no class mean Δ tF1 < -0.03; L3 holds; C's FP per case <= 1.
   L3        for no class: 10 %-trimmed mean Δ recall < -0.02, or (mean Δ recall < -0.02 and UB < 0). Recall is
             the scorer's `recall` on decisive trees (non-provisional case, class not flagged), as tF1 is.
+            **UB is the t bound** (mean + t_{1-alpha, n-1} SD / sqrt n), the bound L3's stated 3-8 % was measured
+            with (Delta's `l3_fix.py`). The percentile bootstrap doubles L3's false alarm on heavy-tailed
+            differences with no gain in power (`l3_null.json`), so L3 is the one bound of the look that is not a
+            bootstrap (Atlas v3 §2, F5).
   H2        LB(Δ whole-tree Dice) > 0, read only if H1 passes.
   H3        LB(Δ decisive macro tF1) > 0, read only if H2 passes.
   Verdict   L-A16's table. The Q4 row (D46 Q4 as amended by D49 Q-R2-3) adopts only if LB(Δ tF1) > -0.015 AND
@@ -108,7 +112,8 @@ def l3(A, C, alpha, b=B):
             continue
         v = list(d.values())
         tm, m = trimmed(v), float(np.mean(v))
-        ub = boot(v, alpha, b)[1]
+        from scipy.stats import t as student_t
+        ub = m + float(student_t.ppf(1 - alpha, len(v) - 1)) * float(np.std(v, ddof=1)) / math.sqrt(len(v))
         out[c] = dict(n=len(v), trimmed10=round(tm, 4), mean=round(m, 4), ub=round(ub, 4),
                       excess_kurtosis=round(excess_kurtosis(v), 2),
                       fires=bool(tm < L3_LIM or (m < L3_LIM and ub < 0)))
@@ -226,18 +231,39 @@ def guard_cases(rows, what):
         sys.exit(f'[gate] REFUSING: {what} is not exactly the locked 100 (pin {PIN_LOCKED[:8]}...)')
 
 
-def ledger_check(path, name):
+def ledger_check(path, name, closing=False):
+    """preflight (closing=False): refuse a model that has had its look, or a third look; then record it as opened.
+    gate (closing=True): the model must be opened and not yet closed."""
     led = json.load(open(path)) if os.path.exists(path) else {'looks': []}
-    if name in [x['name'] for x in led['looks']]:
+    mine = [x for x in led['looks'] if x['name'] == name]
+    if closing:
+        if not mine or mine[0].get('state') != 'opened':
+            sys.exit(f'[gate] REFUSING: {name} was not opened by preflight, or is already closed ({path})')
+        return led
+    if mine:
         sys.exit(f'[gate] REFUSING: {name} has already had its look ({path})')
     if len(led['looks']) >= 2:
         sys.exit('[gate] REFUSING: the track has spent its two candidate looks (L-A18)')
     return led
 
 
+def s_trigger(gate_res, base_rows, a1_argmax_rows, a2_argmax_rows, l0):
+    """L-A18: H1 failed, a1 and a2 at argmax both have point Δ macro tF1 < 0 against Janus 0, and L0 passed."""
+    A = ok(base_rows)
+    d1 = float(np.mean(list(deltas(A, ok(a1_argmax_rows), decisive).values())))
+    d2 = float(np.mean(list(deltas(A, ok(a2_argmax_rows), decisive).values())))
+    fire = (not gate_res['H1']) and d1 < 0 and d2 < 0 and bool(l0['L0'])
+    return dict(H1=gate_res['H1'], a1_argmax_delta=round(d1, 4), a2_argmax_delta=round(d2, 4), L0=l0['L0'],
+                S_triggers=fire, note='S runs on the lead\'s allocation (D49 Q-R2-4) without another round' if fire
+                else 'S does not run; G5 and the decomposition go to the next round' if not gate_res['H1'] else '')
+
+
 def main(argv=None):
     ap = argparse.ArgumentParser()
     ap.add_argument('--selftest', action='store_true')
+    ap.add_argument('--preflight', action='store_true', help='check the posted hashes and the ledger, then open')
+    ap.add_argument('--strigger', action='store_true', help="L-A18: does S's trigger fire?")
+    ap.add_argument('--gate'); ap.add_argument('--a1-argmax'); ap.add_argument('--a2-argmax'); ap.add_argument('--l0')
     ap.add_argument('--base'); ap.add_argument('--cand'); ap.add_argument('--cand-t', type=float)
     ap.add_argument('--name', default='Janus 1-L.1'); ap.add_argument('--alpha', type=float, default=0.025)
     ap.add_argument('--select'); ap.add_argument('--select-sha256')
@@ -246,6 +272,10 @@ def main(argv=None):
     a = ap.parse_args(argv)
     if a.selftest:
         return selftest()
+    if a.strigger:
+        return print(json.dumps(s_trigger(json.load(open(a.gate)), json.load(open(a.base))['rows'],
+                                          json.load(open(a.a1_argmax))['rows'], json.load(open(a.a2_argmax))['rows'],
+                                          json.load(open(a.l0))), indent=1))
     if {'Janus 1-L.1': 0.025, 'Janus 1-L.2': 0.0125}.get(a.name) != a.alpha:
         sys.exit('[gate] REFUSING: alpha must be 0.025 for Janus 1-L.1 and 0.0125 for Janus 1-L.2 (L-A18)')
     for p, h in ((a.select, a.select_sha256), (a.rule_t, a.rule_t_sha256)):
@@ -254,7 +284,13 @@ def main(argv=None):
     tc = json.load(open(a.rule_t))['t_C']
     if a.cand_t is None or abs(a.cand_t - tc) > 1e-9:
         sys.exit(f'[gate] REFUSING: the candidate was exported at t = {a.cand_t}, rule_t.json says t_C = {tc}')
-    led = ledger_check(a.ledger, a.name)
+    if a.preflight:
+        led = ledger_check(a.ledger, a.name)
+        led['looks'].append({'name': a.name, 'state': 'opened', 'select': a.select_sha256, 'rule_t': a.rule_t_sha256,
+                             't': a.cand_t})
+        json.dump(led, open(a.ledger, 'w'), indent=1)
+        return print(f'[gate] preflight passed: {a.name} opened at t = {a.cand_t}; score it now, then run the gate')
+    led = ledger_check(a.ledger, a.name, closing=True)
     base, cand = json.load(open(a.base))['rows'], json.load(open(a.cand))['rows']
     guard_cases(base, 'the baseline'); guard_cases(cand, 'the candidate')
     j0tc = json.load(open(a.j0_tc))['rows'] if a.j0_tc else None
@@ -265,7 +301,9 @@ def main(argv=None):
     res = evaluate(base, cand, a.alpha, B, j0tc, mde, a.name)
     res['inputs'] = {k: sha(p) for k, p in (('base', a.base), ('cand', a.cand), ('select', a.select),
                                              ('rule_t', a.rule_t)) if p}
-    led['looks'].append({'name': a.name, 'verdict': res['verdict'], 'cand_sha256': res['inputs']['cand']})
+    for x in led['looks']:
+        if x['name'] == a.name:
+            x.update(state='closed', verdict=res['verdict'], cand_sha256=res['inputs']['cand'])
     json.dump(led, open(a.ledger, 'w'), indent=1)
     json.dump(res, open(a.out, 'w'), indent=1)
     print(json.dumps({k: v for k, v in res.items() if k not in ('L3',)}, indent=1))
@@ -340,7 +378,7 @@ def selftest():
                 cand[i]['recall'][k] = 0.9 + v[i]
         fired += any(x['fires'] for x in l3(ok(base), ok(cand), 0.025, 500).values())
     null_rate = fired / reps
-    assert null_rate < 0.15, null_rate
+    assert null_rate < 0.08, null_rate
     # collect's guards
     with tempfile.TemporaryDirectory() as W:
         L = json.load(open(os.path.join(ROOT, 'experiments', 'Crucible', 'j1l_r1', 'lists.json')))
@@ -354,7 +392,19 @@ def selftest():
             except SystemExit as e:
                 assert 'REFUSING' in str(e)
         p = os.path.join(W, 'looks.json')
-        json.dump({'looks': [{'name': 'Janus 1-L.1'}]}, open(p, 'w'))
+        json.dump({'looks': [{'name': 'Janus 1-L.1', 'state': 'closed'}]}, open(p, 'w'))
+        try:
+            ledger_check(p, 'Janus 1-L.1', closing=True)
+            raise AssertionError('a closed look was gated again')
+        except SystemExit as e:
+            assert 'REFUSING' in str(e)
+        # S's trigger: H1 failed and both members below Janus 0 at argmax
+        bb, c1 = fixture(4, -0.01); _, c2 = fixture(5, -0.005); _, c3 = fixture(6, 0.004)
+        g = dict(H1=False)
+        assert s_trigger(g, bb, c1, c2, {'L0': True})['S_triggers']
+        assert not s_trigger(g, bb, c1, c3, {'L0': True})['S_triggers']
+        assert not s_trigger(g, bb, c1, c2, {'L0': False})['S_triggers']
+        assert not s_trigger(dict(H1=True), bb, c1, c2, {'L0': True})['S_triggers']
         for nm in ('Janus 1-L.1',):
             try:
                 ledger_check(p, nm)
@@ -370,7 +420,7 @@ def selftest():
             assert 'two candidate looks' in str(e)
     print(f'[gate] self-test passed: L-A16 rows (Q4 at -0.012 adopted, -0.017 not, Dice shown worse not); H2/H3 and '
           f'the share sentence; FP 1.2 fails H1; uniform -0.03 LCx fires L3; heavy-tailed null fires L3 in '
-          f'{null_rate:.3f} of {reps}; alpha 0.0125 wider; locked-100 pin, sealed refusal and the looks ledger')
+          f'{null_rate:.3f} of {reps}; alpha 0.0125 wider; locked-100 pin, sealed refusal and the looks ledger; S trigger')
 
 
 if __name__ == '__main__':

@@ -1,0 +1,50 @@
+{
+ "S1 ensemble -> threshold_export": {
+  "passed": true,
+  "detail": "E npz (key probabilities, SimpleITK order) accepted; argmax/orientation guard holds on the mean"
+ },
+ "S3 decide.py select -> rule_t.py": {
+  "passed": true,
+  "detail": "chosen_t='0.40' parsed as 0.4; dice_bound=True"
+ },
+ "S2 Rule T needs its whole grid": {
+  "passed": true,
+  "detail": "with Rule W's grid only, rule_t.py stops: FileNotFoundError(\"No such file or no access: '/tmp/tmpk5mq6mdl/E_thr_wgrid/t0.60/c0005.ni"
+ },
+ "S4 Rule T on E": {
+  "passed": true,
+  "detail": "wider E -> t_C 0.5 (dr {'0.60': 0.1669, '0.55': 0.3886, '0.50': 0.3886, '0.45': 0.3886, '0.40': 0.5858, '0.35': 0.5858, '0.30': 0.6473, '0.25': 0.7071}); unchanged width -> t_C 0.4 (t* 0.4)",
+  "dr_wide": {
+   "0.60": 0.1669,
+   "0.55": 0.3886,
+   "0.50": 0.3886,
+   "0.45": 0.3886,
+   "0.40": 0.5858,
+   "0.35": 0.5858,
+   "0.30": 0.6473,
+   "0.25": 0.7071
+  },
+  "dr_same": {
+   "0.60": -0.2962,
+   "0.55": 0.0,
+   "0.50": 0.0,
+   "0.45": 0.0,
+   "0.40": 0.0,
+   "0.35": 0.0858,
+   "0.30": 0.1669,
+   "0.25": 0.1669
+  }
+ },
+ "S5 gate self-test kills every mutant": {
+  "passed": true,
+  "detail": "Q-R2-3 removed: killed, Q4 bound -0.015 -> -0.02: killed, FP dropped from H1: killed, L3 -> G3 as written (plain mean >= -0.02): killed, class guard dropped: killed, S alpha = C alpha: killed",
+  "mutants": {
+   "Q-R2-3 removed": true,
+   "Q4 bound -0.015 -> -0.02": true,
+   "FP dropped from H1": true,
+   "L3 -> G3 as written (plain mean >= -0.02)": true,
+   "class guard dropped": true,
+   "S alpha = C alpha": true
+  }
+ }
+}

@@ -1,0 +1,174 @@
+{
+ "n_voxels": 400000,
+ "note": "rim-like voxels only; a whole CT is >99 % certain background, so the share of all voxels is far smaller",
+ "results": {
+  "T=0.7": {
+   "binary_equivalent_raw_t": {
+    "0.20": 0.2748,
+    "0.25": 0.3167,
+    "0.30": 0.3559,
+    "0.35": 0.3933,
+    "0.40": 0.4295,
+    "0.45": 0.4649,
+    "0.50": 0.5
+   },
+   "five_class": {
+    "0.20": {
+     "best_raw_t": 0.287,
+     "voxels_differing": 0.00642
+    },
+    "0.25": {
+     "best_raw_t": 0.33,
+     "voxels_differing": 0.00684
+    },
+    "0.30": {
+     "best_raw_t": 0.37,
+     "voxels_differing": 0.00705
+    },
+    "0.35": {
+     "best_raw_t": 0.408,
+     "voxels_differing": 0.00679
+    },
+    "0.40": {
+     "best_raw_t": 0.444,
+     "voxels_differing": 0.00681
+    },
+    "0.45": {
+     "best_raw_t": 0.48,
+     "voxels_differing": 0.00705
+    },
+    "0.50": {
+     "best_raw_t": 0.515,
+     "voxels_differing": 0.00723
+    }
+   },
+   "max_differing": 0.00723
+  },
+  "T=0.85": {
+   "binary_equivalent_raw_t": {
+    "0.20": 0.2353,
+    "0.25": 0.2822,
+    "0.30": 0.3273,
+    "0.35": 0.3714,
+    "0.40": 0.4147,
+    "0.45": 0.4575,
+    "0.50": 0.5
+   },
+   "five_class": {
+    "0.20": {
+     "best_raw_t": 0.243,
+     "voxels_differing": 0.00308
+    },
+    "0.25": {
+     "best_raw_t": 0.29,
+     "voxels_differing": 0.00329
+    },
+    "0.30": {
+     "best_raw_t": 0.336,
+     "voxels_differing": 0.00325
+    },
+    "0.35": {
+     "best_raw_t": 0.381,
+     "voxels_differing": 0.0036
+    },
+    "0.40": {
+     "best_raw_t": 0.424,
+     "voxels_differing": 0.00359
+    },
+    "0.45": {
+     "best_raw_t": 0.467,
+     "voxels_differing": 0.0036
+    },
+    "0.50": {
+     "best_raw_t": 0.51,
+     "voxels_differing": 0.00353
+    }
+   },
+   "max_differing": 0.0036
+  },
+  "T=1.2": {
+   "binary_equivalent_raw_t": {
+    "0.20": 0.1593,
+    "0.25": 0.2111,
+    "0.30": 0.2657,
+    "0.35": 0.3224,
+    "0.40": 0.3807,
+    "0.45": 0.4401,
+    "0.50": 0.5
+   },
+   "five_class": {
+    "0.20": {
+     "best_raw_t": 0.149,
+     "voxels_differing": 0.00308
+    },
+    "0.25": {
+     "best_raw_t": 0.198,
+     "voxels_differing": 0.00347
+    },
+    "0.30": {
+     "best_raw_t": 0.25,
+     "voxels_differing": 0.00388
+    },
+    "0.35": {
+     "best_raw_t": 0.305,
+     "voxels_differing": 0.00415
+    },
+    "0.40": {
+     "best_raw_t": 0.361,
+     "voxels_differing": 0.00447
+    },
+    "0.45": {
+     "best_raw_t": 0.42,
+     "voxels_differing": 0.00443
+    },
+    "0.50": {
+     "best_raw_t": 0.479,
+     "voxels_differing": 0.0047
+    }
+   },
+   "max_differing": 0.0047
+  },
+  "T=1.5": {
+   "binary_equivalent_raw_t": {
+    "0.20": 0.1111,
+    "0.25": 0.1614,
+    "0.30": 0.2191,
+    "0.35": 0.2832,
+    "0.40": 0.3525,
+    "0.45": 0.4253,
+    "0.50": 0.5
+   },
+   "five_class": {
+    "0.20": {
+     "best_raw_t": 0.088,
+     "voxels_differing": 0.00515
+    },
+    "0.25": {
+     "best_raw_t": 0.128,
+     "voxels_differing": 0.00656
+    },
+    "0.30": {
+     "best_raw_t": 0.177,
+     "voxels_differing": 0.00743
+    },
+    "0.35": {
+     "best_raw_t": 0.233,
+     "voxels_differing": 0.00866
+    },
+    "0.40": {
+     "best_raw_t": 0.294,
+     "voxels_differing": 0.00946
+    },
+    "0.45": {
+     "best_raw_t": 0.361,
+     "voxels_differing": 0.01024
+    },
+    "0.50": {
+     "best_raw_t": 0.433,
+     "voxels_differing": 0.01058
+    }
+   },
+   "max_differing": 0.01058
+  }
+ }
+}

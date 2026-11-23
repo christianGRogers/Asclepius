@@ -433,6 +433,11 @@ def selftest():
     fa = np.mean([any(l3_fires([r['recall'][c] - bb['recall'][c] for r, bb in zip(fake(base=b, seed=s, heavy=True), b)])[0]
                       for c in CLASSES) for s in range(300)])
     assert fa < 0.15, fa                      # any of four classes; per class this is a few %
+    # 5b. the shape G3 as written false-alarms on: three trees of 100 flip from rooted to cut (-0.8 each), the rest
+    #     unchanged. Mean -0.024 < -0.02, but the trimmed mean is 0 and the 95 % upper bound is above 0: L3 holds.
+    flips = np.r_[np.zeros(97), -0.8 * np.ones(3)] + 0.002 * np.random.default_rng(5).standard_normal(100)
+    f, st = l3_fires(flips)
+    assert st['mean'] < -0.02 and not f, st
     # 6. a class mean below -0.03 fails H1 even when the macro passes
     cc = [dict(r, per_class={**r['per_class'], 'LM': r['per_class']['LM'] - 0.04}) for r in fake(dice=0.02, base=b)]
     assert not decide(b, cc)['H1']

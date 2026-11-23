@@ -1,1 +1,3 @@
 case c0014 native (512, 512, 206) grid0.5 (366, 366, 206)
+{"case": "c0014", "native_shape": [512, 512, 206], "raw_GB": 2.808, "deflated_GB": 1.128, "ratio": 2.49, "per_channel_MB": [16.9, 88.9, 106.7, 106.8, 106.6, 96.6, 78.1, 78.2, 78.2, 78.1, 92.4, 103.0, 97.5], "decoded_F_T_wg_MB_upper": 0.36}
+done

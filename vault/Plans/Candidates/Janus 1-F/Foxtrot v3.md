@@ -40,7 +40,7 @@ has not answered Q-F2-1 to Q-F2-3. §7 plans for both answers to each.
 
 | §5 item | Answer | State |
 |---|---|---|
-| 1. Scorer of record | `experiments/Foxtrot/j1f_r3/j1f_scorer.py`, sha256 **`50826b26…8252`**: Atlas's file with SegQueue's collapse imported and pinned. ⟨PASS⟩ checks pass on six training fixtures. **On all 620, its pieces equal the census F-A15 was simulated on, case for case** | **Settled** |
+| 1. Scorer of record | `experiments/Foxtrot/j1f_r3/j1f_scorer.py`, sha256 **`50826b26…8252`**: Atlas's file with SegQueue's collapse imported and pinned. 51 checks pass on six training fixtures. **On all 620, its pieces equal the census F-A15 was simulated on, case for case** | **Settled** |
 | 2. `j1f_gates.json` | F-A15's 18 lines, sha256 **`b268a2fc…05de`**. Its test: OM2 recall 0.59 fails; 0.60 (24 of 40) and 0.61 pass; every line's edge; the 4-of-6 edge; a wrong hash refuses | **Settled** |
 | 3. J1F-A commands | §4: `check`, `prep`, `train` (a1, a2), the chunked `predict`/`decode`, `collect`, with the Fir header and a disk estimate of ⟨NPZ⟩ GB per locked case | **Settled** |
 | 4. Stage-1 spec as one diff against `janus1l` | §5: 21 rows of diff, 14 refusals, 15 self-tests, including F-A19's T test and F-A20's val test, both as runnable reference code (`decode_ref.py`) | **Settled** |
@@ -79,14 +79,14 @@ piece. `score_case`, `pieces_of` and `stage1_labels` are unchanged. `diff` again
 shared face. SegQueue counts face contact (`_grow` is the 6-neighbourhood), so that component is an unattached
 fallback, and the fallback is the RCA. The self-test now asserts exactly that: the left PDA goes to the LCx by
 contact, the PLB to the RCA by fallback, `fallback == 1`. **On every reference map of the 620 the fallback count is
-⟨FB⟩** (§1.3). On predictions, a branch that touches its vessel only diagonally will fall back to the RCA. `collect`
+0** (§1.3). On predictions, a branch that touches its vessel only diagonally will fall back to the RCA. `collect`
 counts it, as F-A17 says. For a left PDA that is a voxel error of the collapse, so the count must be read beside V.
 
 ### 1.2 Its tests, on training fixtures only
 
 `test_scorer.py`. The fixtures are the six training cases Delta v2 chose (smallest
 sha256(`asclepius-j1f-r2-scorertest:` + id): c0585, c0875, c0987, c0287, c0920, c0761). The references are built
-with the scorer's own `stage1_labels`. **⟨PASS⟩ of ⟨NCHK⟩ checks pass** (`results/test_scorer.log`):
+with the scorer's own `stage1_labels`. **All 51 checks pass** (`results/test_scorer.log`), plus one report:
 
 | Source | Checks |
 |---|---|
@@ -108,7 +108,22 @@ the proximal ~45 % of its length counts as detected.**
 The amended scorer was run on every training label (full volume cropped to the tree's box + 12 voxels; every rule is
 local or geodesic, and c0000's pieces are identical to the uncropped run).
 
-⟨PASS620⟩
+| Measure | Amended scorer (this round) | Atlas's `census_r2.jsonl` (what F-A15 was simulated on) |
+|---|---|---|
+| Cases whose pieces are identical, voxel count and length (mm), for all 8 branch classes | **620 of 620** | — |
+| Pieces: D1 / D2 / D3 / OM1 / OM2 / Ramus / PDA / PLB | 611 / 359 / 47 / 540 / 229 / 149 / 676 / 620 | the same |
+| Cases with 2 or 3 pieces | PDA 62 + 3, PLB 10; every other class 0 | the same |
+| `gate_sim.pieces_dist`, per gated class | identical (6 of 6) | — |
+| Atlas's `proposed_lines`, re-derived | **the same 18 numbers** as F-A15 | — |
+
+The same pass also measured the two collapse and converter claims of record:
+
+| Check | Result |
+|---|---|
+| SegQueue's collapse vs `territory.to_four` (D25), outside 255 | 40 voxels differ, in 2 cases, all of them ImageCAS-X "Other" (class 14): round 1's 40 (F-A18) |
+| Contact components | 1,296 (93 to the LCx, 1,203 to the RCA), **0 fallbacks** (F-A17's "0 on every reference map") |
+| Converter: scorer's `stage1_labels` vs `labels_r2.map13` (F0-r2's) | **0 voxels differ** on 620 cases; both give `{'d3': 47, 'd4_to_lad': 2, 'other_lcx': 20, 'other_nearest': 1, 'other_ignore': 8}` (467 voxels at 255) |
+| Presence at 5 mm (cases) | D1 611, D2 358, OM1 540, OM2 228, PDA 607, PLB 609 |
 
 **So F-A15's lines need no re-freeze** (ruling §7, row "per-piece counts differ"): Atlas's `gate_sim.proposed_lines`,
 re-derived from the amended scorer's pieces, gives the same 18 numbers.
@@ -191,7 +206,7 @@ CPU job and stays on `def-aso22`. `check` (§4) re-runs the same counts and refu
 
 **The converter of record** (F-A18) is the one F0-r2 runs, `experiments/Foxtrot/j1f_r2/labels_r2.py`'s `map13`
 (sha256 `7d1441e3…bf74`). It is Delta's map with D47 (A) hard-wired and F-A3's 255 rule. **On all 620 it agrees
-with the scorer's `stage1_labels` on every voxel** (⟨CONVDIFF⟩ voxels differ, §1.3). So the converter the labels are
+with the scorer's `stage1_labels` on every voxel** (0 voxels differ, §1.3). So the converter the labels are
 written with and the converter the scorer's tests build references with are the same function, twice. The swe moves
 `map13` to `src/segtrain/j1f_labels.py` unchanged in logic, pinned by the moved file's hash.
 
@@ -440,7 +455,7 @@ False-fail = the share of 400 random 100-case sets from the 620 on which the cor
 | **L1** | stage-2 share of the parent's reference centreline, bound ≤ 0.02 | **L1r:** the same, counting only stolen centreline points in 26-connected runs longer than **3 mm**; bound ≤ **0.02** | ⟨L1WHY⟩ |
 | **L2** | no stage-2 voxel > 30 mm from predicted coronary foreground in ≥ 95 % of cases | **L2d:** no stage-2 26-component whose **nearest** voxel is > **30 mm** from all other predicted coronary foreground (any class, other stage-2 components included), in **≥ 95 of the 100 cases, read as a count** | ⟨L2WHY⟩ |
 | **K1** | share of each stage-2 class's voxels inside traced lumen, fit-check 20, ≤ 0.05 | **K1r = L1r on the fit-check 20**, at each fit check; `LEAK` above **0.02** at the last check | ⟨K1WHY⟩ |
-| 95 % | as above | count rule, not a bound | With n = 100, a one-sided 1.25 % Clopper–Pearson lower bound is below 0.95 as soon as one case fails (99 of 100 gives ⟨CP99⟩). Read with the bound, "95 %" means "100 %" |
+| 95 % | as above | count rule, not a bound | With n = 100, a one-sided 1.25 % Clopper–Pearson lower bound is below 0.95 as soon as one case fails (99 of 100 gives 0.938; 100 of 100 gives 0.957). Read with the bound, "95 %" means "100 %" |
 
 - **The run length (3 mm)** is longer than any ostial overlap measured here and shorter than the thief's runs (≈ 10
   mm each). It is a property of the rule, not tuned on any model output.

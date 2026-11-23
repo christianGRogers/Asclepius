@@ -47,13 +47,18 @@ def one(path):
     im = nib.load(path)
     icx = np.asarray(im.dataobj).astype(np.uint8)
     z = np.array(im.header.get_zooms()[:3], float)
+    full_shape = list(icx.shape)
+    # every measure below is local to the tree: crop to the labels' box + 36 mm (> the 35 mm L2 window) first
+    nz = ndi.find_objects((icx > 0).astype(np.uint8))[0]
+    mg = np.ceil(36.0 / z).astype(int)
+    icx = icx[tuple(slice(max(s.start - mg[k], 0), min(s.stop + mg[k], full_shape[k])) for k, s in enumerate(nz))]
     lab, info = S.stage1_labels(icx, z)
     st = {}
     c4 = S.collapse4(lab, z, st)
     ref4 = territory.to_four(icx, z)
     valid = lab != S.IGNORE
     mm = (c4 != ref4) & valid
-    row = {'case': c, 'zooms': z.tolist(), 'shape': list(icx.shape), 'other': info,
+    row = {'case': c, 'zooms': z.tolist(), 'shape': full_shape, 'other': info,
            'collapse_mismatch_vox': int(mm.sum()),
            'collapse_mismatch_outside_other': int((mm & (icx != 14)).sum()),
            'sq_stats': st}

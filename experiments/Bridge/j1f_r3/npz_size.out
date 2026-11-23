@@ -1,0 +1,2 @@
+{"case": "c0519", "shape": [512, 512, 275], "channels": 13, "uncompressed_GB": 3.75, "npz_GB_noise0.0": 0.02, "npz_GB_noise0.5": 3.23}
+{"case": "c0881", "shape": [512, 512, 259], "channels": 13, "uncompressed_GB": 3.53, "npz_GB_noise0.0": 0.02, "npz_GB_noise0.5": 3.04}

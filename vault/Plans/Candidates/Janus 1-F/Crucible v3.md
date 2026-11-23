@@ -39,7 +39,7 @@ issue: christianGRogers/Asclepius#303
    - `experiments/Crucible/j1f_r3/j1f_scorer.py` is Atlas's round-2 file with one change of substance: its collapse is
      now an import of SegQueue's `collapse_to_four`, pinned by `labels.py`'s sha256. It also gains `aggregate` and
      `verdict`, which read F-A15's lines.
-   - **sha256 `{{SCORER_SHA}}`.**
+   - **sha256 `c2786b2ee2228a40eb966d74c1f319963869f7f3196da3af6ff768c9901ca03e`.**
    - Delta's checks (30 PASS lines in his log; the ruling says 31) and Atlas's self-test pass on it, on Delta's six
      training cases.
    - **On all 620, it finds exactly the pieces F-A15 was simulated on:** 620 of 620 case rows are equal to Atlas's
@@ -50,18 +50,19 @@ issue: christianGRogers/Asclepius#303
    argmax inside each of F-A19's naming sets, kept on Janus 0's foreground and wherever 1 − p_bg ≥ 1e-3 (so each map
    compresses to almost nothing). T is Janus 0's territories named from them, bit-for-bit what T would be
    from the probabilities. T_L is the same with 1-L's territories, which may arrive after the npz is gone. The npz of
-   one 13-class case is about **{{NPZ_GB}} GB** at float32; a chunk of 10 peaks near **{{CHUNK_GB}} GB**.
+   one 13-class case measured **2.4 GB** at float32 (bounded by 3.3 GB); planning on the bound, a chunk of 10
+   peaks near **33 GB**.
 4. **The converged stage-1 spec is one diff against `janus1l` (item 4).** It adds F-A19's T test and F-A20's val test,
    and each fails on a broken fixture (`decode_ref.py`).
 5. **F-A22's numbers stay (item 5), but two of its measures must be written in the form that does not fail a perfect
    model.** On the 620, with ImageCAS-X's traced side branches standing in for the stage-2 classes:
-   - **L1 (theft)** in the nearest-label form is {{L1_NEAREST}}; in a proximity form (centreline within 1.5 mm of a
-     stage-2 voxel) it is {{L1_PROX}}, and a perfect model fails 0.02 {{L1_PROX_FF}} of the time. **Write the nearest-label
+   - **L1 (theft)** in the nearest-label form is 0 on the exact reference and at most 0.0077 with a one-voxel ostium bleed (pooled), under 0.02 in every draw; in a proximity form (centreline within 1.5 mm of a
+     stage-2 voxel) it is 0.021–0.055 on the exact reference, and a perfect model fails 0.02 100.0 % of the time. **Write the nearest-label
      form.**
-   - **L2 (far paint)** measured per voxel puts a genuine long branch's tip {{L2_VOX}} from the rest of the tree, and fails
-     a perfect model {{L2_VOX_FF}}. Measured per 26-component as its gap to the tree, it is {{L2_COMP}}. **Write the
+   - **L2 (far paint)** measured per voxel puts a genuine long branch's tip a median 42.94 mm (p95 57.05 mm) from the rest of the tree, and fails
+     a perfect model in 100.0 % of draws. Measured per 26-component as its gap to the tree, it is at most 0.5 mm (one voxel's diagonal), and fails no draw. **Write the
      component form.**
-   - **K1** on a perfect, one-voxel-blurred branch is {{K1_D1}} (pooled), far under 0.05.
+   - **K1** on a perfect, one-voxel-blurred branch is 0.010 (pooled), far under 0.05.
 6. **Q-F2-1 to Q-F2-3 change reports, never stage 1's commands (item 6).** T_L's rule is written (§6.3) and sits
    inside J1F-A's one look.
 7. **Step T settles item 7.** `batch_dice` is false, so `leaf_skip` is not needed; no class weights, so F-A2's
@@ -72,7 +73,7 @@ issue: christianGRogers/Asclepius#303
 
 ### 1.1 The file
 
-`experiments/Crucible/j1f_r3/j1f_scorer.py`, **sha256 `{{SCORER_SHA}}`**.
+`experiments/Crucible/j1f_r3/j1f_scorer.py`, **sha256 `c2786b2ee2228a40eb966d74c1f319963869f7f3196da3af6ff768c9901ca03e`**.
 
 | Part | Source | Changed? |
 |---|---|---|
@@ -86,7 +87,7 @@ issue: christianGRogers/Asclepius#303
 - **One behavioural difference from Atlas's collapse, found by the self-test.** SegQueue counts **face** contact.
   Atlas's ring counted 26-neighbours. A PDA or PLB that touches its vessel only along a diagonal therefore has no
   contact and falls back to the RCA, counted.
-  - On ImageCAS-X's references this never happens: **{{FALLBACK}} fallbacks in {{COMPONENTS}} components on the 620**,
+  - On ImageCAS-X's references this never happens: **0 fallbacks in 1,296 components on the 620**,
     and 0 voxels different from D25 outside "Other" and 255.
   - On a prediction it can. `collect` prints the fallback count for F and T (F-A17), so a prediction where it matters
     is visible.
@@ -105,14 +106,23 @@ issue: christianGRogers/Asclepius#303
     naming 1;
   - swaps D1/D2 and PDA/PLB: recall 1, naming 0;
   - OM2 → LCx: recall 1, naming 0, presence below 1; OM2 → background: recall 0.
-- **Result: {{TEST_RESULT}}.**
+- **Result: every check passes: the 30 PASS lines of Delta's log, reproduced one for one, and the extended self-test (`test_scorer.log`).**
 
 ### 1.3 The 620 match the distribution F-A15 was simulated on (`pass620.py`, `summarise.py`)
 
 F-A15's lines come from `Atlas/j1f_r2/gate_sim.py`, which draws pieces per case from `census_r2.jsonl`. The scorer of
 record, run over all 620:
 
-{{PIECE_TABLE}}
+| Class | Cases with it | Pieces | Cases with > 1 piece | `census_r2.jsonl`: cases / pieces |
+|---|---|---|---|---|
+| D1 | 611 | 611 | 0 | 611 / 611 |
+| D2 | 359 | 359 | 0 | 359 / 359 |
+| OM1 | 540 | 540 | 0 | 540 / 540 |
+| OM2 | 229 | 229 | 0 | 229 / 229 |
+| PDA | 608 | 676 | 65 | 608 / 676 |
+| PLB | 610 | 620 | 10 | 610 / 620 |
+| D3 | 47 | 47 | 0 | 47 / 47 |
+| Ramus | 149 | 149 | 0 | 149 / 149 |
 
 - **Every one of the 620 rows is equal** to `census_r2.jsonl`'s: the same pieces, the same voxel counts, the same
   lengths to 0.01 mm. The collapse change does not touch pieces. **No re-run of `gate_sim.py` is needed (§7 of the
@@ -120,11 +130,18 @@ record, run over all 620:
 - **The reference scored against itself:** recall, naming and presence are 1.0 for every class, on every piece.
 - **The reference eroded by one voxel**, labels kept (a model that draws every vessel one voxel thin):
 
-{{ERODE_TABLE}}
+| Class | Pieces | Recall | Presence agreement | Naming | Passes F-A15 |
+|---|---|---|---|---|---|
+| D1 | 611 | 0.874 | 0.898 | 1.000 | **no** |
+| D2 | 359 | 0.905 | 0.948 | 1.000 | yes |
+| OM1 | 540 | 0.867 | 0.900 | 1.000 | yes |
+| OM2 | 229 | 0.956 | 0.982 | 1.000 | yes |
+| PDA | 676 | 0.766 | 0.921 | 1.000 | **no** |
+| PLB | 620 | 0.911 | 0.961 | 1.000 | yes |
 
   A one-voxel-thin model loses whole thin branches (Atlas's round-2 observation), and the per-piece recall shows it.
   This is a report, not a line; it says the gate sees lumen width only through whole-branch loss.
-- **Converter counts on the 620 (F-A18):** {{CONV}}.
+- **Converter counts on the 620 (F-A18):** d3 47, d4_to_lad 2, other_lcx 20, other_nearest 1, other_ignore 8 (F-A18's line).
 
 ## 2. Item 2: `configs/janus1/j1f_gates.json`
 
@@ -144,9 +161,9 @@ record, run over all 620:
 
 ### 3.1 Disk: one case's npz (`npz_size.py`)
 
-- **Measured:** a 13-channel float32 softmax of training case {{NPZ_CASE}} ({{NPZ_SHAPE}}, {{NPZ_VOX}} M voxels), made
+- **Measured:** a 13-channel float32 softmax of training case c0014 (512×512×206, 54 M voxels), made
   from its label (each class blurred by σ = 1 voxel, a 1e-6 noise floor), written by `np.savez_compressed` as nnU-Net
-  does: **{{NPZ_GB}} GB** (float16: {{NPZ_F16}} GB). Uncompressed it is {{NPZ_RAW}} GB.
+  does: **2.4 GB** (float16: 0.44 GB). Uncompressed it is 2.8 GB.
 - **Upper bound:** Atlas's Trillium note measured 1.25 GB for an **untrained** 5-class npz. Scaled to 13 channels that
   is 3.25 GB per case. An untrained network's softmax is noise everywhere and compresses worst.
 - **Plan on 3.3 GB per case.** A chunk of 10 then peaks at **≈ 33 GB** of npz, plus nnU-Net's argmax exports
@@ -172,7 +189,7 @@ rm -rf experiments/janus1f && cp -r repo/trillium/janus1f experiments/janus1f &&
 export JANUS0=$SCRATCH/janus0_out                   # Step T's folder; $KEEP is the fallback
 export J1F_WORK=$SCRATCH/janus1f
 export J1F_GATES_SHA256=b4b88e73877e4644825b0aed06a11ae90b00134c1f8fc5441803422c2e7c8e3f
-export J1F_SCORER_SHA256={{SCORER_SHA}}
+export J1F_SCORER_SHA256=c2786b2ee2228a40eb966d74c1f319963869f7f3196da3af6ff768c9901ca03e
 export nnUNet_compile=f                             # explicit (§7); printed by check
 ```
 
@@ -308,9 +325,21 @@ versions: exact, and with the proxy classes bled one voxel into their parent (a 
 proxies are removed from the "traced" map, as ImageCAS-X would leave an untraced branch as background
 (`pass620.py`).
 
-### 5.2 Results ({{N5}} cases with a proxy branch)
+### 5.2 Results (620 cases with a proxy branch)
 
-{{ITEM5_TABLE}}
+| Measure | Form | Version | LAD group | LCx group | RCA group | Perfect model fails |
+|---|---|---|---|---|---|---|
+| L1 theft (pooled; case p90) | nearest-label | exact | 0.0000 (0.0000) | 0.0000 (0.0000) | 0.0000 (0.0000) | 0.0 % |
+| L1 theft (pooled; case p90) | nearest-label | bleed1 | 0.0061 (0.0119) | 0.0077 (0.0172) | 0.0056 (0.0106) | 0.0 % |
+| L1 theft (pooled; case p90) | proximity (≤ 1.5 mm) | exact | 0.0525 (0.0842) | 0.0548 (0.1053) | 0.0210 (0.0309) | 100.0 % |
+| L1 theft (pooled; case p90) | proximity (≤ 1.5 mm) | bleed1 | 0.0648 (0.1028) | 0.0682 (0.1288) | 0.0250 (0.0348) | 100.0 % |
+| L2 far paint (median / p95 / max mm; cases ≤ 30 mm) | per voxel | exact | 42.94 / 57.05 / 67.22 mm | 8.6 % of cases | | point rule 100.0 %; with a lower bound 100.0 % |
+| L2 far paint (median / p95 / max mm; cases ≤ 30 mm) | per voxel | bleed1 | 43.04 / 57.06 / 67.33 mm | 8.6 % of cases | | point rule 100.0 %; with a lower bound 100.0 % |
+| L2 far paint (median / p95 / max mm; cases ≤ 30 mm) | per component (gap) | exact | 0.35 / 0.4 / 0.5 mm | 100.0 % of cases | | point rule 0.0 %; with a lower bound 0.0 % |
+| L2 far paint (median / p95 / max mm; cases ≤ 30 mm) | per component (gap) | bleed1 | 0.35 / 0.4 / 0.45 mm | 100.0 % of cases | | point rule 0.0 %; with a lower bound 0.0 % |
+| K1 leak (mean over the 620; case p95; the 20 fit-check cases) | all proxies | exact | 0.0000 | 0.0000 | 0.0000 | 0.0 % |
+| K1 leak (mean over the 620; case p95; the 20 fit-check cases) | all proxies | dilate1 | 0.0096 | 0.0166 | 0.0082 | 0.0 % |
+| K1 per group (mean; case p95) | per group | dilate1 | 0.0137 (0.0264) | 0.0150 (0.0368) | 0.0062 (0.0126) | 0.0 % |
 
 False-fail = the share of 4 000 draws of 100 cases (K1: 20 cases) in which the measure crosses its line, with
 F-A22's one-sided 1.25 % bound where it has one.
@@ -319,12 +348,12 @@ F-A22's one-sided 1.25 % bound where it has one.
 
 | Number | Keep? | The form to write into the spec |
 |---|---|---|
-| **L1 = 0.02** | **keep** | **nearest-label:** a reference centreline point of the parent group is stolen when its **nearest predicted coronary voxel** carries a stage-2 class. Pooled over the locked cases, upper bound one-sided 1.25 %. The proximity form (any stage-2 voxel within 1.5 mm) counts every ostium as theft and fails a perfect model ({{L1_PROX_FF_SHORT}}) |
-| **L2 = 30 mm, 95 %** | **keep** | **per component:** a stage-2 26-component is far paint when its **nearest** distance to the predicted non-stage-2 coronary foreground exceeds 30 mm. The per-voxel form measures a branch's length, not a gap ({{L2_VOX_SHORT}}) |
+| **L1 = 0.02** | **keep** | **nearest-label:** a reference centreline point of the parent group is stolen when its **nearest predicted coronary voxel** carries a stage-2 class. Pooled over the locked cases, upper bound one-sided 1.25 %. The proximity form (any stage-2 voxel within 1.5 mm) counts every ostium as theft and fails a perfect model (pooled 0.021–0.055, false-fail 100.0 %) |
+| **L2 = 30 mm, 95 %** | **keep** | **per component:** a stage-2 26-component is far paint when its **nearest** distance to the predicted non-stage-2 coronary foreground exceeds 30 mm. The per-voxel form measures a branch's length, not a gap (median 42.94 mm on a perfect model; only 8.6 % of cases within 30 mm) |
 | **K1 = 0.05** | **keep** | as ruled: the share of a stage-2 class's predicted voxels inside ImageCAS-X's traced lumen, on the 20 fit-check training cases, at the last fit check |
 
 - **L2's 95 % is a point share, not a bound.** With a 1.25 % lower bound, 99 of 100 passing cases gives 0.94 and fails.
-  {{L2_BOUND_NOTE}}
+  Even the component form, which a perfect model passes in every case, would fail the bounded version whenever one case of 100 has a stray blob; so the rule reads the point share, as written (0.0 % and 0.0 % false-fail for a perfect model, bounded and point).
 - **No number changes.** The forms above are the ones under which the round-2 numbers mean what the ruling says they
   mean. They are frozen before J1F-2 is submitted (F-A22).
 - **A guard for Q-F2-1's "yes" (§6.1):** the band re-set (F-A21) and the inter-read floor (F-A23) read only
@@ -423,7 +452,7 @@ the swe issue has about three weeks.
 
 | File | What |
 |---|---|
-| `j1f_scorer.py` | the scorer of record (sha256 `{{SCORER_SHA}}`) |
+| `j1f_scorer.py` | the scorer of record (sha256 `c2786b2ee2228a40eb966d74c1f319963869f7f3196da3af6ff768c9901ca03e`) |
 | `j1f_gates.json` | F-A15's lines (sha256 `b4b88e73…8e3f`) |
 | `test_gates.py`, `test_gates.log` | §2 |
 | `test_scorer.py`, `test_scorer.log` | §1.2 |

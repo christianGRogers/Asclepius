@@ -1,0 +1,19 @@
+{
+  "what": "Janus 1-F stage-1 B gates on the locked 100 (F-A15). Copied byte-identical to configs/janus1/j1f_gates.json; the launcher refuses a file whose sha256 differs from the value posted on #303.",
+  "lines": {
+    "D1":  {"recall": 0.81, "presence": 0.94, "naming": 0.83},
+    "D2":  {"recall": 0.76, "presence": 0.84, "naming": 0.86},
+    "OM1": {"recall": 0.75, "presence": 0.90, "naming": 0.78},
+    "OM2": {"recall": 0.60, "presence": 0.81, "naming": 0.78},
+    "PDA": {"recall": 0.89, "presence": 0.97, "naming": 0.90},
+    "PLB": {"recall": 0.89, "presence": 0.94, "naming": 0.92}
+  },
+  "min_passing": 4,
+  "comparison": "a statistic passes when it is >= its line (inclusive), compared in integer hundredths",
+  "recall": "detected reference pieces / reference pieces, pooled over the locked cases",
+  "presence": "share of locked cases where reference and prediction agree on presence (both >= 5 mm or both < 5 mm)",
+  "naming": "named pieces / detected pieces, pooled",
+  "scorer_sha256": "SCORER_SHA",
+  "segqueue_labels_sha256": "5f69b5bef59ad1346c5877a43c65daf7bdf1329b0ca7e427b6addd55d0000a4b",
+  "tf1_sha256": "24441cf8df0f000bd956c7dd9d8ae1daac866cfb14df1d174441d00e54f05254"
+}

@@ -57,8 +57,13 @@ proxy() {   # proxy <env file> <host> <port>
     . "$GW_ENV"
     export SSHPASS="${JANUS_SSHPASS:-${SSHPASS:-}}"
     # -q: the gateway's diagnostics would name addresses; `trust` reports per hop instead.
+    # 2>/dev/null: ssh does not wait for its ProxyCommand when the session ends (it sends
+    # SIGHUP and exits), so this hop can outlive the finished remote command. If it held
+    # the session's stderr, as it would by inheritance, a caller reading the output to
+    # EOF (`| tee`, captured output) would hang after the command had already returned
+    # (#352/#353). Its stdin/stdout are ssh's own pipe, which nothing else reads.
     exec sshpass -e ssh -q -F none "${HOP_OPTS[@]}" -o UserKnownHostsFile="$KH_GW" \
-        -p "$GW_PORT" -W "$2:$3" "$GW_USER@$GW_HOST"
+        -p "$GW_PORT" -W "$2:$3" "$GW_USER@$GW_HOST" 2>/dev/null
 }
 
 # Mask what ssh may print in place of a secret (the gateway's resolved addresses).

@@ -7,7 +7,8 @@ scorer and pooled per piece with gates.pool():
   Delta v2 (test_branch_score.py): identity; swap D1/D2; OM2 -> LCx; OM2 -> background; one-voxel dilation into
     background; swap PDA/PLB; the collapse equals D25 (territory.to_four) on every non-Other, non-255 voxel.
   Atlas v2 (selftest + validate_scorer.py): one-voxel 6-erosion; OM1+OM2 folded into the LCx; PLB dropped; PDA
-    truncated to 40 % of its length from its root; plus the synthetic self-test (`j1f_scorer.selftest`).
+    truncated to 30 % of its length from its root (40 %, Atlas's, is reported: it sits on the 50 % detection line);
+    plus the synthetic self-test (`j1f_scorer.selftest`).
   New (F-A17): collapse fallbacks are 0 on every reference; a left PDA touching only a left PLB that touches the LCx
     collapses to the LCx (SegQueue's chain rule); a PDA/PLB with no contact falls back to the RCA and is counted.
 Usage: python test_scorer.py <icx620_dir> <split_j1l.json> [out.json]   (exit 1 on any FAIL)"""
@@ -57,7 +58,7 @@ def main(d, split, outp=None):
     assert hashlib.sha256('\n'.join(train).encode()).hexdigest().startswith('1350cb1f')
     pick = sorted(train, key=lambda c: hashlib.sha256(('asclepius-j1f-r2-scorertest:' + c).encode()).hexdigest())[:6]
     names = ('identity', 'swap_D1D2', 'OM2_to_LCx', 'OM2_to_bg', 'dilate1', 'swap_PDAPLB', 'erode1', 'fold_OM',
-             'drop_PLB', 'trunc_PDA_40')
+             'drop_PLB', 'trunc_PDA_40', 'trunc_PDA_30')
     rows = {k: [] for k in names}
     for c in pick:
         im = nib.load(os.path.join(d, f'{int(c[1:]) + 1}.coronary.nii.gz'))
@@ -83,6 +84,7 @@ def main(d, split, outp=None):
         q = p.copy(); q[np.isin(p, (V['OM1'], V['OM2']))] = V['LCx']; preds['fold_OM'] = q
         q = p.copy(); q[p == V['PLB']] = 0; preds['drop_PLB'] = q
         preds['trunc_PDA_40'] = truncate(p, V['PDA'], 0.4, z)
+        preds['trunc_PDA_30'] = truncate(p, V['PDA'], 0.3, z)
         for k in names:
             rows[k].append(S.score_case(ref, preds[k], z, with_tf1=(k == 'identity'), ref_pieces=rp))
         print(c, 'scored', flush=True)
@@ -117,8 +119,11 @@ def main(d, split, outp=None):
             check(f'OM folded into LCx {cl}: recall 1, naming 0', f['recall'] == 1 and f['naming'] == 0)
     a = A['drop_PLB']['PLB']
     check(f'PLB dropped: recall 0 ({a["recall"]})', a['recall'] == 0)
+    a = A['trunc_PDA_30']['PDA']
+    check(f'PDA truncated to 30 %: recall 0 ({a["recall"]:.3f})', a['recall'] == 0)
     a = A['trunc_PDA_40']['PDA']
-    check(f'PDA truncated to 40 %: recall <= 0.2 ({a["recall"]:.3f})', a['recall'] <= 0.2)
+    log.append(f'REPORT PDA truncated to 40 %: recall {a["recall"]:.3f} (at the 50 % line: 40 % kept + the 1.5 mm '
+               f'tolerance covers 0.44-0.58 of the centreline)'); print(log[-1])
     others = [A['drop_PLB'][cl]['recall'] == 1 for cl in G.GATED if cl != 'PLB' and A['drop_PLB'][cl]['pieces']]
     check('PLB dropped: every other class keeps recall 1', all(others))
     print('cases', pick)

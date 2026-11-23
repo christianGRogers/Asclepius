@@ -17,3 +17,44 @@ PASS c0287 collapse fallbacks 0 (0)
 c0287 scored
 PASS c0920 collapse = D25 on every non-Other voxel (0 differ)
 PASS c0920 collapse fallbacks 0 (0)
+c0920 scored
+PASS c0761 collapse = D25 on every non-Other voxel (0 differ)
+PASS c0761 collapse fallbacks 0 (0)
+c0761 scored
+PASS identity D1: recall, agreement, naming = 1
+PASS identity D1: branch tF1 = 1 (min 1.000)
+PASS dilate by 1 voxel D1: recall 1, naming 1
+PASS erode by 1 voxel D1: recall >= 0.8 (0.833), naming of detected = 1 (1.000)
+PASS identity D2: recall, agreement, naming = 1
+PASS identity D2: branch tF1 = 1 (min 1.000)
+PASS dilate by 1 voxel D2: recall 1, naming 1
+PASS erode by 1 voxel D2: recall >= 0.8 (1.000), naming of detected = 1 (1.000)
+PASS identity OM1: recall, agreement, naming = 1
+PASS identity OM1: branch tF1 = 1 (min 1.000)
+PASS dilate by 1 voxel OM1: recall 1, naming 1
+PASS erode by 1 voxel OM1: recall >= 0.8 (1.000), naming of detected = 1 (1.000)
+PASS identity OM2: recall, agreement, naming = 1
+PASS identity OM2: branch tF1 = 1 (min 1.000)
+PASS dilate by 1 voxel OM2: recall 1, naming 1
+PASS erode by 1 voxel OM2: recall >= 0.8 (1.000), naming of detected = 1 (1.000)
+PASS identity PDA: recall, agreement, naming = 1
+PASS identity PDA: branch tF1 = 1 (min 1.000)
+PASS dilate by 1 voxel PDA: recall 1, naming 1
+PASS erode by 1 voxel PDA: recall >= 0.8 (0.833), naming of detected = 1 (1.000)
+PASS identity PLB: recall, agreement, naming = 1
+PASS identity PLB: branch tF1 = 1 (min 1.000)
+PASS dilate by 1 voxel PLB: recall 1, naming 1
+PASS erode by 1 voxel PLB: recall >= 0.8 (1.000), naming of detected = 1 (1.000)
+PASS swap D1/D2 D1: recall 1, naming 0
+PASS swap D1/D2 D2: recall 1, naming 0
+PASS swap PDA/PLB PDA: recall 1, naming 0
+PASS swap PDA/PLB PLB: recall 1, naming 0
+PASS OM2 -> LCx: recall 1, naming 0, agreement < 1
+PASS OM2 -> background: recall 0
+PASS OM folded into LCx OM1: recall 1, naming 0
+PASS OM folded into LCx OM2: recall 1, naming 0
+PASS PLB dropped: recall 0 (0.0)
+FAIL PDA truncated to 40 %: recall <= 0.2 (0.500)
+PASS PLB dropped: every other class keeps recall 1
+cases ['c0585', 'c0875', 'c0987', 'c0287', 'c0920', 'c0761']
+1 FAIL (51 checks)

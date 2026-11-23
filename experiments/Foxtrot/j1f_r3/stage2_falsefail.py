@@ -10,9 +10,9 @@ ImageCAS-X traced no stage-2 class, so a "correct stage-2 prediction" is built o
 and, for power, one wrong model:
   X (thief) the T tubes at L = 30, r = 0.75 plus the LAD lumen within +-5 mm of arc of each tube's origin called S.
 Per case it stores the raw counts; `summarise_stage2.py` resamples 100-case sets and applies the rules:
-  L1  per parent group (LAD, LCx, RCA by SegQueue's collapse), the share of its REFERENCE centreline (skeleton of the
+  L1  (as ruled) per parent group (LAD, LCx, RCA by SegQueue's collapse), the share of its REFERENCE centreline (skeleton of the
       whole reference tree) whose predicted label is a stage-2 class, pooled over cases; upper one-sided 1.25 % bound
-      <= 0.02;
+      <= 0.02. L1r (proposed): the same, counting only stolen points in runs longer than RUN_MM (3 mm);
   L2  per case, the largest distance (mm) of a stage-2 voxel from coronary foreground of a traced class; >= 95 % of
       cases with none beyond 30 mm (point, and with a Clopper-Pearson lower bound at 1.25 %);
   K1  per stage-2 class, the share of its predicted voxels inside ImageCAS-X's traced lumen, pooled over the 20
@@ -63,6 +63,19 @@ def tube_voxels(p0, u, length, r, z, shape):
     return g[d <= r]
 
 
+RUN_MM = 3.0
+
+
+def runs(stolen_mask, z):
+    """Stolen centreline points that lie in 26-connected runs longer than RUN_MM (points x mean voxel side): an ostium
+    painted over its parent (D47 Q4) takes a run of ~1-2 mm; a head that swallows the parent takes longer runs."""
+    if not stolen_mask.any():
+        return 0
+    comp, nc = ndi.label(stolen_mask, S.S26)
+    sizes = np.bincount(comp.ravel())[1:]
+    return int(sizes[sizes * float(np.mean(z)) > RUN_MM].sum())
+
+
 def inside(v, shape):
     return v[np.all((v >= 0) & (v < np.array(shape)), 1)]
 
@@ -103,14 +116,15 @@ def one(path):
             for Ln in LENS:
                 v = tube_voxels(p0, u, Ln, r, z, lab.shape)
                 q = tuple(inside(v, lab.shape).T)
-                stolen = grp_pts['LAD'][q]
+                sm = np.zeros(lab.shape, bool); sm[q] = True; sm &= grp_pts['LAD']
                 rec[f'r{r}_L{Ln}'] = {'vox': int(len(v)), 'in_lumen': int(tree[q].sum()),
-                                      'stolen_LAD': int(stolen.sum())}
+                                      'stolen_LAD': int(sm.sum()), 'stolen_LAD_runs': runs(sm, z)}
         # thief: + LAD lumen within +-5 mm of arc of the origin
         sw = lad & (np.abs(arc - arc[tuple(c0)]) <= 5)
         v = tube_voxels(p0, u, 30, 0.75, z, lab.shape)
         m = np.zeros(lab.shape, bool); m[tuple(inside(v, lab.shape).T)] = True; m |= sw
-        rec['thief'] = {'vox': int(m.sum()) + int(len(v) - len(inside(v, lab.shape))), 'in_lumen': int((m & tree).sum()), 'stolen_LAD': int((m & grp_pts['LAD']).sum())}
+        rec['thief'] = {'vox': int(m.sum()) + int(len(v) - len(inside(v, lab.shape))), 'in_lumen': int((m & tree).sum()),
+                        'stolen_LAD': int((m & grp_pts['LAD']).sum()), 'stolen_LAD_runs': runs(m & grp_pts['LAD'], z)}
         tubes.append(rec)
     row['tubes'] = tubes
     prox = {}
@@ -121,7 +135,7 @@ def one(path):
         paint = p | (ndi.binary_dilation(p, S.S26) & (four == GROUP[g]) & (lab != val))
         own = grp_pts[g] & ~p                      # the group's centreline without the stand-in's own points
         d = cKDTree(np.argwhere(tree & ~paint) * z).query(np.argwhere(paint) * z)[0]
-        prox[name] = {'group_pts': int(own.sum()), 'stolen': int((own & paint).sum()),
+        prox[name] = {'group_pts': int(own.sum()), 'stolen': int((own & paint).sum()), 'stolen_runs': runs(own & paint, z),
                       'L2_maxdist': round(float(d.max()), 2), 'vox': int(paint.sum())}
     row['proxy'] = prox
     row['LAD_arc_mm'] = round(La, 1)

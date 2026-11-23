@@ -1,0 +1,293 @@
+{
+ "cases": 18,
+ "cases_with_3_tubes": 17,
+ "draws": 20,
+ "L1_theft_line_0.02": {
+  "septals r=0.6 L=10": {
+   "pooled_620": 0.0162,
+   "median_upper_bound": 0.0174,
+   "false_fail": 0.0
+  },
+  "septals r=0.6 L=30": {
+   "pooled_620": 0.0162,
+   "median_upper_bound": 0.0175,
+   "false_fail": 0.0
+  },
+  "septals r=0.6 L=60": {
+   "pooled_620": 0.0162,
+   "median_upper_bound": 0.0174,
+   "false_fail": 0.0
+  },
+  "septals r=0.75 L=10": {
+   "pooled_620": 0.021,
+   "median_upper_bound": 0.0224,
+   "false_fail": 1.0
+  },
+  "septals r=0.75 L=30": {
+   "pooled_620": 0.021,
+   "median_upper_bound": 0.0226,
+   "false_fail": 1.0
+  },
+  "septals r=0.75 L=60": {
+   "pooled_620": 0.021,
+   "median_upper_bound": 0.0228,
+   "false_fail": 1.0
+  },
+  "septals r=1.0 L=10": {
+   "pooled_620": 0.0293,
+   "median_upper_bound": 0.0313,
+   "false_fail": 1.0
+  },
+  "septals r=1.0 L=30": {
+   "pooled_620": 0.0293,
+   "median_upper_bound": 0.0318,
+   "false_fail": 1.0
+  },
+  "septals r=1.0 L=60": {
+   "pooled_620": 0.0293,
+   "median_upper_bound": 0.0322,
+   "false_fail": 1.0
+  },
+  "POWER thief (+-5 mm of LAD at each origin)": {
+   "pooled_620": 0.1349,
+   "median_upper_bound": 0.1433,
+   "false_fail": 1.0
+  },
+  "proxy D2 (LAD group), 11 cases": {
+   "pooled_620": 0.0063,
+   "median_upper_bound": 0.0067,
+   "false_fail": 0.0
+  },
+  "proxy OM2 (LCx group), 9 cases": {
+   "pooled_620": 0.01,
+   "median_upper_bound": 0.0115,
+   "false_fail": 0.0
+  },
+  "proxy PLB (RCA group), 18 cases": {
+   "pooled_620": 0.0071,
+   "median_upper_bound": 0.008,
+   "false_fail": 0.0
+  }
+ },
+ "septal_L60_max_distance_mm_percentiles": {
+  "50": 33.9,
+  "90": 37.0,
+  "95": 37.9,
+  "99": 39.2,
+  "100": 39.6
+ },
+ "to_pda_mm_percentiles": {
+  "5": 56.2,
+  "50": 72.0,
+  "95": 79.8
+ },
+ "L2_far_paint": {
+  "septals L=10 mm, line 30 mm": {
+   "flagged_cases_620": 0,
+   "false_fail_point": 0.0,
+   "false_fail_with_CP_bound": 0.0
+  },
+  "septals L=20 mm, line 30 mm": {
+   "flagged_cases_620": 0,
+   "false_fail_point": 0.0,
+   "false_fail_with_CP_bound": 0.0
+  },
+  "septals L=30 mm, line 30 mm": {
+   "flagged_cases_620": 0,
+   "false_fail_point": 0.0,
+   "false_fail_with_CP_bound": 0.0
+  },
+  "septals L=40 mm, line 30 mm": {
+   "flagged_cases_620": 15,
+   "false_fail_point": 1.0,
+   "false_fail_with_CP_bound": 1.0
+  },
+  "septals L=50 mm, line 30 mm": {
+   "flagged_cases_620": 15,
+   "false_fail_point": 1.0,
+   "false_fail_with_CP_bound": 1.0
+  },
+  "septals L=60 mm, line 30 mm": {
+   "flagged_cases_620": 15,
+   "false_fail_point": 1.0,
+   "false_fail_with_CP_bound": 1.0
+  },
+  "septals L=60 mm, line 40 mm": {
+   "flagged_cases_620": 0,
+   "false_fail_point": 0.0,
+   "false_fail_with_CP_bound": 0.0
+  },
+  "septals L=60 mm, line 45 mm": {
+   "flagged_cases_620": 0,
+   "false_fail_point": 0.0,
+   "false_fail_with_CP_bound": 0.0
+  },
+  "septals L=60 mm, line 50 mm": {
+   "flagged_cases_620": 0,
+   "false_fail_point": 0.0,
+   "false_fail_with_CP_bound": 0.0
+  },
+  "proxy D2 (real branch tip vs the rest of the tree), line 30 mm": {
+   "flagged_cases_620": 1,
+   "false_fail_point": 0.45,
+   "false_fail_with_CP_bound": 1.0
+  },
+  "proxy OM2 (real branch tip vs the rest of the tree), line 30 mm": {
+   "flagged_cases_620": 1,
+   "false_fail_point": 0.7,
+   "false_fail_with_CP_bound": 1.0
+  },
+  "proxy PLB (real branch tip vs the rest of the tree), line 30 mm": {
+   "flagged_cases_620": 3,
+   "false_fail_point": 1.0,
+   "false_fail_with_CP_bound": 1.0
+  }
+ },
+ "K1_fitcheck_cases_available": 0,
+ "K1_inside_traced_lumen_line_0.05": {
+  "r=0.6 L=10": {
+   "share_in_lumen": {
+    "S1@15%": 0.0,
+    "S2@30%": 0.0,
+    "S3@45%": 0.0
+   },
+   "fires_at_0.05": false
+  },
+  "r=0.6 L=20": {
+   "share_in_lumen": {
+    "S1@15%": 0.0,
+    "S2@30%": 0.0,
+    "S3@45%": 0.0
+   },
+   "fires_at_0.05": false
+  },
+  "r=0.6 L=30": {
+   "share_in_lumen": {
+    "S1@15%": 0.0,
+    "S2@30%": 0.0,
+    "S3@45%": 0.0
+   },
+   "fires_at_0.05": false
+  },
+  "r=0.6 L=40": {
+   "share_in_lumen": {
+    "S1@15%": 0.0,
+    "S2@30%": 0.0,
+    "S3@45%": 0.0
+   },
+   "fires_at_0.05": false
+  },
+  "r=0.6 L=50": {
+   "share_in_lumen": {
+    "S1@15%": 0.0,
+    "S2@30%": 0.0,
+    "S3@45%": 0.0
+   },
+   "fires_at_0.05": false
+  },
+  "r=0.6 L=60": {
+   "share_in_lumen": {
+    "S1@15%": 0.0,
+    "S2@30%": 0.0,
+    "S3@45%": 0.0
+   },
+   "fires_at_0.05": false
+  },
+  "r=0.75 L=10": {
+   "share_in_lumen": {
+    "S1@15%": 0.0,
+    "S2@30%": 0.0,
+    "S3@45%": 0.0
+   },
+   "fires_at_0.05": false
+  },
+  "r=0.75 L=20": {
+   "share_in_lumen": {
+    "S1@15%": 0.0,
+    "S2@30%": 0.0,
+    "S3@45%": 0.0
+   },
+   "fires_at_0.05": false
+  },
+  "r=0.75 L=30": {
+   "share_in_lumen": {
+    "S1@15%": 0.0,
+    "S2@30%": 0.0,
+    "S3@45%": 0.0
+   },
+   "fires_at_0.05": false
+  },
+  "r=0.75 L=40": {
+   "share_in_lumen": {
+    "S1@15%": 0.0,
+    "S2@30%": 0.0,
+    "S3@45%": 0.0
+   },
+   "fires_at_0.05": false
+  },
+  "r=0.75 L=50": {
+   "share_in_lumen": {
+    "S1@15%": 0.0,
+    "S2@30%": 0.0,
+    "S3@45%": 0.0
+   },
+   "fires_at_0.05": false
+  },
+  "r=0.75 L=60": {
+   "share_in_lumen": {
+    "S1@15%": 0.0,
+    "S2@30%": 0.0,
+    "S3@45%": 0.0
+   },
+   "fires_at_0.05": false
+  },
+  "r=1.0 L=10": {
+   "share_in_lumen": {
+    "S1@15%": 0.0,
+    "S2@30%": 0.0,
+    "S3@45%": 0.0
+   },
+   "fires_at_0.05": false
+  },
+  "r=1.0 L=20": {
+   "share_in_lumen": {
+    "S1@15%": 0.0,
+    "S2@30%": 0.0,
+    "S3@45%": 0.0
+   },
+   "fires_at_0.05": false
+  },
+  "r=1.0 L=30": {
+   "share_in_lumen": {
+    "S1@15%": 0.0,
+    "S2@30%": 0.0,
+    "S3@45%": 0.0
+   },
+   "fires_at_0.05": false
+  },
+  "r=1.0 L=40": {
+   "share_in_lumen": {
+    "S1@15%": 0.0,
+    "S2@30%": 0.0,
+    "S3@45%": 0.0
+   },
+   "fires_at_0.05": false
+  },
+  "r=1.0 L=50": {
+   "share_in_lumen": {
+    "S1@15%": 0.0,
+    "S2@30%": 0.0,
+    "S3@45%": 0.0
+   },
+   "fires_at_0.05": false
+  },
+  "r=1.0 L=60": {
+   "share_in_lumen": {
+    "S1@15%": 0.0,
+    "S2@30%": 0.0,
+    "S3@45%": 0.0
+   },
+   "fires_at_0.05": false
+  }
+ }
+}

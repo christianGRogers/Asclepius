@@ -1,0 +1,627 @@
+{
+ "cases": [
+  "c0585",
+  "c0875",
+  "c0987",
+  "c0287",
+  "c0920",
+  "c0761"
+ ],
+ "scorer_sha256": "50826b26667c999e8e193effe54e60f7832c9166c863c284554491276d8e8252",
+ "pooled": {
+  "identity": {
+   "D1": {
+    "pieces": 6,
+    "detected": 6,
+    "named": 6,
+    "cases": 6,
+    "recall": 1.0,
+    "naming": 1.0,
+    "presence_agreement": 1.0
+   },
+   "D2": {
+    "pieces": 2,
+    "detected": 2,
+    "named": 2,
+    "cases": 6,
+    "recall": 1.0,
+    "naming": 1.0,
+    "presence_agreement": 1.0
+   },
+   "OM1": {
+    "pieces": 5,
+    "detected": 5,
+    "named": 5,
+    "cases": 6,
+    "recall": 1.0,
+    "naming": 1.0,
+    "presence_agreement": 1.0
+   },
+   "OM2": {
+    "pieces": 2,
+    "detected": 2,
+    "named": 2,
+    "cases": 6,
+    "recall": 1.0,
+    "naming": 1.0,
+    "presence_agreement": 1.0
+   },
+   "PDA": {
+    "pieces": 6,
+    "detected": 6,
+    "named": 6,
+    "cases": 6,
+    "recall": 1.0,
+    "naming": 1.0,
+    "presence_agreement": 1.0
+   },
+   "PLB": {
+    "pieces": 6,
+    "detected": 6,
+    "named": 6,
+    "cases": 6,
+    "recall": 1.0,
+    "naming": 1.0,
+    "presence_agreement": 1.0
+   }
+  },
+  "swap_D1D2": {
+   "D1": {
+    "pieces": 6,
+    "detected": 6,
+    "named": 0,
+    "cases": 6,
+    "recall": 1.0,
+    "naming": 0.0,
+    "presence_agreement": 0.3333333333333333
+   },
+   "D2": {
+    "pieces": 2,
+    "detected": 2,
+    "named": 0,
+    "cases": 6,
+    "recall": 1.0,
+    "naming": 0.0,
+    "presence_agreement": 0.3333333333333333
+   },
+   "OM1": {
+    "pieces": 5,
+    "detected": 5,
+    "named": 5,
+    "cases": 6,
+    "recall": 1.0,
+    "naming": 1.0,
+    "presence_agreement": 1.0
+   },
+   "OM2": {
+    "pieces": 2,
+    "detected": 2,
+    "named": 2,
+    "cases": 6,
+    "recall": 1.0,
+    "naming": 1.0,
+    "presence_agreement": 1.0
+   },
+   "PDA": {
+    "pieces": 6,
+    "detected": 6,
+    "named": 6,
+    "cases": 6,
+    "recall": 1.0,
+    "naming": 1.0,
+    "presence_agreement": 1.0
+   },
+   "PLB": {
+    "pieces": 6,
+    "detected": 6,
+    "named": 6,
+    "cases": 6,
+    "recall": 1.0,
+    "naming": 1.0,
+    "presence_agreement": 1.0
+   }
+  },
+  "OM2_to_LCx": {
+   "D1": {
+    "pieces": 6,
+    "detected": 6,
+    "named": 6,
+    "cases": 6,
+    "recall": 1.0,
+    "naming": 1.0,
+    "presence_agreement": 1.0
+   },
+   "D2": {
+    "pieces": 2,
+    "detected": 2,
+    "named": 2,
+    "cases": 6,
+    "recall": 1.0,
+    "naming": 1.0,
+    "presence_agreement": 1.0
+   },
+   "OM1": {
+    "pieces": 5,
+    "detected": 5,
+    "named": 5,
+    "cases": 6,
+    "recall": 1.0,
+    "naming": 1.0,
+    "presence_agreement": 1.0
+   },
+   "OM2": {
+    "pieces": 2,
+    "detected": 2,
+    "named": 0,
+    "cases": 6,
+    "recall": 1.0,
+    "naming": 0.0,
+    "presence_agreement": 0.6666666666666666
+   },
+   "PDA": {
+    "pieces": 6,
+    "detected": 6,
+    "named": 6,
+    "cases": 6,
+    "recall": 1.0,
+    "naming": 1.0,
+    "presence_agreement": 1.0
+   },
+   "PLB": {
+    "pieces": 6,
+    "detected": 6,
+    "named": 6,
+    "cases": 6,
+    "recall": 1.0,
+    "naming": 1.0,
+    "presence_agreement": 1.0
+   }
+  },
+  "OM2_to_bg": {
+   "D1": {
+    "pieces": 6,
+    "detected": 6,
+    "named": 6,
+    "cases": 6,
+    "recall": 1.0,
+    "naming": 1.0,
+    "presence_agreement": 1.0
+   },
+   "D2": {
+    "pieces": 2,
+    "detected": 2,
+    "named": 2,
+    "cases": 6,
+    "recall": 1.0,
+    "naming": 1.0,
+    "presence_agreement": 1.0
+   },
+   "OM1": {
+    "pieces": 5,
+    "detected": 5,
+    "named": 5,
+    "cases": 6,
+    "recall": 1.0,
+    "naming": 1.0,
+    "presence_agreement": 1.0
+   },
+   "OM2": {
+    "pieces": 2,
+    "detected": 0,
+    "named": 0,
+    "cases": 6,
+    "recall": 0.0,
+    "naming": 0.0,
+    "presence_agreement": 0.6666666666666666
+   },
+   "PDA": {
+    "pieces": 6,
+    "detected": 6,
+    "named": 6,
+    "cases": 6,
+    "recall": 1.0,
+    "naming": 1.0,
+    "presence_agreement": 1.0
+   },
+   "PLB": {
+    "pieces": 6,
+    "detected": 6,
+    "named": 6,
+    "cases": 6,
+    "recall": 1.0,
+    "naming": 1.0,
+    "presence_agreement": 1.0
+   }
+  },
+  "dilate1": {
+   "D1": {
+    "pieces": 6,
+    "detected": 6,
+    "named": 6,
+    "cases": 6,
+    "recall": 1.0,
+    "naming": 1.0,
+    "presence_agreement": 1.0
+   },
+   "D2": {
+    "pieces": 2,
+    "detected": 2,
+    "named": 2,
+    "cases": 6,
+    "recall": 1.0,
+    "naming": 1.0,
+    "presence_agreement": 1.0
+   },
+   "OM1": {
+    "pieces": 5,
+    "detected": 5,
+    "named": 5,
+    "cases": 6,
+    "recall": 1.0,
+    "naming": 1.0,
+    "presence_agreement": 1.0
+   },
+   "OM2": {
+    "pieces": 2,
+    "detected": 2,
+    "named": 2,
+    "cases": 6,
+    "recall": 1.0,
+    "naming": 1.0,
+    "presence_agreement": 1.0
+   },
+   "PDA": {
+    "pieces": 6,
+    "detected": 6,
+    "named": 6,
+    "cases": 6,
+    "recall": 1.0,
+    "naming": 1.0,
+    "presence_agreement": 1.0
+   },
+   "PLB": {
+    "pieces": 6,
+    "detected": 6,
+    "named": 6,
+    "cases": 6,
+    "recall": 1.0,
+    "naming": 1.0,
+    "presence_agreement": 1.0
+   }
+  },
+  "swap_PDAPLB": {
+   "D1": {
+    "pieces": 6,
+    "detected": 6,
+    "named": 6,
+    "cases": 6,
+    "recall": 1.0,
+    "naming": 1.0,
+    "presence_agreement": 1.0
+   },
+   "D2": {
+    "pieces": 2,
+    "detected": 2,
+    "named": 2,
+    "cases": 6,
+    "recall": 1.0,
+    "naming": 1.0,
+    "presence_agreement": 1.0
+   },
+   "OM1": {
+    "pieces": 5,
+    "detected": 5,
+    "named": 5,
+    "cases": 6,
+    "recall": 1.0,
+    "naming": 1.0,
+    "presence_agreement": 1.0
+   },
+   "OM2": {
+    "pieces": 2,
+    "detected": 2,
+    "named": 2,
+    "cases": 6,
+    "recall": 1.0,
+    "naming": 1.0,
+    "presence_agreement": 1.0
+   },
+   "PDA": {
+    "pieces": 6,
+    "detected": 6,
+    "named": 0,
+    "cases": 6,
+    "recall": 1.0,
+    "naming": 0.0,
+    "presence_agreement": 0.8333333333333334
+   },
+   "PLB": {
+    "pieces": 6,
+    "detected": 6,
+    "named": 0,
+    "cases": 6,
+    "recall": 1.0,
+    "naming": 0.0,
+    "presence_agreement": 0.8333333333333334
+   }
+  },
+  "erode1": {
+   "D1": {
+    "pieces": 6,
+    "detected": 5,
+    "named": 5,
+    "cases": 6,
+    "recall": 0.8333333333333334,
+    "naming": 1.0,
+    "presence_agreement": 0.8333333333333334
+   },
+   "D2": {
+    "pieces": 2,
+    "detected": 2,
+    "named": 2,
+    "cases": 6,
+    "recall": 1.0,
+    "naming": 1.0,
+    "presence_agreement": 1.0
+   },
+   "OM1": {
+    "pieces": 5,
+    "detected": 5,
+    "named": 5,
+    "cases": 6,
+    "recall": 1.0,
+    "naming": 1.0,
+    "presence_agreement": 1.0
+   },
+   "OM2": {
+    "pieces": 2,
+    "detected": 2,
+    "named": 2,
+    "cases": 6,
+    "recall": 1.0,
+    "naming": 1.0,
+    "presence_agreement": 1.0
+   },
+   "PDA": {
+    "pieces": 6,
+    "detected": 5,
+    "named": 5,
+    "cases": 6,
+    "recall": 0.8333333333333334,
+    "naming": 1.0,
+    "presence_agreement": 1.0
+   },
+   "PLB": {
+    "pieces": 6,
+    "detected": 6,
+    "named": 6,
+    "cases": 6,
+    "recall": 1.0,
+    "naming": 1.0,
+    "presence_agreement": 0.8333333333333334
+   }
+  },
+  "fold_OM": {
+   "D1": {
+    "pieces": 6,
+    "detected": 6,
+    "named": 6,
+    "cases": 6,
+    "recall": 1.0,
+    "naming": 1.0,
+    "presence_agreement": 1.0
+   },
+   "D2": {
+    "pieces": 2,
+    "detected": 2,
+    "named": 2,
+    "cases": 6,
+    "recall": 1.0,
+    "naming": 1.0,
+    "presence_agreement": 1.0
+   },
+   "OM1": {
+    "pieces": 5,
+    "detected": 5,
+    "named": 0,
+    "cases": 6,
+    "recall": 1.0,
+    "naming": 0.0,
+    "presence_agreement": 0.16666666666666666
+   },
+   "OM2": {
+    "pieces": 2,
+    "detected": 2,
+    "named": 0,
+    "cases": 6,
+    "recall": 1.0,
+    "naming": 0.0,
+    "presence_agreement": 0.6666666666666666
+   },
+   "PDA": {
+    "pieces": 6,
+    "detected": 6,
+    "named": 6,
+    "cases": 6,
+    "recall": 1.0,
+    "naming": 1.0,
+    "presence_agreement": 1.0
+   },
+   "PLB": {
+    "pieces": 6,
+    "detected": 6,
+    "named": 6,
+    "cases": 6,
+    "recall": 1.0,
+    "naming": 1.0,
+    "presence_agreement": 1.0
+   }
+  },
+  "drop_PLB": {
+   "D1": {
+    "pieces": 6,
+    "detected": 6,
+    "named": 6,
+    "cases": 6,
+    "recall": 1.0,
+    "naming": 1.0,
+    "presence_agreement": 1.0
+   },
+   "D2": {
+    "pieces": 2,
+    "detected": 2,
+    "named": 2,
+    "cases": 6,
+    "recall": 1.0,
+    "naming": 1.0,
+    "presence_agreement": 1.0
+   },
+   "OM1": {
+    "pieces": 5,
+    "detected": 5,
+    "named": 5,
+    "cases": 6,
+    "recall": 1.0,
+    "naming": 1.0,
+    "presence_agreement": 1.0
+   },
+   "OM2": {
+    "pieces": 2,
+    "detected": 2,
+    "named": 2,
+    "cases": 6,
+    "recall": 1.0,
+    "naming": 1.0,
+    "presence_agreement": 1.0
+   },
+   "PDA": {
+    "pieces": 6,
+    "detected": 6,
+    "named": 6,
+    "cases": 6,
+    "recall": 1.0,
+    "naming": 1.0,
+    "presence_agreement": 1.0
+   },
+   "PLB": {
+    "pieces": 6,
+    "detected": 0,
+    "named": 0,
+    "cases": 6,
+    "recall": 0.0,
+    "naming": 0.0,
+    "presence_agreement": 0.0
+   }
+  },
+  "trunc_PDA_40": {
+   "D1": {
+    "pieces": 6,
+    "detected": 6,
+    "named": 6,
+    "cases": 6,
+    "recall": 1.0,
+    "naming": 1.0,
+    "presence_agreement": 1.0
+   },
+   "D2": {
+    "pieces": 2,
+    "detected": 2,
+    "named": 2,
+    "cases": 6,
+    "recall": 1.0,
+    "naming": 1.0,
+    "presence_agreement": 1.0
+   },
+   "OM1": {
+    "pieces": 5,
+    "detected": 5,
+    "named": 5,
+    "cases": 6,
+    "recall": 1.0,
+    "naming": 1.0,
+    "presence_agreement": 1.0
+   },
+   "OM2": {
+    "pieces": 2,
+    "detected": 2,
+    "named": 2,
+    "cases": 6,
+    "recall": 1.0,
+    "naming": 1.0,
+    "presence_agreement": 1.0
+   },
+   "PDA": {
+    "pieces": 6,
+    "detected": 3,
+    "named": 3,
+    "cases": 6,
+    "recall": 0.5,
+    "naming": 1.0,
+    "presence_agreement": 1.0
+   },
+   "PLB": {
+    "pieces": 6,
+    "detected": 6,
+    "named": 6,
+    "cases": 6,
+    "recall": 1.0,
+    "naming": 1.0,
+    "presence_agreement": 1.0
+   }
+  }
+ },
+ "checks": [
+  "PASS Atlas self-test (synthetic tree, amended collapse)",
+  "PASS chain rule: a left PDA touching only its PLB collapses to the LCx",
+  "PASS chain rule: no fallback counted",
+  "PASS no contact: falls back to the RCA, counted",
+  "PASS c0585 collapse = D25 on every non-Other voxel (0 differ)",
+  "PASS c0585 collapse fallbacks 0 (0)",
+  "PASS c0875 collapse = D25 on every non-Other voxel (0 differ)",
+  "PASS c0875 collapse fallbacks 0 (0)",
+  "PASS c0987 collapse = D25 on every non-Other voxel (0 differ)",
+  "PASS c0987 collapse fallbacks 0 (0)",
+  "PASS c0287 collapse = D25 on every non-Other voxel (0 differ)",
+  "PASS c0287 collapse fallbacks 0 (0)",
+  "PASS c0920 collapse = D25 on every non-Other voxel (0 differ)",
+  "PASS c0920 collapse fallbacks 0 (0)",
+  "PASS c0761 collapse = D25 on every non-Other voxel (0 differ)",
+  "PASS c0761 collapse fallbacks 0 (0)",
+  "PASS identity D1: recall, agreement, naming = 1",
+  "PASS identity D1: branch tF1 = 1 (min 1.000)",
+  "PASS dilate by 1 voxel D1: recall 1, naming 1",
+  "PASS erode by 1 voxel D1: recall >= 0.8 (0.833), naming of detected = 1 (1.000)",
+  "PASS identity D2: recall, agreement, naming = 1",
+  "PASS identity D2: branch tF1 = 1 (min 1.000)",
+  "PASS dilate by 1 voxel D2: recall 1, naming 1",
+  "PASS erode by 1 voxel D2: recall >= 0.8 (1.000), naming of detected = 1 (1.000)",
+  "PASS identity OM1: recall, agreement, naming = 1",
+  "PASS identity OM1: branch tF1 = 1 (min 1.000)",
+  "PASS dilate by 1 voxel OM1: recall 1, naming 1",
+  "PASS erode by 1 voxel OM1: recall >= 0.8 (1.000), naming of detected = 1 (1.000)",
+  "PASS identity OM2: recall, agreement, naming = 1",
+  "PASS identity OM2: branch tF1 = 1 (min 1.000)",
+  "PASS dilate by 1 voxel OM2: recall 1, naming 1",
+  "PASS erode by 1 voxel OM2: recall >= 0.8 (1.000), naming of detected = 1 (1.000)",
+  "PASS identity PDA: recall, agreement, naming = 1",
+  "PASS identity PDA: branch tF1 = 1 (min 1.000)",
+  "PASS dilate by 1 voxel PDA: recall 1, naming 1",
+  "PASS erode by 1 voxel PDA: recall >= 0.8 (0.833), naming of detected = 1 (1.000)",
+  "PASS identity PLB: recall, agreement, naming = 1",
+  "PASS identity PLB: branch tF1 = 1 (min 1.000)",
+  "PASS dilate by 1 voxel PLB: recall 1, naming 1",
+  "PASS erode by 1 voxel PLB: recall >= 0.8 (1.000), naming of detected = 1 (1.000)",
+  "PASS swap D1/D2 D1: recall 1, naming 0",
+  "PASS swap D1/D2 D2: recall 1, naming 0",
+  "PASS swap PDA/PLB PDA: recall 1, naming 0",
+  "PASS swap PDA/PLB PLB: recall 1, naming 0",
+  "PASS OM2 -> LCx: recall 1, naming 0, agreement < 1",
+  "PASS OM2 -> background: recall 0",
+  "PASS OM folded into LCx OM1: recall 1, naming 0",
+  "PASS OM folded into LCx OM2: recall 1, naming 0",
+  "PASS PLB dropped: recall 0 (0.0)",
+  "FAIL PDA truncated to 40 %: recall <= 0.2 (0.500)",
+  "PASS PLB dropped: every other class keeps recall 1"
+ ],
+ "n_fail": 1
+}

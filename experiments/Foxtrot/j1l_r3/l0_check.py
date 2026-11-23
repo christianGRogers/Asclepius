@@ -18,6 +18,8 @@ D50 uses L0 twice, and the script names which use it is:
 It reads only the val-80 rows. It refuses a file that holds any case outside val 80 (so it never reads a locked-20
 row or a sealed case) and a file whose two row sets do not cover the same 80 cases.
 
+Exit status 0 on PASS, 3 on FAIL, so a FAIL stops a `&&` chain.
+
 Usage:
   python l0_check.py --scores $W/scores/identity_val80.json --mode trillium-identity --out $W/l0.json
   python l0_check.py --selftest
@@ -179,6 +181,8 @@ def main():
     print(s)
     print('sha256', hashlib.sha256(s.encode()).hexdigest())
     print(g['verdict'])
+    if not g['verdict'].startswith('L0 PASS'):
+        sys.exit(3)                     # a FAIL stops any && chain (L-A8)
 
 
 if __name__ == '__main__':

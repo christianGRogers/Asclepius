@@ -1,4 +1,0 @@
-round1 differs: {}
-round1 FA15 worst false-fail {'D1': np.float64(0.0625), 'D2': np.float64(0.0635), 'OM1': np.float64(0.0705), 'OM2': np.float64(0.071), 'PDA': np.float64(0.0595), 'PLB': np.float64(0.0485), 'verdict': 0.0025} P(reject) {'omission +0.10': 0.999, 'misnaming 0.10': 0.5775, 'misnaming 0.20': 0.999}
-FA25 differs: {'D1': {'presence': (0.93, 0.94)}, 'PLB': {'recall': (0.9, 0.89), 'presence': (0.95, 0.94)}}
-FA25 FA15 worst false-fail {'D1': np.float64(0.1025), 'D2': np.float64(0.0635), 'OM1': np.float64(0.0705), 'OM2': np.float64(0.071), 'PDA': np.float64(0.0535), 'PLB': np.float64(0.0295), 'verdict': 0.003} P(reject) {'omission +0.10': 0.9985, 'misnaming 0.10': 0.5985, 'misnaming 0.20': 1.0}

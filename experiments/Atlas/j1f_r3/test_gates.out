@@ -1,0 +1,4 @@
+OM2 recall 59/100 -> FAIL
+OM2 recall 60/100 -> pass
+OM2 recall 61/100 -> pass
+test_gates ok; j1f_gates.json sha256 c14190cb4b796a895cae37207b5968f28b7be0d6f40b1fa3f0fbd68dc0d9db68 ; scorer sha256 5221032f3dc086d686b63fa946149a215ac00738a87fd9669d7faa15962b2e5b

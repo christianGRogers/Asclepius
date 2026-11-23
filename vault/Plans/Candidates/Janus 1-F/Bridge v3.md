@@ -25,7 +25,7 @@ What this round finds:
 1. **The scorer of record exists** (item 1): `j1f_scorer.py`, sha256 `7e6875a3…ff78`.
    - It is Atlas's file with SegQueue's `collapse_to_four` in place of the ring collapse.
    - Its pieces reproduce the census the F-A15 lines were simulated on, case for case, over the 620 (§1.3).
-   - Delta's 31 checks and Atlas's perturbations pass on training cases.
+   - Delta's checks and Atlas's perturbations pass on training cases (34 of 34).
 2. **`j1f_gates.json`** (item 2), sha256 `16ce8954…1b6b`: OM2 recall 0.59 fails, 0.60 and 0.61 pass, and every one of
    the 18 lines bites 0.01 below its value.
 3. **Two launcher defects would stop or break J1F-A** (item 4). Both are found in nnU-Net 2.8.1's own source:
@@ -98,8 +98,9 @@ strict majority, branch tF1. `pieces_of` and `score_case` are byte-identical to 
 | — chain rule: a PLB hanging off a left PDA's tip, touching only the PDA, goes to the LCx | | ok |
 | — an unattached PDA falls back to the RCA, and the count goes up by one | | ok |
 | — OM2 recall 23/40 fails, 24/40 (= 0.60) passes, 25/40 passes; no detected piece gives naming NaN, which fails | | ok |
-| Delta's 31 checks, ported to per-piece aggregation, on **the same six training cases** Delta's test names (`asclepius-j1f-r2-scorertest:` salt) | `test_scorer_cases.py` → `test_scorer_cases.out` | **RESULT_CASES** |
-| Atlas's four real-case perturbations as checks: fold OM → LCx, drop PLB, truncate PDA to 40 %, erode by one voxel | same | (in the line above) |
+| Delta's checks, ported to per-piece aggregation, on **the same six training cases** Delta's test names (`asclepius-j1f-r2-scorertest:` salt): collapse = D25 with 0 fallbacks per case, identity, dilation by one voxel, D1/D2 and PDA/PLB swaps, OM2 → LCx, OM2 → background | `test_scorer_cases.py` → `test_scorer_cases.out` | **all pass** (30 apply to these cases) |
+| Atlas's real-case perturbations as checks: fold OM → LCx (recall 1, naming 0), drop PLB (recall 0), truncate PDA to 40 % (recall ≤ 0.5) | same | **all pass** (34 of 34 checks in all) |
+| Atlas's erosion by one voxel | same | **report:** recall D1 0.83, PDA 0.83, others 1.0. One whole thin D1 and one PDA vanish, which is Atlas's round-2 finding and is reported under F-A22. Bridge first wrote it as a check (≥ 0.9); it failed for that reason and is now a report |
 
 **One finding from writing the tests.** Atlas's toy has a PLB that meets its RCA only diagonally.
 - SegQueue's contact rule counts **face** contact only, so that PLB is an unattached component. It falls back to the
@@ -112,7 +113,28 @@ strict majority, branch tF1. `pieces_of` and `score_case` are byte-identical to 
 `run620.py` runs the scorer of record on each of the 620 training references, at native spacing, cropped to the tree
 plus 8 voxels. The output is `run620_summary.json` (per-case rows stay off the repo, in the scratch run).
 
-RESULT_620
+**Result (`run620_summary.json`): the scorer counts exactly what the lines were simulated on.**
+
+| Check over the 620 | Result |
+|---|---|
+| Case set equals Atlas's `census_r2.jsonl` | yes, 620 of 620 |
+| **Pieces per case, per class, against the census** | **0 cases differ in count, in any piece's length (to 0.01 mm) or in any piece's voxel count**, for all eight branch classes |
+| Pieces per case (PDA) | 1: 543, 2: 62, 3: 3 cases (676 pieces); the census is the same |
+| Pieces per case (PLB) | 1: 600, 2: 10 (620 pieces); the census is the same |
+| Other classes | one piece per case in every case that has the class (D1 611, D2 359, OM1 540, OM2 229, Ramus 149, D3 47) |
+| Converter totals (F-A18's expected line) | `{'d3': 47, 'd4_to_lad': 2, 'other_lcx': 20, 'other_nearest': 1, 'other_ignore': 8}`: **matches** |
+| SegQueue's collapse vs D25's `territory.to_four`, every voxel outside "Other" and 255 | **0 voxels differ** |
+| Contact components, fallbacks | 1,296 PDA/PLB components, **0 fallbacks** |
+| Identity (reference scored against itself) | every piece detected and named; presence agrees in 620 of 620, every class |
+| Time | 7.5 s per case median, 11.8 s at p90 (one core, pieces + collapse + identity without tF1) |
+
+**The one difference in counting, quantified.**
+- Recall's denominator is every reference piece. The locked counts the lines were simulated with are the cases
+  present at 5 mm.
+- Over the 620, **four pieces** fall between the two: one each of D2, OM2, PDA and PLB, each in a case where the
+  class's total centreline is under 5 mm. That is 1 piece in 229–676 per class, about 0.6 piece per class on the
+  locked 100.
+- It is far inside the 0.01 rounding of the lines. No re-run of `gate_sim.py` is triggered (ruling §7, row 6).
 
 ### 2.4 What `collect` pins
 
@@ -475,7 +497,7 @@ The lead has not answered. Each branch is written now, so whichever answer comes
 | File | What |
 |---|---|
 | `j1f_scorer.py` | The scorer of record (§2) and its self-test |
-| `test_scorer_cases.py` → `test_scorer_cases.out` | Delta's 31 checks and Atlas's perturbations on six training cases |
+| `test_scorer_cases.py` → `test_scorer_cases.out` | Delta's checks and Atlas's perturbations on six training cases (34 of 34 pass) |
 | `run620.py` → `run620_summary.json` | The scorer on the 620: pieces against Atlas's census, the collapse against D25, the identity |
 | `configs/j1f_gates.json`, `test_gates.py` | Item 2 |
 | `decode_ref.py` → `decode_ref.out` | Reference decode F and T (F-A19), `splits_final.json` (F-A20), the fit-check 20 |

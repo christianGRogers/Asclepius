@@ -1,0 +1,181 @@
+{
+ "cases": 620,
+ "same_case_set_as_census": true,
+ "converter_totals": {
+  "d3": 47,
+  "d4_to_lad": 2,
+  "other_lcx": 20,
+  "other_nearest": 1,
+  "other_ignore": 8
+ },
+ "converter_totals_match_F_A18": true,
+ "collapse_mismatch_voxels_outside_other": 0,
+ "collapse_fallbacks": 0,
+ "collapse_PDA_PLB_components": 1296,
+ "per_class": {
+  "D1": {
+   "cases_with_piece": 611,
+   "cases_present_5mm": 611,
+   "pieces": 611,
+   "pieces_per_case_dist": {
+    "1": 611
+   },
+   "census_pieces_per_case_dist": {
+    "1": 611
+   },
+   "cases_piece_count_differs": 0,
+   "cases_piece_lengths_differ": 0,
+   "cases_piece_voxels_differ": 0,
+   "pieces_in_cases_absent_at_5mm": 0,
+   "pieces_shorter_than_5mm": 0,
+   "identity_detected": 611,
+   "identity_named": 611,
+   "identity_presence_agree": 620
+  },
+  "D2": {
+   "cases_with_piece": 359,
+   "cases_present_5mm": 358,
+   "pieces": 359,
+   "pieces_per_case_dist": {
+    "1": 359
+   },
+   "census_pieces_per_case_dist": {
+    "1": 359
+   },
+   "cases_piece_count_differs": 0,
+   "cases_piece_lengths_differ": 0,
+   "cases_piece_voxels_differ": 0,
+   "pieces_in_cases_absent_at_5mm": 1,
+   "pieces_shorter_than_5mm": 1,
+   "identity_detected": 359,
+   "identity_named": 359,
+   "identity_presence_agree": 620
+  },
+  "D3": {
+   "cases_with_piece": 47,
+   "cases_present_5mm": 47,
+   "pieces": 47,
+   "pieces_per_case_dist": {
+    "1": 47
+   },
+   "census_pieces_per_case_dist": {
+    "1": 47
+   },
+   "cases_piece_count_differs": 0,
+   "cases_piece_lengths_differ": 0,
+   "cases_piece_voxels_differ": 0,
+   "pieces_in_cases_absent_at_5mm": 0,
+   "pieces_shorter_than_5mm": 0,
+   "identity_detected": 47,
+   "identity_named": 47,
+   "identity_presence_agree": 620
+  },
+  "OM1": {
+   "cases_with_piece": 540,
+   "cases_present_5mm": 540,
+   "pieces": 540,
+   "pieces_per_case_dist": {
+    "1": 540
+   },
+   "census_pieces_per_case_dist": {
+    "1": 540
+   },
+   "cases_piece_count_differs": 0,
+   "cases_piece_lengths_differ": 0,
+   "cases_piece_voxels_differ": 0,
+   "pieces_in_cases_absent_at_5mm": 0,
+   "pieces_shorter_than_5mm": 0,
+   "identity_detected": 540,
+   "identity_named": 540,
+   "identity_presence_agree": 620
+  },
+  "OM2": {
+   "cases_with_piece": 229,
+   "cases_present_5mm": 228,
+   "pieces": 229,
+   "pieces_per_case_dist": {
+    "1": 229
+   },
+   "census_pieces_per_case_dist": {
+    "1": 229
+   },
+   "cases_piece_count_differs": 0,
+   "cases_piece_lengths_differ": 0,
+   "cases_piece_voxels_differ": 0,
+   "pieces_in_cases_absent_at_5mm": 1,
+   "pieces_shorter_than_5mm": 1,
+   "identity_detected": 229,
+   "identity_named": 229,
+   "identity_presence_agree": 620
+  },
+  "Ramus": {
+   "cases_with_piece": 149,
+   "cases_present_5mm": 149,
+   "pieces": 149,
+   "pieces_per_case_dist": {
+    "1": 149
+   },
+   "census_pieces_per_case_dist": {
+    "1": 149
+   },
+   "cases_piece_count_differs": 0,
+   "cases_piece_lengths_differ": 0,
+   "cases_piece_voxels_differ": 0,
+   "pieces_in_cases_absent_at_5mm": 0,
+   "pieces_shorter_than_5mm": 0,
+   "identity_detected": 149,
+   "identity_named": 149,
+   "identity_presence_agree": 620
+  },
+  "PDA": {
+   "cases_with_piece": 608,
+   "cases_present_5mm": 607,
+   "pieces": 676,
+   "pieces_per_case_dist": {
+    "1": 543,
+    "2": 62,
+    "3": 3
+   },
+   "census_pieces_per_case_dist": {
+    "1": 543,
+    "2": 62,
+    "3": 3
+   },
+   "cases_piece_count_differs": 0,
+   "cases_piece_lengths_differ": 0,
+   "cases_piece_voxels_differ": 0,
+   "pieces_in_cases_absent_at_5mm": 1,
+   "pieces_shorter_than_5mm": 1,
+   "identity_detected": 676,
+   "identity_named": 676,
+   "identity_presence_agree": 620
+  },
+  "PLB": {
+   "cases_with_piece": 610,
+   "cases_present_5mm": 609,
+   "pieces": 620,
+   "pieces_per_case_dist": {
+    "1": 600,
+    "2": 10
+   },
+   "census_pieces_per_case_dist": {
+    "1": 600,
+    "2": 10
+   },
+   "cases_piece_count_differs": 0,
+   "cases_piece_lengths_differ": 0,
+   "cases_piece_voxels_differ": 0,
+   "pieces_in_cases_absent_at_5mm": 1,
+   "pieces_shorter_than_5mm": 2,
+   "identity_detected": 620,
+   "identity_named": 620,
+   "identity_presence_agree": 620
+  }
+ },
+ "all_pieces_match_census": true,
+ "identity_perfect": true,
+ "seconds_per_case": {
+  "median": 7.5,
+  "p90": 11.8
+ }
+}

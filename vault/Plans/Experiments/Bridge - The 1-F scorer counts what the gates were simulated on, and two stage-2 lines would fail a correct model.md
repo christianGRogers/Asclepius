@@ -31,7 +31,51 @@ or Trillium.
 
 ## Results
 
-RESULT_NOTE
+**1. The scorer.**
+- `j1f_scorer.py` (sha256 `7e6875a3…ff78`) is Atlas's file with three changes:
+  - SegQueue's `collapse_to_four` replaces the ring collapse, with `labels.py` pinned at import;
+  - the converter is removed;
+  - the B reading (`load_gates`, `aggregate`, `verdict`) is added.
+- Its self-test passes, including the chain rule, a counted fallback, and OM2 23/24/25 of 40.
+- On Delta's six training cases, all **34 of 34** checks pass: Delta's (30 apply to these cases) and Atlas's four. The one-voxel erosion
+  is a report: recall D1 0.83 and PDA 0.83, from one thin branch each vanishing, as Atlas found.
+- On all 620 cases, piece counts, lengths and voxel counts equal Atlas's census in every case and class:
+  - PDA has 543 / 62 / 3 cases with 1 / 2 / 3 pieces;
+  - PLB has 600 / 10 with 1 / 2.
+- The converter totals equal F-A18's line.
+- The collapse equals D25 on every voxel outside "Other" and 255, with 0 fallbacks over 1,296 components.
+- Four pieces (one each of D2, OM2, PDA and PLB) sit in cases under 5 mm. That is far inside the lines' rounding.
+
+**2. The gates.**
+- `j1f_gates.json` (sha256 `16ce8954…1b6b`) equals Atlas's `proposed_lines`.
+- OM2 recall 0.59 fails; 0.60 and 0.61 pass.
+- Each of the 18 lines holds at its value and fails 0.01 below.
+- A changed file is refused.
+
+**3. nnU-Net 2.8.1.**
+- **The ignore label must be the largest label + 1** (`label_handling.py` l. 41). With 13 classes it is 13, so F-A3's
+  255 would stop training at its first step.
+- **Probabilities are saved as float32 at the original CT shape** (`label_handling.py` l. 138,
+  `export_prediction.py` l. 101):
+  - 3.5–3.75 GB per case uncompressed;
+  - compressed, 0.02 GB for an idealised smooth softmax up to 3.0–3.2 GB with logit noise.
+  - So a chunk of 10 is budgeted at ≤ 38 GB.
+- `move_plans_between_datasets` keeps the plans identifier when `-tp` is omitted.
+- The fit-check 20 recomputed from the split: sha256 `3f3b696c…1330`, equal to Foxtrot's file.
+
+**4. Stage 2, on 120 training references with correct synthetic branches** (straight tubes, radius 0.6 mm, length
+10–50 mm; painted outside the lumen only, or also over the host's lumen for 2.5 mm, as D47 Q4 trains):
+
+| Number | Correct model's value | False-fail as ruled |
+|---|---|---|
+| L1 (≤ 0.02 theft) | 0.016–0.017 (junction painting), 0 otherwise | 0 in every scenario |
+| L2 (no voxel > 30 mm in ≥ 95 %, 1.25 % bound) | tip distance ≈ branch length | 0.56–0.81 at 30 mm, where only 0.8–1.7 % of cases cross; 1.00 at ≥ 40 mm |
+| K1 (≤ 0.05 of voxels in the traced lumen) | 0.11–0.16 at 10 mm, 0.06–0.08 at 20 mm, 0.04–0.06 at 30 mm | ≈ 1.00 at ≤ 20 mm; 0–0.99 by class at 30 mm |
+| L2′ (islands > 5 mm, ≥ 95 of 100) | — | 0 |
+| K1′ (L1 on the 20 fit-check cases > 0.03) | — | 0 |
+
+- **L2's lower bound at one-sided 1.25 % needs 100 of 100:** at 99 of 100 it is 0.938.
+- **A model with islands in 10 % of cases fails L2′ with probability 0.94.**
 
 ## What it changes
 

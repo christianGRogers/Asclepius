@@ -13,7 +13,7 @@ These are the CPU experiments behind
 | `j1f_scorer.py` | The scorer of record (F-A16, F-A17): Atlas's round-2 file with SegQueue's `collapse_to_four`, the converter removed, and `load_gates` / `aggregate` / `verdict` added. sha256 `7e6875a3…ff78` | `python3 j1f_scorer.py selftest` |
 | `configs/j1f_gates.json` | F-A15's lines, `k_of_6`, `presence_mm`, `tol_mm`. sha256 `16ce8954…1b6b` | — |
 | `test_gates.py` | OM2 recall 0.59 fails, 0.60/0.61 pass; each of 18 lines bites 0.01 below; refusals | `python3 test_gates.py` |
-| `test_scorer_cases.py` → `test_scorer_cases.out` | Delta's 31 checks + Atlas's perturbations on Delta's six training cases | `python3 test_scorer_cases.py $W` (~20 min) |
+| `test_scorer_cases.py` → `test_scorer_cases.out` | Delta's checks + Atlas's perturbations (34 of 34) on Delta's six training cases | `python3 test_scorer_cases.py $W` (~20 min) |
 | `run620.py`, `summarise620.py` → `run620_summary.json` | The scorer on all 620 references vs Atlas's `census_r2.jsonl` | `python3 run620.py $W $W/run620.jsonl 3` (~90 min on 3 cores), then `python3 summarise620.py $W/run620.jsonl > run620_summary.json` |
 | `decode_ref.py` → `decode_ref.out` | Reference decode F / T (F-A19) and `splits_final.json` (F-A20), with self-tests; the fit-check 20 | `python3 decode_ref.py selftest $W` |
 | `npz_size.py` → `npz_size.out` | Disk per locked case for `--save_probabilities` (13 channels, float32) | `python3 npz_size.py $W c0519 32` |

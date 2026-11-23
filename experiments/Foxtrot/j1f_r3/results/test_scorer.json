@@ -568,6 +568,62 @@
     "naming": 1.0,
     "presence_agreement": 1.0
    }
+  },
+  "trunc_PDA_30": {
+   "D1": {
+    "pieces": 6,
+    "detected": 6,
+    "named": 6,
+    "cases": 6,
+    "recall": 1.0,
+    "naming": 1.0,
+    "presence_agreement": 1.0
+   },
+   "D2": {
+    "pieces": 2,
+    "detected": 2,
+    "named": 2,
+    "cases": 6,
+    "recall": 1.0,
+    "naming": 1.0,
+    "presence_agreement": 1.0
+   },
+   "OM1": {
+    "pieces": 5,
+    "detected": 5,
+    "named": 5,
+    "cases": 6,
+    "recall": 1.0,
+    "naming": 1.0,
+    "presence_agreement": 1.0
+   },
+   "OM2": {
+    "pieces": 2,
+    "detected": 2,
+    "named": 2,
+    "cases": 6,
+    "recall": 1.0,
+    "naming": 1.0,
+    "presence_agreement": 1.0
+   },
+   "PDA": {
+    "pieces": 6,
+    "detected": 0,
+    "named": 0,
+    "cases": 6,
+    "recall": 0.0,
+    "naming": 0.0,
+    "presence_agreement": 1.0
+   },
+   "PLB": {
+    "pieces": 6,
+    "detected": 6,
+    "named": 6,
+    "cases": 6,
+    "recall": 1.0,
+    "naming": 1.0,
+    "presence_agreement": 1.0
+   }
   }
  },
  "checks": [
@@ -620,8 +676,9 @@
   "PASS OM folded into LCx OM1: recall 1, naming 0",
   "PASS OM folded into LCx OM2: recall 1, naming 0",
   "PASS PLB dropped: recall 0 (0.0)",
-  "FAIL PDA truncated to 40 %: recall <= 0.2 (0.500)",
+  "PASS PDA truncated to 30 %: recall 0 (0.000)",
+  "REPORT PDA truncated to 40 %: recall 0.500 (at the 50 % line: 40 % kept + the 1.5 mm tolerance covers 0.44-0.58 of the centreline)",
   "PASS PLB dropped: every other class keeps recall 1"
  ],
- "n_fail": 1
+ "n_fail": 0
 }

@@ -34,14 +34,16 @@ What this round finds:
    - Prediction writes **float32** probabilities at the original CT size: 3.5–3.75 GB per case before compression.
      The chunk of 10 needs up to **38 GB** of scratch (§3.2).
 4. **F-A22's stage-2 numbers on a simulated correct model** (item 5), over 120 training cases:
-   - **L2 (30 mm far paint) fails every correct model with a straight branch longer than about 31 mm.** Read with a
-     one-sided 1.25 % bound, it also needs 100 of 100 cases: at 99 of 100, the lower bound is 0.938. **Proposed:** L2
-     counts **islands** (stage-2 components more than 5 mm from stage-1 foreground), on ≥ 95 of 100 cases. The 30 mm
+   - **L2 (30 mm far paint) fails every correct model whose straight branches are longer than about 30 mm.** Read
+     with a one-sided 1.25 % bound, it also needs 100 of 100 cases: at 99 of 100, the lower bound is 0.938. So when
+     only 1–2 % of cases cross 30 mm, a correct model still fails 56–81 % of the time. **Proposed:** L2 counts
+     **islands** (stage-2 components more than 5 mm from stage-1 foreground), on ≥ 95 of 100 cases. The 30 mm
      distance becomes a report.
    - **K1 (0.05 of stage-2 voxels inside the traced lumen) writes `LEAK`** for a correct model that paints each
-     branch's first 2.5 mm over its host, as D47 Q4 teaches. It does so 59–100 % of the time when branches are
-     ≤ 30 mm. **Proposed:** K1 reads L1's centreline statistic on the 20 fit-check cases, with `LEAK` above 0.03.
-   - **L1 (0.02 theft) holds,** but with little room: the same correct model takes 1.5–1.7 % of the LAD and RCA
+     branch's first 2.5 mm over its host, as D47 Q4 teaches. With branches ≤ 20 mm it does so in essentially every
+     draw, and at 30 mm for four of six classes 61–99 % of the time. **Proposed:** K1 reads L1's centreline
+     statistic on the 20 fit-check cases, with `LEAK` above 0.03.
+   - **L1 (0.02 theft) holds,** but with little room: the same correct model takes 1.6–1.7 % of the LAD and RCA
      centreline. **Kept.**
 5. **Step T's results change nothing in the recipe** (item 7):
    - no class-weighted CE, so the loss stays unweighted DiceCE;
@@ -214,7 +216,7 @@ $L/janus1f status                                              # s/epoch, epoch,
 
 ```sh
 $L/janus1f status                                              # expect 100 F maps and 100 T maps with decode's marker, 0 npz left
-du -sh $J1F_WORK/predict/a1/chunk01_npz_size.txt && cat $J1F_WORK/predict/a1/chunk01_npz_size.txt
+cat $J1F_WORK/predict/a1/npz_chunk01.txt                      # du -sh of chunk 1's npz, written by predict before it deletes them
 sbatch --account=def-aso22 --job-name=j1f-collect --time=4:00:00 --cpus-per-task=16 --mem=64G \
        --export=ALL,J1F_RUN=a1 --wrap "$L/janus1f collect"     # V on F, then B on the reading that ships; DECISION.md
 ```
@@ -256,6 +258,7 @@ plans check, the chain logic and `status`. The lines below are the whole differe
 ~ nnUNet_compile: as Janus 0's -> f, pinned in the job environment (§7)
 ~ predict: locked 100 only (no D60, no ensemble, no threshold): chunks of 10, --save_probabilities --disable_tta -chk checkpoint_final.pth
 + decode: F (hierarchical) and T (F-A19) per case, from the npz; then the chunk's npz and nnU-Net's argmax export are deleted; each map carries decode's marker
++ predict writes du -sh of chunk 1's npz to predict/<run>/npz_chunk01.txt before deleting it (the disk budget's measured value)
 - transfer (Rule T), ensemble (E), threshold export: not in 1-F (1-F reads at argmax)
 ~ collect: V on F collapsed (A1c tF1, icx4's aortas, A1a/A1b exclusions, Janus 0's Fir predictions as baseline, L3 on the scorer's recall); then B on the reading that ships (j1f_scorer + j1f_gates.json); F, T, and (if 1-L is adopted) V_L/T_L as §6; writes DECISION.md, verdict.json; a looks ledger opened BEFORE the first score
 ```
@@ -311,15 +314,42 @@ passes, and it recomputes the fit-check 20 from the D45 split: sha256 `3f3b696c�
 
 ### 5.2 Results (`stage2_summary.json`)
 
-RESULT_STAGE2
+**120 training cases** (hash-chosen, salt `asclepius-j1f-r3-bridge-stage2:`). Every simulated branch is correct by
+construction, so every fail below is a **false** fail.
+
+| Branch length L | Junction | L1 share taken, LAD / RCA group | L1 false-fail | Cases with a stage-2 voxel > 30 mm | **L2 false-fail** | L2′ false-fail | K1 share (range over the six classes) | **K1 `LEAK` rate** | K1′ `LEAK` rate |
+|---|---|---|---|---|---|---|---|---|---|
+| 10 mm | junc | 0.017 / 0.016 | 0 | 0 | 0 | 0 | 0.11–0.16 | **1.00** in all six | 0 |
+| 20 mm | junc | 0.017 / 0.016 | 0 | 0 | 0 | 0 | 0.059–0.084 | **≥ 0.998** in all six | 0 |
+| 30 mm | junc | 0.017 / 0.016 | 0 | 0.017 | **0.81** | 0 | 0.040–0.057 | S1 0.61, S2 0.07, S3 0, SN 0.98, Conus 0.99, RMA 0.82 | 0 |
+| 30 mm | out | 0 / 0 | 0 | 0.008 | **0.56** | 0 | 0 | 0 | 0 |
+| 40 mm | either | 0.017 / 0.016 (junc), 0 (out) | 0 | **1.00** | **1.00** | 0 | ≤ 0.043 (junc) | ≤ 0.002 | 0 |
+| 50 mm | either | as above | 0 | **1.00** | **1.00** | 0 | ≤ 0.036 (junc) | 0 | 0 |
+
+Reading the table:
+- **L1 holds** in every scenario. A correct model that paints its junctions takes 1.6–1.7 % of the host group's
+  centreline (LCx 0, since no stage-2 class leaves the LCx here, though SN may in a left-dominant heart). Its upper
+  bound stayed under 0.02 in every resample. The margin is about 0.003.
+- **L2 is the problem, for two reasons:**
+  - **Its distance:** a straight correct branch longer than about 30 mm puts its tip beyond 30 mm in every case.
+  - **Its bound:** at L = 30 mm only 0.8–1.7 % of cases cross the line, yet L2 false-fails 56–81 % of the time.
+    The 1.25 % Clopper-Pearson lower bound of "≥ 95 % of 100" is 0.957 at 100 of 100 and **0.938 at 99 of 100**, so
+    one case sinks it. As worded, L2 means "no case at all".
+- **L2′ (islands > 5 mm from stage-1 foreground) never false-fails.** Correct branches are attached.
+- **K1 as ruled counts the junction overlap,** so it measures branch length, not leakage:
+  - at ≤ 20 mm it writes `LEAK` for every class in essentially every draw;
+  - at 30 mm it writes `LEAK` for four of six classes 61–99 % of the time;
+  - it falls below 0.05 only once branches reach about 40 mm.
+  - In the `out` model it is 0. A correct model can fail K1, and a leaking model with long branches can pass it.
+- **K1′ (L1's statistic on 20 cases, `LEAK` above 0.03) never false-fails.**
 
 ### 5.3 What Bridge proposes (for the J1F-2 ruling, not before)
 
 | Number | Ruled | Proposed | Why |
 |---|---|---|---|
-| **L1** theft | ≤ 0.02 of each parent group's reference centreline, upper bound at 1.25 % | **keep** | A correct junction-painting model takes 1.5–1.7 %. It passes, with little room. Under D47 Q4, a reader who draws wider overlaps teaches more theft, so L1 is the right place for that cost to show |
-| **L2** far paint | in ≥ 95 % of cases, no stage-2 voxel > 30 mm from predicted coronary foreground, lower bound at 1.25 % | **L2′: in ≥ 95 of the 100 cases (the point count, not a bound), no stage-2 26-component of ≥ 20 voxels lies wholly more than 5 mm from predicted stage-1 foreground.** The 30 mm distance is reported beside K3 | (1) A straight correct branch longer than ≈ 31 mm fails the ruled L2 in **every** case. (2) Its 1.25 % lower bound needs 100 of 100 (99 → 0.938), so one long septal or one RMA sinks a correct class. L2′ catches what L2 was for, a stage-2 island painted away from the tree: a model with islands in 10 % of cases fails it with probability ≈ 0.94 (binomial, n = 100) |
-| **K1** | > 0.05 of a stage-2 class's voxels inside the traced lumen, on the 20 fit-check cases, writes `LEAK` | **K1′: L1's centreline statistic on the 20 fit-check training cases; `LEAK` above 0.03 in any parent group** | The ruled K1 counts the junction overlap that D47 Q4 trains. A correct model with branches ≤ 30 mm writes `LEAK` 59–100 % of the time, so the PM would be invited to cancel a sound run. K1′ measures the same leak (stage-2 labels on traced vessel) where a branch's own junction barely moves it |
+| **L1** theft | ≤ 0.02 of each parent group's reference centreline, upper bound at 1.25 % | **keep** | A correct junction-painting model takes 1.6–1.7 %. It passes, with little room. Under D47 Q4, a reader who draws wider overlaps teaches more theft, so L1 is the right place for that cost to show |
+| **L2** far paint | in ≥ 95 % of cases, no stage-2 voxel > 30 mm from predicted coronary foreground, lower bound at 1.25 % | **L2′: in ≥ 95 of the 100 cases (the point count, not a bound), no stage-2 26-component of ≥ 20 voxels lies wholly more than 5 mm from predicted stage-1 foreground.** The 30 mm distance is reported beside K3 | (1) A straight correct branch longer than ≈ 30 mm crosses the ruled L2's distance in **every** case. (2) Its 1.25 % lower bound needs 100 of 100 (99 → 0.938), so one long septal or one RMA sinks a correct class. L2′ catches what L2 was for, a stage-2 island painted away from the tree: a model with islands in 10 % of cases fails it with probability ≈ 0.94 (binomial, n = 100) |
+| **K1** | > 0.05 of a stage-2 class's voxels inside the traced lumen, on the 20 fit-check cases, writes `LEAK` | **K1′: L1's centreline statistic on the 20 fit-check training cases; `LEAK` above 0.03 in any parent group** | The ruled K1 counts the junction overlap that D47 Q4 trains. A correct model with branches ≤ 20 mm writes `LEAK` in essentially every draw (four of six classes 61–99 % at 30 mm), so the PM would be invited to cancel a sound run. K1′ measures the same leak (stage-2 labels on traced vessel) where a branch's own junction barely moves it |
 | **L2's 30 mm, if kept as a decision** | — | Re-set with the band: max(30 mm, the 99th percentile of drawn tip-to-host distance in the trainable extended reads) | The same reads that set the band (F-A21) measure how long the branches really are. No number about branch length is assumed here |
 | **95 %** | — | as L2′ above | — |
 

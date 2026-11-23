@@ -106,9 +106,9 @@ check('drop PLB: recall 0', a['pieces'] == 0 or a['recall'] == 0)
 a = AG['trunc_PDA_40']['PDA']
 check(f'truncate PDA to 40 %: recall <= 0.5 ({a["recall"]:.2f})', a['pieces'] == 0 or a['recall'] <= 0.5)
 e = AG['erode1']
-check('erode by 1 voxel: recall >= 0.9 in every gated class (1.5 mm tolerance) ' +
-      str({k: round(e[k]['recall'], 2) for k in ('D1', 'D2', 'OM1', 'OM2', 'PDA', 'PLB')}),
-      all(e[k]['recall'] >= 0.9 for k in ('D1', 'D2', 'OM1', 'OM2', 'PDA', 'PLB') if e[k]['pieces']))
+# REPORT, not a check: Atlas (round 2) found that a one-voxel erosion removes whole thin D1s and PDAs; F-A22 reports it
+print('REPORT erode by 1 voxel, recall per gated class:',
+      {k: round(e[k]['recall'], 2) for k in ('D1', 'D2', 'OM1', 'OM2', 'PDA', 'PLB')})
 print('cases', pick)
 print(json.dumps({k: {c: {m: (round(x, 3) if isinstance(x, float) else x) for m, x in AG[k][c].items()
                           if m in ('pieces', 'recall', 'presence', 'naming')}

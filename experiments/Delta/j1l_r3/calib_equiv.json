@@ -1,0 +1,526 @@
+{
+ "A_argmax_invariant": true,
+ "A_logp_equals_logits_up_to_constant": true,
+ "B_binary_exact": true,
+ "B_warped_grid": {
+  "T=0.5": [
+   0.5,
+   0.4749,
+   0.4495,
+   0.4232,
+   0.3956
+  ],
+  "T=0.7": [
+   0.5,
+   0.4649,
+   0.4295,
+   0.3933,
+   0.3559
+  ],
+  "T=0.85": [
+   0.5,
+   0.4575,
+   0.4147,
+   0.3714,
+   0.3273
+  ],
+  "T=1.0": [
+   0.5,
+   0.45,
+   0.4,
+   0.35,
+   0.3
+  ],
+  "T=1.25": [
+   0.5,
+   0.4376,
+   0.3759,
+   0.3157,
+   0.2575
+  ],
+  "T=1.5": [
+   0.5,
+   0.4253,
+   0.3525,
+   0.2832,
+   0.2191
+  ],
+  "T=2.0": [
+   0.5,
+   0.401,
+   0.3077,
+   0.2248,
+   0.1552
+  ],
+  "T=3.0": [
+   0.5,
+   0.3539,
+   0.2286,
+   0.135,
+   0.073
+  ]
+ },
+ "C_five_class": {
+  "T=0.5": {
+   "0.50": {
+    "raw_t": 0.5,
+    "binary_map": 0.5,
+    "dice": 0.98289,
+    "n_vox": 6174
+   },
+   "0.45": {
+    "raw_t": 0.475,
+    "binary_map": 0.4749,
+    "dice": 0.98285,
+    "n_vox": 6560
+   },
+   "0.40": {
+    "raw_t": 0.45,
+    "binary_map": 0.4495,
+    "dice": 0.9795,
+    "n_vox": 6910
+   },
+   "0.35": {
+    "raw_t": 0.425,
+    "binary_map": 0.4232,
+    "dice": 0.97781,
+    "n_vox": 7313
+   },
+   "0.30": {
+    "raw_t": 0.3975,
+    "binary_map": 0.3956,
+    "dice": 0.97703,
+    "n_vox": 7808
+   }
+  },
+  "T=0.7": {
+   "0.50": {
+    "raw_t": 0.5,
+    "binary_map": 0.5,
+    "dice": 0.9886,
+    "n_vox": 6245
+   },
+   "0.45": {
+    "raw_t": 0.465,
+    "binary_map": 0.4649,
+    "dice": 0.98674,
+    "n_vox": 6770
+   },
+   "0.40": {
+    "raw_t": 0.43,
+    "binary_map": 0.4295,
+    "dice": 0.9855,
+    "n_vox": 7310
+   },
+   "0.35": {
+    "raw_t": 0.395,
+    "binary_map": 0.3933,
+    "dice": 0.98539,
+    "n_vox": 7980
+   },
+   "0.30": {
+    "raw_t": 0.3575,
+    "binary_map": 0.3559,
+    "dice": 0.98784,
+    "n_vox": 8673
+   }
+  },
+  "T=0.85": {
+   "0.50": {
+    "raw_t": 0.5,
+    "binary_map": 0.5,
+    "dice": 0.99251,
+    "n_vox": 6294
+   },
+   "0.45": {
+    "raw_t": 0.4575,
+    "binary_map": 0.4575,
+    "dice": 0.99288,
+    "n_vox": 6976
+   },
+   "0.40": {
+    "raw_t": 0.415,
+    "binary_map": 0.4147,
+    "dice": 0.99346,
+    "n_vox": 7672
+   },
+   "0.35": {
+    "raw_t": 0.3725,
+    "binary_map": 0.3714,
+    "dice": 0.99448,
+    "n_vox": 8481
+   },
+   "0.30": {
+    "raw_t": 0.3275,
+    "binary_map": 0.3273,
+    "dice": 0.99478,
+    "n_vox": 9343
+   }
+  },
+  "T=1.0": {
+   "0.50": {
+    "raw_t": 0.5,
+    "binary_map": 0.5,
+    "dice": 1.0,
+    "n_vox": 6389
+   },
+   "0.45": {
+    "raw_t": 0.45,
+    "binary_map": 0.45,
+    "dice": 1.0,
+    "n_vox": 7189
+   },
+   "0.40": {
+    "raw_t": 0.4,
+    "binary_map": 0.4,
+    "dice": 1.0,
+    "n_vox": 8063
+   },
+   "0.35": {
+    "raw_t": 0.35,
+    "binary_map": 0.35,
+    "dice": 1.0,
+    "n_vox": 8988
+   },
+   "0.30": {
+    "raw_t": 0.3,
+    "binary_map": 0.3,
+    "dice": 1.0,
+    "n_vox": 10046
+   }
+  },
+  "T=1.25": {
+   "0.50": {
+    "raw_t": 0.4975,
+    "binary_map": 0.5,
+    "dice": 0.9864,
+    "n_vox": 6572
+   },
+   "0.45": {
+    "raw_t": 0.435,
+    "binary_map": 0.4376,
+    "dice": 0.98579,
+    "n_vox": 7622
+   },
+   "0.40": {
+    "raw_t": 0.375,
+    "binary_map": 0.3759,
+    "dice": 0.98936,
+    "n_vox": 8685
+   },
+   "0.35": {
+    "raw_t": 0.315,
+    "binary_map": 0.3157,
+    "dice": 0.99133,
+    "n_vox": 9881
+   },
+   "0.30": {
+    "raw_t": 0.2575,
+    "binary_map": 0.2575,
+    "dice": 0.98988,
+    "n_vox": 11284
+   }
+  },
+  "T=1.5": {
+   "0.50": {
+    "raw_t": 0.4975,
+    "binary_map": 0.5,
+    "dice": 0.9719,
+    "n_vox": 6801
+   },
+   "0.45": {
+    "raw_t": 0.42,
+    "binary_map": 0.4253,
+    "dice": 0.97475,
+    "n_vox": 8035
+   },
+   "0.40": {
+    "raw_t": 0.3475,
+    "binary_map": 0.3525,
+    "dice": 0.9816,
+    "n_vox": 9332
+   },
+   "0.35": {
+    "raw_t": 0.28,
+    "binary_map": 0.2832,
+    "dice": 0.98065,
+    "n_vox": 10898
+   },
+   "0.30": {
+    "raw_t": 0.215,
+    "binary_map": 0.2191,
+    "dice": 0.97872,
+    "n_vox": 12866
+   }
+  },
+  "T=2.0": {
+   "0.50": {
+    "raw_t": 0.48,
+    "binary_map": 0.5,
+    "dice": 0.94335,
+    "n_vox": 7392
+   },
+   "0.45": {
+    "raw_t": 0.385,
+    "binary_map": 0.401,
+    "dice": 0.95661,
+    "n_vox": 9045
+   },
+   "0.40": {
+    "raw_t": 0.2875,
+    "binary_map": 0.3077,
+    "dice": 0.95663,
+    "n_vox": 11137
+   },
+   "0.35": {
+    "raw_t": 0.2075,
+    "binary_map": 0.2248,
+    "dice": 0.95935,
+    "n_vox": 13591
+   },
+   "0.30": {
+    "raw_t": 0.14,
+    "binary_map": 0.1552,
+    "dice": 0.96489,
+    "n_vox": 16286
+   }
+  },
+  "T=3.0": {
+   "0.50": {
+    "raw_t": 0.3925,
+    "binary_map": 0.5,
+    "dice": 0.89789,
+    "n_vox": 9605
+   },
+   "0.45": {
+    "raw_t": 0.2575,
+    "binary_map": 0.3539,
+    "dice": 0.90956,
+    "n_vox": 12980
+   },
+   "0.40": {
+    "raw_t": 0.1425,
+    "binary_map": 0.2286,
+    "dice": 0.92352,
+    "n_vox": 17292
+   },
+   "0.35": {
+    "raw_t": 0.07,
+    "binary_map": 0.135,
+    "dice": 0.93224,
+    "n_vox": 22475
+   },
+   "0.30": {
+    "raw_t": 0.05,
+    "binary_map": 0.073,
+    "dice": 0.88097,
+    "n_vox": 28745
+   }
+  }
+ },
+ "C_worst_dice_calibrated_vs_best_raw": 0.88097,
+ "C_disagreeing_voxels_T2_t040": {
+  "n": 931,
+  "of_mask": 11137,
+  "median_top_vessel_share": 0.639,
+  "median_top_vessel_share_all_mask": 0.999
+ },
+ "D_fp_blob_present_calibrated_vs_raw": {
+  "T=0.5": {
+   "0.50": [
+    false,
+    false
+   ],
+   "0.45": [
+    false,
+    false
+   ],
+   "0.40": [
+    false,
+    false
+   ],
+   "0.35": [
+    false,
+    false
+   ],
+   "0.30": [
+    false,
+    false
+   ]
+  },
+  "T=0.7": {
+   "0.50": [
+    false,
+    false
+   ],
+   "0.45": [
+    false,
+    false
+   ],
+   "0.40": [
+    false,
+    false
+   ],
+   "0.35": [
+    false,
+    false
+   ],
+   "0.30": [
+    false,
+    false
+   ]
+  },
+  "T=0.85": {
+   "0.50": [
+    false,
+    false
+   ],
+   "0.45": [
+    false,
+    false
+   ],
+   "0.40": [
+    false,
+    false
+   ],
+   "0.35": [
+    false,
+    false
+   ],
+   "0.30": [
+    false,
+    false
+   ]
+  },
+  "T=1.0": {
+   "0.50": [
+    false,
+    false
+   ],
+   "0.45": [
+    false,
+    false
+   ],
+   "0.40": [
+    false,
+    false
+   ],
+   "0.35": [
+    false,
+    false
+   ],
+   "0.30": [
+    false,
+    false
+   ]
+  },
+  "T=1.25": {
+   "0.50": [
+    false,
+    false
+   ],
+   "0.45": [
+    false,
+    false
+   ],
+   "0.40": [
+    false,
+    false
+   ],
+   "0.35": [
+    false,
+    false
+   ],
+   "0.30": [
+    false,
+    false
+   ]
+  },
+  "T=1.5": {
+   "0.50": [
+    false,
+    false
+   ],
+   "0.45": [
+    false,
+    false
+   ],
+   "0.40": [
+    false,
+    false
+   ],
+   "0.35": [
+    false,
+    false
+   ],
+   "0.30": [
+    false,
+    false
+   ]
+  },
+  "T=2.0": {
+   "0.50": [
+    false,
+    false
+   ],
+   "0.45": [
+    false,
+    false
+   ],
+   "0.40": [
+    false,
+    false
+   ],
+   "0.35": [
+    false,
+    false
+   ],
+   "0.30": [
+    false,
+    false
+   ]
+  },
+  "T=3.0": {
+   "0.50": [
+    false,
+    false
+   ],
+   "0.45": [
+    false,
+    false
+   ],
+   "0.40": [
+    false,
+    false
+   ],
+   "0.35": [
+    false,
+    false
+   ],
+   "0.30": [
+    false,
+    false
+   ]
+  }
+ },
+ "D_fp_agrees": true,
+ "D_components": {
+  "T=1.0": {
+   "0.50": 13,
+   "0.45": 8,
+   "0.40": 13,
+   "0.35": 8,
+   "0.30": 19
+  },
+  "T=2.0": {
+   "0.50": 7,
+   "0.45": 8,
+   "0.40": 20,
+   "0.35": 13,
+   "0.30": 16
+  }
+ },
+ "E_platt_foreground_exact": true,
+ "C_worst_dice_T_0.5_to_1.5": 0.9719,
+ "reading": "At argmax a temperature changes nothing. Thresholded, a foreground (binary) temperature or Platt fit is exactly a threshold on a warped grid; a five-class temperature is close to one (Dice >= 0.97 for T <= 1.5) and differs only where vessel classes split the mass, which is an artefact of summing classes, not a width correction. No calibration removes an FP component that the matching threshold keeps."
+}

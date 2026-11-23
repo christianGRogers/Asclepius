@@ -285,7 +285,7 @@ Every self-test was re-run here on `dev` at `db02b25`:
    asserts `plans_name` and `data_identifier` unchanged.
 
 Two smaller ones:
-- `SEGTRAIN_MAX_SECONDS` = 23:50 − 30 min = **84 000 s**. Bridge v2's 84 600 was 30 min − 10 min short.
+- `SEGTRAIN_MAX_SECONDS` = 23:50 − 30 min = **84 000 s**. Bridge v2's 84 600 left only 20 min.
 - The val-80 identity split is built from `lists.json` `locked20_of_open36`, which exists. `janus1_split_proposal.json`
   names it `locked20_from_open36`. Both lists hold the same 20, and the block reads `lists.json` only.
 
@@ -393,7 +393,7 @@ logs and by the tuning 60, before any locked-100 number. They follow rules fixed
 | A temperature cannot move the 0.5 crossing; Platt's bias can | `calib60.py --selftest` |
 | Without `--save_npz` there are no E probabilities; with it the chain works | nnU-Net 2.8.1 `ensembling/ensemble.py` l. 45–46, 122; `ensemble_chain.py`, `ensemble_chain.json` |
 | `move_plans` rewrites `plans_name`, and `data_identifier` when `-tp` differs | nnU-Net 2.8.1 `move_plans_between_datasets.py` l. 32–43, 54–57 (wheel read 2026-11-23) |
-| `chosen_t` is a string; `'%.2f' %` on it fails | `experiments/Crucible/j1l_r1/decide.py` l. 81 (`select`); checked in Python 3.13 |
+| `chosen_t` is a string; `'%.2f' %` on it fails | `experiments/Crucible/j1l_r1/decide.py` l. 78 (`select`); checked in Python 3.13 |
 | The gate implements L-A5, L-A16, L-A17, Q-R2-3 and S's α | `gate.py --selftest` (9 fixtures) |
 | icx4's class-weight hook and its log line | `trillium/icx4/lib/icx4_trainers.py` l. 29–39 |
 | The merged scripts' interfaces | §6.1, read at `dev` `db02b25` |
@@ -669,7 +669,7 @@ P=nnUNetResEncUNetPlans_60G_iso05
 mkdir -p $nnUNet_preprocessed/Dataset715_ICX4 && cp $M/plans.json $nnUNet_preprocessed/Dataset715_ICX4/$P.json
 nnUNetv2_move_plans_between_datasets -s 715 -t 718 -sp $P -tp $P
 cp $M/dataset_fingerprint.json $nnUNet_preprocessed/Dataset718_J1L/
-python -m janus1l.plans_check $M/plans.json $nnUNet_preprocessed/Dataset718_J1L/$P.json   # B2 check; refuses on any other difference
+./janus1l plans-check $M/plans.json $nnUNet_preprocessed/Dataset718_J1L/$P.json   # #306's B2 check; refuses on any other difference
 nnUNetv2_preprocess -d 718 -plans_name $P -c 3d_fullres -np 10
 # splits_final.json: [{train: 620, val: 10 lowest tuning-60 ids}] x 2
 ```

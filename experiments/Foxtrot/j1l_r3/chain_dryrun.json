@@ -1,0 +1,345 @@
+{
+ "note": "synthetic phantoms only; no real image, label or score was read",
+ "steps": [
+  {
+   "step": "J0.threshold_export",
+   "ok": true,
+   "returncode": 0,
+   "expect_fail": false,
+   "seconds": 7.5,
+   "tail": [
+    "[threshold_export] 160 cases x 5 thresholds -> /tmp/j1l_dryrun_aek8rs8o/j1l_job0/thr"
+   ]
+  },
+  {
+   "step": "J0.splits_layout",
+   "ok": true,
+   "returncode": 0,
+   "expect_fail": false,
+   "seconds": 0.0,
+   "tail": []
+  },
+  {
+   "step": "J0.score_tuning60_t0.50",
+   "ok": true,
+   "returncode": 0,
+   "expect_fail": false,
+   "seconds": 12.5,
+   "tail": []
+  },
+  {
+   "step": "J0.score_tuning60_t0.45",
+   "ok": true,
+   "returncode": 0,
+   "expect_fail": false,
+   "seconds": 13.6,
+   "tail": []
+  },
+  {
+   "step": "J0.score_tuning60_t0.40",
+   "ok": true,
+   "returncode": 0,
+   "expect_fail": false,
+   "seconds": 12.8,
+   "tail": []
+  },
+  {
+   "step": "J0.score_tuning60_t0.35",
+   "ok": true,
+   "returncode": 0,
+   "expect_fail": false,
+   "seconds": 12.1,
+   "tail": []
+  },
+  {
+   "step": "J0.score_tuning60_t0.30",
+   "ok": true,
+   "returncode": 0,
+   "expect_fail": false,
+   "seconds": 13.2,
+   "tail": []
+  },
+  {
+   "step": "J0.decide_select",
+   "ok": true,
+   "returncode": 0,
+   "expect_fail": false,
+   "seconds": 0.2,
+   "tail": []
+  },
+  {
+   "step": "J0.score_locked100_argmax",
+   "ok": true,
+   "returncode": 0,
+   "expect_fail": false,
+   "seconds": 23.5,
+   "tail": []
+  },
+  {
+   "step": "J0.print_block",
+   "ok": true,
+   "returncode": 0,
+   "expect_fail": false,
+   "seconds": 0.0,
+   "tail": [
+    "[job0] tuning60 t=0.40: tF1 0.9892 Dice 0.9923 FP 0.00 qualifies True",
+    "[job0] tuning60 t=0.35: tF1 0.9892 Dice 0.9997 FP 0.00 qualifies True",
+    "[job0] tuning60 t=0.30: tF1 0.9892 Dice 1.0000 FP 0.00 qualifies True",
+    "[job0] locked100 Janus 0 argmax: decisive macro 0.982 [0.9719, 0.991] Dice 0.7235"
+   ]
+  },
+  {
+   "step": "L0.split_val80",
+   "ok": true,
+   "returncode": 0,
+   "expect_fail": false,
+   "seconds": 0.0,
+   "tail": []
+  },
+  {
+   "step": "L0.score_pair",
+   "ok": true,
+   "returncode": 0,
+   "expect_fail": false,
+   "seconds": 33.5,
+   "tail": []
+  },
+  {
+   "step": "L0.l0_check (phantoms are not Janus 0: clauses 1-2 must FAIL)",
+   "ok": true,
+   "returncode": 3,
+   "expect_fail": true,
+   "seconds": 0.0,
+   "tail": [
+    " \"scores_sha256\": \"98b47d04aea5af6d3dd2f805d455815b03de6018474c65ea7c0e9217c68239ea\"",
+    "}",
+    "sha256 79784cc6d05e890eec761c90a08e55c15fd67eb4eea58ce3325c2fb979835fba",
+    "L0 FAIL: stop (L-A8)"
+   ]
+  },
+  {
+   "step": "T.as_written_in_master_plan",
+   "ok": true,
+   "returncode": 1,
+   "expect_fail": true,
+   "seconds": 0.0,
+   "tail": [
+    "  File \"<string>\", line 1, in <module>",
+    "    import json;print('%.2f' % json.load(open('/tmp/j1l_dryrun_aek8rs8o/j1l_job0/select.json'))['chosen_t'])",
+    "                      ~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~",
+    "TypeError: must be real number, not str"
+   ]
+  },
+  {
+   "step": "T.corrected",
+   "ok": true,
+   "returncode": 0,
+   "expect_fail": false,
+   "seconds": 0.0,
+   "tail": [
+    "0.35"
+   ]
+  },
+  {
+   "step": "DC.error_decomp_t0.35",
+   "ok": true,
+   "returncode": 0,
+   "expect_fail": false,
+   "seconds": 13.2,
+   "tail": []
+  },
+  {
+   "step": "DC.error_decomp_t0.50",
+   "ok": true,
+   "returncode": 0,
+   "expect_fail": false,
+   "seconds": 12.7,
+   "tail": []
+  },
+  {
+   "step": "DC.mde_from_job0",
+   "ok": true,
+   "returncode": 0,
+   "expect_fail": false,
+   "seconds": 0.1,
+   "tail": []
+  },
+  {
+   "step": "RT.export_janus0_at_tstar",
+   "ok": true,
+   "returncode": 0,
+   "expect_fail": false,
+   "seconds": 1.7,
+   "tail": [
+    "[threshold_export] 60 cases x 1 thresholds -> /tmp/j1l_dryrun_aek8rs8o/j1l_job0/d60_j0"
+   ]
+  },
+  {
+   "step": "RT.export_C_grid",
+   "ok": true,
+   "returncode": 0,
+   "expect_fail": false,
+   "seconds": 3.5,
+   "tail": [
+    "[threshold_export] 60 cases x 8 thresholds -> /tmp/j1l_dryrun_aek8rs8o/j1l_job0/d60_C"
+   ]
+  },
+  {
+   "step": "RT.rule_t",
+   "ok": true,
+   "returncode": 0,
+   "expect_fail": false,
+   "seconds": 13.1,
+   "tail": []
+  },
+  {
+   "step": "J0T.job_stops_at_L0_fail",
+   "ok": true,
+   "returncode": 3,
+   "expect_fail": true,
+   "seconds": 37.1,
+   "tail": [
+    " \"scores_sha256\": \"8120640f303ef9f015f66b79c0c01bd9bcaf0e15196d2c0ed0829d628faf4653\"",
+    "}",
+    "sha256 6a57ee3cd0937466bb0579c4fe6ca92de26088f3f7a46be8d2ae3720fca7a155",
+    "L0 FAIL: stop (L-A8)"
+   ]
+  },
+  {
+   "step": "J0T.refuses_wrong_select_sha256",
+   "ok": true,
+   "returncode": 1,
+   "expect_fail": true,
+   "seconds": 0.0,
+   "tail": [
+    "sha256sum: 'standard input': no properly formatted checksum lines found"
+   ]
+  },
+  {
+   "step": "J0T.step3_then_rule_t_same_t_C",
+   "ok": true,
+   "returncode": 0,
+   "expect_fail": false,
+   "seconds": 14.4,
+   "tail": [
+    "[threshold_export] 60 cases x 1 thresholds -> /tmp/j1l_dryrun_aek8rs8o/j1l_j0t/d60_j0",
+    "t_C 0.35 0.35"
+   ]
+  }
+ ],
+ "select": {
+  "chosen_t": "0.35",
+  "chosen_t_type": "str",
+  "per_threshold": {
+   "0.50": {
+    "dice": 0.725,
+    "tf1": 0.9859,
+    "qualifies": true
+   },
+   "0.45": {
+    "dice": 0.9416,
+    "tf1": 0.9892,
+    "qualifies": true
+   },
+   "0.40": {
+    "dice": 0.9923,
+    "tf1": 0.9892,
+    "qualifies": true
+   },
+   "0.35": {
+    "dice": 0.9997,
+    "tf1": 0.9892,
+    "qualifies": true
+   },
+   "0.30": {
+    "dice": 1.0,
+    "tf1": 0.9892,
+    "qualifies": true
+   }
+  }
+ },
+ "l0": {
+  "verdict": "L0 FAIL: stop (L-A8)",
+  "clause3": {
+   "n_agree": 80,
+   "n_counted": 80,
+   "share": 1.0,
+   "need": 0.95,
+   "tol": 0.01,
+   "decisive_in_one_run_only": [],
+   "largest_abs_diff": [
+    [
+     "c0001",
+     0.0066
+    ],
+    [
+     "c0021",
+     0.0002
+    ],
+    [
+     "c0024",
+     0.0
+    ],
+    [
+     "c0038",
+     0.0
+    ],
+    [
+     "c0039",
+     0.0
+    ]
+   ],
+   "pass_": true
+  },
+  "posted_blocks_keys": {
+   "summary": [
+    "classes_without_centreline",
+    "decisive_macro_tf1",
+    "decisive_macro_tf1_ci",
+    "decisive_per_class",
+    "dice_mean",
+    "errors",
+    "flagged_per_class",
+    "fp_cases_le_1",
+    "fp_components_mean",
+    "macro_tf1_incl_flagged_not_decisive",
+    "macro_tf1_tol0_not_decisive",
+    "n_decisive_cases",
+    "n_errors",
+    "n_scored",
+    "n_with_aorta",
+    "provisional_cases"
+   ],
+   "paired": [
+    "case_ci",
+    "fp_diff",
+    "mean_diff_run2_minus_run1",
+    "n",
+    "seed_inclusive_ci",
+    "sigma_seed_estimate_1df"
+   ]
+  }
+ },
+ "rule_t": {
+  "t_star": 0.35,
+  "t_C": 0.35,
+  "dr_mm": {
+   "0.60": -0.3733,
+   "0.55": -0.0959,
+   "0.50": 0.0,
+   "0.45": 0.0,
+   "0.40": 0.0,
+   "0.35": 0.0,
+   "0.30": 0.0,
+   "0.25": 0.0
+  },
+  "t_star_dice_bound": true
+ },
+ "mde_keys": [
+  "mde",
+  "n_decisive",
+  "sd_case_dice",
+  "sd_case_tf1"
+ ],
+ "all_ok": true
+}

@@ -265,3 +265,45 @@ def test_nothing_on_the_lan_address_names_the_main_hop(servers, tmp_path):
     trust = _run(_step(SQ14, "Trust the host keys"), env)
     assert trust.returncode != 0
     assert "main-server hop: no host key" in trust.stderr
+
+
+@pytest.fixture
+def lingering_gateway_hop(tmp_path):
+    # ssh SIGHUPs its ProxyCommand and exits without waiting for it, so the gateway hop
+    # (sshpass, ssh -W) can outlive a finished remote command: CI saw it twice (#352/#353,
+    # output printed, then no EOF). Make that certain: a shim in front of the real sshpass
+    # leaves a process behind from each gateway hop, holding the stderr it inherited. In
+    # its own session, as sshpass puts ssh -W: the hangup of the main ssh's terminal
+    # reaches only that ssh's process group.
+    real = shutil.which("sshpass")
+    shim = tmp_path / "shim"
+    shim.mkdir()
+    pids = tmp_path / "linger.pids"
+    (shim / "sshpass").write_text(
+        "#!/bin/bash\n"
+        'case " $* " in *" -W "*)\n'
+        f'  setsid sleep 300 </dev/null >/dev/null & echo $! >> {pids} ;;\n'
+        'esac\n'
+        f'exec {real} "$@"\n')
+    (shim / "sshpass").chmod(0o755)
+    yield f"{shim}:{os.environ['PATH']}"
+    if pids.exists():
+        for pid in pids.read_text().split():
+            _sh("kill", pid, check=False)
+    assert pids.exists(), "the shim never ran: the test proved nothing"
+
+
+def test_a_lingering_gateway_hop_does_not_hold_the_output(servers, tmp_path,
+                                                          lingering_gateway_hop):
+    env = _env(servers, tmp_path, PATH=lingering_gateway_hop)
+    assert _run(_step(SERVER_SSH, "Trust the host keys"), env).returncode == 0
+    assert _run(_step(SERVER_SSH, "Write the ssh helper"), env).returncode == 0
+    # Read to EOF, as the test above and the workflows' `| tee` do.
+    plain = subprocess.run([str(tmp_path / "remote"), "id -un"], env=env,
+                           capture_output=True, text=True, timeout=30)
+    assert plain.returncode == 0 and plain.stdout.strip() == USER, plain.stderr
+    run = _run(_step(SQ14, "Run the backup step"),
+               {**env, "CMD": "backup-status", "SFTP_PORT": "1", "SFTP_KNOWN_HOSTS": "",
+                "LAN_ADDRESS": ""})
+    assert run.returncode == 0, run.stdout + run.stderr
+    assert f"STUB uid=0 user={USER} args=backup-status" in run.stdout

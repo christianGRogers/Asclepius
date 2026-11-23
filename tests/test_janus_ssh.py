@@ -8,6 +8,7 @@ The end-to-end proof, against two real sshd, is tests/test_janus_ssh_e2e.py (CI 
 import re
 import shutil
 import subprocess
+import time
 from pathlib import Path
 
 import pytest
@@ -134,6 +135,11 @@ case "$(basename "$0")" in
   ssh-keygen) echo "256 SHA256:stub host (ED25519)" ;;
   sshpass) shift; exec "$@" ;;
   ssh)
+    # A gateway hop that outlives the session, holding whatever stderr it inherited.
+    if [ -n "${STUB_LINGER:-}" ] && [[ " $* " == *" -W "* ]]; then
+      echo "gateway hop noise" >&2
+      sleep "$STUB_LINGER" </dev/null >/dev/null & echo $! > "$STUB_LOG.linger"
+    fi
     for a in "$@"; do case "$a" in
       UserKnownHostsFile=*known_hosts_janus) kh=${a#UserKnownHostsFile=} ;;
       StrictHostKeyChecking=accept-new) accept=1 ;;
@@ -258,3 +264,21 @@ def test_proxy_runs_its_own_sshpass_for_the_gateway(stubbed):
     assert "-e ssh -q -F none" in lines[-2]
     assert "StrictHostKeyChecking=yes" in lines[-1] and "known_hosts_gateway" in lines[-1]
     assert lines[-1].endswith("-p 40022 -W 192.0.2.77:22 deployer@gw.secret.example")
+
+
+def test_a_lingering_gateway_hop_does_not_hold_the_output(stubbed, tmp_path):
+    # ssh SIGHUPs its ProxyCommand and exits without waiting, so the gateway hop can
+    # outlive a finished remote command. It must not hold the session's stderr: a caller
+    # reading the output to EOF would hang after the command returned (#352/#353).
+    assert stubbed("trust")[0].returncode == 0
+    t0 = time.monotonic()
+    try:
+        done, _ = stubbed("proxy", str(stubbed.dir / "janus-gateway.env"), "192.0.2.77", "22",
+                          STUB_LINGER="60")
+    finally:
+        linger = tmp_path / "log.linger"
+        if linger.exists():
+            subprocess.run(["kill", linger.read_text().strip()], check=False)
+    assert done.returncode == 0, done.stderr
+    assert time.monotonic() - t0 < 20
+    assert "gateway hop noise" not in done.stderr

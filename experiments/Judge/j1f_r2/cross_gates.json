@@ -1,0 +1,783 @@
+{
+ "sets": {
+  "ruled": {
+   "D1": [
+    0.8,
+    0.9189999999999999,
+    0.85
+   ],
+   "D2": [
+    0.8,
+    0.844,
+    0.85
+   ],
+   "OM1": [
+    0.8,
+    0.8939999999999999,
+    0.85
+   ],
+   "OM2": [
+    0.8,
+    0.825,
+    0.85
+   ],
+   "PDA": [
+    0.8,
+    0.938,
+    0.85
+   ],
+   "PLB": [
+    0.8,
+    0.9119999999999999,
+    0.85
+   ]
+  },
+  "Atlas P1": {
+   "D1": [
+    0.81,
+    0.94,
+    0.83
+   ],
+   "D2": [
+    0.76,
+    0.84,
+    0.86
+   ],
+   "OM1": [
+    0.75,
+    0.9,
+    0.78
+   ],
+   "OM2": [
+    0.6,
+    0.81,
+    0.78
+   ],
+   "PDA": [
+    0.89,
+    0.97,
+    0.9
+   ],
+   "PLB": [
+    0.89,
+    0.94,
+    0.92
+   ]
+  },
+  "Bridge": {
+   "D1": [
+    0.8,
+    0.919,
+    0.83
+   ],
+   "D2": [
+    0.8,
+    0.83,
+    0.86
+   ],
+   "OM1": [
+    0.8,
+    0.89,
+    0.76
+   ],
+   "OM2": [
+    0.73,
+    0.81,
+    0.77
+   ],
+   "PDA": [
+    0.8,
+    0.938,
+    0.89
+   ],
+   "PLB": [
+    0.8,
+    0.912,
+    0.92
+   ]
+  },
+  "Crucible R2": {
+   "D1": [
+    0.85,
+    0.9189999999999999,
+    0.8
+   ],
+   "D2": [
+    0.79,
+    0.844,
+    0.8
+   ],
+   "OM1": [
+    0.84,
+    0.8939999999999999,
+    0.8
+   ],
+   "OM2": [
+    0.72,
+    0.825,
+    0.8
+   ],
+   "PDA": [
+    0.86,
+    0.938,
+    0.8
+   ],
+   "PLB": [
+    0.85,
+    0.9119999999999999,
+    0.8
+   ]
+  },
+  "Delta F2-1": {
+   "D1": [
+    0.75,
+    0.9189999999999999,
+    0.8
+   ],
+   "D2": [
+    0.75,
+    0.844,
+    0.8
+   ],
+   "OM1": [
+    0.75,
+    0.8939999999999999,
+    0.8
+   ],
+   "OM2": [
+    0.75,
+    0.825,
+    0.8
+   ],
+   "PDA": [
+    0.75,
+    0.938,
+    0.8
+   ],
+   "PLB": [
+    0.75,
+    0.9119999999999999,
+    0.8
+   ]
+  },
+  "Foxtrot R2": {
+   "D1": [
+    0.8,
+    0.9189999999999999,
+    0.85
+   ],
+   "D2": [
+    0.8,
+    0.844,
+    0.817
+   ],
+   "OM1": [
+    0.8,
+    0.8939999999999999,
+    0.85
+   ],
+   "OM2": [
+    0.744,
+    0.825,
+    0.744
+   ],
+   "PDA": [
+    0.8,
+    0.938,
+    0.85
+   ],
+   "PLB": [
+    0.8,
+    0.9119999999999999,
+    0.85
+   ]
+  },
+  "Judge J2": {
+   "D1": [
+    0.8,
+    0.919,
+    0.8
+   ],
+   "D2": [
+    0.75,
+    0.83,
+    0.8
+   ],
+   "OM1": [
+    0.75,
+    0.89,
+    0.75
+   ],
+   "OM2": [
+    0.6,
+    0.8,
+    0.75
+   ],
+   "PDA": [
+    0.8,
+    0.938,
+    0.85
+   ],
+   "PLB": [
+    0.8,
+    0.912,
+    0.85
+   ]
+  }
+ },
+ "results": {
+  "ruled": {
+   "Bridge symmetric": {
+    "per_class_fail": {
+     "D1": 0.093,
+     "D2": 0.08,
+     "OM1": 0.505,
+     "OM2": 0.42,
+     "PDA": 0.0,
+     "PLB": 0.013
+    },
+    "verdict_fail": 0.0416
+   },
+   "Bridge misses_only": {
+    "per_class_fail": {
+     "D1": 0.093,
+     "D2": 0.313,
+     "OM1": 0.517,
+     "OM2": 0.945,
+     "PDA": 0.001,
+     "PLB": 0.015
+    },
+    "verdict_fail": 0.2054
+   },
+   "Bridge 2x errors (power)": {
+    "per_class_fail": {
+     "D1": 0.939,
+     "D2": 0.598,
+     "OM1": 0.999,
+     "OM2": 0.992,
+     "PDA": 0.141,
+     "PLB": 0.024
+    },
+    "verdict_fail": 0.9765
+   },
+   "Atlas worst of 9 scenarios": {
+    "per_class_fail": {
+     "D1": 0.112,
+     "D2": 0.212,
+     "OM1": 0.483,
+     "OM2": 0.821,
+     "PDA": 0.0,
+     "PLB": 0.004
+    },
+    "verdict_fail": 0.063
+   },
+   "Atlas power omission +0.10": {
+    "per_class_fail": {
+     "D1": 0.942,
+     "D2": 0.768,
+     "OM1": 0.887,
+     "OM2": 0.916,
+     "PDA": 0.924,
+     "PLB": 0.894
+    },
+    "verdict_fail": 0.999
+   },
+   "Atlas power misnaming 0.10": {
+    "per_class_fail": {
+     "D1": 0.5,
+     "D2": 0.383,
+     "OM1": 0.721,
+     "OM2": 0.768,
+     "PDA": 0.228,
+     "PLB": 0.156
+    },
+    "verdict_fail": 0.598
+   },
+   "Atlas power misnaming 0.20": {
+    "per_class_fail": {
+     "D1": 0.986,
+     "D2": 0.927,
+     "OM1": 0.989,
+     "OM2": 0.965,
+     "PDA": 0.971,
+     "PLB": 0.942
+    },
+    "verdict_fail": 1.0
+   }
+  },
+  "Atlas P1": {
+   "Bridge symmetric": {
+    "per_class_fail": {
+     "D1": 0.064,
+     "D2": 0.064,
+     "OM1": 0.072,
+     "OM2": 0.06,
+     "PDA": 0.082,
+     "PLB": 0.118
+    },
+    "verdict_fail": 0.0075
+   },
+   "Bridge misses_only": {
+    "per_class_fail": {
+     "D1": 0.066,
+     "D2": 0.118,
+     "OM1": 0.076,
+     "OM2": 0.162,
+     "PDA": 0.079,
+     "PLB": 0.113
+    },
+    "verdict_fail": 0.017
+   },
+   "Bridge 2x errors (power)": {
+    "per_class_fail": {
+     "D1": 0.859,
+     "D2": 0.549,
+     "OM1": 0.954,
+     "OM2": 0.596,
+     "PDA": 0.678,
+     "PLB": 0.485
+    },
+    "verdict_fail": 0.9358
+   },
+   "Atlas worst of 9 scenarios": {
+    "per_class_fail": {
+     "D1": 0.061,
+     "D2": 0.066,
+     "OM1": 0.08,
+     "OM2": 0.069,
+     "PDA": 0.058,
+     "PLB": 0.052
+    },
+    "verdict_fail": 0.003
+   },
+   "Atlas power omission +0.10": {
+    "per_class_fail": {
+     "D1": 0.992,
+     "D2": 0.599,
+     "OM1": 0.866,
+     "OM2": 0.249,
+     "PDA": 0.995,
+     "PLB": 0.975
+    },
+    "verdict_fail": 1.0
+   },
+   "Atlas power misnaming 0.10": {
+    "per_class_fail": {
+     "D1": 0.319,
+     "D2": 0.421,
+     "OM1": 0.166,
+     "OM2": 0.186,
+     "PDA": 0.758,
+     "PLB": 0.877
+    },
+    "verdict_fail": 0.582
+   },
+   "Atlas power misnaming 0.20": {
+    "per_class_fail": {
+     "D1": 0.954,
+     "D2": 0.942,
+     "OM1": 0.822,
+     "OM2": 0.645,
+     "PDA": 1.0,
+     "PLB": 1.0
+    },
+    "verdict_fail": 0.998
+   }
+  },
+  "Bridge": {
+   "Bridge symmetric": {
+    "per_class_fail": {
+     "D1": 0.033,
+     "D2": 0.049,
+     "OM1": 0.029,
+     "OM2": 0.087,
+     "PDA": 0.023,
+     "PLB": 0.044
+    },
+    "verdict_fail": 0.0012
+   },
+   "Bridge misses_only": {
+    "per_class_fail": {
+     "D1": 0.036,
+     "D2": 0.293,
+     "OM1": 0.031,
+     "OM2": 0.762,
+     "PDA": 0.021,
+     "PLB": 0.042
+    },
+    "verdict_fail": 0.0312
+   },
+   "Bridge 2x errors (power)": {
+    "per_class_fail": {
+     "D1": 0.854,
+     "D2": 0.647,
+     "OM1": 0.899,
+     "OM2": 0.874,
+     "PDA": 0.544,
+     "PLB": 0.443
+    },
+    "verdict_fail": 0.955
+   },
+   "Atlas worst of 9 scenarios": {
+    "per_class_fail": {
+     "D1": 0.042,
+     "D2": 0.186,
+     "OM1": 0.333,
+     "OM2": 0.554,
+     "PDA": 0.01,
+     "PLB": 0.031
+    },
+    "verdict_fail": 0.035
+   },
+   "Atlas power omission +0.10": {
+    "per_class_fail": {
+     "D1": 0.942,
+     "D2": 0.686,
+     "OM1": 0.822,
+     "OM2": 0.757,
+     "PDA": 0.924,
+     "PLB": 0.894
+    },
+    "verdict_fail": 0.996
+   },
+   "Atlas power misnaming 0.10": {
+    "per_class_fail": {
+     "D1": 0.311,
+     "D2": 0.433,
+     "OM1": 0.08,
+     "OM2": 0.364,
+     "PDA": 0.655,
+     "PLB": 0.875
+    },
+    "verdict_fail": 0.582
+   },
+   "Atlas power misnaming 0.20": {
+    "per_class_fail": {
+     "D1": 0.953,
+     "D2": 0.943,
+     "OM1": 0.69,
+     "OM2": 0.695,
+     "PDA": 1.0,
+     "PLB": 1.0
+    },
+    "verdict_fail": 0.998
+   }
+  },
+  "Crucible R2": {
+   "Bridge symmetric": {
+    "per_class_fail": {
+     "D1": 0.006,
+     "D2": 0.065,
+     "OM1": 0.136,
+     "OM2": 0.147,
+     "PDA": 0.0,
+     "PLB": 0.014
+    },
+    "verdict_fail": 0.0018
+   },
+   "Bridge misses_only": {
+    "per_class_fail": {
+     "D1": 0.007,
+     "D2": 0.22,
+     "OM1": 0.139,
+     "OM2": 0.68,
+     "PDA": 0.0,
+     "PLB": 0.015
+    },
+    "verdict_fail": 0.0252
+   },
+   "Bridge 2x errors (power)": {
+    "per_class_fail": {
+     "D1": 0.618,
+     "D2": 0.302,
+     "OM1": 0.98,
+     "OM2": 0.87,
+     "PDA": 0.008,
+     "PLB": 0.015
+    },
+    "verdict_fail": 0.659
+   },
+   "Atlas worst of 9 scenarios": {
+    "per_class_fail": {
+     "D1": 0.293,
+     "D2": 0.155,
+     "OM1": 0.677,
+     "OM2": 0.438,
+     "PDA": 0.004,
+     "PLB": 0.004
+    },
+    "verdict_fail": 0.134
+   },
+   "Atlas power omission +0.10": {
+    "per_class_fail": {
+     "D1": 0.945,
+     "D2": 0.731,
+     "OM1": 0.916,
+     "OM2": 0.668,
+     "PDA": 0.924,
+     "PLB": 0.894
+    },
+    "verdict_fail": 0.999
+   },
+   "Atlas power misnaming 0.10": {
+    "per_class_fail": {
+     "D1": 0.105,
+     "D2": 0.136,
+     "OM1": 0.304,
+     "OM2": 0.396,
+     "PDA": 0.016,
+     "PLB": 0.014
+    },
+    "verdict_fail": 0.044
+   },
+   "Atlas power misnaming 0.20": {
+    "per_class_fail": {
+     "D1": 0.836,
+     "D2": 0.676,
+     "OM1": 0.917,
+     "OM2": 0.782,
+     "PDA": 0.702,
+     "PLB": 0.635
+    },
+    "verdict_fail": 0.974
+   }
+  },
+  "Delta F2-1": {
+   "Bridge symmetric": {
+    "per_class_fail": {
+     "D1": 0.007,
+     "D2": 0.063,
+     "OM1": 0.135,
+     "OM2": 0.167,
+     "PDA": 0.0,
+     "PLB": 0.013
+    },
+    "verdict_fail": 0.0021
+   },
+   "Bridge misses_only": {
+    "per_class_fail": {
+     "D1": 0.007,
+     "D2": 0.091,
+     "OM1": 0.137,
+     "OM2": 0.783,
+     "PDA": 0.0,
+     "PLB": 0.014
+    },
+    "verdict_fail": 0.0127
+   },
+   "Bridge 2x errors (power)": {
+    "per_class_fail": {
+     "D1": 0.614,
+     "D2": 0.193,
+     "OM1": 0.982,
+     "OM2": 0.908,
+     "PDA": 0.007,
+     "PLB": 0.015
+    },
+    "verdict_fail": 0.6342
+   },
+   "Atlas worst of 9 scenarios": {
+    "per_class_fail": {
+     "D1": 0.007,
+     "D2": 0.087,
+     "OM1": 0.128,
+     "OM2": 0.556,
+     "PDA": 0.0,
+     "PLB": 0.004
+    },
+    "verdict_fail": 0.004
+   },
+   "Atlas power omission +0.10": {
+    "per_class_fail": {
+     "D1": 0.942,
+     "D2": 0.683,
+     "OM1": 0.866,
+     "OM2": 0.763,
+     "PDA": 0.924,
+     "PLB": 0.894
+    },
+    "verdict_fail": 0.998
+   },
+   "Atlas power misnaming 0.10": {
+    "per_class_fail": {
+     "D1": 0.102,
+     "D2": 0.131,
+     "OM1": 0.27,
+     "OM2": 0.451,
+     "PDA": 0.016,
+     "PLB": 0.014
+    },
+    "verdict_fail": 0.048
+   },
+   "Atlas power misnaming 0.20": {
+    "per_class_fail": {
+     "D1": 0.836,
+     "D2": 0.673,
+     "OM1": 0.908,
+     "OM2": 0.801,
+     "PDA": 0.702,
+     "PLB": 0.635
+    },
+    "verdict_fail": 0.973
+   }
+  },
+  "Foxtrot R2": {
+   "Bridge symmetric": {
+    "per_class_fail": {
+     "D1": 0.093,
+     "D2": 0.064,
+     "OM1": 0.503,
+     "OM2": 0.118,
+     "PDA": 0.001,
+     "PLB": 0.014
+    },
+    "verdict_fail": 0.0136
+   },
+   "Bridge misses_only": {
+    "per_class_fail": {
+     "D1": 0.097,
+     "D2": 0.305,
+     "OM1": 0.513,
+     "OM2": 0.773,
+     "PDA": 0.001,
+     "PLB": 0.014
+    },
+    "verdict_fail": 0.1657
+   },
+   "Bridge 2x errors (power)": {
+    "per_class_fail": {
+     "D1": 0.941,
+     "D2": 0.441,
+     "OM1": 0.999,
+     "OM2": 0.858,
+     "PDA": 0.14,
+     "PLB": 0.024
+    },
+    "verdict_fail": 0.9063
+   },
+   "Atlas worst of 9 scenarios": {
+    "per_class_fail": {
+     "D1": 0.112,
+     "D2": 0.212,
+     "OM1": 0.483,
+     "OM2": 0.556,
+     "PDA": 0.0,
+     "PLB": 0.004
+    },
+    "verdict_fail": 0.041
+   },
+   "Atlas power omission +0.10": {
+    "per_class_fail": {
+     "D1": 0.942,
+     "D2": 0.768,
+     "OM1": 0.887,
+     "OM2": 0.763,
+     "PDA": 0.924,
+     "PLB": 0.894
+    },
+    "verdict_fail": 0.999
+   },
+   "Atlas power misnaming 0.10": {
+    "per_class_fail": {
+     "D1": 0.5,
+     "D2": 0.213,
+     "OM1": 0.721,
+     "OM2": 0.354,
+     "PDA": 0.228,
+     "PLB": 0.156
+    },
+    "verdict_fail": 0.365
+   },
+   "Atlas power misnaming 0.20": {
+    "per_class_fail": {
+     "D1": 0.986,
+     "D2": 0.802,
+     "OM1": 0.989,
+     "OM2": 0.628,
+     "PDA": 0.971,
+     "PLB": 0.942
+    },
+    "verdict_fail": 1.0
+   }
+  },
+  "Judge J2": {
+   "Bridge symmetric": {
+    "per_class_fail": {
+     "D1": 0.008,
+     "D2": 0.018,
+     "OM1": 0.021,
+     "OM2": 0.024,
+     "PDA": 0.001,
+     "PLB": 0.013
+    },
+    "verdict_fail": 0.0
+   },
+   "Bridge misses_only": {
+    "per_class_fail": {
+     "D1": 0.006,
+     "D2": 0.047,
+     "OM1": 0.021,
+     "OM2": 0.116,
+     "PDA": 0.001,
+     "PLB": 0.015
+    },
+    "verdict_fail": 0.0003
+   },
+   "Bridge 2x errors (power)": {
+    "per_class_fail": {
+     "D1": 0.612,
+     "D2": 0.155,
+     "OM1": 0.85,
+     "OM2": 0.434,
+     "PDA": 0.134,
+     "PLB": 0.025
+    },
+    "verdict_fail": 0.3701
+   },
+   "Atlas worst of 9 scenarios": {
+    "per_class_fail": {
+     "D1": 0.028,
+     "D2": 0.037,
+     "OM1": 0.055,
+     "OM2": 0.041,
+     "PDA": 0.0,
+     "PLB": 0.004
+    },
+    "verdict_fail": 0.0
+   },
+   "Atlas power omission +0.10": {
+    "per_class_fail": {
+     "D1": 0.942,
+     "D2": 0.495,
+     "OM1": 0.788,
+     "OM2": 0.201,
+     "PDA": 0.924,
+     "PLB": 0.894
+    },
+    "verdict_fail": 0.979
+   },
+   "Atlas power misnaming 0.10": {
+    "per_class_fail": {
+     "D1": 0.102,
+     "D2": 0.086,
+     "OM1": 0.056,
+     "OM2": 0.092,
+     "PDA": 0.228,
+     "PLB": 0.156
+    },
+    "verdict_fail": 0.02
+   },
+   "Atlas power misnaming 0.20": {
+    "per_class_fail": {
+     "D1": 0.836,
+     "D2": 0.657,
+     "OM1": 0.609,
+     "OM2": 0.474,
+     "PDA": 0.971,
+     "PLB": 0.942
+    },
+    "verdict_fail": 0.971
+   }
+  }
+ }
+}

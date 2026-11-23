@@ -21,7 +21,7 @@ PRE-REGISTERED RULE (written before the first run; Bridge v3 §3):
     (V2) in every class, the voxel-weighted root_view share falls by <= 5 percentage points.
   Otherwise it FAILS, and S at 0.45 mm needs a larger patch (288^3 = 129.6 mm) or is not run at 0.45 mm.
 
-Usage: python3 view_check.py <dir of the 620 labels, cNNNN.nii.gz> [n_proc] > view_check.json
+Usage: python3 view_check.py <dir of the 620 labels, cNNNN.nii.gz> [n_proc] > view_check_full.json  (commit only its summary)
        python3 view_check.py --selftest
 """
 from __future__ import annotations

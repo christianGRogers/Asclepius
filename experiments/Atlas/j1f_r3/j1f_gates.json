@@ -1,0 +1,12 @@
+{
+ "what": "Janus 1-F B gate lines (F-A15), read by j1f_scorer.gate; the launcher refuses a file whose sha256 differs from the value posted on #303",
+ "k_of_6": 4,
+ "lines": {
+  "D1": {"recall": 0.81, "presence": 0.94, "naming": 0.83},
+  "D2": {"recall": 0.76, "presence": 0.84, "naming": 0.86},
+  "OM1": {"recall": 0.75, "presence": 0.90, "naming": 0.78},
+  "OM2": {"recall": 0.60, "presence": 0.81, "naming": 0.78},
+  "PDA": {"recall": 0.89, "presence": 0.97, "naming": 0.90},
+  "PLB": {"recall": 0.89, "presence": 0.94, "naming": 0.92}
+ }
+}

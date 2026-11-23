@@ -1,0 +1,1 @@
+{"case": "c0099", "shape": [512, 512, 206], "voxels": 54001664, "channels": 13, "float32": {"npz_bytes": 2342608016, "uncompressed_bytes": 2808086528, "write_s": 96.0}, "float16": {"npz_bytes": 26587540, "uncompressed_bytes": 1404043264, "write_s": 5.1}}

@@ -1,0 +1,17 @@
+{
+  "what": "Janus 1-F stage-1 B lines (F-A15, Janus 1-F Round 2). Read by j1f_scorer.verdict; the launcher refuses a file whose sha256 differs from the value posted on #303.",
+  "source": "experiments/Atlas/j1f_r2/gate_sim.py proposed_lines: 5th percentile of a human-level model, worst of nine scenarios, rounded down to 0.01",
+  "lines": {
+    "D1":  {"recall": 0.81, "presence": 0.94, "naming": 0.83},
+    "D2":  {"recall": 0.76, "presence": 0.84, "naming": 0.86},
+    "OM1": {"recall": 0.75, "presence": 0.90, "naming": 0.78},
+    "OM2": {"recall": 0.60, "presence": 0.81, "naming": 0.78},
+    "PDA": {"recall": 0.89, "presence": 0.97, "naming": 0.90},
+    "PLB": {"recall": 0.89, "presence": 0.94, "naming": 0.92}
+  },
+  "k_of_6": 4,
+  "presence_mm": 5.0,
+  "tol_mm": 1.5,
+  "detect_fraction": 0.5,
+  "min_piece_vox": 20
+}

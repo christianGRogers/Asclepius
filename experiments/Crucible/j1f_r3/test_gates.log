@@ -1,0 +1,13 @@
+PASS OM2 recall 0.59: OM2 pass = False
+PASS OM2 recall 0.59: B still passes on the other five (n_pass 5)
+PASS OM2 recall 0.60: OM2 pass = True
+PASS OM2 recall 0.60: B still passes on the other five (n_pass 6)
+PASS OM2 recall 0.61: OM2 pass = True
+PASS OM2 recall 0.61: B still passes on the other five (n_pass 6)
+PASS D1, D2, OM2 failing: n_pass 3 < 4, B fails
+PASS naming of OM2 with 61 detected, 61 named = 1.0
+PASS PDA presence 0.93 < 0.97 fails (0.93)
+PASS tampered gates file refused
+PASS a file without PLB refused
+gates sha256 b4b88e73877e4644825b0aed06a11ae90b00134c1f8fc5441803422c2e7c8e3f
+ALL PASS

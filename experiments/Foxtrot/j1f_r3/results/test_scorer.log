@@ -14,3 +14,6 @@ PASS c0987 collapse fallbacks 0 (0)
 c0987 scored
 PASS c0287 collapse = D25 on every non-Other voxel (0 differ)
 PASS c0287 collapse fallbacks 0 (0)
+c0287 scored
+PASS c0920 collapse = D25 on every non-Other voxel (0 differ)
+PASS c0920 collapse fallbacks 0 (0)

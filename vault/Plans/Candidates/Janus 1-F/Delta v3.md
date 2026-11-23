@@ -8,7 +8,7 @@ updated: 2026-11-23
 issue: christianGRogers/Asclepius#303
 ---
 
-# Delta v3 (Janus 1-F): the scorer, the gate file and the stage-1 spec are frozen as tested code; two of F-A22's stage-2 lines fail a correct model and are re-defined; the plan is converged except for the lead's three answers, whose consequences are written for both outcomes
+# Delta v3 (Janus 1-F): the scorer, the gate file and the stage-1 spec are frozen as tested code; three of F-A22's stage-2 lines measure the wrong thing and are re-defined, with their numbers kept; the plan is converged except for the lead's three answers, whose consequences are written for both outcomes
 
 ## 0. Position and what changed
 
@@ -30,7 +30,7 @@ Where a measurement below shows a settled number misbehaving, I say so and propo
 - **D49 and D50** are in force. Neither changes a 1-F term (§7.3).
 
 **New evidence this round** (CPU; code in `experiments/Delta/j1f_r3/`; note:
-[[Delta - Janus 1-F round 3, the scorer and gates are frozen as tested code, and two of F-A22's stage-2 lines fail a correct model]]):
+[[Delta - Janus 1-F round 3, the scorer and gates are frozen as tested code, and three of F-A22's stage-2 lines fail a correct model]]):
 1. **The scorer of record exists and has a hash** (§1): `j1f_scorer.py`, sha256 **`d615c7e7…d808`**. 37 of 37
    checks pass on six training cases. Its reference pieces equal the pieces F-A15 was simulated on, case by case,
    on all 620 (§1.3).
@@ -45,8 +45,9 @@ Where a measurement below shows a settled number misbehaving, I say so and propo
 6. **The npz size** (§3.3): 3.75 GB raw per locked case (all 620 are 512 × 512 × ≤ 275); about 1.1–1.5 GB deflated on a
    synthetic estimate. A chunk of 10 needs ≤ 40 GB.
 7. **F-A22's numbers on the 620** (§5): with ImageCAS-X's own side branches standing in for stage-2 classes,
-   **literal L2 fails a perfect model in most cases**, and **L1 and K1 fail a model that paints an ostium one voxel
-   too wide**. Each gets a re-definition that a correct model passes and a real leak does not.
+   **literal L2 fails a perfect model** (only 9 % of cases pass). **L1 and K1 fail a model whose only error is an
+   ostium painted one voxel too wide** (L1 on the LCx 98 % of the time; K1 21 %). Each gets a re-definition that such
+   a model passes (0 %) and a real leak does not, with the ruled numbers kept.
 
 **Independence.** I did not open any other round-3 candidate of this track or any `exp/j1f-r3-*` branch. To read
 Step T's results I read #302, whose comment thread includes the five track-1-L round-3 summaries (mine among them).
@@ -95,14 +96,38 @@ F-A15's lines come from Atlas's `gate_sim.py`, which draws the number of pieces 
 `experiments/Atlas/j1f_r2/census_r2.jsonl`. `census620.py` ran the scorer of record's `pieces_of` on the converter of
 record's labels, for all 620 training cases.
 
-**RESULT_PIECES**
+**Result: the same pieces, case by case, on all 620.**
+- For every case and all eight branch classes, the list of pieces (voxel count and length to 0.01 mm) equals
+  `census_r2.jsonl`'s: **0 of 620 cases differ** (`census620_summary.json`, `pieces_vs_census_r2`).
+- The piece distribution F-A15 drew from is therefore exactly the scorer's:
+  - D1 611 × 1;
+  - D2 359 × 1;
+  - OM1 540 × 1;
+  - OM2 229 × 1;
+  - PDA 543 × 1, 62 × 2, 3 × 3;
+  - PLB 600 × 1, 10 × 2.
+- **Atlas's `gate_sim.py`, re-run on this census** (sorted by case), writes `gate_sim.json` and its stdout
+  **byte-identical** to the round-2 files F-A15 was frozen from (`gate_sim_on_census620.json`, `.out`).
+
+So the ruling's §7 row "the amended scorer's per-piece counts differ" does not fire, and **F-A15 stays frozen as
+ruled.** By construction the scorer's per-piece recall on a reference scored against itself is 1. The
+human-level recall distribution behind the lines is the simulation's, drawn on exactly these pieces.
 
 ### 1.4 The converter of record (F-A18)
 
 `j1f_labels.py`: Delta's round-1 converter with D47 (A) hard-wired (L-PDA → PDA, L-PLA → PLB; the switch removed) and
 F-A3's ignore rule ("Other" touching neither the LAD side nor the LCx side → 255).
 
-**RESULT_CONVERTER**
+**Result on all 620:**
+- **Converter counts:** `{'d3': 47, 'd4_to_lad': 2, 'other_lcx': 20, 'other_nearest': 1, 'other_ignore': 8}`. This is
+  exactly F-A18's and F0-r2's expected line.
+- **The collapse check:**
+  - `collapse4` (SegQueue's) equals `territory.to_four` (D25) on **every** voxel outside "Other" and 255: 0
+    mismatches.
+  - Inside "Other", 40 voxels in 2 cases differ. These are round 1's known 40 voxels: nearest-voxel assignment
+    against piece-wise side.
+- **SegQueue's contact rule:** 1 296 PDA/PLB components, 93 to the LCx, **0 fallbacks** (0 ties, 0 unattached). This
+  is round 2's figure, now on the converter of record.
 
 ## 2. `configs/janus1/j1f_gates.json` (§5 item 2)
 
@@ -352,11 +377,64 @@ painted too wide.
 - **K1:** 2 000 random 20-case draws (the fit check's size), and the 20 fit-check cases themselves.
 - **Bounds:** F-A22's, one-sided 1.25 % by case bootstrap.
 
-**RESULT_STAGE2**
+**Results** (`census620_summary.json`; P = probability over 2 000 draws):
+
+| Gate (as ruled) | Perfect stand-in (k = 0) | Ostium 1 voxel wide (k = 1) | 2 voxels (k = 2) |
+|---|---|---|---|
+| **L1** 0.02, upper bound | passes (share 0) | LAD 0.015, **LCx 0.020**, RCA 0.010 pooled; **P(fail) LCx 0.98** | LAD 0.038, LCx 0.048, RCA 0.018; P(fail) 1.00 / 1.00 / 0.31 |
+| **L2** literal (stage-2 voxel > 30 mm from the nearest stage-1 voxel) | **only 9 % of cases pass**; per-case max distance median 41 mm, p95 54.5 mm; P(fail) 1.00 | the same | the same |
+| **K1** 0.05, 20 cases | passes (share 0) | LAD 0.046, LCx 0.044 pooled; **P(> 0.05) 0.21** | ≈ 0.10; P = 1.00 |
+
+**Why each fails a correct model:**
+- **L2 literal.** A correct branch is attached to the tree. Its far end lies 30–55 mm from the nearest voxel of
+  another class, because a branch of a few centimetres runs away from its trunk. By group, the share of cases beyond
+  30 mm is LAD 27 %, LCx 37 % and RCA 79 %. Septal perforators run perpendicular into the septum, and the RMA runs down
+  the acute margin, so the real classes are no shorter. **No line between 30 and 50 mm is safe** (88 % of cases within
+  50 mm). The measure is wrong, not the number.
+- **L1 literal.** A stage-2 label that reaches one or two trunk-centreline points at its ostium is not theft. But on a
+  thin distal LCx (median trunk centreline 70 mm, p10 41 mm) a one-voxel ostium already reaches 2 %. **Stolen runs are
+  short:** the longest run of stolen trunk centreline is 2.8 mm at k = 1 and 5.6 mm at k = 2, over all 620 cases.
+- **K1.** An ostium painted one voxel wide puts about 4.5 % of a D/OM-sized branch's voxels into the traced lumen's
+  rim. Inside the lumen's **core** (the traced lumen less its one-voxel rim) the share is 1.3 % (p95 over 20 cases
+  1.6–1.8 %).
+
+**The re-definitions, measured on the same draws:**
+
+| Gate (proposed) | k = 0 | k = 1 | k = 2 |
+|---|---|---|---|
+| **L1′:** only stolen runs ≥ 3 mm of trunk centreline count; line 0.02, upper bound | 0 | 0 (no run ≥ 3 mm) | pooled ≤ 0.007; **P(fail) 0** |
+| **L2′:** stage-2 components touching no predicted voxel of any class, > 30 mm from the predicted tree | 0 | 0 | 0 |
+| **K1′:** the lumen core, line 0.10 | 0 | ≤ 0.018 (p95 on 20); P 0 | ≤ 0.061 (p95); P 0 |
+
+**Power is kept:**
+- **L1′.** A model that labels 10 mm of the LAD trunk as a septal in every case steals 9 % of a median LAD trunk
+  (110 mm; 12 % at p10), more than four times the line. On the LCx (median 70 mm) it is 14 %.
+- **K1′.** A septal head painted over the LAD lumen puts most of its voxels into the core, so a leak gives shares far
+  above 0.10.
+- **L2′.** It still catches paint far from the heart. A broken but correct branch leaves a fragment a few millimetres
+  from its own proximal part, not 30 mm.
+
+**L2's 95 % with a bound.** A per-case pass share needs about 99 of 100 clean cases for its one-sided 1.25 % lower
+bound to clear 0.95. A model with stray far islands in 1 % of cases fails that bound 26 % of the time (2 %: 60 %). The
+point rule "≥ 95 of 100 cases clean" fails it 0.05 % of the time (2 %: 1.6 %; 5 %: 38 %; 10 %: 94 %)
+(`L2_rule_table`).
 
 ### 5.2 What I propose (§11, F3-4)
 
-**RESULT_STAGE2_PROPOSAL**
+**Keep all four numbers (0.02, 30 mm, 95 %, K1's place in the fit check) and change what three of them measure:**
+1. **L1′:** the share of each parent group's reference trunk centreline that lies in a **run of ≥ 3 mm** predicted as
+   a stage-2 class is ≤ 0.02, with the one-sided 1.25 % upper bound. 3 mm is twice D3's 1.5 mm tolerance; ostium
+   paint stays below it (longest run 2.8 mm at k = 1).
+2. **L2′:** in **≥ 95 of the 100** locked cases, no stage-2 voxel lies in a 26-component that touches no predicted
+   coronary voxel **and** is more than 30 mm from the predicted tree. This is a point count, not a bound: it is a fold
+   tripwire, not an adoption claim, and the bound fails a model with 1 % stray islands a quarter of the time.
+3. **K1′:** the share of each stage-2 class's predicted voxels inside the **core** of ImageCAS-X's traced lumen (the
+   traced lumen less its one-voxel rim) on the 20 fit-check cases. Above **0.10** at the last check, `LEAK`. 0.05 on
+   the core would flag a two-voxel ostium 30–36 % of the time.
+4. **Reports added:** the literal L1, L2 and K1, so that the judge can see both forms.
+
+Caveat: the stand-ins are D/OM/PDA/PLB-sized. Septals and the conus may be smaller, which raises the ostium share
+in K1 (its denominator is smaller). That is why K1′'s line is 0.10, with the measured p95 at k = 2 being 0.06.
 
 ## 6. Q-F2-1 to Q-F2-3: the plan under each answer (§5 item 6)
 
@@ -455,7 +533,7 @@ Step T's tar route, with a sha256 posted on both sides.
 | 2. Gate file | **Yes** | File, hash `09ddb06f…`, the 0.59 / 0.61 test |
 | 3. J1F-A command block | **Yes** | §3. Two values are read at run time, not decided here: F0-r2's lines and `nnUNet_compile`. Each has its refusal |
 | 4. Stage-1 spec diff | **Yes** | §4, with reference code for every 1-F test, and two nnU-Net defects fixed |
-| 5. F-A22's numbers | **Yes, if F3-4 is ruled** | §5. Two literal definitions fail a correct model. The re-definitions pass it and keep the lines |
+| 5. F-A22's numbers | **Yes, if F3-4 is ruled** | §5. Literal L2 fails a perfect model; literal L1 and K1 fail a one-voxel ostium error. The re-definitions pass both and keep every line |
 | 6. Q-F2-1 to Q-F2-3 | **No: only the lead can answer.** Not blocking | §6 writes the plan for each answer |
 | 7. Step T, F0-r2 | **Step T: yes. F0-r2: not run** | Its result gates `prep`, not the plan |
 | 8. Converged? | **Yes, except item 6** | See below |
@@ -499,7 +577,7 @@ Step T's tar route, with a sha256 posted on both sides.
 | F3-1 | F-A16 | The scorer of record is `j1f_scorer.py`, sha256 `d615c7e7…d808`; its tests are `test_j1f_scorer.py` (37 checks) plus the three self-tests |
 | F3-2 | F-A15 | The gate file is `j1f_gates.json`, sha256 `09ddb06f…fc5f`; comparisons inclusive, in exact hundredths |
 | F3-3 | F-A2, F-A18, F-A20 | Dataset 719 holds the 620 only; ignore is 13 on disk; the plans check is pinned to Step T's hashes; `-tp` = `-sp` |
-| F3-4 | F-A22 | **RESULT_AMEND** |
+| F3-4 | F-A22 | L1 counts stolen trunk-centreline runs ≥ 3 mm (0.02, upper bound unchanged); L2 counts stage-2 islands touching no predicted voxel, > 30 mm away, with ≥ 95 of 100 cases clean as a point count; K1 counts the traced lumen's core, line 0.10 (§5) |
 | F3-5 | F-A21 | `batch_dice: False` is final (Step T); `leaf_skip` is not built |
 | F3-6 | F-A20 | `nnUNet_compile` = Fir's own value if found, else `f`; `check` refuses it unset |
 | F3-7 | F-A24 | T_L's verdict rule (§6.3), in force if Q-F2-3 = yes; the within-group maps are kept either way |

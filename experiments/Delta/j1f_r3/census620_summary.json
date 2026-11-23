@@ -1,0 +1,477 @@
+{
+ "n_cases": 620,
+ "converter": {
+  "d3": 47,
+  "d4_to_lad": 2,
+  "other_lcx": 20,
+  "other_nearest": 1,
+  "other_ignore": 8
+ },
+ "converter_expected_620": {
+  "d3": 47,
+  "d4_to_lad": 2,
+  "other_lcx": 20,
+  "other_nearest": 1,
+  "other_ignore": 8
+ },
+ "collapse_mismatch_vox_nonother": 0,
+ "collapse_mismatch_other_vox": 40,
+ "collapse_mismatch_other_cases": 2,
+ "contact": {
+  "components": 1296,
+  "fallback": 0,
+  "fallbackTie": 0,
+  "fallbackUnattached": 0,
+  "to_LCx": 93
+ },
+ "pieces_vs_census_r2": {
+  "cases_compared": 620,
+  "cases_differing": 0,
+  "by_class": {
+   "D1": 0,
+   "D2": 0,
+   "D3": 0,
+   "OM1": 0,
+   "OM2": 0,
+   "Ramus": 0,
+   "PDA": 0,
+   "PLB": 0
+  },
+  "first": []
+ },
+ "pieces_per_case": {
+  "D1": {
+   "0": 9,
+   "1": 611,
+   "2": 0,
+   "3": 0,
+   "4": 0
+  },
+  "D2": {
+   "0": 261,
+   "1": 359,
+   "2": 0,
+   "3": 0,
+   "4": 0
+  },
+  "D3": {
+   "0": 573,
+   "1": 47,
+   "2": 0,
+   "3": 0,
+   "4": 0
+  },
+  "OM1": {
+   "0": 80,
+   "1": 540,
+   "2": 0,
+   "3": 0,
+   "4": 0
+  },
+  "OM2": {
+   "0": 391,
+   "1": 229,
+   "2": 0,
+   "3": 0,
+   "4": 0
+  },
+  "Ramus": {
+   "0": 471,
+   "1": 149,
+   "2": 0,
+   "3": 0,
+   "4": 0
+  },
+  "PDA": {
+   "0": 12,
+   "1": 543,
+   "2": 62,
+   "3": 3,
+   "4": 0
+  },
+  "PLB": {
+   "0": 10,
+   "1": 600,
+   "2": 10,
+   "3": 0,
+   "4": 0
+  }
+ },
+ "stage2_standins": {
+  "bleed0": {
+   "L1_LAD": {
+    "share_620": 0.0,
+    "case_p95": 0.0,
+    "P_point_gt_0.02": 0.0,
+    "P_ub_gt_0.02": 0.0,
+    "ub_median": 0.0
+   },
+   "L1_LCx": {
+    "share_620": 0.0,
+    "case_p95": 0.0,
+    "P_point_gt_0.02": 0.0,
+    "P_ub_gt_0.02": 0.0,
+    "ub_median": 0.0
+   },
+   "L1_RCA": {
+    "share_620": 0.0,
+    "case_p95": 0.0,
+    "P_point_gt_0.02": 0.0,
+    "P_ub_gt_0.02": 0.0,
+    "ub_median": 0.0
+   },
+   "L1runs3_LAD": {
+    "share_620": 0.0,
+    "P_ub_gt_0.02": 0.0,
+    "longest_run_mm": 0.0,
+    "runs_ge_3mm": 0
+   },
+   "L1runs3_LCx": {
+    "share_620": 0.0,
+    "P_ub_gt_0.02": 0.0,
+    "longest_run_mm": 0.0,
+    "runs_ge_3mm": 0
+   },
+   "L1runs3_RCA": {
+    "share_620": 0.0,
+    "P_ub_gt_0.02": 0.0,
+    "longest_run_mm": 0.0,
+    "runs_ge_3mm": 0
+   },
+   "L2_far_mm": {
+    "share_cases_le_30mm": 0.0935,
+    "case_max_mm_p50_p90_p95_max": [
+     41.2,
+     50.6,
+     54.5,
+     67.2
+    ],
+    "by_group_p95_mm": {
+     "LAD": 40.4,
+     "LCx": 45.6,
+     "RCA": 52.7
+    },
+    "by_group_share_gt_30mm": {
+     "LAD": 0.271,
+     "LCx": 0.369,
+     "RCA": 0.789
+    },
+    "P_fail_point": 1.0,
+    "P_fail_lb": 1.0,
+    "share_cases_le_35mm": 0.2452,
+    "share_cases_le_40mm": 0.4435,
+    "share_cases_le_45mm": 0.679,
+    "share_cases_le_50mm": 0.8806
+   },
+   "L2_island_far_mm": {
+    "share_cases_le_30mm": 1.0,
+    "case_max_mm_p50_p90_p95_max": [
+     0.0,
+     0.0,
+     0.0,
+     0.0
+    ],
+    "by_group_p95_mm": {
+     "LAD": 0.0,
+     "LCx": 0.0,
+     "RCA": 0.0
+    },
+    "by_group_share_gt_30mm": {
+     "LAD": 0.0,
+     "LCx": 0.0,
+     "RCA": 0.0
+    },
+    "P_fail_point": 0.0,
+    "P_fail_lb": 0.0,
+    "share_cases_le_35mm": 1.0,
+    "share_cases_le_40mm": 1.0,
+    "share_cases_le_45mm": 1.0,
+    "share_cases_le_50mm": 1.0
+   },
+   "K1_LAD": {
+    "share_620": 0.0,
+    "P_gt_0.05_on_20": 0.0,
+    "p95_on_20": 0.0,
+    "core_share_620": 0.0,
+    "core_P_gt_0.05_on_20": 0.0,
+    "core_p95_on_20": 0.0
+   },
+   "K1_LCx": {
+    "share_620": 0.0,
+    "P_gt_0.05_on_20": 0.0,
+    "p95_on_20": 0.0,
+    "core_share_620": 0.0,
+    "core_P_gt_0.05_on_20": 0.0,
+    "core_p95_on_20": 0.0
+   },
+   "K1_RCA": {
+    "share_620": 0.0,
+    "P_gt_0.05_on_20": 0.0,
+    "p95_on_20": 0.0,
+    "core_share_620": 0.0,
+    "core_P_gt_0.05_on_20": 0.0,
+    "core_p95_on_20": 0.0
+   }
+  },
+  "bleed1": {
+   "L1_LAD": {
+    "share_620": 0.0154,
+    "case_p95": 0.0288,
+    "P_point_gt_0.02": 0.0,
+    "P_ub_gt_0.02": 0.0,
+    "ub_median": 0.0171
+   },
+   "L1_LCx": {
+    "share_620": 0.0197,
+    "case_p95": 0.0455,
+    "P_point_gt_0.02": 0.379,
+    "P_ub_gt_0.02": 0.981,
+    "ub_median": 0.0224
+   },
+   "L1_RCA": {
+    "share_620": 0.0099,
+    "case_p95": 0.0191,
+    "P_point_gt_0.02": 0.0,
+    "P_ub_gt_0.02": 0.0,
+    "ub_median": 0.011
+   },
+   "L1runs3_LAD": {
+    "share_620": 0.0,
+    "P_ub_gt_0.02": 0.0,
+    "longest_run_mm": 2.77,
+    "runs_ge_3mm": 0
+   },
+   "L1runs3_LCx": {
+    "share_620": 0.0,
+    "P_ub_gt_0.02": 0.0,
+    "longest_run_mm": 2.52,
+    "runs_ge_3mm": 0
+   },
+   "L1runs3_RCA": {
+    "share_620": 0.0,
+    "P_ub_gt_0.02": 0.0,
+    "longest_run_mm": 2.22,
+    "runs_ge_3mm": 0
+   },
+   "L2_far_mm": {
+    "share_cases_le_30mm": 0.0919,
+    "case_max_mm_p50_p90_p95_max": [
+     41.3,
+     51.0,
+     54.5,
+     67.4
+    ],
+    "by_group_p95_mm": {
+     "LAD": 40.4,
+     "LCx": 45.6,
+     "RCA": 52.7
+    },
+    "by_group_share_gt_30mm": {
+     "LAD": 0.271,
+     "LCx": 0.369,
+     "RCA": 0.797
+    },
+    "P_fail_point": 1.0,
+    "P_fail_lb": 1.0,
+    "share_cases_le_35mm": 0.2419,
+    "share_cases_le_40mm": 0.4339,
+    "share_cases_le_45mm": 0.6677,
+    "share_cases_le_50mm": 0.8758
+   },
+   "L2_island_far_mm": {
+    "share_cases_le_30mm": 1.0,
+    "case_max_mm_p50_p90_p95_max": [
+     0.0,
+     0.0,
+     0.0,
+     0.0
+    ],
+    "by_group_p95_mm": {
+     "LAD": 0.0,
+     "LCx": 0.0,
+     "RCA": 0.0
+    },
+    "by_group_share_gt_30mm": {
+     "LAD": 0.0,
+     "LCx": 0.0,
+     "RCA": 0.0
+    },
+    "P_fail_point": 0.0,
+    "P_fail_lb": 0.0,
+    "share_cases_le_35mm": 1.0,
+    "share_cases_le_40mm": 1.0,
+    "share_cases_le_45mm": 1.0,
+    "share_cases_le_50mm": 1.0
+   },
+   "K1_LAD": {
+    "share_620": 0.046,
+    "P_gt_0.05_on_20": 0.214,
+    "p95_on_20": 0.0552,
+    "core_share_620": 0.0132,
+    "core_P_gt_0.05_on_20": 0.0,
+    "core_p95_on_20": 0.0162
+   },
+   "K1_LCx": {
+    "share_620": 0.0441,
+    "P_gt_0.05_on_20": 0.2055,
+    "p95_on_20": 0.0566,
+    "core_share_620": 0.0135,
+    "core_P_gt_0.05_on_20": 0.0,
+    "core_p95_on_20": 0.018
+   },
+   "K1_RCA": {
+    "share_620": 0.0183,
+    "P_gt_0.05_on_20": 0.0,
+    "p95_on_20": 0.0219,
+    "core_share_620": 0.0046,
+    "core_P_gt_0.05_on_20": 0.0,
+    "core_p95_on_20": 0.0057
+   }
+  },
+  "bleed2": {
+   "L1_LAD": {
+    "share_620": 0.0379,
+    "case_p95": 0.067,
+    "P_point_gt_0.02": 1.0,
+    "P_ub_gt_0.02": 1.0,
+    "ub_median": 0.0416
+   },
+   "L1_LCx": {
+    "share_620": 0.048,
+    "case_p95": 0.1059,
+    "P_point_gt_0.02": 1.0,
+    "P_ub_gt_0.02": 1.0,
+    "ub_median": 0.0538
+   },
+   "L1_RCA": {
+    "share_620": 0.0176,
+    "case_p95": 0.0322,
+    "P_point_gt_0.02": 0.0015,
+    "P_ub_gt_0.02": 0.3115,
+    "ub_median": 0.0195
+   },
+   "L1runs3_LAD": {
+    "share_620": 0.0064,
+    "P_ub_gt_0.02": 0.0,
+    "longest_run_mm": 5.55,
+    "runs_ge_3mm": 123
+   },
+   "L1runs3_LCx": {
+    "share_620": 0.007,
+    "P_ub_gt_0.02": 0.0,
+    "longest_run_mm": 4.16,
+    "runs_ge_3mm": 87
+   },
+   "L1runs3_RCA": {
+    "share_620": 0.0005,
+    "P_ub_gt_0.02": 0.0,
+    "longest_run_mm": 4.11,
+    "runs_ge_3mm": 7
+   },
+   "L2_far_mm": {
+    "share_cases_le_30mm": 0.0887,
+    "case_max_mm_p50_p90_p95_max": [
+     41.5,
+     51.4,
+     54.5,
+     67.8
+    ],
+    "by_group_p95_mm": {
+     "LAD": 40.4,
+     "LCx": 45.6,
+     "RCA": 53.0
+    },
+    "by_group_share_gt_30mm": {
+     "LAD": 0.271,
+     "LCx": 0.369,
+     "RCA": 0.805
+    },
+    "P_fail_point": 1.0,
+    "P_fail_lb": 1.0,
+    "share_cases_le_35mm": 0.2371,
+    "share_cases_le_40mm": 0.4226,
+    "share_cases_le_45mm": 0.6629,
+    "share_cases_le_50mm": 0.8645
+   },
+   "L2_island_far_mm": {
+    "share_cases_le_30mm": 1.0,
+    "case_max_mm_p50_p90_p95_max": [
+     0.0,
+     0.0,
+     0.0,
+     0.0
+    ],
+    "by_group_p95_mm": {
+     "LAD": 0.0,
+     "LCx": 0.0,
+     "RCA": 0.0
+    },
+    "by_group_share_gt_30mm": {
+     "LAD": 0.0,
+     "LCx": 0.0,
+     "RCA": 0.0
+    },
+    "P_fail_point": 0.0,
+    "P_fail_lb": 0.0,
+    "share_cases_le_35mm": 1.0,
+    "share_cases_le_40mm": 1.0,
+    "share_cases_le_45mm": 1.0,
+    "share_cases_le_50mm": 1.0
+   },
+   "K1_LAD": {
+    "share_620": 0.1008,
+    "P_gt_0.05_on_20": 1.0,
+    "p95_on_20": 0.1204,
+    "core_share_620": 0.0468,
+    "core_P_gt_0.05_on_20": 0.2975,
+    "core_p95_on_20": 0.0572
+   },
+   "K1_LCx": {
+    "share_620": 0.0969,
+    "P_gt_0.05_on_20": 1.0,
+    "p95_on_20": 0.122,
+    "core_share_620": 0.0474,
+    "core_P_gt_0.05_on_20": 0.363,
+    "core_p95_on_20": 0.0611
+   },
+   "K1_RCA": {
+    "share_620": 0.0335,
+    "P_gt_0.05_on_20": 0.0,
+    "p95_on_20": 0.0404,
+    "core_share_620": 0.0131,
+    "core_P_gt_0.05_on_20": 0.0,
+    "core_p95_on_20": 0.0163
+   }
+  }
+ },
+ "L2_rule_table": {
+  "0.0": {
+   "P_fail_point_95of100": 0.0,
+   "P_fail_lb_0.95": 0.0
+  },
+  "0.01": {
+   "P_fail_point_95of100": 0.0005,
+   "P_fail_lb_0.95": 0.2642
+  },
+  "0.02": {
+   "P_fail_point_95of100": 0.0155,
+   "P_fail_lb_0.95": 0.5967
+  },
+  "0.03": {
+   "P_fail_point_95of100": 0.0808,
+   "P_fail_lb_0.95": 0.8054
+  },
+  "0.05": {
+   "P_fail_point_95of100": 0.384,
+   "P_fail_lb_0.95": 0.9629
+  },
+  "0.08": {
+   "P_fail_point_95of100": 0.8201,
+   "P_fail_lb_0.95": 0.9977
+  },
+  "0.1": {
+   "P_fail_point_95of100": 0.9424,
+   "P_fail_lb_0.95": 0.9997
+  }
+ }
+}

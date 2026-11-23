@@ -16,6 +16,6 @@ output. Plan: `vault/Plans/Candidates/Janus 1-F/Delta v3.md`.
 | `splits_final_j1f.json` | train 620, val = the 20 fit-check cases | — |
 | `npz_size.py` | One case's `--save_probabilities` npz, estimated | `python npz_size.py <icx620> <split_j1l.json>` → `npz_size.json` |
 | `census620.py` | One pass over the 620: converter counts, collapse check, scorer pieces, stage-2 stand-ins | `python census620.py <icx620> <split_j1l.json> <out.jsonl> 4` |
-| `summarise_census.py` | → `census620_summary.json` (§1.3, §1.4, §5 of the candidate) | `python summarise_census.py <out.jsonl> ../../Atlas/j1f_r2/census_r2.jsonl census620_summary.json` |
+| `summarise_census.py` | → `census620_summary.json` (§1.3, §1.4, §5 of the candidate) | `python summarise_census.py <out.jsonl (sorted)> ../../Atlas/j1f_r2/census_r2.jsonl census620_summary.json` |
 | `census620.jsonl.gz` | The per-case census (labels-derived counts and lengths only) | — |
-| `gate_sim_on_census620.json` | Atlas's `gate_sim.py` re-run on this census | `python ../../Atlas/j1f_r2/gate_sim.py <census620.jsonl> gate_sim_on_census620.json` |
+| `gate_sim_on_census620.json`, `.out` | Atlas's `gate_sim.py` re-run on this census (sorted by case): byte-identical to `../../Atlas/j1f_r2/gate_sim.json` and `.out` | `python ../../Atlas/j1f_r2/gate_sim.py <census620.jsonl> gate_sim_on_census620.json` |

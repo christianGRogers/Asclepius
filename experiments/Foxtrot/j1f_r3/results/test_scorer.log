@@ -1,0 +1,16 @@
+selftest ok; scorer sha256 50826b26667c999e8e193effe54e60f7832c9166c863c284554491276d8e8252
+PASS Atlas self-test (synthetic tree, amended collapse)
+PASS chain rule: a left PDA touching only its PLB collapses to the LCx
+PASS chain rule: no fallback counted
+PASS no contact: falls back to the RCA, counted
+PASS c0585 collapse = D25 on every non-Other voxel (0 differ)
+PASS c0585 collapse fallbacks 0 (0)
+c0585 scored
+PASS c0875 collapse = D25 on every non-Other voxel (0 differ)
+PASS c0875 collapse fallbacks 0 (0)
+c0875 scored
+PASS c0987 collapse = D25 on every non-Other voxel (0 differ)
+PASS c0987 collapse fallbacks 0 (0)
+c0987 scored
+PASS c0287 collapse = D25 on every non-Other voxel (0 differ)
+PASS c0287 collapse fallbacks 0 (0)

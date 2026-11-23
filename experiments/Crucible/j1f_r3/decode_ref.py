@@ -5,14 +5,19 @@ Stage-1 channels: 0 bg, 1 LM, 2 LAD, 3 LCx, 4 RCA, 5 D1, 6 D2, 7 D3, 8 OM1, 9 OM
 
   decode_F(P)              F: territory = argmax of the summed probabilities over the five decode groups (F-A4), then
                            the class = argmax inside the territory's group.
-  name_maps(P)             N: three uint8 maps, the argmax inside each NAMING SET of F-A19:
+  name_maps(P, keep)       N: three uint8 maps, the argmax inside each NAMING SET of F-A19:
                              N_LAD = argmax over {LAD, D1, D2, D3};
                              N_LCx = argmax over {LCx, OM1, OM2, Ramus, PDA, PLB};
-                             N_RCA = argmax over {RCA, PDA, PLB}.
-                           Written by `decode` beside F, so any four-class territory map can be named later without
-                           the probabilities (the npz is deleted after each chunk, F-A20).
+                             N_RCA = argmax over {RCA, PDA, PLB};
+                           kept only where `keep` (default: 1 - p_bg >= KEEP_MIN, or Janus 0's foreground, as
+                           `decode` passes it), 0 elsewhere, so the maps compress to almost nothing. Written by
+                           `decode` beside F, so any four-class territory map can be named later without the
+                           probabilities (the npz is deleted after each chunk, F-A20).
   name_territory(T4, N)    a reading from a four-class territory map: LM stays LM, bg stays bg, every LAD / LCx /
-                           RCA voxel takes N_LAD / N_LCx / N_RCA. T = name_territory(Janus 0's argmax, N);
+                           RCA voxel takes N_LAD / N_LCx / N_RCA; where N is 0 (outside `keep`), the trunk class.
+                           T is bit-equal to the probabilities' reading because `keep` covers Janus 0's foreground;
+                           T_L is equal wherever 1-L's foreground has 1 - p_bg >= KEEP_MIN in 1-F, and its trunk
+                           class elsewhere (counted by `collect`). T = name_territory(Janus 0's argmax, N);
                            T_L = name_territory(Janus 1-L's shipped map, N) (F-A24, Q-F2-3).
   splits_final(train, val) F-A20's two identical entries, refusing a locked or sealed id anywhere.
 
@@ -25,6 +30,7 @@ import numpy as np
 
 GROUPS = ((0,), (1,), (2, 5, 6, 7), (3, 8, 9, 10), (4, 11, 12))         # F's decode groups (F-A4, F-A19)
 NAMING = {2: (2, 5, 6, 7), 3: (3, 8, 9, 10, 11, 12), 4: (4, 11, 12)}       # T's naming sets (F-A19)
+KEEP_MIN = 1e-3
 TERR4 = np.array([0, 1, 2, 3, 4, 2, 2, 2, 3, 3, 3, 4, 4], np.uint8)       # F's group -> vessel (before F-A17's collapse)
 
 
@@ -40,16 +46,20 @@ def decode_F(P):
     return out
 
 
-def name_maps(P):
+def name_maps(P, keep=None):
     P = np.asarray(P)
-    return {v: np.asarray(s, np.uint8)[np.argmax(P[list(s)], 0)] for v, s in NAMING.items()}
+    if keep is None:
+        keep = (1 - P[0]) >= KEEP_MIN
+    return {v: np.where(keep, np.asarray(s, np.uint8)[np.argmax(P[list(s)], 0)], 0).astype(np.uint8)
+            for v, s in NAMING.items()}
 
 
 def name_territory(T4, N):
     T4 = np.asarray(T4)
     out = np.where(T4 == 1, 1, 0).astype(np.uint8)
     for v, n in N.items():
-        out[T4 == v] = n[T4 == v]
+        m = T4 == v
+        out[m] = np.where(n[m] > 0, n[m], v)
     return out
 
 
@@ -95,7 +105,7 @@ def selftest():
           (np.argmax(P, 0) != F).mean() > 0.01)
     # 2. T from the name maps equals T computed directly from the probabilities (so the npz may be deleted)
     J0 = rng.integers(0, 5, (24, 24, 24)).astype(np.uint8)
-    N = name_maps(P)
+    N = name_maps(P, ((1 - P[0]) >= KEEP_MIN) | (J0 > 0))      # as decode passes keep
     T = name_territory(J0, N)
     Td = np.zeros_like(T)
     Td[J0 == 1] = 1
@@ -111,11 +121,11 @@ def selftest():
     P2[:, 4, 4, 1:7] = 1e-3; P2[3, 4, 4, 1:7] = 0.40; P2[11, 4, 4, 1:7] = 0.45; P2[4, 4, 4, 1:7] = 0.10
     P2 /= P2.sum(0, keepdims=True)
     J0b = np.zeros((8, 8, 8), np.uint8); J0b[4, 4, 1:7] = 3                # Janus 0 calls it LCx
-    Tb = name_territory(J0b, name_maps(P2))
+    Tb = name_territory(J0b, name_maps(P2, J0b > 0))
     check('T: a left PDA inside Janus 0\'s LCx territory is named PDA', (Tb[4, 4, 1:7] == 11).all())
     # the broken fixture: Delta v2's naming set for LCx (no PDA/PLB) cannot name it
     broken = {2: (2, 5, 6, 7), 3: (3, 8, 9, 10), 4: (4, 11, 12)}
-    Nb = {v: np.asarray(s, np.uint8)[np.argmax(P2[list(s)], 0)] for v, s in broken.items()}
+    Nb = {v: np.where(J0b > 0, np.asarray(s, np.uint8)[np.argmax(P2[list(s)], 0)], 0) for v, s in broken.items()}
     check('broken fixture (LCx set without PDA/PLB) fails the test', not (name_territory(J0b, Nb)[4, 4, 1:7] == 11).all())
     # F on the same voxels: PDA group sum 0.45 + 0.10 > LCx group 0.40 -> RCA group, named PDA; collapse decides side
     check('F: the same voxels decode as PDA (RCA group), side left to F-A17', (decode_F(P2)[4, 4, 1:7] == 11).all())
@@ -124,6 +134,9 @@ def selftest():
     TL = name_territory(L1, N)
     check('T_L: vessels are 1-L\'s map (bit-equal on LM/LAD/LCx territories)',
           (np.where(np.isin(TL, (11, 12)) & (L1 == 3), 3, TERR4[TL]) == L1).all())
+    # outside keep, a territory voxel takes its trunk class
+    Nk = name_maps(P, np.zeros(J0.shape, bool))
+    check('outside keep: every territory voxel takes its trunk class', (name_territory(J0, Nk) == J0).all())
     # 6. F-A20: splits_final has no locked id
     train = ['c%04d' % i for i in range(30)]; locked = ['c%04d' % i for i in range(100, 110)]
     s = splits_final(train, train[:5], locked, [])

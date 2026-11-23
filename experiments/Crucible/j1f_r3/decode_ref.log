@@ -6,6 +6,7 @@ PASS T: a left PDA inside Janus 0's LCx territory is named PDA
 PASS broken fixture (LCx set without PDA/PLB) fails the test
 PASS F: the same voxels decode as PDA (RCA group), side left to F-A17
 PASS T_L: vessels are 1-L's map (bit-equal on LM/LAD/LCx territories)
+PASS outside keep: every territory voxel takes its trunk class
 PASS splits_final: two identical entries, val inside train
 PASS a locked id in train is refused
 PASS a locked id as val is refused (L-A21 leak)

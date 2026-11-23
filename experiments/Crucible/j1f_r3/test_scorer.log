@@ -1,0 +1,34 @@
+Atlas self-test:
+selftest ok; scorer sha256 c2786b2ee2228a40eb966d74c1f319963869f7f3196da3af6ff768c9901ca03e
+PASS c0585 collapse = D25 on every non-Other voxel (0 differ), fallback 0
+PASS c0875 collapse = D25 on every non-Other voxel (0 differ), fallback 0
+PASS c0987 collapse = D25 on every non-Other voxel (0 differ), fallback 0
+PASS c0287 collapse = D25 on every non-Other voxel (0 differ), fallback 0
+PASS c0920 collapse = D25 on every non-Other voxel (0 differ), fallback 0
+PASS c0761 collapse = D25 on every non-Other voxel (0 differ), fallback 0
+PASS identity D1: recall, presence, naming = 1
+PASS identity D1: branch tF1 = 1 (1.000)
+PASS dilate by 1 voxel D1: recall 1, naming 1
+PASS identity D2: recall, presence, naming = 1
+PASS identity D2: branch tF1 = 1 (1.000)
+PASS dilate by 1 voxel D2: recall 1, naming 1
+PASS identity OM1: recall, presence, naming = 1
+PASS identity OM1: branch tF1 = 1 (1.000)
+PASS dilate by 1 voxel OM1: recall 1, naming 1
+PASS identity OM2: recall, presence, naming = 1
+PASS identity OM2: branch tF1 = 1 (1.000)
+PASS dilate by 1 voxel OM2: recall 1, naming 1
+PASS identity PDA: recall, presence, naming = 1
+PASS identity PDA: branch tF1 = 1 (1.000)
+PASS dilate by 1 voxel PDA: recall 1, naming 1
+PASS identity PLB: recall, presence, naming = 1
+PASS identity PLB: branch tF1 = 1 (1.000)
+PASS dilate by 1 voxel PLB: recall 1, naming 1
+PASS swap D1/D2 D1: recall 1, naming 0
+PASS swap D1/D2 D2: recall 1, naming 0
+PASS swap PDA/PLB PDA: recall 1, naming 0
+PASS swap PDA/PLB PLB: recall 1, naming 0
+PASS OM2 -> LCx: detected (recall 1), not named (naming 0), presence drops
+PASS OM2 -> background: recall 0
+cases ['c0585', 'c0875', 'c0987', 'c0287', 'c0920', 'c0761']
+ALL PASS ; scorer sha256 c2786b2ee2228a40eb966d74c1f319963869f7f3196da3af6ff768c9901ca03e

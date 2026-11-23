@@ -1,17 +1,5 @@
-Traceback (most recent call last):
-  File "/usr/local/lib/python3.13/site-packages/nibabel/loadsave.py", line 104, in load
-    stat_result = os.stat(filename)
-FileNotFoundError: [Errno 2] No such file or directory: '/tmp/claude-0/icx620/15.coronary.nii.gz'
+{"case": "c0014", "shape": [512, 512, 206], "voxels_M": 54.0, "uncompressed_GB_f32": 2.81, "npz_GB_f32": 2.389, "npz_GB_f16": 0.436, "upper_bound_GB_f32_from_untrained_5class": 3.25}
 
-During handling of the above exception, another exception occurred:
-
-Traceback (most recent call last):
-  File "/home/user/Asclepius/experiments/Crucible/j1f_r3/npz_size.py", line 20, in <module>
-    im = nib.load(os.path.join(src, '%d.coronary.nii.gz' % (int(c[1:]) + 1)))
-  File "/usr/local/lib/python3.13/site-packages/nibabel/loadsave.py", line 106, in load
-    raise FileNotFoundError(f"No such file or no access: '{filename}'")
-FileNotFoundError: No such file or no access: '/tmp/claude-0/icx620/15.coronary.nii.gz'
-
-real	0m0.414s
-user	0m1.112s
-sys	0m0.048s
+real	5m31.103s
+user	5m16.852s
+sys	0m9.050s

@@ -219,8 +219,10 @@ F-A1 to F-A26 stay in force except where these change them. They override the ca
   measured against the trunk it left, not the piece it continues.
 - **Why K1r.** K1 as ruled is the ostial overlap over the branch's volume, so it falls as 1/length: a correct septal
   ≤ 20 mm writes `LEAK` at every radius tried (Foxtrot), and at 30 mm four of six classes do so 61–99 % of the time
-  (Bridge). Atlas and Crucible found K1 safe because their stand-ins were never painted over the parent; D47 Q4 trains
-  exactly that. K1r is 0 on every correct septal and 0.137 on the thief. One statistic then serves training (K1r)
+  (Bridge). Atlas and Crucible found K1 safe (≤ 0.02 at a one- or two-voxel bleed) because their stand-ins are
+  ImageCAS-X's D/OM/PDA/PLB branches, median centreline 38–56 mm per class (scorer of record, 620); Delta's same stand-ins with the bleed confined to the parent
+  already fail 21 % of the time. Septals, the SN and the conus can be short, and D47 Q4 trains their ostia over the
+  parent. K1r is 0 on every correct septal and 0.137 on the thief. One statistic then serves training (K1r)
   and the look (L1r).
 - **Reports beside them, never deciding:** literal L1, L2 and K1; Delta's lumen-core K1′; each stage-2 class's
   farthest-voxel distance and outside-band volume (K3).
@@ -325,7 +327,7 @@ and Fir, and (d) risk and cost.
 | **Atlas v3** | 5. P-r3-1 applies the line rule to the counts of record, which F-A25 had waved off; the repository history of the compile flag | 5. `gate_refreeze` re-runs byte-identically, and the three moved cells move again under a different case order; the scorer self-test and `test_gates` pass | 4.5. Keeps 255 on disk (the nnU-Net defect missed); the locked 100 not separated from Dataset 719 explicitly | 5. 0 extra GPU | **Scorer of record (F-A28), lines (F-A27)** adopted |
 | **Foxtrot v3** | 5. The sharpest stage-2 analysis: child-over-parent ostia, the run filter, a gap measure, one statistic for training and the look; the compile `grep` | 5. Stage-2 and 620 summaries re-derive byte-identically from its rows; rows re-run equal; 51 scorer checks; `decode_ref` self-test | 4.5. Keeps 255 on disk; decision layer outside its pinned files | 5. 0 extra GPU | **L1r, L2d, K1r (F-A30), G (F-A31), the compile rule (F-A33), the identity command** adopted |
 | **Bridge v3** | 4.5. The ignore-13 defect and L2's bound arithmetic are exact. Weak: L2′'s 5 mm fails a correct branch drawn in pieces; it repeats #302's mistaken date for `job_body.sh` | 4. Scorer, gates and decode self-tests pass. Its 620 and stage-2 per-case rows are kept off the repository, so its summaries could not be re-derived; its findings are corroborated by Delta and Foxtrot | 4. Puts the locked 100's images in Dataset 719 | 5. 0 extra GPU | **Ignore = 13 (F-A29)**, L2's point count and the junction model adopted; L2′ and K1′ not adopted |
-| **Crucible v3** | 4. Clear item-by-item answers; the purge deadline for `prep`; the 1-L window. Weak: K1 kept because its stand-ins never paint over the parent, which D47 Q4 trains | 4.5. Scorer, gates and decode self-tests pass; its 620 summary re-derives byte-identically; rows re-run equal | 3.5. Keeps 255 on disk (training would die at step one); the locked 100's labels in Dataset 719 | 4.5. 0 extra GPU | **The purge deadline and the 14-day window (Q-F3-1, Q-F3-3)** adopted; its L1 and L2 forms superseded by the equivalent adopted ones |
+| **Crucible v3** | 4. Clear item-by-item answers; the purge deadline for `prep`; the 1-L window. Weak: K1 kept on the evidence of long D/OM stand-ins, where an ostial overlap is a small share; short branches trained child over parent (D47 Q4) fail it | 4.5. Scorer, gates and decode self-tests pass; its 620 summary re-derives byte-identically; rows re-run equal | 3.5. Keeps 255 on disk (training would die at step one); the locked 100's labels in Dataset 719 | 4.5. 0 extra GPU | **The purge deadline and the 14-day window (Q-F3-1, Q-F3-3)** adopted; its L1 and L2 forms superseded by the equivalent adopted ones |
 
 ### Spot-checks this round
 

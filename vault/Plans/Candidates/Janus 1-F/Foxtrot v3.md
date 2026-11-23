@@ -62,7 +62,8 @@ or a pre-written rule:
 
 `experiments/Foxtrot/j1f_r3/j1f_scorer.py`, sha256 `50826b26667c999e8e193effe54e60f7832c9166c863c284554491276d8e8252`.
 
-It is Atlas's round-2 `j1f_scorer.py` (`2da3cb1a…886c`) with three edits and no other change:
+It is Atlas's round-2 `j1f_scorer.py` (`2da3cb1a…886c`) with three edits to the code and one to its self-test
+(below), and no other change:
 
 | Edit | What |
 |---|---|
@@ -73,7 +74,8 @@ It is Atlas's round-2 `j1f_scorer.py` (`2da3cb1a…886c`) with three edits and n
 **Every scoring definition is Atlas's, byte for byte** (F-A16): pieces are 26-components of ≥ 20 voxels; the
 centreline is the whole reference tree's skeleton restricted to the piece; presence is at 5 mm; detection is ≥ 50 %
 within 1.5 mm of predicted vessel of any class; naming is a strict majority, ties wrong; there is one tF1 root per
-piece. `score_case`, `pieces_of` and `stage1_labels` are unchanged. `diff` against Atlas's file is 4 hunks.
+piece. `score_case`, `pieces_of` and `stage1_labels` are unchanged (`diff` against Atlas's file touches only the
+header, the import, `collapse4` and the self-test).
 
 **One change to Atlas's self-test, and why.** Its synthetic PLB meets its RCA only along an edge (diagonal), with no
 shared face. SegQueue counts face contact (`_grow` is the 6-neighbourhood), so that component is an unattached

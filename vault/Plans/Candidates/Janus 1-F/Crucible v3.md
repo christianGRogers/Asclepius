@@ -40,13 +40,15 @@ issue: christianGRogers/Asclepius#303
      now an import of SegQueue's `collapse_to_four`, pinned by `labels.py`'s sha256. It also gains `aggregate` and
      `verdict`, which read F-A15's lines.
    - **sha256 `{{SCORER_SHA}}`.**
-   - Delta's 31 checks and Atlas's self-test pass on it, on Delta's six training cases.
+   - Delta's checks (30 PASS lines in his log; the ruling says 31) and Atlas's self-test pass on it, on Delta's six
+     training cases.
    - **On all 620, it finds exactly the pieces F-A15 was simulated on:** 620 of 620 case rows are equal to Atlas's
      `census_r2.jsonl`, piece by piece, voxel count and length. **So F-A15's lines need no re-freeze.**
 2. **The gates file exists and is pinned (item 2).** sha256 `b4b88e73877e4644825b0aed06a11ae90b00134c1f8fc5441803422c2e7c8e3f`.
    A fixture with OM2 recall 0.59 fails, 0.60 and 0.61 pass, and a tampered file is refused.
 3. **T and T_L need no probabilities after `decode` (item 3).** `decode` writes F and three uint8 **name maps**, the
-   argmax inside each of F-A19's naming sets. T is Janus 0's territories named from them, bit-for-bit what T would be
+   argmax inside each of F-A19's naming sets, kept on Janus 0's foreground and wherever 1 − p_bg ≥ 1e-3 (so each map
+   compresses to almost nothing). T is Janus 0's territories named from them, bit-for-bit what T would be
    from the probabilities. T_L is the same with 1-L's territories, which may arrive after the npz is gone. The npz of
    one 13-class case is about **{{NPZ_GB}} GB** at float32; a chunk of 10 peaks near **{{CHUNK_GB}} GB**.
 4. **The converged stage-1 spec is one diff against `janus1l` (item 4).** It adds F-A19's T test and F-A20's val test,
@@ -96,7 +98,7 @@ issue: christianGRogers/Asclepius#303
 
 - **Atlas's self-test**, extended: the chain rule (a PDA reached only through a PLB that leaves the LCx goes to the
   LCx), stage-2 values collapse by SegQueue's `PARENT`, 255 → 0, and `aggregate`/`verdict` on the toy.
-- **Delta's 31 checks**, on Delta's six training cases (c0585, c0875, c0987, c0287, c0920, c0761, chosen by
+- **Delta's checks** (the 30 lines of his `test_branch_score.log`), on Delta's six training cases (c0585, c0875, c0987, c0287, c0920, c0761, chosen by
   `asclepius-j1f-r2-scorertest:`), against this file's API:
   - 6 × collapse equals D25 on every non-"Other" voxel, now with 0 fallbacks asserted;
   - per gated class: identity recall, presence and naming 1; identity branch tF1 1; one-voxel dilation recall 1 and
@@ -213,7 +215,7 @@ J1F_RUN=a2 ./janus1f train     # fold 1, its own seed; report only
 ./janus1f status               # s/epoch, epochs done, chain state; fitcheck.json after epochs 150 and 300
 ```
 
-The fit check writes `STALL` at epoch 150 (F-A5) and K1's stage-1 counterpart is not computed (K1 is stage 2's).
+The fit check writes `STALL` at epoch 150 (F-A5).
 
 **4. `predict` (after a1's last link, ≈ 1–2 GPU-h).** The locked 100 in chunks of 10:
 
@@ -223,7 +225,7 @@ The fit check writes `STALL` at epoch 150 (F-A5) and K1's stage-1 counterpart is
 
 For each chunk: `nnUNetv2_predict -chk checkpoint_final.pth --save_probabilities --disable_tta -f 0 -npp 2 -nps 2`
 into `$J1F_WORK/tmp_chunk/`; then `decode` writes per case `F/<id>.nii.gz`, `N/<id>_{LAD,LCx,RCA}.nii.gz` (the name
-maps, §4.2) and `T/<id>.nii.gz` (Janus 0's Fir territories named by N), stamps each with a marker holding the
+maps, kept on Janus 0's foreground ∪ {1 − p_bg ≥ 1e-3}) and `T/<id>.nii.gz` (Janus 0's Fir territories named by N), stamps each with a marker holding the
 checkpoint's sha256, and **deletes the chunk's `.npz`, `.pkl` and nnU-Net's own `.nii.gz`** before the next chunk.
 `predict` scores nothing. a2 is predicted the same way into its own folder, if it ran.
 
@@ -275,10 +277,10 @@ file and its pins; `SEGTRAIN_CT_WINDOW=off`, `SEGTRAIN_SAVE_EVERY=10`, `SEGTRAIN
    Janus 0's argmax, for every deep-supervision output. Fixture: one head row not copied.
 8. **Hierarchical decode** (Delta test 2; `decode_ref.py` checks 1–2): F's territory is the argmax of the group sums;
    a plain argmax differs on > 1 % of random voxels. Fixture: a decode that takes the plain argmax.
-9. **F-A19's T test** (`decode_ref.py` checks 3–5): T from the name maps equals T from the probabilities on every
+9. **F-A19's T test** (`decode_ref.py` checks 3–6 and 9): T from the name maps equals T from the probabilities on every
    voxel; T's vessels are Janus 0's; **a left PDA inside Janus 0's LCx territory is named PDA**. Fixture: Delta v2's
    LCx naming set without PDA/PLB, which names it LCx and fails.
-10. **F-A20's val test** (`decode_ref.py` checks 9–11, and `check_splits_file` on the file `prep` wrote): two identical
+10. **F-A20's val test** (`decode_ref.py` checks 10–12, and `check_splits_file` on the file `prep` wrote): two identical
     entries, val inside the 620, **no locked or sealed id anywhere in `splits_final.json`**. Fixture: a locked id as
     val, which is L-A21's leak.
 11. **The scorer:** `j1f_scorer.py selftest` and `test_scorer.py` on Delta's six training cases (§1.2).
@@ -415,6 +417,7 @@ the swe issue has about three weeks.
 | The first extended reads give a stage-2 proxy unlike the traced branches (e.g. septals far longer than D1) | L2's component form is unaffected; L1's nearest-label form is unaffected. Only the band (F-A21) moves |
 | A measured second-reader branch study arrives before J1F-A is submitted | F-A15's lines are recomputed by Atlas's rule; the gates file and its sha256 change before submission, never after |
 | 1-L's adopted maps arrive after the 14-day window | T_L is reported later, never shipped by this look |
+| a1's fit check shows the branches drawn about one voxel thinner than ImageCAS-X | Expect B to fail on thin classes (§1.3's erosion row). Nothing is changed after the look; round N+1 chooses (as F-A6's "not adopted" row) |
 
 ## 10. Evidence and code (`experiments/Crucible/j1f_r3/`)
 

@@ -62,9 +62,10 @@ refused. Gates sha256 `b4b88e73877e4644825b0aed06a11ae90b00134c1f8fc5441803422c2
 
 ### 5. Name maps
 
-`decode_ref.py` (11 of 11 pass):
+`decode_ref.py` (12 of 12 pass):
 - Three uint8 maps per case hold the argmax inside each of F-A19's naming sets: {LAD, D1, D2, D3}; {LCx, OM1, OM2,
-  Ramus, PDA, PLB}; {RCA, PDA, PLB}.
+  Ramus, PDA, PLB}; {RCA, PDA, PLB}. They are kept only on Janus 0's foreground and where 1 − p_bg ≥ 1e-3, and are 0
+  elsewhere, where a territory voxel takes its trunk class.
 - Any four-class territory map named from them is **bit-equal** to the same reading computed from the probabilities.
 - So T (Janus 0's territories) and T_L (1-L's, which may only exist later) need no npz.
 - A left PDA inside Janus 0's LCx territory is named PDA. Delta v2's LCx set (no PDA/PLB) fails this test, as it
@@ -76,8 +77,8 @@ refused. Gates sha256 `b4b88e73877e4644825b0aed06a11ae90b00134c1f8fc5441803422c2
 - **F-A16:** the scorer's sha256 can be posted: `{{SCORER_SHA}}`. **F-A15's lines need no re-freeze**: the pieces
   are the simulated ones, row for row.
 - **F-A15:** `configs/janus1/j1f_gates.json` can be copied byte-identically from this branch.
-- **F-A20:** `decode` should also write the name maps. They make T_L possible after the npz is deleted, at about
-  3 MB per case.
+- **F-A20:** `decode` should also write the name maps. They make T_L possible after the npz is deleted, and
+  compress to almost nothing because they are kept only near the predicted tree.
 - **F-A22:** keep 0.02, 30 mm, 95 % and 0.05, but write L1 in its **nearest-label** form and L2 in its **per-component**
   form. In the other two forms a perfect model fails.
 - **Convergence:** with these, every §5 item of the round-2 ruling has an answer that does not wait on a cluster run.

@@ -99,7 +99,10 @@ for tag in ('exact', 'dilate1'):
                          'false_fail_at_0.05_any20': round(float(np.mean(np.array(draws) > 0.05)), 4)}
 for g in ('LAD', 'LCx', 'RCA'):
     v = np.array([r['stage2']['K1_group'][g] for r in rows if g in r['stage2'].get('K1_group', {})])
-    res5[f'K1_dilate1_group_{g}'] = {'mean': round(float(v.mean()), 4), 'p95_case': round(float(np.percentile(v, 95)), 4)}
+    draws = [np.mean(v[rng.integers(0, len(v), 20)]) for _ in range(B)]
+    res5[f'K1_dilate1_group_{g}'] = {'n_cases': int(len(v)), 'mean': round(float(v.mean()), 4),
+                                     'p95_case': round(float(np.percentile(v, 95)), 4),
+                                     'false_fail_at_0.05_any20': round(float(np.mean(np.array(draws) > 0.05)), 4)}
 out['item5'] = res5
 out['fitcheck20'] = fit if len(rows) == 620 else None
 json.dump(out, open(sys.argv[2], 'w'), indent=1)

@@ -1,0 +1,15 @@
+{
+ "about": "Janus 1-F stage-1 B gate lines (F-A15, Janus 1-F Round 2). Recall and naming pooled over reference pieces, presence agreement over the 100 locked cases (F-A16). A class passes when all three lines are met; >= k_of_6 classes must pass. Read by j1f_scorer.load_gates, which refuses any other sha256 than the one posted on #303.",
+ "source": "experiments/Atlas/j1f_r2/gate_sim.py proposed_lines, re-run byte-identically by the Round 2 judge",
+ "k_of_6": 4,
+ "presence_mm": 5.0,
+ "tol_mm": 1.5,
+ "classes": {
+  "D1":  {"recall": 0.81, "presence": 0.94, "naming": 0.83},
+  "D2":  {"recall": 0.76, "presence": 0.84, "naming": 0.86},
+  "OM1": {"recall": 0.75, "presence": 0.90, "naming": 0.78},
+  "OM2": {"recall": 0.60, "presence": 0.81, "naming": 0.78},
+  "PDA": {"recall": 0.89, "presence": 0.97, "naming": 0.90},
+  "PLB": {"recall": 0.89, "presence": 0.94, "naming": 0.92}
+ }
+}

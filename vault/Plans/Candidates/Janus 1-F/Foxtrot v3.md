@@ -42,9 +42,9 @@ has not answered Q-F2-1 to Q-F2-3. §7 plans for both answers to each.
 |---|---|---|
 | 1. Scorer of record | `experiments/Foxtrot/j1f_r3/j1f_scorer.py`, sha256 **`50826b26…8252`**: Atlas's file with SegQueue's collapse imported and pinned. 51 checks pass on six training fixtures. **On all 620, its pieces equal the census F-A15 was simulated on, case for case** | **Settled** |
 | 2. `j1f_gates.json` | F-A15's 18 lines, sha256 **`b268a2fc…05de`**. Its test: OM2 recall 0.59 fails; 0.60 (24 of 40) and 0.61 pass; every line's edge; the 4-of-6 edge; a wrong hash refuses | **Settled** |
-| 3. J1F-A commands | §4: `check`, `prep`, `train` (a1, a2), the chunked `predict`/`decode`, `collect`, with the Fir header and a disk estimate of ⟨NPZ⟩ GB per locked case | **Settled** |
+| 3. J1F-A commands | §4: `check`, `prep`, `train` (a1, a2), the chunked `predict`/`decode`, `collect`, with the Fir header and a disk estimate of ≈ 1.2 GB per locked case (3.75 GB at worst) | **Settled** |
 | 4. Stage-1 spec as one diff against `janus1l` | §5: 21 rows of diff, 14 refusals, 15 self-tests, including F-A19's T test and F-A20's val test, both as runnable reference code (`decode_ref.py`) | **Settled** |
-| 5. F-A22's stage-2 numbers | **L1 at 0.02 fails a correct model** (child-over-parent ostia already take ⟨L1⟩ of the LAD group's centreline). **K1 at 0.05 fires on correct septals up to ⟨K1L⟩ mm.** **L2 as worded fails correct septals longer than 35–40 mm** and, with the 1.25 % bound, fails on a single case. Re-cut: L1 and K1 count only runs > 3 mm; L2 measures detached components; 95 % is read as a count | **Settled for submission; frozen before J1F-2** |
+| 5. F-A22's stage-2 numbers | **L1 at 0.02 fails a correct model** (three septal ostia painted child over parent take 0.0225 of the LAD group's centreline at r = 0.75 mm: false-fail 100 %). **K1 at 0.05 fires on correct septals up to 20–30 mm long.** **L2 as worded fails correct septals longer than 35–40 mm** and, with the 1.25 % bound, fails on a single case. Re-cut: L1 and K1 count only runs > 3 mm; L2 measures detached components; 95 % is read as a count | **Settled for submission; frozen before J1F-2** |
 | 6. Q-F2-1 to Q-F2-3 | Unanswered. Q-F2-1 and Q-F2-2 change nothing in J1F-A. Q-F2-3 is written both ways (§7), and **T_L's rule sits inside J1F-A's one look** | **Settled for both answers** |
 | 7. Step T and F0-r2 | No class-weighted CE: the loss stays. `batch_dice` False: leaf-Dice stays, no `leaf_skip`. **`nnUNet_compile` can be read from the training logs Step T already kept** (nnU-Net prints `Using torch.compile...`). F0-r2: a check with a stop rule, run by `check` before `prep` | **Settled as rules; two posted lines outstanding** |
 | 8. Converged? | **Yes for stage 1 (J1F-A and a2)**, on two conditions that are checks, not choices: F0-r2's three lines and the compile `grep` are posted and match. Stage 2 is not up for convergence: its numbers are frozen before J1F-2, as F-A22 allows | §9 |
@@ -303,13 +303,18 @@ done
 deleted the probabilities. G is enough to form T and T_L later from files: a few MB per case instead of a re-run.
 
 **Disk.** One locked case's npz is 13 × X × Y × Z float32, written with `np.savez_compressed`
-(`export_prediction.py`). ⟨NPZTEXT⟩
+(`export_prediction.py`). `npz_size.py` wrote one on training case c0000's grid (512 × 512 × 275), from a modelled
+softmax field (logits falling with distance from each class, plus noise of 0.01–0.05):
+- raw float32: **3.75 GB**;
+- npz: **1.09 GB** without noise, **1.15 GB** with it; about 60 s to write.
+- In this model 58 % of the probabilities underflow to exactly 0, and zlib stores those cheaply. A real network's
+  background may underflow less, so **plan for 1.2 GB per case and provision for 3.75 GB.**
 
-- **Chunk of 10, one run:** ⟨CHUNK⟩ GB of npz on `$SCRATCH` at its peak.
-- **Unchunked (100 cases × 2 runs):** ⟨FULL⟩ GB. That is why F-A20 chunks.
+- **Chunk of 10, one run:** ≈ 12 GB of npz on `$SCRATCH` at its peak (37.5 GB at worst).
+- **Unchunked (100 cases × 2 runs):** ≈ 230 GB (750 GB at worst). That is why F-A20 chunks.
 - **Memory:** each export holds the float32 array plus its resampling copy, about 2 × the raw size. `-npp 2 -nps 2`
   keeps it under 280 G.
-- **Kept after decode:** F, T and G for 100 cases × 2 runs, about ⟨KEPT⟩ GB.
+- **Kept after decode:** F, T and G for 100 cases × 2 runs, under 2 GB (uint8, mostly background, gzipped NIfTI).
 
 **If track 1-L's Job 0 posts `du -sh $SCRATCH/j1l_job0/probs`** (5 classes), 1-F's per-case npz is about 13/5 of its
 per-case figure. Use that number instead of mine if it is larger.
@@ -438,7 +443,9 @@ thief").
 **The rules, as F-A22 states them:**
 - **L1:** per parent group, the share of reference centreline predicted as a stage-2 class. Pooled over the 100
   cases; one-sided 1.25 % upper bound ≤ 0.02.
-- **L2:** in ≥ 95 % of cases, no stage-2 voxel more than 30 mm from predicted coronary foreground.
+- **L2:** in ≥ 95 % of cases, no stage-2 voxel more than 30 mm from predicted coronary foreground. "Foreground" is
+  read as the **traced** classes. If it included the stage-2 classes themselves, every stage-2 voxel would be at 0 mm
+  and L2 could never fail.
 - **K1:** per stage-2 class, the share of its voxels inside ImageCAS-X's traced lumen, on the 20 fit-check cases,
   ≤ 0.05.
 
@@ -446,19 +453,72 @@ False-fail = the share of 400 random 100-case sets from the 620 on which the cor
 
 ### 6.2 Results
 
-⟨STAGE2⟩
+`results/stage2_summary.json`. 620 cases; 608 have all three septals (12 have no PDA to aim at). 400 sets of 100.
+
+**L1, theft (line 0.02, one-sided 1.25 % upper bound):**
+
+| Correct prediction | L1 as ruled: pooled share / false-fail | L1r (runs > 3 mm): pooled share / false-fail |
+|---|---|---|
+| 3 septals, r = 0.6 mm (any length) | 0.0166 / **0 %** (median bound 0.0177) | 0 / 0 % |
+| 3 septals, r = 0.75 mm | 0.0225 / **100 %** | 0 / 0 % |
+| 3 septals, r = 1.0 mm | 0.0304 / **100 %** | 0.0002 / 0 % |
+| D2 as a stand-in (LAD group, 359 cases) | 0.0068 / 0 % | 0 / 0 % |
+| OM2 as a stand-in (LCx group, 229 cases) | 0.0076 / 0 % | 0 / 0 % |
+| PLB as a stand-in (RCA group, 610 cases) | 0.0070 / 0 % | 0 / 0 % |
+| **Power:** the thief (± 5 mm of LAD at each septal origin) | 0.142 / fails 100 % | **0.142 / fails 100 %** |
+
+- An ostium painted over its parent takes 3–5 centreline points (about 1.5–2 mm) per branch. The LAD group carries
+  three septals, so the share is 3 × that over the group's length.
+- **The share depends on how thick the model paints the ostium, not on whether the branch is right.** At r = 0.6 it
+  passes, at 0.75 it fails every time. A 0.02 line with a bound sits on that edge.
+- L1r drops the junction runs (all under 3 mm) and keeps the thief's (≈ 10 mm runs): 0.142 either way.
+
+**L2, far paint (30 mm, ≥ 95 % of cases):**
+
+| Correct prediction | Cases (of 620) with a voxel > 30 mm from traced foreground | False-fail, point / with the 1.25 % bound |
+|---|---|---|
+| septals 10, 20 or 30 mm | 0 | 0 / 0 |
+| septals 40 mm | **555** | **100 % / 100 %** |
+| septals 50 or 60 mm | 563 | 100 % / 100 % |
+| septals 60 mm, line 40 mm | 15 | 2.5 % / 95.8 % |
+| septals 60 mm, line 45 mm | 1 | 0 / 18 % |
+| D2 tip vs the rest of the tree | 35 | 52 % / 100 % |
+| OM2 tip vs the rest of the tree | 39 | 64 % / 100 % |
+| PLB tip vs the rest of the tree | 176 | 100 % / 100 % |
+
+- A septal aimed through the septum is 59–84 mm from the PDA it heads for (5th–95th percentile). Its mid-course
+  is therefore 34–39 mm from any traced vessel (median 34.1 mm, 95th percentile 39.0, maximum 45.6, for 60 mm tubes).
+- **Real traced branches already break the rule:** 176 of 620 PLBs have a tip more than 30 mm from the RCA/LCx/LAD
+  trees, and 35–39 D2s and OM2s do. L2 as worded measures how long a branch is, not whether it is painted where no
+  vessel is.
+
+**K1, inside the traced lumen (line 0.05, the 20 fit-check cases, per class):**
+
+| Septal length | r = 0.6 | r = 0.75 | r = 1.0 |
+|---|---|---|---|
+| 10 mm | 0.115–0.136, **fires** | 0.125–0.145, **fires** | 0.119–0.149, **fires** |
+| 20 mm | 0.060–0.070, **fires** | 0.066–0.076, **fires** | 0.063–0.079, **fires** |
+| 30 mm | 0.040–0.047 | 0.045–0.052, **fires** | 0.043–0.054, **fires** |
+| 40 mm or longer | ≤ 0.036 | ≤ 0.039 | ≤ 0.041 |
+
+- K1's share is the ostial overlap divided by the branch's volume, so it falls as 1/length. A correct short septal
+  (or a long one the model has only learnt the first 20 mm of, early in J1F-2) writes `LEAK`.
+- **K1r** (L1r on the fit-check 20): **0 for every correct septal**, 0.137 for the thief.
 
 ### 6.3 What changes, frozen now and binding on J1F-2
 
 | Rule | As ruled | Proposed | Why |
 |---|---|---|---|
-| **L1** | stage-2 share of the parent's reference centreline, bound ≤ 0.02 | **L1r:** the same, counting only stolen centreline points in 26-connected runs longer than **3 mm**; bound ≤ **0.02** | ⟨L1WHY⟩ |
-| **L2** | no stage-2 voxel > 30 mm from predicted coronary foreground in ≥ 95 % of cases | **L2d:** no stage-2 26-component whose **nearest** voxel is > **30 mm** from all other predicted coronary foreground (any class, other stage-2 components included), in **≥ 95 of the 100 cases, read as a count** | ⟨L2WHY⟩ |
-| **K1** | share of each stage-2 class's voxels inside traced lumen, fit-check 20, ≤ 0.05 | **K1r = L1r on the fit-check 20**, at each fit check; `LEAK` above **0.02** at the last check | ⟨K1WHY⟩ |
+| **L1** | stage-2 share of the parent's reference centreline, bound ≤ 0.02 | **L1r:** the same, counting only stolen centreline points in 26-connected runs longer than **3 mm**; bound ≤ **0.02** | A correct model fails L1 whenever it paints ostia ≥ 0.75 mm in radius (false-fail 100 %); L1r is 0 for every correct prediction and keeps the thief at 0.142 |
+| **L2** | no stage-2 voxel > 30 mm from predicted coronary foreground in ≥ 95 % of cases | **L2d:** no stage-2 26-component whose **nearest** voxel is > **30 mm** from all other predicted coronary foreground (any class, other stage-2 components included), in **≥ 95 of the 100 cases, read as a count** | L2 fails every correct septal ≥ 40 mm and real PLB tips in 176 of 620 cases; a connected branch is never detached |
+| **K1** | share of each stage-2 class's voxels inside traced lumen, fit-check 20, ≤ 0.05 | **K1r = L1r on the fit-check 20**, at each fit check; `LEAK` above **0.02** at the last check | K1 fires on every correct septal ≤ 20 mm and on most ≤ 30 mm; K1r is 0 on them and 0.137 on the thief. One measure for training (K1r) and the look (L1r) |
 | 95 % | as above | count rule, not a bound | With n = 100, a one-sided 1.25 % Clopper–Pearson lower bound is below 0.95 as soon as one case fails (99 of 100 gives 0.938; 100 of 100 gives 0.957). Read with the bound, "95 %" means "100 %" |
 
-- **The run length (3 mm)** is longer than any ostial overlap measured here and shorter than the thief's runs (≈ 10
-  mm each). It is a property of the rule, not tuned on any model output.
+- **The run length (3 mm)** is longer than the ostial overlaps measured here (at r = 1.0 mm a few exceed it, for a
+  pooled 0.0002) and shorter than the thief's runs (≈ 10 mm each). It was set from the reference geometry, not from
+  any model output.
+- **L2d's power was not simulated.** It follows from the definition: a stage-2 component more than 30 mm from every
+  other predicted coronary voxel fails it, at any size.
 - **L2d still catches what L2 was for:** paint in the ventricle, the aorta or the fat. A blob of stage-2 voxels 30 mm
   from everything fails it whatever its size. A long correct septal, connected to its LAD, never does. A septal broken
   into pieces with gaps under 30 mm never does either, because each piece is within its gap of the next.

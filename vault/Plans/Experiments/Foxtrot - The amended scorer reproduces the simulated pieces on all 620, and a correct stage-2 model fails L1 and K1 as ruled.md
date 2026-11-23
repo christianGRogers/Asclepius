@@ -68,18 +68,49 @@ Evidence for [[Candidates/Janus 1-F/Foxtrot v3|Foxtrot v3]] (track 1-F, round 3)
 
 ### 3. Disk per locked case
 
-⟨NPZNOTE⟩
+`npz_size.py` modelled a 13-class softmax on c0000's grid (512 × 512 × 275) and wrote it as nnU-Net 2.8.1 does:
+`np.savez_compressed` of float32, from `export_prediction.py`.
+- raw: 3.75 GB;
+- npz: 1.09 GB without noise, 1.15 GB with N(0, 0.01–0.05) logit noise; about 60 s to write.
+- 58 % of the modelled probabilities underflow to 0. A real network may underflow less, so the plan provisions
+  3.75 GB per case and expects about 1.2.
 
 ### 4. Stage-2 numbers on a correct prediction
 
-⟨S2NOTE⟩
+A correct stage-2 prediction was added to each reference in two ways, both painted child over parent (D47 Q4):
+- three synthetic septals (straight tubes from the LAD at 15/30/45 % of its arc toward the nearest PDA, r 0.6–1.0
+  mm, length 10–60 mm);
+- real traced branches (D2, OM2, PLB) relabelled as the stand-in class.
+
+A thief model (the septals plus ± 5 mm of LAD lumen at each origin) measures power. 400 random 100-case sets.
+
+| Rule | Correct prediction | Result |
+|---|---|---|
+| L1 ≤ 0.02 (upper 1.25 % bound) | septals r = 0.6 / 0.75 / 1.0 mm | pooled 0.0166 / **0.0225** / **0.0304**; false-fail 0 / **100 %** / **100 %** |
+| L1 | D2, OM2, PLB stand-ins | 0.0068, 0.0076, 0.0070; false-fail 0 |
+| L1r (runs > 3 mm only) | every correct prediction above | ≤ 0.0002; false-fail 0 |
+| L1 and L1r | thief | 0.142; fails every time |
+| L2 (30 mm, 95 % of cases) | septals 10–30 mm | 0 cases flagged |
+| L2 | septals 40 mm / 60 mm | **555 / 563 of 620 cases flagged**; false-fail 100 % |
+| L2 | real branch tips (D2 / OM2 / PLB) | 35 / 39 / **176** of 620 cases beyond 30 mm |
+| L2 with the 1.25 % bound | any | fails on a single flagged case (99 of 100 → lower bound 0.938) |
+| K1 ≤ 0.05 (fit-check 20) | septals ≤ 20 mm, any r; 30 mm at r ≥ 0.75 | **fires** (0.045–0.149) |
+| K1r (= L1r on the fit-check 20) | every correct septal / thief | 0 / 0.137 |
+
+The septals' mid-course lies 34–39 mm from any traced vessel (median 34.1 mm at 60 mm length), because the PDA they
+aim at is 59–84 mm away.
 
 ## What it changes
 
 - **Item 1:** the scorer of record is `50826b26…8252`. F-A15 stands without re-freezing.
 - **Item 2:** `j1f_gates.json` is `b268a2fc…05de`.
-- **Item 3:** chunks of 10 hold ⟨CHUNKS⟩ GB at their peak.
-- **Item 5:** ⟨S2CHANGE⟩
+- **Item 3:** chunks of 10 hold about 12 GB at their peak (37.5 GB at worst).
+- **Item 5:** as ruled, L1 and K1 fail correct models on ostial overlap alone, and L2 fails long correct branches.
+  Proposed for the freeze before J1F-2:
+  - **L1r:** theft counted in runs > 3 mm, still ≤ 0.02;
+  - **K1r = L1r on the fit-check 20**, `LEAK` above 0.02;
+  - **L2d:** detached stage-2 components > 30 mm from all other coronary foreground, in ≤ 5 of 100 cases, read as a
+    count.
 
 ## Limits
 

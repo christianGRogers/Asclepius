@@ -1,0 +1,39 @@
+Part A cases ['c0585', 'c0875', 'c0987', 'c0287', 'c0920', 'c0761']
+PASS c0585 collapse = D25 on every non-Other voxel (0 differ)
+PASS c0875 collapse = D25 on every non-Other voxel (0 differ)
+PASS c0987 collapse = D25 on every non-Other voxel (0 differ)
+PASS c0287 collapse = D25 on every non-Other voxel (0 differ)
+PASS c0920 collapse = D25 on every non-Other voxel (0 differ)
+PASS c0761 collapse = D25 on every non-Other voxel (0 differ)
+PASS identity D1: recall, agreement, naming = 1
+PASS identity D1: branch tF1 = 1 (1.000)
+PASS dilate by 1 voxel D1: recall 1, naming 1
+PASS identity D2: recall, agreement, naming = 1
+PASS identity D2: branch tF1 = 1 (1.000)
+PASS dilate by 1 voxel D2: recall 1, naming 1
+PASS identity OM1: recall, agreement, naming = 1
+PASS identity OM1: branch tF1 = 1 (1.000)
+PASS dilate by 1 voxel OM1: recall 1, naming 1
+PASS identity OM2: recall, agreement, naming = 1
+PASS identity OM2: branch tF1 = 1 (1.000)
+PASS dilate by 1 voxel OM2: recall 1, naming 1
+PASS identity PDA: recall, agreement, naming = 1
+PASS identity PDA: branch tF1 = 1 (1.000)
+PASS dilate by 1 voxel PDA: recall 1, naming 1
+PASS identity PLB: recall, agreement, naming = 1
+PASS identity PLB: branch tF1 = 1 (1.000)
+PASS dilate by 1 voxel PLB: recall 1, naming 1
+PASS swap D1/D2 D1: recall 1, naming 0
+PASS swap D1/D2 D2: recall 1, naming 0
+PASS swap PDA/PLB PDA: recall 1, naming 0
+PASS swap PDA/PLB PLB: recall 1, naming 0
+PASS OM2 -> LCx: detected (recall 1), not named (naming 0), agreement drops
+PASS OM2 -> background: recall 0
+PASS c0217 identity: every piece detected and named, tF1 1, presence agrees
+PASS c0217 D1/D2 swapped: detected, misnamed
+PASS c0217 OM folded into LCx: detected, misnamed, presence lost
+PASS c0217 PLB removed: missed
+PASS c0217 PDA kept to 40 %: missed
+selftest ok; scorer sha256 5221032f3dc086d686b63fa946149a215ac00738a87fd9669d7faa15962b2e5b
+Part A: 6 cases; checks failed: 0; total failed: 0
+ALL PASS ; scorer 5221032f3dc086d686b63fa946149a215ac00738a87fd9669d7faa15962b2e5b

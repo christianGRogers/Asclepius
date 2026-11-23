@@ -111,8 +111,16 @@ def main(d, split, out, npr=4, only=None):
     paths = [os.path.join(d, f'{int(c[1:]) + 1}.coronary.nii.gz') for c in train]
     missing = [p for p in paths if not os.path.exists(p)]
     assert not missing, missing[:3]
-    with Pool(npr) as pool, open(out, 'w') as f:
-        for r in pool.imap(one, paths):
+    done = set()
+    if os.path.exists(out):                               # resume: keep complete rows, redo the rest
+        rows = [json.loads(l) for l in open(out) if l.strip().endswith('}')]
+        done = {r['case'] for r in rows}
+        with open(out, 'w') as f:
+            for r in rows:
+                f.write(json.dumps(r) + '\n')
+    paths = [p for c, p in zip(train, paths) if c not in done]
+    with Pool(npr, maxtasksperchild=20) as pool, open(out, 'a') as f:
+        for r in pool.imap_unordered(one, paths):
             f.write(json.dumps(r) + '\n'); f.flush()
     print('scorer', S.scorer_sha256())
 

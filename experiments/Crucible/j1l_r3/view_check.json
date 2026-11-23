@@ -1,0 +1,15 @@
+{
+ "n": 620,
+ "median_cover_128": 1.0,
+ "median_cover_115": 1.0,
+ "p10_cover_128": 1.0,
+ "p10_cover_115": 0.9918,
+ "median_extent_mm": [
+  107.3,
+  89.8,
+  85.8
+ ],
+ "share_cases_any_axis_over_128": 0.027,
+ "share_cases_any_axis_over_115": 0.218,
+ "view_check": "PASS"
+}

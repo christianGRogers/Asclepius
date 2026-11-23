@@ -118,6 +118,10 @@ def read_rule(rows):
                 median_extent_mm=np.round(np.median(ext, 0), 1).tolist(),
                 share_cases_any_axis_over_128=round(float((ext.max(1) > 128).mean()), 3),
                 share_cases_any_axis_over_115=round(float((ext.max(1) > 115.2).mean()), 3),
+                share_cover_below_095_128=round(float((c128 < 0.95).mean()), 3),
+                share_cover_below_095_115=round(float((c115 < 0.95).mean()), 3),
+                min_cover_128=round(float(c128.min()), 4), min_cover_115=round(float(c115.min()), 4),
+                mean_cover_128=round(float(c128.mean()), 4), mean_cover_115=round(float(c115.mean()), 4),
                 view_check='PASS' if passed else 'FAIL')
 
 

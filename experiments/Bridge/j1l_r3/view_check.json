@@ -1,0 +1,71 @@
+{
+ "summary": {
+  "n": 620,
+  "rule": "V1: fit_tree share falls <= 10 pp; V2: every class root_view falls <= 5 pp",
+  "fit_tree": {
+   "0.50mm": 0.9726,
+   "0.45mm": 0.7823,
+   "0.40mm": 0.2823
+  },
+  "fit_left": {
+   "0.50mm": 1.0,
+   "0.45mm": 0.9968,
+   "0.40mm": 0.871
+  },
+  "fit_rca": {
+   "0.50mm": 0.9984,
+   "0.45mm": 0.9935,
+   "0.40mm": 0.9758
+  },
+  "coverage_median": {
+   "0.50mm": 1.0,
+   "0.45mm": 1.0,
+   "0.40mm": 0.987
+  },
+  "coverage_p10": {
+   "0.50mm": 1.0,
+   "0.45mm": 0.9918,
+   "0.40mm": 0.9298
+  },
+  "root_view_voxel_share": {
+   "0.50mm": {
+    "LM": 1.0,
+    "LAD": 0.8966,
+    "LCx": 0.9511,
+    "RCA": 0.9442
+   },
+   "0.45mm": {
+    "LM": 1.0,
+    "LAD": 0.8382,
+    "LCx": 0.902,
+    "RCA": 0.8623
+   },
+   "0.40mm": {
+    "LM": 1.0,
+    "LAD": 0.7608,
+    "LCx": 0.8348,
+    "RCA": 0.7373
+   }
+  },
+  "extent_mm_median": [
+   107.3,
+   89.8,
+   85.8
+  ],
+  "extent_mm_p90": [
+   120.2,
+   101.8,
+   98.5
+  ],
+  "extent_mm_max_axis_median": 107.4,
+  "V1_drop_pp": 19.03,
+  "V2_drop_pp": {
+   "LM": 0.0,
+   "LAD": 5.84,
+   "LCx": 4.91,
+   "RCA": 8.19
+  },
+  "verdict_0.45mm": "FAIL"
+ },
+ "note": "per-case rows not committed"
+}

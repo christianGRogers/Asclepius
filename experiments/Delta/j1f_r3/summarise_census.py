@@ -124,3 +124,24 @@ for bl in bleeds:
 out['stage2_standins'] = stage2
 json.dump(out, open(sys.argv[3], 'w'), indent=1)
 print(json.dumps(out, indent=1)[:6000])
+
+# ---------------------------------------------------------------- L2's rule, for a model whose stray far islands occur
+# in a share q of cases (independent of the stand-ins): P(fail) under the point rule (>= 95 of 100 clean) and under a
+# one-sided 1.25 % bootstrap lower bound >= 0.95
+from math import comb
+tab = {}
+for q in (0.0, 0.01, 0.02, 0.03, 0.05, 0.08, 0.10):
+    pk = [comb(100, k) * (1 - q) ** k * q ** (100 - k) for k in range(101)]   # k clean cases
+    point = sum(p for k, p in enumerate(pk) if k < 95)
+    lb_fail = 0.0
+    for k, p in enumerate(pk):
+        if p < 1e-12:
+            continue
+        ok = np.r_[np.ones(k), np.zeros(100 - k)]
+        b = rng.integers(0, 100, size=(4000, 100))
+        if np.quantile(ok[b].mean(1), Q) < 0.95:
+            lb_fail += p
+    tab[str(q)] = {'P_fail_point_95of100': round(point, 4), 'P_fail_lb_0.95': round(lb_fail, 4)}
+out['L2_rule_table'] = tab
+json.dump(out, open(sys.argv[3], 'w'), indent=1)
+print(json.dumps(tab))

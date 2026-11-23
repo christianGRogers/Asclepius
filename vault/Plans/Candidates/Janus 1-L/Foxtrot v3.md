@@ -61,12 +61,13 @@ missing from the posted blocks, S at 0.5 mm), I say so, and the evidence here is
 
 - **The rule: run the fine-tune with `nnUNet_compile=f`, and say in the verdict that Janus 0's setting is unknown.**
 - **Why that is safe.** The flag only decides whether `torch.compile` fuses the network's kernels. The loss, optimiser,
-  data, augmentation and architecture are the same either way. The checkpoint's state dict is the same too:
-  `finetune_load` strips the `_orig_mod.` prefix. So the flag is a speed setting with float-rounding effects, not a
+  data, augmentation and architecture are the same either way. The checkpoint loads either way:
+  `finetune_load` strips a `_orig_mod.` prefix and unwraps a compiled module
+  (`src/segtrain/nnunet_ext/finetune_load.py` l. 25, 40, 93). So the flag is a speed setting with float-rounding effects, not a
   recipe term.
 - **Why `f`:** Job 0 already predicts with `f`. Compile on H100 adds minutes of start-up to every chained job, and it
   risks a recompile on resume.
-- **L-A21 item 6** (the trainer diff self-test) asserts `nnUNet_compile=f`, not "as Janus 0's".
+- **Amendment to L-A21:** the trainer-diff self-test (item 6) asserts `nnUNet_compile=f`, not "as Janus 0's".
 
 ### 1.3 Job 0: not run. What each output would change
 
@@ -289,14 +290,15 @@ Eight scenarios per grid, 12 cases each, compared with the exact oracle t:
 
 | | Mean \|wall error\| (mm) | Worst (mm) | Exact grid hits (of 16) |
 |---|---|---|---|
-| **Rule T (as merged)** | RESULT_RT_MEAN | RESULT_RT_MAX | RESULT_RT_HITS |
-| Shared-tube volume offset (an alternative I built to test it) | RESULT_ALT_MEAN | RESULT_ALT_MAX | RESULT_ALT_HITS |
-| Frozen t\* | RESULT_FR_MEAN | RESULT_FR_MAX | RESULT_FR_HITS |
+| **Rule T (as merged)** | 0.031 | 0.1 | 13 |
+| Shared-tube volume offset (an alternative I built to test it) | 0.027 | 0.1 | 12 |
+| Frozen t\* | 0.098 | 0.255 | 2 |
 
 - **Rule T resolves the sub-voxel shifts the export threshold makes** (0.05–0.15 mm). It is not moved by an extra branch
   or a missing distal piece.
 - Its largest miss is the one no t ≤ 0.50 can fix: C already wider than Janus 0 at t\*.
-- **The alternative is no better, so I propose no change to Rule T.** F5's degenerate case belongs to voxel-aligned
+- **Rule T is within one grid step of the oracle in all 16 rows.** The alternative is about the same (0.027 against
+  0.031 mm), **so I propose no change to Rule T.** F5's degenerate case belongs to voxel-aligned
   tubes, which real coronaries are not. F5's report line is there so that a degenerate D60 result is named, not hidden.
 
 ## 9. Cost (Trillium, 1 × H100)
@@ -568,6 +570,8 @@ Post: the `.out` tail, `l0_trillium.json` with its sha256, and the `du -sh` line
 ```sh
 cd $SCRATCH/asclepius/repo && git pull --ff-only && source $HOME/icx14-venv/bin/activate
 J=trillium/janus1l/janus1l
+R=$SCRATCH/asclepius/repo; E=$R/experiments/Crucible/j1l_r1; JOB0=$SCRATCH/j1l_job0
+V=$SCRATCH/j1l_j0t; Q=$SCRATCH/j1l_pred      # J0T's folder (inputs in_l100, in_d60; d60_j0) and predict's
 $J check                    # self-tests 1-9 (L-A21) + the Step T pins + l0_trillium.json says PASS; dry run prints paths
 $J prepare                  # P: copy + move plans, preprocess, fingerprint; dataset 718; ≈ 1 GPU-h
 $J train                    # a1 (fold 0), a2 (fold 1), concurrent, chained 23:50 jobs; $J status between

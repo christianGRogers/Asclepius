@@ -1,0 +1,160 @@
+{
+ "note": "synthetic 5-class rim logits; no data read",
+ "n_voxels": 400000,
+ "junction_share": 0.05,
+ "argmax_invariant_to_T": true,
+ "worst_disagreement_share": 0.0206,
+ "rows": [
+  {
+   "T": 0.7,
+   "t": 0.45,
+   "nearest_raw_t": 0.4726,
+   "disagree_share_of_calibrated_mask": 0.00467
+  },
+  {
+   "T": 0.7,
+   "t": 0.4,
+   "nearest_raw_t": 0.4376,
+   "disagree_share_of_calibrated_mask": 0.00435
+  },
+  {
+   "T": 0.7,
+   "t": 0.35,
+   "nearest_raw_t": 0.4019,
+   "disagree_share_of_calibrated_mask": 0.00405
+  },
+  {
+   "T": 0.7,
+   "t": 0.3,
+   "nearest_raw_t": 0.3635,
+   "disagree_share_of_calibrated_mask": 0.00417
+  },
+  {
+   "T": 0.7,
+   "t": 0.25,
+   "nearest_raw_t": 0.3232,
+   "disagree_share_of_calibrated_mask": 0.00409
+  },
+  {
+   "T": 0.85,
+   "t": 0.45,
+   "nearest_raw_t": 0.4621,
+   "disagree_share_of_calibrated_mask": 0.0024
+  },
+  {
+   "T": 0.85,
+   "t": 0.4,
+   "nearest_raw_t": 0.4201,
+   "disagree_share_of_calibrated_mask": 0.00244
+  },
+  {
+   "T": 0.85,
+   "t": 0.35,
+   "nearest_raw_t": 0.3769,
+   "disagree_share_of_calibrated_mask": 0.00233
+  },
+  {
+   "T": 0.85,
+   "t": 0.3,
+   "nearest_raw_t": 0.3325,
+   "disagree_share_of_calibrated_mask": 0.00244
+  },
+  {
+   "T": 0.85,
+   "t": 0.25,
+   "nearest_raw_t": 0.2862,
+   "disagree_share_of_calibrated_mask": 0.00224
+  },
+  {
+   "T": 1.25,
+   "t": 0.45,
+   "nearest_raw_t": 0.4201,
+   "disagree_share_of_calibrated_mask": 0.00518
+  },
+  {
+   "T": 1.25,
+   "t": 0.4,
+   "nearest_raw_t": 0.3604,
+   "disagree_share_of_calibrated_mask": 0.0053
+  },
+  {
+   "T": 1.25,
+   "t": 0.35,
+   "nearest_raw_t": 0.3021,
+   "disagree_share_of_calibrated_mask": 0.00474
+  },
+  {
+   "T": 1.25,
+   "t": 0.3,
+   "nearest_raw_t": 0.2459,
+   "disagree_share_of_calibrated_mask": 0.00455
+  },
+  {
+   "T": 1.25,
+   "t": 0.25,
+   "nearest_raw_t": 0.1924,
+   "disagree_share_of_calibrated_mask": 0.00447
+  },
+  {
+   "T": 1.5,
+   "t": 0.45,
+   "nearest_raw_t": 0.3854,
+   "disagree_share_of_calibrated_mask": 0.01072
+  },
+  {
+   "T": 1.5,
+   "t": 0.4,
+   "nearest_raw_t": 0.3139,
+   "disagree_share_of_calibrated_mask": 0.00998
+  },
+  {
+   "T": 1.5,
+   "t": 0.35,
+   "nearest_raw_t": 0.2502,
+   "disagree_share_of_calibrated_mask": 0.00943
+  },
+  {
+   "T": 1.5,
+   "t": 0.3,
+   "nearest_raw_t": 0.1924,
+   "disagree_share_of_calibrated_mask": 0.00959
+  },
+  {
+   "T": 1.5,
+   "t": 0.25,
+   "nearest_raw_t": 0.1391,
+   "disagree_share_of_calibrated_mask": 0.00895
+  },
+  {
+   "T": 2.0,
+   "t": 0.45,
+   "nearest_raw_t": 0.2935,
+   "disagree_share_of_calibrated_mask": 0.0206
+  },
+  {
+   "T": 2.0,
+   "t": 0.4,
+   "nearest_raw_t": 0.2179,
+   "disagree_share_of_calibrated_mask": 0.0196
+  },
+  {
+   "T": 2.0,
+   "t": 0.35,
+   "nearest_raw_t": 0.1546,
+   "disagree_share_of_calibrated_mask": 0.01883
+  },
+  {
+   "T": 2.0,
+   "t": 0.3,
+   "nearest_raw_t": 0.1028,
+   "disagree_share_of_calibrated_mask": 0.01778
+  },
+  {
+   "T": 2.0,
+   "t": 0.25,
+   "nearest_raw_t": 0.0646,
+   "disagree_share_of_calibrated_mask": 0.01637
+  }
+ ],
+ "reading": "Platt or isotonic calibration of p_fg is exactly a re-gridding of Rule W. Temperature scaling leaves argmax unchanged and, at the rim, its masks equal a raw-threshold mask up to the share printed: a calibration step can only move t*, not add a mask Rule W cannot reach on a finer or wider grid."
+}

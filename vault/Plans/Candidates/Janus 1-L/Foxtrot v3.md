@@ -254,7 +254,8 @@ exit codes: L0, the `T=` line, and a wrong select hash.
 - `mde_from_job0.py` reads the scorer's `rows` and `dice.tree`.
 - `rule_t.py` refuses any non-D60 case.
 - The r9 scorer refuses sealed cases.
-- All six round-1 and round-2 self-tests pass here, and so does `l0_check.py`'s.
+- The self-tests of the five scripts of record (`threshold_export.py`, `decide.py`, `rule_t.py`, `error_decomp.py`,
+  the r9 scorer) pass here, and so does `l0_check.py`'s.
 
 ### 7.3 The command blocks
 

@@ -22,21 +22,21 @@ ruling's §5 items 1–8 with code and CPU evidence from the D45 training 620 (l
      as `tf1.py` is), and the pooled statistics and gate arithmetic added.
    - **It passes 35 of 35 checks on training cases:** Delta's 30 on Delta's six fixtures; my 5 real-case
      perturbations; and the synthetic self-test.
-   - **On the 620,** its reference pieces equal round 2's census piece for piece («PIECES»). So F-A15's lines were
+   - **On the 620,** its reference pieces equal round 2's census piece for piece (620 of 620 cases identical (0 differences in piece count, voxels or length > 0.01 mm)). So F-A15's lines were
      simulated on exactly what it counts.
-   - SegQueue's collapse equals D25 on every voxel outside "Other" and 255 («COLLAPSE»).
+   - SegQueue's collapse equals D25 on every voxel outside "Other" and 255 (0 voxels in 0 of 620 cases).
 2. **F-A15's lines survive the scorer's counts but not F-A25's locked counts.**
    - Re-run with F-A25's counts (97/64/84/40/98/99), the round-2 rule gives three different numbers:
      - **D1 presence 0.93** (frozen: 0.94);
      - **PLB recall 0.90** (frozen: 0.89);
      - **PLB presence 0.95** (frozen: 0.94).
-   - With the frozen 0.94, a human-level D1 fails up to **«D1FF»** of the time, against the rule's ≈ 5 %.
+   - With the frozen 0.94, a human-level D1 fails up to **10.3 %** of the time, against the rule's ≈ 5 %.
    - I propose re-freezing those three (§2.1). `j1f_gates.json` carries F-A15 as ruled, with its test, until the judge
      chooses.
 3. **Stage 2's L2 ("no voxel more than 30 mm from predicted coronary foreground") false-fails a correct model** if
    the foreground excludes the stage-2 class itself, and is vacuous if it includes it.
-   - On the 620, a traced side branch reaches more than 30 mm from its trunk in «L2CASES» of cases.
-   - **Per component it works:** no correctly placed piece starts more than «L2MIN» mm from the trunk.
+   - On the 620, a traced side branch reaches more than 30 mm from its trunk in 189 (LAD), 266 (LCx) and 469 (RCA) of 620 of cases.
+   - **Per component it works:** no correctly placed piece starts more than 0.5 mm from the trunk.
    - I propose L2 per component (§2.5).
    - L1 (0.02) and K1 (0.05) hold for an exact model. Their behaviour under a 1–2 voxel width error is in §2.5.
 4. **T_L cannot be built from F and T alone.** F-A20 deletes the probabilities chunk by chunk.
@@ -118,7 +118,7 @@ The three F-A17 cases added to the self-test:
 
 **One behaviour to know.** SegQueue counts contact by **shared faces**, so a branch joined to its parent only along a
 diagonal counts as unattached. It is still sent to the RCA, and counted as a fallback.
-- It cost nothing on the references: «FALLBACK» fallbacks in «COMPONENTS» PDA/PLB components on the 620.
+- It cost nothing on the references: 0 fallbacks in 1,296 (1,203 to the RCA, 93 to the LCx) PDA/PLB components on the 620.
 - On predictions, `collect` prints the fallback count beside F and T, as F-A17 already requires.
 
 **Its tests, on training fixtures only (`test_scorer.py` → `test_scorer.log`): 35 of 35 pass.**
@@ -143,12 +143,12 @@ diagonal counts as unattached. It is still sent to the RCA, and counted as a fal
 
 | Check | Result |
 |---|---|
-| SegQueue's collapse vs D25, outside "Other" and 255 | «COLLAPSE» |
-| The same, inside "Other" | «OTHERMM» (round 2's ring disagreed on 40 "Other" voxels in 2 cases; "Other" has no D25 class of its own, so these are not errors) |
-| PDA/PLB components; SegQueue fallbacks | «COMPONENTS»; «FALLBACK» |
-| F-A18's expected line `{d3 47, d4_to_lad 2, other_lcx 20, other_nearest 1, other_ignore 8}` | «OTHERLINE» |
-| Reference pieces vs round 2's `census_r2.jsonl` (count, voxels, length per piece) | «PIECES» |
-| Cases with each class present at 5 mm (D1, D2, D3, OM1, OM2, Ramus, PDA, PLB) | «PRESENT» |
+| SegQueue's collapse vs D25, outside "Other" and 255 | 0 voxels in 0 of 620 cases |
+| The same, inside "Other" | 40 voxels in 2 cases (round 2's ring disagreed on 40 "Other" voxels in 2 cases; "Other" has no D25 class of its own, so these are not errors) |
+| PDA/PLB components; SegQueue fallbacks | 1,296 (1,203 to the RCA, 93 to the LCx); 0 |
+| F-A18's expected line `{d3 47, d4_to_lad 2, other_lcx 20, other_nearest 1, other_ignore 8}` | equal: `{d3 47, d4_to_lad 2, other_lcx 20, other_nearest 1, other_ignore 8}` |
+| Reference pieces vs round 2's `census_r2.jsonl` (count, voxels, length per piece) | 620 of 620 cases identical (0 differences in piece count, voxels or length > 0.01 mm) |
+| Cases with each class present at 5 mm (D1, D2, D3, OM1, OM2, Ramus, PDA, PLB) | 611 / 358 / 47 / 540 / 228 / 149 / 607 / 609 (round 2's census exactly) |
 
 **So the piece distribution F-A15 was simulated on is the scorer's own.** The ruling's §7 trigger ("the amended
 scorer's per-piece counts differ") does not fire.
@@ -161,11 +161,11 @@ simulation unchanged, with two inputs swapped:
 
 | | Lines by the rule (5th percentile, worst scenario, round down) | Human-level false-fail of the frozen F-A15 lines, worst of 9 | of the re-derived lines | P(reject): omission +0.10 / misnaming 0.10 / 0.20, frozen → re-derived |
 |---|---|---|---|---|
-| Round-1 counts | **= F-A15** | «R1FF» | — | «R1PW» |
-| **F-A25 counts** | **D1 presence 0.93; PLB recall 0.90, presence 0.95**; the other 15 unchanged | «FAFF» | «RDFF» | «FAPW» → «RDPW» |
+| Round-1 counts | **= F-A15** | worst class 7.1 %, verdict 0.3 % | — | 99.7 / 57.7 / 99.9 % |
+| **F-A25 counts** | **D1 presence 0.93; PLB recall 0.90, presence 0.95**; the other 15 unchanged | **D1 10.3 %**; others ≤ 7.1 %; verdict 0.35 % | D1 5.7 %, PLB 5.2 %; all ≤ 7.1 %; verdict 0.4 % | 99.9 / 58.7 / 99.95 % → 99.9 / 57.2 / 99.95 % |
 
 - **D1 has one fewer locked case with a D1** (97). The human 5th percentile of presence agreement drops by one case,
-  and 0.94 then fails a human-level D1 up to «D1FF» of the time.
+  and 0.94 then fails a human-level D1 up to 10.3 % of the time.
 - **PLB has three more cases** (99). Its 5th percentiles rise, and the rule tightens it, which F-A6 allows before
   submission.
 - **F-A25 called these differences "within the rounding of the lines".** For D1's presence line they are not: it is a
@@ -200,10 +200,10 @@ the counts of record.
 
 **Disk** (`npz_size.py`, one training case, c0099, 512 × 512 × 206; `summary_620.json` for the 620's grids):
 - nnU-Net 2.8.1 writes `np.savez_compressed(…, probabilities=…)` at the original grid, 13 channels.
-- **Uncompressed ceiling:** C × voxels × bytes. The median 620 grid is «MEDVOX» voxels, so **«MEDGB» GB per case in
-  float32** («MEDGB16» GB in float16). The largest is **«MAXGB» GB**.
-- **Measured on c0099 with a network-like synthetic softmax:** «NPZ».
-- **Peak disk for one chunk of 10, at the 620's largest grid: «CHUNKGB» GB**, against «ALL100» GB for all 100 at the
+- **Uncompressed ceiling:** C × voxels × bytes. The median 620 grid is 72.1 M (512 × 512 × 275, the grid of 384 of the 620 and also the largest; smallest 43.5 M) voxels, so **3.75 GB per case in
+  float32** (1.87 GB in float16). The largest is **3.75 GB**.
+- **Measured on c0099 with a network-like synthetic softmax:** float32 **2.34 GB** (83 % of its 2.81 GB uncompressed, 96 s to write); float16 0.027 GB, because the far-field probabilities underflow to 0 in half precision. So a float32 npz barely compresses and the ceiling is the right planning number.
+- **Peak disk for one chunk of 10, at the 620's largest grid: 37.5 (float32; 18.7 in float16) GB**, against 375 GB for all 100 at the
   median grid (F-A20's chunking is what keeps it under ≈ 0.1 TB).
 - Fir's `$SCRATCH` quota is 19 TiB (the compute-inventory note), so either fits. Chunking also bounds the time a
   locked-100 probability file exists.
@@ -340,27 +340,27 @@ are branches of the same calibre leaving the same trunk.
 
 | Number | As ruled | k = 0 (exact) | k = 1 | k = 2 | Proposal |
 |---|---|---|---|---|---|
-| **L1** theft share, pooled (LAD / LCx / RCA) | ≤ 0.02 (one-sided 1.25 %) | «L1K0» | «L1K1» | «L1K2» | «L1PROP» |
-| P(L1 fails) on a 100-case draw, point / upper bound | | «L1PK0» | «L1PK1» | «L1PK2» | |
-| **K1** in-lumen share, 20 cases (LAD / LCx / RCA) | ≤ 0.05 | «K1K0» | «K1K1» | «K1K2» | «K1PROP» |
-| P(K1 writes LEAK) | | «K1PK0» | «K1PK1» | «K1PK2» | |
-| **L2 per voxel**, class excluded from the foreground: cases with a piece > 30 mm (LAD / LCx / RCA) | ≥ 95 % of cases clean | «L2V» | | | **fails a correct model**: «L2VP» |
-| **L2 per component**: cases with a piece starting > 30 mm from the trunk | | «L2C» | | | «L2CP» |
+| **L1** theft share, pooled (LAD / LCx / RCA) | ≤ 0.02 (one-sided 1.25 %) | 0 / 0 / 0 | 0.0058 / 0.0078 / 0.0056 | 0.0168 / **0.0210** / 0.0104 | keep 0.02 |
+| P(L1 fails) on a 100-case draw, point / upper bound | | 0 / 0 | 0 / 0 on every host | LCx 0.78 / 1.00; LAD 0.0002 / 0.11; RCA 0 / 0 | |
+| **K1** in-lumen share, 20 cases (LAD / LCx / RCA) | ≤ 0.05 | 0 / 0 / 0 | 0.012 / 0.012 / 0.005 (p95 of draws ≤ 0.015) | 0.017 / 0.016 / 0.006 (p95 ≤ 0.020) | keep 0.05 |
+| P(K1 writes LEAK) | | 0 | 0 | 0 | |
+| **L2 per voxel**, class excluded from the foreground: cases with a piece > 30 mm (LAD / LCx / RCA) | ≥ 95 % of cases clean | 189 / 266 / 469 of 620 | | | **fails a correct model**: P(fail) = 1.00 on every host |
+| **L2 per component**: cases with a piece starting > 30 mm from the trunk | | 0 / 0 / 0 | | | P(fail) = 0 |
 
 **L2, as written, is ambiguous, and both readings are wrong:**
 - **If "predicted coronary foreground" includes the stage-2 class itself,** every voxel of a connected branch is at
   0 mm. L2 catches only a detached blob. That was its intent, but by accident of definition.
 - **If it excludes the class** (the only reading under which the 30 mm number means anything), a correct branch fails
   whenever it runs more than 30 mm from its trunk.
-  - The 620's side branches: piece max distance p50/p90/p95 = «L2Q».
+  - The 620's side branches: piece max distance p50/p90/p95 = LAD 19.9 / 35.4 / 39.8 mm, LCx 21.5 / 46.3 / 50.8 mm, RCA 39.5 / 51.0 / 55.0 mm (max 67.2 mm).
   - A real RMA runs along the acute margin and a septal deep into the septum, so the real classes are no shorter.
 - **Proposed (P-r3-2): L2 per 26-component.**
   - In ≥ 95 % of locked cases, no stage-2 component of ≥ 20 voxels has its **nearest** voxel more than 30 mm from the
     stage-1 foreground (LM and the trunks with their stage-1 branches).
-  - On the 620 a correctly placed piece's nearest voxel is at «L2MIN» mm at most, so a correct model passes
-    («L2CP»). A blob painted in the atrium or the myocardium, which is what L2 is for, does not.
+  - On the 620 a correctly placed piece's nearest voxel is at 0.5 mm at most, so a correct model passes
+    (P(fail) = 0). A blob painted in the atrium or the myocardium, which is what L2 is for, does not.
 
-**L1 and K1:** «L1K1TEXT»
+**L1 and K1:** both keep their numbers. An exact or one-voxel-wide model passes L1 in every 100-case draw (pooled theft ≤ 0.008, 95th percentile of draws ≤ 0.009) and K1 in every 20-case draw (≤ 0.015). L1 fires on a model two voxels too wide on the LCx (0.021; P(fail) 0.78 at the point, 1.00 at the bound), so 0.02 also catches gross over-painting at junctions, which the gate should see. K1 does not fire even at k = 2 (≤ 0.020), so 0.05 has room for real origins. These are surrogate rates: the real classes are untraced, so the first extended reads should re-check them before J1F-2, as they re-set the band.
 
 **The 95 % in L2, and the one-sided 1.25 %:** kept, because the null above is far from both lines.
 

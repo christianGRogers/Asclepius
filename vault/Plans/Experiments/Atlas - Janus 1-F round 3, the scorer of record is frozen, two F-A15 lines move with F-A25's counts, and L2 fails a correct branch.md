@@ -49,14 +49,76 @@ The model paints them exactly (k = 0) or one or two 6-connected voxels too wide 
 
 ## Results
 
-«RESULTS»
+### 1. The scorer of record, on training fixtures and the 620
+
+| Check | Result |
+|---|---|
+| `test_scorer.py`: Delta's 30 checks (6 hash-chosen training cases), 5 real-case checks on c0217, the synthetic self-test | **35 / 35 pass** (`test_scorer.log`) |
+| SegQueue's collapse vs D25, outside "Other" and 255 | **0 voxels** in 620 cases (40 "Other" voxels in 2 cases differ; "Other" has no D25 class) |
+| PDA/PLB components; fallbacks | 1,296 (1,203 to the RCA, 93 to the LCx); **0 fallbacks** |
+| F-A18's 'Other' line | `{d3 47, d4_to_lad 2, other_lcx 20, other_nearest 1, other_ignore 8}`, as expected |
+| Pieces vs `census_r2.jsonl` (count, voxels, length) | **identical** in 620 of 620 cases |
+
+So the per-piece distribution F-A15 was simulated on is the scorer's own.
+
+- **One behaviour of SegQueue's rule:** contact is face contact. A branch joined to its parent only diagonally counts
+  as unattached, falls back to the RCA, and is counted.
+- **The self-test has a case for it.** On the 620 references it never happens (0 fallbacks).
+
+### 2. F-A15 at F-A25's counts (`gate_refreeze.out`)
+
+| Locked counts | Lines by the rule | Worst human false-fail, frozen F-A15 | Worst, re-derived | P(reject): omission +0.10 / misnaming 0.10 / 0.20 |
+|---|---|---|---|---|
+| Round 1 (98/64/84/40/96/96) | = F-A15 | 7.1 % (verdict 0.3 %) | — | 99.7 / 57.7 / 99.9 % |
+| **F-A25 (97/64/84/40/98/99)** | **D1 presence 0.93; PLB recall 0.90, presence 0.95** | **D1 10.3 %** (others ≤ 7.1 %) | D1 5.7 %, PLB 5.2 % (all ≤ 7.1 %) | 99.9 / 58.7 / 99.95 % → 99.9 / 57.2 / 99.95 % |
+
+### 3. Disk
+
+- **Grids:** the 620's grids are at most 512 × 512 × 275 (72.1 M voxels, 384 of 620 cases).
+- **Uncompressed ceiling:** a 13-channel float32 npz is at most **3.75 GB per case**. A chunk of 10 is 37.5 GB; all
+  100 at once would be 375 GB.
+- **Measured on c0099** (54.0 M voxels):
+  - float32 writes **2.34 GB** (83 % of uncompressed, 96 s);
+  - float16 writes 0.027 GB, because the far field underflows to 0.
+- **Planning number:** the float32 ceiling.
+
+### 4. Stage 2's numbers under the surrogate (`summary_620.json`)
+
+| | LAD | LCx | RCA |
+|---|---|---|---|
+| L1 pooled theft, k = 0 / 1 / 2 | 0 / 0.0058 / 0.0168 | 0 / 0.0078 / **0.0210** | 0 / 0.0056 / 0.0104 |
+| P(L1 > 0.02), 100-case draws, k = 2 (point / upper bound) | 0.0002 / 0.11 | **0.78 / 1.00** | 0 / 0 |
+| K1 in-lumen share, k = 1 / 2 (p95 of 20-case draws) | 0.015 / 0.020 | 0.015 / 0.020 | 0.006 / 0.007 |
+| Pieces | 1,012 | 909 | 599 |
+| Piece max distance from the stage-1 foreground, p50 / p90 / p95 / max (mm) | 19.9 / 35.4 / 39.8 / 60.0 | 21.5 / 46.3 / 50.8 / 62.3 | 39.5 / 51.0 / 55.0 / 67.2 |
+| Cases failing L2 **per voxel** (> 30 mm) | 189 | 266 | 469 |
+| Cases failing L2 **per component** (nearest voxel > 30 mm) | 0 | 0 | 0 |
+| Piece nearest distance, max (mm) | 0.45 | 0.45 | 0.5 |
+
+**What the surrogate shows:**
+- **L1 and K1** never fire for an exact or one-voxel-wide model. L1 fires on the LCx at two voxels too wide.
+- **L2 per voxel** fails a correct model in every 100-case draw on every host.
+- **L2 per component** never does.
+
+### 5. T_L and the verdict
+
+- `decode.py selftest` passes. A plain 13-way argmax moves 9.8 % of voxels across territories on random logits.
+- On the T test, T names a left PDA inside Janus 0's LCx territory PDA and keeps Janus 0's territory bit for bit.
+- compose(Janus 0, NAMES) equals the direct within-territory argmax.
+- `verdict.py selftest` passes for both answers to Q-F2-3.
+
+### 6. `nnUNet_compile`
+
+- `trillium/icx4/lib/job_body.sh` l. 38 exports `nnUNet_compile=f`.
+- `git log -S nnUNet_compile` on it shows only its first commit, `2de3f2f` (2026-10-17). That is before Janus 0's
+  checkpoint (2026-10-21).
 
 ## What it changes
 
 - **F-A16:** the scorer of record is `5221032f…` (P-r3-7). The swe copies it byte for byte, with `test_scorer.py` and
   `test_gates.py` as its tests.
 - **F-A15:** three cells, re-derived by F-A15's own rule at F-A25's counts (P-r3-1), or kept as ruled at a D1
-  false-fail of ≈ «D1FF».
+  false-fail of ≈ 10.3 %.
 - **F-A22's L2:** per component (P-r3-2). L1 0.02, K1 0.05, 95 % and 30 mm are kept.
 - **F-A20:** `decode` also writes NAMES (P-r3-3), so T_L exists for Q-F2-3 (P-r3-4).
 - **F-A20's `nnUNet_compile` "as Janus 0's":** pinned to `f` (P-r3-5).

@@ -214,9 +214,9 @@ F-A1 to F-A26 stay in force except where these change them. They override the ca
   under L1r, seven times the line (Foxtrot's thief).
 - **Why L2d.** Literal L2 measures a branch's length: a correct straight branch longer than ≈ 30 mm crosses it in every
   case (Bridge, Delta, Foxtrot, Atlas, Crucible). L2d measures a gap. It is the only one of the five component forms
-  that also passes **a correct branch the model draws in pieces** (the judge's check, §2): Bridge's L2′ (islands
-  > 5 mm from stage-1 foreground) fails a branch drawn with a 3 mm gap in most cases, because the distal piece is
-  measured against the trunk it left, not the piece it continues.
+  that also passes **a correct branch the model draws in pieces** (the judge's check, §2: false-fail 0 on every host,
+  against 1.00 for Bridge's L2′ and up to 0.96–0.97 for Atlas's, Crucible's and Delta's forms on the RCA). The others
+  measure the distal piece against the trunk it left, not against the piece it continues.
 - **Why K1r.** K1 as ruled is the ostial overlap over the branch's volume, so it falls as 1/length: a correct septal
   ≤ 20 mm writes `LEAK` at every radius tried (Foxtrot), and at 30 mm four of six classes do so 61–99 % of the time
   (Bridge). Atlas and Crucible found K1 safe (≤ 0.02 at a one- or two-voxel bleed) because their stand-ins are
@@ -353,6 +353,8 @@ and Fir, and (d) risk and cost.
   no volume opened): D1 97, D2 64, OM1 84, OM2 40, PDA 98, PLB 99 at 5 mm.
 
 **The 620 numbers.**
+- **The scorer of record's tests:** `Atlas/j1f_r3/test_scorer.py` re-ran here on the six training fixtures and c0217:
+  **ALL PASS** (Part A: 6 cases, 0 checks failed), and it rewrote its committed `test_scorer.log` byte-identically.
 - Each advocate's summariser, re-run on its committed per-case rows, reproduces its committed summary
   **byte-identically**: Atlas `summary_620.json`, Crucible `summary620.json`, Delta `census620_summary.json`,
   Foxtrot `pass_summary.json` and `stage2_summary.json`. Bridge's rows are not in the repository.
@@ -363,12 +365,23 @@ and Fir, and (d) risk and cost.
   - Crucible `pass620.py`: 6 of 6 equal in every field but its wall-clock `sec`.
   - Output: `Judge/j1f_r3/rerun_rows.out`.
 
-**L2 forms on a correct branch drawn with a gap** (`Judge/j1f_r3/l2_forms.py` → `l2_forms_summary.json`; the
-120 training cases with the smallest sha256(`asclepius-j1f-r3-judge-l2:` + id); stand-ins D2 / OM2 / PLB-to-RCA,
-relabelled as one stage-2 class; a gap of 3 mm or 8 mm cut at half the branch's geodesic length; false-fail = share of
-2 000 random 100-case sets with fewer than 95 clean cases):
+**L2 forms on a correct branch drawn with a gap** (`Judge/j1f_r3/l2_forms.py` → `l2_forms.jsonl`,
+`l2_forms_summary.json`). The cases are the training cases with the smallest sha256(`asclepius-j1f-r3-judge-l2:` + id):
+the run was set for 120 and stopped at its time limit after **103**, which are the ones summarised. Stand-ins D2 (LAD,
+55 cases, median length 32.6 mm), OM2 (LCx, 40, 43.4 mm) and PLB collapsing to the RCA (RCA, 93, 50.8 mm), relabelled as
+one stage-2 class; a gap of 3 mm or 8 mm is cut at half the branch's geodesic length. False-fail = share of 2 000
+bootstrap 100-case sets with fewer than 95 clean cases. Every number is a **false** fail: each branch is correct.
 
-L2_TABLE
+| Form | Whole branch, all hosts | 3 mm gap: LAD / LCx / RCA | 8 mm gap: LAD / LCx / RCA |
+|---|---|---|---|
+| Bridge L2′ (island > 5 mm from stage-1) | 0 | **1.00 / 1.00 / 1.00** (93 / 95 / 98 % of cases fail) | **1.00 / 1.00 / 1.00** |
+| Atlas P-r3-2, Crucible (nearest > 30 mm from stage-1) | 0 | 0 / 0.39 / 0.62 | 0 / 0.36 / **0.96** |
+| Delta L2′ (no touch and > 30 mm) | 0 | 0 / 0.38 / 0.64 | 0 / 0.40 / **0.97** |
+| **Foxtrot L2d (nearest > 30 mm from all other foreground)** | **0** | **0 / 0 / 0** | **0 / 0 / 0** |
+
+- A distal piece of a long PLB or OM2 lies more than 30 mm from the stage-1 tree in 5–11 % of cases, so every form
+  that measures against stage-1 foreground alone fails a correct model that breaks such a branch once.
+- L2d measures the gap the model actually left, and passes all of them.
 
 **Not re-run:** Bridge's `stage2_sim.py` and `run620.py` (their per-case rows are not committed, and the 120-case
 sweep is a few CPU-hours); Delta's `npz_size.py` and the other npz estimates (synthetic, and superseded by the posted
@@ -396,9 +409,9 @@ Nothing in the definition changes: the same voxels are ignored; only the stored 
   filter is robust to radius (Foxtrot: 0 at r = 0.6–0.75, 0.0002 at 1.0) and keeps the thief at 0.142. Bridge's
   literal L1 passes its 0.6 mm tubes with 0.003 of room; at 0.75 mm it does not.
 - **L2.** Every component form passes a correct whole branch. The judge's check separates them on a correct branch
-  drawn in pieces (§2). Atlas's, Crucible's and Delta's forms pass it as long as the distal piece is within 30 mm of the
-  stage-1 tree; L2d passes it whenever each piece is within 30 mm of the next, which is the property that matters.
-  Bridge's 5 mm fails it. L2d still fails any blob 30 mm from everything, whatever its size.
+  drawn in pieces (§2): Bridge's 5 mm form fails it every time; Atlas's, Crucible's and Delta's fail it 36–97 % of the
+  time on the LCx and RCA, because a long branch's distal piece can lie > 30 mm from the stage-1 tree; L2d fails it
+  never. L2d still fails any blob 30 mm from everything, whatever its size.
 - **K1.** Bridge's K1′ (unfiltered theft on the fit-check 20 at 0.03) sits on the same edge as literal L1: correct
   ostia of r = 1.0 mm give 0.030 (Foxtrot). Delta's core form passes correct ostia but measures something different
   from the look's L1r. K1r makes the training flag and the look agree.

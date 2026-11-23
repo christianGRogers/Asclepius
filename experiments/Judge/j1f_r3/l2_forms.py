@@ -21,7 +21,7 @@ The forms (a case FAILS if any component meets the condition):
   Atlas P-r3-2 / Crucible   d1 > 30 mm
   Delta L2'    not touch and d1 > 30 mm
   Foxtrot L2d  dall > 30 mm
-`summarise` draws 2 000 random 100-case sets and applies ">= 95 of 100 cases clean" (point count).
+`summarise` draws 2 000 bootstrap 100-case sets (with replacement, from the cases that have the stand-in) and applies ">= 95 of 100 cases clean" (point count).
 Usage: python l2_forms.py run <icx620_dir> <split_j1l.json> <out.jsonl> [n_proc] [n_cases=120]
        python l2_forms.py summarise <out.jsonl> <summary.json>"""
 import hashlib, json, os, sys
@@ -136,7 +136,7 @@ def summarise(inp, out, draws=2000):
                 fail = np.array([any(f(c) for c in r[ver]) for r in hr])
                 rates = []
                 for _ in range(draws):
-                    idx = rng.choice(len(fail), 100, replace=False)
+                    idx = rng.choice(len(fail), 100, replace=True)
                     rates.append(fail[idx].sum() > 5)
                 h[f'{ver} | {fname}'] = {'cases_failing': int(fail.sum()), 'share': round(float(fail.mean()), 4),
                                          'P(false-fail)': round(float(np.mean(rates)), 4)}

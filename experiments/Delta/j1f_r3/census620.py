@@ -16,7 +16,8 @@ Per case:
           of the tree) -- the ruling's literal L2 -- and the same for stage-2 voxels in a 26-component that touches
           no stage-1 voxel (the island form, proposed).
        K1 numerator/denominator per stand-in group: stage-2 voxels inside ImageCAS-X's traced lumen of another class
-          / all stage-2 voxels.
+          / all stage-2 voxels; and the same counting only the lumen's core (the traced lumen less its one-voxel rim).
+       L1 run lengths: the 26-components of stolen trunk-centreline points, in mm (points x geometric-mean spacing).
 Labels only, CPU. Usage: python census620.py <icx620_dir> <split_j1l.json> <out.jsonl> [n_proc]
 """
 import hashlib, json, os, sys
@@ -49,6 +50,7 @@ def stage2_proxies(lab, z, skel):
             out[g] = None
             continue
         tr_cl = skel & (lab == trunk)
+        core = ndi.binary_erosion(traced & ~pm)   # the lumen ImageCAS-X would trace without the stand-ins, less its rim
         n_cl = int(tr_cl.sum())
         res = {'trunk_cl_pts': n_cl}
         for k in BLEEDS:
@@ -56,8 +58,15 @@ def stage2_proxies(lab, z, skel):
             if k:
                 s2 |= ndi.binary_dilation(pm, S26, iterations=k) & traced & ~pm
             stage1 = traced & ~s2
-            r = {'theft_pts': int((tr_cl & s2).sum()),
-                 's2_vox': int(s2.sum()), 's2_in_traced': int((s2 & ~pm).sum())}
+            th = tr_cl & s2
+            runs = []
+            if th.any():
+                lab_r, nr = ndi.label(th, S26)
+                runs = [round(float(v) * float(np.prod(z)) ** (1 / 3), 2)
+                        for v in ndi.sum(th, lab_r, range(1, nr + 1))]
+            r = {'theft_pts': int(th.sum()), 'theft_runs_mm': runs,
+                 's2_vox': int(s2.sum()), 's2_in_traced': int((s2 & ~pm).sum()),
+                 's2_in_traced_core': int((s2 & ~pm & core).sum())}
             if stage1.any():
                 bb = ndi.find_objects((s2 | stage1).astype(np.uint8))[0]
                 d = ndi.distance_transform_edt(~stage1[bb], sampling=z)

@@ -13,7 +13,7 @@
   "recall": "detected reference pieces / reference pieces, pooled over the locked cases",
   "presence": "share of locked cases where reference and prediction agree on presence (both >= 5 mm or both < 5 mm)",
   "naming": "named pieces / detected pieces, pooled",
-  "scorer_sha256": "SCORER_SHA",
+  "scorer_sha256": "d615c7e74a07dd5c1d030c5b69441b25d1dc8e6a0014c569699162bf7e09d808",
   "segqueue_labels_sha256": "5f69b5bef59ad1346c5877a43c65daf7bdf1329b0ca7e427b6addd55d0000a4b",
   "tf1_sha256": "24441cf8df0f000bd956c7dd9d8ae1daac866cfb14df1d174441d00e54f05254"
 }

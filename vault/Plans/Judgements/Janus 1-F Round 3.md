@@ -357,7 +357,11 @@ and Fir, and (d) risk and cost.
   **byte-identically**: Atlas `summary_620.json`, Crucible `summary620.json`, Delta `census620_summary.json`,
   Foxtrot `pass_summary.json` and `stage2_summary.json`. Bridge's rows are not in the repository.
 - **Per-case rows re-run** (`Judge/j1f_r3/rerun_rows.py`, the 6 training cases with the smallest
-  sha256(`asclepius-j1f-r3-judge-rows:` + id)): ROWS_RESULT.
+  sha256(`asclepius-j1f-r3-judge-rows:` + id)): c0755, c0115, c0984, c0888, c0240, c0173.
+  - Atlas `check_620.py`, Foxtrot `pass_r3.py`, Foxtrot `stage2_falsefail.py` and Delta `census620.py`: **6 of 6 rows
+    equal** to the committed rows, every field.
+  - Crucible `pass620.py`: 6 of 6 equal in every field but its wall-clock `sec`.
+  - Output: `Judge/j1f_r3/rerun_rows.out`.
 
 **L2 forms on a correct branch drawn with a gap** (`Judge/j1f_r3/l2_forms.py` → `l2_forms_summary.json`; the
 120 training cases with the smallest sha256(`asclepius-j1f-r3-judge-l2:` + id); stand-ins D2 / OM2 / PLB-to-RCA,

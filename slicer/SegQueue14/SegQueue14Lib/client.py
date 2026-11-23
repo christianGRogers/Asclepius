@@ -31,9 +31,33 @@ from segqueue14 import PROTOCOL_VERSION, protocol
 from segqueue.checksum import CHUNK_BYTES
 from segqueue.dataset import suffix_for
 
-#: Chunk size for resumable uploads. 8 MiB balances "few round trips" against
-#: "how much has to be resent when a home connection drops mid-chunk".
-UPLOAD_CHUNK_BYTES = 8 * 1024 * 1024
+#: Chunk size for resumable uploads. It must stay under the request-body limit of
+#: the reverse proxy in front of Girder: the public server's nginx keeps the
+#: default ``client_max_body_size`` of 1 MiB and answers a larger chunk with its
+#: own "413 Request Entity Too Large" before Girder sees it, so the old 8 MiB
+#: chunk failed every file over 1 MiB (an extended read, a reviewer revision).
+#: A chunk is sent as a raw ``application/octet-stream`` body, not multipart, so
+#: the body nginx measures is the chunk itself; the offset and upload id travel in
+#: the query string and headers. 768 KiB leaves a quarter of the 1 MiB limit as
+#: margin for any proxy that counts more than the bare body, and a 20 MB read is
+#: still only ~27 round trips. If a proxy is stricter still, ``uploadFile``
+#: halves the size on a 413 (down to ``UPLOAD_CHUNK_FLOOR_BYTES``).
+UPLOAD_CHUNK_BYTES = 768 * 1024
+
+#: The smallest chunk ``uploadFile`` halves down to after HTTP 413. A proxy that
+#: refuses 64 KiB is misconfigured rather than strict; more halving would only
+#: turn one clear error into thousands of requests.
+UPLOAD_CHUNK_FLOOR_BYTES = 64 * 1024
+
+#: HTTP "Payload Too Large": the proxy (or server) refused the request body size.
+HTTP_PAYLOAD_TOO_LARGE = 413
+
+#: Shown when a chunk of the floor size is still refused with 413.
+UPLOAD_TOO_LARGE_MESSAGE = (
+    "The server's proxy refused the upload because of its size (HTTP 413), even "
+    "in the smallest pieces this module sends. Nothing has been submitted, and "
+    "your work is still saved on this computer. Please tell the project lead, "
+    "who needs to raise the upload size limit on the server.")
 
 #: Connect/read timeouts. The read timeout is generous because the server hashes
 #: an uploaded file before answering /submit, and a large segmentation on a busy
@@ -51,13 +75,19 @@ class SegQueue14Error(RuntimeError):
     ``detail`` its extra fields, when the failure was such a refusal; otherwise
     ``None`` and ``{}``. Every instance carries both, so callers can branch on
     ``exc.code`` without first asking whether it is there.
+
+    ``status`` is the HTTP status code when the failure was an HTTP response
+    (``None`` when the server could not be reached, or the error is the
+    client's own), so callers can tell a proxy's 413 from any other refusal.
     """
 
     def __init__(self, message: str, code: Optional[str] = None,
-                 detail: Optional[Dict[str, Any]] = None) -> None:
+                 detail: Optional[Dict[str, Any]] = None,
+                 status: Optional[int] = None) -> None:
         super().__init__(message)
         self.code = code
         self.detail = detail if detail is not None else {}
+        self.status = status
 
 
 def _unlinkQuietly(path: str) -> None:
@@ -99,6 +129,10 @@ class SegQueue14Client:
         self.token = None
         self.user = None
         self.extensionVersion = extensionVersion
+        #: Upload chunk size for this session. Starts at ``UPLOAD_CHUNK_BYTES``
+        #: and is halved on HTTP 413 by ``uploadFile``; the reduced size is kept
+        #: for every later upload, so only the first one pays for the probing.
+        self.uploadChunkBytes = UPLOAD_CHUNK_BYTES
 
     # ------------------------------------------------------------- plumbing
 
@@ -137,8 +171,10 @@ class SegQueue14Client:
             body = None
 
         structured = protocol.parse_error(body)
+        status = response.status_code
         if structured is not None:
-            return SegQueue14Error(str(structured), structured.code, structured.detail)
+            return SegQueue14Error(str(structured), structured.code, structured.detail,
+                                   status=status)
 
         message = ''
         if isinstance(body, dict):
@@ -148,7 +184,7 @@ class SegQueue14Client:
 
         if response.status_code == 401:
             message = 'Your session has expired. Log in again.'
-        return SegQueue14Error(f'{message} (HTTP {response.status_code})')
+        return SegQueue14Error(f'{message} (HTTP {status})', status=status)
 
     @staticmethod
     def _writeBody(response, handle, total=0, progress=None):
@@ -392,6 +428,12 @@ class SegQueue14Client:
         upstream can take a minute, and a dropped connection at second fifty
         should cost seconds, not the whole transfer -- so a failed chunk asks
         the server how much it actually has and continues from there.
+
+        A chunk refused with HTTP 413 (a proxy's body-size limit) halves the
+        chunk size, down to ``UPLOAD_CHUNK_FLOOR_BYTES``, and continues from the
+        server's offset. The smaller size is kept on the client for the rest of
+        this upload and every later one. A 413 at the floor raises
+        ``UPLOAD_TOO_LARGE_MESSAGE``; nothing is deleted locally either way.
         """
         name = name or os.path.basename(path)
         size = os.path.getsize(path)
@@ -406,10 +448,21 @@ class SegQueue14Client:
             offset = 0
             while offset < size:
                 handle.seek(offset)
-                chunk = handle.read(UPLOAD_CHUNK_BYTES)
+                chunk = handle.read(self.uploadChunkBytes)
                 try:
                     upload = self._sendChunk(uploadId, offset, chunk)
-                except SegQueue14Error:
+                except SegQueue14Error as exc:
+                    if exc.status == HTTP_PAYLOAD_TOO_LARGE:
+                        if self.uploadChunkBytes <= UPLOAD_CHUNK_FLOOR_BYTES:
+                            raise SegQueue14Error(
+                                UPLOAD_TOO_LARGE_MESSAGE,
+                                status=HTTP_PAYLOAD_TOO_LARGE) from exc
+                        self.uploadChunkBytes = max(
+                            UPLOAD_CHUNK_FLOOR_BYTES, self.uploadChunkBytes // 2)
+                        # A refused body was never stored, but resume from what
+                        # the server says it has rather than assume.
+                        offset = self._uploadOffset(uploadId)
+                        continue
                     # Ask the server what it really has, then continue. If it
                     # agrees with us the chunk genuinely failed, so re-raise
                     # rather than spin.

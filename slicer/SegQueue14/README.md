@@ -163,6 +163,21 @@ empty, grouped under their parent in the segment list, with show/hide per group:
   (`GET /segqueue14/review/case/{id}/submissions`, the queue, the submission and the
   claim), so the protocol stays 21 and the server is unchanged.
 
+### Reviewers see the case's note thread (0.24.1)
+
+- Opening a submission for review now shows that case's whole note thread in
+  **Case notes**: the comments annotators sent with **Post**, which 0.24.0 left
+  out (a reviewer holds no case of their own, so the thread stayed empty). It is
+  read-only and looks exactly as it does to the annotator; *Annotator's note: ...*
+  stays above it. It refreshes on the usual notes timer while the review is open.
+- The posting row stays greyed out while reviewing: reviewers do not post notes.
+- A thread that cannot be fetched is left empty, quietly; it never stops the review.
+- Approving, saving a revision, *Return to pool*, comparing, viewing a case, opening
+  your own case or logging out empties the thread again.
+- Needs plugin **0.7.1** for reviewer accounts that are not also annotators (the
+  server used to refuse them with `not_an_annotator`); until it is deployed those
+  accounts see an empty thread. Protocol stays 21.
+
 **The reviewer's case list** (0.18.0, #280) is sorted by submission time, newest
 first; rows with nothing submitted yet come last. The *Submitted (ET)* column shows
 that time in US Eastern time (America/Toronto, daylight saving included), e.g.

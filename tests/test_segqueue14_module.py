@@ -577,8 +577,8 @@ def _calls_in(node):
             if isinstance(n, ast.Call) and isinstance(n.func, ast.Attribute)}
 
 
-def test_the_module_is_0_24_0_and_protocol_21():
-    assert re.search(r'^__version__ = "0\.24\.0"$', _source(), re.M)
+def test_the_module_is_0_24_1_and_protocol_21():
+    assert re.search(r'^__version__ = "0\.24\.1"$', _source(), re.M)
     sys_path = str(REPO / "src")
     import sys
 
@@ -603,7 +603,7 @@ def test_comparing_never_writes_a_submission_a_draft_or_a_decision():
     client = set(re.findall(r"self\.logic\.client\.(\w+)", body))
     assert client == {"downloadReviewFile"}
     # Nothing is left open for review: Save changes & approve stays disabled.
-    assert "self._claimedSubmission = None" in body
+    assert "self._endReview()" in body
     load = ast.get_source_segment(_source(), _method("SegQueue14Logic", "loadComparison"))
     assert "self.segmentationNode = None" in load
 
@@ -1139,3 +1139,178 @@ def test_the_extended_row_has_no_paragraph_of_instructions_and_keeps_its_control
     assert "self.logic.setGroupVisible(group, on)" in code
     assert "self.onToggleComplete(group, on)" in code
     assert "layout.addWidget(self.extendedBox)" in code
+
+
+# ------------------------------------------- the case thread, for the reviewer (0.24.1)
+
+
+class _NotesLogic:
+    """``SegQueue14Logic`` as ``onRefreshNotes`` sees it: who asked for which thread."""
+
+    def __init__(self, assignment=None, fail=None):
+        self.assignment = assignment
+        self.fail = fail
+        self.asked = []
+
+    def caseNotes(self, limit=None):
+        self.asked.append(("own", self.assignment.case_id))
+        return ["own note"]
+
+    def caseNotesFor(self, caseId, limit=None):
+        self.asked.append(("review", caseId))
+        if self.fail is not None:
+            raise self.fail
+        return ["posted by the annotator"]
+
+
+class _NotesError(Exception):
+    pass
+
+
+def _notes_widget(logic, claimed=None, caseId=""):
+    """Run the notes methods on a stand-in widget: what they fetch and render."""
+    errors = []
+
+    class Util:
+        @staticmethod
+        def errorDisplay(text):
+            errors.append(text)
+
+    class Slicer:
+        util = Util
+
+    namespace = {"SegQueueError": _NotesError, "slicer": Slicer, "traceback": None}
+    for name in ("onRefreshNotes", "onNotesTimer", "_endReview"):
+        exec(compile(ast.Module(body=[_method("SegQueue14Widget", name)], type_ignores=[]),
+                     str(MODULE), "exec"), namespace)
+
+    class Widget:
+        pass
+
+    widget = Widget()
+    widget.logic = logic
+    widget._claimedSubmission = claimed
+    widget._reviewCaseId = caseId
+    widget.rendered = []
+    widget.errors = errors
+    widget._renderNotes = widget.rendered.append
+    for name in ("onRefreshNotes", "onNotesTimer", "_endReview"):
+        setattr(widget, name, namespace[name].__get__(widget))
+    return widget
+
+
+def test_the_reviewed_case_s_thread_is_fetched_while_reviewing():
+    logic = _NotesLogic()
+    widget = _notes_widget(logic, claimed="sub1", caseId="case7")
+    widget.onRefreshNotes()
+    assert logic.asked == [("review", "case7")]
+    assert widget.rendered == [["posted by the annotator"]]
+
+
+def test_the_timer_refreshes_the_reviewed_case_s_thread():
+    logic = _NotesLogic()
+    widget = _notes_widget(logic, claimed="sub1", caseId="case7")
+    widget.onNotesTimer()
+    assert logic.asked == [("review", "case7")]
+
+
+def test_with_nothing_open_no_thread_is_fetched_and_it_stays_empty():
+    logic = _NotesLogic()
+    widget = _notes_widget(logic)
+    widget.onNotesTimer()
+    assert logic.asked == [] and widget.rendered == []
+    widget.onRefreshNotes()
+    assert logic.asked == [] and widget.rendered == [[]]
+    # A stale case id without an open submission is not a review either.
+    widget = _notes_widget(logic, claimed=None, caseId="case7")
+    widget.onRefreshNotes()
+    assert logic.asked == [] and widget.rendered == [[]]
+
+
+def test_one_s_own_case_still_shows_its_own_thread():
+    class Assignment:
+        case_id = "own1"
+
+    logic = _NotesLogic(assignment=Assignment())
+    widget = _notes_widget(logic)
+    widget.onNotesTimer()
+    assert logic.asked == [("own", "own1")]
+
+
+@pytest.mark.parametrize("fail", [_NotesError("403 not_an_annotator"), RuntimeError("down")])
+def test_a_failed_fetch_while_reviewing_is_quiet_on_the_timer(fail):
+    logic = _NotesLogic(fail=fail)
+    widget = _notes_widget(logic, claimed="sub1", caseId="case7")
+    widget.onNotesTimer()
+    widget.onRefreshNotes(quiet=True)
+    assert widget.errors == [] and widget.rendered == []
+
+
+def test_ending_the_review_forgets_the_case_and_empties_the_thread():
+    logic = _NotesLogic()
+    widget = _notes_widget(logic, claimed="sub1", caseId="case7")
+    widget._endReview()
+    assert widget._claimedSubmission is None and widget._reviewCaseId == ""
+    assert widget.rendered == [[]]
+    widget.onNotesTimer()
+    assert logic.asked == []
+
+
+def test_every_way_out_of_a_review_goes_through_end_review():
+    """Verdict, revise, return, compare, view a case, own case, logout: none of them
+    may clear ``_claimedSubmission`` and leave the reviewed thread on screen."""
+    cls = next(c for c in _classes() if c.name == "SegQueue14Widget")
+    for fn in cls.body:
+        if not isinstance(fn, ast.FunctionDef) or fn.name in ("__init__", "_endReview"):
+            continue
+        body = ast.get_source_segment(_source(), fn)
+        assert "self._claimedSubmission = None" not in body, fn.name
+    for name in ("onReviseSubmission", "onReturnToPool", "onVerdict", "onLogout"):
+        assert "self._endReview()" in _body("SegQueue14Widget", name), name
+
+
+def test_opening_a_submission_keeps_its_case_and_shows_its_thread():
+    opened = _body("SegQueue14Widget", "onOpenReview")
+    assert 'self._reviewCaseId = str(entry.get("caseId") or "")' in opened
+    claim = opened.index("self._claimedSubmission = submissionId")
+    assert claim < opened.index("self._reviewCaseId = ") < opened.rindex(
+        "self.onRefreshNotes()")
+    # The row it is read from carries the case id.
+    review = (REPO / "server" / "girder_segqueue14" / "rest" / "review.py").read_text(
+        encoding="utf-8")
+    row = review.split("    def _row(self, assignment, submission):", 1)[1].split(
+        "\n    def ", 1)[0]
+    assert "'caseId': str(submission['caseId'])" in row
+
+
+def test_the_reviewer_s_compose_row_stays_disabled():
+    enabled = _body("SegQueue14Widget", "_updateEnabled")
+    assert "self.noteInput.setEnabled(hasCase)" in enabled
+    assert "self.postNoteButton.setEnabled(hasCase)" in enabled
+    post = _body("SegQueue14Widget", "onPostNote")
+    assert "if self.logic is None or self.logic.assignment is None:" in post
+    assert "_reviewCaseId" not in post and "caseNotesFor" not in post
+
+
+def test_the_logic_reads_any_case_s_thread_but_only_when_logged_in():
+    namespace = {}
+    exec(compile(ast.Module(body=[_method("SegQueue14Logic", "caseNotesFor")],
+                            type_ignores=[]), str(MODULE), "exec"), namespace)
+    calls = []
+
+    class Client:
+        def caseNotes(self, caseId, limit=None):
+            calls.append((caseId, limit))
+            return ["n"]
+
+    class Logic:
+        loggedIn = True
+        client = Client()
+
+    logic = Logic()
+    assert namespace["caseNotesFor"](logic, "case7") == ["n"]
+    assert calls == [("case7", None)]
+    assert namespace["caseNotesFor"](logic, "") == []
+    logic.loggedIn = False
+    assert namespace["caseNotesFor"](logic, "case7") == []
+    assert calls == [("case7", None)]

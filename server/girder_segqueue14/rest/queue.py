@@ -56,6 +56,7 @@ from ..utils import (
     fileForCase,
     hashStoredFile,
     incomingFolder,
+    isReviewer,
     loadOwnAssignment,
     refuse,
     requireAnnotator,
@@ -518,7 +519,13 @@ class QueueResource14(Resource):
                dataType='integer', required=False)
     )
     def listNotes(self, case, limit):
-        user = requireAnnotator(self.getCurrentUser())
+        # A reviewer (or an admin) reads the thread of the submission they are
+        # reviewing without being in the annotator group; an annotator still
+        # has to have worked on the case. ``addNote`` keeps requiring an
+        # annotator.
+        user = self.getCurrentUser()
+        if not isReviewer(user):
+            requireAnnotator(user)
         requireCaseInvolvement(Assignment14(), case['_id'], user)
         return [noteInfo(n).to_dict() for n in Note14().forCase(case['_id'], limit)]
 

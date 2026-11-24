@@ -121,7 +121,7 @@ from SegQueue14Lib import SegQueue14Error as SegQueueError
 
 #: Continues SegQueue's numbering (0.13.0 was the last 4-class release). The
 #: release tag is ``segqueue-v`` + this; bump it to publish.
-__version__ = "0.23.1"
+__version__ = "0.24.0"
 
 #: Where the module's help points.
 HELP_URL = "https://github.com/christianGRogers/Asclepius"
@@ -2061,6 +2061,9 @@ class SegQueue14Widget(ScriptedLoadableModuleWidget):
         self._annotators = []
         self._historyRows = []
         self._claimedSubmission = None
+        #: The opened submission's own note from its annotator (``annotatorNote``),
+        #: shown in "Case notes" while it is open for review; "" when none.
+        self._reviewNote = ""
         self._reviewStart = None
         self._slicerLogo = None
         #: The reads in the open comparison (#335), and their panel rows.
@@ -2197,6 +2200,19 @@ class SegQueue14Widget(ScriptedLoadableModuleWidget):
         self.noteInput.setText("")
         self.logic.saveNoteDraft("")
         self.onRefreshNotes()
+
+    def _showAnnotatorNote(self, note):
+        """Show the opened submission's note from its annotator in "Case notes",
+        labelled as theirs; nothing at all when there is none.
+
+        Plain text (the label's format is ``PlainText``): the note is whatever the
+        annotator typed, so it is never read as markup. Hidden again once nothing
+        is under review (``_updateEnabled``).
+        """
+        note = (note or "").strip() if isinstance(note, str) else ""
+        self._reviewNote = note
+        self.annotatorNoteLabel.setText("Annotator's note: " + note if note else "")
+        self.annotatorNoteLabel.setVisible(bool(note) and bool(self._claimedSubmission))
 
     def _clearNotes(self):
         """Empty the thread and the compose box when the case goes away."""
@@ -2639,6 +2655,19 @@ class SegQueue14Widget(ScriptedLoadableModuleWidget):
         notesLayout.setContentsMargins(8, 6, 8, 6)
         notesLayout.setSpacing(6)
 
+        # The opened submission's note from its annotator, for the reviewer. A
+        # label of its own, not a block in the thread: the thread is re-rendered
+        # on every refresh, and this is set once, on opening the submission. Plain
+        # text, always: the note is the annotator's free text, never markup.
+        self.annotatorNoteLabel = qt.QLabel()
+        self.annotatorNoteLabel.setTextFormat(qt.Qt.PlainText)
+        self.annotatorNoteLabel.setWordWrap(True)
+        self.annotatorNoteLabel.setTextInteractionFlags(qt.Qt.TextSelectableByMouse)
+        self.annotatorNoteLabel.setToolTip(
+            "What the annotator wrote when they submitted this read.")
+        self.annotatorNoteLabel.setVisible(False)
+        notesLayout.addWidget(self.annotatorNoteLabel)
+
         self.notesBrowser = qt.QTextBrowser()
         self.notesBrowser.setMaximumHeight(150)
         self.notesBrowser.setOpenExternalLinks(True)
@@ -2832,10 +2861,11 @@ class SegQueue14Widget(ScriptedLoadableModuleWidget):
         """The "Extended classes" toggle (D44), and per-group show/hide once on.
 
         Off by default and remembered per login: an annotator who does not use the
-        extended classes keeps the familiar four. The instructions and each class's
-        hint sit under the toggle, where the classes are. Under them, one
-        "complete" tick-box per branch group (D47 Q3); above the toggle, the
-        extended-mode note on a flagged case (D47 Q6).
+        extended classes keeps the familiar four. Under the toggle, the per-group
+        show/hide (each class's hint in its group's tooltip) and one "complete"
+        tick-box per branch group (D47 Q3); above it, the extended-mode note on a
+        flagged case (D47 Q6). No paragraph of instructions (0.24.0): the panel
+        stays short, and how to use the classes is in the annotator guide.
         """
         self.extendedModeLabel = qt.QLabel(labels.EXTENDED_MODE_NOTE)
         self.extendedModeLabel.setWordWrap(True)
@@ -2843,7 +2873,7 @@ class SegQueue14Widget(ScriptedLoadableModuleWidget):
         self.extendedModeLabel.setVisible(False)
         layout.addWidget(self.extendedModeLabel)
 
-        self.extendedCheck = qt.QCheckBox("Extended classes (optional)")
+        self.extendedCheck = qt.QCheckBox("Extended classes")
         self.extendedCheck.setToolTip(
             "Adds 17 optional classes, empty: stent, calcified and non-calcified "
             "plaque, D1-D3, S1-S3, OM1-OM2, SN, conus, RMA, PDA, PLB and the ramus. "
@@ -2855,10 +2885,6 @@ class SegQueue14Widget(ScriptedLoadableModuleWidget):
         boxLayout = qt.QVBoxLayout(self.extendedBox)
         boxLayout.setContentsMargins(0, 0, 0, 0)
         boxLayout.setSpacing(4)
-        self.extendedHelp = _muted(qt.QLabel(labels.EXTENDED_INSTRUCTIONS))
-        self.extendedHelp.setWordWrap(True)
-        boxLayout.addWidget(self.extendedHelp)
-
         row = qt.QHBoxLayout()
         row.addWidget(_muted(qt.QLabel("Show:")))
         self.groupChecks = {}
@@ -2909,7 +2935,7 @@ class SegQueue14Widget(ScriptedLoadableModuleWidget):
         self._updateExtendedBox()
 
     def _updateExtendedBox(self):
-        """Show the group row and instructions when the scene has extended classes;
+        """Show the group rows when the scene has extended classes;
         the extended-mode note on a flagged case (D47 Q6); the ticks of the open
         read (D47 Q3)."""
         flagged = bool(self.logic.caseExtendedMode)
@@ -3853,6 +3879,7 @@ class SegQueue14Widget(ScriptedLoadableModuleWidget):
             self.logic.centre3d()
 
         self._claimedSubmission = submissionId
+        self._showAnnotatorNote(entry.get("annotatorNote"))
         self._reviewStart = time.time()
         self._updateExtendedBox()
         self.reviewStatusLabel.setText(
@@ -4619,7 +4646,12 @@ class SegQueue14Widget(ScriptedLoadableModuleWidget):
             button.setEnabled(hasCase)
         self._updateReleaseButton()
         self.editorBox.setEnabled(hasCase or reviewing)
-        self.notesBox.setEnabled(hasCase)
+        # Enabled while reviewing too, so the annotator's note is readable; the
+        # thread's own compose row still needs a case of one's own.
+        self.notesBox.setEnabled(hasCase or reviewing)
+        self.noteInput.setEnabled(hasCase)
+        self.postNoteButton.setEnabled(hasCase)
+        self.annotatorNoteLabel.setVisible(reviewing and bool(self._reviewNote))
 
     def _updateReleaseButton(self):
         """"Discard changes and close" while the open case is one recalled with

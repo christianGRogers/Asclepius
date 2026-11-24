@@ -147,6 +147,22 @@ empty, grouped under their parent in the segment list, with show/hide per group:
   local copy is kept.
 - Module only: the protocol stays 21 and the server is unchanged.
 
+### Reviewers see the annotator's note; a shorter extended-classes row (0.24.0)
+
+- Opening a submission for review shows the note its annotator sent with it (the
+  text in *Case notes* when they pressed *Submit*) at the top of **Case notes**, as
+  *Annotator's note: ...*, above the case's thread, which is unchanged. Nothing
+  extra is shown when the read was submitted without a note. It is shown as plain
+  text, whatever it contains. The posting row stays greyed out while reviewing.
+- The long paragraph of instructions under **Extended classes** is gone, and the
+  toggle reads *Extended classes* (no longer *Extended classes (optional)*; the
+  classes are still optional, as its tooltip says). The toggle, its tooltip, the *Show:* and *Complete:* tick-boxes and their tooltips
+  are unchanged; how to use the classes is in the annotator guide
+  ([docs/ANNOTATOR-SETUP.md](../../docs/ANNOTATOR-SETUP.md)).
+- Module only: the server already sends `annotatorNote` in every reviewer row
+  (`GET /segqueue14/review/case/{id}/submissions`, the queue, the submission and the
+  claim), so the protocol stays 21 and the server is unchanged.
+
 **The reviewer's case list** (0.18.0, #280) is sorted by submission time, newest
 first; rows with nothing submitted yet come last. The *Submitted (ET)* column shows
 that time in US Eastern time (America/Toronto, daylight saving included), e.g.

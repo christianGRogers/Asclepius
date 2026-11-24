@@ -165,11 +165,14 @@ empty, grouped under their parent in the segment list, with show/hide per group:
 
 ### Reviewers see the case's note thread (0.24.1)
 
-- Opening a submission for review now shows that case's whole note thread in
-  **Case notes**: the comments annotators sent with **Post**, which 0.24.0 left
-  out (a reviewer holds no case of their own, so the thread stayed empty). It is
+- Opening a submission for review now shows, in **Case notes**, the case's full
+  note thread, including other annotators' and the auto screener's notes: the
+  comments annotators sent with **Post**, which 0.24.0 left out (a reviewer holds
+  no case of their own, so the thread stayed empty), and the system notes. It is
+  fetched by the case, never filtered by the submission's annotator. It is
   read-only and looks exactly as it does to the annotator; *Annotator's note: ...*
   stays above it. It refreshes on the usual notes timer while the review is open.
+  As everywhere, a long thread shows its newest 50 notes (`NOTE_PAGE_SIZE`).
 - The posting row stays greyed out while reviewing: reviewers do not post notes.
 - A thread that cannot be fetched is left empty, quietly; it never stops the review.
 - Approving, saving a revision, *Return to pool*, comparing, viewing a case, opening

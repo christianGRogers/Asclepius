@@ -1314,3 +1314,33 @@ def test_the_logic_reads_any_case_s_thread_but_only_when_logged_in():
     logic.loggedIn = False
     assert namespace["caseNotesFor"](logic, "case7") == []
     assert calls == [("case7", None)]
+
+
+def test_the_reviewer_s_fetch_is_by_case_id_only_and_never_filtered():
+    """The lead's rule: the whole thread for the case -- every annotator's notes,
+    system notes and the auto screener's. Fetched by the reviewed case's id alone,
+    and nothing on the client drops a note by annotator, author or ``system``."""
+    logic_fetch = _body("SegQueue14Logic", "caseNotesFor")
+    assert "self.client.caseNotes(caseId, limit=limit)" in logic_fetch
+    refresh = _body("SegQueue14Widget", "onRefreshNotes")
+    assert "self.logic.caseNotesFor(caseId)" in refresh
+    opened = _body("SegQueue14Widget", "onOpenReview")
+    assert 'self._reviewCaseId = str(entry.get("caseId") or "")' in opened
+    for name, body in (("caseNotesFor", logic_fetch), ("onRefreshNotes", refresh),
+                       ("_renderNotes", _body("SegQueue14Widget", "_renderNotes"))):
+        code = body.split('"""')[-1]
+        for word in ("annotator", "author_id", "authorId", "userId",
+                     "filter(", "for n in notes if", "for note in notes if"):
+            assert word not in code, (name, word)
+    # ``system`` only colours a note in the renderer; every note is drawn.
+    render = _body("SegQueue14Widget", "_renderNotes")
+    assert "for note in notes:" in render and "continue" not in render
+    # Run it: notes from two annotators, a system note and the auto screener all
+    # reach the renderer, in the server's order.
+    thread = [{"author": "anna"}, {"author": "SegQueue14", "system": True},
+              {"author": "bobby"}, {"author": "auto screener", "system": True}]
+    logic = _NotesLogic()
+    logic.caseNotesFor = lambda caseId, limit=None: (logic.asked.append(caseId), thread)[1]
+    widget = _notes_widget(logic, claimed="sub1", caseId="case7")
+    widget.onRefreshNotes()
+    assert logic.asked == ["case7"] and widget.rendered == [thread]

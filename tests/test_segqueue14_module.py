@@ -577,8 +577,8 @@ def _calls_in(node):
             if isinstance(n, ast.Call) and isinstance(n.func, ast.Attribute)}
 
 
-def test_the_module_is_0_23_1_and_protocol_21():
-    assert re.search(r'^__version__ = "0\.23\.1"$', _source(), re.M)
+def test_the_module_is_0_24_0_and_protocol_21():
+    assert re.search(r'^__version__ = "0\.24\.0"$', _source(), re.M)
     sys_path = str(REPO / "src")
     import sys
 
@@ -1014,3 +1014,126 @@ def test_the_defect_controls_are_hidden_on_a_server_too_old_for_them():
         assert "self._updateDefectControls()" in _body("SegQueue14Widget", name), name
     assert "self._updateDefectControls()" in _body("SegQueue14Widget",
                                                     "_updateReviewEnabled")
+
+
+# ------------------------------------- the annotator's note, for the reviewer (0.24.0)
+
+
+def test_opening_a_submission_shows_its_annotators_note_in_case_notes():
+    """The note travels in the reviewer row as ``annotatorNote`` (the server's
+    ``_row``, which the history the panel opens from is made of); opening the
+    submission puts it in the Case notes box, labelled as the annotator's."""
+    opened = _body("SegQueue14Widget", "onOpenReview")
+    assert 'self._showAnnotatorNote(entry.get("annotatorNote"))' in opened
+    assert opened.index("self._claimedSubmission = submissionId") < opened.index(
+        "self._showAnnotatorNote(")
+    show = _body("SegQueue14Widget", "_showAnnotatorNote")
+    assert '"Annotator\'s note: " + note' in show
+    case = _body("SegQueue14Widget", "_buildCaseSection")
+    assert "notesLayout.addWidget(self.annotatorNoteLabel)" in case
+    assert case.index("self.notesBox = qt.QGroupBox(\"Case notes\")") < case.index(
+        "notesLayout.addWidget(self.annotatorNoteLabel)") < case.index(
+        "notesLayout.addWidget(self.notesBrowser)"), "in Case notes, above the thread"
+    enabled = _body("SegQueue14Widget", "_updateEnabled")
+    assert "self.notesBox.setEnabled(hasCase or reviewing)" in enabled
+    assert "self.noteInput.setEnabled(hasCase)" in enabled
+    assert "self.postNoteButton.setEnabled(hasCase)" in enabled
+    assert ("self.annotatorNoteLabel.setVisible(reviewing and bool(self._reviewNote))"
+            in enabled), "hidden again once nothing is under review"
+
+
+def test_the_note_is_shown_alongside_the_thread_not_instead_of_it():
+    show = _body("SegQueue14Widget", "_showAnnotatorNote")
+    assert "notesBrowser" not in show and "_renderNotes" not in show
+    render = _body("SegQueue14Widget", "_renderNotes")
+    assert "annotatorNote" not in render and "_reviewNote" not in render
+
+
+def _show_note(note, claimed="sub1"):
+    """Run ``_showAnnotatorNote`` with a stand-in label: what the panel shows."""
+
+    class Label:
+        text, visible = None, None
+
+        def setText(self, text):
+            self.text = text
+
+        def setVisible(self, on):
+            self.visible = on
+
+    namespace = {}
+    exec(compile(ast.Module(body=[_method("SegQueue14Widget", "_showAnnotatorNote")],
+                            type_ignores=[]), str(MODULE), "exec"), namespace)
+
+    class Widget:
+        pass
+
+    widget = Widget()
+    widget.annotatorNoteLabel = Label()
+    widget._claimedSubmission = claimed
+    namespace["_showAnnotatorNote"](widget, note)
+    return widget
+
+
+def test_the_note_is_labelled_as_the_annotators():
+    widget = _show_note("distal RCA poorly opacified")
+    assert widget.annotatorNoteLabel.text == "Annotator's note: distal RCA poorly opacified"
+    assert widget.annotatorNoteLabel.visible is True
+    assert widget._reviewNote == "distal RCA poorly opacified"
+
+
+@pytest.mark.parametrize("note", ["", None, "   \n ", 42])
+def test_nothing_extra_appears_without_a_note(note):
+    widget = _show_note(note)
+    assert widget.annotatorNoteLabel.visible is False
+    assert widget.annotatorNoteLabel.text == ""
+    assert widget._reviewNote == ""
+
+
+def test_the_note_is_shown_as_plain_text():
+    """Untrusted text from the annotator: a plain-text label, never rich text, and
+    the note's characters are passed through as they are, not built into HTML."""
+    case = _body("SegQueue14Widget", "_buildCaseSection")
+    assert "self.annotatorNoteLabel.setTextFormat(qt.Qt.PlainText)" in case
+    assert "setOpenExternalLinks" not in case.split("self.annotatorNoteLabel = ")[1].split(
+        "notesLayout.addWidget(self.annotatorNoteLabel)")[0]
+    markup = "<b>bold</b> <a href='http://x'>link</a> <img src=x>"
+    widget = _show_note(markup)
+    assert widget.annotatorNoteLabel.text == "Annotator's note: " + markup
+    show = _body("SegQueue14Widget", "_showAnnotatorNote")
+    assert "setHtml" not in show and "<" not in show.split('"""')[-1]
+
+
+def test_the_reviewer_rows_already_carry_the_note():
+    """Client-only change: the server's reviewer row has had ``annotatorNote`` all
+    along, and the queue, the submission, the claim and the case history all use it."""
+    review = (REPO / "server" / "girder_segqueue14" / "rest" / "review.py").read_text(
+        encoding="utf-8")
+    row = review.split("    def _row(self, assignment, submission):", 1)[1].split(
+        "\n    def ", 1)[0]
+    assert "'annotatorNote': submission.get('annotatorNote', '')" in row
+    for route in ("def reviewQueue", "def getSubmission", "def claim(",
+                  "def caseSubmissions"):
+        body = review.split(route, 1)[1].split("\n    @access", 1)[0]
+        assert "self._row(" in body, route
+
+
+# --------------------------------- the extended-classes row, without the paragraph
+
+
+def test_the_extended_row_has_no_paragraph_of_instructions_and_keeps_its_controls():
+    build = _body("SegQueue14Widget", "_buildExtendedRow")
+    code = build.split('"""', 2)[2]
+    assert "EXTENDED_INSTRUCTIONS" not in code
+    assert "extendedHelp" not in _source()
+    # The controls are all still there, and wired.
+    assert 'self.extendedCheck = qt.QCheckBox("Extended classes (optional)")' in code
+    assert "self.extendedCheck.setToolTip(" in code
+    assert "self.extendedCheck.toggled.connect(self.onToggleExtended)" in code
+    assert "self.extendedModeLabel = qt.QLabel(labels.EXTENDED_MODE_NOTE)" in code
+    assert 'qt.QLabel("Show:")' in code and 'qt.QLabel("Complete:")' in code
+    assert "self.groupChecks[group] = check" in code
+    assert "self.completeChecks[group] = check" in code
+    assert "self.logic.setGroupVisible(group, on)" in code
+    assert "self.onToggleComplete(group, on)" in code
+    assert "layout.addWidget(self.extendedBox)" in code

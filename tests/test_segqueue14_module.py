@@ -1127,7 +1127,9 @@ def test_the_extended_row_has_no_paragraph_of_instructions_and_keeps_its_control
     assert "EXTENDED_INSTRUCTIONS" not in code
     assert "extendedHelp" not in _source()
     # The controls are all still there, and wired.
-    assert 'self.extendedCheck = qt.QCheckBox("Extended classes (optional)")' in code
+    # The label reads without "(optional)" (the lead, via the PM).
+    assert 'self.extendedCheck = qt.QCheckBox("Extended classes")' in code
+    assert "(optional)" not in code
     assert "self.extendedCheck.setToolTip(" in code
     assert "self.extendedCheck.toggled.connect(self.onToggleExtended)" in code
     assert "self.extendedModeLabel = qt.QLabel(labels.EXTENDED_MODE_NOTE)" in code

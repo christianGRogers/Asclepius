@@ -180,7 +180,7 @@ versions cannot show.
 
 ### Extended classes (optional)
 
-Above the Segment Editor there is a box called **Extended classes (optional)**. It
+Above the Segment Editor there is a box called **Extended classes**. It
 is off unless you turn it on, and SegQueue remembers your choice for your login.
 If you leave it off, everything above is the whole job.
 

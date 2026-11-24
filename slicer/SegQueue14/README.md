@@ -154,8 +154,9 @@ empty, grouped under their parent in the segment list, with show/hide per group:
   *Annotator's note: ...*, above the case's thread, which is unchanged. Nothing
   extra is shown when the read was submitted without a note. It is shown as plain
   text, whatever it contains. The posting row stays greyed out while reviewing.
-- The long paragraph of instructions under **Extended classes (optional)** is gone.
-  The toggle, its tooltip, the *Show:* and *Complete:* tick-boxes and their tooltips
+- The long paragraph of instructions under **Extended classes** is gone, and the
+  toggle reads *Extended classes* (no longer *Extended classes (optional)*; the
+  classes are still optional, as its tooltip says). The toggle, its tooltip, the *Show:* and *Complete:* tick-boxes and their tooltips
   are unchanged; how to use the classes is in the annotator guide
   ([docs/ANNOTATOR-SETUP.md](../../docs/ANNOTATOR-SETUP.md)).
 - Module only: the server already sends `annotatorNote` in every reviewer row

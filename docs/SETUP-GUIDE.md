@@ -158,7 +158,7 @@ local copy of a case is deleted once the server confirms your submission.
 
 ### Extended classes (optional, 0.18.0)
 
-The **Extended classes (optional)** box above the Segment Editor is off by default
+The **Extended classes** box above the Segment Editor is off by default
 and remembered per login. With it off, a case is the four classes above and
 nothing else changes. Turned on, it adds 17 empty classes, grouped under their
 parent vessel in the segment list:

@@ -2873,7 +2873,7 @@ class SegQueue14Widget(ScriptedLoadableModuleWidget):
         self.extendedModeLabel.setVisible(False)
         layout.addWidget(self.extendedModeLabel)
 
-        self.extendedCheck = qt.QCheckBox("Extended classes (optional)")
+        self.extendedCheck = qt.QCheckBox("Extended classes")
         self.extendedCheck.setToolTip(
             "Adds 17 optional classes, empty: stent, calcified and non-calcified "
             "plaque, D1-D3, S1-S3, OM1-OM2, SN, conus, RMA, PDA, PLB and the ramus. "

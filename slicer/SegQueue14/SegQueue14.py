@@ -121,7 +121,7 @@ from SegQueue14Lib import SegQueue14Error as SegQueueError
 
 #: Continues SegQueue's numbering (0.13.0 was the last 4-class release). The
 #: release tag is ``segqueue-v`` + this; bump it to publish.
-__version__ = "0.24.0"
+__version__ = "0.24.1"
 
 #: Where the module's help points.
 HELP_URL = "https://github.com/christianGRogers/Asclepius"
@@ -1346,6 +1346,14 @@ class SegQueue14Logic(ScriptedLoadableModuleLogic):
             return []
         return self.client.caseNotes(self.assignment.case_id, limit=limit)
 
+    def caseNotesFor(self, caseId, limit=None):
+        """The thread on any case by id: the one a reviewer has open for review,
+        who holds no assignment of their own. Read-only; posting stays with
+        ``addCaseNote``, which needs an assignment."""
+        if not caseId or not self.loggedIn:
+            return []
+        return self.client.caseNotes(caseId, limit=limit)
+
     def addCaseNote(self, text):
         if self.assignment is None:
             raise SegQueueError("There is no case open to add a note to.")
@@ -2061,6 +2069,9 @@ class SegQueue14Widget(ScriptedLoadableModuleWidget):
         self._annotators = []
         self._historyRows = []
         self._claimedSubmission = None
+        #: The case of the submission open for review (the row's ``caseId``), so
+        #: "Case notes" can show its thread; "" whenever nothing is open.
+        self._reviewCaseId = ""
         #: The opened submission's own note from its annotator (``annotatorNote``),
         #: shown in "Case notes" while it is open for review; "" when none.
         self._reviewNote = ""
@@ -2162,11 +2173,22 @@ class SegQueue14Widget(ScriptedLoadableModuleWidget):
         reason an annotator cannot get on with the case, so the timer swallows
         everything and only a deliberate press reports.
         """
-        if self.logic is None or self.logic.assignment is None:
+        if self.logic is None:
+            self._renderNotes([])
+            return
+        if self.logic.assignment is not None:
+            fetch = self.logic.caseNotes
+        elif self._claimedSubmission and self._reviewCaseId:
+            # A reviewer holds no assignment: the thread is the reviewed case's.
+            caseId = self._reviewCaseId
+
+            def fetch():
+                return self.logic.caseNotesFor(caseId)
+        else:
             self._renderNotes([])
             return
         try:
-            notes = self.logic.caseNotes()
+            notes = fetch()
         except SegQueueError as exc:
             if not quiet:
                 slicer.util.errorDisplay(str(exc))
@@ -2220,8 +2242,19 @@ class SegQueue14Widget(ScriptedLoadableModuleWidget):
         self._renderNotes([])
 
     def onNotesTimer(self):
-        if self.logic is not None and self.logic.assignment is not None:
+        if self.logic is None:
+            return
+        if self.logic.assignment is not None or (
+                self._claimedSubmission and self._reviewCaseId):
             self.onRefreshNotes()
+
+    def _endReview(self):
+        """Nothing is open for review any more: forget the submission and its
+        case, and empty the thread unless a case of one's own is showing it."""
+        self._claimedSubmission = None
+        self._reviewCaseId = ""
+        if self.logic is None or self.logic.assignment is None:
+            self._renderNotes([])
 
     def _saveNoteDraft(self):
         """Persist the unposted note. Cheap, and called wherever work is saved."""
@@ -3383,7 +3416,7 @@ class SegQueue14Widget(ScriptedLoadableModuleWidget):
 
         # Read-only: nothing is open for review, so nothing can be revised or
         # approved from this scene by accident.
-        self._claimedSubmission = None
+        self._endReview()
         self._fillComparePanel(reads)
         self.reviewStatusLabel.setText(
             "Comparing {} reads of <b>{}</b>, read-only.".format(
@@ -3879,7 +3912,12 @@ class SegQueue14Widget(ScriptedLoadableModuleWidget):
             self.logic.centre3d()
 
         self._claimedSubmission = submissionId
+        self._reviewCaseId = str(entry.get("caseId") or "")
         self._showAnnotatorNote(entry.get("annotatorNote"))
+        # The case's whole thread, read-only: annotators who press Post leave
+        # their comments there, not in ``annotatorNote``. Quiet: a thread that
+        # cannot be fetched never stops the review.
+        self.onRefreshNotes()
         self._reviewStart = time.time()
         self._updateExtendedBox()
         self.reviewStatusLabel.setText(
@@ -4015,7 +4053,7 @@ class SegQueue14Widget(ScriptedLoadableModuleWidget):
                 slicer.vtkMRMLLayoutNode.SlicerLayoutFourUpView)
             self.logic.centre3d()
 
-        self._claimedSubmission = None
+        self._endReview()
         self.reviewStatusLabel.setText(
             "Viewing <b>{}</b> — no submission on it yet.".format(
                 _escape(case.get("caseName", ""))))
@@ -4220,7 +4258,7 @@ class SegQueue14Widget(ScriptedLoadableModuleWidget):
                     "Could not save the revision:\n\n" + traceback.format_exc())
                 return
 
-        self._claimedSubmission = None
+        self._endReview()
         self.reviewStatusLabel.setText(
             "Saved your version and approved the case.")
         self.verdictComment.setText("")
@@ -4249,7 +4287,7 @@ class SegQueue14Widget(ScriptedLoadableModuleWidget):
                 return
 
         if self._claimedSubmission == entry["submissionId"]:
-            self._claimedSubmission = None
+            self._endReview()
         self.reviewStatusLabel.setText("Sent {} back to the pool.".format(case))
         self.verdictComment.setText("")
         self.onRefreshReview()
@@ -4273,7 +4311,7 @@ class SegQueue14Widget(ScriptedLoadableModuleWidget):
                 return
 
         if self._claimedSubmission == entry["submissionId"]:
-            self._claimedSubmission = None
+            self._endReview()
         self._reviewStart = None
         self.reviewStatusLabel.setText("Approved {}.".format(
             _escape(entry.get("caseName", "the case"))))
@@ -4380,6 +4418,7 @@ class SegQueue14Widget(ScriptedLoadableModuleWidget):
             self.logic.disconnect()
         self.statusLabel.setText("Not logged in.")
         self.caseLabel.setText("No case open.")
+        self._endReview()
         self._clearNotes()
         self.reworkLabel.setVisible(False)
         self.reviewBox.setVisible(False)
@@ -4471,7 +4510,7 @@ class SegQueue14Widget(ScriptedLoadableModuleWidget):
         self.onRefreshNotes()
         self._bindEditor(self.logic.segmentationNode, self.logic.volumeNode)
         # Taking a case ends any review: the scene is this case now.
-        self._claimedSubmission = None
+        self._endReview()
         self._reviewStart = None
 
         slicer.app.layoutManager().setLayout(

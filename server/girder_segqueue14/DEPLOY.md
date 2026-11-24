@@ -571,6 +571,17 @@ Deploy the server before the module reaches `main`: a 0.23.0 module on an older 
 hides *Defect only* and *Mark defect* (the search box works on any server); modules
 0.17-0.22 (protocols 17-20) keep working and never see the route.
 
+## Reviewers read the case thread (plugin 0.7.1, protocol 21)
+
+No step to run beyond `install`. `GET /segqueue14/case/:id/note` now lets a reviewer
+or an admin read a case's note thread without being in the annotator group; until
+0.7.1 a reviewer-only account got 403 `not_an_annotator`. Annotators keep the old
+rule (only cases they have worked on), and `POST` (adding a note) still requires an
+annotator. Module **0.24.1** shows the thread under *Case notes* while a submission
+is open for review; against a 0.7.0 server it works for reviewers who are also
+annotators and shows an empty thread, quietly, for reviewer-only accounts. Older
+modules never call the route as a reviewer.
+
 ## Extended reads scored before D47: `rescore-extended`
 
 `segqueue14-score --rescore-extended` (#326) scores again every extended read scored

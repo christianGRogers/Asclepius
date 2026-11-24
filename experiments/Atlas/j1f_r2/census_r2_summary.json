@@ -1,0 +1,341 @@
+{
+ "n_cases": 620,
+ "collapse_mismatch_cases": 2,
+ "collapse_mismatch_vox_total": 40,
+ "collapse_mismatch_by_icx_value": {
+  "14": 40
+ },
+ "other": {
+  "d3": 47,
+  "d4_to_lad": 2,
+  "other_lcx": 20,
+  "other_nearest": 1,
+  "other_ignore": 8
+ },
+ "ignore_cases": 8,
+ "pieces": {
+  "D1": {
+   "cases_any_piece": 611,
+   "cases_present_5mm": 611,
+   "cases_present_3mm": 611,
+   "pieces": 611,
+   "pieces_per_case": {
+    "1": 611
+   },
+   "piece_len_p10_50_90": [
+    21.24,
+    44.87,
+    91.51
+   ],
+   "pieces_lt5mm": 0
+  },
+  "D2": {
+   "cases_any_piece": 359,
+   "cases_present_5mm": 358,
+   "cases_present_3mm": 359,
+   "pieces": 359,
+   "pieces_per_case": {
+    "1": 359
+   },
+   "piece_len_p10_50_90": [
+    16.28,
+    38.15,
+    72.49
+   ],
+   "pieces_lt5mm": 1
+  },
+  "D3": {
+   "cases_any_piece": 47,
+   "cases_present_5mm": 47,
+   "cases_present_3mm": 47,
+   "pieces": 47,
+   "pieces_per_case": {
+    "1": 47
+   },
+   "piece_len_p10_50_90": [
+    15.48,
+    37.57,
+    64.43
+   ],
+   "pieces_lt5mm": 0
+  },
+  "OM1": {
+   "cases_any_piece": 540,
+   "cases_present_5mm": 540,
+   "cases_present_3mm": 540,
+   "pieces": 540,
+   "pieces_per_case": {
+    "1": 540
+   },
+   "piece_len_p10_50_90": [
+    15.78,
+    44.36,
+    94.06
+   ],
+   "pieces_lt5mm": 0
+  },
+  "OM2": {
+   "cases_any_piece": 229,
+   "cases_present_5mm": 228,
+   "cases_present_3mm": 229,
+   "pieces": 229,
+   "pieces_per_case": {
+    "1": 229
+   },
+   "piece_len_p10_50_90": [
+    16.87,
+    48.88,
+    85.65
+   ],
+   "pieces_lt5mm": 1
+  },
+  "Ramus": {
+   "cases_any_piece": 149,
+   "cases_present_5mm": 149,
+   "cases_present_3mm": 149,
+   "pieces": 149,
+   "pieces_per_case": {
+    "1": 149
+   },
+   "piece_len_p10_50_90": [
+    22.49,
+    41.04,
+    86.06
+   ],
+   "pieces_lt5mm": 0
+  },
+  "PDA": {
+   "cases_any_piece": 608,
+   "cases_present_5mm": 607,
+   "cases_present_3mm": 608,
+   "pieces": 676,
+   "pieces_per_case": {
+    "2": 62,
+    "1": 543,
+    "3": 3
+   },
+   "piece_len_p10_50_90": [
+    19.7,
+    49.42,
+    82.09
+   ],
+   "pieces_lt5mm": 1
+  },
+  "PLB": {
+   "cases_any_piece": 610,
+   "cases_present_5mm": 609,
+   "cases_present_3mm": 610,
+   "pieces": 620,
+   "pieces_per_case": {
+    "1": 600,
+    "2": 10
+   },
+   "piece_len_p10_50_90": [
+    19.1,
+    55.86,
+    119.09
+   ],
+   "pieces_lt5mm": 2
+  }
+ },
+ "band": {
+  "4.0": {
+   "mm3_p10_50_90": [
+    35512.74,
+    43383.85,
+    52719.53
+   ],
+   "x_tree_volume_median": 22.0,
+   "share_by_nearest_territory": {
+    "LM": 0.028,
+    "LAD": 0.332,
+    "LCx": 0.257,
+    "RCA": 0.213
+   }
+  },
+  "8.0": {
+   "mm3_p10_50_90": [
+    117522.72,
+    141738.0,
+    169831.01
+   ],
+   "x_tree_volume_median": 72.3,
+   "share_by_nearest_territory": {
+    "LM": 0.031,
+    "LAD": 0.327,
+    "LCx": 0.253,
+    "RCA": 0.215
+   }
+  },
+  "15.0": {
+   "mm3_p10_50_90": [
+    366038.87,
+    432991.4,
+    508657.62
+   ],
+   "x_tree_volume_median": 220.5,
+   "share_by_nearest_territory": {
+    "LM": 0.037,
+    "LAD": 0.316,
+    "LCx": 0.244,
+    "RCA": 0.225
+   }
+  }
+ },
+ "tree_mm3_median": 1950.8,
+ "branch_from_parent": {
+  "D1": {
+   "pieces": 611,
+   "p50_of_piece_median": 9.0,
+   "p50_of_piece_p90": 17.3,
+   "p50_of_piece_max": 20.0,
+   "share_pieces_max_within_4mm": 0.002,
+   "share_pieces_max_within_8mm": 0.051,
+   "share_pieces_max_within_15mm": 0.277,
+   "share_pieces_median_within_4mm": 0.047,
+   "share_pieces_median_within_8mm": 0.378,
+   "share_pieces_median_within_15mm": 0.908
+  },
+  "D2": {
+   "pieces": 359,
+   "p50_of_piece_median": 8.2,
+   "p50_of_piece_p90": 14.7,
+   "p50_of_piece_max": 16.9,
+   "share_pieces_max_within_4mm": 0.006,
+   "share_pieces_max_within_8mm": 0.1,
+   "share_pieces_max_within_15mm": 0.423,
+   "share_pieces_median_within_4mm": 0.075,
+   "share_pieces_median_within_8mm": 0.471,
+   "share_pieces_median_within_15mm": 0.908
+  },
+  "D3": {
+   "pieces": 47,
+   "p50_of_piece_median": 9.1,
+   "p50_of_piece_p90": 16.9,
+   "p50_of_piece_max": 18.9,
+   "share_pieces_max_within_4mm": 0.0,
+   "share_pieces_max_within_8mm": 0.064,
+   "share_pieces_max_within_15mm": 0.319,
+   "share_pieces_median_within_4mm": 0.021,
+   "share_pieces_median_within_8mm": 0.362,
+   "share_pieces_median_within_15mm": 0.936
+  },
+  "OM1": {
+   "pieces": 540,
+   "p50_of_piece_median": 10.7,
+   "p50_of_piece_p90": 19.2,
+   "p50_of_piece_max": 21.9,
+   "share_pieces_max_within_4mm": 0.007,
+   "share_pieces_max_within_8mm": 0.096,
+   "share_pieces_max_within_15mm": 0.324,
+   "share_pieces_median_within_4mm": 0.072,
+   "share_pieces_median_within_8mm": 0.354,
+   "share_pieces_median_within_15mm": 0.661
+  },
+  "OM2": {
+   "pieces": 229,
+   "p50_of_piece_median": 11.1,
+   "p50_of_piece_p90": 17.4,
+   "p50_of_piece_max": 19.5,
+   "share_pieces_max_within_4mm": 0.013,
+   "share_pieces_max_within_8mm": 0.114,
+   "share_pieces_max_within_15mm": 0.354,
+   "share_pieces_median_within_4mm": 0.087,
+   "share_pieces_median_within_8mm": 0.306,
+   "share_pieces_median_within_15mm": 0.642
+  },
+  "Ramus": {
+   "pieces": 149,
+   "p50_of_piece_median": 12.1,
+   "p50_of_piece_p90": 20.8,
+   "p50_of_piece_max": 23.2,
+   "share_pieces_max_within_4mm": 0.0,
+   "share_pieces_max_within_8mm": 0.034,
+   "share_pieces_max_within_15mm": 0.208,
+   "share_pieces_median_within_4mm": 0.02,
+   "share_pieces_median_within_8mm": 0.201,
+   "share_pieces_median_within_15mm": 0.685
+  },
+  "PDA": {
+   "pieces": 676,
+   "p50_of_piece_median": 19.4,
+   "p50_of_piece_p90": 32.1,
+   "p50_of_piece_max": 35.0,
+   "share_pieces_max_within_4mm": 0.001,
+   "share_pieces_max_within_8mm": 0.012,
+   "share_pieces_max_within_15mm": 0.095,
+   "share_pieces_median_within_4mm": 0.012,
+   "share_pieces_median_within_8mm": 0.099,
+   "share_pieces_median_within_15mm": 0.306
+  },
+  "PLB": {
+   "pieces": 620,
+   "p50_of_piece_median": 20.9,
+   "p50_of_piece_p90": 30.5,
+   "p50_of_piece_max": 32.8,
+   "share_pieces_max_within_4mm": 0.0,
+   "share_pieces_max_within_8mm": 0.029,
+   "share_pieces_max_within_15mm": 0.1,
+   "share_pieces_median_within_4mm": 0.026,
+   "share_pieces_median_within_8mm": 0.098,
+   "share_pieces_median_within_15mm": 0.303
+  },
+  "all": {
+   "pieces": 3231,
+   "share_max_within_4mm": 0.003,
+   "share_max_within_8mm": 0.055,
+   "share_max_within_15mm": 0.232,
+   "share_p90_within_4mm": 0.006,
+   "share_p90_within_8mm": 0.071,
+   "share_p90_within_15mm": 0.287,
+   "share_median_within_4mm": 0.044,
+   "share_median_within_8mm": 0.259,
+   "share_median_within_15mm": 0.596
+  }
+ },
+ "trunk_twigs": {
+  "LAD": {
+   "cases_with_twig_ge_3mm": 11,
+   "cases_with_twig_ge_5mm": 9,
+   "cases_with_twig_ge_10mm": 7,
+   "twigs_ge_3mm": 14,
+   "twigs_ge_5mm": 12,
+   "twigs_ge_10mm": 10
+  },
+  "LCx": {
+   "cases_with_twig_ge_3mm": 21,
+   "cases_with_twig_ge_5mm": 21,
+   "cases_with_twig_ge_10mm": 20,
+   "twigs_ge_3mm": 21,
+   "twigs_ge_5mm": 21,
+   "twigs_ge_10mm": 20
+  },
+  "RCA": {
+   "cases_with_twig_ge_3mm": 1,
+   "cases_with_twig_ge_5mm": 1,
+   "cases_with_twig_ge_10mm": 0,
+   "twigs_ge_3mm": 1,
+   "twigs_ge_5mm": 1,
+   "twigs_ge_10mm": 0
+  }
+ },
+ "posterior_by_labels": {
+  "right_only": 559,
+  "left_only": 46,
+  "both": 13,
+  "none": 2
+ },
+ "cases_with_left_pda_or_pla": 59,
+ "dominance_xlsx": {
+  "R": 564,
+  "Co": 21,
+  "L": 35
+ },
+ "dominance_xlsx_x_left_posterior": {
+  "Co|left_posterior=False": 2,
+  "Co|left_posterior=True": 19,
+  "L|left_posterior=True": 35,
+  "R|left_posterior=False": 559,
+  "R|left_posterior=True": 5
+ }
+}

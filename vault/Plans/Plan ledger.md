@@ -2,7 +2,7 @@
 aliases: [Plan ledger]
 tags: [plans, changelog]
 status: living
-updated: 2026-11-12
+updated: 2026-11-23
 ---
 
 # Plan ledger
@@ -87,3 +87,13 @@ Candidates are in `Candidates/Janus 1-F/`; rulings are `Judgements/Janus 1-F Rou
 | 1-F | 1 | [[Candidates/Janus 1-F/Crucible v1\|Crucible v1]] | Crucible | Lost. Leaf-Dice, the territory band and the inter-read agreement floor adopted for stage 2 (F-A11); L2 and the cross-track septal note adopted; the separate pilot not adopted |
 | 1-F | 1 | [[Candidates/Janus 1-F/Foxtrot v1\|Foxtrot v1]] | Foxtrot | Lost. The training-case stall check (F-A5), F0 and ignore for unexplained "Other" adopted; the replicate sent to the lead (Q8); the D3-fit read threshold and the a2-must-agree gate not adopted |
 | 1-F | 1 | [[Candidates/Janus 1-F/Bridge v1\|Bridge v1]] | Bridge | Lost. Job B (reads per class) sent to round 2; the child-in-parent overlap rule sent to the lead (Q4); SN origin evidence used; dormant stage-1 heads not adopted |
+| 1-F | 2 | [[Candidates/Janus 1-F/Delta v2\|Delta v2]] | Delta | **Track 1-F plan** (holder), with F-A14–F-A26 ([[Janus 1-F Round 2]]). Its scorer tests, SegQueue-collapse check, band measurement and warm-start reasoning kept; its flat gate lines, locked-100 fold validation, plans sha256 check and T decode corrected; Job B not committed |
+| 1-F | 2 | [[Candidates/Janus 1-F/Atlas v2\|Atlas v2]] | Atlas | Lost. Its per-class B lines adopted as the lines of record (F-A15), and its scorer's definitions (F-A16) |
+| 1-F | 2 | [[Candidates/Janus 1-F/Bridge v2\|Bridge v2]] | Bridge | Lost. The human misnaming estimate, SegQueue's collapse (F-A17) and the territory sets adopted; Job B sent to the lead (Q-F2-2) |
+| 1-F | 2 | [[Candidates/Janus 1-F/Crucible v2\|Crucible v2]] | Crucible | Lost. `batch_dice: false`, the band table, K1 and the inter-read floor adopted (F-A21–F-A23); the sealed-pool question (Q-F2-1) and the T_L rule (Q-F2-3) sent to the lead |
+| 1-F | 2 | [[Candidates/Janus 1-F/Foxtrot v2\|Foxtrot v2]] | Foxtrot | Lost. T's LCx territory fix (F-A19), the L-A21 carry-over (F-A20), the census reconciliation (F-A25), F0-r2 (F-A26), the band cap and the 1.5× rule adopted |
+| 1-F | 3 | [[Candidates/Janus 1-F/Delta v3\|Delta v3]] | Delta | **Track 1-F plan** (holder), with F-A27–F-A36 ([[Janus 1-F Round 3]]); **stage 1 ruled converged**. Dataset 719 of the 620 only, ignore 13 on disk, the plans check pinned to Step T's hashes kept; its separate converter, L2′, core K1′ and 96 G headers replaced |
+| 1-F | 3 | [[Candidates/Janus 1-F/Atlas v3\|Atlas v3]] | Atlas | Lost. Its scorer is the scorer of record (`5221032f…`, F-A28); P-r3-1 re-derives three F-A15 cells at F-A25's counts (F-A27); the compile flag's repository history (F-A33) and the T_L verdict code adopted |
+| 1-F | 3 | [[Candidates/Janus 1-F/Foxtrot v3\|Foxtrot v3]] | Foxtrot | Lost. L1r, L2d and K1r (F-A30), the G name maps (F-A31), the compile `grep` (F-A33), the F-A8 identity command and the detection report (F-A35) adopted; its scorer superseded by Atlas's (decision layer outside its pins) |
+| 1-F | 3 | [[Candidates/Janus 1-F/Bridge v3\|Bridge v3]] | Bridge | Lost. Ignore = 13 (F-A29), L2's point count and the junction-painting model adopted; its L2′ (5 mm islands) fails a correct branch drawn in pieces and K1′ sits on literal L1's edge, so neither is adopted |
+| 1-F | 3 | [[Candidates/Janus 1-F/Crucible v3\|Crucible v3]] | Crucible | Lost. The purge deadline for `prep` (Q-F3-3) and the 14-day 1-L window (Q-F3-1) adopted; kept 255 on disk and K1 as ruled; its L1 and L2 forms superseded by the equivalent adopted ones |

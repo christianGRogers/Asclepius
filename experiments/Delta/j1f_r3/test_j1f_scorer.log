@@ -1,0 +1,44 @@
+selftest ok; scorer sha256 d615c7e74a07dd5c1d030c5b69441b25d1dc8e6a0014c569699162bf7e09d808
+j1f_labels selftest ok
+j1f_gate selftest ok; gates sha256 c673d05e3e263a3d7115088921cd0d58dd764d668742d0979d23e7ddbd0a8395
+PASS c0585 SegQueue collapse = D25 on every non-Other voxel (0 differ)
+PASS c0875 SegQueue collapse = D25 on every non-Other voxel (0 differ)
+PASS c0987 SegQueue collapse = D25 on every non-Other voxel (0 differ)
+PASS c0287 SegQueue collapse = D25 on every non-Other voxel (0 differ)
+PASS c0920 SegQueue collapse = D25 on every non-Other voxel (0 differ)
+PASS c0761 SegQueue collapse = D25 on every non-Other voxel (0 differ)
+PASS identity D1: recall, presence, naming = 1
+PASS identity D1: branch tF1 = 1 (1.000)
+PASS dilate by 1 voxel D1: recall 1, naming 1
+PASS 255 in the prediction scores as background D1: identity numbers
+PASS identity D2: recall, presence, naming = 1
+PASS identity D2: branch tF1 = 1 (1.000)
+PASS dilate by 1 voxel D2: recall 1, naming 1
+PASS 255 in the prediction scores as background D2: identity numbers
+PASS identity OM1: recall, presence, naming = 1
+PASS identity OM1: branch tF1 = 1 (1.000)
+PASS dilate by 1 voxel OM1: recall 1, naming 1
+PASS 255 in the prediction scores as background OM1: identity numbers
+PASS identity OM2: recall, presence, naming = 1
+PASS identity OM2: branch tF1 = 1 (1.000)
+PASS dilate by 1 voxel OM2: recall 1, naming 1
+PASS 255 in the prediction scores as background OM2: identity numbers
+PASS identity PDA: recall, presence, naming = 1
+PASS identity PDA: branch tF1 = 1 (1.000)
+PASS dilate by 1 voxel PDA: recall 1, naming 1
+PASS 255 in the prediction scores as background PDA: identity numbers
+PASS identity PLB: recall, presence, naming = 1
+PASS identity PLB: branch tF1 = 1 (1.000)
+PASS dilate by 1 voxel PLB: recall 1, naming 1
+PASS 255 in the prediction scores as background PLB: identity numbers
+PASS swap D1/D2 D1: recall 1, naming 0
+PASS swap D1/D2 D2: recall 1, naming 0
+PASS swap PDA/PLB PDA: recall 1, naming 0
+PASS swap PDA/PLB PLB: recall 1, naming 0
+PASS OM2 -> LCx: detected (recall 1), not named (naming 0), presence drops
+PASS OM2 -> background: recall 0
+PASS OM2 cut to its root 30 %: not detected (recall 0.00)
+cases ['c0585', 'c0875', 'c0987', 'c0287', 'c0920', 'c0761']
+{"identity": {"D1": {"pieces": 6, "recall": 1.0, "presence": 1.0, "naming": 1.0}, "D2": {"pieces": 2, "recall": 1.0, "presence": 1.0, "naming": 1.0}, "OM1": {"pieces": 5, "recall": 1.0, "presence": 1.0, "naming": 1.0}, "OM2": {"pieces": 2, "recall": 1.0, "presence": 1.0, "naming": 1.0}, "PDA": {"pieces": 6, "recall": 1.0, "presence": 1.0, "naming": 1.0}, "PLB": {"pieces": 6, "recall": 1.0, "presence": 1.0, "naming": 1.0}}, "swap_D1_D2": {"D1": {"pieces": 6, "recall": 1.0, "presence": 0.333, "naming": 0.0}, "D2": {"pieces": 2, "recall": 1.0, "presence": 0.333, "naming": 0.0}, "OM1": {"pieces": 5, "recall": 1.0, "presence": 1.0, "naming": 1.0}, "OM2": {"pieces": 2, "recall": 1.0, "presence": 1.0, "naming": 1.0}, "PDA": {"pieces": 6, "recall": 1.0, "presence": 1.0, "naming": 1.0}, "PLB": {"pieces": 6, "recall": 1.0, "presence": 1.0, "naming": 1.0}}, "OM2_to_LCx": {"D1": {"pieces": 6, "recall": 1.0, "presence": 1.0, "naming": 1.0}, "D2": {"pieces": 2, "recall": 1.0, "presence": 1.0, "naming": 1.0}, "OM1": {"pieces": 5, "recall": 1.0, "presence": 1.0, "naming": 1.0}, "OM2": {"pieces": 2, "recall": 1.0, "presence": 0.667, "naming": 0.0}, "PDA": {"pieces": 6, "recall": 1.0, "presence": 1.0, "naming": 1.0}, "PLB": {"pieces": 6, "recall": 1.0, "presence": 1.0, "naming": 1.0}}, "OM2_to_bg": {"D1": {"pieces": 6, "recall": 1.0, "presence": 1.0, "naming": 1.0}, "D2": {"pieces": 2, "recall": 1.0, "presence": 1.0, "naming": 1.0}, "OM1": {"pieces": 5, "recall": 1.0, "presence": 1.0, "naming": 1.0}, "OM2": {"pieces": 2, "recall": 0.0, "presence": 0.667, "naming": NaN}, "PDA": {"pieces": 6, "recall": 1.0, "presence": 1.0, "naming": 1.0}, "PLB": {"pieces": 6, "recall": 1.0, "presence": 1.0, "naming": 1.0}}, "dilate1": {"D1": {"pieces": 6, "recall": 1.0, "presence": 1.0, "naming": 1.0}, "D2": {"pieces": 2, "recall": 1.0, "presence": 1.0, "naming": 1.0}, "OM1": {"pieces": 5, "recall": 1.0, "presence": 1.0, "naming": 1.0}, "OM2": {"pieces": 2, "recall": 1.0, "presence": 1.0, "naming": 1.0}, "PDA": {"pieces": 6, "recall": 1.0, "presence": 1.0, "naming": 1.0}, "PLB": {"pieces": 6, "recall": 1.0, "presence": 1.0, "naming": 1.0}}, "PDA_PLB_swap": {"D1": {"pieces": 6, "recall": 1.0, "presence": 1.0, "naming": 1.0}, "D2": {"pieces": 2, "recall": 1.0, "presence": 1.0, "naming": 1.0}, "OM1": {"pieces": 5, "recall": 1.0, "presence": 1.0, "naming": 1.0}, "OM2": {"pieces": 2, "recall": 1.0, "presence": 1.0, "naming": 1.0}, "PDA": {"pieces": 6, "recall": 1.0, "presence": 0.833, "naming": 0.0}, "PLB": {"pieces": 6, "recall": 1.0, "presence": 0.833, "naming": 0.0}}, "with255": {"D1": {"pieces": 6, "recall": 1.0, "presence": 1.0, "naming": 1.0}, "D2": {"pieces": 2, "recall": 1.0, "presence": 1.0, "naming": 1.0}, "OM1": {"pieces": 5, "recall": 1.0, "presence": 1.0, "naming": 1.0}, "OM2": {"pieces": 2, "recall": 1.0, "presence": 1.0, "naming": 1.0}, "PDA": {"pieces": 6, "recall": 1.0, "presence": 1.0, "naming": 1.0}, "PLB": {"pieces": 6, "recall": 1.0, "presence": 1.0, "naming": 1.0}}, "OM2_trunc": {"D1": {"pieces": 6, "recall": 1.0, "presence": 1.0, "naming": 1.0}, "D2": {"pieces": 2, "recall": 1.0, "presence": 1.0, "naming": 1.0}, "OM1": {"pieces": 5, "recall": 1.0, "presence": 1.0, "naming": 1.0}, "OM2": {"pieces": 2, "recall": 0.0, "presence": 1.0, "naming": NaN}, "PDA": {"pieces": 6, "recall": 1.0, "presence": 1.0, "naming": 1.0}, "PLB": {"pieces": 6, "recall": 1.0, "presence": 1.0, "naming": 1.0}}}
+scorer sha256 d615c7e74a07dd5c1d030c5b69441b25d1dc8e6a0014c569699162bf7e09d808
+ALL PASS

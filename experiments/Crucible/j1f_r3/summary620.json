@@ -1,0 +1,310 @@
+{
+ "n_cases": 620,
+ "item1_piece_rows_differing_from_census_r2": [],
+ "item1_piece_distribution": {
+  "D1": {
+   "cases_with": 611,
+   "pieces": 611,
+   "multi_piece_cases": 0,
+   "census_r2_cases_with": 611,
+   "census_r2_pieces": 611
+  },
+  "D2": {
+   "cases_with": 359,
+   "pieces": 359,
+   "multi_piece_cases": 0,
+   "census_r2_cases_with": 359,
+   "census_r2_pieces": 359
+  },
+  "OM1": {
+   "cases_with": 540,
+   "pieces": 540,
+   "multi_piece_cases": 0,
+   "census_r2_cases_with": 540,
+   "census_r2_pieces": 540
+  },
+  "OM2": {
+   "cases_with": 229,
+   "pieces": 229,
+   "multi_piece_cases": 0,
+   "census_r2_cases_with": 229,
+   "census_r2_pieces": 229
+  },
+  "PDA": {
+   "cases_with": 608,
+   "pieces": 676,
+   "multi_piece_cases": 65,
+   "census_r2_cases_with": 608,
+   "census_r2_pieces": 676
+  },
+  "PLB": {
+   "cases_with": 610,
+   "pieces": 620,
+   "multi_piece_cases": 10,
+   "census_r2_cases_with": 610,
+   "census_r2_pieces": 620
+  },
+  "D3": {
+   "cases_with": 47,
+   "pieces": 47,
+   "multi_piece_cases": 0,
+   "census_r2_cases_with": 47,
+   "census_r2_pieces": 47
+  },
+  "Ramus": {
+   "cases_with": 149,
+   "pieces": 149,
+   "multi_piece_cases": 0,
+   "census_r2_cases_with": 149,
+   "census_r2_pieces": 149
+  }
+ },
+ "item1_collapse": {
+  "components": 1296,
+  "fallback": 0,
+  "mismatch_vox_vs_D25_outside_Other_and_255": 0,
+  "cases_with_fallback": []
+ },
+ "item1_converter_counts": {
+  "d3": 47,
+  "d4_to_lad": 2,
+  "other_lcx": 20,
+  "other_nearest": 1,
+  "other_ignore": 8
+ },
+ "item1_identity": {
+  "D1": {
+   "pieces": 611,
+   "recall": 1.0,
+   "naming": 1.0,
+   "presence": 1.0,
+   "passes_lines": true
+  },
+  "D2": {
+   "pieces": 359,
+   "recall": 1.0,
+   "naming": 1.0,
+   "presence": 1.0,
+   "passes_lines": true
+  },
+  "OM1": {
+   "pieces": 540,
+   "recall": 1.0,
+   "naming": 1.0,
+   "presence": 1.0,
+   "passes_lines": true
+  },
+  "OM2": {
+   "pieces": 229,
+   "recall": 1.0,
+   "naming": 1.0,
+   "presence": 1.0,
+   "passes_lines": true
+  },
+  "PDA": {
+   "pieces": 676,
+   "recall": 1.0,
+   "naming": 1.0,
+   "presence": 1.0,
+   "passes_lines": true
+  },
+  "PLB": {
+   "pieces": 620,
+   "recall": 1.0,
+   "naming": 1.0,
+   "presence": 1.0,
+   "passes_lines": true
+  }
+ },
+ "item1_erode1": {
+  "D1": {
+   "pieces": 611,
+   "recall": 0.874,
+   "naming": 1.0,
+   "presence": 0.8984,
+   "passes_lines": false
+  },
+  "D2": {
+   "pieces": 359,
+   "recall": 0.9053,
+   "naming": 1.0,
+   "presence": 0.9484,
+   "passes_lines": true
+  },
+  "OM1": {
+   "pieces": 540,
+   "recall": 0.8667,
+   "naming": 1.0,
+   "presence": 0.9,
+   "passes_lines": true
+  },
+  "OM2": {
+   "pieces": 229,
+   "recall": 0.9563,
+   "naming": 1.0,
+   "presence": 0.9823,
+   "passes_lines": true
+  },
+  "PDA": {
+   "pieces": 676,
+   "recall": 0.7663,
+   "naming": 1.0,
+   "presence": 0.921,
+   "passes_lines": false
+  },
+  "PLB": {
+   "pieces": 620,
+   "recall": 0.9113,
+   "naming": 1.0,
+   "presence": 0.9613,
+   "passes_lines": true
+  }
+ },
+ "item5": {
+  "n_cases_with_proxy": 620,
+  "L1_nearest_exact_LAD": {
+   "pooled": 0.0,
+   "p90_case": 0.0,
+   "false_fail_at_0.02": 0.0
+  },
+  "L1_nearest_exact_LCx": {
+   "pooled": 0.0,
+   "p90_case": 0.0,
+   "false_fail_at_0.02": 0.0
+  },
+  "L1_nearest_exact_RCA": {
+   "pooled": 0.0,
+   "p90_case": 0.0,
+   "false_fail_at_0.02": 0.0
+  },
+  "L1_nearest_bleed1_LAD": {
+   "pooled": 0.0061,
+   "p90_case": 0.0119,
+   "false_fail_at_0.02": 0.0
+  },
+  "L1_nearest_bleed1_LCx": {
+   "pooled": 0.0077,
+   "p90_case": 0.0172,
+   "false_fail_at_0.02": 0.0
+  },
+  "L1_nearest_bleed1_RCA": {
+   "pooled": 0.0056,
+   "p90_case": 0.0106,
+   "false_fail_at_0.02": 0.0
+  },
+  "L1_prox_exact_LAD": {
+   "pooled": 0.0525,
+   "p90_case": 0.0842,
+   "false_fail_at_0.02": 1.0
+  },
+  "L1_prox_exact_LCx": {
+   "pooled": 0.0548,
+   "p90_case": 0.1053,
+   "false_fail_at_0.02": 1.0
+  },
+  "L1_prox_exact_RCA": {
+   "pooled": 0.021,
+   "p90_case": 0.0309,
+   "false_fail_at_0.02": 0.998
+  },
+  "L1_prox_bleed1_LAD": {
+   "pooled": 0.0648,
+   "p90_case": 0.1028,
+   "false_fail_at_0.02": 1.0
+  },
+  "L1_prox_bleed1_LCx": {
+   "pooled": 0.0682,
+   "p90_case": 0.1288,
+   "false_fail_at_0.02": 1.0
+  },
+  "L1_prox_bleed1_RCA": {
+   "pooled": 0.025,
+   "p90_case": 0.0348,
+   "false_fail_at_0.02": 1.0
+  },
+  "L2_voxel_exact": {
+   "share_cases_within_30mm": 0.0855,
+   "p50_mm": 42.94,
+   "p95_mm": 57.05,
+   "max_mm": 67.22,
+   "false_fail_point_0.95": 1.0,
+   "false_fail_lower_bound_0.95": 1.0
+  },
+  "L2_component_exact": {
+   "share_cases_within_30mm": 1.0,
+   "p50_mm": 0.35,
+   "p95_mm": 0.4,
+   "max_mm": 0.5,
+   "false_fail_point_0.95": 0.0,
+   "false_fail_lower_bound_0.95": 0.0
+  },
+  "L2_voxel_bleed1": {
+   "share_cases_within_30mm": 0.0855,
+   "p50_mm": 43.04,
+   "p95_mm": 57.06,
+   "max_mm": 67.33,
+   "false_fail_point_0.95": 1.0,
+   "false_fail_lower_bound_0.95": 1.0
+  },
+  "L2_component_bleed1": {
+   "share_cases_within_30mm": 1.0,
+   "p50_mm": 0.35,
+   "p95_mm": 0.4,
+   "max_mm": 0.45,
+   "false_fail_point_0.95": 0.0,
+   "false_fail_lower_bound_0.95": 0.0
+  },
+  "K1_exact": {
+   "mean_620": 0.0,
+   "p95_case": 0.0,
+   "fitcheck20_mean": 0.0,
+   "false_fail_at_0.05_any20": 0.0
+  },
+  "K1_dilate1": {
+   "mean_620": 0.0096,
+   "p95_case": 0.0166,
+   "fitcheck20_mean": 0.0082,
+   "false_fail_at_0.05_any20": 0.0
+  },
+  "K1_dilate1_group_LAD": {
+   "n_cases": 611,
+   "mean": 0.0137,
+   "p95_case": 0.0264,
+   "false_fail_at_0.05_any20": 0.0
+  },
+  "K1_dilate1_group_LCx": {
+   "n_cases": 573,
+   "mean": 0.015,
+   "p95_case": 0.0368,
+   "false_fail_at_0.05_any20": 0.0
+  },
+  "K1_dilate1_group_RCA": {
+   "n_cases": 618,
+   "mean": 0.0062,
+   "p95_case": 0.0126,
+   "false_fail_at_0.05_any20": 0.0
+  }
+ },
+ "fitcheck20": [
+  "c0789",
+  "c0230",
+  "c0571",
+  "c0066",
+  "c0939",
+  "c0500",
+  "c0658",
+  "c0139",
+  "c0440",
+  "c0525",
+  "c0715",
+  "c0206",
+  "c0057",
+  "c0383",
+  "c0655",
+  "c0802",
+  "c0565",
+  "c0465",
+  "c0919",
+  "c0618"
+ ]
+}

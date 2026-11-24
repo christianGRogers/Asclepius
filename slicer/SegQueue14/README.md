@@ -135,6 +135,18 @@ empty, grouped under their parent in the segment list, with show/hide per group:
 - *Defect only* and *Mark defect* are hidden when the server is older than
   protocol 21.
 
+### Uploads behind a 1 MiB proxy limit (0.23.1)
+
+- Submissions and reviewer revisions upload in 768 KiB pieces instead of 8 MiB, so
+  a file over 1 MiB (an extended read, for one) no longer fails with *HTTP 413*
+  behind a proxy that keeps nginx's default 1 MiB request-body limit.
+- If the proxy still refuses a piece as too large, the module halves the piece size
+  (down to 64 KiB), carries on from what the server has, and keeps the smaller size
+  for the rest of the session. If even 64 KiB is refused, it says the server's proxy
+  refused the upload size and to tell the project lead; nothing is submitted and the
+  local copy is kept.
+- Module only: the protocol stays 21 and the server is unchanged.
+
 **The reviewer's case list** (0.18.0, #280) is sorted by submission time, newest
 first; rows with nothing submitted yet come last. The *Submitted (ET)* column shows
 that time in US Eastern time (America/Toronto, daylight saving included), e.g.

@@ -1,0 +1,2613 @@
+{
+ "pieces_per_case": {
+  "D1": {
+   "1": 611
+  },
+  "D2": {
+   "1": 359
+  },
+  "OM1": {
+   "1": 540
+  },
+  "OM2": {
+   "1": 229
+  },
+  "PDA": {
+   "1": 543,
+   "2": 62,
+   "3": 3
+  },
+  "PLB": {
+   "1": 600,
+   "2": 10
+  }
+ },
+ "params_sigma0.05": {
+  "D1": {
+   "m": 0.0157,
+   "f": 0.9841,
+   "p0": 0.1097,
+   "h": 0.9547,
+   "A": 0.969
+  },
+  "D2": {
+   "m": 0.0852,
+   "f": 0.1401,
+   "p0": 0.0736,
+   "h": 0.951,
+   "A": 0.894
+  },
+  "OM1": {
+   "m": 0.0328,
+   "f": 0.1905,
+   "p0": 0.1528,
+   "h": 0.9419,
+   "A": 0.944
+  },
+  "OM2": {
+   "m": 0.1786,
+   "f": 0.0962,
+   "p0": 0.1154,
+   "h": 0.9462,
+   "A": 0.875
+  },
+  "PDA": {
+   "m": 0.0064,
+   "f": 0.1062,
+   "p0": 0.0572,
+   "h": 0.9376,
+   "A": 0.988
+  },
+  "PLB": {
+   "m": 0.0203,
+   "f": 0.3052,
+   "p0": 0.0379,
+   "h": 0.9292,
+   "A": 0.962
+  }
+ },
+ "params_sigma0.08": {
+  "D1": {
+   "m": 0.0157,
+   "f": 0.9841,
+   "p0": 0.1058,
+   "h": 0.9506,
+   "A": 0.969
+  },
+  "D2": {
+   "m": 0.0852,
+   "f": 0.1401,
+   "p0": 0.0696,
+   "h": 0.9469,
+   "A": 0.894
+  },
+  "OM1": {
+   "m": 0.0328,
+   "f": 0.1905,
+   "p0": 0.149,
+   "h": 0.9377,
+   "A": 0.944
+  },
+  "OM2": {
+   "m": 0.1786,
+   "f": 0.0962,
+   "p0": 0.1115,
+   "h": 0.9421,
+   "A": 0.875
+  },
+  "PDA": {
+   "m": 0.0064,
+   "f": 0.1062,
+   "p0": 0.0529,
+   "h": 0.9334,
+   "A": 0.988
+  },
+  "PLB": {
+   "m": 0.0203,
+   "f": 0.3052,
+   "p0": 0.0335,
+   "h": 0.9249,
+   "A": 0.962
+  }
+ },
+ "params_sigma0.12": {
+  "D1": {
+   "m": 0.0157,
+   "f": 0.9841,
+   "p0": 0.0977,
+   "h": 0.942,
+   "A": 0.969
+  },
+  "D2": {
+   "m": 0.0852,
+   "f": 0.1401,
+   "p0": 0.0611,
+   "h": 0.9383,
+   "A": 0.894
+  },
+  "OM1": {
+   "m": 0.0328,
+   "f": 0.1905,
+   "p0": 0.1411,
+   "h": 0.9291,
+   "A": 0.944
+  },
+  "OM2": {
+   "m": 0.1786,
+   "f": 0.0962,
+   "p0": 0.1033,
+   "h": 0.9334,
+   "A": 0.875
+  },
+  "PDA": {
+   "m": 0.0064,
+   "f": 0.1062,
+   "p0": 0.044,
+   "h": 0.9247,
+   "A": 0.988
+  },
+  "PLB": {
+   "m": 0.0203,
+   "f": 0.3052,
+   "p0": 0.0242,
+   "h": 0.9162,
+   "A": 0.962
+  }
+ },
+ "as_ruled": {
+  "as_ruled sigma_h=0.05 s_naming=0.0": {
+   "D1": {
+    "fail_rate": 0.0145,
+    "fail_recall": 0.013,
+    "fail_naming": 0.0,
+    "fail_presence": 0.0015,
+    "recall_mean": 0.876,
+    "recall_p05": 0.8163,
+    "naming_mean": 1.0,
+    "naming_p05": 1.0,
+    "presence_mean": 0.9647,
+    "presence_p05": 0.94
+   },
+   "D2": {
+    "fail_rate": 0.201,
+    "fail_recall": 0.1755,
+    "fail_naming": 0.0,
+    "fail_presence": 0.06,
+    "recall_mean": 0.8466,
+    "recall_p05": 0.7656,
+    "naming_mean": 1.0,
+    "naming_p05": 1.0,
+    "presence_mean": 0.894,
+    "presence_p05": 0.84
+   },
+   "OM1": {
+    "fail_rate": 0.3565,
+    "fail_recall": 0.3455,
+    "fail_naming": 0.0,
+    "fail_presence": 0.03,
+    "recall_mean": 0.8193,
+    "recall_p05": 0.75,
+    "naming_mean": 1.0,
+    "naming_p05": 1.0,
+    "presence_mean": 0.9417,
+    "presence_p05": 0.9
+   },
+   "OM2": {
+    "fail_rate": 0.8065,
+    "fail_recall": 0.8055,
+    "fail_naming": 0.0,
+    "fail_presence": 0.0895,
+    "recall_mean": 0.7266,
+    "recall_p05": 0.6,
+    "naming_mean": 1.0,
+    "naming_p05": 1.0,
+    "presence_mean": 0.8707,
+    "presence_p05": 0.81
+   },
+   "PDA": {
+    "fail_rate": 0.0,
+    "fail_recall": 0.0,
+    "fail_naming": 0.0,
+    "fail_presence": 0.0,
+    "recall_mean": 0.9369,
+    "recall_p05": 0.8952,
+    "naming_mean": 1.0,
+    "naming_p05": 1.0,
+    "presence_mean": 0.9896,
+    "presence_p05": 0.97
+   },
+   "PLB": {
+    "fail_rate": 0.0015,
+    "fail_recall": 0.0,
+    "fail_naming": 0.0,
+    "fail_presence": 0.0015,
+    "recall_mean": 0.9422,
+    "recall_p05": 0.899,
+    "naming_mean": 1.0,
+    "naming_p05": 1.0,
+    "presence_mean": 0.9687,
+    "presence_p05": 0.94
+   },
+   "verdict_fail_rate": 0.065,
+   "npass_dist": {
+    "0": 0.0,
+    "1": 0.0,
+    "2": 0.001,
+    "3": 0.064,
+    "4": 0.3435,
+    "5": 0.497,
+    "6": 0.0945
+   }
+  },
+  "as_ruled sigma_h=0.05 s_naming=0.5": {
+   "D1": {
+    "fail_rate": 0.003,
+    "fail_recall": 0.0005,
+    "fail_naming": 0.001,
+    "fail_presence": 0.0015,
+    "recall_mean": 0.9296,
+    "recall_p05": 0.8878,
+    "naming_mean": 0.9423,
+    "naming_p05": 0.8999,
+    "presence_mean": 0.9647,
+    "presence_p05": 0.94
+   },
+   "D2": {
+    "fail_rate": 0.0815,
+    "fail_recall": 0.039,
+    "fail_naming": 0.0005,
+    "fail_presence": 0.06,
+    "recall_mean": 0.8796,
+    "recall_p05": 0.8125,
+    "naming_mean": 0.9624,
+    "naming_p05": 0.9153,
+    "presence_mean": 0.894,
+    "presence_p05": 0.84
+   },
+   "OM1": {
+    "fail_rate": 0.0595,
+    "fail_recall": 0.009,
+    "fail_naming": 0.023,
+    "fail_presence": 0.03,
+    "recall_mean": 0.8929,
+    "recall_p05": 0.8333,
+    "naming_mean": 0.9176,
+    "naming_p05": 0.8648,
+    "presence_mean": 0.9417,
+    "presence_p05": 0.9
+   },
+   "OM2": {
+    "fail_rate": 0.58,
+    "fail_recall": 0.56,
+    "fail_naming": 0.0425,
+    "fail_presence": 0.0895,
+    "recall_mean": 0.7748,
+    "recall_p05": 0.65,
+    "naming_mean": 0.9379,
+    "naming_p05": 0.8571,
+    "presence_mean": 0.8707,
+    "presence_p05": 0.81
+   },
+   "PDA": {
+    "fail_rate": 0.0,
+    "fail_recall": 0.0,
+    "fail_naming": 0.0,
+    "fail_presence": 0.0,
+    "recall_mean": 0.9655,
+    "recall_p05": 0.934,
+    "naming_mean": 0.9704,
+    "naming_p05": 0.9411,
+    "presence_mean": 0.9896,
+    "presence_p05": 0.97
+   },
+   "PLB": {
+    "fail_rate": 0.0015,
+    "fail_recall": 0.0,
+    "fail_naming": 0.0,
+    "fail_presence": 0.0015,
+    "recall_mean": 0.961,
+    "recall_p05": 0.9278,
+    "naming_mean": 0.9804,
+    "naming_p05": 0.956,
+    "presence_mean": 0.9687,
+    "presence_p05": 0.94
+   },
+   "verdict_fail_rate": 0.003,
+   "npass_dist": {
+    "0": 0.0,
+    "1": 0.0,
+    "2": 0.0,
+    "3": 0.003,
+    "4": 0.0855,
+    "5": 0.5455,
+    "6": 0.366
+   }
+  },
+  "as_ruled sigma_h=0.05 s_naming=1.0": {
+   "D1": {
+    "fail_rate": 0.1075,
+    "fail_recall": 0.0,
+    "fail_naming": 0.106,
+    "fail_presence": 0.0015,
+    "recall_mean": 0.9841,
+    "recall_p05": 0.9592,
+    "naming_mean": 0.8902,
+    "naming_p05": 0.8367,
+    "presence_mean": 0.9647,
+    "presence_p05": 0.94
+   },
+   "D2": {
+    "fail_rate": 0.071,
+    "fail_recall": 0.004,
+    "fail_naming": 0.011,
+    "fail_presence": 0.06,
+    "recall_mean": 0.9136,
+    "recall_p05": 0.8586,
+    "naming_mean": 0.9266,
+    "naming_p05": 0.8688,
+    "presence_mean": 0.894,
+    "presence_p05": 0.84
+   },
+   "OM1": {
+    "fail_rate": 0.497,
+    "fail_recall": 0.0,
+    "fail_naming": 0.48,
+    "fail_presence": 0.03,
+    "recall_mean": 0.9672,
+    "recall_p05": 0.9286,
+    "naming_mean": 0.8472,
+    "naming_p05": 0.7791,
+    "presence_mean": 0.9417,
+    "presence_p05": 0.9
+   },
+   "OM2": {
+    "fail_rate": 0.465,
+    "fail_recall": 0.2785,
+    "fail_naming": 0.2505,
+    "fail_presence": 0.0895,
+    "recall_mean": 0.8222,
+    "recall_p05": 0.725,
+    "naming_mean": 0.8837,
+    "naming_p05": 0.7857,
+    "presence_mean": 0.8707,
+    "presence_p05": 0.81
+   },
+   "PDA": {
+    "fail_rate": 0.0005,
+    "fail_recall": 0.0,
+    "fail_naming": 0.0005,
+    "fail_presence": 0.0,
+    "recall_mean": 0.9938,
+    "recall_p05": 0.9806,
+    "naming_mean": 0.9427,
+    "naming_p05": 0.9029,
+    "presence_mean": 0.9896,
+    "presence_p05": 0.97
+   },
+   "PLB": {
+    "fail_rate": 0.0015,
+    "fail_recall": 0.0,
+    "fail_naming": 0.0,
+    "fail_presence": 0.0015,
+    "recall_mean": 0.98,
+    "recall_p05": 0.9583,
+    "naming_mean": 0.9615,
+    "naming_p05": 0.9263,
+    "presence_mean": 0.9687,
+    "presence_p05": 0.94
+   },
+   "verdict_fail_rate": 0.048,
+   "npass_dist": {
+    "0": 0.0,
+    "1": 0.0,
+    "2": 0.001,
+    "3": 0.047,
+    "4": 0.272,
+    "5": 0.4535,
+    "6": 0.2265
+   }
+  },
+  "as_ruled sigma_h=0.08 s_naming=0.0": {
+   "D1": {
+    "fail_rate": 0.013,
+    "fail_recall": 0.0105,
+    "fail_naming": 0.0,
+    "fail_presence": 0.0025,
+    "recall_mean": 0.878,
+    "recall_p05": 0.8265,
+    "naming_mean": 1.0,
+    "naming_p05": 1.0,
+    "presence_mean": 0.9649,
+    "presence_p05": 0.94
+   },
+   "D2": {
+    "fail_rate": 0.171,
+    "fail_recall": 0.15,
+    "fail_naming": 0.0,
+    "fail_presence": 0.046,
+    "recall_mean": 0.8509,
+    "recall_p05": 0.7812,
+    "naming_mean": 1.0,
+    "naming_p05": 1.0,
+    "presence_mean": 0.8957,
+    "presence_p05": 0.85
+   },
+   "OM1": {
+    "fail_rate": 0.3405,
+    "fail_recall": 0.332,
+    "fail_naming": 0.0,
+    "fail_presence": 0.0235,
+    "recall_mean": 0.8218,
+    "recall_p05": 0.75,
+    "naming_mean": 1.0,
+    "naming_p05": 1.0,
+    "presence_mean": 0.9418,
+    "presence_p05": 0.9
+   },
+   "OM2": {
+    "fail_rate": 0.797,
+    "fail_recall": 0.7965,
+    "fail_naming": 0.0,
+    "fail_presence": 0.091,
+    "recall_mean": 0.7289,
+    "recall_p05": 0.625,
+    "naming_mean": 1.0,
+    "naming_p05": 1.0,
+    "presence_mean": 0.8703,
+    "presence_p05": 0.81
+   },
+   "PDA": {
+    "fail_rate": 0.0,
+    "fail_recall": 0.0,
+    "fail_naming": 0.0,
+    "fail_presence": 0.0,
+    "recall_mean": 0.9394,
+    "recall_p05": 0.8991,
+    "naming_mean": 1.0,
+    "naming_p05": 1.0,
+    "presence_mean": 0.9898,
+    "presence_p05": 0.97
+   },
+   "PLB": {
+    "fail_rate": 0.0015,
+    "fail_recall": 0.0,
+    "fail_naming": 0.0,
+    "fail_presence": 0.0015,
+    "recall_mean": 0.947,
+    "recall_p05": 0.9072,
+    "naming_mean": 1.0,
+    "naming_p05": 1.0,
+    "presence_mean": 0.9686,
+    "presence_p05": 0.94
+   },
+   "verdict_fail_rate": 0.0545,
+   "npass_dist": {
+    "0": 0.0,
+    "1": 0.0,
+    "2": 0.001,
+    "3": 0.0535,
+    "4": 0.3245,
+    "5": 0.5095,
+    "6": 0.1115
+   }
+  },
+  "as_ruled sigma_h=0.08 s_naming=0.5": {
+   "D1": {
+    "fail_rate": 0.003,
+    "fail_recall": 0.0,
+    "fail_naming": 0.0005,
+    "fail_presence": 0.0025,
+    "recall_mean": 0.9305,
+    "recall_p05": 0.8878,
+    "naming_mean": 0.9436,
+    "naming_p05": 0.9,
+    "presence_mean": 0.9649,
+    "presence_p05": 0.94
+   },
+   "D2": {
+    "fail_rate": 0.0715,
+    "fail_recall": 0.037,
+    "fail_naming": 0.0005,
+    "fail_presence": 0.046,
+    "recall_mean": 0.8822,
+    "recall_p05": 0.8125,
+    "naming_mean": 0.9645,
+    "naming_p05": 0.9245,
+    "presence_mean": 0.8957,
+    "presence_p05": 0.85
+   },
+   "OM1": {
+    "fail_rate": 0.047,
+    "fail_recall": 0.007,
+    "fail_naming": 0.0185,
+    "fail_presence": 0.0235,
+    "recall_mean": 0.8937,
+    "recall_p05": 0.8333,
+    "naming_mean": 0.9196,
+    "naming_p05": 0.8649,
+    "presence_mean": 0.9418,
+    "presence_p05": 0.9
+   },
+   "OM2": {
+    "fail_rate": 0.58,
+    "fail_recall": 0.5645,
+    "fail_naming": 0.0335,
+    "fail_presence": 0.091,
+    "recall_mean": 0.7743,
+    "recall_p05": 0.675,
+    "naming_mean": 0.9411,
+    "naming_p05": 0.8621,
+    "presence_mean": 0.8703,
+    "presence_p05": 0.81
+   },
+   "PDA": {
+    "fail_rate": 0.0,
+    "fail_recall": 0.0,
+    "fail_naming": 0.0,
+    "fail_presence": 0.0,
+    "recall_mean": 0.9662,
+    "recall_p05": 0.934,
+    "naming_mean": 0.9723,
+    "naming_p05": 0.9417,
+    "presence_mean": 0.9898,
+    "presence_p05": 0.97
+   },
+   "PLB": {
+    "fail_rate": 0.0015,
+    "fail_recall": 0.0,
+    "fail_naming": 0.0,
+    "fail_presence": 0.0015,
+    "recall_mean": 0.9632,
+    "recall_p05": 0.9278,
+    "naming_mean": 0.9831,
+    "naming_p05": 0.9579,
+    "presence_mean": 0.9686,
+    "presence_p05": 0.94
+   },
+   "verdict_fail_rate": 0.0025,
+   "npass_dist": {
+    "0": 0.0,
+    "1": 0.0,
+    "2": 0.0,
+    "3": 0.0025,
+    "4": 0.073,
+    "5": 0.5495,
+    "6": 0.375
+   }
+  },
+  "as_ruled sigma_h=0.08 s_naming=1.0": {
+   "D1": {
+    "fail_rate": 0.0895,
+    "fail_recall": 0.0,
+    "fail_naming": 0.087,
+    "fail_presence": 0.0025,
+    "recall_mean": 0.9824,
+    "recall_p05": 0.9592,
+    "naming_mean": 0.8937,
+    "naming_p05": 0.8421,
+    "presence_mean": 0.9649,
+    "presence_p05": 0.94
+   },
+   "D2": {
+    "fail_rate": 0.058,
+    "fail_recall": 0.0015,
+    "fail_naming": 0.0135,
+    "fail_presence": 0.046,
+    "recall_mean": 0.9137,
+    "recall_p05": 0.8594,
+    "naming_mean": 0.9312,
+    "naming_p05": 0.8704,
+    "presence_mean": 0.8957,
+    "presence_p05": 0.85
+   },
+   "OM1": {
+    "fail_rate": 0.466,
+    "fail_recall": 0.0,
+    "fail_naming": 0.4545,
+    "fail_presence": 0.0235,
+    "recall_mean": 0.9664,
+    "recall_p05": 0.9286,
+    "naming_mean": 0.8504,
+    "naming_p05": 0.7831,
+    "presence_mean": 0.9418,
+    "presence_p05": 0.9
+   },
+   "OM2": {
+    "fail_rate": 0.4585,
+    "fail_recall": 0.2885,
+    "fail_naming": 0.228,
+    "fail_presence": 0.091,
+    "recall_mean": 0.819,
+    "recall_p05": 0.725,
+    "naming_mean": 0.8899,
+    "naming_p05": 0.7941,
+    "presence_mean": 0.8703,
+    "presence_p05": 0.81
+   },
+   "PDA": {
+    "fail_rate": 0.0005,
+    "fail_recall": 0.0,
+    "fail_naming": 0.0005,
+    "fail_presence": 0.0,
+    "recall_mean": 0.9926,
+    "recall_p05": 0.9727,
+    "naming_mean": 0.9465,
+    "naming_p05": 0.9074,
+    "presence_mean": 0.9898,
+    "presence_p05": 0.97
+   },
+   "PLB": {
+    "fail_rate": 0.0015,
+    "fail_recall": 0.0,
+    "fail_naming": 0.0,
+    "fail_presence": 0.0015,
+    "recall_mean": 0.9792,
+    "recall_p05": 0.9495,
+    "naming_mean": 0.9671,
+    "naming_p05": 0.9362,
+    "presence_mean": 0.9686,
+    "presence_p05": 0.94
+   },
+   "verdict_fail_rate": 0.027,
+   "npass_dist": {
+    "0": 0.0,
+    "1": 0.0,
+    "2": 0.0,
+    "3": 0.027,
+    "4": 0.2665,
+    "5": 0.46,
+    "6": 0.2465
+   }
+  },
+  "as_ruled sigma_h=0.12 s_naming=0.0": {
+   "D1": {
+    "fail_rate": 0.025,
+    "fail_recall": 0.025,
+    "fail_naming": 0.0,
+    "fail_presence": 0.0005,
+    "recall_mean": 0.8722,
+    "recall_p05": 0.8163,
+    "naming_mean": 1.0,
+    "naming_p05": 1.0,
+    "presence_mean": 0.9649,
+    "presence_p05": 0.94
+   },
+   "D2": {
+    "fail_rate": 0.223,
+    "fail_recall": 0.2025,
+    "fail_naming": 0.0,
+    "fail_presence": 0.056,
+    "recall_mean": 0.8429,
+    "recall_p05": 0.7656,
+    "naming_mean": 1.0,
+    "naming_p05": 1.0,
+    "presence_mean": 0.8952,
+    "presence_p05": 0.84
+   },
+   "OM1": {
+    "fail_rate": 0.3845,
+    "fail_recall": 0.378,
+    "fail_naming": 0.0,
+    "fail_presence": 0.0275,
+    "recall_mean": 0.8165,
+    "recall_p05": 0.75,
+    "naming_mean": 1.0,
+    "naming_p05": 1.0,
+    "presence_mean": 0.942,
+    "presence_p05": 0.9
+   },
+   "OM2": {
+    "fail_rate": 0.7955,
+    "fail_recall": 0.794,
+    "fail_naming": 0.0,
+    "fail_presence": 0.091,
+    "recall_mean": 0.7237,
+    "recall_p05": 0.6,
+    "naming_mean": 1.0,
+    "naming_p05": 1.0,
+    "presence_mean": 0.8706,
+    "presence_p05": 0.81
+   },
+   "PDA": {
+    "fail_rate": 0.0,
+    "fail_recall": 0.0,
+    "fail_naming": 0.0,
+    "fail_presence": 0.0,
+    "recall_mean": 0.9343,
+    "recall_p05": 0.8938,
+    "naming_mean": 1.0,
+    "naming_p05": 1.0,
+    "presence_mean": 0.9895,
+    "presence_p05": 0.97
+   },
+   "PLB": {
+    "fail_rate": 0.0005,
+    "fail_recall": 0.0,
+    "fail_naming": 0.0,
+    "fail_presence": 0.0005,
+    "recall_mean": 0.9417,
+    "recall_p05": 0.899,
+    "naming_mean": 1.0,
+    "naming_p05": 1.0,
+    "presence_mean": 0.9676,
+    "presence_p05": 0.94
+   },
+   "verdict_fail_rate": 0.0735,
+   "npass_dist": {
+    "0": 0.0,
+    "1": 0.0,
+    "2": 0.0025,
+    "3": 0.071,
+    "4": 0.372,
+    "5": 0.4615,
+    "6": 0.093
+   }
+  },
+  "as_ruled sigma_h=0.12 s_naming=0.5": {
+   "D1": {
+    "fail_rate": 0.0005,
+    "fail_recall": 0.0,
+    "fail_naming": 0.0,
+    "fail_presence": 0.0005,
+    "recall_mean": 0.9195,
+    "recall_p05": 0.8673,
+    "naming_mean": 0.9485,
+    "naming_p05": 0.909,
+    "presence_mean": 0.9649,
+    "presence_p05": 0.94
+   },
+   "D2": {
+    "fail_rate": 0.0955,
+    "fail_recall": 0.0625,
+    "fail_naming": 0.0,
+    "fail_presence": 0.056,
+    "recall_mean": 0.8704,
+    "recall_p05": 0.7969,
+    "naming_mean": 0.9683,
+    "naming_p05": 0.9259,
+    "presence_mean": 0.8952,
+    "presence_p05": 0.84
+   },
+   "OM1": {
+    "fail_rate": 0.053,
+    "fail_recall": 0.016,
+    "fail_naming": 0.014,
+    "fail_presence": 0.0275,
+    "recall_mean": 0.8854,
+    "recall_p05": 0.8214,
+    "naming_mean": 0.9223,
+    "naming_p05": 0.8684,
+    "presence_mean": 0.942,
+    "presence_p05": 0.9
+   },
+   "OM2": {
+    "fail_rate": 0.6145,
+    "fail_recall": 0.6035,
+    "fail_naming": 0.025,
+    "fail_presence": 0.091,
+    "recall_mean": 0.7661,
+    "recall_p05": 0.65,
+    "naming_mean": 0.9446,
+    "naming_p05": 0.871,
+    "presence_mean": 0.8706,
+    "presence_p05": 0.81
+   },
+   "PDA": {
+    "fail_rate": 0.0,
+    "fail_recall": 0.0,
+    "fail_naming": 0.0,
+    "fail_presence": 0.0,
+    "recall_mean": 0.9563,
+    "recall_p05": 0.9216,
+    "naming_mean": 0.977,
+    "naming_p05": 0.95,
+    "presence_mean": 0.9895,
+    "presence_p05": 0.97
+   },
+   "PLB": {
+    "fail_rate": 0.0005,
+    "fail_recall": 0.0,
+    "fail_naming": 0.0,
+    "fail_presence": 0.0005,
+    "recall_mean": 0.9535,
+    "recall_p05": 0.9175,
+    "naming_mean": 0.9876,
+    "naming_p05": 0.967,
+    "presence_mean": 0.9676,
+    "presence_p05": 0.94
+   },
+   "verdict_fail_rate": 0.0025,
+   "npass_dist": {
+    "0": 0.0,
+    "1": 0.0,
+    "2": 0.0,
+    "3": 0.0025,
+    "4": 0.0815,
+    "5": 0.5935,
+    "6": 0.3225
+   }
+  },
+  "as_ruled sigma_h=0.12 s_naming=1.0": {
+   "D1": {
+    "fail_rate": 0.0565,
+    "fail_recall": 0.0,
+    "fail_naming": 0.056,
+    "fail_presence": 0.0005,
+    "recall_mean": 0.9679,
+    "recall_p05": 0.9388,
+    "naming_mean": 0.9011,
+    "naming_p05": 0.8478,
+    "presence_mean": 0.9649,
+    "presence_p05": 0.94
+   },
+   "D2": {
+    "fail_rate": 0.0695,
+    "fail_recall": 0.0135,
+    "fail_naming": 0.0095,
+    "fail_presence": 0.056,
+    "recall_mean": 0.8986,
+    "recall_p05": 0.8281,
+    "naming_mean": 0.938,
+    "naming_p05": 0.8814,
+    "presence_mean": 0.8952,
+    "presence_p05": 0.84
+   },
+   "OM1": {
+    "fail_rate": 0.4165,
+    "fail_recall": 0.0,
+    "fail_naming": 0.4005,
+    "fail_presence": 0.0275,
+    "recall_mean": 0.9538,
+    "recall_p05": 0.9167,
+    "naming_mean": 0.8561,
+    "naming_p05": 0.7875,
+    "presence_mean": 0.942,
+    "presence_p05": 0.9
+   },
+   "OM2": {
+    "fail_rate": 0.493,
+    "fail_recall": 0.3535,
+    "fail_naming": 0.2075,
+    "fail_presence": 0.091,
+    "recall_mean": 0.8087,
+    "recall_p05": 0.7,
+    "naming_mean": 0.8948,
+    "naming_p05": 0.8,
+    "presence_mean": 0.8706,
+    "presence_p05": 0.81
+   },
+   "PDA": {
+    "fail_rate": 0.0,
+    "fail_recall": 0.0,
+    "fail_naming": 0.0,
+    "fail_presence": 0.0,
+    "recall_mean": 0.9784,
+    "recall_p05": 0.9524,
+    "naming_mean": 0.9549,
+    "naming_p05": 0.9192,
+    "presence_mean": 0.9895,
+    "presence_p05": 0.97
+   },
+   "PLB": {
+    "fail_rate": 0.0005,
+    "fail_recall": 0.0,
+    "fail_naming": 0.0,
+    "fail_presence": 0.0005,
+    "recall_mean": 0.9655,
+    "recall_p05": 0.9307,
+    "naming_mean": 0.9754,
+    "naming_p05": 0.9468,
+    "presence_mean": 0.9676,
+    "presence_p05": 0.94
+   },
+   "verdict_fail_rate": 0.029,
+   "npass_dist": {
+    "0": 0.0,
+    "1": 0.0,
+    "2": 0.0005,
+    "3": 0.0285,
+    "4": 0.227,
+    "5": 0.4945,
+    "6": 0.2495
+   }
+  }
+ },
+ "worst_recall_scenario": {
+  "D1": {
+   "fail_rate": 0.0,
+   "fail_recall": 0.0,
+   "fail_naming": 0.0,
+   "fail_presence": 0.0,
+   "recall_mean": 0.8716,
+   "recall_p05": 0.8163,
+   "naming_mean": 1.0,
+   "naming_p05": 1.0,
+   "presence_mean": 0.9649,
+   "presence_p05": 0.94
+  },
+  "D2": {
+   "fail_rate": 0.0,
+   "fail_recall": 0.0,
+   "fail_naming": 0.0,
+   "fail_presence": 0.0,
+   "recall_mean": 0.8437,
+   "recall_p05": 0.7656,
+   "naming_mean": 1.0,
+   "naming_p05": 1.0,
+   "presence_mean": 0.8945,
+   "presence_p05": 0.84
+  },
+  "OM1": {
+   "fail_rate": 0.0,
+   "fail_recall": 0.0,
+   "fail_naming": 0.0,
+   "fail_presence": 0.0,
+   "recall_mean": 0.8178,
+   "recall_p05": 0.75,
+   "naming_mean": 1.0,
+   "naming_p05": 1.0,
+   "presence_mean": 0.9419,
+   "presence_p05": 0.9
+  },
+  "OM2": {
+   "fail_rate": 0.0,
+   "fail_recall": 0.0,
+   "fail_naming": 0.0,
+   "fail_presence": 0.0,
+   "recall_mean": 0.7235,
+   "recall_p05": 0.6,
+   "naming_mean": 1.0,
+   "naming_p05": 1.0,
+   "presence_mean": 0.8704,
+   "presence_p05": 0.81
+  },
+  "PDA": {
+   "fail_rate": 0.0,
+   "fail_recall": 0.0,
+   "fail_naming": 0.0,
+   "fail_presence": 0.0,
+   "recall_mean": 0.9349,
+   "recall_p05": 0.8932,
+   "naming_mean": 1.0,
+   "naming_p05": 1.0,
+   "presence_mean": 0.9896,
+   "presence_p05": 0.97
+  },
+  "PLB": {
+   "fail_rate": 0.0,
+   "fail_recall": 0.0,
+   "fail_naming": 0.0,
+   "fail_presence": 0.0,
+   "recall_mean": 0.9421,
+   "recall_p05": 0.898,
+   "naming_mean": 1.0,
+   "naming_p05": 1.0,
+   "presence_mean": 0.9685,
+   "presence_p05": 0.94
+  },
+  "verdict_fail_rate": 0.0,
+  "npass_dist": {
+   "0": 0.0,
+   "1": 0.0,
+   "2": 0.0,
+   "3": 0.0,
+   "4": 0.0,
+   "5": 0.0,
+   "6": 1.0
+  }
+ },
+ "worst_naming_scenario": {
+  "D1": {
+   "fail_rate": 0.0,
+   "fail_recall": 0.0,
+   "fail_naming": 0.0,
+   "fail_presence": 0.0,
+   "recall_mean": 0.984,
+   "recall_p05": 0.9592,
+   "naming_mean": 0.89,
+   "naming_p05": 0.8351,
+   "presence_mean": 0.9647,
+   "presence_p05": 0.94
+  },
+  "D2": {
+   "fail_rate": 0.0,
+   "fail_recall": 0.0,
+   "fail_naming": 0.0,
+   "fail_presence": 0.0,
+   "recall_mean": 0.9139,
+   "recall_p05": 0.8594,
+   "naming_mean": 0.9266,
+   "naming_p05": 0.8644,
+   "presence_mean": 0.8941,
+   "presence_p05": 0.84
+  },
+  "OM1": {
+   "fail_rate": 0.0,
+   "fail_recall": 0.0,
+   "fail_naming": 0.0,
+   "fail_presence": 0.0,
+   "recall_mean": 0.9673,
+   "recall_p05": 0.9286,
+   "naming_mean": 0.8468,
+   "naming_p05": 0.7805,
+   "presence_mean": 0.9419,
+   "presence_p05": 0.9
+  },
+  "OM2": {
+   "fail_rate": 0.0,
+   "fail_recall": 0.0,
+   "fail_naming": 0.0,
+   "fail_presence": 0.0,
+   "recall_mean": 0.8208,
+   "recall_p05": 0.725,
+   "naming_mean": 0.8848,
+   "naming_p05": 0.7879,
+   "presence_mean": 0.8713,
+   "presence_p05": 0.81
+  },
+  "PDA": {
+   "fail_rate": 0.0,
+   "fail_recall": 0.0,
+   "fail_naming": 0.0,
+   "fail_presence": 0.0,
+   "recall_mean": 0.9936,
+   "recall_p05": 0.9802,
+   "naming_mean": 0.9429,
+   "naming_p05": 0.9029,
+   "presence_mean": 0.9898,
+   "presence_p05": 0.97
+  },
+  "PLB": {
+   "fail_rate": 0.0,
+   "fail_recall": 0.0,
+   "fail_naming": 0.0,
+   "fail_presence": 0.0,
+   "recall_mean": 0.9798,
+   "recall_p05": 0.9583,
+   "naming_mean": 0.962,
+   "naming_p05": 0.9263,
+   "presence_mean": 0.9683,
+   "presence_p05": 0.94
+  },
+  "verdict_fail_rate": 0.0,
+  "npass_dist": {
+   "0": 0.0,
+   "1": 0.0,
+   "2": 0.0,
+   "3": 0.0,
+   "4": 0.0,
+   "5": 0.0,
+   "6": 1.0
+  }
+ },
+ "proposed_lines": {
+  "D1": {
+   "recall": 0.81,
+   "naming": 0.83,
+   "presence": 0.94
+  },
+  "D2": {
+   "recall": 0.76,
+   "naming": 0.86,
+   "presence": 0.84
+  },
+  "OM1": {
+   "recall": 0.75,
+   "naming": 0.78,
+   "presence": 0.9
+  },
+  "OM2": {
+   "recall": 0.6,
+   "naming": 0.78,
+   "presence": 0.81
+  },
+  "PDA": {
+   "recall": 0.89,
+   "naming": 0.9,
+   "presence": 0.97
+  },
+  "PLB": {
+   "recall": 0.89,
+   "naming": 0.92,
+   "presence": 0.94
+  }
+ },
+ "proposed_human": {
+  "proposed sigma_h=0.05 s_naming=0.0": {
+   "D1": {
+    "fail_rate": 0.053,
+    "fail_recall": 0.034,
+    "fail_naming": 0.0,
+    "fail_presence": 0.0215,
+    "recall_mean": 0.8746,
+    "naming_mean": 1.0,
+    "presence_mean": 0.9648
+   },
+   "D2": {
+    "fail_rate": 0.0505,
+    "fail_recall": 0.025,
+    "fail_naming": 0.0,
+    "fail_presence": 0.029,
+    "recall_mean": 0.8469,
+    "naming_mean": 1.0,
+    "presence_mean": 0.8947
+   },
+   "OM1": {
+    "fail_rate": 0.057,
+    "fail_recall": 0.04,
+    "fail_naming": 0.0,
+    "fail_presence": 0.0205,
+    "recall_mean": 0.8205,
+    "naming_mean": 1.0,
+    "presence_mean": 0.9428
+   },
+   "OM2": {
+    "fail_rate": 0.0525,
+    "fail_recall": 0.028,
+    "fail_naming": 0.0,
+    "fail_presence": 0.034,
+    "recall_mean": 0.7275,
+    "naming_mean": 1.0,
+    "presence_mean": 0.8705
+   },
+   "PDA": {
+    "fail_rate": 0.0445,
+    "fail_recall": 0.0315,
+    "fail_naming": 0.0,
+    "fail_presence": 0.015,
+    "recall_mean": 0.9368,
+    "naming_mean": 1.0,
+    "presence_mean": 0.9897
+   },
+   "PLB": {
+    "fail_rate": 0.0395,
+    "fail_recall": 0.017,
+    "fail_naming": 0.0,
+    "fail_presence": 0.026,
+    "recall_mean": 0.9431,
+    "naming_mean": 1.0,
+    "presence_mean": 0.9685
+   },
+   "verdict_fail_rate": 0.0015,
+   "npass_dist": {
+    "0": 0.0,
+    "1": 0.0,
+    "2": 0.0,
+    "3": 0.0015,
+    "4": 0.0255,
+    "5": 0.2415,
+    "6": 0.7315
+   }
+  },
+  "proposed sigma_h=0.05 s_naming=0.5": {
+   "D1": {
+    "fail_rate": 0.0215,
+    "fail_recall": 0.0,
+    "fail_naming": 0.0,
+    "fail_presence": 0.0215,
+    "recall_mean": 0.93,
+    "naming_mean": 0.9405,
+    "presence_mean": 0.9648
+   },
+   "D2": {
+    "fail_rate": 0.031,
+    "fail_recall": 0.001,
+    "fail_naming": 0.0015,
+    "fail_presence": 0.029,
+    "recall_mean": 0.8807,
+    "naming_mean": 0.9617,
+    "presence_mean": 0.8947
+   },
+   "OM1": {
+    "fail_rate": 0.0205,
+    "fail_recall": 0.0,
+    "fail_naming": 0.0,
+    "fail_presence": 0.0205,
+    "recall_mean": 0.8938,
+    "naming_mean": 0.9179,
+    "presence_mean": 0.9428
+   },
+   "OM2": {
+    "fail_rate": 0.037,
+    "fail_recall": 0.003,
+    "fail_naming": 0.002,
+    "fail_presence": 0.034,
+    "recall_mean": 0.7742,
+    "naming_mean": 0.9397,
+    "presence_mean": 0.8705
+   },
+   "PDA": {
+    "fail_rate": 0.015,
+    "fail_recall": 0.0,
+    "fail_naming": 0.0,
+    "fail_presence": 0.015,
+    "recall_mean": 0.9649,
+    "naming_mean": 0.9709,
+    "presence_mean": 0.9897
+   },
+   "PLB": {
+    "fail_rate": 0.0265,
+    "fail_recall": 0.0005,
+    "fail_naming": 0.0005,
+    "fail_presence": 0.026,
+    "recall_mean": 0.9614,
+    "naming_mean": 0.981,
+    "presence_mean": 0.9685
+   },
+   "verdict_fail_rate": 0.0,
+   "npass_dist": {
+    "0": 0.0,
+    "1": 0.0,
+    "2": 0.0,
+    "3": 0.0,
+    "4": 0.009,
+    "5": 0.1335,
+    "6": 0.8575
+   }
+  },
+  "proposed sigma_h=0.05 s_naming=1.0": {
+   "D1": {
+    "fail_rate": 0.0625,
+    "fail_recall": 0.0,
+    "fail_naming": 0.041,
+    "fail_presence": 0.0215,
+    "recall_mean": 0.9841,
+    "naming_mean": 0.8887,
+    "presence_mean": 0.9648
+   },
+   "D2": {
+    "fail_rate": 0.062,
+    "fail_recall": 0.0,
+    "fail_naming": 0.0345,
+    "fail_presence": 0.029,
+    "recall_mean": 0.9141,
+    "naming_mean": 0.9265,
+    "presence_mean": 0.8947
+   },
+   "OM1": {
+    "fail_rate": 0.0695,
+    "fail_recall": 0.0,
+    "fail_naming": 0.05,
+    "fail_presence": 0.0205,
+    "recall_mean": 0.9676,
+    "naming_mean": 0.8479,
+    "presence_mean": 0.9428
+   },
+   "OM2": {
+    "fail_rate": 0.071,
+    "fail_recall": 0.0,
+    "fail_naming": 0.0375,
+    "fail_presence": 0.034,
+    "recall_mean": 0.821,
+    "naming_mean": 0.8863,
+    "presence_mean": 0.8705
+   },
+   "PDA": {
+    "fail_rate": 0.0565,
+    "fail_recall": 0.0,
+    "fail_naming": 0.042,
+    "fail_presence": 0.015,
+    "recall_mean": 0.9937,
+    "naming_mean": 0.9428,
+    "presence_mean": 0.9897
+   },
+   "PLB": {
+    "fail_rate": 0.0485,
+    "fail_recall": 0.0,
+    "fail_naming": 0.0225,
+    "fail_presence": 0.026,
+    "recall_mean": 0.9797,
+    "naming_mean": 0.9626,
+    "presence_mean": 0.9685
+   },
+   "verdict_fail_rate": 0.0025,
+   "npass_dist": {
+    "0": 0.0,
+    "1": 0.0,
+    "2": 0.0005,
+    "3": 0.002,
+    "4": 0.038,
+    "5": 0.286,
+    "6": 0.6735
+   }
+  },
+  "proposed sigma_h=0.08 s_naming=0.0": {
+   "D1": {
+    "fail_rate": 0.0465,
+    "fail_recall": 0.029,
+    "fail_naming": 0.0,
+    "fail_presence": 0.02,
+    "recall_mean": 0.8785,
+    "naming_mean": 1.0,
+    "presence_mean": 0.9655
+   },
+   "D2": {
+    "fail_rate": 0.0555,
+    "fail_recall": 0.029,
+    "fail_naming": 0.0,
+    "fail_presence": 0.0335,
+    "recall_mean": 0.849,
+    "naming_mean": 1.0,
+    "presence_mean": 0.8946
+   },
+   "OM1": {
+    "fail_rate": 0.0615,
+    "fail_recall": 0.034,
+    "fail_naming": 0.0,
+    "fail_presence": 0.0305,
+    "recall_mean": 0.8232,
+    "naming_mean": 1.0,
+    "presence_mean": 0.9424
+   },
+   "OM2": {
+    "fail_rate": 0.054,
+    "fail_recall": 0.0285,
+    "fail_naming": 0.0,
+    "fail_presence": 0.032,
+    "recall_mean": 0.7292,
+    "naming_mean": 1.0,
+    "presence_mean": 0.8709
+   },
+   "PDA": {
+    "fail_rate": 0.0445,
+    "fail_recall": 0.0275,
+    "fail_naming": 0.0,
+    "fail_presence": 0.0185,
+    "recall_mean": 0.9394,
+    "naming_mean": 1.0,
+    "presence_mean": 0.9893
+   },
+   "PLB": {
+    "fail_rate": 0.045,
+    "fail_recall": 0.02,
+    "fail_naming": 0.0,
+    "fail_presence": 0.0305,
+    "recall_mean": 0.9457,
+    "naming_mean": 1.0,
+    "presence_mean": 0.9684
+   },
+   "verdict_fail_rate": 0.002,
+   "npass_dist": {
+    "0": 0.0,
+    "1": 0.0,
+    "2": 0.0,
+    "3": 0.002,
+    "4": 0.032,
+    "5": 0.237,
+    "6": 0.729
+   }
+  },
+  "proposed sigma_h=0.08 s_naming=0.5": {
+   "D1": {
+    "fail_rate": 0.02,
+    "fail_recall": 0.0,
+    "fail_naming": 0.0,
+    "fail_presence": 0.02,
+    "recall_mean": 0.9316,
+    "naming_mean": 0.943,
+    "presence_mean": 0.9655
+   },
+   "D2": {
+    "fail_rate": 0.035,
+    "fail_recall": 0.0015,
+    "fail_naming": 0.0005,
+    "fail_presence": 0.0335,
+    "recall_mean": 0.8807,
+    "naming_mean": 0.964,
+    "presence_mean": 0.8946
+   },
+   "OM1": {
+    "fail_rate": 0.0305,
+    "fail_recall": 0.0,
+    "fail_naming": 0.0,
+    "fail_presence": 0.0305,
+    "recall_mean": 0.8953,
+    "naming_mean": 0.9195,
+    "presence_mean": 0.9424
+   },
+   "OM2": {
+    "fail_rate": 0.037,
+    "fail_recall": 0.004,
+    "fail_naming": 0.003,
+    "fail_presence": 0.032,
+    "recall_mean": 0.776,
+    "naming_mean": 0.9397,
+    "presence_mean": 0.8709
+   },
+   "PDA": {
+    "fail_rate": 0.0195,
+    "fail_recall": 0.001,
+    "fail_naming": 0.0,
+    "fail_presence": 0.0185,
+    "recall_mean": 0.9655,
+    "naming_mean": 0.973,
+    "presence_mean": 0.9893
+   },
+   "PLB": {
+    "fail_rate": 0.032,
+    "fail_recall": 0.003,
+    "fail_naming": 0.0,
+    "fail_presence": 0.0305,
+    "recall_mean": 0.9623,
+    "naming_mean": 0.9827,
+    "presence_mean": 0.9684
+   },
+   "verdict_fail_rate": 0.0,
+   "npass_dist": {
+    "0": 0.0,
+    "1": 0.0,
+    "2": 0.0,
+    "3": 0.0,
+    "4": 0.01,
+    "5": 0.154,
+    "6": 0.836
+   }
+  },
+  "proposed sigma_h=0.08 s_naming=1.0": {
+   "D1": {
+    "fail_rate": 0.0485,
+    "fail_recall": 0.0,
+    "fail_naming": 0.0285,
+    "fail_presence": 0.02,
+    "recall_mean": 0.9829,
+    "naming_mean": 0.8938,
+    "presence_mean": 0.9655
+   },
+   "D2": {
+    "fail_rate": 0.0585,
+    "fail_recall": 0.0,
+    "fail_naming": 0.0265,
+    "fail_presence": 0.0335,
+    "recall_mean": 0.9127,
+    "naming_mean": 0.9302,
+    "presence_mean": 0.8946
+   },
+   "OM1": {
+    "fail_rate": 0.0705,
+    "fail_recall": 0.0,
+    "fail_naming": 0.04,
+    "fail_presence": 0.0305,
+    "recall_mean": 0.9668,
+    "naming_mean": 0.8515,
+    "presence_mean": 0.9424
+   },
+   "OM2": {
+    "fail_rate": 0.0635,
+    "fail_recall": 0.001,
+    "fail_naming": 0.032,
+    "fail_presence": 0.032,
+    "recall_mean": 0.8208,
+    "naming_mean": 0.8882,
+    "presence_mean": 0.8709
+   },
+   "PDA": {
+    "fail_rate": 0.045,
+    "fail_recall": 0.0,
+    "fail_naming": 0.0275,
+    "fail_presence": 0.0185,
+    "recall_mean": 0.9921,
+    "naming_mean": 0.9469,
+    "presence_mean": 0.9893
+   },
+   "PLB": {
+    "fail_rate": 0.044,
+    "fail_recall": 0.0,
+    "fail_naming": 0.0135,
+    "fail_presence": 0.0305,
+    "recall_mean": 0.9788,
+    "naming_mean": 0.9662,
+    "presence_mean": 0.9684
+   },
+   "verdict_fail_rate": 0.002,
+   "npass_dist": {
+    "0": 0.0,
+    "1": 0.0,
+    "2": 0.0,
+    "3": 0.002,
+    "4": 0.042,
+    "5": 0.24,
+    "6": 0.716
+   }
+  },
+  "proposed sigma_h=0.12 s_naming=0.0": {
+   "D1": {
+    "fail_rate": 0.062,
+    "fail_recall": 0.045,
+    "fail_naming": 0.0,
+    "fail_presence": 0.023,
+    "recall_mean": 0.8724,
+    "naming_mean": 1.0,
+    "presence_mean": 0.9647
+   },
+   "D2": {
+    "fail_rate": 0.0635,
+    "fail_recall": 0.035,
+    "fail_naming": 0.0,
+    "fail_presence": 0.037,
+    "recall_mean": 0.844,
+    "naming_mean": 1.0,
+    "presence_mean": 0.8948
+   },
+   "OM1": {
+    "fail_rate": 0.065,
+    "fail_recall": 0.0465,
+    "fail_naming": 0.0,
+    "fail_presence": 0.0215,
+    "recall_mean": 0.8188,
+    "naming_mean": 1.0,
+    "presence_mean": 0.9425
+   },
+   "OM2": {
+    "fail_rate": 0.0555,
+    "fail_recall": 0.031,
+    "fail_naming": 0.0,
+    "fail_presence": 0.0325,
+    "recall_mean": 0.7235,
+    "naming_mean": 1.0,
+    "presence_mean": 0.871
+   },
+   "PDA": {
+    "fail_rate": 0.0595,
+    "fail_recall": 0.0435,
+    "fail_naming": 0.0,
+    "fail_presence": 0.02,
+    "recall_mean": 0.9343,
+    "naming_mean": 1.0,
+    "presence_mean": 0.9896
+   },
+   "PLB": {
+    "fail_rate": 0.0485,
+    "fail_recall": 0.025,
+    "fail_naming": 0.0,
+    "fail_presence": 0.0285,
+    "recall_mean": 0.942,
+    "naming_mean": 1.0,
+    "presence_mean": 0.9679
+   },
+   "verdict_fail_rate": 0.0025,
+   "npass_dist": {
+    "0": 0.0,
+    "1": 0.0,
+    "2": 0.0,
+    "3": 0.0025,
+    "4": 0.0375,
+    "5": 0.2715,
+    "6": 0.6885
+   }
+  },
+  "proposed sigma_h=0.12 s_naming=0.5": {
+   "D1": {
+    "fail_rate": 0.024,
+    "fail_recall": 0.001,
+    "fail_naming": 0.0,
+    "fail_presence": 0.023,
+    "recall_mean": 0.9202,
+    "naming_mean": 0.9481,
+    "presence_mean": 0.9647
+   },
+   "D2": {
+    "fail_rate": 0.039,
+    "fail_recall": 0.004,
+    "fail_naming": 0.0,
+    "fail_presence": 0.037,
+    "recall_mean": 0.8724,
+    "naming_mean": 0.9676,
+    "presence_mean": 0.8948
+   },
+   "OM1": {
+    "fail_rate": 0.022,
+    "fail_recall": 0.0005,
+    "fail_naming": 0.0,
+    "fail_presence": 0.0215,
+    "recall_mean": 0.8857,
+    "naming_mean": 0.9244,
+    "presence_mean": 0.9425
+   },
+   "OM2": {
+    "fail_rate": 0.0395,
+    "fail_recall": 0.0075,
+    "fail_naming": 0.0025,
+    "fail_presence": 0.0325,
+    "recall_mean": 0.7674,
+    "naming_mean": 0.9427,
+    "presence_mean": 0.871
+   },
+   "PDA": {
+    "fail_rate": 0.0235,
+    "fail_recall": 0.0045,
+    "fail_naming": 0.0,
+    "fail_presence": 0.02,
+    "recall_mean": 0.9561,
+    "naming_mean": 0.9772,
+    "presence_mean": 0.9896
+   },
+   "PLB": {
+    "fail_rate": 0.031,
+    "fail_recall": 0.004,
+    "fail_naming": 0.0,
+    "fail_presence": 0.0285,
+    "recall_mean": 0.9536,
+    "naming_mean": 0.9878,
+    "presence_mean": 0.9679
+   },
+   "verdict_fail_rate": 0.0,
+   "npass_dist": {
+    "0": 0.0,
+    "1": 0.0,
+    "2": 0.0,
+    "3": 0.0,
+    "4": 0.0125,
+    "5": 0.154,
+    "6": 0.8335
+   }
+  },
+  "proposed sigma_h=0.12 s_naming=1.0": {
+   "D1": {
+    "fail_rate": 0.0395,
+    "fail_recall": 0.0,
+    "fail_naming": 0.017,
+    "fail_presence": 0.023,
+    "recall_mean": 0.9682,
+    "naming_mean": 0.9011,
+    "presence_mean": 0.9647
+   },
+   "D2": {
+    "fail_rate": 0.055,
+    "fail_recall": 0.0,
+    "fail_naming": 0.019,
+    "fail_presence": 0.037,
+    "recall_mean": 0.8998,
+    "naming_mean": 0.938,
+    "presence_mean": 0.8948
+   },
+   "OM1": {
+    "fail_rate": 0.051,
+    "fail_recall": 0.0,
+    "fail_naming": 0.03,
+    "fail_presence": 0.0215,
+    "recall_mean": 0.9539,
+    "naming_mean": 0.8584,
+    "presence_mean": 0.9425
+   },
+   "OM2": {
+    "fail_rate": 0.059,
+    "fail_recall": 0.0005,
+    "fail_naming": 0.0275,
+    "fail_presence": 0.0325,
+    "recall_mean": 0.8094,
+    "naming_mean": 0.8936,
+    "presence_mean": 0.871
+   },
+   "PDA": {
+    "fail_rate": 0.0275,
+    "fail_recall": 0.0,
+    "fail_naming": 0.0075,
+    "fail_presence": 0.02,
+    "recall_mean": 0.9782,
+    "naming_mean": 0.9551,
+    "presence_mean": 0.9896
+   },
+   "PLB": {
+    "fail_rate": 0.0305,
+    "fail_recall": 0.0005,
+    "fail_naming": 0.002,
+    "fail_presence": 0.0285,
+    "recall_mean": 0.9653,
+    "naming_mean": 0.9758,
+    "presence_mean": 0.9679
+   },
+   "verdict_fail_rate": 0.0005,
+   "npass_dist": {
+    "0": 0.0,
+    "1": 0.0,
+    "2": 0.0,
+    "3": 0.0005,
+    "4": 0.026,
+    "5": 0.209,
+    "6": 0.7645
+   }
+  }
+ },
+ "power": {
+  "omission +0.10 | as_ruled": {
+   "D1": {
+    "fail_rate": 0.9425,
+    "fail_recall": 0.179,
+    "fail_naming": 0.0,
+    "fail_presence": 0.9425,
+    "recall_mean": 0.8355,
+    "recall_p05": 0.7755,
+    "naming_mean": 0.9446,
+    "naming_p05": 0.9012,
+    "presence_mean": 0.8669,
+    "presence_p05": 0.81
+   },
+   "D2": {
+    "fail_rate": 0.7395,
+    "fail_recall": 0.631,
+    "fail_naming": 0.0,
+    "fail_presence": 0.6375,
+    "recall_mean": 0.7858,
+    "recall_p05": 0.7031,
+    "naming_mean": 0.9642,
+    "naming_p05": 0.92,
+    "presence_mean": 0.8311,
+    "presence_p05": 0.77
+   },
+   "OM1": {
+    "fail_rate": 0.882,
+    "fail_recall": 0.5095,
+    "fail_naming": 0.024,
+    "fail_presence": 0.8675,
+    "recall_mean": 0.8014,
+    "recall_p05": 0.7262,
+    "naming_mean": 0.92,
+    "naming_p05": 0.8636,
+    "presence_mean": 0.8576,
+    "presence_p05": 0.8
+   },
+   "OM2": {
+    "fail_rate": 0.9395,
+    "fail_recall": 0.934,
+    "fail_naming": 0.033,
+    "fail_presence": 0.432,
+    "recall_mean": 0.6788,
+    "recall_p05": 0.55,
+    "naming_mean": 0.9425,
+    "naming_p05": 0.8571,
+    "presence_mean": 0.8305,
+    "presence_p05": 0.77
+   },
+   "PDA": {
+    "fail_rate": 0.919,
+    "fail_recall": 0.036,
+    "fail_naming": 0.0,
+    "fail_presence": 0.919,
+    "recall_mean": 0.8686,
+    "recall_p05": 0.8073,
+    "naming_mean": 0.9727,
+    "naming_p05": 0.945,
+    "presence_mean": 0.8933,
+    "presence_p05": 0.84
+   },
+   "PLB": {
+    "fail_rate": 0.9055,
+    "fail_recall": 0.0375,
+    "fail_naming": 0.0,
+    "fail_presence": 0.9055,
+    "recall_mean": 0.8644,
+    "recall_p05": 0.8041,
+    "naming_mean": 0.9833,
+    "naming_p05": 0.961,
+    "presence_mean": 0.8726,
+    "presence_p05": 0.82
+   },
+   "verdict_fail_rate": 0.997,
+   "npass_dist": {
+    "0": 0.4865,
+    "1": 0.3805,
+    "2": 0.1105,
+    "3": 0.0195,
+    "4": 0.003,
+    "5": 0.0,
+    "6": 0.0
+   }
+  },
+  "omission +0.10 | proposed": {
+   "D1": {
+    "fail_rate": 0.994,
+    "fail_recall": 0.2505,
+    "fail_naming": 0.0,
+    "fail_presence": 0.994,
+    "recall_mean": 0.8355,
+    "naming_mean": 0.9446,
+    "presence_mean": 0.8669
+   },
+   "D2": {
+    "fail_rate": 0.5675,
+    "fail_recall": 0.291,
+    "fail_naming": 0.0,
+    "fail_presence": 0.547,
+    "recall_mean": 0.7851,
+    "naming_mean": 0.9639,
+    "presence_mean": 0.8292
+   },
+   "OM1": {
+    "fail_rate": 0.866,
+    "fail_recall": 0.1025,
+    "fail_naming": 0.0,
+    "fail_presence": 0.865,
+    "recall_mean": 0.8,
+    "naming_mean": 0.9189,
+    "presence_mean": 0.8566
+   },
+   "OM2": {
+    "fail_rate": 0.2575,
+    "fail_recall": 0.101,
+    "fail_naming": 0.004,
+    "fail_presence": 0.2295,
+    "recall_mean": 0.6826,
+    "naming_mean": 0.9392,
+    "presence_mean": 0.8324
+   },
+   "PDA": {
+    "fail_rate": 0.997,
+    "fail_recall": 0.707,
+    "fail_naming": 0.0,
+    "fail_presence": 0.997,
+    "recall_mean": 0.87,
+    "naming_mean": 0.9723,
+    "presence_mean": 0.8944
+   },
+   "PLB": {
+    "fail_rate": 0.9765,
+    "fail_recall": 0.781,
+    "fail_naming": 0.0005,
+    "fail_presence": 0.9765,
+    "recall_mean": 0.8628,
+    "naming_mean": 0.9834,
+    "presence_mean": 0.8716
+   },
+   "verdict_fail_rate": 0.999,
+   "npass_dist": {
+    "0": 0.1225,
+    "1": 0.4625,
+    "2": 0.367,
+    "3": 0.047,
+    "4": 0.001,
+    "5": 0.0,
+    "6": 0.0
+   }
+  },
+  "omission +0.20 | as_ruled": {
+   "D1": {
+    "fail_rate": 1.0,
+    "fail_recall": 0.9125,
+    "fail_naming": 0.0,
+    "fail_presence": 1.0,
+    "recall_mean": 0.7415,
+    "recall_p05": 0.6633,
+    "naming_mean": 0.9443,
+    "naming_p05": 0.8971,
+    "presence_mean": 0.7693,
+    "presence_p05": 0.7
+   },
+   "D2": {
+    "fail_rate": 0.9885,
+    "fail_recall": 0.9835,
+    "fail_naming": 0.0005,
+    "fail_presence": 0.9745,
+    "recall_mean": 0.6893,
+    "recall_p05": 0.5938,
+    "naming_mean": 0.9648,
+    "naming_p05": 0.9149,
+    "presence_mean": 0.7668,
+    "presence_p05": 0.7
+   },
+   "OM1": {
+    "fail_rate": 0.9995,
+    "fail_recall": 0.976,
+    "fail_naming": 0.03,
+    "fail_presence": 0.999,
+    "recall_mean": 0.709,
+    "recall_p05": 0.619,
+    "naming_mean": 0.9203,
+    "naming_p05": 0.8594,
+    "presence_mean": 0.7735,
+    "presence_p05": 0.7
+   },
+   "OM2": {
+    "fail_rate": 0.994,
+    "fail_recall": 0.994,
+    "fail_naming": 0.0405,
+    "fail_presence": 0.8105,
+    "recall_mean": 0.587,
+    "recall_p05": 0.475,
+    "naming_mean": 0.9427,
+    "naming_p05": 0.8571,
+    "presence_mean": 0.7915,
+    "presence_p05": 0.73
+   },
+   "PDA": {
+    "fail_rate": 1.0,
+    "fail_recall": 0.7295,
+    "fail_naming": 0.0,
+    "fail_presence": 1.0,
+    "recall_mean": 0.7705,
+    "recall_p05": 0.6937,
+    "naming_mean": 0.9726,
+    "naming_p05": 0.9405,
+    "presence_mean": 0.7968,
+    "presence_p05": 0.73
+   },
+   "PLB": {
+    "fail_rate": 1.0,
+    "fail_recall": 0.7805,
+    "fail_naming": 0.0,
+    "fail_presence": 1.0,
+    "recall_mean": 0.7659,
+    "recall_p05": 0.6907,
+    "naming_mean": 0.9833,
+    "naming_p05": 0.9577,
+    "presence_mean": 0.7763,
+    "presence_p05": 0.71
+   },
+   "verdict_fail_rate": 1.0,
+   "npass_dist": {
+    "0": 0.9825,
+    "1": 0.017,
+    "2": 0.0005,
+    "3": 0.0,
+    "4": 0.0,
+    "5": 0.0,
+    "6": 0.0
+   }
+  },
+  "omission +0.20 | proposed": {
+   "D1": {
+    "fail_rate": 1.0,
+    "fail_recall": 0.95,
+    "fail_naming": 0.0,
+    "fail_presence": 1.0,
+    "recall_mean": 0.7415,
+    "naming_mean": 0.9443,
+    "presence_mean": 0.7693
+   },
+   "D2": {
+    "fail_rate": 0.965,
+    "fail_recall": 0.8825,
+    "fail_naming": 0.0005,
+    "fail_presence": 0.956,
+    "recall_mean": 0.689,
+    "naming_mean": 0.9639,
+    "presence_mean": 0.7655
+   },
+   "OM1": {
+    "fail_rate": 1.0,
+    "fail_recall": 0.7545,
+    "fail_naming": 0.0,
+    "fail_presence": 1.0,
+    "recall_mean": 0.7083,
+    "naming_mean": 0.9186,
+    "presence_mean": 0.7731
+   },
+   "OM2": {
+    "fail_rate": 0.679,
+    "fail_recall": 0.506,
+    "fail_naming": 0.0065,
+    "fail_presence": 0.6165,
+    "recall_mean": 0.5878,
+    "naming_mean": 0.9389,
+    "presence_mean": 0.7922
+   },
+   "PDA": {
+    "fail_rate": 1.0,
+    "fail_recall": 0.998,
+    "fail_naming": 0.0005,
+    "fail_presence": 1.0,
+    "recall_mean": 0.7732,
+    "naming_mean": 0.9725,
+    "presence_mean": 0.7992
+   },
+   "PLB": {
+    "fail_rate": 1.0,
+    "fail_recall": 0.9995,
+    "fail_naming": 0.0005,
+    "fail_presence": 1.0,
+    "recall_mean": 0.7649,
+    "naming_mean": 0.9833,
+    "presence_mean": 0.7757
+   },
+   "verdict_fail_rate": 1.0,
+   "npass_dist": {
+    "0": 0.655,
+    "1": 0.334,
+    "2": 0.011,
+    "3": 0.0,
+    "4": 0.0,
+    "5": 0.0,
+    "6": 0.0
+   }
+  },
+  "misnaming 0.10 | as_ruled": {
+   "D1": {
+    "fail_rate": 0.5,
+    "fail_recall": 0.0,
+    "fail_naming": 0.4995,
+    "fail_presence": 0.0005,
+    "recall_mean": 0.9297,
+    "recall_p05": 0.8878,
+    "naming_mean": 0.8495,
+    "naming_p05": 0.7849,
+    "presence_mean": 0.9649,
+    "presence_p05": 0.94
+   },
+   "D2": {
+    "fail_rate": 0.386,
+    "fail_recall": 0.0455,
+    "fail_naming": 0.3305,
+    "fail_presence": 0.061,
+    "recall_mean": 0.8816,
+    "recall_p05": 0.8125,
+    "naming_mean": 0.8675,
+    "naming_p05": 0.7895,
+    "presence_mean": 0.8945,
+    "presence_p05": 0.84
+   },
+   "OM1": {
+    "fail_rate": 0.6875,
+    "fail_recall": 0.0085,
+    "fail_naming": 0.6785,
+    "fail_presence": 0.025,
+    "recall_mean": 0.8946,
+    "recall_p05": 0.8333,
+    "naming_mean": 0.8286,
+    "naming_p05": 0.7532,
+    "presence_mean": 0.942,
+    "presence_p05": 0.9
+   },
+   "OM2": {
+    "fail_rate": 0.796,
+    "fail_recall": 0.5705,
+    "fail_naming": 0.492,
+    "fail_presence": 0.0905,
+    "recall_mean": 0.7731,
+    "recall_p05": 0.675,
+    "naming_mean": 0.8479,
+    "naming_p05": 0.7333,
+    "presence_mean": 0.8704,
+    "presence_p05": 0.81
+   },
+   "PDA": {
+    "fail_rate": 0.2015,
+    "fail_recall": 0.0,
+    "fail_naming": 0.2015,
+    "fail_presence": 0.0,
+    "recall_mean": 0.9661,
+    "recall_p05": 0.9345,
+    "naming_mean": 0.8768,
+    "naming_p05": 0.819,
+    "presence_mean": 0.9896,
+    "presence_p05": 0.97
+   },
+   "PLB": {
+    "fail_rate": 0.1525,
+    "fail_recall": 0.0,
+    "fail_naming": 0.1505,
+    "fail_presence": 0.002,
+    "recall_mean": 0.9627,
+    "recall_p05": 0.9286,
+    "naming_mean": 0.8842,
+    "naming_p05": 0.8298,
+    "presence_mean": 0.9686,
+    "presence_p05": 0.94
+   },
+   "verdict_fail_rate": 0.58,
+   "npass_dist": {
+    "0": 0.0055,
+    "1": 0.042,
+    "2": 0.1865,
+    "3": 0.346,
+    "4": 0.2935,
+    "5": 0.1095,
+    "6": 0.017
+   }
+  },
+  "misnaming 0.10 | proposed": {
+   "D1": {
+    "fail_rate": 0.323,
+    "fail_recall": 0.0,
+    "fail_naming": 0.3135,
+    "fail_presence": 0.0205,
+    "recall_mean": 0.9297,
+    "naming_mean": 0.8495,
+    "presence_mean": 0.9649
+   },
+   "D2": {
+    "fail_rate": 0.421,
+    "fail_recall": 0.0015,
+    "fail_naming": 0.401,
+    "fail_presence": 0.0325,
+    "recall_mean": 0.8823,
+    "naming_mean": 0.8686,
+    "presence_mean": 0.8937
+   },
+   "OM1": {
+    "fail_rate": 0.1635,
+    "fail_recall": 0.0,
+    "fail_naming": 0.1375,
+    "fail_presence": 0.03,
+    "recall_mean": 0.8932,
+    "naming_mean": 0.8267,
+    "presence_mean": 0.9412
+   },
+   "OM2": {
+    "fail_rate": 0.179,
+    "fail_recall": 0.0025,
+    "fail_naming": 0.1535,
+    "fail_presence": 0.032,
+    "recall_mean": 0.7753,
+    "naming_mean": 0.8471,
+    "presence_mean": 0.8718
+   },
+   "PDA": {
+    "fail_rate": 0.773,
+    "fail_recall": 0.0005,
+    "fail_naming": 0.768,
+    "fail_presence": 0.021,
+    "recall_mean": 0.9663,
+    "naming_mean": 0.8743,
+    "presence_mean": 0.9894
+   },
+   "PLB": {
+    "fail_rate": 0.8725,
+    "fail_recall": 0.002,
+    "fail_naming": 0.87,
+    "fail_presence": 0.035,
+    "recall_mean": 0.9619,
+    "naming_mean": 0.8841,
+    "presence_mean": 0.9685
+   },
+   "verdict_fail_rate": 0.5775,
+   "npass_dist": {
+    "0": 0.003,
+    "1": 0.0375,
+    "2": 0.1755,
+    "3": 0.3615,
+    "4": 0.326,
+    "5": 0.088,
+    "6": 0.0085
+   }
+  },
+  "misnaming 0.20 | as_ruled": {
+   "D1": {
+    "fail_rate": 0.9845,
+    "fail_recall": 0.0,
+    "fail_naming": 0.9845,
+    "fail_presence": 0.0005,
+    "recall_mean": 0.9297,
+    "recall_p05": 0.8878,
+    "naming_mean": 0.7562,
+    "naming_p05": 0.6813,
+    "presence_mean": 0.9649,
+    "presence_p05": 0.94
+   },
+   "D2": {
+    "fail_rate": 0.9275,
+    "fail_recall": 0.0455,
+    "fail_naming": 0.9205,
+    "fail_presence": 0.061,
+    "recall_mean": 0.8816,
+    "recall_p05": 0.8125,
+    "naming_mean": 0.7706,
+    "naming_p05": 0.6731,
+    "presence_mean": 0.8945,
+    "presence_p05": 0.84
+   },
+   "OM1": {
+    "fail_rate": 0.9895,
+    "fail_recall": 0.0085,
+    "fail_naming": 0.989,
+    "fail_presence": 0.025,
+    "recall_mean": 0.8946,
+    "recall_p05": 0.8333,
+    "naming_mean": 0.7368,
+    "naming_p05": 0.6494,
+    "presence_mean": 0.942,
+    "presence_p05": 0.9
+   },
+   "OM2": {
+    "fail_rate": 0.9595,
+    "fail_recall": 0.5705,
+    "fail_naming": 0.896,
+    "fail_presence": 0.0905,
+    "recall_mean": 0.7731,
+    "recall_p05": 0.675,
+    "naming_mean": 0.7548,
+    "naming_p05": 0.6176,
+    "presence_mean": 0.8704,
+    "presence_p05": 0.81
+   },
+   "PDA": {
+    "fail_rate": 0.961,
+    "fail_recall": 0.0,
+    "fail_naming": 0.961,
+    "fail_presence": 0.0,
+    "recall_mean": 0.9661,
+    "recall_p05": 0.9345,
+    "naming_mean": 0.7793,
+    "naming_p05": 0.7087,
+    "presence_mean": 0.9896,
+    "presence_p05": 0.97
+   },
+   "PLB": {
+    "fail_rate": 0.945,
+    "fail_recall": 0.0,
+    "fail_naming": 0.9445,
+    "fail_presence": 0.002,
+    "recall_mean": 0.9627,
+    "recall_p05": 0.9286,
+    "naming_mean": 0.7857,
+    "naming_p05": 0.7158,
+    "presence_mean": 0.9686,
+    "presence_p05": 0.94
+   },
+   "verdict_fail_rate": 1.0,
+   "npass_dist": {
+    "0": 0.7835,
+    "1": 0.2005,
+    "2": 0.0155,
+    "3": 0.0005,
+    "4": 0.0,
+    "5": 0.0,
+    "6": 0.0
+   }
+  },
+  "misnaming 0.20 | proposed": {
+   "D1": {
+    "fail_rate": 0.9565,
+    "fail_recall": 0.0,
+    "fail_naming": 0.9555,
+    "fail_presence": 0.0205,
+    "recall_mean": 0.9297,
+    "naming_mean": 0.7562,
+    "presence_mean": 0.9649
+   },
+   "D2": {
+    "fail_rate": 0.9555,
+    "fail_recall": 0.0015,
+    "fail_naming": 0.953,
+    "fail_presence": 0.0325,
+    "recall_mean": 0.8823,
+    "naming_mean": 0.7719,
+    "presence_mean": 0.8937
+   },
+   "OM1": {
+    "fail_rate": 0.82,
+    "fail_recall": 0.0,
+    "fail_naming": 0.815,
+    "fail_presence": 0.03,
+    "recall_mean": 0.8932,
+    "naming_mean": 0.7344,
+    "presence_mean": 0.9412
+   },
+   "OM2": {
+    "fail_rate": 0.635,
+    "fail_recall": 0.0025,
+    "fail_naming": 0.6255,
+    "fail_presence": 0.032,
+    "recall_mean": 0.7753,
+    "naming_mean": 0.7522,
+    "presence_mean": 0.8718
+   },
+   "PDA": {
+    "fail_rate": 1.0,
+    "fail_recall": 0.0005,
+    "fail_naming": 1.0,
+    "fail_presence": 0.021,
+    "recall_mean": 0.9663,
+    "naming_mean": 0.777,
+    "presence_mean": 0.9894
+   },
+   "PLB": {
+    "fail_rate": 0.999,
+    "fail_recall": 0.002,
+    "fail_naming": 0.999,
+    "fail_presence": 0.035,
+    "recall_mean": 0.9619,
+    "naming_mean": 0.7852,
+    "presence_mean": 0.9685
+   },
+   "verdict_fail_rate": 0.999,
+   "npass_dist": {
+    "0": 0.4745,
+    "1": 0.4265,
+    "2": 0.0905,
+    "3": 0.0075,
+    "4": 0.001,
+    "5": 0.0,
+    "6": 0.0
+   }
+  },
+  "both +0.10/0.10 | as_ruled": {
+   "D1": {
+    "fail_rate": 0.9675,
+    "fail_recall": 0.179,
+    "fail_naming": 0.471,
+    "fail_presence": 0.9425,
+    "recall_mean": 0.8355,
+    "recall_p05": 0.7755,
+    "naming_mean": 0.8499,
+    "naming_p05": 0.7804,
+    "presence_mean": 0.8669,
+    "presence_p05": 0.81
+   },
+   "D2": {
+    "fail_rate": 0.8255,
+    "fail_recall": 0.631,
+    "fail_naming": 0.336,
+    "fail_presence": 0.6375,
+    "recall_mean": 0.7858,
+    "recall_p05": 0.7031,
+    "naming_mean": 0.8678,
+    "naming_p05": 0.7843,
+    "presence_mean": 0.8311,
+    "presence_p05": 0.77
+   },
+   "OM1": {
+    "fail_rate": 0.959,
+    "fail_recall": 0.5095,
+    "fail_naming": 0.6645,
+    "fail_presence": 0.8675,
+    "recall_mean": 0.8014,
+    "recall_p05": 0.7262,
+    "naming_mean": 0.8287,
+    "naming_p05": 0.7463,
+    "presence_mean": 0.8576,
+    "presence_p05": 0.8
+   },
+   "OM2": {
+    "fail_rate": 0.9735,
+    "fail_recall": 0.934,
+    "fail_naming": 0.4625,
+    "fail_presence": 0.432,
+    "recall_mean": 0.6788,
+    "recall_p05": 0.55,
+    "naming_mean": 0.8487,
+    "naming_p05": 0.7241,
+    "presence_mean": 0.8305,
+    "presence_p05": 0.77
+   },
+   "PDA": {
+    "fail_rate": 0.938,
+    "fail_recall": 0.036,
+    "fail_naming": 0.2175,
+    "fail_presence": 0.919,
+    "recall_mean": 0.8686,
+    "recall_p05": 0.8073,
+    "naming_mean": 0.8767,
+    "naming_p05": 0.8172,
+    "presence_mean": 0.8933,
+    "presence_p05": 0.84
+   },
+   "PLB": {
+    "fail_rate": 0.9185,
+    "fail_recall": 0.0375,
+    "fail_naming": 0.1555,
+    "fail_presence": 0.9055,
+    "recall_mean": 0.8644,
+    "recall_p05": 0.8041,
+    "naming_mean": 0.8844,
+    "naming_p05": 0.8256,
+    "presence_mean": 0.8726,
+    "presence_p05": 0.82
+   },
+   "verdict_fail_rate": 0.9995,
+   "npass_dist": {
+    "0": 0.655,
+    "1": 0.28,
+    "2": 0.0575,
+    "3": 0.007,
+    "4": 0.0005,
+    "5": 0.0,
+    "6": 0.0
+   }
+  },
+  "both +0.10/0.10 | proposed": {
+   "D1": {
+    "fail_rate": 0.9955,
+    "fail_recall": 0.2505,
+    "fail_naming": 0.3105,
+    "fail_presence": 0.994,
+    "recall_mean": 0.8355,
+    "naming_mean": 0.8499,
+    "presence_mean": 0.8669
+   },
+   "D2": {
+    "fail_rate": 0.741,
+    "fail_recall": 0.291,
+    "fail_naming": 0.396,
+    "fail_presence": 0.547,
+    "recall_mean": 0.7851,
+    "naming_mean": 0.8684,
+    "presence_mean": 0.8292
+   },
+   "OM1": {
+    "fail_rate": 0.884,
+    "fail_recall": 0.1025,
+    "fail_naming": 0.158,
+    "fail_presence": 0.865,
+    "recall_mean": 0.8,
+    "naming_mean": 0.8266,
+    "presence_mean": 0.8566
+   },
+   "OM2": {
+    "fail_rate": 0.378,
+    "fail_recall": 0.101,
+    "fail_naming": 0.172,
+    "fail_presence": 0.2295,
+    "recall_mean": 0.6826,
+    "naming_mean": 0.8473,
+    "presence_mean": 0.8324
+   },
+   "PDA": {
+    "fail_rate": 0.9995,
+    "fail_recall": 0.707,
+    "fail_naming": 0.7495,
+    "fail_presence": 0.997,
+    "recall_mean": 0.87,
+    "naming_mean": 0.8744,
+    "presence_mean": 0.8944
+   },
+   "PLB": {
+    "fail_rate": 0.996,
+    "fail_recall": 0.781,
+    "fail_naming": 0.862,
+    "fail_presence": 0.9765,
+    "recall_mean": 0.8628,
+    "naming_mean": 0.8842,
+    "presence_mean": 0.8716
+   },
+   "verdict_fail_rate": 1.0,
+   "npass_dist": {
+    "0": 0.2545,
+    "1": 0.5045,
+    "2": 0.2215,
+    "3": 0.0195,
+    "4": 0.0,
+    "5": 0.0,
+    "6": 0.0
+   }
+  },
+  "icx14: all misnamed | as_ruled": {
+   "D1": {
+    "fail_rate": 1.0,
+    "fail_recall": 0.0,
+    "fail_naming": 1.0,
+    "fail_presence": 0.0005,
+    "recall_mean": 0.9297,
+    "recall_p05": 0.8878,
+    "naming_mean": 0.0,
+    "naming_p05": 0.0,
+    "presence_mean": 0.9649,
+    "presence_p05": 0.94
+   },
+   "D2": {
+    "fail_rate": 1.0,
+    "fail_recall": 0.0455,
+    "fail_naming": 1.0,
+    "fail_presence": 0.061,
+    "recall_mean": 0.8816,
+    "recall_p05": 0.8125,
+    "naming_mean": 0.0,
+    "naming_p05": 0.0,
+    "presence_mean": 0.8945,
+    "presence_p05": 0.84
+   },
+   "OM1": {
+    "fail_rate": 1.0,
+    "fail_recall": 0.0085,
+    "fail_naming": 1.0,
+    "fail_presence": 0.025,
+    "recall_mean": 0.8946,
+    "recall_p05": 0.8333,
+    "naming_mean": 0.0,
+    "naming_p05": 0.0,
+    "presence_mean": 0.942,
+    "presence_p05": 0.9
+   },
+   "OM2": {
+    "fail_rate": 1.0,
+    "fail_recall": 0.5705,
+    "fail_naming": 1.0,
+    "fail_presence": 0.0905,
+    "recall_mean": 0.7731,
+    "recall_p05": 0.675,
+    "naming_mean": 0.0,
+    "naming_p05": 0.0,
+    "presence_mean": 0.8704,
+    "presence_p05": 0.81
+   },
+   "PDA": {
+    "fail_rate": 1.0,
+    "fail_recall": 0.0,
+    "fail_naming": 1.0,
+    "fail_presence": 0.0,
+    "recall_mean": 0.9661,
+    "recall_p05": 0.9345,
+    "naming_mean": 0.0,
+    "naming_p05": 0.0,
+    "presence_mean": 0.9896,
+    "presence_p05": 0.97
+   },
+   "PLB": {
+    "fail_rate": 1.0,
+    "fail_recall": 0.0,
+    "fail_naming": 1.0,
+    "fail_presence": 0.002,
+    "recall_mean": 0.9627,
+    "recall_p05": 0.9286,
+    "naming_mean": 0.0,
+    "naming_p05": 0.0,
+    "presence_mean": 0.9686,
+    "presence_p05": 0.94
+   },
+   "verdict_fail_rate": 1.0,
+   "npass_dist": {
+    "0": 1.0,
+    "1": 0.0,
+    "2": 0.0,
+    "3": 0.0,
+    "4": 0.0,
+    "5": 0.0,
+    "6": 0.0
+   }
+  },
+  "icx14: all misnamed | proposed": {
+   "D1": {
+    "fail_rate": 1.0,
+    "fail_recall": 0.0,
+    "fail_naming": 1.0,
+    "fail_presence": 0.0205,
+    "recall_mean": 0.9297,
+    "naming_mean": 0.0,
+    "presence_mean": 0.9649
+   },
+   "D2": {
+    "fail_rate": 1.0,
+    "fail_recall": 0.0015,
+    "fail_naming": 1.0,
+    "fail_presence": 0.0325,
+    "recall_mean": 0.8823,
+    "naming_mean": 0.0,
+    "presence_mean": 0.8937
+   },
+   "OM1": {
+    "fail_rate": 1.0,
+    "fail_recall": 0.0,
+    "fail_naming": 1.0,
+    "fail_presence": 0.03,
+    "recall_mean": 0.8932,
+    "naming_mean": 0.0,
+    "presence_mean": 0.9412
+   },
+   "OM2": {
+    "fail_rate": 1.0,
+    "fail_recall": 0.0025,
+    "fail_naming": 1.0,
+    "fail_presence": 0.032,
+    "recall_mean": 0.7753,
+    "naming_mean": 0.0,
+    "presence_mean": 0.8718
+   },
+   "PDA": {
+    "fail_rate": 1.0,
+    "fail_recall": 0.0005,
+    "fail_naming": 1.0,
+    "fail_presence": 0.021,
+    "recall_mean": 0.9663,
+    "naming_mean": 0.0,
+    "presence_mean": 0.9894
+   },
+   "PLB": {
+    "fail_rate": 1.0,
+    "fail_recall": 0.002,
+    "fail_naming": 1.0,
+    "fail_presence": 0.035,
+    "recall_mean": 0.9619,
+    "naming_mean": 0.0,
+    "presence_mean": 0.9685
+   },
+   "verdict_fail_rate": 1.0,
+   "npass_dist": {
+    "0": 1.0,
+    "1": 0.0,
+    "2": 0.0,
+    "3": 0.0,
+    "4": 0.0,
+    "5": 0.0,
+    "6": 0.0
+   }
+  }
+ }
+}

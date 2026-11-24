@@ -1,0 +1,4 @@
+decode_ref selftest ok
+fitcheck20 ['c0057', 'c0066', 'c0139', 'c0206', 'c0230', 'c0383', 'c0440', 'c0465', 'c0500', 'c0525', 'c0565', 'c0571', 'c0618', 'c0655', 'c0658', 'c0715', 'c0789', 'c0802', 'c0919', 'c0939']
+fitcheck20 sha256 3f3b696c231d71bcc99763f83983fb824c2e74bdd597a37e09220188191f1330
+splits_final sha256 69292e684276a8f314456a6df9389b1277e9baaa7cc194d145fb60ac807ce4bd

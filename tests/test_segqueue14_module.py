@@ -577,8 +577,8 @@ def _calls_in(node):
             if isinstance(n, ast.Call) and isinstance(n.func, ast.Attribute)}
 
 
-def test_the_module_is_0_23_0_and_protocol_21():
-    assert re.search(r'^__version__ = "0\.23\.0"$', _source(), re.M)
+def test_the_module_is_0_23_1_and_protocol_21():
+    assert re.search(r'^__version__ = "0\.23\.1"$', _source(), re.M)
     sys_path = str(REPO / "src")
     import sys
 

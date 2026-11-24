@@ -1,0 +1,199 @@
+{
+ "cases": 103,
+ "draws": 2000,
+ "rule": ">= 95 of 100 cases clean (point count)",
+ "hosts": {
+  "LAD": {
+   "cases_with_standin": 55,
+   "len_mm_median": 32.6,
+   "whole | Bridge L2prime (d1 > 5)": {
+    "cases_failing": 0,
+    "share": 0.0,
+    "P(false-fail)": 0.0
+   },
+   "whole | Atlas/Crucible (d1 > 30)": {
+    "cases_failing": 0,
+    "share": 0.0,
+    "P(false-fail)": 0.0
+   },
+   "whole | Delta L2prime (no touch, d1 > 30)": {
+    "cases_failing": 0,
+    "share": 0.0,
+    "P(false-fail)": 0.0
+   },
+   "whole | Foxtrot L2d (dall > 30)": {
+    "cases_failing": 0,
+    "share": 0.0,
+    "P(false-fail)": 0.0
+   },
+   "gap3 | Bridge L2prime (d1 > 5)": {
+    "cases_failing": 51,
+    "share": 0.9273,
+    "P(false-fail)": 1.0
+   },
+   "gap3 | Atlas/Crucible (d1 > 30)": {
+    "cases_failing": 0,
+    "share": 0.0,
+    "P(false-fail)": 0.0
+   },
+   "gap3 | Delta L2prime (no touch, d1 > 30)": {
+    "cases_failing": 0,
+    "share": 0.0,
+    "P(false-fail)": 0.0
+   },
+   "gap3 | Foxtrot L2d (dall > 30)": {
+    "cases_failing": 0,
+    "share": 0.0,
+    "P(false-fail)": 0.0
+   },
+   "gap8 | Bridge L2prime (d1 > 5)": {
+    "cases_failing": 45,
+    "share": 0.8182,
+    "P(false-fail)": 1.0
+   },
+   "gap8 | Atlas/Crucible (d1 > 30)": {
+    "cases_failing": 0,
+    "share": 0.0,
+    "P(false-fail)": 0.0
+   },
+   "gap8 | Delta L2prime (no touch, d1 > 30)": {
+    "cases_failing": 0,
+    "share": 0.0,
+    "P(false-fail)": 0.0
+   },
+   "gap8 | Foxtrot L2d (dall > 30)": {
+    "cases_failing": 0,
+    "share": 0.0,
+    "P(false-fail)": 0.0
+   }
+  },
+  "LCx": {
+   "cases_with_standin": 40,
+   "len_mm_median": 43.400000000000006,
+   "whole | Bridge L2prime (d1 > 5)": {
+    "cases_failing": 0,
+    "share": 0.0,
+    "P(false-fail)": 0.0
+   },
+   "whole | Atlas/Crucible (d1 > 30)": {
+    "cases_failing": 0,
+    "share": 0.0,
+    "P(false-fail)": 0.0
+   },
+   "whole | Delta L2prime (no touch, d1 > 30)": {
+    "cases_failing": 0,
+    "share": 0.0,
+    "P(false-fail)": 0.0
+   },
+   "whole | Foxtrot L2d (dall > 30)": {
+    "cases_failing": 0,
+    "share": 0.0,
+    "P(false-fail)": 0.0
+   },
+   "gap3 | Bridge L2prime (d1 > 5)": {
+    "cases_failing": 38,
+    "share": 0.95,
+    "P(false-fail)": 1.0
+   },
+   "gap3 | Atlas/Crucible (d1 > 30)": {
+    "cases_failing": 2,
+    "share": 0.05,
+    "P(false-fail)": 0.385
+   },
+   "gap3 | Delta L2prime (no touch, d1 > 30)": {
+    "cases_failing": 2,
+    "share": 0.05,
+    "P(false-fail)": 0.3775
+   },
+   "gap3 | Foxtrot L2d (dall > 30)": {
+    "cases_failing": 0,
+    "share": 0.0,
+    "P(false-fail)": 0.0
+   },
+   "gap8 | Bridge L2prime (d1 > 5)": {
+    "cases_failing": 34,
+    "share": 0.85,
+    "P(false-fail)": 1.0
+   },
+   "gap8 | Atlas/Crucible (d1 > 30)": {
+    "cases_failing": 2,
+    "share": 0.05,
+    "P(false-fail)": 0.3625
+   },
+   "gap8 | Delta L2prime (no touch, d1 > 30)": {
+    "cases_failing": 2,
+    "share": 0.05,
+    "P(false-fail)": 0.3975
+   },
+   "gap8 | Foxtrot L2d (dall > 30)": {
+    "cases_failing": 0,
+    "share": 0.0,
+    "P(false-fail)": 0.0
+   }
+  },
+  "RCA": {
+   "cases_with_standin": 93,
+   "len_mm_median": 50.8,
+   "whole | Bridge L2prime (d1 > 5)": {
+    "cases_failing": 0,
+    "share": 0.0,
+    "P(false-fail)": 0.0
+   },
+   "whole | Atlas/Crucible (d1 > 30)": {
+    "cases_failing": 0,
+    "share": 0.0,
+    "P(false-fail)": 0.0
+   },
+   "whole | Delta L2prime (no touch, d1 > 30)": {
+    "cases_failing": 0,
+    "share": 0.0,
+    "P(false-fail)": 0.0
+   },
+   "whole | Foxtrot L2d (dall > 30)": {
+    "cases_failing": 0,
+    "share": 0.0,
+    "P(false-fail)": 0.0
+   },
+   "gap3 | Bridge L2prime (d1 > 5)": {
+    "cases_failing": 91,
+    "share": 0.9785,
+    "P(false-fail)": 1.0
+   },
+   "gap3 | Atlas/Crucible (d1 > 30)": {
+    "cases_failing": 6,
+    "share": 0.0645,
+    "P(false-fail)": 0.6245
+   },
+   "gap3 | Delta L2prime (no touch, d1 > 30)": {
+    "cases_failing": 6,
+    "share": 0.0645,
+    "P(false-fail)": 0.642
+   },
+   "gap3 | Foxtrot L2d (dall > 30)": {
+    "cases_failing": 0,
+    "share": 0.0,
+    "P(false-fail)": 0.0
+   },
+   "gap8 | Bridge L2prime (d1 > 5)": {
+    "cases_failing": 88,
+    "share": 0.9462,
+    "P(false-fail)": 1.0
+   },
+   "gap8 | Atlas/Crucible (d1 > 30)": {
+    "cases_failing": 10,
+    "share": 0.1075,
+    "P(false-fail)": 0.9595
+   },
+   "gap8 | Delta L2prime (no touch, d1 > 30)": {
+    "cases_failing": 10,
+    "share": 0.1075,
+    "P(false-fail)": 0.9665
+   },
+   "gap8 | Foxtrot L2d (dall > 30)": {
+    "cases_failing": 0,
+    "share": 0.0,
+    "P(false-fail)": 0.0
+   }
+  }
+ }
+}

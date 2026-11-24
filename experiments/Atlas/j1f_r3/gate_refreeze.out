@@ -1,0 +1,6 @@
+round1 differs: {}
+round1 FA15 worst false-fail {'D1': 0.0625, 'D2': 0.0635, 'OM1': 0.0705, 'OM2': 0.071, 'PDA': 0.0485, 'PLB': 0.058, 'verdict': 0.003} P(reject) {'omission +0.10': 0.997, 'misnaming 0.10': 0.5765, 'misnaming 0.20': 0.999}
+round1 rederived worst false-fail {'D1': 0.0625, 'D2': 0.0635, 'OM1': 0.0705, 'OM2': 0.071, 'PDA': 0.0485, 'PLB': 0.058, 'verdict': 0.003} P(reject) {'omission +0.10': 0.997, 'misnaming 0.10': 0.5765, 'misnaming 0.20': 0.999}
+FA25 differs: {'D1': {'presence': (0.93, 0.94)}, 'PLB': {'recall': (0.9, 0.89), 'presence': (0.95, 0.94)}}
+FA25 FA15 worst false-fail {'D1': 0.1025, 'D2': 0.0635, 'OM1': 0.0705, 'OM2': 0.071, 'PDA': 0.0465, 'PLB': 0.03, 'verdict': 0.0035} P(reject) {'omission +0.10': 0.9985, 'misnaming 0.10': 0.5865, 'misnaming 0.20': 0.9995}
+FA25 rederived worst false-fail {'D1': 0.0565, 'D2': 0.0635, 'OM1': 0.0705, 'OM2': 0.071, 'PDA': 0.0465, 'PLB': 0.052, 'verdict': 0.004} P(reject) {'omission +0.10': 0.999, 'misnaming 0.10': 0.5715, 'misnaming 0.20': 0.9995}

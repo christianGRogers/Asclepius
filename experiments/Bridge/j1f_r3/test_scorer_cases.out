@@ -1,0 +1,39 @@
+PASS c0585 collapse = D25 on every non-Other voxel (0 differ), fallbacks 0
+PASS c0875 collapse = D25 on every non-Other voxel (0 differ), fallbacks 0
+PASS c0987 collapse = D25 on every non-Other voxel (0 differ), fallbacks 0
+PASS c0287 collapse = D25 on every non-Other voxel (0 differ), fallbacks 0
+PASS c0920 collapse = D25 on every non-Other voxel (0 differ), fallbacks 0
+PASS c0761 collapse = D25 on every non-Other voxel (0 differ), fallbacks 0
+PASS identity D1: recall, presence, naming = 1
+PASS identity D1: branch tF1 = 1 (1.000)
+PASS dilate by 1 voxel D1: recall 1, naming 1
+PASS identity D2: recall, presence, naming = 1
+PASS identity D2: branch tF1 = 1 (1.000)
+PASS dilate by 1 voxel D2: recall 1, naming 1
+PASS identity OM1: recall, presence, naming = 1
+PASS identity OM1: branch tF1 = 1 (1.000)
+PASS dilate by 1 voxel OM1: recall 1, naming 1
+PASS identity OM2: recall, presence, naming = 1
+PASS identity OM2: branch tF1 = 1 (1.000)
+PASS dilate by 1 voxel OM2: recall 1, naming 1
+PASS identity PDA: recall, presence, naming = 1
+PASS identity PDA: branch tF1 = 1 (1.000)
+PASS dilate by 1 voxel PDA: recall 1, naming 1
+PASS identity PLB: recall, presence, naming = 1
+PASS identity PLB: branch tF1 = 1 (1.000)
+PASS dilate by 1 voxel PLB: recall 1, naming 1
+PASS swap D1/D2 D1: recall 1, naming 0
+PASS swap D1/D2 D2: recall 1, naming 0
+PASS swap PDA/PLB PDA: recall 1, naming 0
+PASS swap PDA/PLB PLB: recall 1, naming 0
+PASS OM2 -> LCx: recall 1, naming 0, presence drops
+PASS OM2 -> background: recall 0
+PASS fold OM -> LCx OM1: recall 1, naming 0
+PASS fold OM -> LCx OM2: recall 1, naming 0
+PASS drop PLB: recall 0
+PASS truncate PDA to 40 %: recall <= 0.5 (0.50)
+REPORT erode by 1 voxel, recall per gated class: {'D1': 0.83, 'D2': 1.0, 'OM1': 1.0, 'OM2': 1.0, 'PDA': 0.83, 'PLB': 1.0}
+cases ['c0585', 'c0875', 'c0987', 'c0287', 'c0920', 'c0761']
+{"identity": {"D1": {"pieces": 6, "recall": 1.0, "naming": 1.0, "presence": 1.0}, "D2": {"pieces": 2, "recall": 1.0, "naming": 1.0, "presence": 1.0}, "OM1": {"pieces": 5, "recall": 1.0, "naming": 1.0, "presence": 1.0}, "OM2": {"pieces": 2, "recall": 1.0, "naming": 1.0, "presence": 1.0}, "PDA": {"pieces": 6, "recall": 1.0, "naming": 1.0, "presence": 1.0}, "PLB": {"pieces": 6, "recall": 1.0, "naming": 1.0, "presence": 1.0}}, "swap_D1_D2": {"D1": {"pieces": 6, "recall": 1.0, "naming": 0.0, "presence": 0.333}, "D2": {"pieces": 2, "recall": 1.0, "naming": 0.0, "presence": 0.333}, "OM1": {"pieces": 5, "recall": 1.0, "naming": 1.0, "presence": 1.0}, "OM2": {"pieces": 2, "recall": 1.0, "naming": 1.0, "presence": 1.0}, "PDA": {"pieces": 6, "recall": 1.0, "naming": 1.0, "presence": 1.0}, "PLB": {"pieces": 6, "recall": 1.0, "naming": 1.0, "presence": 1.0}}, "OM2_to_LCx": {"D1": {"pieces": 6, "recall": 1.0, "naming": 1.0, "presence": 1.0}, "D2": {"pieces": 2, "recall": 1.0, "naming": 1.0, "presence": 1.0}, "OM1": {"pieces": 5, "recall": 1.0, "naming": 1.0, "presence": 1.0}, "OM2": {"pieces": 2, "recall": 1.0, "naming": 0.0, "presence": 0.667}, "PDA": {"pieces": 6, "recall": 1.0, "naming": 1.0, "presence": 1.0}, "PLB": {"pieces": 6, "recall": 1.0, "naming": 1.0, "presence": 1.0}}, "OM2_to_bg": {"D1": {"pieces": 6, "recall": 1.0, "naming": 1.0, "presence": 1.0}, "D2": {"pieces": 2, "recall": 1.0, "naming": 1.0, "presence": 1.0}, "OM1": {"pieces": 5, "recall": 1.0, "naming": 1.0, "presence": 1.0}, "OM2": {"pieces": 2, "recall": 0.0, "naming": NaN, "presence": 0.667}, "PDA": {"pieces": 6, "recall": 1.0, "naming": 1.0, "presence": 1.0}, "PLB": {"pieces": 6, "recall": 1.0, "naming": 1.0, "presence": 1.0}}, "dilate1": {"D1": {"pieces": 6, "recall": 1.0, "naming": 1.0, "presence": 1.0}, "D2": {"pieces": 2, "recall": 1.0, "naming": 1.0, "presence": 1.0}, "OM1": {"pieces": 5, "recall": 1.0, "naming": 1.0, "presence": 1.0}, "OM2": {"pieces": 2, "recall": 1.0, "naming": 1.0, "presence": 1.0}, "PDA": {"pieces": 6, "recall": 1.0, "naming": 1.0, "presence": 1.0}, "PLB": {"pieces": 6, "recall": 1.0, "naming": 1.0, "presence": 1.0}}, "PDA_PLB_swap": {"D1": {"pieces": 6, "recall": 1.0, "naming": 1.0, "presence": 1.0}, "D2": {"pieces": 2, "recall": 1.0, "naming": 1.0, "presence": 1.0}, "OM1": {"pieces": 5, "recall": 1.0, "naming": 1.0, "presence": 1.0}, "OM2": {"pieces": 2, "recall": 1.0, "naming": 1.0, "presence": 1.0}, "PDA": {"pieces": 6, "recall": 1.0, "naming": 0.0, "presence": 0.833}, "PLB": {"pieces": 6, "recall": 1.0, "naming": 0.0, "presence": 0.833}}, "fold_OM": {"D1": {"pieces": 6, "recall": 1.0, "naming": 1.0, "presence": 1.0}, "D2": {"pieces": 2, "recall": 1.0, "naming": 1.0, "presence": 1.0}, "OM1": {"pieces": 5, "recall": 1.0, "naming": 0.0, "presence": 0.167}, "OM2": {"pieces": 2, "recall": 1.0, "naming": 0.0, "presence": 0.667}, "PDA": {"pieces": 6, "recall": 1.0, "naming": 1.0, "presence": 1.0}, "PLB": {"pieces": 6, "recall": 1.0, "naming": 1.0, "presence": 1.0}}, "drop_PLB": {"D1": {"pieces": 6, "recall": 1.0, "naming": 1.0, "presence": 1.0}, "D2": {"pieces": 2, "recall": 1.0, "naming": 1.0, "presence": 1.0}, "OM1": {"pieces": 5, "recall": 1.0, "naming": 1.0, "presence": 1.0}, "OM2": {"pieces": 2, "recall": 1.0, "naming": 1.0, "presence": 1.0}, "PDA": {"pieces": 6, "recall": 1.0, "naming": 1.0, "presence": 1.0}, "PLB": {"pieces": 6, "recall": 0.0, "naming": NaN, "presence": 0.0}}, "trunc_PDA_40": {"D1": {"pieces": 6, "recall": 1.0, "naming": 1.0, "presence": 1.0}, "D2": {"pieces": 2, "recall": 1.0, "naming": 1.0, "presence": 1.0}, "OM1": {"pieces": 5, "recall": 1.0, "naming": 1.0, "presence": 1.0}, "OM2": {"pieces": 2, "recall": 1.0, "naming": 1.0, "presence": 1.0}, "PDA": {"pieces": 6, "recall": 0.5, "naming": 1.0, "presence": 1.0}, "PLB": {"pieces": 6, "recall": 1.0, "naming": 1.0, "presence": 1.0}}, "erode1": {"D1": {"pieces": 6, "recall": 0.833, "naming": 1.0, "presence": 0.833}, "D2": {"pieces": 2, "recall": 1.0, "naming": 1.0, "presence": 1.0}, "OM1": {"pieces": 5, "recall": 1.0, "naming": 1.0, "presence": 1.0}, "OM2": {"pieces": 2, "recall": 1.0, "naming": 1.0, "presence": 1.0}, "PDA": {"pieces": 6, "recall": 0.833, "naming": 1.0, "presence": 1.0}, "PLB": {"pieces": 6, "recall": 1.0, "naming": 1.0, "presence": 0.833}}}
+scorer sha256 7e6875a3cec72727572d4a5ab2675eec75b18b0b8daa94698a20b315dadfff78
+ALL PASS (0 fail)

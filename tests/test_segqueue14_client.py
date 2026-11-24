@@ -22,6 +22,7 @@ if str(_EXTENSION14) not in sys.path:
 
 from SegQueue14Lib import CaseCache, SegQueue14Client, SegQueue14Error  # noqa: E402
 from SegQueue14Lib import cache as cache14  # noqa: E402
+from SegQueue14Lib import client as client14  # noqa: E402
 from test_segqueue_client import FakeResponse, FakeSession, girderError  # noqa: E402
 
 from segqueue14 import PROTOCOL_VERSION, protocol  # noqa: E402
@@ -502,3 +503,172 @@ def test_the_shared_rules_for_search_and_the_defect_controls():
     assert protocol.clean_defect_reason(" a\n b ") == "a b"
     assert len(protocol.clean_defect_reason("x" * 999)) == protocol.DEFECT_REASON_MAX_CHARS
     assert protocol.clean_defect_reason(None) == ""
+
+
+# ------------------------------------------------ upload behind a proxy limit
+#
+# The public server's nginx refuses any request body over 1 MiB with its own
+# HTML "413 Request Entity Too Large", before Girder sees it. The 8 MiB chunk
+# the client used to send made every file over 1 MiB unsubmittable.
+
+
+_PROXY_LIMIT = 1024 * 1024
+_NGINX_413 = ("<html><head><title>413 Request Entity Too Large</title></head>"
+              "<body><center><h1>413 Request Entity Too Large</h1></center>"
+              "<hr><center>nginx/1.18.0</center></body></html>")
+
+
+def _proxiedUploadSession(size, limit=_PROXY_LIMIT, failAt=None, offsetAfterFailure=0):
+    """A Girder upload stub behind a proxy that refuses bodies over ``limit``.
+
+    ``failAt`` makes the chunk at that offset land on the server but lose its
+    reply once (the server then has ``offsetAfterFailure`` bytes).
+    """
+    state = {"received": 0, "failed": False, "refused": 0}
+
+    def chunk(call):
+        offset = int(call["params"]["offset"])
+        length = len(call["data"])
+        if length > limit:
+            state["refused"] += 1
+            return FakeResponse(413, None, text=_NGINX_413,
+                                reason="Request Entity Too Large")
+        assert offset == state["received"], "chunk sent at the wrong offset"
+        if failAt is not None and offset == failAt and not state["failed"]:
+            state["failed"] = True
+            state["received"] = offsetAfterFailure
+            return FakeResponse(502, None, text="bad gateway", reason="Bad Gateway")
+        state["received"] = offset + length
+        if state["received"] >= size:
+            return FakeResponse(200, {"_id": "file1", "size": size})
+        return FakeResponse(200, {"_id": "up1", "received": state["received"]})
+
+    session = FakeSession({
+        ("POST", "/file"): FakeResponse(200, {"_id": "up1"}),
+        ("POST", "file/chunk"): chunk,
+        ("GET", "file/offset"): lambda call: FakeResponse(
+            200, {"offset": state["received"]}),
+    })
+    return session, state
+
+
+def _chunks(session):
+    return [(int(c["params"]["offset"]), len(c["data"])) for c in session.calls
+            if "file/chunk" in c["url"]]
+
+
+def test_the_default_chunk_fits_under_a_1_mib_proxy_limit():
+    assert client14.UPLOAD_CHUNK_BYTES <= 768 * 1024 < _PROXY_LIMIT
+    assert client14.UPLOAD_CHUNK_FLOOR_BYTES < client14.UPLOAD_CHUNK_BYTES
+
+
+def test_a_large_upload_never_sends_a_chunk_over_the_default(tmp_path):
+    size = 9 * 1024 * 1024 + 123  # an extended read, bigger than the old 8 MiB chunk
+    path = tmp_path / "submission.seg.nrrd"
+    path.write_bytes(b"s" * size)
+    session, state = _proxiedUploadSession(size)
+
+    file = makeClient(session).uploadFile(str(path), "folder1")
+
+    assert file == {"_id": "file1", "size": size}
+    sent = _chunks(session)
+    assert state["refused"] == 0
+    assert max(length for _, length in sent) <= client14.UPLOAD_CHUNK_BYTES
+    assert sum(length for _, length in sent) == size
+    assert [o for o, _ in sent] == [i * client14.UPLOAD_CHUNK_BYTES
+                                    for i in range(len(sent))]
+
+
+def test_a_413_halves_the_chunk_and_the_upload_succeeds(tmp_path):
+    size = 3 * 1024 * 1024
+    path = tmp_path / "submission.seg.nrrd"
+    path.write_bytes(bytes(range(256)) * (size // 256))
+    # A proxy stricter than the default chunk: 768 KiB refused, 384 KiB accepted.
+    session, state = _proxiedUploadSession(size, limit=500 * 1024)
+    client = makeClient(session)
+
+    file = client.uploadFile(str(path), "folder1")
+
+    assert file["_id"] == "file1"
+    assert state["refused"] == 1
+    half = client14.UPLOAD_CHUNK_BYTES // 2
+    sent = _chunks(session)
+    assert sent[0] == (0, client14.UPLOAD_CHUNK_BYTES)  # the refused one
+    assert all(length <= half for _, length in sent[1:])
+    assert [o for o, _ in sent[1:]] == list(range(0, size, half))
+    # The refused chunk was resumed from the server's offset, not assumed.
+    assert any("file/offset" in c["url"] for c in session.calls)
+    # The smaller size sticks for the client's later uploads in this session.
+    assert client.uploadChunkBytes == half
+    session2, state2 = _proxiedUploadSession(size, limit=500 * 1024)
+    client.session = session2
+    client.uploadFile(str(path), "folder1")
+    assert state2["refused"] == 0
+    assert all(length <= half for _, length in _chunks(session2))
+
+
+def test_repeated_413s_halve_down_to_what_the_proxy_takes(tmp_path):
+    size = 400 * 1024
+    path = tmp_path / "submission.seg.nrrd"
+    path.write_bytes(b"s" * size)
+    session, state = _proxiedUploadSession(size, limit=100 * 1024)
+    client = makeClient(session)
+
+    client.uploadFile(str(path), "folder1")
+
+    # 768 -> 384 -> 192 -> 96 KiB
+    assert state["refused"] == 3
+    assert client.uploadChunkBytes == 96 * 1024
+
+
+def test_a_413_at_the_floor_says_to_tell_the_project_lead(tmp_path):
+    size = 200 * 1024
+    path = tmp_path / "submission.seg.nrrd"
+    path.write_bytes(b"s" * size)
+    session, state = _proxiedUploadSession(size, limit=1024)
+
+    with pytest.raises(SegQueue14Error) as caught:
+        makeClient(session).uploadFile(str(path), "folder1")
+
+    assert caught.value.status == 413
+    message = str(caught.value)
+    assert "proxy refused the upload" in message
+    assert "project lead" in message
+    assert "still saved on this computer" in message
+    assert "<html>" not in message
+    # It stopped at the floor instead of halving forever.
+    assert min(length for _, length in _chunks(session)) == \
+        client14.UPLOAD_CHUNK_FLOOR_BYTES
+    assert path.exists()
+
+
+def test_offset_resume_still_works_with_the_smaller_chunk(tmp_path):
+    chunk = client14.UPLOAD_CHUNK_BYTES
+    size = chunk * 3
+    path = tmp_path / "submission.seg.nrrd"
+    path.write_bytes(b"s" * size)
+    # The second chunk lands but its reply is lost: resume at the server's
+    # offset, never resend it.
+    session, _state = _proxiedUploadSession(
+        size, failAt=chunk, offsetAfterFailure=2 * chunk)
+
+    file = makeClient(session).uploadFile(str(path), "folder1")
+
+    assert file["_id"] == "file1"
+    assert [o for o, _ in _chunks(session)] == [0, chunk, 2 * chunk]
+
+
+def test_http_errors_carry_their_status_and_keep_their_message():
+    session = FakeSession({("GET", "user/me"): FakeResponse(
+        500, {"message": "boom"})})
+    with pytest.raises(SegQueue14Error) as caught:
+        makeClient(session)._json("GET", "user/me")
+    assert caught.value.status == 500
+    assert str(caught.value) == "boom (HTTP 500)"
+
+    session = FakeSession({("GET", "user/me"): girderError(
+        protocol.ERR_NOT_YOUR_CASE, "not yours", status=403)})
+    with pytest.raises(SegQueue14Error) as caught:
+        makeClient(session)._json("GET", "user/me")
+    assert caught.value.status == 403
+    assert caught.value.code == protocol.ERR_NOT_YOUR_CASE

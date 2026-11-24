@@ -1,0 +1,12 @@
+{
+ "other": {
+  "other_diag": 50,
+  "other_marg": 20,
+  "other_amb": 8,
+  "d3_from_other": 47,
+  "d3_set": 1,
+  "d4_to_lad": 2
+ },
+ "cases_with_D3": 47,
+ "source": "Foxtrot j1f/make_labels_1f.py stats on the 620 Zenodo label files, this container"
+}

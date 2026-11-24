@@ -1,0 +1,74 @@
+{
+ "1_select": {
+  "chosen_t": "0.40",
+  "chosen_t_type": "str",
+  "keys": [
+   "0.30",
+   "0.35",
+   "0.40",
+   "0.45",
+   "0.50"
+  ]
+ },
+ "2_tstar_line": {
+  "master_plan_line": {
+   "returncode": 1,
+   "stdout": "",
+   "stderr_last": "TypeError: must be real number, not str"
+  },
+  "corrected_line": {
+   "returncode": 0,
+   "stdout": "0.40"
+  },
+  "consequence": "with T empty, `for t in 0.50 $T` runs once: the decomposition at t* is silently skipped"
+ },
+ "3_dice_bound": {
+  "t_star": 0.4,
+  "dice_bound": true
+ },
+ "4_threshold_export": {
+  "folders": [
+   "t0.25",
+   "t0.30",
+   "t0.35",
+   "t0.40",
+   "t0.45",
+   "t0.50",
+   "t0.55",
+   "t0.60"
+  ],
+  "rule_t_needs": [
+   "t0.25",
+   "t0.30",
+   "t0.35",
+   "t0.40",
+   "t0.45",
+   "t0.50",
+   "t0.55",
+   "t0.60"
+  ],
+  "match": true
+ },
+ "5_rule_t": {
+  "t_C": 0.5,
+  "dr_mm": {
+   "0.60": -0.0858,
+   "0.55": 0.0,
+   "0.50": 0.0,
+   "0.45": 0.0811,
+   "0.40": 0.3028,
+   "0.35": 0.3028,
+   "0.30": 0.3028,
+   "0.25": 0.3028
+  },
+  "n_cases": 2
+ },
+ "6_mde_from_job0": {
+  "a1": 0.0036,
+  "E": [
+   0.0031,
+   0.0036
+  ]
+ },
+ "verdict": "chain runs; one defect: the master plan \u00a75 t* line fails on select.json's string chosen_t"
+}

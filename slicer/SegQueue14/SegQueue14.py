@@ -30,9 +30,11 @@ What an annotator sees:
 * **Extended classes** (D44, 0.18.0, protocol 18): an optional per-annotator
   toggle, off by default, adds 17 empty classes -- stent, calcified and
   non-calcified plaque, D1-D3, S1-S3, OM1-OM2, SN, conus, RMA, PDA, PLB and the
-  ramus -- grouped under their parent vessel. With it off, a case is the four
-  classes exactly as before; with any extended class in the scene, all 21 are
-  submitted. Turning it off removes only extended classes that are empty.
+  ramus -- grouped under their parent vessel. Turning it off only hides them
+  (D53, 0.25.6): nothing is removed, and on shows them as they were. A read whose
+  extended classes hold no work (empty, or untouched seed copies) is submitted
+  as the four classes exactly as before; one with work in any, as all 21,
+  whatever the toggle shows.
 * **Reopened cases** (#315, 0.19.0, protocol 19): a case the lead reopened for the
   annotator's own revision opens from their submitted read, every class whole
   (D39), instead of the prelabel or the seed. Submitting it unchanged is fine (D38).
@@ -147,12 +149,13 @@ from SegQueue14Lib import (
 )
 from SegQueue14Lib import SegQueue14Client as SegQueueClient
 from SegQueue14Lib import inversecut, surfaces
+from SegQueue14Lib import extendedview
 from SegQueue14Lib import overlap, selection
 from SegQueue14Lib import SegQueue14Error as SegQueueError
 
 #: Continues SegQueue's numbering (0.13.0 was the last 4-class release). The
 #: release tag is ``segqueue-v`` + this; bump it to publish.
-__version__ = "0.25.5"
+__version__ = "0.25.6"
 
 #: Where the module's help points.
 HELP_URL = "https://github.com/christianGRogers/Asclepius"
@@ -338,6 +341,18 @@ class SegQueue14Logic(ScriptedLoadableModuleLogic):
         #: The open case is flagged to be read in extended mode (D47 Q6): the
         #: extended classes are on for it, whatever the per-login toggle says.
         self.caseExtendedMode = False
+        #: The open case is flagged for extended mode (D47 Q6), kept apart from
+        #: ``caseExtendedMode`` because the toggle off clears that one (it only
+        #: decides what is shown). A flagged case is always submitted as 21
+        #: classes (D53, amended): see ``submitsExtended``.
+        self.caseFlaggedExtended = False
+        #: The read just opened (a draft, a reopened read, a reviewer's
+        #: submission) has work in its extended classes (D53): they are shown for
+        #: it, whatever the per-login toggle says, until it is turned off.
+        self.extendedWorkOpened = False
+        #: The toggle off hides the extended classes and remembers their eyes; on
+        #: shows them as they were (D53). Nothing is ever removed by it.
+        self.extendedView = extendedview.ExtendedView()
         #: The branch groups ticked complete on the open read (D47 Q3), a subset of
         #: ``labels.COMPLETE_GROUPS``. Saved in the class-stack header on submit.
         self.completeGroups = set()
@@ -475,6 +490,11 @@ class SegQueue14Logic(ScriptedLoadableModuleLogic):
         self._applyCaseFlags(assignment, manifest)
         self._loadOrCreateSegmentation(manifest)
         self._loadHelpers(assignment)
+        # D53: a draft or reopened read with work in its extended classes opens
+        # with them on (the toggle shows them; whatever is missing is added empty,
+        # and is new to _restoreFirstSelected).
+        if self.showExtendedIfWorked():
+            self.addExtendedClasses()
         # A fresh case starts from the model's prediction; a reopened draft is
         # the annotator's own correction and is left alone.
         self.prelabelClasses = 0
@@ -525,6 +545,7 @@ class SegQueue14Logic(ScriptedLoadableModuleLogic):
         """D47 for the case being opened: extended mode from the case's flag (Q6),
         and the branch-group ticks the draft or the reopened read had (Q3)."""
         self.caseExtendedMode = bool(getattr(assignment, "extended_mode", False))
+        self.caseFlaggedExtended = self.caseExtendedMode
         self.completeGroups = set(self._savedCompleteGroups(manifest))
         # Into the manifest now: the next autosave replaces the read they came from.
         self.cache.update(assignment.assignment_id,
@@ -727,9 +748,10 @@ class SegQueue14Logic(ScriptedLoadableModuleLogic):
         """Every class the open read has, in label order: the project's four,
         plus all 17 extended ones when the toggle is on or any is in the scene.
 
-        This is what is exported, hidden, checked for overlap and named: an
-        extended read always carries all 21 channels (``labels.ALL_NAMES``), so
-        which classes a read has never depends on which ones were painted.
+        This is what is hidden, checked for overlap and named. The export starts
+        from it and keeps the 17 only when one holds work (D53,
+        ``exportSubmission``): an extended read always carries all 21 channels
+        (``labels.ALL_NAMES``), never a subset of the painted ones.
         """
         if self.project is None:
             return []
@@ -740,9 +762,69 @@ class SegQueue14Logic(ScriptedLoadableModuleLogic):
         return specs
 
     def extendedOn(self):
-        """Whether new scenes get the extended classes: the annotator's toggle, or
-        a case flagged for extended mode (D47 Q6)."""
-        return bool(self.extendedClasses or self.caseExtendedMode)
+        """Whether the extended classes are on for the open read: the annotator's
+        toggle, a case flagged for extended mode (D47 Q6), or a read that opened
+        with work in them (D53)."""
+        return bool(self.extendedClasses or self.caseExtendedMode
+                    or self.extendedWorkOpened)
+
+    def extendedWork(self, seed=None):
+        """The extended classes that hold an annotator's work, in label order (D53).
+
+        Work is any voxel in an extended class, except a class that is still an
+        untouched copy of the seed (D51 d): empty classes and untouched copies are
+        not work. This alone decides whether a read is submitted with four classes
+        or 21 -- never the toggle, which only shows or hides them.
+        """
+        node = self.segmentationNode
+        if node is None:
+            return []
+        if seed is None:
+            seed = self.seedMask()
+        return [name for name in labels.EXTRA_NAMES
+                if _segmentHasContent(node, name)
+                and not (seed is not None and self.isUntouchedSeedCopy(name, seed))]
+
+    def submitsExtended(self, work):
+        """Whether the read is submitted with all 21 classes (D53, amended so
+        D47 stands): when an extended class holds work (``work``), when a branch
+        group is ticked complete (D47 Q3: a ticked group with no branches is
+        information), or when the case is flagged for extended mode (D47 Q6),
+        whatever was drawn. Otherwise the four, exactly as before. Never the
+        toggle."""
+        return bool(work or labels.clean_complete_groups(self.completeGroups)
+                    or self.caseFlaggedExtended)
+
+    def showExtendedIfWorked(self):
+        """At open (D53): a read with work in its extended classes has them on for
+        it, so nobody opens their own work hidden. Not saved to the login's toggle.
+        Returns whether it turned them on."""
+        if self.extendedOn() or not self.hasExtendedSegments():
+            return False
+        if not (self.extendedWork() or labels.clean_complete_groups(self.completeGroups)):
+            return False
+        self.extendedWorkOpened = True
+        return True
+
+    def extendedSegmentIds(self):
+        """Segment ids of the extended classes in the open segmentation."""
+        node = self.segmentationNode
+        if node is None:
+            return []
+        return [s for s in (_segmentIdIn(node, n) for n in labels.EXTRA_NAMES) if s]
+
+    def setExtendedShown(self, shown):
+        """Show or hide the extended classes, and nothing else (D53).
+
+        Hiding remembers each class's eye; showing gives it back, so the classes
+        come back exactly as they were. No segment is added, removed, emptied,
+        refilled or re-seeded here. Returns how many segments changed.
+        """
+        node = self.segmentationNode
+        display = node.GetDisplayNode() if node is not None else None
+        if shown:
+            return self.extendedView.show(display, self.extendedSegmentIds())
+        return self.extendedView.hide(display, self.extendedSegmentIds())
 
     def setCompleteGroup(self, group, on):
         """Tick or untick one branch group as complete (D47 Q3).
@@ -765,11 +847,13 @@ class SegQueue14Logic(ScriptedLoadableModuleLogic):
         """Replace the ticks (a read opened for review or revision). Not saved."""
         self.completeGroups = set(labels.clean_complete_groups(groups or ()))
 
-    def completeGroupsForExport(self):
+    def completeGroupsForExport(self, names=None):
         """What goes in the class-stack header (D47 Q3): the ticked groups for a
         read with the extended classes ([] when none is ticked), ``None`` for a
-        four-class read, which has no branch classes to be complete about."""
-        names = [spec.name for spec in self.classSpecs()]
+        four-class read, which has no branch classes to be complete about.
+        ``names`` are the classes being written (default: ``classSpecs``)."""
+        if names is None:
+            names = [spec.name for spec in self.classSpecs()]
         if not labels.is_extended(names):
             return None
         return labels.clean_complete_groups(self.completeGroups)
@@ -910,8 +994,8 @@ class SegQueue14Logic(ScriptedLoadableModuleLogic):
     def isUntouchedSeedCopy(self, name, seed=None, mask=None):
         """Whether class ``name`` is still exactly the seed, voxel for voxel (D51).
 
-        The one test behind both D51 c (the toggle off removes such a class) and
-        D51 d (it is submitted as an empty channel). Exact, on the CT grid
+        The one test behind D51 d (it is submitted as an empty channel) and D53
+        (it is not work, so it alone never makes a read extended). Exact, on the CT grid
         (``inversecut.is_untouched_copy``); ``seed`` and ``mask`` are passed in
         when the caller already has them. Without ``mask``, a class whose stored
         voxel count differs from the seed's is answered without reading it whole.
@@ -936,34 +1020,6 @@ class SegQueue14Logic(ScriptedLoadableModuleLogic):
                 return False
             mask = self._classMask(name, seed.shape)
         return inversecut.is_untouched_copy(mask, seed)
-
-    def removeEmptyExtendedClasses(self, segmentationNode=None):
-        """Remove the extended classes that hold nothing of the annotator's.
-        Returns ``(removed, kept)``.
-
-        Removed: an empty class, and one still an untouched copy of the seed
-        (D51 c) -- a branch, as the materials start empty (D52); a material still
-        exactly the seed (a 0.25.0-0.25.3 draft) is removed the same way. Kept:
-        any class the annotator changed, whatever the toggle says:
-        turning the classes off must never throw away work.
-        """
-        node = segmentationNode or self.segmentationNode
-        if node is None:
-            return [], []
-        removed, kept = [], []
-        segmentation = node.GetSegmentation()
-        seed = self.seedMask() if node is self.segmentationNode else None
-        for name in labels.EXTRA_NAMES:
-            segmentId = _segmentIdIn(node, name)
-            if not segmentId:
-                continue
-            if _segmentHasContent(node, name) and not (
-                    seed is not None and self.isUntouchedSeedCopy(name, seed)):
-                kept.append(name)
-            else:
-                segmentation.RemoveSegment(segmentId)
-                removed.append(name)
-        return removed, kept
 
     def orderSegments(self, segmentationNode=None):
         """Put the classes in panel order: each vessel followed by its branches,
@@ -1512,6 +1568,9 @@ class SegQueue14Logic(ScriptedLoadableModuleLogic):
         self.assignment = None
         self._sessionStart = None
         self.caseExtendedMode = False
+        self.caseFlaggedExtended = False
+        self.extendedWorkOpened = False
+        self.extendedView.reset()
         self.completeGroups = set()
         self.seedFirstSelected = set()
 
@@ -1624,17 +1683,22 @@ class SegQueue14Logic(ScriptedLoadableModuleLogic):
         drawn them; only the project's own classes are read, by name -- which
         excludes the helpers structurally, not by convention.
 
-        **Four classes or 21** (D44): ``classSpecs``. With no extended class in the
-        scene the file is the four, exactly as 0.17.x writes it; with any, all 21
-        in label order, the empty ones as empty channels, and the branch groups
-        ticked complete in the header (D47 Q3, ``completeGroupsForExport``).
+        **Four classes or 21** (D53, amending D44; ``submitsExtended``): decided
+        here, never by the toggle. All 21 in label order -- the empty ones as
+        empty channels, the branch groups ticked complete in the header (D47 Q3,
+        ``completeGroupsForExport``) -- when an extended class holds an
+        annotator's work, when any group is ticked complete, or when the case is
+        flagged for extended mode (D47 Q6), toggle on or off. Otherwise the file
+        is the four, exactly as 0.17.x writes it.
 
         **An untouched seed copy is not a read** (D51 d): an extended class still
         exactly the seed (``isUntouchedSeedCopy``) is written as an empty channel,
-        and named in ``seedCopiesBlanked``. Only branches start as seed copies
-        (D52); the test stays on every extended class, so a material left as the
-        seed by a 0.25.0-0.25.3 draft is never submitted as the whole tree. The
-        four classes are written as they are, seed copies or not (D26, D38).
+        and named in ``seedCopiesBlanked``, and is not work (D53): a read whose
+        extended classes are all empty or untouched copies is sent as the four.
+        Only branches start as seed copies (D52); the test stays on every
+        extended class, so a material left as the seed by a 0.25.0-0.25.3 draft
+        is never submitted as the whole tree. The four classes are written as
+        they are, seed copies or not (D26, D38).
 
         Returns ``(voxelCounts, sourceGeometry, segmentationGeometry)``; the
         counts are per class, each counted whole, from the masks written.
@@ -1644,18 +1708,31 @@ class SegQueue14Logic(ScriptedLoadableModuleLogic):
         if self.volumeNode is None or self.project is None:
             raise RuntimeError("There is no case open to export.")
         shape = slicer.util.arrayFromVolume(self.volumeNode).shape
-        # The four, or all 21 once any extended class is in the scene (D44).
+        # Every class the scene has; then the four alone unless an extended class
+        # holds work (D53). The toggle does not enter into it.
         specs = self.classSpecs()
         extra = set(labels.EXTRA_NAMES)
+        if self.caseFlaggedExtended or labels.clean_complete_groups(self.completeGroups):
+            # Sent as 21 whatever is in the scene (a flagged case or a tick):
+            # classes not in it go as empty channels.
+            have = {spec.name for spec in specs}
+            specs = specs + [spec for spec in self.extraSpecs() if spec.name not in have]
         seed = self.seedMask() if any(s.name in extra for s in specs) else None
-        masks, blanked = [], []
+        masks, blanked, work = [], [], False
         for spec in specs:
             mask = self._classMask(spec.name, shape)
-            if (seed is not None and spec.name in extra
-                    and self.isUntouchedSeedCopy(spec.name, seed, mask)):
-                mask = np.zeros(shape, np.uint8)
-                blanked.append(spec.name)
+            if spec.name in extra:
+                if seed is not None and self.isUntouchedSeedCopy(spec.name, seed, mask):
+                    mask = np.zeros(shape, np.uint8)
+                    blanked.append(spec.name)
+                elif mask.any():
+                    work = True
             masks.append(mask)
+        if not self.submitsExtended(work):
+            kept = [i for i, spec in enumerate(specs) if spec.name not in extra]
+            specs = [specs[i] for i in kept]
+            masks = [masks[i] for i in kept]
+            blanked = []
         self.seedCopiesBlanked = blanked
 
         matrix = vtk.vtkMatrix4x4()
@@ -1667,7 +1744,7 @@ class SegQueue14Logic(ScriptedLoadableModuleLogic):
                 path, masks, names, labelfile.ras_to_lps(ijkToRas),
                 colors=[tuple(spec.color) for spec in specs],
                 # D47 Q3: the branch groups ticked complete, for an extended read.
-                complete_groups=self.completeGroupsForExport())
+                complete_groups=self.completeGroupsForExport(names))
         except (OSError, ValueError) as exc:
             raise RuntimeError(
                 "Could not write the segmentation to {}: {}".format(path, exc)) from exc
@@ -2082,7 +2159,26 @@ def _segmentHasContent(segmentationNode, name):
     try:
         array = slicer.util.arrayFromSegmentBinaryLabelmap(segmentationNode, segmentId)
     except Exception:
-        return False
+        # A segmentation loaded from a file (a reviewer's submission) has no
+        # reference geometry, and slicer.util refuses to read it without one.
+        # This used to answer "empty" there, and the toggle off then removed
+        # every extended class of the read, the annotator's work included (D53).
+        # Read the stored labelmap instead; if even that fails, say "has content":
+        # a class must never be taken for empty because it could not be read.
+        try:
+            from vtk.util import numpy_support
+
+            image = slicer.vtkOrientedImageData()
+            logic = slicer.vtkSlicerSegmentationsModuleLogic
+            if not logic.GetSegmentBinaryLabelmapRepresentation(
+                    segmentationNode, segmentId, image):
+                return True
+            scalars = image.GetPointData().GetScalars()
+            if scalars is None or not image.GetNumberOfPoints():
+                return False
+            return bool(numpy_support.vtk_to_numpy(scalars).any())
+        except Exception:
+            return True
     return array is not None and array.size > 0 and bool(array.any())
 
 
@@ -3179,8 +3275,11 @@ class SegQueue14Widget(ScriptedLoadableModuleWidget):
             "stent and plaque classes start empty. On a case with a vessel seed "
             "a branch becomes a copy of the seed the first time you select it, "
             "like the four; otherwise it stays empty. A branch left as an "
-            "untouched seed copy is submitted empty. Turning this off removes "
-            "only the empty classes and the untouched seed copies.")
+            "untouched seed copy is submitted empty. Turning this off only "
+            "hides the classes: nothing is deleted, and turning it on shows them "
+            "as they were. Your read is sent with all 21 classes if any of them "
+            "has your work in it, a Complete box is ticked or the case asks for "
+            "them, whether this is on or off.")
         self.extendedCheck.toggled.connect(self.onToggleExtended)
         layout.addWidget(self.extendedCheck)
 
@@ -3237,18 +3336,19 @@ class SegQueue14Widget(ScriptedLoadableModuleWidget):
         self.logic.extendedClasses = on
         self._updateExtendedBox()
 
-    def _updateExtendedBox(self):
-        """Show the group rows when the scene has extended classes;
-        the extended-mode note on a flagged case (D47 Q6); the ticks of the open
-        read (D47 Q3)."""
+    def _updateExtendedBox(self, resetShowTicks=True):
+        """Show the group rows while the extended classes are on (D53: off hides
+        them, and their rows); the extended-mode note on a flagged case (D47 Q6);
+        the ticks of the open read (D47 Q3). The "Show" ticks are reset only for a
+        newly opened read, never by the toggle, so they keep matching the classes
+        they hid."""
         flagged = bool(self.logic.caseExtendedMode)
         self.extendedModeLabel.setVisible(flagged)
         self.extendedCheck.blockSignals(True)
         self.extendedCheck.setChecked(bool(self.logic.extendedOn()))
         self.extendedCheck.blockSignals(False)
-        shown = self.logic.extendedOn() or self.logic.hasExtendedSegments()
-        self.extendedBox.setVisible(shown)
-        for check in self.groupChecks.values():
+        self.extendedBox.setVisible(bool(self.logic.extendedOn()))
+        for check in self.groupChecks.values() if resetShowTicks else ():
             check.blockSignals(True)
             check.setChecked(True)
             check.blockSignals(False)
@@ -3262,7 +3362,13 @@ class SegQueue14Widget(ScriptedLoadableModuleWidget):
         self.logic.setCompleteGroup(group, on)
 
     def onToggleExtended(self, on):
-        """Turn the extended classes on or off, for this login and the open scene.
+        """Show or hide the extended classes, for this login and the open scene.
+
+        D53: off only hides them -- the classes, their rows in the Segment
+        Editor's list and the group rows here. It never removes, empties, refills
+        or re-seeds a segment, and raises nothing. On adds whichever are missing
+        (empty, D52) and shows the rest exactly as they were. What is submitted is
+        decided at export by the work in them (``exportSubmission``), not here.
 
         On a case flagged for extended mode (D47 Q6) turning them off is still
         allowed: it is a request, not a rule (D38).
@@ -3271,22 +3377,64 @@ class SegQueue14Widget(ScriptedLoadableModuleWidget):
         self.logic.extendedClasses = bool(on)
         if not on:
             self.logic.caseExtendedMode = False
+            self.logic.extendedWorkOpened = False
         if self.logic.segmentationNode is not None and (
                 self.logic.assignment is not None or self._claimedSubmission):
             if on:
                 # Added empty, always (D52): quick. On the annotator's own seeded
                 # case a branch gets its copy of the seed on its first selection
                 # (_onClassSelected); materials and a reviewer's never (D51 b).
+                # An existing class is never touched (addExtendedClasses skips it).
                 self.logic.addExtendedClasses()
+                self.logic.setExtendedShown(True)
             else:
-                _removed, kept = self.logic.removeEmptyExtendedClasses()
-                if kept:
-                    slicer.util.infoDisplay(
-                        "Kept {} because you have changed them. Erase a class "
-                        "first if you want it gone; the read is submitted with all "
-                        "21 classes while any of them is in the scene.".format(
-                            ", ".join(kept)))
-        self._updateExtendedBox()
+                self._deselectExtended()
+                self.logic.setExtendedShown(False)
+            self._applyExtendedRows()
+        self._updateExtendedBox(resetShowTicks=False)
+
+    def _deselectExtended(self):
+        """Before the extended classes are hidden: an extended class selected for
+        editing is deselected, so no stroke lands in a class that is not shown."""
+        node = getattr(self, "editorNode", None)
+        if node is None:
+            return
+        try:
+            selected = node.GetSelectedSegmentID()
+        except Exception:
+            return
+        if selected and selected in self.logic.extendedSegmentIds():
+            node.SetSelectedSegmentID("")
+
+    def _applyExtendedRows(self):
+        """Hide the extended classes' rows in the Segment Editor's segment lists
+        while the classes are off (D53), and show them while on. Rows only: the
+        segments and their voxels stay in the scene."""
+        editor = getattr(self, "editorWidget", None)
+        if editor is None:
+            return
+        hidden = ([] if self.logic.extendedOn() or self.logic.segmentationNode is None
+                  else self.logic.extendedSegmentIds())
+        try:
+            tables = slicer.util.findChildren(editor, className="qMRMLSegmentsTableView")
+        except Exception:
+            return
+        for table in tables:
+            try:
+                if table.segmentationNode() is None:
+                    continue        # not bound to a case: nothing to filter
+                table.setHideSegments(hidden)
+            except Exception:  # pragma: no cover - a Slicer without the filter
+                pass
+
+    def _applyExtendedView(self):
+        """For a read just opened (own case, draft, reviewer): with the extended
+        classes off, hide them and their rows (D53); with them on, show the rows.
+        Never changes a voxel."""
+        if not self.logic.extendedOn():
+            self._deselectExtended()
+            self.logic.setExtendedShown(False)
+        self._applyExtendedRows()
 
     def _buildSubmitSection(self):
         box = ctk.ctkCollapsibleButton()
@@ -4159,6 +4307,10 @@ class SegQueue14Widget(ScriptedLoadableModuleWidget):
             slicer.util.setSliceViewerLayers(background=volumeNode, fit=True)
             self.logic.volumeNode = volumeNode
             self.logic.segmentationNode = segmentationNode
+            # D53: the CT as the read's reference geometry, as an own case has it, so
+            # every per-class read (``_segmentHasContent``) works on a reviewer's
+            # panel too; without one Slicer refuses them.
+            segmentationNode.SetReferenceImageGeometryParameterFromVolumeNode(volumeNode)
             # A class stack (0.17.0 on, D39) loads as the four named classes,
             # each whole, overlaps visible. An older labelmap submission comes
             # back as Segment_1, Segment_2 ... in colours Slicer chose; its label
@@ -4169,9 +4321,15 @@ class SegQueue14Widget(ScriptedLoadableModuleWidget):
             # server is too old to send them.
             self.logic.setCompleteGroups(self._reviewCompleteGroups(entry, segPath))
             self.logic.caseExtendedMode = bool(entry.get("extendedMode"))
+            self.logic.caseFlaggedExtended = self.logic.caseExtendedMode
             # D44: an extended read loads with all its classes, whatever the toggle
             # says; with the toggle on (or a flagged case), a four-class read gets
             # the 17, empty -- never from the seed, in a reviewer's panel (D51 b).
+            # D53: a read with work in its extended classes shows them, toggle or
+            # not (it was always opened whole, D44); nothing is ever removed.
+            self.logic.extendedView.reset()
+            self.logic.extendedWorkOpened = False
+            self.logic.showExtendedIfWorked()
             if self.logic.extendedOn():
                 self.logic.addExtendedClasses()
             self.logic.applyViewPreset()
@@ -4193,6 +4351,7 @@ class SegQueue14Widget(ScriptedLoadableModuleWidget):
         self.onRefreshNotes()
         self._reviewStart = time.time()
         self._updateExtendedBox()
+        self._applyExtendedView()
         self.reviewStatusLabel.setText(
             "Reviewing <b>{}</b> by {}{} — edit it in the Segment Editor if you "
             "want to correct it.".format(
@@ -4798,6 +4957,7 @@ class SegQueue14Widget(ScriptedLoadableModuleWidget):
         self.logic.showPrelabelIn3d(True)
         self.logic.centre3d()
         self._updateExtendedBox()
+        self._applyExtendedView()
 
         self.caseBox.collapsed = False
         # Left open on purpose: it is now the whole interface. Every effect, the

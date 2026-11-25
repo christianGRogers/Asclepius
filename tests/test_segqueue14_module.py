@@ -257,9 +257,14 @@ def test_a_seeded_case_starts_with_the_seed_in_every_class_hidden():
     assert "copySegmentIntoClasses(" in every and "self.project.segments" in every
     copy = ast.get_source_segment(_source(), _method("SegQueue14Logic",
                                                      "copySegmentIntoClasses"))
-    # Per-class array writes: one import into several targets fills only the first.
-    assert "updateSegmentBinaryLabelmapFromArray" in copy
-    assert "ImportLabelmapToSegmentationNode" not in copy
+    # Per-class writes (one import into several targets fills only the first), in
+    # place (0.25.5): no array round trip against the CT, which made each copy a
+    # full-CT labelmap layer.
+    code = copy.split('"""')[2]   # the body, without the docstring's history
+    assert "self.copySegmentInto(sourceSegmentId, segmentId)" in code
+    assert "updateSegmentBinaryLabelmapFromArray" not in code
+    assert "arrayFromSegmentBinaryLabelmap" not in code
+    assert "ImportLabelmapToSegmentationNode" not in code
 
 
 @pytest.mark.parametrize("method", ["submit", "reviseSubmission"])
@@ -582,8 +587,8 @@ def _calls_in(node):
             if isinstance(n, ast.Call) and isinstance(n.func, ast.Attribute)}
 
 
-def test_the_module_is_0_25_3_and_protocol_21():
-    assert re.search(r'^__version__ = "0\.25\.4"$', _source(), re.M)
+def test_the_module_is_0_25_5_and_protocol_21():
+    assert re.search(r'^__version__ = "0\.25\.5"$', _source(), re.M)
     sys_path = str(REPO / "src")
     import sys
 
@@ -1819,6 +1824,10 @@ def _d51_logic(np, assignment=True, extended=True, seed=True, shape=(4, 6, 6)):
         node.masks[SEED_ID] = seedMask.copy()
         logic.seedSegmentId = SEED_ID
         logic.copySegmentIntoEveryClass(SEED_ID)  # D26: the four start as the seed
+        # In place since 0.25.5, one write per class; the tests count their own.
+        assert node.segmentWrites == [logic.segmentIdFor(s.name)
+                                      for s in labels.segment_specs()]
+        node.segmentWrites = []
     return logic, labels, labelfile, seedMask
 
 
@@ -2074,5 +2083,5 @@ def test_the_module_writes_seed_copies_inside_keeping_closed_surface():
     copy = ast.get_source_segment(_source(), _method("SegQueue14Logic",
                                                      "copySegmentIntoClasses"))
     guard = copy.index("with surfaces.keeping_closed_surface(self.segmentationNode)")
-    assert guard < copy.index("updateSegmentBinaryLabelmapFromArray(")
+    assert guard < copy.index("self.copySegmentInto(")
     assert "from SegQueue14Lib import inversecut, surfaces" in _source()

@@ -152,7 +152,7 @@ from SegQueue14Lib import SegQueue14Error as SegQueueError
 
 #: Continues SegQueue's numbering (0.13.0 was the last 4-class release). The
 #: release tag is ``segqueue-v`` + this; bump it to publish.
-__version__ = "0.25.4"
+__version__ = "0.25.5"
 
 #: Where the module's help points.
 HELP_URL = "https://github.com/christianGRogers/Asclepius"
@@ -682,33 +682,31 @@ class SegQueue14Logic(ScriptedLoadableModuleLogic):
     def copySegmentIntoClasses(self, sourceSegmentId, specs):
         """Put a full copy of one segment's voxels into each class of ``specs``.
 
-        Written per class with ``updateSegmentBinaryLabelmapFromArray`` against
-        the CT, which keeps the copies as overlapping segments in separate
-        labelmap layers; trimming one leaves the others whole. (Importing one
-        label volume into several target segments does not: only the first gets
-        the voxels -- checked in Slicer 5.8.) Returns how many classes have voxels.
+        One in-place write per class (``copySegmentInto``, the
+        ``SetBinaryLabelmapToSegment`` write D52 uses for a branch's copy), so
+        each copy's labelmap layer covers the seed's own extent, not the CT's.
+        0.25.5: these four copies used to be written through
+        ``updateSegmentBinaryLabelmapFromArray`` against the CT, which put each in a
+        layer the size of the whole CT -- about 315M voxels at open and 1.5 GB peak
+        on a 512 x 512 x 300 CT -- for the same voxels. The copies stay overlapping
+        segments in separate layers either way: trimming one leaves the others
+        whole. (Importing one label volume into several target segments does not:
+        only the first gets the voxels -- checked in Slicer 5.8.) Returns how many
+        classes have voxels.
         """
         if (not sourceSegmentId or self.segmentationNode is None
                 or self.volumeNode is None or self.project is None):
             return 0
-        mask = slicer.util.arrayFromSegmentBinaryLabelmap(
-            self.segmentationNode, sourceSegmentId, self.volumeNode)
-        if mask is None or not mask.size or not mask.any():
-            return 0
-        mask = (mask > 0).astype("uint8")
         filled = 0
-        # The write drops every segment's closed surface (Slicer 5.8): with the
-        # classes shown in 3D, turning the extended classes on mid-case blanked
-        # the 3D view until Show in 3D. Rebuilt here when it was showing (0.25.2).
+        # An in-place write keeps the other segments' closed surfaces; the guard
+        # stays so a Slicer that drops them still has them rebuilt (0.25.2).
         with surfaces.keeping_closed_surface(self.segmentationNode):
             for spec in specs:
                 segmentId = self.segmentIdFor(spec.name)
                 if segmentId is None:
                     segmentId = self.segmentationNode.GetSegmentation().AddEmptySegment(
                         spec.name, spec.name, list(spec.color))
-                slicer.util.updateSegmentBinaryLabelmapFromArray(
-                    mask, self.segmentationNode, segmentId, self.volumeNode)
-                if _segmentHasContent(self.segmentationNode, spec.name):
+                if self.copySegmentInto(sourceSegmentId, segmentId):
                     filled += 1
         return filled
 

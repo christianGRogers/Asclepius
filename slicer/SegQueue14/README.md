@@ -181,6 +181,33 @@ empty, grouped under their parent in the segment list, with show/hide per group:
   server used to refuse them with `not_an_annotator`); until it is deployed those
   accounts see an empty thread. Protocol stays 21.
 
+### A seeded case opens with a fraction of the memory (0.25.5)
+
+Performance only: what the annotator sees is unchanged. Protocol stays 21, no
+server change.
+
+On the annotator's own seeded case, D26 fills LM, LAD, LCx and RCA with a copy of
+the vessel seed. Each copy used to be written through `slicer.util` against the CT
+(`updateSegmentBinaryLabelmapFromArray`), which put it in a labelmap layer the size
+of the whole CT: four full-CT layers for a seed a few hundred thousand voxels big.
+Each copy is now written in place from the seed's own labelmap (`copySegmentInto`,
+`SetBinaryLabelmapToSegment`, as 0.25.4 already does for a branch's first
+selection), so its layer is the seed's extent.
+
+- Every class still starts as a hidden, whole copy of the seed, each in a layer of
+  its own (trimming one leaves the others); a resumed draft is never refilled.
+- The export still writes each class whole on the CT grid (D39); the
+  untouched-seed-copy test (D51 c, d), overlap, selection and 3D surfaces are as in
+  0.25.4.
+- Measured on Slicer 5.8.1, a 512 x 512 x 300 CT and a 188k-voxel seed
+  (`tests/slicer_bench_extended14.py`, three runs each): the four copies' layers
+  went from 4 x 78.6M to 4 x 11.9M voxels (all five layers, seed included:
+  326.5M -> 59.7M); the open from 1.7 s to 0.7 s (2.8 s to 1.5 s with the classes
+  shown in 3D); memory added by the open from +300 MB to +69 MB resident, and the
+  open no longer raises the process's peak (1477 MB before; after, the bench's own
+  set-up peak of 1234 MB is never exceeded). Turning the extended classes on with
+  the classes shown in 3D went from 1.7 s to 0.2 s as a side effect.
+
 ### Materials start empty; selecting a class shows it; overlap everywhere (0.25.4, D52)
 
 D52 (2026-11-25, amends D51, and amended the same day after a lag report). Four

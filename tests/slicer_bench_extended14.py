@@ -12,12 +12,17 @@ hundred thousand voxels -- four vessels and 14 branches drawn as tubes. It opens
 an own seeded case does (the four filled from the seed, D26), with or without the
 classes shown in 3D (``BENCH_SURFACES``). Then:
 
+* **open** -- the four filled from the seed (``_prefillClassesFromSeed``, D26) and
+  hidden, timed. 0.25.4 writes each copy against the CT (a full-CT labelmap layer
+  per class); 0.25.5 writes it in place, in a layer the seed's size.
 * **toggle on** -- what the panel's "Extended classes" toggle calls. 0.25.3 adds the
   17 and fills each from the seed (``addExtendedClasses(fromSeed=True)``); 0.25.4
   adds them empty (D52).
 * **first selection of a branch** -- 0.25.4: ``seedOnFirstSelection`` (the copy of
   the seed made then) and showing it, as the panel does on a selection. 0.25.3 only
   showed it: its copy was made at toggle-on.
+``BENCH_OPEN_ONLY=1`` stops after the open, so the peak is the open's own.
+
 * the segmentation's labelmap layers and their voxels, after each step, and the
   process's resident and peak memory (``/proc/self/status``).
 
@@ -108,6 +113,17 @@ def layers(segmentation_node):
     return count, voxels
 
 
+def layer_extents(segmentation_node):
+    """Each labelmap layer's dimensions (i, j, k), largest first."""
+    segmentation = segmentation_node.GetSegmentation()
+    found = []
+    for index in range(segmentation.GetNumberOfLayers()):
+        image = segmentation.GetLayerDataObject(index)
+        if image is not None and hasattr(image, "GetDimensions"):
+            found.append(list(image.GetDimensions()))
+    return sorted(found, key=lambda d: -(d[0] * d[1] * d[2]))
+
+
 def main():
     import numpy as np
 
@@ -151,12 +167,28 @@ def main():
     slicer.mrmlScene.RemoveNode(seedNode)
     logic.seedSegmentId = logic._importHelper(seedPath, "~ vessel seed (not submitted)",
                                               (0.95, 0.85, 0.2), 0.25)
-    logic._prefillClassesFromSeed(logic.assignment)
+    before = memory()
+    started = time.perf_counter()
+    prefilled = logic._prefillClassesFromSeed(logic.assignment)
     logic.setClassesVisible(False)
     if SURFACES:
         logic.showPrelabelIn3d()
+    slicer.app.processEvents()
+    opened = time.perf_counter() - started
+    after = memory()  # before the class read-back below, which allocates
     node = logic.segmentationNode
-    result["opened"] = dict(zip(("layers", "layer_voxels"), layers(node)), **memory())
+    result["opened"] = dict(zip(("layers", "layer_voxels"), layers(node)),
+                            seconds=round(opened, 3), prefilled=prefilled,
+                            layer_dims=layer_extents(node),
+                            rss_before_mb=before.get("rss_mb"),
+                            peak_before_mb=before.get("peak_mb"),
+                            class_voxels={spec.name: int(np.count_nonzero(
+                                slicer.util.arrayFromSegmentBinaryLabelmap(
+                                    node, logic.segmentIdFor(spec.name), volume)))
+                                for spec in logic.project.segments},
+                            **after)
+    if os.environ.get("BENCH_OPEN_ONLY") == "1":
+        return result
 
     # Toggle on, as the panel's toggle does it in each version.
     newApi = hasattr(logic, "seedOnFirstSelection")

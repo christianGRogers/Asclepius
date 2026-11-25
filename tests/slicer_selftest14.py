@@ -140,6 +140,21 @@ def _counts(slicer, labels, segmentationNode, volume, segmentId):
         for spec in labels.segment_specs()}
 
 
+def _layerOf(segmentationNode, segmentId):
+    """The labelmap layer (a vtkOrientedImageData) a segment's voxels live in."""
+    segment = segmentationNode.GetSegmentation().GetSegment(segmentId)
+    return segment.GetRepresentation("Binary labelmap") if segment is not None else None
+
+
+def _classLayers(segmentationNode, segmentId, labels):
+    """``{class: voxels in the labelmap layer holding it}`` for the four classes."""
+    found = {}
+    for spec in labels.segment_specs():
+        layer = _layerOf(segmentationNode, segmentId(spec.name))
+        found[spec.name] = int(layer.GetNumberOfPoints()) if layer is not None else 0
+    return found
+
+
 def run():
     import numpy as np
 
@@ -195,6 +210,20 @@ def run():
     copies = _counts(slicer, labels, logic.segmentationNode, volume, logic.segmentIdFor)
     check("every class starts as the whole seed", filled == 4 and all(
         n == nSeed for n in copies.values()), copies)
+
+    # 0.25.5: each copy is written in place, in a labelmap layer the seed's size --
+    # not one the CT's size per class (about 315M voxels at open on a real CT).
+    # Each class still in a layer of its own, so trimming one leaves the others.
+    ks, js, iz = np.nonzero(seed)
+    seedBox = ((ks.max() - ks.min() + 1) * (js.max() - js.min() + 1)
+               * (iz.max() - iz.min() + 1))
+    classLayers = _classLayers(logic.segmentationNode, logic.segmentIdFor, labels)
+    check("the seed copies are not full-CT labelmap layers (0.25.5)", all(
+        0 < n <= seedBox < int(np.prod(SHAPE)) for n in classLayers.values()),
+        (classLayers, int(seedBox), int(np.prod(SHAPE))))
+    check("each seed copy is in a labelmap layer of its own",
+          len({_layerOf(logic.segmentationNode, logic.segmentIdFor(n))
+               for n in classLayers}) == 4)
 
     draft = os.path.join(tmp, "draft.seg.nrrd")
     slicer.util.saveNode(logic.segmentationNode, draft)

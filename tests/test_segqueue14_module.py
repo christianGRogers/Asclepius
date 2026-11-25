@@ -252,8 +252,11 @@ def test_a_seeded_case_starts_with_the_seed_in_every_class_hidden():
     assert "elif not self.resumedDraft and assignment.has_seed" in open_case
     assert "_prefillClassesFromSeed" in open_case
     assert open_case.index("applyViewPreset") < open_case.index("setClassesVisible(False)")
+    every = ast.get_source_segment(_source(), _method("SegQueue14Logic",
+                                                      "copySegmentIntoEveryClass"))
+    assert "copySegmentIntoClasses(" in every and "self.project.segments" in every
     copy = ast.get_source_segment(_source(), _method("SegQueue14Logic",
-                                                     "copySegmentIntoEveryClass"))
+                                                     "copySegmentIntoClasses"))
     # Per-class array writes: one import into several targets fills only the first.
     assert "updateSegmentBinaryLabelmapFromArray" in copy
     assert "ImportLabelmapToSegmentationNode" not in copy
@@ -279,7 +282,7 @@ def test_a_reopened_draft_keeps_its_label_values():
 
 def test_an_empty_scene_is_still_written():
     # An empty class is an all-zero channel on the CT grid, never a refusal.
-    body = ast.get_source_segment(_source(), _method("SegQueue14Logic", "_classMask"))
+    body = ast.get_source_segment(_source(), _method("SegQueue14Logic", "_segmentMask"))
     assert "np.zeros(shape, np.uint8)" in body
 
 
@@ -289,8 +292,10 @@ def test_every_class_is_exported_whole_on_the_ct_grid():
     body = ast.get_source_segment(_source(), _method("SegQueue14Logic", "exportSubmission"))
     assert "logic().ExportSegmentsToLabelmapNode(" not in body
     assert "labelfile.write_class_stack(" in body
-    mask = ast.get_source_segment(_source(), _method("SegQueue14Logic", "_classMask"))
+    mask = ast.get_source_segment(_source(), _method("SegQueue14Logic", "_segmentMask"))
     assert "arrayFromSegmentBinaryLabelmap(" in mask and "self.volumeNode" in mask
+    assert "_segmentMask(" in ast.get_source_segment(
+        _source(), _method("SegQueue14Logic", "_classMask"))
     assert "exportLabelmap" not in _source()
 
 
@@ -577,8 +582,8 @@ def _calls_in(node):
             if isinstance(n, ast.Call) and isinstance(n.func, ast.Attribute)}
 
 
-def test_the_module_is_0_24_1_and_protocol_21():
-    assert re.search(r'^__version__ = "0\.24\.1"$', _source(), re.M)
+def test_the_module_is_0_25_0_and_protocol_21():
+    assert re.search(r'^__version__ = "0\.25\.0"$', _source(), re.M)
     sys_path = str(REPO / "src")
     import sys
 
@@ -1344,3 +1349,460 @@ def test_the_reviewer_s_fetch_is_by_case_id_only_and_never_filtered():
     widget = _notes_widget(logic, claimed="sub1", caseId="case7")
     widget.onRefreshNotes()
     assert logic.asked == ["case7"] and widget.rendered == [thread]
+
+
+# ------------------------------------------- D51: inverse cut, seeded extended classes
+
+LIB = REPO / "slicer" / "SegQueue14" / "SegQueue14Lib"
+EFFECT = LIB / "SegmentEditorInverseCutEffect.py"
+ICON = REPO / "slicer" / "SegQueue14" / "Resources" / "Icons" / "InverseCut.png"
+
+
+def _inversecut():
+    import importlib.util
+
+    spec = importlib.util.spec_from_file_location("inversecut_d51", LIB / "inversecut.py")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+def _effect_tree():
+    return ast.parse(EFFECT.read_text(encoding="utf-8"))
+
+
+def test_inverse_cut_is_registered_when_the_module_loads_and_before_the_editor():
+    source = _source()
+    assert 'INVERSE_CUT_EFFECT_NAME = "Inverse cut"' in source
+    assert '"SegQueue14Lib", "SegmentEditorInverseCutEffect.py"' in source
+    register = next(n for n in _tree().body if isinstance(n, ast.FunctionDef)
+                    and n.name == "registerInverseCutEffect")
+    body = ast.get_source_segment(source, register)
+    # Slicer's scripted-effect pattern, registered once.
+    assert "qSlicerSegmentEditorScriptedEffect(None)" in body
+    assert "setPythonSource(" in body and ".self().register()" in body
+    assert "registeredEffects()" in body
+    module = next(c for c in _classes() if c.name == "SegQueue14")
+    init = ast.get_source_segment(source, next(
+        n for n in module.body if isinstance(n, ast.FunctionDef) and n.name == "__init__"))
+    assert '"startupCompleted()", registerInverseCutEffect' in init
+    # In the panel the embedded editor lists the effects registered when it is
+    # built, so the effect is registered first.
+    editor = ast.get_source_segment(source, _method("SegQueue14Widget", "_buildEditorSection"))
+    assert editor.index("registerInverseCutEffect()") < editor.index(
+        "qMRMLSegmentEditorWidget()")
+
+
+def test_the_effect_is_a_scripted_segment_editor_effect_with_its_own_icon():
+    tree = _effect_tree()
+    source = EFFECT.read_text(encoding="utf-8")
+    # setPythonSource looks for the class named after the file.
+    cls = next(n for n in tree.body if isinstance(n, ast.ClassDef)
+               and n.name == EFFECT.stem)
+    assert [b.id for b in cls.bases] == ["AbstractScriptedSegmentEditorEffect"]
+    methods = {n.name for n in cls.body if isinstance(n, ast.FunctionDef)}
+    assert {"clone", "icon", "helpText", "setupOptionsFrame",
+            "processInteractionEvents", "apply", "deactivate"} <= methods
+    assert 'EFFECT_NAME = "Inverse cut"' in source
+    assert "scriptedEffect.name = EFFECT_NAME" in source
+    assert '"Resources", "Icons", "InverseCut.png"' in source
+    help_text = next(n for n in tree.body if isinstance(n, ast.Assign)
+                     and getattr(n.targets[0], "id", "") == "HELP_TEXT")
+    text = ast.literal_eval(help_text.value)
+    assert text.startswith("Inverse cut:") and "\n" not in text
+    assert ICON.read_bytes()[:8] == b"\x89PNG\r\n\x1a\n"
+
+
+def test_the_effect_changes_only_the_selected_segment_in_one_undo_step():
+    tree = _effect_tree()
+    cls = next(n for n in tree.body if isinstance(n, ast.ClassDef) and n.name == EFFECT.stem)
+    apply = next(n for n in cls.body if isinstance(n, ast.FunctionDef) and n.name == "apply")
+    body = ast.get_source_segment(EFFECT.read_text(encoding="utf-8"), apply)
+    # The helpers are refused, the voxels come from inversecut, one undo state is
+    # saved before the one write, and the write is the selected segment's.
+    assert "HELPER_NAMES" in body and "inversecut.inverse_cut(" in body
+    assert body.count("saveStateForUndo()") == 1
+    assert body.count("updateSegmentBinaryLabelmapFromArray(") == 1
+    assert body.index("saveStateForUndo()") < body.index(
+        "updateSegmentBinaryLabelmapFromArray(")
+    assert "result, segmentationNode, segmentId, volumeNode" in body
+    assert "SEED_SEGMENT_NAME" in body
+    assert "SEED_SEGMENT_NAME = _protocol.SEED_SEGMENT_NAME" in EFFECT.read_text(
+        encoding="utf-8")
+
+
+def test_the_effect_and_its_icon_are_in_the_archive_and_the_release_check(tmp_path):
+    import importlib.util
+    import zipfile
+
+    spec = importlib.util.spec_from_file_location(
+        "build14_d51", REPO / "slicer" / "build-extension14.py")
+    build14 = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(build14)
+    archive, _, _ = build14.build(str(tmp_path))
+    names = zipfile.ZipFile(archive).namelist()
+    scripted = "SegQueue/lib/Slicer-5.8/qt-scripted-modules/"
+    for path in ("SegQueue14Lib/SegmentEditorInverseCutEffect.py",
+                 "SegQueue14Lib/inversecut.py", "Resources/Icons/InverseCut.png"):
+        assert scripted + path in names, path
+    workflow = (REPO / ".github" / "workflows" / "segqueue-release.yml").read_text()
+    for path in ("SegQueue14Lib/SegmentEditorInverseCutEffect.py",
+                 "SegQueue14Lib/inversecut.py", "Resources/Icons/InverseCut.png"):
+        assert '"{}"'.format(path) in workflow
+
+
+def test_a_lasso_is_tested_by_the_even_odd_rule():
+    np = pytest.importorskip("numpy")
+    ic = _inversecut()
+    square = [(0, 0), (10, 0), (10, 10), (0, 10)]
+    got = ic.points_in_polygon([(5, 5), (11, 5), (-1, -1), (9.5, 0.5)], square)
+    assert got.tolist() == [True, False, False, True]
+    assert ic.simplify_polygon([(0, 0), (0, 0), (1, 1)]).shape == (0, 2)
+    assert len(ic.simplify_polygon(np.random.default_rng(1).random((1000, 2)))) == 256
+    # A 3D view's matrix is projective: the divide by w is applied.
+    m = np.eye(4)
+    m[3] = [0, 0, 0.5, 1]
+    assert np.allclose(ic.project([(2, 4, 2)], m), [(1, 2)])
+
+
+def _grid():
+    np = pytest.importorskip("numpy")
+    # [k, j, i]; display x = i, y = j: a slice view looking down k.
+    return np, np.eye(4)
+
+
+def test_inverse_cut_keeps_only_the_inside_through_every_slice():
+    np, eye = _grid()
+    ic = _inversecut()
+    segment = np.zeros((4, 10, 10), np.uint8)
+    segment[:, 2:8, 2:8] = 1
+    inside = ic.inside_region(segment, eye, [(3.5, 3.5), (6.5, 3.5), (6.5, 6.5), (3.5, 6.5)])
+    result, source = ic.inverse_cut(segment, inside, seed=np.ones_like(segment))
+    assert source == "segment"
+    want = np.zeros_like(segment)
+    want[:, 4:7, 4:7] = 1
+    assert np.array_equal(result, want)
+    # Only the segment's own voxels are ever kept, never anything new.
+    assert not (result & (segment == 0)).any()
+
+
+def test_an_empty_segment_takes_the_seed_inside_the_region():
+    np, eye = _grid()
+    ic = _inversecut()
+    seed = np.zeros((3, 8, 8), np.uint8)
+    seed[:, 1:7, 3] = 1
+    empty = np.zeros_like(seed)
+    lasso = [(2, 0.5), (5, 0.5), (5, 3.5), (2, 3.5)]
+    inside = ic.inside_region(seed, eye, lasso)
+    result, source = ic.inverse_cut(empty, inside, seed)
+    assert source == "seed"
+    want = np.zeros_like(seed)
+    want[:, 1:4, 3] = 1
+    assert np.array_equal(result, want)
+    # Nothing to cut: an empty segment and no seed, or an empty seed.
+    assert ic.inverse_cut(empty, inside) == (None, None)
+    assert ic.inverse_cut(empty, inside, np.zeros_like(seed)) == (None, None)
+    with pytest.raises(ValueError):
+        ic.inverse_cut(empty[0], inside)
+
+
+def test_an_untouched_seed_copy_is_exact():
+    np, _ = _grid()
+    ic = _inversecut()
+    seed = np.zeros((3, 4, 4), np.uint8)
+    seed[1, 1:3, 1:3] = 1
+    assert ic.is_untouched_copy(seed.copy() * 7, seed)
+    edited = seed.copy()
+    edited[1, 1, 1] = 0
+    assert not ic.is_untouched_copy(edited, seed)
+    assert not ic.is_untouched_copy(np.zeros_like(seed), seed)
+    assert not ic.is_untouched_copy(np.zeros_like(seed), np.zeros_like(seed))
+    assert not ic.is_untouched_copy(seed[:2], seed)
+    assert not ic.is_untouched_copy(None, seed)
+
+
+# The logic, run on numpy masks: the real methods, compiled out of the module
+# with a stand-in for Slicer's segmentation node.
+
+SEED_ID = "seed"
+_D51_METHODS = (
+    "extraSpecs", "hasExtendedSegments", "classSpecs", "extendedOn",
+    "completeGroupsForExport", "addExtendedClasses", "fillExtendedFromSeed",
+    "_seedIdInScene", "seedMask", "isUntouchedSeedCopy", "removeEmptyExtendedClasses",
+    "orderSegments", "copySegmentIntoEveryClass", "copySegmentIntoClasses",
+    "segmentIdFor", "exportSubmission", "_classMask", "_segmentMask", "sourceGeometry",
+)
+
+
+class _Segment:
+    def __init__(self, name, color):
+        self.name, self.color, self.label = name, color, None
+
+    def GetName(self):
+        return self.name
+
+    def SetLabelValue(self, value):
+        self.label = value
+
+
+class _Segmentation:
+    def __init__(self, node):
+        self.node, self.ids = node, []
+        self.segments = {}
+
+    def AddEmptySegment(self, segmentId, name, color):
+        self.ids.append(segmentId)
+        self.segments[segmentId] = _Segment(name, color)
+        return segmentId
+
+    def GetSegment(self, segmentId):
+        return self.segments.get(segmentId)
+
+    def RemoveSegment(self, segmentId):
+        self.ids.remove(segmentId)
+        del self.segments[segmentId]
+        self.node.masks.pop(segmentId, None)
+
+    def GetNumberOfSegments(self):
+        return len(self.ids)
+
+    def GetNthSegmentID(self, i):
+        return self.ids[i]
+
+    def SetSegmentIndex(self, segmentId, position):
+        self.ids.remove(segmentId)
+        self.ids.insert(position, segmentId)
+
+
+class _Display:
+    def __init__(self):
+        self.visible = {}
+
+    def SetSegmentVisibility(self, segmentId, visible):
+        self.visible[segmentId] = visible
+
+
+class _SegNode:
+    def __init__(self, shape):
+        self.shape, self.masks = shape, {}
+        self.segmentation, self.display = _Segmentation(self), _Display()
+
+    def GetSegmentation(self):
+        return self.segmentation
+
+    def GetDisplayNode(self):
+        return self.display
+
+
+class _Volume:
+    def __init__(self, shape):
+        self.shape = shape
+
+    def GetIJKToRASMatrix(self, matrix):
+        pass
+
+
+def _fake_slicer(np):
+    class Util:
+        @staticmethod
+        def arrayFromSegmentBinaryLabelmap(node, segmentId, reference=None):
+            mask = node.masks.get(segmentId)
+            return None if mask is None else mask.copy()
+
+        @staticmethod
+        def updateSegmentBinaryLabelmapFromArray(array, node, segmentId, reference):
+            node.masks[segmentId] = (np.asarray(array) != 0).astype(np.uint8)
+
+        @staticmethod
+        def arrayFromVolume(volume):
+            return np.zeros(volume.shape, np.int16)
+
+    class Slicer:
+        util = Util
+
+    return Slicer
+
+
+class _Vtk:
+    class vtkMatrix4x4:
+        def GetElement(self, r, c):
+            return float(r == c)
+
+
+class _LabelFile:
+    def __init__(self):
+        self.written = None
+
+    def write_class_stack(self, path, masks, names, affine, colors=None,
+                          complete_groups=None):
+        self.written = dict(zip(names, (m.copy() for m in masks)))
+
+    @staticmethod
+    def ras_to_lps(matrix):
+        return matrix
+
+
+def _d51_logic(np, assignment=True, extended=True, seed=True, shape=(4, 6, 6)):
+    """A ``SegQueue14Logic`` with the D51 methods, the four classes laid out and
+    (when ``seed``) the case's seed as a helper segment, as a fresh case has them."""
+    import sys
+
+    if str(REPO / "src") not in sys.path:
+        sys.path.append(str(REPO / "src"))
+    from segqueue14 import labels
+
+    cls = next(c for c in _classes() if c.name == "SegQueue14Logic")
+    body = [n for n in cls.body if isinstance(n, ast.FunctionDef) and n.name in _D51_METHODS]
+    assert {n.name for n in body} == set(_D51_METHODS)
+    helpers = [n for n in _tree().body if isinstance(n, ast.FunctionDef)
+               and n.name in ("_segmentIdIn", "_segmentHasContent")]
+    labelfile = _LabelFile()
+    namespace = {"slicer": _fake_slicer(np), "vtk": _Vtk, "labels": labels,
+                 "labelfile": labelfile, "inversecut": _inversecut(),
+                 "_geometryOf": lambda node: None}
+    module = ast.Module(body=helpers + [ast.ClassDef(
+        name="Logic", bases=[], keywords=[], body=body, decorator_list=[])],
+        type_ignores=[])
+    exec(compile(ast.fix_missing_locations(module), str(MODULE), "exec"), namespace)
+    logic = namespace["Logic"]()
+
+    class Project:
+        segments = labels.segment_specs()
+
+    logic.project = Project()
+    logic.assignment = object() if assignment else None
+    logic.extendedClasses, logic.caseExtendedMode = extended, False
+    logic.completeGroups = set()
+    logic.lastAddedExtended, logic.seedCopiesBlanked = [], []
+    logic.volumeNode = _Volume(shape)
+    logic.segmentationNode = node = _SegNode(shape)
+    for spec in labels.segment_specs():
+        node.segmentation.AddEmptySegment(spec.name, spec.name, spec.color)
+    logic.seedSegmentId = None
+    seedMask = np.zeros(shape, np.uint8)
+    seedMask[1:3, 1:5, 2] = 1
+    if seed:
+        node.segmentation.AddEmptySegment(SEED_ID, "~ vessel seed (not submitted)", (1, 1, 0))
+        node.masks[SEED_ID] = seedMask.copy()
+        logic.seedSegmentId = SEED_ID
+        logic.copySegmentIntoEveryClass(SEED_ID)  # D26: the four start as the seed
+    return logic, labels, labelfile, seedMask
+
+
+def test_extended_classes_start_as_hidden_seed_copies_on_an_own_seeded_case():
+    np = pytest.importorskip("numpy")
+    logic, labels, _, seed = _d51_logic(np)
+    # A draft's own extended class is never refilled.
+    node = logic.segmentationNode
+    node.segmentation.AddEmptySegment("D1", "D1", (0, 0, 1))
+    own = np.zeros_like(seed)
+    own[0, 0, 0] = 1
+    node.masks["D1"] = own.copy()
+
+    added = logic.addExtendedClasses(fromSeed=True)
+    assert added == 16 and "D1" not in logic.lastAddedExtended
+    for name in labels.EXTRA_NAMES:
+        if name == "D1":
+            assert np.array_equal(node.masks["D1"], own)
+            continue
+        assert np.array_equal(node.masks[name], seed), name
+        assert node.display.visible[name] is False, name
+    assert node.segmentation.GetSegment("PDA").label == labels.ALL_LABEL_VALUES["PDA"]
+    # The seed itself is untouched.
+    assert np.array_equal(node.masks[SEED_ID], seed)
+
+
+def test_at_open_the_classes_are_added_empty_and_filled_after_the_seed_loads():
+    open_case = ast.get_source_segment(_source(), _method("SegQueue14Logic", "openCase"))
+    assert "addedAtOpen = list(self.lastAddedExtended)" in open_case
+    assert open_case.index("addedAtOpen = list(") < open_case.index("_loadPrelabel(")
+    assert "if not self.resumedDraft and assignment.has_seed and addedAtOpen:" in open_case
+    assert "self.fillExtendedFromSeed(addedAtOpen)" in open_case
+    template = ast.get_source_segment(_source(), _method("SegQueue14Logic", "_applyTemplate"))
+    assert "self.lastAddedExtended = []" in template
+    assert "self.addExtendedClasses()" in template and "fromSeed" not in template
+
+
+@pytest.mark.parametrize("assignment,seed", [(False, True), (True, False)],
+                         ids=["reviewer", "seedless"])
+def test_extended_classes_stay_empty_for_a_reviewer_and_on_a_seedless_case(assignment, seed):
+    np = pytest.importorskip("numpy")
+    logic, labels, _, _ = _d51_logic(np, assignment=assignment, seed=seed)
+    assert logic.addExtendedClasses(fromSeed=True) == 17
+    node = logic.segmentationNode
+    assert all(name not in node.masks for name in labels.EXTRA_NAMES)
+
+
+def test_the_panel_seeds_only_the_annotators_own_case():
+    toggle = ast.get_source_segment(_source(), _method("SegQueue14Widget", "onToggleExtended"))
+    assert "addExtendedClasses(\n                    fromSeed=self.logic.assignment is not None)" \
+        in toggle
+    review = ast.get_source_segment(_source(), _method("SegQueue14Widget", "onOpenReview"))
+    assert "addExtendedClasses(fromSeed=False)" in review
+
+
+def test_toggle_off_removes_untouched_seed_copies_and_keeps_edited_ones():
+    np = pytest.importorskip("numpy")
+    logic, labels, _, seed = _d51_logic(np)
+    logic.addExtendedClasses(fromSeed=True)
+    node = logic.segmentationNode
+    trimmed = node.masks["D1"].copy()
+    trimmed[1, 1, 2] = 0
+    node.masks["D1"] = trimmed                        # cut down: work
+    node.masks["Stent"] = np.zeros_like(seed)         # erased: empty
+    grown = seed.copy()
+    grown[0, 0, 0] = 1
+    node.masks["PDA"] = grown                         # added to: work
+    removed, kept = logic.removeEmptyExtendedClasses()
+    assert kept == ["D1", "PDA"]
+    assert sorted(removed) == sorted(n for n in labels.EXTRA_NAMES if n not in kept)
+    # The four (seed copies all) and the seed are never removed by the toggle.
+    assert all(logic.segmentIdFor(n) for n in labels.NAMES)
+    assert node.segmentation.GetSegment(SEED_ID) is not None
+
+
+def test_export_blanks_untouched_seed_copies_but_not_the_four():
+    np = pytest.importorskip("numpy")
+    logic, labels, labelfile, seed = _d51_logic(np)
+    logic.addExtendedClasses(fromSeed=True)
+    node = logic.segmentationNode
+    trimmed = seed.copy()
+    trimmed[1, 1, 2] = 0
+    node.masks["D1"] = trimmed
+    counts, _, _ = logic.exportSubmission("unused.seg.nrrd")
+    written = labelfile.written
+    assert list(written) == labels.ALL_NAMES
+    n = int(seed.sum())
+    for name in labels.NAMES:                      # D26/D38: sent as they are
+        assert np.array_equal(written[name], seed) and counts[name] == n
+    assert np.array_equal(written["D1"], trimmed) and counts["D1"] == n - 1
+    blanked = [name for name in labels.EXTRA_NAMES if name != "D1"]
+    for name in blanked:
+        assert not written[name].any() and counts[name] == 0, name
+    assert logic.seedCopiesBlanked == [n for n in labels.ALL_NAMES if n in blanked]
+    # D47 Q3: the complete ticks are unchanged by it.
+    assert "seedCopiesBlanked" not in ast.get_source_segment(
+        _source(), _method("SegQueue14Logic", "completeGroupsForExport"))
+
+
+def test_without_a_seed_nothing_is_blanked_or_removed_as_a_copy():
+    np = pytest.importorskip("numpy")
+    logic, labels, labelfile, _ = _d51_logic(np, seed=False)
+    logic.addExtendedClasses(fromSeed=True)
+    node = logic.segmentationNode
+    painted = np.zeros(node.shape, np.uint8)
+    painted[0, 0, 0] = 1
+    node.masks["D2"] = painted
+    logic.exportSubmission("unused.seg.nrrd")
+    assert logic.seedCopiesBlanked == [] and labelfile.written["D2"].sum() == 1
+    assert logic.removeEmptyExtendedClasses()[1] == ["D2"]
+
+
+def test_one_helper_decides_what_is_an_untouched_seed_copy():
+    for name in ("removeEmptyExtendedClasses", "exportSubmission"):
+        body = ast.get_source_segment(_source(), _method("SegQueue14Logic", name))
+        assert "self.isUntouchedSeedCopy(" in body, name
+        assert "is_untouched_copy" not in body, name
+    helper = ast.get_source_segment(_source(), _method("SegQueue14Logic",
+                                                       "isUntouchedSeedCopy"))
+    assert "inversecut.is_untouched_copy(mask, seed)" in helper

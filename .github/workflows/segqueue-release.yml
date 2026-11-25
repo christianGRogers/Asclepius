@@ -177,9 +177,12 @@ jobs:
               "SegQueue14.py",
               "SegQueue.py",               # the stub that retires the 4-class module
               "SegQueue14Lib/updater.py",
+              "SegQueue14Lib/inversecut.py",
+              "SegQueue14Lib/SegmentEditorInverseCutEffect.py",   # D51
               "segqueue/release.py",
               "segqueue14/protocol.py",
               "Resources/Icons/SegQueue14.png",
+              "Resources/Icons/InverseCut.png",
               "Resources/Icons/wordmark-light.png",
               "Resources/Icons/wordmark-dark.png",
           ]

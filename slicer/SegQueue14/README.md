@@ -181,6 +181,32 @@ empty, grouped under their parent in the segment list, with show/hide per group:
   server used to refuse them with `not_an_annotator`); until it is deployed those
   accounts see an empty thread. Protocol stays 21.
 
+### Inverse cut, and extended classes start from the seed (0.25.0, D51)
+
+- **Inverse cut**, a new Segment Editor effect with its own icon beside Scissors in
+  the embedded editor (registered when the module loads). Hold the left button and
+  draw an outline in a slice view or the 3D view. On release the **selected
+  segment keeps only its voxels inside the outline**, extruded through the volume
+  along the view direction as Scissors does by default. If the selected segment is
+  empty and the case has a vessel seed, it becomes the seed's voxels inside the
+  outline instead. Other segments are untouched, the seed and the heart region
+  can never be cut, and it is one step in the editor's undo. A Python effect
+  (`SegQueue14Lib/SegmentEditorInverseCutEffect.py`) with the voxel arithmetic in
+  `SegQueue14Lib/inversecut.py`, numpy only and tested by pytest; the icon is
+  `Resources/Icons/InverseCut.png`.
+- **Extended classes start from the seed** on the annotator's own seeded case:
+  each class the toggle (or a case flagged for extended mode) adds is a hidden full
+  copy of the seed, as D26 does for the four. A resumed draft's classes are never
+  refilled, a seedless case still gets them empty, and classes a reviewer's panel
+  adds to a four-class read stay empty (D51 b).
+- **Toggle off** removes extended classes that are empty *or* still an untouched
+  copy of the seed, voxel for voxel; a class the annotator changed stays (D51 c).
+- **Submit:** an extended class that is still an untouched copy of the seed is
+  written as an empty channel, so a seed copy is never taken for a read (D51 d).
+  The four classes are submitted as they are (D26, D38), and the per-group
+  *Complete* ticks are unchanged (D47 Q3). The panel says how many classes went
+  empty this way. Module only: protocol stays 21, server unchanged.
+
 **The reviewer's case list** (0.18.0, #280) is sorted by submission time, newest
 first; rows with nothing submitted yet come last. The *Submitted (ET)* column shows
 that time in US Eastern time (America/Toronto, daylight saving included), e.g.

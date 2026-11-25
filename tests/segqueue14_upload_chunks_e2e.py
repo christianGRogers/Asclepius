@@ -90,6 +90,17 @@ def stored(client, fileDoc):
     return client._request("GET", f"file/{fileDoc['_id']}/download").content
 
 
+def girderSha512(fileDoc):
+    """The SHA-512 Girder computed of the bytes it stored. Girder 5 keeps it on the
+    file document but does not expose it over REST, so it is read from Mongo."""
+    from bson import ObjectId
+    from pymongo import MongoClient
+
+    db = MongoClient(os.environ["GIRDER_MONGO_URI"]).get_default_database()
+    doc = db.file.find_one({"_id": ObjectId(fileDoc["_id"])}, {"sha512": 1})
+    return (doc or {}).get("sha512")
+
+
 def proxy(upstream, limit):
     """An nginx stand-in: 413 for any body over ``limit``, else pass through."""
     counts = {"413": 0, "chunks": []}
@@ -186,7 +197,8 @@ def main(argv=None):
     try:
         doc = client.uploadFile(path, folder, name="accepted.seg.nrrd")
         check("the upload succeeds", doc.get("size") == size, repr(doc.get("size")))
-        check("Girder's SHA-512 of the stored file matches", doc.get("sha512") == sha512)
+        check("Girder's SHA-512 of the stored file matches", girderSha512(doc) == sha512,
+              repr(girderSha512(doc))[:20])
         check("the stored file reads back byte for byte", stored(client, doc) == data)
         check("in chunks of 768 KiB", client.uploadChunkBytes == client14.UPLOAD_CHUNK_BYTES)
     except SegQueue14Error as exc:
@@ -207,7 +219,8 @@ def main(argv=None):
         check("every chunk Girder took was at most 64 KiB",
               counts["chunks"] and max(counts["chunks"]) <= floor)
         check("the upload succeeds", doc.get("size") == size, repr(doc.get("size")))
-        check("Girder's SHA-512 of the stored file matches", doc.get("sha512") == sha512)
+        check("Girder's SHA-512 of the stored file matches", girderSha512(doc) == sha512,
+              repr(girderSha512(doc))[:20])
         check("the stored file reads back byte for byte", stored(client, doc) == data)
     except SegQueue14Error as exc:
         check("the upload behind the proxy succeeds", False, str(exc))

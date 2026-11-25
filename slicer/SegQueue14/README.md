@@ -181,6 +181,44 @@ empty, grouped under their parent in the segment list, with show/hide per group:
   server used to refuse them with `not_an_annotator`); until it is deployed those
   accounts see an empty thread. Protocol stays 21.
 
+### A material painted inside an artery keeps both (0.25.3, D39, D44)
+
+Reported on 0.25.2: overlapping classes could not be submitted, which an extended
+read needs. Stent, calcified and non-calcified plaque (D44) sit inside LM, LAD,
+LCx, RCA and their branches, and D39 saves every class whole, overlaps included.
+
+- **What it was not.** Nothing in submit, the export or the server refuses or
+  trims overlap: the class stack has one 0/1 channel per class, and the server
+  stores it as sent (D38). The module's own Segment Editor was not it either: in a
+  real Slicer 5.8.1 and 5.12.4 its "Modify other segments" stays at **Allow
+  overlap** through opening a case, the extended toggle, every effect and a
+  reviewer's submission, and Paint, Draw, Scissors (fill inside), Threshold, Draw
+  tube, Islands, Logical operators (copy, add) and Inverse cut all put a plaque
+  inside the LAD with every LAD voxel kept.
+- **Root cause.** Slicer's own **Segment Editor module** edits the same case through
+  a parameter node of its own, made with Slicer's default, **Overwrite all**. A
+  plaque painted there (or thresholded, filled, drawn) took its voxels out of the
+  LAD, so the overlap was gone before it reached a submission. The same default
+  applied to any Segment Editor node made after a scene clear, which is what
+  opening a submission for review does; the panel's node was only corrected
+  because the module set it again straight after. Reproduced on 5.8.1 and 5.12.4
+  (Threshold over the tree in the Segment Editor module left the LAD empty).
+- **Fix** (`SegQueue14Lib/overlap.py`). The module registers a scene *default node*
+  for the Segment Editor with Allow overlap (`SetOverwriteMode(OverwriteNone)`, still
+  the current call in 5.12, with the mode looked up by name as the fallback), so
+  every Segment Editor node made from then on starts there, the Segment Editor
+  module's included, also after a scene clear. Each case or submission opened (own
+  case, resumed draft, reopened or recalled read, a reviewer's submission) sets the
+  panel's node and the Segment Editor module's node to Allow overlap again.
+- **Your choice is kept.** Nothing watches the setting afterwards: pick another mode
+  in the Masking panel and it stays until the next case opens.
+- Tested: `tests/test_segqueue14_overlap.py`; `run_overlap` in
+  `tests/slicer_selftest14.py` (every effect above, own case and reviewer, the
+  Segment Editor module, a scene clear, the export as two overlapping channels),
+  which fails on 0.25.2. The server test of an extended read now checks the stored
+  stent and plaque channels overlap LAD and RCA, each whole. Protocol stays 21; no
+  server change.
+
 ### Inverse cut keeps the 3D view (0.25.2, D51)
 
 After an Inverse cut the cut class disappeared from the 3D view (with every other

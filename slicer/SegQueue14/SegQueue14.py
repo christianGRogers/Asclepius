@@ -54,6 +54,12 @@ What an annotator sees:
   four do (D26). A reviewer's added classes stay empty. Turning the toggle off
   removes untouched seed copies too, and an untouched seed copy is submitted as an
   empty channel.
+* **Overlap while editing** (D39, D44, 0.25.3): "Modify other segments: Allow
+  overlap" is the default for every Segment Editor node in the scene, Slicer's own
+  Segment Editor module's included, and is set on each case or submission opened,
+  so a stent or plaque painted inside an artery keeps the artery's voxels
+  (``SegQueue14Lib/overlap.py``). A different choice in the Masking panel is kept
+  until the next case opens.
 
 The server owns the protocol, local data is a lease, nothing the client says is
 trusted: those three decisions are the live module's and are kept unchanged.
@@ -133,11 +139,12 @@ from SegQueue14Lib import (
 )
 from SegQueue14Lib import SegQueue14Client as SegQueueClient
 from SegQueue14Lib import inversecut, surfaces
+from SegQueue14Lib import overlap
 from SegQueue14Lib import SegQueue14Error as SegQueueError
 
 #: Continues SegQueue's numbering (0.13.0 was the last 4-class release). The
 #: release tag is ``segqueue-v`` + this; bump it to publish.
-__version__ = "0.25.2"
+__version__ = "0.25.3"
 
 #: Where the module's help points.
 HELP_URL = "https://github.com/christianGRogers/Asclepius"
@@ -3070,7 +3077,13 @@ class SegQueue14Widget(ScriptedLoadableModuleWidget):
             self.editorWidget.setSourceVolumeNodeSelectorVisible(False)
         except AttributeError:  # pragma: no cover - Slicer < 5.2 naming
             self.editorWidget.setMasterVolumeNodeSelectorVisible(False)
+        # 0.25.3 (D39, D44): every Segment Editor node the scene makes from now
+        # on -- this one, Slicer's own Segment Editor module's, one made again
+        # after a scene clear -- starts at "Allow overlap", not Slicer's
+        # "Overwrite all", so a material painted inside an artery keeps both.
+        overlap.allow_overlap_by_default(slicer.mrmlScene, slicer.vtkMRMLSegmentEditorNode)
         self.editorNode = slicer.mrmlScene.AddNewNodeByClass("vtkMRMLSegmentEditorNode")
+        overlap.allow_overlap(self.editorNode, slicer.vtkMRMLSegmentEditorNode)
         self.editorWidget.setMRMLSegmentEditorNode(self.editorNode)
         layout.addWidget(self.editorWidget)
 
@@ -4744,7 +4757,9 @@ class SegQueue14Widget(ScriptedLoadableModuleWidget):
                 and slicer.mrmlScene.GetNodeByID(node.GetID()) is not None):
             return node
         self.editorWidget.setMRMLScene(slicer.mrmlScene)
+        overlap.allow_overlap_by_default(slicer.mrmlScene, slicer.vtkMRMLSegmentEditorNode)
         self.editorNode = slicer.mrmlScene.AddNewNodeByClass("vtkMRMLSegmentEditorNode")
+        overlap.allow_overlap(self.editorNode, slicer.vtkMRMLSegmentEditorNode)
         self.editorWidget.setMRMLSegmentEditorNode(self.editorNode)
         return self.editorNode
 
@@ -4760,12 +4775,18 @@ class SegQueue14Widget(ScriptedLoadableModuleWidget):
         except AttributeError:  # pragma: no cover - Slicer < 5.2 naming
             self.editorWidget.setMasterVolumeNode(volumeNode)
 
-        if segmentationNode is not None and self.editorNode is not None:
-            # Branches are disjoint anatomy, so painting one must never erase
-            # another. The default overwrites, and an annotator who finds their
-            # LAD half gone after working on the LCx has no way to know why.
-            self.editorNode.SetOverwriteMode(
-                slicer.vtkMRMLSegmentEditorNode.OverwriteNone)
+        if segmentationNode is not None:
+            # "Modify other segments: Allow overlap" (D39, D44): painting one class
+            # never erases another. Slicer's default is "Overwrite all", which took
+            # the LAD's voxels wherever plaque was painted inside it. Set here, once
+            # per case or submission opened -- own case, resumed draft, reopened or
+            # recalled read, a reviewer's submission, after a scene clear -- on this
+            # panel's node and on Slicer's own Segment Editor module's node, which
+            # edits the same case (0.25.3: that one was left at "Overwrite all").
+            # Not enforced afterwards: an annotator who picks another mode in the
+            # Masking panel keeps it until the next case opens.
+            overlap.allow_overlap_everywhere(
+                slicer.mrmlScene, slicer.vtkMRMLSegmentEditorNode, [self.editorNode])
 
     # -------------------------------------------------------------- actions
 

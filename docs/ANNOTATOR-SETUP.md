@@ -219,7 +219,10 @@ four vessels. Otherwise they start empty:
   them only when that is true. They are optional.
 - Some cases open with the box already on and a note asking you to use the
   extended classes. Please do.
-- Paint stent and plaque where you see them. They may overlap the vessel.
+- Paint stent and plaque where you see them. They may overlap the vessel. From
+  SegQueue 0.25.3 the editor keeps both: under **Masking**, *Modify other segments*
+  is **Allow overlap** whenever a case opens, also in Slicer's own Segment Editor
+  module. If you change it, it stays changed until the next case.
 - Hover over a group name in the box to see what goes in each class. The
   **Show** ticks hide or show a whole group.
 - Turning the box off removes the extended classes you left empty or did not

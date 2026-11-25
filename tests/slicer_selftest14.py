@@ -42,6 +42,14 @@ Mark/Unmark button are hidden on an older server; marking asks first, saying how
 many annotators hold the case, with an optional reason; unmarking asks; a refusal
 is the server's sentence; the benchmark's button is disabled.
 
+0.25.3 (``run_overlap``, D39, D44): a material painted inside an artery keeps both
+classes. "Calcified plaque" goes inside a trimmed LAD through Paint, Draw, Scissors
+(fill inside), Threshold, Draw tube (when installed), Islands, Logical operators
+(copy, add) and Inverse cut, on an own case and as a reviewer editing a submission,
+and the LAD keeps every voxel; Slicer's own Segment Editor module, a node made after
+a scene clear and the panel all start at "Allow overlap"; a mode the annotator
+picks is kept until the next case; the export has two overlapping channels.
+
 With ``SEGQUEUE_SELFTEST_INSTALLED=<folder>`` it tests the module Slicer loaded
 from that installed folder instead of the checkout.
 
@@ -1853,10 +1861,375 @@ def run_defect_cases():
         slicer.util.confirmYesNoDisplay = realConfirm
 
 
+def run_overlap():
+    """0.25.3 (D39, D44): a material painted inside an artery keeps both classes.
+
+    Through the module's own panel, in a real Red view and 3D-free effects: Paint,
+    Draw, Scissors (fill inside), Threshold, Draw tube (when installed), Islands,
+    Logical operators (copy, add) and Inverse cut each put "Calcified plaque"
+    inside a trimmed LAD and leave every LAD voxel. The same as a reviewer editing
+    an opened submission. Slicer's own Segment Editor module, which edits the same
+    case and used to start at "Overwrite all", starts at "Allow overlap"; so does
+    a node made after a scene clear. A deliberate choice in the Masking panel is
+    kept until the next case. A painted plaque is exported as two overlapping
+    channels.
+    """
+    import shutil
+
+    import numpy as np
+    import qt
+    import vtk
+
+    import slicer
+
+    if not os.environ.get("SEGQUEUE_SELFTEST_INSTALLED"):
+        sys.path.insert(0, os.path.join(REPO, "src"))
+        sys.path.insert(0, os.path.join(REPO, "slicer", "SegQueue14"))
+    import SegQueue14 as module
+    from SegQueue14Lib import overlap
+
+    from segqueue.protocol import ProjectConfig
+    from segqueue14 import labelfile, labels
+
+    say("--- 0.25.3: a material inside an artery keeps both (D39, D44)")
+    E = slicer.vtkMRMLSegmentEditorNode
+    ALLOW = overlap.allow_overlap_mode(E)
+    check("'Allow overlap' is OverwriteNone in this Slicer",
+          ALLOW is not None and ALLOW == E.OverwriteNone, ALLOW)
+    PLAQUE = "Calcified plaque"
+
+    # A modal dialog would stop the run for good: answer it, and say what it was.
+    def closeModals():
+        dialog = slicer.app.activeModalWidget()
+        if dialog is not None:
+            say("  (answered a dialog:", dialog.windowTitle,
+                repr(getattr(dialog, "text", ""))[:200], ")")
+            dialog.accept()
+
+    modalTimer = qt.QTimer()
+    modalTimer.setInterval(300)
+    modalTimer.timeout.connect(closeModals)
+    modalTimer.start()
+    realError = slicer.util.errorDisplay
+    slicer.util.errorDisplay = lambda *a, **k: say("  (error shown:", a[:1], ")")
+    layoutManager, viewport = _ensureLayout(slicer, qt)
+    tmp = tempfile.mkdtemp()
+    try:
+        widget = module.SegQueue14Widget()
+        widget.setup()
+        fresh = slicer.mrmlScene.AddNewNodeByClass("vtkMRMLSegmentEditorNode")
+        check("once the panel is built, a new Segment Editor node starts at Allow overlap",
+              fresh.GetOverwriteMode() == ALLOW, fresh.GetOverwriteMode())
+        slicer.mrmlScene.RemoveNode(fresh)
+
+        # Slicer's own Segment Editor module, if it can be built here, left at
+        # "Overwrite all" before the case opens, as an earlier session would.
+        seEditor = None
+        try:
+            seEditor = slicer.modules.segmenteditor.widgetRepresentation().self().editor
+        except Exception:
+            say("SKIP the Segment Editor module: not available here", traceback.format_exc()[-200:])
+        if seEditor is not None:
+            check("  the Segment Editor module's node starts at Allow overlap",
+                  seEditor.mrmlSegmentEditorNode().GetOverwriteMode() == ALLOW,
+                  seEditor.mrmlSegmentEditorNode().GetOverwriteMode())
+            seEditor.mrmlSegmentEditorNode().SetOverwriteMode(E.OverwriteAllSegments)
+
+        # An own seeded case through the panel's normal path, extended classes on.
+        logic = widget.logic
+        logic.project = ProjectConfig(name="selftest", instructions=labels.INSTRUCTIONS,
+                                      segments=labels.segment_specs())
+        logic.extendedClasses = True
+        seed = np.zeros(SHAPE, np.uint8)
+        for lo, hi in TUBES.values():
+            seed[5:35, lo:hi, lo:hi] = 1
+
+        def openCase(assignment, progress=None):
+            fresh, volume = _seededCase(slicer, np, module, labels, tmp, "overlap", seed, True)
+            for name in ("volumeNode", "segmentationNode", "seedSegmentId",
+                         "seedPrefilledExtended", "lastAddedExtended", "_sessionStart",
+                         "cache"):
+                setattr(logic, name, getattr(fresh, name))
+            logic.assignment = assignment
+            slicer.util.setSliceViewerLayers(background=volume, fit=True)
+
+        logic.openCase = openCase
+        widget._openAssignment(_Assignment(
+            assignment_id="overlap", case_name="overlap", attempt=1, has_seed=True,
+            has_prelabel=False, reviewer_comment="", deadline=None))
+        editor, editorNode = widget.editorWidget, widget.editorNode
+        check("an own case opens with the panel at Allow overlap",
+              editorNode.GetOverwriteMode() == ALLOW and editorNode.GetMaskMode() == 0,
+              (editorNode.GetOverwriteMode(), editorNode.GetMaskMode()))
+        if seEditor is not None:
+            check("  and the Segment Editor module's node too",
+                  seEditor.mrmlSegmentEditorNode().GetOverwriteMode() == ALLOW,
+                  seEditor.mrmlSegmentEditorNode().GetOverwriteMode())
+
+        results = _materialInsideArtery(slicer, np, vtk, qt, layoutManager, widget,
+                                        logic, editor, editorNode, PLAQUE, ALLOW, "own case")
+
+        # The Segment Editor module on the same case: Threshold over the tree.
+        if seEditor is not None:
+            node, volume = logic.segmentationNode, logic.volumeNode
+            _resetClasses(slicer, np, logic, PLAQUE)
+            seEditor.setSegmentationNode(node)
+            seEditor.setSourceVolumeNode(volume)
+            seEditor.mrmlSegmentEditorNode().SetSelectedSegmentID(logic.segmentIdFor(PLAQUE))
+            seEditor.setActiveEffectByName("Threshold")
+            effect = seEditor.activeEffect()
+            effect.setParameter("MinimumThreshold", "300")
+            effect.setParameter("MaximumThreshold", "500")
+            effect.self().onApply()
+            seEditor.setActiveEffectByName("")
+            lad, plaque = _voxels(slicer, logic, "LAD"), _voxels(slicer, logic, PLAQUE)
+            check("  Threshold in Slicer's Segment Editor module keeps the LAD whole",
+                  int(lad.sum()) == TUBE_VOXELS and (plaque & lad).sum() == TUBE_VOXELS,
+                  (int(lad.sum()), int((plaque & lad).sum())))
+            seEditor.setSegmentationNode(None)
+
+        # A deliberate choice in the Masking panel is the annotator's until the next case.
+        editorNode.SetOverwriteMode(E.OverwriteVisibleSegments)
+        widget.onToggleExtended(False)
+        widget.onToggleExtended(True)
+        editor.setActiveEffectByName("Paint")
+        editor.setActiveEffectByName("")
+        check("a mode chosen in the Masking panel is kept (extended toggle, an effect)",
+              editorNode.GetOverwriteMode() == E.OverwriteVisibleSegments,
+              editorNode.GetOverwriteMode())
+        widget._bindEditor(logic.segmentationNode, logic.volumeNode)
+        check("  until the next case or submission is bound",
+              editorNode.GetOverwriteMode() == ALLOW, editorNode.GetOverwriteMode())
+
+        # Export: plaque painted inside the LAD is two overlapping channels.
+        _resetClasses(slicer, np, logic, PLAQUE)
+        _paintPlaque(slicer, np, vtk, layoutManager, logic, editor, editorNode, PLAQUE)
+        path = os.path.join(tmp, "overlap.seg.nrrd")
+        logic.exportSubmission(path)
+        data = labelfile.read_class_stack(path)
+        channels = dict(zip(data["names"], data["masks"]))
+        lad, plaque = channels["LAD"] != 0, channels[PLAQUE] != 0
+        check("the export has the LAD whole and the plaque inside it, overlapping",
+              int(lad.sum()) == TUBE_VOXELS and plaque.any()
+              and (plaque & lad).sum() == plaque.sum(),
+              (int(lad.sum()), int(plaque.sum()), int((plaque & lad).sum())))
+        volumePath = os.path.join(tmp, "overlap-ct.nrrd")
+        slicer.util.saveNode(logic.volumeNode, volumePath)
+
+        # A reviewer editing that submission: the scene is cleared and reloaded.
+        logic.assignment = None
+
+        class ReviewClient:
+            loggedIn = False
+
+            def downloadReviewFile(self, submissionId, kind, out):
+                shutil.copy(volumePath if kind == "volume" else path, out)
+
+        logic.client = ReviewClient()
+        entry = {"submissionId": "s-overlap", "caseId": "c-overlap", "caseName": "overlap",
+                 "volumeName": "overlap-ct.nrrd", "submissionName": "overlap.seg.nrrd",
+                 "extended": True, "annotator": {"login": "selftest"}}
+        widget._selectedSubmission = lambda: entry
+        widget.onRefreshNotes = lambda *a, **k: None
+        if seEditor is not None:
+            seEditor.mrmlSegmentEditorNode().SetOverwriteMode(E.OverwriteAllSegments)
+        widget.onOpenReview()
+        editorNode = widget.editorNode
+        check("a reviewer's submission opens with the panel at Allow overlap, after the clear",
+              logic.segmentationNode is not None and editorNode.GetScene() is not None
+              and editorNode.GetOverwriteMode() == ALLOW, editorNode.GetOverwriteMode())
+        if seEditor is not None:
+            node = slicer.mrmlScene.GetSingletonNode("SegmentEditor", "vtkMRMLSegmentEditorNode")
+            check("  and the Segment Editor module's node too",
+                  node is not None and node.GetOverwriteMode() == ALLOW,
+                  None if node is None else node.GetOverwriteMode())
+        reviewed = _materialInsideArtery(slicer, np, vtk, qt, layoutManager, widget, logic,
+                                         widget.editorWidget, editorNode, PLAQUE, ALLOW,
+                                         "reviewer", effects=("Paint", "Threshold", "Logical copy"))
+        results.update(reviewed)
+
+        # After another scene clear, before anything is bound.
+        slicer.mrmlScene.Clear(False)
+        again = slicer.mrmlScene.AddNewNodeByClass("vtkMRMLSegmentEditorNode")
+        check("a Segment Editor node made after a scene clear starts at Allow overlap",
+              again.GetOverwriteMode() == ALLOW, again.GetOverwriteMode())
+        try:
+            widget.cleanup()
+        except Exception:
+            pass
+    except Exception:
+        check("the overlap section runs", False, traceback.format_exc())
+    finally:
+        modalTimer.stop()
+        slicer.util.errorDisplay = realError
+        if viewport is not None:
+            viewport.hide()
+
+
+def _voxels(slicer, logic, name):
+    return slicer.util.arrayFromSegmentBinaryLabelmap(
+        logic.segmentationNode, logic.segmentIdFor(name), logic.volumeNode) > 0
+
+
+def _resetClasses(slicer, np, logic, material):
+    """Each vessel class cut to its own tube; the material empty and shown."""
+    for name, (lo, hi) in TUBES.items():
+        keep = np.zeros(SHAPE, np.uint8)
+        keep[5:35, lo:hi, lo:hi] = 1
+        slicer.util.updateSegmentBinaryLabelmapFromArray(
+            keep, logic.segmentationNode, logic.segmentIdFor(name), logic.volumeNode)
+    slicer.util.updateSegmentBinaryLabelmapFromArray(
+        np.zeros(SHAPE, np.uint8), logic.segmentationNode, logic.segmentIdFor(material),
+        logic.volumeNode)
+    # Shown, as an annotator shows it before painting (the editor asks otherwise).
+    logic.segmentationNode.GetDisplayNode().SetSegmentVisibility(
+        logic.segmentIdFor(material), True)
+
+
+def _redView(slicer, np, vtk, layoutManager, volume):
+    """The Red view on the LAD at slice 20, and ``onScreen(i, j)`` for it."""
+    layoutManager.setLayout(slicer.vtkMRMLLayoutNode.SlicerLayoutOneUpRedSliceView)
+    slicer.app.processEvents()
+    red = layoutManager.sliceWidget("Red")
+    sliceNode = red.mrmlSliceNode()
+    red.sliceLogic().FitSliceToAll()
+    ijkToRas = vtk.vtkMatrix4x4()
+    volume.GetIJKToRASMatrix(ijkToRas)
+    rasOf = _matrixOf(np, ijkToRas)
+    sliceNode.JumpSliceByCentering(*(rasOf @ [21, 21, 20, 1])[:3])
+    slicer.app.processEvents()
+
+    def onScreen(i, j):
+        xy = np.linalg.inv(_matrixOf(np, sliceNode.GetXYToRAS())) @ (rasOf @ [i, j, 20, 1])
+        return xy[0], xy[1]
+
+    return red.sliceView().interactor(), onScreen, rasOf
+
+
+def _paintPlaque(slicer, np, vtk, layoutManager, logic, editor, editorNode, material):
+    interactor, onScreen, _ = _redView(slicer, np, vtk, layoutManager, logic.volumeNode)
+    editorNode.SetSelectedSegmentID(logic.segmentIdFor(material))
+    editor.setActiveEffectByName("Paint")
+    effect = editor.activeEffect()
+    effect.setCommonParameter("BrushDiameterIsRelative", 0)
+    effect.setCommonParameter("BrushAbsoluteDiameter", 1.2)
+    effect.setCommonParameter("BrushSphere", 0)
+    centre = onScreen(21, 21)
+    _drag(vtk, interactor, [centre, (centre[0] + 1, centre[1])])
+    slicer.app.processEvents()
+    editor.setActiveEffectByName("")
+
+
+_OVERLAP_EFFECTS = ("Paint", "Draw", "Scissors", "Threshold", "Draw tube", "Islands",
+                    "Logical copy", "Logical add", "Inverse cut")
+
+
+def _materialInsideArtery(slicer, np, vtk, qt, layoutManager, widget, logic, editor,
+                          editorNode, material, allow, who, effects=_OVERLAP_EFFECTS):
+    """Each effect puts ``material`` inside the trimmed LAD; the LAD keeps every voxel."""
+    volume = logic.volumeNode
+    interactor, onScreen, rasOf = _redView(slicer, np, vtk, layoutManager, volume)
+    square = [onScreen(i, j) for i, j in
+              [(19.6, 19.6), (22.4, 19.6), (22.4, 22.4), (19.6, 22.4)]]
+    seed = np.zeros(SHAPE, np.uint8)
+    for lo, hi in TUBES.values():
+        seed[5:35, lo:hi, lo:hi] = 1
+    node = logic.segmentationNode
+    materialId = logic.segmentIdFor(material)
+
+    def paint():
+        _paintPlaque(slicer, np, vtk, layoutManager, logic, editor, editorNode, material)
+
+    def draw():
+        editor.setActiveEffectByName("Draw")
+        _drag(vtk, interactor, square)
+        interactor.SetKeySym("a")                 # Draw's "apply" key
+        interactor.InvokeEvent(vtk.vtkCommand.KeyPressEvent)
+
+    def scissors():
+        editor.setActiveEffectByName("Scissors")
+        editor.activeEffect().setParameter("Operation", "FillInside")
+        editor.activeEffect().setParameter("Shape", "FreeForm")
+        _drag(vtk, interactor, square)
+
+    def threshold():
+        editor.setActiveEffectByName("Threshold")
+        editor.activeEffect().setParameter("MinimumThreshold", "300")
+        editor.activeEffect().setParameter("MaximumThreshold", "500")
+        editor.activeEffect().self().onApply()
+
+    def drawTube():
+        editor.setActiveEffectByName("Draw tube")
+        tube = editor.activeEffect().self()
+        if tube.segmentMarkupNode is None:
+            tube.createNewMarkupNode()
+        tube.logic.radius = 0.6
+        for k in (8, 15, 22):
+            tube.segmentMarkupNode.AddControlPoint(vtk.vtkVector3d(*(rasOf @ [21, 21, k, 1])[:3]))
+        slicer.app.processEvents()
+        tube.onApply()
+
+    def islands():
+        # A stroke left in two pieces inside the LAD: keep the larger.
+        pieces = np.zeros(SHAPE, np.uint8)
+        pieces[10:20, 20:23, 20:23] = 1
+        pieces[25:27, 20:23, 20:23] = 1
+        slicer.util.updateSegmentBinaryLabelmapFromArray(pieces, node, materialId, volume)
+        editor.setActiveEffectByName("Islands")
+        editor.activeEffect().setParameter("Operation", "KEEP_LARGEST_ISLAND")
+        editor.activeEffect().setParameter("MinimumSize", "1")
+        editor.activeEffect().self().onApply()
+
+    def logical(operation):
+        def apply():
+            editor.setActiveEffectByName("Logical operators")
+            editor.activeEffect().setParameter("Operation", operation)
+            editor.activeEffect().setParameter("ModifierSegmentID", logic.segmentIdFor("LAD"))
+            editor.activeEffect().self().onApply()
+        return apply
+
+    def inverseCut():
+        # An own seeded case's material starts as the seed (D51): cut it to the LAD.
+        slicer.util.updateSegmentBinaryLabelmapFromArray(seed, node, materialId, volume)
+        editor.setActiveEffectByName("Inverse cut")
+        _drag(vtk, interactor, square)
+
+    run = {"Paint": paint, "Draw": draw, "Scissors": scissors, "Threshold": threshold,
+           "Draw tube": drawTube, "Islands": islands, "Logical copy": logical("COPY"),
+           "Logical add": logical("UNION"), "Inverse cut": inverseCut}
+    results = {}
+    for name in effects:
+        effectName = {"Logical copy": "Logical operators", "Logical add": "Logical operators",
+                      "Scissors": "Scissors"}.get(name, name)
+        if editor.effectByName(effectName) is None:
+            say("SKIP", who, name, "-- not in this Slicer's editor")
+            continue
+        try:
+            _resetClasses(slicer, np, logic, material)
+            editorNode.SetSelectedSegmentID(materialId)
+            slicer.app.processEvents()
+            run[name]()
+            slicer.app.processEvents()
+            lad, plaque = _voxels(slicer, logic, "LAD"), _voxels(slicer, logic, material)
+            ok = int(lad.sum()) == TUBE_VOXELS and bool((plaque & lad).any())
+            results[name] = ok
+            check("{}: {} puts the plaque inside the LAD and keeps the LAD whole".format(
+                who, name), ok, (int(lad.sum()), int(plaque.sum()), int((plaque & lad).sum()),
+                                 editorNode.GetOverwriteMode()))
+            check("  and leaves the panel at Allow overlap",
+                  editorNode.GetOverwriteMode() == allow, editorNode.GetOverwriteMode())
+        except Exception:
+            results[name] = False
+            check("{}: {} runs".format(who, name), False, traceback.format_exc())
+        finally:
+            editor.setActiveEffectByName("")
+    return results
+
+
 #: ``SEGQUEUE_SELFTEST_ONLY=run_d51,...`` runs only those parts (for a quick local run).
 _ONLY = [name for name in os.environ.get("SEGQUEUE_SELFTEST_ONLY", "").split(",") if name]
 for part in (run, run_extended, run_d47, run_d51, run_compare, run_my_submissions,
-             run_defect_cases):
+             run_defect_cases, run_overlap):
     if _ONLY and part.__name__ not in _ONLY:
         continue
     try:

@@ -42,13 +42,17 @@ Mark/Unmark button are hidden on an older server; marking asks first, saying how
 many annotators hold the case, with an optional reason; unmarking asks; a refusal
 is the server's sentence; the benchmark's button is disabled.
 
-0.25.3 (``run_overlap``, D39, D44): a material painted inside an artery keeps both
+0.25.4 (``run_overlap``, D52, D39, D44): a material painted inside an artery keeps both
 classes. "Calcified plaque" goes inside a trimmed LAD through Paint, Draw, Scissors
 (fill inside), Threshold, Draw tube (when installed), Islands, Logical operators
 (copy, add) and Inverse cut, on an own case and as a reviewer editing a submission,
 and the LAD keeps every voxel; Slicer's own Segment Editor module, a node made after
 a scene clear and the panel all start at "Allow overlap"; a mode the annotator
-picks is kept until the next case; the export has two overlapping channels.
+picks is kept until the next case; the export has two overlapping channels. D52:
+on a seeded case the materials start with 0 voxels and the branches as seed copies;
+plaque painted inside the LAD is submitted as plaque, overlapping it; selecting a
+hidden class (own case and reviewer) shows it and only it, with no "segment is
+hidden" question, and the first paint stroke on it lands.
 
 With ``SEGQUEUE_SELFTEST_INSTALLED=<folder>`` it tests the module Slicer loaded
 from that installed folder instead of the checkout.
@@ -668,11 +672,13 @@ def run_extended():
                   [s.name for s in resumed.classSpecs()] == labels.ALL_NAMES)
         slicer.mrmlScene.RemoveNode(resumed.segmentationNode)
 
-    # 7. Toggle on from the start: the seed fills all 21 (D51; D44 had the 17 empty).
+    # 7. Toggle on from the start: the seed fills the four and the 14 branches
+    # (D51); the three materials start empty (D52).
     fresh, volume2 = _seededCase(slicer, np, module, labels, tmp, "fresh", seed, True)
     got = _countsOf(slicer, fresh.segmentationNode, volume2, labels.ALL_NAMES, segIn)
-    check("with the toggle on a seeded case opens with all 21 classes seeded (D51)",
-          got == {n: nSeed for n in labels.ALL_NAMES}, got)
+    check("with the toggle on a seeded case opens with the 18 vessel and branch classes "
+          "seeded (D51) and the materials empty (D52)",
+          got == {n: 0 if n in labels.MATERIALS else nSeed for n in labels.ALL_NAMES}, got)
 
 
 def run_d51():
@@ -716,16 +722,20 @@ def run_d51():
     except Exception:
         check("  with its own icon", False, traceback.format_exc())
 
-    # 2. Own seeded case, toggle on: the 17 are hidden seed copies.
+    # 2. Own seeded case, toggle on: the 14 branches are hidden seed copies; the
+    # three materials start empty, with 0 voxels (D52).
+    branches = [n for n in labels.EXTRA_NAMES if n not in labels.MATERIALS]
     logic, volume = _seededCase(slicer, np, module, labels, tmp, "own", seed, True)
     node = logic.segmentationNode
     got = _countsOf(slicer, node, volume, labels.EXTRA_NAMES, segIn)
-    check("an own seeded case's extended classes start as the seed",
-          got == {n: nSeed for n in labels.EXTRA_NAMES}
-          and logic.seedPrefilledExtended == 17, got)
+    check("an own seeded case's branch classes start as the seed",
+          {n: got[n] for n in branches} == {n: nSeed for n in branches}
+          and logic.seedPrefilledExtended == 14, (got, logic.seedPrefilledExtended))
+    check("  and its materials start empty, with 0 voxels (D52)",
+          {n: got[n] for n in labels.MATERIALS} == {n: 0 for n in labels.MATERIALS}, got)
     display = node.GetDisplayNode()
     check("  hidden", not any(display.GetSegmentVisibility(segIn(node, n))
-                              for n in labels.EXTRA_NAMES))
+                              for n in branches))
 
     # 3. Inverse cut through the real path (0.25.1): a real Red slice view and 3D
     # view, an oblique CT, and the mouse driven through the views' interactors.
@@ -736,7 +746,8 @@ def run_d51():
     finally:
         editor.setActiveEffectByName("")
 
-    # 4. Toggle off: untouched seed copies go, a trimmed D1 stays.
+    # 4. Toggle off: untouched seed copies and the empty materials go, a trimmed
+    # D1 stays.
     d1 = slicer.util.arrayFromSegmentBinaryLabelmap(node, segIn(node, "D1"), volume).copy()
     d1[5:10] = 0
     slicer.util.updateSegmentBinaryLabelmapFromArray(d1, node, segIn(node, "D1"), volume)
@@ -753,12 +764,14 @@ def run_d51():
     check("  and the classes stay in the 3D view",
           inThreeD("LAD") and inThreeD("D1"), (inThreeD("LAD"), inThreeD("D1")))
 
-    # 5. On again: the 16 come back as seed copies; submit sends them empty.
+    # 5. On again: the 13 branches come back as seed copies, the materials empty;
+    # submit sends them all empty.
     logic.extendedClasses = True
-    check("toggling on again seeds the 16 new ones, not D1",
+    check("toggling on again adds the 16 new ones, seeds the branches, not D1, and "
+          "leaves the materials empty",
           logic.addExtendedClasses(fromSeed=True) == 16
-          and _countsOf(slicer, node, volume, ["D1", "PDA"], segIn)
-          == {"D1": int(d1.sum()), "PDA": nSeed})
+          and _countsOf(slicer, node, volume, ["D1", "PDA", "Stent"], segIn)
+          == {"D1": int(d1.sum()), "PDA": nSeed, "Stent": 0})
     check("  and the 3D view keeps the classes, the new ones included, without "
           "Show in 3D", inThreeD("LAD") and inThreeD("D1") and inThreeD("PDA"),
           (inThreeD("LAD"), inThreeD("D1"), inThreeD("PDA")))
@@ -770,7 +783,9 @@ def run_d51():
     want["D1"] = int(d1.sum())
     check("export sends untouched seed copies empty, the four and D1 as they are",
           written == want and counts == want
-          and len(logic.seedCopiesBlanked) == 16, written)
+          and len(logic.seedCopiesBlanked) == 13
+          and not set(logic.seedCopiesBlanked) & set(labels.MATERIALS),
+          (written, logic.seedCopiesBlanked))
 
     # 6. A reviewer's added classes stay empty, seed in the scene or not.
     logic.assignment = None
@@ -1862,7 +1877,7 @@ def run_defect_cases():
 
 
 def run_overlap():
-    """0.25.3 (D39, D44): a material painted inside an artery keeps both classes.
+    """0.25.4 (D52, D39, D44): a material painted inside an artery keeps both classes.
 
     Through the module's own panel, in a real Red view and 3D-free effects: Paint,
     Draw, Scissors (fill inside), Threshold, Draw tube (when installed), Islands,
@@ -1873,6 +1888,11 @@ def run_overlap():
     a node made after a scene clear. A deliberate choice in the Masking panel is
     kept until the next case. A painted plaque is exported as two overlapping
     channels.
+
+    D52: the seeded case's materials start empty and its branches as the seed;
+    the plaque painted inside the LAD is submitted as plaque; selecting a hidden
+    class shows it (and nothing else), and the first stroke on it lands, with no
+    "segment is hidden" question -- on the own case and as a reviewer.
     """
     import shutil
 
@@ -1891,7 +1911,7 @@ def run_overlap():
     from segqueue.protocol import ProjectConfig
     from segqueue14 import labelfile, labels
 
-    say("--- 0.25.3: a material inside an artery keeps both (D39, D44)")
+    say("--- 0.25.4: a material inside an artery keeps both (D52, D39, D44)")
     E = slicer.vtkMRMLSegmentEditorNode
     ALLOW = overlap.allow_overlap_mode(E)
     check("'Allow overlap' is OverwriteNone in this Slicer",
@@ -1899,11 +1919,14 @@ def run_overlap():
     PLAQUE = "Calcified plaque"
 
     # A modal dialog would stop the run for good: answer it, and say what it was.
+    dialogs = []
+
     def closeModals():
         dialog = slicer.app.activeModalWidget()
         if dialog is not None:
-            say("  (answered a dialog:", dialog.windowTitle,
-                repr(getattr(dialog, "text", ""))[:200], ")")
+            text = repr(getattr(dialog, "text", ""))[:200]
+            dialogs.append(text)
+            say("  (answered a dialog:", dialog.windowTitle, text, ")")
             dialog.accept()
 
     modalTimer = qt.QTimer()
@@ -1952,6 +1975,8 @@ def run_overlap():
                 setattr(logic, name, getattr(fresh, name))
             logic.assignment = assignment
             slicer.util.setSliceViewerLayers(background=volume, fit=True)
+            # As openCase does on a seeded case (D26): every class starts hidden.
+            logic.setClassesVisible(False)
 
         logic.openCase = openCase
         widget._openAssignment(_Assignment(
@@ -1965,6 +1990,32 @@ def run_overlap():
             check("  and the Segment Editor module's node too",
                   seEditor.mrmlSegmentEditorNode().GetOverwriteMode() == ALLOW,
                   seEditor.mrmlSegmentEditorNode().GetOverwriteMode())
+
+        # D52: the materials start empty, the branches as the seed.
+        segIn = module._segmentIdIn
+        nSeed = int(seed.sum())
+        got = _countsOf(slicer, logic.segmentationNode, logic.volumeNode,
+                        labels.EXTRA_NAMES, segIn)
+        check("D52: on a seeded case the materials start with 0 voxels",
+              {n: got[n] for n in labels.MATERIALS} == {n: 0 for n in labels.MATERIALS}, got)
+        check("  and the branches start as seed copies",
+              all(got[n] == nSeed for n in labels.EXTRA_NAMES if n not in labels.MATERIALS)
+              and logic.seedPrefilledExtended == 14, (got, logic.seedPrefilledExtended))
+        # D52: binding shows the class the editor selected, and only that one.
+        display = logic.segmentationNode.GetDisplayNode()
+        selected = editorNode.GetSelectedSegmentID()
+        shown = [n for n in labels.ALL_NAMES
+                 if display.GetSegmentVisibility(logic.segmentIdFor(n))]
+        if selected:
+            check("D52: the class the editor selected on opening is shown, the others "
+                  "stay hidden", shown == [n for n in labels.ALL_NAMES
+                                           if logic.segmentIdFor(n) == selected],
+                  (selected, shown))
+        else:
+            check("D52: with nothing selected on opening, every class stays hidden",
+                  shown == [], shown)
+        _selectHiddenAndPaint(slicer, np, vtk, layoutManager, logic, editor, editorNode,
+                              PLAQUE, dialogs, "own case")
 
         results = _materialInsideArtery(slicer, np, vtk, qt, layoutManager, widget,
                                         logic, editor, editorNode, PLAQUE, ALLOW, "own case")
@@ -2016,6 +2067,25 @@ def run_overlap():
         volumePath = os.path.join(tmp, "overlap-ct.nrrd")
         slicer.util.saveNode(logic.volumeNode, volumePath)
 
+        # D52: submitted as plaque -- it started empty, so it is no seed copy to
+        # blank (D51 d) -- in its own channel, overlapping the LAD's.
+        painted = int(plaque.sum())
+        logic.client = _RecordingClient()
+        logic.submit()
+        sent = labelfile.read_class_stack(logic.client.kept[0]) if logic.client.kept else None
+        sentChannels = dict(zip(sent["names"], sent["masks"])) if sent else {}
+        sentLad = sentChannels.get("LAD", np.zeros(1)) != 0
+        sentPlaque = sentChannels.get(PLAQUE, np.zeros(1)) != 0
+        check("D52: plaque painted inside the LAD on a seeded case is submitted as "
+              "plaque, overlapping the LAD",
+              sent is not None and int(sentPlaque.sum()) == painted > 0
+              and int((sentPlaque & sentLad).sum()) == painted
+              and int(sentLad.sum()) == TUBE_VOXELS
+              and PLAQUE not in logic.seedCopiesBlanked
+              and logic.client.calls[-1][1].get(PLAQUE) == painted,
+              (painted, logic.client.calls[-1:] if logic.client.calls else None,
+               logic.seedCopiesBlanked))
+
         # A reviewer editing that submission: the scene is cleared and reloaded.
         logic.assignment = None
 
@@ -2043,6 +2113,8 @@ def run_overlap():
             check("  and the Segment Editor module's node too",
                   node is not None and node.GetOverwriteMode() == ALLOW,
                   None if node is None else node.GetOverwriteMode())
+        _selectHiddenAndPaint(slicer, np, vtk, layoutManager, logic, widget.editorWidget,
+                              editorNode, PLAQUE, dialogs, "reviewer")
         reviewed = _materialInsideArtery(slicer, np, vtk, qt, layoutManager, widget, logic,
                                          widget.editorWidget, editorNode, PLAQUE, ALLOW,
                                          "reviewer", effects=("Paint", "Threshold", "Logical copy"))
@@ -2120,6 +2192,37 @@ def _paintPlaque(slicer, np, vtk, layoutManager, logic, editor, editorNode, mate
     editor.setActiveEffectByName("")
 
 
+def _selectHiddenAndPaint(slicer, np, vtk, layoutManager, logic, editor, editorNode,
+                          material, dialogs, who):
+    """D52: selecting a hidden class shows it, and only it; the first stroke lands.
+
+    As the annotator does it: another class is selected, the material is hidden
+    and empty, then the material is clicked in the segment list (which sets the
+    editor node's selection) and painted at once.
+    """
+    _resetClasses(slicer, np, logic, material)
+    node = logic.segmentationNode
+    display = node.GetDisplayNode()
+    materialId = logic.segmentIdFor(material)
+    editorNode.SetSelectedSegmentID(logic.segmentIdFor("LM"))
+    slicer.app.processEvents()
+    display.SetSegmentVisibility(materialId, False)
+    others = {n: bool(display.GetSegmentVisibility(logic.segmentIdFor(n)))
+              for n in [spec.name for spec in logic.classSpecs()] if n != material}
+    del dialogs[:]
+    editorNode.SetSelectedSegmentID(materialId)
+    slicer.app.processEvents()
+    check("D52 {}: selecting a hidden class shows it".format(who),
+          bool(display.GetSegmentVisibility(materialId)))
+    after = {n: bool(display.GetSegmentVisibility(logic.segmentIdFor(n))) for n in others}
+    check("  and leaves every other class's visibility as it was", after == others,
+          [n for n in others if after[n] != others[n]])
+    _paintPlaque(slicer, np, vtk, layoutManager, logic, editor, editorNode, material)
+    painted = int(_voxels(slicer, logic, material).sum())
+    check("  and the first paint stroke on it lands, with no 'segment is hidden' question",
+          painted > 0 and not dialogs, (painted, list(dialogs)))
+
+
 _OVERLAP_EFFECTS = ("Paint", "Draw", "Scissors", "Threshold", "Draw tube", "Islands",
                     "Logical copy", "Logical add", "Inverse cut")
 
@@ -2189,8 +2292,8 @@ def _materialInsideArtery(slicer, np, vtk, qt, layoutManager, widget, logic, edi
         return apply
 
     def inverseCut():
-        # An own seeded case's material starts as the seed (D51): cut it to the LAD.
-        slicer.util.updateSegmentBinaryLabelmapFromArray(seed, node, materialId, volume)
+        # The material starts empty (D52): Inverse cut gives it the seed inside the
+        # outline, which is the LAD there.
         editor.setActiveEffectByName("Inverse cut")
         _drag(vtk, interactor, square)
 

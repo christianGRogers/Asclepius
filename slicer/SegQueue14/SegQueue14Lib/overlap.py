@@ -1,4 +1,4 @@
-"""Overlapping classes while editing: "Modify other segments: Allow overlap" (0.25.3).
+"""Overlapping classes while editing: "Modify other segments: Allow overlap" (0.25.4, D52).
 
 D39 keeps every class whole on export, overlaps included, and D44's materials
 (stent, calcified and non-calcified plaque) sit *inside* LM, LAD, LCx, RCA and

@@ -1,4 +1,4 @@
-"""``SegQueue14Lib.overlap`` (0.25.3, D39, D44): "Allow overlap" while editing.
+"""``SegQueue14Lib.overlap`` (0.25.4, D52, D39, D44): "Allow overlap" while editing.
 
 A material painted inside an artery must keep both. Slicer's own Segment Editor
 module made its parameter node with Slicer's default, "Overwrite all", and erased

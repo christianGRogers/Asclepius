@@ -50,11 +50,17 @@ What an annotator sees:
   so the 3D view keeps showing the classes; adding seeded extended classes keeps
   them too (``SegQueue14Lib/surfaces.py``).
 * **Seeded extended classes** (D51, 0.25.0): on the annotator's own seeded case,
-  an extended class the panel adds starts as a hidden copy of the seed, as the
-  four do (D26). A reviewer's added classes stay empty. Turning the toggle off
-  removes untouched seed copies too, and an untouched seed copy is submitted as an
-  empty channel.
-* **Overlap while editing** (D39, D44, 0.25.3): "Modify other segments: Allow
+  a branch class the panel adds starts as a hidden copy of the seed, as the four
+  do (D26). A reviewer's added classes stay empty. Turning the toggle off removes
+  untouched seed copies too, and an untouched seed copy is submitted as an empty
+  channel. 0.25.4 (D52): stent, calcified and non-calcified plaque always start
+  empty, also on a seeded case.
+* **Selecting a class shows it** (D52, 0.25.4): the class selected for editing in
+  the panel's editor -- clicked in the segment list, or picked by the editor when a
+  case or submission is bound -- is made visible, so Slicer's "segment is hidden"
+  question never takes the first stroke (``SegQueue14Lib/selection.py``). Other
+  classes keep their visibility; a seeded case's classes still start hidden.
+* **Overlap while editing** (D39, D44, D52, 0.25.4): "Modify other segments: Allow
   overlap" is the default for every Segment Editor node in the scene, Slicer's own
   Segment Editor module's included, and is set on each case or submission opened,
   so a stent or plaque painted inside an artery keeps the artery's voxels
@@ -139,12 +145,12 @@ from SegQueue14Lib import (
 )
 from SegQueue14Lib import SegQueue14Client as SegQueueClient
 from SegQueue14Lib import inversecut, surfaces
-from SegQueue14Lib import overlap
+from SegQueue14Lib import overlap, selection
 from SegQueue14Lib import SegQueue14Error as SegQueueError
 
 #: Continues SegQueue's numbering (0.13.0 was the last 4-class release). The
 #: release tag is ``segqueue-v`` + this; bump it to publish.
-__version__ = "0.25.3"
+__version__ = "0.25.4"
 
 #: Where the module's help points.
 HELP_URL = "https://github.com/christianGRogers/Asclepius"
@@ -480,8 +486,9 @@ class SegQueue14Logic(ScriptedLoadableModuleLogic):
             # down to that class.
             self.seedPrefilled = self._prefillClassesFromSeed(assignment)
         if not self.resumedDraft and assignment.has_seed and addedAtOpen:
-            # D51: the extended classes start from the seed too, hidden, as the
-            # four do; a resumed draft is never refilled (D26).
+            # D51: the branch classes start from the seed too, hidden, as the
+            # four do; the materials start empty (D52); a resumed draft is never
+            # refilled (D26).
             self.seedPrefilledExtended = self.fillExtendedFromSeed(addedAtOpen)
         slicer.util.setSliceViewerLayers(background=self.volumeNode, fit=True)
         self.applyViewPreset()
@@ -777,9 +784,10 @@ class SegQueue14Logic(ScriptedLoadableModuleLogic):
         Each new segment gets its pinned label value (``labels.ALL_LABEL_VALUES``)
         and colour once, on creation; an existing one is never re-pinned (#270).
         They are added empty. With ``fromSeed`` -- the annotator's own case only --
-        each one added here is then filled with a copy of the seed, hidden
-        (``fillExtendedFromSeed``, D51); one already in the scene is never
-        refilled. Returns how many were added; ``lastAddedExtended`` names them.
+        each *branch* added here is then filled with a copy of the seed, hidden
+        (``fillExtendedFromSeed``, D51); the materials stay empty (D52), and one
+        already in the scene is never refilled. Returns how many were added;
+        ``lastAddedExtended`` names them.
         """
         self.lastAddedExtended = []
         node = segmentationNode or self.segmentationNode
@@ -804,9 +812,12 @@ class SegQueue14Logic(ScriptedLoadableModuleLogic):
         return added
 
     def fillExtendedFromSeed(self, names):
-        """Fill the named extended classes with a copy of the seed, hidden (D51).
+        """Fill the named branch classes with a copy of the seed, hidden (D51).
 
         As D26 does for the four: the annotator shows a class and cuts it down.
+        Only the 14 branches: the materials (``labels.MATERIALS``: stent,
+        calcified and non-calcified plaque) always start empty (D52) -- a seed
+        copy made them useless, since paint inside the lumen changed nothing.
         Only on the annotator's own case (``assignment``): a reviewer's added
         classes stay empty (D51 b). Nothing happens on a case without a seed.
         Returns how many were filled; never raises -- a class left empty is a
@@ -817,8 +828,10 @@ class SegQueue14Logic(ScriptedLoadableModuleLogic):
         seedId = self._seedIdInScene()
         if not seedId:
             return 0
-        wanted = set(names)
+        wanted = set(names) - set(labels.MATERIALS)
         specs = [spec for spec in self.extraSpecs() if spec.name in wanted]
+        if not specs:
+            return 0
         try:
             filled = self.copySegmentIntoClasses(seedId, specs)
         except Exception:
@@ -883,7 +896,9 @@ class SegQueue14Logic(ScriptedLoadableModuleLogic):
         Returns ``(removed, kept)``.
 
         Removed: an empty class, and one still an untouched copy of the seed
-        (D51 c). Kept: any class the annotator changed, whatever the toggle says:
+        (D51 c) -- a branch, as the materials start empty (D52); a material still
+        exactly the seed (a 0.25.0-0.25.3 draft) is removed the same way. Kept:
+        any class the annotator changed, whatever the toggle says:
         turning the classes off must never throw away work.
         """
         node = segmentationNode or self.segmentationNode
@@ -1569,8 +1584,10 @@ class SegQueue14Logic(ScriptedLoadableModuleLogic):
 
         **An untouched seed copy is not a read** (D51 d): an extended class still
         exactly the seed (``isUntouchedSeedCopy``) is written as an empty channel,
-        and named in ``seedCopiesBlanked``. The four classes are written as they
-        are, seed copies or not (D26, D38).
+        and named in ``seedCopiesBlanked``. Only branches start as seed copies
+        (D52); the test stays on every extended class, so a material left as the
+        seed by a 0.25.0-0.25.3 draft is never submitted as the whole tree. The
+        four classes are written as they are, seed copies or not (D26, D38).
 
         Returns ``(voxelCounts, sourceGeometry, segmentationGeometry)``; the
         counts are per class, each counted whole, from the masks written.
@@ -2249,6 +2266,10 @@ class SegQueue14Widget(ScriptedLoadableModuleWidget):
         self.logic = None
         self.editorWidget = None
         self.editorNode = None
+        #: D52: shows the class selected for editing (``SegQueue14Lib/selection.py``),
+        #: and the ``(node, observer tag)`` that drives it.
+        self._showSelected = selection.ShowSelected()
+        self._selectionObservation = None
         self.autosaveTimer = None
         self.heartbeatTimer = None
         self.clockTimer = None
@@ -3077,7 +3098,7 @@ class SegQueue14Widget(ScriptedLoadableModuleWidget):
             self.editorWidget.setSourceVolumeNodeSelectorVisible(False)
         except AttributeError:  # pragma: no cover - Slicer < 5.2 naming
             self.editorWidget.setMasterVolumeNodeSelectorVisible(False)
-        # 0.25.3 (D39, D44): every Segment Editor node the scene makes from now
+        # 0.25.4 (D39, D44, D52): every Segment Editor node the scene makes from now
         # on -- this one, Slicer's own Segment Editor module's, one made again
         # after a scene clear -- starts at "Allow overlap", not Slicer's
         # "Overwrite all", so a material painted inside an artery keeps both.
@@ -3085,6 +3106,7 @@ class SegQueue14Widget(ScriptedLoadableModuleWidget):
         self.editorNode = slicer.mrmlScene.AddNewNodeByClass("vtkMRMLSegmentEditorNode")
         overlap.allow_overlap(self.editorNode, slicer.vtkMRMLSegmentEditorNode)
         self.editorWidget.setMRMLSegmentEditorNode(self.editorNode)
+        self._watchSelection(self.editorNode)
         layout.addWidget(self.editorWidget)
 
     def _buildExtendedRow(self, layout):
@@ -3106,11 +3128,12 @@ class SegQueue14Widget(ScriptedLoadableModuleWidget):
         self.extendedCheck = qt.QCheckBox("Extended classes")
         self.extendedCheck.setToolTip(
             "Adds 17 optional classes: stent, calcified and non-calcified plaque, "
-            "D1-D3, S1-S3, OM1-OM2, SN, conus, RMA, PDA, PLB and the ramus. On a "
-            "case with a vessel seed each starts as a hidden copy of the seed, like "
-            "the four; otherwise empty. A class left as an untouched seed copy is "
-            "submitted empty. Turning this off removes only the empty ones and the "
-            "untouched seed copies.")
+            "D1-D3, S1-S3, OM1-OM2, SN, conus, RMA, PDA, PLB and the ramus. The "
+            "stent and plaque classes start empty. On a case with a vessel seed "
+            "each branch starts as a hidden copy of the seed, like the four; "
+            "otherwise empty. A branch left as an untouched seed copy is "
+            "submitted empty. Turning this off removes only the empty classes and "
+            "the untouched seed copies.")
         self.extendedCheck.toggled.connect(self.onToggleExtended)
         layout.addWidget(self.extendedCheck)
 
@@ -3204,8 +3227,9 @@ class SegQueue14Widget(ScriptedLoadableModuleWidget):
         if self.logic.segmentationNode is not None and (
                 self.logic.assignment is not None or self._claimedSubmission):
             if on:
-                # D51: on the annotator's own seeded case the new classes start as
-                # hidden copies of the seed; a reviewer's stay empty (D51 b).
+                # D51: on the annotator's own seeded case the new branches start
+                # as hidden copies of the seed; the materials start empty (D52);
+                # a reviewer's stay empty (D51 b).
                 self.logic.addExtendedClasses(
                     fromSeed=self.logic.assignment is not None)
             else:
@@ -4423,8 +4447,12 @@ class SegQueue14Widget(ScriptedLoadableModuleWidget):
         if not assignment.has_prelabel and assignment.has_seed:
             if self.logic is not None and self.logic.resumedDraft:
                 return " · your draft"
-            return (" · <i>each class starts as the whole seed (hidden): show one "
-                    "at a time and cut it down</i>")
+            # D52: selecting a class shows it; the materials start empty.
+            materials = (self.logic is not None and any(
+                self.logic.segmentIdFor(name) for name in labels.MATERIALS))
+            return (" · <i>each class starts as the whole seed (hidden): select one "
+                    "to show it, and cut it down{}</i>".format(
+                        "; stent and plaque start empty" if materials else ""))
         if not assignment.has_prelabel:
             return " · <i>no prelabel: draw from scratch</i>"
         filled = self.logic.prelabelClasses if self.logic else 0
@@ -4557,6 +4585,7 @@ class SegQueue14Widget(ScriptedLoadableModuleWidget):
         self._saveNoteDraft()
         if self.logic is not None:
             self.logic.autosave()
+        self._watchSelection(None)
         if self.editorWidget is not None:
             self.editorWidget.setMRMLScene(None)
         if self.editorNode is not None:
@@ -4761,7 +4790,34 @@ class SegQueue14Widget(ScriptedLoadableModuleWidget):
         self.editorNode = slicer.mrmlScene.AddNewNodeByClass("vtkMRMLSegmentEditorNode")
         overlap.allow_overlap(self.editorNode, slicer.vtkMRMLSegmentEditorNode)
         self.editorWidget.setMRMLSegmentEditorNode(self.editorNode)
+        self._watchSelection(self.editorNode)
         return self.editorNode
+
+    def _watchSelection(self, node):
+        """Show the class selected for editing whenever the selection changes (D52).
+
+        Observes ``node`` (the panel's editor node; None stops watching). Classes
+        start hidden (D26, D51), and Slicer's editor asks "the selected segment is
+        hidden, make it visible?" at the first stroke and drops that stroke; a
+        class selected here is shown first, so it never asks. Other classes keep
+        their visibility.
+        """
+        # getattr: Slicer may run setup() from the base __init__, before ours.
+        if getattr(self, "_selectionObservation", None) is not None:
+            old, tag = self._selectionObservation
+            try:
+                old.RemoveObserver(tag)
+            except Exception:
+                pass
+            self._selectionObservation = None
+        self._showSelected = selection.ShowSelected()
+        if node is None:
+            return
+        tag = node.AddObserver(vtk.vtkCommand.ModifiedEvent, self._onEditorNodeModified)
+        self._selectionObservation = (node, tag)
+
+    def _onEditorNodeModified(self, caller=None, event=None):
+        self._showSelected.update(self.editorNode)
 
     def _bindEditor(self, segmentationNode, volumeNode):
         if self.editorWidget is None:
@@ -4782,11 +4838,15 @@ class SegQueue14Widget(ScriptedLoadableModuleWidget):
             # per case or submission opened -- own case, resumed draft, reopened or
             # recalled read, a reviewer's submission, after a scene clear -- on this
             # panel's node and on Slicer's own Segment Editor module's node, which
-            # edits the same case (0.25.3: that one was left at "Overwrite all").
+            # edits the same case (before 0.25.4 that one was left at "Overwrite all").
             # Not enforced afterwards: an annotator who picks another mode in the
             # Masking panel keeps it until the next case opens.
             overlap.allow_overlap_everywhere(
                 slicer.mrmlScene, slicer.vtkMRMLSegmentEditorNode, [self.editorNode])
+            # D52: the class the editor selected on binding is shown, so the first
+            # stroke on it lands; the other classes stay as the case opened them
+            # (hidden on a seeded case, D26/D51).
+            self._showSelected.update(self.editorNode, force=True)
 
     # -------------------------------------------------------------- actions
 
@@ -4845,7 +4905,7 @@ class SegQueue14Widget(ScriptedLoadableModuleWidget):
         blanked = self.logic.seedCopiesBlanked
         self.caseLabel.setText(
             "Submitted.{} Press 'Get next case' when you are ready.".format(
-                " {} extended class{} still an untouched copy of the seed went as "
+                " {} branch class{} still an untouched copy of the seed went as "
                 "empty.".format(len(blanked), "" if len(blanked) == 1 else "es")
                 if blanked else ""))
         self.reworkLabel.setVisible(False)

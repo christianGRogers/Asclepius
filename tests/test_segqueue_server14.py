@@ -1428,7 +1428,7 @@ def test_an_extended_read_is_stored_scored_and_exported_whole(world, tmp_path):
     assert submission["classes"] == labels.ALL_NAMES and submission["extended"] is True
     stored = _storedStack(world, submission)
     assert stored["names"] == labels.ALL_NAMES
-    # D39, D44 (0.25.3): a material painted inside an artery is stored as two
+    # D39, D44 (0.25.4, D52): a material painted inside an artery is stored as two
     # overlapping channels, the artery whole and the material whole.
     sent = dict(zip(labels.ALL_NAMES, _stackOf(np, classes, labels.ALL_NAMES)))
     kept = dict(zip(stored["names"], stored["masks"]))

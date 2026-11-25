@@ -181,9 +181,41 @@ empty, grouped under their parent in the segment list, with show/hide per group:
   server used to refuse them with `not_an_annotator`); until it is deployed those
   accounts see an empty thread. Protocol stays 21.
 
-### A material painted inside an artery keeps both (0.25.4, D52, D39, D44)
+### Materials start empty; selecting a class shows it; overlap everywhere (0.25.4, D52)
 
-Reported on 0.25.2: overlapping classes could not be submitted, which an extended
+D52 (2026-11-25, amends D51). Three changes, all in the module; protocol stays 21,
+no server change.
+
+**Materials start empty.** Stent, calcified and non-calcified plaque are always
+added empty, also on a seeded case. 0.25.0-0.25.3 started them as a hidden copy of
+the seed (D51), which made them useless: paint inside the lumen changed nothing and
+the class was submitted empty (D51 d), and paint outside it was submitted as the
+whole tree plus the stroke. The 14 branch classes keep D51's start as a hidden seed
+copy. The materials are `labels.MATERIALS` (the extended classes with no parent),
+not a list of names in the module.
+
+- The D51 prefill now fills up to 14 classes, not 17; the case line on a seeded
+  case says *stent and plaque start empty* when the extended classes are on.
+- Turning the toggle off removes the empty classes (now including untouched
+  materials) and the untouched branch seed copies, as before.
+- Submit still blanks an extended class left exactly as the seed (D51 d). Only
+  branches start that way now; the test stays on the materials too, so a material
+  left as the seed by a 0.25.0-0.25.3 draft is never submitted as the whole tree.
+  The message after submitting says *branch class*.
+- Plaque painted inside the LAD on a seeded case is submitted as plaque, in its own
+  channel overlapping the LAD's.
+
+**Selecting a class shows it** (`SegQueue14Lib/selection.py`). The class selected
+for editing in the panel's Segment Editor is made visible: when it is clicked in the
+segment list, and when the editor picks one as a case or submission is bound. So
+Slicer's *"The selected segment is hidden. Would you like to make it visible?"* no
+longer appears and no longer drops the first stroke. Own case and a reviewer's
+editing alike. Only the selected class changes: every other class keeps its
+visibility, and a seeded case's classes still start hidden (D26, D51). A class the
+annotator hides again by its eye while it stays selected stays hidden until another
+class is selected.
+
+**Overlap allowed everywhere** (D39, D44). Reported on 0.25.2: overlapping classes could not be submitted, which an extended
 read needs. Stent, calcified and non-calcified plaque (D44) sit inside LM, LAD,
 LCx, RCA and their branches, and D39 saves every class whole, overlaps included.
 
@@ -212,12 +244,17 @@ LCx, RCA and their branches, and D39 saves every class whole, overlaps included.
   panel's node and the Segment Editor module's node to Allow overlap again.
 - **Your choice is kept.** Nothing watches the setting afterwards: pick another mode
   in the Masking panel and it stays until the next case opens.
-- Tested: `tests/test_segqueue14_overlap.py`; `run_overlap` in
-  `tests/slicer_selftest14.py` (every effect above, own case and reviewer, the
-  Segment Editor module, a scene clear, the export as two overlapping channels),
-  which fails on 0.25.2. The server test of an extended read now checks the stored
-  stent and plaque channels overlap LAD and RCA, each whole. Protocol stays 21; no
-  server change.
+
+**Tested:** `tests/test_segqueue14_overlap.py`, `tests/test_segqueue14_selection.py`
+and the D51/D52 tests in `tests/test_segqueue14_module.py`; in Slicer, `run_d51`,
+`run_extended` and `run_overlap` in `tests/slicer_selftest14.py`. `run_overlap`
+covers every effect above (own case and reviewer), the Segment Editor module, a
+scene clear and the export as two overlapping channels, and for D52 the materials
+at 0 voxels and branches as the seed on a seeded case, plaque inside the LAD
+submitted as plaque, and selecting a hidden class showing it (own case and
+reviewer) with the first paint stroke landing and no question asked. The server test of an
+extended read checks the stored stent and plaque channels overlap LAD and RCA, each
+whole.
 
 ### A clear message when the server refuses the upload's chunk size (0.25.3)
 

@@ -583,7 +583,7 @@ def _calls_in(node):
 
 
 def test_the_module_is_0_25_3_and_protocol_21():
-    assert re.search(r'^__version__ = "0\.25\.3"$', _source(), re.M)
+    assert re.search(r'^__version__ = "0\.25\.4"$', _source(), re.M)
     sys_path = str(REPO / "src")
     import sys
 
@@ -1785,7 +1785,8 @@ def _d51_logic(np, assignment=True, extended=True, seed=True, shape=(4, 6, 6)):
     return logic, labels, labelfile, seedMask
 
 
-def test_extended_classes_start_as_hidden_seed_copies_on_an_own_seeded_case():
+def test_extended_branches_start_as_hidden_seed_copies_on_an_own_seeded_case():
+    """D51 for the 14 branches; D52: the three materials always start empty."""
     np = pytest.importorskip("numpy")
     logic, labels, _, seed = _d51_logic(np)
     # A draft's own extended class is never refilled.
@@ -1800,6 +1801,9 @@ def test_extended_classes_start_as_hidden_seed_copies_on_an_own_seeded_case():
     for name in labels.EXTRA_NAMES:
         if name == "D1":
             assert np.array_equal(node.masks["D1"], own)
+            continue
+        if name in labels.MATERIALS:              # D52: empty, also when seeded
+            assert not node.masks.get(name, np.zeros_like(seed)).any(), name
             continue
         assert np.array_equal(node.masks[name], seed), name
         assert node.display.visible[name] is False, name
@@ -1849,6 +1853,10 @@ def test_toggle_off_removes_untouched_seed_copies_and_keeps_edited_ones():
     grown = seed.copy()
     grown[0, 0, 0] = 1
     node.masks["PDA"] = grown                         # added to: work
+    # D52: the materials start empty, so they are removed as empty ones; a material
+    # still the whole seed (a 0.25.0-0.25.3 draft) is removed as a seed copy.
+    assert not node.masks.get("Calcified plaque", np.zeros_like(seed)).any()
+    node.masks["Non-calcified plaque"] = seed.copy()
     removed, kept = logic.removeEmptyExtendedClasses()
     assert kept == ["D1", "PDA"]
     assert sorted(removed) == sorted(n for n in labels.EXTRA_NAMES if n not in kept)
@@ -1872,13 +1880,53 @@ def test_export_blanks_untouched_seed_copies_but_not_the_four():
     for name in labels.NAMES:                      # D26/D38: sent as they are
         assert np.array_equal(written[name], seed) and counts[name] == n
     assert np.array_equal(written["D1"], trimmed) and counts["D1"] == n - 1
-    blanked = [name for name in labels.EXTRA_NAMES if name != "D1"]
-    for name in blanked:
+    # D52: the 13 untouched branches are blanked seed copies; the materials were
+    # never seed copies, and are written empty because they are.
+    blanked = [name for name in labels.EXTRA_NAMES
+               if name != "D1" and name not in labels.MATERIALS]
+    assert len(blanked) == 13
+    for name in blanked + labels.MATERIALS:
         assert not written[name].any() and counts[name] == 0, name
     assert logic.seedCopiesBlanked == [n for n in labels.ALL_NAMES if n in blanked]
     # D47 Q3: the complete ticks are unchanged by it.
     assert "seedCopiesBlanked" not in ast.get_source_segment(
         _source(), _method("SegQueue14Logic", "completeGroupsForExport"))
+
+
+def test_plaque_painted_inside_a_seeded_lad_is_submitted_as_plaque():
+    """D52: on a seeded case the plaque starts empty, so plaque painted inside the
+    LAD is sent as plaque, overlapping the LAD (D39), not blanked as a seed copy."""
+    np = pytest.importorskip("numpy")
+    logic, labels, labelfile, seed = _d51_logic(np)
+    logic.addExtendedClasses(fromSeed=True)
+    node = logic.segmentationNode
+    plaque = np.zeros_like(seed)
+    plaque[1, 2, 2] = 1                               # inside the seed, so the LAD
+    assert seed[1, 2, 2] == 1
+    node.masks["Calcified plaque"] = plaque.copy()
+    counts, _, _ = logic.exportSubmission("unused.seg.nrrd")
+    written = labelfile.written
+    assert np.array_equal(written["Calcified plaque"], plaque)
+    assert counts["Calcified plaque"] == 1
+    assert (written["Calcified plaque"] & written["LAD"]).sum() == 1
+    assert "Calcified plaque" not in logic.seedCopiesBlanked
+
+
+def test_a_material_left_as_the_seed_by_an_older_draft_is_still_blanked():
+    np = pytest.importorskip("numpy")
+    logic, labels, labelfile, seed = _d51_logic(np)
+    logic.addExtendedClasses(fromSeed=True)
+    logic.segmentationNode.masks["Stent"] = seed.copy()    # as 0.25.0-0.25.3 seeded it
+    logic.exportSubmission("unused.seg.nrrd")
+    assert not labelfile.written["Stent"].any()
+    assert "Stent" in logic.seedCopiesBlanked
+
+
+def test_the_materials_left_empty_come_from_the_labels():
+    fill = ast.get_source_segment(_source(), _method("SegQueue14Logic",
+                                                     "fillExtendedFromSeed"))
+    assert "labels.MATERIALS" in fill
+    assert '"Stent"' not in fill and "plaque" not in fill.split('"""')[-1].lower()
 
 
 def test_without_a_seed_nothing_is_blanked_or_removed_as_a_copy():

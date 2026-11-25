@@ -179,7 +179,8 @@ jobs:
               "SegQueue14Lib/updater.py",
               "SegQueue14Lib/inversecut.py",
               "SegQueue14Lib/surfaces.py",            # 0.25.2
-              "SegQueue14Lib/overlap.py",             # 0.25.3
+              "SegQueue14Lib/overlap.py",             # 0.25.4, D52
+              "SegQueue14Lib/selection.py",           # 0.25.4, D52
               "SegQueue14Lib/SegmentEditorInverseCutEffect.py",   # D51
               "segqueue/release.py",
               "segqueue14/protocol.py",

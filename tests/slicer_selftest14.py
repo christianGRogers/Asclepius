@@ -702,10 +702,9 @@ def run_d51():
     effect = editor.effectByName("Inverse cut")
     check("  and listed by an embedded Segment Editor", effect is not None)
     try:
-        # PythonQt exposes the C++ effect's icon as a property, not a method.
-        icon = effect.icon() if callable(effect.icon) else effect.icon
-        check("  with its own icon", not icon.isNull()
-              and not effect.self().icon().isNull())
+        # PythonQt does not wrap the C++ icon(); the scripted effect's icon() is
+        # the Python one, which is what the editor's button shows.
+        check("  with its own icon", not effect.self().icon().isNull())
     except Exception:
         check("  with its own icon", False, traceback.format_exc())
 

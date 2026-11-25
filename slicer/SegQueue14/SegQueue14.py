@@ -149,7 +149,8 @@ from SegQueue14Lib import (
 )
 from SegQueue14Lib import SegQueue14Client as SegQueueClient
 from SegQueue14Lib import inversecut, surfaces
-from SegQueue14Lib import extendedview, overlap, selection
+from SegQueue14Lib import extendedview
+from SegQueue14Lib import overlap, selection
 from SegQueue14Lib import SegQueue14Error as SegQueueError
 
 #: Continues SegQueue's numbering (0.13.0 was the last 4-class release). The

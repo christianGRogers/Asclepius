@@ -59,6 +59,13 @@
 # setting's current and new value; --apply prints the old values to restore:
 #   branding [--apply]
 #
+# Girder's minimum upload chunk size (core.upload_minimum_chunk_size) set to 0, so the
+# module's 768 KiB chunks are not refused with "Chunk is smaller than the minimum size."
+# (HTTP 400). Refuses unless every assetstore is a filesystem one; takes no args; run
+# once (install does not). Dry run without --apply: the current and new value; --apply
+# prints the old value to restore:
+#   upload-chunks [--apply]
+#
 # The script never touches the live checkout, the live plugin or live data; see its
 # header. Secrets: SSH_HOST, SSH_PORT, SSH_USERNAME, SSH_PASSWORD (as server-ssh.yml),
 # SSH_KNOWN_HOSTS optional.
@@ -95,7 +102,8 @@ on:
                   rescore-extended, "rescore-extended --apply", revisions-check,
                   reopen, "reopen --apply",
                   restore-reopened, "restore-reopened --apply",
-                  branding, "branding --apply"]
+                  branding, "branding --apply",
+                  upload-chunks, "upload-chunks --apply"]
       args:
         description: "benchmark-assign: --exclude=<login,...> [--login=<login,...>] [--retest]; benchmark-seed: --from-girder=<folder> [--from-girder-file=<name>]; benchmark-create: --imagecas-id=<N> [--replace]; quality-report: [--limit=<N>] [--exclude=<login,...>]; readers-report: [--min=<N>]; reopen: --login=<login> --submitted-before=<YYYY-MM-DD>; restore-reopened: --login=<login>"
         type: string
@@ -139,6 +147,7 @@ jobs:
             reopen|"reopen --apply") ;;
             restore-reopened|"restore-reopened --apply") ;;
             branding|"branding --apply") ;;
+            upload-chunks|"upload-chunks --apply") ;;
             *) echo "::error::unknown step '$cmd'"; exit 1 ;;
           esac
           # D43: only benchmark-assign, -seed, -create, quality-report (#296),
@@ -211,8 +220,8 @@ jobs:
                 if ! printf '%s' "$ARGS" | grep -Eq '^--login=[a-z0-9._-]+$'; then
                   echo "::error::restore-reopened args must be exactly --login=<one login>"; exit 1
                 fi ;;
-              # #334: rescore-extended and revisions-check take none; nor does
-              # branding. They fall here.
+              # #334: rescore-extended and revisions-check take none; nor do
+              # branding and upload-chunks. They fall here.
               *) echo "::error::only benchmark-assign, benchmark-seed, benchmark-create, quality-report, readers-report, reopen and restore-reopened take args"; exit 1 ;;
             esac
             # The step is ours (a fixed list above), the options go first: --apply stays last.

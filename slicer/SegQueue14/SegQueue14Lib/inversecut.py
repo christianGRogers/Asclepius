@@ -10,6 +10,9 @@ Segment Editor effect (``SegmentEditorInverseCutEffect``) and the module's logic
 * ``inside_region``: which voxels of a mask project inside a lasso drawn in a
   view, the region extruded through the whole volume along the view direction,
   as Slicer's Scissors does by default.
+* ``outline_in_pane``: a slice view's lasso moved from the view's event positions
+  into the XY of the pane it was drawn in (a lightbox has several), which is
+  what the slice node's XYToRAS expects (0.25.1).
 * ``is_untouched_copy``: whether a class is still a voxel-for-voxel copy of the
   seed (D51 c and d).
 """
@@ -75,6 +78,23 @@ def project(ijk, ijk_to_display):
     return h[:, :2] / w[:, None]
 
 
+def outline_in_pane(points, device_start, pane_start):
+    """``(n, 2)``: a slice view's lasso in the XY of the pane it was drawn in.
+
+    ``points`` are the interactor's event positions. ``device_start`` is the first
+    of them and ``pane_start`` the same point as Slicer converts it
+    (``vtkMRMLAbstractSliceViewDisplayableManager.ConvertDeviceToXYZ``, what
+    Scissors uses), whose x and y are relative to the pane under the mouse. Every
+    point moves by that one offset, so a lasso that strays across a lightbox pane
+    border stays one shape in the pane it started in. Outside a lightbox the
+    offset is zero and the points come back as they were.
+    """
+    pts = np.asarray(points, dtype=float).reshape(-1, 2)
+    offset = (np.asarray(pane_start, dtype=float).reshape(-1)[:2]
+              - np.asarray(device_start, dtype=float).reshape(-1)[:2])
+    return pts + offset
+
+
 def inside_region(mask, ijk_to_display, polygon):
     """Boolean array shaped like ``mask``: its voxels whose centre projects inside
     ``polygon``. Only the voxels set in ``mask`` are tested (the rest are False),
@@ -102,9 +122,15 @@ def inverse_cut(segment, inside, seed=None):
 
     The segment keeps only its voxels inside the region. If it is empty and a seed
     is given, it becomes the seed's voxels inside the region instead. ``source``
-    says which happened: ``"segment"``, ``"seed"``, or ``None`` when there was
-    nothing to cut (an empty segment and no seed, or an empty seed), in which case
-    ``result`` is None and the segment is to be left alone.
+    says which happened: ``"segment"`` or ``"seed"``; otherwise ``result`` is None
+    and the segment is to be left alone, and ``source`` says why: ``None`` when
+    there was nothing to cut (an empty segment and no seed, or an empty seed), and
+    ``"outside"`` when the region holds none of the voxels it would keep.
+
+    **Fail-safe (0.25.1).** A cut never empties the segment: an outline that
+    misses every voxel is a slip, or a region that did not land where it was drawn
+    (0.25.0 wiped whole segments that way in a lightbox view), not a request to
+    delete the class.
 
     All arrays share one shape (one grid); ``result`` is 0/1 ``uint8``.
     """
@@ -114,15 +140,22 @@ def inverse_cut(segment, inside, seed=None):
         raise ValueError("segment {} and region {} are not on one grid".format(
             segment.shape, inside.shape))
     if segment.any():
-        return (segment & inside).astype(np.uint8), "segment"
+        return _kept(segment, inside, "segment")
     if seed is not None:
         seed = np.asarray(seed) != 0
         if seed.shape != inside.shape:
             raise ValueError("seed {} and region {} are not on one grid".format(
                 seed.shape, inside.shape))
         if seed.any():
-            return (seed & inside).astype(np.uint8), "seed"
+            return _kept(seed, inside, "seed")
     return None, None
+
+
+def _kept(source, inside, name):
+    kept = source & inside
+    if not kept.any():
+        return None, "outside"
+    return kept.astype(np.uint8), name
 
 
 def is_untouched_copy(mask, seed):

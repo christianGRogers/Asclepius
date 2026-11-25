@@ -13,6 +13,16 @@ has a vessel seed, it becomes the seed's voxels inside the outline instead.
   vessel seed and the heart region), are never modified; a helper cannot be the
   selected segment for this effect.
 * One undoable step, in the editor's own undo history.
+* Fail-safe (0.25.1): an outline that holds none of the segment's voxels (or the
+  seed's) changes nothing and says so in the status bar. A cut never empties the
+  segment.
+* A slice view's outline is converted the way Slicer's own Scissors converts it
+  (``ConvertDeviceToXYZ``), into the XY of the pane it was drawn in. 0.25.0 read
+  the raw event position as slice XY, which is only the same thing outside a
+  lightbox: in one, the outline landed in another place and the cut wiped the
+  segment.
+* The cursor is the effect's icon over the slice views and the 3D view, as for
+  Scissors.
 
 Loaded by Slicer through ``qSlicerSegmentEditorScriptedEffect.setPythonSource``
 (``SegQueue14.registerInverseCutEffect``), which looks for the class named after
@@ -59,6 +69,10 @@ class SegmentEditorInverseCutEffect(AbstractScriptedSegmentEditorEffect):
         scriptedEffect.name = EFFECT_NAME
         scriptedEffect.perSegment = True
         scriptedEffect.requireSegments = True
+        # The editor builds the cursor from icon(); for a scripted effect it shows
+        # it over the slice views only unless told otherwise (Scissors shows both).
+        scriptedEffect.showEffectCursorInSliceView = True
+        scriptedEffect.showEffectCursorInThreeDView = True
         AbstractScriptedSegmentEditorEffect.__init__(self, scriptedEffect)
         #: The outline being drawn, per view: {viewWidget: _Outline}.
         self._outlines = {}
@@ -96,7 +110,8 @@ class SegmentEditorInverseCutEffect(AbstractScriptedSegmentEditorEffect):
             if callerInteractor.GetShiftKey() or callerInteractor.GetControlKey():
                 return False
             outline = self._outlineFor(viewWidget)
-            outline.start(callerInteractor.GetEventPosition())
+            position = callerInteractor.GetEventPosition()
+            outline.start(position, _paneXY(viewWidget, callerInteractor, position))
             self._render(viewWidget)
             return True
         outline = self._outlines.get(viewWidget)
@@ -108,7 +123,8 @@ class SegmentEditorInverseCutEffect(AbstractScriptedSegmentEditorEffect):
             return True
         if eventId == vtk.vtkCommand.LeftButtonReleaseEvent:
             outline.add(callerInteractor.GetEventPosition())
-            points = outline.finish()
+            start, paneStart = outline.deviceStart, outline.paneStart
+            points = inversecut.outline_in_pane(outline.finish(), start, paneStart)
             self._render(viewWidget)
             try:
                 self.apply(viewWidget, points)
@@ -146,7 +162,8 @@ class SegmentEditorInverseCutEffect(AbstractScriptedSegmentEditorEffect):
     # ------------------------------------------------------------ the cut
 
     def apply(self, viewWidget, polygon):
-        """Cut the selected segment to the outline ``polygon`` (display points)."""
+        """Cut the selected segment to the outline ``polygon``: in a slice view the
+        pane's XY (``inversecut.outline_in_pane``), in the 3D view display points."""
         if len(inversecut.simplify_polygon(polygon)) < 3:
             return False
         parameters = self.scriptedEffect.parameterSetNode()
@@ -188,6 +205,11 @@ class SegmentEditorInverseCutEffect(AbstractScriptedSegmentEditorEffect):
             return False
         inside = inversecut.inside_region(source, toDisplay, polygon)
         result, used = inversecut.inverse_cut(segment, inside, seed)
+        if used == "outside":
+            # Fail-safe: never empty the segment (0.25.1).
+            _status("Inverse cut: the outline holds none of the {}; nothing was "
+                    "changed.".format("seed" if source is seed else "selected segment"))
+            return False
         if result is None:
             return False
 
@@ -209,6 +231,8 @@ class _Outline:
     def __init__(self):
         self.points = []
         self.drawing = False
+        #: The first point as an event position, and in its pane's XY.
+        self.deviceStart = self.paneStart = (0, 0)
         self.polyData = vtk.vtkPolyData()
         mapper = vtk.vtkPolyDataMapper2D()
         mapper.SetInputData(self.polyData)
@@ -219,8 +243,10 @@ class _Outline:
         prop.SetLineWidth(2)
         self.actor.VisibilityOff()
 
-    def start(self, xy):
+    def start(self, xy, paneXY=None):
         self.points = [tuple(xy)]
+        self.deviceStart = tuple(xy)[:2]
+        self.paneStart = tuple(paneXY)[:2] if paneXY is not None else self.deviceStart
         self.drawing = True
         self.actor.VisibilityOn()
         self._update()
@@ -250,6 +276,18 @@ class _Outline:
         self.polyData.SetPoints(vtkPoints)
         self.polyData.SetLines(cells)
         self.polyData.Modified()
+
+
+def _paneXY(viewWidget, interactor, position):
+    """``position`` (an event position) in the XY that the slice node's XYToRAS
+    takes: relative to the lightbox pane under it, as Slicer's own effects convert
+    it. Anything but a slice view keeps its display position."""
+    if viewWidget.className() != "qMRMLSliceWidget":
+        return tuple(position)[:2]
+    xyz = [0.0, 0.0, 0.0]
+    slicer.vtkMRMLAbstractSliceViewDisplayableManager.ConvertDeviceToXYZ(
+        interactor, viewWidget.mrmlSliceNode(), position[0], position[1], xyz)
+    return xyz[0], xyz[1]
 
 
 def _sourceVolume(parameters):
@@ -286,8 +324,9 @@ def _matrix(vtkMatrix):
 
 
 def _ijkToDisplay(viewWidget, volumeNode):
-    """4x4 from the CT's voxel index to this view's display coordinates (the
-    interactor's event positions), or None for a view this effect does not know."""
+    """4x4 from the CT's voxel index to this view's outline coordinates (a slice
+    view's pane XY, the 3D view's display positions), or None for a view this
+    effect does not know."""
     import numpy as np
 
     ijkToRas = vtk.vtkMatrix4x4()
@@ -301,8 +340,8 @@ def _ijkToDisplay(viewWidget, volumeNode):
 
     kind = viewWidget.className()
     if kind == "qMRMLSliceWidget":
-        # Slice XY is the event position; dropping its third coordinate extrudes the
-        # outline through every slice, as Scissors' default does.
+        # Slice XY is the outline's pane XY (_paneXY); dropping the third coordinate
+        # extrudes it through every slice, as Scissors' default does.
         xyToRas = _matrix(viewWidget.mrmlSliceNode().GetXYToRAS())
         return np.linalg.inv(xyToRas) @ worldFromIjk
     if kind == "qMRMLThreeDWidget":

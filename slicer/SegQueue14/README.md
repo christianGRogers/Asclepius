@@ -181,6 +181,31 @@ empty, grouped under their parent in the segment list, with show/hide per group:
   server used to refuse them with `not_an_annotator`); until it is deployed those
   accounts see an empty thread. Protocol stays 21.
 
+### Inverse cut fixes (0.25.1, D51)
+
+Inverse cut (D51) could wipe the whole selected class instead of keeping what was
+outlined, and showed no icon cursor over the 3D view.
+
+- **The outline lands where it is drawn.** In a slice view the effect read the
+  mouse's event position as slice XY. That is only true outside a lightbox: in a
+  lightbox pane the outline was mapped to another place, held none of the class,
+  and the cut emptied it. The outline is now converted as Slicer's own Scissors
+  converts it (`ConvertDeviceToXYZ`, the pane under the mouse), then extruded
+  through every slice as before. The ordinary slice views and the 3D view were
+  already mapped correctly, which the new self-test checks on an oblique CT at 1x
+  and 2x display scaling, against VTK's own projection for the 3D view.
+- **Fail-safe:** an outline that holds none of the selected class's voxels (or,
+  for an empty class, none of the seed's) changes nothing and says so in the
+  status bar. A cut never empties the class.
+- **Cursor:** the effect's icon is the cursor over the 3D view as well as the
+  slice views, as for Scissors. The icon is now Slicer-sized (21 x 21,
+  transparent) like the editor's own effects; the 64-pixel grey square made a
+  cursor three times the size of Scissors'.
+- The Slicer self-test now drives the effect through a real Red slice view and 3D
+  view with mouse events (and a lightbox on Slicer 5.8), instead of calling the
+  cut directly with a stand-in view, which is why 0.25.0's CI was green.
+  Module only: protocol stays 21, server unchanged.
+
 ### Inverse cut, and extended classes start from the seed (0.25.0, D51)
 
 - **Inverse cut**, a new Segment Editor effect with its own icon beside Scissors in

@@ -582,8 +582,8 @@ def _calls_in(node):
             if isinstance(n, ast.Call) and isinstance(n.func, ast.Attribute)}
 
 
-def test_the_module_is_0_25_0_and_protocol_21():
-    assert re.search(r'^__version__ = "0\.25\.0"$', _source(), re.M)
+def test_the_module_is_0_25_1_and_protocol_21():
+    assert re.search(r'^__version__ = "0\.25\.1"$', _source(), re.M)
     sys_path = str(REPO / "src")
     import sys
 
@@ -1505,6 +1505,72 @@ def test_an_empty_segment_takes_the_seed_inside_the_region():
     with pytest.raises(ValueError):
         ic.inverse_cut(empty[0], inside)
 
+
+
+def test_a_cut_that_misses_every_voxel_leaves_the_segment_alone():
+    # Fail-safe (0.25.1): 0.25.0 emptied the segment when the region and the
+    # segment did not overlap (a lightbox outline landed elsewhere).
+    np, eye = _grid()
+    ic = _inversecut()
+    segment = np.zeros((4, 10, 10), np.uint8)
+    segment[:, 2:5, 2:5] = 1
+    beside = ic.inside_region(segment, eye, [(7, 7), (9, 7), (9, 9), (7, 9)])
+    assert not beside.any()
+    assert ic.inverse_cut(segment, beside) == (None, "outside")
+    # The same for an empty class taking the seed: the seed outside the outline.
+    empty = np.zeros_like(segment)
+    assert ic.inverse_cut(empty, beside, seed=segment) == (None, "outside")
+    # One voxel inside is a cut, not a refusal.
+    one = np.zeros_like(segment, bool)
+    one[0, 2, 2] = True
+    result, source = ic.inverse_cut(segment, one)
+    assert source == "segment" and int(result.sum()) == 1
+
+
+def test_the_effect_refuses_a_cut_that_would_empty_the_segment():
+    source = EFFECT.read_text(encoding="utf-8")
+    cls = next(n for n in _effect_tree().body if isinstance(n, ast.ClassDef)
+               and n.name == EFFECT.stem)
+    apply = next(n for n in cls.body if isinstance(n, ast.FunctionDef) and n.name == "apply")
+    body = ast.get_source_segment(source, apply)
+    # Checked, with a message, before the undo state and the write.
+    assert 'used == "outside"' in body and "nothing was" in body
+    assert body.index('used == "outside"') < body.index("saveStateForUndo()")
+
+
+def test_a_lightbox_outline_is_moved_into_its_pane():
+    np = pytest.importorskip("numpy")
+    ic = _inversecut()
+    # Slicer put the first point (330, 250) at (18, 30) in its pane.
+    lasso = [(330, 250), (360, 250), (360, 280)]
+    got = ic.outline_in_pane(lasso, (330, 250), (18.0, 30.0, 1.0))
+    assert np.allclose(got, [(18, 30), (48, 30), (48, 60)])
+    # Outside a lightbox Slicer's XY is the event position: nothing moves.
+    assert np.allclose(ic.outline_in_pane(lasso, (330, 250), (330, 250, 0)), lasso)
+    # A lasso straying into the next pane stays one shape in its own.
+    got = ic.outline_in_pane([(300, 10), (320, 10), (320, 30)], (300, 10), (290, 10))
+    assert np.allclose(got, [(290, 10), (310, 10), (310, 30)])
+
+
+def test_the_effect_converts_a_slice_outline_as_slicer_does_and_shows_its_cursor():
+    source = EFFECT.read_text(encoding="utf-8")
+    # Scissors' own conversion, from the first point; the outline moved with it.
+    assert "vtkMRMLAbstractSliceViewDisplayableManager.ConvertDeviceToXYZ(" in source
+    assert "inversecut.outline_in_pane(outline.finish()" in source
+    # The icon is the cursor over the 3D view too, as for Scissors.
+    assert "scriptedEffect.showEffectCursorInThreeDView = True" in source
+    assert "scriptedEffect.showEffectCursorInSliceView = True" in source
+
+
+def test_the_icon_is_sized_like_slicers_own_effect_icons():
+    import struct
+
+    data = ICON.read_bytes()
+    width, height = struct.unpack(">II", data[16:24])
+    # The editor builds the cursor from the icon at its own size; Slicer's effects
+    # use 21 x 21 (a 64-pixel grey square made a cursor three times Scissors').
+    assert (width, height) == (21, 21)
+    assert data[25] == 6  # RGBA: a transparent background, as Slicer's icons
 
 def test_an_untouched_seed_copy_is_exact():
     np, _ = _grid()

@@ -43,6 +43,9 @@ What an annotator sees:
   icon beside Scissors in the embedded editor. The annotator outlines a region and
   the selected class keeps only what is inside it; an empty class takes the vessel
   seed inside it instead (``SegQueue14Lib/SegmentEditorInverseCutEffect.py``).
+  0.25.1: the outline is converted as Slicer's Scissors converts it (a lightbox
+  outline used to land elsewhere and wipe the class), a cut that would empty the
+  class changes nothing, and the icon is the cursor over the 3D view too.
 * **Seeded extended classes** (D51, 0.25.0): on the annotator's own seeded case,
   an extended class the panel adds starts as a hidden copy of the seed, as the
   four do (D26). A reviewer's added classes stay empty. Turning the toggle off
@@ -131,7 +134,7 @@ from SegQueue14Lib import SegQueue14Error as SegQueueError
 
 #: Continues SegQueue's numbering (0.13.0 was the last 4-class release). The
 #: release tag is ``segqueue-v`` + this; bump it to publish.
-__version__ = "0.25.0"
+__version__ = "0.25.1"
 
 #: Where the module's help points.
 HELP_URL = "https://github.com/christianGRogers/Asclepius"

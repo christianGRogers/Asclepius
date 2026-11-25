@@ -719,48 +719,14 @@ def run_d51():
     check("  hidden", not any(display.GetSegmentVisibility(segIn(node, n))
                               for n in labels.EXTRA_NAMES))
 
-    # 3. Inverse cut on LAD in a slice view whose XY is the CT's (i, j).
-    import vtk
-
+    # 3. Inverse cut through the real path (0.25.1): a real Red slice view and 3D
+    # view, an oblique CT, and the mouse driven through the views' interactors.
     try:
-        editor.setSegmentationNode(node)
-        editor.setSourceVolumeNode(volume)
-        editorNode.SetSelectedSegmentID(segIn(node, "LAD"))
-        editor.setActiveEffectByName("Inverse cut")
-        active = editor.activeEffect()
-
-        class SliceNode:
-            def GetXYToRAS(self):
-                matrix = vtk.vtkMatrix4x4()
-                volume.GetIJKToRASMatrix(matrix)
-                return matrix
-
-        class View:
-            def className(self):
-                return "qMRMLSliceWidget"
-
-            def mrmlSliceNode(self):
-                return SliceNode()
-
-        lo, hi = TUBES["LAD"]
-        lasso = [(lo - 0.5, lo - 0.5), (hi - 1.5, lo - 0.5), (hi - 1.5, hi - 0.5),
-                 (lo - 0.5, hi - 0.5)]
-        active.self().apply(View(), lasso)
-        lad = slicer.util.arrayFromSegmentBinaryLabelmap(node, segIn(node, "LAD"), volume)
-        want = np.zeros(SHAPE, np.uint8)
-        want[5:35, lo:hi, lo:hi - 1] = 1
-        check("inverse cut keeps only LAD's voxels inside the outline, every slice",
-              np.array_equal(lad > 0, want > 0), int((lad > 0).sum()))
-        others = _countsOf(slicer, node, volume, [n for n in labels.ALL_NAMES if n != "LAD"],
-                           segIn)
-        check("  and changes no other class",
-              set(others.values()) == {nSeed}, others)
-        editor.undo()
-        check("  one undo puts LAD back",
-              _countsOf(slicer, node, volume, ["LAD"], segIn) == {"LAD": nSeed})
-        editor.setActiveEffectByName("")
+        _inverseCutInRealViews(slicer, np, editor, editorNode)
     except Exception:
-        check("inverse cut runs", False, traceback.format_exc())
+        check("inverse cut runs in real views", False, traceback.format_exc())
+    finally:
+        editor.setActiveEffectByName("")
 
     # 4. Toggle off: untouched seed copies go, a trimmed D1 stays.
     d1 = slicer.util.arrayFromSegmentBinaryLabelmap(node, segIn(node, "D1"), volume).copy()
@@ -794,6 +760,256 @@ def run_d51():
     check("a reviewer's extended classes stay empty",
           _countsOf(slicer, node, volume, labels.EXTRA_NAMES, segIn)
           == {n: 0 for n in labels.EXTRA_NAMES})
+
+
+
+# --------------------------------------------------------------------- D51 views
+
+#: Inverse cut's test CT: not aligned with slice XY. Spacing, origin, and a 20
+#: degree turn about S, so a raw event position is nowhere near a voxel index.
+_IC_SHAPE = (40, 50, 60)
+_IC_SPACING = (0.7, 0.8, 1.5)
+_IC_ORIGIN = (-30.0, 12.0, 40.0)
+#: The selected segment, ``[k, j, i]``, and the part an outline keeps of it.
+_IC_SEGMENT = (slice(5, 35), slice(10, 40), slice(10, 50))
+_IC_KEEP = (slice(5, 35), slice(20, 31), slice(20, 31))
+
+
+def _matrixOf(np, vtkMatrix):
+    return np.array([[vtkMatrix.GetElement(r, c) for c in range(4)] for r in range(4)])
+
+
+def _ensureLayout(slicer, qt):
+    """The application's layout manager; one of our own under --no-main-window,
+    where the Segment Editor would otherwise have no views to observe."""
+    if slicer.app.layoutManager() is not None:
+        return slicer.app.layoutManager(), None
+    viewport = qt.QWidget()
+    viewport.resize(900, 700)
+    layoutManager = slicer.qSlicerLayoutManager(viewport)
+    layoutManager.setMRMLScene(slicer.mrmlScene)
+    slicer.app.setLayoutManager(layoutManager)
+    viewport.show()
+    return layoutManager, viewport
+
+
+def _drag(vtk, interactor, points):
+    """Press at the first point, move through the rest and back, release: what a
+    mouse does, as the view's interactor reports it to the Segment Editor."""
+    interactor.SetEventPosition(int(round(points[0][0])), int(round(points[0][1])))
+    interactor.InvokeEvent(vtk.vtkCommand.LeftButtonPressEvent)
+    for x, y in list(points[1:]) + [points[0]]:
+        interactor.SetEventPosition(int(round(x)), int(round(y)))
+        interactor.InvokeEvent(vtk.vtkCommand.MouseMoveEvent)
+    interactor.InvokeEvent(vtk.vtkCommand.LeftButtonReleaseEvent)
+
+
+def _qtDrag(slicer, qt, widget, points):
+    """The same drag as Qt mouse events on the view's OpenGL widget, so it goes
+    through VTK's Qt adapter (device-pixel-ratio scaling, y flip) too."""
+    ratio = widget.devicePixelRatioF() if hasattr(widget, "devicePixelRatioF") else 1.0
+    height = widget.height
+
+    def send(kind, point, button, buttons):
+        position = qt.QPointF(point[0] / ratio, height - 1 - point[1] / ratio)
+        slicer.app.sendEvent(widget, qt.QMouseEvent(kind, position, button, buttons,
+                                                    qt.Qt.NoModifier))
+
+    send(qt.QEvent.MouseMove, points[0], qt.Qt.NoButton, qt.Qt.NoButton)
+    send(qt.QEvent.MouseButtonPress, points[0], qt.Qt.LeftButton, qt.Qt.LeftButton)
+    for point in list(points[1:]) + [points[0]]:
+        send(qt.QEvent.MouseMove, point, qt.Qt.NoButton, qt.Qt.LeftButton)
+    send(qt.QEvent.MouseButtonRelease, points[0], qt.Qt.LeftButton, qt.Qt.NoButton)
+    slicer.app.processEvents()
+
+
+def _iconCursor(np, qt, view):
+    """Whether ``view`` shows a bitmap cursor with the icon's yellow in it."""
+    cursor = view.cursor
+    if cursor.shape() != qt.Qt.BitmapCursor or cursor.pixmap().isNull():
+        return False
+    image = cursor.pixmap().toImage()
+    for y in range(image.height()):
+        for x in range(image.width()):
+            colour = qt.QColor(image.pixel(x, y))
+            if colour.red() > 200 and colour.green() > 170 and colour.blue() < 110:
+                return True
+    return False
+
+
+def _inverseCutInRealViews(slicer, np, editor, editorNode):
+    import qt
+    import vtk
+
+    layoutManager, viewport = _ensureLayout(slicer, qt)
+    scene = slicer.mrmlScene
+    volume = scene.AddNewNodeByClass("vtkMRMLScalarVolumeNode", "inverse cut CT")
+    slicer.util.updateVolumeFromArray(volume, np.zeros(_IC_SHAPE, np.int16))
+    volume.SetSpacing(*_IC_SPACING)
+    volume.SetOrigin(*_IC_ORIGIN)
+    turn = np.radians(20)
+    direction = vtk.vtkMatrix4x4()
+    for r, row in enumerate([[np.cos(turn), -np.sin(turn), 0],
+                             [np.sin(turn), np.cos(turn), 0], [0, 0, 1]]):
+        for c, value in enumerate(row):
+            direction.SetElement(r, c, value)
+    volume.SetIJKToRASDirectionMatrix(direction)
+    node = scene.AddNewNodeByClass("vtkMRMLSegmentationNode", "inverse cut")
+    node.CreateDefaultDisplayNodes()
+    node.SetReferenceImageGeometryParameterFromVolumeNode(volume)
+    lad = node.GetSegmentation().AddEmptySegment("LAD")
+    other = node.GetSegmentation().AddEmptySegment("LCx")
+    start = np.zeros(_IC_SHAPE, np.uint8)
+    start[_IC_SEGMENT] = 1
+    slicer.util.updateSegmentBinaryLabelmapFromArray(start, node, lad, volume)
+    slicer.util.updateSegmentBinaryLabelmapFromArray(start, node, other, volume)
+    want = np.zeros(_IC_SHAPE, bool)
+    want[_IC_KEEP] = True
+
+    def voxels(segmentId):
+        return slicer.util.arrayFromSegmentBinaryLabelmap(node, segmentId, volume) > 0
+
+    def reset():
+        slicer.util.updateSegmentBinaryLabelmapFromArray(start, node, lad, volume)
+
+    slicer.util.setSliceViewerLayers(background=volume, fit=True)
+    layoutManager.setLayout(slicer.vtkMRMLLayoutNode.SlicerLayoutOneUpRedSliceView)
+    slicer.app.processEvents()
+    red = layoutManager.sliceWidget("Red")
+    sliceNode = red.mrmlSliceNode()
+    red.sliceLogic().FitSliceToAll()
+    ijkToRas = vtk.vtkMatrix4x4()
+    volume.GetIJKToRASMatrix(ijkToRas)
+    rasOf = _matrixOf(np, ijkToRas)
+    sliceNode.JumpSliceByCentering(*(rasOf @ [25, 25, 20, 1])[:3])
+    slicer.app.processEvents()
+
+    editor.setSegmentationNode(node)
+    editor.setSourceVolumeNode(volume)
+    editorNode.SetSelectedSegmentID(lad)
+    editor.show()
+    editor.setActiveEffectByName("Inverse cut")
+    slicer.app.processEvents()
+
+    # The cursor: the effect's icon, over the slice view and (as Scissors) the 3D view.
+    check("Inverse cut's cursor over the Red view is its icon",
+          _iconCursor(np, qt, red.sliceView()), red.sliceView().cursor.shape())
+
+    # The outline: the kept box's corners (half a voxel out), mapped to screen
+    # through the slice node, the way the mouse would have to go round it.
+    corners = [(19.5, 19.5), (30.5, 19.5), (30.5, 30.5), (19.5, 30.5)]
+
+    def onScreen(i, j):
+        xy = np.linalg.inv(_matrixOf(np, sliceNode.GetXYToRAS())) @ (rasOf @ [i, j, 20, 1])
+        return xy[0], xy[1]
+
+    lasso = [onScreen(i, j) for i, j in corners]
+    interactor = red.sliceView().interactor()
+    _drag(vtk, interactor, lasso)
+    slicer.app.processEvents()
+    got = voxels(lad)
+    check("inverse cut in a real Red view keeps what the outline goes round, "
+          "every slice", np.array_equal(got, want),
+          (int(got.sum()), int(want.sum())))
+    check("  and leaves the other class alone",
+          np.array_equal(voxels(other), start > 0))
+    editor.undo()
+    check("  one undo puts it back", np.array_equal(voxels(lad), start > 0))
+
+    # The fail-safe: an outline beside the segment changes nothing.
+    beside = [onScreen(i, j) for i, j in
+              [(52.5, 41.5), (58.5, 41.5), (58.5, 48.5), (52.5, 48.5)]]
+    _drag(vtk, interactor, beside)
+    slicer.app.processEvents()
+    check("an outline that holds none of the segment leaves it unchanged",
+          np.array_equal(voxels(lad), start > 0), int(voxels(lad).sum()))
+
+    reset()
+    # The same drag as Qt mouse events, through VTK's Qt adapter.
+    glWidgets = [w for w in red.sliceView().findChildren(qt.QWidget)
+                 if "OpenGL" in w.className()]
+    if glWidgets:
+        _qtDrag(slicer, qt, glWidgets[0], lasso)
+        got = voxels(lad)
+        check("  and the same from Qt mouse events", np.array_equal(got, want),
+              int(got.sum()))
+        reset()
+    else:
+        say("SKIP the Qt-event drag: no OpenGL widget under the Red view")
+
+    reset()
+    # A lightbox: four panes, the outline drawn in the top-right one. 0.25.0 read
+    # the event position as slice XY and wiped the segment here. Slicer 5.8 has
+    # this lightbox (the slice node's layout grid); later Slicers ignore the grid.
+    sliceNode.SetLayoutGrid(2, 2)
+    slicer.app.processEvents()
+    if sliceNode.GetLayoutGridRows() == 2 and sliceNode.GetLayoutGridColumns() == 2:
+        width, height = red.sliceView().renderWindow().GetSize()
+        paneWidth, paneHeight = width / 2.0, height / 2.0
+        lightbox = [(x + paneWidth, y + paneHeight) for x, y in
+                    [onScreen(i, j) for i, j in corners]]
+        xyz = [0.0, 0.0, 0.0]
+        slicer.vtkMRMLAbstractSliceViewDisplayableManager.ConvertDeviceToXYZ(
+            interactor, sliceNode, int(round(lightbox[0][0])), int(round(lightbox[0][1])),
+            xyz)
+        _drag(vtk, interactor, lightbox)
+        slicer.app.processEvents()
+        got = voxels(lad)
+        check("inverse cut in a lightbox pane keeps what the outline goes round",
+              np.array_equal(got, want), (int(got.sum()), xyz))
+        reset()
+        sliceNode.SetLayoutGrid(1, 1)
+        slicer.app.processEvents()
+    else:
+        say("SKIP the lightbox drag: this Slicer has no slice-node layout grid")
+
+    # The 3D view, against VTK's own world-to-display conversion.
+    layoutManager.setLayout(slicer.vtkMRMLLayoutNode.SlicerLayoutOneUp3DView)
+    slicer.app.processEvents()
+    threeD = layoutManager.threeDWidget(0).threeDView()
+    threeD.resetFocalPoint()
+    renderer = threeD.renderWindow().GetRenderers().GetFirstRenderer()
+    camera = renderer.GetActiveCamera()
+    camera.Azimuth(35)
+    camera.Elevation(20)
+    camera.OrthogonalizeViewUp()
+    renderer.ResetCameraClippingRange()
+    threeD.forceRender()
+    slicer.app.processEvents()
+    check("Inverse cut's cursor over the 3D view is its icon",
+          _iconCursor(np, qt, threeD), threeD.cursor.shape())
+
+    def display(ras):
+        coordinate = vtk.vtkCoordinate()
+        coordinate.SetCoordinateSystemToWorld()
+        coordinate.SetValue(*ras)
+        return coordinate.GetComputedDoubleDisplayValue(renderer)
+
+    centre = display((rasOf @ [30, 25, 20, 1])[:3])
+    box = (centre[0] - 25, centre[1] - 20, centre[0] + 25, centre[1] + 20)
+    _drag(vtk, threeD.interactor(),
+          [(box[0], box[1]), (box[2], box[1]), (box[2], box[3]), (box[0], box[3])])
+    slicer.app.processEvents()
+    got = voxels(lad)
+    k, j, i = np.nonzero(start)
+    ras = (np.stack([i, j, k, np.ones_like(i)], axis=1) @ rasOf.T)[:, :3]
+    wrong = 0
+    for n in range(len(k)):
+        x, y = display(ras[n])
+        margin = min(x - box[0], box[2] - x, y - box[1], box[3] - y)
+        if abs(margin) > 1.0 and (margin > 0) != bool(got[k[n], j[n], i[n]]):
+            wrong += 1
+    check("inverse cut in the 3D view keeps what projects inside the outline",
+          0 < int(got.sum()) < int(start.sum()) and wrong == 0,
+          (int(got.sum()), wrong))
+    reset()
+
+    editor.setActiveEffectByName("")
+    scene.RemoveNode(node)
+    scene.RemoveNode(volume)
+    if viewport is not None:
+        layoutManager.setLayout(slicer.vtkMRMLLayoutNode.SlicerLayoutOneUpRedSliceView)
+        viewport.hide()
 
 
 def run_d47():

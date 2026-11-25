@@ -46,6 +46,9 @@ What an annotator sees:
   0.25.1: the outline is converted as Slicer's Scissors converts it (a lightbox
   outline used to land elsewhere and wipe the class), a cut that would empty the
   class changes nothing, and the icon is the cursor over the 3D view too.
+  0.25.2: the cut is written through the editor (``modifySelectedSegmentByLabelmap``)
+  so the 3D view keeps showing the classes; adding seeded extended classes keeps
+  them too (``SegQueue14Lib/surfaces.py``).
 * **Seeded extended classes** (D51, 0.25.0): on the annotator's own seeded case,
   an extended class the panel adds starts as a hidden copy of the seed, as the
   four do (D26). A reviewer's added classes stay empty. Turning the toggle off
@@ -129,12 +132,12 @@ from SegQueue14Lib import (
     updater,
 )
 from SegQueue14Lib import SegQueue14Client as SegQueueClient
-from SegQueue14Lib import inversecut
+from SegQueue14Lib import inversecut, surfaces
 from SegQueue14Lib import SegQueue14Error as SegQueueError
 
 #: Continues SegQueue's numbering (0.13.0 was the last 4-class release). The
 #: release tag is ``segqueue-v`` + this; bump it to publish.
-__version__ = "0.25.1"
+__version__ = "0.25.2"
 
 #: Where the module's help points.
 HELP_URL = "https://github.com/christianGRogers/Asclepius"
@@ -682,15 +685,19 @@ class SegQueue14Logic(ScriptedLoadableModuleLogic):
             return 0
         mask = (mask > 0).astype("uint8")
         filled = 0
-        for spec in specs:
-            segmentId = self.segmentIdFor(spec.name)
-            if segmentId is None:
-                segmentId = self.segmentationNode.GetSegmentation().AddEmptySegment(
-                    spec.name, spec.name, list(spec.color))
-            slicer.util.updateSegmentBinaryLabelmapFromArray(
-                mask, self.segmentationNode, segmentId, self.volumeNode)
-            if _segmentHasContent(self.segmentationNode, spec.name):
-                filled += 1
+        # The write drops every segment's closed surface (Slicer 5.8): with the
+        # classes shown in 3D, turning the extended classes on mid-case blanked
+        # the 3D view until Show in 3D. Rebuilt here when it was showing (0.25.2).
+        with surfaces.keeping_closed_surface(self.segmentationNode):
+            for spec in specs:
+                segmentId = self.segmentIdFor(spec.name)
+                if segmentId is None:
+                    segmentId = self.segmentationNode.GetSegmentation().AddEmptySegment(
+                        spec.name, spec.name, list(spec.color))
+                slicer.util.updateSegmentBinaryLabelmapFromArray(
+                    mask, self.segmentationNode, segmentId, self.volumeNode)
+                if _segmentHasContent(self.segmentationNode, spec.name):
+                    filled += 1
         return filled
 
     # ----------------------------------------------------- extended classes

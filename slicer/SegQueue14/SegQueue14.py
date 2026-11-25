@@ -39,6 +39,15 @@ What an annotator sees:
 * **Compare reads** (#335, 0.21.0, reviewers): two or more annotators' reads of one
   case loaded together, read-only, each in its own colour, with an agreement map of
   any two (both / A only / B only per class, and the Dice, ``segqueue14.compare``).
+* **Inverse cut** (D51, 0.25.0): a Segment Editor effect of its own, with its own
+  icon beside Scissors in the embedded editor. The annotator outlines a region and
+  the selected class keeps only what is inside it; an empty class takes the vessel
+  seed inside it instead (``SegQueue14Lib/SegmentEditorInverseCutEffect.py``).
+* **Seeded extended classes** (D51, 0.25.0): on the annotator's own seeded case,
+  an extended class the panel adds starts as a hidden copy of the seed, as the
+  four do (D26). A reviewer's added classes stay empty. Turning the toggle off
+  removes untouched seed copies too, and an untouched seed copy is submitted as an
+  empty channel.
 
 The server owns the protocol, local data is a lease, nothing the client says is
 trusted: those three decisions are the live module's and are kept unchanged.
@@ -117,11 +126,12 @@ from SegQueue14Lib import (
     updater,
 )
 from SegQueue14Lib import SegQueue14Client as SegQueueClient
+from SegQueue14Lib import inversecut
 from SegQueue14Lib import SegQueue14Error as SegQueueError
 
 #: Continues SegQueue's numbering (0.13.0 was the last 4-class release). The
 #: release tag is ``segqueue-v`` + this; bump it to publish.
-__version__ = "0.24.1"
+__version__ = "0.25.0"
 
 #: Where the module's help points.
 HELP_URL = "https://github.com/christianGRogers/Asclepius"
@@ -214,6 +224,36 @@ def initialServerUrl(settingsValue):
                          settingsValue(_LIVE_SETTING_SERVER, DEFAULT_SERVER_URL))
 
 
+#: The Inverse cut Segment Editor effect (D51), shipped with the module.
+INVERSE_CUT_EFFECT_NAME = "Inverse cut"
+INVERSE_CUT_EFFECT_SOURCE = os.path.join(
+    _MODULE_DIR, "SegQueue14Lib", "SegmentEditorInverseCutEffect.py")
+
+
+def registerInverseCutEffect():
+    """Register the Inverse cut effect with Slicer's Segment Editor (D51), once.
+
+    Called when Slicer finishes starting up and again before the module's panel
+    builds its editor, so the effect is in the factory before any editor widget
+    lists its effects. Returns whether it is registered; never raises -- a Slicer
+    that refuses the effect still gets a working panel, without the one tool.
+    """
+    try:
+        factory = slicer.qSlicerSegmentEditorEffectFactory.instance()
+        if any(effect.name == INVERSE_CUT_EFFECT_NAME
+               for effect in factory.registeredEffects()):
+            return True
+        import qSlicerSegmentationsEditorEffectsPythonQt as effects
+
+        instance = effects.qSlicerSegmentEditorScriptedEffect(None)
+        instance.setPythonSource(INVERSE_CUT_EFFECT_SOURCE.replace("\\", "/"))
+        instance.self().register()
+        return True
+    except Exception:
+        traceback.print_exc()
+        return False
+
+
 class SegQueue14(ScriptedLoadableModule):
     def __init__(self, parent):
         ScriptedLoadableModule.__init__(self, parent)
@@ -228,6 +268,9 @@ class SegQueue14(ScriptedLoadableModule):
         _icon = os.path.join(_RESOURCES, "Icons", "SegQueue14.png")
         if os.path.isfile(_icon):
             self.parent.icon = qt.QIcon(_icon)
+        # D51: Inverse cut joins the Segment Editor's effects once Slicer is up
+        # (the effect factory and the editor's Python base classes exist by then).
+        slicer.app.connect("startupCompleted()", registerInverseCutEffect)
 
 
 # =============================================================================
@@ -258,6 +301,14 @@ class SegQueue14Logic(ScriptedLoadableModuleLogic):
         self.prelabelClasses = 0
         #: How many classes were filled with a copy of the seed on this open (D26).
         self.seedPrefilled = 0
+        #: How many extended classes were filled with a copy of the seed on this
+        #: open (D51).
+        self.seedPrefilledExtended = 0
+        #: The extended classes the last ``addExtendedClasses`` created, by name.
+        self.lastAddedExtended = []
+        #: The extended classes the last export wrote as empty channels because
+        #: they were still an untouched copy of the seed (D51 d).
+        self.seedCopiesBlanked = []
         #: The annotator's "Extended classes" toggle (D44): new scenes get the 17
         #: extended classes, empty. Off by default; set from the per-login setting.
         self.extendedClasses = False
@@ -405,12 +456,20 @@ class SegQueue14Logic(ScriptedLoadableModuleLogic):
         # the annotator's own correction and is left alone.
         self.prelabelClasses = 0
         self.seedPrefilled = 0
+        self.seedPrefilledExtended = 0
+        # The extended classes _applyTemplate just added (toggle on, or a case
+        # flagged for extended mode), before the prelabel can fill any of them.
+        addedAtOpen = list(self.lastAddedExtended)
         if not self.resumedDraft and assignment.has_prelabel:
             self.prelabelClasses = self._loadPrelabel(assignment)
         elif not self.resumedDraft and assignment.has_seed:
             # D26: every class starts as the whole seed, for the annotator to cut
             # down to that class.
             self.seedPrefilled = self._prefillClassesFromSeed(assignment)
+        if not self.resumedDraft and assignment.has_seed and addedAtOpen:
+            # D51: the extended classes start from the seed too, hidden, as the
+            # four do; a resumed draft is never refilled (D26).
+            self.seedPrefilledExtended = self.fillExtendedFromSeed(addedAtOpen)
         slicer.util.setSliceViewerLayers(background=self.volumeNode, fit=True)
         self.applyViewPreset()
         if assignment.has_seed and not assignment.has_prelabel:
@@ -595,7 +654,15 @@ class SegQueue14Logic(ScriptedLoadableModuleLogic):
             return 0
 
     def copySegmentIntoEveryClass(self, sourceSegmentId):
-        """Put a full copy of one segment's voxels into every project segment.
+        """Put a full copy of one segment's voxels into every project segment."""
+        if self.project is None:
+            return 0
+        return self.copySegmentIntoClasses(
+            sourceSegmentId,
+            sorted(self.project.segments, key=lambda spec: int(spec.label)))
+
+    def copySegmentIntoClasses(self, sourceSegmentId, specs):
+        """Put a full copy of one segment's voxels into each class of ``specs``.
 
         Written per class with ``updateSegmentBinaryLabelmapFromArray`` against
         the CT, which keeps the copies as overlapping segments in separate
@@ -612,7 +679,7 @@ class SegQueue14Logic(ScriptedLoadableModuleLogic):
             return 0
         mask = (mask > 0).astype("uint8")
         filled = 0
-        for spec in sorted(self.project.segments, key=lambda spec: int(spec.label)):
+        for spec in specs:
             segmentId = self.segmentIdFor(spec.name)
             if segmentId is None:
                 segmentId = self.segmentationNode.GetSegmentation().AddEmptySegment(
@@ -687,13 +754,17 @@ class SegQueue14Logic(ScriptedLoadableModuleLogic):
             return None
         return labels.clean_complete_groups(self.completeGroups)
 
-    def addExtendedClasses(self, segmentationNode=None):
-        """Add whichever of the 17 extended classes are missing, empty (D44).
+    def addExtendedClasses(self, segmentationNode=None, fromSeed=False):
+        """Add whichever of the 17 extended classes are missing (D44).
 
         Each new segment gets its pinned label value (``labels.ALL_LABEL_VALUES``)
         and colour once, on creation; an existing one is never re-pinned (#270).
-        Returns how many were added.
+        They are added empty. With ``fromSeed`` -- the annotator's own case only --
+        each one added here is then filled with a copy of the seed, hidden
+        (``fillExtendedFromSeed``, D51); one already in the scene is never
+        refilled. Returns how many were added; ``lastAddedExtended`` names them.
         """
+        self.lastAddedExtended = []
         node = segmentationNode or self.segmentationNode
         if node is None:
             return 0
@@ -708,26 +779,108 @@ class SegQueue14Logic(ScriptedLoadableModuleLogic):
                 segment.SetLabelValue(int(spec.label))
             except AttributeError:  # pragma: no cover - old Slicer
                 pass
+            self.lastAddedExtended.append(spec.name)
             added += 1
         self.orderSegments(node)
+        if fromSeed and self.lastAddedExtended and node is self.segmentationNode:
+            self.fillExtendedFromSeed(self.lastAddedExtended)
         return added
 
-    def removeEmptyExtendedClasses(self, segmentationNode=None):
-        """Remove the extended classes that hold nothing. Returns ``(removed, kept)``.
+    def fillExtendedFromSeed(self, names):
+        """Fill the named extended classes with a copy of the seed, hidden (D51).
 
-        An extended class with voxels is kept, whatever the toggle says: turning
-        the classes off must never throw away work.
+        As D26 does for the four: the annotator shows a class and cuts it down.
+        Only on the annotator's own case (``assignment``): a reviewer's added
+        classes stay empty (D51 b). Nothing happens on a case without a seed.
+        Returns how many were filled; never raises -- a class left empty is a
+        worse start, not a blocked one.
+        """
+        if self.assignment is None or not names:
+            return 0
+        seedId = self._seedIdInScene()
+        if not seedId:
+            return 0
+        wanted = set(names)
+        specs = [spec for spec in self.extraSpecs() if spec.name in wanted]
+        try:
+            filled = self.copySegmentIntoClasses(seedId, specs)
+        except Exception:
+            return 0
+        display = self.segmentationNode.GetDisplayNode()
+        if display is not None:
+            for spec in specs:
+                segmentId = self.segmentIdFor(spec.name)
+                if segmentId:
+                    display.SetSegmentVisibility(segmentId, False)
+        return filled
+
+    def _seedIdInScene(self):
+        """The vessel seed's segment id, if it is in the open segmentation."""
+        if not self.seedSegmentId or self.segmentationNode is None:
+            return None
+        if self.segmentationNode.GetSegmentation().GetSegment(self.seedSegmentId) is None:
+            return None
+        return self.seedSegmentId
+
+    def seedMask(self):
+        """The seed as a 0/1 array on the CT grid, or None (no seed, or empty)."""
+        seedId = self._seedIdInScene()
+        if not seedId or self.volumeNode is None:
+            return None
+        shape = slicer.util.arrayFromVolume(self.volumeNode).shape
+        mask = self._segmentMask(seedId, shape, "the vessel seed")
+        return mask if mask.any() else None
+
+    def isUntouchedSeedCopy(self, name, seed=None, mask=None):
+        """Whether class ``name`` is still exactly the seed, voxel for voxel (D51).
+
+        The one test behind both D51 c (the toggle off removes such a class) and
+        D51 d (it is submitted as an empty channel). Exact, on the CT grid
+        (``inversecut.is_untouched_copy``); ``seed`` and ``mask`` are passed in
+        when the caller already has them. Without ``mask``, a class whose stored
+        voxel count differs from the seed's is answered without reading it whole.
+        """
+        import numpy as np
+
+        if seed is None:
+            seed = self.seedMask()
+        if seed is None:
+            return False
+        if mask is None:
+            segmentId = self.segmentIdFor(name)
+            if not segmentId:
+                return False
+            try:
+                stored = slicer.util.arrayFromSegmentBinaryLabelmap(
+                    self.segmentationNode, segmentId)
+            except Exception:
+                stored = None
+            if stored is not None and int(np.count_nonzero(stored)) != int(
+                    np.count_nonzero(seed)):
+                return False
+            mask = self._classMask(name, seed.shape)
+        return inversecut.is_untouched_copy(mask, seed)
+
+    def removeEmptyExtendedClasses(self, segmentationNode=None):
+        """Remove the extended classes that hold nothing of the annotator's.
+        Returns ``(removed, kept)``.
+
+        Removed: an empty class, and one still an untouched copy of the seed
+        (D51 c). Kept: any class the annotator changed, whatever the toggle says:
+        turning the classes off must never throw away work.
         """
         node = segmentationNode or self.segmentationNode
         if node is None:
             return [], []
         removed, kept = [], []
         segmentation = node.GetSegmentation()
+        seed = self.seedMask() if node is self.segmentationNode else None
         for name in labels.EXTRA_NAMES:
             segmentId = _segmentIdIn(node, name)
             if not segmentId:
                 continue
-            if _segmentHasContent(node, name):
+            if _segmentHasContent(node, name) and not (
+                    seed is not None and self.isUntouchedSeedCopy(name, seed)):
                 kept.append(name)
             else:
                 segmentation.RemoveSegment(segmentId)
@@ -1256,9 +1409,12 @@ class SegQueue14Logic(ScriptedLoadableModuleLogic):
             except AttributeError:  # pragma: no cover - old Slicer
                 pass
 
-        # D44: the 17 extended classes, empty, when the annotator has turned them
-        # on. A draft that already has them keeps them as they are (never
-        # re-pinned), toggle or not; one from 0.17.x gets them added, empty.
+        # D44: the 17 extended classes when the annotator has turned them on. A
+        # draft that already has them keeps them as they are (never re-pinned),
+        # toggle or not; one from 0.17.x gets them added, empty. They are added
+        # empty here: the seed is not in the scene yet, and openCase fills the
+        # ones added now from it on a fresh seeded case (D51).
+        self.lastAddedExtended = []
         if self.extendedOn():
             self.addExtendedClasses()
         else:
@@ -1394,6 +1550,11 @@ class SegQueue14Logic(ScriptedLoadableModuleLogic):
         in label order, the empty ones as empty channels, and the branch groups
         ticked complete in the header (D47 Q3, ``completeGroupsForExport``).
 
+        **An untouched seed copy is not a read** (D51 d): an extended class still
+        exactly the seed (``isUntouchedSeedCopy``) is written as an empty channel,
+        and named in ``seedCopiesBlanked``. The four classes are written as they
+        are, seed copies or not (D26, D38).
+
         Returns ``(voxelCounts, sourceGeometry, segmentationGeometry)``; the
         counts are per class, each counted whole, from the masks written.
         """
@@ -1404,9 +1565,17 @@ class SegQueue14Logic(ScriptedLoadableModuleLogic):
         shape = slicer.util.arrayFromVolume(self.volumeNode).shape
         # The four, or all 21 once any extended class is in the scene (D44).
         specs = self.classSpecs()
-        masks = []
+        extra = set(labels.EXTRA_NAMES)
+        seed = self.seedMask() if any(s.name in extra for s in specs) else None
+        masks, blanked = [], []
         for spec in specs:
-            masks.append(self._classMask(spec.name, shape))
+            mask = self._classMask(spec.name, shape)
+            if (seed is not None and spec.name in extra
+                    and self.isUntouchedSeedCopy(spec.name, seed, mask)):
+                mask = np.zeros(shape, np.uint8)
+                blanked.append(spec.name)
+            masks.append(mask)
+        self.seedCopiesBlanked = blanked
 
         matrix = vtk.vtkMatrix4x4()
         self.volumeNode.GetIJKToRASMatrix(matrix)
@@ -1427,9 +1596,12 @@ class SegQueue14Logic(ScriptedLoadableModuleLogic):
 
     def _classMask(self, name, shape):
         """One class as a 0/1 uint8 array on the CT grid; zeros if it has none."""
+        return self._segmentMask(self.segmentIdFor(name), shape, name)
+
+    def _segmentMask(self, segmentId, shape, name):
+        """One segment as a 0/1 uint8 array on the CT grid; zeros if it has none."""
         import numpy as np
 
-        segmentId = self.segmentIdFor(name)
         mask = None
         if segmentId:
             mask = slicer.util.arrayFromSegmentBinaryLabelmap(
@@ -2879,6 +3051,8 @@ class SegQueue14Widget(ScriptedLoadableModuleWidget):
         # what every tutorial and every YouTube video shows.
         self._buildExtendedRow(layout)
 
+        # D51: before the editor is built, so Inverse cut is among its effects.
+        registerInverseCutEffect()
         self.editorWidget = slicer.qMRMLSegmentEditorWidget()
         self.editorWidget.setMRMLScene(slicer.mrmlScene)
         self.editorWidget.setSegmentationNodeSelectorVisible(False)
@@ -2908,9 +3082,12 @@ class SegQueue14Widget(ScriptedLoadableModuleWidget):
 
         self.extendedCheck = qt.QCheckBox("Extended classes")
         self.extendedCheck.setToolTip(
-            "Adds 17 optional classes, empty: stent, calcified and non-calcified "
-            "plaque, D1-D3, S1-S3, OM1-OM2, SN, conus, RMA, PDA, PLB and the ramus. "
-            "Leave any of them empty. Turning this off removes only the empty ones.")
+            "Adds 17 optional classes: stent, calcified and non-calcified plaque, "
+            "D1-D3, S1-S3, OM1-OM2, SN, conus, RMA, PDA, PLB and the ramus. On a "
+            "case with a vessel seed each starts as a hidden copy of the seed, like "
+            "the four; otherwise empty. A class left as an untouched seed copy is "
+            "submitted empty. Turning this off removes only the empty ones and the "
+            "untouched seed copies.")
         self.extendedCheck.toggled.connect(self.onToggleExtended)
         layout.addWidget(self.extendedCheck)
 
@@ -3004,12 +3181,15 @@ class SegQueue14Widget(ScriptedLoadableModuleWidget):
         if self.logic.segmentationNode is not None and (
                 self.logic.assignment is not None or self._claimedSubmission):
             if on:
-                self.logic.addExtendedClasses()
+                # D51: on the annotator's own seeded case the new classes start as
+                # hidden copies of the seed; a reviewer's stay empty (D51 b).
+                self.logic.addExtendedClasses(
+                    fromSeed=self.logic.assignment is not None)
             else:
                 _removed, kept = self.logic.removeEmptyExtendedClasses()
                 if kept:
                     slicer.util.infoDisplay(
-                        "Kept {} because they have voxels in them. Erase a class "
+                        "Kept {} because you have changed them. Erase a class "
                         "first if you want it gone; the read is submitted with all "
                         "21 classes while any of them is in the scene.".format(
                             ", ".join(kept)))
@@ -3898,9 +4078,9 @@ class SegQueue14Widget(ScriptedLoadableModuleWidget):
             self.logic.caseExtendedMode = bool(entry.get("extendedMode"))
             # D44: an extended read loads with all its classes, whatever the toggle
             # says; with the toggle on (or a flagged case), a four-class read gets
-            # the 17, empty.
+            # the 17, empty -- never from the seed, in a reviewer's panel (D51 b).
             if self.logic.extendedOn():
-                self.logic.addExtendedClasses()
+                self.logic.addExtendedClasses(fromSeed=False)
             self.logic.applyViewPreset()
             self._bindEditor(segmentationNode, volumeNode)
             slicer.app.layoutManager().setLayout(
@@ -4631,7 +4811,12 @@ class SegQueue14Widget(ScriptedLoadableModuleWidget):
 
         self._clearNotes()
         self.saveStatusLabel.setText("")
-        self.caseLabel.setText("Submitted. Press 'Get next case' when you are ready.")
+        blanked = self.logic.seedCopiesBlanked
+        self.caseLabel.setText(
+            "Submitted.{} Press 'Get next case' when you are ready.".format(
+                " {} extended class{} still an untouched copy of the seed went as "
+                "empty.".format(len(blanked), "" if len(blanked) == 1 else "es")
+                if blanked else ""))
         self.reworkLabel.setVisible(False)
         self._bindEditor(None, None)
         self._updateEnabled()

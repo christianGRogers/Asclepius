@@ -1628,7 +1628,7 @@ _D51_METHODS = (
     "completeGroupsForExport", "addExtendedClasses", "seedOnFirstSelection",
     "copySegmentInto", "_saveFirstSelected", "_restoreFirstSelected",
     "_seedIdInScene", "seedMask", "isUntouchedSeedCopy", "extendedWork",
-    "showExtendedIfWorked", "extendedSegmentIds", "setExtendedShown",
+    "showExtendedIfWorked", "extendedSegmentIds", "setExtendedShown", "submitsExtended",
     "orderSegments", "copySegmentIntoEveryClass", "copySegmentIntoClasses",
     "segmentIdFor", "exportSubmission", "_classMask", "_segmentMask", "sourceGeometry",
 )
@@ -1817,7 +1817,7 @@ def _d51_logic(np, assignment=True, extended=True, seed=True, shape=(4, 6, 6)):
 
     logic.project = Project()
     logic.extendedClasses, logic.caseExtendedMode = extended, False
-    logic.extendedWorkOpened = False
+    logic.extendedWorkOpened, logic.caseFlaggedExtended = False, False
     logic.extendedView = namespace["extendedview"].ExtendedView()
     logic.completeGroups = set()
     logic.lastAddedExtended, logic.seedCopiesBlanked = [], []
@@ -2057,12 +2057,53 @@ def test_export_is_four_classes_when_no_extended_class_holds_work():
     logic, labels, labelfile, seed = _d51_logic(np)
     logic.addExtendedClasses()
     _selectAll(logic, labels)                     # 14 untouched copies, 3 empty
-    logic.completeGroups = {labels.COMPLETE_GROUPS[0]}
     counts, _, _ = logic.exportSubmission("unused.seg.nrrd")
     assert list(labelfile.written) == labels.NAMES and list(counts) == labels.NAMES
     assert labelfile.complete is None             # a four-class read has no ticks
     assert logic.seedCopiesBlanked == []
     assert logic.extendedWork() == []
+
+
+@pytest.mark.parametrize("toggle", [True, False])
+def test_a_complete_tick_with_no_voxels_is_sent_as_21_with_the_tick(toggle):
+    """D53 as amended: D47 Q3 stands -- a ticked group with no branches is work."""
+    np = pytest.importorskip("numpy")
+    logic, labels, labelfile, seed = _d51_logic(np)
+    logic.addExtendedClasses()
+    _selectAll(logic, labels)                     # nothing drawn: copies and empties
+    logic.completeGroups = {labels.COMPLETE_GROUPS[1]}
+    logic.extendedClasses = toggle
+    logic.setExtendedShown(toggle)
+    logic.exportSubmission("unused.seg.nrrd")
+    assert list(labelfile.written) == labels.ALL_NAMES
+    assert labelfile.complete == [labels.COMPLETE_GROUPS[1]]
+    assert not any(labelfile.written[n].any() for n in labels.EXTRA_NAMES)  # D51 d
+
+
+@pytest.mark.parametrize("toggle", [True, False])
+def test_a_flagged_case_with_nothing_drawn_is_sent_as_21(toggle):
+    """D53 as amended: D47 Q6 stands -- a flagged case is always an extended read,
+    also when the toggle was turned off and when the scene lacks the 17."""
+    np = pytest.importorskip("numpy")
+    logic, labels, labelfile, seed = _d51_logic(np, extended=toggle)
+    logic.caseFlaggedExtended = True
+    if toggle:
+        logic.addExtendedClasses()
+    logic.exportSubmission("unused.seg.nrrd")
+    assert list(labelfile.written) == labels.ALL_NAMES
+    assert labelfile.complete == []
+    assert not any(labelfile.written[n].any() for n in labels.EXTRA_NAMES)
+
+
+def test_the_toggle_off_never_clears_the_case_flag():
+    toggle = ast.get_source_segment(_source(), _method("SegQueue14Widget", "onToggleExtended"))
+    assert "caseFlaggedExtended" not in toggle
+    close = ast.get_source_segment(_source(), _method("SegQueue14Logic", "closeCase"))
+    assert "self.caseFlaggedExtended = False" in close
+    flags = ast.get_source_segment(_source(), _method("SegQueue14Logic", "_applyCaseFlags"))
+    assert "self.caseFlaggedExtended = self.caseExtendedMode" in flags
+    review = ast.get_source_segment(_source(), _method("SegQueue14Widget", "onOpenReview"))
+    assert "self.logic.caseFlaggedExtended = self.logic.caseExtendedMode" in review
 
 
 @pytest.mark.parametrize("toggle", [True, False])

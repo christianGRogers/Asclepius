@@ -341,6 +341,11 @@ class SegQueue14Logic(ScriptedLoadableModuleLogic):
         #: The open case is flagged to be read in extended mode (D47 Q6): the
         #: extended classes are on for it, whatever the per-login toggle says.
         self.caseExtendedMode = False
+        #: The open case is flagged for extended mode (D47 Q6), kept apart from
+        #: ``caseExtendedMode`` because the toggle off clears that one (it only
+        #: decides what is shown). A flagged case is always submitted as 21
+        #: classes (D53, amended): see ``submitsExtended``.
+        self.caseFlaggedExtended = False
         #: The read just opened (a draft, a reopened read, a reviewer's
         #: submission) has work in its extended classes (D53): they are shown for
         #: it, whatever the per-login toggle says, until it is turned off.
@@ -540,6 +545,7 @@ class SegQueue14Logic(ScriptedLoadableModuleLogic):
         """D47 for the case being opened: extended mode from the case's flag (Q6),
         and the branch-group ticks the draft or the reopened read had (Q3)."""
         self.caseExtendedMode = bool(getattr(assignment, "extended_mode", False))
+        self.caseFlaggedExtended = self.caseExtendedMode
         self.completeGroups = set(self._savedCompleteGroups(manifest))
         # Into the manifest now: the next autosave replaces the read they came from.
         self.cache.update(assignment.assignment_id,
@@ -779,13 +785,23 @@ class SegQueue14Logic(ScriptedLoadableModuleLogic):
                 if _segmentHasContent(node, name)
                 and not (seed is not None and self.isUntouchedSeedCopy(name, seed))]
 
+    def submitsExtended(self, work):
+        """Whether the read is submitted with all 21 classes (D53, amended so
+        D47 stands): when an extended class holds work (``work``), when a branch
+        group is ticked complete (D47 Q3: a ticked group with no branches is
+        information), or when the case is flagged for extended mode (D47 Q6),
+        whatever was drawn. Otherwise the four, exactly as before. Never the
+        toggle."""
+        return bool(work or labels.clean_complete_groups(self.completeGroups)
+                    or self.caseFlaggedExtended)
+
     def showExtendedIfWorked(self):
         """At open (D53): a read with work in its extended classes has them on for
         it, so nobody opens their own work hidden. Not saved to the login's toggle.
         Returns whether it turned them on."""
         if self.extendedOn() or not self.hasExtendedSegments():
             return False
-        if not self.extendedWork():
+        if not (self.extendedWork() or labels.clean_complete_groups(self.completeGroups)):
             return False
         self.extendedWorkOpened = True
         return True
@@ -1552,6 +1568,7 @@ class SegQueue14Logic(ScriptedLoadableModuleLogic):
         self.assignment = None
         self._sessionStart = None
         self.caseExtendedMode = False
+        self.caseFlaggedExtended = False
         self.extendedWorkOpened = False
         self.extendedView.reset()
         self.completeGroups = set()
@@ -1666,12 +1683,13 @@ class SegQueue14Logic(ScriptedLoadableModuleLogic):
         drawn them; only the project's own classes are read, by name -- which
         excludes the helpers structurally, not by convention.
 
-        **Four classes or 21** (D53, amending D44): decided here, by the work in
-        the extended classes, never by the toggle. If no extended class holds an
-        annotator's work, the file is the four, exactly as 0.17.x writes it. If
-        any does, all 21 in label order, the empty ones as empty channels, and the
-        branch groups ticked complete in the header (D47 Q3,
-        ``completeGroupsForExport``) -- toggle on or off.
+        **Four classes or 21** (D53, amending D44; ``submitsExtended``): decided
+        here, never by the toggle. All 21 in label order -- the empty ones as
+        empty channels, the branch groups ticked complete in the header (D47 Q3,
+        ``completeGroupsForExport``) -- when an extended class holds an
+        annotator's work, when any group is ticked complete, or when the case is
+        flagged for extended mode (D47 Q6), toggle on or off. Otherwise the file
+        is the four, exactly as 0.17.x writes it.
 
         **An untouched seed copy is not a read** (D51 d): an extended class still
         exactly the seed (``isUntouchedSeedCopy``) is written as an empty channel,
@@ -1694,6 +1712,11 @@ class SegQueue14Logic(ScriptedLoadableModuleLogic):
         # holds work (D53). The toggle does not enter into it.
         specs = self.classSpecs()
         extra = set(labels.EXTRA_NAMES)
+        if self.caseFlaggedExtended or labels.clean_complete_groups(self.completeGroups):
+            # Sent as 21 whatever is in the scene (a flagged case or a tick):
+            # classes not in it go as empty channels.
+            have = {spec.name for spec in specs}
+            specs = specs + [spec for spec in self.extraSpecs() if spec.name not in have]
         seed = self.seedMask() if any(s.name in extra for s in specs) else None
         masks, blanked, work = [], [], False
         for spec in specs:
@@ -1705,7 +1728,7 @@ class SegQueue14Logic(ScriptedLoadableModuleLogic):
                 elif mask.any():
                     work = True
             masks.append(mask)
-        if not work:
+        if not self.submitsExtended(work):
             kept = [i for i, spec in enumerate(specs) if spec.name not in extra]
             specs = [specs[i] for i in kept]
             masks = [masks[i] for i in kept]
@@ -3255,7 +3278,8 @@ class SegQueue14Widget(ScriptedLoadableModuleWidget):
             "untouched seed copy is submitted empty. Turning this off only "
             "hides the classes: nothing is deleted, and turning it on shows them "
             "as they were. Your read is sent with all 21 classes if any of them "
-            "has your work in it, whether this is on or off.")
+            "has your work in it, a Complete box is ticked or the case asks for "
+            "them, whether this is on or off.")
         self.extendedCheck.toggled.connect(self.onToggleExtended)
         layout.addWidget(self.extendedCheck)
 
@@ -4297,6 +4321,7 @@ class SegQueue14Widget(ScriptedLoadableModuleWidget):
             # server is too old to send them.
             self.logic.setCompleteGroups(self._reviewCompleteGroups(entry, segPath))
             self.logic.caseExtendedMode = bool(entry.get("extendedMode"))
+            self.logic.caseFlaggedExtended = self.logic.caseExtendedMode
             # D44: an extended read loads with all its classes, whatever the toggle
             # says; with the toggle on (or a flagged case), a four-class read gets
             # the 17, empty -- never from the seed, in a reviewer's panel (D51 b).

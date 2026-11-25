@@ -31,7 +31,8 @@ group rows, and on shows them with the eyes they had; no dialog is raised by the
 toggle or by submit; a draft saved with the toggle off resumes with the work; the
 export is 21 channels with the work in them when any extended class holds work,
 toggle off or on, and the four when they are all empty or untouched seed copies;
-and a reviewer's panel toggles the same way and revises all 21.
+a Complete tick with no voxels and a flagged case with nothing drawn are 21 (D47
+stands); and a reviewer's panel toggles the same way and revises all 21.
 
 D47 (#322, ``run_d47``): a case flagged for extended mode opens with the extended
 classes; the three branch-group "complete" tick-boxes start unticked, are saved
@@ -2751,6 +2752,42 @@ def run_d53():
                 "on" if on else "off"),
                 labelfile.read_class_stack(path)["names"] == labels.NAMES
                 and fresh.seedCopiesBlanked == [])
+            slicer.mrmlScene.RemoveNode(fresh.segmentationNode)
+
+        # D53 as amended (D47 stands): a Complete tick with no voxels, and a case
+        # flagged for extended mode with nothing drawn, are sent as 21.
+        for on in (True, False):
+            fresh, freshCt = _seededCase(slicer, np, module, labels, tmp,
+                                         "d53-tick-{}".format(on), seed, True)
+            for name in ("D1", "OM2"):
+                fresh.seedOnFirstSelection(fresh.segmentIdFor(name))
+            fresh.setCompleteGroup(labels.COMPLETE_GROUPS[0], True)
+            fresh.extendedClasses = on
+            fresh.setExtendedShown(on)
+            path = os.path.join(tmp, "d53-tick-{}.seg.nrrd".format(on))
+            fresh.exportSubmission(path)
+            stored = labelfile.read_class_stack(path)
+            ticks = labelfile.complete_groups(labelfile.read_header(path))
+            check("a Complete tick with no voxels (toggle {}): 21 channels and the "
+                  "tick".format("on" if on else "off"),
+                  stored["names"] == labels.ALL_NAMES
+                  and ticks == [labels.COMPLETE_GROUPS[0]]
+                  and not any(m.any() for n, m in zip(stored["names"], stored["masks"])
+                              if n in labels.EXTRA_NAMES), (stored["names"], ticks))
+            slicer.mrmlScene.RemoveNode(fresh.segmentationNode)
+        for on in (True, False):
+            fresh, freshCt = _seededCase(slicer, np, module, labels, tmp,
+                                         "d53-flag-{}".format(on), seed, on)
+            fresh.caseExtendedMode = fresh.caseFlaggedExtended = True
+            if not on:                      # the annotator turned the box off
+                fresh.caseExtendedMode = False
+                fresh.setExtendedShown(False)
+            path = os.path.join(tmp, "d53-flag-{}.seg.nrrd".format(on))
+            fresh.exportSubmission(path)
+            stored = labelfile.read_class_stack(path)
+            check("a flagged case with nothing drawn ({}): 21 channels".format(
+                "box on" if on else "box turned off, 17 never added"),
+                stored["names"] == labels.ALL_NAMES, stored["names"])
             slicer.mrmlScene.RemoveNode(fresh.segmentationNode)
     finally:
         modalTimer.stop()

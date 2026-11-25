@@ -234,8 +234,9 @@ starts empty:
 - Turning the box off only hides the extended classes. Nothing is deleted, and
   turning it back on shows them exactly as they were (from SegQueue 0.25.6). You do
   not need to turn it off before you submit: if any extended class has your work in
-  it, the case is sent with all 21 classes, whether the box is on or off. If none
-  has (they are empty, or untouched copies of the outline), it is sent with the four.
+  it, or you ticked a **Complete** box, or the case asked for the extended classes,
+  it is sent with all 21 classes, whether the box is on or off. Otherwise (the
+  classes are empty, or untouched copies of the outline) it is sent with the four.
 
 Useful buttons:
 

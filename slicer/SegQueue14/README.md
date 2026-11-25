@@ -52,11 +52,12 @@ empty, grouped under their parent in the segment list, with show/hide per group:
 - **On:** the 17 are added empty to the open case or draft. The seed still fills
   only LM, LAD, LCx and RCA (D26); the annotator moves a branch out of its parent
   into its class, and paints the materials. Overlaps are fine (D39).
-- **Submitted classes** (D53, 0.25.6): decided at export by the work in the extended
-  classes, not by the toggle. With work in any of them, the read is submitted with
-  all 21 channels in label order (`labels.ALL_NAMES`), the empty ones empty; with
-  none (every extended class empty or an untouched seed copy), as the four. Turning
-  the toggle off only hides the classes; it never removes one.
+- **Submitted classes** (D53, 0.25.6): decided at export, not by the toggle. With
+  work in any extended class, a *Complete* tick, or a case flagged for extended
+  mode, the read is submitted with all 21 channels in label order
+  (`labels.ALL_NAMES`), the empty ones empty; otherwise (every extended class empty
+  or an untouched seed copy), as the four. Turning the toggle off only hides the
+  classes; it never removes one.
 - **Label values** 5-21 are fixed (`src/segqueue14/labels.py`) and set once when a
   segment is created. An existing segment is never re-pinned (#270's root cause), so
   a 0.17.x draft opened in 0.18.0 keeps its four classes untouched, plus the 17
@@ -197,11 +198,12 @@ because you have changed them ..."* box confused them.
   (`SegQueue14Lib/extendedview.py`): a class or group hidden before stays hidden,
   and a group's *Show* tick is no longer reset by the toggle. Only missing classes
   are added (empty, D52); an existing one is never touched.
-- **The export decides 4 or 21.** If no extended class holds work, the read is the
-  four classes exactly as before; an empty class or an untouched seed copy (D51 d)
-  is not work. Otherwise all 21 are sent, toggle on or off, untouched copies blanked
-  (D51 d) and the *Complete* ticks in the header (D47 Q3). A four-class read carries
-  no ticks.
+- **The export decides 4 or 21, never the toggle.** All 21 are sent (untouched seed
+  copies blanked, D51 d; the *Complete* ticks in the header, D47 Q3) when an
+  extended class holds work, when any branch group is ticked *Complete* (a ticked
+  group with no branches is information), or when the case is flagged for extended
+  mode (D47 Q6), whatever was drawn. Otherwise the read is the four classes exactly
+  as before; an empty class or an untouched seed copy is not work.
 - **Opening a read with extended work** (a draft, a reopened read, a reviewer's
   submission) shows its extended classes, whatever the login's toggle says (not
   saved to it), so nobody opens their own work hidden.

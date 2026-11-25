@@ -49,7 +49,8 @@ classes. "Calcified plaque" goes inside a trimmed LAD through Paint, Draw, Sciss
 and the LAD keeps every voxel; Slicer's own Segment Editor module, a node made after
 a scene clear and the panel all start at "Allow overlap"; a mode the annotator
 picks is kept until the next case; the export has two overlapping channels. D52:
-on a seeded case the materials start with 0 voxels and the branches as seed copies;
+on a seeded case the 17 start with 0 voxels and a branch selected in the panel becomes
+the seed (that class only);
 plaque painted inside the LAD is submitted as plaque, overlapping it; selecting a
 hidden class (own case and reviewer) shows it and only it, with no "segment is
 hidden" question, and the first paint stroke on it lands.
@@ -499,8 +500,8 @@ def _seededCase(slicer, np, module, labels, tmp, name, seed, extended):
                              has_seed=True, has_prelabel=False)
     logic.assignment = assignment
     logic._loadOrCreateSegmentation({})
-    addedAtOpen = list(logic.lastAddedExtended)
     os.makedirs(logic.cache.caseDir(name), exist_ok=True)
+    logic.cache.writeManifest(name, {"assignmentId": name})
     seedNode = slicer.mrmlScene.AddNewNodeByClass("vtkMRMLLabelMapVolumeNode", name + "-seed")
     slicer.util.updateVolumeFromArray(seedNode, seed)
     seedNode.CopyOrientation(volume)
@@ -509,8 +510,9 @@ def _seededCase(slicer, np, module, labels, tmp, name, seed, extended):
     slicer.mrmlScene.RemoveNode(seedNode)
     logic.seedSegmentId = logic._importHelper(seedPath, SEED_NAME, (0.95, 0.85, 0.2), 0.25)
     logic._prefillClassesFromSeed(assignment)
-    # D51: as openCase does, the extended classes added at open start from the seed.
-    logic.seedPrefilledExtended = logic.fillExtendedFromSeed(addedAtOpen)
+    # D52: as openCase does, the extended classes added at open stay empty; a
+    # branch gets its seed copy when first selected (seedOnFirstSelection).
+    logic._restoreFirstSelected({})
     logic._sessionStart = time.time()
     return logic, volume
 
@@ -672,19 +674,21 @@ def run_extended():
                   [s.name for s in resumed.classSpecs()] == labels.ALL_NAMES)
         slicer.mrmlScene.RemoveNode(resumed.segmentationNode)
 
-    # 7. Toggle on from the start: the seed fills the four and the 14 branches
-    # (D51); the three materials start empty (D52).
+    # 7. Toggle on from the start: the seed fills the four (D26); the 17 start
+    # empty, a branch filled only when first selected (D52).
     fresh, volume2 = _seededCase(slicer, np, module, labels, tmp, "fresh", seed, True)
     got = _countsOf(slicer, fresh.segmentationNode, volume2, labels.ALL_NAMES, segIn)
-    check("with the toggle on a seeded case opens with the 18 vessel and branch classes "
-          "seeded (D51) and the materials empty (D52)",
-          got == {n: 0 if n in labels.MATERIALS else nSeed for n in labels.ALL_NAMES}, got)
+    check("with the toggle on a seeded case opens with the four seeded and the 17 "
+          "extended classes empty (D52)",
+          got == {n: 0 if n in labels.EXTRA_NAMES else nSeed for n in labels.ALL_NAMES}, got)
 
 
 def run_d51():
-    """D51: Inverse cut is registered and listed by the editor, and cuts; extended
-    classes start from the seed on an own case, empty for a reviewer; the toggle off
-    removes untouched seed copies; export sends them empty."""
+    """D51: Inverse cut is registered and listed by the editor, and cuts. D51/D52:
+    toggle-on adds the extended classes with no seed voxels; on an own case a branch
+    becomes the seed on its first selection, exactly that class, once; materials and
+    a reviewer's classes stay empty; export sends untouched seed copies empty; the
+    toggle off removes them; a first selection keeps every other 3D surface."""
     import numpy as np
 
     import slicer
@@ -722,20 +726,33 @@ def run_d51():
     except Exception:
         check("  with its own icon", False, traceback.format_exc())
 
-    # 2. Own seeded case, toggle on: the 14 branches are hidden seed copies; the
-    # three materials start empty, with 0 voxels (D52).
-    branches = [n for n in labels.EXTRA_NAMES if n not in labels.MATERIALS]
+    # 2. Own seeded case, toggle on (D52): the 17 added with no seed voxels; the
+    # first selection of a branch fills exactly that one, from the seed.
     logic, volume = _seededCase(slicer, np, module, labels, tmp, "own", seed, True)
     node = logic.segmentationNode
     got = _countsOf(slicer, node, volume, labels.EXTRA_NAMES, segIn)
-    check("an own seeded case's branch classes start as the seed",
-          {n: got[n] for n in branches} == {n: nSeed for n in branches}
-          and logic.seedPrefilledExtended == 14, (got, logic.seedPrefilledExtended))
-    check("  and its materials start empty, with 0 voxels (D52)",
-          {n: got[n] for n in labels.MATERIALS} == {n: 0 for n in labels.MATERIALS}, got)
-    display = node.GetDisplayNode()
-    check("  hidden", not any(display.GetSegmentVisibility(segIn(node, n))
-                              for n in branches))
+    check("toggle-on adds the 17 extended classes with no seed voxels (D52)",
+          got == {n: 0 for n in labels.EXTRA_NAMES}, got)
+    check("  the first selection of a branch fills it from the seed",
+          logic.seedOnFirstSelection(segIn(node, "D2")) is True)
+    got = _countsOf(slicer, node, volume, labels.EXTRA_NAMES, segIn)
+    check("  exactly that one class",
+          got == {n: nSeed if n == "D2" else 0 for n in labels.EXTRA_NAMES}, got)
+    check("  and it is recorded for the draft",
+          logic.seedFirstSelected == {"D2"}
+          and logic.cache.manifest("own").get("seedFirstSelected") == ["D2"],
+          (logic.seedFirstSelected, logic.cache.manifest("own")))
+    for name in labels.EXTRA_NAMES:
+        logic.seedOnFirstSelection(segIn(node, name))
+    got = _countsOf(slicer, node, volume, labels.EXTRA_NAMES, segIn)
+    check("selecting each one: the branches become the seed, the materials stay empty",
+          got == {n: 0 if n in labels.MATERIALS else nSeed for n in labels.EXTRA_NAMES}, got)
+    emptied = np.zeros(SHAPE, np.uint8)
+    slicer.util.updateSegmentBinaryLabelmapFromArray(emptied, node, segIn(node, "D3"), volume)
+    check("a branch emptied on purpose is not refilled when selected again",
+          logic.seedOnFirstSelection(segIn(node, "D3")) is False
+          and _countsOf(slicer, node, volume, ["D3"], segIn) == {"D3": 0})
+    slicer.util.updateSegmentBinaryLabelmapFromArray(seed, node, segIn(node, "D3"), volume)
 
     # 3. Inverse cut through the real path (0.25.1): a real Red slice view and 3D
     # view, an oblique CT, and the mouse driven through the views' interactors.
@@ -746,35 +763,10 @@ def run_d51():
     finally:
         editor.setActiveEffectByName("")
 
-    # 4. Toggle off: untouched seed copies and the empty materials go, a trimmed
-    # D1 stays.
+    # 4. Export: untouched seed copies go empty, D1 cut down as it is.
     d1 = slicer.util.arrayFromSegmentBinaryLabelmap(node, segIn(node, "D1"), volume).copy()
     d1[5:10] = 0
     slicer.util.updateSegmentBinaryLabelmapFromArray(d1, node, segIn(node, "D1"), volume)
-    # With the classes shown in 3D (Show in 3D), the toggle must keep them there.
-    logic.showPrelabelIn3d()
-
-    def inThreeD(name):
-        surface = _closedSurface(slicer, node, segIn(node, name))
-        return surface is not None and surface.GetNumberOfPoints() > 0
-
-    removed, kept = logic.removeEmptyExtendedClasses()
-    check("toggling off removes untouched seed copies and keeps an edited class",
-          kept == ["D1"] and len(removed) == 16, (removed, kept))
-    check("  and the classes stay in the 3D view",
-          inThreeD("LAD") and inThreeD("D1"), (inThreeD("LAD"), inThreeD("D1")))
-
-    # 5. On again: the 13 branches come back as seed copies, the materials empty;
-    # submit sends them all empty.
-    logic.extendedClasses = True
-    check("toggling on again adds the 16 new ones, seeds the branches, not D1, and "
-          "leaves the materials empty",
-          logic.addExtendedClasses(fromSeed=True) == 16
-          and _countsOf(slicer, node, volume, ["D1", "PDA", "Stent"], segIn)
-          == {"D1": int(d1.sum()), "PDA": nSeed, "Stent": 0})
-    check("  and the 3D view keeps the classes, the new ones included, without "
-          "Show in 3D", inThreeD("LAD") and inThreeD("D1") and inThreeD("PDA"),
-          (inThreeD("LAD"), inThreeD("D1"), inThreeD("PDA")))
     path = os.path.join(tmp, "d51.seg.nrrd")
     counts, _, _ = logic.exportSubmission(path)
     stored = labelfile.read_class_stack(path)
@@ -787,12 +779,54 @@ def run_d51():
           and not set(logic.seedCopiesBlanked) & set(labels.MATERIALS),
           (written, logic.seedCopiesBlanked))
 
+    # 5. Toggle off: untouched seed copies and the empty materials go, a trimmed
+    # D1 stays. With the classes shown in 3D (Show in 3D), the toggle keeps them.
+    logic.showPrelabelIn3d()
+
+    def inThreeD(name):
+        surface = _closedSurface(slicer, node, segIn(node, name))
+        return surface is not None and surface.GetNumberOfPoints() > 0
+
+    removed, kept = logic.removeEmptyExtendedClasses()
+    check("toggling off removes untouched seed copies and keeps an edited class",
+          kept == ["D1"] and len(removed) == 16, (removed, kept))
+    check("  and the classes stay in the 3D view",
+          inThreeD("LAD") and inThreeD("D1"), (inThreeD("LAD"), inThreeD("D1")))
+
+    # On again: the 16 come back empty and are not refilled (already selected once
+    # in this read); D1 is kept as it is; the 3D view keeps every class.
+    logic.extendedClasses = True
+    check("toggling on again adds the 16 empty, and keeps D1",
+          logic.addExtendedClasses() == 16
+          and _countsOf(slicer, node, volume, ["D1", "PDA", "Stent"], segIn)
+          == {"D1": int(d1.sum()), "PDA": 0, "Stent": 0})
+    check("  a branch already selected in this read is not refilled",
+          logic.seedOnFirstSelection(segIn(node, "PDA")) is False
+          and _countsOf(slicer, node, volume, ["PDA"], segIn) == {"PDA": 0})
+    check("  and the 3D view keeps the classes without Show in 3D",
+          inThreeD("LAD") and inThreeD("D1"), (inThreeD("LAD"), inThreeD("D1")))
+
+    # A first selection with the classes shown in 3D: only that class's surface is
+    # built, and every other class keeps its own (D52, in place).
+    for name in labels.EXTRA_NAMES:
+        node.GetSegmentation().RemoveSegment(segIn(node, name))
+    logic.seedFirstSelected = set()
+    logic.addExtendedClasses()
+    logic.showPrelabelIn3d()
+    check("a first selection with surfaces shown builds that class's surface, keeping "
+          "the others'", logic.seedOnFirstSelection(segIn(node, "PDA")) is True
+          and inThreeD("PDA") and inThreeD("LAD") and inThreeD("RCA"),
+          (inThreeD("PDA"), inThreeD("LAD"), inThreeD("RCA")))
+
     # 6. A reviewer's added classes stay empty, seed in the scene or not.
     logic.assignment = None
     for name in labels.EXTRA_NAMES:
         node.GetSegmentation().RemoveSegment(segIn(node, name))
-    logic.addExtendedClasses(fromSeed=True)
-    check("a reviewer's extended classes stay empty",
+    logic.seedFirstSelected = set()
+    logic.addExtendedClasses()
+    for name in labels.EXTRA_NAMES:
+        logic.seedOnFirstSelection(segIn(node, name))
+    check("a reviewer's extended classes stay empty, also when selected",
           _countsOf(slicer, node, volume, labels.EXTRA_NAMES, segIn)
           == {n: 0 for n in labels.EXTRA_NAMES})
 
@@ -1970,7 +2004,7 @@ def run_overlap():
         def openCase(assignment, progress=None):
             fresh, volume = _seededCase(slicer, np, module, labels, tmp, "overlap", seed, True)
             for name in ("volumeNode", "segmentationNode", "seedSegmentId",
-                         "seedPrefilledExtended", "lastAddedExtended", "_sessionStart",
+                         "seedFirstSelected", "lastAddedExtended", "_sessionStart",
                          "cache"):
                 setattr(logic, name, getattr(fresh, name))
             logic.assignment = assignment
@@ -1991,16 +2025,16 @@ def run_overlap():
                   seEditor.mrmlSegmentEditorNode().GetOverwriteMode() == ALLOW,
                   seEditor.mrmlSegmentEditorNode().GetOverwriteMode())
 
-        # D52: the materials start empty, the branches as the seed.
+        # D52: on a seeded case the 17 open with no seed voxels -- materials always,
+        # branches until their first selection.
         segIn = module._segmentIdIn
         nSeed = int(seed.sum())
         got = _countsOf(slicer, logic.segmentationNode, logic.volumeNode,
                         labels.EXTRA_NAMES, segIn)
         check("D52: on a seeded case the materials start with 0 voxels",
               {n: got[n] for n in labels.MATERIALS} == {n: 0 for n in labels.MATERIALS}, got)
-        check("  and the branches start as seed copies",
-              all(got[n] == nSeed for n in labels.EXTRA_NAMES if n not in labels.MATERIALS)
-              and logic.seedPrefilledExtended == 14, (got, logic.seedPrefilledExtended))
+        check("  and so do the branches, before their first selection",
+              got == {n: 0 for n in labels.EXTRA_NAMES}, got)
         # D52: binding shows the class the editor selected, and only that one.
         display = logic.segmentationNode.GetDisplayNode()
         selected = editorNode.GetSelectedSegmentID()
@@ -2014,6 +2048,24 @@ def run_overlap():
         else:
             check("D52: with nothing selected on opening, every class stays hidden",
                   shown == [], shown)
+        # D52: selecting a branch in the panel's editor, as a click in the segment
+        # list does: it becomes the seed -- that class only -- and is shown.
+        node = logic.segmentationNode
+        editorNode.SetSelectedSegmentID(logic.segmentIdFor("OM1"))
+        slicer.app.processEvents()
+        got = _countsOf(slicer, node, logic.volumeNode, labels.EXTRA_NAMES, segIn)
+        check("D52: selecting a branch in the panel fills exactly that class from the seed",
+              got == {n: nSeed if n == "OM1" else 0 for n in labels.EXTRA_NAMES}, got)
+        check("  and shows it",
+              bool(display.GetSegmentVisibility(logic.segmentIdFor("OM1"))))
+        for name in [n for n in labels.EXTRA_NAMES if n not in labels.MATERIALS]:
+            editorNode.SetSelectedSegmentID(logic.segmentIdFor(name))
+        editorNode.SetSelectedSegmentID(logic.segmentIdFor("LM"))
+        slicer.app.processEvents()
+        got = _countsOf(slicer, node, logic.volumeNode, labels.EXTRA_NAMES, segIn)
+        check("  each branch selected once is the seed; the materials stay empty",
+              got == {n: 0 if n in labels.MATERIALS else nSeed for n in labels.EXTRA_NAMES},
+              got)
         _selectHiddenAndPaint(slicer, np, vtk, layoutManager, logic, editor, editorNode,
                               PLAQUE, dialogs, "own case")
 

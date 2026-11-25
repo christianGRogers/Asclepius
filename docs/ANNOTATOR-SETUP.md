@@ -197,10 +197,12 @@ is off unless you turn it on, and SegQueue remembers your choice for your login.
 If you leave it off, everything above is the whole job.
 
 Turned on, it adds 17 more classes, listed under the vessel they belong to. On a
-case with the yellow outline, each branch class starts as a hidden copy of it, just
-like the four vessels. Stent, calcified plaque and non-calcified plaque always start
-empty, on every case (from SegQueue 0.25.4). On a case without the outline, every
-extended class starts empty:
+case with the yellow outline, a branch class becomes a copy of it the first time
+you select it, just like the four vessels start (from SegQueue 0.25.4; before that,
+all of them were copied when the box was turned on, which was slow). If you then
+erase it, it stays erased. Stent, calcified plaque and non-calcified plaque always
+start empty, on every case. On a case without the outline, every extended class
+starts empty:
 
 | Group | Classes |
 |---|---|

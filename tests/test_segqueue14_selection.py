@@ -147,6 +147,52 @@ def test_nothing_selected_or_nothing_to_show_never_raises():
     assert sel.show_segment(None, "LAD") is False
 
 
+def test_on_select_runs_on_a_new_selection_before_it_is_shown():
+    """D52: the module fills a branch's seed copy there, once per new selection."""
+    sel = _selection()
+    node = _hidden()
+    seen = []
+
+    def on_select(segmentation_node, segment_id):
+        seen.append((segment_id, segmentation_node.display.visible[segment_id]))
+
+    watcher = sel.ShowSelected(on_select)
+    editor = _EditorNode(node, "LAD")
+    watcher.update(editor)
+    watcher.update(editor)                       # an effect parameter: no new selection
+    editor.selected = "Calcified plaque"
+    watcher.update(editor)
+    watcher.update(editor, force=True)           # a case bound
+    assert seen == [("LAD", False), ("Calcified plaque", False), ("Calcified plaque", True)]
+    watcher.update(_EditorNode(node, None), force=True)
+    assert len(seen) == 3
+
+
+def test_on_select_writing_into_the_node_does_not_select_again():
+    sel = _selection()
+    node = _hidden()
+    editor = _EditorNode(node, "LAD")
+    calls = []
+
+    def on_select(segmentation_node, segment_id):
+        calls.append(segment_id)
+        watcher.update(editor)                   # the write modifies the editor node
+
+    watcher = sel.ShowSelected(on_select)
+    assert watcher.update(editor) is True and calls == ["LAD"]
+
+
+def test_a_failing_on_select_still_shows_the_class():
+    sel = _selection()
+    node = _hidden()
+
+    def broken(*args):
+        raise RuntimeError("no seed")
+
+    assert sel.ShowSelected(broken).update(_EditorNode(node, "LAD")) is True
+    assert node.display.visible["LAD"] is True
+
+
 def test_selection_is_python39_clean_and_free_of_slicer():
     tree = ast.parse((LIB / "selection.py").read_text(), feature_version=(3, 9))
     imported = {alias.name.split(".")[0] for n in ast.walk(tree)
@@ -171,6 +217,7 @@ def test_every_editor_node_the_panel_makes_is_watched():
     watch = ast.get_source_segment(source, _method("_watchSelection"))
     assert "RemoveObserver(" in watch and "vtk.vtkCommand.ModifiedEvent" in watch
     assert "self._onEditorNodeModified" in watch
+    assert "selection.ShowSelected(self._onClassSelected)" in watch
     cleanup = ast.get_source_segment(source, _method("cleanup"))
     assert "self._watchSelection(None)" in cleanup
 

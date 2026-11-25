@@ -54,7 +54,9 @@ What an annotator sees:
   do (D26). A reviewer's added classes stay empty. Turning the toggle off removes
   untouched seed copies too, and an untouched seed copy is submitted as an empty
   channel. 0.25.4 (D52): stent, calcified and non-calcified plaque always start
-  empty, also on a seeded case.
+  empty, also on a seeded case; the toggle adds every extended class empty, and a
+  branch becomes its copy of the seed when it is first selected for editing, one
+  class at a time (``seedOnFirstSelection``), not 14 at once.
 * **Selecting a class shows it** (D52, 0.25.4): the class selected for editing in
   the panel's editor -- clicked in the segment list, or picked by the editor when a
   case or submission is bound -- is made visible, so Slicer's "segment is hidden"
@@ -320,9 +322,11 @@ class SegQueue14Logic(ScriptedLoadableModuleLogic):
         self.prelabelClasses = 0
         #: How many classes were filled with a copy of the seed on this open (D26).
         self.seedPrefilled = 0
-        #: How many extended classes were filled with a copy of the seed on this
-        #: open (D51).
-        self.seedPrefilledExtended = 0
+        #: The branch classes that have had their first selection in this read
+        #: (D52): given their copy of the seed then, or found already drawn. Never
+        #: filled again, so a class emptied on purpose stays empty. Kept in the
+        #: draft's manifest as ``seedFirstSelected``.
+        self.seedFirstSelected = set()
         #: The extended classes the last ``addExtendedClasses`` created, by name.
         self.lastAddedExtended = []
         #: The extended classes the last export wrote as empty channels because
@@ -475,21 +479,15 @@ class SegQueue14Logic(ScriptedLoadableModuleLogic):
         # the annotator's own correction and is left alone.
         self.prelabelClasses = 0
         self.seedPrefilled = 0
-        self.seedPrefilledExtended = 0
-        # The extended classes _applyTemplate just added (toggle on, or a case
-        # flagged for extended mode), before the prelabel can fill any of them.
-        addedAtOpen = list(self.lastAddedExtended)
+        self._restoreFirstSelected(manifest)
         if not self.resumedDraft and assignment.has_prelabel:
             self.prelabelClasses = self._loadPrelabel(assignment)
         elif not self.resumedDraft and assignment.has_seed:
             # D26: every class starts as the whole seed, for the annotator to cut
-            # down to that class.
+            # down to that class. The extended classes the toggle added stay
+            # empty: a branch gets its copy of the seed when it is first
+            # selected (D52, ``seedOnFirstSelection``); materials never do.
             self.seedPrefilled = self._prefillClassesFromSeed(assignment)
-        if not self.resumedDraft and assignment.has_seed and addedAtOpen:
-            # D51: the branch classes start from the seed too, hidden, as the
-            # four do; the materials start empty (D52); a resumed draft is never
-            # refilled (D26).
-            self.seedPrefilledExtended = self.fillExtendedFromSeed(addedAtOpen)
         slicer.util.setSliceViewerLayers(background=self.volumeNode, fit=True)
         self.applyViewPreset()
         if assignment.has_seed and not assignment.has_prelabel:
@@ -778,16 +776,16 @@ class SegQueue14Logic(ScriptedLoadableModuleLogic):
             return None
         return labels.clean_complete_groups(self.completeGroups)
 
-    def addExtendedClasses(self, segmentationNode=None, fromSeed=False):
+    def addExtendedClasses(self, segmentationNode=None):
         """Add whichever of the 17 extended classes are missing (D44).
 
         Each new segment gets its pinned label value (``labels.ALL_LABEL_VALUES``)
         and colour once, on creation; an existing one is never re-pinned (#270).
-        They are added empty. With ``fromSeed`` -- the annotator's own case only --
-        each *branch* added here is then filled with a copy of the seed, hidden
-        (``fillExtendedFromSeed``, D51); the materials stay empty (D52), and one
-        already in the scene is never refilled. Returns how many were added;
-        ``lastAddedExtended`` names them.
+        They are added empty, always (D52): no seed voxels are written here, so
+        turning the toggle on is quick. On the annotator's own seeded case a
+        branch gets its copy of the seed when it is first selected
+        (``seedOnFirstSelection``); the materials stay empty. Returns how many
+        were added; ``lastAddedExtended`` names them.
         """
         self.lastAddedExtended = []
         node = segmentationNode or self.segmentationNode
@@ -807,42 +805,92 @@ class SegQueue14Logic(ScriptedLoadableModuleLogic):
             self.lastAddedExtended.append(spec.name)
             added += 1
         self.orderSegments(node)
-        if fromSeed and self.lastAddedExtended and node is self.segmentationNode:
-            self.fillExtendedFromSeed(self.lastAddedExtended)
         return added
 
-    def fillExtendedFromSeed(self, names):
-        """Fill the named branch classes with a copy of the seed, hidden (D51).
+    def seedOnFirstSelection(self, segmentId):
+        """Give a branch class its copy of the seed on its first selection (D52).
 
-        As D26 does for the four: the annotator shows a class and cuts it down.
-        Only the 14 branches: the materials (``labels.MATERIALS``: stent,
-        calcified and non-calcified plaque) always start empty (D52) -- a seed
-        copy made them useless, since paint inside the lumen changed nothing.
-        Only on the annotator's own case (``assignment``): a reviewer's added
-        classes stay empty (D51 b). Nothing happens on a case without a seed.
-        Returns how many were filled; never raises -- a class left empty is a
-        worse start, not a blocked one.
+        D51 starts each branch class as a copy of the seed, as D26 does for the
+        four; D52 makes the copy when the class is first selected for editing,
+        one class at a time, instead of 14 at once when the toggle is turned on
+        (which lagged: 14 full copies, each in a labelmap layer of its own, and
+        every 3D surface rebuilt).
+
+        Only a branch (``labels.MATERIALS`` -- stent and plaque -- always start
+        empty), only on the annotator's own case (a reviewer's never, D51 b),
+        only with the seed in the scene, and only the *first* time in this read:
+        the class is then recorded in ``seedFirstSelected``, filled or not, so a
+        class that already has voxels is left as drawn, and one emptied on
+        purpose afterwards is never refilled. The record is kept in the draft.
+        Returns whether the class was filled; never raises -- a class left
+        empty is a worse start, not a blocked one.
         """
-        if self.assignment is None or not names:
-            return 0
+        if (self.assignment is None or self.segmentationNode is None
+                or not segmentId):
+            return False
+        segment = self.segmentationNode.GetSegmentation().GetSegment(segmentId)
+        name = segment.GetName() if segment is not None else None
+        if name not in labels.PARENT or name in self.seedFirstSelected:
+            return False
+        self.seedFirstSelected.add(name)
+        self._saveFirstSelected()
+        if _segmentHasContent(self.segmentationNode, name):
+            return False
         seedId = self._seedIdInScene()
         if not seedId:
-            return 0
-        wanted = set(names) - set(labels.MATERIALS)
-        specs = [spec for spec in self.extraSpecs() if spec.name in wanted]
-        if not specs:
-            return 0
+            return False
         try:
-            filled = self.copySegmentIntoClasses(seedId, specs)
+            return self.copySegmentInto(seedId, segmentId)
         except Exception:
-            return 0
-        display = self.segmentationNode.GetDisplayNode()
-        if display is not None:
-            for spec in specs:
-                segmentId = self.segmentIdFor(spec.name)
-                if segmentId:
-                    display.SetSegmentVisibility(segmentId, False)
-        return filled
+            return False
+
+    def copySegmentInto(self, sourceSegmentId, segmentId):
+        """Copy one segment's voxels into one other segment, in place (D52).
+
+        Through ``SetBinaryLabelmapToSegment``, the segment-level write the
+        Segment Editor's effects use, from the source's own labelmap: no array
+        round trip over the CT, the other segments untouched, and only this
+        segment's 3D surface built, and only if the segmentation shows surfaces
+        (``copySegmentIntoClasses`` re-imports through ``slicer.util``, which
+        drops every segment's surface; in Slicer 5.8.1 and 5.12.4 alike).
+        Returns whether the segment has voxels afterwards.
+        """
+        node = self.segmentationNode
+        if node is None or not sourceSegmentId or not segmentId:
+            return False
+        module = slicer.vtkSlicerSegmentationsModuleLogic
+        source = slicer.vtkOrientedImageData()
+        if not module.GetSegmentBinaryLabelmapRepresentation(node, sourceSegmentId, source):
+            return False
+        module.SetBinaryLabelmapToSegment(source, node, segmentId, module.MODE_REPLACE)
+        name = node.GetSegmentation().GetSegment(segmentId).GetName()
+        return _segmentHasContent(node, name)
+
+    def _saveFirstSelected(self):
+        if self.assignment is not None:
+            self.cache.update(self.assignment.assignment_id,
+                              seedFirstSelected=sorted(self.seedFirstSelected))
+
+    def _restoreFirstSelected(self, manifest):
+        """``seedFirstSelected`` for the read being opened (D52).
+
+        A fresh case starts with none. A draft has its own. A draft saved before
+        0.25.4 -- or a submitted read reopened for revision -- has no record: every
+        extended class already in it counts as selected, so what the annotator
+        left empty there is not refilled.
+        """
+        saved = (manifest or {}).get("seedFirstSelected")
+        if saved is not None:
+            self.seedFirstSelected = {n for n in saved if n in labels.PARENT}
+        elif self.resumedDraft and self.segmentationNode is not None:
+            # Not those the toggle added to it just now, at open: they are new.
+            new = set(self.lastAddedExtended)
+            self.seedFirstSelected = {
+                n for n in labels.PARENT
+                if n not in new and _segmentIdIn(self.segmentationNode, n)}
+        else:
+            self.seedFirstSelected = set()
+        self._saveFirstSelected()
 
     def _seedIdInScene(self):
         """The vessel seed's segment id, if it is in the open segmentation."""
@@ -1467,6 +1515,7 @@ class SegQueue14Logic(ScriptedLoadableModuleLogic):
         self._sessionStart = None
         self.caseExtendedMode = False
         self.completeGroups = set()
+        self.seedFirstSelected = set()
 
     # ---------------------------------------------------------------- time
 
@@ -2268,7 +2317,7 @@ class SegQueue14Widget(ScriptedLoadableModuleWidget):
         self.editorNode = None
         #: D52: shows the class selected for editing (``SegQueue14Lib/selection.py``),
         #: and the ``(node, observer tag)`` that drives it.
-        self._showSelected = selection.ShowSelected()
+        self._showSelected = selection.ShowSelected(self._onClassSelected)
         self._selectionObservation = None
         self.autosaveTimer = None
         self.heartbeatTimer = None
@@ -3130,10 +3179,10 @@ class SegQueue14Widget(ScriptedLoadableModuleWidget):
             "Adds 17 optional classes: stent, calcified and non-calcified plaque, "
             "D1-D3, S1-S3, OM1-OM2, SN, conus, RMA, PDA, PLB and the ramus. The "
             "stent and plaque classes start empty. On a case with a vessel seed "
-            "each branch starts as a hidden copy of the seed, like the four; "
-            "otherwise empty. A branch left as an untouched seed copy is "
-            "submitted empty. Turning this off removes only the empty classes and "
-            "the untouched seed copies.")
+            "a branch becomes a copy of the seed the first time you select it, "
+            "like the four; otherwise it stays empty. A branch left as an "
+            "untouched seed copy is submitted empty. Turning this off removes "
+            "only the empty classes and the untouched seed copies.")
         self.extendedCheck.toggled.connect(self.onToggleExtended)
         layout.addWidget(self.extendedCheck)
 
@@ -3227,11 +3276,10 @@ class SegQueue14Widget(ScriptedLoadableModuleWidget):
         if self.logic.segmentationNode is not None and (
                 self.logic.assignment is not None or self._claimedSubmission):
             if on:
-                # D51: on the annotator's own seeded case the new branches start
-                # as hidden copies of the seed; the materials start empty (D52);
-                # a reviewer's stay empty (D51 b).
-                self.logic.addExtendedClasses(
-                    fromSeed=self.logic.assignment is not None)
+                # Added empty, always (D52): quick. On the annotator's own seeded
+                # case a branch gets its copy of the seed on its first selection
+                # (_onClassSelected); materials and a reviewer's never (D51 b).
+                self.logic.addExtendedClasses()
             else:
                 _removed, kept = self.logic.removeEmptyExtendedClasses()
                 if kept:
@@ -4127,7 +4175,7 @@ class SegQueue14Widget(ScriptedLoadableModuleWidget):
             # says; with the toggle on (or a flagged case), a four-class read gets
             # the 17, empty -- never from the seed, in a reviewer's panel (D51 b).
             if self.logic.extendedOn():
-                self.logic.addExtendedClasses(fromSeed=False)
+                self.logic.addExtendedClasses()
             self.logic.applyViewPreset()
             self._bindEditor(segmentationNode, volumeNode)
             slicer.app.layoutManager().setLayout(
@@ -4794,7 +4842,8 @@ class SegQueue14Widget(ScriptedLoadableModuleWidget):
         return self.editorNode
 
     def _watchSelection(self, node):
-        """Show the class selected for editing whenever the selection changes (D52).
+        """Show the class selected for editing whenever the selection changes (D52),
+        after giving a branch selected for the first time its seed copy.
 
         Observes ``node`` (the panel's editor node; None stops watching). Classes
         start hidden (D26, D51), and Slicer's editor asks "the selected segment is
@@ -4810,7 +4859,7 @@ class SegQueue14Widget(ScriptedLoadableModuleWidget):
             except Exception:
                 pass
             self._selectionObservation = None
-        self._showSelected = selection.ShowSelected()
+        self._showSelected = selection.ShowSelected(self._onClassSelected)
         if node is None:
             return
         tag = node.AddObserver(vtk.vtkCommand.ModifiedEvent, self._onEditorNodeModified)
@@ -4818,6 +4867,14 @@ class SegQueue14Widget(ScriptedLoadableModuleWidget):
 
     def _onEditorNodeModified(self, caller=None, event=None):
         self._showSelected.update(self.editorNode)
+
+    def _onClassSelected(self, segmentationNode, segmentId):
+        """A class was just selected for editing, before it is shown (D52): a
+        branch selected for the first time in the annotator's own read gets its
+        copy of the seed now (``seedOnFirstSelection``)."""
+        logic = getattr(self, "logic", None)
+        if logic is not None and segmentationNode is logic.segmentationNode:
+            logic.seedOnFirstSelection(segmentId)
 
     def _bindEditor(self, segmentationNode, volumeNode):
         if self.editorWidget is None:

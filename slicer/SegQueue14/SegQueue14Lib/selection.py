@@ -14,6 +14,12 @@ the visibility it had. A class the annotator hides again by its eye, while it
 stays selected, stays hidden: only a *change* of selection, or binding a case,
 shows it.
 
+The same moment is when a branch class gets its copy of the seed (D52, amended
+the same day): ``on_select`` is called with the newly selected segment before it
+is shown, and the module fills the class there if it is a branch selected for the
+first time in the read -- one class at a time, not 14 when the extended classes
+are turned on.
+
 Free of Slicer, Qt and VTK -- the editor node is passed in -- so pytest checks it
 with stand-ins. Python 3.9-clean, as Slicer 5.8 bundles 3.9.
 """
@@ -62,16 +68,28 @@ class ShowSelected:
     selected segment or segmentation is a different one); ``update(editor_node,
     force=True)`` when a case or submission is bound, which shows whatever is
     selected then, even if it has the same id as on the previous case.
+
+    ``on_select(segmentation_node, segment_id)``, if given, is called at those
+    same moments, before the segment is shown. What it raises is swallowed: a
+    selection must never fail.
     """
 
-    def __init__(self):
+    def __init__(self, on_select=None):
         self.last = (None, None)
+        self.on_select = on_select
 
     def update(self, editor_node, force=False):
         """Returns whether a segment was made visible."""
         current = selected_segment(editor_node)
         changed = (current[0] is not self.last[0]) or (current[1] != self.last[1])
+        # Before on_select: what it writes modifies the editor node again, and
+        # that event must see no new selection.
         self.last = current
         if current[1] is None or not (changed or force):
             return False
+        if self.on_select is not None:
+            try:
+                self.on_select(*current)
+            except Exception:
+                pass
         return show_segment(*current)

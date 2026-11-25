@@ -183,19 +183,19 @@ empty, grouped under their parent in the segment list, with show/hide per group:
 
 ### Materials start empty; selecting a class shows it; overlap everywhere (0.25.4, D52)
 
-D52 (2026-11-25, amends D51). Three changes, all in the module; protocol stays 21,
-no server change.
+D52 (2026-11-25, amends D51, and amended the same day after a lag report). Four
+changes, all in the module; protocol stays 21, no server change.
 
 **Materials start empty.** Stent, calcified and non-calcified plaque are always
 added empty, also on a seeded case. 0.25.0-0.25.3 started them as a hidden copy of
 the seed (D51), which made them useless: paint inside the lumen changed nothing and
 the class was submitted empty (D51 d), and paint outside it was submitted as the
-whole tree plus the stroke. The 14 branch classes keep D51's start as a hidden seed
-copy. The materials are `labels.MATERIALS` (the extended classes with no parent),
-not a list of names in the module.
+whole tree plus the stroke. The 14 branch classes keep D51's start as a seed copy,
+made on demand (below). The branches are `labels.PARENT` (the extended classes with
+a parent vessel), not a list of names in the module.
 
-- The D51 prefill now fills up to 14 classes, not 17; the case line on a seeded
-  case says *stent and plaque start empty* when the extended classes are on.
+- The case line on a seeded case says *stent and plaque start empty* when the
+  extended classes are on.
 - Turning the toggle off removes the empty classes (now including untouched
   materials) and the untouched branch seed copies, as before.
 - Submit still blanks an extended class left exactly as the seed (D51 d). Only
@@ -204,6 +204,32 @@ not a list of names in the module.
   The message after submitting says *branch class*.
 - Plaque painted inside the LAD on a seeded case is submitted as plaque, in its own
   channel overlapping the LAD's.
+
+**Seed copies are made on demand** (lag report). Since D51, turning the extended
+classes on lagged badly on a seeded case: 0.25.0-0.25.3 wrote 17 copies of the seed
+at once, each re-imported through `slicer.util` over the whole CT into a labelmap
+layer of its own the size of the CT, and then rebuilt every 3D surface. Now:
+
+- Turning the toggle on adds the 17 empty: no seed voxels, no surface rebuilt.
+- A branch becomes its copy of the seed when it is **first selected for editing**,
+  in the same handler that shows a selected class: one class at a time. The copy is
+  written in place from the seed's own labelmap (`copySegmentInto`,
+  `SetBinaryLabelmapToSegment`), so its layer is the seed's size, not the CT's,
+  and only that class's 3D surface is built, only if surfaces are showing; every
+  other class keeps its own.
+- *First* means once per read: the class is recorded in `seedFirstSelected` (in the
+  draft's manifest) whether it was filled or already had voxels, so a class emptied
+  on purpose is never refilled, also after a resumed draft. A draft from before
+  0.25.4, or a reopened read, counts every branch already in it as selected.
+- Materials never get a copy; a reviewer's classes never do (D51 b). A branch never
+  selected stays empty and is sent empty. Toggle-off and the export treat untouched
+  seed copies as before (D51 c, d). After toggle off and on, a branch already
+  selected in the read comes back empty.
+- Measured on Slicer 5.8.1, 512 x 512 x 300 CT, a 188k-voxel seed
+  (`tests/slicer_bench_extended14.py`): toggle on went from 8.0 s (14.5 s with the
+  classes shown in 3D), 22 layers and 2.75 GB peak memory to 0.003 s (1.8 s), 5
+  layers and no change in memory; a branch's first selection takes about 0.5 s and
+  adds one layer the size of the seed's extent.
 
 **Selecting a class shows it** (`SegQueue14Lib/selection.py`). The class selected
 for editing in the panel's Segment Editor is made visible: when it is clicked in the
@@ -252,7 +278,10 @@ covers every effect above (own case and reviewer), the Segment Editor module, a
 scene clear and the export as two overlapping channels, and for D52 the materials
 at 0 voxels and branches as the seed on a seeded case, plaque inside the LAD
 submitted as plaque, and selecting a hidden class showing it (own case and
-reviewer) with the first paint stroke landing and no question asked. The server test of an
+reviewer) with the first paint stroke landing and no question asked; and for the
+on-demand seed copies, that toggle-on adds no seed voxels, that a first selection
+(through the panel and the logic) fills exactly that class, once, and that it keeps
+every other class's 3D surface. The server test of an
 extended read checks the stored stent and plaque channels overlap LAD and RCA, each
 whole.
 

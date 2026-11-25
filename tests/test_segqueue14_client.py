@@ -658,6 +658,71 @@ def test_offset_resume_still_works_with_the_smaller_chunk(tmp_path):
     assert [o for o, _ in _chunks(session)] == [0, chunk, 2 * chunk]
 
 
+def _minimumChunkSession(size, minimum=5 * 1024 * 1024):
+    """Girder 5's own check (``checkUploadSize``): a chunk that is not the last
+    and is under ``core.upload_minimum_chunk_size`` is a 400 ValidationException."""
+    state = {"received": 0}
+
+    def chunk(call):
+        length = len(call["data"])
+        if state["received"] + length != size and length < minimum:
+            return FakeResponse(400, {"message": "Chunk is smaller than the minimum size.",
+                                      "type": "validation"})
+        state["received"] += length
+        if state["received"] >= size:
+            return FakeResponse(200, {"_id": "file1", "size": size})
+        return FakeResponse(200, {"_id": "up1", "received": state["received"]})
+
+    return FakeSession({
+        ("POST", "/file"): FakeResponse(200, {"_id": "up1"}),
+        ("POST", "file/chunk"): chunk,
+        ("GET", "file/offset"): lambda call: FakeResponse(
+            200, {"offset": state["received"]}),
+    })
+
+
+def test_girders_minimum_chunk_400_says_it_is_a_server_setting(tmp_path):
+    size = client14.UPLOAD_CHUNK_BYTES + 1  # two chunks: the first is not the last
+    path = tmp_path / "submission.seg.nrrd"
+    path.write_bytes(b"s" * size)
+
+    with pytest.raises(SegQueue14Error) as caught:
+        makeClient(_minimumChunkSession(size)).uploadFile(str(path), "folder1")
+
+    assert caught.value.status == 400
+    assert str(caught.value) == client14.UPLOAD_CHUNK_REFUSED_MESSAGE
+    message = str(caught.value)
+    assert "chunk size (a server setting)" in message
+    assert "still saved on this computer" in message and "project lead" in message
+    # Girder's own words stay on the cause, for a log or a bug report.
+    assert "Chunk is smaller than the minimum size" in str(caught.value.__cause__)
+    assert path.exists()
+
+
+def test_a_file_in_one_chunk_never_meets_girders_minimum(tmp_path):
+    # The last chunk is exempt in Girder, which is why small reads always worked.
+    size = client14.UPLOAD_CHUNK_BYTES
+    path = tmp_path / "submission.seg.nrrd"
+    path.write_bytes(b"s" * size)
+    file = makeClient(_minimumChunkSession(size)).uploadFile(str(path), "folder1")
+    assert file == {"_id": "file1", "size": size}
+
+
+def test_other_400s_keep_girders_message(tmp_path):
+    size = 10
+    path = tmp_path / "submission.seg.nrrd"
+    path.write_bytes(b"s" * size)
+    session = FakeSession({
+        ("POST", "/file"): FakeResponse(200, {"_id": "up1"}),
+        ("POST", "file/chunk"): FakeResponse(400, {"message": "Received too many bytes.",
+                                                   "type": "validation"}),
+        ("GET", "file/offset"): FakeResponse(200, {"offset": 0}),
+    })
+    with pytest.raises(SegQueue14Error) as caught:
+        makeClient(session).uploadFile(str(path), "folder1")
+    assert str(caught.value) == "Received too many bytes. (HTTP 400)"
+
+
 def test_http_errors_carry_their_status_and_keep_their_message():
     session = FakeSession({("GET", "user/me"): FakeResponse(
         500, {"message": "boom"})})

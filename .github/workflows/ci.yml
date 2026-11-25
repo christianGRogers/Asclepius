@@ -220,6 +220,8 @@ jobs:
           # re-applied and restored (deploy step `branding`).
           # test_segqueue_server14_defect.py: defect cases and the case search (protocol 21).
           # test_segqueue_server14_notes.py: reviewers read the case thread (plugin 0.7.1).
+          # test_segqueue_server14_upload_chunks.py: Girder's minimum upload chunk size to
+          # 0, applied, re-applied, restored, refused beside S3 (deploy step `upload-chunks`).
           pytest -q -rs tests/test_segqueue_server.py tests/test_d36_consolidate.py \
             tests/test_segqueue_server_janusm.py tests/test_janusm_reads.py \
             tests/test_segqueue_server14.py tests/test_segqueue_server14_benchmark.py \
@@ -227,6 +229,7 @@ jobs:
             tests/test_segqueue_server14_readers.py tests/test_segqueue_server14_sweep.py \
             tests/test_segqueue_server14_recall.py tests/test_segqueue_server14_branding.py \
             tests/test_segqueue_server14_defect.py tests/test_segqueue_server14_notes.py \
+            tests/test_segqueue_server14_upload_chunks.py \
             -k "not test_janusm_reads or r4s17 or r5s or ps3s11" --junitxml=junit.xml \
             2>&1 | tee server-tests.log
       - name: Fail if these skipped
@@ -455,6 +458,25 @@ jobs:
           # and the oblique-correction path has its own unit tests.
           segqueue-ingest --root "$GITHUB_WORKSPACE/incoming" \
             --layout flat --no-fix-geometry --admin "$ADMIN_LOGIN"
+
+      - name: The module's uploads over 768 KiB, with Girder's default minimum chunk size
+        # SegQueue14's own uploadFile in 768 KiB chunks (janus's nginx is 1 MiB), which the
+        # step below never exercises: its 4-class client sends 8 MiB chunks of files of a
+        # few KB, always one final chunk, which Girder exempts from its 5 MiB minimum. Here
+        # the 400 "Chunk is smaller than the minimum size." with Girder's default, then the
+        # deploy step `upload-chunks --apply` (same database), then the upload and its
+        # checksum, also behind a 413 proxy down to the 64 KiB floor; then --restore, so
+        # the acceptance test below runs on Girder's default as before.
+        run: |
+          set +e -o pipefail
+          python tests/segqueue14_upload_chunks_e2e.py \
+            --url "$SEGQUEUE_URL" \
+            --admin-login "$ADMIN_LOGIN" --admin-password "$ADMIN_PASSWORD" 2>&1 | tee chunks.log
+          code=${PIPESTATUS[0]}
+          { echo '### Uploads over 768 KiB'; echo '```'
+            grep -E 'FAIL|FAILED:|passed,' chunks.log | head -40 || echo "(no output captured)"
+            echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+          exit "$code"
 
       - name: Acceptance test
         # The same client the Slicer extension uses, over real HTTP. A pass here

@@ -483,7 +483,11 @@ def _seededCase(slicer, np, module, labels, tmp, name, seed, extended):
                                   segments=labels.segment_specs())
     logic.extendedClasses = extended
     logic.volumeNode = volume
+    assignment = _Assignment(assignment_id=name, case_name=name, attempt=1,
+                             has_seed=True, has_prelabel=False)
+    logic.assignment = assignment
     logic._loadOrCreateSegmentation({})
+    addedAtOpen = list(logic.lastAddedExtended)
     os.makedirs(logic.cache.caseDir(name), exist_ok=True)
     seedNode = slicer.mrmlScene.AddNewNodeByClass("vtkMRMLLabelMapVolumeNode", name + "-seed")
     slicer.util.updateVolumeFromArray(seedNode, seed)
@@ -492,10 +496,9 @@ def _seededCase(slicer, np, module, labels, tmp, name, seed, extended):
     slicer.util.saveNode(seedNode, seedPath)
     slicer.mrmlScene.RemoveNode(seedNode)
     logic.seedSegmentId = logic._importHelper(seedPath, SEED_NAME, (0.95, 0.85, 0.2), 0.25)
-    assignment = _Assignment(assignment_id=name, case_name=name, attempt=1,
-                             has_seed=True, has_prelabel=False)
     logic._prefillClassesFromSeed(assignment)
-    logic.assignment = assignment
+    # D51: as openCase does, the extended classes added at open start from the seed.
+    logic.seedPrefilledExtended = logic.fillExtendedFromSeed(addedAtOpen)
     logic._sessionStart = time.time()
     return logic, volume
 
@@ -657,12 +660,140 @@ def run_extended():
                   [s.name for s in resumed.classSpecs()] == labels.ALL_NAMES)
         slicer.mrmlScene.RemoveNode(resumed.segmentationNode)
 
-    # 7. Toggle on from the start: the seed fills the four only; the 17 start empty.
+    # 7. Toggle on from the start: the seed fills all 21 (D51; D44 had the 17 empty).
     fresh, volume2 = _seededCase(slicer, np, module, labels, tmp, "fresh", seed, True)
     got = _countsOf(slicer, fresh.segmentationNode, volume2, labels.ALL_NAMES, segIn)
-    check("with the toggle on a seeded case opens with the four seeded and 17 empty",
-          got == dict({n: 0 for n in labels.EXTRA_NAMES}, **{n: nSeed for n in labels.NAMES}),
-          got)
+    check("with the toggle on a seeded case opens with all 21 classes seeded (D51)",
+          got == {n: nSeed for n in labels.ALL_NAMES}, got)
+
+
+def run_d51():
+    """D51: Inverse cut is registered and listed by the editor, and cuts; extended
+    classes start from the seed on an own case, empty for a reviewer; the toggle off
+    removes untouched seed copies; export sends them empty."""
+    import numpy as np
+
+    import slicer
+
+    if not os.environ.get("SEGQUEUE_SELFTEST_INSTALLED"):
+        sys.path.insert(0, os.path.join(REPO, "src"))
+        sys.path.insert(0, os.path.join(REPO, "slicer", "SegQueue14"))
+    import SegQueue14 as module
+
+    from segqueue14 import labelfile, labels
+
+    say("--- D51: inverse cut, seeded extended classes")
+    tmp = tempfile.mkdtemp()
+    seed = np.zeros(SHAPE, np.uint8)
+    for lo, hi in TUBES.values():
+        seed[5:35, lo:hi, lo:hi] = 1
+    nSeed = int(seed.sum())
+    segIn = module._segmentIdIn
+
+    # 1. The effect: registered, with its icon, and listed by an embedded editor.
+    check("Inverse cut is registered", module.registerInverseCutEffect())
+    factory = slicer.qSlicerSegmentEditorEffectFactory.instance()
+    names = [effect.name for effect in factory.registeredEffects()]
+    check("  in the effect factory, once", names.count("Inverse cut") == 1, names)
+    editor = slicer.qMRMLSegmentEditorWidget()
+    editor.setMRMLScene(slicer.mrmlScene)
+    editorNode = slicer.mrmlScene.AddNewNodeByClass("vtkMRMLSegmentEditorNode")
+    editor.setMRMLSegmentEditorNode(editorNode)
+    effect = editor.effectByName("Inverse cut")
+    check("  and listed by an embedded Segment Editor", effect is not None)
+    try:
+        # PythonQt does not wrap the C++ icon(); the scripted effect's icon() is
+        # the Python one, which is what the editor's button shows.
+        check("  with its own icon", not effect.self().icon().isNull())
+    except Exception:
+        check("  with its own icon", False, traceback.format_exc())
+
+    # 2. Own seeded case, toggle on: the 17 are hidden seed copies.
+    logic, volume = _seededCase(slicer, np, module, labels, tmp, "own", seed, True)
+    node = logic.segmentationNode
+    got = _countsOf(slicer, node, volume, labels.EXTRA_NAMES, segIn)
+    check("an own seeded case's extended classes start as the seed",
+          got == {n: nSeed for n in labels.EXTRA_NAMES}
+          and logic.seedPrefilledExtended == 17, got)
+    display = node.GetDisplayNode()
+    check("  hidden", not any(display.GetSegmentVisibility(segIn(node, n))
+                              for n in labels.EXTRA_NAMES))
+
+    # 3. Inverse cut on LAD in a slice view whose XY is the CT's (i, j).
+    import vtk
+
+    try:
+        editor.setSegmentationNode(node)
+        editor.setSourceVolumeNode(volume)
+        editorNode.SetSelectedSegmentID(segIn(node, "LAD"))
+        editor.setActiveEffectByName("Inverse cut")
+        active = editor.activeEffect()
+
+        class SliceNode:
+            def GetXYToRAS(self):
+                matrix = vtk.vtkMatrix4x4()
+                volume.GetIJKToRASMatrix(matrix)
+                return matrix
+
+        class View:
+            def className(self):
+                return "qMRMLSliceWidget"
+
+            def mrmlSliceNode(self):
+                return SliceNode()
+
+        lo, hi = TUBES["LAD"]
+        lasso = [(lo - 0.5, lo - 0.5), (hi - 1.5, lo - 0.5), (hi - 1.5, hi - 0.5),
+                 (lo - 0.5, hi - 0.5)]
+        active.self().apply(View(), lasso)
+        lad = slicer.util.arrayFromSegmentBinaryLabelmap(node, segIn(node, "LAD"), volume)
+        want = np.zeros(SHAPE, np.uint8)
+        want[5:35, lo:hi, lo:hi - 1] = 1
+        check("inverse cut keeps only LAD's voxels inside the outline, every slice",
+              np.array_equal(lad > 0, want > 0), int((lad > 0).sum()))
+        others = _countsOf(slicer, node, volume, [n for n in labels.ALL_NAMES if n != "LAD"],
+                           segIn)
+        check("  and changes no other class",
+              set(others.values()) == {nSeed}, others)
+        editor.undo()
+        check("  one undo puts LAD back",
+              _countsOf(slicer, node, volume, ["LAD"], segIn) == {"LAD": nSeed})
+        editor.setActiveEffectByName("")
+    except Exception:
+        check("inverse cut runs", False, traceback.format_exc())
+
+    # 4. Toggle off: untouched seed copies go, a trimmed D1 stays.
+    d1 = slicer.util.arrayFromSegmentBinaryLabelmap(node, segIn(node, "D1"), volume).copy()
+    d1[5:10] = 0
+    slicer.util.updateSegmentBinaryLabelmapFromArray(d1, node, segIn(node, "D1"), volume)
+    removed, kept = logic.removeEmptyExtendedClasses()
+    check("toggling off removes untouched seed copies and keeps an edited class",
+          kept == ["D1"] and len(removed) == 16, (removed, kept))
+
+    # 5. On again: the 16 come back as seed copies; submit sends them empty.
+    logic.extendedClasses = True
+    check("toggling on again seeds the 16 new ones, not D1",
+          logic.addExtendedClasses(fromSeed=True) == 16
+          and _countsOf(slicer, node, volume, ["D1", "PDA"], segIn)
+          == {"D1": int(d1.sum()), "PDA": nSeed})
+    path = os.path.join(tmp, "d51.seg.nrrd")
+    counts, _, _ = logic.exportSubmission(path)
+    stored = labelfile.read_class_stack(path)
+    written = labelfile.voxel_counts(stored["masks"], stored["names"])
+    want = dict({n: 0 for n in labels.EXTRA_NAMES}, **{n: nSeed for n in labels.NAMES})
+    want["D1"] = int(d1.sum())
+    check("export sends untouched seed copies empty, the four and D1 as they are",
+          written == want and counts == want
+          and len(logic.seedCopiesBlanked) == 16, written)
+
+    # 6. A reviewer's added classes stay empty, seed in the scene or not.
+    logic.assignment = None
+    for name in labels.EXTRA_NAMES:
+        node.GetSegmentation().RemoveSegment(segIn(node, name))
+    logic.addExtendedClasses(fromSeed=True)
+    check("a reviewer's extended classes stay empty",
+          _countsOf(slicer, node, volume, labels.EXTRA_NAMES, segIn)
+          == {n: 0 for n in labels.EXTRA_NAMES})
 
 
 def run_d47():
@@ -1424,7 +1555,7 @@ def run_defect_cases():
         slicer.util.confirmYesNoDisplay = realConfirm
 
 
-for part in (run, run_extended, run_d47, run_compare, run_my_submissions,
+for part in (run, run_extended, run_d47, run_d51, run_compare, run_my_submissions,
              run_defect_cases):
     try:
         part()

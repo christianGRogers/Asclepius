@@ -178,14 +178,25 @@ versions cannot show.
 5. Click **Submit case**. Nothing checks what you drew before it is sent, so look
    over each vessel yourself first.
 
+### Inverse cut
+
+Next to Scissors in the Segment Editor there is an **Inverse cut** tool (yellow
+shape with scissors). Use it to keep a small part instead of erasing everything
+around it. Select a class, click Inverse cut, then hold the left mouse button and
+draw around the part you want. When you let go, the class keeps only what is inside
+your outline, through every slice, like Scissors does. If the class is empty, it
+gets the part of the yellow outline that is inside your shape instead. No other
+class changes. **Ctrl+Z** undoes it.
+
 ### Extended classes (optional)
 
 Above the Segment Editor there is a box called **Extended classes**. It
 is off unless you turn it on, and SegQueue remembers your choice for your login.
 If you leave it off, everything above is the whole job.
 
-Turned on, it adds 17 more classes, all empty, listed under the vessel they belong
-to:
+Turned on, it adds 17 more classes, listed under the vessel they belong to. On a
+case with the yellow outline, each one starts as a hidden copy of it, just like the
+four vessels. Otherwise they start empty:
 
 | Group | Classes |
 |---|---|
@@ -195,7 +206,8 @@ to:
 | RCA branches | SN (sinus node), Conus, RMA (right marginal), PDA, PLB (posterolateral) |
 | Materials | Stent, Calcified plaque, Non-calcified plaque |
 
-- Use only the ones you want. An empty class is fine.
+- Use only the ones you want. An empty class is fine. If you leave a class as an
+  untouched copy of the outline, it is sent empty.
 - To use a branch class, move that branch out of whichever vessel it leaves and
   into its class. For example, erase the first diagonal from LAD and paint it into
   D1. SN, PDA and PLB come out of the RCA or the LCx, whichever they come off: in
@@ -210,8 +222,8 @@ to:
 - Paint stent and plaque where you see them. They may overlap the vessel.
 - Hover over a group name in the box to see what goes in each class. The
   **Show** ticks hide or show a whole group.
-- Turning the box off removes only the extended classes you left empty. A class
-  you drew in stays.
+- Turning the box off removes the extended classes you left empty or did not
+  change. A class you changed stays.
 
 Useful buttons:
 

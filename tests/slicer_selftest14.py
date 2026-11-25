@@ -2474,9 +2474,11 @@ def _sameMasks(np, a, b):
 
 
 def _tablesHiding(slicer, editor):
-    """``[ids hidden]`` for each segment list in the editor widget."""
+    """``[ids hidden]`` for each segment list in the editor widget that shows the
+    case (an unbound one, with no segmentation, has nothing to filter)."""
     return [list(t.hideSegments()) for t in
-            slicer.util.findChildren(editor, className="qMRMLSegmentsTableView")]
+            slicer.util.findChildren(editor, className="qMRMLSegmentsTableView")
+            if t.segmentationNode() is not None]
 
 
 def run_d53():

@@ -57,6 +57,7 @@ bash $D populate --apply   # create the pool cases that have a seed
 bash $D worker             # SegQueue14 scoring worker
 bash $D status             # counts; `off` is the rollback switch
 bash $D branding           # dry run: Girder's brand name and banner colour (Bradensbay)
+bash $D upload-chunks      # dry run: Girder's minimum upload chunk size -> 0 (run once)
 ```
 
 **Reaching janus.** Janus's SSH port is closed to the outside (since 2026-11-20), so
@@ -668,6 +669,71 @@ cd ~/Asclepius-sq14 && PYTHONPATH=server ~/Asclepius/.venv/bin/python -m girder_
 
 `--restore` accepts only these two keys. An admin can also set both back in Girder's
 *Admin console -> Server configuration* (Brand Name, Banner Color).
+
+## Girder's minimum upload chunk size: `upload-chunks` (run once)
+
+**Symptom.** Annotators submitting a read over 768 KiB (extended 21-class reads, as a
+rule) get *Chunk is smaller than the minimum size. (HTTP 400)*; from module 0.25.3
+on, *The server refused the upload's chunk size (a server setting)...*. Their work is
+kept locally.
+
+**Cause.** janus's nginx keeps `client_max_body_size` at 1 MiB, so since 0.23.1 the
+module uploads in 768 KiB chunks, halved on HTTP 413 down to 64 KiB. Girder 5 refuses
+every chunk but the last that is under `core.upload_minimum_chunk_size`, 5 MiB by
+default (`checkUploadSize` in `girder/utility/abstract_assetstore_adapter.py`). With
+1 MiB in front and 5 MiB behind, no chunk size works for a file over 1 MiB. That
+minimum is S3's floor for multipart parts; janus's **filesystem** assetstore appends
+each chunk to a temporary file and needs none.
+
+**Fix.** The *SegQueue14 on janus* step `upload-chunks` runs
+`python -m girder_segqueue14.upload_chunks` from `~/Asclepius-sq14` (no install, no
+restart); it takes no `args`. **`install` does not run it**: run it once, `upload-chunks`
+(a dry run) and then `upload-chunks --apply`, on the lead's word. Girder 5 reads the
+setting from the database on every chunk (no cache unless `core.cache.enabled`), so
+the running Girder uses it at once; annotators just submit again.
+
+| Setting | New value | Girder 5 default |
+|---|---|---|
+| `core.upload_minimum_chunk_size` | `0` | `5242880` (5 MiB) |
+
+- **Refuses** (exit 2, nothing written) unless **every** assetstore is a filesystem
+  assetstore (Girder type 0), naming any that is not: on S3 the minimum must stay.
+  Also refuses a Girder that is not 5.x, or one without this setting.
+- **Dry run** (`upload-chunks`): the assetstores, the value Girder answers now (and
+  whether it is stored or Girder's default) and the new value. Nothing is written.
+- **`upload-chunks --apply`**: checks the value with Girder's own validator, writes it
+  only if it differs, and prints the old value and the command that puts it back.
+  Running it again prints `already 0; nothing to change` and writes nothing. No other
+  setting is touched.
+- If annotators still get the 400 after `--apply`, a
+  `GIRDER_SETTING_CORE_UPLOAD_MINIMUM_CHUNK_SIZE` environment variable in Girder's
+  service overrides the database, or `core.cache.enabled` is on; remove the variable
+  or restart Girder, by hand, only then.
+- **nginx stays at 1 MiB.** With the minimum at 0 every chunk the module sends (768
+  KiB, or 384/192/96/64 KiB after a 413) is accepted, so the proxy limit need not
+  change. Raising `client_max_body_size` instead would not help alone: Girder would
+  still refuse any non-final chunk under 5 MiB.
+
+**Undo.** `--apply` prints, for a database that held no value:
+
+```text
+[upload-chunks] to put the old value back: python -m girder_segqueue14.upload_chunks --restore='{"core.upload_minimum_chunk_size": null}'
+```
+
+Run it on janus as the deploy user, from the same checkout (`null` unsets the key and
+Girder's 5 MiB default comes back, and with it the HTTP 400 above):
+
+```sh
+cd ~/Asclepius-sq14 && PYTHONPATH=server ~/Asclepius/.venv/bin/python -m girder_segqueue14.upload_chunks \
+    --restore='{"core.upload_minimum_chunk_size": null}'
+```
+
+Girder's *Admin console -> Server configuration* shows the value (*Upload minimum
+chunk size*) but does not let it be edited; use this step. CI checks both sides against a real Girder with its
+default minimum (*The real client against a real server*, `tests/segqueue14_upload_chunks_e2e.py`):
+the module's real `uploadFile` fails with exactly this 400, and after this step's
+`--apply` succeeds with the stored file's checksum matching, also behind a proxy that
+forces the chunk down to the 64 KiB floor.
 
 ## Exports before #331: was a reviewer's correction left out?
 

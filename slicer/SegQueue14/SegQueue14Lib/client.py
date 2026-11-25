@@ -59,6 +59,17 @@ UPLOAD_TOO_LARGE_MESSAGE = (
     "your work is still saved on this computer. Please tell the project lead, "
     "who needs to raise the upload size limit on the server.")
 
+#: Girder's own text when a chunk other than the last is under its
+#: ``core.upload_minimum_chunk_size`` (5 MiB by default, which no chunk under a
+#: 1 MiB proxy limit can meet). A server setting the annotator cannot change.
+GIRDER_CHUNK_TOO_SMALL = 'Chunk is smaller than the minimum size'
+
+#: Shown instead of Girder's 400 above.
+UPLOAD_CHUNK_REFUSED_MESSAGE = (
+    "The server refused the upload's chunk size (a server setting). Nothing has "
+    "been submitted, and your work is still saved on this computer. Please tell "
+    "the project lead.")
+
 #: Connect/read timeouts. The read timeout is generous because the server hashes
 #: an uploaded file before answering /submit, and a large segmentation on a busy
 #: server can take a few seconds.
@@ -434,6 +445,10 @@ class SegQueue14Client:
         server's offset. The smaller size is kept on the client for the rest of
         this upload and every later one. A 413 at the floor raises
         ``UPLOAD_TOO_LARGE_MESSAGE``; nothing is deleted locally either way.
+
+        Girder's HTTP 400 "Chunk is smaller than the minimum size" (its
+        ``core.upload_minimum_chunk_size``, a server setting) raises
+        ``UPLOAD_CHUNK_REFUSED_MESSAGE`` at once: no chunk size can fix it.
         """
         name = name or os.path.basename(path)
         size = os.path.getsize(path)
@@ -463,6 +478,9 @@ class SegQueue14Client:
                         # the server says it has rather than assume.
                         offset = self._uploadOffset(uploadId)
                         continue
+                    if exc.status == 400 and GIRDER_CHUNK_TOO_SMALL in str(exc):
+                        raise SegQueue14Error(UPLOAD_CHUNK_REFUSED_MESSAGE,
+                                              status=400) from exc
                     # Ask the server what it really has, then continue. If it
                     # agrees with us the chunk genuinely failed, so re-raise
                     # rather than spin.

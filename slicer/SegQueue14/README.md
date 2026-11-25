@@ -181,6 +181,22 @@ empty, grouped under their parent in the segment list, with show/hide per group:
   server used to refuse them with `not_an_annotator`); until it is deployed those
   accounts see an empty thread. Protocol stays 21.
 
+### A clear message when the server refuses the upload's chunk size (0.25.3)
+
+- Submitting a read over 768 KiB (an extended read, usually) failed with Girder's
+  *Chunk is smaller than the minimum size. (HTTP 400)*. Girder refuses every upload
+  piece but the last under its `core.upload_minimum_chunk_size` (5 MiB by default),
+  and the module's pieces stay under janus's 1 MiB proxy limit (0.23.1), so no
+  piece size could work. The fix is on the server: the deploy step `upload-chunks`
+  sets that minimum to 0 on janus (filesystem assetstore; see
+  [DEPLOY.md](../../server/girder_segqueue14/DEPLOY.md)).
+- The module now shows that refusal as *The server refused the upload's chunk size (a
+  server setting). Nothing has been submitted, and your work is still saved on this
+  computer. Please tell the project lead.* As before, a failed submit keeps the
+  local copy. The piece size (768 KiB, halved on HTTP 413 down to 64 KiB) is
+  unchanged.
+- Module only: protocol stays 21, the plugin's queue is unchanged.
+
 ### Inverse cut keeps the 3D view (0.25.2, D51)
 
 After an Inverse cut the cut class disappeared from the 3D view (with every other

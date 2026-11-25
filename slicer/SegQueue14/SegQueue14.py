@@ -3396,6 +3396,8 @@ class SegQueue14Widget(ScriptedLoadableModuleWidget):
             return
         for table in tables:
             try:
+                if table.segmentationNode() is None:
+                    continue        # not bound to a case: nothing to filter
                 table.setHideSegments(hidden)
             except Exception:  # pragma: no cover - a Slicer without the filter
                 pass

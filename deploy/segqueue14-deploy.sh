@@ -66,6 +66,13 @@
 # values and the command that restores them. Nothing else changes:
 #   bash segqueue14-deploy.sh branding [--apply]
 #
+# Girder's minimum upload chunk size set to 0 (core.upload_minimum_chunk_size;
+# girder_segqueue14.upload_chunks), so the module's 768 KiB chunks (under nginx's 1 MiB
+# body limit) are not refused with "Chunk is smaller than the minimum size.". Refuses
+# unless every assetstore is a filesystem one. Run once; install does not run it. Dry
+# run without --apply; --apply prints the old value and the command that restores it:
+#   bash segqueue14-deploy.sh upload-chunks [--apply]
+#
 # What it never does: check out a branch in ~/Asclepius, reinstall the old plugin
 # (server/; only restore-live does, from that checkout), or write to the old
 # SegQueue's data outside the D36 steps. `main` is cloned separately into
@@ -572,6 +579,24 @@ branding() {
     [ ${#apply[@]} -gt 0 ] || say "dry run only. If it reads right: bash $0 branding --apply"
 }
 
+# ------------------------------------------------------------ upload-chunks
+
+upload_chunks() {
+    local apply=()
+    case "${1:-}" in
+        "") ;;
+        --apply) apply=(--apply) ;;
+        *) die "upload-chunks: takes only --apply" ;;
+    esac
+    [ $# -le 1 ] || die "upload-chunks: takes only --apply"
+    fetch_branch
+    # Run from the main checkout, like branding: no reinstall, no restart. Girder 5
+    # reads settings from the database on each upload (no cache unless
+    # core.cache.enabled), so the running Girder uses the new value at once.
+    as_user env PYTHONPATH="$SRC/server" "$PY" -m girder_segqueue14.upload_chunks ${apply[@]+"${apply[@]}"}
+    [ ${#apply[@]} -gt 0 ] || say "dry run only. If it reads right: bash $0 upload-chunks --apply"
+}
+
 # ------------------------------------------------------------ D36 (issue #124)
 
 recent_backup() {   # a D36 database dump from the last 24 h, or nothing
@@ -686,11 +711,12 @@ case "${1:-}" in
     reopen) shift; reopen "$@" ;;
     restore-reopened) shift; restore_reopened "$@" ;;
     branding) shift; branding "$@" ;;
+    upload-chunks) shift; upload_chunks "$@" ;;
     backup-prepare|backup-finish|backup-status|backup-restore-test|backup-off)
         step="${1#backup-}"; shift
         case "$step" in prepare|finish) step="install-$step" ;; esac
         # The hourly job's priority for the drill too: annotators come first.
         nice_=(); [ "$step" = restore-test ] && nice_=(nice -n 19 ionice -c3)
         USER_HOME="$USER_HOME" exec ${nice_[@]+"${nice_[@]}"} bash "$(dirname "$0")/backup/segqueue-backup.sh" "$step" "$@" ;;
-    *) sed -n '2,72p' "$0"; exit 1 ;;
+    *) sed -n '2,79p' "$0"; exit 1 ;;
 esac

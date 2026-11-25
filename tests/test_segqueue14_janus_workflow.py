@@ -76,6 +76,9 @@ def _which(tmp_path, command, args=""):
     # Bradensbay branding: no args; --apply from the step only.
     ("branding", "", "branding"),
     ("branding --apply", "", "branding --apply"),
+    # Girder's minimum upload chunk size to 0: no args; --apply from the step only.
+    ("upload-chunks", "", "upload-chunks"),
+    ("upload-chunks --apply", "", "upload-chunks --apply"),
 ])
 def test_accepted(tmp_path, command, args, expected):
     code, cmd, log = _which(tmp_path, command, args)
@@ -179,6 +182,12 @@ def test_accepted(tmp_path, command, args, expected):
     ("branding --dry-run", "", "unknown step"),
     ("branding  --apply", "", "unknown step"),
     ("branding --apply;id", "", "unknown step"),
+    ("upload-chunks", "--apply", "only benchmark-assign, benchmark-seed,"),
+    ("upload-chunks", "--restore={}", "only benchmark-assign, benchmark-seed,"),
+    ("upload-chunks", "$(id)", "only benchmark-assign, benchmark-seed,"),
+    ("upload-chunks --restore", "", "unknown step"),
+    ("upload-chunks  --apply", "", "unknown step"),
+    ("upload-chunks --apply;id", "", "unknown step"),
     ("Branding", "", "unknown step"),
 ])
 def test_refused(tmp_path, command, args, why):

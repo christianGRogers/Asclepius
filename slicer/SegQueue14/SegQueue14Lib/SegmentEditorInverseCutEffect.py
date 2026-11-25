@@ -13,6 +13,10 @@ has a vessel seed, it becomes the seed's voxels inside the outline instead.
   vessel seed and the heart region), are never modified; a helper cannot be the
   selected segment for this effect.
 * One undoable step, in the editor's own undo history.
+* Written through the editor (``modifySelectedSegmentByLabelmap``), as Slicer's
+  own effects write, so the 3D view keeps showing the class, cut (0.25.2). 0.25.1
+  wrote with ``slicer.util.updateSegmentBinaryLabelmapFromArray``, which drops the
+  closed surface of every segment: the 3D view went blank until Show in 3D.
 * Fail-safe (0.25.1): an outline that holds none of the segment's voxels (or the
   seed's) changes nothing and says so in the status bar. A cut never empties the
   segment.
@@ -213,9 +217,21 @@ class SegmentEditorInverseCutEffect(AbstractScriptedSegmentEditorEffect):
         if result is None:
             return False
 
+        # Through the editor, as Slicer's own effects write (0.25.2): the segment's
+        # labelmap is modified in place, so the closed surface the 3D view shows is
+        # rebuilt from it. 0.25.1 wrote with slicer.util's
+        # updateSegmentBinaryLabelmapFromArray, which re-imports the segment and
+        # drops the closed surface of every segment, so the 3D view went blank
+        # until Show in 3D. As in Slicer's effects, the effect saves the undo state
+        # itself, once, before the write: one Ctrl+Z takes the cut back and leaves
+        # nothing more to undo (the self-test checks both).
+        labelmap = _labelmapOnGrid(result, volumeNode, segmentationNode)
         self.scriptedEffect.saveStateForUndo()
-        slicer.util.updateSegmentBinaryLabelmapFromArray(
-            result, segmentationNode, segmentId, volumeNode)
+        # bypassMasking: only the selected segment changes, whatever the editor's
+        # overwrite mode -- the classes overlap (D39) and the helpers are never cut.
+        self.scriptedEffect.modifySelectedSegmentByLabelmap(
+            labelmap, slicer.qSlicerSegmentEditorAbstractEffect.ModificationModeSet,
+            list(labelmap.GetExtent()), True)
         display = segmentationNode.GetDisplayNode()
         if display is not None:
             # A seeded class starts hidden (D26, D51); show the one just cut.
@@ -315,6 +331,29 @@ def _onGrid(mask, shape):
                 tuple(mask.shape), tuple(shape)))
         return np.zeros(shape, np.uint8)
     return (mask != 0).astype(np.uint8)
+
+
+def _labelmapOnGrid(mask, volumeNode, segmentationNode):
+    """``mask`` (0/1, ``[k, j, i]`` on the CT grid) as a ``vtkOrientedImageData`` in
+    the CT's geometry, in the segmentation's coordinates: what the editor's
+    ``modifySelectedSegmentByLabelmap`` takes."""
+    import numpy as np
+    from vtk.util import numpy_support
+
+    logic = slicer.vtkSlicerSegmentationsModuleLogic
+    labelmap = logic.CreateOrientedImageDataFromVolumeNode(
+        volumeNode, segmentationNode.GetParentTransformNode())
+    if labelmap is None:
+        raise RuntimeError("the CT's geometry cannot be put on the segmentation")
+    dims = labelmap.GetDimensions()
+    if tuple(mask.shape) != (dims[2], dims[1], dims[0]):
+        raise RuntimeError("a {} mask on the CT's {} grid".format(
+            tuple(mask.shape), (dims[2], dims[1], dims[0])))
+    labelmap.AllocateScalars(vtk.VTK_UNSIGNED_CHAR, 1)
+    voxels = numpy_support.vtk_to_numpy(labelmap.GetPointData().GetScalars())
+    voxels[:] = (np.asarray(mask) != 0).astype(np.uint8).ravel()
+    labelmap.Modified()
+    return labelmap
 
 
 def _matrix(vtkMatrix):

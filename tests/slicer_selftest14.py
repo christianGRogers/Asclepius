@@ -732,9 +732,18 @@ def run_d51():
     d1 = slicer.util.arrayFromSegmentBinaryLabelmap(node, segIn(node, "D1"), volume).copy()
     d1[5:10] = 0
     slicer.util.updateSegmentBinaryLabelmapFromArray(d1, node, segIn(node, "D1"), volume)
+    # With the classes shown in 3D (Show in 3D), the toggle must keep them there.
+    logic.showPrelabelIn3d()
+
+    def inThreeD(name):
+        surface = _closedSurface(slicer, node, segIn(node, name))
+        return surface is not None and surface.GetNumberOfPoints() > 0
+
     removed, kept = logic.removeEmptyExtendedClasses()
     check("toggling off removes untouched seed copies and keeps an edited class",
           kept == ["D1"] and len(removed) == 16, (removed, kept))
+    check("  and the classes stay in the 3D view",
+          inThreeD("LAD") and inThreeD("D1"), (inThreeD("LAD"), inThreeD("D1")))
 
     # 5. On again: the 16 come back as seed copies; submit sends them empty.
     logic.extendedClasses = True
@@ -742,6 +751,9 @@ def run_d51():
           logic.addExtendedClasses(fromSeed=True) == 16
           and _countsOf(slicer, node, volume, ["D1", "PDA"], segIn)
           == {"D1": int(d1.sum()), "PDA": nSeed})
+    check("  and the 3D view keeps the classes, the new ones included, without "
+          "Show in 3D", inThreeD("LAD") and inThreeD("D1") and inThreeD("PDA"),
+          (inThreeD("LAD"), inThreeD("D1"), inThreeD("PDA")))
     path = os.path.join(tmp, "d51.seg.nrrd")
     counts, _, _ = logic.exportSubmission(path)
     stored = labelfile.read_class_stack(path)
@@ -777,6 +789,24 @@ _IC_KEEP = (slice(5, 35), slice(20, 31), slice(20, 31))
 
 def _matrixOf(np, vtkMatrix):
     return np.array([[vtkMatrix.GetElement(r, c) for c in range(4)] for r in range(4)])
+
+
+def _closedSurface(slicer, node, segmentId):
+    """The segment's closed-surface polydata as the 3D view has it, or None."""
+    segment = node.GetSegmentation().GetSegment(segmentId)
+    name = slicer.vtkSegmentationConverter.GetSegmentationClosedSurfaceRepresentationName()
+    return None if segment is None else segment.GetRepresentation(name)
+
+
+def _rasBox(np, rasOf, keep):
+    """Min and max RAS corner of the voxels ``keep`` (k, j, i slices), to their faces."""
+    k, j, i = keep
+    corners = [rasOf @ [x, y, z, 1]
+               for x in (i.start - 0.5, i.stop - 0.5)
+               for y in (j.start - 0.5, j.stop - 0.5)
+               for z in (k.start - 0.5, k.stop - 0.5)]
+    corners = np.array(corners)[:, :3]
+    return corners.min(axis=0), corners.max(axis=0)
 
 
 def _ensureLayout(slicer, qt):
@@ -871,6 +901,31 @@ def _inverseCutInRealViews(slicer, np, editor, editorNode):
 
     def reset():
         slicer.util.updateSegmentBinaryLabelmapFromArray(start, node, lad, volume)
+        # The writes above drop every segment's surface; put the 3D view back the
+        # way the annotator had it (Show in 3D) before the next cut.
+        node.CreateClosedSurfaceRepresentation()
+
+    # The classes shown in 3D, as the module's Show in 3D leaves them.
+    node.CreateClosedSurfaceRepresentation()
+    node.GetDisplayNode().SetVisibility3D(True)
+    rasOfIjk = vtk.vtkMatrix4x4()
+    volume.GetIJKToRASMatrix(rasOfIjk)
+
+    def surfaceInside(segmentId, keep, label):
+        """Check the segment still has a closed surface after a cut, with no Show
+        in 3D: non-empty, and inside the RAS box of the voxels ``keep`` (k, j, i
+        slices) -- the cut's shape, not the segment it was cut from."""
+        surface = _closedSurface(slicer, node, segmentId)
+        points = 0 if surface is None else surface.GetNumberOfPoints()
+        bounds = None if not points else surface.GetBounds()
+        box = _rasBox(np, _matrixOf(np, rasOfIjk), keep)
+        # A voxel's slack: the surface overshoots the voxel faces a little (0.5 mm
+        # along the 1.5 mm axis in 5.8); the uncut segment is ~9 mm wider.
+        slack = max(_IC_SPACING)
+        inside = bounds is not None and all(
+            box[0][a] - slack <= bounds[2 * a] and bounds[2 * a + 1] <= box[1][a] + slack
+            for a in range(3))
+        check(label, points > 0 and inside, (points, bounds, box))
 
     slicer.util.setSliceViewerLayers(background=volume, fit=True)
     layoutManager.setLayout(slicer.vtkMRMLLayoutNode.SlicerLayoutOneUpRedSliceView)
@@ -913,8 +968,15 @@ def _inverseCutInRealViews(slicer, np, editor, editorNode):
           (int(got.sum()), int(want.sum())))
     check("  and leaves the other class alone",
           np.array_equal(voxels(other), start > 0))
+    surfaceInside(lad, _IC_KEEP, "  and it is still in the 3D view, cut, without Show in 3D")
+    surfaceInside(other, _IC_SEGMENT, "  and so is the other class, whole")
     editor.undo()
     check("  one undo puts it back", np.array_equal(voxels(lad), start > 0))
+    undoButton = editor.findChild(qt.QToolButton, "UndoButton")
+    if undoButton is not None:
+        check("  in a single undo step", not undoButton.enabled)
+    else:
+        say("SKIP the undo-depth check: no UndoButton in this Slicer's editor")
 
     # The fail-safe: an outline beside the segment changes nothing.
     beside = [onScreen(i, j) for i, j in
@@ -1002,7 +1064,27 @@ def _inverseCutInRealViews(slicer, np, editor, editorNode):
     check("inverse cut in the 3D view keeps what projects inside the outline",
           0 < int(got.sum()) < int(start.sum()) and wrong == 0,
           (int(got.sum()), wrong))
+    kk, jj, ii = np.nonzero(got)
+    kept = (slice(kk.min(), kk.max() + 1), slice(jj.min(), jj.max() + 1),
+            slice(ii.min(), ii.max() + 1)) if len(kk) else _IC_KEEP
+    surfaceInside(lad, kept, "  and the cut class is still in the 3D view, as cut")
     reset()
+
+    # An empty class takes the seed inside the outline (D51 a), in 3D too.
+    seedId = node.GetSegmentation().AddEmptySegment("seed", SEED_NAME)
+    slicer.util.updateSegmentBinaryLabelmapFromArray(start, node, seedId, volume)
+    empty = node.GetSegmentation().AddEmptySegment("RCA", "RCA")
+    node.CreateClosedSurfaceRepresentation()
+    editorNode.SetSelectedSegmentID(empty)
+    layoutManager.setLayout(slicer.vtkMRMLLayoutNode.SlicerLayoutOneUpRedSliceView)
+    slicer.app.processEvents()
+    _drag(vtk, interactor, lasso)
+    slicer.app.processEvents()
+    got = voxels(empty)
+    check("an empty class takes the seed inside the outline",
+          np.array_equal(got, want), int(got.sum()))
+    surfaceInside(empty, _IC_KEEP, "  and shows in 3D without Show in 3D")
+    check("  the seed is left whole", np.array_equal(voxels(seedId), start > 0))
 
     editor.setActiveEffectByName("")
     scene.RemoveNode(node)
@@ -1771,8 +1853,12 @@ def run_defect_cases():
         slicer.util.confirmYesNoDisplay = realConfirm
 
 
+#: ``SEGQUEUE_SELFTEST_ONLY=run_d51,...`` runs only those parts (for a quick local run).
+_ONLY = [name for name in os.environ.get("SEGQUEUE_SELFTEST_ONLY", "").split(",") if name]
 for part in (run, run_extended, run_d47, run_d51, run_compare, run_my_submissions,
              run_defect_cases):
+    if _ONLY and part.__name__ not in _ONLY:
+        continue
     try:
         part()
     except Exception:

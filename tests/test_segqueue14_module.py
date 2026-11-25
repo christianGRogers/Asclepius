@@ -582,8 +582,8 @@ def _calls_in(node):
             if isinstance(n, ast.Call) and isinstance(n.func, ast.Attribute)}
 
 
-def test_the_module_is_0_25_1_and_protocol_21():
-    assert re.search(r'^__version__ = "0\.25\.1"$', _source(), re.M)
+def test_the_module_is_0_25_2_and_protocol_21():
+    assert re.search(r'^__version__ = "0\.25\.2"$', _source(), re.M)
     sys_path = str(REPO / "src")
     import sys
 
@@ -1367,6 +1367,15 @@ def _inversecut():
     return module
 
 
+def _surfaces():
+    import importlib.util
+
+    spec = importlib.util.spec_from_file_location("surfaces_d51", LIB / "surfaces.py")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
 def _effect_tree():
     return ast.parse(EFFECT.read_text(encoding="utf-8"))
 
@@ -1419,13 +1428,22 @@ def test_the_effect_changes_only_the_selected_segment_in_one_undo_step():
     apply = next(n for n in cls.body if isinstance(n, ast.FunctionDef) and n.name == "apply")
     body = ast.get_source_segment(EFFECT.read_text(encoding="utf-8"), apply)
     # The helpers are refused, the voxels come from inversecut, one undo state is
-    # saved before the one write, and the write is the selected segment's.
+    # saved before the one write, and the write is the selected segment's --
+    # through the editor, as Slicer's effects write (0.25.2): slicer.util's
+    # updateSegmentBinaryLabelmapFromArray drops every segment's closed surface,
+    # which blanked the 3D view until Show in 3D.
     assert "HELPER_NAMES" in body and "inversecut.inverse_cut(" in body
     assert body.count("saveStateForUndo()") == 1
-    assert body.count("updateSegmentBinaryLabelmapFromArray(") == 1
+    assert "updateSegmentBinaryLabelmapFromArray(" not in body
+    assert body.count("modifySelectedSegmentByLabelmap(") == 1
     assert body.index("saveStateForUndo()") < body.index(
-        "updateSegmentBinaryLabelmapFromArray(")
-    assert "result, segmentationNode, segmentId, volumeNode" in body
+        "modifySelectedSegmentByLabelmap(")
+    assert "_labelmapOnGrid(result, volumeNode, segmentationNode)" in body
+    write = body[body.index("modifySelectedSegmentByLabelmap("):]
+    write = write[:write.index(")\n")]
+    # Set, not Add: the class becomes the result. Masking bypassed: the editor's
+    # overwrite mode must not reach the other (overlapping) classes or the helpers.
+    assert "ModificationModeSet" in write and write.rstrip().endswith("True")
     assert "SEED_SEGMENT_NAME" in body
     assert "SEED_SEGMENT_NAME = _protocol.SEED_SEGMENT_NAME" in EFFECT.read_text(
         encoding="utf-8")
@@ -1615,6 +1633,11 @@ class _Segmentation:
     def __init__(self, node):
         self.node, self.ids = node, []
         self.segments = {}
+        #: Whether the segments have closed surfaces (shown in 3D).
+        self.surfaces = False
+
+    def ContainsRepresentation(self, name):
+        return self.surfaces and name == "Closed surface"
 
     def AddEmptySegment(self, segmentId, name, color):
         self.ids.append(segmentId)
@@ -1659,6 +1682,10 @@ class _SegNode:
     def GetDisplayNode(self):
         return self.display
 
+    def CreateClosedSurfaceRepresentation(self):
+        self.segmentation.surfaces = True
+        self.surfacesBuilt = getattr(self, "surfacesBuilt", 0) + 1
+
 
 class _Volume:
     def __init__(self, shape):
@@ -1678,6 +1705,8 @@ def _fake_slicer(np):
         @staticmethod
         def updateSegmentBinaryLabelmapFromArray(array, node, segmentId, reference):
             node.masks[segmentId] = (np.asarray(array) != 0).astype(np.uint8)
+            # As Slicer 5.8 does: the re-import drops every segment's surface.
+            node.segmentation.surfaces = False
 
         @staticmethod
         def arrayFromVolume(volume):
@@ -1725,6 +1754,7 @@ def _d51_logic(np, assignment=True, extended=True, seed=True, shape=(4, 6, 6)):
     labelfile = _LabelFile()
     namespace = {"slicer": _fake_slicer(np), "vtk": _Vtk, "labels": labels,
                  "labelfile": labelfile, "inversecut": _inversecut(),
+                 "surfaces": _surfaces(),
                  "_geometryOf": lambda node: None}
     module = ast.Module(body=helpers + [ast.ClassDef(
         name="Logic", bases=[], keywords=[], body=body, decorator_list=[])],
@@ -1872,3 +1902,32 @@ def test_one_helper_decides_what_is_an_untouched_seed_copy():
     helper = ast.get_source_segment(_source(), _method("SegQueue14Logic",
                                                        "isUntouchedSeedCopy"))
     assert "inversecut.is_untouched_copy(mask, seed)" in helper
+
+
+def test_seeding_extended_classes_keeps_the_3d_view_when_it_was_showing():
+    """0.25.2: the seed copies are written with slicer.util, which drops every
+    segment's closed surface; with the classes shown in 3D, turning the extended
+    classes on blanked the 3D view until Show in 3D. The surfaces are rebuilt."""
+    np = pytest.importorskip("numpy")
+    logic, labels, _, _ = _d51_logic(np, extended=False)
+    node = logic.segmentationNode
+    node.CreateClosedSurfaceRepresentation()  # Show in 3D
+    assert logic.addExtendedClasses(fromSeed=True) == 17
+    assert node.segmentation.surfaces and node.surfacesBuilt == 2
+
+
+def test_seeding_extended_classes_builds_no_surfaces_nobody_showed():
+    np = pytest.importorskip("numpy")
+    logic, _, _, _ = _d51_logic(np, extended=False)
+    node = logic.segmentationNode
+    assert logic.addExtendedClasses(fromSeed=True) == 17
+    assert not node.segmentation.surfaces
+    assert getattr(node, "surfacesBuilt", 0) == 0
+
+
+def test_the_module_writes_seed_copies_inside_keeping_closed_surface():
+    copy = ast.get_source_segment(_source(), _method("SegQueue14Logic",
+                                                     "copySegmentIntoClasses"))
+    guard = copy.index("with surfaces.keeping_closed_surface(self.segmentationNode)")
+    assert guard < copy.index("updateSegmentBinaryLabelmapFromArray(")
+    assert "from SegQueue14Lib import inversecut, surfaces" in _source()

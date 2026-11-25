@@ -181,6 +181,35 @@ empty, grouped under their parent in the segment list, with show/hide per group:
   server used to refuse them with `not_an_annotator`); until it is deployed those
   accounts see an empty thread. Protocol stays 21.
 
+### Inverse cut keeps the 3D view (0.25.2, D51)
+
+After an Inverse cut the cut class disappeared from the 3D view (with every other
+class) until **Show in 3D** was pressed again, which read as "it removes the whole
+segment".
+
+- **Root cause.** The effect wrote its result with Slicer's
+  `slicer.util.updateSegmentBinaryLabelmapFromArray`. That re-imports the segment
+  from a label volume, and Slicer 5.8 then drops the closed-surface representation
+  of *every* segment in the segmentation: the voxels were right, but nothing was
+  left for the 3D view to draw. Show in 3D rebuilt the surfaces, which is why it
+  came back.
+- **Fix.** The cut is now written the way Slicer's own effects (Scissors, Paint,
+  Islands) write: through the editor's `modifySelectedSegmentByLabelmap` (Set, on
+  the CT's grid). The labelmap is changed in place, so the 3D view is rebuilt from
+  it at once, the cut class as cut and the other classes untouched. It is still
+  one Ctrl+Z, still changes only the selected class whatever the editor's overwrite
+  setting, and still refuses an outline that holds none of the class. An empty
+  class that takes the seed inside the outline shows in 3D the same way.
+- **Turning the extended classes on** mid-case wrote the seed copies the same way
+  and blanked the 3D view too. When the classes were showing in 3D, their surfaces
+  are now rebuilt after the copies are written (`SegQueue14Lib/surfaces.py`).
+  Turning the toggle off only removes segments, which never lost the surfaces.
+- The Slicer self-test now shows the classes in 3D before cutting, and checks that
+  after a cut (in a slice view, in the 3D view, and into an empty class) the cut
+  class still has a closed surface the shape of the cut, without Show in 3D; and
+  that toggling the extended classes keeps every class in 3D.
+  Module only: protocol stays 21, server unchanged.
+
 ### Inverse cut fixes (0.25.1, D51)
 
 Inverse cut (D51) could wipe the whole selected class instead of keeping what was

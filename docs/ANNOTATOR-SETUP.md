@@ -167,8 +167,10 @@ versions cannot show.
    | RCA | Right coronary artery | Yes |
 
    Each one starts as a hidden copy of the yellow outline.
-3. In the Segment Editor, show one vessel at a time (click the eye next to its
-   name) and erase everything that is not that vessel. Add any artery the outline
+3. In the Segment Editor, work on one vessel at a time: click its name to select
+   it, which also shows it (from SegQueue 0.25.4; the other classes stay as they
+   are, and the eye next to each name still hides or shows it). Erase everything
+   that is not that vessel. Add any artery the outline
    missed, remove anything that is not a coronary artery, and keep the outline on
    the bright, contrast-filled part of the vessel.
 4. Side branches belong to the vessel they come off. Diagonals and septals go with
@@ -195,8 +197,12 @@ is off unless you turn it on, and SegQueue remembers your choice for your login.
 If you leave it off, everything above is the whole job.
 
 Turned on, it adds 17 more classes, listed under the vessel they belong to. On a
-case with the yellow outline, each one starts as a hidden copy of it, just like the
-four vessels. Otherwise they start empty:
+case with the yellow outline, a branch class becomes a copy of it the first time
+you select it, just like the four vessels start (from SegQueue 0.25.4; before that,
+all of them were copied when the box was turned on, which was slow). If you then
+erase it, it stays erased. Stent, calcified plaque and non-calcified plaque always
+start empty, on every case. On a case without the outline, every extended class
+starts empty:
 
 | Group | Classes |
 |---|---|
@@ -206,8 +212,8 @@ four vessels. Otherwise they start empty:
 | RCA branches | SN (sinus node), Conus, RMA (right marginal), PDA, PLB (posterolateral) |
 | Materials | Stent, Calcified plaque, Non-calcified plaque |
 
-- Use only the ones you want. An empty class is fine. If you leave a class as an
-  untouched copy of the outline, it is sent empty.
+- Use only the ones you want. An empty class is fine. If you leave a branch class
+  as an untouched copy of the outline, it is sent empty.
 - To use a branch class, move that branch out of whichever vessel it leaves and
   into its class. For example, erase the first diagonal from LAD and paint it into
   D1. SN, PDA and PLB come out of the RCA or the LCx, whichever they come off: in
@@ -219,11 +225,14 @@ four vessels. Otherwise they start empty:
   them only when that is true. They are optional.
 - Some cases open with the box already on and a note asking you to use the
   extended classes. Please do.
-- Paint stent and plaque where you see them. They may overlap the vessel.
+- Paint stent and plaque where you see them, starting from an empty class. They
+  may overlap the vessel. From SegQueue 0.25.4 the editor keeps both: under **Masking**, *Modify other segments*
+  is **Allow overlap** whenever a case opens, also in Slicer's own Segment Editor
+  module. If you change it, it stays changed until the next case.
 - Hover over a group name in the box to see what goes in each class. The
   **Show** ticks hide or show a whole group.
-- Turning the box off removes the extended classes you left empty or did not
-  change. A class you changed stays.
+- Turning the box off removes the extended classes you left empty, and the branch
+  classes you did not change. A class you changed stays.
 
 Useful buttons:
 

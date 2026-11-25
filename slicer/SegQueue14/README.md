@@ -181,6 +181,110 @@ empty, grouped under their parent in the segment list, with show/hide per group:
   server used to refuse them with `not_an_annotator`); until it is deployed those
   accounts see an empty thread. Protocol stays 21.
 
+### Materials start empty; selecting a class shows it; overlap everywhere (0.25.4, D52)
+
+D52 (2026-11-25, amends D51, and amended the same day after a lag report). Four
+changes, all in the module; protocol stays 21, no server change.
+
+**Materials start empty.** Stent, calcified and non-calcified plaque are always
+added empty, also on a seeded case. 0.25.0-0.25.3 started them as a hidden copy of
+the seed (D51), which made them useless: paint inside the lumen changed nothing and
+the class was submitted empty (D51 d), and paint outside it was submitted as the
+whole tree plus the stroke. The 14 branch classes keep D51's start as a seed copy,
+made on demand (below). The branches are `labels.PARENT` (the extended classes with
+a parent vessel), not a list of names in the module.
+
+- The case line on a seeded case says *stent and plaque start empty* when the
+  extended classes are on.
+- Turning the toggle off removes the empty classes (now including untouched
+  materials) and the untouched branch seed copies, as before.
+- Submit still blanks an extended class left exactly as the seed (D51 d). Only
+  branches start that way now; the test stays on the materials too, so a material
+  left as the seed by a 0.25.0-0.25.3 draft is never submitted as the whole tree.
+  The message after submitting says *branch class*.
+- Plaque painted inside the LAD on a seeded case is submitted as plaque, in its own
+  channel overlapping the LAD's.
+
+**Seed copies are made on demand** (lag report). Since D51, turning the extended
+classes on lagged badly on a seeded case: 0.25.0-0.25.3 wrote 17 copies of the seed
+at once, each re-imported through `slicer.util` over the whole CT into a labelmap
+layer of its own the size of the CT, and then rebuilt every 3D surface. Now:
+
+- Turning the toggle on adds the 17 empty: no seed voxels, no surface rebuilt.
+- A branch becomes its copy of the seed when it is **first selected for editing**,
+  in the same handler that shows a selected class: one class at a time. The copy is
+  written in place from the seed's own labelmap (`copySegmentInto`,
+  `SetBinaryLabelmapToSegment`), so its layer is the seed's size, not the CT's,
+  and only that class's 3D surface is built, only if surfaces are showing; every
+  other class keeps its own.
+- *First* means once per read: the class is recorded in `seedFirstSelected` (in the
+  draft's manifest) whether it was filled or already had voxels, so a class emptied
+  on purpose is never refilled, also after a resumed draft. A draft from before
+  0.25.4, or a reopened read, counts every branch already in it as selected.
+- Materials never get a copy; a reviewer's classes never do (D51 b). A branch never
+  selected stays empty and is sent empty. Toggle-off and the export treat untouched
+  seed copies as before (D51 c, d). After toggle off and on, a branch already
+  selected in the read comes back empty.
+- Measured on Slicer 5.8.1, 512 x 512 x 300 CT, a 188k-voxel seed
+  (`tests/slicer_bench_extended14.py`): toggle on went from 8.0 s (14.5 s with the
+  classes shown in 3D), 22 layers and 2.75 GB peak memory to 0.003 s (1.8 s), 5
+  layers and no change in memory; a branch's first selection takes about 0.5 s and
+  adds one layer the size of the seed's extent.
+
+**Selecting a class shows it** (`SegQueue14Lib/selection.py`). The class selected
+for editing in the panel's Segment Editor is made visible: when it is clicked in the
+segment list, and when the editor picks one as a case or submission is bound. So
+Slicer's *"The selected segment is hidden. Would you like to make it visible?"* no
+longer appears and no longer drops the first stroke. Own case and a reviewer's
+editing alike. Only the selected class changes: every other class keeps its
+visibility, and a seeded case's classes still start hidden (D26, D51). A class the
+annotator hides again by its eye while it stays selected stays hidden until another
+class is selected.
+
+**Overlap allowed everywhere** (D39, D44). Reported on 0.25.2: overlapping classes could not be submitted, which an extended
+read needs. Stent, calcified and non-calcified plaque (D44) sit inside LM, LAD,
+LCx, RCA and their branches, and D39 saves every class whole, overlaps included.
+
+- **What it was not.** Nothing in submit, the export or the server refuses or
+  trims overlap: the class stack has one 0/1 channel per class, and the server
+  stores it as sent (D38). The module's own Segment Editor was not it either: in a
+  real Slicer 5.8.1 and 5.12.4 its "Modify other segments" stays at **Allow
+  overlap** through opening a case, the extended toggle, every effect and a
+  reviewer's submission, and Paint, Draw, Scissors (fill inside), Threshold, Draw
+  tube, Islands, Logical operators (copy, add) and Inverse cut all put a plaque
+  inside the LAD with every LAD voxel kept.
+- **Root cause.** Slicer's own **Segment Editor module** edits the same case through
+  a parameter node of its own, made with Slicer's default, **Overwrite all**. A
+  plaque painted there (or thresholded, filled, drawn) took its voxels out of the
+  LAD, so the overlap was gone before it reached a submission. The same default
+  applied to any Segment Editor node made after a scene clear, which is what
+  opening a submission for review does; the panel's node was only corrected
+  because the module set it again straight after. Reproduced on 5.8.1 and 5.12.4
+  (Threshold over the tree in the Segment Editor module left the LAD empty).
+- **Fix** (`SegQueue14Lib/overlap.py`). The module registers a scene *default node*
+  for the Segment Editor with Allow overlap (`SetOverwriteMode(OverwriteNone)`, still
+  the current call in 5.12, with the mode looked up by name as the fallback), so
+  every Segment Editor node made from then on starts there, the Segment Editor
+  module's included, also after a scene clear. Each case or submission opened (own
+  case, resumed draft, reopened or recalled read, a reviewer's submission) sets the
+  panel's node and the Segment Editor module's node to Allow overlap again.
+- **Your choice is kept.** Nothing watches the setting afterwards: pick another mode
+  in the Masking panel and it stays until the next case opens.
+
+**Tested:** `tests/test_segqueue14_overlap.py`, `tests/test_segqueue14_selection.py`
+and the D51/D52 tests in `tests/test_segqueue14_module.py`; in Slicer, `run_d51`,
+`run_extended` and `run_overlap` in `tests/slicer_selftest14.py`. `run_overlap`
+covers every effect above (own case and reviewer), the Segment Editor module, a
+scene clear and the export as two overlapping channels, and for D52 the materials
+at 0 voxels and branches as the seed on a seeded case, plaque inside the LAD
+submitted as plaque, and selecting a hidden class showing it (own case and
+reviewer) with the first paint stroke landing and no question asked; and for the
+on-demand seed copies, that toggle-on adds no seed voxels, that a first selection
+(through the panel and the logic) fills exactly that class, once, and that it keeps
+every other class's 3D surface. The server test of an
+extended read checks the stored stent and plaque channels overlap LAD and RCA, each
+whole.
+
 ### A clear message when the server refuses the upload's chunk size (0.25.3)
 
 - Submitting a read over 768 KiB (an extended read, usually) failed with Girder's

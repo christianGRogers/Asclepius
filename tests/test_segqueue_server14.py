@@ -1426,7 +1426,17 @@ def test_an_extended_read_is_stored_scored_and_exported_whole(world, tmp_path):
 
     submission = Submission14().load(response["submissionId"], force=True)
     assert submission["classes"] == labels.ALL_NAMES and submission["extended"] is True
-    assert _storedStack(world, submission)["names"] == labels.ALL_NAMES
+    stored = _storedStack(world, submission)
+    assert stored["names"] == labels.ALL_NAMES
+    # D39, D44 (0.25.4, D52): a material painted inside an artery is stored as two
+    # overlapping channels, the artery whole and the material whole.
+    sent = dict(zip(labels.ALL_NAMES, _stackOf(np, classes, labels.ALL_NAMES)))
+    kept = dict(zip(stored["names"], stored["masks"]))
+    for material, vessel in (("Stent", "LAD"), ("Calcified plaque", "RCA")):
+        assert np.array_equal(kept[vessel] != 0, sent[vessel] != 0), vessel
+        assert np.array_equal(kept[material] != 0, sent[material] != 0), material
+        shared = (kept[material] != 0) & (kept[vessel] != 0)
+        assert shared.any() and np.array_equal(shared, kept[material] != 0), material
 
     scoring.runOnce()
     submission = Submission14().load(response["submissionId"], force=True)

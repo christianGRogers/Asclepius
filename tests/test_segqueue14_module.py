@@ -583,7 +583,7 @@ def _calls_in(node):
 
 
 def test_the_module_is_0_25_3_and_protocol_21():
-    assert re.search(r'^__version__ = "0\.25\.3"$', _source(), re.M)
+    assert re.search(r'^__version__ = "0\.25\.4"$', _source(), re.M)
     sys_path = str(REPO / "src")
     import sys
 
@@ -1611,7 +1611,8 @@ def test_an_untouched_seed_copy_is_exact():
 SEED_ID = "seed"
 _D51_METHODS = (
     "extraSpecs", "hasExtendedSegments", "classSpecs", "extendedOn",
-    "completeGroupsForExport", "addExtendedClasses", "fillExtendedFromSeed",
+    "completeGroupsForExport", "addExtendedClasses", "seedOnFirstSelection",
+    "copySegmentInto", "_saveFirstSelected", "_restoreFirstSelected",
     "_seedIdInScene", "seedMask", "isUntouchedSeedCopy", "removeEmptyExtendedClasses",
     "orderSegments", "copySegmentIntoEveryClass", "copySegmentIntoClasses",
     "segmentIdFor", "exportSubmission", "_classMask", "_segmentMask", "sourceGeometry",
@@ -1712,10 +1713,40 @@ def _fake_slicer(np):
         def arrayFromVolume(volume):
             return np.zeros(volume.shape, np.int16)
 
+    class OrientedImage:
+        mask = None
+
+    class SegmentationsLogic:
+        """``vtkSlicerSegmentationsModuleLogic``: the in-place, one-segment write."""
+        MODE_REPLACE = 0
+
+        @staticmethod
+        def GetSegmentBinaryLabelmapRepresentation(node, segmentId, image):
+            image.mask = node.masks.get(segmentId)
+            return image.mask is not None
+
+        @staticmethod
+        def SetBinaryLabelmapToSegment(image, node, segmentId, mode):
+            node.masks[segmentId] = image.mask.copy()
+            # As Slicer does: the other segments keep their surfaces; this one
+            # gets its own if the segmentation shows surfaces.
+            node.segmentWrites = getattr(node, "segmentWrites", []) + [segmentId]
+
     class Slicer:
         util = Util
+        vtkOrientedImageData = OrientedImage
+        vtkSlicerSegmentationsModuleLogic = SegmentationsLogic
 
     return Slicer
+
+
+class _Cache:
+    def __init__(self):
+        self.manifest = {}
+
+    def update(self, assignmentId, **fields):
+        self.manifest.update(fields)
+        return dict(self.manifest)
 
 
 class _Vtk:
@@ -1766,10 +1797,16 @@ def _d51_logic(np, assignment=True, extended=True, seed=True, shape=(4, 6, 6)):
         segments = labels.segment_specs()
 
     logic.project = Project()
-    logic.assignment = object() if assignment else None
     logic.extendedClasses, logic.caseExtendedMode = extended, False
     logic.completeGroups = set()
     logic.lastAddedExtended, logic.seedCopiesBlanked = [], []
+    logic.seedFirstSelected, logic.resumedDraft = set(), False
+    logic.cache = _Cache()
+
+    class Assignment:
+        assignment_id = "a1"
+
+    logic.assignment = Assignment() if assignment else None
     logic.volumeNode = _Volume(shape)
     logic.segmentationNode = node = _SegNode(shape)
     for spec in labels.segment_specs():
@@ -1785,38 +1822,85 @@ def _d51_logic(np, assignment=True, extended=True, seed=True, shape=(4, 6, 6)):
     return logic, labels, labelfile, seedMask
 
 
-def test_extended_classes_start_as_hidden_seed_copies_on_an_own_seeded_case():
-    np = pytest.importorskip("numpy")
-    logic, labels, _, seed = _d51_logic(np)
-    # A draft's own extended class is never refilled.
-    node = logic.segmentationNode
-    node.segmentation.AddEmptySegment("D1", "D1", (0, 0, 1))
-    own = np.zeros_like(seed)
-    own[0, 0, 0] = 1
-    node.masks["D1"] = own.copy()
+def _select(logic, name):
+    """What the panel does when a class is selected for editing (D52)."""
+    return logic.seedOnFirstSelection(logic.segmentIdFor(name))
 
-    added = logic.addExtendedClasses(fromSeed=True)
-    assert added == 16 and "D1" not in logic.lastAddedExtended
+
+def _selectAll(logic, labels):
+    """Every extended class selected once, as an annotator going through them."""
     for name in labels.EXTRA_NAMES:
-        if name == "D1":
-            assert np.array_equal(node.masks["D1"], own)
-            continue
-        assert np.array_equal(node.masks[name], seed), name
-        assert node.display.visible[name] is False, name
+        _select(logic, name)
+
+
+def test_toggle_on_adds_the_17_empty_and_writes_no_seed_voxels():
+    """D52 (lag report): no seed copies, no surfaces dropped or rebuilt."""
+    np = pytest.importorskip("numpy")
+    logic, labels, _, seed = _d51_logic(np, extended=False)
+    node = logic.segmentationNode
+    node.CreateClosedSurfaceRepresentation()      # Show in 3D
+    assert logic.addExtendedClasses() == 17
+    assert all(name not in node.masks for name in labels.EXTRA_NAMES)
+    assert node.segmentation.surfaces and node.surfacesBuilt == 1
+    assert getattr(node, "segmentWrites", []) == []
     assert node.segmentation.GetSegment("PDA").label == labels.ALL_LABEL_VALUES["PDA"]
-    # The seed itself is untouched.
     assert np.array_equal(node.masks[SEED_ID], seed)
 
 
-def test_at_open_the_classes_are_added_empty_and_filled_after_the_seed_loads():
-    open_case = ast.get_source_segment(_source(), _method("SegQueue14Logic", "openCase"))
-    assert "addedAtOpen = list(self.lastAddedExtended)" in open_case
-    assert open_case.index("addedAtOpen = list(") < open_case.index("_loadPrelabel(")
-    assert "if not self.resumedDraft and assignment.has_seed and addedAtOpen:" in open_case
-    assert "self.fillExtendedFromSeed(addedAtOpen)" in open_case
-    template = ast.get_source_segment(_source(), _method("SegQueue14Logic", "_applyTemplate"))
-    assert "self.lastAddedExtended = []" in template
-    assert "self.addExtendedClasses()" in template and "fromSeed" not in template
+def test_the_first_selection_of_a_branch_fills_exactly_that_class():
+    np = pytest.importorskip("numpy")
+    logic, labels, _, seed = _d51_logic(np)
+    logic.addExtendedClasses()
+    node = logic.segmentationNode
+    node.CreateClosedSurfaceRepresentation()
+    assert _select(logic, "D1") is True
+    assert np.array_equal(node.masks["D1"], seed)
+    assert [n for n in labels.EXTRA_NAMES if n in node.masks] == ["D1"]
+    # One in-place write: the other surfaces are kept, none rebuilt.
+    assert node.segmentWrites == ["D1"] and node.surfacesBuilt == 1
+    assert node.segmentation.surfaces
+    # Recorded, and in the draft's manifest.
+    assert logic.seedFirstSelected == {"D1"}
+    assert logic.cache.manifest["seedFirstSelected"] == ["D1"]
+    assert np.array_equal(node.masks[SEED_ID], seed)
+
+
+def test_a_branch_is_filled_only_the_first_time():
+    np = pytest.importorskip("numpy")
+    logic, _, _, seed = _d51_logic(np)
+    logic.addExtendedClasses()
+    node = logic.segmentationNode
+    _select(logic, "D1")
+    node.masks["D1"] = np.zeros_like(seed)        # emptied on purpose
+    assert _select(logic, "D1") is False
+    assert not node.masks["D1"].any()
+
+
+def test_a_branch_already_drawn_is_left_as_it_is():
+    np = pytest.importorskip("numpy")
+    logic, _, _, seed = _d51_logic(np)
+    logic.addExtendedClasses()
+    node = logic.segmentationNode
+    own = np.zeros_like(seed)
+    own[0, 0, 0] = 1
+    node.masks["D2"] = own.copy()
+    assert _select(logic, "D2") is False
+    assert np.array_equal(node.masks["D2"], own) and "D2" in logic.seedFirstSelected
+
+
+def test_materials_the_four_and_the_helpers_are_never_filled_on_selection():
+    np = pytest.importorskip("numpy")
+    logic, labels, _, seed = _d51_logic(np)
+    logic.addExtendedClasses()
+    node = logic.segmentationNode
+    lad = node.masks["LAD"].copy()
+    for name in labels.MATERIALS + ["LAD"]:
+        assert _select(logic, name) is False, name
+    assert logic.seedOnFirstSelection(SEED_ID) is False
+    assert logic.seedOnFirstSelection(None) is False
+    assert all(name not in node.masks for name in labels.MATERIALS)
+    assert np.array_equal(node.masks["LAD"], lad)
+    assert logic.seedFirstSelected == set()
 
 
 @pytest.mark.parametrize("assignment,seed", [(False, True), (True, False)],
@@ -1824,23 +1908,67 @@ def test_at_open_the_classes_are_added_empty_and_filled_after_the_seed_loads():
 def test_extended_classes_stay_empty_for_a_reviewer_and_on_a_seedless_case(assignment, seed):
     np = pytest.importorskip("numpy")
     logic, labels, _, _ = _d51_logic(np, assignment=assignment, seed=seed)
-    assert logic.addExtendedClasses(fromSeed=True) == 17
+    assert logic.addExtendedClasses() == 17
+    _selectAll(logic, labels)
     node = logic.segmentationNode
     assert all(name not in node.masks for name in labels.EXTRA_NAMES)
 
 
-def test_the_panel_seeds_only_the_annotators_own_case():
+def test_the_branches_come_from_the_labels():
+    body = ast.get_source_segment(_source(), _method("SegQueue14Logic",
+                                                     "seedOnFirstSelection"))
+    code = body.split('"""')[-1]
+    assert "labels.PARENT" in code
+    assert '"Stent"' not in code and "plaque" not in code.lower()
+
+
+def test_first_selections_are_restored_from_the_draft():
+    np = pytest.importorskip("numpy")
+    logic, labels, _, _ = _d51_logic(np)
+    logic.addExtendedClasses()
+    # A fresh case: none.
+    logic._restoreFirstSelected({})
+    assert logic.seedFirstSelected == set()
+    # A 0.25.4 draft: its own record (unknown names dropped).
+    logic.resumedDraft = True
+    logic._restoreFirstSelected({"seedFirstSelected": ["D1", "PDA", "Stent", "LAD"]})
+    assert logic.seedFirstSelected == {"D1", "PDA"}
+    assert logic.cache.manifest["seedFirstSelected"] == ["D1", "PDA"]
+    # An older draft, or a reopened read: every branch in it counts as selected,
+    # except those the toggle added at open.
+    logic.lastAddedExtended = ["S1", "S2"]
+    logic._restoreFirstSelected({})
+    assert logic.seedFirstSelected == set(labels.PARENT) - {"S1", "S2"}
+    assert _select(logic, "D1") is False and _select(logic, "S1") is True
+
+
+def test_at_open_the_extended_classes_stay_empty_and_the_record_is_restored():
+    open_case = ast.get_source_segment(_source(), _method("SegQueue14Logic", "openCase"))
+    assert "fillExtendedFromSeed" not in _source() and "fromSeed" not in _source()
+    assert open_case.index("self._loadOrCreateSegmentation(") < open_case.index(
+        "self._restoreFirstSelected(manifest)")
+    template = ast.get_source_segment(_source(), _method("SegQueue14Logic", "_applyTemplate"))
+    assert "self.lastAddedExtended = []" in template
+    close = ast.get_source_segment(_source(), _method("SegQueue14Logic", "closeCase"))
+    assert "self.seedFirstSelected = set()" in close
+
+
+def test_the_panel_fills_on_selection_and_never_at_toggle_on():
     toggle = ast.get_source_segment(_source(), _method("SegQueue14Widget", "onToggleExtended"))
-    assert "addExtendedClasses(\n                    fromSeed=self.logic.assignment is not None)" \
-        in toggle
+    assert "self.logic.addExtendedClasses()" in toggle
     review = ast.get_source_segment(_source(), _method("SegQueue14Widget", "onOpenReview"))
-    assert "addExtendedClasses(fromSeed=False)" in review
+    assert "self.logic.addExtendedClasses()" in review
+    selected = ast.get_source_segment(_source(), _method("SegQueue14Widget",
+                                                         "_onClassSelected"))
+    assert "logic.seedOnFirstSelection(segmentId)" in selected
+    assert "segmentationNode is logic.segmentationNode" in selected
 
 
 def test_toggle_off_removes_untouched_seed_copies_and_keeps_edited_ones():
     np = pytest.importorskip("numpy")
     logic, labels, _, seed = _d51_logic(np)
-    logic.addExtendedClasses(fromSeed=True)
+    logic.addExtendedClasses()
+    _selectAll(logic, labels)
     node = logic.segmentationNode
     trimmed = node.masks["D1"].copy()
     trimmed[1, 1, 2] = 0
@@ -1849,6 +1977,10 @@ def test_toggle_off_removes_untouched_seed_copies_and_keeps_edited_ones():
     grown = seed.copy()
     grown[0, 0, 0] = 1
     node.masks["PDA"] = grown                         # added to: work
+    # D52: the materials start empty, so they are removed as empty ones; a material
+    # still the whole seed (a 0.25.0-0.25.3 draft) is removed as a seed copy.
+    assert not node.masks.get("Calcified plaque", np.zeros_like(seed)).any()
+    node.masks["Non-calcified plaque"] = seed.copy()
     removed, kept = logic.removeEmptyExtendedClasses()
     assert kept == ["D1", "PDA"]
     assert sorted(removed) == sorted(n for n in labels.EXTRA_NAMES if n not in kept)
@@ -1860,7 +1992,8 @@ def test_toggle_off_removes_untouched_seed_copies_and_keeps_edited_ones():
 def test_export_blanks_untouched_seed_copies_but_not_the_four():
     np = pytest.importorskip("numpy")
     logic, labels, labelfile, seed = _d51_logic(np)
-    logic.addExtendedClasses(fromSeed=True)
+    logic.addExtendedClasses()
+    _selectAll(logic, labels)
     node = logic.segmentationNode
     trimmed = seed.copy()
     trimmed[1, 1, 2] = 0
@@ -1872,8 +2005,12 @@ def test_export_blanks_untouched_seed_copies_but_not_the_four():
     for name in labels.NAMES:                      # D26/D38: sent as they are
         assert np.array_equal(written[name], seed) and counts[name] == n
     assert np.array_equal(written["D1"], trimmed) and counts["D1"] == n - 1
-    blanked = [name for name in labels.EXTRA_NAMES if name != "D1"]
-    for name in blanked:
+    # D52: the 13 untouched branches (each selected once, so a seed copy) are
+    # blanked; the materials never were seed copies, and are written empty.
+    blanked = [name for name in labels.EXTRA_NAMES
+               if name != "D1" and name not in labels.MATERIALS]
+    assert len(blanked) == 13
+    for name in blanked + labels.MATERIALS:
         assert not written[name].any() and counts[name] == 0, name
     assert logic.seedCopiesBlanked == [n for n in labels.ALL_NAMES if n in blanked]
     # D47 Q3: the complete ticks are unchanged by it.
@@ -1881,10 +2018,39 @@ def test_export_blanks_untouched_seed_copies_but_not_the_four():
         _source(), _method("SegQueue14Logic", "completeGroupsForExport"))
 
 
+def test_plaque_painted_inside_a_seeded_lad_is_submitted_as_plaque():
+    """D52: on a seeded case the plaque starts empty, so plaque painted inside the
+    LAD is sent as plaque, overlapping the LAD (D39), not blanked as a seed copy."""
+    np = pytest.importorskip("numpy")
+    logic, labels, labelfile, seed = _d51_logic(np)
+    logic.addExtendedClasses()
+    node = logic.segmentationNode
+    plaque = np.zeros_like(seed)
+    plaque[1, 2, 2] = 1                               # inside the seed, so the LAD
+    assert seed[1, 2, 2] == 1
+    node.masks["Calcified plaque"] = plaque.copy()
+    counts, _, _ = logic.exportSubmission("unused.seg.nrrd")
+    written = labelfile.written
+    assert np.array_equal(written["Calcified plaque"], plaque)
+    assert counts["Calcified plaque"] == 1
+    assert (written["Calcified plaque"] & written["LAD"]).sum() == 1
+    assert "Calcified plaque" not in logic.seedCopiesBlanked
+
+
+def test_a_material_left_as_the_seed_by_an_older_draft_is_still_blanked():
+    np = pytest.importorskip("numpy")
+    logic, labels, labelfile, seed = _d51_logic(np)
+    logic.addExtendedClasses()
+    logic.segmentationNode.masks["Stent"] = seed.copy()    # as 0.25.0-0.25.3 seeded it
+    logic.exportSubmission("unused.seg.nrrd")
+    assert not labelfile.written["Stent"].any()
+    assert "Stent" in logic.seedCopiesBlanked
+
+
 def test_without_a_seed_nothing_is_blanked_or_removed_as_a_copy():
     np = pytest.importorskip("numpy")
     logic, labels, labelfile, _ = _d51_logic(np, seed=False)
-    logic.addExtendedClasses(fromSeed=True)
+    logic.addExtendedClasses()
     node = logic.segmentationNode
     painted = np.zeros(node.shape, np.uint8)
     painted[0, 0, 0] = 1
@@ -1902,27 +2068,6 @@ def test_one_helper_decides_what_is_an_untouched_seed_copy():
     helper = ast.get_source_segment(_source(), _method("SegQueue14Logic",
                                                        "isUntouchedSeedCopy"))
     assert "inversecut.is_untouched_copy(mask, seed)" in helper
-
-
-def test_seeding_extended_classes_keeps_the_3d_view_when_it_was_showing():
-    """0.25.2: the seed copies are written with slicer.util, which drops every
-    segment's closed surface; with the classes shown in 3D, turning the extended
-    classes on blanked the 3D view until Show in 3D. The surfaces are rebuilt."""
-    np = pytest.importorskip("numpy")
-    logic, labels, _, _ = _d51_logic(np, extended=False)
-    node = logic.segmentationNode
-    node.CreateClosedSurfaceRepresentation()  # Show in 3D
-    assert logic.addExtendedClasses(fromSeed=True) == 17
-    assert node.segmentation.surfaces and node.surfacesBuilt == 2
-
-
-def test_seeding_extended_classes_builds_no_surfaces_nobody_showed():
-    np = pytest.importorskip("numpy")
-    logic, _, _, _ = _d51_logic(np, extended=False)
-    node = logic.segmentationNode
-    assert logic.addExtendedClasses(fromSeed=True) == 17
-    assert not node.segmentation.surfaces
-    assert getattr(node, "surfacesBuilt", 0) == 0
 
 
 def test_the_module_writes_seed_copies_inside_keeping_closed_surface():

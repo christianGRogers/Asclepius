@@ -209,7 +209,12 @@ because you have changed them ..."* box confused them.
   branch still an untouched seed copy; turned on again it came back **empty**, and
   was never given its seed copy again (D52 records it as selected), so the branch an
   annotator was about to trim was gone. The toggle also reset the group *Show*
-  ticks without showing their classes, so a hidden group looked deleted. The info
+  ticks without showing their classes, so a hidden group looked deleted. **On a
+  reviewer's panel the toggle off removed all 17**, the annotator's work included: a
+  submission loaded from its file has no reference geometry, Slicer refuses to read
+  a class without one, and `_segmentHasContent` took the refusal for "empty".
+  0.25.6 gives the loaded read the CT's geometry and reads the stored labelmap when
+  Slicer refuses; a class that cannot be read counts as content, never empty. The info
   box came only from the toggle (submit never raised it); annotators met it when
   turning the box off just before submitting, as the panel's tooltip and the guide
   described toggling off as tidying the read.

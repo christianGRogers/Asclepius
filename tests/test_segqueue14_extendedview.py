@@ -111,3 +111,21 @@ def test_the_panel_hides_and_shows_through_it():
         assert "self._applyExtendedView()" in method("SegQueue14Widget", name), name
     rows = method("SegQueue14Widget", "_applyExtendedRows")
     assert "setHideSegments(" in rows
+
+
+def test_a_class_that_cannot_be_read_is_never_taken_for_empty():
+    """D53 root cause on a reviewer's panel: an unreadable class answered 'empty'."""
+    import ast
+
+    source = (LIB.parent / "SegQueue14.py").read_text()
+    tree = ast.parse(source)
+    helper = next(n for n in tree.body
+                  if isinstance(n, ast.FunctionDef) and n.name == "_segmentHasContent")
+    body = ast.get_source_segment(source, helper)
+    fallback = body[body.index("except Exception:"):]
+    assert "GetSegmentBinaryLabelmapRepresentation" in fallback
+    assert fallback.rstrip().split("\n")[-2].strip() == "return True"
+    review = next(n for n in ast.walk(tree)
+                  if isinstance(n, ast.FunctionDef) and n.name == "onOpenReview")
+    assert "SetReferenceImageGeometryParameterFromVolumeNode(volumeNode)" in \
+        ast.get_source_segment(source, review)

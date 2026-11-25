@@ -2703,15 +2703,12 @@ def run_d53():
             logic.applyProjectNames()
             logic.extendedView.reset()
             logic.extendedClasses = False
-            _d1 = segIn(logic.segmentationNode, "D1")
-            _raw = slicer.util.arrayFromSegmentBinaryLabelmap(logic.segmentationNode, _d1)
-            say("  raw D1", None if _raw is None else (_raw.shape, int(_raw.sum())),
-                module._segmentHasContent(logic.segmentationNode, "D1"),
-                [logic.segmentationNode.GetSegmentation().GetNthSegment(i).GetName()
-                 for i in range(logic.segmentationNode.GetSegmentation().GetNumberOfSegments())])
-            say("  reviewer debug", logic.showExtendedIfWorked(), logic.extendedOn(),
-                logic.hasExtendedSegments(), logic.seedSegmentId, logic.extendedWork(),
-                logic.caseExtendedMode, logic.extendedWorkOpened)
+            # As onOpenReview does (D53), and checked first without it: a loaded
+            # read with no reference geometry still reads its classes' content.
+            check("reviewer: an extended class reads as having content on a loaded read",
+                  module._segmentHasContent(logic.segmentationNode, "D1"))
+            logic.segmentationNode.SetReferenceImageGeometryParameterFromVolumeNode(reviewCt)
+            logic.showExtendedIfWorked()
             widget._bindEditor(logic.segmentationNode, reviewCt)
             widget._updateExtendedBox()
             widget._applyExtendedView()

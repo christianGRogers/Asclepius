@@ -2135,7 +2135,26 @@ def _segmentHasContent(segmentationNode, name):
     try:
         array = slicer.util.arrayFromSegmentBinaryLabelmap(segmentationNode, segmentId)
     except Exception:
-        return False
+        # A segmentation loaded from a file (a reviewer's submission) has no
+        # reference geometry, and slicer.util refuses to read it without one.
+        # This used to answer "empty" there, and the toggle off then removed
+        # every extended class of the read, the annotator's work included (D53).
+        # Read the stored labelmap instead; if even that fails, say "has content":
+        # a class must never be taken for empty because it could not be read.
+        try:
+            from vtk.util import numpy_support
+
+            image = slicer.vtkOrientedImageData()
+            logic = slicer.vtkSlicerSegmentationsModuleLogic
+            if not logic.GetSegmentBinaryLabelmapRepresentation(
+                    segmentationNode, segmentId, image):
+                return True
+            scalars = image.GetPointData().GetScalars()
+            if scalars is None or not image.GetNumberOfPoints():
+                return False
+            return bool(numpy_support.vtk_to_numpy(scalars).any())
+        except Exception:
+            return True
     return array is not None and array.size > 0 and bool(array.any())
 
 
@@ -4261,6 +4280,10 @@ class SegQueue14Widget(ScriptedLoadableModuleWidget):
             slicer.util.setSliceViewerLayers(background=volumeNode, fit=True)
             self.logic.volumeNode = volumeNode
             self.logic.segmentationNode = segmentationNode
+            # D53: the CT as the read's reference geometry, as an own case has it, so
+            # every per-class read (``_segmentHasContent``) works on a reviewer's
+            # panel too; without one Slicer refuses them.
+            segmentationNode.SetReferenceImageGeometryParameterFromVolumeNode(volumeNode)
             # A class stack (0.17.0 on, D39) loads as the four named classes,
             # each whole, overlaps visible. An older labelmap submission comes
             # back as Segment_1, Segment_2 ... in colours Slicer chose; its label

@@ -52,10 +52,11 @@ empty, grouped under their parent in the segment list, with show/hide per group:
 - **On:** the 17 are added empty to the open case or draft. The seed still fills
   only LM, LAD, LCx and RCA (D26); the annotator moves a branch out of its parent
   into its class, and paints the materials. Overlaps are fine (D39).
-- **Submitted classes:** while any extended class is in the scene, the read is
-  submitted with all 21 channels in label order (`labels.ALL_NAMES`), the empty ones
-  empty. Turning the toggle off removes only the empty extended classes; a class
-  with voxels is kept, so the read stays extended.
+- **Submitted classes** (D53, 0.25.6): decided at export by the work in the extended
+  classes, not by the toggle. With work in any of them, the read is submitted with
+  all 21 channels in label order (`labels.ALL_NAMES`), the empty ones empty; with
+  none (every extended class empty or an untouched seed copy), as the four. Turning
+  the toggle off only hides the classes; it never removes one.
 - **Label values** 5-21 are fixed (`src/segqueue14/labels.py`) and set once when a
   segment is created. An existing segment is never re-pinned (#270's root cause), so
   a 0.17.x draft opened in 0.18.0 keeps its four classes untouched, plus the 17
@@ -180,6 +181,38 @@ empty, grouped under their parent in the segment list, with show/hide per group:
 - Needs plugin **0.7.1** for reviewer accounts that are not also annotators (the
   server used to refuse them with `not_an_annotator`); until it is deployed those
   accounts see an empty thread. Protocol stays 21.
+
+### The extended-classes toggle never deletes work (0.25.6, D53)
+
+Protocol stays 21, no server change. Annotators reported that turning **Extended
+classes** off deleted their work on the extra classes, and that a *"Kept D1, D2, OM2
+because you have changed them ..."* box confused them.
+
+- **Off only hides.** The extended classes, their rows in the Segment Editor's list
+  (`setHideSegments`) and the group rows under the toggle are hidden; an extended
+  class selected for editing is deselected. No segment is removed, emptied,
+  refilled or re-seeded. `removeEmptyExtendedClasses` and the info box are gone;
+  the toggle raises no dialog.
+- **On shows them as they were**, each with the eye it had
+  (`SegQueue14Lib/extendedview.py`): a class or group hidden before stays hidden,
+  and a group's *Show* tick is no longer reset by the toggle. Only missing classes
+  are added (empty, D52); an existing one is never touched.
+- **The export decides 4 or 21.** If no extended class holds work, the read is the
+  four classes exactly as before; an empty class or an untouched seed copy (D51 d)
+  is not work. Otherwise all 21 are sent, toggle on or off, untouched copies blanked
+  (D51 d) and the *Complete* ticks in the header (D47 Q3). A four-class read carries
+  no ticks.
+- **Opening a read with extended work** (a draft, a reopened read, a reviewer's
+  submission) shows its extended classes, whatever the login's toggle says (not
+  saved to it), so nobody opens their own work hidden.
+- Root causes, reproduced in Slicer 5.8.1 and 5.12.4: the toggle off removed every
+  branch still an untouched seed copy; turned on again it came back **empty**, and
+  was never given its seed copy again (D52 records it as selected), so the branch an
+  annotator was about to trim was gone. The toggle also reset the group *Show*
+  ticks without showing their classes, so a hidden group looked deleted. The info
+  box came only from the toggle (submit never raised it); annotators met it when
+  turning the box off just before submitting, as the panel's tooltip and the guide
+  described toggling off as tidying the read.
 
 ### A seeded case opens with a fraction of the memory (0.25.5)
 

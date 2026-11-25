@@ -231,8 +231,11 @@ starts empty:
   module. If you change it, it stays changed until the next case.
 - Hover over a group name in the box to see what goes in each class. The
   **Show** ticks hide or show a whole group.
-- Turning the box off removes the extended classes you left empty, and the branch
-  classes you did not change. A class you changed stays.
+- Turning the box off only hides the extended classes. Nothing is deleted, and
+  turning it back on shows them exactly as they were (from SegQueue 0.25.6). You do
+  not need to turn it off before you submit: if any extended class has your work in
+  it, the case is sent with all 21 classes, whether the box is on or off. If none
+  has (they are empty, or untouched copies of the outline), it is sent with the four.
 
 Useful buttons:
 

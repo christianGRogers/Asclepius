@@ -468,7 +468,7 @@ than writing subtly wrong data for a month before anyone notices.
 | Slicer: *"Failed to load node from file"* on a case | The volume is obliquely acquired and was ingested before geometry correction existed. Re-ingest that case; see §5.2. |
 | Ingest finds 0 eligible cases | The tree is not in TotalSegmentator layout (no `<case>/segmentations/`), or genuinely has no cardiac scans. Try `--layout flat`, or `--all-cases` to bypass the heart filter. |
 | Uploads fail with a permission error | The annotator is not in `segqueue-annotators`. That group is the only place they get write access, and only to the drop-box folder. |
-| Extension: *"Could not reach the server… check that the VPN is connected."* | Exactly that — or a self-signed certificate whose CA root is not installed. See §7. |
+| Extension: *"Could not reach the server… Check your internet connection and try again."* | The box is down or unreachable from the annotator's network — or a self-signed certificate whose CA root is not installed. See §7. |
 | Extension: *"the server returned something that is not JSON"* | A captive portal or proxy is intercepting. Common on campus guest wifi. |
 | Extension: *"Could not import the segqueue package"* | The module was loaded from a copy outside the repository. It imports `segqueue` from the sibling `src/`; both must travel together. |
 | Annotator gets "no cases available" while cases remain | Normal near the end: every remaining case has already been shown to them, and nobody is offered the same case twice. Check `GET /segqueue/stats`. |

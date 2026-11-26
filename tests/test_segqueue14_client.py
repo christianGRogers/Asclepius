@@ -737,3 +737,16 @@ def test_http_errors_carry_their_status_and_keep_their_message():
         makeClient(session)._json("GET", "user/me")
     assert caught.value.status == 403
     assert caught.value.code == protocol.ERR_NOT_YOUR_CASE
+
+
+def test_an_unreachable_server_names_the_url_and_not_a_vpn():
+    class Dead(FakeSession):
+        def request(self, *args, **kwargs):
+            raise requests.ConnectionError("no route to host")
+
+    with pytest.raises(SegQueue14Error) as caught:
+        makeClient(Dead()).whoami()
+    message = str(caught.value)
+    assert "segqueue.example.edu" in message
+    assert "no route to host" in message
+    assert "vpn" not in message.lower()

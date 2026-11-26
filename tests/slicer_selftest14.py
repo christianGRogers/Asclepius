@@ -21,8 +21,18 @@ with the four vessels as before; turning "Extended classes" on adds the 17 empty
 with their pinned label values, grouped under their parents; a branch moved from
 LAD into D1 and a painted plaque are submitted, opened by a reviewer and revised
 with all 21 classes whole; a 0.17.x four-class draft reopens intact (with the 17
-empty extras when the toggle is on); and turning the toggle off removes only the
-empty extended classes.
+empty extras when the toggle is on); and turning the toggle off removes nothing
+(D53).
+
+D53 (0.25.6, ``run_d53``), the toggle only hides: through the panel, D1 painted, D2
+cut with Inverse cut and OM2 trimmed from its seed copy keep every voxel over three
+off-and-on toggles; off hides the classes, their rows in the editor's list and the
+group rows, and on shows them with the eyes they had; no dialog is raised by the
+toggle or by submit; a draft saved with the toggle off resumes with the work; the
+export is 21 channels with the work in them when any extended class holds work,
+toggle off or on, and the four when they are all empty or untouched seed copies;
+a Complete tick with no voxels and a flagged case with nothing drawn are 21 (D47
+stands); and a reviewer's panel toggles the same way and revises all 21.
 
 D47 (#322, ``run_d47``): a case flagged for extended mode opens with the extended
 classes; the three branch-group "complete" tick-boxes start unticked, are saved
@@ -686,21 +696,27 @@ def run_extended():
             "on: the 17 added, empty" if on else "off"), got == expected, got)
         path = os.path.join(tmp, "resumed-{}.seg.nrrd".format(on))
         resumed.exportSubmission(path)
-        check("  and exports {} classes".format(21 if on else 4),
-              labelfile.read_class_stack(path)["names"]
-              == (labels.ALL_NAMES if on else labels.NAMES))
+        # D53: the 17 empty extras are not work, so the read is the four either way.
+        check("  and exports 4 classes ({})".format(
+            "the 17 hold no work" if on else "no extended classes"),
+              labelfile.read_class_stack(path)["names"] == labels.NAMES)
         if on:
-            # 6. Off again: the empty extended classes go, a painted one stays.
+            # 6. Off again (D53): every extended class stays, hidden; a painted one
+            # keeps the read at 21 channels.
             d1 = np.zeros(SHAPE, np.uint8)
             d1[5:7, 20:23, 20:23] = 1
             slicer.util.updateSegmentBinaryLabelmapFromArray(
                 d1, resumed.segmentationNode, segIn(resumed.segmentationNode, "D1"), volume)
             resumed.extendedClasses = False
-            removed, kept = resumed.removeEmptyExtendedClasses()
-            check("toggling off removes only the empty extended classes",
-                  kept == ["D1"] and len(removed) == 16, (removed, kept))
-            check("  so the read keeps all 21 channels while D1 has voxels",
-                  [s.name for s in resumed.classSpecs()] == labels.ALL_NAMES)
+            resumed.setExtendedShown(False)
+            check("toggling off keeps every extended class (D53)",
+                  all(segIn(resumed.segmentationNode, n) for n in labels.EXTRA_NAMES)
+                  and _countsOf(slicer, resumed.segmentationNode, volume, ["D1"], segIn)
+                  == {"D1": 18})
+            path = os.path.join(tmp, "resumed-off.seg.nrrd")
+            resumed.exportSubmission(path)
+            check("  and the read is sent with all 21 channels while D1 has work",
+                  labelfile.read_class_stack(path)["names"] == labels.ALL_NAMES)
         slicer.mrmlScene.RemoveNode(resumed.segmentationNode)
 
     # 7. Toggle on from the start: the seed fills the four (D26); the 17 start
@@ -717,7 +733,7 @@ def run_d51():
     toggle-on adds the extended classes with no seed voxels; on an own case a branch
     becomes the seed on its first selection, exactly that class, once; materials and
     a reviewer's classes stay empty; export sends untouched seed copies empty; the
-    toggle off removes them; a first selection keeps every other 3D surface."""
+    toggle off keeps them (D53); a first selection keeps every other 3D surface."""
     import numpy as np
 
     import slicer
@@ -816,22 +832,23 @@ def run_d51():
         surface = _closedSurface(slicer, node, segIn(node, name))
         return surface is not None and surface.GetNumberOfPoints() > 0
 
-    removed, kept = logic.removeEmptyExtendedClasses()
-    check("toggling off removes untouched seed copies and keeps an edited class",
-          kept == ["D1"] and len(removed) == 16, (removed, kept))
+    # D53: off only hides -- the untouched copies stay copies, D1 stays trimmed.
+    kept = _countsOf(slicer, node, volume, labels.EXTRA_NAMES, segIn)
+    logic.extendedClasses = False
+    logic.setExtendedShown(False)
+    check("toggling off removes nothing and changes no voxel (D53)",
+          _countsOf(slicer, node, volume, labels.EXTRA_NAMES, segIn) == kept, kept)
     check("  and the classes stay in the 3D view",
           inThreeD("LAD") and inThreeD("D1"), (inThreeD("LAD"), inThreeD("D1")))
 
-    # On again: the 16 come back empty and are not refilled (already selected once
-    # in this read); D1 is kept as it is; the 3D view keeps every class.
+    # On again: nothing to add, nothing refilled, the 3D view keeps every class.
     logic.extendedClasses = True
-    check("toggling on again adds the 16 empty, and keeps D1",
-          logic.addExtendedClasses() == 16
-          and _countsOf(slicer, node, volume, ["D1", "PDA", "Stent"], segIn)
-          == {"D1": int(d1.sum()), "PDA": 0, "Stent": 0})
+    check("toggling on again adds nothing and keeps every class as it was",
+          logic.addExtendedClasses() == 0 and logic.setExtendedShown(True) == 17
+          and _countsOf(slicer, node, volume, labels.EXTRA_NAMES, segIn) == kept)
     check("  a branch already selected in this read is not refilled",
           logic.seedOnFirstSelection(segIn(node, "PDA")) is False
-          and _countsOf(slicer, node, volume, ["PDA"], segIn) == {"PDA": 0})
+          and _countsOf(slicer, node, volume, ["PDA"], segIn) == {"PDA": nSeed})
     check("  and the 3D view keeps the classes without Show in 3D",
           inThreeD("LAD") and inThreeD("D1"), (inThreeD("LAD"), inThreeD("D1")))
 
@@ -2410,10 +2427,379 @@ def _materialInsideArtery(slicer, np, vtk, qt, layoutManager, widget, logic, edi
     return results
 
 
+# --------------------------------------------------------------------- D53
+
+
+def _paintAt(slicer, np, vtk, layoutManager, logic, editor, editorNode, name, i, j):
+    """One Paint stroke into class ``name`` at voxel (i, j) of slice 20, in the Red view."""
+    interactor, onScreen, _ = _redView(slicer, np, vtk, layoutManager, logic.volumeNode)
+    editorNode.SetSelectedSegmentID(logic.segmentIdFor(name))
+    slicer.app.processEvents()
+    editor.setActiveEffectByName("Paint")
+    effect = editor.activeEffect()
+    effect.setCommonParameter("BrushDiameterIsRelative", 0)
+    effect.setCommonParameter("BrushAbsoluteDiameter", 1.2)
+    effect.setCommonParameter("BrushSphere", 0)
+    centre = onScreen(i, j)
+    _drag(vtk, interactor, [centre, (centre[0] + 1, centre[1])])
+    slicer.app.processEvents()
+    editor.setActiveEffectByName("")
+
+
+def _inverseCutAround(slicer, np, vtk, layoutManager, logic, editor, editorNode, name):
+    """Inverse cut on class ``name``: an outline around the LAD at slice 20."""
+    interactor, onScreen, _ = _redView(slicer, np, vtk, layoutManager, logic.volumeNode)
+    editorNode.SetSelectedSegmentID(logic.segmentIdFor(name))
+    slicer.app.processEvents()
+    editor.setActiveEffectByName("Inverse cut")
+    _drag(vtk, interactor, [onScreen(i, j) for i, j in
+                            [(19.6, 19.6), (22.4, 19.6), (22.4, 22.4), (19.6, 22.4)]])
+    slicer.app.processEvents()
+    editor.setActiveEffectByName("")
+
+
+def _masksOf(slicer, np, node, volume, segmentIdIn, names):
+    """``{name: 0/1 array on the CT grid}``, None for a class not in ``node``."""
+    out = {}
+    for name in names:
+        segmentId = segmentIdIn(node, name)
+        out[name] = None if not segmentId else (slicer.util.arrayFromSegmentBinaryLabelmap(
+            node, segmentId, volume) > 0).astype(np.uint8)
+    return out
+
+
+def _sameMasks(np, a, b):
+    """The names whose masks differ between ``a`` and ``b`` (presence included)."""
+    return [n for n in a if (a[n] is None) != (b.get(n) is None)
+            or (a[n] is not None and not np.array_equal(a[n], b[n]))]
+
+
+def _tablesHiding(slicer, editor):
+    """``[ids hidden]`` for each segment list in the editor widget that shows the
+    case (an unbound one, with no segmentation, has nothing to filter)."""
+    return [list(t.hideSegments()) for t in
+            slicer.util.findChildren(editor, className="qMRMLSegmentsTableView")
+            if t.segmentationNode() is not None]
+
+
+def run_d53():
+    """D53 (0.25.6): the extended-classes toggle only hides; the export decides 4 or 21."""
+    import numpy as np
+    import qt
+    import vtk
+
+    import slicer
+
+    if not os.environ.get("SEGQUEUE_SELFTEST_INSTALLED"):
+        sys.path.insert(0, os.path.join(REPO, "src"))
+        sys.path.insert(0, os.path.join(REPO, "slicer", "SegQueue14"))
+    import SegQueue14 as module
+
+    from segqueue.protocol import ProjectConfig
+    from segqueue14 import labelfile, labels
+
+    say("--- D53: the extended-classes toggle only hides")
+    segIn = module._segmentIdIn
+    seed = np.zeros(SHAPE, np.uint8)
+    for lo, hi in TUBES.values():
+        seed[5:35, lo:hi, lo:hi] = 1
+    nSeed = int(seed.sum())
+
+    # Every dialog the toggle or submit could raise is recorded (and answered).
+    dialogs = []
+
+    def closeModals():
+        dialog = slicer.app.activeModalWidget()
+        if dialog is not None:
+            dialogs.append(repr(getattr(dialog, "text", ""))[:200])
+            dialog.accept()
+
+    modalTimer = qt.QTimer()
+    modalTimer.setInterval(300)
+    modalTimer.timeout.connect(closeModals)
+    modalTimer.start()
+    patched = {}
+    for name in ("infoDisplay", "warningDisplay", "errorDisplay", "messageBox"):
+        patched[name] = getattr(slicer.util, name)
+        setattr(slicer.util, name,
+                lambda *a, _n=name, **k: dialogs.append((_n, str(a[:1])[:200])))
+    realConfirm = slicer.util.confirmYesNoDisplay
+    layoutManager, viewport = _ensureLayout(slicer, qt)
+    tmp = tempfile.mkdtemp()
+    try:
+        widget = module.SegQueue14Widget()
+        widget.setup()
+        logic = widget.logic
+        logic.project = ProjectConfig(name="selftest", instructions=labels.INSTRUCTIONS,
+                                      segments=labels.segment_specs())
+        logic.extendedClasses = True
+
+        def openCase(assignment, progress=None):
+            fresh, volume = _seededCase(slicer, np, module, labels, tmp, "d53", seed, True)
+            for name in ("volumeNode", "segmentationNode", "seedSegmentId",
+                         "seedFirstSelected", "lastAddedExtended", "_sessionStart",
+                         "cache"):
+                setattr(logic, name, getattr(fresh, name))
+            logic.assignment = assignment
+            slicer.util.setSliceViewerLayers(background=volume, fit=True)
+            logic.setClassesVisible(False)
+
+        logic.openCase = openCase
+        widget._openAssignment(_Assignment(
+            assignment_id="d53", case_name="d53", attempt=1, has_seed=True,
+            has_prelabel=False, reviewer_comment="", deadline=None))
+        editor, editorNode = widget.editorWidget, widget.editorNode
+        node, volume = logic.segmentationNode, logic.volumeNode
+        display = node.GetDisplayNode()
+        check("the panel opens a seeded case with the extended classes on",
+              widget.extendedCheck.checked and all(
+                  logic.segmentIdFor(n) for n in labels.EXTRA_NAMES))
+
+        # The edits: D1 painted (outside the seed), D2 cut with Inverse cut, OM2
+        # trimmed from its seed copy to the LCx, plaque painted inside the LAD, D3
+        # selected and left an untouched seed copy.
+        _paintAt(slicer, np, vtk, layoutManager, logic, editor, editorNode, "D1", 26, 26)
+        _inverseCutAround(slicer, np, vtk, layoutManager, logic, editor, editorNode, "D2")
+        editorNode.SetSelectedSegmentID(logic.segmentIdFor("OM2"))
+        slicer.app.processEvents()
+        om2 = slicer.util.arrayFromSegmentBinaryLabelmap(
+            node, logic.segmentIdFor("OM2"), volume).copy()
+        keep = np.zeros_like(om2)
+        keep[5:35, 30:33, 30:33] = 1
+        slicer.util.updateSegmentBinaryLabelmapFromArray(
+            om2 * keep, node, logic.segmentIdFor("OM2"), volume)
+        _paintAt(slicer, np, vtk, layoutManager, logic, editor, editorNode,
+                 "Calcified plaque", 21, 21)
+        editorNode.SetSelectedSegmentID(logic.segmentIdFor("D3"))
+        slicer.app.processEvents()
+        before = _masksOf(slicer, np, node, volume, segIn, labels.ALL_NAMES)
+        counts = {n: int(before[n].sum()) for n in ("D1", "D2", "OM2", "D3")}
+        check("D1 painted, D2 cut with Inverse cut, OM2 trimmed, D3 an untouched copy",
+              counts["D1"] > nSeed and 0 < counts["D2"] < nSeed
+              and counts["OM2"] == TUBE_VOXELS and counts["D3"] == nSeed
+              and before["Calcified plaque"].any(), counts)
+        display.SetSegmentVisibility(logic.segmentIdFor("S1"), False)   # hidden by its eye
+        eyes = {n: bool(display.GetSegmentVisibility(logic.segmentIdFor(n)))
+                for n in labels.ALL_NAMES}
+        ids = [logic.segmentIdFor(n) for n in labels.ALL_NAMES]
+        editorNode.SetSelectedSegmentID(logic.segmentIdFor("D1"))
+        slicer.app.processEvents()
+        del dialogs[:]
+
+        for cycle in range(1, 4):
+            widget.extendedCheck.setChecked(False)
+            slicer.app.processEvents()
+            off = _masksOf(slicer, np, node, volume, segIn, labels.ALL_NAMES)
+            check("toggle off #{}: every voxel unchanged, nothing removed".format(cycle),
+                  not _sameMasks(np, before, off), _sameMasks(np, before, off))
+            hiddenNow = [n for n in labels.EXTRA_NAMES
+                         if display.GetSegmentVisibility(logic.segmentIdFor(n))]
+            check("  the extended classes are hidden, the four as they were",
+                  not hiddenNow and all(
+                      bool(display.GetSegmentVisibility(logic.segmentIdFor(n))) == eyes[n]
+                      for n in labels.NAMES), hiddenNow)
+            extIds = set(logic.extendedSegmentIds())
+            tables = _tablesHiding(slicer, editor)
+            check("  their rows are hidden in the editor's list, and the group rows",
+                  tables and all(set(t) == extIds for t in tables)
+                  and not widget.extendedBox.isVisibleTo(widget.parent), tables)
+            check("  and no extended class is left selected for editing",
+                  editorNode.GetSelectedSegmentID() not in extIds,
+                  editorNode.GetSelectedSegmentID())
+            widget.extendedCheck.setChecked(True)
+            slicer.app.processEvents()
+            on = _masksOf(slicer, np, node, volume, segIn, labels.ALL_NAMES)
+            check("toggle on #{}: every voxel unchanged, nothing added".format(cycle),
+                  not _sameMasks(np, before, on)
+                  and [logic.segmentIdFor(n) for n in labels.ALL_NAMES] == ids,
+                  _sameMasks(np, before, on))
+            now = {n: bool(display.GetSegmentVisibility(logic.segmentIdFor(n)))
+                   for n in labels.ALL_NAMES}
+            check("  every class shown or hidden as it was", now == eyes,
+                  [n for n in now if now[n] != eyes[n]])
+            check("  and the rows are back",
+                  all(not t for t in _tablesHiding(slicer, editor))
+                  and widget.extendedBox.isVisibleTo(widget.parent))
+            # A branch selected again is never re-seeded or emptied (D52).
+            for name in ("D1", "D2", "OM2", "D3"):
+                editorNode.SetSelectedSegmentID(logic.segmentIdFor(name))
+                slicer.app.processEvents()
+            check("  selecting the branches again changes none of them",
+                  not _sameMasks(np, before, _masksOf(slicer, np, node, volume, segIn,
+                                                      labels.ALL_NAMES)))
+        check("no dialog is raised by the toggle", not dialogs, dialogs)
+
+        # A group hidden with its Show tick stays hidden, and its tick unticked.
+        widget.groupChecks[labels.GROUP_LAD].setChecked(False)
+        widget.extendedCheck.setChecked(False)
+        widget.extendedCheck.setChecked(True)
+        slicer.app.processEvents()
+        check("a group hidden by its Show tick stays hidden over a toggle, tick unticked",
+              not widget.groupChecks[labels.GROUP_LAD].checked
+              and not display.GetSegmentVisibility(logic.segmentIdFor("D1")))
+        widget.groupChecks[labels.GROUP_LAD].setChecked(True)
+
+        # Export with the toggle off and work present: all 21, the work in them.
+        widget.extendedCheck.setChecked(False)
+        slicer.app.processEvents()
+        path = os.path.join(tmp, "d53-off.seg.nrrd")
+        logic.exportSubmission(path)
+        stored = labelfile.read_class_stack(path)
+        written = dict(zip(stored["names"], stored["masks"]))
+        check("export with the toggle off and work present: 21 channels",
+              stored["names"] == labels.ALL_NAMES, stored["names"])
+        check("  with the work in them, voxel for voxel, D3 sent empty (D51 d)",
+              all(np.array_equal(written[n] > 0, before[n] > 0)
+                  for n in ("D1", "D2", "OM2", "Calcified plaque", "LAD"))
+              and not written["D3"].any() and logic.seedCopiesBlanked == ["D3"],
+              logic.seedCopiesBlanked)
+
+        # A draft saved with the toggle off resumes with the work, and shows it.
+        check("a draft saves with the toggle off", logic.autosave())
+        draft = logic.cache.manifest("d53").get("workPath")
+        resumed = module.SegQueue14Logic(cacheRoot=os.path.join(tmp, "d53-resume"))
+        resumed.project = logic.project
+        resumed.volumeNode = volume
+        resumed.extendedClasses = False
+        resumed.assignment = _Assignment(assignment_id="d53r")
+        resumed._loadOrCreateSegmentation({"workPath": draft})
+        resumed.seedSegmentId = resumed.segmentIdFor(SEED_NAME)
+        back = _masksOf(slicer, np, resumed.segmentationNode, volume, segIn, labels.ALL_NAMES)
+        check("  and resumes with every class, voxel for voxel",
+              not _sameMasks(np, before, back), _sameMasks(np, before, back))
+        check("  with the extended classes shown for it (they hold work)",
+              resumed.showExtendedIfWorked() and resumed.extendedOn()
+              and not resumed.extendedClasses)
+        path = os.path.join(tmp, "d53-resumed.seg.nrrd")
+        resumed.exportSubmission(path)
+        check("  and exports all 21",
+              labelfile.read_class_stack(path)["names"] == labels.ALL_NAMES)
+        slicer.mrmlScene.RemoveNode(resumed.segmentationNode)
+
+        # Submit through the panel with the toggle off: no dialog but the
+        # confirmation, and all 21 uploaded with the work.
+        logic.client = _RecordingClient()
+        logic.client.loggedIn = True
+        slicer.util.confirmYesNoDisplay = lambda *a, **k: True
+        del dialogs[:]
+        reviewCt = slicer.mrmlScene.AddNewNodeByClass("vtkMRMLScalarVolumeNode", "ct-d53")
+        slicer.util.updateVolumeFromArray(reviewCt, np.where(seed > 0, 400, -100).astype(np.int16))
+        reviewCt.SetSpacing(0.5, 0.5, 0.6)
+        reviewCt.SetOrigin(10, -20, 30)
+        widget.onSubmit()
+        slicer.app.processEvents()
+        check("no dialog is raised by submit", not dialogs, dialogs)
+        uploaded = logic.client.kept[0] if logic.client.kept else None
+        stored = labelfile.read_class_stack(uploaded) if uploaded else {"names": []}
+        check("submit with the toggle off uploads all 21 with the work",
+              stored["names"] == labels.ALL_NAMES and all(
+                  np.array_equal(dict(zip(stored["names"], stored["masks"]))[n] > 0,
+                                 before[n] > 0) for n in ("D1", "D2", "OM2")),
+              stored["names"])
+
+        # A reviewer's panel: the 21-class read opens whole, toggles the same way.
+        if uploaded:
+            widget._claimedSubmission = "s-d53"
+            logic.assignment = None
+            logic.volumeNode = reviewCt
+            logic.segmentationNode = slicer.util.loadSegmentation(uploaded)
+            logic.applyProjectNames()
+            logic.extendedView.reset()
+            logic.extendedClasses = False
+            # As onOpenReview does (D53), and checked first without it: a loaded
+            # read with no reference geometry still reads its classes' content.
+            check("reviewer: an extended class reads as having content on a loaded read",
+                  module._segmentHasContent(logic.segmentationNode, "D1"))
+            logic.segmentationNode.SetReferenceImageGeometryParameterFromVolumeNode(reviewCt)
+            logic.showExtendedIfWorked()
+            widget._bindEditor(logic.segmentationNode, reviewCt)
+            widget._updateExtendedBox()
+            widget._applyExtendedView()
+            rnode = logic.segmentationNode
+            review = _masksOf(slicer, np, rnode, reviewCt, segIn, labels.ALL_NAMES)
+            check("reviewer: a read with extended work opens with them on, toggle off "
+                  "for the login", widget.extendedCheck.checked and not logic.extendedClasses)
+            for _ in range(3):
+                widget.extendedCheck.setChecked(False)
+                widget.extendedCheck.setChecked(True)
+                slicer.app.processEvents()
+            again = _masksOf(slicer, np, rnode, reviewCt, segIn, labels.ALL_NAMES)
+            check("reviewer: three toggles change no voxel and raise no dialog",
+                  not _sameMasks(np, review, again) and not dialogs,
+                  (_sameMasks(np, review, again), dialogs))
+            widget.extendedCheck.setChecked(False)
+            logic.client = _RecordingClient()
+            logic.reviseSubmission("s-d53")
+            revised = labelfile.read_class_stack(logic.client.kept[0])
+            check("reviewer: a revision with the toggle off sends all 21 with the work",
+                  revised["names"] == labels.ALL_NAMES and all(
+                      np.array_equal(dict(zip(revised["names"], revised["masks"]))[n] > 0,
+                                     review[n] > 0) for n in ("D1", "D2", "OM2")))
+            widget._endReview()
+            slicer.mrmlScene.RemoveNode(rnode)
+
+        # Only empty classes and untouched seed copies: the four, toggle on or off.
+        for on in (True, False):
+            fresh, freshCt = _seededCase(slicer, np, module, labels, tmp,
+                                         "d53-none-{}".format(on), seed, True)
+            for name in ("D1", "OM2", "PDA"):
+                fresh.seedOnFirstSelection(fresh.segmentIdFor(name))
+            fresh.extendedClasses = on
+            fresh.setExtendedShown(on)
+            path = os.path.join(tmp, "d53-none-{}.seg.nrrd".format(on))
+            fresh.exportSubmission(path)
+            check("only empty classes and untouched copies (toggle {}): 4 channels".format(
+                "on" if on else "off"),
+                labelfile.read_class_stack(path)["names"] == labels.NAMES
+                and fresh.seedCopiesBlanked == [])
+            slicer.mrmlScene.RemoveNode(fresh.segmentationNode)
+
+        # D53 as amended (D47 stands): a Complete tick with no voxels, and a case
+        # flagged for extended mode with nothing drawn, are sent as 21.
+        for on in (True, False):
+            fresh, freshCt = _seededCase(slicer, np, module, labels, tmp,
+                                         "d53-tick-{}".format(on), seed, True)
+            for name in ("D1", "OM2"):
+                fresh.seedOnFirstSelection(fresh.segmentIdFor(name))
+            fresh.setCompleteGroup(labels.COMPLETE_GROUPS[0], True)
+            fresh.extendedClasses = on
+            fresh.setExtendedShown(on)
+            path = os.path.join(tmp, "d53-tick-{}.seg.nrrd".format(on))
+            fresh.exportSubmission(path)
+            stored = labelfile.read_class_stack(path)
+            ticks = labelfile.complete_groups(labelfile.read_header(path))
+            check("a Complete tick with no voxels (toggle {}): 21 channels and the "
+                  "tick".format("on" if on else "off"),
+                  stored["names"] == labels.ALL_NAMES
+                  and ticks == [labels.COMPLETE_GROUPS[0]]
+                  and not any(m.any() for n, m in zip(stored["names"], stored["masks"])
+                              if n in labels.EXTRA_NAMES), (stored["names"], ticks))
+            slicer.mrmlScene.RemoveNode(fresh.segmentationNode)
+        for on in (True, False):
+            fresh, freshCt = _seededCase(slicer, np, module, labels, tmp,
+                                         "d53-flag-{}".format(on), seed, on)
+            fresh.caseExtendedMode = fresh.caseFlaggedExtended = True
+            if not on:                      # the annotator turned the box off
+                fresh.caseExtendedMode = False
+                fresh.setExtendedShown(False)
+            path = os.path.join(tmp, "d53-flag-{}.seg.nrrd".format(on))
+            fresh.exportSubmission(path)
+            stored = labelfile.read_class_stack(path)
+            check("a flagged case with nothing drawn ({}): 21 channels".format(
+                "box on" if on else "box turned off, 17 never added"),
+                stored["names"] == labels.ALL_NAMES, stored["names"])
+            slicer.mrmlScene.RemoveNode(fresh.segmentationNode)
+    finally:
+        modalTimer.stop()
+        for name, function in patched.items():
+            setattr(slicer.util, name, function)
+        slicer.util.confirmYesNoDisplay = realConfirm
+
+
 #: ``SEGQUEUE_SELFTEST_ONLY=run_d51,...`` runs only those parts (for a quick local run).
 _ONLY = [name for name in os.environ.get("SEGQUEUE_SELFTEST_ONLY", "").split(",") if name]
 for part in (run, run_extended, run_d47, run_d51, run_compare, run_my_submissions,
-             run_defect_cases, run_overlap):
+             run_defect_cases, run_overlap, run_d53):
     if _ONLY and part.__name__ not in _ONLY:
         continue
     try:

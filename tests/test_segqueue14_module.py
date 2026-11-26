@@ -587,8 +587,8 @@ def _calls_in(node):
             if isinstance(n, ast.Call) and isinstance(n.func, ast.Attribute)}
 
 
-def test_the_module_is_0_25_5_and_protocol_21():
-    assert re.search(r'^__version__ = "0\.25\.5"$', _source(), re.M)
+def test_the_module_is_0_25_6_and_protocol_21():
+    assert re.search(r'^__version__ = "0\.25\.6"$', _source(), re.M)
     sys_path = str(REPO / "src")
     import sys
 
@@ -1372,6 +1372,15 @@ def _inversecut():
     return module
 
 
+def _extendedview():
+    import importlib.util
+
+    spec = importlib.util.spec_from_file_location("extendedview_d53", LIB / "extendedview.py")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
 def _surfaces():
     import importlib.util
 
@@ -1618,7 +1627,8 @@ _D51_METHODS = (
     "extraSpecs", "hasExtendedSegments", "classSpecs", "extendedOn",
     "completeGroupsForExport", "addExtendedClasses", "seedOnFirstSelection",
     "copySegmentInto", "_saveFirstSelected", "_restoreFirstSelected",
-    "_seedIdInScene", "seedMask", "isUntouchedSeedCopy", "removeEmptyExtendedClasses",
+    "_seedIdInScene", "seedMask", "isUntouchedSeedCopy", "extendedWork",
+    "showExtendedIfWorked", "extendedSegmentIds", "setExtendedShown", "submitsExtended",
     "orderSegments", "copySegmentIntoEveryClass", "copySegmentIntoClasses",
     "segmentIdFor", "exportSubmission", "_classMask", "_segmentMask", "sourceGeometry",
 )
@@ -1675,6 +1685,9 @@ class _Display:
 
     def SetSegmentVisibility(self, segmentId, visible):
         self.visible[segmentId] = visible
+
+    def GetSegmentVisibility(self, segmentId):
+        return self.visible.get(segmentId, True)
 
 
 class _SegNode:
@@ -1767,6 +1780,7 @@ class _LabelFile:
     def write_class_stack(self, path, masks, names, affine, colors=None,
                           complete_groups=None):
         self.written = dict(zip(names, (m.copy() for m in masks)))
+        self.complete = complete_groups
 
     @staticmethod
     def ras_to_lps(matrix):
@@ -1790,7 +1804,7 @@ def _d51_logic(np, assignment=True, extended=True, seed=True, shape=(4, 6, 6)):
     labelfile = _LabelFile()
     namespace = {"slicer": _fake_slicer(np), "vtk": _Vtk, "labels": labels,
                  "labelfile": labelfile, "inversecut": _inversecut(),
-                 "surfaces": _surfaces(),
+                 "surfaces": _surfaces(), "extendedview": _extendedview(),
                  "_geometryOf": lambda node: None}
     module = ast.Module(body=helpers + [ast.ClassDef(
         name="Logic", bases=[], keywords=[], body=body, decorator_list=[])],
@@ -1803,6 +1817,8 @@ def _d51_logic(np, assignment=True, extended=True, seed=True, shape=(4, 6, 6)):
 
     logic.project = Project()
     logic.extendedClasses, logic.caseExtendedMode = extended, False
+    logic.extendedWorkOpened, logic.caseFlaggedExtended = False, False
+    logic.extendedView = namespace["extendedview"].ExtendedView()
     logic.completeGroups = set()
     logic.lastAddedExtended, logic.seedCopiesBlanked = [], []
     logic.seedFirstSelected, logic.resumedDraft = set(), False
@@ -1973,29 +1989,167 @@ def test_the_panel_fills_on_selection_and_never_at_toggle_on():
     assert "segmentationNode is logic.segmentationNode" in selected
 
 
-def test_toggle_off_removes_untouched_seed_copies_and_keeps_edited_ones():
+def _edited(np, logic, labels, seed):
+    """D1 trimmed, PDA grown, plaque painted, the rest as selection left them."""
+    node = logic.segmentationNode
+    trimmed = seed.copy()
+    trimmed[1, 1, 2] = 0
+    node.masks[logic.segmentIdFor("D1")] = trimmed
+    grown = seed.copy()
+    grown[0, 0, 0] = 1
+    node.masks[logic.segmentIdFor("PDA")] = grown
+    plaque = np.zeros_like(seed)
+    plaque[1, 2, 2] = 1
+    node.masks[logic.segmentIdFor("Calcified plaque")] = plaque
+    return {name: node.masks.get(logic.segmentIdFor(name)) for name in labels.ALL_NAMES}
+
+
+def test_toggle_off_only_hides_and_on_shows_them_as_they_were():
+    """D53: the toggle never removes, empties, refills or re-seeds a class."""
     np = pytest.importorskip("numpy")
     logic, labels, _, seed = _d51_logic(np)
     logic.addExtendedClasses()
     _selectAll(logic, labels)
+    before = _edited(np, logic, labels, seed)
     node = logic.segmentationNode
-    trimmed = node.masks["D1"].copy()
-    trimmed[1, 1, 2] = 0
-    node.masks["D1"] = trimmed                        # cut down: work
-    node.masks["Stent"] = np.zeros_like(seed)         # erased: empty
-    grown = seed.copy()
-    grown[0, 0, 0] = 1
-    node.masks["PDA"] = grown                         # added to: work
-    # D52: the materials start empty, so they are removed as empty ones; a material
-    # still the whole seed (a 0.25.0-0.25.3 draft) is removed as a seed copy.
-    assert not node.masks.get("Calcified plaque", np.zeros_like(seed)).any()
-    node.masks["Non-calcified plaque"] = seed.copy()
-    removed, kept = logic.removeEmptyExtendedClasses()
-    assert kept == ["D1", "PDA"]
-    assert sorted(removed) == sorted(n for n in labels.EXTRA_NAMES if n not in kept)
-    # The four (seed copies all) and the seed are never removed by the toggle.
-    assert all(logic.segmentIdFor(n) for n in labels.NAMES)
-    assert node.segmentation.GetSegment(SEED_ID) is not None
+    ids = {name: logic.segmentIdFor(name) for name in labels.ALL_NAMES}
+    node.display.SetSegmentVisibility(ids["D2"], False)       # hidden by its eye
+    for _ in range(3):
+        assert logic.setExtendedShown(False) == 17
+        assert logic.setExtendedShown(False) == 17              # off twice: no loss
+        assert not any(node.display.visible[ids[n]] for n in labels.EXTRA_NAMES)
+        assert all(node.display.GetSegmentVisibility(ids[n]) for n in labels.NAMES
+                   if ids[n] not in node.display.visible)
+        logic.extendedClasses = True
+        assert logic.addExtendedClasses() == 0                    # nothing re-added
+        assert logic.setExtendedShown(True) == 17
+        assert node.display.visible[ids["D2"]] is False           # as it was
+        assert node.display.visible[ids["D1"]] is True
+        # Selecting a branch again never re-seeds it.
+        for name in labels.EXTRA_NAMES:
+            assert _select(logic, name) is False
+        after = {name: node.masks.get(ids[name]) for name in labels.ALL_NAMES}
+        assert all(np.array_equal(before[n], after[n]) for n in labels.ALL_NAMES
+                   if before[n] is not None)
+        assert [n for n in labels.ALL_NAMES if after[n] is None] == [
+            n for n in labels.ALL_NAMES if before[n] is None]
+    assert [logic.segmentIdFor(n) for n in labels.ALL_NAMES] == list(ids.values())
+
+
+def test_the_removal_path_and_the_kept_box_are_gone():
+    assert "removeEmptyExtendedClasses" not in _source()
+    assert "because you have changed them" not in _source()
+    toggle = ast.get_source_segment(_source(), _method("SegQueue14Widget", "onToggleExtended"))
+    assert "RemoveSegment" not in toggle and "Display(" not in toggle
+    for name in ("onToggleExtended", "onSubmit", "_applyExtendedView",
+                 "_applyExtendedRows", "_deselectExtended"):
+        body = ast.get_source_segment(_source(), _method("SegQueue14Widget", name))
+        assert "infoDisplay" not in body and "warningDisplay" not in body, name
+    for name in ("setExtendedShown", "extendedWork", "showExtendedIfWorked",
+                 "exportSubmission"):
+        body = ast.get_source_segment(_source(), _method("SegQueue14Logic", name))
+        assert "RemoveSegment" not in body, name
+
+
+def test_export_is_four_classes_when_no_extended_class_holds_work():
+    """D53: empty extended classes and untouched seed copies are not work."""
+    np = pytest.importorskip("numpy")
+    logic, labels, labelfile, seed = _d51_logic(np)
+    logic.addExtendedClasses()
+    _selectAll(logic, labels)                     # 14 untouched copies, 3 empty
+    counts, _, _ = logic.exportSubmission("unused.seg.nrrd")
+    assert list(labelfile.written) == labels.NAMES and list(counts) == labels.NAMES
+    assert labelfile.complete is None             # a four-class read has no ticks
+    assert logic.seedCopiesBlanked == []
+    assert logic.extendedWork() == []
+
+
+@pytest.mark.parametrize("toggle", [True, False])
+def test_a_complete_tick_with_no_voxels_is_sent_as_21_with_the_tick(toggle):
+    """D53 as amended: D47 Q3 stands -- a ticked group with no branches is work."""
+    np = pytest.importorskip("numpy")
+    logic, labels, labelfile, seed = _d51_logic(np)
+    logic.addExtendedClasses()
+    _selectAll(logic, labels)                     # nothing drawn: copies and empties
+    logic.completeGroups = {labels.COMPLETE_GROUPS[1]}
+    logic.extendedClasses = toggle
+    logic.setExtendedShown(toggle)
+    logic.exportSubmission("unused.seg.nrrd")
+    assert list(labelfile.written) == labels.ALL_NAMES
+    assert labelfile.complete == [labels.COMPLETE_GROUPS[1]]
+    assert not any(labelfile.written[n].any() for n in labels.EXTRA_NAMES)  # D51 d
+
+
+@pytest.mark.parametrize("toggle", [True, False])
+def test_a_flagged_case_with_nothing_drawn_is_sent_as_21(toggle):
+    """D53 as amended: D47 Q6 stands -- a flagged case is always an extended read,
+    also when the toggle was turned off and when the scene lacks the 17."""
+    np = pytest.importorskip("numpy")
+    logic, labels, labelfile, seed = _d51_logic(np, extended=toggle)
+    logic.caseFlaggedExtended = True
+    if toggle:
+        logic.addExtendedClasses()
+    logic.exportSubmission("unused.seg.nrrd")
+    assert list(labelfile.written) == labels.ALL_NAMES
+    assert labelfile.complete == []
+    assert not any(labelfile.written[n].any() for n in labels.EXTRA_NAMES)
+
+
+def test_the_toggle_off_never_clears_the_case_flag():
+    toggle = ast.get_source_segment(_source(), _method("SegQueue14Widget", "onToggleExtended"))
+    assert "caseFlaggedExtended" not in toggle
+    close = ast.get_source_segment(_source(), _method("SegQueue14Logic", "closeCase"))
+    assert "self.caseFlaggedExtended = False" in close
+    flags = ast.get_source_segment(_source(), _method("SegQueue14Logic", "_applyCaseFlags"))
+    assert "self.caseFlaggedExtended = self.caseExtendedMode" in flags
+    review = ast.get_source_segment(_source(), _method("SegQueue14Widget", "onOpenReview"))
+    assert "self.logic.caseFlaggedExtended = self.logic.caseExtendedMode" in review
+
+
+@pytest.mark.parametrize("toggle", [True, False])
+def test_export_is_21_classes_when_one_holds_work_whatever_the_toggle(toggle):
+    np = pytest.importorskip("numpy")
+    logic, labels, labelfile, seed = _d51_logic(np)
+    logic.addExtendedClasses()
+    _selectAll(logic, labels)
+    before = _edited(np, logic, labels, seed)
+    logic.completeGroups = {labels.COMPLETE_GROUPS[0]}
+    logic.extendedClasses = toggle
+    logic.setExtendedShown(toggle)
+    counts, _, _ = logic.exportSubmission("unused.seg.nrrd")
+    assert list(labelfile.written) == labels.ALL_NAMES
+    for name in ("D1", "PDA", "Calcified plaque"):
+        assert np.array_equal(labelfile.written[name], before[name]), name
+    assert labelfile.complete == [labels.COMPLETE_GROUPS[0]]          # D47 Q3
+    assert len(logic.seedCopiesBlanked) == 12                         # D51 d
+    assert logic.extendedWork() == [n for n in labels.EXTRA_NAMES
+                                    if n in ("D1", "PDA", "Calcified plaque")]
+
+
+def test_a_read_opened_with_extended_work_shows_them_and_one_without_does_not():
+    np = pytest.importorskip("numpy")
+    logic, labels, _, seed = _d51_logic(np, extended=False)
+    assert logic.showExtendedIfWorked() is False              # no extended classes
+    logic.addExtendedClasses()
+    _selectAll(logic, labels)
+    assert logic.showExtendedIfWorked() is False              # copies and empties
+    assert not logic.extendedOn()
+    _edited(np, logic, labels, seed)
+    assert logic.showExtendedIfWorked() is True and logic.extendedOn()
+    assert logic.extendedClasses is False                     # the login's choice kept
+
+
+def test_toggle_on_never_overwrites_an_existing_class():
+    np = pytest.importorskip("numpy")
+    logic, labels, _, seed = _d51_logic(np)
+    logic.addExtendedClasses()
+    _selectAll(logic, labels)
+    before = _edited(np, logic, labels, seed)
+    for _ in range(3):
+        assert logic.addExtendedClasses() == 0
+    node = logic.segmentationNode
+    assert all(np.array_equal(node.masks.get(logic.segmentIdFor(n)), before[n])
+               for n in labels.ALL_NAMES if before[n] is not None)
 
 
 def test_export_blanks_untouched_seed_copies_but_not_the_four():
@@ -2052,6 +2206,12 @@ def test_a_material_left_as_the_seed_by_an_older_draft_is_still_blanked():
     logic.addExtendedClasses()
     logic.segmentationNode.masks["Stent"] = seed.copy()    # as 0.25.0-0.25.3 seeded it
     logic.exportSubmission("unused.seg.nrrd")
+    # D53: a seed copy is not work, so alone it leaves the read four classes.
+    assert list(labelfile.written) == labels.NAMES
+    painted = np.zeros_like(seed)
+    painted[0, 0, 0] = 1
+    logic.segmentationNode.masks["D1"] = painted
+    logic.exportSubmission("unused.seg.nrrd")
     assert not labelfile.written["Stent"].any()
     assert "Stent" in logic.seedCopiesBlanked
 
@@ -2066,11 +2226,11 @@ def test_without_a_seed_nothing_is_blanked_or_removed_as_a_copy():
     node.masks["D2"] = painted
     logic.exportSubmission("unused.seg.nrrd")
     assert logic.seedCopiesBlanked == [] and labelfile.written["D2"].sum() == 1
-    assert logic.removeEmptyExtendedClasses()[1] == ["D2"]
+    assert logic.extendedWork() == ["D2"]
 
 
 def test_one_helper_decides_what_is_an_untouched_seed_copy():
-    for name in ("removeEmptyExtendedClasses", "exportSubmission"):
+    for name in ("extendedWork", "exportSubmission"):
         body = ast.get_source_segment(_source(), _method("SegQueue14Logic", name))
         assert "self.isUntouchedSeedCopy(" in body, name
         assert "is_untouched_copy" not in body, name

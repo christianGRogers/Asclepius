@@ -183,6 +183,10 @@ empty, grouped under their parent in the segment list, with show/hide per group:
   server used to refuse them with `not_an_annotator`); until it is deployed those
   accounts see an empty thread. Protocol stays 21.
 
+### No VPN advice in the connection error (0.25.7)
+
+"Could not reach the server" now says to check the internet connection and tell the project lead, instead of telling annotators to connect a VPN that does not exist. Protocol stays 21, no server change.
+
 ### The extended-classes toggle never deletes work (0.25.6, D53)
 
 Protocol stays 21, no server change. Annotators reported that turning **Extended

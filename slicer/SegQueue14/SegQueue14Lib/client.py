@@ -167,7 +167,8 @@ class SegQueue14Client:
         except requests.RequestException as exc:
             raise SegQueue14Error(
                 f'Could not reach the server at {self.serverUrl}.\n{exc}\n\n'
-                'If you are off campus, check that the VPN is connected.'
+                'Check your internet connection and try again. '
+                'If it keeps happening, tell the project lead.'
             ) from exc
 
         if response.status_code >= 400:

@@ -53,8 +53,9 @@ empty, grouped under their parent in the segment list, with show/hide per group:
   only LM, LAD, LCx and RCA (D26); the annotator moves a branch out of its parent
   into its class, and paints the materials. Overlaps are fine (D39).
 - **Submitted classes** (D53, 0.25.6): decided at export, not by the toggle. With
-  work in any extended class, a *Complete* tick, or a case flagged for extended
-  mode, the read is submitted with all 21 channels in label order
+  work in any extended class, a *Complete* tick carried from an older draft or
+  read (the panel has no tick-boxes since 0.25.8, D54), or a case flagged for
+  extended mode, the read is submitted with all 21 channels in label order
   (`labels.ALL_NAMES`), the empty ones empty; otherwise (every extended class empty
   or an untouched seed copy), as the four. Turning the toggle off only hides the
   classes; it never removes one.
@@ -78,7 +79,8 @@ empty, grouped under their parent in the segment list, with show/hide per group:
   of this group, so an empty class here means absent". Unticked by default, never
   required. Saved with the draft and written into the class-stack header
   (`SegQueue14_CompleteGroups`) of an extended read; a reviewer sees the annotator's
-  ticks and a revision keeps them.
+  ticks and a revision keeps them. **Removed from the panel in 0.25.8 (D54);** ticks
+  already on a draft or a read are still kept, unshown.
 - **Extended-mode cases:** a case the server flags `extendedMode` opens with the
   extended classes on (whatever the toggle) and a one-line note asking the
   annotator to use them. Turning the toggle off is still allowed.
@@ -182,6 +184,40 @@ empty, grouped under their parent in the segment list, with show/hide per group:
 - Needs plugin **0.7.1** for reviewer accounts that are not also annotators (the
   server used to refuse them with `not_an_annotator`); until it is deployed those
   accounts see an empty thread. Protocol stays 21.
+
+### A simpler reviewer panel (0.25.8)
+
+Reviewers only; annotators see no change. Protocol stays 21, no server change.
+
+- Gone from the review section: the *optional note for the case thread* box, the
+  **Image only** and **Take & segment** buttons, and the caption over the history
+  table. The row under the history table is **Open submission** alone.
+- **Approve**, **Save changes & approve** and **Return to pool** work as before but
+  send no reviewer note (the client's empty default), so the case thread gets the
+  verdict without a comment. Marking a case defect still takes its optional reason.
+- The panel no longer opens a case that has no submission, and no longer takes one
+  for the reviewer to segment; **Assign case** still hands a case to an annotator.
+- **The case header** reads `<case>  |  attempt 1  |  due in 7 day(s)`, with the
+  `  |  ` separator the deadline already used and no em dash. The instructions that
+  followed the deadline (*each class starts as the whole seed...*, *no prelabel:
+  draw from scratch*) are gone; the two status suffixes stay, as `  |  your draft`
+  or `  |  prelabel <version> (<n> classes)`.
+- **No em dash in anything the panel shows** (the lead): *Reviewing <case> by
+  <login>. Edit it in the Segment Editor...* is now two sentences. A test fails if
+  an em dash comes back in a string literal of the module.
+- **Eastern time** (America/Toronto, with daylight saving) for every absolute time:
+  the history table's column is now *When (ET)*, as wide as the case list's
+  *Submitted (ET)*, with cells like `2026-11-10 14:32 ET`; the case-notes thread
+  shows its note times the same way instead of the machine's local time. Relative
+  times (*due in 7 day(s)*) are unchanged.
+- **No Complete tick-boxes** (D54): the *Complete: LAD branches / LCx branches /
+  RCA branches* row is gone, for annotators and reviewers. New reads carry no
+  complete groups (`[]` for an extended read, no key for a four-class one, as an
+  unticked read always did). Ticks a draft or a submitted read already has are kept,
+  out of sight: a resumed draft resubmits them, and a reviewer's revision carries
+  the annotator's ticks through unchanged. A read carrying ticks is still sent with
+  21 classes (D53), so they are never dropped; a case flagged for extended mode
+  still sends 21 (D47 Q6). Server and protocol 21 unchanged.
 
 ### No VPN advice in the connection error (0.25.7)
 

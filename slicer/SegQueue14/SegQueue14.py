@@ -155,7 +155,7 @@ from SegQueue14Lib import SegQueue14Error as SegQueueError
 
 #: Continues SegQueue's numbering (0.13.0 was the last 4-class release). The
 #: release tag is ``segqueue-v`` + this; bump it to publish.
-__version__ = "0.25.7"
+__version__ = "0.25.8"
 
 #: Where the module's help points.
 HELP_URL = "https://github.com/christianGRogers/Asclepius"
@@ -355,6 +355,8 @@ class SegQueue14Logic(ScriptedLoadableModuleLogic):
         self.extendedView = extendedview.ExtendedView()
         #: The branch groups ticked complete on the open read (D47 Q3), a subset of
         #: ``labels.COMPLETE_GROUPS``. Saved in the class-stack header on submit.
+        #: D54: never set from the panel; only carried from a draft or a read
+        #: that already had them, so new reads have none.
         self.completeGroups = set()
         #: The reviewer's "Compare reads" scene (#335), or None: see
         #: ``loadComparison``. Read-only: nothing in it is ever uploaded.
@@ -826,25 +828,12 @@ class SegQueue14Logic(ScriptedLoadableModuleLogic):
             return self.extendedView.show(display, self.extendedSegmentIds())
         return self.extendedView.hide(display, self.extendedSegmentIds())
 
-    def setCompleteGroup(self, group, on):
-        """Tick or untick one branch group as complete (D47 Q3).
-
-        Kept with the case's draft (the cache manifest), so it survives a restart
-        like the segmentation does. Returns the ticked groups, in panel order.
-        """
-        if group not in labels.COMPLETE_GROUPS:
-            raise ValueError("not a branch group: {!r}".format(group))
-        if on:
-            self.completeGroups.add(group)
-        else:
-            self.completeGroups.discard(group)
-        ticked = labels.clean_complete_groups(self.completeGroups)
-        if self.assignment is not None:
-            self.cache.update(self.assignment.assignment_id, completeGroups=ticked)
-        return ticked
-
     def setCompleteGroups(self, groups):
-        """Replace the ticks (a read opened for review or revision). Not saved."""
+        """Replace the ticks (a read opened for review or revision). Not saved.
+
+        D54: the panel no longer shows or sets ticks. Those a read or a draft
+        already has are kept here, out of sight, so a revision or a resubmitted
+        draft carries them through unchanged."""
         self.completeGroups = set(labels.clean_complete_groups(groups or ()))
 
     def completeGroupsForExport(self, names=None):
@@ -2499,12 +2488,10 @@ class SegQueue14Widget(ScriptedLoadableModuleWidget):
             return
         blocks = []
         for note in notes:
-            when = ""
-            if note.created_at:
-                try:
-                    when = time.strftime("%d %b %H:%M", time.localtime(note.created_at))
-                except (ValueError, OSError):
-                    when = ""
+            # US Eastern, like every absolute time in the panel (0.25.8).
+            when = _easternTime(_epochIso(note.created_at)) if note.created_at else ""
+            if when == "--":
+                when = ""
             colour = "#6a6a6a" if note.system else "#1466D8"
             blocks.append(
                 "<p style='margin:0 0 8px 0'>"
@@ -3305,24 +3292,6 @@ class SegQueue14Widget(ScriptedLoadableModuleWidget):
         row.addStretch(1)
         boxLayout.addLayout(row)
 
-        # D47 Q3: "I looked for every branch of this group, so an empty class here
-        # means absent". Unticked by default; nothing is required at submit (D38).
-        row = qt.QHBoxLayout()
-        row.addWidget(_muted(qt.QLabel("Complete:")))
-        self.completeChecks = {}
-        for group in labels.COMPLETE_GROUPS:
-            check = qt.QCheckBox(group)
-            check.setChecked(False)
-            check.setToolTip(
-                "Tick when you have looked for every branch of this group ({}), so "
-                "an empty class here means the branch is absent, not that you did "
-                "not look. Optional.".format(", ".join(labels.group_members(group))))
-            check.toggled.connect(
-                lambda on, group=group: self.onToggleComplete(group, on))
-            row.addWidget(check)
-            self.completeChecks[group] = check
-        row.addStretch(1)
-        boxLayout.addLayout(row)
         self.extendedBox.setVisible(False)
         layout.addWidget(self.extendedBox)
 
@@ -3338,8 +3307,8 @@ class SegQueue14Widget(ScriptedLoadableModuleWidget):
 
     def _updateExtendedBox(self, resetShowTicks=True):
         """Show the group rows while the extended classes are on (D53: off hides
-        them, and their rows); the extended-mode note on a flagged case (D47 Q6);
-        the ticks of the open read (D47 Q3). The "Show" ticks are reset only for a
+        them, and their rows); the extended-mode note on a flagged case (D47 Q6).
+        The "Show" ticks are reset only for a
         newly opened read, never by the toggle, so they keep matching the classes
         they hid."""
         flagged = bool(self.logic.caseExtendedMode)
@@ -3352,14 +3321,6 @@ class SegQueue14Widget(ScriptedLoadableModuleWidget):
             check.blockSignals(True)
             check.setChecked(True)
             check.blockSignals(False)
-        for group, check in self.completeChecks.items():
-            check.blockSignals(True)
-            check.setChecked(group in self.logic.completeGroups)
-            check.blockSignals(False)
-
-    def onToggleComplete(self, group, on):
-        """Tick or untick a branch group as complete (D47 Q3), for the open read."""
-        self.logic.setCompleteGroup(group, on)
 
     def onToggleExtended(self, on):
         """Show or hide the extended classes, for this login and the open scene.
@@ -3585,14 +3546,11 @@ class SegQueue14Widget(ScriptedLoadableModuleWidget):
         footer.addWidget(self.defectButton)
         layout.addLayout(footer)
 
-        layout.addWidget(_caption(
-            "Every submission against the selected case, oldest first. Nothing "
-            "is ever overwritten, so a superseded attempt is still here."))
         self.historyTable = qt.QTableWidget()
         self.historyTable.setColumnCount(5)
         self.historyTable.setHorizontalHeaderLabels(
-            ["When", "Author", "Role", "Attempt", "Dice"])
-        _tidyTable(self.historyTable, [112, 72, 62, 48, 50], 110)
+            ["When (ET)", "Author", "Role", "Attempt", "Dice"])
+        _tidyTable(self.historyTable, [124, 72, 62, 48, 50], 110)
         layout.addWidget(self.historyTable)
 
         openRow = qt.QHBoxLayout()
@@ -3604,21 +3562,6 @@ class SegQueue14Widget(ScriptedLoadableModuleWidget):
         self.openReviewButton.clicked.connect(self.onOpenReview)
         openRow.addWidget(self.openReviewButton, 1)
 
-        self.openCaseButton = qt.QPushButton("Image only")
-        self.openCaseButton.setToolTip(
-            "Loads the case's own volume and whatever masks ship with it. For a "
-            "case nobody has worked on there is no submission to open, and the "
-            "image is what says whether the scan is usable at all.")
-        self.openCaseButton.clicked.connect(self.onOpenCase)
-        openRow.addWidget(self.openCaseButton)
-
-        self.takeCaseButton = qt.QPushButton("Take && segment")
-        self.takeCaseButton.setToolTip(
-            "Assigns the selected case to you and opens it as an ordinary case, "
-            "so you can segment and submit it yourself. It becomes genuinely "
-            "yours: it shows in your queue and is reviewed like any other.")
-        self.takeCaseButton.clicked.connect(self.onTakeCase)
-        openRow.addWidget(self.takeCaseButton)
         layout.addLayout(openRow)
 
         self.referenceButton = qt.QPushButton("Show ImageCAS-X reference")
@@ -3637,19 +3580,14 @@ class SegQueue14Widget(ScriptedLoadableModuleWidget):
 
         # -- deciding
         #
-        # Three verdict buttons, a comment box and the assignment controls
-        # used to run down the panel as one column of equally-weighted rows,
-        # which gave no clue that the first three act on the submission that
-        # is open and the last acts on the row that is selected. They are two
-        # groups, so they are drawn as two, each under what it operates on.
+        # Three verdict buttons and the assignment controls used to run down
+        # the panel as one column of equally-weighted rows, which gave no clue
+        # that the first three act on the submission that is open and the last
+        # acts on the row that is selected. They are two groups, so they are
+        # drawn as two, each under what it operates on.
         layout.addWidget(_separator())
         layout.addWidget(_caption(
             "What to do with the submission that is open."))
-
-        self.verdictComment = qt.QLineEdit()
-        self.verdictComment.setPlaceholderText(
-            "optional note for the case thread")
-        layout.addWidget(self.verdictComment)
 
         row = qt.QHBoxLayout()
         self.approveButton = qt.QPushButton("Approve")
@@ -4169,7 +4107,7 @@ class SegQueue14Widget(ScriptedLoadableModuleWidget):
         for index, entry in enumerate(self._historyRows):
             score = (entry.get("autoScore") or {}).get("mean_dice")
             cells = [
-                _shortTime(entry.get("created")),
+                _easternTime(entry.get("created")),
                 (entry.get("annotator") or {}).get("login", ""),
                 entry.get("authorRole", "annotator"),
                 str(entry.get("attempt", 1)),
@@ -4224,13 +4162,6 @@ class SegQueue14Widget(ScriptedLoadableModuleWidget):
         decided = state in REVIEW_DECIDED_STATES
 
         self.openReviewButton.setEnabled(hasSubmission)
-        # A case with no submission can still be opened and still be handed out.
-        self.openCaseButton.setEnabled(_case is not None)
-        # Taking a case needs a free hand: holding one already is what the
-        # concurrency limit exists to prevent.
-        self.takeCaseButton.setEnabled(
-            _case is not None and self.logic is not None
-            and self.logic.assignment is None)
         self.assignButton.setEnabled(
             _case is not None and self.annotatorCombo.count > 0)
         self.referenceButton.setEnabled(
@@ -4316,7 +4247,7 @@ class SegQueue14Widget(ScriptedLoadableModuleWidget):
             # back as Segment_1, Segment_2 ... in colours Slicer chose; its label
             # values are the protocol's, which is enough to put the names back.
             self.logic.applyProjectNames()
-            # D47: the read's ticks (shown and kept on revise), and the case's
+            # D47: the read's ticks (kept on revise, not shown: D54), and the case's
             # extended-mode flag, from the server's row; the file's header if the
             # server is too old to send them.
             self.logic.setCompleteGroups(self._reviewCompleteGroups(entry, segPath))
@@ -4353,7 +4284,7 @@ class SegQueue14Widget(ScriptedLoadableModuleWidget):
         self._updateExtendedBox()
         self._applyExtendedView()
         self.reviewStatusLabel.setText(
-            "Reviewing <b>{}</b> by {}{} — edit it in the Segment Editor if you "
+            "Reviewing <b>{}</b> by {}{}. Edit it in the Segment Editor if you "
             "want to correct it.".format(
                 _escape(entry.get("caseName", "")),
                 _escape((entry.get("annotator") or {}).get("login", "")),
@@ -4430,186 +4361,6 @@ class SegQueue14Widget(ScriptedLoadableModuleWidget):
         except Exception:
             return []
 
-    def onOpenCase(self):
-        """Load a case's own volume, for one with no submission to open.
-
-        A case nobody has worked on has nothing in the history table, so the
-        submission path has nothing to download. Looking at the image before
-        deciding who should get it is most of why a reviewer opens a case at
-        all, and it is the only way to tell a usable scan from a broken one.
-        """
-        case, _assignment = self._selectedReviewRow()
-        if case is None:
-            slicer.util.errorDisplay("Select a case first.")
-            return
-        if self.logic.assignment is not None:
-            slicer.util.errorDisplay(
-                "You have a case of your own open. Submit it or give it back "
-                "first -- opening a case clears the scene.")
-            return
-
-        directory = self.logic.reviewDir()
-        volumePath = os.path.join(
-            directory, _safeName(case.get("volumeName"), "case.nrrd"))
-
-        with _busy():
-            try:
-                self.logic.client.downloadCaseVolume(case["caseId"], volumePath)
-            except SegQueueError as exc:
-                slicer.util.errorDisplay(str(exc))
-                return
-            volumePath = self.logic.correctSuffix(volumePath)
-
-            self.logic.closeComparison()
-            slicer.mrmlScene.Clear(False)
-            try:
-                volumeNode = slicer.util.loadVolume(volumePath)
-            except Exception:
-                slicer.util.errorDisplay(
-                    "The case downloaded but Slicer could not open it:\n\n"
-                    + traceback.format_exc())
-                return
-
-            self.logic.volumeNode = volumeNode
-            self.logic.segmentationNode = None
-            slicer.util.setSliceViewerLayers(background=volumeNode, fit=True)
-            self.logic.applyViewPreset()
-
-            # The masks that ship with the case, when it has them. They are what
-            # makes the 3D view worth looking at before anyone has segmented
-            # anything -- and whether a case has a usable coronary mask is
-            # exactly what decides how long it will take whoever gets it.
-            self._loadCaseHelpers(case, directory)
-
-            slicer.app.layoutManager().setLayout(
-                slicer.vtkMRMLLayoutNode.SlicerLayoutFourUpView)
-            self.logic.centre3d()
-
-        self._endReview()
-        self.reviewStatusLabel.setText(
-            "Viewing <b>{}</b> — no submission on it yet.".format(
-                _escape(case.get("caseName", ""))))
-        self._updateEnabled()
-        self._updateReviewEnabled()
-
-    def onTakeCase(self):
-        """Assign the selected case to yourself and open it as a case.
-
-        A reviewer looking at an unassigned case often wants to *do* it -- a
-        tricky one, a demonstration, or simply the last few nobody picked up.
-
-        Deliberately routed through an ordinary assignment rather than a
-        reviewer-only way to submit. Everything that makes a submission correct
-        hangs off having one: the project's segments created with the right names
-        and label values, the branches started from the coronary mask, the
-        autosave, the elapsed-time record, and the upload the
-        server will accept. A second path to submitting would have to reproduce
-        all of that, and would drift from it.
-
-        So the case becomes genuinely theirs -- it shows in their queue, counts
-        against their quota, and is submitted and reviewed like any other.
-        """
-        case, _assignment = self._selectedReviewRow()
-        if case is None:
-            slicer.util.errorDisplay("Select a case first.")
-            return
-        if self.logic.assignment is not None:
-            slicer.util.errorDisplay(
-                "Finish or give back the case you already have before taking "
-                "another one.")
-            return
-        if case.get("assignments"):
-            # Not a hard refusal: a case can want a second annotator. But taking
-            # one somebody is already working on is much more often a misclick
-            # than a decision, so it is worth one sentence.
-            if not slicer.util.confirmYesNoDisplay(
-                    "{} is already out with {}.\n\nTake it as well?".format(
-                        case.get("caseName", "This case"),
-                        ", ".join(sorted({a.get("annotator", "?")
-                                          for a in case["assignments"]})))):
-                return
-        elif not slicer.util.confirmYesNoDisplay(
-                "Take {} and start segmenting it yourself?".format(
-                    case.get("caseName", "this case"))):
-            return
-
-        with _busy():
-            try:
-                me = self.logic.client.whoami() or {}
-                myId = me.get("_id")
-                if not myId:
-                    slicer.util.errorDisplay("The server did not say who you are.")
-                    return
-                self.logic.client.assignCase(case["caseId"], myId)
-                assignment = next(
-                    (a for a in self.logic.outstanding()
-                     if a.case_id == case["caseId"]), None)
-            except SegQueueError as exc:
-                slicer.util.errorDisplay(str(exc))
-                return
-
-        if assignment is None:
-            slicer.util.errorDisplay(
-                "The case was assigned to you but did not come back in your "
-                "list. Press 'Get next case' to pick it up.")
-            self.onRefreshReview()
-            return
-
-        self.reviewStatusLabel.setText(
-            "Took <b>{}</b> — it is yours now, and submits like any other "
-            "case.".format(_escape(case.get("caseName", ""))))
-        self._openAssignment(assignment)
-        self.onRefreshReview()
-
-    def _loadCaseHelpers(self, case, directory):
-        """Bring in the case's heart mask and its prelabel, if it has them.
-
-        For a reviewer opening a case nobody has submitted: the prelabel is what
-        whoever gets the case will start from, which is most of what decides how
-        long it will take them.
-        """
-        if self.logic.segmentationNode is None:
-            self.logic.segmentationNode = slicer.mrmlScene.AddNewNodeByClass(
-                "vtkMRMLSegmentationNode", "Case masks")
-            self.logic.segmentationNode.CreateDefaultDisplayNodes()
-            self.logic.segmentationNode.SetReferenceImageGeometryParameterFromVolumeNode(
-                self.logic.volumeNode)
-
-        self.logic.seedSegmentId = None
-        path = os.path.join(directory, "case_seed.nii.gz")
-        try:
-            got = self.logic.client.downloadCaseAsset(
-                case["caseId"], protocol.ASSET_SEED, path)
-        except SegQueueError:
-            got = None
-        if got:
-            self.logic.seedSegmentId = self.logic._importHelper(
-                path, protocol.SEED_SEGMENT_NAME, SEED_COLOR, SEED_FILL)
-
-        self.logic.regionSegmentId = None
-        path = os.path.join(directory, "case_region.nii.gz")
-        try:
-            got = self.logic.client.downloadCaseAsset(
-                case["caseId"], protocol.ASSET_REGION, path)
-        except SegQueueError:
-            got = None
-        if got:
-            self.logic.regionSegmentId = self.logic._importHelper(
-                path, protocol.REGION_SEGMENT_NAME, REGION_COLOR, REGION_FILL)
-
-        path = os.path.join(directory, "case_prelabel.nii.gz")
-        try:
-            got = self.logic.client.downloadCaseAsset(
-                case["caseId"], protocol.ASSET_PRELABEL, path)
-        except SegQueueError:
-            got = None
-        if got:
-            try:
-                self.logic.importLabelsIntoProject(path)
-            except Exception:
-                pass
-        self.logic.showPrelabelIn3d(True)
-
     def onShowReference(self):
         """Load the ImageCAS-X reference for the open case, for comparison.
 
@@ -4649,21 +4400,17 @@ class SegQueue14Widget(ScriptedLoadableModuleWidget):
             "ImageCAS-X reference loaded as its own segmentation (outlines only).")
 
     def _prelabelText(self, assignment):
-        if not assignment.has_prelabel and assignment.has_seed:
-            if self.logic is not None and self.logic.resumedDraft:
-                return " · your draft"
-            # D52: selecting a class shows it; the materials start empty.
-            materials = (self.logic is not None and any(
-                self.logic.segmentIdFor(name) for name in labels.MATERIALS))
-            return (" · <i>each class starts as the whole seed (hidden): select one "
-                    "to show it, and cut it down{}</i>".format(
-                        "; stent and plaque start empty" if materials else ""))
-        if not assignment.has_prelabel:
-            return " · <i>no prelabel: draw from scratch</i>"
-        filled = self.logic.prelabelClasses if self.logic else 0
+        """A short status after the deadline: a resumed draft, or the prelabel.
+
+        Status only (0.25.8): the instructions that used to follow (how a seeded
+        case's classes start, "draw from scratch") are gone from the header.
+        """
         if self.logic is not None and self.logic.resumedDraft:
-            return " · your draft"
-        return " · prelabel {} ({} classes)".format(
+            return "  |  your draft"
+        if not assignment.has_prelabel:
+            return ""
+        filled = self.logic.prelabelClasses if self.logic else 0
+        return "  |  prelabel {} ({} classes)".format(
             _escape(assignment.prelabel_version or "?"), filled)
 
     def onReviseSubmission(self):
@@ -4684,8 +4431,7 @@ class SegQueue14Widget(ScriptedLoadableModuleWidget):
         with _busy():
             try:
                 self.logic.reviseSubmission(
-                    self._claimedSubmission,
-                    note=self.verdictComment.text.strip(), seconds=seconds)
+                    self._claimedSubmission, seconds=seconds)
             except (SegQueueError, RuntimeError) as exc:
                 slicer.util.errorDisplay(str(exc))
                 return
@@ -4697,7 +4443,6 @@ class SegQueue14Widget(ScriptedLoadableModuleWidget):
         self._endReview()
         self.reviewStatusLabel.setText(
             "Saved your version and approved the case.")
-        self.verdictComment.setText("")
         self.onRefreshReview()
         self._updateEnabled()
 
@@ -4716,8 +4461,7 @@ class SegQueue14Widget(ScriptedLoadableModuleWidget):
 
         with _busy():
             try:
-                self.logic.client.returnToPool(
-                    entry["submissionId"], reason=self.verdictComment.text.strip())
+                self.logic.client.returnToPool(entry["submissionId"])
             except SegQueueError as exc:
                 slicer.util.errorDisplay(str(exc))
                 return
@@ -4725,7 +4469,6 @@ class SegQueue14Widget(ScriptedLoadableModuleWidget):
         if self._claimedSubmission == entry["submissionId"]:
             self._endReview()
         self.reviewStatusLabel.setText("Sent {} back to the pool.".format(case))
-        self.verdictComment.setText("")
         self.onRefreshReview()
         self._updateEnabled()
 
@@ -4739,9 +4482,7 @@ class SegQueue14Widget(ScriptedLoadableModuleWidget):
         with _busy():
             try:
                 self.logic.client.submitVerdict(
-                    entry["submissionId"], verdict,
-                    comment=self.verdictComment.text.strip(),
-                    secondsSpent=seconds)
+                    entry["submissionId"], verdict, secondsSpent=seconds)
             except SegQueueError as exc:
                 slicer.util.errorDisplay(str(exc))
                 return
@@ -4751,7 +4492,6 @@ class SegQueue14Widget(ScriptedLoadableModuleWidget):
         self._reviewStart = None
         self.reviewStatusLabel.setText("Approved {}.".format(
             _escape(entry.get("caseName", "the case"))))
-        self.verdictComment.setText("")
         self.onRefreshReview()
         self._updateEnabled()
 
@@ -4935,7 +4675,7 @@ class SegQueue14Widget(ScriptedLoadableModuleWidget):
                 self.progressBar.setVisible(False)
 
         self.caseLabel.setText(
-            "<b>{}</b> — attempt {}{}{}".format(
+            "<b>{}</b>  |  attempt {}{}{}".format(
                 assignment.case_name, assignment.attempt,
                 _deadlineText(assignment.deadline),
                 self._prelabelText(assignment)))
@@ -5401,22 +5141,6 @@ def _tidyTable(table, widths, minimumHeight):
     except AttributeError:  # pragma: no cover - a Qt without these accessors
         pass
     return table
-
-
-def _shortTime(value):
-    """An ISO timestamp as ``2026-09-27 15:04``, or ``--``.
-
-    Local time, seconds dropped. A reviewer comparing two attempts wants to know
-    which came first and roughly when, and a column of full ISO strings with
-    microseconds and an offset makes that harder rather than easier.
-    """
-    if not value:
-        return "--"
-    text = str(value).replace("T", " ")
-    for cut in ("+", "."):
-        if cut in text:
-            text = text.split(cut)[0]
-    return text[:16]
 
 
 def _escape(text):

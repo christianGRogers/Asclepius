@@ -587,8 +587,8 @@ def _calls_in(node):
             if isinstance(n, ast.Call) and isinstance(n.func, ast.Attribute)}
 
 
-def test_the_module_is_0_25_7_and_protocol_21():
-    assert re.search(r'^__version__ = "0\.25\.7"$', _source(), re.M)
+def test_the_module_is_0_25_8_and_protocol_21():
+    assert re.search(r'^__version__ = "0\.25\.8"$', _source(), re.M)
     sys_path = str(REPO / "src")
     import sys
 
@@ -662,7 +662,6 @@ def test_compare_is_offered_only_with_two_reads_and_reopened_reads_only_when_ask
 
 def test_a_review_open_or_a_case_open_ends_the_comparison():
     for classname, name in (("SegQueue14Widget", "onOpenReview"),
-                            ("SegQueue14Widget", "onOpenCase"),
                             ("SegQueue14Logic", "closeCase")):
         body = ast.get_source_segment(_source(), _method(classname, name))
         assert "closeComparison()" in body, name
@@ -1143,11 +1142,11 @@ def test_the_extended_row_has_no_paragraph_of_instructions_and_keeps_its_control
     assert "self.extendedCheck.setToolTip(" in code
     assert "self.extendedCheck.toggled.connect(self.onToggleExtended)" in code
     assert "self.extendedModeLabel = qt.QLabel(labels.EXTENDED_MODE_NOTE)" in code
-    assert 'qt.QLabel("Show:")' in code and 'qt.QLabel("Complete:")' in code
+    assert 'qt.QLabel("Show:")' in code
     assert "self.groupChecks[group] = check" in code
-    assert "self.completeChecks[group] = check" in code
     assert "self.logic.setGroupVisible(group, on)" in code
-    assert "self.onToggleComplete(group, on)" in code
+    # D54: the Complete tick-boxes are gone.
+    assert 'qt.QLabel("Complete:")' not in code and "completeChecks" not in _source()
     assert "layout.addWidget(self.extendedBox)" in code
 
 
@@ -2245,3 +2244,177 @@ def test_the_module_writes_seed_copies_inside_keeping_closed_surface():
     guard = copy.index("with surfaces.keeping_closed_surface(self.segmentationNode)")
     assert guard < copy.index("self.copySegmentInto(")
     assert "from SegQueue14Lib import inversecut, surfaces" in _source()
+
+
+# ------------------------------------------- a simpler reviewer panel (0.25.8)
+
+def _call_named(node, attr):
+    return [n for n in ast.walk(node)
+            if isinstance(n, ast.Call) and isinstance(n.func, ast.Attribute)
+            and n.func.attr == attr]
+
+
+def test_the_reviewer_panel_has_no_note_box_image_only_take_or_history_caption():
+    """0.25.8: the note box, *Image only*, *Take & segment* and the caption over
+    the history table are gone, and nothing still refers to them."""
+    source = _source()
+    for gone in ("verdictComment", "openCaseButton", "takeCaseButton",
+                 "onOpenCase", "onTakeCase", "_loadCaseHelpers",
+                 "optional note for the case thread", '"Image only"',
+                 "Take && segment", "Every submission against the selected case"):
+        assert gone not in source, gone
+    widget = next(c for c in _classes() if c.name == "SegQueue14Widget")
+    names = {n.name for n in widget.body if isinstance(n, ast.FunctionDef)}
+    assert not names & {"onOpenCase", "onTakeCase", "_loadCaseHelpers"}
+    # The open row is Open submission alone, and the captions that stay, stay.
+    build = _body("SegQueue14Widget", "_buildReviewSection")
+    row = build[build.index("openRow = qt.QHBoxLayout()"):
+                build.index("layout.addLayout(openRow)")]
+    assert row.count("openRow.addWidget(") == 1
+    assert "self.openReviewButton" in row
+    assert "What to do with the submission that is open." in build
+
+
+def test_verdict_revise_and_pool_send_no_reviewer_note():
+    """The calls still go out, with the client's own "no note" default ('')."""
+    verdict = _method("SegQueue14Widget", "onVerdict")
+    (call,) = _call_named(verdict, "submitVerdict")
+    assert {k.arg for k in call.keywords} == {"secondsSpent"}
+    assert len(call.args) == 2
+    revise = _method("SegQueue14Widget", "onReviseSubmission")
+    (call,) = _call_named(revise, "reviseSubmission")
+    assert {k.arg for k in call.keywords} == {"seconds"}
+    pool = _method("SegQueue14Widget", "onReturnToPool")
+    (call,) = _call_named(pool, "returnToPool")
+    assert not call.keywords and len(call.args) == 1
+
+    client = (REPO / "slicer" / "SegQueue14" / "SegQueue14Lib" / "client.py").read_text()
+    assert "def submitVerdict(self, submissionId: str, verdict: str, comment: str = ''," \
+        in client
+    assert "def returnToPool(self, submissionId: str, reason: str = '')" in client
+    logic = ast.get_source_segment(_source(), _method("SegQueue14Logic",
+                                                      "reviseSubmission"))
+    assert 'note=""' in logic.splitlines()[0]
+
+
+# ------------------------------------------- 0.25.8: header, em dashes, Eastern time, D54
+
+def test_the_case_header_has_no_em_dash_and_no_instructions():
+    load = _source()
+    assert '"<b>{}</b>  |  attempt {}{}{}".format(' in load
+    text = _body("SegQueue14Widget", "_prelabelText")
+    code = text.split('"""', 2)[2]
+    for gone in ("whole seed", "cut it down", "stent and plaque start empty",
+                 "draw from scratch", "\u00b7", "<i>"):
+        assert gone not in code, gone
+    assert '"  |  your draft"' in code and '"  |  prelabel {} ({} classes)"' in code
+
+
+class _Assign:
+    def __init__(self, has_prelabel, prelabel_version="v3"):
+        self.has_prelabel = has_prelabel
+        self.has_seed = True
+        self.prelabel_version = prelabel_version
+
+
+@pytest.mark.parametrize("draft,prelabel,shown", [
+    (False, False, ""),
+    (True, False, "  |  your draft"),
+    (True, True, "  |  your draft"),
+    (False, True, "  |  prelabel v3 (4 classes)"),
+])
+def test_the_header_status_after_the_deadline(draft, prelabel, shown):
+    namespace = {"_escape": lambda t: str(t)}
+    exec(compile(ast.Module(body=[_method("SegQueue14Widget", "_prelabelText")],
+                            type_ignores=[]), "prelabel", "exec"), namespace)
+    widget = type("W", (), {})()
+    widget.logic = type("L", (), {"resumedDraft": draft, "prelabelClasses": 4})()
+    assert namespace["_prelabelText"](widget, _Assign(prelabel)) == shown
+
+
+def _user_visible_dashes(path):
+    """Every string literal in ``path`` that is not a docstring and holds an em
+    dash (or its HTML entity)."""
+    tree = ast.parse(path.read_text(encoding="utf-8"))
+    docs = set()
+    for node in ast.walk(tree):
+        if isinstance(node, (ast.Module, ast.ClassDef, ast.FunctionDef,
+                             ast.AsyncFunctionDef)) and node.body:
+            first = node.body[0]
+            if isinstance(first, ast.Expr) and isinstance(first.value, ast.Constant):
+                docs.add(id(first.value))
+    return ["{}:{}".format(path.name, node.lineno) for node in ast.walk(tree)
+            if isinstance(node, ast.Constant) and isinstance(node.value, str)
+            and id(node) not in docs
+            and ("\u2014" in node.value or "&mdash;" in node.value
+                 or "&#8212;" in node.value)]
+
+
+def test_no_em_dash_in_any_string_the_module_can_show():
+    """0.25.8 (the lead): no em dash in text an annotator or reviewer sees.
+
+    Deliberately wider than "strings passed to Qt": every string literal in the
+    module and its library, and in ``src/segqueue14``, except docstrings, so a
+    message built in a helper and shown later is caught too. Comments are not
+    strings and are free. Limits: text the server sends (error messages, notes)
+    is not checked, nor a dash assembled at run time from parts.
+    """
+    files = sorted((REPO / "slicer" / "SegQueue14").rglob("*.py")) + sorted(
+        (REPO / "src" / "segqueue14").rglob("*.py"))
+    assert len(files) > 5
+    found = [hit for path in files for hit in _user_visible_dashes(path)]
+    assert found == []
+
+
+def test_the_history_table_is_in_eastern_time():
+    build = _body("SegQueue14Widget", "_buildReviewSection")
+    assert '["When (ET)", "Author", "Role", "Attempt", "Dice"]' in build
+    # As wide as the case list's "Submitted (ET)", which shows the same " ET" cells.
+    assert "_tidyTable(self.historyTable, [124, 72, 62, 48, 50], 110)" in build
+    assert '["Case", "Annotator", "State", "Submitted (ET)", "#"]' in build
+    fill = _body("SegQueue14Widget", "onReviewRowChanged")
+    assert '_easternTime(entry.get("created"))' in fill
+    assert "_shortTime" not in _source()
+
+
+@pytest.mark.parametrize("created,shown", [
+    # The server's submission ``created`` (isoformat, UTC), each side of both changes.
+    ("2026-03-08T06:59:00+00:00", "2026-03-08 01:59 ET"),     # EST, just before
+    ("2026-03-08T07:00:00+00:00", "2026-03-08 03:00 ET"),     # EDT from 02:00
+    ("2026-11-01T05:59:00+00:00", "2026-11-01 01:59 ET"),     # EDT, just before
+    ("2026-11-01T06:00:00+00:00", "2026-11-01 01:00 ET"),     # EST again
+    ("2026-07-15T16:20:31.123456", "2026-07-15 12:20 ET"),    # naive UTC, microseconds
+    (None, "--"),
+])
+def test_a_history_cell_is_eastern_on_each_side_of_the_dst_change(created, shown):
+    assert _listing_namespace()["_easternTime"](created) == shown
+
+
+@pytest.mark.parametrize("epoch,shown", [
+    (1772953140, "2026-03-08 01:59 ET"),      # 06:59 UTC, EST
+    (1772953200, "2026-03-08 03:00 ET"),      # 07:00 UTC, EDT
+    (1793512740, "2026-11-01 01:59 ET"),      # 05:59 UTC, EDT
+    (1793512800, "2026-11-01 01:00 ET"),      # 06:00 UTC, EST
+])
+def test_a_case_note_time_is_eastern_on_each_side_of_the_dst_change(epoch, shown):
+    namespace = _listing_namespace()
+    assert namespace["_easternTime"](namespace["_epochIso"](epoch)) == shown
+    render = _body("SegQueue14Widget", "_renderNotes")
+    assert "_easternTime(_epochIso(note.created_at))" in render
+    assert "localtime" not in render
+
+
+def test_d54_the_panel_sets_no_complete_groups_and_keeps_carried_ones():
+    """D54: no tick-boxes and nothing in the panel that sets a tick. Ticks a draft
+    or a reviewed read already has are still read in and written out."""
+    source = _source()
+    for gone in ("completeChecks", "onToggleComplete", "def setCompleteGroup(",
+                 "logic.setCompleteGroup("):
+        assert gone not in source, gone
+    flags = _body("SegQueue14Logic", "_applyCaseFlags")
+    assert "self._savedCompleteGroups(manifest)" in flags
+    opened = _body("SegQueue14Widget", "onOpenReview")
+    assert "self.logic.setCompleteGroups(self._reviewCompleteGroups(entry, segPath))" \
+        in opened
+    export = _body("SegQueue14Logic", "exportSubmission")
+    assert "complete_groups=self.completeGroupsForExport(names)" in export

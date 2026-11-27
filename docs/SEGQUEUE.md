@@ -188,7 +188,9 @@ backwards compatible (protocol stays 19; 0.18.x and 0.19.x keep working):
   module version. `segqueue14-score --rescore-extended [--dry-run]` scores again the
   extended reads scored under 0.18's rule (replaces the stored score, keeps the old
   one under `autoScore.previous`, changes no review state; idempotent).
-* **"Branch group complete" tick-boxes** (Q3), one per group (LAD branches, LCx
+* **"Branch group complete" tick-boxes** (Q3; removed from the panel in SegQueue14
+  0.25.8 by D54, which treats an undrawn branch in an extended read as confirmed
+  absent), one per group (LAD branches, LCx
   branches with the ramus, RCA branches): "I looked for every branch of this group,
   so an empty class here means absent". Unticked by default, never required (D38).
   They travel in the class-stack header (`SegQueue14_CompleteGroups`), are stored as

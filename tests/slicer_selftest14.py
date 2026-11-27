@@ -1198,11 +1198,12 @@ def _inverseCutInRealViews(slicer, np, editor, editorNode):
 
 
 def run_d47():
-    """D47 (#322): a flagged case opens with the extended classes; the branch-group
-    tick-boxes are saved with the draft, written in the class-stack header on
-    submit, shown to a reviewer and kept by a revision; a PDA moved out of the LCx
-    collapses into the LCx."""
+    """D47 (#322): a flagged case opens with the extended classes; branch-group
+    ticks a draft already has are kept with it, written in the class-stack header
+    on submit and kept by a revision; a PDA moved out of the LCx collapses into the
+    LCx. D54: the panel has no tick-boxes, so the ticks are carried, never set."""
     import numpy as np
+    import qt
 
     import slicer
 
@@ -1263,19 +1264,19 @@ def run_d47():
           labelfile.COMPLETE_KEY not in labelfile.read_header(path))
     slicer.mrmlScene.RemoveNode(plain.segmentationNode)
 
-    # 2. Ticks start off and are saved with the draft.
-    check("the branch groups start unticked", logic.completeGroups == set())
-    logic.setCompleteGroup(labels.GROUP_RCA, True)
-    logic.setCompleteGroup(labels.GROUP_LAD, True)
-    logic.setCompleteGroup(labels.GROUP_LAD, False)
-    logic.setCompleteGroup(labels.GROUP_LCX, True)
+    # 2. A new read has no ticks (D54); a draft from before D54 keeps its own.
+    check("a new read has no complete groups", logic.completeGroups == set())
     ticked = [labels.GROUP_LCX, labels.GROUP_RCA]
-    check("  ticked ones are saved with the case",
-          logic.cache.manifest("x1").get("completeGroups") == ticked,
+    logic.cache.update("x1", completeGroups=ticked)
+    logic._applyCaseFlags(flagged, logic.cache.manifest("x1"))
+    check("  a resumed draft holding ticks keeps them",
+          logic.completeGroups == set(ticked)
+          and logic.cache.manifest("x1").get("completeGroups") == ticked,
           logic.cache.manifest("x1"))
     again = module.SegQueue14Logic(cacheRoot=os.path.join(tmp, "cache"))
     again._applyCaseFlags(flagged, again.cache.manifest("x1"))
-    check("  and come back when the case is reopened", again.completeGroups == set(ticked))
+    check("  and they come back when the case is reopened",
+          again.completeGroups == set(ticked))
 
     # 3. The tick-boxes in the panel.
     try:
@@ -1283,16 +1284,11 @@ def run_d47():
         widget.setup()
         widget.logic = logic
         widget._updateExtendedBox()
-        boxes = widget.completeChecks
-        check("the panel has one complete tick-box per branch group",
-              list(boxes) == list(labels.COMPLETE_GROUPS), list(boxes))
-        check("  showing the open read's ticks",
-              [boxes[g].checked for g in labels.COMPLETE_GROUPS] == [False, True, True])
-        boxes[labels.GROUP_LAD].setChecked(True)
-        boxes[labels.GROUP_LCX].setChecked(False)
-        ticked = [labels.GROUP_LAD, labels.GROUP_RCA]
-        check("  ticking one updates the read", logic.completeGroups == set(ticked),
-              logic.completeGroups)
+        check("the panel has no Complete tick-boxes (D54), and does not drop the ticks",
+              not hasattr(widget, "completeChecks")
+              and not any(label.text == "Complete:"
+                          for label in widget.extendedBox.findChildren(qt.QLabel))
+              and logic.completeGroups == set(ticked), logic.completeGroups)
         check("  the extended-mode note shows on a flagged case, and the toggle is on",
               not widget.extendedModeLabel.isHidden() and widget.extendedCheck.checked)
         widget.logic = plain
@@ -1305,10 +1301,7 @@ def run_d47():
         except Exception:
             pass
     except Exception:
-        check("the panel builds with the tick-boxes", False, traceback.format_exc())
-        logic.setCompleteGroup(labels.GROUP_LAD, True)
-        logic.setCompleteGroup(labels.GROUP_LCX, False)
-        ticked = [labels.GROUP_LAD, labels.GROUP_RCA]
+        check("the panel builds without the tick-boxes", False, traceback.format_exc())
 
     # 4. A PDA moved out of the LCx (left-dominant), submitted with the ticks.
     node = logic.segmentationNode
@@ -1347,7 +1340,8 @@ def run_d47():
     review.segmentationNode = slicer.util.loadSegmentation(uploaded)
     review.applyProjectNames()
     review.setCompleteGroups(labelfile.complete_groups(labelfile.read_header(uploaded)))
-    check("a reviewer sees the annotator's ticks", review.completeGroups == set(ticked))
+    check("a reviewer's read keeps the annotator's ticks, unshown",
+          review.completeGroups == set(ticked))
     review.client = _RecordingClient()
     review.reviseSubmission("s47")
     revised = labelfile.read_class_stack(review.client.kept[0])
@@ -1724,6 +1718,8 @@ def run_my_submissions():
 def run_defect_cases():
     """Protocol 21: search and defect cases in the reviewer's case list. Saves a
     screenshot of the panel beside the report."""
+    import qt
+
     import slicer
 
     if not os.environ.get("SEGQUEUE_SELFTEST_INSTALLED"):
@@ -1811,6 +1807,18 @@ def run_defect_cases():
             widget._selectCase(caseId)
             slicer.app.processEvents()
 
+        # 0.25.8: the note box, Image only, Take & segment and the history
+        # caption are gone; the open row is Open submission alone.
+        check("the reviewer panel has no note box, Image only or Take & segment",
+              not any(hasattr(widget, n) for n in
+                      ("verdictComment", "openCaseButton", "takeCaseButton"))
+              and not any(b.text in ("Image only", "Take && segment")
+                          for b in widget.reviewBox.findChildren(qt.QPushButton))
+              and not any(isinstance(w, qt.QLineEdit)
+                          and w.placeholderText == "optional note for the case thread"
+                          for w in widget.reviewBox.findChildren(qt.QLineEdit))
+              and not any("Every submission against" in label.text
+                          for label in widget.reviewBox.findChildren(qt.QLabel)))
         check("the search box sits above the list, empty, and shows on any server",
               not widget.reviewSearch.isHidden() and widget.reviewSearch.text == ""
               and widget.reviewSearch.placeholderText == "Search cases by name")
@@ -2754,22 +2762,23 @@ def run_d53():
                 and fresh.seedCopiesBlanked == [])
             slicer.mrmlScene.RemoveNode(fresh.segmentationNode)
 
-        # D53 as amended (D47 stands): a Complete tick with no voxels, and a case
-        # flagged for extended mode with nothing drawn, are sent as 21.
+        # D53 as amended (D47 stands): a Complete tick with no voxels (carried
+        # from a draft or read from before D54), and a case flagged for extended
+        # mode with nothing drawn, are sent as 21.
         for on in (True, False):
             fresh, freshCt = _seededCase(slicer, np, module, labels, tmp,
                                          "d53-tick-{}".format(on), seed, True)
             for name in ("D1", "OM2"):
                 fresh.seedOnFirstSelection(fresh.segmentIdFor(name))
-            fresh.setCompleteGroup(labels.COMPLETE_GROUPS[0], True)
+            fresh.setCompleteGroups([labels.COMPLETE_GROUPS[0]])
             fresh.extendedClasses = on
             fresh.setExtendedShown(on)
             path = os.path.join(tmp, "d53-tick-{}.seg.nrrd".format(on))
             fresh.exportSubmission(path)
             stored = labelfile.read_class_stack(path)
             ticks = labelfile.complete_groups(labelfile.read_header(path))
-            check("a Complete tick with no voxels (toggle {}): 21 channels and the "
-                  "tick".format("on" if on else "off"),
+            check("a carried Complete tick with no voxels (toggle {}): 21 channels "
+                  "and the tick".format("on" if on else "off"),
                   stored["names"] == labels.ALL_NAMES
                   and ticks == [labels.COMPLETE_GROUPS[0]]
                   and not any(m.any() for n, m in zip(stored["names"], stored["masks"])

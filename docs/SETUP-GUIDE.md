@@ -175,8 +175,7 @@ parent vessel in the segment list:
 Any of them may stay empty. To use a branch class, move that branch out of
 whichever vessel it leaves into its class (SN, PDA and PLB out of the RCA or the
 LCx). Trace septals, SN, conus and RMA as far as they are visible, even where the
-seed stops. The **Complete** ticks, one per branch group, say "I looked for every
-branch here, so an empty class means absent"; they are optional. A case flagged
+seed stops. A case flagged
 for extended mode opens with the box on and a note asking you to use it. Paint stent and plaque where you see them; overlapping a
 vessel is fine, and every class is saved whole. The tooltip on each group says
 what goes in each class, and the **Show** ticks hide or show a group. Turning the

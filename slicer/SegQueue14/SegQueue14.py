@@ -355,6 +355,8 @@ class SegQueue14Logic(ScriptedLoadableModuleLogic):
         self.extendedView = extendedview.ExtendedView()
         #: The branch groups ticked complete on the open read (D47 Q3), a subset of
         #: ``labels.COMPLETE_GROUPS``. Saved in the class-stack header on submit.
+        #: D54: never set from the panel; only carried from a draft or a read
+        #: that already had them, so new reads have none.
         self.completeGroups = set()
         #: The reviewer's "Compare reads" scene (#335), or None: see
         #: ``loadComparison``. Read-only: nothing in it is ever uploaded.
@@ -826,25 +828,12 @@ class SegQueue14Logic(ScriptedLoadableModuleLogic):
             return self.extendedView.show(display, self.extendedSegmentIds())
         return self.extendedView.hide(display, self.extendedSegmentIds())
 
-    def setCompleteGroup(self, group, on):
-        """Tick or untick one branch group as complete (D47 Q3).
-
-        Kept with the case's draft (the cache manifest), so it survives a restart
-        like the segmentation does. Returns the ticked groups, in panel order.
-        """
-        if group not in labels.COMPLETE_GROUPS:
-            raise ValueError("not a branch group: {!r}".format(group))
-        if on:
-            self.completeGroups.add(group)
-        else:
-            self.completeGroups.discard(group)
-        ticked = labels.clean_complete_groups(self.completeGroups)
-        if self.assignment is not None:
-            self.cache.update(self.assignment.assignment_id, completeGroups=ticked)
-        return ticked
-
     def setCompleteGroups(self, groups):
-        """Replace the ticks (a read opened for review or revision). Not saved."""
+        """Replace the ticks (a read opened for review or revision). Not saved.
+
+        D54: the panel no longer shows or sets ticks. Those a read or a draft
+        already has are kept here, out of sight, so a revision or a resubmitted
+        draft carries them through unchanged."""
         self.completeGroups = set(labels.clean_complete_groups(groups or ()))
 
     def completeGroupsForExport(self, names=None):
@@ -2499,12 +2488,10 @@ class SegQueue14Widget(ScriptedLoadableModuleWidget):
             return
         blocks = []
         for note in notes:
-            when = ""
-            if note.created_at:
-                try:
-                    when = time.strftime("%d %b %H:%M", time.localtime(note.created_at))
-                except (ValueError, OSError):
-                    when = ""
+            # US Eastern, like every absolute time in the panel (0.25.8).
+            when = _easternTime(_epochIso(note.created_at)) if note.created_at else ""
+            if when == "--":
+                when = ""
             colour = "#6a6a6a" if note.system else "#1466D8"
             blocks.append(
                 "<p style='margin:0 0 8px 0'>"
@@ -3305,24 +3292,6 @@ class SegQueue14Widget(ScriptedLoadableModuleWidget):
         row.addStretch(1)
         boxLayout.addLayout(row)
 
-        # D47 Q3: "I looked for every branch of this group, so an empty class here
-        # means absent". Unticked by default; nothing is required at submit (D38).
-        row = qt.QHBoxLayout()
-        row.addWidget(_muted(qt.QLabel("Complete:")))
-        self.completeChecks = {}
-        for group in labels.COMPLETE_GROUPS:
-            check = qt.QCheckBox(group)
-            check.setChecked(False)
-            check.setToolTip(
-                "Tick when you have looked for every branch of this group ({}), so "
-                "an empty class here means the branch is absent, not that you did "
-                "not look. Optional.".format(", ".join(labels.group_members(group))))
-            check.toggled.connect(
-                lambda on, group=group: self.onToggleComplete(group, on))
-            row.addWidget(check)
-            self.completeChecks[group] = check
-        row.addStretch(1)
-        boxLayout.addLayout(row)
         self.extendedBox.setVisible(False)
         layout.addWidget(self.extendedBox)
 
@@ -3338,8 +3307,8 @@ class SegQueue14Widget(ScriptedLoadableModuleWidget):
 
     def _updateExtendedBox(self, resetShowTicks=True):
         """Show the group rows while the extended classes are on (D53: off hides
-        them, and their rows); the extended-mode note on a flagged case (D47 Q6);
-        the ticks of the open read (D47 Q3). The "Show" ticks are reset only for a
+        them, and their rows); the extended-mode note on a flagged case (D47 Q6).
+        The "Show" ticks are reset only for a
         newly opened read, never by the toggle, so they keep matching the classes
         they hid."""
         flagged = bool(self.logic.caseExtendedMode)
@@ -3352,14 +3321,6 @@ class SegQueue14Widget(ScriptedLoadableModuleWidget):
             check.blockSignals(True)
             check.setChecked(True)
             check.blockSignals(False)
-        for group, check in self.completeChecks.items():
-            check.blockSignals(True)
-            check.setChecked(group in self.logic.completeGroups)
-            check.blockSignals(False)
-
-    def onToggleComplete(self, group, on):
-        """Tick or untick a branch group as complete (D47 Q3), for the open read."""
-        self.logic.setCompleteGroup(group, on)
 
     def onToggleExtended(self, on):
         """Show or hide the extended classes, for this login and the open scene.
@@ -3588,8 +3549,8 @@ class SegQueue14Widget(ScriptedLoadableModuleWidget):
         self.historyTable = qt.QTableWidget()
         self.historyTable.setColumnCount(5)
         self.historyTable.setHorizontalHeaderLabels(
-            ["When", "Author", "Role", "Attempt", "Dice"])
-        _tidyTable(self.historyTable, [112, 72, 62, 48, 50], 110)
+            ["When (ET)", "Author", "Role", "Attempt", "Dice"])
+        _tidyTable(self.historyTable, [124, 72, 62, 48, 50], 110)
         layout.addWidget(self.historyTable)
 
         openRow = qt.QHBoxLayout()
@@ -4146,7 +4107,7 @@ class SegQueue14Widget(ScriptedLoadableModuleWidget):
         for index, entry in enumerate(self._historyRows):
             score = (entry.get("autoScore") or {}).get("mean_dice")
             cells = [
-                _shortTime(entry.get("created")),
+                _easternTime(entry.get("created")),
                 (entry.get("annotator") or {}).get("login", ""),
                 entry.get("authorRole", "annotator"),
                 str(entry.get("attempt", 1)),
@@ -4286,7 +4247,7 @@ class SegQueue14Widget(ScriptedLoadableModuleWidget):
             # back as Segment_1, Segment_2 ... in colours Slicer chose; its label
             # values are the protocol's, which is enough to put the names back.
             self.logic.applyProjectNames()
-            # D47: the read's ticks (shown and kept on revise), and the case's
+            # D47: the read's ticks (kept on revise, not shown: D54), and the case's
             # extended-mode flag, from the server's row; the file's header if the
             # server is too old to send them.
             self.logic.setCompleteGroups(self._reviewCompleteGroups(entry, segPath))
@@ -4323,7 +4284,7 @@ class SegQueue14Widget(ScriptedLoadableModuleWidget):
         self._updateExtendedBox()
         self._applyExtendedView()
         self.reviewStatusLabel.setText(
-            "Reviewing <b>{}</b> by {}{} — edit it in the Segment Editor if you "
+            "Reviewing <b>{}</b> by {}{}. Edit it in the Segment Editor if you "
             "want to correct it.".format(
                 _escape(entry.get("caseName", "")),
                 _escape((entry.get("annotator") or {}).get("login", "")),
@@ -4439,21 +4400,17 @@ class SegQueue14Widget(ScriptedLoadableModuleWidget):
             "ImageCAS-X reference loaded as its own segmentation (outlines only).")
 
     def _prelabelText(self, assignment):
-        if not assignment.has_prelabel and assignment.has_seed:
-            if self.logic is not None and self.logic.resumedDraft:
-                return " · your draft"
-            # D52: selecting a class shows it; the materials start empty.
-            materials = (self.logic is not None and any(
-                self.logic.segmentIdFor(name) for name in labels.MATERIALS))
-            return (" · <i>each class starts as the whole seed (hidden): select one "
-                    "to show it, and cut it down{}</i>".format(
-                        "; stent and plaque start empty" if materials else ""))
-        if not assignment.has_prelabel:
-            return " · <i>no prelabel: draw from scratch</i>"
-        filled = self.logic.prelabelClasses if self.logic else 0
+        """A short status after the deadline: a resumed draft, or the prelabel.
+
+        Status only (0.25.8): the instructions that used to follow (how a seeded
+        case's classes start, "draw from scratch") are gone from the header.
+        """
         if self.logic is not None and self.logic.resumedDraft:
-            return " · your draft"
-        return " · prelabel {} ({} classes)".format(
+            return "  |  your draft"
+        if not assignment.has_prelabel:
+            return ""
+        filled = self.logic.prelabelClasses if self.logic else 0
+        return "  |  prelabel {} ({} classes)".format(
             _escape(assignment.prelabel_version or "?"), filled)
 
     def onReviseSubmission(self):
@@ -4718,7 +4675,7 @@ class SegQueue14Widget(ScriptedLoadableModuleWidget):
                 self.progressBar.setVisible(False)
 
         self.caseLabel.setText(
-            "<b>{}</b> — attempt {}{}{}".format(
+            "<b>{}</b>  |  attempt {}{}{}".format(
                 assignment.case_name, assignment.attempt,
                 _deadlineText(assignment.deadline),
                 self._prelabelText(assignment)))
@@ -5184,22 +5141,6 @@ def _tidyTable(table, widths, minimumHeight):
     except AttributeError:  # pragma: no cover - a Qt without these accessors
         pass
     return table
-
-
-def _shortTime(value):
-    """An ISO timestamp as ``2026-09-27 15:04``, or ``--``.
-
-    Local time, seconds dropped. A reviewer comparing two attempts wants to know
-    which came first and roughly when, and a column of full ISO strings with
-    microseconds and an offset makes that harder rather than easier.
-    """
-    if not value:
-        return "--"
-    text = str(value).replace("T", " ")
-    for cut in ("+", "."):
-        if cut in text:
-            text = text.split(cut)[0]
-    return text[:16]
 
 
 def _escape(text):

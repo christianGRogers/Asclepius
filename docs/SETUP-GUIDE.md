@@ -179,7 +179,8 @@ seed stops. A case flagged
 for extended mode opens with the box on and a note asking you to use it. Paint stent and plaque where you see them; overlapping a
 vessel is fine, and every class is saved whole. The tooltip on each group says
 what goes in each class, and the **Show** ticks hide or show a group. Turning the
-box off removes only the extended classes that are empty. When a read is scored,
+box off only hides the extended classes: nothing is removed, and turning it back
+on shows them exactly as they were. When a read is scored,
 each branch is counted as part of the vessel it leaves, so a read that uses the
 branch classes is compared like a four-class read.
 

@@ -1724,6 +1724,8 @@ def run_my_submissions():
 def run_defect_cases():
     """Protocol 21: search and defect cases in the reviewer's case list. Saves a
     screenshot of the panel beside the report."""
+    import qt
+
     import slicer
 
     if not os.environ.get("SEGQUEUE_SELFTEST_INSTALLED"):
@@ -1811,6 +1813,18 @@ def run_defect_cases():
             widget._selectCase(caseId)
             slicer.app.processEvents()
 
+        # 0.25.8: the note box, Image only, Take & segment and the history
+        # caption are gone; the open row is Open submission alone.
+        check("the reviewer panel has no note box, Image only or Take & segment",
+              not any(hasattr(widget, n) for n in
+                      ("verdictComment", "openCaseButton", "takeCaseButton"))
+              and not any(b.text in ("Image only", "Take && segment")
+                          for b in widget.reviewBox.findChildren(qt.QPushButton))
+              and not any(isinstance(w, qt.QLineEdit)
+                          and w.placeholderText == "optional note for the case thread"
+                          for w in widget.reviewBox.findChildren(qt.QLineEdit))
+              and not any("Every submission against" in label.text
+                          for label in widget.reviewBox.findChildren(qt.QLabel)))
         check("the search box sits above the list, empty, and shows on any server",
               not widget.reviewSearch.isHidden() and widget.reviewSearch.text == ""
               and widget.reviewSearch.placeholderText == "Search cases by name")

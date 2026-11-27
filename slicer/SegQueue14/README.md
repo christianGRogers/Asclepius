@@ -183,6 +183,19 @@ empty, grouped under their parent in the segment list, with show/hide per group:
   server used to refuse them with `not_an_annotator`); until it is deployed those
   accounts see an empty thread. Protocol stays 21.
 
+### A simpler reviewer panel (0.25.8)
+
+Reviewers only; annotators see no change. Protocol stays 21, no server change.
+
+- Gone from the review section: the *optional note for the case thread* box, the
+  **Image only** and **Take & segment** buttons, and the caption over the history
+  table. The row under the history table is **Open submission** alone.
+- **Approve**, **Save changes & approve** and **Return to pool** work as before but
+  send no reviewer note (the client's empty default), so the case thread gets the
+  verdict without a comment. Marking a case defect still takes its optional reason.
+- The panel no longer opens a case that has no submission, and no longer takes one
+  for the reviewer to segment; **Assign case** still hands a case to an annotator.
+
 ### No VPN advice in the connection error (0.25.7)
 
 "Could not reach the server" now says to check the internet connection and tell the project lead, instead of telling annotators to connect a VPN that does not exist. Protocol stays 21, no server change.

@@ -587,8 +587,8 @@ def _calls_in(node):
             if isinstance(n, ast.Call) and isinstance(n.func, ast.Attribute)}
 
 
-def test_the_module_is_0_25_7_and_protocol_21():
-    assert re.search(r'^__version__ = "0\.25\.7"$', _source(), re.M)
+def test_the_module_is_0_25_8_and_protocol_21():
+    assert re.search(r'^__version__ = "0\.25\.8"$', _source(), re.M)
     sys_path = str(REPO / "src")
     import sys
 
@@ -662,7 +662,6 @@ def test_compare_is_offered_only_with_two_reads_and_reopened_reads_only_when_ask
 
 def test_a_review_open_or_a_case_open_ends_the_comparison():
     for classname, name in (("SegQueue14Widget", "onOpenReview"),
-                            ("SegQueue14Widget", "onOpenCase"),
                             ("SegQueue14Logic", "closeCase")):
         body = ast.get_source_segment(_source(), _method(classname, name))
         assert "closeComparison()" in body, name
@@ -2245,3 +2244,54 @@ def test_the_module_writes_seed_copies_inside_keeping_closed_surface():
     guard = copy.index("with surfaces.keeping_closed_surface(self.segmentationNode)")
     assert guard < copy.index("self.copySegmentInto(")
     assert "from SegQueue14Lib import inversecut, surfaces" in _source()
+
+
+# ------------------------------------------- a simpler reviewer panel (0.25.8)
+
+def _call_named(node, attr):
+    return [n for n in ast.walk(node)
+            if isinstance(n, ast.Call) and isinstance(n.func, ast.Attribute)
+            and n.func.attr == attr]
+
+
+def test_the_reviewer_panel_has_no_note_box_image_only_take_or_history_caption():
+    """0.25.8: the note box, *Image only*, *Take & segment* and the caption over
+    the history table are gone, and nothing still refers to them."""
+    source = _source()
+    for gone in ("verdictComment", "openCaseButton", "takeCaseButton",
+                 "onOpenCase", "onTakeCase", "_loadCaseHelpers",
+                 "optional note for the case thread", '"Image only"',
+                 "Take && segment", "Every submission against the selected case"):
+        assert gone not in source, gone
+    widget = next(c for c in _classes() if c.name == "SegQueue14Widget")
+    names = {n.name for n in widget.body if isinstance(n, ast.FunctionDef)}
+    assert not names & {"onOpenCase", "onTakeCase", "_loadCaseHelpers"}
+    # The open row is Open submission alone, and the captions that stay, stay.
+    build = _body("SegQueue14Widget", "_buildReviewSection")
+    row = build[build.index("openRow = qt.QHBoxLayout()"):
+                build.index("layout.addLayout(openRow)")]
+    assert row.count("openRow.addWidget(") == 1
+    assert "self.openReviewButton" in row
+    assert "What to do with the submission that is open." in build
+
+
+def test_verdict_revise_and_pool_send_no_reviewer_note():
+    """The calls still go out, with the client's own "no note" default ('')."""
+    verdict = _method("SegQueue14Widget", "onVerdict")
+    (call,) = _call_named(verdict, "submitVerdict")
+    assert {k.arg for k in call.keywords} == {"secondsSpent"}
+    assert len(call.args) == 2
+    revise = _method("SegQueue14Widget", "onReviseSubmission")
+    (call,) = _call_named(revise, "reviseSubmission")
+    assert {k.arg for k in call.keywords} == {"seconds"}
+    pool = _method("SegQueue14Widget", "onReturnToPool")
+    (call,) = _call_named(pool, "returnToPool")
+    assert not call.keywords and len(call.args) == 1
+
+    client = (REPO / "slicer" / "SegQueue14" / "SegQueue14Lib" / "client.py").read_text()
+    assert "def submitVerdict(self, submissionId: str, verdict: str, comment: str = ''," \
+        in client
+    assert "def returnToPool(self, submissionId: str, reason: str = '')" in client
+    logic = ast.get_source_segment(_source(), _method("SegQueue14Logic",
+                                                      "reviseSubmission"))
+    assert 'note=""' in logic.splitlines()[0]

@@ -1,0 +1,8 @@
+old:A_right leaf {'LADgrp': 1.0, 'S1': 0.3419, 'OM1': 0.6806, 'other': 0.3263} ce 0.00069
+old:B_miss leaf {'LADgrp': 1.0, 'S1': 0.9724, 'OM1': 0.6806, 'other': 0.3263} ce 0.00117
+old:C_sprawl leaf {'LADgrp': 1.0, 'S1': 0.3419, 'OM1': 0.6876, 'other': 0.3343} ce 0.00076
+old:D_intrude leaf {'LADgrp': 1.0, 'S1': 0.3419, 'OM1': 0.8461, 'other': 0.3343} ce 0.00259
+d54:A_right leaf {'LADgrp': 0.0793, 'S1': 0.4792, 'OM1': 0.6806, 'other': 0.3263} ce 0.00079
+d54:B_miss leaf {'LADgrp': 0.1016, 'S1': 0.9802, 'OM1': 0.6806, 'other': 0.3263} ce 0.00127
+d54:C_sprawl leaf {'LADgrp': 0.4502, 'S1': 0.8518, 'OM1': 0.6876, 'other': 0.3343} ce 0.00282
+d54:D_intrude leaf {'LADgrp': 0.4502, 'S1': 0.502, 'OM1': 0.8461, 'other': 0.3343} ce 0.00282

@@ -1,0 +1,11 @@
+{
+ "what": "Janus 1-F stage 1 (J1F-A) parent copy of Janus 0's output heads (F-A2, master plan §2). Every decoder.seg_layers head of Janus 0 (5 channels; deep supervision included) becomes a 13-channel head: a class Janus 0 has keeps its own row; a new class copies its parent's row; every channel of a territory (the parent and its children) gets the parent's bias minus log(k), k the territory's channel count, so each territory's softmax mass equals Janus 0's probability of it at step 0 (experiments/Delta/j1f_r1/parent_copy.py). Read by nnUNetTrainer_janus1f and trillium/janus1f/lib/janus1f/parents.py",
+ "source_classes": ["background", "LM", "LAD", "LCx", "RCA"],
+ "target_classes": ["background", "LM", "LAD", "LCx", "RCA", "D1", "D2", "D3", "OM1", "OM2", "Ramus", "PDA", "PLB"],
+ "parent": {
+  "D1": "LAD", "D2": "LAD", "D3": "LAD",
+  "OM1": "LCx", "OM2": "LCx", "Ramus": "LCx",
+  "PDA": "RCA", "PLB": "RCA"
+ },
+ "ignore_label_on_disk": 13
+}

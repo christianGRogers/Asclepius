@@ -655,22 +655,36 @@ def main(argv=None):
     res = freeze(rows, pairs, raised=set(a.raised), d35_rows=d35_rows)
     res['inputs'] = {'export': os.path.abspath(a.export), 'reads_listed': len(names), 'trainable_reads': len(tr),
                      'd35_reads': len(split['d35']), 'held_out_reads': len(split['held_out']),
-                     'held_out_reasons': split['held_out_reasons'], 'manifest_source': source,
+                     'held_out_reasons': split['held_out_reasons'],
+                     'manifest_source': {k: v for k, v in source.items() if k in ('kind', 'classes', 'replicas',
+                                                                                    'pool_seal', 'since')},
+                     'versions': versions(),
+                     'trainable_rows_sha256': None,
                      'scorer_sha256': SCORER_SHA256, 'freeze_sha256': _sha(os.path.abspath(__file__)),
                      'raised': sorted(a.raised), 'd35_tiers': bool(a.d35_tiers)}
     res['rules'] = {'ruled': RULED, 'band_clamp': BAND_CLAMP, 'band_min_reads': BAND_MIN_READS, 'band_q': BAND_Q,
                     'run_q': RUN_Q, 'run_stop_mm': RUN_STOP_MM, 'gap_steps': GAP_STEPS, 'gap_rate': GAP_RATE,
                     'theft_margin': THEFT_MARGIN, 'theft_stop': THEFT_STOP, 'train_min': TRAIN_MIN, 'tiers': TIERS}
-    blob = json.dumps(res, indent=1, sort_keys=True, default=float)
-    open(a.out, 'w').write(blob + '\n')
     rowsp = os.path.splitext(a.out)[0] + '_rows.jsonl'
     with open(rowsp, 'w') as f:
         for r in rows:
             r = {k: v for k, v in r.items() if k != 'band'}
             f.write(json.dumps(r, sort_keys=True) + '\n')
+    res['inputs']['trainable_rows_sha256'] = _sha(rowsp)
+    res['inputs']['trainable_reads_sha256'] = hashlib.sha256('\n'.join(sorted(tr)).encode()).hexdigest()
+    blob = json.dumps(res, indent=1, sort_keys=True, default=float)
+    open(a.out, 'w').write(blob + '\n')
     print_summary(res)
+    print('rows', rowsp, 'sha256', _sha(rowsp), '(stays with the export: it names reads)')
     print('freeze', a.out, 'sha256', _sha(a.out))
     return 4 if res['stop'] else 0
+
+
+def versions():
+    import scipy
+    import skimage
+    return {'python': sys.version.split()[0], 'numpy': np.__version__, 'scipy': scipy.__version__,
+            'scikit-image': skimage.__version__, 'nibabel': nb.__version__}
 
 
 def print_summary(res):

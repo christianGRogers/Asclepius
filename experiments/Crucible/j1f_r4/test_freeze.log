@@ -1,0 +1,49 @@
+PASS d54: a septal over its own parent (LAD) is the septal (D47 Q4)
+PASS d54: LAD voxels outside the septal are LAD singletons (no {parent+children} set: confirmed absent)
+PASS d54: background stays background (no band set in an extended read)
+PASS d54: two branches on one voxel (S1 and D1 over LAD) are IGNORE
+PASS d54: materials are dropped before the rule (a vessel voxel marked plaque stays vessel)
+PASS d54: a material-only voxel is background
+PASS d54: a PDA leaving the LCx, over the LCx, is the PDA (contact parent, D47 Q1)
+PASS kind: four-class read
+PASS kind: extended with a branch drawn
+PASS kind: extended, plaque only, no branch drawn -> nobranch
+PASS measure: septal length ~ 20 mm minus the LAD radius (20.91)
+PASS measure: the LAD band p95 sits near the septal's far end (17.852 mm)
+PASS measure: a correct child-over-parent ostium paints a run < 3 mm over the LAD centreline ([2.5])
+PASS measure: a connected septal leaves no L2d gap beyond one voxel ([0.5])
+PASS measure: a septal drawn in two pieces leaves its gap ([0.5, 9.0])
+PASS measure: a thief that calls 10 mm of LAD a septal makes a run >= 9 mm ([12.0])
+PASS band: 40 reads at 12 mm -> 12 mm, re-set ({'mm': 12.0, 'raw_mm': 12.0, 'reads': 40, 'reset': True})
+PASS band: a group with < 10 reads keeps the provisional 15 mm, flagged
+PASS band: clamped to 25 mm above
+PASS band: clamped to 8 mm below
+PASS L1r: ostium runs of 1 mm keep 3 mm
+PASS L1r: runs of 3.7 mm raise the run length to 4.0 mm ({'mm': 4.0, 'p99_mm': 3.7, 'max_mm': 3.7, 'runs': 40})
+PASS L1r: runs of 7 mm (> 5 mm) STOP the freeze
+PASS L1r/K1r: read-faithful theft above 0.02 STOPs ({'point': 0.012, 'upper': 0.024})
+PASS L2d: no gaps keep 30 mm
+PASS L2d: 3 % of reads with a 35 mm gap move it to 40 mm ({'mm': 40.0, 'share_by_candidate': {'30.0': 0.03, '40.0': 0.0, '50.0': 0.0}, 'max_gap_mm': 35.0, 'septal_len_p95_mm': None, 'septals_over_40mm': 0})
+PASS L2d: 3 % of reads with a 60 mm gap STOP
+PASS counts: 30 patients from 3 sources with 10 each -> met
+PASS counts: the other classes are confirmed absent in those 30 (D54 negatives)
+PASS counts: after a near miss the line is 45 (F-A23 1.5x) -> not met
+PASS counts: 30 patients but only one source with >= 5 -> not met
+PASS floor: 10 agreeing pairs -> met
+PASS floor: 9 pairs -> not met (>= 10 needed)
+PASS floor (D54): named/pieces 1.0 but presence agreement 5/11 < 0.6 -> not met ({'pairs': 11, 'detect_x_naming': 1.0, 'presence_agreement': 0.4545, 'met': False})
+PASS trainable: S1 needs count AND floor
+PASS screen: a clean tree passes
+PASS screen: a sealed pool volume (BMC-BEO2017-SerialStenosis-CCTA__P1_s5) refuses, before its (empty) directory is read
+PASS screen: its second read (__r2) refuses too
+PASS screen: another volume of a sealed patient (BMC-BEO2017-SerialStenosis-CCTA__P1_tp9) refuses (by patient, D32)
+PASS screen: an --acceptance-scoring export refuses (D55 Q-F2-1)
+PASS screen: no pool-seal record refuses
+PASS screen: a different seal hash refuses
+PASS screen: no manifest refuses
+PASS screen: a --four-class export refuses
+PASS screen: the annotator benchmark refuses (D43)
+PASS screen: stand-in names in a real run refuse
+PASS screen: real names in a --standins run refuse
+PASS screen: a D35 decision volume (Figshare-CardiacCT15__pat1_tp0) is excluded and counted, not kept
+ALL PASS

@@ -47,9 +47,14 @@ D54 and D55 change nothing in it (§2). This round is about **stage 2 (J1F-2)**.
      `--acceptance-scoring` export, a `--four-class` export and the annotator benchmark. It runs on CPU and prints a
      sha256 for the lead to post.
    - **Tested** on a 60-case stand-in export built from ImageCAS-X *training* labels: 120 reads, 55 of them extended
-     pairs, with D2, OM2 and PLB standing in for S1, SN and RMA. It also passes 6 of 6 whole-export refusals. A
-     "thief" export (10 mm of LAD painted S1) moves K1r's statistic from 0.000 to 0.050–0.095 and its line to STOP
-     (§5.3).
+     pairs, with D2, OM2 and PLB standing in for S1, SN and RMA. It also passes 6 of 6 whole-export refusals.
+   - **On the correct stand-ins** it freezes τ₁ = 3 mm, τ₂ = 30 mm and the line at 0.02 (the bound is 0.006 at 3 mm).
+   - **A "thief" export** (10 mm of LAD painted S1 in half the reads) has no run length that keeps the bound under
+     0.01 (0.041 at 3 mm). At 6 mm the LAD statistic is 0.026, against 0.0006 on the correct stand-ins, and its bound
+     is 0.036. So the line would be 0.075, and the freeze STOPs (exit 2) (§5.3).
+   - **One rule changed from my first draft:** τ₁ and the line are set jointly, on the pooled statistic that L1r
+     actually gates. A 99th-percentile rule on single ostia would have pushed τ₁ to 6 mm on correct stand-ins (17 of
+     65 S1 ostia are over 3 mm with one voxel of bleed) and halved L1r's sensitivity for nothing.
 4. **D55 is written into the stage-2 plan** (§4):
    - the sealed pool is read in extended mode but never reaches the freeze (Q-F2-1);
    - there is no J1F-B, and the 1.5× near-miss rule is a flag of the script (Q-F2-2);
@@ -242,24 +247,27 @@ ImageCAS-X cases, so **D54 does not change any definition** (F-A30 stands). It c
 2. **What the re-check measures on reads.** Round 3 (§5 item 2) asks that 3 mm, 30 mm and 0.02 be re-checked on the
    first extended reads. Under D54 a read is a full label, so a read *is* a correct model's output for its own case,
    and each re-check is that read scored as a prediction:
-   - **τ₁ (L1r's run length):** for each drawn stage-2 piece, the longest 26-connected run of its parent group's own
-     centreline (the group as drawn, whole, D39) inside the piece dilated by one voxel. That is a correct ostium with
-     one voxel of bleed.
-     - τ₁ = the 99th percentile over pieces, rounded up to 0.5 mm, never below 3 mm.
-     - **Above 6 mm: STOP** (the round-3 thief paints 10 mm).
-     - With < 30 pieces, 3 mm stays.
+   - **τ₁ (L1r's run length) and the L1r/K1r line (one statistic, F-A30), set jointly.**
+     - Each read is scored as a correct model would be on its own case: the pooled share of each parent group's own
+       centreline (the group as drawn, whole, D39) inside the read's stage-2 pieces dilated by one voxel (a correct
+       ostium with one voxel of bleed), counting only runs longer than τ.
+     - Its one-sided 1.25 % upper bound comes from a patient bootstrap, worst of LAD, LCx and RCA.
+     - **τ₁ = the smallest of 3.0, 3.5, …, 6.0 mm whose bound is ≤ 0.01** (half the ruled line), and the line stays
+       0.02.
+     - If no τ up to 6 mm gets there, τ₁ = 6 mm and the line rises to 2 × the bound, rounded up to 0.005. **Above
+       0.04: STOP.** The round-3 thief paints 10 mm, so 6 mm still catches it.
+     - With < 30 pieces, 3 mm and 0.02 stay.
+     - **Why joint, not a percentile of single ostia.** L1r gates a pooled share, not the longest ostium. On the
+       stand-ins, 17 of 65 S1 ostia run over 3 mm with one voxel of bleed. Their 99th percentile is 5.8 mm, so a
+       percentile rule would set τ₁ = 6 mm. Yet the pooled share at 3 mm is only 0.0037 (bound 0.0063), a third of the
+       line. Raising τ₁ to 6 mm would buy nothing and blind L1r to any thief shorter than 6 mm. The per-piece 99th
+       percentile is still printed.
    - **τ₂ (L2d's gap):** for each stage-2 26-component (≥ 20 voxels), the distance from its nearest voxel to every
      other drawn coronary voxel. That is the gap a reader left.
      - τ₂ = the smallest of 30, 35, 40, 45 and 50 mm at which ≤ 1 % of reads have a component beyond it.
      - None: **STOP**.
      - With < 30 reads, 30 mm stays.
      - At 1 %, a model that leaves reader-like gaps expects 1 dirty case in 100, far from L2d's 6.
-   - **The L1r/K1r line (one statistic, F-A30):** the pooled share of each parent group's centreline inside stage-2
-     pieces (one-voxel bleed) in runs > τ₁, with its one-sided 1.25 % upper bound by patient bootstrap. The worst of
-     LAD, LCx and RCA is taken.
-     - If that bound is ≤ 0.01 (half the line), 0.02 stays.
-     - Otherwise the line is 2 × the bound rounded up to 0.005.
-     - **Above 0.04: STOP.**
    - Septal length (Round 3 §7, "longer than 40 mm") no longer decides anything. L2d measures a gap, not a length
      (F-A30). The freeze writes each piece's length to `rows.jsonl`.
 
@@ -375,8 +383,8 @@ The readings of J1F-2's one prediction, pre-registered in the ledger:
 
 ### 5.1 The script
 
-`experiments/Atlas/j1f_r4/j1f2_freeze.py`. Run `python j1f2_freeze.py selftest`; the exact sha256 goes in the PR
-description.
+`experiments/Atlas/j1f_r4/j1f2_freeze.py`, sha256 **`d0715f789744434edc5f698b7a7291221ba123eb2916c559d56ded8bba468f72`**.
+`python j1f2_freeze.py selftest` prints `j1f2_freeze selftest ok`.
 - **Pins.** It imports the scorer of record by sha256 (`5221032f…2e5b`), which pins `tf1.py` and `labels.py` itself.
   It loads the D27 seal through `segtrain.pool_seal`, which checks its hash. It reads A33's D35 list by sha256
   (`1a75fe41…66b1`) and `janusm.guard` for the reserve and every Round-10 draw.
@@ -396,7 +404,7 @@ description.
   - `rows.jsonl`: per read. It stays with the lead.
 - **Exit codes:** 0 FROZEN, 2 STOP (a number out of range: the PM), 3 REFUSED.
 - **Every rule is a module constant**, so the script's hash freezes the rules:
-  - `BAND_Q`, `BAND_CLAMP`, `TAU1_*`, `TAU2_*`, `LINE1_*`;
+  - `BAND_Q`, `BAND_CLAMP`, `TAU1_GRID`, `TAU1_*`, `TAU2_*`, `LINE1_*`;
   - `TRAIN_PATIENTS`, `RAISE`, `SRC_*`, `FLOOR*`, `TIER_*`;
   - `NBOOT`, `BOOT_SEED`.
 
@@ -430,8 +438,8 @@ echo "exit $?"; sha256sum $W/freeze/j1f2_freeze.json
 - Exit 3 means the export held a sealed read: export again with the command above.
 - Exit 2 goes to the PM.
 
-**Cost:** CPU only. The stand-in run took 2.6 min per extended read pair on one core here, so a 300-read export on
-16 cores should take well under the hour asked.
+**Cost:** CPU only. The 120-read stand-in export (55 pairs) took 13 min on 4 cores here (45 core-minutes), so a
+300-read export on 16 cores needs about 30 minutes, well inside the 3 hours asked.
 
 ### 5.3 Tests on stand-ins
 
@@ -446,23 +454,47 @@ reads; the other 55 are extended.
 
 **Results** (`results/freeze_standin_normal.out`, `results/standin_normal_freeze.json`):
 
-FREEZE_NORMAL_TABLE
+| Output | Value | Rule outcome |
+|---|---|---|
+| status, exit | **FROZEN**, 0 | |
+| band LAD (S1 = D2 stand-in) | **21.5 mm** | q95 21.3 mm over 65 reads |
+| band RCA (RMA = PLB stand-in) | **25 mm** | q95 46.8 mm over 100 reads, clamped |
+| band proximal LCx (SN = OM2 stand-in) | **25 mm** | q95 36.5 mm over 42 reads, clamped |
+| band proximal RCA | **15 mm** | provisional: 0 reads (no stand-in) |
+| τ₁ | **3.0 mm** | worst bound 0.0063 at 3 mm (≤ 0.01). Per-piece longest run: q99 5.8 mm, max 6.6 mm, 207 pieces |
+| L1r/K1r line | **0.02** | pooled at 3 mm: LAD 0.0037, LCx 0.0020, RCA 0.0013 |
+| τ₂ | **30 mm** | 110 reads; 0 % of reads leave a gap over 30 mm (the largest per-read gap is 0.45 mm) |
+| S1: patients / sources ≥ 5 / floor (n) | 34 / 4 / **0.954** (34) | **train** |
+| SN | 23 / 3 / 0.905 (23) | not trained: 23 < 30 |
+| RMA | 52 / 5 / 0.960 (52) | **train** |
+| S2, S3, Conus | 0 | not trained; confirmed absent in 55 of 55 extended patients (D54) |
+| presence agreement, double reads | S1 0.945, SN 0.927, RMA 0.927 | report |
+| extended / four-class trainable reads; ticked; branchless | 110 / 10; 0; 0 | |
+| `j1f2_freeze.json` sha256 | `e7b1dcbf…4aed` | |
 
 **What the run shows:**
-- **The band clamps at the top.** D2 and the RCA-side PLB reach far from their hosts, so their q95 is above 25 mm.
-  The proximal-RCA group has no stand-in, so it keeps 15 mm with "provisional (0 reads)". The script picks the rule
-  outcome per group.
-- **τ₁** lands just above 3 mm: a one-voxel bleed at the junction of a 0.3–0.4 mm-voxel ImageCAS-X tree gives runs up
-  to ≈ 3.5 mm. This is the case Round 3 §7 foresaw (ostia longer than 3 mm), and the rule handles it.
-- **The floor** recovers the simulated second reader. Dropping 10 % of pieces into the parent gives detection ≈ 1 and
-  naming ≈ 0.9.
-- **The counts** fail on purpose. 55 patients spread over 5 fake sources reach ≥ 5 per source in some groups only,
-  and the train flags follow exactly.
+- **Each band rule outcome appears:** a re-set inside the clamp (LAD), a clamp at 25 mm (RCA, proximal LCx: the
+  stand-ins are long D/OM/PLB branches, not septals), and the provisional 15 mm for a group with no reads.
+- **τ₁ stays 3 mm** although single ostia reach 6.6 mm with one voxel of bleed. This is §3.4's reason for the joint
+  rule.
+- **The floor recovers the simulated second reader.** Recall is 1.0: a dropped piece stays in the parent, so it is
+  still covered. Naming is 0.95 / 0.90: the dropped pieces are named as the parent, which is exactly D54's
+  disagreement.
+- **The count rules bite as written.** SN has 23 patients and stays folded. S1 trains with 4 sources at ≥ 5 (StandIn-E
+  has 4).
 
 **The thief** (`results/freeze_standin_thief.out`): 20 cases whose first read also paints the 10 mm of LAD centreline
 nearest the S1 stand-in's origin as S1.
 
-FREEZE_THIEF_TABLE
+| Output | Correct stand-ins (60) | **Thief (20)** |
+|---|---|---|
+| worst upper bound at 3 mm | 0.0063 | **0.041** |
+| LAD pooled share / upper bound at 6 mm | 0.0006 / 0.0018 | **0.026 / 0.036** (half the reads are the thief) |
+| τ₁, line | 3 mm, 0.02 | **6 mm, 0.075** |
+| status, exit | FROZEN, 0 | **STOP, 2**: "LINE_L1 0.075 > 0.04 at TAU_L1 6.0 mm" |
+| per-piece longest run, q99 | 5.8 mm | 14.0 mm |
+
+The freeze refuses to set lines that would let a 10 mm theft pass. That is the PM's stop, not a number.
 
 **Refusals** (`test_refusals.py` → `results/test_refusals.out`): **6 of 6 pass**.
 1. A sealed volume's name beside a stand-in exits 3, and an `open()` spy shows **0 files of the export opened**.
@@ -524,7 +556,7 @@ failing for every class.
 | # | Proposal | Replaces |
 |---|---|---|
 | P-r4-1 | Stage 2's label sets as §3.2: every voxel of an extended read a singleton (D54); D47 Q4 and D40 for overlaps; four-class reads as F-A11 with the band on their background | F-A11's and F-A21's extended-read rows; master plan §4's D47 Q3 bullet |
-| P-r4-2 | The band, τ₁, τ₂, the L1r/K1r line, the read counts, the floor and the D35 tiers are the outputs of `j1f2_freeze.py` (rules §3.3–§3.4, constants in the file), with its D54 QC lines printed as reports | F-A21's band re-set, F-A23's counts, F-A30's "re-checked before J1F-2" |
+| P-r4-2 | The band, τ₁ with the L1r/K1r line (one joint rule), τ₂, the read counts, the floor and the D35 tiers are the outputs of `j1f2_freeze.py` (rules §3.3–§3.4, constants in the file), with its D54 QC lines printed as reports | F-A21's band re-set, F-A23's counts, F-A30's "re-checked before J1F-2" |
 | P-r4-3 | J1F-2 starts from a1's network; its look reads F2, R2_s and R2_L under §4.4's table; a V′ failure ships the branches on s's vessels | F-A22's "failing V′ … not adopted" |
 | P-r4-4 | The freeze refuses any sealed name, replica, acceptance-mode or four-class export, before opening a file (D55 Q-F2-1) | Round 3 §3.8's "the band and floor scripts refuse a sealed-pool patient" (now code) |
 | P-r4-5 | J1F-2 is submitted only when the freeze marks ≥ 1 class `train`; otherwise the freeze is re-run on the next export | F-A23's "when counts allow" |
@@ -553,9 +585,8 @@ allow (F-A22). No J1F-B (D55).
 
 | Observation | Then |
 |---|---|
-| The freeze exits 2 on τ₁ > 6 mm | L1r's run filter cannot separate ostia from theft at that bleed; the PM brings a run-free L1 form (Crucible's nearest-label form) to the next ruling |
+| The freeze exits 2 on the L1r/K1r line (> 0.04 at τ₁ = 6 mm) | Correct reads already overlap their parents more than the run filter can absorb. The PM checks how readers draw D47 Q4 ostia, and the next ruling brings a run-free L1 form (Crucible's nearest-label form) |
 | The freeze exits 2 on τ₂ (> 1 % of reads leave a > 50 mm gap) | Readers draw disconnected septals; L2d becomes a report until a ruling |
-| The freeze exits 2 on the line (> 0.04) | Reads themselves overlap parents too much; the PM checks D47 Q4 drawing before any J1F-2 |
 | `branchless_extended_trainable_reads` is more than 10 % of extended reads, or the D1-absent share is above 20 % | Q-F4-1 becomes urgent before J1F-2 |
 | No class reaches `train` for two exports in a row | D35's tiers and the read plan go back to the PM; nothing trains |
 | A class fails a J1F-2 look with its count within 1.5× of its threshold | `--raised`; revisit Q-F2-2 (D55) |

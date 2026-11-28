@@ -1,0 +1,13 @@
+{"status": "STOP", "stop": ["LINE_L1 0.075 > 0.04 at TAU_L1 6.0 mm"], "band_mm": {"LAD": 23.5, "RCA": 25.0, "pRCA": 15.0, "pLCx": 25.0}, "tau_L1_mm": 6.0, "tau_L2_mm": 30.0, "line_L1_K1r": 0.075}
+S1 {'patients_present': 14, 'needs': 30, 'sources_with_5': 1, 'floor_patients': 14, 'floor': 0.9231, 'train': False, 'd35_tier': 'counts'}
+S2 {'patients_present': 0, 'needs': 30, 'sources_with_5': 0, 'floor_patients': 0, 'floor': 0.0, 'train': False, 'd35_tier': 'counts'}
+S3 {'patients_present': 0, 'needs': 30, 'sources_with_5': 0, 'floor_patients': 0, 'floor': 0.0, 'train': False, 'd35_tier': 'counts'}
+SN {'patients_present': 10, 'needs': 30, 'sources_with_5': 0, 'floor_patients': 10, 'floor': 0.8235, 'train': False, 'd35_tier': 'counts'}
+Conus {'patients_present': 0, 'needs': 30, 'sources_with_5': 0, 'floor_patients': 0, 'floor': 0.0, 'train': False, 'd35_tier': 'counts'}
+RMA {'patients_present': 20, 'needs': 30, 'sources_with_5': 1, 'floor_patients': 20, 'floor': 0.9744, 'train': False, 'd35_tier': 'counts'}
+j1f2_freeze.json sha256 ef8390b3b41e57882803780e789ab0c4cfdcd9d5c42d7157ec256092ec463117
+
+real	4m58.988s
+user	16m42.052s
+sys	1m41.749s
+rc=2

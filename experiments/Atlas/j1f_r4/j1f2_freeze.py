@@ -3,21 +3,21 @@
 What it computes (Round 3 §5 items 1-3; F-A21, F-A23, F-A30; D54; D55):
   1. BAND per class group: the 95th percentile of the drawn voxels' distance (mm) from their host, each read weighted
      equally, rounded up to 0.5 mm and clamped to [8, 25] mm; needs >= 10 reads with the group drawn, else 15 mm stays.
-  2. TAU_L1, L1r's run length: the 99th percentile over drawn stage-2 pieces of the longest run of the parent group's
-     own centreline inside the piece dilated by one voxel (a correct model's ostium with one voxel of bleed), rounded
-     up to 0.5 mm, never below 3 mm. Above 6 mm: STOP (L1r would lose the thief). < 30 pieces: 3 mm stays.
+  2. TAU_L1, L1r's run length, and LINE_L1 (= K1r's line, F-A30: one statistic), one joint rule. Each read is scored
+     as a correct model: the share of each parent group's own centreline inside the read's stage-2 pieces dilated by
+     one voxel (a correct ostium with one voxel of bleed), counting runs longer than tau, pooled, with its one-sided
+     1.25 % upper bound by patient bootstrap, worst of LAD/LCx/RCA. TAU_L1 = the smallest tau in 3.0, 3.5, ..., 6.0 mm
+     whose bound is <= 0.01 (half the ruled line); the line stays 0.02. If none is, TAU_L1 = 6 mm and the line is
+     2 x the bound rounded up to 0.005; above 0.04: STOP. < 30 pieces: 3 mm and 0.02 stay.
   3. TAU_L2, L2d's gap: the smallest of 30, 35, 40, 45, 50 mm such that <= 1 % of reads have a stage-2 26-component
      (>= 20 voxels) whose nearest voxel is farther than it from every other drawn coronary voxel. None: STOP.
      < 30 reads: 30 mm stays.
-  4. LINE_L1 (= K1r's line, F-A30: one statistic): the pooled share of each parent group's centreline inside stage-2
-     pieces (one-voxel bleed) in runs > TAU_L1, its one-sided 1.25 % upper bound by patient bootstrap, worst group.
-     <= 0.01: 0.02 stays; else 2 x the bound rounded up to 0.005; above 0.04: STOP.
-  5. READ COUNTS (F-A23): per class, trainable patients with the class present in >= 1 trainable extended read, and
+  4. READ COUNTS (F-A23): per class, trainable patients with the class present in >= 1 trainable extended read, and
      sources with >= 5 of them. Train iff >= 30 patients (45 after a near miss, --raised) from >= 3 such sources and
      the floor holds.
-  6. FLOOR (F-A23): on trainable patients with two extended reads of one volume and the class present in >= 1, both
+  5. FLOOR (F-A23): on trainable patients with two extended reads of one volume and the class present in >= 1, both
      directions pooled, detection x naming by the scorer of record's definitions; >= 0.6 on >= 10 patients.
-  7. D35 TIERS (F-A22 S): per class, D35 patients (A33's list) with the class present in >= 1 extended read: decide
+  6. D35 TIERS (F-A22 S): per class, D35 patients (A33's list) with the class present in >= 1 extended read: decide
      >= 30, report >= 20, else counts. Counts only: no prediction exists or is read.
 
 D54 (confirmed absence) is how every read is read here: in an extended read, a branch class the annotator did not draw
@@ -77,7 +77,8 @@ CLASS_PARENT = {'S1': 'LAD', 'S2': 'LAD', 'S3': 'LAD', 'Conus': 'RCA', 'RMA': 'R
 BAND_GROUPS = {'LAD': ('S1', 'S2', 'S3'), 'RCA': ('RMA',), 'pRCA': ('Conus', 'SN@RCA'), 'pLCx': ('SN@LCx',)}
 BAND_HOST = {'LAD': (2, 5, 6, 7), 'RCA': (4,), 'pRCA': (4,), 'pLCx': (1, 3)}
 BAND_Q, BAND_MIN_READS, BAND_PROVISIONAL, BAND_CLAMP = 0.95, 10, 15.0, (8.0, 25.0)
-TAU1_Q, TAU1_FLOOR, TAU1_STOP, TAU1_MIN_PIECES = 0.99, 3.0, 6.0, 30
+TAU1_Q, TAU1_FLOOR, TAU1_MIN_PIECES = 0.99, 3.0, 30
+TAU1_GRID = (3.0, 3.5, 4.0, 4.5, 5.0, 5.5, 6.0)
 TAU2_STEPS, TAU2_SHARE, TAU2_MIN_READS = (30.0, 35.0, 40.0, 45.0, 50.0), 0.01, 30
 LINE1_KEEP, LINE1_RULED, LINE1_STOP, LINE1_Q = 0.01, 0.02, 0.04, 0.9875
 TRAIN_PATIENTS, RAISE, SRC_MIN, SRC_N = 30, 1.5, 5, 3
@@ -180,7 +181,7 @@ def sn_side(lab, piece_mask, sp):
     return 'LCx' if d['LCx'] < d['RCA'] else 'RCA'
 
 
-def geometry(lab, masks, sp, taus=TAU2_STEPS, tau1_grid=(3.0, 3.5, 4.0, 4.5, 5.0, 5.5, 6.0)):
+def geometry(lab, masks, sp, tau1_grid=TAU1_GRID):
     """Everything steps 1-4 need from one read. Distances in mm."""
     sl = _crop(lab)
     lab = lab[sl]
@@ -367,7 +368,6 @@ def boot_upper(rows, group, tau, q, rng):
 
 
 def freeze(rows, pairs, raised=(), seed=BOOT_SEED):
-    rng = np.random.default_rng(seed)
     stop = []
     geo = [r for r in rows if r['role'] == 'trainable' and r['extended'] and 'gaps' in r]
     res = {'band_mm': {}, 'band_detail': {}}
@@ -380,20 +380,37 @@ def freeze(rows, pairs, raised=(), seed=BOOT_SEED):
             w, src = BAND_PROVISIONAL, f'provisional (only {n} reads < {BAND_MIN_READS})'
         res['band_mm'][g] = w
         res['band_detail'][g] = {'reads': n, 'q95_mm': None if q95 is None else round(q95, 3), 'rule': src}
-    # TAU_L1
+    # TAU_L1 and LINE_L1 (= K1r), one joint rule: the smallest run length at which the reads, scored as a correct
+    # model, stay at or below half the ruled line (one-sided 1.25 % upper bound, worst parent group); the line stays
+    # 0.02 there. If no run length up to 6 mm does, TAU_L1 = 6 mm and the line rises to 2 x that bound (STOP > 0.04).
     runs = sorted(p['longest_run_mm'] for r in geo for p in r['pieces'])
-    if len(runs) >= TAU1_MIN_PIECES:
-        q99 = float(np.quantile(runs, TAU1_Q))
-        tau1 = max(TAU1_FLOOR, ceil_to(q99, 0.5))
-        if tau1 > TAU1_STOP:
-            stop.append(f'TAU_L1 {tau1} mm > {TAU1_STOP} mm (q99 {q99:.2f})')
-            tau1 = None
-        rule1 = 'reads'
+    q99 = float(np.quantile(runs, TAU1_Q)) if runs else None
+    ub_by_tau = {}
+    for t in TAU1_GRID:
+        ub = {}
+        for g in PARENT_GROUP:
+            pt, u = boot_upper(geo, g, t, LINE1_Q, np.random.default_rng(seed)) if geo else (0.0, 0.0)
+            ub[g] = {'point': round(pt, 5), 'upper_1.25%': round(u, 5)}
+        ub_by_tau[str(t)] = ub
+    worst = {t: max(v['upper_1.25%'] for v in ub.values()) for t, ub in ub_by_tau.items()}
+    if len(runs) < TAU1_MIN_PIECES:
+        tau1, line, rule1 = TAU1_FLOOR, LINE1_RULED, f'kept (only {len(runs)} pieces < {TAU1_MIN_PIECES})'
     else:
-        q99, tau1, rule1 = None, TAU1_FLOOR, f'kept (only {len(runs)} pieces < {TAU1_MIN_PIECES})'
+        ok = [t for t in TAU1_GRID if worst[str(t)] <= LINE1_KEEP]
+        if ok:
+            tau1, line, rule1 = ok[0], LINE1_RULED, 'reads: smallest run length with upper bound <= 0.01'
+        else:
+            tau1 = TAU1_GRID[-1]
+            line = max(LINE1_RULED, ceil_to(2 * worst[str(tau1)], 0.005))
+            rule1 = 'reads: no run length <= 6 mm keeps the bound <= 0.01; line raised'
+            if line > LINE1_STOP:
+                stop.append(f'LINE_L1 {line} > {LINE1_STOP} at TAU_L1 {tau1} mm')
     res['tau_L1_mm'] = tau1
-    res['tau_L1_detail'] = {'pieces': len(runs), 'q99_mm': None if q99 is None else round(q99, 3),
-                            'max_mm': round(runs[-1], 3) if runs else None, 'rule': rule1}
+    res['tau_L1_detail'] = {'pieces': len(runs), 'piece_longest_run_q99_mm': None if q99 is None else round(q99, 3),
+                            'piece_longest_run_max_mm': round(runs[-1], 3) if runs else None, 'rule': rule1,
+                            'worst_upper_by_tau': worst}
+    res['line_L1_K1r'] = line
+    res['line_L1_detail'] = ub_by_tau[str(tau1)]
     # TAU_L2
     worst = [max(r['gaps']) if r['gaps'] else 0.0 for r in geo]
     if len(worst) >= TAU2_MIN_READS:
@@ -407,21 +424,6 @@ def freeze(rows, pairs, raised=(), seed=BOOT_SEED):
     res['tau_L2_detail'] = {'reads': len(worst), 'rule': rule2,
                             'share_over': {str(t): round(float(np.mean(np.array(worst) > t)), 4) if worst else None
                                            for t in TAU2_STEPS}}
-    # LINE_L1 = K1r
-    tau_for_line = tau1 if tau1 is not None else TAU1_STOP
-    ub = {}
-    for g in PARENT_GROUP:
-        pt, u = boot_upper(geo, g, tau_for_line, LINE1_Q, rng) if geo else (0.0, 0.0)
-        ub[g] = {'point': round(pt, 5), 'upper_1.25%': round(u, 5)}
-    worst_ub = max((v['upper_1.25%'] for v in ub.values()), default=0.0)
-    if worst_ub <= LINE1_KEEP:
-        line = LINE1_RULED
-    else:
-        line = max(LINE1_RULED, ceil_to(2 * worst_ub, 0.005))
-        if line > LINE1_STOP:
-            stop.append(f'LINE_L1 {line} > {LINE1_STOP}')
-    res['line_L1_K1r'] = line
-    res['line_L1_detail'] = ub
     # read counts, floor, tiers
     train_rows = [r for r in rows if r['role'] == 'trainable' and r['extended']]
     res['extended_trainable_reads'] = len(train_rows)

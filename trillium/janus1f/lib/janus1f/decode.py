@@ -110,7 +110,8 @@ class NnunetIO:
     def __init__(self, plans_json):
         from nnunetv2.utilities.plans_handling.plans_handler import PlansManager
         with open(plans_json) as f:
-            self.rw = PlansManager(json.load(f)).image_reader_writer_class()()
+            rw = PlansManager(json.load(f)).image_reader_writer_class   # a class (2.8.1 property)
+        self.rw = rw() if isinstance(rw, type) else rw
 
     def read_seg(self, path):
         seg, props = self.rw.read_seg(path)

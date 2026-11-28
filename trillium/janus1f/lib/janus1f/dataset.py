@@ -1,6 +1,6 @@
 """`prep` (CPU job): Dataset719_J1F = the 620 only (F-A29), plans moved and checked, fingerprint placed, preprocess.
 
-  python -m janus1f.dataset prep    <work> <layout.json> <icx_dir> <janus0_results_fold_dir> <n_proc>
+  python -m janus1f.dataset prep    <work> <layout.json> <icx_dir> <janus0_model_dir (holds plans.json)> <n_proc>
   python -m janus1f.dataset census  <work>          # what `status` prints after prep
 
 In order, each step refusing on doubt:
@@ -213,11 +213,11 @@ def check_converter_line(tot):
 
 
 # ---------------------------------------------------------------------------- plans
-def place_plans(work, j0_fold_dir):
+def place_plans(work, j0_model_dir):
     """Step T's plans as Dataset715_ICX4/<P>.json; move to 719 (-tp = -sp); fingerprint placed; L-A21's check."""
     p = paths(work)
-    j0_plans = os.path.join(j0_fold_dir, 'plans.json')
-    j0_fp = os.path.join(j0_fold_dir, 'dataset_fingerprint.json')
+    j0_plans = os.path.join(j0_model_dir, 'plans.json')
+    j0_fp = os.path.join(j0_model_dir, 'dataset_fingerprint.json')
     pins.check_file(j0_plans, pins.PLANS_SHA256, "Janus 0's plans.json (Step T)")
     pins.check_file(j0_fp, pins.FINGERPRINT_SHA256, "Janus 0's dataset_fingerprint.json (Step T)")
     os.makedirs(p['src_pp'], exist_ok=True)
@@ -231,7 +231,7 @@ def place_plans(work, j0_fold_dir):
                                                             'rb').read())
     if errs:
         raise PrepError('refusing: plans check: ' + '; '.join(errs))
-    check_no_class_weights(j0_fold_dir, p['pp'], p['raw'])
+    check_no_class_weights(j0_model_dir, p['pp'], p['raw'])
     return 'plans check OK (Step T b7178bbc...3cc2, fingerprint e41c772f...7e05, batch_dice False)'
 
 
@@ -242,7 +242,7 @@ def run(cmd, env=None):
     print(f'[janus1f]   done in {time.time() - t:.0f}s', flush=True)
 
 
-def prep(work, layout_json, icx_dir, j0_fold_dir, n_proc):
+def prep(work, layout_json, icx_dir, j0_model_dir, n_proc):
     sp = split.load()
     refuse_used_id(work)
     p = paths(work)
@@ -264,7 +264,7 @@ def prep(work, layout_json, icx_dir, j0_fold_dir, n_proc):
     print(f'[janus1f] Dataset719_J1F: 620 images, 620 labels, no locked or sealed id; {lm}', flush=True)
     print(f'[janus1f] converter {pins.load_json(census)["converter"]} = F0-r2\'s line', flush=True)
     if not os.path.exists(os.path.join(work, '.plans_done')):
-        msg = place_plans(work, j0_fold_dir)
+        msg = place_plans(work, j0_model_dir)
         open(os.path.join(work, '.plans_done'), 'w').write(msg)
     print('[janus1f] ' + open(os.path.join(work, '.plans_done')).read(), flush=True)
     if not os.path.exists(os.path.join(work, '.preprocess_done')):

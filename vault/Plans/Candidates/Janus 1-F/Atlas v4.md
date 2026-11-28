@@ -54,7 +54,7 @@ D54 and D55 change nothing in it (§2). This round is about **stage 2 (J1F-2)**.
      is 0.036. So the line would be 0.075, and the freeze STOPs (exit 2) (§5.3).
    - **One rule changed from my first draft:** τ₁ and the line are set jointly, on the pooled statistic that L1r
      actually gates. A 99th-percentile rule on single ostia would have pushed τ₁ to 6 mm on correct stand-ins (17 of
-     65 S1 ostia are over 3 mm with one voxel of bleed) and halved L1r's sensitivity for nothing.
+     65 S1 ostia are over 3 mm with one voxel of bleed) and blinded L1r to any theft shorter than 6 mm, for nothing.
 4. **D55 is written into the stage-2 plan** (§4):
    - the sealed pool is read in extended mode but never reaches the freeze (Q-F2-1);
    - there is no J1F-B, and the 1.5× near-miss rule is a flag of the script (Q-F2-2);
@@ -83,7 +83,7 @@ trainer, a stage-2 scorer layer and J1F-2's decode. Their definitions are fixed 
   read was opened.
 
 **Not read:**
-- no locked-100 label (not even counts this round);
+- no locked-100 label (the one locked number quoted, D1 present in 97 of 100, is F-A25's published count);
 - no sealed ImageCAS-X test case, quality-0 case or D60 CT;
 - no TotalSegmentator twin;
 - no pool read, sealed or not;

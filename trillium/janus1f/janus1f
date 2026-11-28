@@ -1,0 +1,317 @@
+#!/bin/bash
+# janus1f: J1F-A on Fir (track 1-F stage 1; #392; vault/Plans/Master plan - Janus 1-F.md §5 step 4).
+# The spec is Delta v3 §4 as amended by F-A27 to F-A35 (Janus 1-F Round 3, F-A36). The lead runs every job.
+#
+#   L=$SCRATCH/asclepius/repo/trillium/janus1f/janus1f
+#   $L check | tee $J1F_WORK/check.txt   login node: pins, self-tests, the scorer's tests, F0-r2's lines, versions,
+#                                         the SBATCH headers. Post it on #303
+#   $L prep                               CPU job: Dataset 719 = the 620, ignore 13, plans moved and checked,
+#                                         fingerprint placed, preprocess only
+#   $L status                             jobs, markers, plans check, label counts, epochs, fitcheck.json, STALL
+#   J1F_RUN=a1 $L train                   fold 0: two chained 23:50 GPU links (afterok); a2 = fold 1, report only
+#   J1F_RUN=a1 $L predict                 afterok: the locked 100 in 10 chunks; decode F, T, G; delete each npz
+#   $L collect                            CPU job: opens the looks ledger first; V on F, B, the verdict
+#
+# Environment: JANUS0 (default $HOME/janus0-keep, else $SCRATCH/janus0_out), J1F_WORK (default $SCRATCH/janus1f),
+# JANUS0_COMPILE (t|f; required: the value job 1's grep gave, F-A33), J1F_SCORER_SHA256 and J1F_GATES_SHA256 (the
+# hashes posted on #303; checked against the hashes of record), J1F_RUN (a1|a2), J1F_VENV (default
+# $HOME/icx14-venv), J1F_ICX (ImageCAS-X labels, default $SCRATCH/icx4/icx), J1F_LAYOUT (CT paths, default
+# $SCRATCH/icx4/layout.json), J1F_AORTA (default $JANUS0/aorta).
+# collect only (D55): J1F_Q_F2_3 (default yes), J1F_JANUS1L_ADOPTED=1 + J1F_JANUS1L_MAPS=<dir>,
+# J1F_JANUS1L_COLLECT_SUBMITTED=1.
+# J1F_DRYRUN=1: no modules, no sbatch; job scripts are written and printed, nothing is submitted.
+set -euo pipefail
+
+HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+LIB="$HERE/lib"
+REPO="$(cd "$HERE/../.." && pwd)"
+MODE="${1:-}"
+DRY="${J1F_DRYRUN:-0}"
+PLANS=nnUNetResEncUNetPlans_60G_iso05
+DS=Dataset719_J1F
+TRAINER=nnUNetTrainer_janus1f
+J0_MODEL_REL=nnunet_results/Dataset715_ICX4/nnUNetTrainerICX4__${PLANS}__3d_fullres
+SCORER_SHA256=5221032f3dc086d686b63fa946149a215ac00738a87fd9669d7faa15962b2e5b
+GATES_SHA256=198b3b158098d846358971ad8a85f22eda7f9a76c00f0e1ee798e15171191406
+
+say() { printf '[janus1f] %s\n' "$*"; }
+die() { printf '[janus1f] REFUSE: %s\n' "$*" >&2; exit 1; }
+
+case "$MODE" in check|prep|status|train|predict|collect) ;;
+    *) die "usage: janus1f check|prep|status|train|predict|collect (see the header of $0)" ;; esac
+
+if [ "$DRY" = "1" ]; then : "${SCRATCH:=${TMPDIR:-/tmp}/janus1f-dryrun-scratch}"; mkdir -p "$SCRATCH"; fi
+[ -n "${SCRATCH:-}" ] || die "\$SCRATCH is not set (run this on fir.alliancecan.ca)"
+W="${J1F_WORK:-$SCRATCH/janus1f}"
+if [ -z "${JANUS0:-}" ]; then
+    JANUS0="$HOME/janus0-keep"; [ -f "$JANUS0/SHA256SUMS" ] || JANUS0="$SCRATCH/janus0_out"
+fi
+VENV="${J1F_VENV:-$HOME/icx14-venv}"
+ICX="${J1F_ICX:-$SCRATCH/icx4/icx}"
+LAYOUT="${J1F_LAYOUT:-$SCRATCH/icx4/layout.json}"
+AORTA="${J1F_AORTA:-$JANUS0/aorta}"
+J0_MODEL="$JANUS0/$J0_MODEL_REL"
+RUN="${J1F_RUN:-}"
+mkdir -p "$W/logs" "$W/results"
+export PYTHONPATH="$LIB${PYTHONPATH:+:$PYTHONPATH}"
+
+load_env() {
+    if [ "$DRY" = "1" ]; then PY="${J1F_PYTHON:-python3}"; return 0; fi
+    command -v module >/dev/null 2>&1 || die "the 'module' command is missing; run this on a Fir login node"
+    module purge >/dev/null 2>&1 || true
+    module load StdEnv/2023 python/3.11.5
+    [ -f "$VENV/bin/activate" ] || die "no venv at $VENV (Fir's icx14 venv, nnunetv2 2.8.1)"
+    # shellcheck disable=SC1091
+    source "$VENV/bin/activate"
+    PY="$VENV/bin/python"
+}
+
+# F-A34: sha256sum -c SHA256SUMS before every mode
+janus0_sums() {
+    if [ ! -f "$JANUS0/SHA256SUMS" ]; then
+        [ "$DRY" = "1" ] && { say "dry run: no $JANUS0/SHA256SUMS; Janus 0 not checked"; return 0; }
+        die "no $JANUS0/SHA256SUMS (Step T): set JANUS0 to \$HOME/janus0-keep or \$SCRATCH/janus0_out"
+    fi
+    (cd "$JANUS0" && sha256sum --quiet -c SHA256SUMS) || die "Janus 0's SHA256SUMS is not OK in $JANUS0"
+    say "Janus 0: $JANUS0, SHA256SUMS OK ($(grep -c . "$JANUS0/SHA256SUMS") files)"
+}
+
+# F-A33: refuse an unset JANUS0_COMPILE, print the value
+compile_flag() {
+    case "${JANUS0_COMPILE:-}" in
+        t|f) say "nnUNet_compile = JANUS0_COMPILE = $JANUS0_COMPILE (F-A33)" ;;
+        "") die "JANUS0_COMPILE is unset: export the value job 1's grep gave (F-A33; expected f)" ;;
+        *) die "JANUS0_COMPILE must be t or f, not '$JANUS0_COMPILE'" ;;
+    esac
+}
+
+# the exported hashes from #303 must be the hashes of record (F-A27, F-A28)
+exported_hashes() {
+    [ "${J1F_SCORER_SHA256:-$SCORER_SHA256}" = "$SCORER_SHA256" ] || die "J1F_SCORER_SHA256 is not the scorer of record $SCORER_SHA256"
+    [ "${J1F_GATES_SHA256:-$GATES_SHA256}" = "$GATES_SHA256" ] || die "J1F_GATES_SHA256 is not the gate file of record $GATES_SHA256"
+}
+
+# L-A21: the repository must be installed editable in the venv
+editable() {
+    local where
+    where="$("$PY" -c 'import segtrain, os; print(os.path.dirname(os.path.dirname(os.path.abspath(segtrain.__file__))))' 2>/dev/null || true)"
+    [ "$where" = "$REPO/src" ] || die "segtrain is not installed editable from $REPO (found: '${where:-none}'): pip install --no-deps -e $REPO"
+    say "segtrain editable from $REPO/src"
+}
+
+# nnU-Net finds trainers inside its own package: a one-line shim imports ours from the editable segtrain
+install_trainer() {
+    local tdir
+    tdir="$("$PY" -c 'import nnunetv2, os; print(os.path.join(os.path.dirname(nnunetv2.__file__), "training", "nnUNetTrainer", "variants", "janus1f"))')"
+    mkdir -p "$tdir"; touch "$tdir/__init__.py"
+    printf 'from segtrain.nnunet_ext.nnUNetTrainer_janus1f import nnUNetTrainer_janus1f  # noqa: F401\n' > "$tdir/janus1f_trainer.py"
+    "$PY" -c "from nnunetv2.training.nnUNetTrainer.variants.janus1f.janus1f_trainer import $TRAINER; print('[janus1f] trainer importable:', $TRAINER.__module__)"
+}
+
+locked_baseline() {
+    "$PY" - "$JANUS0/pred_fir" <<'EOF' || die "a Janus 0 baseline prediction is missing (never re-predicted silently)"
+import os, sys
+from janus1f import split
+d = sys.argv[1]; sp = split.load()
+miss = [c for c in sp['locked100'] if not os.path.exists(os.path.join(d, c + '.nii.gz'))]
+if miss:
+    sys.exit(f'[janus1f] REFUSE: no Janus 0 Fir prediction in {d} for {len(miss)} locked case(s), e.g. {miss[:3]}')
+print(f'[janus1f] Janus 0 Fir predictions: 100 of 100 locked cases in {d}')
+EOF
+}
+
+running() {   # running or pending jobs of this launcher with the given name
+    if [ "$DRY" = "1" ] || ! command -v squeue >/dev/null 2>&1; then return 1; fi
+    squeue -u "$USER" -h -o '%i %j %T' | awk -v n="$1" '$2 == n' | grep -q .
+}
+
+submit() {   # submit <script> [dependency]; prints the job id
+    local dep="${2:-}"
+    if [ "$DRY" = "1" ]; then echo "DRYRUN-$(basename "$1" .sh)"; return 0; fi
+    (cd "$W" && if [ -n "$dep" ]; then sbatch --parsable --dependency="afterok:$dep" "$1"; else sbatch --parsable "$1"; fi)
+}
+
+job_preamble() {   # the lines every job script starts with after its SBATCH header
+    cat <<EOF
+set -euo pipefail
+module purge >/dev/null 2>&1 || true
+module load StdEnv/2023 python/3.11.5
+source "$VENV/bin/activate"
+export PYTHONPATH="$LIB" PYTHONUNBUFFERED=1 W="$W" JANUS0="$JANUS0"
+export nnUNet_raw="$W/nnunet_raw" nnUNet_preprocessed="$W/nnunet_preprocessed" nnUNet_results="$W/nnunet_results"
+(cd "$JANUS0" && sha256sum --quiet -c SHA256SUMS) || { echo "[janus1f] REFUSE: Janus 0 SHA256SUMS not OK"; exit 2; }
+EOF
+}
+
+header() { "$PY" -m janus1f.sbatch "$1" "$2" "$W/logs/$2-%j.out"; }
+
+fold_of() { case "$1" in a1) echo 0 ;; a2) echo 1 ;; *) die "J1F_RUN must be a1 or a2, not '$1'" ;; esac; }
+
+# ------------------------------------------------------------------------------------------------- modes
+mode_check() {
+    load_env
+    compile_flag
+    exported_hashes
+    janus0_sums
+    [ "$DRY" = "1" ] || editable
+    say "versions: $("$PY" -c 'import numpy, scipy, skimage, sys; print("python", sys.version.split()[0], "numpy", numpy.__version__, "scipy", scipy.__version__, "scikit-image", skimage.__version__)')"
+    say "versions: $("$PY" -c 'import importlib.metadata as m
+out = []
+for p in ("nnunetv2", "torch", "nibabel"):
+    try: out.append(f"{p} {m.version(p)}")
+    except Exception: out.append(f"{p} absent")
+print(" ".join(out))')"
+    "$PY" -c 'from janus1f import pins; print("\n".join("[janus1f] " + l for l in pins.check_four()))' || die "a pin differs"
+    "$PY" -m janus1f.selftest || die "a self-test failed"
+    if [ -f "$ICX/train.txt" ]; then
+        "$PY" -c "from janus1f import split, pins; print('\n'.join('[janus1f] F0-r2 ' + l for l in split.f0r2_lines('$ICX'))); print('[janus1f] F0-r2 converter line prep must reproduce:', pins.CONVERTER_LINE)" \
+            || die "F0-r2's lines differ on $ICX (stop; tell the PM)"
+        "$PY" "$LIB/test_scorer.py" "$ICX" "$REPO/configs/janus1/split-2026-11.json" > "$W/test_scorer.log" 2>&1 \
+            || { tail -5 "$W/test_scorer.log"; die "the scorer's tests on the six training fixtures failed ($W/test_scorer.log)"; }
+        say "scorer tests on training fixtures: $(tail -1 "$W/test_scorer.log")"
+    else
+        [ "$DRY" = "1" ] || die "no ImageCAS-X file lists in $ICX: F0-r2 and the scorer's tests cannot run"
+        say "dry run: no $ICX; F0-r2 re-print and the scorer's case tests skipped"
+    fi
+    if [ "$DRY" != "1" ]; then install_trainer; locked_baseline; fi
+    for k in prep train predict collect; do say "SBATCH header ($k):"; header "$k" "janus1f-$k" | sed 's/^/    /'; done
+    echo "JANUS0_COMPILE=$JANUS0_COMPILE $(date -u +%FT%TZ)" > "$W/.check_ok"
+    say "check passed. Post this printout on #303"
+}
+
+need_check() {
+    [ -f "$W/.check_ok" ] || die "run 'janus1f check' first (no $W/.check_ok)"
+    local c; c="$(cut -d' ' -f1 "$W/.check_ok")"
+    [ "$c" = "JANUS0_COMPILE=${JANUS0_COMPILE:-}" ] || die "check ran with $c; JANUS0_COMPILE is now '${JANUS0_COMPILE:-}': re-run check"
+}
+
+mode_prep() {
+    load_env; compile_flag; exported_hashes; janus0_sums; need_check
+    [ -f "$W/.prep_done" ] && { say "prep already done"; return 0; }
+    running janus1f-prep && { say "prep already queued or running"; return 0; }
+    local J="$W/prep.sh"
+    { header prep janus1f-prep; job_preamble
+      echo "python -m janus1f.dataset prep \"$W\" \"$LAYOUT\" \"$ICX\" \"$J0_MODEL\" 16"; } > "$J"
+    chmod +x "$J"
+    [ "$DRY" = "1" ] && { say "dry run: $J"; cat "$J"; }
+    say "submitted prep: $(submit "$J")"
+}
+
+mode_train() {
+    [ -n "$RUN" ] || die "set J1F_RUN=a1 or a2"
+    local FOLD; FOLD="$(fold_of "$RUN")"
+    load_env; compile_flag; exported_hashes; janus0_sums; need_check
+    [ -f "$W/.prep_done" ] || [ "$DRY" = "1" ] || die "prep has not finished (no $W/.prep_done)"
+    local OUT="$W/nnunet_results/$DS/${TRAINER}__${PLANS}__3d_fullres/fold_$FOLD"
+    [ -f "$OUT/checkpoint_final.pth" ] && { say "$RUN already trained ($OUT/checkpoint_final.pth)"; return 0; }
+    running "janus1f-train-$RUN" && { say "$RUN already queued or running"; return 0; }
+    local CK="$J0_MODEL/fold_0/checkpoint_final.pth" prev="" jid i
+    for i in 1 2; do
+        local J="$W/train_${RUN}_link$i.sh" CONT=""
+        [ "$i" = 2 ] && CONT="--c"
+        { header train "janus1f-train-$RUN"; job_preamble
+          cat <<EOF
+export nnUNet_compile=$JANUS0_COMPILE SEGTRAIN_CT_WINDOW=off SEGTRAIN_SAVE_EVERY=10 SEGTRAIN_SAVE_PROBABILITIES=0
+export SEGTRAIN_MAX_SECONDS=84000 nnUNet_n_proc_DA=10
+export SEGTRAIN_FINETUNE_FROM="$CK"
+export SEGTRAIN_FINETUNE_HEADS="parent_copy:$REPO/configs/janus1/j1f_parents.json"
+unset SEGTRAIN_ITERATIONS SEGTRAIN_EPOCHS
+nnUNetv2_train 719 3d_fullres $FOLD -tr $TRAINER -p $PLANS $CONT
+EOF
+        } > "$J"
+        chmod +x "$J"
+        [ "$DRY" = "1" ] && { say "dry run: $J"; cat "$J"; }
+        jid="$(submit "$J" "$prev")"
+        echo "$jid" >> "$W/jobs_train_$RUN"
+        say "submitted $RUN train link $i (fold $FOLD): $jid${prev:+ (afterok:$prev)}"
+        prev="$jid"
+    done
+}
+
+mode_predict() {
+    [ -n "$RUN" ] || die "set J1F_RUN=a1 or a2"
+    local FOLD; FOLD="$(fold_of "$RUN")"
+    load_env; compile_flag; exported_hashes; janus0_sums; need_check
+    [ "$DRY" = "1" ] || locked_baseline
+    [ -f "$W/.predict_done_$RUN" ] && { say "$RUN already predicted and decoded"; return 0; }
+    running "janus1f-predict-$RUN" && { say "$RUN predict already queued or running"; return 0; }
+    local OUT="$W/nnunet_results/$DS/${TRAINER}__${PLANS}__3d_fullres/fold_$FOLD" dep=""
+    if [ ! -f "$OUT/checkpoint_final.pth" ]; then
+        [ -s "$W/jobs_train_$RUN" ] || [ "$DRY" = "1" ] || die "$RUN is neither trained nor submitted: run train first"
+        dep="$(tail -1 "$W/jobs_train_$RUN" 2>/dev/null || true)"
+    fi
+    local J="$W/predict_$RUN.sh"
+    { header predict "janus1f-predict-$RUN"; job_preamble
+      cat <<EOF
+export nnUNet_compile=$JANUS0_COMPILE
+[ -f "$OUT/checkpoint_final.pth" ] || { echo "[janus1f] REFUSE: $RUN has no checkpoint_final.pth yet"; exit 2; }
+python -m janus1f.predict_inputs "$W" "$LAYOUT"          # the locked CTs linked into 10 chunks; refuses any other id
+for k in 0 1 2 3 4 5 6 7 8 9; do
+  if [ -f "$W/maps_$RUN/.chunk\$k" ]; then echo "[janus1f] chunk \$k already decoded"; continue; fi
+  [ \$(df --output=avail -B1G "$W" | tail -1) -ge 40 ] || { echo "[janus1f] REFUSE: < 40 GB free"; exit 3; }
+  mkdir -p "$W/raw_$RUN/chunk\$k" "$W/maps_$RUN"
+  nnUNetv2_predict -i "$W/in_l100/chunk\$k" -o "$W/raw_$RUN/chunk\$k" -d 719 -c 3d_fullres \\
+    -tr $TRAINER -p $PLANS -f $FOLD -chk checkpoint_final.pth --save_probabilities --disable_tta -npp 2 -nps 2
+  du -sh "$W/raw_$RUN/chunk\$k" | tee -a "$W/results/du_$RUN.txt"     # chunk 0's line is posted
+  python -m janus1f.decode --run $RUN --chunk \$k --probs "$W/raw_$RUN/chunk\$k" --janus0 "$JANUS0/pred_fir" \\
+    --out "$W/maps_$RUN" --plans "$W/nnunet_preprocessed/$DS/$PLANS.json" --cases "$W/in_l100/chunk\$k.json"
+  touch "$W/maps_$RUN/.chunk\$k"
+done
+touch "$W/.predict_done_$RUN"
+EOF
+    } > "$J"
+    chmod +x "$J"
+    [ "$DRY" = "1" ] && { say "dry run: $J"; cat "$J"; }
+    say "submitted $RUN predict: $(submit "$J" "$dep")${dep:+ (afterok:$dep)}"
+}
+
+mode_collect() {
+    load_env; exported_hashes; janus0_sums; need_check
+    [ -f "$W/results/verdict.json" ] && { say "collect already ran: $W/results/DECISION.md"; return 0; }
+    running janus1f-collect && { say "collect already queued or running"; return 0; }
+    "$PY" -c "import sys; from janus1f import ledger; sys.exit(1 if any(e.get('candidate') == 'J1F-A' for e in ledger.read('$W/results/looks.json')) else 0)" \
+        || die "J1F-A's look is already in $W/results/looks.json; a second collect refuses (F-A22)"
+    "$PY" -c 'from janus1f import pins; pins.check_four()' || die "a pin differs (F-A36)"
+    set +e; "$PY" -m janus1f.collect gate "$W"; local g=$?; set -e
+    [ "$g" = 4 ] && return 0
+    [ "$g" = 0 ] || die "collect cannot start (see above)"
+    local J="$W/collect.sh"
+    { header collect janus1f-collect; job_preamble
+      echo "export J1F_Q_F2_3=\"${J1F_Q_F2_3:-yes}\" J1F_JANUS1L_ADOPTED=\"${J1F_JANUS1L_ADOPTED:-}\" J1F_JANUS1L_MAPS=\"${J1F_JANUS1L_MAPS:-}\""
+      echo "python -m janus1f.collect run \"$W\" \"$JANUS0\" \"$ICX\" \"$AORTA\" \"$LAYOUT\" 16"; } > "$J"
+    chmod +x "$J"
+    [ "$DRY" = "1" ] && { say "dry run: $J"; cat "$J"; }
+    say "submitted collect: $(submit "$J")"
+}
+
+mode_status() {
+    PY="${J1F_PYTHON:-python3}"; [ -x "$VENV/bin/python" ] && PY="$VENV/bin/python"
+    if [ "$DRY" != "1" ] && command -v squeue >/dev/null 2>&1; then
+        squeue -u "$USER" -h -o '%i %j %T %M %r' | awk '$2 ~ /^janus1f-/' | sed 's/^/[janus1f] job: /' || true
+    fi
+    local m; for m in .check_ok .labels_done .plans_done .preprocess_done .prep_done .predict_done_a1 .predict_done_a2; do
+        [ -e "$W/$m" ] && say "done: $m"
+    done
+    [ -f "$W/.plans_done" ] && say "$(cat "$W/.plans_done")"
+    [ -f "$W/prep_census.json" ] && say "label counts: $(tr -d '\n ' < "$W/prep_census.json")"
+    local r f d
+    for r in a1 a2; do
+        d="$W/nnunet_results/$DS/${TRAINER}__${PLANS}__3d_fullres/fold_$(fold_of $r)"
+        [ -d "$d" ] || continue
+        f="$(ls -t "$d"/training_log_*.txt 2>/dev/null | head -1 || true)"
+        if [ -n "$f" ]; then
+            say "$r: $(grep -h '^.*Epoch [0-9]' "$f" | tail -1 | sed 's/.*Epoch/epoch/')"
+            say "$r: $(grep -h 'Epoch time' "$f" | tail -1 | sed 's/.*Epoch time/s\/epoch/')"
+        fi
+        [ -f "$d/step0_identity.json" ] && say "$r: step-0 identity $(tr -d '\n ' < "$d/step0_identity.json")"
+        [ -f "$d/fitcheck.json" ] && "$PY" -c "import json; d = json.load(open('$d/fitcheck.json')); [print('[janus1f] $r: fitcheck epoch', k, {c: (None if v is None else round(v, 3)) for c, v in e['mean_dice'].items()}) for k, e in d.items()]"
+        [ -f "$d/STALL" ] && say "$r: STALL: $(cat "$d/STALL")"
+        [ -d "$W/maps_$r" ] && say "$r: decoded chunks $(ls -A "$W/maps_$r" | grep -c '^\.chunk' || true) of 10"
+    done
+    [ -f "$W/results/du_a1.txt" ] && say "chunk 0 du -sh: $(head -1 "$W/results/du_a1.txt")"
+    [ -f "$W/results/looks.json" ] && say "looks: $(tr -d '\n ' < "$W/results/looks.json")"
+    [ -f "$W/results/verdict.json" ] && say "verdict: $("$PY" -c "import json; print(json.load(open('$W/results/verdict.json'))['ships'])")"
+    return 0
+}
+
+"mode_$MODE"

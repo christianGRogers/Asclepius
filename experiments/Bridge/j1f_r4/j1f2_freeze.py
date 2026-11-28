@@ -108,6 +108,10 @@ THEFT_STOP = 0.05                   # above this a theft line no longer separate
 N_BOOT = 2000
 TRAIN_MIN = {'patients': 30, 'sources': 3, 'per_source': 5, 'pairs': 10, 'floor': 0.6}   # F-A11, F-A23
 TIERS = {'decide': 30, 'report': 20}                                                     # F-A22 S
+# D54 omission report: ImageCAS-X's own presence (centreline >= 5 mm) on the D45 620, counts only
+# (experiments/Delta/j1f_r1/census.json, train560 + dev44 + train_open16)
+PRIOR_620 = {'D1': 610, 'D2': 356, 'OM1': 538, 'OM2': 227, 'PDA': 605, 'PLB': 600, 'Ramus': 148}
+UNDER_RATIO = 0.8                   # a class drawn in fewer than 0.8x ImageCAS-X's share of hearts (upper bound) is flagged
 WINDOW_MM = 62.0                    # L2d's search radius (> the last gap step)
 
 
@@ -500,7 +504,8 @@ def freeze(rows, pairs, raised=(), d35_rows=None):
             w, status = RULED['band_mm'], f'kept (fewer than {BAND_MIN_READS} reads)'
         band[g] = {'width_mm': w, 'status': status, 'reads': len(rs), 'p95_pooled_mm': p,
                    'p95_read_median_mm': float(np.median(rw)) if rw else None,
-                   'far_p99_mm': float(np.percentile([r['far_mm'][g] for r in rs], 99)) if rs else None}
+                   'far_p99_mm': float(np.percentile([r['far_mm'][g] for r in rs if g in r.get('far_mm', {})], 99))
+                   if any(g in r.get('far_mm', {}) for r in rs) else None}
     res['band'] = band
     # 2a. L1r's run length
     runs = [x for r in rows for g in GROUPS for x in r['runs'].get(g, [])]
@@ -568,7 +573,7 @@ def freeze(rows, pairs, raised=(), d35_rows=None):
             per_src[by_pat[p]['source']] = per_src.get(by_pat[p]['source'], 0) + 1
         mult = 1.5 if k in raised else 1.0
         need_p = int(math.ceil(TRAIN_MIN['patients'] * mult))
-        need_pairs = int(math.ceil(TRAIN_MIN['pairs'] * mult))
+        need_pairs = TRAIN_MIN['pairs']                       # F-A23 raises the read count only
         pr_ = [q['classes'][k] for q in pairs if q and any(q['classes'][k]['present'])]
         pieces = sum(q['pieces'] for q in pr_)
         named = sum(q['named'] for q in pr_)
@@ -587,7 +592,16 @@ def freeze(rows, pairs, raised=(), d35_rows=None):
     res['n_patients'] = len(by_pat)
     res['n_pairs'] = sum(1 for q in pairs if q)
     # D54 reports (never deciding)
-    res['d54'] = {'reads_with_old_ticks': sum(1 for r in rows if r.get('ticks')),
+    omit = {}
+    for k, n620 in PRIOR_620.items():
+        k_ = sum(1 for r in rows if r['present'].get(k))
+        prior = n620 / 620
+        up = clopper_upper(k_, len(rows), 0.025) if rows else 1.0
+        omit[k] = {'reads_drawn': k_, 'reads': len(rows), 'rate': round(k_ / len(rows), 4) if rows else None,
+                   'icx620_rate': round(prior, 4), 'upper975': round(up, 4),
+                   'flag_under_drawn': bool(rows) and up < UNDER_RATIO * prior}
+    res['d54'] = {'stage1_drawn_vs_icx620': omit,
+                  'reads_with_old_ticks': sum(1 for r in rows if r.get('ticks')),
                   'reads_no_branch_drawn': sum(1 for r in rows if r.get('no_branch_drawn')),
                   'ignore_vox_total': int(sum(r.get('ignore_vox', 0) for r in rows))}
     if d35_rows is not None:

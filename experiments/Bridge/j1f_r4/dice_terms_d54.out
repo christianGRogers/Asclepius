@@ -1,0 +1,18 @@
+c0786
+c0939
+c0532
+c0286
+c0221
+c0324
+c0963
+c0452
+c0417
+c0046
+d47q3:ext:A_right {"leaf": {"LADgrp": 1.0, "S1": 0.3189, "OM1": 0.8107, "other": 0.135}, "ignore": {"LADgrp": 1.0, "S1": 0.3189, "OM1": 0.7786, "other": 0.0923}, "merged": {"LADgrp": 0.0649, "S1": 0.0007, "OM1": 0.8107, "other": 0.135}, "ce": 0.0008}
+d47q3:ext:B_miss {"leaf": {"LADgrp": 1.0, "S1": 0.9713, "OM1": 0.8107, "other": 0.135}, "ignore": {"LADgrp": 1.0, "S1": 0.9713, "OM1": 0.7786, "other": 0.0923}, "merged": {"LADgrp": 0.089, "S1": 0.0009, "OM1": 0.8107, "other": 0.135}, "ce": 0.00138}
+d47q3:ext:C_sprawl {"leaf": {"LADgrp": 1.0, "S1": 0.3189, "OM1": 0.8163, "other": 0.1436}, "ignore": {"LADgrp": 1.0, "S1": 0.3189, "OM1": 0.7786, "other": 0.0923}, "merged": {"LADgrp": 0.0785, "S1": 0.0008, "OM1": 0.8163, "other": 0.1436}, "ce": 0.00088}
+d47q3:ext:D_intrude {"leaf": {"LADgrp": 1.0, "S1": 0.3189, "OM1": 0.919, "other": 0.1436}, "ignore": {"LADgrp": 1.0, "S1": 0.3189, "OM1": 0.7786, "other": 0.0923}, "merged": {"LADgrp": 0.417, "S1": 0.0029, "OM1": 0.919, "other": 0.1436}, "ce": 0.00302}
+d54:ext:A_right {"leaf": {"LADgrp": 0.0785, "S1": 0.4189, "OM1": 0.8107, "other": 0.135}, "ignore": {"LADgrp": 0.0729, "S1": 0.4189, "OM1": 0.8025, "other": 0.1227}, "merged": {"LADgrp": 0.0785, "S1": 0.0005, "OM1": 0.8107, "other": 0.135}, "ce": 0.00088}
+d54:ext:B_miss {"leaf": {"LADgrp": 0.1026, "S1": 0.9772, "OM1": 0.8107, "other": 0.135}, "ignore": {"LADgrp": 0.0973, "S1": 0.9772, "OM1": 0.8025, "other": 0.1227}, "merged": {"LADgrp": 0.1026, "S1": 0.0007, "OM1": 0.8107, "other": 0.135}, "ce": 0.00146}
+d54:ext:C_sprawl {"leaf": {"LADgrp": 0.4495, "S1": 0.8387, "OM1": 0.8163, "other": 0.1436}, "ignore": {"LADgrp": 0.445, "S1": 0.8387, "OM1": 0.8088, "other": 0.1318}, "merged": {"LADgrp": 0.4495, "S1": 0.0026, "OM1": 0.8163, "other": 0.1436}, "ce": 0.00325}
+d54:ext:D_intrude {"leaf": {"LADgrp": 0.4495, "S1": 0.4457, "OM1": 0.919, "other": 0.1436}, "ignore": {"LADgrp": 0.445, "S1": 0.4457, "OM1": 0.9178, "other": 0.1318}, "merged": {"LADgrp": 0.4495, "S1": 0.0005, "OM1": 0.919, "other": 0.1436}, "ce": 0.00325}

@@ -294,7 +294,8 @@ def per_read(args):
     extended = bool(info.get('extended'))
     lab = read_labels(masks)
     row = {'read': os.path.basename(d), 'role': role, 'extended': extended,
-           'ticks': info.get('completeGroups') or [], 'present': {}}
+           'ticks': info.get('completeGroups') or [], 'present': {},
+           'branches_drawn': sorted(n for n in SQ.PARENT if n in masks and int(masks[n].sum()) >= MIN_COMP_VOX)}
     sl = _crop(lab) if (lab > 0).any() else None
     if sl is None:
         row['present'] = {n: False for n in STAGE2}
@@ -426,6 +427,11 @@ def freeze(rows, pairs, raised=(), seed=BOOT_SEED):
     res['extended_trainable_reads'] = len(train_rows)
     res['four_class_trainable_reads'] = sum(r['role'] == 'trainable' and not r['extended'] for r in rows)
     res['ticked_reads'] = sum(bool(r['ticks']) for r in train_rows)
+    # D54 QC (report only): extended reads with no branch drawn at all train every branch as absent
+    res['branchless_extended_trainable_reads'] = sum(not r['branches_drawn'] for r in train_rows)
+    res['stage1_branch_absent_share'] = {
+        b: round(float(np.mean([b not in r['branches_drawn'] for r in train_rows])), 4) if train_rows else None
+        for b in ('D1', 'D2', 'OM1', 'OM2', 'PDA', 'PLB')}
     res['classes'] = {}
     for c in STAGE2:
         pats = {}

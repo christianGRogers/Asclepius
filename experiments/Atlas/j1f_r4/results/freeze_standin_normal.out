@@ -1,0 +1,13 @@
+{"status": "FROZEN", "stop": [], "band_mm": {"LAD": 21.5, "RCA": 25.0, "pRCA": 15.0, "pLCx": 25.0}, "tau_L1_mm": 3.0, "tau_L2_mm": 30.0, "line_L1_K1r": 0.02}
+S1 {'patients_present': 34, 'needs': 30, 'sources_with_5': 4, 'floor_patients': 34, 'floor': 0.9538, 'train': True, 'd35_tier': 'counts'}
+S2 {'patients_present': 0, 'needs': 30, 'sources_with_5': 0, 'floor_patients': 0, 'floor': 0.0, 'train': False, 'd35_tier': 'counts'}
+S3 {'patients_present': 0, 'needs': 30, 'sources_with_5': 0, 'floor_patients': 0, 'floor': 0.0, 'train': False, 'd35_tier': 'counts'}
+SN {'patients_present': 23, 'needs': 30, 'sources_with_5': 3, 'floor_patients': 23, 'floor': 0.9048, 'train': False, 'd35_tier': 'counts'}
+Conus {'patients_present': 0, 'needs': 30, 'sources_with_5': 0, 'floor_patients': 0, 'floor': 0.0, 'train': False, 'd35_tier': 'counts'}
+RMA {'patients_present': 52, 'needs': 30, 'sources_with_5': 5, 'floor_patients': 52, 'floor': 0.96, 'train': True, 'd35_tier': 'counts'}
+j1f2_freeze.json sha256 e7b1dcbf2732495b52f6e9bcce24ed8d84f63a7b53f9abe91c0729a092ba4aed
+
+real	12m58.785s
+user	45m28.838s
+sys	4m40.797s
+rc=0

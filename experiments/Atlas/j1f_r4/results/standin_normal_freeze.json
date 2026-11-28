@@ -1,0 +1,221 @@
+{
+ "band_detail": {
+  "LAD": {
+   "q95_mm": 21.297,
+   "reads": 65,
+   "rule": "reads"
+  },
+  "RCA": {
+   "q95_mm": 46.839,
+   "reads": 100,
+   "rule": "reads"
+  },
+  "pLCx": {
+   "q95_mm": 36.529,
+   "reads": 42,
+   "rule": "reads"
+  },
+  "pRCA": {
+   "q95_mm": null,
+   "reads": 0,
+   "rule": "provisional (only 0 reads < 10)"
+  }
+ },
+ "band_mm": {
+  "LAD": 21.5,
+  "RCA": 25.0,
+  "pLCx": 25.0,
+  "pRCA": 15.0
+ },
+ "branchless_extended_trainable_reads": 0,
+ "classes": {
+  "Conus": {
+   "by_source": {},
+   "d35_patients_present": 0,
+   "d35_tier": "counts",
+   "floor": 0.0,
+   "floor_naming": 0.0,
+   "floor_ok": false,
+   "floor_patients": 0,
+   "floor_pieces": 0,
+   "floor_recall": 0.0,
+   "needs": 30,
+   "patients_extended_absent": 55,
+   "patients_present": 0,
+   "presence_agreement_double_read": 1.0,
+   "sources_with_5": 0,
+   "train": false
+  },
+  "RMA": {
+   "by_source": {
+    "StandIn-A": 9,
+    "StandIn-B": 14,
+    "StandIn-C": 10,
+    "StandIn-D": 11,
+    "StandIn-E": 8
+   },
+   "d35_patients_present": 0,
+   "d35_tier": "counts",
+   "floor": 0.96,
+   "floor_naming": 0.96,
+   "floor_ok": true,
+   "floor_patients": 52,
+   "floor_pieces": 100,
+   "floor_recall": 1.0,
+   "needs": 30,
+   "patients_extended_absent": 3,
+   "patients_present": 52,
+   "presence_agreement_double_read": 0.9273,
+   "sources_with_5": 5,
+   "train": true
+  },
+  "S1": {
+   "by_source": {
+    "StandIn-A": 5,
+    "StandIn-B": 9,
+    "StandIn-C": 8,
+    "StandIn-D": 8,
+    "StandIn-E": 4
+   },
+   "d35_patients_present": 0,
+   "d35_tier": "counts",
+   "floor": 0.9538,
+   "floor_naming": 0.9538,
+   "floor_ok": true,
+   "floor_patients": 34,
+   "floor_pieces": 65,
+   "floor_recall": 1.0,
+   "needs": 30,
+   "patients_extended_absent": 21,
+   "patients_present": 34,
+   "presence_agreement_double_read": 0.9455,
+   "sources_with_5": 4,
+   "train": true
+  },
+  "S2": {
+   "by_source": {},
+   "d35_patients_present": 0,
+   "d35_tier": "counts",
+   "floor": 0.0,
+   "floor_naming": 0.0,
+   "floor_ok": false,
+   "floor_patients": 0,
+   "floor_pieces": 0,
+   "floor_recall": 0.0,
+   "needs": 30,
+   "patients_extended_absent": 55,
+   "patients_present": 0,
+   "presence_agreement_double_read": 1.0,
+   "sources_with_5": 0,
+   "train": false
+  },
+  "S3": {
+   "by_source": {},
+   "d35_patients_present": 0,
+   "d35_tier": "counts",
+   "floor": 0.0,
+   "floor_naming": 0.0,
+   "floor_ok": false,
+   "floor_patients": 0,
+   "floor_pieces": 0,
+   "floor_recall": 0.0,
+   "needs": 30,
+   "patients_extended_absent": 55,
+   "patients_present": 0,
+   "presence_agreement_double_read": 1.0,
+   "sources_with_5": 0,
+   "train": false
+  },
+  "SN": {
+   "by_source": {
+    "StandIn-A": 4,
+    "StandIn-B": 5,
+    "StandIn-C": 6,
+    "StandIn-D": 3,
+    "StandIn-E": 5
+   },
+   "d35_patients_present": 0,
+   "d35_tier": "counts",
+   "floor": 0.9048,
+   "floor_naming": 0.9048,
+   "floor_ok": true,
+   "floor_patients": 23,
+   "floor_pieces": 42,
+   "floor_recall": 1.0,
+   "needs": 30,
+   "patients_extended_absent": 32,
+   "patients_present": 23,
+   "presence_agreement_double_read": 0.9273,
+   "sources_with_5": 3,
+   "train": false
+  }
+ },
+ "excluded": {},
+ "extended_trainable_reads": 110,
+ "four_class_trainable_reads": 10,
+ "inputs": {
+  "d35_file_sha256": "1a75fe41ffe44aa37c884b723c066a6b8cd3669164e0c670b6439028c2b966b1",
+  "double_read_patients": 55,
+  "manifest_sha256": "b73fdced5041697176c65ba07824f4ae5bfeda859bc19dc2914e659903a2dece",
+  "raised": [],
+  "reads_in_export": 120,
+  "reads_opened": 120,
+  "scorer_sha256": "5221032f3dc086d686b63fa946149a215ac00738a87fd9669d7faa15962b2e5b",
+  "script_sha256": "d0715f789744434edc5f698b7a7291221ba123eb2916c559d56ded8bba468f72",
+  "seal_sha256": "e71141b407acb79eeff912eee21029d34edb677d984172d871eb5f02cb1d0690"
+ },
+ "line_L1_K1r": 0.02,
+ "line_L1_detail": {
+  "LAD": {
+   "point": 0.00365,
+   "upper_1.25%": 0.00626
+  },
+  "LCx": {
+   "point": 0.00201,
+   "upper_1.25%": 0.00381
+  },
+  "RCA": {
+   "point": 0.00127,
+   "upper_1.25%": 0.0032
+  }
+ },
+ "stage1_branch_absent_share": {
+  "D1": 0.0364,
+  "D2": 1.0,
+  "OM1": 0.1,
+  "OM2": 1.0,
+  "PDA": 0.0636,
+  "PLB": 0.9545
+ },
+ "status": "FROZEN",
+ "stop": [],
+ "tau_L1_detail": {
+  "piece_longest_run_max_mm": 6.555,
+  "piece_longest_run_q99_mm": 5.81,
+  "pieces": 207,
+  "rule": "reads: smallest run length with upper bound <= 0.01",
+  "worst_upper_by_tau": {
+   "3.0": 0.00626,
+   "3.5": 0.00511,
+   "4.0": 0.00323,
+   "4.5": 0.00292,
+   "5.0": 0.00292,
+   "5.5": 0.00184,
+   "6.0": 0.00184
+  }
+ },
+ "tau_L1_mm": 3.0,
+ "tau_L2_detail": {
+  "reads": 110,
+  "rule": "reads",
+  "share_over": {
+   "30.0": 0.0,
+   "35.0": 0.0,
+   "40.0": 0.0,
+   "45.0": 0.0,
+   "50.0": 0.0
+  }
+ },
+ "tau_L2_mm": 30.0,
+ "ticked_reads": 0
+}

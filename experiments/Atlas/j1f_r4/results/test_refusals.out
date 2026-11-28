@@ -1,0 +1,7 @@
+PASS sealed volume beside a stand-in exit 3 | opened 0 file(s) of the export
+PASS sealed replica __r2 exit 3 | REFUSED (D27/D55): 1 read(s) of the export are sealed or the benchmark, e.g. ['BMC-BEO2017-SerialStenosis-CCTA__P1_s5__r2: sealed pool volume BMC-BEO2017-Serial
+PASS acceptance-mode manifest exit 3 | REFUSED: the export was written with --acceptance-scoring (D27/D55).
+PASS four-class export exit 3 | REFUSED: a --four-class export has no extended classes; export each read's own classes.
+PASS --no-guard on a pool name exit 3 | REFUSED: --no-guard is for stand-in exports only (every read named StandIn-*).
+PASS annotator benchmark exit 3 | REFUSED (D27/D55): 1 read(s) of the export are sealed or the benchmark, e.g. ['annotator_benchmark_0001: annotator benchmark (D43)']. Export again WITHOUT --acc
+ALL PASS
